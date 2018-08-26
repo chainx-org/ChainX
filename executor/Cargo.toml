@@ -1,0 +1,24 @@
+[package]
+name = "exchange-executor"
+version = "0.1.0"
+authors = ["Chainpool <http://www.chainx.org>"]
+
+[dependencies]
+hex-literal = "0.1"
+triehash = { version = "0.1" }
+ed25519 = { git = "https://github.com/paritytech/substrate" }
+substrate-codec = { git = "https://github.com/paritytech/substrate" }
+substrate-runtime-io = { git = "https://github.com/paritytech/substrate" }
+substrate-runtime-support = { git = "https://github.com/paritytech/substrate" }
+substrate-state-machine = { git = "https://github.com/paritytech/substrate" }
+substrate-executor = { git = "https://github.com/paritytech/substrate" }
+substrate-primitives = { git = "https://github.com/paritytech/substrate" }
+exchange-primitives = { path = "../primitives" }
+exchange-runtime = { path = "../runtime" }
+
+[dev-dependencies]
+substrate-keyring = { git = "https://github.com/paritytech/substrate" }
+substrate-runtime-primitives = { git = "https://github.com/paritytech/substrate" }
+substrate-runtime-staking = { git = "https://github.com/paritytech/substrate" }
+substrate-runtime-system = { git = "https://github.com/paritytech/substrate" }
+substrate-runtime-consensus = { git = "https://github.com/paritytech/substrate" }
