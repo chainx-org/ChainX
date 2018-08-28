@@ -2,13 +2,14 @@
 name = "ChainX"
 version = "0.1.0"
 dependencies = [
+ "chainx-executor 0.1.0",
+ "chainx-primitives 0.1.0",
+ "chainx-rpc 0.1.0",
+ "chainx-runtime 0.1.0",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ctrlc 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "env_logger 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "exchange-executor 0.1.0",
- "exchange-primitives 0.1.0",
- "exchange-runtime 0.1.0",
  "exit-future 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -23,6 +24,7 @@ dependencies = [
  "substrate-network 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-network-libp2p 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-rpc-servers 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-state-db 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "tokio 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -235,6 +237,80 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "cfg-if"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "chainx-executor"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives 0.1.0",
+ "chainx-runtime 0.1.0",
+ "ed25519 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-executor 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-keyring 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-consensus 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-io 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-staking 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-support 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-system 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-state-machine 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "triehash 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "chainx-primitives"
+version = "0.1.0"
+dependencies = [
+ "pretty_assertions 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.72 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.72 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-codec-derive 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-std 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-serializer 0.1.0 (git+https://github.com/chainx-org/substrate)",
+]
+
+[[package]]
+name = "chainx-rpc"
+version = "0.1.0"
+dependencies = [
+ "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-rpc 0.1.0 (git+https://github.com/chainx-org/substrate)",
+]
+
+[[package]]
+name = "chainx-runtime"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives 0.1.0",
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.72 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.72 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-keyring 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-consensus 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-council 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-democracy 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-executive 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-io 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-session 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-staking 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-std 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-support 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-system 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-timestamp 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-version 0.1.0 (git+https://github.com/chainx-org/substrate)",
+]
 
 [[package]]
 name = "chashmap"
@@ -574,72 +650,6 @@ dependencies = [
 name = "etrace"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "exchange-executor"
-version = "0.1.0"
-dependencies = [
- "ed25519 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "exchange-primitives 0.1.0",
- "exchange-runtime 0.1.0",
- "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-executor 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-keyring 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-consensus 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-io 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-staking 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-support 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-system 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-state-machine 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "triehash 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "exchange-primitives"
-version = "0.1.0"
-dependencies = [
- "pretty_assertions 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.72 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.72 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-codec-derive 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-std 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-serializer 0.1.0 (git+https://github.com/chainx-org/substrate)",
-]
-
-[[package]]
-name = "exchange-runtime"
-version = "0.1.0"
-dependencies = [
- "exchange-primitives 0.1.0",
- "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.72 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.72 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-keyring 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-consensus 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-council 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-democracy 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-executive 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-io 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-session 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-staking 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-std 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-support 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-system 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-timestamp 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-version 0.1.0 (git+https://github.com/chainx-org/substrate)",
-]
 
 [[package]]
 name = "exit-future"
@@ -1971,14 +1981,6 @@ dependencies = [
  "libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)",
  "local-encoding 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "snappy-sys 0.1.0 (git+https://github.com/paritytech/rust-snappy)",
-]
-
-[[package]]
-name = "rpc"
-version = "0.1.0"
-dependencies = [
- "substrate-rpc 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-rpc-servers 0.1.0 (git+https://github.com/chainx-org/substrate)",
 ]
 
 [[package]]

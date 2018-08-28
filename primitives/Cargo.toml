@@ -1,5 +1,5 @@
 [package]
-name = "exchange-primitives"
+name = "chainx-primitives"
 version = "0.1.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 

@@ -6,10 +6,12 @@ extern crate substrate_runtime_primitives;
 extern crate substrate_primitives;
 extern crate substrate_client as client;
 extern crate substrate_bft as bft;
+extern crate substrate_rpc_servers as rpc_server;
 
-extern crate exchange_primitives;
-extern crate exchange_executor;
-extern crate exchange_runtime;
+extern crate chainx_primitives;
+extern crate chainx_executor;
+extern crate chainx_runtime;
+extern crate chainx_rpc;
 
 extern crate futures;
 extern crate tokio;
@@ -27,22 +29,19 @@ use substrate_network_libp2p::AddrComponent;
 use substrate_network::specialization::Specialization;
 use substrate_network::{NodeIndex, Context, message};
 use substrate_network::StatusMessage as GenericFullStatus;
-use exchange_primitives::{Block, Header, Hash, UncheckedExtrinsic};
-use exchange_runtime::{GenesisConfig,
+use chainx_primitives::{Block, Header, Hash, UncheckedExtrinsic};
+use chainx_runtime::{GenesisConfig,
     ConsensusConfig, CouncilConfig, DemocracyConfig, SessionConfig, StakingConfig,
     TimestampConfig};
 
-use futures::{Future, Sink, Stream};
+use futures::{Future, Stream};
 use tokio::runtime::Runtime;
 use tokio::timer::Interval;
 use clap::{Arg, App, SubCommand};
-
 use std::sync::Arc;
-use std::path::PathBuf;
 use std::collections::HashMap;
 use std::iter;
-use std::net::Ipv4Addr;
-use std::thread;
+use std::net::{Ipv4Addr, IpAddr, SocketAddr};
 use std::time::{Duration, Instant};
 
 pub struct Protocol {
@@ -104,7 +103,7 @@ fn genesis_config() -> GenesisConfig {
         let god_key = hex!("3d866ec8a9190c8343c2fc593d21d8a6d0c5c4763aaab2349de3a6111d64d124");
         let genesis_config = GenesisConfig {
                 consensus: Some(ConsensusConfig {
-                    code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/exchange_runtime.compact.wasm").to_vec(),   // TODO
+                    code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm").to_vec(),
                     authorities: vec![ed25519::Pair::from_seed(&god_key).public().into(),],
                 }),
                 system: None,
@@ -237,16 +236,33 @@ fn main() {
             .values_of("bootnodes")
             .map_or(Default::default(), |v| v.map(|n| n.to_owned()).collect::<Vec<_>>()));
     env_logger::init();
-    let executor = exchange_executor::NativeExecutor::with_heap_pages(8);
-    let client = Arc::new(client::new_in_mem::<exchange_executor::NativeExecutor<exchange_executor::Executor>, Block, _>(executor, genesis_config()).unwrap());
+    let executor = chainx_executor::NativeExecutor::with_heap_pages(8);
+    let client = Arc::new(client::new_in_mem::<chainx_executor::NativeExecutor<chainx_executor::Executor>, Block, _>(executor, genesis_config()).unwrap());
 
+    let (exit_send, exit) = exit_future::signal();
+    let mut runtime = Runtime::new().expect("failed to start runtime on current thread");
+    let task_executor = runtime.executor();
+
+    let extrinsic_pool = Arc::new(TransactionPool::new());
+    let handler = || {
+        let client = client.clone();
+        let chain = rpc_server::apis::chain::Chain::new(client.clone(), task_executor.clone());
+        let state = rpc_server::apis::state::State::new(client.clone(), task_executor.clone());
+        let author = rpc_server::apis::author::Author::new(client.clone(), extrinsic_pool.clone(), task_executor.clone());
+        rpc_server::rpc_handler::<chainx_primitives::Block, chainx_primitives::Hash, _, _, _, _, _>(
+            state,
+            chain,
+            author,
+            chainx_rpc::default_rpc_config(),
+        )
+    };
 
     let param = NetworkParam {
        config: substrate_network::ProtocolConfig::default(),
        network_config: net_conf,
        chain: client.clone(),
        on_demand: None,
-       transaction_pool: Arc::new(TransactionPool::new()),
+       transaction_pool: extrinsic_pool.clone(),
        specialization: Protocol::new(),
     };
     let network = NetworkService::new(param, DOT_PROTOCOL_ID).unwrap();
@@ -267,8 +283,12 @@ fn main() {
         }
         Ok(())
     });
-    let (exit_send, exit) = exit_future::signal();
-    let mut runtime = Runtime::new().expect("failed to start runtime on current thread");
+    
+    let rpc_http = Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8081));
+    let rpc_ws = Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8082));
+    chainx_rpc::maybe_start_server(rpc_http, |address| rpc_server::start_http(address, handler())).unwrap();
+    chainx_rpc::maybe_start_server(rpc_ws, |address| rpc_server::start_ws(address, handler())).unwrap();
+
     let _ = runtime.block_on(exit.until(work).map(|_| ()));
     exit_send.fire();
 }

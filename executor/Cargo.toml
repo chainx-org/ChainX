@@ -1,5 +1,5 @@
 [package]
-name = "exchange-executor"
+name = "chainx-executor"
 version = "0.1.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
@@ -13,8 +13,8 @@ substrate-runtime-support = { git = "https://github.com/chainx-org/substrate" }
 substrate-state-machine = { git = "https://github.com/chainx-org/substrate" }
 substrate-executor = { git = "https://github.com/chainx-org/substrate" }
 substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
-exchange-primitives = { path = "../primitives" }
-exchange-runtime = { path = "../runtime" }
+chainx-primitives = { path = "../primitives" }
+chainx-runtime = { path = "../runtime" }
 
 [dev-dependencies]
 substrate-keyring = { git = "https://github.com/chainx-org/substrate" }

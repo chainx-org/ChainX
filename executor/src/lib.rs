@@ -3,13 +3,13 @@
 //! A `CodeExecutor` specialisation which uses natively compiled runtime when the wasm to be
 //! executed is equivalent to the natively compiled code.
 
-extern crate exchange_runtime;
+extern crate chainx_runtime;
 #[macro_use] extern crate substrate_executor;
 extern crate substrate_codec as codec;
 extern crate substrate_state_machine as state_machine;
 extern crate substrate_runtime_io as runtime_io;
 extern crate substrate_primitives as primitives;
-extern crate exchange_primitives;
+extern crate chainx_primitives;
 extern crate ed25519;
 extern crate triehash;
 
@@ -22,7 +22,7 @@ extern crate triehash;
 #[cfg(test)] #[macro_use] extern crate hex_literal;
 
 pub use substrate_executor::NativeExecutor;
-native_executor_instance!(pub Executor, exchange_runtime::api::dispatch, exchange_runtime::VERSION, include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/exchange_runtime.compact.wasm"));
+native_executor_instance!(pub Executor, chainx_runtime::api::dispatch, chainx_runtime::VERSION, include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm"));
 
 #[cfg(test)]
 mod tests {
@@ -34,16 +34,16 @@ mod tests {
 	use runtime_support::{Hashable, StorageValue, StorageMap};
 	use state_machine::{CodeExecutor, TestExternalities};
 	use primitives::{twox_128, KeccakHasher};
-	use exchange_primitives::{Hash, BlockNumber, AccountId};
+	use chainx_primitives::{Hash, BlockNumber, AccountId};
 	use runtime_primitives::traits::Header as HeaderT;
 	use runtime_primitives::{ApplyOutcome, ApplyError, ApplyResult, MaybeUnsigned};
 	use {staking, system, consensus};
-	use exchange_runtime::{Header, Block, UncheckedExtrinsic, Extrinsic, Call, Concrete, Staking,
+	use chainx_runtime::{Header, Block, UncheckedExtrinsic, Extrinsic, Call, Concrete, Staking,
 		BuildStorage, GenesisConfig, SessionConfig, StakingConfig, BareExtrinsic};
 	use ed25519::{Public, Pair};
 
-	const BLOATY_CODE: &[u8] = include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/exchange_runtime.wasm");
-	const COMPACT_CODE: &[u8] = include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/exchange_runtime.compact.wasm");
+	const BLOATY_CODE: &[u8] = include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.wasm");
+	const COMPACT_CODE: &[u8] = include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm");
 
 	// TODO: move into own crate.
 	macro_rules! map {
@@ -358,7 +358,7 @@ mod tests {
 			twox_128(&<system::BlockHash<Concrete>>::key_for(0)).to_vec() => vec![0u8; 32]
 		];
 
-		let foreign_code = include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/exchange_runtime.wasm");
+		let foreign_code = include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.wasm");
 		let r = WasmExecutor::new(8).call(&mut t, &foreign_code[..], "initialise_block", &vec![].and(&from_block_number(1u64)));
 		assert!(r.is_ok());
 		let r = WasmExecutor::new(8).call(&mut t, &foreign_code[..], "apply_extrinsic", &vec![].and(&xt())).unwrap();
@@ -378,7 +378,7 @@ mod tests {
 			twox_128(&<system::BlockHash<Concrete>>::key_for(0)).to_vec() => vec![0u8; 32]
 		];
 
-		let foreign_code = include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/exchange_runtime.compact.wasm");
+		let foreign_code = include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm");
 		let r = WasmExecutor::new(8).call(&mut t, &foreign_code[..], "initialise_block", &vec![].and(&from_block_number(1u64)));
 		assert!(r.is_ok());
 		let r = WasmExecutor::new(8).call(&mut t, &foreign_code[..], "apply_extrinsic", &vec![].and(&xt())).unwrap();

@@ -13,12 +13,14 @@ substrate-client-db = { git = "https://github.com/chainx-org/substrate" }
 substrate-state-db = { git = "https://github.com/chainx-org/substrate" }
 substrate-codec = { git = "https://github.com/chainx-org/substrate", default_features = false }
 substrate-bft = { git = "https://github.com/chainx-org/substrate", default_features = false }
+substrate-rpc-servers = { git = "https://github.com/chainx-org/substrate" }
 ed25519 = { git = "https://github.com/chainx-org/substrate" }
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
-exchange-primitives = {path = "./primitives"}
-exchange-runtime = {path = "./runtime"}
-exchange-executor = {path = "./executor"}
+chainx-primitives = {path = "./primitives"}
+chainx-runtime = {path = "./runtime"}
+chainx-executor = {path = "./executor"}
+chainx-rpc = {path = "./rpc"}
 hex-literal = "0.1"
 ctrlc = { version = "3.0", features = ["termination"] }
 futures = "0.1.17"

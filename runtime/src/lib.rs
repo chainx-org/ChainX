@@ -31,10 +31,10 @@ extern crate substrate_runtime_system as system;
 extern crate substrate_runtime_timestamp as timestamp;
 #[macro_use]
 extern crate substrate_runtime_version as version;
-extern crate exchange_primitives;
+extern crate chainx_primitives;
 
 use rstd::prelude::*;
-use exchange_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature};
+use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature};
 use runtime_primitives::generic;
 use runtime_primitives::traits::{Convert, HasPublicAux, BlakeTwo256};
 use version::RuntimeVersion;
