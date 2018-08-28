@@ -1,0 +1,29 @@
+[package]
+name = "chainx-pool"
+version = "0.1.0"
+authors = ["Chainpool  <http://www.chainx.org>"]
+
+[dependencies]
+error-chain = "0.12"
+hex-literal = "0.1"
+triehash = { version = "0.2.3" }
+ed25519 = { git = "https://github.com/chainx-org/substrate" }
+substrate-codec = { git = "https://github.com/chainx-org/substrate" }
+substrate-extrinsic-pool = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-io = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-support = { git = "https://github.com/chainx-org/substrate" }
+substrate-state-machine = { git = "https://github.com/chainx-org/substrate" }
+substrate-executor = { git = "https://github.com/chainx-org/substrate" }
+substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-network = { git = "https://github.com/chainx-org/substrate" }
+substrate-client = { git = "https://github.com/chainx-org/substrate" }
+chainx-primitives = { path = "../primitives" }
+chainx-runtime = { path = "../runtime" }
+chainx-executor = {path = "../executor"}
+[dev-dependencies]
+substrate-keyring = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-staking = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-system = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-consensus = { git = "https://github.com/chainx-org/substrate" }

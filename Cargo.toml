@@ -21,6 +21,7 @@ chainx-primitives = {path = "./primitives"}
 chainx-runtime = {path = "./runtime"}
 chainx-executor = {path = "./executor"}
 chainx-rpc = {path = "./rpc"}
+chainx-pool = {path = "./pool"}
 hex-literal = "0.1"
 ctrlc = { version = "3.0", features = ["termination"] }
 futures = "0.1.17"
@@ -37,4 +38,5 @@ members = [
     "runtime",
     "executor",
     "rpc",
+    "pool",
 ]

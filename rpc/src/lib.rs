@@ -7,9 +7,9 @@ extern crate log;
 use std::io;
 use std::net::SocketAddr;
 
-const CHAIN_NAME :&'static str = "chainx";
-const IMPL_NAME :&'static str = "bud";
-const IMPL_VERSION :&'static str = "v0.1.0";
+const CHAIN_NAME: &'static str = "chainx";
+const IMPL_NAME: &'static str = "bud";
+const IMPL_VERSION: &'static str = "v0.1.0";
 
 #[derive(Clone)]
 pub struct RpcConfig {
@@ -34,28 +34,29 @@ impl rpc::system::SystemApi for RpcConfig {
 
 pub fn default_rpc_config() -> RpcConfig {
     RpcConfig {
-      chain_name: CHAIN_NAME.to_string(),
-      impl_name: IMPL_NAME,
-      impl_version: IMPL_VERSION,
-    } 
+        chain_name: CHAIN_NAME.to_string(),
+        impl_name: IMPL_NAME,
+        impl_version: IMPL_VERSION,
+    }
 }
 
-pub fn maybe_start_server<T, F>(address: Option<SocketAddr>, start: F) -> Result<Option<T>, io::Error> where
+pub fn maybe_start_server<T, F>(
+    address: Option<SocketAddr>,
+    start: F,
+) -> Result<Option<T>, io::Error>
+where
     F: Fn(&SocketAddr) -> Result<T, io::Error>,
 {
     Ok(match address {
-        Some(mut address) => Some(start(&address)
-            .or_else(|e| match e.kind() {
-                io::ErrorKind::AddrInUse |
-                io::ErrorKind::PermissionDenied => {
-                    warn!("Unable to bind server to {}. Trying random port.", address);
-                    address.set_port(0);
-                    start(&address)
-                },
-                _ => Err(e),
-            })?),
+        Some(mut address) => Some(start(&address).or_else(|e| match e.kind() {
+            io::ErrorKind::AddrInUse |
+            io::ErrorKind::PermissionDenied => {
+                warn!("Unable to bind server to {}. Trying random port.", address);
+                address.set_port(0);
+                start(&address)
+            }
+            _ => Err(e),
+        })?),
         None => None,
     })
 }
-
-

@@ -34,7 +34,8 @@ extern crate substrate_runtime_version as version;
 extern crate chainx_primitives;
 
 use rstd::prelude::*;
-use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature};
+use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey,
+                        Signature};
 use runtime_primitives::generic;
 use runtime_primitives::traits::{Convert, HasPublicAux, BlakeTwo256};
 use version::RuntimeVersion;
@@ -50,49 +51,49 @@ pub struct Concrete;
 
 /// Runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: ver_str!("demo"),
-	impl_name: ver_str!("parity-demo"),
-	authoring_version: 1,
-	spec_version: 1,
-	impl_version: 0,
+    spec_name: ver_str!("demo"),
+    impl_name: ver_str!("parity-demo"),
+    authoring_version: 1,
+    spec_version: 1,
+    impl_version: 0,
 };
 
 /// Version module for this concrete runtime.
 pub type Version = version::Module<Concrete>;
 
 impl version::Trait for Concrete {
-	const VERSION: RuntimeVersion = VERSION;
+    const VERSION: RuntimeVersion = VERSION;
 }
 
 impl HasPublicAux for Concrete {
-	type PublicAux = AccountId;
+    type PublicAux = AccountId;
 }
 
 impl system::Trait for Concrete {
-	type Index = Index;
-	type BlockNumber = BlockNumber;
-	type Hash = Hash;
-	type Hashing = BlakeTwo256;
-	type Digest = generic::Digest<Vec<u8>>;
-	type AccountId = AccountId;
-	type Header = generic::Header<BlockNumber, BlakeTwo256, Vec<u8>>;
+    type Index = Index;
+    type BlockNumber = BlockNumber;
+    type Hash = Hash;
+    type Hashing = BlakeTwo256;
+    type Digest = generic::Digest<Vec<u8>>;
+    type AccountId = AccountId;
+    type Header = generic::Header<BlockNumber, BlakeTwo256, Vec<u8>>;
 }
 
 /// System module for this concrete runtime.
 pub type System = system::Module<Concrete>;
 
 impl consensus::Trait for Concrete {
-	type PublicAux = <Self as HasPublicAux>::PublicAux;
-	type SessionKey = SessionKey;
+    type PublicAux = <Self as HasPublicAux>::PublicAux;
+    type SessionKey = SessionKey;
 }
 
 /// Consensus module for this concrete runtime.
 pub type Consensus = consensus::Module<Concrete>;
 
 impl timestamp::Trait for Concrete {
-	const TIMESTAMP_SET_POSITION: u32 = 0;
+    const TIMESTAMP_SET_POSITION: u32 = 0;
 
-	type Moment = u64;
+    type Moment = u64;
 }
 
 /// Timestamp module for this concrete runtime.
@@ -101,31 +102,31 @@ pub type Timestamp = timestamp::Module<Concrete>;
 /// Session key conversion.
 pub struct SessionKeyConversion;
 impl Convert<AccountId, SessionKey> for SessionKeyConversion {
-	fn convert(a: AccountId) -> SessionKey {
-		a.0.into()
-	}
+    fn convert(a: AccountId) -> SessionKey {
+        a.0.into()
+    }
 }
 
 impl session::Trait for Concrete {
-	const NOTE_MISSED_PROPOSAL_POSITION: u32 = 1;
-	type ConvertAccountIdToSessionKey = SessionKeyConversion;
-	type OnSessionChange = Staking;
+    const NOTE_MISSED_PROPOSAL_POSITION: u32 = 1;
+    type ConvertAccountIdToSessionKey = SessionKeyConversion;
+    type OnSessionChange = Staking;
 }
 
 /// Session module for this concrete runtime.
 pub type Session = session::Module<Concrete>;
 
 impl staking::Trait for Concrete {
-	type Balance = Balance;
-	type AccountIndex = AccountIndex;
-	type OnAccountKill = ();
+    type Balance = Balance;
+    type AccountIndex = AccountIndex;
+    type OnAccountKill = ();
 }
 
 /// Staking module for this concrete runtime.
 pub type Staking = staking::Module<Concrete>;
 
 impl democracy::Trait for Concrete {
-	type Proposal = PrivCall;
+    type Proposal = PrivCall;
 }
 
 /// Democracy module for this concrete runtime.
@@ -178,8 +179,13 @@ pub type Extrinsic = generic::Extrinsic<Address, Index, Call>;
 /// Extrinsic type that is signed.
 pub type BareExtrinsic = generic::Extrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Concrete, Block, Staking, Staking,
-	(((((), Council), Democracy), Staking), Session)>;
+pub type Executive = executive::Executive<
+    Concrete,
+    Block,
+    Staking,
+    Staking,
+    (((((), Council), Democracy), Staking), Session),
+>;
 
 impl_outer_config! {
 	pub struct GenesisConfig for Concrete {
@@ -194,7 +200,7 @@ impl_outer_config! {
 }
 
 pub mod api {
-	impl_stubs!(
+    impl_stubs!(
 		version => |()| super::Version::version(),
 		authorities => |()| super::Consensus::authorities(),
 		initialise_block => |header| super::Executive::initialise_block(&header),

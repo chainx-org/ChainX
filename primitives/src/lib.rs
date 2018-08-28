@@ -15,19 +15,8 @@ extern crate substrate_runtime_std as rstd;
 #[cfg(test)]
 extern crate substrate_serializer;
 
-#[macro_use]
-extern crate substrate_codec_derive;
-
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
-
 #[cfg(feature = "std")]
 extern crate serde;
-
-#[cfg(feature = "std")]
-use primitives::bytes;
-
 use rstd::prelude::*;
 use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::generic;
