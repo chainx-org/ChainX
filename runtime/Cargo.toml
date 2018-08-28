@@ -10,22 +10,22 @@ log = { version = "0.3", optional = true }
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
 safe-mix = { version = "1.0", default_features = false}
-substrate-codec = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-std = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-io = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-support = { git = "https://github.com/paritytech/substrate" }
-substrate-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-keyring = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-consensus = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-council = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-democracy = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-executive = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-session = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-staking = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-system = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-timestamp = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-version = { git = "https://github.com/paritytech/substrate" }
+substrate-codec = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-std = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-io = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-support = { git = "https://github.com/chainx-org/substrate" }
+substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-keyring = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-consensus = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-council = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-democracy = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-executive = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-session = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-staking = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-system = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-timestamp = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-version = { git = "https://github.com/chainx-org/substrate" }
 exchange-primitives = { path = "../primitives" }
 
 [features]

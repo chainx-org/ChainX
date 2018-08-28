@@ -4,16 +4,16 @@ version = "0.1.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-substrate-network = { git = "https://github.com/paritytech/substrate" }
-substrate-network-libp2p = { git = "https://github.com/paritytech/substrate" }
-substrate-runtime-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-client = { git = "https://github.com/paritytech/substrate" }
-substrate-client-db = { git = "https://github.com/paritytech/substrate" }
-substrate-state-db = { git = "https://github.com/paritytech/substrate" }
-substrate-codec = { git = "https://github.com/paritytech/substrate", default_features = false }
-substrate-bft = { git = "https://github.com/paritytech/substrate", default_features = false }
-ed25519 = { git = "https://github.com/paritytech/substrate" }
+substrate-network = { git = "https://github.com/chainx-org/substrate" }
+substrate-network-libp2p = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-client = { git = "https://github.com/chainx-org/substrate" }
+substrate-client-db = { git = "https://github.com/chainx-org/substrate" }
+substrate-state-db = { git = "https://github.com/chainx-org/substrate" }
+substrate-codec = { git = "https://github.com/chainx-org/substrate", default_features = false }
+substrate-bft = { git = "https://github.com/chainx-org/substrate", default_features = false }
+ed25519 = { git = "https://github.com/chainx-org/substrate" }
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
 exchange-primitives = {path = "./primitives"}
