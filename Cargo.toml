@@ -13,6 +13,7 @@ substrate-client-db = { git = "https://github.com/paritytech/substrate" }
 substrate-state-db = { git = "https://github.com/paritytech/substrate" }
 substrate-codec = { git = "https://github.com/paritytech/substrate", default_features = false }
 substrate-bft = { git = "https://github.com/paritytech/substrate", default_features = false }
+ed25519 = { git = "https://github.com/paritytech/substrate" }
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
 exchange-primitives = {path = "./primitives"}
@@ -26,11 +27,12 @@ log = "0.3"
 env_logger = "0.4.3"
 clap = "2.30.0"
 rhododendron = "0.3"
-ed25519 = { git = "https://github.com/paritytech/substrate" }
+exit-future = "0.1"
 
 [workspace]
 members = [
     "primitives",
     "runtime",
     "executor",
+    "rpc",
 ]

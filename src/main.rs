@@ -13,6 +13,7 @@ extern crate exchange_runtime;
 
 extern crate futures;
 extern crate tokio;
+extern crate exit_future;
 extern crate ctrlc;
 extern crate rhododendron;
 #[macro_use]
@@ -30,20 +31,25 @@ use exchange_primitives::{Block, Header, Hash, UncheckedExtrinsic};
 use exchange_runtime::{GenesisConfig,
     ConsensusConfig, CouncilConfig, DemocracyConfig, SessionConfig, StakingConfig,
     TimestampConfig};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::path::PathBuf;
-use std::collections::HashMap;
+
 use futures::{Future, Sink, Stream};
 use tokio::runtime::Runtime;
+use tokio::timer::Interval;
 use clap::{Arg, App, SubCommand};
+
+use std::sync::Arc;
+use std::path::PathBuf;
+use std::collections::HashMap;
 use std::iter;
 use std::net::Ipv4Addr;
 use std::thread;
+use std::time::{Duration, Instant};
 
 pub struct Protocol {
   version: u64,
 }
+
+const TIMER_INTERVAL_MS: u64 = 5000;
 
 type FullStatus = GenericFullStatus<Block>;
 
@@ -243,13 +249,8 @@ fn main() {
     };
     let network = NetworkService::new(param, DOT_PROTOCOL_ID).unwrap();
 
-    let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-    ctrlc::set_handler(move || {
-       r.store(false, Ordering::SeqCst);
-    }).expect("Error setting Ctrl-C handler");
-
-    while running.load(Ordering::SeqCst) {
+    let interval = Interval::new(Instant::now(), Duration::from_millis(TIMER_INTERVAL_MS));
+    let work = interval.map_err(|e| debug!("Timer error: {:?}", e)).for_each(move |_| {
         let best_header = client.best_block_header().unwrap();
         println!("Best block: #{}", best_header.number);
         if let Some(_) = matches.subcommand_matches("validator") {
@@ -262,6 +263,10 @@ fn main() {
                 client.import_block(client::BlockOrigin::NetworkBroadcast, justified, Some(block.extrinsics)).unwrap();
                 network.on_block_imported(hash, &block_header);
         }
-        thread::sleep_ms(5000);
-    }
+        Ok(())
+    });
+    let (exit_send, exit) = exit_future::signal();
+    let mut runtime = Runtime::new().expect("failed to start runtime on current thread");
+    let _ = runtime.block_on(exit.until(work).map(|_| ()));
+    exit_send.fire();
 }
