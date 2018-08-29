@@ -114,7 +114,6 @@ fn genesis_config() -> GenesisConfig {
         session: Some(SessionConfig {
             validators: vec![god_key.clone().into()],
             session_length: 720, // that's 1 hour per session.
-            broken_percent_late: 30,
         }),
         staking: Some(StakingConfig {
             current_era: 0,
@@ -228,9 +227,9 @@ fn main() {
     };
 
     let mut net_conf = substrate_network_libp2p::NetworkConfiguration::new();
-    net_conf.listen_address = iter::once(AddrComponent::IP4(Ipv4Addr::new(127, 0, 0, 1)))
+    net_conf.listen_addresses = vec![iter::once(AddrComponent::IP4(Ipv4Addr::new(127, 0, 0, 1)))
         .chain(iter::once(AddrComponent::TCP(port)))
-        .collect();
+        .collect()];
     net_conf.boot_nodes.extend(
         matches.values_of("bootnodes").map_or(
             Default::default(),
@@ -238,7 +237,7 @@ fn main() {
         ),
     );
 
-    env_logger::init();
+    let _ = env_logger::try_init();
 
     let executor = chainx_executor::NativeExecutor::with_heap_pages(8);
     let client = Arc::new(

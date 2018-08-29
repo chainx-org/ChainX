@@ -20,6 +20,10 @@ extern crate serde_derive;
 #[cfg(feature = "std")]
 extern crate serde;
 
+extern crate substrate_codec as codec;
+ #[macro_use]
+extern crate substrate_codec_derive;
+
 extern crate substrate_runtime_std as rstd;
 extern crate substrate_runtime_consensus as consensus;
 extern crate substrate_runtime_council as council;
@@ -51,12 +55,18 @@ pub struct Concrete;
 
 /// Runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: ver_str!("demo"),
-    impl_name: ver_str!("parity-demo"),
+    spec_name: ver_str!("chainx"),
+    impl_name: ver_str!("chainpool-chainx"),
     authoring_version: 1,
     spec_version: 1,
     impl_version: 0,
 };
+
+impl_outer_event! {
+    pub enum Event for Concrete {
+        session, staking
+    }
+}
 
 /// Version module for this concrete runtime.
 pub type Version = version::Module<Concrete>;
@@ -77,6 +87,7 @@ impl system::Trait for Concrete {
     type Digest = generic::Digest<Vec<u8>>;
     type AccountId = AccountId;
     type Header = generic::Header<BlockNumber, BlakeTwo256, Vec<u8>>;
+    type Event = Event;
 }
 
 /// System module for this concrete runtime.
@@ -108,18 +119,20 @@ impl Convert<AccountId, SessionKey> for SessionKeyConversion {
 }
 
 impl session::Trait for Concrete {
-    const NOTE_MISSED_PROPOSAL_POSITION: u32 = 1;
     type ConvertAccountIdToSessionKey = SessionKeyConversion;
     type OnSessionChange = Staking;
+    type Event = Event;
 }
 
 /// Session module for this concrete runtime.
 pub type Session = session::Module<Concrete>;
 
 impl staking::Trait for Concrete {
+    const NOTE_MISSED_PROPOSAL_POSITION: u32 = 1;
     type Balance = Balance;
     type AccountIndex = AccountIndex;
-    type OnAccountKill = ();
+    type OnFreeBalanceZero = ();
+    type Event = Event;
 }
 
 /// Staking module for this concrete runtime.

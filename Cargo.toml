@@ -27,7 +27,7 @@ ctrlc = { version = "3.0", features = ["termination"] }
 futures = "0.1.17"
 tokio = "0.1.7"
 log = "0.3"
-env_logger = "0.4.3"
+env_logger = "0.5.13"
 clap = "2.30.0"
 rhododendron = "0.3"
 exit-future = "0.1"
