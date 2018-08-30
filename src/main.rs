@@ -7,6 +7,9 @@ extern crate substrate_primitives;
 extern crate substrate_client as client;
 extern crate substrate_bft as bft;
 extern crate substrate_rpc_servers as rpc_server;
+extern crate substrate_client_db as client_db;
+extern crate substrate_state_machine as state_machine;
+extern crate substrate_state_db as state_db;
 
 extern crate chainx_primitives;
 extern crate chainx_executor;
@@ -32,6 +35,7 @@ use substrate_network::specialization::Specialization;
 use substrate_network::{NodeIndex, Context, message};
 use substrate_network::StatusMessage as GenericFullStatus;
 use chainx_primitives::{Block, Header, Hash};
+use chainx_executor::NativeExecutor;
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig};
 
@@ -43,13 +47,16 @@ use std::sync::Arc;
 use std::iter;
 use std::net::{Ipv4Addr, IpAddr, SocketAddr};
 use std::time::{Duration, Instant};
+use std::path::PathBuf;
 
 use chainx_pool::pool::{TransactionPool, PoolApi};
+use state_machine::ExecutionStrategy;
 
 
 pub struct Protocol;
 
 const TIMER_INTERVAL_MS: u64 = 5000;
+const FINALIZATION_WINDOW: u64 = 32;
 
 type FullStatus = GenericFullStatus<Block>;
 
@@ -99,7 +106,11 @@ pub type NetworkService = substrate_network::Service<Block, Protocol, Hash>;
 
 pub type NetworkParam = substrate_network::Params<Block, Protocol, Hash>;
 
+pub type TBackend = client_db::Backend<Block>;
+pub type TExecutor = client::LocalCallExecutor<TBackend, NativeExecutor<chainx_executor::Executor>>;
+
 const DOT_PROTOCOL_ID: substrate_network::ProtocolId = *b"exc";
+const DB_PATH: &str = r"./chainx";
 
 fn genesis_config() -> GenesisConfig {
     let god_key = hex!("3d866ec8a9190c8343c2fc593d21d8a6d0c5c4763aaab2349de3a6111d64d124");
@@ -239,15 +250,26 @@ fn main() {
 
     let _ = env_logger::try_init();
 
-    let executor = chainx_executor::NativeExecutor::with_heap_pages(8);
-    let client = Arc::new(
-        client::new_in_mem::<
-            chainx_executor::NativeExecutor<chainx_executor::Executor>,
-            Block,
-            _,
-        >(executor, genesis_config()).unwrap(),
-    );
+    let backend = Arc::new(
+        TBackend::new(
+            client_db::DatabaseSettings{
+                cache_size: None,
+                path: PathBuf::from(DB_PATH),
+                pruning:state_db::PruningMode::default(),},
+                FINALIZATION_WINDOW
+        ).unwrap());
 
+    let executor = client::LocalCallExecutor::new(
+                    backend.clone(),
+                    NativeExecutor::<chainx_executor::Executor>::with_heap_pages(8));
+
+    let client = Arc::new(
+            client::Client::new(
+                backend.clone(),
+                executor,
+                genesis_config(),
+                ExecutionStrategy::NativeWhenPossible
+            ).unwrap());
 
     let (exit_send, exit) = exit_future::signal();
     let mut runtime = Runtime::new().expect("failed to start runtime on current thread");
@@ -298,16 +320,16 @@ fn main() {
                 let block_header = block.header.clone();
                 let hash = block_header.hash();
                 let justification = fake_justify(&block.header);
-                let justified = client
-                    .check_justification(block.header, justification)
-                    .unwrap();
-                client
-                    .import_block(
+                let justified = client.check_justification(
+                                        block.header,
+                                        justification).unwrap();
+
+                client.import_block(
                         client::BlockOrigin::NetworkBroadcast,
                         justified,
                         Some(block.extrinsics),
-                    )
-                    .unwrap();
+                    ).unwrap();
+
                 network.on_block_imported(hash, &block_header);
             }
             Ok(())

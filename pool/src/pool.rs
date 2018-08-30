@@ -11,9 +11,8 @@ use std::{
 use codec::{Encode, Decode};
 use chainx_runtime::{Address, UncheckedExtrinsic};
 use runtime_primitives::traits::{Checkable};
-use substrate_primitives::{KeccakHasher, RlpCodec};
 use substrate_client::{self, Client};
-
+use substrate_client_db;
 
 use extrinsic_pool::{
     Pool,
@@ -39,7 +38,7 @@ pub type CheckedExtrinsic =
             &'static str,
         >,
     >>::Checked;
-pub type Backend = substrate_client::in_mem::Backend<Block, KeccakHasher, RlpCodec>;
+pub type Backend = substrate_client_db::Backend<Block>;
 use chainx_executor;
 pub type Executor = substrate_client::LocalCallExecutor<
     Backend,
