@@ -321,12 +321,12 @@ fn main() {
         IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
         8082,
     ));
-    chainx_rpc::maybe_start_server(
+    let _rpc_http = chainx_rpc::maybe_start_server(
         rpc_http,
         |address| rpc_server::start_http(address, handler()),
-    ).unwrap();
-    chainx_rpc::maybe_start_server(rpc_ws, |address| rpc_server::start_ws(address, handler()))
-        .unwrap();
+    );
+    let _rpc_ws = chainx_rpc::maybe_start_server(rpc_ws,
+        |address| rpc_server::start_ws(address, handler()));
 
     let _ = runtime.block_on(exit.until(work).map(|_| ()));
     exit_send.fire();
