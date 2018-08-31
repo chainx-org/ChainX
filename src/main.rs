@@ -178,6 +178,7 @@ fn main() {
         backend.clone(),
         NativeExecutor::<chainx_executor::Executor>::with_heap_pages(8));
     let genesis_config = genesis_config::testnet_genesis();
+
     let client = Arc::new(
         client::Client::new(
             backend.clone(),
