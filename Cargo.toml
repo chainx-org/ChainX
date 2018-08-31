@@ -1,7 +1,7 @@
 [package]
-name = "ChainX"
+name = "chainx"
 version = "0.1.0"
-authors = ["Chainpool <http://www.chainx.org>"]
+authors = ["Chainpool <https://www.chainx.org>"]
 
 [dependencies]
 substrate-network = { git = "https://github.com/chainx-org/substrate" }
@@ -11,6 +11,7 @@ substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
 substrate-client = { git = "https://github.com/chainx-org/substrate" }
 substrate-client-db = { git = "https://github.com/chainx-org/substrate" }
 substrate-state-db = { git = "https://github.com/chainx-org/substrate" }
+substrate-state-machine = { git = "https://github.com/chainx-org/substrate" }
 substrate-codec = { git = "https://github.com/chainx-org/substrate", default_features = false }
 substrate-bft = { git = "https://github.com/chainx-org/substrate", default_features = false }
 substrate-rpc-servers = { git = "https://github.com/chainx-org/substrate" }
