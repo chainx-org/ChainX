@@ -4,26 +4,22 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[macro_use]
-extern crate substrate_runtime_io as runtime_io;
-
-#[macro_use]
-extern crate substrate_runtime_support;
-
-#[macro_use]
-extern crate substrate_runtime_primitives as runtime_primitives;
 
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate serde_derive;
-
 #[cfg(feature = "std")]
 extern crate serde;
 
+#[macro_use]
+extern crate substrate_runtime_io as runtime_io;
+#[macro_use]
+extern crate substrate_runtime_support;
+#[macro_use]
+extern crate substrate_runtime_primitives as runtime_primitives;
 extern crate substrate_codec as codec;
  #[macro_use]
 extern crate substrate_codec_derive;
-
 extern crate substrate_runtime_std as rstd;
 extern crate substrate_runtime_consensus as consensus;
 extern crate substrate_runtime_council as council;
@@ -36,6 +32,11 @@ extern crate substrate_runtime_timestamp as timestamp;
 #[macro_use]
 extern crate substrate_runtime_version as version;
 extern crate chainx_primitives;
+#[cfg(feature = "std")]
+mod checked_block;
+
+#[cfg(feature = "std")]
+pub use checked_block::CheckedBlock;
 
 use rstd::prelude::*;
 use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey,
@@ -52,6 +53,12 @@ pub use runtime_primitives::BuildStorage;
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 /// Concrete runtime type used to parameterize the various modules.
 pub struct Concrete;
+
+
+/// The position of the timestamp set extrinsic.
+pub const TIMESTAMP_SET_POSITION: u32 = 0;
+/// The position of the offline nodes noting extrinsic.
+pub const NOTE_OFFLINE_POSITION: u32 = 2;
 
 /// Runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {

@@ -1,9 +1,6 @@
 // Copyright 2018 Chainpool.
 
 //! Shareable ChainX types.
-
-#![warn(missing_docs)]
-
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
@@ -17,9 +14,18 @@ extern crate substrate_serializer;
 
 #[cfg(feature = "std")]
 extern crate serde;
+#[cfg(feature = "std")]
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate substrate_codec_derive;
+
 use rstd::prelude::*;
 use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::generic;
+
+/// Signature on candidate's block data by a collator.
+pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
 
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, Vec<u8>>;
@@ -79,9 +85,45 @@ pub type Balance = u128;
 // TODO: parameterize blockid only as necessary.
 pub type BlockId = generic::BlockId<Block>;
 
-/*
-/// A log entry in the block.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
+/// Inherent data to include in a block.
+#[derive(Encode, Decode)]
+pub struct InherentData {
+    /// Current timestamp.
+    pub timestamp: Timestamp,
+    /// Indices of offline validators.
+    pub offline_indices: Vec<u32>,
+}
+
+/// Candidate receipt type.
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct Log(#[cfg_attr(feature = "std", serde(with="bytes"))] pub Vec<u8>);
-*/
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+#[cfg_attr(feature = "std", serde(deny_unknown_fields))]
+pub struct CandidateReceipt {
+    /// chainx account id.
+    pub collator: AccountId,
+    /// Signature on blake2-256 of the block data by collator.
+    pub signature: CandidateSignature,
+    /// blake2-256 Hash of block data.
+    pub block_data_hash: Hash,
+}
+
+impl CandidateReceipt {
+    /// Get the blake2_256 hash
+    #[cfg(feature = "std")]
+    pub fn hash(&self) -> Hash {
+        use runtime_primitives::traits::{BlakeTwo256, Hash};
+        BlakeTwo256::hash_of(self)
+    }
+
+    /// Check integrity vs. provided block data.
+    pub fn check_signature(&self) -> Result<(), ()> {
+        use runtime_primitives::traits::Verify;
+
+        if self.signature.verify(&self.block_data_hash.0[..], &self.collator) {
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
+}

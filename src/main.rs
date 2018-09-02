@@ -46,7 +46,7 @@ use chainx_executor::NativeExecutor;
 use futures::{Future, Stream};
 use tokio::runtime::Runtime;
 use tokio::timer::Interval;
-use chainx_pool::pool::{TransactionPool, PoolApi};
+use chainx_pool::{TransactionPool, PoolApi};
 use state_machine::ExecutionStrategy;
 
 mod genesis_config;
@@ -203,7 +203,7 @@ fn main() {
         let state = rpc_server::apis::state::State::new(rpc_client.clone(), task_executor.clone());
         let author = rpc_server::apis::author::Author::new(
             rpc_client.clone(),
-            extrinsic_pool.inner.clone(),
+            extrinsic_pool.inner().clone(),
             task_executor.clone(),
             );
         rpc_server::rpc_handler::<chainx_primitives::Block, chainx_primitives::Hash, _, _, _, _, _>(

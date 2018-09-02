@@ -36,8 +36,10 @@ exit-future = "0.1"
 [workspace]
 members = [
     "primitives",
-    "runtime",
+    "consensus",
     "executor",
-    "rpc",
+    "runtime",
     "pool",
+    "rpc",
+    "api",
 ]

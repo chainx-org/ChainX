@@ -4,13 +4,10 @@ use std::{
     cmp::Ordering,
     collections::HashMap,
     sync::Arc,
-    result,
 };
 
 
 use codec::{Encode, Decode};
-use chainx_runtime::{Address, UncheckedExtrinsic};
-use runtime_primitives::traits::{Checkable};
 use substrate_client::{self, Client};
 use substrate_client_db;
 
@@ -30,14 +27,6 @@ use extrinsic_pool::{
 
 use substrate_network;
 use chainx_primitives::{Block, Hash, BlockId, AccountId};
-pub type CheckedExtrinsic =
-    <UncheckedExtrinsic as Checkable<
-        fn(Address)
-           -> result::Result<
-            AccountId,
-            &'static str,
-        >,
-    >>::Checked;
 pub type Backend = substrate_client_db::Backend<Block>;
 use chainx_executor;
 pub type Executor = substrate_client::LocalCallExecutor<
@@ -51,8 +40,6 @@ pub struct VerifiedExtrinsic {
     sender: AccountId,
     hash: Hash,
 }
-
-pub struct Scoring;
 
 impl VerifiedTransaction for VerifiedExtrinsic {
     type Hash = Hash;
@@ -134,7 +121,7 @@ impl ChainApi for PoolApi {
 
 
 pub struct TransactionPool {
-    pub inner: Arc<Pool<PoolApi>>,
+    inner: Arc<Pool<PoolApi>>,
     client: Arc<Client<Backend, Executor, Block>>,
 }
 
@@ -157,7 +144,12 @@ impl TransactionPool {
             .map(|info| BlockId::hash(info.chain.best_hash))
             .ok()
     }
+
+    pub fn inner(&self) -> Arc<Pool<PoolApi>> {
+      self.inner.clone()         
+    }
 }
+
 impl substrate_network::TransactionPool<Hash, Block> for TransactionPool {
     fn transactions(&self) -> Vec<(Hash, Vec<u8>)> {
         println!("-------------transactions-------------");

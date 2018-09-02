@@ -13,4 +13,7 @@ extern crate substrate_extrinsic_pool as extrinsic_pool;
 extern crate substrate_client;
 extern crate ed25519;
 
-pub mod pool;
+mod pool;
+
+pub use pool::TransactionPool;
+pub use pool::PoolApi;
