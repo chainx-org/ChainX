@@ -1,29 +1,34 @@
 // Copyright 2018 chainpool.
 
-extern crate chainx_executor;
+extern crate substrate_runtime_primitives as runtime_primitives;
+extern crate substrate_executor as substrate_executor;
+extern crate substrate_state_machine as state_machine;
+extern crate substrate_runtime_io as runtime_io;
+extern crate substrate_client_db as client_db;
+extern crate substrate_runtime_executive;
+extern crate substrate_client as client;
+extern crate substrate_codec as codec;
+extern crate substrate_primitives;
+
 extern crate chainx_primitives as primitives;
 extern crate chainx_runtime as runtime;
-extern crate substrate_codec as codec;
-extern crate substrate_runtime_io as runtime_io;
-extern crate substrate_client as client;
-extern crate substrate_executor as substrate_executor;
-extern crate substrate_runtime_executive;
-extern crate substrate_primitives;
-extern crate substrate_runtime_primitives as runtime_primitives;
-extern crate substrate_state_machine as state_machine;
+extern crate chainx_executor;
 
 #[macro_use]
 extern crate error_chain;
-
-#[cfg(test)]
-extern crate substrate_keyring as keyring;
-
+#[macro_use]
+extern crate log;
 
 use primitives::{
 	AccountId, Block, BlockId, Hash, Index, SessionKey, Timestamp,
-	UncheckedExtrinsic, InherentData,
+	UncheckedExtrinsic, InherentData, Header,
 };
+use client::block_builder::BlockBuilder as ClientBlockBuilder;
+use substrate_primitives::{KeccakHasher, RlpCodec};
+use chainx_executor::NativeExecutor;
 use runtime::Address;
+
+mod implement;
 
 error_chain! {
 	errors {
@@ -70,6 +75,12 @@ pub trait BlockBuilder {
 	/// Bake the block with provided extrinsics.
 	fn bake(self) -> Result<Block>;
 }
+
+pub type TBackend = client_db::Backend<Block>;
+pub type TExecutor = client::LocalCallExecutor<TBackend, NativeExecutor<chainx_executor::Executor>>;
+pub type TClient = client::Client<TBackend, TExecutor, Block>;
+pub type TClientBlockBuilder = ClientBlockBuilder<TBackend, TExecutor, Block, KeccakHasher, RlpCodec>;
+
 
 /// Trait encapsulating the ChainX API.
 ///

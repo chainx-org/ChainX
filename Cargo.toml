@@ -18,20 +18,22 @@ substrate-rpc-servers = { git = "https://github.com/chainx-org/substrate" }
 ed25519 = { git = "https://github.com/chainx-org/substrate" }
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
-chainx-primitives = {path = "./primitives"}
-chainx-runtime = {path = "./runtime"}
-chainx-executor = {path = "./executor"}
-chainx-rpc = {path = "./rpc"}
-chainx-pool = {path = "./pool"}
-hex-literal = "0.1"
+chainx-primitives = { path = "./primitives" }
+chainx-executor = { path = "./executor" }
+chainx-runtime = { path = "./runtime" }
+chainx-network = { path = "./network" }
+chainx-pool = { path = "./pool" }
+chainx-rpc = { path = "./rpc" }
+chainx-api = { path = "./api" }
 ctrlc = { version = "3.0", features = ["termination"] }
+env_logger = "0.5.13"
+rhododendron = "0.3"
+hex-literal = "0.1"
+exit-future = "0.1"
 futures = "0.1.17"
 tokio = "0.1.7"
-log = "0.3"
-env_logger = "0.5.13"
 clap = "2.30.0"
-rhododendron = "0.3"
-exit-future = "0.1"
+log = "0.3"
 
 [workspace]
 members = [

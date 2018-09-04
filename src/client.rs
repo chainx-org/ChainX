@@ -1,21 +1,22 @@
 // Copyright 2018 chainpool
 
+extern crate substrate_state_machine as state_machine;
 extern crate substrate_client_db as client_db;
 extern crate substrate_state_db as state_db;
-extern crate substrate_state_machine as state_machine;
+extern crate substrate_primitives;
 extern crate substrate_client;
 
+extern crate chainx_primitives;
 extern crate chainx_executor;
+extern crate chainx_api;
 
-use self::chainx_executor::NativeExecutor;
+pub use self::chainx_api::{TBackend, TExecutor, TClient, TClientBlockBuilder};
 use self::state_machine::ExecutionStrategy;
+use self::chainx_executor::NativeExecutor;
 use std::path::PathBuf;
 use super::Arc;
 
 const FINALIZATION_WINDOW: u64 = 32;
-pub type TBackend = client_db::Backend<super::Block>;
-pub type TExecutor = substrate_client::LocalCallExecutor<TBackend, NativeExecutor<chainx_executor::Executor>>;
-pub type TClient = substrate_client::Client<TBackend, TExecutor, super::Block>;
 
 pub fn build_client(db_path: &str) -> Arc<TClient> {
     let backend = Arc::new(

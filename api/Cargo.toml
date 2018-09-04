@@ -4,18 +4,17 @@ version = "0.1.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-error-chain = "0.12"
+substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-executive = { git = "https://github.com/chainx-org/substrate" }
+substrate-state-machine = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-io = { git = "https://github.com/chainx-org/substrate" }
+substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-client-db = { git = "https://github.com/chainx-org/substrate" }
+substrate-executor = { git = "https://github.com/chainx-org/substrate" }
+substrate-client = { git = "https://github.com/chainx-org/substrate" }
+substrate-codec = { git = "https://github.com/chainx-org/substrate" }
+chainx-primitives = { path = "../primitives" }
 chainx-executor = { path = "../executor" }
 chainx-runtime = { path = "../runtime" }
-chainx-primitives = { path = "../primitives" }
-substrate-codec = { git = "https://github.com/chainx-org/substrate" }
-substrate-runtime-io = { git = "https://github.com/chainx-org/substrate" }
-substrate-runtime-executive = { git = "https://github.com/chainx-org/substrate" }
-substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
-substrate-client = { git = "https://github.com/chainx-org/substrate" }
-substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
-substrate-executor = { git = "https://github.com/chainx-org/substrate" }
-substrate-state-machine = { git = "https://github.com/chainx-org/substrate" }
-
-[dev-dependencies]
-substrate-keyring = { git = "https://github.com/chainx-org/substrate" }
+error-chain = "0.12"
+log = "0.3"
