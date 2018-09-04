@@ -296,6 +296,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "chainx-network"
+version = "0.1.0"
+dependencies = [
+ "chainx-api 0.1.0",
+ "chainx-consensus 0.1.0",
+ "chainx-primitives 0.1.0",
+ "ed25519 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rhododendron 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-bft 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-codec-derive 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-network 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "tokio 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "chainx-pool"
 version = "0.1.0"
 dependencies = [

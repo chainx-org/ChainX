@@ -39,6 +39,7 @@ members = [
     "consensus",
     "executor",
     "runtime",
+    "network",
     "pool",
     "rpc",
     "api",

@@ -121,7 +121,6 @@ impl Service {
 			C: BlockchainEvents<Block> + ChainHead<Block> + BlockBody<Block>,
 			C: bft::BlockImport<Block> + bft::Authorities<Block> + Send + Sync + 'static,
 			N: Network + Send + 'static,
-			N::TableRouter: Send + 'static,
 	{
 		use parking_lot::RwLock;
 		use super::OfflineTracker;

@@ -1,3 +1,5 @@
+// Copyright 2018 chainpool
+
 use ed25519;
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
 SessionConfig, StakingConfig, TimestampConfig};

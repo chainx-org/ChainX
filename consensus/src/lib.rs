@@ -57,27 +57,17 @@ pub type TransactionPool = substrate_extrinsic_pool::Pool<chainx_pool::PoolApi>;
 // block size limit.
 const MAX_TRANSACTIONS_SIZE: usize = 4 * 1024 * 1024;
 
-/// A handle to a statement table router.
-///
-/// This is expected to be a lightweight, shared type like an `Arc`.
-pub trait TableRouter: Clone {
-	/// Errors when fetching data from the network.
-	type Error;
-}
-
 /// A long-lived network which can create BFT message routing processes on demand.
 pub trait Network {
-	/// The table router type. This should handle importing of any statements,
-	/// routing statements to peers, and driving completion of any `StatementProducers`.
-	type TableRouter: TableRouter;
 	/// The input stream of BFT messages. Should never logically conclude.
 	type Input: Stream<Item=bft::Communication<Block>,Error=Error>;
 	/// The output sink of BFT messages. Messages sent here should eventually pass to all
 	/// current authorities.
 	type Output: Sink<SinkItem=bft::Communication<Block>,SinkError=Error>;
 
-	/// Instantiate a table router using the given task executor.
-	fn communication_for(&self, validators: &[SessionKey], task_executor: TaskExecutor) -> (Self::TableRouter, Self::Input, Self::Output);
+	fn communication_for(&self, validators: &[SessionKey], parent_hash: Hash,
+                         key: Arc<ed25519::Pair>, task_executor: TaskExecutor)
+       -> (Self::Input, Self::Output);
 }
 
 /// ChainX proposer factory.
@@ -101,7 +91,6 @@ impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
 	where
 		N: Network,
 		P: ChainXApi + Send + Sync + 'static,
-		N::TableRouter: Send + 'static,
 {
 	type Proposer = Proposer<P>;
 	type Input = N::Input;
@@ -112,7 +101,7 @@ impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
 		&self,
 		parent_header: &Header,
 		authorities: &[AuthorityId],
-		_sign_with: Arc<ed25519::Pair>,
+		sign_with: Arc<ed25519::Pair>,
 	) -> Result<(Self::Proposer, Self::Input, Self::Output), Error> {
 		use runtime_primitives::traits::{Hash as HashT, BlakeTwo256};
 
@@ -125,8 +114,10 @@ impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
 		let validators = self.client.validators(&id)?;
 		self.offline.write().note_new_block(&validators[..]);
 
-		let (_router, input, output) = self.network.communication_for(
+		let (input, output) = self.network.communication_for(
 			authorities,
+            parent_hash,
+            sign_with.clone(),
 			self.handle.clone()
 		);
         let now = Instant::now();
@@ -139,7 +130,7 @@ impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
 		let proposer = Proposer {
 			client: self.client.clone(),
             dynamic_inclusion, 
-			//local_key: sign_with,
+			local_key: sign_with,
 			parent_hash,
 			parent_id: id,
 			parent_number: parent_header.number,
@@ -157,7 +148,7 @@ impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
 pub struct Proposer<C: ChainXApi + Send + Sync> {
 	client: Arc<C>,
     dynamic_inclusion: DynamicInclusion,
-	//local_key: Arc<ed25519::Pair>,
+	local_key: Arc<ed25519::Pair>,
 	parent_hash: Hash,
 	parent_id: BlockId,
 	parent_number: BlockNumber,

@@ -1,3 +1,5 @@
+// Copyright 2018 chainpool
+
 use std::net::SocketAddr;
 
 use clap;
