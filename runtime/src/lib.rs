@@ -18,7 +18,7 @@ extern crate substrate_runtime_support;
 #[macro_use]
 extern crate substrate_runtime_primitives as runtime_primitives;
 extern crate substrate_codec as codec;
- #[macro_use]
+#[macro_use]
 extern crate substrate_codec_derive;
 extern crate substrate_runtime_std as rstd;
 extern crate substrate_runtime_consensus as consensus;
@@ -41,9 +41,26 @@ pub use checked_block::CheckedBlock;
 use rstd::prelude::*;
 use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey,
                         Signature};
-use runtime_primitives::generic;
 use runtime_primitives::traits::{Convert, HasPublicAux, BlakeTwo256};
+use timestamp::Call as TimestampCall;
+use chainx_primitives::InherentData;
+use runtime_primitives::generic;
 use version::RuntimeVersion;
+
+pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
+	let make_inherent = |function| UncheckedExtrinsic::new(
+		Extrinsic {
+			signed: Default::default(),
+			function,
+			index: 0,
+		},
+		Default::default(),
+	);
+
+	let mut inherent: Vec<UncheckedExtrinsic> =  Vec::new();
+    inherent.push(make_inherent(Call::Timestamp(TimestampCall::set(data.timestamp))));
+	inherent
+}
 
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
@@ -204,8 +221,9 @@ pub type Executive = executive::Executive<
     Block,
     Staking,
     Staking,
-    (((((), Council), Democracy), Staking), Session),
+    ((((((), Council), Democracy), Staking), Session), Timestamp),
 >;
+
 
 impl_outer_config! {
 	pub struct GenesisConfig for Concrete {
@@ -227,7 +245,9 @@ pub mod api {
 		apply_extrinsic => |extrinsic| super::Executive::apply_extrinsic(extrinsic),
 		execute_block => |block| super::Executive::execute_block(block),
 		finalise_block => |()| super::Executive::finalise_block(),
+        inherent_extrinsics => |inherent| super::inherent_extrinsics(inherent),
 		validator_count => |()| super::Session::validator_count(),
+		random_seed => |()| super::System::random_seed(),
 		validators => |()| super::Session::validators()
 	);
 }

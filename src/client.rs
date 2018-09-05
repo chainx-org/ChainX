@@ -21,16 +21,19 @@ const FINALIZATION_WINDOW: u64 = 32;
 pub fn build_client(db_path: &str) -> Arc<TClient> {
     let backend = Arc::new(
         TBackend::new(
-            client_db::DatabaseSettings{
+            client_db::DatabaseSettings {
                 cache_size: None,
                 path: PathBuf::from(db_path),
-                pruning:state_db::PruningMode::default(),},
-                FINALIZATION_WINDOW
-        ).unwrap());
+                pruning: state_db::PruningMode::default(),
+            },
+            FINALIZATION_WINDOW,
+        ).unwrap(),
+    );
 
     let executor = substrate_client::LocalCallExecutor::new(
         backend.clone(),
-        NativeExecutor::<chainx_executor::Executor>::with_heap_pages(8));
+        NativeExecutor::<chainx_executor::Executor>::with_heap_pages(8),
+    );
     let genesis_config = super::genesis_config::testnet_genesis();
 
     Arc::new(
@@ -38,6 +41,7 @@ pub fn build_client(db_path: &str) -> Arc<TClient> {
             backend.clone(),
             executor,
             genesis_config,
-            ExecutionStrategy::NativeWhenPossible
-        ).unwrap())
+            ExecutionStrategy::NativeWhenPossible,
+        ).unwrap(),
+    )
 }

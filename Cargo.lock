@@ -211,6 +211,7 @@ name = "chainx"
 version = "0.1.0"
 dependencies = [
  "chainx-api 0.1.0",
+ "chainx-consensus 0.1.0",
  "chainx-executor 0.1.0",
  "chainx-network 0.1.0",
  "chainx-pool 0.1.0",

@@ -2,16 +2,16 @@
 
 use ed25519;
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
-SessionConfig, StakingConfig, TimestampConfig};
+                     SessionConfig, StakingConfig, TimestampConfig};
 
 pub fn testnet_genesis() -> GenesisConfig {
     let god_key = hex!("3d866ec8a9190c8343c2fc593d21d8a6d0c5c4763aaab2349de3a6111d64d124");
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
-                      "../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm"
-                  ).to_vec(),
-                  authorities: vec![ed25519::Pair::from_seed(&god_key).public().into()],
+                "../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm"
+            ).to_vec(),
+            authorities: vec![ed25519::Pair::from_seed(&god_key).public().into()],
         }),
         system: None,
         session: Some(SessionConfig {
@@ -30,13 +30,13 @@ pub fn testnet_genesis() -> GenesisConfig {
             balances: vec![(god_key.clone().into(), 1u128 << 63)]
                 .into_iter()
                 .collect(),
-                validator_count: 12,
-                minimum_validator_count: 0,
-                sessions_per_era: 24, // 24 hours per era.
-                bonding_duration: 90, // 90 days per bond.
-                early_era_slash: 10000,
-                session_reward: 100,
-                offline_slash_grace: 0,
+            validator_count: 12,
+            minimum_validator_count: 0,
+            sessions_per_era: 24, // 24 hours per era.
+            bonding_duration: 90, // 90 days per bond.
+            early_era_slash: 10000,
+            session_reward: 100,
+            offline_slash_grace: 0,
         }),
         democracy: Some(DemocracyConfig {
             launch_period: 120 * 24 * 14, // 2 weeks per public referendum

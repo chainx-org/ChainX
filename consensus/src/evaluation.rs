@@ -47,40 +47,45 @@ error_chain! {
 /// Attempt to evaluate a substrate block as a chainx block, returning error
 /// upon any initial validity checks failing.
 pub fn evaluate_initial(
-	proposal: &Block,
-	now: Timestamp,
-	parent_hash: &Hash,
-	parent_number: BlockNumber,
+    proposal: &Block,
+    now: Timestamp,
+    parent_hash: &Hash,
+    parent_number: BlockNumber,
 ) -> Result<CheckedBlock> {
-	const MAX_TIMESTAMP_DRIFT: Timestamp = 60;
+    const MAX_TIMESTAMP_DRIFT: Timestamp = 60;
 
-	let encoded = Encode::encode(proposal);
-	let proposal = ChainXGenericBlock::decode(&mut &encoded[..])
-		.and_then(|b| CheckedBlock::new(b).ok())
-		.ok_or_else(|| ErrorKind::ProposalNotForChainX)?;
+    let encoded = Encode::encode(proposal);
+    let proposal = ChainXGenericBlock::decode(&mut &encoded[..])
+        .and_then(|b| CheckedBlock::new(b).ok())
+        .ok_or_else(|| ErrorKind::ProposalNotForChainX)?;
 
-	let transactions_size = proposal.extrinsics.iter().fold(0, |a, tx| {
-		a + Encode::encode(tx).len()
-	});
+    let transactions_size = proposal.extrinsics.iter().fold(0, |a, tx| {
+        a + Encode::encode(tx).len()
+    });
 
-	if transactions_size > MAX_TRANSACTIONS_SIZE {
-		bail!(ErrorKind::ProposalTooLarge(transactions_size))
-	}
+    if transactions_size > MAX_TRANSACTIONS_SIZE {
+        bail!(ErrorKind::ProposalTooLarge(transactions_size))
+    }
 
-	if proposal.header.parent_hash != *parent_hash {
-		bail!(ErrorKind::WrongParentHash(*parent_hash, proposal.header.parent_hash));
-	}
+    if proposal.header.parent_hash != *parent_hash {
+        bail!(ErrorKind::WrongParentHash(
+            *parent_hash,
+            proposal.header.parent_hash,
+        ));
+    }
 
-	if proposal.header.number != parent_number + 1 {
-		bail!(ErrorKind::WrongNumber(parent_number + 1, proposal.header.number));
-	}
+    if proposal.header.number != parent_number + 1 {
+        bail!(ErrorKind::WrongNumber(
+            parent_number + 1,
+            proposal.header.number,
+        ));
+    }
+    let block_timestamp = proposal.timestamp();
 
-	let block_timestamp = proposal.timestamp();
+    // lenient maximum -- small drifts will just be delayed using a timer.
+    if block_timestamp > now + MAX_TIMESTAMP_DRIFT {
+        bail!(ErrorKind::TimestampInFuture)
+    }
 
-	// lenient maximum -- small drifts will just be delayed using a timer.
-	if block_timestamp > now + MAX_TIMESTAMP_DRIFT {
-		bail!(ErrorKind::TimestampInFuture)
-	}
-
-	Ok(proposal)
+    Ok(proposal)
 }

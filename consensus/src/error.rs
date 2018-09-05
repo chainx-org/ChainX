@@ -35,7 +35,7 @@ error_chain! {
 }
 
 impl From<::bft::InputStreamConcluded> for Error {
-	fn from(err: ::bft::InputStreamConcluded) -> Self {
-		::bft::Error::from(err).into()
-	}
+    fn from(err: ::bft::InputStreamConcluded) -> Self {
+        ::bft::Error::from(err).into()
+    }
 }

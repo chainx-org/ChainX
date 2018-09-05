@@ -15,14 +15,18 @@ use super::Arc;
 
 pub type NetworkParam = Params<super::Block, ChainXProtocol, super::Hash>;
 
-pub fn build_network(port: u16, boot_nodes: Vec<String>,
-                     client: Arc<super::client::TClient>,
-                     tx_pool: Arc<TransactionPool<super::Hash, super::Block>>)
-      -> Arc<NetworkService> {
+pub fn build_network(
+    port: u16,
+    boot_nodes: Vec<String>,
+    client: Arc<super::client::TClient>,
+    tx_pool: Arc<TransactionPool<super::Hash, super::Block>>,
+) -> Arc<NetworkService> {
     let mut net_conf = substrate_network_libp2p::NetworkConfiguration::new();
-    net_conf.listen_addresses = vec![iter::once(AddrComponent::IP4(Ipv4Addr::new(127, 0, 0, 1)))
-        .chain(iter::once(AddrComponent::TCP(port)))
-        .collect()];
+    net_conf.listen_addresses = vec![
+        iter::once(AddrComponent::IP4(Ipv4Addr::new(127, 0, 0, 1)))
+            .chain(iter::once(AddrComponent::TCP(port)))
+            .collect(),
+    ];
     net_conf.boot_nodes = boot_nodes;
     let param = NetworkParam {
         config: substrate_network::ProtocolConfig::default(),
@@ -33,4 +37,4 @@ pub fn build_network(port: u16, boot_nodes: Vec<String>,
         specialization: ChainXProtocol::new(),
     };
     NetworkService::new(param, CHAINX_PROTOCOL_ID).unwrap()
-} 
+}
