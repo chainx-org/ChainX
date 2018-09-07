@@ -5,6 +5,7 @@ extern crate substrate_runtime_primitives;
 extern crate substrate_bft as bft;
 extern crate substrate_primitives;
 extern crate substrate_client;
+extern crate substrate_keyring as keyring;
 
 extern crate chainx_consensus as consensus;
 extern crate chainx_primitives;
@@ -15,13 +16,13 @@ extern crate chainx_pool;
 
 extern crate rhododendron;
 extern crate exit_future;
-#[macro_use]
 extern crate hex_literal;
 extern crate env_logger;
 extern crate ed25519;
 extern crate tokio;
 extern crate ctrlc;
 extern crate clap;
+#[macro_use]
 extern crate log;
 
 use chainx_network::consensus::ConsensusNetwork;
@@ -38,6 +39,7 @@ mod cli;
 
 fn main() {
     let matches = cli::build_cli().clone().get_matches();
+    let is_dev = matches.is_present("dev");
     let port = match matches.value_of("port") {
         Some(port) => {
             port.parse()
@@ -57,7 +59,7 @@ fn main() {
     let _ = env_logger::try_init();
 
     let db_path = matches.value_of("db-path").unwrap_or("./.chainx");
-    let client = client::build_client(db_path);
+    let client = client::build_client(db_path, is_dev);
 
     let (exit_send, exit) = exit_future::signal();
     let mut runtime = Runtime::new().expect("failed to start runtime on current thread");
@@ -73,9 +75,12 @@ fn main() {
 
     let validator_mode = matches.subcommand_matches("validator").is_some();
     let _consensus = if validator_mode {
-        let key = ed25519::Pair::from_seed(&hex!(
-            "3d866ec8a9190c8343c2fc593d21d8a6d0c5c4763aaab2349de3a6111d64d124"
-        ));
+        let key = if matches.subcommand_matches("validator").unwrap().is_present("a") { 
+               info!("Select key1----Alice");
+               ed25519::Pair::from_seed(b"Alice                           ") } else {
+               info!("Select key2----Bob");
+               ed25519::Pair::from_seed(b"Bob                             ")
+        };
         let consensus_net = ConsensusNetwork::new(network, client.clone());
         Some(consensus::Service::new(
             client.clone(),

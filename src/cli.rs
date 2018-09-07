@@ -10,6 +10,12 @@ pub fn build_cli() -> App<'static, 'static> {
         .version("0.1.0")
         .about("    Cross-Chain Asset Manager")
         .arg(
+            Arg::with_name("dev")
+                .long("dev")
+                .help("Run in development mode")
+                .takes_value(false)
+        )
+        .arg(
             Arg::with_name("port")
                 .long("port")
                 .value_name("PORT")
@@ -47,7 +53,8 @@ pub fn build_cli() -> App<'static, 'static> {
         )
         .subcommand(SubCommand::with_name("validator").about(
             "Enable validator mode",
-        ))
+             ).args_from_usage("-a... 'select validator key Alice or not'")
+         )
 }
 
 pub fn parse_address(

@@ -18,7 +18,7 @@ use super::Arc;
 
 const FINALIZATION_WINDOW: u64 = 32;
 
-pub fn build_client(db_path: &str) -> Arc<TClient> {
+pub fn build_client(db_path: &str, is_dev: bool) -> Arc<TClient> {
     let backend = Arc::new(
         TBackend::new(
             client_db::DatabaseSettings {
@@ -32,9 +32,10 @@ pub fn build_client(db_path: &str) -> Arc<TClient> {
 
     let executor = substrate_client::LocalCallExecutor::new(
         backend.clone(),
-        NativeExecutor::<chainx_executor::Executor>::with_heap_pages(8),
-    );
-    let genesis_config = super::genesis_config::testnet_genesis();
+        NativeExecutor::new());
+
+    let genesis_config = super::genesis_config::testnet_genesis(is_dev);
+
 
     Arc::new(
         TClient::new(

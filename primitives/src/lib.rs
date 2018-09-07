@@ -19,6 +19,8 @@ extern crate serde;
 extern crate serde_derive;
 #[macro_use]
 extern crate substrate_codec_derive;
+#[cfg(feature = "std")]
+use primitives::bytes;
 
 use rstd::prelude::*;
 use runtime_primitives::traits::BlakeTwo256;
@@ -28,7 +30,8 @@ use runtime_primitives::generic;
 pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
 
 /// Block header type as expected by this runtime.
-pub type Header = generic::Header<BlockNumber, BlakeTwo256, Vec<u8>>;
+pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
+/// pub type Header = generic::Header<BlockNumber, BlakeTwo256, Vec<u8>>;
 
 /// Opaque, encoded, unchecked extrinsic.
 pub type UncheckedExtrinsic = Vec<u8>;
@@ -84,6 +87,12 @@ pub type Balance = u128;
 /// "generic" block ID for the future-proof block type.
 // TODO: parameterize blockid only as necessary.
 pub type BlockId = generic::BlockId<Block>;
+
+/// A log entry in the block.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub struct Log(#[cfg_attr(feature = "std", serde(with="bytes"))] pub Vec<u8>);
+
 
 /// Inherent data to include in a block.
 #[derive(Encode, Decode)]
