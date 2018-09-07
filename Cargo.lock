@@ -218,6 +218,7 @@ dependencies = [
  "chainx-primitives 0.1.0",
  "chainx-rpc 0.1.0",
  "chainx-runtime 0.1.0",
+ "chainx-test 0.1.0",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ctrlc 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519 0.1.0 (git+https://github.com/chainx-org/substrate)",
@@ -225,6 +226,8 @@ dependencies = [
  "exit-future 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-http-server 8.0.1 (git+https://github.com/paritytech/jsonrpc.git)",
+ "jsonrpc-ws-server 8.0.0 (git+https://github.com/paritytech/jsonrpc.git)",
  "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "rhododendron 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.75 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -238,6 +241,7 @@ dependencies = [
  "substrate-network-libp2p 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-rpc-servers 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-balances 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-state-db 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-state-machine 0.1.0 (git+https://github.com/chainx-org/substrate)",
@@ -400,6 +404,21 @@ dependencies = [
  "substrate-runtime-system 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-runtime-timestamp 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-runtime-version 0.1.0 (git+https://github.com/chainx-org/substrate)",
+]
+
+[[package]]
+name = "chainx-test"
+version = "0.1.0"
+dependencies = [
+ "chainx-pool 0.1.0",
+ "chainx-primitives 0.1.0",
+ "chainx-runtime 0.1.0",
+ "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-extrinsic-pool 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-keyring 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-network 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-balances 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
 ]
 
 [[package]]

@@ -1,21 +1,16 @@
 // Copyright 2018 chainpool
 
-extern crate substrate_state_machine as state_machine;
-extern crate substrate_client_db as client_db;
-extern crate substrate_state_db as state_db;
-extern crate substrate_primitives;
-extern crate substrate_client;
-
-extern crate chainx_primitives;
-extern crate chainx_executor;
-extern crate chainx_api;
-
-pub use self::chainx_api::{TBackend, TExecutor, TClient, TClientBlockBuilder};
-use self::state_machine::ExecutionStrategy;
-use self::chainx_executor::NativeExecutor;
-use super::cli::ChainSpec;
 use std::path::PathBuf;
-use super::Arc;
+use Arc;
+
+use substrate_client;
+use client_db;
+use state_db;
+
+pub use chainx_api::{TBackend, TExecutor, TClient, TClientBlockBuilder};
+use state_machine::ExecutionStrategy;
+use chainx_executor::NativeExecutor;
+use cli::ChainSpec;
 
 const FINALIZATION_WINDOW: u64 = 32;
 
@@ -28,8 +23,8 @@ pub fn build_client(db_path: &str, chainspec: ChainSpec) -> Arc<TClient> {
                 pruning: state_db::PruningMode::default(),
             },
             FINALIZATION_WINDOW,
-        ).unwrap(),
-    );
+            ).unwrap(),
+            );
 
     let executor = substrate_client::LocalCallExecutor::new(
         backend.clone(),
@@ -44,6 +39,6 @@ pub fn build_client(db_path: &str, chainspec: ChainSpec) -> Arc<TClient> {
             executor,
             genesis_config,
             ExecutionStrategy::NativeWhenPossible,
-        ).unwrap(),
-    )
+            ).unwrap(),
+            )
 }

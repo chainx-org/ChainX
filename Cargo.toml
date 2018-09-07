@@ -17,6 +17,8 @@ substrate-codec = { git = "https://github.com/chainx-org/substrate", default_fea
 substrate-bft = { git = "https://github.com/chainx-org/substrate", default_features = false }
 substrate-rpc-servers = { git = "https://github.com/chainx-org/substrate" }
 substrate-runtime-balances = { git = "https://github.com/chainx-org/substrate" }
+jsonrpc-http-server = { git = "https://github.com/paritytech/jsonrpc" }
+jsonrpc-ws-server = { git = "https://github.com/paritytech/jsonrpc" }
 ed25519 = { git = "https://github.com/chainx-org/substrate" }
 ctrlc = { version = "3.0", features = ["termination"] }
 serde = { version = "1.0", default_features = false }
