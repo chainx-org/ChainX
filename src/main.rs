@@ -25,21 +25,27 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 
-use chainx_network::consensus::ConsensusNetwork;
-use chainx_primitives::{Block, Hash};
-use chainx_pool::{TransactionPool, PoolApi};
-
-use tokio::runtime::Runtime;
-use std::sync::Arc;
-
 mod genesis_config;
 mod network;
 mod client;
 mod cli;
 
+use chainx_network::consensus::ConsensusNetwork;
+use chainx_pool::{TransactionPool, PoolApi};
+use chainx_primitives::{Block, Hash};
+use cli::ChainSpec;
+
+use tokio::runtime::Runtime;
+use std::sync::Arc;
+
 fn main() {
+    let _ = env_logger::try_init();
     let matches = cli::build_cli().clone().get_matches();
-    let is_dev = matches.is_present("dev");
+    let chainspec = match matches.value_of("chainspec").unwrap_or("multi") {
+        "dev" => { info!("Chainspec is dev mode"); ChainSpec::Dev },
+        "local" => { info!("Chainspec is local mode"); ChainSpec::Local },
+        "multi" | _ => { info!("Chainspec is multi mode"); ChainSpec::Multi },
+    };
     let port = match matches.value_of("port") {
         Some(port) => {
             port.parse()
@@ -56,10 +62,8 @@ fn main() {
         },
     ));
 
-    let _ = env_logger::try_init();
-
     let db_path = matches.value_of("db-path").unwrap_or("./.chainx");
-    let client = client::build_client(db_path, is_dev);
+    let client = client::build_client(db_path, chainspec);
 
     let (exit_send, exit) = exit_future::signal();
     let mut runtime = Runtime::new().expect("failed to start runtime on current thread");
@@ -75,12 +79,13 @@ fn main() {
 
     let validator_mode = matches.subcommand_matches("validator").is_some();
     let _consensus = if validator_mode {
-        let key = if matches.subcommand_matches("validator").unwrap().is_present("a") { 
-               info!("Select key1----Alice");
-               ed25519::Pair::from_seed(b"Alice                           ") } else {
-               info!("Select key2----Bob");
-               ed25519::Pair::from_seed(b"Bob                             ")
+        let key = match matches.subcommand_matches("validator").unwrap().value_of("auth").unwrap_or("alice") { 
+               "alice" => { info!("Auth is alice"); ed25519::Pair::from_seed(b"Alice                           ") },
+               "bob" => { info!("Auth is bob"); ed25519::Pair::from_seed(b"Bob                             ") },
+               "gavin" => { info!("Auth is gavin"); ed25519::Pair::from_seed(b"Gavin                           ") },
+               "satoshi" | _ => { info!("Auth is satoshi"); ed25519::Pair::from_seed(b"Satoshi                         ") },
         };
+
         let consensus_net = ConsensusNetwork::new(network, client.clone());
         Some(consensus::Service::new(
             client.clone(),

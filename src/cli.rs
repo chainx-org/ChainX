@@ -5,15 +5,23 @@ use std::net::SocketAddr;
 use clap;
 use clap::{Arg, App, SubCommand};
 
+#[derive(Clone, Debug)]
+pub enum ChainSpec {
+    Dev, // One validator mode.
+    Local, // Two validator mode.
+    Multi, // Four validator mode.
+}
+
 pub fn build_cli() -> App<'static, 'static> {
     App::new("chainx")
         .version("0.1.0")
         .about("    Cross-Chain Asset Manager")
         .arg(
-            Arg::with_name("dev")
-                .long("dev")
-                .help("Run in development mode")
-                .takes_value(false)
+            Arg::with_name("chainspec")
+                .long("chainspec")
+                .value_name("CHAINSPEC")
+                .help("Run in [dev|local|multi] mode, dev---single validator, local---2 validator testnet, multi---4 validator testnet")
+                .takes_value(true)
         )
         .arg(
             Arg::with_name("port")
@@ -53,8 +61,14 @@ pub fn build_cli() -> App<'static, 'static> {
         )
         .subcommand(SubCommand::with_name("validator").about(
             "Enable validator mode",
-             ).args_from_usage("-a... 'select validator key Alice or not'")
-         )
+             ).arg(
+                 Arg::with_name("auth")
+                   .long("auth")
+                   .value_name("Validator")
+                   .help("Select validator one of [alice|bob|gavin|satoshi]")
+                   .takes_value(true)
+             )
+        )
 }
 
 pub fn parse_address(
