@@ -1,9 +1,7 @@
 // Copyright 2018 chainpool
 
+use clap::{Arg, App, SubCommand, ArgMatches};
 use std::net::SocketAddr;
-
-use clap;
-use clap::{Arg, App, SubCommand};
 
 #[derive(Clone, Debug)]
 pub enum ChainSpec {
@@ -74,7 +72,7 @@ pub fn build_cli() -> App<'static, 'static> {
 pub fn parse_address(
     default: &str,
     port_param: &str,
-    matches: &clap::ArgMatches,
+    matches: &ArgMatches,
 ) -> Result<SocketAddr, String> {
     let mut address: SocketAddr = default.parse().ok().ok_or_else(|| {
         format!("Invalid address specified for --{}.", port_param)

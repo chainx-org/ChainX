@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["Chainpool  <http://www.chainx.org>"]
 
 [dependencies]
-error-chain = "0.12"
-hex-literal = "0.1"
-triehash = { version = "0.2.3" }
 ed25519 = { git = "https://github.com/chainx-org/substrate" }
 substrate-codec = { git = "https://github.com/chainx-org/substrate" }
 substrate-extrinsic-pool = { git = "https://github.com/chainx-org/substrate" }
@@ -22,6 +19,9 @@ substrate-client-db = { git = "https://github.com/chainx-org/substrate" }
 chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
 chainx-executor = {path = "../executor"}
+triehash = { version = "0.2.3" }
+error-chain = "0.12"
+hex-literal = "0.1"
 [dev-dependencies]
 substrate-keyring = { git = "https://github.com/chainx-org/substrate" }
 substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }

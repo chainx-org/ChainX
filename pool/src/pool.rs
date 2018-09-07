@@ -1,49 +1,49 @@
 // Copyright 2018 Chainpool.
 
-use std::{
-    cmp::Ordering,
-    collections::HashMap,
-    sync::Arc,
-};
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 
-
+use extrinsic_pool::{Pool, ChainApi, VerifiedFor, ExtrinsicFor, scoring,
+    Readiness, VerifiedTransaction, Transaction, Error, ErrorKind, Options,
+    scoring::Choice};
+use runtime_primitives::traits::{Hash as HashT, BlakeTwo256};
 use codec::{Encode, Decode};
 use substrate_client::{self, Client};
 use substrate_client_db;
-
-use extrinsic_pool::{
-    Pool,
-    ChainApi,
-    VerifiedFor,
-    ExtrinsicFor,
-    scoring,
-    Readiness,
-    VerifiedTransaction,
-    Transaction,
-    Error,
-    ErrorKind,
-    Options,
-};
-
 use substrate_network;
-use chainx_primitives::{Block, Hash, BlockId, AccountId};
-pub type Backend = substrate_client_db::Backend<Block>;
-use chainx_executor;
-pub type Executor = substrate_client::LocalCallExecutor<
-    Backend,
-    NativeExecutor<chainx_executor::Executor>,
->;
 use substrate_executor::NativeExecutor;
+
+use chainx_primitives::{Block, Hash, BlockId, AccountId};
+use chainx_runtime::UncheckedExtrinsic;
+use chainx_executor;
+
+pub type Backend = substrate_client_db::Backend<Block>;
+pub type Executor = substrate_client::LocalCallExecutor<Backend, NativeExecutor<chainx_executor::Executor>>;
 
 #[derive(Debug, Clone)]
 pub struct VerifiedExtrinsic {
-    sender: AccountId,
+    sender: Hash,
     hash: Hash,
+    encoded_size: usize,
+}
+
+impl VerifiedExtrinsic {
+    /// Get the 256-bit hash of this transaction.
+    pub fn hash(&self) -> &Hash {
+        &self.hash
+    }
+    /// Get encoded size of the transaction.
+    pub fn encoded_size(&self) -> usize {
+        self.encoded_size
+    }
+    /// Get the account ID of the sender of this transaction.
+    pub fn sender(&self) -> Option<Hash> {
+        Some(self.sender)
+    }
 }
 
 impl VerifiedTransaction for VerifiedExtrinsic {
     type Hash = Hash;
-    type Sender = AccountId;
+    type Sender = Hash;
 
     fn hash(&self) -> &Self::Hash {
         &self.hash
@@ -54,10 +54,9 @@ impl VerifiedTransaction for VerifiedExtrinsic {
     }
 
     fn mem_usage(&self) -> usize {
-        0
+        self.encoded_size
     }
 }
-
 
 pub struct PoolApi;
 impl PoolApi {
@@ -65,6 +64,7 @@ impl PoolApi {
         PoolApi
     }
 }
+
 impl ChainApi for PoolApi {
     type Block = Block;
     type Hash = Hash;
@@ -78,9 +78,16 @@ impl ChainApi for PoolApi {
     fn verify_transaction(
         &self,
         _at: &BlockId,
-        _uxt: &ExtrinsicFor<Self>,
+        uxt: &ExtrinsicFor<Self>,
     ) -> Result<Self::VEx, Self::Error> {
-        unimplemented!()
+        let encoded = uxt.encode();
+        let (encoded_size, hash) = (uxt.len(), BlakeTwo256::hash(&encoded));
+        Ok(VerifiedExtrinsic{
+            sender:hash,
+            hash,
+            encoded_size,
+        }
+        )
     }
 
     fn ready(&self) -> Self::Ready {
@@ -95,27 +102,25 @@ impl ChainApi for PoolApi {
         _nonce_cache: &mut Self::Ready,
         _xt: &VerifiedFor<Self>,
     ) -> Readiness {
-        unimplemented!()
+        Readiness::Ready
     }
 
     fn compare(_old: &VerifiedFor<Self>, _other: &VerifiedFor<Self>) -> Ordering {
-        unimplemented!()
+        Ordering::Equal
     }
 
     fn choose(_old: &VerifiedFor<Self>, _new: &VerifiedFor<Self>) -> scoring::Choice {
-        unimplemented!()
+        Choice::InsertNew
     }
 
     fn update_scores(
         _xts: &[Transaction<VerifiedFor<Self>>],
         _scores: &mut [Self::Score],
         _change: scoring::Change<()>,
-    ) {
-        unimplemented!()
-    }
+    ) {}
 
     fn should_replace(_old: &VerifiedFor<Self>, _new: &VerifiedFor<Self>) -> scoring::Choice {
-        unimplemented!()
+        Choice::InsertNew
     }
 }
 
@@ -146,13 +151,12 @@ impl TransactionPool {
     }
 
     pub fn inner(&self) -> Arc<Pool<PoolApi>> {
-      self.inner.clone()         
+        self.inner.clone()
     }
 }
 
 impl substrate_network::TransactionPool<Hash, Block> for TransactionPool {
-    fn transactions(&self) -> Vec<(Hash, Vec<u8>)> {
-        println!("-------------transactions-------------");
+    fn transactions(&self) -> Vec<(Hash, ExtrinsicFor<PoolApi>)> {
         let best_block_id = match self.best_block_id() {
             Some(id) => id,
             None => return vec![],
@@ -162,7 +166,7 @@ impl substrate_network::TransactionPool<Hash, Block> for TransactionPool {
                 pending
                     .map(|t| {
                         let hash = t.hash().clone();
-                        let ex = t.original.clone();
+                        let ex:ExtrinsicFor<PoolApi> = t.original.clone();
                         (hash, ex)
                     })
                     .collect()
@@ -173,36 +177,36 @@ impl substrate_network::TransactionPool<Hash, Block> for TransactionPool {
             })
     }
 
-    fn import(&self, transaction: &Vec<u8>) -> Option<Hash> {
-        println!("-------------import-------------");
-        let encoded = transaction.encode();
-        if let Some(uxt) = Decode::decode(&mut &encoded[..]) {
-            let best_block_id = self.best_block_id()?;
-            match self.inner.submit_one(&best_block_id, uxt) {
-                Ok(xt) => Some(*xt.hash()),
-                Err(e) => {
-                    match e.kind() {
-                        ErrorKind::AlreadyImported(hash) => Some(
-                            ::std::str::FromStr::from_str(&hash)
-                                .map_err(|_| {})
-                                .expect("Hash string is always valid"),
-                        ),
-                        _ => {
-                            //debug!("Error adding transaction to the pool: {:?}", e);
-                            None
+    fn import(&self, transaction: &ExtrinsicFor<PoolApi>) -> Option<Hash> {
+        match UncheckedExtrinsic::decode(&mut &transaction[..]) {
+            Some(_) => {
+                let best_block_id = self.best_block_id()?;
+                match self.inner.submit_one(&best_block_id, transaction.clone()) {
+                    Ok(xt) => Some(*xt.hash()),
+                    Err(e) => {
+                        match e.kind() {
+                            ErrorKind::AlreadyImported(hash) => Some(
+                                ::std::str::FromStr::from_str(&hash)
+                                    .map_err(|_| {})
+                                    .expect("Hash string is always valid"),
+                            ),
+                            _ => {
+                                //debug!("Error adding transaction to the pool: {:?}", e);
+                                None
+                            }
                         }
                     }
                 }
-            }
+            },
 
-        } else {
-            //debug!("Error decoding transaction");
-            None
+            None => {
+                //debug!("Error decoding transaction");
+                None
+            }
         }
     }
 
     fn on_broadcasted(&self, propagations: HashMap<Hash, Vec<String>>) {
-        println!("-------------on_broadcasted-------------");
         self.inner.on_broadcasted(propagations)
     }
 }

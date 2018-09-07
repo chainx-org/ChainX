@@ -1,0 +1,15 @@
+[package]
+name = "chainx-test"
+version = "0.1.0"
+authors = ["Chainpool  <http://www.chainx.org>"]
+
+[dependencies]
+substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-runtime-balances = { git = "https://github.com/chainx-org/substrate" }
+substrate-extrinsic-pool = { git = "https://github.com/chainx-org/substrate" }
+substrate-network = { git = "https://github.com/chainx-org/substrate" }
+substrate-keyring = { git = "https://github.com/chainx-org/substrate" }
+substrate-codec = { git = "https://github.com/chainx-org/substrate" }
+chainx-primitives = { path = "../primitives" }
+chainx-runtime = { path = "../runtime" }
+chainx-pool = { path = "../pool" }

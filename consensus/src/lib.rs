@@ -430,32 +430,33 @@ where
         let mut block_builder = self.client.build_block(&self.parent_id, inherent_data)?;
 
         {
-            //let mut unqueue_invalid = Vec::new();
+            let mut unqueue_invalid = Vec::new();
             let result = self.transaction_pool.cull_and_get_pending(
-                &BlockId::hash(self.parent_hash),
-                |_pending_iterator| {
-                    // TO DO:
-				/*let mut _pending_size = 0;
-				for pending in pending_iterator {
-					if pending_size + pending.verified.encoded_size() >= MAX_TRANSACTIONS_SIZE { break }
+                &BlockId::hash(self.parent_hash), |pending_iterator| {
+                    let mut pending_size = 0;
+                    for pending in pending_iterator {
+                        if pending_size + pending.verified.encoded_size() >= MAX_TRANSACTIONS_SIZE { break }
 
-					match block_builder.push_extrinsic(pending.original.clone()) {
-						Ok(()) => {
-							pending_size += pending.verified.encoded_size();
-						}
-						Err(e) => {
-							trace!(target: "transaction-pool", "Invalid transaction: {}", e);
-							unqueue_invalid.push(pending.verified.hash().clone());
-						}
-					}
-				}*/
+                        info!("push transaction: {}",pending.verified.hash().clone());
+                        info!("transaction origin data: {:?}",pending.original.clone());
+
+                        match block_builder.push_extrinsic(pending.original.clone()) {
+                            Ok(()) => {
+                                pending_size += pending.verified.encoded_size();
+                            }
+                            Err(e) => {
+                                trace!(target: "transaction-pool", "Invalid transaction: {}", e);
+                                unqueue_invalid.push(pending.verified.hash().clone());
+                            }
+                        }
+                    }
                 },
             );
             if let Err(e) = result {
                 warn!("Unable to get the pending set: {:?}", e);
             }
 
-            //self.transaction_pool.remove(&unqueue_invalid, false);
+            self.transaction_pool.remove(&unqueue_invalid, false);
         }
 
         let chainx_block = block_builder.bake()?;

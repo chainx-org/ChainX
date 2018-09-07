@@ -31,7 +31,6 @@ pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
 
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
-/// pub type Header = generic::Header<BlockNumber, BlakeTwo256, Vec<u8>>;
 
 /// Opaque, encoded, unchecked extrinsic.
 pub type UncheckedExtrinsic = Vec<u8>;

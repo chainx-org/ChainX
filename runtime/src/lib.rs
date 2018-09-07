@@ -41,16 +41,13 @@ pub use checked_block::CheckedBlock;
 pub use balances::address::Address as RawAddress;
 
 use rstd::prelude::*;
-use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey,
-                        Signature};
+use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Log, SessionKey, Signature};
 
 use runtime_primitives::traits::{Convert, HasPublicAux, BlakeTwo256};
 use timestamp::Call as TimestampCall;
 use chainx_primitives::InherentData;
 use runtime_primitives::generic;
 use version::RuntimeVersion;
-
-//pub use chainx_primitives::Header;
 
 pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
 	let make_inherent = |function| UncheckedExtrinsic::new(
@@ -114,7 +111,7 @@ impl system::Trait for Concrete {
     type BlockNumber = BlockNumber;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
-    type Digest = generic::Digest<Vec<u8>>;
+    type Digest = generic::Digest<Log>;
     type AccountId = AccountId;
     type Header = Header;
     
@@ -225,7 +222,7 @@ impl_outer_dispatch! {
 //pub type Address = staking::Address<Concrete>;
 pub type Address = balances::Address<Concrete>;
 /// Block header type as expected by this runtime.
-pub type Header = generic::Header<BlockNumber, BlakeTwo256, Vec<u8>>;
+pub use chainx_primitives::Header;
 /// Block type as expected by this runtime.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// BlockId type as expected by this runtime.

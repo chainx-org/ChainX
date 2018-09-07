@@ -13,6 +13,7 @@ extern crate chainx_runtime;
 extern crate chainx_network;
 extern crate chainx_rpc;
 extern crate chainx_pool;
+extern crate chainx_test;
 
 extern crate rhododendron;
 extern crate exit_future;
@@ -79,7 +80,7 @@ fn main() {
 
     let validator_mode = matches.subcommand_matches("validator").is_some();
     let _consensus = if validator_mode {
-        let key = match matches.subcommand_matches("validator").unwrap().value_of("auth").unwrap_or("alice") { 
+        let key = match matches.subcommand_matches("validator").unwrap().value_of("auth").unwrap_or("alice") {
                "alice" => { info!("Auth is alice"); ed25519::Pair::from_seed(b"Alice                           ") },
                "bob" => { info!("Auth is bob"); ed25519::Pair::from_seed(b"Bob                             ") },
                "gavin" => { info!("Auth is gavin"); ed25519::Pair::from_seed(b"Gavin                           ") },
@@ -115,6 +116,7 @@ fn main() {
             chainx_rpc::default_rpc_config(),
             )
     };
+
     let rpc_interface: &str = "127.0.0.1";
     let ws_interface: &str = "127.0.0.1";
     let rpc_http = Some(
@@ -130,7 +132,9 @@ fn main() {
         |address| rpc_server::start_http(address, handler()),
     );
     let _rpc_ws =
-        chainx_rpc::maybe_start_server(rpc_ws, |address| rpc_server::start_ws(address, handler()));
+        chainx_rpc::maybe_start_server(
+        rpc_ws,
+        |address| rpc_server::start_ws(address, handler()));
 
     let _ = runtime.block_on(exit);
     exit_send.fire();
