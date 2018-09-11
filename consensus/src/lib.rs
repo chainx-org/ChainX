@@ -1,59 +1,59 @@
 // Copyright 2018 Chainpool.
-extern crate substrate_bft as bft;
-extern crate substrate_codec as codec;
-extern crate substrate_primitives as primitives;
-extern crate substrate_runtime_support as runtime_support;
+
 extern crate substrate_runtime_primitives as runtime_primitives;
+extern crate substrate_runtime_support as runtime_support;
+extern crate substrate_primitives as primitives;
 extern crate substrate_client as client;
-extern crate substrate_network;
+extern crate substrate_codec as codec;
 extern crate substrate_extrinsic_pool;
+extern crate substrate_bft as bft;
+extern crate substrate_network;
 
-extern crate chainx_runtime;
 extern crate chainx_primitives;
-extern crate chainx_api;
+extern crate chainx_runtime;
 extern crate chainx_pool;
+extern crate chainx_api;
 
-extern crate exit_future;
-extern crate tokio;
 extern crate rhododendron;
+extern crate exit_future;
+extern crate parking_lot;
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
 extern crate futures;
+extern crate ed25519;
+extern crate tokio;
 #[macro_use]
 extern crate log;
-extern crate ed25519;
-extern crate parking_lot;
 
-mod evaluation;
-mod error;
-mod offline_tracker;
-mod service;
 mod dynamic_inclusion;
+mod offline_tracker;
+mod evaluation;
+mod service;
+mod error;
 
-use std::sync::Arc;
+use tokio::timer::{Delay, Interval};
 use std::time::{Duration, Instant};
+use tokio::runtime::TaskExecutor;
+use parking_lot::RwLock;
+use futures::prelude::*;
+use futures::future;
+use std::sync::Arc;
 
 use codec::{Decode, Encode};
 use primitives::AuthorityId;
-use tokio::runtime::TaskExecutor;
-use tokio::timer::{Delay, Interval};
-use chainx_primitives::{CandidateReceipt, BlockId, Hash, Block, Header, AccountId, BlockNumber,
-                        Timestamp, SessionKey};
+
+use chainx_primitives::{CandidateReceipt, BlockId, Hash, Block, Header, AccountId, BlockNumber, Timestamp, SessionKey};
 use chainx_api::ChainXApi;
 
-use futures::prelude::*;
-use futures::future;
-use parking_lot::RwLock;
-
-pub use self::error::{ErrorKind, Error};
 pub use self::offline_tracker::OfflineTracker;
-pub use service::Service;
 use dynamic_inclusion::DynamicInclusion;
+pub use self::error::{ErrorKind, Error};
+pub use service::Service;
 
+pub type TransactionPool = substrate_extrinsic_pool::Pool<chainx_pool::PoolApi>;
 /// Shared offline validator tracker.
 pub type SharedOfflineTracker = Arc<RwLock<OfflineTracker>>;
-pub type TransactionPool = substrate_extrinsic_pool::Pool<chainx_pool::PoolApi>;
 
 // block size limit.
 const MAX_TRANSACTIONS_SIZE: usize = 4 * 1024 * 1024;

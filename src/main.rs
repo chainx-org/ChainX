@@ -41,12 +41,16 @@ mod client;
 mod cli;
 mod rpc;
 
+use substrate_client::BlockchainEvents;
+
 use chainx_network::consensus::ConsensusNetwork;
 use chainx_pool::{TransactionPool, PoolApi};
 use chainx_primitives::{Block, Hash};
 use cli::ChainSpec;
 
 use tokio::runtime::Runtime;
+use tokio::prelude::Stream;
+use tokio::prelude::Future;
 use std::sync::Arc;
 
 fn main() {
@@ -86,9 +90,22 @@ fn main() {
             client.clone(),
             ));
 
-    let network = network::build_network(port, boot_nodes, client.clone(), extrinsic_pool.clone());
-
     let validator_mode = matches.subcommand_matches("validator").is_some();
+    let network = network::build_network(port, boot_nodes, client.clone(), extrinsic_pool.clone(), validator_mode);
+
+    {
+            // block notifications
+            let network = network.clone();
+			let events = client.import_notification_stream()
+				.for_each(move |notification| {
+                    network.on_block_imported(notification.hash, &notification.header);
+					Ok(())
+				})
+                .select(exit.clone())
+				.then(|_| Ok(()));
+			task_executor.spawn(events);
+    }
+
     let _consensus = if validator_mode {
         let key = match matches.subcommand_matches("validator").unwrap().value_of("auth").unwrap_or("alice") {
             "alice" => { info!("Auth is alice"); ed25519::Pair::from_seed(b"Alice                           ") },

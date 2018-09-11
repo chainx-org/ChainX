@@ -2,42 +2,39 @@
 
 //! chainx-specific network implementation.
 //!
-//! This manages gossip of consensus messages for BFT, communication between validators,
+//! This manages gossip of consensus messages for BFT, communication between validators
 //! and more.
 
-extern crate substrate_bft as bft;
 extern crate substrate_codec as codec;
-extern crate substrate_network;
-extern crate substrate_primitives;
-
-extern crate chainx_api;
-extern crate chainx_consensus;
-extern crate chainx_primitives;
-
-extern crate ed25519;
-extern crate futures;
-extern crate parking_lot;
-extern crate tokio;
-extern crate rhododendron;
-
-#[macro_use]
-extern crate log;
 #[macro_use]
 extern crate substrate_codec_derive;
+extern crate substrate_primitives;
+extern crate substrate_bft as bft;
+extern crate substrate_network;
+
+extern crate chainx_primitives;
+extern crate chainx_consensus;
+extern crate chainx_api;
+
+extern crate rhododendron;
+extern crate ed25519;
+extern crate futures;
+extern crate tokio;
+#[macro_use]
+extern crate log;
 
 pub mod consensus;
 
-use codec::Decode;
-use parking_lot::Mutex;
-use chainx_primitives::{Block, SessionKey, Hash, Header};
-use substrate_network::{NodeIndex, Context, Severity};
-use substrate_network::consensus_gossip::ConsensusGossip;
-use substrate_network::{message, generic_message};
-use substrate_network::specialization::Specialization;
 use substrate_network::StatusMessage as GenericFullStatus;
+use substrate_network::consensus_gossip::ConsensusGossip;
+use substrate_network::{NodeIndex, Context, Severity};
+use substrate_network::specialization::Specialization;
+use substrate_network::{message, generic_message};
+use codec::Decode;
+
+use chainx_primitives::{Block, SessionKey, Hash, Header};
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// ChainX protocol id.
 pub const CHAINX_PROTOCOL_ID: substrate_network::ProtocolId = *b"pcx";
@@ -52,30 +49,7 @@ struct PeerInfo {
     claimed_validator: bool,
 }
 
-#[derive(Default)]
-struct KnowledgeEntry {
-    _knows_block_data: Vec<SessionKey>,
-}
-
-/// Tracks knowledge of peers.
-struct Knowledge {
-    _candidates: HashMap<Hash, KnowledgeEntry>,
-}
-
-impl Knowledge {
-    pub fn new() -> Self {
-        Knowledge { _candidates: HashMap::new() }
-    }
-
-    /*
-	fn note_candidate(&mut self, hash: Hash) {
-		let _entry = self.candidates.entry(hash).or_insert_with(Default::default);
-	}
-*/
-}
-
 struct CurrentConsensus {
-    knowledge: Arc<Mutex<Knowledge>>,
     parent_hash: Hash,
     local_session_key: SessionKey,
 }
@@ -89,21 +63,12 @@ pub enum Message {
     SessionKey(SessionKey),
 }
 
-/*
-fn send_chainx_message(ctx: &mut Context<Block>, to: NodeIndex, message: Message) {
-	trace!(target: "c_net", "Sending chainx message to {}: {:?}", to, message);
-	let encoded = message.encode();
-	ctx.send_message(to, generic_message::Message::ChainSpecific(encoded))
-}
-*/
-
 /// ChainX protocol attachment for substrate.
 pub struct ChainXProtocol {
     peers: HashMap<NodeIndex, PeerInfo>,
     consensus_gossip: ConsensusGossip<Block>,
     validators: HashMap<SessionKey, NodeIndex>,
     live_consensus: Option<CurrentConsensus>,
-    _next_req_id: u64,
 }
 
 impl ChainXProtocol {
@@ -114,7 +79,6 @@ impl ChainXProtocol {
             consensus_gossip: ConsensusGossip::new(),
             validators: HashMap::new(),
             live_consensus: None,
-            _next_req_id: 1,
         }
     }
 
@@ -130,15 +94,6 @@ impl ChainXProtocol {
                 |&(ref hash, _)| hash,
             ),
         );
-    }
-
-    fn dispatch_pending_requests(&mut self, _ctx: &mut Context<Block>) {
-        let _consensus = match self.live_consensus {
-            Some(ref mut c) => c,
-            None => {
-                return;
-            }
-        };
     }
 
     fn on_chainx_message(
@@ -177,8 +132,6 @@ impl ChainXProtocol {
             }
             self.validators.insert(key, who);
         }
-
-        self.dispatch_pending_requests(ctx);
     }
 }
 
@@ -189,16 +142,14 @@ impl Specialization<Block> for ChainXProtocol {
 
     fn on_connect(&mut self, ctx: &mut Context<Block>, who: NodeIndex, status: FullStatus) {
         let validator = status.roles.contains(substrate_network::Roles::AUTHORITY);
-        let _send_key = validator;
 
-        let mut peer_info = PeerInfo {
+        let peer_info = PeerInfo {
             validator_key: None,
             claimed_validator: validator,
         };
 
         self.peers.insert(who, peer_info);
         self.consensus_gossip.new_peer(ctx, who, status.roles);
-        self.dispatch_pending_requests(ctx);
     }
 
     fn on_disconnect(&mut self, ctx: &mut Context<Block>, who: NodeIndex) {
@@ -208,7 +159,6 @@ impl Specialization<Block> for ChainXProtocol {
             }
 
             self.consensus_gossip.peer_disconnected(ctx, who);
-            self.dispatch_pending_requests(ctx);
         }
     }
 
@@ -244,10 +194,11 @@ impl Specialization<Block> for ChainXProtocol {
         self.consensus_gossip.abort();
     }
 
-    fn maintain_peers(&mut self, ctx: &mut Context<Block>) {
+    fn maintain_peers(&mut self, _ctx: &mut Context<Block>) {
         self.consensus_gossip.collect_garbage(None);
-        self.dispatch_pending_requests(ctx);
     }
 
-    fn on_block_imported(&mut self, _ctx: &mut Context<Block>, _hash: Hash, _header: &Header) {}
+    fn on_block_imported(&mut self, _ctx: &mut Context<Block>, hash: Hash, header: &Header) {
+        info!("on_block_imported number:{:?}, hash:{:?}", header.number, hash);
+    }
 }

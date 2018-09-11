@@ -271,6 +271,5 @@ pub mod api {
 		random_seed => |()| super::System::random_seed(),
 		account_nonce => |account| super::System::account_nonce(&account),
 		lookup_address => |address| super::Balances::lookup_address(address)
-
 	);
 }

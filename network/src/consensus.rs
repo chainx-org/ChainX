@@ -4,23 +4,21 @@
 //! This fulfills the `chainx_consensus::Network` trait, providing a hook to be called
 //! each time consensus begins on a new chain head.
 
-use bft;
-use ed25519;
 use substrate_network::{self as net, generic_message as msg};
 use substrate_network::consensus_gossip::ConsensusMessage;
+
+use chainx_primitives::{Block, Hash, SessionKey};
 use chainx_api::ChainXApi;
 use chainx_consensus::Network;
-use chainx_primitives::{Block, Hash, SessionKey};
-
-use futures::prelude::*;
-use futures::sync::mpsc;
-
-use std::sync::Arc;
 
 use tokio::runtime::TaskExecutor;
-use parking_lot::Mutex;
+use futures::prelude::*;
+use futures::sync::mpsc;
+use std::sync::Arc;
+use ed25519;
+use bft;
 
-use super::{NetworkService, Knowledge, CurrentConsensus};
+use super::{NetworkService, CurrentConsensus};
 
 /// Sink for output BFT messages.
 pub struct BftSink<E> {
@@ -287,15 +285,12 @@ impl<P: ChainXApi + Send + Sync + 'static> Network for ConsensusNetwork<P> {
 
         let (bft_send, bft_recv) = mpsc::unbounded();
 
-        let knowledge = Arc::new(Mutex::new(Knowledge::new()));
-
         let local_session_key = key.public().into();
         let local_id = key.public().into();
         let process_task = self.network.with_spec(|spec, ctx| {
             spec.new_consensus(
                 ctx,
                 CurrentConsensus {
-                    knowledge,
                     parent_hash,
                     local_session_key,
                 },

@@ -4,7 +4,7 @@ use std::net::Ipv4Addr;
 use std::iter;
 use Arc;
 
-use substrate_network::{Params, TransactionPool};
+use substrate_network::{Params, TransactionPool, Roles};
 use substrate_network_libp2p::AddrComponent;
 use substrate_network_libp2p;
 use substrate_network;
@@ -18,6 +18,7 @@ pub fn build_network(
     boot_nodes: Vec<String>,
     client: Arc<super::client::TClient>,
     tx_pool: Arc<TransactionPool<super::Hash, super::Block>>,
+    is_validator: bool,
     ) -> Arc<NetworkService> {
     let mut net_conf = substrate_network_libp2p::NetworkConfiguration::new();
     net_conf.listen_addresses = vec![
@@ -26,8 +27,12 @@ pub fn build_network(
             .collect(),
     ];
     net_conf.boot_nodes = boot_nodes;
+    let mut config = substrate_network::ProtocolConfig::default();
+    if is_validator {
+       config.roles = Roles::AUTHORITY;
+    }
     let param = NetworkParam {
-        config: substrate_network::ProtocolConfig::default(),
+        config: config,
         network_config: net_conf,
         chain: client,
         on_demand: None,

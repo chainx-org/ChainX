@@ -1,12 +1,12 @@
 // Copyright 2018 Chainpool.
 
 //! ChainX block evaluation and evaluation errors.
+use chainx_runtime::{Block as ChainXGenericBlock, CheckedBlock};
+use chainx_primitives::{Block, Hash, BlockNumber, Timestamp};
 
 use super::MAX_TRANSACTIONS_SIZE;
 
 use codec::{Decode, Encode};
-use chainx_runtime::{Block as ChainXGenericBlock, CheckedBlock};
-use chainx_primitives::{Block, Hash, BlockNumber, Timestamp};
 
 error_chain! {
 	links {

@@ -1,30 +1,29 @@
 // Copyright 2018 Chainpool.
 
 //! Consensus service.
-
 /// Consensus service. A long running service that manages BFT agreement over the network.
 ///
 /// This uses a handle to an underlying thread pool to dispatch heavy work
 /// such as candidate verification while performing event-driven work
 /// on a local event loop.
 
-use std::thread;
 use std::time::{Duration, Instant};
 use std::sync::Arc;
+use std::thread;
 
-use bft::{self, BftService};
 use client::{BlockchainEvents, ChainHead, BlockBody};
+use super::{Network, ProposerFactory};
 use ed25519;
-use futures::prelude::*;
+use error;
 
 use tokio::executor::current_thread::TaskExecutor as LocalThreadHandle;
-use tokio::runtime::TaskExecutor as ThreadPoolHandle;
 use tokio::runtime::current_thread::Runtime as LocalRuntime;
+use tokio::runtime::TaskExecutor as ThreadPoolHandle;
 use tokio::timer::{Delay, Interval};
+use futures::prelude::*;
 
-use super::{Network, ProposerFactory};
-use error;
 use chainx_primitives::{Block, Header};
+use bft::{self, BftService};
 use chainx_api::ChainXApi;
 use TransactionPool;
 

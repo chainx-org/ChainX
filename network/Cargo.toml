@@ -4,17 +4,16 @@ version = "0.1.0"
 authors = ["Chainpool <https://www.chainx.org>"]
 
 [dependencies]
-parking_lot = "0.4"
-chainx-api = { path = "../api" }
-chainx-consensus = { path = "../consensus" }
-chainx-primitives = { path = "../primitives" }
-substrate-bft = { git = "https://github.com/chainx-org/substrate" }
-substrate-codec = { git = "https://github.com/chainx-org/substrate" }
 substrate-codec-derive = { git = "https://github.com/chainx-org/substrate" }
-substrate-network = { git = "https://github.com/chainx-org/substrate" }
 substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-network = { git = "https://github.com/chainx-org/substrate" }
+substrate-codec = { git = "https://github.com/chainx-org/substrate" }
+substrate-bft = { git = "https://github.com/chainx-org/substrate" }
+chainx-primitives = { path = "../primitives" }
+chainx-consensus = { path = "../consensus" }
+chainx-api = { path = "../api" }
 ed25519 = { git = "https://github.com/chainx-org/substrate" }
+rhododendron = "0.3"
 futures = "0.1"
 tokio = "0.1.7"
 log = "0.4"
-rhododendron = "0.3"
