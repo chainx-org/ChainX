@@ -52,6 +52,5 @@ members = [
     "pool",
     "rpc",
     "api",
-    "test",
-    "fxck"
+    "test"
 ]

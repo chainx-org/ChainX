@@ -880,19 +880,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fxck"
-version = "0.1.0"
-dependencies = [
- "chainx-primitives 0.1.0",
- "chainx-runtime 0.1.0",
- "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-keyring 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-balances 0.1.0 (git+https://github.com/chainx-org/substrate)",
- "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
-]
-
-[[package]]
 name = "gcc"
 version = "0.3.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
