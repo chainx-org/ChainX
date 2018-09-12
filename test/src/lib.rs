@@ -7,6 +7,10 @@ extern crate substrate_codec;
 extern crate chainx_primitives;
 extern crate chainx_runtime;
 extern crate chainx_pool;
+extern crate chainx_api;
+
+
+use chainx_api::ChainXApi;
 
 use substrate_network::TransactionPool as Pool;
 use substrate_runtime_primitives::MaybeUnsigned;
@@ -40,6 +44,8 @@ fn xt() -> UncheckedExtrinsic {
 }
 
 
-pub fn push_one_transaction(extrinsic_pool: Arc<TransactionPool>){
+pub fn push_one_transaction<A>(extrinsic_pool: Arc<TransactionPool<A>>) where
+    A: ChainXApi + Send + Sync,
+{
     let _txhash = extrinsic_pool.clone().import(&xt().encode()).unwrap();
 }

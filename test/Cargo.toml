@@ -13,3 +13,4 @@ substrate-codec = { git = "https://github.com/chainx-org/substrate" }
 chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
 chainx-pool = { path = "../pool" }
+chainx-api = { path = "../api" }

@@ -110,7 +110,7 @@ impl Service {
         client: Arc<C>,
         api: Arc<A>,
         network: N,
-        transaction_pool: Arc<TransactionPool>,
+        transaction_pool: Arc<TransactionPool<A>>,
         thread_pool: ThreadPoolHandle,
         key: ed25519::Pair,
     ) -> Service

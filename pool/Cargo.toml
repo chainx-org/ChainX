@@ -19,9 +19,12 @@ substrate-client-db = { git = "https://github.com/chainx-org/substrate" }
 chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
 chainx-executor = {path = "../executor"}
+chainx-api = { path = "../api" }
 triehash = { version = "0.2.3" }
 error-chain = "0.12"
 hex-literal = "0.1"
+log = "0.3"
+
 [dev-dependencies]
 substrate-keyring = { git = "https://github.com/chainx-org/substrate" }
 substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }

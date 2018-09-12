@@ -46,6 +46,7 @@ use substrate_client::BlockchainEvents;
 use chainx_network::consensus::ConsensusNetwork;
 use chainx_pool::{PoolApi, TransactionPool};
 use chainx_primitives::{Block, Hash};
+use chainx_api::TClient;
 use cli::ChainSpec;
 
 use std::sync::Arc;
@@ -94,10 +95,10 @@ fn main() {
     let task_executor = runtime.executor();
 
     let extrinsic_pool = Arc::new(TransactionPool::new(
-        Default::default(),
-        PoolApi::default(),
-        client.clone(),
-    ));
+            Default::default(),
+            PoolApi::new( client.clone() as Arc<TClient> ),
+            client.clone(),
+            ));
 
     let validator_mode = matches.subcommand_matches("validator").is_some();
     let network = network::build_network(

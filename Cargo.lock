@@ -328,12 +328,14 @@ dependencies = [
 name = "chainx-pool"
 version = "0.1.0"
 dependencies = [
+ "chainx-api 0.1.0",
  "chainx-executor 0.1.0",
  "chainx-primitives 0.1.0",
  "chainx-runtime 0.1.0",
  "ed25519 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-client 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-client-db 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
@@ -423,6 +425,7 @@ dependencies = [
 name = "chainx-test"
 version = "0.1.0"
 dependencies = [
+ "chainx-api 0.1.0",
  "chainx-pool 0.1.0",
  "chainx-primitives 0.1.0",
  "chainx-runtime 0.1.0",

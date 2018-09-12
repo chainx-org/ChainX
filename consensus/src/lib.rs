@@ -32,28 +32,27 @@ mod evaluation;
 mod service;
 mod error;
 
+use chainx_primitives::{CandidateReceipt, BlockId, Hash, Block, Header, AccountId, BlockNumber, Timestamp, SessionKey};
+use dynamic_inclusion::DynamicInclusion;
 use tokio::timer::{Delay, Interval};
 use std::time::{Duration, Instant};
 use tokio::runtime::TaskExecutor;
+use codec::{Decode, Encode};
+use primitives::AuthorityId;
+use chainx_api::ChainXApi;
 use parking_lot::RwLock;
 use futures::prelude::*;
 use futures::future;
 use std::sync::Arc;
 
-use codec::{Decode, Encode};
-use primitives::AuthorityId;
-
-use chainx_primitives::{CandidateReceipt, BlockId, Hash, Block, Header, AccountId, BlockNumber, Timestamp, SessionKey};
-use chainx_api::ChainXApi;
-
+type TransactionPool<A> = substrate_extrinsic_pool::Pool<chainx_pool::PoolApi<A>>;
 pub use self::offline_tracker::OfflineTracker;
-use dynamic_inclusion::DynamicInclusion;
 pub use self::error::{ErrorKind, Error};
 pub use service::Service;
 
-pub type TransactionPool = substrate_extrinsic_pool::Pool<chainx_pool::PoolApi>;
 /// Shared offline validator tracker.
 pub type SharedOfflineTracker = Arc<RwLock<OfflineTracker>>;
+
 
 // block size limit.
 const MAX_TRANSACTIONS_SIZE: usize = 4 * 1024 * 1024;
@@ -83,7 +82,7 @@ where
     /// The client instance.
     pub client: Arc<P>,
     /// transaction pool,
-    pub transaction_pool: Arc<TransactionPool>,
+    pub transaction_pool: Arc<TransactionPool<P>>,
     /// The backing network handle.
     pub network: N,
     /// handle to remote task executor
@@ -146,7 +145,9 @@ where
 }
 
 /// The ChainX proposer logic.
-pub struct Proposer<C: ChainXApi + Send + Sync> {
+pub struct Proposer<C: ChainXApi + Send + Sync> where
+    C: ChainXApi + Send + Sync,
+{
     client: Arc<C>,
     dynamic_inclusion: DynamicInclusion,
     local_key: Arc<ed25519::Pair>,
@@ -154,7 +155,7 @@ pub struct Proposer<C: ChainXApi + Send + Sync> {
     parent_id: BlockId,
     parent_number: BlockNumber,
     random_seed: Hash,
-    transaction_pool: Arc<TransactionPool>,
+    transaction_pool: Arc<TransactionPool<C>>,
     offline: SharedOfflineTracker,
     validators: Vec<AccountId>,
 }
@@ -384,12 +385,13 @@ impl ProposalTiming {
 }
 
 /// Future which resolves upon the creation of a proposal.
-pub struct CreateProposal<C: ChainXApi + Send + Sync> {
+pub struct CreateProposal<C: ChainXApi + Send + Sync> where
+{
     parent_hash: Hash,
     parent_number: BlockNumber,
     parent_id: BlockId,
     client: Arc<C>,
-    transaction_pool: Arc<TransactionPool>,
+    transaction_pool: Arc<TransactionPool<C>>,
     timing: ProposalTiming,
     validators: Vec<AccountId>,
     offline: SharedOfflineTracker,
