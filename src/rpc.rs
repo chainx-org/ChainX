@@ -2,8 +2,6 @@
 
 use jsonrpc_http_server::Server as HttpServer;
 use jsonrpc_ws_server::Server as WsServer;
-use chainx_rpc::chainext::ChainExt;
-use rpc_server::apis::chain::Chain;
 use chainx_pool::TransactionPool;
 use tokio::runtime::TaskExecutor;
 use chainx_api::ChainXApi;

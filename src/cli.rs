@@ -29,6 +29,20 @@ pub fn build_cli() -> App<'static, 'static> {
             .takes_value(true),
             )
         .arg(
+            Arg::with_name("telemetry-url")
+            .long("telemetry-url")
+            .value_name("TELEMETRY_URL")
+            .help("The URL of the telemetry server. Implies --telemetry")
+            .takes_value(true),
+            )
+        .arg(
+            Arg::with_name("telemetry")
+            .long("telemetry")
+            .value_name("TELEMETRY")
+            .help("Should connect telemetry")
+            .takes_value(false),
+            )
+        .arg(
             Arg::with_name("bootnodes")
             .long("bootnodes")
             .value_name("URL")
@@ -73,7 +87,7 @@ pub fn parse_address(
     default: &str,
     port_param: &str,
     matches: &ArgMatches,
-    ) -> Result<SocketAddr, String> {
+) -> Result<SocketAddr, String> {
     let mut address: SocketAddr = default.parse().ok().ok_or_else(|| {
         format!("Invalid address specified for --{}.", port_param)
     })?;

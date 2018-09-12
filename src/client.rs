@@ -23,12 +23,10 @@ pub fn build_client(db_path: &str, chainspec: ChainSpec) -> Arc<TClient> {
                 pruning: state_db::PruningMode::default(),
             },
             FINALIZATION_WINDOW,
-            ).unwrap(),
-            );
+        ).unwrap(),
+    );
 
-    let executor = substrate_client::LocalCallExecutor::new(
-        backend.clone(),
-        NativeExecutor::new());
+    let executor = substrate_client::LocalCallExecutor::new(backend.clone(), NativeExecutor::new());
 
     let genesis_config = super::genesis_config::testnet_genesis(chainspec);
 
@@ -39,6 +37,6 @@ pub fn build_client(db_path: &str, chainspec: ChainSpec) -> Arc<TClient> {
             executor,
             genesis_config,
             ExecutionStrategy::NativeWhenPossible,
-            ).unwrap(),
-            )
+        ).unwrap(),
+    )
 }

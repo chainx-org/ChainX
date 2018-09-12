@@ -8,6 +8,8 @@ extern crate substrate_network;
 extern crate substrate_network_libp2p;
 extern crate substrate_primitives;
 extern crate substrate_rpc_servers as rpc_server;
+#[macro_use]
+extern crate substrate_telemetry as tel;
 extern crate substrate_runtime_primitives;
 extern crate substrate_state_db as state_db;
 extern crate substrate_state_machine as state_machine;
@@ -31,15 +33,20 @@ extern crate hex_literal;
 extern crate jsonrpc_http_server;
 extern crate jsonrpc_ws_server;
 extern crate rhododendron;
+extern crate ansi_term;
+extern crate sysinfo;
 extern crate tokio;
+#[macro_use]
+extern crate slog;
 #[macro_use]
 extern crate log;
 
-mod cli;
-mod client;
 mod genesis_config;
+mod telemetry;
 mod network;
+mod client;
 mod rpc;
+mod cli;
 
 use substrate_client::BlockchainEvents;
 
@@ -74,7 +81,7 @@ fn main() {
     let port = match matches.value_of("port") {
         Some(port) => port
             .parse()
-            .map_err(|_| "Invalid p2p port value specified.")
+            .map_err(|_| "invalid p2p port value specified.")
             .unwrap(),
         None => 20222,
     };
@@ -147,7 +154,7 @@ fn main() {
             }
         };
 
-        let consensus_net = ConsensusNetwork::new(network, client.clone());
+        let consensus_net = ConsensusNetwork::new(network.clone(), client.clone());
         Some(consensus::Service::new(
             client.clone(),
             client.clone(),
@@ -162,6 +169,17 @@ fn main() {
 
     let (_rpc_http, _rpc_ws) = rpc::start(&client, &task_executor, &matches, &extrinsic_pool);
 
-    let _ = runtime.block_on(exit);
+    if matches.is_present("telemetry") {
+        let telemetry_url = match matches.value_of("telemetry_url") {
+            Some(url) => Some(url.to_owned()),
+            None => Some("http://aws.chainx.org:8888".to_owned()),
+        };
+        let _telemetry = telemetry::build_telemetry(telemetry_url, validator_mode);
+        telemetry::run_telemetry(network, client, extrinsic_pool, task_executor);
+        let _ = runtime.block_on(exit.clone());
+    } else {
+        let _ = runtime.block_on(exit);
+    }
+
     exit_send.fire();
 }

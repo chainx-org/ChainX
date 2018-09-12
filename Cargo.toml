@@ -14,6 +14,7 @@ substrate-client-db = { git = "https://github.com/chainx-org/substrate" }
 substrate-keyring = { git = "https://github.com/chainx-org/substrate" }
 substrate-state-db = { git = "https://github.com/chainx-org/substrate" }
 substrate-state-machine = { git = "https://github.com/chainx-org/substrate" }
+substrate-telemetry = { git = "https://github.com/chainx-org/substrate" }
 substrate-codec = { git = "https://github.com/chainx-org/substrate", default_features = false }
 substrate-bft = { git = "https://github.com/chainx-org/substrate", default_features = false }
 substrate-rpc-servers = { git = "https://github.com/chainx-org/substrate" }
@@ -38,8 +39,11 @@ rhododendron = "0.3"
 hex-literal = "0.1"
 exit-future = "0.1"
 futures = "0.1.17"
+ansi_term = "0.10"
+sysinfo = "0.5.7"
 tokio = "0.1.7"
 clap = "2.30.0"
+slog = "^2"
 log = "0.3"
 
 [workspace]
