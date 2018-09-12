@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Chainpool <https://www.chainx.org>"]
 
 [dependencies]
+jsonrpc-macros = { git="https://github.com/paritytech/jsonrpc.git" }
 substrate-network = { git = "https://github.com/chainx-org/substrate" }
 substrate-network-libp2p = { git = "https://github.com/chainx-org/substrate" }
 substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
@@ -52,4 +53,5 @@ members = [
     "rpc",
     "api",
     "test",
+    "fxck"
 ]

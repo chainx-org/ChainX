@@ -227,6 +227,7 @@ dependencies = [
  "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-http-server 8.0.1 (git+https://github.com/paritytech/jsonrpc.git)",
+ "jsonrpc-macros 8.0.1 (git+https://github.com/paritytech/jsonrpc.git)",
  "jsonrpc-ws-server 8.0.0 (git+https://github.com/paritytech/jsonrpc.git)",
  "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "rhododendron 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -370,8 +371,21 @@ dependencies = [
 name = "chainx-rpc"
 version = "0.1.0"
 dependencies = [
+ "chainx-api 0.1.0",
+ "error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-core 8.0.2 (git+https://github.com/paritytech/jsonrpc.git)",
+ "jsonrpc-http-server 8.0.1 (git+https://github.com/paritytech/jsonrpc.git)",
+ "jsonrpc-macros 8.0.1 (git+https://github.com/paritytech/jsonrpc.git)",
+ "jsonrpc-pubsub 8.0.1 (git+https://github.com/paritytech/jsonrpc.git)",
+ "jsonrpc-ws-server 8.0.0 (git+https://github.com/paritytech/jsonrpc.git)",
  "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.75 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-client 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
  "substrate-rpc 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-rpc-servers 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "tokio 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -863,6 +877,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "fxck"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives 0.1.0",
+ "chainx-runtime 0.1.0",
+ "substrate-codec 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-keyring 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-balances 0.1.0 (git+https://github.com/chainx-org/substrate)",
+ "substrate-runtime-primitives 0.1.0 (git+https://github.com/chainx-org/substrate)",
 ]
 
 [[package]]

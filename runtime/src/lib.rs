@@ -49,6 +49,8 @@ use chainx_primitives::InherentData;
 use runtime_primitives::generic;
 use version::RuntimeVersion;
 
+//pub use chainx_primitives::Header;
+
 pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
 	let make_inherent = |function| UncheckedExtrinsic::new(
 		Extrinsic {
