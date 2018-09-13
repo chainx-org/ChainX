@@ -51,7 +51,7 @@ mod cli;
 use substrate_client::BlockchainEvents;
 
 use chainx_network::consensus::ConsensusNetwork;
-use chainx_pool::{PoolApi, TransactionPool};
+use chainx_pool::{PoolApi, TransactionPool, Pool};
 use chainx_primitives::{Block, Hash, BlockId};
 use chainx_api::TClient;
 use cli::ChainSpec;
@@ -192,10 +192,10 @@ fn main() {
     if matches.is_present("telemetry") {
         let telemetry_url = match matches.value_of("telemetry_url") {
             Some(url) => Some(url.to_owned()),
-            None => Some("http://aws.chainx.org:8888".to_owned()),
+            None => Some("ws://stats.chainx.org/submit/".to_owned()),
         };
         let _telemetry = telemetry::build_telemetry(telemetry_url, validator_mode);
-        telemetry::run_telemetry(network, client, extrinsic_pool, task_executor);
+        telemetry::run_telemetry(network, client, extrinsic_pool.inner(), task_executor);
         let _ = runtime.block_on(exit.clone());
     } else {
         let _ = runtime.block_on(exit);

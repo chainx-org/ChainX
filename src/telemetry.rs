@@ -1,8 +1,10 @@
 // Copyright 2018 chainpool
 
-use substrate_network::{TransactionPool, SyncState, SyncProvider};
+use substrate_network::{SyncState, SyncProvider};
 use substrate_runtime_primitives::traits::{Header, As};
 use substrate_client::BlockchainEvents;
+use ::{PoolApi, Pool};
+use ::TClient;
 use tel;
 
 use sysinfo::{get_current_pid, ProcessExt, System, SystemExt};
@@ -24,11 +26,11 @@ pub fn build_telemetry(
                 url: url,
                 on_connect: Box::new(move || {
                     telemetry!("system.connected";
-                            "name" => "chainx",
+                            "name" => "ChainX",
                             "implementation" => "chainx",
                             "version" => "0.1",
                             "config" => "",
-                            "chain" => "chainx",
+                            "chain" => "ChainX",
                             "authority" => is_authority
                         );
                 }),
@@ -42,7 +44,7 @@ pub fn build_telemetry(
 pub fn run_telemetry(
     network: ::Arc<::chainx_network::NetworkService>,
     client: ::Arc<::client::TClient>,
-    _txpool: ::Arc<TransactionPool<::Hash, ::Block>>,
+    txpool: ::Arc<Pool<PoolApi<TClient>>>,
     handle: TaskExecutor,
 ) {
     let interval = Interval::new(Instant::now(), Duration::from_millis(TIMER_INTERVAL_MS));
@@ -51,6 +53,7 @@ pub fn run_telemetry(
     let mut sys = System::new();
     let self_pid = get_current_pid();
     let client1 = client.clone();
+    let txpool1 = txpool.clone();
     let display_notifications = interval.map_err(|e| debug!("Timer error: {:?}", e)).for_each(move |_| {
         let sync_status = network.status();
         if let Ok(best_block) = client1.best_block_header() {
@@ -66,6 +69,7 @@ pub fn run_telemetry(
                    (format!("Syncing{}", speed()), format!(", target=#{}", n)),
             };
             last_number = Some(best_number);
+            let txpool_status = txpool1.light_status();
             info!(
                 target: "substrate",
                 "{}{} ({} peers), best: #{} ({})",
@@ -87,6 +91,7 @@ pub fn run_telemetry(
                 "peers" => num_peers,
                 "height" => best_number,
                 "best" => ?hash,
+                "txcount" => txpool_status.transaction_count,
                 "cpu" => cpu_usage,
                 "memory" => memory
             );
@@ -101,16 +106,16 @@ pub fn run_telemetry(
         Ok(())
     });
 
-    /*let display_txpool_import = txpool.import_notification_stream().for_each(move |_| {
+    let display_txpool_import = txpool.import_notification_stream().for_each(move |_| {
         let status = txpool.light_status();
         telemetry!("txpool.import";
                    "mem_usage" => status.mem_usage,
                    "count" => status.transaction_count,
                    "sender" => status.senders);
         Ok(())
-    });*/
+    });
 
-    let informant_work = display_notifications.join(display_block_import);
+    let informant_work = display_notifications.join3(display_block_import, display_txpool_import);
     handle.spawn(informant_work.map(|_| ()));
 }
 

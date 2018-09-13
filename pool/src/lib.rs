@@ -23,5 +23,6 @@ mod pool;
 mod error;
 
 pub use pool::TransactionPool;
+pub use extrinsic_pool::Pool;
 pub use pool::PoolApi;
 
