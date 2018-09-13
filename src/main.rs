@@ -52,7 +52,7 @@ use substrate_client::BlockchainEvents;
 
 use chainx_network::consensus::ConsensusNetwork;
 use chainx_pool::{PoolApi, TransactionPool};
-use chainx_primitives::{Block, Hash};
+use chainx_primitives::{Block, Hash, BlockId};
 use chainx_api::TClient;
 use cli::ChainSpec;
 
@@ -119,14 +119,34 @@ fn main() {
     {
         // block notifications
         let network = network.clone();
+        let txpool = extrinsic_pool.clone();
+
         let events = client
             .import_notification_stream()
             .for_each(move |notification| {
                 network.on_block_imported(notification.hash, &notification.header);
+                txpool.inner().cull(&BlockId::hash(notification.hash))
+                  .map_err(|e| warn!("Error removing extrinsics: {:?}", e))?;
                 Ok(())
             }).select(exit.clone())
             .then(|_| Ok(()));
         task_executor.spawn(events);
+    }
+
+   {
+         // extrinsic notifications
+         let network = network.clone();
+         let txpool = extrinsic_pool.clone();
+         let events = txpool.inner().import_notification_stream()
+             // TODO [ToDr] Consider throttling?
+             .for_each(move |_| {
+                network.trigger_repropagate();
+                Ok(())
+             })
+             .select(exit.clone())
+             .then(|_| Ok(()));
+
+          task_executor.spawn(events);
     }
 
     let _consensus = if validator_mode {
