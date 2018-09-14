@@ -42,8 +42,8 @@ pub fn start<A>(
                 chainx_rpc::default_rpc_config(),
                 )
         };
-        let rpc_interface: &str = "127.0.0.1";
-        let ws_interface: &str = "127.0.0.1";
+        let rpc_interface: &str = if matches.is_present("rpc-external") { "0.0.0.0" } else { "127.0.0.1" };
+        let ws_interface: &str = if matches.is_present("ws-external") { "0.0.0.0" } else { "127.0.0.1" };
         let rpc_http_addr = Some(
             cli::parse_address(&format!("{}:{}", rpc_interface, 8081), "rpc-port", &matches).unwrap(),
             );

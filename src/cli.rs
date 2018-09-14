@@ -51,6 +51,14 @@ pub fn build_cli() -> App<'static, 'static> {
             .multiple(true),
             )
         .arg(
+            Arg::with_name("listen-addr")
+            .long("listen-addr")
+            .value_name("LISTEN_ADDR")
+            .help("Listen on this multiaddress")
+            .takes_value(true)
+            .multiple(true),
+            )
+        .arg(
             Arg::with_name("db-path")
             .long("db-path")
             .value_name("DB")
@@ -70,6 +78,25 @@ pub fn build_cli() -> App<'static, 'static> {
             .value_name("PORT")
             .help("Specify WebSockets RPC server TCP port")
             .takes_value(true),
+            )
+        .arg(
+            Arg::with_name("name")
+            .long("name")
+            .value_name("NAME")
+            .help("The human-readable name for this node, as reported to the telemetry server, if enabled")
+            .takes_value(true),
+            )
+        .arg(
+            Arg::with_name("rpc-external")
+            .long("rpc-external")
+            .help("Listen to all RPC interfaces (default is local)")
+            .takes_value(false),
+            )
+        .arg(
+            Arg::with_name("ws-external")
+            .long("ws-external")
+            .help("Listen to all WebSocket interfaces (default is local)")
+            .takes_value(false),
             )
         .subcommand(SubCommand::with_name("validator").about(
                 "Enable validator mode",

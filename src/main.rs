@@ -35,6 +35,7 @@ extern crate jsonrpc_ws_server;
 extern crate rhododendron;
 extern crate ansi_term;
 extern crate sysinfo;
+extern crate names;
 extern crate tokio;
 #[macro_use]
 extern crate slog;
@@ -57,6 +58,7 @@ use chainx_api::TClient;
 use cli::ChainSpec;
 
 use std::sync::Arc;
+use names::{Generator, Name};
 use tokio::prelude::Future;
 use tokio::prelude::Stream;
 use tokio::runtime::Runtime;
@@ -108,11 +110,13 @@ fn main() {
             ));
 
     let validator_mode = matches.subcommand_matches("validator").is_some();
+    let multi_address = matches.values_of("listen-addr").unwrap_or_default();
     let network = network::build_network(
         port,
         boot_nodes,
         client.clone(),
         extrinsic_pool.clone(),
+        multi_address,
         validator_mode,
     );
 
@@ -194,7 +198,11 @@ fn main() {
             Some(url) => Some(url.to_owned()),
             None => Some("ws://stats.chainx.org/submit/".to_owned()),
         };
-        let _telemetry = telemetry::build_telemetry(telemetry_url, validator_mode);
+        let name = match matches.value_of("name") {
+            None => Generator::with_naming(Name::Numbered).next().unwrap(),
+            Some(name) => name.into(),
+        };
+        let _telemetry = telemetry::build_telemetry(telemetry_url, validator_mode, name);
         telemetry::run_telemetry(network, client, extrinsic_pool.inner(), task_executor);
         let _ = runtime.block_on(exit.clone());
     } else {

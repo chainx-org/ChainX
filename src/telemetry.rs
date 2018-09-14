@@ -19,6 +19,7 @@ const TIMER_INTERVAL_MS: u64 = 5000;
 pub fn build_telemetry(
     telemetry_url: Option<String>,
     is_authority: bool,
+    name: String,
 ) -> Option<tel::Telemetry> {
     let telemetry = match telemetry_url {
         Some(url) => {
@@ -26,7 +27,7 @@ pub fn build_telemetry(
                 url: url,
                 on_connect: Box::new(move || {
                     telemetry!("system.connected";
-                            "name" => "ChainX",
+                            "name" => name.clone(),
                             "implementation" => "chainx",
                             "version" => "0.1",
                             "config" => "",
