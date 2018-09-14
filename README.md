@@ -13,6 +13,8 @@
         * [Local two validator node](#local-two-validator-node)
         * [Multiple validator node](#multiple-validator-node)
     * [Sync node](#sync-node)
+        * [Public testnet](#public-testnet)
+        * [Development](#development-1)
 * [License](#license)
 
 <!-- /TOC -->
@@ -22,6 +24,12 @@
 For the time being the goal of [ChainX](https://github.com/chainx-org/ChainX) is to build a corss-chain digital asset management platform on the strength of [substrate](https://github.com/paritytech/substrate) which is next-generation framework for blockchain created by [paritytech](https://github.com/paritytech). The long-term vision of ChainX is to evolve as a general blockchain infrastrcutre platform.
 
 ChainX is still at a very early stage and in an active development. The instruction as followed is not stable and may change in the future.
+
+:tada: Run this command to connect to our public testnet:
+
+```bash
+$ chainx --chainspec=multi --telemetry --bootnodes=/ip4/47.105.73.172/tcp/30333/p2p/QmW7aJxigxGFXLmn966nJBBCexZA4nfSiydeg1JfmGFC9q --db-path=/tmp/chainx
+```
 
 ## Installation
 
@@ -48,9 +56,6 @@ $ sudo apt install cmake pkg-config libssl-dev git
 # Get the source code
 $ git clone https://github.com/chainx-org/ChainX ~/ChainX
 $ cd ~/ChainX
-
-# Build the WebAssembly binaries
-$ ./runtime/wasm/build.sh
 
 # Build all native code
 $ cargo build
@@ -132,6 +137,16 @@ $ chainx --chainspec=multi --db-path=/tmp/multi-satoshi --bootnodes=/ip4/127.0.0
 ```
 
 ### Sync node
+
+#### Public testnet
+
+Run the following command to connect to our public testnet:
+
+```bash
+$ chainx --chainspec=multi --telemetry --bootnodes=/ip4/47.105.73.172/tcp/30333/p2p/QmW7aJxigxGFXLmn966nJBBCexZA4nfSiydeg1JfmGFC9q --db-path=/tmp/chainx
+```
+
+#### Development
 
 Running `chainx` without `validator` subcommand is to synchronise to the chain, e.g., synchronise to a node in local mode:
 
