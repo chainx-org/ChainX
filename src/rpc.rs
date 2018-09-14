@@ -27,15 +27,17 @@ pub fn start<A>(
 {
         let handler = || {
             let chain = rpc_server::apis::chain::Chain::new(client.clone(), task_executor.clone());
+            let chain_ext = chainx_rpc::chainext::ChainExt::new(client.clone(), task_executor.clone());
             let state = rpc_server::apis::state::State::new(client.clone(), task_executor.clone());
             let author = rpc_server::apis::author::Author::new(
                 client.clone(),
                 extrinsic_pool.inner().clone(),
                 task_executor.clone(),
                 );
-            rpc_server::rpc_handler::<chainx_primitives::Block, chainx_primitives::Hash, _, _, _, _, _>(
+            chainx_rpc::servers::rpc_handler::<chainx_primitives::Block, chainx_primitives::Hash, _, _, _, _, _, _>(
                 state,
                 chain,
+                chain_ext,
                 author,
                 chainx_rpc::default_rpc_config(),
                 )
