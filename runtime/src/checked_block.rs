@@ -20,7 +20,7 @@ impl CheckedBlock {
             .get(TIMESTAMP_SET_POSITION as usize)
             .map_or(false, |xt| {
                 !xt.is_signed() &&
-                    match xt.extrinsic.function {
+                    match xt.function {
                         Call::Timestamp(TimestampCall::set(_)) => true,
                         _ => false,
                     }
@@ -50,7 +50,7 @@ impl CheckedBlock {
         let x = self.inner
             .extrinsics
             .get(TIMESTAMP_SET_POSITION as usize)
-            .and_then(|xt| match xt.extrinsic.function {
+            .and_then(|xt| match xt.function {
                 Call::Timestamp(TimestampCall::set(x)) => Some(x),
                 _ => None,
             });
@@ -66,7 +66,7 @@ impl CheckedBlock {
         self.inner
             .extrinsics
             .get(NOTE_OFFLINE_POSITION as usize)
-            .and_then(|xt| match xt.extrinsic.function {
+            .and_then(|xt| match xt.function {
                 //Call::Session(SessionCall::note_offline(ref x)) => Some(&x[..]),
                 _ => None,
             })

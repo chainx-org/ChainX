@@ -15,7 +15,7 @@ extern crate substrate_primitives as primitives;
 extern crate substrate_rpc;
 pub extern crate substrate_rpc as apis;
 extern crate substrate_rpc_servers as rpc_server;
-extern crate substrate_runtime_primitives as runtime_primitives;
+extern crate sr_primitives as runtime_primitives;
 extern crate tokio;
 #[macro_use]
 extern crate error_chain;

@@ -6,23 +6,24 @@ authors = ["Chainpool <http://www.chainx.org>"]
 [dependencies]
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
-substrate-codec = { git = "https://github.com/chainx-org/substrate", default_features = false }
-substrate-codec-derive = { git = "https://github.com/chainx-org/substrate", default_features = false }
-substrate-primitives = { git = "https://github.com/chainx-org/substrate", default_features = false }
-substrate-runtime-std = { git = "https://github.com/chainx-org/substrate", default_features = false }
-substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate", default_features = false }
+parity-codec = { version = "~1.0", default_features = false }
+parity-codec-derive = { version = "~1.0", default_features = false }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", default_features = false }
+sr-std = { git = "https://github.com/paritytech/substrate/", default_features = false }
+sr-primitives = { git = "https://github.com/paritytech/substrate", default_features = false }
 
 [dev-dependencies]
-substrate-serializer = { git = "https://github.com/chainx-org/substrate" }
+substrate-serializer = { git = "https://github.com/paritytech/substrate" }
 pretty_assertions = "0.4"
 
 [features]
 default = ["std"]
 std = [
-	"substrate-codec/std",
+    "parity-codec-derive/std",
+    "parity-codec/std",
 	"substrate-primitives/std",
-	"substrate-runtime-std/std",
-	"substrate-runtime-primitives/std",
+	"sr-std/std",
+	"sr-primitives/std",
 	"serde/std",
     "serde_derive",
 ]

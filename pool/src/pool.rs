@@ -5,7 +5,7 @@ use extrinsic_pool::{Pool, ChainApi, VerifiedFor, ExtrinsicFor, scoring,
 use runtime_primitives::traits::{Hash as HashT, Bounded, Checkable, BlakeTwo256};
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use chainx_primitives::{Block, Hash, BlockId, AccountId, Index};
-use chainx_runtime::{Address, UncheckedExtrinsic};
+use chainx_runtime::{Address, UncheckedExtrinsic, RawAddress};
 use substrate_executor::NativeExecutor;
 use substrate_client::{self, Client};
 use extrinsic_pool::IntoPoolError;
@@ -25,11 +25,13 @@ const MAX_TRANSACTION_SIZE: usize = 4 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct VerifiedExtrinsic {
-    inner: Option<CheckedExtrinsic>,
-    sender: Option<AccountId>,
-    hash: Hash,
+    /// Transaction hash.
+    pub hash: Hash,
+    /// Transaction sender.
+    pub sender: AccountId,
+    /// Transaction index.
+    pub index: Index,
     encoded_size: usize,
-    index: Index,
 }
 
 impl VerifiedExtrinsic {
@@ -37,27 +39,21 @@ impl VerifiedExtrinsic {
     pub fn hash(&self) -> &Hash {
         &self.hash
     }
+
     /// Get encoded size of the transaction.
     pub fn encoded_size(&self) -> usize {
         self.encoded_size
     }
-    /// Get the account ID of the sender of this transaction.
-    pub fn sender(&self) -> Option<AccountId> {
-        self.sender
-    }
+
     /// Get the account ID of the sender of this transaction.
     pub fn index(&self) -> Index {
         self.index
-    }
-    /// Returns `true` if the transaction is not yet fully verified.
-    pub fn is_fully_verified(&self) -> bool {
-        self.inner.is_some()
     }
 }
 
 impl VerifiedTransaction for VerifiedExtrinsic {
     type Hash = Hash;
-    type Sender = Option<AccountId>;
+    type Sender = AccountId;
 
     fn hash(&self) -> &Self::Hash {
         &self.hash
@@ -105,7 +101,7 @@ impl<A> ChainApi for PoolApi<A> where
     A: ChainXApi + Send + Sync,
 {
     type Ready = HashMap<AccountId, u64>;
-    type Sender = Option<AccountId>;
+    type Sender = AccountId;
     type VEx = VerifiedExtrinsic;
     type Block = Block;
     type Error = Error;
@@ -131,14 +127,14 @@ impl<A> ChainApi for PoolApi<A> where
             bail!(ErrorKind::TooLarge(encoded_size, MAX_TRANSACTION_SIZE));
         }
 
-        debug!(target: "transaction-pool", "Transaction submitted: {}", ::substrate_primitives::hexdisplay::HexDisplay::from(&encoded));
-        let inner = match uxt.clone().check_with(|a| self.lookup(at, a)) {
-            Ok(xt) => Some(xt),
-            // keep the transaction around in the future pool and attempt to promote it later.
-            Err(Self::NO_ACCOUNT) => None,
-            Err(e) => bail!(e),
-        };
-        let sender = inner.as_ref().map(|x| x.signed.clone());
+       debug!(target: "transaction-pool", "Transaction submitted: {}", ::substrate_primitives::hexdisplay::HexDisplay::from(&encoded));
+        let checked = uxt.clone().check_with(|a| {
+            match a {
+                RawAddress::Id(id) => Ok(id),
+                RawAddress::Index(_) => Err("Index based addresses are not supported".into()),// TODO: Make index addressing optional in substrate
+            }
+        })?;
+        let sender = checked.signed.expect("Only signed extrinsics are allowed at this point");
 
         if encoded_size < 1024 {
             debug!(target: "transaction-pool", "Transaction verified: {} => {:?}", hash, uxt);
@@ -147,8 +143,7 @@ impl<A> ChainApi for PoolApi<A> where
         }
 
         Ok(VerifiedExtrinsic {
-            index: uxt.extrinsic.index,
-            inner,
+            index: checked.index,
             sender,
             hash,
             encoded_size,
@@ -162,22 +157,19 @@ impl<A> ChainApi for PoolApi<A> where
     fn is_ready(
         &self,
         at: &BlockId,
-        nonce_cache: &mut Self::Ready,
+        known_nonces: &mut Self::Ready,
         xt: &VerifiedFor<Self>,
     ) -> Readiness {
-        let sender = match xt.verified.sender() {
-            Some(sender) => sender,
-            None => return Readiness::Future
-        };
+        let sender = xt.verified.sender().clone();
+        trace!(target: "transaction-pool", "Checking readiness of {} (from {})", xt.verified.hash, sender);
 
-        trace!(target: "transaction-pool", "Checking readiness of {} (from {})", xt.verified.hash, Hash::from(sender));
+        // TODO: find a way to handle index error properly -- will need changes to
+        // transaction-pool trait.
         let api = &self.api;
-        let s = api.index(at, sender).ok().unwrap_or_else(Bounded::max_value) as u64;
-        let next_index = nonce_cache.entry(sender).or_insert_with(|| s);
-        let tmp = *next_index as u32;
-        trace!(target: "transaction-pool", "Next index for sender is {}; xt index is {}", next_index, xt.verified.index);
+        let next_index = known_nonces.entry(sender)
+            .or_insert_with(|| api.index(at, sender).ok().unwrap_or_else(Bounded::max_value));
 
-        let result = match xt.verified.index.cmp(&tmp) {
+        let result = match xt.verified.index.cmp(&next_index) {
             Ordering::Greater => Readiness::Future,
             Ordering::Equal => Readiness::Ready,
             // TODO [ToDr] Should mark transactions referencing too old blockhash as `Stale` as well.
@@ -194,17 +186,9 @@ impl<A> ChainApi for PoolApi<A> where
     }
 
     fn choose(old: &VerifiedFor<Self>, new: &VerifiedFor<Self>) -> scoring::Choice {
-        if old.verified.is_fully_verified() {
-            assert!(new.verified.is_fully_verified(), "Scoring::choose called with transactions from different senders");
-            if old.verified.index() == new.verified.index() {
-                return Choice::ReplaceOld;
-            }
+        if old.verified.index() == new.verified.index() {
+            return Choice::ReplaceOld;
         }
-
-        // This will keep both transactions, even though they have the same indices.
-        // It's fine for not fully verified transactions, we might also allow it for
-        // verified transactions but it would mean that only one of the two is actually valid
-        // (most likely the first to be included in the block).
         Choice::InsertNew
     }
 
@@ -214,24 +198,12 @@ impl<A> ChainApi for PoolApi<A> where
         _change: scoring::Change<()>,
     ) {
         for i in 0..xts.len() {
-            if !xts[i].verified.is_fully_verified() {
-                scores[i] = 0;
-            } else {
-                // all the same score since there are no fees.
-                // TODO: prioritize things like misbehavior or fishermen reports
-                scores[i] = 1;
-            }
+           scores[i] = 1;
         }
     }
 
     fn should_replace(old: &VerifiedFor<Self>, _new: &VerifiedFor<Self>) -> scoring::Choice {
-        if old.verified.is_fully_verified() {
-            // Don't allow new transactions if we are reaching the limit.
-            Choice::RejectNew
-        } else {
-            // Always replace not fully verified transactions.
-            Choice::ReplaceOld
-        }
+        Choice::RejectNew
     }
 }
 

@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-substrate-executor = { git = "https://github.com/chainx-org/substrate" }
-substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
+substrate-executor = { git = "https://github.com/paritytech/substrate" }
+substrate-primitives = { git = "https://github.com/paritytech/substrate" }
 chainx-runtime = { path = "../runtime" }

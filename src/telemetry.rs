@@ -1,7 +1,7 @@
 // Copyright 2018 chainpool
 
 use substrate_network::{SyncState, SyncProvider};
-use substrate_runtime_primitives::traits::{Header, As};
+use sr_primitives::traits::{Header, As};
 use substrate_client::BlockchainEvents;
 use ::{PoolApi, Pool};
 use ::TClient;

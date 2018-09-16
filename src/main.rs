@@ -10,7 +10,7 @@ extern crate substrate_primitives;
 extern crate substrate_rpc_servers as rpc_server;
 #[macro_use]
 extern crate substrate_telemetry as tel;
-extern crate substrate_runtime_primitives;
+extern crate sr_primitives;
 extern crate substrate_state_db as state_db;
 extern crate substrate_state_machine as state_machine;
 
@@ -22,11 +22,9 @@ extern crate chainx_pool;
 extern crate chainx_primitives;
 extern crate chainx_rpc;
 extern crate chainx_runtime;
-extern crate chainx_test;
 
 extern crate clap;
 extern crate ctrlc;
-extern crate ed25519;
 extern crate env_logger;
 extern crate exit_future;
 extern crate hex_literal;
@@ -50,6 +48,7 @@ mod rpc;
 mod cli;
 
 use substrate_client::BlockchainEvents;
+use substrate_primitives::ed25519;
 
 use chainx_network::consensus::ConsensusNetwork;
 use chainx_pool::{PoolApi, TransactionPool, Pool};

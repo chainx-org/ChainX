@@ -1,5 +1,5 @@
 use jsonrpc_macros::Trailing;
-use primitives::{KeccakHasher, RlpCodec};
+use primitives::{Blake2Hasher, RlpCodec};
 use runtime_primitives::generic::{BlockId, SignedBlock};
 use runtime_primitives::traits::{Block as BlockT, Header, NumberFor};
 
@@ -32,8 +32,8 @@ impl<B, E, Block> ChainApiExt<Block::Hash, Block::Header, NumberFor<Block>, Bloc
 	for ChainExt<B, E, Block>
 where
 	Block: BlockT + 'static,
-	B: client::backend::Backend<Block, KeccakHasher, RlpCodec> + Send + Sync + 'static,
-	E: client::CallExecutor<Block, KeccakHasher, RlpCodec> + Send + Sync + 'static,
+	B: client::backend::Backend<Block, Blake2Hasher, RlpCodec> + Send + Sync + 'static,
+	E: client::CallExecutor<Block, Blake2Hasher, RlpCodec> + Send + Sync + 'static,
 {
 	fn block_info(
 		&self,

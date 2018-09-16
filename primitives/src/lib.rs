@@ -4,10 +4,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-extern crate substrate_codec as codec;
+extern crate parity_codec as codec;
 extern crate substrate_primitives as primitives;
-extern crate substrate_runtime_primitives as runtime_primitives;
-extern crate substrate_runtime_std as rstd;
+extern crate sr_primitives as runtime_primitives;
+extern crate sr_std as rstd;
 
 #[cfg(test)]
 extern crate substrate_serializer;
@@ -18,7 +18,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
-extern crate substrate_codec_derive;
+extern crate parity_codec_derive;
 #[cfg(feature = "std")]
 use primitives::bytes;
 
@@ -29,11 +29,13 @@ use runtime_primitives::generic;
 /// Signature on candidate's block data by a collator.
 pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
 
-/// Block header type as expected by this runtime.
-pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
+/// Header type.
+pub type Header = generic::Header<BlockNumber, BlakeTwo256, generic::DigestItem<()>>;
 
 /// Opaque, encoded, unchecked extrinsic.
-pub type UncheckedExtrinsic = Vec<u8>;
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub struct UncheckedExtrinsic(#[cfg_attr(feature = "std", serde(with="bytes"))] pub Vec<u8>);
 
 /// A "future-proof" block type for Polkadot. This will be resilient to upgrades in transaction
 /// format, because it doesn't attempt to decode extrinsics.
@@ -65,11 +67,9 @@ pub type ChainId = u32;
 pub type Hash = primitives::H256;
 
 /// Index of a transaction in the relay chain. 32-bit should be plenty.
-pub type Index = u32;
+pub type Index = u64;
 
-/// Alias to 512-bit hash when used in the context of a signature on the relay chain.
-/// Equipped with logic for possibly "unsigned" messages.
-pub type Signature = runtime_primitives::MaybeUnsigned<runtime_primitives::Ed25519Signature>;
+pub type Signature = runtime_primitives::Ed25519Signature;
 
 /// A timestamp: seconds since the unix epoch.
 pub type Timestamp = u64;
@@ -86,12 +86,6 @@ pub type Balance = u128;
 /// "generic" block ID for the future-proof block type.
 // TODO: parameterize blockid only as necessary.
 pub type BlockId = generic::BlockId<Block>;
-
-/// A log entry in the block.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct Log(#[cfg_attr(feature = "std", serde(with="bytes"))] pub Vec<u8>);
-
 
 /// Inherent data to include in a block.
 #[derive(Encode, Decode)]

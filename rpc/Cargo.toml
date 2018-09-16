@@ -4,16 +4,16 @@ version = "0.1.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-substrate-rpc = { git = "https://github.com/chainx-org/substrate" }
+substrate-rpc = { git = "https://github.com/paritytech/substrate" }
 jsonrpc-core = { git="https://github.com/paritytech/jsonrpc.git" }
 jsonrpc-http-server = { git = "https://github.com/paritytech/jsonrpc.git" }
 jsonrpc-pubsub = { git = "https://github.com/paritytech/jsonrpc.git" }
 jsonrpc-ws-server = { git = "https://github.com/paritytech/jsonrpc.git" }
 jsonrpc-macros = { git="https://github.com/paritytech/jsonrpc.git" }
-substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
-substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
-substrate-rpc-servers = { git = "https://github.com/chainx-org/substrate" }
-substrate-client = { git = "https://github.com/chainx-org/substrate" }
+sr-primitives = { git = "https://github.com/paritytech/substrate" }
+substrate-primitives = { git = "https://github.com/paritytech/substrate" }
+substrate-rpc-servers = { git = "https://github.com/paritytech/substrate" }
+substrate-client = { git = "https://github.com/paritytech/substrate" }
 chainx-api = { path = "../api" }
 log = "0.3"
 serde = "1.0"

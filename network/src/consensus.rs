@@ -6,6 +6,7 @@
 
 use substrate_network::{self as net, generic_message as msg};
 use substrate_network::consensus_gossip::ConsensusMessage;
+use substrate_primitives::ed25519;
 
 use chainx_primitives::{Block, Hash, SessionKey};
 use chainx_api::ChainXApi;
@@ -15,7 +16,6 @@ use tokio::runtime::TaskExecutor;
 use futures::prelude::*;
 use futures::sync::mpsc;
 use std::sync::Arc;
-use ed25519;
 use bft;
 
 use super::{NetworkService, CurrentConsensus};

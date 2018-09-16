@@ -4,26 +4,25 @@ version = "0.1.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-futures = "0.1.17"
-parking_lot = "0.4"
-tokio = "0.1.7"
-ed25519 = { git = "https://github.com/chainx-org/substrate" }
-error-chain = "0.12"
-log = "0.3"
-exit-future = "0.1"
-rhododendron = "0.3"
-substrate-bft = { git = "https://github.com/chainx-org/substrate" }
-substrate-codec = { git = "https://github.com/chainx-org/substrate" }
-substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
-substrate-runtime-support = { git = "https://github.com/chainx-org/substrate" }
-substrate-client = { git = "https://github.com/chainx-org/substrate" }
-substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
-substrate-network = { git = "https://github.com/chainx-org/substrate" }
-substrate-extrinsic-pool = { git = "https://github.com/chainx-org/substrate" }
+substrate-extrinsic-pool = { git = "https://github.com/paritytech/substrate" }
+substrate-bft = { git = "https://github.com/paritytech/substrate" }
+substrate-primitives = { git = "https://github.com/paritytech/substrate" }
+srml-support = { git = "https://github.com/paritytech/substrate" }
+substrate-client = { git = "https://github.com/paritytech/substrate" }
+sr-primitives = { git = "https://github.com/paritytech/substrate" }
+substrate-network = { git = "https://github.com/paritytech/substrate" }
 chainx-primitives = {path = "../primitives" }
 chainx-runtime = {path = "../runtime" }
-chainx-api = {path = "../api" }
+parity-codec = { version = "~1.0" }
 chainx-pool = {path = "../pool" }
+chainx-api = {path = "../api" }
+error-chain = "0.12"
+rhododendron = "0.3"
+exit-future = "0.1"
+parking_lot = "0.4"
+futures = "0.1.17"
+tokio = "0.1.7"
+log = "0.3"
 
 [dev-dependencies]
-substrate-keyring = { git = "https://github.com/chainx-org/substrate" }
+substrate-keyring = { git = "https://github.com/paritytech/substrate" }

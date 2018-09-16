@@ -5,9 +5,9 @@
 //! This manages gossip of consensus messages for BFT, communication between validators
 //! and more.
 
-extern crate substrate_codec as codec;
+extern crate parity_codec as codec;
 #[macro_use]
-extern crate substrate_codec_derive;
+extern crate parity_codec_derive;
 extern crate substrate_primitives;
 extern crate substrate_bft as bft;
 extern crate substrate_network;
@@ -17,7 +17,6 @@ extern crate chainx_consensus;
 extern crate chainx_api;
 
 extern crate rhododendron;
-extern crate ed25519;
 extern crate futures;
 extern crate tokio;
 #[macro_use]

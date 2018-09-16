@@ -1,10 +1,10 @@
 // Copyright 2018 Chainpool.
 
-extern crate substrate_runtime_primitives as runtime_primitives;
-extern crate substrate_runtime_support as runtime_support;
+extern crate sr_primitives as runtime_primitives;
+extern crate srml_support as runtime_support;
 extern crate substrate_primitives as primitives;
 extern crate substrate_client as client;
-extern crate substrate_codec as codec;
+extern crate parity_codec as codec;
 extern crate substrate_extrinsic_pool;
 extern crate substrate_bft as bft;
 extern crate substrate_network;
@@ -21,7 +21,6 @@ extern crate parking_lot;
 extern crate error_chain;
 #[macro_use]
 extern crate futures;
-extern crate ed25519;
 extern crate tokio;
 #[macro_use]
 extern crate log;
@@ -38,7 +37,7 @@ use tokio::timer::{Delay, Interval};
 use std::time::{Duration, Instant};
 use tokio::runtime::TaskExecutor;
 use codec::{Decode, Encode};
-use primitives::AuthorityId;
+use primitives::{AuthorityId, ed25519};
 use chainx_api::ChainXApi;
 use parking_lot::RwLock;
 use futures::prelude::*;

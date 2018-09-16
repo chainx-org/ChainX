@@ -1,7 +1,7 @@
 // Copyright 2018 chainpool
 
-use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
-                     SessionConfig, StakingConfig, TimestampConfig, BalancesConfig};
+use chainx_runtime::{GenesisConfig, ConsensusConfig, DemocracyConfig, TreasuryConfig,
+                     SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, Permill};
 use super::cli::ChainSpec;
 use keyring::Keyring;
 use ed25519;
@@ -62,35 +62,23 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             minimum_validator_count: 1,
             validator_count: 2,
             sessions_per_era: 24, // 24 hours per era.
-            early_era_slash: 10000,
             session_reward: 100,
             offline_slash_grace: 0,
+            offline_slash: 10000,
         }),
         democracy: Some(DemocracyConfig {
             launch_period: 120 * 24 * 14, // 2 weeks per public referendum
             voting_period: 120 * 24 * 28, // 4 weeks to discuss & vote on an active referendum
             minimum_deposit: 1000, // 1000 as the minimum deposit for a referendum
         }),
-        council: Some(CouncilConfig {
-            active_council: vec![],
-            candidacy_bond: 1000, // 1000 to become a council candidate
-            voter_bond: 100, // 100 down to vote for a candidate
-            present_slash_per_voter: 1, // slash by 1 per voter for an invalid presentation.
-            carry_count: 24, // carry over the 24 runners-up to the next council election
-            presentation_duration: 120 * 24, // one day for presenting winners.
-            // one week period between possible council elections.
-            approval_voting_period: 7 * 120 * 24,
-            term_duration: 180 * 120 * 24, // 180 day term duration for the council.
-            // start with no council: we'll raise this once the stake has been dispersed a bit.
-            desired_seats: 0,
-            // one addition vote should go by before an inactive voter can be reaped.
-            inactive_grace_period: 1,
-            // 90 day cooling off period if council member vetoes a proposal.
-            cooloff_period: 90 * 120 * 24,
-            voting_period: 7 * 120 * 24, // 7 day voting period for council members.
-        }),
         timestamp: Some(TimestampConfig {
             period: 5,                  // 5 second block time.
+        }),
+        treasury: Some(TreasuryConfig {
+            proposal_bond: Permill::from_percent(5),
+            proposal_bond_minimum: 1_000_000,
+            spend_period: 12 * 60 * 24,
+            burn: Permill::from_percent(50),
         }),
     }
 }

@@ -4,17 +4,15 @@ version = "0.1.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-substrate-runtime-primitives = { git = "https://github.com/chainx-org/substrate" }
-substrate-runtime-executive = { git = "https://github.com/chainx-org/substrate" }
-substrate-state-machine = { git = "https://github.com/chainx-org/substrate" }
-substrate-runtime-io = { git = "https://github.com/chainx-org/substrate" }
-substrate-primitives = { git = "https://github.com/chainx-org/substrate" }
-substrate-client-db = { git = "https://github.com/chainx-org/substrate" }
-substrate-executor = { git = "https://github.com/chainx-org/substrate" }
-substrate-client = { git = "https://github.com/chainx-org/substrate" }
-substrate-codec = { git = "https://github.com/chainx-org/substrate" }
+sr-primitives = { git = "https://github.com/paritytech/substrate" }
+srml-executive = { git = "https://github.com/paritytech/substrate" }
+sr-io = { git = "https://github.com/paritytech/substrate" }
+substrate-primitives = { git = "https://github.com/paritytech/substrate" }
+substrate-client-db = { git = "https://github.com/paritytech/substrate" }
+substrate-executor = { git = "https://github.com/paritytech/substrate" }
+substrate-client = { git = "https://github.com/paritytech/substrate" }
 chainx-primitives = { path = "../primitives" }
 chainx-executor = { path = "../executor" }
 chainx-runtime = { path = "../runtime" }
-error-chain = "0.12"
+parity-codec = { version = "~1.0" }
 log = "0.3"
