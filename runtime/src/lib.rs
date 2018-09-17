@@ -248,7 +248,7 @@ pub type Executive = executive::Executive<
     Block,
     Balances,
     Balances,
-    ((((((), Council), Democracy), Staking), Session), Timestamp),
+    (((((), Democracy), Staking), Session), Timestamp),
 >;
 
 

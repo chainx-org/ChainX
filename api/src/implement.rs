@@ -54,7 +54,6 @@ impl ChainXApi for TClient {
     }
 
     fn build_block(&self, at: &BlockId, inherent_data: InherentData) -> Result<Self::BlockBuilder> {
-        info!("------api build block {:?}", at);
         let mut block_builder = self.new_block_at(at)?;
         for inherent in self.inherent_extrinsics(at, inherent_data)? {
             block_builder.push(inherent)?;
