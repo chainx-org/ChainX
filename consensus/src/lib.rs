@@ -19,25 +19,22 @@ extern crate exit_future;
 extern crate parking_lot;
 #[macro_use]
 extern crate error_chain;
-#[macro_use]
 extern crate futures;
 extern crate tokio;
 #[macro_use]
 extern crate log;
 
-mod dynamic_inclusion;
 mod offline_tracker;
 mod evaluation;
 mod service;
 mod error;
 
-use chainx_primitives::{CandidateReceipt, BlockId, Hash, Block, Header, AccountId, BlockNumber, Timestamp, SessionKey};
-use dynamic_inclusion::DynamicInclusion;
-use tokio::timer::{Delay, Interval};
+use chainx_primitives::{BlockId, Hash, Block, Header, AccountId, BlockNumber, Timestamp, SessionKey};
+use primitives::{AuthorityId, ed25519};
 use std::time::{Duration, Instant};
 use tokio::runtime::TaskExecutor;
+use tokio::timer::Delay;
 use codec::{Decode, Encode};
-use primitives::{AuthorityId, ed25519};
 use chainx_api::ChainXApi;
 use parking_lot::RwLock;
 use futures::prelude::*;
@@ -108,6 +105,8 @@ where
     ) -> Result<(Self::Proposer, Self::Input, Self::Output), Error> {
         use runtime_primitives::traits::{Hash as HashT, BlakeTwo256};
 
+        const FORCE_DELAY: Timestamp = 1;
+
         let parent_hash = parent_header.hash().into();
 
         let id = BlockId::hash(parent_hash);
@@ -124,11 +123,10 @@ where
             self.handle.clone(),
         );
         let now = Instant::now();
-        let dynamic_inclusion = DynamicInclusion::new(10, now, Duration::from_millis(4000));
 
         let proposer = Proposer {
             client: self.client.clone(),
-            dynamic_inclusion,
+            start: now,
             local_key: sign_with,
             parent_hash,
             parent_id: id,
@@ -137,6 +135,7 @@ where
             transaction_pool: self.transaction_pool.clone(),
             offline: self.offline.clone(),
             validators,
+            minimum_timestamp: current_timestamp() + FORCE_DELAY,
         };
 
         Ok((proposer, input, output))
@@ -144,11 +143,10 @@ where
 }
 
 /// The ChainX proposer logic.
-pub struct Proposer<C: ChainXApi + Send + Sync> where
-    C: ChainXApi + Send + Sync,
+pub struct Proposer<C: ChainXApi + Send + Sync>
 {
     client: Arc<C>,
-    dynamic_inclusion: DynamicInclusion,
+    start: Instant,
     local_key: Arc<ed25519::Pair>,
     parent_hash: Hash,
     parent_id: BlockId,
@@ -157,6 +155,7 @@ pub struct Proposer<C: ChainXApi + Send + Sync> where
     transaction_pool: Arc<TransactionPool<C>>,
     offline: SharedOfflineTracker,
     validators: Vec<AccountId>,
+    minimum_timestamp: u64,
 }
 
 impl<C: ChainXApi + Send + Sync> Proposer<C> {
@@ -175,34 +174,87 @@ where
     C: ChainXApi + Send + Sync,
 {
     type Error = Error;
-    type Create = future::Either<CreateProposal<C>, future::FutureResult<Block, Error>>;
+    type Create = Result<Block, Error>;
     type Evaluate = Box<Future<Item = bool, Error = Error>>;
 
     fn propose(&self) -> Self::Create {
-        const ATTEMPT_PROPOSE_EVERY: Duration = Duration::from_millis(100);
+        use chainx_api::BlockBuilder;
+        use runtime_primitives::traits::{Hash as HashT, BlakeTwo256};
+        use chainx_primitives::InherentData;
 
-        let now = Instant::now();
-        let initial_included = 0;
-        let enough_candidates = self.dynamic_inclusion
-            .acceptable_in(now, initial_included)
-            .unwrap_or_else(|| now + Duration::from_millis(1));
-        let timing = ProposalTiming {
-            attempt_propose: Interval::new(now + ATTEMPT_PROPOSE_EVERY, ATTEMPT_PROPOSE_EVERY),
-            enough_candidates: Delay::new(enough_candidates),
-            dynamic_inclusion: self.dynamic_inclusion.clone(),
-            last_included: initial_included,
+        const MAX_VOTE_OFFLINE_SECONDS: Duration = Duration::from_secs(60);
+        // TODO: handle case when current timestamp behind that in state.
+        let timestamp = ::std::cmp::max(self.minimum_timestamp, current_timestamp());
+
+        let elapsed_since_start = self.start.elapsed();
+        let offline_indices = if elapsed_since_start > MAX_VOTE_OFFLINE_SECONDS {
+            Vec::new()
+        } else {
+            self.offline.read().reports(&self.validators[..])
         };
 
-        future::Either::A(CreateProposal {
-            parent_hash: self.parent_hash.clone(),
-            parent_number: self.parent_number.clone(),
-            parent_id: self.parent_id.clone(),
-            client: self.client.clone(),
-            transaction_pool: self.transaction_pool.clone(),
-            offline: self.offline.clone(),
-            validators: self.validators.clone(),
-            timing,
-        })
+        if !offline_indices.is_empty() {
+            info!(
+                "Submitting offline validators {:?} for slash-vote",
+                offline_indices.iter().map(|&i| self.validators[i as usize]).collect::<Vec<_>>(),
+                )
+        }
+
+        let inherent_data = InherentData {
+            timestamp,
+            offline_indices,
+        };
+
+        let mut block_builder = self.client.build_block(&self.parent_id, inherent_data)?;
+
+        {
+            let mut unqueue_invalid = Vec::new();
+            let result = self.transaction_pool.cull_and_get_pending(&BlockId::hash(self.parent_hash), |pending_iterator| {
+                let mut pending_size = 0;
+                for pending in pending_iterator {
+                    if pending_size + pending.verified.encoded_size() >= MAX_TRANSACTIONS_SIZE { break }
+
+                    match block_builder.push_extrinsic(pending.original.clone()) {
+                        Ok(()) => {
+                            pending_size += pending.verified.encoded_size();
+                        }
+                        Err(e) => {
+                            trace!(target: "transaction-pool", "Invalid transaction: {}", e);
+                            unqueue_invalid.push(pending.verified.hash().clone());
+                        }
+                    }
+                }
+            });
+            if let Err(e) = result {
+                warn!("Unable to get the pending set: {:?}", e);
+            }
+
+            self.transaction_pool.remove(&unqueue_invalid, false);
+        }
+
+        let block = block_builder.bake()?;
+
+        info!("Proposing block [number: {}; hash: {}; parent_hash: {}; extrinsics: [{}]]",
+              block.header.number,
+              Hash::from(block.header.hash()),
+              block.header.parent_hash,
+              block.extrinsics.iter()
+              .map(|xt| format!("{}", BlakeTwo256::hash_of(xt)))
+              .collect::<Vec<_>>()
+              .join(", ")
+             );
+
+        let substrate_block = Decode::decode(&mut block.encode().as_slice())
+            .expect("blocks are defined to serialize to substrate blocks correctly; qed");
+
+        assert!(evaluation::evaluate_initial(
+            &substrate_block,
+            timestamp,
+            &self.parent_hash,
+            self.parent_number,
+        ).is_ok());
+
+        Ok(substrate_block)
     }
 
     fn evaluate(&self, unchecked_proposal: &Block) -> Self::Evaluate {
@@ -240,19 +292,12 @@ where
                 None
             };
 
-            // delay casting vote until able according to minimum block time,
-            // timestamp delay, and count delay.
-            // construct a future from the maximum of the two durations.
-            let max_delay = timestamp_delay;
-
-            let temporary_delay = match max_delay {
+            match timestamp_delay {
                 Some(duration) => future::Either::A(Delay::new(duration).map_err(
                     |e| Error::from(ErrorKind::Timer(e)),
                 )),
                 None => future::Either::B(future::ok(())),
-            };
-
-            temporary_delay
+            }
         };
 
         // refuse to vote if this block says a validator is offline that we
@@ -294,42 +339,81 @@ where
         proposer
     }
 
-    fn import_misbehavior(&self, _misbehavior: Vec<(AuthorityId, bft::Misbehavior<Hash>)>) {}
+    fn import_misbehavior(&self, misbehavior: Vec<(AuthorityId, bft::Misbehavior<Hash>)>) {
+        use rhododendron::Misbehavior as GenericMisbehavior;
+        use runtime_primitives::bft::{MisbehaviorKind, MisbehaviorReport};
+        use chainx_primitives::UncheckedExtrinsic as GenericExtrinsic;
+        use chainx_runtime::{Call, UncheckedExtrinsic, ConsensusCall};
+
+        let local_id = self.local_key.public().0.into();
+        let mut next_index = {
+            let cur_index = self.transaction_pool.cull_and_get_pending(&BlockId::hash(self.parent_hash), |pending| pending
+                .filter(|tx| tx.verified.sender == local_id)
+                .last()
+                .map(|tx| Ok(tx.verified.index()))
+                .unwrap_or_else(|| self.client.index(&self.parent_id, local_id))
+            );
+
+            match cur_index {
+                Ok(Ok(cur_index)) => cur_index + 1,
+                Ok(Err(e)) => {
+                    warn!(target: "consensus", "Error computing next transaction index: {}", e);
+                    return;
+                }
+                Err(e) => {
+                    warn!(target: "consensus", "Error computing next transaction index: {}", e);
+                    return;
+                }
+            }
+        };
+
+        for (target, misbehavior) in misbehavior {
+            let report = MisbehaviorReport {
+                parent_hash: self.parent_hash,
+                parent_number: self.parent_number,
+                target,
+                misbehavior: match misbehavior {
+                    GenericMisbehavior::ProposeOutOfTurn(_, _, _) => continue,
+                    GenericMisbehavior::DoublePropose(_, _, _) => continue,
+                    GenericMisbehavior::DoublePrepare(round, (h1, s1), (h2, s2))
+                        => MisbehaviorKind::BftDoublePrepare(round as u32, (h1, s1.signature), (h2, s2.signature)),
+                    GenericMisbehavior::DoubleCommit(round, (h1, s1), (h2, s2))
+                        => MisbehaviorKind::BftDoubleCommit(round as u32, (h1, s1.signature), (h2, s2.signature)),
+                }
+            };
+            let payload = (next_index, Call::Consensus(ConsensusCall::report_misbehavior(report)));
+            let signature = self.local_key.sign(&payload.encode()).into();
+            next_index += 1;
+
+            let local_id = self.local_key.public().0.into();
+            let extrinsic = UncheckedExtrinsic {
+                signature: Some((chainx_runtime::RawAddress::Id(local_id), signature)),
+                index: payload.0,
+                function: payload.1,
+            };
+            let uxt: GenericExtrinsic = Decode::decode(&mut extrinsic.encode().as_slice()).expect("Encoded extrinsic is valid");
+            self.transaction_pool.submit_one(&BlockId::hash(self.parent_hash), uxt)
+                .expect("locally signed extrinsic is valid; qed");
+        }
+    }
 
     fn on_round_end(&self, round_number: usize, was_proposed: bool) {
         let primary_validator =
             self.validators[self.primary_index(round_number, self.validators.len())];
 
-
         // alter the message based on whether we think the empty proposer was forced to skip the round.
         // this is determined by checking if our local validator would have been forced to skip the round.
-        let consider_online = was_proposed ||
-            {
-                let forced_delay = self.dynamic_inclusion.acceptable_in(Instant::now(), 0);
-                let public = ::ed25519::Public::from_raw(primary_validator.0);
-                match forced_delay {
-                    None => {
-                        info!(
-					"Potential Offline Validator: {} failed to propose during assigned slot: {}",
-					public,
-					round_number,
-				)
-                    }
-                    Some(_) => {
-                        info!(
-					"Potential Offline Validator {} potentially forced to skip assigned slot: {}",
-					public,
-					round_number,
-				)
-                    }
-                }
-
-                forced_delay.is_some()
-            };
+        if !was_proposed {
+            let public = ed25519::Public::from_raw(primary_validator.0);
+            info!(
+                "Potential Offline Validator: {} failed to propose during assigned slot: {}",
+                public,
+                round_number,
+            );
+        }
 
         self.offline.write().note_round_end(
-            primary_validator,
-            consider_online,
+            primary_validator, was_proposed
         );
     }
 }
@@ -341,174 +425,4 @@ fn current_timestamp() -> Timestamp {
         .duration_since(time::UNIX_EPOCH)
         .expect("now always later than unix epoch; qed")
         .as_secs()
-}
-
-struct ProposalTiming {
-    attempt_propose: Interval,
-    dynamic_inclusion: DynamicInclusion,
-    enough_candidates: Delay,
-    last_included: usize,
-}
-
-impl ProposalTiming {
-    // whether it's time to attempt a proposal.
-    // shouldn't be called outside of the context of a task.
-    fn poll(&mut self, included: usize) -> Poll<(), ErrorKind> {
-        // first drain from the interval so when the minimum delay is up
-        // we don't have any notifications built up.
-        //
-        // this interval is just meant to produce periodic task wakeups
-        // that lead to the `dynamic_inclusion` getting updated as necessary.
-        if let Async::Ready(x) = self.attempt_propose.poll().map_err(ErrorKind::Timer)? {
-            x.expect("timer still alive; intervals never end; qed");
-        }
-
-        if included == self.last_included {
-            return self.enough_candidates.poll().map_err(ErrorKind::Timer);
-        }
-
-        // the amount of includable candidates has changed. schedule a wakeup
-        // if it's not sufficient anymore.
-        match self.dynamic_inclusion.acceptable_in(
-            Instant::now(),
-            included,
-        ) {
-            Some(instant) => {
-                self.last_included = included;
-                self.enough_candidates.reset(instant);
-                self.enough_candidates.poll().map_err(ErrorKind::Timer)
-            }
-            None => Ok(Async::Ready(())),
-        }
-    }
-}
-
-/// Future which resolves upon the creation of a proposal.
-pub struct CreateProposal<C: ChainXApi + Send + Sync> where
-{
-    parent_hash: Hash,
-    parent_number: BlockNumber,
-    parent_id: BlockId,
-    client: Arc<C>,
-    transaction_pool: Arc<TransactionPool<C>>,
-    timing: ProposalTiming,
-    validators: Vec<AccountId>,
-    offline: SharedOfflineTracker,
-}
-
-impl<C> CreateProposal<C>
-where
-    C: ChainXApi + Send + Sync,
-{
-    fn propose_with(&self, _candidates: Vec<CandidateReceipt>) -> Result<Block, Error> {
-        use chainx_api::BlockBuilder;
-        use runtime_primitives::traits::{Hash as HashT, BlakeTwo256};
-        use chainx_primitives::InherentData;
-
-        const MAX_VOTE_OFFLINE_SECONDS: Duration = Duration::from_secs(60);
-
-        // TODO: handle case when current timestamp behind that in state.
-        let timestamp = current_timestamp();
-
-        let elapsed_since_start = self.timing.dynamic_inclusion.started_at().elapsed();
-        /*let offline_indices = if elapsed_since_start > MAX_VOTE_OFFLINE_SECONDS {
-            Vec::new()
-        } else {
-            self.offline.read().reports(&self.validators[..])
-        };
-
-        if !offline_indices.is_empty() {
-            info!(
-				"Submitting offline validators {:?} for slash-vote",
-				offline_indices.iter().map(|&i| self.validators[i as usize]).collect::<Vec<_>>(),
-			)
-        }*/
-
-        let inherent_data = InherentData {
-            timestamp,
-        };
-
-        let mut block_builder = self.client.build_block(&self.parent_id, inherent_data)?;
-
-        {
-            let mut unqueue_invalid = Vec::new();
-            let result = self.transaction_pool.cull_and_get_pending(
-                &BlockId::hash(self.parent_hash), |pending_iterator| {
-                    let mut pending_size = 0;
-                    for pending in pending_iterator {
-                        if pending_size + pending.verified.encoded_size() >= MAX_TRANSACTIONS_SIZE { break }
-
-                        info!("push transaction: {}",pending.verified.hash().clone());
-                        info!("transaction origin data: {:?}",pending.original.clone());
-
-                        match block_builder.push_extrinsic(pending.original.clone()) {
-                            Ok(()) => {
-                                pending_size += pending.verified.encoded_size();
-                            }
-                            Err(e) => {
-                                trace!(target: "transaction-pool", "Invalid transaction: {}", e);
-                                unqueue_invalid.push(pending.verified.hash().clone());
-                            }
-                        }
-                    }
-                },
-            );
-            if let Err(e) = result {
-                warn!("Unable to get the pending set: {:?}", e);
-            }
-
-            self.transaction_pool.remove(&unqueue_invalid, false);
-        }
-
-        let chainx_block = block_builder.bake()?;
-
-        info!(
-            "Proposing block [number: {}; hash: {}; parent_hash: {}; extrinsics: [{}]]",
-            chainx_block.header.number,
-            Hash::from(chainx_block.header.hash()),
-            chainx_block.header.parent_hash,
-            chainx_block
-                .extrinsics
-                .iter()
-                .map(|xt| format!("{}", BlakeTwo256::hash_of(xt)))
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
-
-        let substrate_block = Decode::decode(&mut chainx_block.encode().as_slice()).expect(
-            "chainx blocks defined to serialize to substrate blocks correctly; qed",
-        );
-
-        // TODO: full re-evaluation
-        assert!(
-            evaluation::evaluate_initial(
-                &substrate_block,
-                timestamp,
-                &self.parent_hash,
-                self.parent_number,
-            ).is_ok()
-        );
-
-        Ok(substrate_block)
-    }
-}
-
-impl<C> Future for CreateProposal<C>
-where
-    C: ChainXApi + Send + Sync,
-{
-    type Item = Block;
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Block, Error> {
-        // 1. try to propose if we have enough includable candidates and other
-        // delays have concluded.
-        let included = 0;
-        try_ready!(self.timing.poll(included));
-
-        // 2. propose
-        let proposed_candidates: Vec<CandidateReceipt> = vec![];
-
-        self.propose_with(proposed_candidates).map(Async::Ready)
-    }
 }

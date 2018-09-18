@@ -13,9 +13,6 @@ extern crate chainx_primitives as primitives;
 extern crate chainx_runtime as runtime;
 extern crate chainx_executor;
 
-#[macro_use]
-extern crate log;
-
 use primitives::{
 	AccountId, Block, BlockId, Hash, Index, SessionKey, Timestamp,
 	UncheckedExtrinsic, InherentData,

@@ -23,6 +23,7 @@ extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive;
 extern crate substrate_primitives;
+#[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
 extern crate srml_consensus as consensus;
 extern crate srml_contract as contract;
@@ -45,6 +46,7 @@ mod checked_block;
 pub use balances::address::Address as RawAddress;
 #[cfg(feature = "std")]
 pub use checked_block::CheckedBlock;
+pub use consensus::Call as ConsensusCall;
 pub use runtime_primitives::Permill;
 
 use rstd::prelude::*;
@@ -65,8 +67,16 @@ pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
         index: 0,
     };
 
-    let mut inherent: Vec<UncheckedExtrinsic> = Vec::new();
-    inherent.push(make_inherent(Call::Timestamp(TimestampCall::set(data.timestamp))));
+    let mut inherent = vec![
+        make_inherent(Call::Timestamp(TimestampCall::set(data.timestamp))),
+    ];
+
+    if !data.offline_indices.is_empty() {
+        inherent.push(make_inherent(
+                Call::Consensus(ConsensusCall::note_offline(data.offline_indices))
+        ));
+    }
+
     inherent
 }
 

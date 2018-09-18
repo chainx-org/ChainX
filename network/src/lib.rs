@@ -197,7 +197,6 @@ impl Specialization<Block> for ChainXProtocol {
         self.consensus_gossip.collect_garbage(None);
     }
 
-    fn on_block_imported(&mut self, _ctx: &mut Context<Block>, hash: Hash, header: &Header) {
-        info!("on_block_imported number:{:?}, hash:{:?}", header.number, hash);
+    fn on_block_imported(&mut self, _ctx: &mut Context<Block>, _hash: Hash, _header: &Header) {
     }
 }

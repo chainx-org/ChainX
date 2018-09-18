@@ -84,7 +84,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             voting_period: 20,
         }),
         timestamp: Some(TimestampConfig {
-            period: 5,                  // 5 second block time.
+            period: 2,                  // 2 second block time.
         }),
         treasury: Some(TreasuryConfig {
             proposal_bond: Permill::from_percent(5),

@@ -13,22 +13,22 @@ use std::thread;
 
 use client::{BlockchainEvents, ChainHead, BlockBody};
 use super::{Network, ProposerFactory};
+use bft::{self, BftService};
 use ed25519;
 use error;
 
 use tokio::executor::current_thread::TaskExecutor as LocalThreadHandle;
 use tokio::runtime::current_thread::Runtime as LocalRuntime;
 use tokio::runtime::TaskExecutor as ThreadPoolHandle;
-use tokio::timer::{Delay, Interval};
+use tokio::timer::Interval;
 use futures::prelude::*;
 
 use chainx_primitives::{Block, Header};
-use bft::{self, BftService};
 use chainx_api::ChainXApi;
 use TransactionPool;
 
-const TIMER_DELAY_MS: u64 = 5000;
-const TIMER_INTERVAL_MS: u64 = 500;
+const TIMER_DELAY_MS: Duration = Duration::from_millis(2000);
+const TIMER_INTERVAL_MS: Duration = Duration::from_millis(200);
 
 // spin up an instance of BFT agreement on the current thread's executor.
 // panics if there is no current thread executor.
@@ -40,62 +40,14 @@ where
     <F::Proposer as bft::Proposer<Block>>::Error: ::std::fmt::Display + Into<error::Error>,
     <F as bft::Environment<Block>>::Error: ::std::fmt::Display,
 {
-    const DELAY_UNTIL: Duration = Duration::from_millis(5000);
-
     let mut handle = LocalThreadHandle::current();
     match bft_service.build_upon(&header) {
-        Ok(Some(bft_work)) => {
-            // do not poll work for some amount of time.
-            let work = Delay::new(Instant::now() + DELAY_UNTIL).then(move |res| {
-                if let Err(e) = res {
-                    warn!(target: "bft", "Failed to force delay of consensus: {:?}", e);
-                }
-
-                debug!(target: "bft", "Starting agreement. After forced delay for {:?}",
-					DELAY_UNTIL);
-
-                bft_work
-            });
-            if let Err(e) = handle.spawn_local(Box::new(work)) {
-                warn!(target: "bft", "Couldn't initialize BFT agreement: {:?}", e);
-            }
+        Ok(Some(bft_work)) => if let Err(e) = handle.spawn_local(Box::new(bft_work)) {
+            warn!(target: "bft", "Couldn't initialize BFT agreement: {:?}", e);
         }
         Ok(None) => trace!(target: "bft", "Could not start agreement on top of {}", header.hash()),
         Err(e) => warn!(target: "bft", "BFT agreement error: {}", e),
     }
-}
-
-// creates a task to prune redundant entries in availability store upon block finalization
-//
-// NOTE: this will need to be changed to finality notification rather than
-// block import notifications when the consensus switches to non-instant finality.
-fn prune_unneeded_availability<C>(client: Arc<C>) -> impl Future<Item = (), Error = ()> + Send
-where
-    C: Send + Sync + BlockchainEvents<Block> + BlockBody<Block> + 'static,
-{
-    /*enum NotifyError {
-		NoBody,
-		BodyFetch(::client::error::Error),
-		UnexpectedFormat,
-		ExtrinsicsWrong,
-	}
-
-	impl NotifyError {
-		fn log(&self, hash: &::chainx_primitives::Hash) {
-			match *self {
-				NotifyError::NoBody => warn!("No block body for imported block {:?}", hash),
-				NotifyError::BodyFetch(ref err) => warn!("Failed to fetch block body for imported block {:?}: {:?}", hash, err),
-				NotifyError::UnexpectedFormat => warn!("Consensus outdated: Block {:?} has unexpected body format", hash),
-				NotifyError::ExtrinsicsWrong => warn!("Consensus outdated: Extrinsics cannot be decoded for {:?}", hash),
-			}
-		}
-	}*/
-    // TO DO
-    client.import_notification_stream().for_each(
-        move |_notification| {
-            Ok(())
-        },
-    )
 }
 
 /// Consensus service. Starts working when created.
@@ -151,8 +103,8 @@ impl Service {
             };
 
             let interval = Interval::new(
-                Instant::now() + Duration::from_millis(TIMER_DELAY_MS),
-                Duration::from_millis(TIMER_INTERVAL_MS),
+                Instant::now() + TIMER_DELAY_MS,
+                TIMER_INTERVAL_MS,
             );
 
             let mut prev_best = match client.best_block_header() {
@@ -187,13 +139,6 @@ impl Service {
 
             runtime.spawn(notifications);
             runtime.spawn(timed);
-
-            let prune_available = prune_unneeded_availability(client)
-                .select(exit.clone())
-                .then(|_| Ok(()));
-
-            // spawn this on the tokio executor since it's fine on a thread pool.
-            thread_pool.spawn(prune_available);
 
             if let Err(e) = runtime.block_on(exit) {
                 debug!("BFT event loop error {:?}", e);

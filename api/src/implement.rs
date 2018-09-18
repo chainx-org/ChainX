@@ -24,7 +24,6 @@ impl ChainXApi for TClient {
     }
 
     fn random_seed(&self, at: &BlockId) -> Result<Hash> {
-        info!("api random_seed block id {:?}", at);
         self.call_api_at(at, "random_seed", &())
     }
 

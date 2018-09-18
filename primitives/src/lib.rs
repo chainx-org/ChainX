@@ -93,6 +93,8 @@ pub type BlockId = generic::BlockId<Block>;
 pub struct InherentData {
     /// Current timestamp.
     pub timestamp: Timestamp,
+    /// Indices of offline validators.
+    pub offline_indices: Vec<u32>,
 }
 
 /// Candidate receipt type.
