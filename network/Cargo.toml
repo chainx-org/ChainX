@@ -9,8 +9,8 @@ substrate-network = { git = "https://github.com/paritytech/substrate" }
 substrate-bft = { git = "https://github.com/paritytech/substrate" }
 chainx-primitives = { path = "../primitives" }
 chainx-consensus = { path = "../consensus" }
-parity-codec-derive = { version = "~1.0" }
-parity-codec = { version = "~1.0" }
+parity-codec-derive = { version = "^1.0" }
+parity-codec = { version = "^1.0" }
 chainx-api = { path = "../api" }
 rhododendron = "0.3"
 futures = "0.1"

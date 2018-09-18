@@ -54,11 +54,20 @@ impl ChainXApi for TClient {
     }
 
     fn build_block(&self, at: &BlockId, inherent_data: InherentData) -> Result<Self::BlockBuilder> {
-        let mut block_builder = self.new_block_at(at)?;
-        for inherent in self.inherent_extrinsics(at, inherent_data)? {
-            block_builder.push(inherent)?;
-        }
+//        let mut block_builder = self.new_block_at(at)?;
+//        for inherent in self.inherent_extrinsics(at, inherent_data)? {
+//            block_builder.push(inherent)?;
+//        }
+//
+//        Ok(block_builder)
+        let runtime_version = self.runtime_version_at(at)?;
 
+        let mut block_builder = self.new_block_at(at)?;
+        if runtime_version.has_api(*b"inherent", 1) {
+            for inherent in self.inherent_extrinsics(at, inherent_data)? {
+                block_builder.push(inherent)?;
+            }
+        }
         Ok(block_builder)
     }
 
@@ -67,7 +76,9 @@ impl ChainXApi for TClient {
         at: &BlockId,
         inherent_data: InherentData,
     ) -> Result<Vec<UncheckedExtrinsic>> {
-        let runtime_version = self.runtime_version_at(at)?;
-        self.call_api_at(at, "inherent_extrinsics", &(inherent_data, runtime_version.spec_version))
+//        let runtime_version = self.runtime_version_at(at)?;
+        // TODO change for api
+        self.call_api_at(at, "inherent_extrinsics", &inherent_data)
+//        self.call_api_at(at, "inherent_extrinsics", &(inherent_data, runtime_version.spec_version))
     }
 }

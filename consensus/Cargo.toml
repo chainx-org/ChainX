@@ -13,7 +13,7 @@ sr-primitives = { git = "https://github.com/paritytech/substrate" }
 substrate-network = { git = "https://github.com/paritytech/substrate" }
 chainx-primitives = {path = "../primitives" }
 chainx-runtime = {path = "../runtime" }
-parity-codec = { version = "~1.0" }
+parity-codec = { version = "^1.0" }
 chainx-pool = {path = "../pool" }
 chainx-api = {path = "../api" }
 error-chain = "0.12"

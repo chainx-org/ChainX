@@ -4,6 +4,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
+#![recursion_limit="256"]
 
 #[cfg(feature = "std")]
 #[macro_use]
@@ -23,6 +25,7 @@ extern crate parity_codec_derive;
 extern crate substrate_primitives;
 extern crate sr_std as rstd;
 extern crate srml_consensus as consensus;
+extern crate srml_contract as contract;
 extern crate srml_balances as balances;
 extern crate srml_council as council;
 extern crate srml_democracy as democracy;
@@ -35,6 +38,7 @@ extern crate srml_treasury as treasury;
 #[macro_use]
 extern crate sr_version as version;
 extern crate chainx_primitives;
+
 #[cfg(feature = "std")]
 mod checked_block;
 
@@ -50,31 +54,27 @@ use timestamp::Call as TimestampCall;
 use chainx_primitives::InherentData;
 use runtime_primitives::generic;
 use runtime_primitives::traits::{Convert, BlakeTwo256, DigestItem};
-use council::motions as council_motions;
-use version::RuntimeVersion;
+use council::{motions as council_motions, voting as council_voting};
+use version::{RuntimeVersion, ApiId};
 use codec::{Encode, Decode, Input};
 
 pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
-	let make_inherent = |function| UncheckedExtrinsic {
-			signature: Default::default(),
-			function,
-			index: 0,
+    let make_inherent = |function| UncheckedExtrinsic {
+        signature: Default::default(),
+        function,
+        index: 0,
     };
 
-	let mut inherent: Vec<UncheckedExtrinsic> =  Vec::new();
+    let mut inherent: Vec<UncheckedExtrinsic> = Vec::new();
     inherent.push(make_inherent(Call::Timestamp(TimestampCall::set(data.timestamp))));
-	inherent
+    inherent
 }
 
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
 
-// Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-/// Runtime type used to parameterize the various modules.
-pub struct Runtime;
-
+const INHERENT: ApiId = *b"inherent";
+const VALIDATX: ApiId = *b"validatx";
 
 /// The position of the timestamp set extrinsic.
 pub const TIMESTAMP_SET_POSITION: u32 = 0;
@@ -88,6 +88,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     authoring_version: 1,
     spec_version: 1,
     impl_version: 0,
+    apis: apis_vec!([(INHERENT, 1), (VALIDATX, 1)]),
 };
 
 impl system::Trait for Runtime {
@@ -100,41 +101,29 @@ impl system::Trait for Runtime {
     type AccountId = AccountId;
     type Header = Header;
     type Event = Event;
+    type Log = Log;
 }
-
-/// System module for this concrete runtime.
-pub type System = system::Module<Runtime>;
 
 impl balances::Trait for Runtime {
-	type Balance = Balance;
-	type AccountIndex = AccountIndex;
-	type OnFreeBalanceZero = Staking;
-	type EnsureAccountLiquid = Staking;
-	type Event = Event;
+    type Balance = Balance;
+    type AccountIndex = AccountIndex;
+    type OnFreeBalanceZero = Staking;
+    type EnsureAccountLiquid = Staking;
+    type Event = Event;
 }
-/// balances module for this concrete runtime.
-pub type Balances = balances::Module<Runtime>;
-
 
 impl consensus::Trait for Runtime {
     const NOTE_OFFLINE_POSITION: u32 = NOTE_OFFLINE_POSITION;
     type Log = Log;
-	type SessionKey = SessionKey;
-	type OnOfflineValidator = Staking;
-
+    type SessionKey = SessionKey;
+    type OnOfflineValidator = Staking;
 }
-
-/// Consensus module for this concrete runtime.
-pub type Consensus = consensus::Module<Runtime>;
 
 impl timestamp::Trait for Runtime {
     const TIMESTAMP_SET_POSITION: u32 = 0;
 
     type Moment = u64;
 }
-
-/// Timestamp module for this concrete runtime.
-pub type Timestamp = timestamp::Module<Runtime>;
 
 /// Session key conversion.
 pub struct SessionKeyConversion;
@@ -150,85 +139,77 @@ impl session::Trait for Runtime {
     type Event = Event;
 }
 
-/// Session module for this concrete runtime.
-pub type Session = session::Module<Runtime>;
-
 impl treasury::Trait for Runtime {
     type ApproveOrigin = council_motions::EnsureMembers<_4>;
     type RejectOrigin = council_motions::EnsureMembers<_2>;
     type Event = Event;
 }
 
-/// Treasury module for this concrete runtime.
-pub type Treasury = treasury::Module<Runtime>;
-
 impl staking::Trait for Runtime {
     type OnRewardMinted = Treasury;
     type Event = Event;
 }
-
-/// Staking module for this concrete runtime.
-pub type Staking = staking::Module<Runtime>;
 
 impl democracy::Trait for Runtime {
     type Proposal = Call;
     type Event = Event;
 }
 
-/// Democracy module for this concrete runtime.
-pub type Democracy = democracy::Module<Runtime>;
-
 impl council::Trait for Runtime {
     type Event = Event;
 }
-/// Council module for this concrete runtime.
-pub type Council = council::Module<Runtime>;
 
-impl_outer_event! {
-    pub enum Event for Runtime {
-        balances<T>,
-        session<T>,
-        staking<T>,
-        democracy<T>,
-        council<T>,
-        council_motions<T>,
-        treasury<T>,
-    }
+impl contract::Trait for Runtime {
+    type Gas = u64;
+    type DetermineContractAddress = contract::SimpleAddressDeterminator<Runtime>;
 }
 
-impl_outer_log! {
-    pub enum Log(InternalLog: DigestItem<SessionKey>) for Runtime {
-        consensus(AuthoritiesChange)
-    }
+// TODO add voting and motions at here
+impl council::voting::Trait for Runtime {
+    type Event = Event;
 }
 
-impl_outer_origin! {
-    pub enum Origin for Runtime {
-        council_motions
-    }
-}
-
-impl_outer_dispatch! {
-	pub enum Call where origin: Origin {
-		Consensus,
-        Balances,
-		Session,
-		Staking,
-		Timestamp,
-		Democracy,
-		Council,
-	}
+impl council::motions::Trait for Runtime {
+    type Origin = Origin;
+    type Proposal = Call;
+    type Event = Event;
 }
 
 impl DigestItem for Log {
+    type Hash = Hash;
     type AuthorityId = SessionKey;
 
     fn as_authorities_change(&self) -> Option<&[Self::AuthorityId]> {
         match self.0 {
             InternalLog::consensus(ref item) => item.as_authorities_change(),
+            _ => None,
+        }
+    }
+
+    fn as_changes_trie_root(&self) -> Option<&Self::Hash> {
+        match self.0 {
+            InternalLog::system(ref item) => item.as_changes_trie_root(),
+            _ => None,
         }
     }
 }
+
+construct_runtime!(
+	pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) {
+		System: system::{default, Log(ChangesTrieRoot)},
+		Consensus: consensus::{Module, Call, Storage, Config, Log(AuthoritiesChange)},
+		Balances: balances,
+		Timestamp: timestamp::{Module, Call, Storage, Config},
+		Session: session,
+		Staking: staking,
+		Democracy: democracy,
+		Council: council,
+		CouncilVoting: council_voting::{Module, Call, Storage, Event<T>},
+		CouncilMotions: council_motions::{Module, Call, Storage, Event<T>, Origin},
+		Treasury: treasury,
+		Contract: contract::{Module, Call, Config},
+	}
+);
 
 /// The address format for describing accounts.
 pub type Address = balances::Address<Runtime>;
@@ -243,40 +224,7 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Index, Call, 
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<
-    Runtime,
-    Block,
-    Balances,
-    Balances,
-    (((((), Democracy), Staking), Session), Timestamp),
->;
-
-
-impl_outer_config! {
-	pub struct GenesisConfig for Runtime {
-		ConsensusConfig => consensus,
-		SystemConfig => system,
-        BalancesConfig => balances,
-		SessionConfig => session,
-		StakingConfig => staking,
-		DemocracyConfig => democracy,
-		TimestampConfig => timestamp,
-        TreasuryConfig => treasury,
-	}
-}
-
-impl_json_metadata!(
-    for Runtime with modules
-        system::Module with Storage,
-        consensus::Module with Storage,
-        balances::Module with Storage,
-        timestamp::Module with Storage,
-        session::Module with Storage,
-        staking::Module with Storage,
-        democracy::Module with Storage,
-        council::Module with Storage,
-        treasury::Module with Storage,
-);
+pub type Executive = executive::Executive<Runtime, Block, Balances, Balances, AllModules>;
 
 pub mod api {
     impl_stubs!(

@@ -29,8 +29,15 @@ use runtime_primitives::generic;
 /// Signature on candidate's block data by a collator.
 pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
 
+/// The Ed25519 pub key of an session that belongs to an authority of the relay chain. This is
+/// exactly equivalent to what the substrate calls an "authority".
+pub type SessionKey = primitives::AuthorityId;
+
+/// A hash of some data used by the relay chain.
+pub type Hash = primitives::H256;
+
 /// Header type.
-pub type Header = generic::Header<BlockNumber, BlakeTwo256, generic::DigestItem<()>>;
+pub type Header = generic::Header<BlockNumber, BlakeTwo256, generic::DigestItem<Hash, SessionKey>>;
 
 /// Opaque, encoded, unchecked extrinsic.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
@@ -56,15 +63,9 @@ pub type AccountId = primitives::H256;
 /// never know...
 pub type AccountIndex = u64;
 
-/// The Ed25519 pub key of an session that belongs to an authority of the relay chain. This is
-/// exactly equivalent to what the substrate calls an "authority".
-pub type SessionKey = primitives::AuthorityId;
 
 /// Indentifier for a chain. 32-bit should be plenty.
 pub type ChainId = u32;
-
-/// A hash of some data used by the relay chain.
-pub type Hash = primitives::H256;
 
 /// Index of a transaction in the relay chain. 32-bit should be plenty.
 pub type Index = u64;
