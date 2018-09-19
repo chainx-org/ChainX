@@ -23,6 +23,7 @@ pub fn build_network(
     is_validator: bool,
     ) -> Arc<NetworkService> {
     let mut net_conf = substrate_network_libp2p::NetworkConfiguration::new();
+    net_conf.listen_addresses = vec![];
     for addr in multi_address {
       let addr = addr.parse().map_err(|_| "Invalid listen multiaddress").unwrap();
       net_conf.listen_addresses.push(addr);
