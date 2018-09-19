@@ -117,7 +117,7 @@ impl system::Trait for Runtime {
 impl balances::Trait for Runtime {
     type Balance = Balance;
     type AccountIndex = AccountIndex;
-    type OnFreeBalanceZero = Staking;
+    type OnFreeBalanceZero = (Staking, Contract);
     type EnsureAccountLiquid = Staking;
     type Event = Event;
 }
