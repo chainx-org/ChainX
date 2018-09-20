@@ -5,7 +5,7 @@ use extrinsic_pool::{Pool, ChainApi, VerifiedFor, ExtrinsicFor, scoring,
 use runtime_primitives::traits::{Hash as HashT, Bounded, Checkable, BlakeTwo256};
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use chainx_primitives::{Block, Hash, BlockId, AccountId, Index};
-use chainx_runtime::{Address, UncheckedExtrinsic, RawAddress};
+use chainx_runtime::{UncheckedExtrinsic, RawAddress};
 use substrate_executor::NativeExecutor;
 use substrate_client::{self, Client};
 use extrinsic_pool::IntoPoolError;
@@ -16,7 +16,6 @@ use substrate_network;
 use chainx_executor;
 use extrinsic_pool;
 
-type CheckedExtrinsic = <UncheckedExtrinsic as Checkable<fn(Address) -> ::std::result::Result<AccountId, &'static str>>>::Checked;
 type Executor = substrate_client::LocalCallExecutor<Backend, NativeExecutor<chainx_executor::Executor>>;
 type Backend = substrate_client_db::Backend<Block>;
 use error::{Error, ErrorKind};
@@ -75,24 +74,10 @@ pub struct PoolApi<A>{
 impl<A> PoolApi<A> where
     A: ChainXApi,
 {
-    const NO_ACCOUNT: &'static str = "Account not found.";
-
     /// Create a new instance.
     pub fn new(api: Arc<A>) -> Self {
         PoolApi {
             api,
-        }
-    }
-
-    fn lookup(&self, at: &BlockId, address: Address) -> ::std::result::Result<AccountId, &'static str> {
-        // TODO [ToDr] Consider introducing a cache for this.
-        match self.api.lookup(at, address.clone()) {
-            Ok(Some(address)) => Ok(address),
-            Ok(None) => Err(Self::NO_ACCOUNT.into()),
-            Err(e) => {
-                println!("Error looking up address: {:?}: {:?}", address, e);
-                Err("API error.")
-            },
         }
     }
 }
@@ -111,7 +96,7 @@ impl<A> ChainApi for PoolApi<A> where
 
     fn verify_transaction(
         &self,
-        at: &BlockId,
+        _at: &BlockId,
         xt: &ExtrinsicFor<Self>,
     ) -> Result<Self::VEx, Self::Error> {
 
@@ -202,7 +187,7 @@ impl<A> ChainApi for PoolApi<A> where
         }
     }
 
-    fn should_replace(old: &VerifiedFor<Self>, _new: &VerifiedFor<Self>) -> scoring::Choice {
+    fn should_replace(_old: &VerifiedFor<Self>, _new: &VerifiedFor<Self>) -> scoring::Choice {
         Choice::RejectNew
     }
 }
