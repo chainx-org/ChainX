@@ -2,10 +2,10 @@
 
 use extrinsic_pool::{Pool, ChainApi, VerifiedFor, ExtrinsicFor, scoring,
                      Readiness, VerifiedTransaction, Transaction, Options, scoring::Choice};
-use runtime_primitives::traits::{Hash as HashT, Bounded, Checkable, BlakeTwo256};
+use runtime_primitives::traits::{Hash as HashT, Bounded, Checkable, BlakeTwo256, Lookup, CurrentHeight, BlockNumberToHash};
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
-use chainx_primitives::{Block, Hash, BlockId, AccountId, Index};
-use chainx_runtime::{UncheckedExtrinsic, RawAddress};
+use chainx_primitives::{Block, Hash, BlockId, AccountId, Index, BlockNumber};
+use chainx_runtime::{UncheckedExtrinsic, Address};
 use substrate_executor::NativeExecutor;
 use substrate_client::{self, Client};
 use extrinsic_pool::IntoPoolError;
@@ -15,10 +15,10 @@ use substrate_client_db;
 use substrate_network;
 use chainx_executor;
 use extrinsic_pool;
+use error::{Error, ErrorKind, Result};
 
 type Executor = substrate_client::LocalCallExecutor<Backend, NativeExecutor<chainx_executor::Executor>>;
 type Backend = substrate_client_db::Backend<Block>;
-use error::{Error, ErrorKind};
 
 const MAX_TRANSACTION_SIZE: usize = 4 * 1024 * 1024;
 
@@ -67,6 +67,28 @@ impl VerifiedTransaction for VerifiedExtrinsic {
     }
 }
 
+pub struct LocalContext<'a, A: 'a>(&'a Arc<A>);
+impl<'a, A: 'a + ChainXApi> CurrentHeight for LocalContext<'a, A> {
+    type BlockNumber = BlockNumber;
+    fn current_height(&self) -> BlockNumber {
+        self.0.current_height()
+    }
+}
+impl<'a, A: 'a + ChainXApi> BlockNumberToHash for LocalContext<'a, A> {
+    type BlockNumber = BlockNumber;
+    type Hash = Hash;
+    fn block_number_to_hash(&self, n: BlockNumber) -> Option<Hash> {
+        self.0.block_number_to_hash(n)
+    }
+}
+impl<'a, A: 'a + ChainXApi> Lookup for LocalContext<'a, A> {
+    type Source = Address;
+    type Target = AccountId;
+    fn lookup(&self, a: Address) -> ::std::result::Result<AccountId, &'static str> {
+        self.0.lookup(&BlockId::number(self.current_height()), a).unwrap_or(None).ok_or("error with lookup")
+    }
+}
+
 pub struct PoolApi<A>{
     api:Arc<A>,
 }
@@ -98,7 +120,7 @@ impl<A> ChainApi for PoolApi<A> where
         &self,
         _at: &BlockId,
         xt: &ExtrinsicFor<Self>,
-    ) -> Result<Self::VEx, Self::Error> {
+    ) -> Result<Self::VEx> {
 
         let encoded = xt.encode();
         let uxt = UncheckedExtrinsic::decode(&mut encoded.as_slice()).ok_or_else(|| ErrorKind::InvalidExtrinsicFormat)?;
@@ -113,13 +135,8 @@ impl<A> ChainApi for PoolApi<A> where
         }
 
        debug!(target: "transaction-pool", "Transaction submitted: {}", ::substrate_primitives::hexdisplay::HexDisplay::from(&encoded));
-        let checked = uxt.clone().check_with(|a| {
-            match a {
-                RawAddress::Id(id) => Ok(id),
-                RawAddress::Index(_) => Err("Index based addresses are not supported".into()),// TODO: Make index addressing optional in substrate
-            }
-        })?;
-        let sender = checked.signed.expect("Only signed extrinsics are allowed at this point");
+        let checked = uxt.clone().check(&LocalContext(&self.api))?;
+        let (sender, index) = checked.signed.expect("function previously bailed unless uxt.is_signed(); qed");
 
         if encoded_size < 1024 {
             debug!(target: "transaction-pool", "Transaction verified: {} => {:?}", hash, uxt);
@@ -128,7 +145,7 @@ impl<A> ChainApi for PoolApi<A> where
         }
 
         Ok(VerifiedExtrinsic {
-            index: checked.index,
+            index,
             sender,
             hash,
             encoded_size,

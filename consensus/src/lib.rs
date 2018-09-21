@@ -5,7 +5,7 @@ extern crate srml_support as runtime_support;
 extern crate substrate_primitives as primitives;
 extern crate substrate_client as client;
 extern crate parity_codec as codec;
-extern crate substrate_extrinsic_pool;
+extern crate substrate_transaction_pool;
 extern crate substrate_bft as bft;
 extern crate substrate_network;
 
@@ -31,6 +31,7 @@ mod error;
 
 use chainx_primitives::{BlockId, Hash, Block, Header, AccountId, BlockNumber, Timestamp, SessionKey};
 use primitives::{AuthorityId, ed25519};
+use runtime_primitives::generic::Era;
 use std::time::{Duration, Instant};
 use tokio::runtime::TaskExecutor;
 use tokio::timer::Delay;
@@ -41,7 +42,7 @@ use futures::prelude::*;
 use futures::future;
 use std::sync::Arc;
 
-type TransactionPool<A> = substrate_extrinsic_pool::Pool<chainx_pool::PoolApi<A>>;
+type TransactionPool<A> = substrate_transaction_pool::Pool<chainx_pool::PoolApi<A>>;
 pub use self::offline_tracker::OfflineTracker;
 pub use self::error::{ErrorKind, Error};
 pub use service::Service;
@@ -387,8 +388,7 @@ where
 
             let local_id = self.local_key.public().0.into();
             let extrinsic = UncheckedExtrinsic {
-                signature: Some((chainx_runtime::RawAddress::Id(local_id), signature)),
-                index: payload.0,
+                signature: Some((chainx_runtime::RawAddress::Id(local_id), signature, payload.0, Era::immortal())),
                 function: payload.1,
             };
             let uxt: GenericExtrinsic = Decode::decode(&mut extrinsic.encode().as_slice()).expect("Encoded extrinsic is valid");

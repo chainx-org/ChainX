@@ -2,7 +2,7 @@
 
 extern crate sr_primitives as runtime_primitives;
 extern crate substrate_primitives as substrate_primitives;
-extern crate substrate_extrinsic_pool as extrinsic_pool;
+extern crate substrate_transaction_pool as extrinsic_pool;
 extern crate parity_codec as codec;
 extern crate substrate_client_db;
 extern crate substrate_executor;

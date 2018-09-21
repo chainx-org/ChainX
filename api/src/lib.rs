@@ -14,9 +14,10 @@ extern crate chainx_runtime as runtime;
 extern crate chainx_executor;
 
 use primitives::{
-	AccountId, Block, BlockId, Hash, Index, SessionKey, Timestamp,
+	AccountId, Block, BlockId, Hash, Index, SessionKey, Timestamp, BlockNumber,
 	UncheckedExtrinsic, InherentData,
 };
+use runtime_primitives::{transaction_validity::TransactionValidity, traits::{CurrentHeight, BlockNumberToHash}};
 use client::block_builder::BlockBuilder as ClientBlockBuilder;
 pub use client::error::{Error, ErrorKind, Result};
 use substrate_primitives::{Blake2Hasher, RlpCodec};
@@ -43,7 +44,7 @@ pub type TClientBlockBuilder = ClientBlockBuilder<TBackend, TExecutor, Block, Bl
 /// Trait encapsulating the ChainX API.
 ///
 /// All calls should fail when the exact runtime is unknown.
-pub trait ChainXApi {
+pub trait ChainXApi: CurrentHeight<BlockNumber=BlockNumber> + BlockNumberToHash<BlockNumber=BlockNumber,Hash=Hash> {
 	/// The block builder for this API type.
 	type BlockBuilder: BlockBuilder;
 
@@ -68,6 +69,8 @@ pub trait ChainXApi {
 	/// Evaluate a block. Returns true if the block is good, false if it is known to be bad,
 	/// and an error if we can't evaluate for some reason.
 	fn evaluate_block(&self, at: &BlockId, block: Block) -> Result<bool>;
+
+    fn validate_transaction(&self, at: &BlockId, transaction: UncheckedExtrinsic) -> Result<TransactionValidity>;
 
 	/// Build a block on top of the given, with inherent extrinsics pre-pushed.
 	fn build_block(&self, at: &BlockId, inherent_data: InherentData) -> Result<Self::BlockBuilder>;

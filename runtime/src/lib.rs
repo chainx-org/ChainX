@@ -47,7 +47,7 @@ pub use balances::address::Address as RawAddress;
 #[cfg(feature = "std")]
 pub use checked_block::CheckedBlock;
 pub use consensus::Call as ConsensusCall;
-pub use runtime_primitives::Permill;
+pub use runtime_primitives::{Permill, Perbill};
 
 use rstd::prelude::*;
 use substrate_primitives::u32_trait::{_2, _4};
@@ -58,22 +58,15 @@ use runtime_primitives::generic;
 use runtime_primitives::traits::{Convert, BlakeTwo256, DigestItem};
 use council::{motions as council_motions, voting as council_voting};
 use version::{RuntimeVersion, ApiId};
-use codec::{Encode, Decode, Input};
 
 pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
-    let make_inherent = |function| UncheckedExtrinsic {
-        signature: Default::default(),
-        function,
-        index: 0,
-    };
-
-    let mut inherent = vec![
-        make_inherent(Call::Timestamp(TimestampCall::set(data.timestamp))),
-    ];
+    let mut inherent = vec![generic::UncheckedMortalExtrinsic::new_unsigned(
+        Call::Timestamp(TimestampCall::set(data.timestamp))
+    )];
 
     if !data.offline_indices.is_empty() {
-        inherent.push(make_inherent(
-                Call::Consensus(ConsensusCall::note_offline(data.offline_indices))
+        inherent.push(generic::UncheckedMortalExtrinsic::new_unsigned(
+            Call::Consensus(ConsensusCall::note_offline(data.offline_indices))
         ));
     }
 
@@ -230,11 +223,11 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// BlockId type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Index, Call, Signature>;
+pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Index, Call, Signature>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Runtime, Block, Balances, Balances, AllModules>;
+pub type Executive = executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, Balances, AllModules>;
 
 pub mod api {
     impl_stubs!(

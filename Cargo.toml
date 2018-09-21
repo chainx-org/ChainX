@@ -46,6 +46,7 @@ log = "0.3"
 
 [workspace]
 members = [
+    "runtime/staking",
     "primitives",
     "consensus",
     "executor",

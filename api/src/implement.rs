@@ -44,6 +44,10 @@ impl ChainXApi for TClient {
         }
     }
 
+    fn validate_transaction(&self, at: &BlockId, tx: UncheckedExtrinsic) -> Result<TransactionValidity> {
+        self.call_api_at(at, "validate_transaction", &tx)
+    }
+
     fn index(&self, at: &BlockId, account: AccountId) -> Result<Index> {
        self.call_api_at(at, "account_nonce", &account)
     }

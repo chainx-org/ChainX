@@ -2,7 +2,7 @@
 
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
-                     ContractConfig, Permill};
+                     ContractConfig, Permill, Perbill};
 use super::cli::ChainSpec;
 use keyring::Keyring;
 use ed25519;
@@ -39,9 +39,9 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             creation_fee: 0,
             reclaim_rebate: 0,
             balances: vec![
-                (Keyring::Alice.to_raw_public().into(), 10000),
-                (Keyring::Bob.to_raw_public().into(), 10000),
-                (Keyring::Charlie.to_raw_public().into(), 10000),
+                (Keyring::Alice.to_raw_public().into(), 1000000),
+                (Keyring::Bob.to_raw_public().into(), 1000000),
+                (Keyring::Charlie.to_raw_public().into(), 1000000),
             ],
         }),
 
@@ -60,9 +60,11 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             minimum_validator_count: 1,
             validator_count: 2,
             sessions_per_era: 24, // 24 hours per era.
-            session_reward: 100,
+            session_reward: Perbill::from_millionths(100),
             offline_slash_grace: 0,
-            offline_slash: 10000,
+            offline_slash: Perbill::from_millionths(1000),
+            current_offline_slash: 0,
+            current_session_reward: 0,
         }),
         democracy: Some(DemocracyConfig {
             launch_period: 120 * 24 * 14, // 2 weeks per public referendum
