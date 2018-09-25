@@ -23,6 +23,10 @@ impl ChainXApi for TClient {
         self.call_api_at(at, "validators", &())
     }
 
+    fn stake_weight(&self, at: &BlockId, account: AccountId) -> Result<Balance> {
+        self.call_api_at(at, "stake_weight", &account)
+    }
+
     fn random_seed(&self, at: &BlockId) -> Result<Hash> {
         self.call_api_at(at, "random_seed", &())
     }

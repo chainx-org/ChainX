@@ -23,7 +23,7 @@ srml-democracy = { git = "https://github.com/paritytech/substrate" }
 srml-executive = { git = "https://github.com/paritytech/substrate" }
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
 srml-session = { git = "https://github.com/paritytech/substrate" }
-srml-staking = { git = "https://github.com/paritytech/substrate" }
+chainx-staking = { path = "./staking" }
 srml-system = { git = "https://github.com/paritytech/substrate" }
 srml-timestamp = { git = "https://github.com/paritytech/substrate" }
 srml-treasury = { git = "https://github.com/paritytech/substrate" }
@@ -42,9 +42,9 @@ std = [
 	"srml-council/std",
 	"srml-democracy/std",
 	"srml-executive/std",
+	"chainx-staking/std",
 	"sr-primitives/std",
 	"srml-session/std",
-	"srml-staking/std",
 	"srml-system/std",
 	"srml-timestamp/std",
 	"sr-version/std",

@@ -168,6 +168,29 @@ impl<C: ChainXApi + Send + Sync> Proposer<C> {
         let offset = offset.low_u64() as usize + round_number;
         offset % len
     }
+
+    fn primary_validator(&self, round_number: usize) -> Option<AccountId> {
+       use primitives::uint::U256;
+
+       let mut stake_weight = self.validators.iter()
+         .map(|account| {let weight = self.client.stake_weight(&self.parent_id, *account).unwrap();
+              if weight == 0 { 1 } else { weight } })
+         .collect::<Vec<_>>();
+       trace!("validator stake weight:{:?}", stake_weight);
+       for i in 1..self.validators.len() {
+         stake_weight[i] = stake_weight[i] + stake_weight[i-1];
+       }
+       let big_len = stake_weight[self.validators.len() - 1];
+       let big_value = U256::from_big_endian(&self.random_seed.0).low_u64() as u128;
+       let offset = (big_value * big_value + round_number as u128) % big_len;
+
+       for i in 0..stake_weight.len() {
+         if offset < stake_weight[i] {
+            return Some(self.validators[i]);
+         }
+       }
+       return None;
+    }
 }
 
 impl<C> bft::Proposer<Block> for Proposer<C>
@@ -398,8 +421,7 @@ where
     }
 
     fn on_round_end(&self, round_number: usize, was_proposed: bool) {
-        let primary_validator =
-            self.validators[self.primary_index(round_number, self.validators.len())];
+        let primary_validator = self.primary_validator(round_number).unwrap();
 
         // alter the message based on whether we think the empty proposer was forced to skip the round.
         // this is determined by checking if our local validator would have been forced to skip the round.

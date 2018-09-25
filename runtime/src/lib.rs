@@ -32,7 +32,7 @@ extern crate srml_council as council;
 extern crate srml_democracy as democracy;
 extern crate srml_executive as executive;
 extern crate srml_session as session;
-extern crate srml_staking as staking;
+extern crate chainx_staking as staking;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
@@ -240,6 +240,7 @@ pub mod api {
         inherent_extrinsics => |inherent| super::inherent_extrinsics(inherent),
 		validator_count => |()| super::Session::validator_count(),
         validators => |()| super::Session::validators(),
+        stake_weight => |account| super::Staking::stake_weight(&account),
         timestamp => |()| super::Timestamp::get(),
 		random_seed => |()| super::System::random_seed(),
 		account_nonce => |account| super::System::account_nonce(&account),
