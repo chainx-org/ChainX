@@ -36,6 +36,7 @@ extern crate chainx_staking as staking;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
+extern crate cxrml_tokenbalances as tokenbalances;
 #[macro_use]
 extern crate sr_version as version;
 extern crate chainx_primitives;
@@ -178,6 +179,14 @@ impl council::motions::Trait for Runtime {
     type Event = Event;
 }
 
+impl tokenbalances::Trait for Runtime {
+    type TokenBalance = TokenBalance;
+    type Precision = Precision;
+    type TokenDesc = TokenDesc;
+    type Symbol = Symbol;
+    type Event = Event;
+}
+
 impl DigestItem for Log {
     type Hash = Hash;
     type AuthorityId = SessionKey;
@@ -211,6 +220,7 @@ construct_runtime!(
 		CouncilMotions: council_motions::{Module, Call, Storage, Event<T>, Origin},
 		Treasury: treasury,
 		Contract: contract::{Module, Call, Config},
+		TokenBalances: tokenbalances,
 	}
 );
 
@@ -228,6 +238,12 @@ pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Index, 
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive = executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, Balances, AllModules>;
+
+// define tokenbalances module type
+pub type Symbol = [u8; 8];
+pub type TokenDesc = [u8; 32];
+pub type TokenBalance = u128;
+pub type Precision = u32;
 
 pub mod api {
     impl_stubs!(

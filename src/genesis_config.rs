@@ -2,7 +2,7 @@
 
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
-                     ContractConfig, Permill, Perbill};
+                     ContractConfig, Permill, Perbill, TokenBalancesConfig};
 use super::cli::ChainSpec;
 use keyring::Keyring;
 use ed25519;
@@ -80,7 +80,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             presentation_duration: 10,
             approval_voting_period: 20,
             term_duration: 1000000,
-            desired_seats:  0, // start with no council: we'll raise this once the stake has been dispersed a bit.
+            desired_seats: 0, // start with no council: we'll raise this once the stake has been dispersed a bit.
             inactive_grace_period: 1,
             cooloff_period: 75,
             voting_period: 20,
@@ -101,6 +101,10 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             gas_price: 1,
             max_depth: 1024,
             block_gas_limit: 10_000_000,
+        }),
+        tokenbalances: Some(TokenBalancesConfig {
+            token_list: vec![],
+            transfer_token_fee: 10,
         }),
     }
 }

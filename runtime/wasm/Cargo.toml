@@ -30,28 +30,32 @@ srml-treasury = { git = "https://github.com/paritytech/substrate", default-featu
 sr-version = { git = "https://github.com/paritytech/substrate", default-features = false }
 chainx-primitives = { path = "../../primitives", default-features = false }
 
+# chainx runtime module
+cxrml-tokenbalances = { path = "../../cxrml/tokenbalances", default-features = false }
+
 [features]
 default = []
 std = [
     "safe-mix/std",
-	"parity-codec/std",
-	"substrate-primitives/std",
-	"sr-std/std",
-	"sr-io/std",
-	"srml-support/std",
+    "parity-codec/std",
+    "substrate-primitives/std",
+    "sr-std/std",
+    "sr-io/std",
+    "srml-support/std",
     "srml-balances/std",
-	"srml-consensus/std",
-	"srml-council/std",
-	"srml-democracy/std",
-	"chainx-staking/std",
-	"srml-executive/std",
-	"sr-primitives/std",
-	"srml-session/std",
-	"srml-system/std",
-	"srml-timestamp/std",
+    "srml-consensus/std",
+    "srml-council/std",
+    "srml-democracy/std",
+    "chainx-staking/std",
+    "srml-executive/std",
+    "sr-primitives/std",
+    "srml-session/std",
+    "srml-system/std",
+    "srml-timestamp/std",
     "srml-treasury/std",
-	"sr-version/std",
+    "sr-version/std",
     "chainx-primitives/std",
+    "cxrml-tokenbalances/std",
 ]
 
 [profile.release]
