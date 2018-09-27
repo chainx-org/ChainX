@@ -46,7 +46,6 @@ log = "0.3"
 
 [workspace]
 members = [
-    "runtime/staking",
     "primitives",
     "consensus",
     "executor",
@@ -56,4 +55,5 @@ members = [
     "rpc",
     "api",
     "cxrml/tokenbalances",
+    "cxrml/staking",
 ]
