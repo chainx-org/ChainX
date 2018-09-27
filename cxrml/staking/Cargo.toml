@@ -1,5 +1,5 @@
 [package]
-name = "chainx-staking"
+name = "cxrml-staking"
 version = "0.1.0"
 authors = ["Chainpool <http://chainx.org>"]
 

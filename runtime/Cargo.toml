@@ -23,7 +23,7 @@ srml-democracy = { git = "https://github.com/paritytech/substrate" }
 srml-executive = { git = "https://github.com/paritytech/substrate" }
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
 srml-session = { git = "https://github.com/paritytech/substrate" }
-chainx-staking = { path = "./staking" }
+
 srml-system = { git = "https://github.com/paritytech/substrate" }
 srml-timestamp = { git = "https://github.com/paritytech/substrate" }
 srml-treasury = { git = "https://github.com/paritytech/substrate" }
@@ -32,6 +32,7 @@ chainx-primitives = { path = "../primitives" }
 
 # chainx runtime module
 cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
+cxrml-staking = { path = "../cxrml/staking" }
 
 [features]
 default = ["std"]
@@ -45,7 +46,6 @@ std = [
     "srml-council/std",
     "srml-democracy/std",
     "srml-executive/std",
-    "chainx-staking/std",
     "sr-primitives/std",
     "srml-session/std",
     "srml-system/std",
@@ -56,4 +56,5 @@ std = [
     "serde/std",
     "safe-mix/std",
     "cxrml-tokenbalances/std",
+    "cxrml-staking/std",
 ]

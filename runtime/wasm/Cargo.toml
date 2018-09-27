@@ -23,7 +23,6 @@ srml-democracy = { git = "https://github.com/paritytech/substrate", default-feat
 srml-executive = { git = "https://github.com/paritytech/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 srml-session = { git = "https://github.com/paritytech/substrate", default-features = false }
-chainx-staking = { path = "../staking", default-features = false }
 srml-system = { git = "https://github.com/paritytech/substrate", default-features = false }
 srml-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false }
 srml-treasury = { git = "https://github.com/paritytech/substrate", default-features = false }
@@ -32,6 +31,7 @@ chainx-primitives = { path = "../../primitives", default-features = false }
 
 # chainx runtime module
 cxrml-tokenbalances = { path = "../../cxrml/tokenbalances", default-features = false }
+cxrml-staking = { path = "../../cxrml/staking", default-features = false }
 
 [features]
 default = []
@@ -46,7 +46,6 @@ std = [
     "srml-consensus/std",
     "srml-council/std",
     "srml-democracy/std",
-    "chainx-staking/std",
     "srml-executive/std",
     "sr-primitives/std",
     "srml-session/std",
@@ -56,6 +55,7 @@ std = [
     "sr-version/std",
     "chainx-primitives/std",
     "cxrml-tokenbalances/std",
+    "cxrml-staking/std",
 ]
 
 [profile.release]

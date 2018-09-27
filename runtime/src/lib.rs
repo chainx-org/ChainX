@@ -32,7 +32,7 @@ extern crate srml_council as council;
 extern crate srml_democracy as democracy;
 extern crate srml_executive as executive;
 extern crate srml_session as session;
-extern crate chainx_staking as staking;
+extern crate cxrml_staking as staking;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
