@@ -8,6 +8,7 @@ use primitives::testing::{Digest, DigestItem, Header};
 use runtime_io;
 
 use {GenesisConfig, Module, Trait, system, balances, TokenT, Token};
+use utils::*;
 
 impl_outer_origin! {
         pub enum Origin for Test {}
@@ -43,23 +44,8 @@ pub type TokenDesc = [u8; 32];
 pub type TokenBalance = u128;
 pub type Precision = u32;
 
-// help function
-pub fn u8_to_symbol(s: &[u8]) -> Symbol {
-    let len = if s.len() < 8 { s.len() } else { 8 };
-    let mut sym: Symbol = Default::default();
-    sym[..len].clone_from_slice(&s[..len]);
-    sym
-}
-
-pub fn u8_to_token_desc(s: &[u8]) -> TokenDesc {
-    let len = if s.len() < 32 { s.len() } else { 32 };
-    let mut sym: TokenDesc = Default::default();
-    sym[..len].clone_from_slice(&s[..len]);
-    sym
-}
-
 impl Trait for Test {
-    type TokenBalance = u128;
+    type TokenBalance = TokenBalance;
     type Precision = Precision;
     type TokenDesc = TokenDesc;
     type Symbol = Symbol;
@@ -84,8 +70,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
         reclaim_rebate: 0,
     }.build_storage().unwrap());
     // token
-    let t: TokenT<Test> = Token::new(u8_to_symbol(b"x-btc"), u8_to_token_desc(b"btc token"), 8);
-    let t2: TokenT<Test> = Token::new(u8_to_symbol(b"x-eth"), u8_to_token_desc(b"eth token"), 4);
+    let t: TokenT<Test> = Token::new(slice_to_u8_8(b"x-btc"), slice_to_u8_32(b"btc token"), 8);
+    let t2: TokenT<Test> = Token::new(slice_to_u8_8(b"x-eth"), slice_to_u8_32(b"eth token"), 4);
 
     r.extend(GenesisConfig::<Test> {
         token_list: vec![

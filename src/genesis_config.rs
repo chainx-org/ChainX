@@ -2,7 +2,7 @@
 
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
-                     ContractConfig, Permill, Perbill, TokenBalancesConfig};
+                     ContractConfig, Permill, Perbill, TokenBalancesConfig, FinancialRecordsConfig};
 use super::cli::ChainSpec;
 use keyring::Keyring;
 use ed25519;
@@ -106,5 +106,9 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             token_list: vec![],
             transfer_token_fee: 10,
         }),
+        financialrecords: Some(FinancialRecordsConfig {
+            deposit_fee: 10,
+            withdrawal_fee: 10,
+        })
     }
 }

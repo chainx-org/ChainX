@@ -26,24 +26,26 @@ use runtime_io::{blake2_256, twox_128};
 /// Returns only a first part of the storage key.
 ///
 /// Hashed by XX.
+#[allow(dead_code)]
 fn first_part_of_key<M: StorageDoubleMap + ?Sized>(k1: M::Key1) -> [u8; 16] {
-	let mut raw_prefix = Vec::new();
-	raw_prefix.extend(M::PREFIX);
-	raw_prefix.extend(Encode::encode(&k1));
-	twox_128(&raw_prefix)
+    let mut raw_prefix = Vec::new();
+    raw_prefix.extend(M::PREFIX);
+    raw_prefix.extend(Encode::encode(&k1));
+    twox_128(&raw_prefix)
 }
 
 /// Returns a compound key that consist of the two parts: (prefix, `k1`) and `k2`.
 ///
 /// The first part is hased by XX and then concatenated with a blake2 hash of `k2`.
+#[allow(dead_code)]
 fn full_key<M: StorageDoubleMap + ?Sized>(k1: M::Key1, k2: M::Key2) -> Vec<u8> {
-	let first_part = first_part_of_key::<M>(k1);
-	let second_part = blake2_256(&Encode::encode(&k2));
+    let first_part = first_part_of_key::<M>(k1);
+    let second_part = blake2_256(&Encode::encode(&k2));
 
-	let mut k = Vec::new();
-	k.extend(&first_part);
-	k.extend(&second_part);
-	k
+    let mut k = Vec::new();
+    k.extend(&first_part);
+    k.extend(&second_part);
+    k
 }
 
 /// An implementation of a map with a two keys.
@@ -60,31 +62,31 @@ fn full_key<M: StorageDoubleMap + ?Sized>(k1: M::Key1, k2: M::Key2) -> Vec<u8> {
 /// Blake2 is used for `Key2` is because it will be used as a key for contract's storage and
 /// thus will be susceptible for a untrusted input.
 pub trait StorageDoubleMap {
-	type Key1: Codec;
-	type Key2: Codec;
-	type Value: Codec + Default;
+    type Key1: Codec;
+    type Key2: Codec;
+    type Value: Codec + Default;
 
-	const PREFIX: &'static [u8];
+    const PREFIX: &'static [u8];
 
-	/// Insert an entry into this map.
-	fn insert(k1: Self::Key1, k2: Self::Key2, val: Self::Value) {
-		unhashed::put(&full_key::<Self>(k1, k2)[..], &val);
-	}
+    /// Insert an entry into this map.
+    fn insert(k1: Self::Key1, k2: Self::Key2, val: Self::Value) {
+        unhashed::put(&full_key::<Self>(k1, k2)[..], &val);
+    }
 
-	/// Remove an entry from this map.
-	fn remove(k1: Self::Key1, k2: Self::Key2) {
-		unhashed::kill(&full_key::<Self>(k1, k2)[..]);
-	}
+    /// Remove an entry from this map.
+    fn remove(k1: Self::Key1, k2: Self::Key2) {
+        unhashed::kill(&full_key::<Self>(k1, k2)[..]);
+    }
 
-	/// Get an entry from this map.
-	///
-	/// If there is entry stored under the given keys, returns `None`.
-	fn get(k1: Self::Key1, k2: Self::Key2) -> Option<Self::Value> {
-		unhashed::get(&full_key::<Self>(k1, k2)[..])
-	}
+    /// Get an entry from this map.
+    ///
+    /// If there is entry stored under the given keys, returns `None`.
+    fn get(k1: Self::Key1, k2: Self::Key2) -> Option<Self::Value> {
+        unhashed::get(&full_key::<Self>(k1, k2)[..])
+    }
 
-	/// Removes all entries that shares the `k1` as the first key.
-	fn remove_prefix(k1: Self::Key1) {
-		unhashed::kill_prefix(&first_part_of_key::<Self>(k1))
-	}
+    /// Removes all entries that shares the `k1` as the first key.
+    fn remove_prefix(k1: Self::Key1) {
+        unhashed::kill_prefix(&first_part_of_key::<Self>(k1))
+    }
 }

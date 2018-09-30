@@ -1,0 +1,23 @@
+[package]
+name = "cxrml-support"
+version = "0.1.0"
+authors = ["Chainpool <https://www.chainx.org>"]
+
+[dependencies]
+hex-literal = "0.1.0"
+parity-codec = { version = "1.1", default_features = false }
+parity-codec-derive = { version = "~1.0", default_features = false }
+sr-std = { git = "https://github.com/paritytech/substrate", default_features = false }
+sr-io = { git = "https://github.com/paritytech/substrate", default_features = false }
+srml-support = { git = "https://github.com/paritytech/substrate", default_features = false }
+
+
+[features]
+default = ["std"]
+std=[
+    "parity-codec/std",
+    "parity-codec-derive/std",
+    "sr-std/std",
+    "sr-io/std",
+    "srml-support/std",
+]
