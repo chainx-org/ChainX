@@ -1,5 +1,7 @@
 # ChainX
 
+[![Build Status](https://travis-ci.com/chainx-org/ChainX.svg?branch=master)](https://travis-ci.com/chainx-org/ChainX)
+
 <!-- TOC GFM -->
 
 * [Introduction](#introduction)
@@ -57,8 +59,11 @@ $ sudo apt install cmake pkg-config libssl-dev git
 $ git clone https://github.com/chainx-org/ChainX ~/ChainX
 $ cd ~/ChainX
 
-# Build all native code
+# Build all native code, the executable binary will be present in target/debug/chainx.
 $ cargo build
+
+# If your want to run chainx in production, please build it in release mode
+$ cargo build --release
 ```
 
 ## Development
