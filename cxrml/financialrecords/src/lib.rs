@@ -222,6 +222,27 @@ impl<T: Trait> StorageDoubleMap for RecordsOf<T> {
     const PREFIX: &'static [u8] = b"FinancialRecords RecordsOf";
 }
 
+/// Last deposit index of a account and related symbol
+pub(crate) struct LastDepositIndexOf<T>(::rstd::marker::PhantomData<T>);
+
+impl<T: Trait> StorageDoubleMap for LastDepositIndexOf<T> {
+    type Key1 = T::AccountId;
+    type Key2 = T::Symbol;
+    type Value = u32;
+    const PREFIX: &'static [u8] = b"FinancialRecords LastDepositIndexOf";
+}
+
+/// Last withdrawal index of a account and related symbol
+pub(crate) struct LastWithdrawalIndexOf<T>(::rstd::marker::PhantomData<T>);
+
+impl<T: Trait> StorageDoubleMap for LastWithdrawalIndexOf<T> {
+    type Key1 = T::AccountId;
+    type Key2 = T::Symbol;
+    type Value = u32;
+    const PREFIX: &'static [u8] = b"FinancialRecords LastWithdrawalIndexOf";
+}
+
+
 impl<T: Trait> Module<T> {
     /// Deposit one of this module's events.
     fn deposit_event(event: Event<T>) {
@@ -262,6 +283,51 @@ impl<T: Trait> Module<T> {
             <RecordsOf<T>>::get(who.clone(), index).map(|r| (index, r))
         }
     }
+
+    pub fn last_deposit_index_of(who: &T::AccountId, sym: &T::Symbol) -> Option<u32> {
+        <LastDepositIndexOf<T>>::get(who.clone(), sym.clone())
+    }
+
+    pub fn last_withdrawal_index_of(who: &T::AccountId, sym: &T::Symbol) -> Option<u32> {
+        <LastWithdrawalIndexOf<T>>::get(who.clone(), sym.clone())
+    }
+
+    pub fn last_deposit_of(who: &T::AccountId, sym: &T::Symbol) -> Option<(u32, RecordT<T>)> {
+        Self::last_deposit_index_of(who, sym).and_then(|index| {
+            <RecordsOf<T>>::get(who.clone(), index).map(|r| (index, r))
+        })
+    }
+
+    pub fn last_withdrawal_of(who: &T::AccountId, sym: &T::Symbol) -> Option<(u32, RecordT<T>)> {
+        Self::last_withdrawal_index_of(who, sym).and_then(|index| {
+            <RecordsOf<T>>::get(who.clone(), index).map(|r| (index, r))
+        })
+    }
+
+    /// deposit/withdrawal pre-process
+    fn before(who: &T::AccountId, sym: &T::Symbol, is_withdrawal: bool) -> Result<(), &'static str> {
+        let r = if is_withdrawal {
+            match Self::last_deposit_of(who, sym) {
+                None => return Err("the account has no deposit record for this token yet"),
+                Some((_, record)) =>
+                    {
+                        if !record.is_finish() {
+                            return Err("the account has no deposit record for this token yet");
+                        }
+                    }
+            }
+
+            Self::last_withdrawal_of(who, sym)
+        } else { Self::last_deposit_of(who, sym) };
+
+        if let Some((_, record)) = r {
+            if !record.is_finish() {
+                return Err("the last action have not finished yet! only if the last deposit/withdrawal have finished you can do a new action.");
+            }
+        }
+        Ok(())
+    }
+
     /// insert a new record for a account, notice the record state must be init state
     fn new_record(who: &T::AccountId, record: &RecordT<T>) -> Result<u32, &'static str> {
         if !record.is_init() {
@@ -270,63 +336,65 @@ impl<T: Trait> Module<T> {
         let len: u32 = Self::records_len_of(who);
         <RecordsOf<T>>::insert(who.clone(), len, *record);
         <RecordsLenOf<T>>::insert(who, len + 1);  // len is more than 1 to max index
+        match record.action() {
+            Action::Deposit(_) => <LastDepositIndexOf<T>>::insert(who.clone(), record.symbol(), len),
+            Action::Withdrawal(_) => <LastWithdrawalIndexOf<T>>::insert(who.clone(), record.symbol(), len),
+        }
         Ok(len)
     }
 }
 
 impl<T: Trait> Module<T> {
-    /// deposit/withdrawal pre-process
-    fn before(who: &T::AccountId, is_withdrawal: bool) -> Result<(), &'static str> {
-        match Self::last_record_of(who) {
-            Some((_, record)) => {
-                if !record.is_finish() {
-                    return Err("the last action have not finished yet! only if the last deposit/withdrawal have finished you can do a new action.");
-                }
-            }
-            None => {
-                if is_withdrawal {
-                    return Err("the account has not deposit record yet")
-                }
-            }
-        }
-        Ok(())
-    }
     /// deposit, notice this func has include deposit_init and deposit_finish (not wait for block confirm process)
     pub fn deposit(who: &T::AccountId, sym: &T::Symbol, balance: T::TokenBalance) -> DispatchResult {
         let index = Self::deposit_with_index(who, sym, balance)?;
         Self::deposit_finish_with_index(who, index, true).map(|_| ())
     }
+
     /// withdrawal, notice this func has include withdrawal_init and withdrawal_locking
     pub fn withdrawal(who: &T::AccountId, sym: &T::Symbol, balance: T::TokenBalance) -> DispatchResult {
         let index = Self::withdrawal_with_index(who, sym, balance)?;
         Self::withdrawal_locking_with_index(who, index).map(|_| ())
     }
+
     /// withdrawal finish, let the locking token destroy
-    pub fn withdrawal_finish(who: &T::AccountId, success: bool) -> DispatchResult {
-        let last_index = Self::records_len_of(who) - 1;
-        Self::withdrawal_finish_with_index(who, last_index, success).map(|_| ())
+    pub fn withdrawal_finish(who: &T::AccountId, sym: &T::Symbol, success: bool) -> DispatchResult {
+        let r = Self::last_withdrawal_index_of(who, sym);
+        if r.is_none() {
+            return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
+        }
+        Self::withdrawal_finish_with_index(who, r.unwrap(), success).map(|_| ())
     }
+
     /// deposit init, use for record a deposit process begin, usually for start block confirm process
     pub fn deposit_init(who: &T::AccountId, sym: &T::Symbol, balance: T::TokenBalance) -> DispatchResult {
         Self::deposit_with_index(who, sym, balance).map(|_| ())
     }
     /// deposit finish, use for change the deposit record to final, success mark the deposit if success
-    pub fn deposit_finish(who: &T::AccountId, success: bool) -> DispatchResult {
-        let last_index = Self::records_len_of(who) - 1;
-        Self::deposit_finish_with_index(who, last_index, success).map(|_| ())
+    pub fn deposit_finish(who: &T::AccountId, sym: &T::Symbol, success: bool) -> DispatchResult {
+        let r = Self::last_deposit_index_of(who, sym);
+        if r.is_none() {
+            return Err("have not executed deposit_init() yet for this record");
+        }
+        Self::deposit_finish_with_index(who, r.unwrap(), success).map(|_| ())
     }
+
     /// withdrawal init, use for record a withdrawal start, should call withdrawal_locking after it
     pub fn withdrawal_init(who: &T::AccountId, sym: &T::Symbol, balance: T::TokenBalance) -> DispatchResult {
         Self::withdrawal_with_index(who, sym, balance).map(|_| ())
     }
     /// change the free token to locking state
-    pub fn withdrawal_locking(who: &T::AccountId) -> DispatchResult {
-        let last_index = Self::records_len_of(who) - 1;
-        Self::withdrawal_locking_with_index(who, last_index).map(|_| ())
+    pub fn withdrawal_locking(who: &T::AccountId, sym: &T::Symbol) -> DispatchResult {
+        let r = Self::last_withdrawal_index_of(who, sym);
+        if r.is_none() {
+            return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
+        }
+        Self::withdrawal_locking_with_index(who, r.unwrap()).map(|_| ())
     }
+
     /// deposit init, notice this func return index to show the index of records for this account
     pub fn deposit_with_index(who: &T::AccountId, sym: &T::Symbol, balance: T::TokenBalance) -> Result<u32, &'static str> {
-        Self::before(who, false)?;
+        Self::before(who, sym, false)?;
 
         <tokenbalances::Module<T>>::is_valid_token(sym)?;
 
@@ -374,7 +442,7 @@ impl<T: Trait> Module<T> {
     }
     /// withdrawal init, notice this func return index to show the index of records for this account
     pub fn withdrawal_with_index(who: &T::AccountId, sym: &T::Symbol, balance: T::TokenBalance) -> Result<u32, &'static str> {
-        Self::before(who, true)?;
+        Self::before(who, sym, true)?;
 
         <tokenbalances::Module<T>>::is_valid_token_for(who, sym)?;
         // check token balance

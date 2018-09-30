@@ -118,16 +118,34 @@ fn test_normal2() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
         let btc_symbol = slice_to_u8_8(b"x-btc");
+        let eth_symbol = slice_to_u8_8(b"x-eth");
 
         // deposit
         FinancialRecords::deposit_init(&a, &btc_symbol, 100).unwrap();
-        assert_ok!(FinancialRecords::deposit_finish(&a, true));
+        assert_ok!(FinancialRecords::deposit_finish(&a, &btc_symbol, true));
+        assert_ok!(FinancialRecords::deposit(&a, &eth_symbol, 100));
+
+        assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 100);
+        assert_eq!(TokenBalances::total_token_of(&a, &eth_symbol), 100);
+
         // withdraw
         FinancialRecords::withdrawal(&a, &btc_symbol, 50).unwrap();
+        FinancialRecords::withdrawal(&a, &eth_symbol, 50).unwrap();
 
-        assert_ok!(FinancialRecords::withdrawal_finish(&a, true));
+        assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true));
+        assert_ok!(FinancialRecords::withdrawal_finish(&a, &eth_symbol, false));
 
         assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 50);
+        assert_eq!(TokenBalances::total_token_of(&a, &eth_symbol), 100);
+
+        assert_eq!(FinancialRecords::records_len_of(&a), 4);
+
+        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &btc_symbol).unwrap(), 0);
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &btc_symbol).unwrap(), 2);
+        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &eth_symbol).unwrap(), 1);
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &eth_symbol).unwrap(), 3);
+
+        assert_eq!(Balances::free_balance(&a), 960);
     })
 }
 
@@ -138,34 +156,37 @@ fn test_last_not_finish() {
         let btc_symbol = slice_to_u8_8(b"x-btc");
         FinancialRecords::deposit_init(&a, &btc_symbol, 100).unwrap();
         assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50),
-            "the last action have not finished yet! only if the last deposit/withdrawal have finished you can do a new action.");
+            "the account has no deposit record for this token yet");
         // let deposit fail
-        assert_ok!(FinancialRecords::deposit_finish(&a, false));
+        assert_ok!(FinancialRecords::deposit_finish(&a, &btc_symbol, false)); // 1. deposit failed
         assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 0);
+
         assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "not a existed token in this account token list");
         assert_eq!(FinancialRecords::records_len_of(&a), 1);
 
         FinancialRecords::deposit_init(&a, &btc_symbol, 100).unwrap();
-        assert_ok!(FinancialRecords::deposit_finish(&a, true));
-        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 50));
-        assert_err!(FinancialRecords::deposit(&a, &btc_symbol, 50),
-            "the last action have not finished yet! only if the last deposit/withdrawal have finished you can do a new action.");
-        assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 100);
-        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 50);
+        assert_ok!(FinancialRecords::deposit_finish(&a, &btc_symbol, true));  // 2. deposit success
 
-        assert_ok!(FinancialRecords::withdrawal_finish(&a, false));
+        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 50));
+
+        assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 50));  // 3. deposit success
+
+        assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 150);
         assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 100);
 
+        assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, false)); // 4. withdrawal failed
+        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 150);
+
         assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 25));
-        assert_ok!(FinancialRecords::withdrawal_finish(&a, true));  // destroy token here
-        assert_eq!(FinancialRecords::records_len_of(&a), 4);
-        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 75);
+        assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true));  // destroy token here 5. withdrawal success
+        assert_eq!(FinancialRecords::records_len_of(&a), 5);
+        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 125);
 
-        assert_eq!(TokenBalances::total_token(&btc_symbol), 175);
+        assert_eq!(TokenBalances::total_token(&btc_symbol), 225);
 
-        // 1. deposit failed 2. deposit success 3. withdrawal failed 4. withdrawal success
-        // 10 + 10 + 10 + 10 = 40
-        assert_eq!(Balances::free_balance(&a), 960);
+        // 1. deposit failed 2. deposit success 3. deposit success 4. withdrawal failed 5. withdrawal success
+        // 10 + 10 + 10 + 10 = 50
+        assert_eq!(Balances::free_balance(&a), 950);
     })
 }
 
@@ -198,6 +219,58 @@ fn test_withdrawal_first() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
         let btc_symbol = slice_to_u8_8(b"x-btc");
-        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "the account has not deposit record yet");
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "the account has no deposit record for this token yet");
+    })
+}
+
+#[test]
+fn test_multi_sym() {
+    with_externalities(&mut new_test_ext(), || {
+        let a: u64 = 1; // accountid
+        let btc_symbol = slice_to_u8_8(b"x-btc");
+        let eth_symbol = slice_to_u8_8(b"x-eth");
+
+
+        assert_err!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true), "have not executed withdrawal() or withdrawal_init() yet for this record");
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "the account has no deposit record for this token yet");
+
+        assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 100));  // index = 0
+        assert_ok!(FinancialRecords::deposit(&a, &eth_symbol, 100));  // eth 100 index = 1
+        assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 100));  // btc 200 index = 2
+
+        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &btc_symbol), Some(2));
+        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &eth_symbol), Some(1));
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &eth_symbol), None);
+
+        assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 200);
+        assert_eq!(TokenBalances::total_token_of(&a, &eth_symbol), 100);
+
+        // withdraw
+        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 50));  // index = 3
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 25), "the last action have not finished yet! only if the last deposit/withdrawal have finished you can do a new action.");
+
+        assert_ok!(FinancialRecords::withdrawal(&a, &eth_symbol, 50));  // parallel withdraw  index = 4
+
+        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 150);
+        assert_eq!(TokenBalances::free_token_of(&a, &eth_symbol), 50);
+
+        assert_ok!(FinancialRecords::deposit(&a, &eth_symbol, 50));  // deposit while withdraw  index = 5
+
+        assert_eq!(TokenBalances::free_token_of(&a, &eth_symbol), 100);
+
+        assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true));
+        assert_ok!(FinancialRecords::withdrawal_finish(&a, &eth_symbol, false));
+
+        assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 150);
+        assert_eq!(TokenBalances::total_token_of(&a, &eth_symbol), 150);
+
+        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &btc_symbol), Some(2));
+        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &eth_symbol), Some(5));
+
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &btc_symbol), Some(3));
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &eth_symbol), Some(4));
+
+
+        assert_eq!(FinancialRecords::records_len_of(&a), 6);
     })
 }
