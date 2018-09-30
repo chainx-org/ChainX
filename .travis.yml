@@ -14,9 +14,10 @@ env:
   global:
     - CRATE_NAME=chainx
 
-matrix:
-  include:
-    - env: TARGET=x86_64-unknown-linux-gnu
+# Ignore the various targets for now
+# matrix:
+  # include:
+    # - env: TARGET=x86_64-unknown-linux-gnu
 
 before_install:
   - set -e
@@ -24,7 +25,7 @@ before_install:
   - rustup update nightly
   - rustup target add wasm32-unknown-unknown --toolchain nightly
   - rustup update stable
-  - cargo install --git https://github.com/alexcrichton/wasm-gc
+  - cargo install --git https://github.com/alexcrichton/wasm-gc --force
   - sudo apt update
   - sudo apt install -y pkg-config libssl-dev
   - sudo bash ci/cmake.sh 3.5.1
