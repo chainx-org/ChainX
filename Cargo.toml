@@ -54,6 +54,8 @@ members = [
     "pool",
     "rpc",
     "api",
+    "cxrml/support",
     "cxrml/tokenbalances",
     "cxrml/staking",
+    "cxrml/financialrecords",
 ]

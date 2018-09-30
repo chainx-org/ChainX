@@ -32,11 +32,12 @@ extern crate srml_council as council;
 extern crate srml_democracy as democracy;
 extern crate srml_executive as executive;
 extern crate srml_session as session;
-extern crate cxrml_staking as staking;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
+extern crate cxrml_staking as staking;
 extern crate cxrml_tokenbalances as tokenbalances;
+extern crate cxrml_financialrecords as financialrecords;
 #[macro_use]
 extern crate sr_version as version;
 extern crate chainx_primitives;
@@ -164,8 +165,8 @@ impl council::Trait for Runtime {
 }
 
 impl contract::Trait for Runtime {
-    type Gas = u64;
     type DetermineContractAddress = contract::SimpleAddressDeterminator<Runtime>;
+    type Gas = u64;
 }
 
 // TODO add voting and motions at here
@@ -184,6 +185,10 @@ impl tokenbalances::Trait for Runtime {
     type Precision = Precision;
     type TokenDesc = TokenDesc;
     type Symbol = Symbol;
+    type Event = Event;
+}
+
+impl financialrecords::Trait for Runtime {
     type Event = Event;
 }
 
@@ -221,6 +226,7 @@ construct_runtime!(
 		Treasury: treasury,
 		Contract: contract::{Module, Call, Config},
 		TokenBalances: tokenbalances,
+		FinancialRecords: financialrecords,
 	}
 );
 

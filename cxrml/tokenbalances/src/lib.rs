@@ -28,12 +28,14 @@ extern crate sr_primitives as primitives;
 extern crate srml_system as system;
 extern crate srml_balances as balances;
 
-mod double_map;
+extern crate cxrml_support as cxrt_support;
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+
+pub mod utils;
 
 use rstd::prelude::*;
 use codec::Codec;
@@ -41,7 +43,7 @@ use runtime_support::{StorageValue, StorageMap, Parameter};
 use runtime_support::dispatch::Result;
 use primitives::traits::{SimpleArithmetic, As, Member, CheckedAdd, CheckedSub, OnFinalise};
 
-use double_map::StorageDoubleMap;
+use cxrt_support::StorageDoubleMap;
 
 // substrate mod
 use system::ensure_signed;
@@ -61,7 +63,7 @@ pub trait Trait: balances::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-/// Preference of what happens on a slash event.
+/// Token struct.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Token<Symbol, TokenDesc, Precision> where
@@ -102,59 +104,63 @@ impl<Symbol, TokenDesc, Precision> Token<Symbol, TokenDesc, Precision> where
 pub type TokenT<T> = Token<<T as Trait>::Symbol, <T as Trait>::TokenDesc, <T as Trait>::Precision>;
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-	    /// register_token to module, should allow by root
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        /// register_token to module, should allow by root
         fn register_token(token: Token<T::Symbol, T::TokenDesc, T::Precision>, free: T::TokenBalance, locked: T::TokenBalance) -> Result;
         /// transfer between account
         fn transfer_token(origin, dest: Address<T::AccountId, T::AccountIndex>, sym: T::Symbol, value: T::TokenBalance) -> Result;
-	}
+
+        fn set_transfer_token_fee(val: T::Balance) -> Result;
+    }
 }
 
 decl_event!(
-	pub enum Event<T> where
-		<T as system::Trait>::AccountId,
-		<T as Trait>::TokenBalance,
-		<T as Trait>::Symbol,
-		<T as Trait>::TokenDesc,
-		<T as Trait>::Precision,
-		<T as balances::Trait>::Balance
-	{
-	    /// register new token (token.symbol, token.token_desc, token.precision)
-	    RegisterToken(Symbol, TokenDesc, Precision),
-	    /// cancel token
-	    CancelToken(Symbol),
-	    /// deposit succeeded (who, symbol, balance)
-	    DepositToken(AccountId, Symbol, TokenBalance),
-	    /// lock withdraw (who, symbol, balance)
-	    LockToken(AccountId, Symbol, TokenBalance),
-	    /// unlock withdraw (who, symbol, balance)
-	    UnlockToken(AccountId, Symbol, TokenBalance),
-	    /// withdraw
-	    WithdrawToken(AccountId, Symbol, TokenBalance),
-		/// Transfer succeeded (from, to, symbol, value, fees).
-		TransferToken(AccountId, AccountId, Symbol, TokenBalance, Balance),
-	}
+    pub enum Event<T> where
+        <T as system::Trait>::AccountId,
+        <T as Trait>::TokenBalance,
+        <T as Trait>::Symbol,
+        <T as Trait>::TokenDesc,
+        <T as Trait>::Precision,
+        <T as balances::Trait>::Balance
+    {
+        /// register new token (token.symbol, token.token_desc, token.precision)
+        RegisterToken(Symbol, TokenDesc, Precision),
+        /// cancel token
+        CancelToken(Symbol),
+        /// issue succeeded (who, symbol, balance)
+        IssueToken(AccountId, Symbol, TokenBalance),
+        /// lock destroy (who, symbol, balance)
+        LockToken(AccountId, Symbol, TokenBalance),
+        /// unlock destroy (who, symbol, balance)
+        UnlockToken(AccountId, Symbol, TokenBalance),
+        /// destroy
+        DestroyToken(AccountId, Symbol, TokenBalance),
+        /// Transfer succeeded (from, to, symbol, value, fees).
+        TransferToken(AccountId, AccountId, Symbol, TokenBalance, Balance),
+        /// set transfer token fee
+        SetTransferTokenFee(Balance),
+    }
 );
 
 decl_storage! {
-	trait Store for Module<T: Trait> as TokenBalances {
-	    /// supported token list
-	    pub TokenListMap get(token_list_map): default map [u32 => (bool, T::Symbol)];
-	    /// supported token list length
-	    pub TokenListLen get(token_list_len): default u32;
-	    /// token info for every token, key is token symbol
-	    pub TokenInfo get(token_info): default map [T::Symbol => TokenT<T>];
-	    /// total free token of a symbol
-	    pub TotalFreeToken get(total_free_token): default map [T::Symbol => T::TokenBalance];
-	    /// total locked token of a symbol
-	    pub TotalLockedToken get(total_locked_token): default map [T::Symbol => T::TokenBalance];
+    trait Store for Module<T: Trait> as TokenBalances {
+        /// supported token list
+        pub TokenListMap get(token_list_map): default map [u32 => (bool, T::Symbol)];
+        /// supported token list length
+        pub TokenListLen get(token_list_len): default u32;
+        /// token info for every token, key is token symbol
+        pub TokenInfo get(token_info): default map [T::Symbol => TokenT<T>];
+        /// total free token of a symbol
+        pub TotalFreeToken get(total_free_token): default map [T::Symbol => T::TokenBalance];
+        /// total locked token of a symbol
+        pub TotalLockedToken get(total_locked_token): default map [T::Symbol => T::TokenBalance];
 
         /// token list of a account
         pub TokenListOf get(token_list_of): default map [T::AccountId => Vec<T::Symbol>];
 
         /// transfer token fee
         pub TransferTokenFee get(transfer_token_fee): required T::Balance;
-	}
+    }
 }
 
 // account token storage
@@ -162,14 +168,14 @@ pub(crate) struct FreeTokenOf<T>(::rstd::marker::PhantomData<T>);
 
 pub(crate) struct LockedTokenOf<T>(::rstd::marker::PhantomData<T>);
 
-impl<T: Trait> double_map::StorageDoubleMap for FreeTokenOf<T> {
+impl<T: Trait> StorageDoubleMap for FreeTokenOf<T> {
     type Key1 = T::AccountId;
     type Key2 = T::Symbol;
     type Value = T::TokenBalance;
     const PREFIX: &'static [u8] = b"TokenBalances FreeTokenOf";
 }
 
-impl<T: Trait> double_map::StorageDoubleMap for LockedTokenOf<T> {
+impl<T: Trait> StorageDoubleMap for LockedTokenOf<T> {
     type Key1 = T::AccountId;
     type Key2 = T::Symbol;
     type Value = T::TokenBalance;
@@ -322,8 +328,8 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    /// deposit from real coin to chainx token, notice it become free token directly
-    pub fn deposit(who: &T::AccountId, symbol: &T::Symbol, balance: T::TokenBalance) -> Result {
+    /// issue from real coin to chainx token, notice it become free token directly
+    pub fn issue(who: &T::AccountId, symbol: &T::Symbol, balance: T::TokenBalance) -> Result {
         Self::is_valid_token(symbol)?;
 
         <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
@@ -336,12 +342,12 @@ impl<T: Trait> Module<T> {
         // increase for this account
         Self::increase_account_free_token_by(who, symbol, balance)?;
 
-        Self::deposit_event(RawEvent::DepositToken(who.clone(), symbol.clone(), balance));
+        Self::deposit_event(RawEvent::IssueToken(who.clone(), symbol.clone(), balance));
         Ok(())
     }
 
-    /// withdraw token must be lock first, and become locked state
-    pub fn lock_withdraw_token(who: &T::AccountId, symbol: &T::Symbol, balance: T::TokenBalance) -> Result {
+    /// destroy token must be lock first, and become locked state
+    pub fn lock_destroy_token(who: &T::AccountId, symbol: &T::Symbol, balance: T::TokenBalance) -> Result {
         Self::is_valid_token(symbol)?;
         Self::is_valid_token_for(who, symbol)?;
 
@@ -368,8 +374,8 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// unlock locked token if withdraw failed
-    pub fn unlock_withdraw_token(who: &T::AccountId, symbol: &T::Symbol, balance: T::TokenBalance) -> Result {
+    /// unlock locked token if destroy failed
+    pub fn unlock_destroy_token(who: &T::AccountId, symbol: &T::Symbol, balance: T::TokenBalance) -> Result {
         Self::is_valid_token(symbol)?;
         Self::is_valid_token_for(who, symbol)?;
 
@@ -396,8 +402,8 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// real withdraw token, only decrease in account locked token
-    pub fn withdraw(who: &T::AccountId, symbol: &T::Symbol, balance: T::TokenBalance) -> Result {
+    /// real destroy token, only decrease in account locked token
+    pub fn destroy(who: &T::AccountId, symbol: &T::Symbol, balance: T::TokenBalance) -> Result {
         Self::is_valid_token(symbol)?;
         Self::is_valid_token_for(who, symbol)?;
 
@@ -405,11 +411,11 @@ impl<T: Trait> Module<T> {
 
         // for all token
         if Self::total_locked_token(symbol) < balance {
-            return Err("not enough locked token to withdraw");
+            return Err("not enough locked token to destroy");
         }
         // for account
         if Self::locked_token_of(who, symbol) < balance {
-            return Err("not enough locked token to withdraw for this account");
+            return Err("not enough locked token to destroy for this account");
         }
         // destroy token
         // for all token
@@ -418,7 +424,7 @@ impl<T: Trait> Module<T> {
         // for account
         Self::decrease_account_locked_token_by(who, symbol, balance)?;
 
-        Self::deposit_event(RawEvent::WithdrawToken(who.clone(), symbol.clone(), balance));
+        Self::deposit_event(RawEvent::DestroyToken(who.clone(), symbol.clone(), balance));
         Ok(())
     }
 
@@ -512,6 +518,7 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    // public call
     /// transfer token between accountid, notice the fee is chainx
     pub fn transfer_token(origin: T::Origin, dest: balances::Address<T>, sym: T::Symbol, value: T::TokenBalance) -> Result {
         let transactor = ensure_signed(origin)?;
@@ -522,32 +529,51 @@ impl<T: Trait> Module<T> {
         // Self::is_valid_token_for(&dest, &sym)?;
         Self::init_token_for(&dest, &sym);
 
-        let from_balance = <balances::Module<T>>::free_balance(&transactor);
         let fee = Self::transfer_token_fee();
-        let new_from_balance = match from_balance.checked_sub(&fee) {
-            Some(b) => b,
-            None => return Err("chainx balance too low to send token balance"),
-        };
-
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(&transactor)?;
-        if new_from_balance < <balances::Module<T>>::existential_deposit() {
-            return Err("chainx balance is not enough after this tx, not allow to be killed at here")
-        }
-
-        if Self::free_token_of(&transactor, &sym) < value {
-            return Err("transactor's free token balance too low, can't transfer this token");
-        }
-
-        // first deduct free
-        <balances::Module<T>>::set_free_balance(&transactor, new_from_balance);
-        // set token storage
-        if transactor != dest {
-            Self::decrease_account_free_token_by(&transactor, &sym, value)?;
-            Self::increase_account_free_token_by(&dest, &sym, value)?;
-            Self::deposit_event(RawEvent::TransferToken(transactor, dest, sym, value, fee));
-        }
+        let sender = &transactor;
+        let receiver = &dest;
+        Self::handle_fee(sender, fee, true, || {
+            if Self::free_token_of(&sender, &sym) < value {
+                return Err("transactor's free token balance too low, can't transfer this token");
+            }
+            if sender != receiver {
+                Self::decrease_account_free_token_by(sender, &sym, value)?;
+                Self::increase_account_free_token_by(receiver, &sym, value)?;
+                Self::deposit_event(RawEvent::TransferToken(sender.clone(), receiver.clone(), sym, value, fee));
+            }
+            Ok(())
+        })?;
 
         Ok(())
+    }
+
+    pub fn set_transfer_token_fee(val: T::Balance) -> Result {
+        <TransferTokenFee<T>>::put(val);
+        Self::deposit_event(RawEvent::SetTransferTokenFee(val));
+        Ok(())
+    }
+}
+
+impl<T: Trait> Module<T> {
+    /// handle the fee with the func
+    pub fn handle_fee<F>(who: &T::AccountId, fee: T::Balance, check_after_open: bool, mut func: F) -> Result
+        where F: FnMut() -> Result
+    {
+        let from_balance = <balances::Module<T>>::free_balance(who);
+        let new_from_balance = match from_balance.checked_sub(&fee) {
+            Some(b) => b,
+            None => return Err("chainx balance too low to exec this option"),
+        };
+        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        if check_after_open && new_from_balance < <balances::Module<T>>::existential_deposit() {
+            return Err("chainx balance is not enough after this tx, not allow to be killed at here");
+        }
+
+        let ret = func()?;
+
+        // deduct free
+        <balances::Module<T>>::set_free_balance(who, new_from_balance);
+        Ok(ret)
     }
 }
 
