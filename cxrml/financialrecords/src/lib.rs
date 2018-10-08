@@ -3,17 +3,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// map!, vec! marco.
-#[cfg_attr(feature = "std", macro_use)]
-extern crate sr_std as rstd;
-// Needed for tests (`with_externalities`).
-#[cfg(test)]
-extern crate sr_io as runtime_io;
-
-// Needed for the set of mock primitives used in our tests.
-#[cfg(test)]
-extern crate substrate_primitives;
-
+// for encode/decode
 // Needed for deriving `Serialize` and `Deserialize` for various types.
 // We only implement the serde traits for std builds - they're unneeded
 // in the wasm runtime.
@@ -26,28 +16,41 @@ extern crate serde_derive;
 extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 
+// for substrate
+// Needed for the set of mock primitives used in our tests.
+#[cfg(test)]
+extern crate substrate_primitives;
+
+// for substrate runtime
+// map!, vec! marco.
+#[cfg_attr(feature = "std", macro_use)]
+extern crate sr_std as rstd;
+// Needed for tests (`with_externalities`).
+#[cfg(test)]
+extern crate sr_io as runtime_io;
+extern crate sr_primitives as runtime_primitives;
+
+// for substrate runtime module lib
 // Needed for type-safe access to storage DB.
 #[macro_use]
 extern crate srml_support as runtime_support;
-
-extern crate sr_primitives as runtime_primitives;
 extern crate srml_system as system;
-// for test
 extern crate srml_balances as balances;
 
-extern crate cxrml_support as cxrt_support;
+// for chainx runtime module lib
+extern crate cxrml_support as cxsupport;
 extern crate cxrml_tokenbalances as tokenbalances;
 
 #[cfg(test)]
 mod tests;
 
 use rstd::prelude::*;
+use rstd::result::Result;
 use runtime_support::dispatch::Result as DispatchResult;
 use runtime_support::{StorageMap, StorageValue};
 use runtime_primitives::traits::OnFinalise;
-use rstd::result::Result;
 
-use cxrt_support::StorageDoubleMap;
+use cxsupport::StorageDoubleMap;
 
 pub trait Trait: tokenbalances::Trait {
     /// The overarching event type.
@@ -399,7 +402,7 @@ impl<T: Trait> Module<T> {
         <tokenbalances::Module<T>>::is_valid_token(sym)?;
 
         let mut index = 0_u32;
-        <tokenbalances::Module<T>>::handle_fee(who, Self::deposit_fee(), true, || {
+        <cxsupport::Module<T>>::handle_fee_after(who, Self::deposit_fee(), true, || {
             let r = Record { action: Action::Deposit(Default::default()), symbol: *sym, balance: balance, init_blocknum: <system::Module<T>>::block_number() };
             index = Self::new_record(who, &r)?;
             Self::deposit_event(RawEvent::DepositInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));
@@ -451,7 +454,7 @@ impl<T: Trait> Module<T> {
         }
 
         let mut index = 0_u32;
-        <tokenbalances::Module<T>>::handle_fee(who, Self::withdrawal_fee(), true, || {
+        <cxsupport::Module<T>>::handle_fee_after(who, Self::withdrawal_fee(), true, || {
             let r = Record { action: Action::Withdrawal(Default::default()), symbol: *sym, balance: balance, init_blocknum: <system::Module<T>>::block_number() };
             index = Self::new_record(who, &r)?;
             Self::deposit_event(RawEvent::WithdrawalInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));

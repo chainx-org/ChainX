@@ -85,8 +85,20 @@ pub trait StorageDoubleMap {
         unhashed::get(&full_key::<Self>(k1, k2)[..])
     }
 
+    /// Get an entry from this map.
+    ///
+    /// If there is entry stored under the given keys, returns default value.
+    fn get_or_default(k1: Self::Key1, k2: Self::Key2) -> Self::Value {
+        unhashed::get_or_default(&full_key::<Self>(k1, k2)[..])
+    }
+
     /// Removes all entries that shares the `k1` as the first key.
     fn remove_prefix(k1: Self::Key1) {
         unhashed::kill_prefix(&first_part_of_key::<Self>(k1))
+    }
+
+    /// Remove and return the value, None for the value not exist.
+    fn take(k1: Self::Key1, k2: Self::Key2) -> Option<Self::Value> {
+        unhashed::take(&full_key::<Self>(k1, k2)[..])
     }
 }

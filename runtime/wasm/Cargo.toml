@@ -30,9 +30,11 @@ sr-version = { git = "https://github.com/paritytech/substrate", default-features
 chainx-primitives = { path = "../../primitives", default-features = false }
 
 # chainx runtime module
+cxrml-support = { path = "../../cxrml/support", default-features = false }
 cxrml-staking = { path = "../../cxrml/staking", default-features = false }
 cxrml-tokenbalances = { path = "../../cxrml/tokenbalances", default-features = false }
 cxrml-financialrecords = { path = "../../cxrml/financialrecords", default-features = false }
+cxrml-multisig = { path = "../../cxrml/multisig", default-features = false }
 
 [features]
 default = []
@@ -55,9 +57,11 @@ std = [
     "srml-treasury/std",
     "sr-version/std",
     "chainx-primitives/std",
+    "cxrml-support/std",
     "cxrml-staking/std",
     "cxrml-tokenbalances/std",
     "cxrml-financialrecords/std",
+    "cxrml-multisig/std",
 ]
 
 [profile.release]
