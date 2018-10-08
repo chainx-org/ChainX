@@ -9,8 +9,7 @@ use runtime_io;
 use runtime_io::with_externalities;
 
 use super::*;
-use tokenbalances::{Token, TokenT};
-use tokenbalances::utils::*;
+use tokenbalances::Token;
 
 impl_outer_origin! {
         pub enum Origin for Test {}
@@ -43,18 +42,16 @@ impl balances::Trait for Test {
 impl cxsupport::Trait for Test {}
 
 // define tokenbalances module type
-pub type Symbol = [u8; 8];
-pub type TokenDesc = [u8; 32];
 pub type TokenBalance = u128;
 pub type Precision = u32;
 
 impl tokenbalances::Trait for Test {
     type TokenBalance = TokenBalance;
     type Precision = Precision;
-    type TokenDesc = TokenDesc;
-    type Symbol = Symbol;
     type Event = ();
 }
+
+pub type TestPrecision = <Test as tokenbalances::Trait>::Precision;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
@@ -71,8 +68,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
         reclaim_rebate: 0,
     }.build_storage().unwrap());
     // token balance
-    let t: TokenT<Test> = Token::new(slice_to_u8_8(b"x-btc"), slice_to_u8_32(b"btc token"), 8);
-    let t2: TokenT<Test> = Token::new(slice_to_u8_8(b"x-eth"), slice_to_u8_32(b"eth token"), 4);
+    let t: Token<TestPrecision> = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
+    let t2: Token<TestPrecision> = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
     r.extend(tokenbalances::GenesisConfig::<Test> {
         token_list: vec![
@@ -101,7 +98,7 @@ type Balances = balances::Module<Test>;
 fn test_normal() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_symbol = slice_to_u8_8(b"x-btc");
+        let btc_symbol = b"x-btc".to_vec();
 
         // deposit
         let index = FinancialRecords::deposit_with_index(&a, &btc_symbol, 100).unwrap();
@@ -119,8 +116,8 @@ fn test_normal() {
 fn test_normal2() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_symbol = slice_to_u8_8(b"x-btc");
-        let eth_symbol = slice_to_u8_8(b"x-eth");
+        let btc_symbol = b"x-btc".to_vec();
+        let eth_symbol = b"x-eth".to_vec();
 
         // deposit
         FinancialRecords::deposit_init(&a, &btc_symbol, 100).unwrap();
@@ -155,7 +152,7 @@ fn test_normal2() {
 fn test_last_not_finish() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_symbol = slice_to_u8_8(b"x-btc");
+        let btc_symbol = b"x-btc".to_vec();
         FinancialRecords::deposit_init(&a, &btc_symbol, 100).unwrap();
         assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50),
             "the account has no deposit record for this token yet");
@@ -196,7 +193,7 @@ fn test_last_not_finish() {
 fn test_withdrawal_larger() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_symbol = slice_to_u8_8(b"x-btc");
+        let btc_symbol = b"x-btc".to_vec();
         assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 10));
 
         assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "not enough free token to withdraw");
@@ -208,7 +205,7 @@ fn test_withdrawal_larger() {
 fn test_fee() {
     with_externalities(&mut new_test_ext(), || {
         let b: u64 = 2; // accountid
-        let btc_symbol = slice_to_u8_8(b"x-btc");
+        let btc_symbol = b"x-btc".to_vec();
         assert_ok!(FinancialRecords::deposit(&b, &btc_symbol, 100));
 
         assert_err!(FinancialRecords::withdrawal(&b, &btc_symbol, 50), "chainx balance is not enough after this tx, not allow to be killed at here");
@@ -220,7 +217,7 @@ fn test_fee() {
 fn test_withdrawal_first() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_symbol = slice_to_u8_8(b"x-btc");
+        let btc_symbol = b"x-btc".to_vec();
         assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "the account has no deposit record for this token yet");
     })
 }
@@ -229,8 +226,8 @@ fn test_withdrawal_first() {
 fn test_multi_sym() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_symbol = slice_to_u8_8(b"x-btc");
-        let eth_symbol = slice_to_u8_8(b"x-eth");
+        let btc_symbol = b"x-btc".to_vec();
+        let eth_symbol = b"x-eth".to_vec();
 
 
         assert_err!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true), "have not executed withdrawal() or withdrawal_init() yet for this record");

@@ -7,12 +7,11 @@ use primitives::traits::BlakeTwo256;
 use primitives::testing::{Digest, DigestItem, Header};
 use runtime_io;
 
-use {GenesisConfig, Module, Trait, system, balances, cxsupport, TokenT, Token};
-use utils::*;
+use {GenesisConfig, Module, Trait, system, balances, cxsupport, Token};
 
 impl_outer_origin! {
-        pub enum Origin for Test {}
-    }
+    pub enum Origin for Test {}
+}
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
@@ -41,18 +40,16 @@ impl balances::Trait for Test {
 impl cxsupport::Trait for Test {}
 
 // define tokenbalances module type
-pub type Symbol = [u8; 8];
-pub type TokenDesc = [u8; 32];
 pub type TokenBalance = u128;
 pub type Precision = u32;
 
 impl Trait for Test {
     type TokenBalance = TokenBalance;
     type Precision = Precision;
-    type TokenDesc = TokenDesc;
-    type Symbol = Symbol;
     type Event = ();
 }
+
+pub type TestPrecision = <Test as Trait>::Precision;
 
 pub type TokenBalances = Module<Test>;
 pub type Balances = balances::Module<Test>;
@@ -72,8 +69,9 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
         reclaim_rebate: 0,
     }.build_storage().unwrap());
     // token
-    let t: TokenT<Test> = Token::new(slice_to_u8_8(b"x-btc"), slice_to_u8_32(b"btc token"), 8);
-    let t2: TokenT<Test> = Token::new(slice_to_u8_8(b"x-eth"), slice_to_u8_32(b"eth token"), 4);
+    let t: Token<TestPrecision> = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
+    let t2: Token<TestPrecision> = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
+
 
     r.extend(GenesisConfig::<Test> {
         token_list: vec![

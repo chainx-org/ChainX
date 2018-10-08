@@ -189,8 +189,6 @@ impl council::motions::Trait for Runtime {
 impl tokenbalances::Trait for Runtime {
     type TokenBalance = TokenBalance;
     type Precision = Precision;
-    type TokenDesc = TokenDesc;
-    type Symbol = Symbol;
     type Event = Event;
 }
 
@@ -262,8 +260,6 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 pub type Executive = executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, Balances, AllModules>;
 
 // define tokenbalances module type
-pub type Symbol = [u8; 8];
-pub type TokenDesc = [u8; 32];
 pub type TokenBalance = u128;
 pub type Precision = u32;
 
