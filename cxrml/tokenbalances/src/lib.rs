@@ -4,31 +4,35 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// for encode/decode
 #[cfg(feature = "std")]
 extern crate serde;
-
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate serde_derive;
-
-#[macro_use]
-extern crate srml_support as runtime_support;
-
-// Needed for tests (`with_externalities`).
-#[cfg_attr(feature = "std", macro_use)]
-extern crate sr_std as rstd;
-
 #[macro_use]
 extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 
+// for substrate
 extern crate substrate_primitives;
+
+// for substrate runtime
+// Needed for tests (`with_externalities`).
+#[cfg_attr(feature = "std", macro_use)]
+extern crate sr_std as rstd;
+
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as primitives;
+
+// for substrate runtime module lib
+#[macro_use]
+extern crate srml_support as runtime_support;
 extern crate srml_system as system;
 extern crate srml_balances as balances;
 
-extern crate cxrml_support as cxrt_support;
+// for chainx runtime module lib
+extern crate cxrml_support as cxsupport;
 
 #[cfg(test)]
 mod mock;
@@ -43,14 +47,14 @@ use runtime_support::{StorageValue, StorageMap, Parameter};
 use runtime_support::dispatch::Result;
 use primitives::traits::{SimpleArithmetic, As, Member, CheckedAdd, CheckedSub, OnFinalise};
 
-use cxrt_support::StorageDoubleMap;
+use cxsupport::StorageDoubleMap;
 
 // substrate mod
 use system::ensure_signed;
 use balances::address::Address;
 use balances::EnsureAccountLiquid;
 
-pub trait Trait: balances::Trait {
+pub trait Trait: balances::Trait + cxsupport::Trait {
     /// The token balance.
     type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<u8> + As<u16> + As<u32> + As<u64> + As<u128> + As<usize> + Copy + Default;
     /// The token precision, for example, btc, 1BTC=1000mBTC=1000000Bits, and decide a precision for btc
@@ -532,7 +536,7 @@ impl<T: Trait> Module<T> {
         let fee = Self::transfer_token_fee();
         let sender = &transactor;
         let receiver = &dest;
-        Self::handle_fee(sender, fee, true, || {
+        <cxsupport::Module<T>>::handle_fee_after(sender, fee, true, || {
             if Self::free_token_of(&sender, &sym) < value {
                 return Err("transactor's free token balance too low, can't transfer this token");
             }
@@ -554,28 +558,6 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
-    /// handle the fee with the func
-    pub fn handle_fee<F>(who: &T::AccountId, fee: T::Balance, check_after_open: bool, mut func: F) -> Result
-        where F: FnMut() -> Result
-    {
-        let from_balance = <balances::Module<T>>::free_balance(who);
-        let new_from_balance = match from_balance.checked_sub(&fee) {
-            Some(b) => b,
-            None => return Err("chainx balance too low to exec this option"),
-        };
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
-        if check_after_open && new_from_balance < <balances::Module<T>>::existential_deposit() {
-            return Err("chainx balance is not enough after this tx, not allow to be killed at here");
-        }
-
-        let ret = func()?;
-
-        // deduct free
-        <balances::Module<T>>::set_free_balance(who, new_from_balance);
-        Ok(ret)
-    }
-}
 
 #[cfg(feature = "std")]
 #[derive(Serialize, Deserialize)]

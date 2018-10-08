@@ -5,7 +5,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 #[cfg(feature = "std")]
 #[macro_use]
@@ -35,9 +35,11 @@ extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
+extern crate cxrml_support as cxsupport;
 extern crate cxrml_staking as staking;
 extern crate cxrml_tokenbalances as tokenbalances;
 extern crate cxrml_financialrecords as financialrecords;
+extern crate cxrml_multisig as multisig;
 #[macro_use]
 extern crate sr_version as version;
 extern crate chainx_primitives;
@@ -60,6 +62,9 @@ use runtime_primitives::generic;
 use runtime_primitives::traits::{Convert, BlakeTwo256, DigestItem};
 use council::{motions as council_motions, voting as council_voting};
 use version::{RuntimeVersion, ApiId};
+
+#[cfg(feature = "std")]
+pub use multisig::BalancesConfigCopy;
 
 pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
     let mut inherent = vec![generic::UncheckedMortalExtrinsic::new_unsigned(
@@ -132,6 +137,7 @@ impl timestamp::Trait for Runtime {
 
 /// Session key conversion.
 pub struct SessionKeyConversion;
+
 impl Convert<AccountId, SessionKey> for SessionKeyConversion {
     fn convert(a: AccountId) -> SessionKey {
         a.0.into()
@@ -192,6 +198,13 @@ impl financialrecords::Trait for Runtime {
     type Event = Event;
 }
 
+impl multisig::Trait for Runtime {
+    type MultiSig = multisig::SimpleMultiSigIdFor<Runtime>;
+    type Event = Event;
+}
+
+impl cxsupport::Trait for Runtime {}
+
 impl DigestItem for Log {
     type Hash = Hash;
     type AuthorityId = SessionKey;
@@ -227,6 +240,9 @@ construct_runtime!(
 		Contract: contract::{Module, Call, Config},
 		TokenBalances: tokenbalances,
 		FinancialRecords: financialrecords,
+		MultiSig: multisig,
+		// put end of this marco
+		CXSupport: cxsupport::{Module},
 	}
 );
 

@@ -58,4 +58,5 @@ members = [
     "cxrml/tokenbalances",
     "cxrml/staking",
     "cxrml/financialrecords",
+    "cxrml/multisig",
 ]

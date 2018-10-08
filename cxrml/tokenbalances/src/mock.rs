@@ -7,7 +7,7 @@ use primitives::traits::BlakeTwo256;
 use primitives::testing::{Digest, DigestItem, Header};
 use runtime_io;
 
-use {GenesisConfig, Module, Trait, system, balances, TokenT, Token};
+use {GenesisConfig, Module, Trait, system, balances, cxsupport, TokenT, Token};
 use utils::*;
 
 impl_outer_origin! {
@@ -37,6 +37,8 @@ impl balances::Trait for Test {
     type EnsureAccountLiquid = ();
     type Event = ();
 }
+
+impl cxsupport::Trait for Test {}
 
 // define tokenbalances module type
 pub type Symbol = [u8; 8];

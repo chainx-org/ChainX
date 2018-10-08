@@ -40,6 +40,8 @@ impl balances::Trait for Test {
     type Event = ();
 }
 
+impl cxsupport::Trait for Test {}
+
 // define tokenbalances module type
 pub type Symbol = [u8; 8];
 pub type TokenDesc = [u8; 32];

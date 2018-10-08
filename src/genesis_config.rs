@@ -2,7 +2,8 @@
 
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
-                     ContractConfig, Permill, Perbill, TokenBalancesConfig, FinancialRecordsConfig};
+                     ContractConfig, Permill, Perbill, TokenBalancesConfig, FinancialRecordsConfig,
+                     MultiSigConfig, BalancesConfigCopy};
 use super::cli::ChainSpec;
 use keyring::Keyring;
 use ed25519;
@@ -23,6 +24,22 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         ChainSpec::Local => vec![auth1, auth2],
         ChainSpec::Multi => vec![auth1, auth2, auth3, auth4],
     };
+
+    let balances_config = BalancesConfig {
+        transaction_base_fee: 1,
+        transaction_byte_fee: 0,
+        existential_deposit: 500,
+        transfer_fee: 0,
+        creation_fee: 0,
+        reclaim_rebate: 0,
+        balances: vec![
+            (Keyring::Alice.to_raw_public().into(), 1000000),
+            (Keyring::Bob.to_raw_public().into(), 1000000),
+            (Keyring::Charlie.to_raw_public().into(), 1000000),
+        ],
+    };
+    let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
+
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
@@ -31,20 +48,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             authorities: initial_authorities.clone(),
         }),
         system: None,
-        balances: Some(BalancesConfig {
-            transaction_base_fee: 1,
-            transaction_byte_fee: 0,
-            existential_deposit: 500,
-            transfer_fee: 0,
-            creation_fee: 0,
-            reclaim_rebate: 0,
-            balances: vec![
-                (Keyring::Alice.to_raw_public().into(), 1000000),
-                (Keyring::Bob.to_raw_public().into(), 1000000),
-                (Keyring::Charlie.to_raw_public().into(), 1000000),
-            ],
-        }),
-
+        balances: Some(balances_config),
         session: Some(SessionConfig {
             validators: initial_authorities
                 .iter()
@@ -109,6 +113,13 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         financialrecords: Some(FinancialRecordsConfig {
             deposit_fee: 10,
             withdrawal_fee: 10,
-        })
+        }),
+        multisig: Some(MultiSigConfig {
+            genesis_multi_sig: vec![],
+            deploy_fee: 0,
+            exec_fee: 0,
+            confirm_fee: 0,
+            balances_config: balances_config_copy,
+        }),
     }
 }
