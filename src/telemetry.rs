@@ -63,12 +63,12 @@ pub fn run_telemetry(
             let best_number: u64 = best_block.number().as_();
             let speed = move || speed(best_number, last_number);
             let (status, target) =
-              match (sync_status.sync.state, sync_status.sync.best_seen_block) {
-                (SyncState::Idle, _) => ("Idle".into(), "".into()),
-                (SyncState::Downloading, None) => (format!("Syncing{}", speed()), "".into()),
-                (SyncState::Downloading, Some(n)) =>
-                   (format!("Syncing{}", speed()), format!(", target=#{}", n)),
-            };
+                match (sync_status.sync.state, sync_status.sync.best_seen_block) {
+                    (SyncState::Idle, _) => ("Idle".into(), "".into()),
+                    (SyncState::Downloading, None) => (format!("Syncing{}", speed()), "".into()),
+                    (SyncState::Downloading, Some(n)) =>
+                        (format!("Syncing{}", speed()), format!(", target=#{}", n)),
+                };
             last_number = Some(best_number);
             let txpool_status = txpool1.light_status();
             info!(

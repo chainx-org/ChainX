@@ -14,5 +14,5 @@ substrate-client = { git = "https://github.com/paritytech/substrate" }
 chainx-primitives = { path = "../primitives" }
 chainx-executor = { path = "../executor" }
 chainx-runtime = { path = "../runtime" }
-parity-codec = { version = "^1.0" }
+parity-codec = { version = "2.0" }
 log = "0.3"

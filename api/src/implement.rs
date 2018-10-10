@@ -53,7 +53,7 @@ impl ChainXApi for TClient {
     }
 
     fn index(&self, at: &BlockId, account: AccountId) -> Result<Index> {
-       self.call_api_at(at, "account_nonce", &account)
+        self.call_api_at(at, "account_nonce", &account)
     }
 
     fn lookup(&self, at: &BlockId, address: Address) -> Result<Option<AccountId>> {

@@ -23,7 +23,6 @@ extern crate substrate_primitives;
 
 // for substrate runtime
 // map!, vec! marco.
-#[cfg_attr(feature = "std", macro_use)]
 extern crate sr_std as rstd;
 // Needed for tests (`with_externalities`).
 #[cfg(test)]
@@ -208,11 +207,11 @@ impl<Symbol, TokenBalance, BlockNumber> Record<Symbol, TokenBalance, BlockNumber
 decl_storage! {
     trait Store for Module<T: Trait> as FinancialRecords {
         /// Record list length of every account
-        pub RecordsLenOf get(records_len_of): default map [T::AccountId => u32];
+        pub RecordsLenOf get(records_len_of): map T::AccountId => u32;
         /// Fee for deposit, can change by Root
-        pub DepositFee get(deposit_fee): default T::Balance;
+        pub DepositFee get(deposit_fee) config(): T::Balance;
         /// Fee for withdrawal, can change by Root
-        pub WithdrawalFee get(withdrawal_fee): default T::Balance;
+        pub WithdrawalFee get(withdrawal_fee) config(): T::Balance;
     }
 }
 /// Record list for every account, use accountid and index to index the record of account
@@ -539,35 +538,35 @@ impl<T: Trait> Module<T> {
 }
 
 
-#[cfg(feature = "std")]
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-/// The genesis block configuration type. This is a simple default-capable struct that
-/// contains any fields with which this module can be configured at genesis time.
-pub struct GenesisConfig<T: Trait> {
-    pub deposit_fee: T::Balance,
-    pub withdrawal_fee: T::Balance,
-}
-
-#[cfg(feature = "std")]
-impl<T: Trait> Default for GenesisConfig<T> {
-    fn default() -> Self {
-        GenesisConfig {
-            deposit_fee: Default::default(),
-            withdrawal_fee: Default::default(),
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl<T: Trait> runtime_primitives::BuildStorage for GenesisConfig<T>
-{
-    fn build_storage(self) -> ::std::result::Result<runtime_primitives::StorageMap, String> {
-        use codec::Encode;
-        Ok(map![
-            Self::hash(<DepositFee<T>>::key()).to_vec() => self.deposit_fee.encode(),
-            Self::hash(<WithdrawalFee<T>>::key()).to_vec() => self.withdrawal_fee.encode()
-        ])
-    }
-}
+//#[cfg(feature = "std")]
+//#[derive(Serialize, Deserialize)]
+//#[serde(rename_all = "camelCase")]
+//#[serde(deny_unknown_fields)]
+///// The genesis block configuration type. This is a simple default-capable struct that
+///// contains any fields with which this module can be configured at genesis time.
+//pub struct GenesisConfig<T: Trait> {
+//    pub deposit_fee: T::Balance,
+//    pub withdrawal_fee: T::Balance,
+//}
+//
+//#[cfg(feature = "std")]
+//impl<T: Trait> Default for GenesisConfig<T> {
+//    fn default() -> Self {
+//        GenesisConfig {
+//            deposit_fee: Default::default(),
+//            withdrawal_fee: Default::default(),
+//        }
+//    }
+//}
+//
+//#[cfg(feature = "std")]
+//impl<T: Trait> runtime_primitives::BuildStorage for GenesisConfig<T>
+//{
+//    fn build_storage(self) -> ::std::result::Result<runtime_primitives::StorageMap, String> {
+//        use codec::Encode;
+//        Ok(map![
+//            Self::hash(<DepositFee<T>>::key()).to_vec() => self.deposit_fee.encode(),
+//            Self::hash(<WithdrawalFee<T>>::key()).to_vec() => self.withdrawal_fee.encode()
+//        ])
+//    }
+//}

@@ -28,6 +28,7 @@ extern crate ctrlc;
 extern crate env_logger;
 extern crate exit_future;
 extern crate hex_literal;
+extern crate parity_codec as codec;
 extern crate jsonrpc_http_server;
 extern crate jsonrpc_ws_server;
 extern crate rhododendron;
@@ -48,14 +49,16 @@ mod rpc;
 mod cli;
 
 use substrate_client::BlockchainEvents;
-use substrate_primitives::ed25519;
+use substrate_primitives::{ed25519, storage::StorageKey, twox_128};
 
 use chainx_network::consensus::ConsensusNetwork;
 use chainx_pool::{PoolApi, TransactionPool, Pool};
-use chainx_primitives::{Block, Hash, BlockId};
+use chainx_primitives::{Block, Hash, BlockId, Timestamp};
 use chainx_api::TClient;
+use chainx_runtime::{BlockPeriod, StorageValue, Runtime as ChainXRuntime};
 use cli::ChainSpec;
 
+use codec::Decode;
 use std::sync::Arc;
 use names::{Generator, Name};
 use tokio::prelude::Future;
@@ -103,10 +106,10 @@ fn main() {
     let task_executor = runtime.executor();
 
     let extrinsic_pool = Arc::new(TransactionPool::new(
-            Default::default(),
-            PoolApi::new( client.clone() as Arc<TClient> ),
-            client.clone(),
-            ));
+        Default::default(),
+        PoolApi::new(client.clone() as Arc<TClient>),
+        client.clone(),
+    ));
 
     let validator_mode = matches.subcommand_matches("validator").is_some();
     let multi_address = matches.values_of("listen-addr").unwrap_or_default();
@@ -129,27 +132,27 @@ fn main() {
             .for_each(move |notification| {
                 network.on_block_imported(notification.hash, &notification.header);
                 txpool.inner().cull(&BlockId::hash(notification.hash))
-                  .map_err(|e| warn!("Error removing extrinsics: {:?}", e))?;
+                    .map_err(|e| warn!("Error removing extrinsics: {:?}", e))?;
                 Ok(())
             }).select(exit.clone())
             .then(|_| Ok(()));
         task_executor.spawn(events);
     }
 
-   {
-         // extrinsic notifications
-         let network = network.clone();
-         let txpool = extrinsic_pool.clone();
-         let events = txpool.inner().import_notification_stream()
-             // TODO [ToDr] Consider throttling?
-             .for_each(move |_| {
+    {
+        // extrinsic notifications
+        let network = network.clone();
+        let txpool = extrinsic_pool.clone();
+        let events = txpool.inner().import_notification_stream()
+            // TODO [ToDr] Consider throttling?
+            .for_each(move |_| {
                 network.trigger_repropagate();
                 Ok(())
-             })
-             .select(exit.clone())
-             .then(|_| Ok(()));
+            })
+            .select(exit.clone())
+            .then(|_| Ok(()));
 
-          task_executor.spawn(events);
+        task_executor.spawn(events);
     }
 
     let _consensus = if validator_mode {
@@ -158,24 +161,34 @@ fn main() {
             .unwrap()
             .value_of("auth")
             .unwrap_or("alice")
-        {
-            "alice" => {
-                info!("Auth is alice");
-                ed25519::Pair::from_seed(b"Alice                           ")
-            }
-            "bob" => {
-                info!("Auth is bob");
-                ed25519::Pair::from_seed(b"Bob                             ")
-            }
-            "gavin" => {
-                info!("Auth is gavin");
-                ed25519::Pair::from_seed(b"Gavin                           ")
-            }
-            "satoshi" | _ => {
-                info!("Auth is satoshi");
-                ed25519::Pair::from_seed(b"Satoshi                         ")
-            }
-        };
+            {
+                "alice" => {
+                    info!("Auth is alice");
+                    ed25519::Pair::from_seed(b"Alice                           ")
+                }
+                "bob" => {
+                    info!("Auth is bob");
+                    ed25519::Pair::from_seed(b"Bob                             ")
+                }
+                "gavin" => {
+                    info!("Auth is gavin");
+                    ed25519::Pair::from_seed(b"Gavin                           ")
+                }
+                "satoshi" | _ => {
+                    info!("Auth is satoshi");
+                    ed25519::Pair::from_seed(b"Satoshi                         ")
+                }
+            };
+
+
+        let block_id = BlockId::number(client.info().unwrap().chain.best_number);
+        // TODO: this needs to be dynamically adjustable
+        let block_delay = client.storage(&block_id, &StorageKey(twox_128(BlockPeriod::<ChainXRuntime>::key()).to_vec())).unwrap()
+            .and_then(|data| Timestamp::decode(&mut data.0.as_slice()))
+            .unwrap_or_else(|| {
+                warn!("Block period is missing in the storage.");
+                3
+            });
 
         let consensus_net = ConsensusNetwork::new(network.clone(), client.clone());
         Some(consensus::Service::new(
@@ -185,6 +198,7 @@ fn main() {
             extrinsic_pool.inner().clone(),
             task_executor.clone(),
             key,
+            block_delay,
         ))
     } else {
         None

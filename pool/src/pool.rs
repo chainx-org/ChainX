@@ -207,6 +207,10 @@ impl<A> ChainApi for PoolApi<A> where
     fn should_replace(_old: &VerifiedFor<Self>, _new: &VerifiedFor<Self>) -> scoring::Choice {
         Choice::RejectNew
     }
+
+    fn latest_hash(&self) -> Hash {
+        self.api.block_number_to_hash(self.api.current_height()).expect("Latest block number always has a hash; qed")
+    }
 }
 
 pub struct TransactionPool<A> where

@@ -66,8 +66,8 @@ pub fn maybe_start_server<T, F>(
     address: Option<SocketAddr>,
     start: F,
 ) -> Result<Option<T>, io::Error>
-where
-    F: Fn(&SocketAddr) -> Result<T, io::Error>,
+    where
+        F: Fn(&SocketAddr) -> Result<T, io::Error>,
 {
     Ok(match address {
         Some(mut address) => Some(start(&address).or_else(|e| match e.kind() {

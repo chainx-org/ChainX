@@ -33,12 +33,12 @@ const TIMER_INTERVAL_MS: Duration = Duration::from_millis(200);
 // spin up an instance of BFT agreement on the current thread's executor.
 // panics if there is no current thread executor.
 fn start_bft<F, C>(header: Header, bft_service: Arc<BftService<Block, F, C>>)
-where
-    F: bft::Environment<Block> + 'static,
-    C: bft::BlockImport<Block> + bft::Authorities<Block> + 'static,
-    F::Error: ::std::fmt::Debug,
-    <F::Proposer as bft::Proposer<Block>>::Error: ::std::fmt::Display + Into<error::Error>,
-    <F as bft::Environment<Block>>::Error: ::std::fmt::Display,
+    where
+        F: bft::Environment<Block> + 'static,
+        C: bft::BlockImport<Block> + bft::Authorities<Block> + 'static,
+        F::Error: ::std::fmt::Debug,
+        <F::Proposer as bft::Proposer<Block>>::Error: ::std::fmt::Display + Into<error::Error>,
+        <F as bft::Environment<Block>>::Error: ::std::fmt::Display,
 {
     let mut handle = LocalThreadHandle::current();
     match bft_service.build_upon(&header) {
@@ -65,12 +65,13 @@ impl Service {
         transaction_pool: Arc<TransactionPool<A>>,
         thread_pool: ThreadPoolHandle,
         key: ed25519::Pair,
+        block_delay: u64,
     ) -> Service
-    where
-        A: ChainXApi + Send + Sync + 'static,
-        C: BlockchainEvents<Block> + ChainHead<Block> + BlockBody<Block>,
-        C: bft::BlockImport<Block> + bft::Authorities<Block> + Send + Sync + 'static,
-        N: Network + Send + 'static,
+        where
+            A: ChainXApi + Send + Sync + 'static,
+            C: BlockchainEvents<Block> + ChainHead<Block> + BlockBody<Block>,
+            C: bft::BlockImport<Block> + bft::Authorities<Block> + Send + Sync + 'static,
+            N: Network + Send + 'static,
     {
         use parking_lot::RwLock;
         use super::OfflineTracker;
@@ -86,6 +87,7 @@ impl Service {
                 network,
                 handle: thread_pool.clone(),
                 offline: Arc::new(RwLock::new(OfflineTracker::new())),
+                force_delay: block_delay,
             };
             let bft_service = Arc::new(BftService::new(client.clone(), key, factory));
 
@@ -94,12 +96,12 @@ impl Service {
                 let bft_service = bft_service.clone();
 
                 client.import_notification_stream().for_each(move |notification| {
-					if notification.is_new_best {
-						trace!(target: "bft", "Attempting to start new consensus round after import notification of {:?}", notification.hash);
-						start_bft(notification.header, bft_service.clone());
-					}
-					Ok(())
-				})
+                    if notification.is_new_best {
+                        trace!(target: "bft", "Attempting to start new consensus round after import notification of {:?}", notification.hash);
+                        start_bft(notification.header, bft_service.clone());
+                    }
+                    Ok(())
+                })
             };
 
             let interval = Interval::new(
@@ -124,17 +126,17 @@ impl Service {
                     let s = bft_service.clone();
 
                     interval.map_err(|e| debug!(target: "bft", "Timer error: {:?}", e)).for_each(move |_| {
-					if let Ok(best_block) = c.best_block_header() {
-						let hash = best_block.hash();
+                        if let Ok(best_block) = c.best_block_header() {
+                            let hash = best_block.hash();
 
-						if hash == prev_best {
-							debug!(target: "bft", "Starting consensus round after a timeout");
-							start_bft(best_block, s.clone());
-						}
-						prev_best = hash;
-					}
-					Ok(())
-				})
+                            if hash == prev_best {
+                                debug!(target: "bft", "Starting consensus round after a timeout");
+                                start_bft(best_block, s.clone());
+                            }
+                            prev_best = hash;
+                        }
+                        Ok(())
+                    })
                 };
 
             runtime.spawn(notifications);

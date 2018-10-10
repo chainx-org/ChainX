@@ -19,6 +19,7 @@ extern crate serde;
 extern crate serde_derive;
 #[macro_use]
 extern crate parity_codec_derive;
+
 #[cfg(feature = "std")]
 use primitives::bytes;
 
@@ -42,7 +43,7 @@ pub type Header = generic::Header<BlockNumber, BlakeTwo256, generic::DigestItem<
 /// Opaque, encoded, unchecked extrinsic.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct UncheckedExtrinsic(#[cfg_attr(feature = "std", serde(with="bytes"))] pub Vec<u8>);
+pub struct UncheckedExtrinsic(#[cfg_attr(feature = "std", serde(with = "bytes"))] pub Vec<u8>);
 
 /// A "future-proof" block type for Polkadot. This will be resilient to upgrades in transaction
 /// format, because it doesn't attempt to decode extrinsics.

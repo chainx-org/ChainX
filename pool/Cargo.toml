@@ -17,7 +17,7 @@ substrate-client-db = { git = "https://github.com/paritytech/substrate" }
 chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
 chainx-executor = {path = "../executor"}
-parity-codec = { version = "^1.0" }
+parity-codec = { version = "2.0" }
 chainx-api = { path = "../api" }
 triehash = { version = "0.2.3" }
 error-chain = "0.12"

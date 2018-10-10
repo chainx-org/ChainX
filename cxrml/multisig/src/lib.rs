@@ -23,7 +23,6 @@ extern crate substrate_primitives;
 
 // for substrate runtime
 // map!, vec! marco.
-#[cfg_attr(feature = "std", macro_use)]
 extern crate sr_std as rstd;
 // Needed for tests (`with_externalities`).
 #[cfg(feature = "std")]
@@ -133,21 +132,46 @@ const MAX_OWNERS: u32 = 32;
 
 decl_storage! {
     trait Store for Module<T: Trait> as MultiSig {
-        pub MultiSigOwnerFor get(multi_sig_owner_for): map [T::AccountId => T::AccountId];
-        pub MultiSigListOwnerFor get(multi_sig_list_owner_for): map [T::AccountId => Vec<(T::AccountId, bool)>];
+        pub MultiSigOwnerFor get(multi_sig_owner_for): map T::AccountId => Option<T::AccountId>;
+        pub MultiSigListOwnerFor get(multi_sig_list_owner_for): map T::AccountId => Option<Vec<(T::AccountId, bool)>>;
 
-        pub RequiredNumFor get(required_num_for): map [T::AccountId => u32];
-        pub NumOwnerFor get(num_owner_for): map [T::AccountId => u32];
+        pub RequiredNumFor get(required_num_for): map T::AccountId => Option<u32>;
+        pub NumOwnerFor get(num_owner_for): map T::AccountId => Option<u32>;
 
-        pub PendingListLenFor get(pending_list_len_for): default map [T::AccountId => u32];
+        pub PendingListLenFor get(pending_list_len_for): map T::AccountId => u32;
 
         // for deployer
-        pub MultiSigListLenFor get(multi_sig_list_len_for): default map [T::AccountId => u32];
+        pub MultiSigListLenFor get(multi_sig_list_len_for): map T::AccountId => u32;
 
         // for fee
-        pub DeployFee get(deploy_fee): default T::Balance;
-        pub ExecFee get(exec_fee): default T::Balance;
-        pub ConfirmFee get(confirm_fee): default T::Balance;
+        pub DeployFee get(deploy_fee) config(): T::Balance;
+        pub ExecFee get(exec_fee) config(): T::Balance;
+        pub ConfirmFee get(confirm_fee) config(): T::Balance;
+    }
+    add_extra_genesis {
+        config(genesis_multi_sig): Vec<(T::AccountId, Vec<(T::AccountId, bool)>, u32, T::Balance)>;
+        config(balances_config): balances::GenesisConfig<T>;
+        build(|storage: &mut runtime_primitives::StorageMap, config: &GenesisConfig<T>| {
+            use runtime_io::with_externalities;
+            use substrate_primitives::Blake2Hasher;
+
+            // balances config storage
+            let mut src_r = BalancesConfigCopy::create_from_src(&config.balances_config).src().build_storage().unwrap();
+            src_r.extend(storage.clone());
+            let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
+            let genesis = config.genesis_multi_sig.clone();
+            with_externalities(&mut tmp_storage, || {
+                for (deployer, owners, required_num, value) in genesis {
+                    if let Err(e) = <Module<T>>::deploy_for(&deployer, owners, required_num, value) {
+                        panic!(e)
+                    }
+                    // <system::Module<T>>::inc_account_nonce(&deployer);
+                }
+            });
+
+            let map: runtime_primitives::StorageMap = tmp_storage.into();
+            storage.extend(map);
+        });
     }
 }
 
@@ -497,19 +521,19 @@ impl<T: Trait> Module<T> {
     }
 }
 
-#[cfg(feature = "std")]
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-/// The genesis block configuration type. This is a simple default-capable struct that
-/// contains any fields with which this module can be configured at genesis time.
-pub struct GenesisConfig<T: Trait> {
-    pub genesis_multi_sig: Vec<(T::AccountId, Vec<(T::AccountId, bool)>, u32, T::Balance)>,
-    pub deploy_fee: T::Balance,
-    pub exec_fee: T::Balance,
-    pub confirm_fee: T::Balance,
-    pub balances_config: balances::GenesisConfig<T>,
-}
+//#[cfg(feature = "std")]
+//#[derive(Serialize, Deserialize)]
+//#[serde(rename_all = "camelCase")]
+//#[serde(deny_unknown_fields)]
+///// The genesis block configuration type. This is a simple default-capable struct that
+///// contains any fields with which this module can be configured at genesis time.
+//pub struct GenesisConfig<T: Trait> {
+//    pub genesis_multi_sig: Vec<(T::AccountId, Vec<(T::AccountId, bool)>, u32, T::Balance)>,
+//    pub deploy_fee: T::Balance,
+//    pub exec_fee: T::Balance,
+//    pub confirm_fee: T::Balance,
+//    pub balances_config: balances::GenesisConfig<T>,
+//}
 
 #[cfg(feature = "std")]
 pub struct BalancesConfigCopy<T: Trait> (balances::GenesisConfig<T>);
@@ -533,53 +557,53 @@ impl<T: Trait> BalancesConfigCopy<T> {
         self.0
     }
 }
-
-#[cfg(feature = "std")]
-impl<T: Trait> Default for GenesisConfig<T> {
-    fn default() -> Self {
-        GenesisConfig {
-            genesis_multi_sig: vec![],
-            deploy_fee: Default::default(),
-            exec_fee: Default::default(),
-            confirm_fee: Default::default(),
-            // balances config
-            balances_config: Default::default(),
-        }
-    }
-}
-
-
-#[cfg(feature = "std")]
-impl<T: Trait> runtime_primitives::BuildStorage for GenesisConfig<T>
-{
-    fn build_storage(self) -> ::std::result::Result<runtime_primitives::StorageMap, String> {
-        use codec::Encode;
-        use runtime_io::with_externalities;
-        use substrate_primitives::{Blake2Hasher, RlpCodec};
-
-        let mut r: runtime_primitives::StorageMap = map![
-            Self::hash(<DeployFee<T>>::key()).to_vec() => self.deploy_fee.encode(),
-            Self::hash(<ExecFee<T>>::key()).to_vec() => self.exec_fee.encode(),
-            Self::hash(<ConfirmFee<T>>::key()).to_vec() => self.confirm_fee.encode()
-        ];
-
-        let mut src_r = self.balances_config.build_storage().unwrap();
-        src_r.extend(r.clone());    // add multisig fee
-        let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher, RlpCodec> = src_r.into();
-        let genesis = self.genesis_multi_sig.clone();
-
-        with_externalities(&mut tmp_storage, || {
-            for (deployer, owners, required_num, value) in genesis {
-                if let Err(e) = <Module<T>>::deploy_for(&deployer, owners, required_num, value) {
-                    panic!(e)
-                }
-                // <system::Module<T>>::inc_account_nonce(&deployer);
-            }
-        });
-
-        let map: runtime_primitives::StorageMap = tmp_storage.into();
-        r.extend(map);
-
-        Ok(r)
-    }
-}
+//
+//#[cfg(feature = "std")]
+//impl<T: Trait> Default for GenesisConfig<T> {
+//    fn default() -> Self {
+//        GenesisConfig {
+//            genesis_multi_sig: vec![],
+//            deploy_fee: Default::default(),
+//            exec_fee: Default::default(),
+//            confirm_fee: Default::default(),
+//            // balances config
+//            balances_config: Default::default(),
+//        }
+//    }
+//}
+//
+//
+//#[cfg(feature = "std")]
+//impl<T: Trait> runtime_primitives::BuildStorage for GenesisConfig<T>
+//{
+//    fn build_storage(self) -> ::std::result::Result<runtime_primitives::StorageMap, String> {
+//        use codec::Encode;
+//        use runtime_io::with_externalities;
+//        use substrate_primitives::{Blake2Hasher, RlpCodec};
+//
+//        let mut r: runtime_primitives::StorageMap = map![
+//            Self::hash(<DeployFee<T>>::key()).to_vec() => self.deploy_fee.encode(),
+//            Self::hash(<ExecFee<T>>::key()).to_vec() => self.exec_fee.encode(),
+//            Self::hash(<ConfirmFee<T>>::key()).to_vec() => self.confirm_fee.encode()
+//        ];
+//
+//        let mut src_r = self.balances_config.build_storage().unwrap();
+//        src_r.extend(r.clone());    // add multisig fee
+//        let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher, RlpCodec> = src_r.into();
+//        let genesis = self.genesis_multi_sig.clone();
+//
+//        with_externalities(&mut tmp_storage, || {
+//            for (deployer, owners, required_num, value) in genesis {
+//                if let Err(e) = <Module<T>>::deploy_for(&deployer, owners, required_num, value) {
+//                    panic!(e)
+//                }
+//                // <system::Module<T>>::inc_account_nonce(&deployer);
+//            }
+//        });
+//
+//        let map: runtime_primitives::StorageMap = tmp_storage.into();
+//        r.extend(map);
+//
+//        Ok(r)
+//    }
+//}
