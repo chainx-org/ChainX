@@ -2,20 +2,20 @@ use client;
 use jsonrpc_core as rpccore;
 
 pub fn unimplemented() -> rpccore::Error {
-	rpccore::Error {
-		code: rpccore::ErrorCode::ServerError(1),
-		message: "Not implemented yet".into(),
-		data: None,
-	}
+    rpccore::Error {
+        code: rpccore::ErrorCode::ServerError(1),
+        message: "Not implemented yet".into(),
+        data: None,
+    }
 }
 
 pub fn internal<E: ::std::fmt::Debug>(e: E) -> rpccore::Error {
-	warn!("Unknown error: {:?}", e);
-	rpccore::Error {
-		code: rpccore::ErrorCode::InternalError,
-		message: "Unknown error occured".into(),
-		data: Some(format!("{:?}", e).into()),
-	}
+    warn!("Unknown error: {:?}", e);
+    rpccore::Error {
+        code: rpccore::ErrorCode::InternalError,
+        message: "Unknown error occured".into(),
+        data: Some(format!("{:?}", e).into()),
+    }
 }
 
 error_chain! {
@@ -32,10 +32,10 @@ error_chain! {
 }
 
 impl From<Error> for rpccore::Error {
-	fn from(e: Error) -> Self {
-		match e {
-			Error(ErrorKind::Unimplemented, _) => unimplemented(),
-			e => internal(e),
-		}
-	}
+    fn from(e: Error) -> Self {
+        match e {
+            Error(ErrorKind::Unimplemented, _) => unimplemented(),
+            e => internal(e),
+        }
+    }
 }

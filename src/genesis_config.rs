@@ -1,6 +1,6 @@
 // Copyright 2018 chainpool
 
-use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilConfig, DemocracyConfig,
+use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilVotingConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
                      ContractConfig, Permill, Perbill, TokenBalancesConfig, FinancialRecordsConfig,
                      MultiSigConfig, BalancesConfigCopy};
@@ -24,6 +24,16 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         ChainSpec::Local => vec![auth1, auth2],
         ChainSpec::Multi => vec![auth1, auth2, auth3, auth4],
     };
+
+
+//    const MILLICENTS: u128 = 1_000_000_000;
+//    const CENTS: u128 = 1_000 * MILLICENTS;	// assume this is worth about a cent.
+//    const DOLLARS: u128 = 100 * CENTS;
+
+    const SECS_PER_BLOCK: u64 = 3;
+    const MINUTES: u64 = 60 / SECS_PER_BLOCK;
+    const HOURS: u64 = MINUTES * 60;
+    const DAYS: u64 = HOURS * 24;
 
     let balances_config = BalancesConfig {
         transaction_base_fee: 1,
@@ -55,11 +65,11 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                 .cloned()
                 .map(Into::into)
                 .collect(),
-            session_length: 720, // that's 1 hour per session.
+            session_length: 1 * HOURS, // that's 1 hour per session.
         }),
         staking: Some(StakingConfig {
             current_era: 0,
-            bonding_duration: 90, // 90 days per bond.
+            bonding_duration: 90 * DAYS, // 90 days per bond.
             intentions: vec![],
             minimum_validator_count: 1,
             validator_count: 2,
@@ -75,27 +85,17 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             voting_period: 120 * 24 * 28, // 4 weeks to discuss & vote on an active referendum
             minimum_deposit: 1000, // 1000 as the minimum deposit for a referendum
         }),
-        council: Some(CouncilConfig {
-            active_council: vec![],
-            candidacy_bond: 10,
-            voter_bond: 2,
-            present_slash_per_voter: 1,
-            carry_count: 4,
-            presentation_duration: 10,
-            approval_voting_period: 20,
-            term_duration: 1000000,
-            desired_seats: 0, // start with no council: we'll raise this once the stake has been dispersed a bit.
-            inactive_grace_period: 1,
-            cooloff_period: 75,
-            voting_period: 20,
+        council_voting: Some(CouncilVotingConfig {
+            cooloff_period: 4 * DAYS,
+            voting_period: 1 * DAYS,
         }),
         timestamp: Some(TimestampConfig {
-            period: 2,                  // 2 second block time.
+            period: SECS_PER_BLOCK,                  // 3 second block time.
         }),
         treasury: Some(TreasuryConfig {
             proposal_bond: Permill::from_percent(5),
             proposal_bond_minimum: 1_000_000,
-            spend_period: 12 * 60 * 24,
+            spend_period: 1 * DAYS,
             burn: Permill::from_percent(50),
         }),
         contract: Some(ContractConfig {

@@ -1,6 +1,6 @@
 // Copyright 2018 Chainpool.
 
-use substrate_primitives::{H256, Blake2Hasher, RlpCodec};
+use substrate_primitives::{H256, Blake2Hasher};
 
 use runtime_primitives::BuildStorage;
 use runtime_primitives::traits::BlakeTwo256;
@@ -52,7 +52,7 @@ impl Trait for Test {
 type Balances = balances::Module<Test>;
 type MultiSig = Module<Test>;
 
-pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
+pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
     let b_config = balances::GenesisConfig::<Test> {
@@ -85,7 +85,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
     r.into()
 }
 
-pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
+pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
     let b_config = balances::GenesisConfig::<Test> {
@@ -114,7 +114,7 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
     r.into()
 }
 
-pub fn err_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
+pub fn err_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
     let b_config = balances::GenesisConfig::<Test> {

@@ -1,6 +1,6 @@
 // Copyright 2018 Chainpool.
 
-use substrate_primitives::{H256, Blake2Hasher, RlpCodec};
+use substrate_primitives::{H256, Blake2Hasher};
 
 use primitives::BuildStorage;
 use primitives::traits::BlakeTwo256;
@@ -56,7 +56,7 @@ pub type Balances = balances::Module<Test>;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
-pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher, RlpCodec> {
+pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
     // balance
     r.extend(balances::GenesisConfig::<Test> {

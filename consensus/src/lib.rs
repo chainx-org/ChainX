@@ -43,6 +43,7 @@ use futures::future;
 use std::sync::Arc;
 
 type TransactionPool<A> = substrate_transaction_pool::Pool<chainx_pool::PoolApi<A>>;
+
 pub use self::offline_tracker::OfflineTracker;
 pub use self::error::{ErrorKind, Error};
 pub use service::Service;
@@ -57,24 +58,24 @@ const MAX_TRANSACTIONS_SIZE: usize = 4 * 1024 * 1024;
 /// A long-lived network which can create BFT message routing processes on demand.
 pub trait Network {
     /// The input stream of BFT messages. Should never logically conclude.
-    type Input: Stream<Item = bft::Communication<Block>, Error = Error>;
+    type Input: Stream<Item=bft::Communication<Block>, Error=Error>;
     /// The output sink of BFT messages. Messages sent here should eventually pass to all
     /// current authorities.
-    type Output: Sink<SinkItem = bft::Communication<Block>, SinkError = Error>;
+    type Output: Sink<SinkItem=bft::Communication<Block>, SinkError=Error>;
 
     fn communication_for(
         &self,
         validators: &[SessionKey],
+        local_id: SessionKey,
         parent_hash: Hash,
-        key: Arc<ed25519::Pair>,
         task_executor: TaskExecutor,
     ) -> (Self::Input, Self::Output);
 }
 
 /// ChainX proposer factory.
 pub struct ProposerFactory<N, P>
-where
-    P: ChainXApi + Send + Sync + 'static,
+    where
+        P: ChainXApi + Send + Sync + 'static,
 {
     /// The client instance.
     pub client: Arc<P>,
@@ -86,12 +87,14 @@ where
     pub handle: TaskExecutor,
     /// Offline-tracker.
     pub offline: SharedOfflineTracker,
+    /// Force delay in evaluation this long.
+    pub force_delay: Timestamp,
 }
 
 impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
-where
-    N: Network,
-    P: ChainXApi + Send + Sync + 'static,
+    where
+        N: Network,
+        P: ChainXApi + Send + Sync + 'static,
 {
     type Proposer = Proposer<P>;
     type Input = N::Input;
@@ -106,8 +109,6 @@ where
     ) -> Result<(Self::Proposer, Self::Input, Self::Output), Error> {
         use runtime_primitives::traits::{Hash as HashT, BlakeTwo256};
 
-        const FORCE_DELAY: Timestamp = 1;
-
         let parent_hash = parent_header.hash().into();
 
         let id = BlockId::hash(parent_hash);
@@ -117,10 +118,11 @@ where
         let validators = self.client.validators(&id)?;
         self.offline.write().note_new_block(&validators[..]);
 
+        let local_id = sign_with.public().0.into();
         let (input, output) = self.network.communication_for(
             authorities,
-            parent_hash,
-            sign_with.clone(),
+            local_id,
+            parent_hash.clone(),
             self.handle.clone(),
         );
         let now = Instant::now();
@@ -136,7 +138,7 @@ where
             transaction_pool: self.transaction_pool.clone(),
             offline: self.offline.clone(),
             validators,
-            minimum_timestamp: current_timestamp() + FORCE_DELAY,
+            minimum_timestamp: current_timestamp() + self.force_delay,
         };
 
         Ok((proposer, input, output))
@@ -170,36 +172,38 @@ impl<C: ChainXApi + Send + Sync> Proposer<C> {
     }
 
     fn primary_validator(&self, round_number: usize) -> Option<AccountId> {
-       use primitives::uint::U256;
+        use primitives::uint::U256;
 
-       let mut stake_weight = self.validators.iter()
-         .map(|account| {let weight = self.client.stake_weight(&self.parent_id, *account).unwrap();
-              if weight == 0 { 1 } else { weight } })
-         .collect::<Vec<_>>();
-       trace!("validator stake weight:{:?}", stake_weight);
-       for i in 1..self.validators.len() {
-         stake_weight[i] = stake_weight[i] + stake_weight[i-1];
-       }
-       let big_len = stake_weight[self.validators.len() - 1];
-       let big_value = U256::from_big_endian(&self.random_seed.0).low_u64() as u128;
-       let offset = (big_value * big_value + round_number as u128) % big_len;
+        let mut stake_weight = self.validators.iter()
+            .map(|account| {
+                let weight = self.client.stake_weight(&self.parent_id, *account).unwrap();
+                if weight == 0 { 1 } else { weight }
+            })
+            .collect::<Vec<_>>();
+        trace!("validator stake weight:{:?}", stake_weight);
+        for i in 1..self.validators.len() {
+            stake_weight[i] = stake_weight[i] + stake_weight[i - 1];
+        }
+        let big_len = stake_weight[self.validators.len() - 1];
+        let big_value = U256::from_big_endian(&self.random_seed.0).low_u64() as u128;
+        let offset = (big_value * big_value + round_number as u128) % big_len;
 
-       for i in 0..stake_weight.len() {
-         if offset < stake_weight[i] {
-            return Some(self.validators[i]);
-         }
-       }
-       return None;
+        for i in 0..stake_weight.len() {
+            if offset < stake_weight[i] {
+                return Some(self.validators[i]);
+            }
+        }
+        return None;
     }
 }
 
 impl<C> bft::Proposer<Block> for Proposer<C>
-where
-    C: ChainXApi + Send + Sync,
+    where
+        C: ChainXApi + Send + Sync,
 {
     type Error = Error;
     type Create = Result<Block, Error>;
-    type Evaluate = Box<Future<Item = bool, Error = Error>>;
+    type Evaluate = Box<Future<Item=bool, Error=Error>>;
 
     fn propose(&self) -> Self::Create {
         use chainx_api::BlockBuilder;
@@ -207,6 +211,7 @@ where
         use chainx_primitives::InherentData;
 
         const MAX_VOTE_OFFLINE_SECONDS: Duration = Duration::from_secs(60);
+
         // TODO: handle case when current timestamp behind that in state.
         let timestamp = ::std::cmp::max(self.minimum_timestamp, current_timestamp());
 
@@ -221,7 +226,7 @@ where
             info!(
                 "Submitting offline validators {:?} for slash-vote",
                 offline_indices.iter().map(|&i| self.validators[i as usize]).collect::<Vec<_>>(),
-                )
+            )
         }
 
         let inherent_data = InherentData {
@@ -236,7 +241,7 @@ where
             let result = self.transaction_pool.cull_and_get_pending(&BlockId::hash(self.parent_hash), |pending_iterator| {
                 let mut pending_size = 0;
                 for pending in pending_iterator {
-                    if pending_size + pending.verified.encoded_size() >= MAX_TRANSACTIONS_SIZE { break }
+                    if pending_size + pending.verified.encoded_size() >= MAX_TRANSACTIONS_SIZE { break; }
 
                     match block_builder.push_extrinsic(pending.original.clone()) {
                         Ok(()) => {
@@ -263,10 +268,10 @@ where
               Hash::from(block.header.hash()),
               block.header.parent_hash,
               block.extrinsics.iter()
-              .map(|xt| format!("{}", BlakeTwo256::hash_of(xt)))
-              .collect::<Vec<_>>()
-              .join(", ")
-             );
+                  .map(|xt| format!("{}", BlakeTwo256::hash_of(xt)))
+                  .collect::<Vec<_>>()
+                  .join(", ")
+        );
 
         let substrate_block = Decode::decode(&mut block.encode().as_slice())
             .expect("blocks are defined to serialize to substrate blocks correctly; qed");
@@ -309,9 +314,9 @@ where
             // the duration until the given timestamp is current
             let proposed_timestamp = proposal.timestamp();
             let timestamp_delay = if proposed_timestamp > current_timestamp {
-                Some(
-                    now + Duration::from_secs(proposed_timestamp - current_timestamp),
-                )
+                let delay_s = proposed_timestamp - current_timestamp;
+                debug!(target: "bft", "Delaying evaluation of proposal for {} seconds", delay_s);
+                Some(now + Duration::from_secs(delay_s))
             } else {
                 None
             };
@@ -331,9 +336,9 @@ where
             &self.validators[..],
             offline,
         )
-        {
-            return Box::new(futures::empty());
-        }
+            {
+                return Box::new(futures::empty());
+            }
 
         // evaluate whether the block is actually valid.
         // TODO: is it better to delay this until the delays are finished?
@@ -375,7 +380,7 @@ where
                 .filter(|tx| tx.verified.sender == local_id)
                 .last()
                 .map(|tx| Ok(tx.verified.index()))
-                .unwrap_or_else(|| self.client.index(&self.parent_id, local_id))
+                .unwrap_or_else(|| self.client.index(&self.parent_id, local_id)),
             );
 
             match cur_index {
@@ -400,10 +405,10 @@ where
                     GenericMisbehavior::ProposeOutOfTurn(_, _, _) => continue,
                     GenericMisbehavior::DoublePropose(_, _, _) => continue,
                     GenericMisbehavior::DoublePrepare(round, (h1, s1), (h2, s2))
-                        => MisbehaviorKind::BftDoublePrepare(round as u32, (h1, s1.signature), (h2, s2.signature)),
+                    => MisbehaviorKind::BftDoublePrepare(round as u32, (h1, s1.signature), (h2, s2.signature)),
                     GenericMisbehavior::DoubleCommit(round, (h1, s1), (h2, s2))
-                        => MisbehaviorKind::BftDoubleCommit(round as u32, (h1, s1.signature), (h2, s2.signature)),
-                }
+                    => MisbehaviorKind::BftDoubleCommit(round as u32, (h1, s1.signature), (h2, s2.signature)),
+                },
             };
             let payload = (next_index, Call::Consensus(ConsensusCall::report_misbehavior(report)));
             let signature = self.local_key.sign(&payload.encode()).into();
@@ -435,7 +440,7 @@ where
         }
 
         self.offline.write().note_round_end(
-            primary_validator, was_proposed
+            primary_validator, was_proposed,
         );
     }
 }

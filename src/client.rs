@@ -37,6 +37,7 @@ pub fn build_client(db_path: &str, chainspec: ChainSpec) -> Arc<TClient> {
             executor,
             genesis_config,
             ExecutionStrategy::NativeWhenPossible,
+            ExecutionStrategy::NativeWhenPossible,
         ).unwrap(),
     )
 }

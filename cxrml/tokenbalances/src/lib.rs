@@ -5,8 +5,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // for encode/decode
-#[cfg(feature = "std")]
-extern crate serde;
+//#[cfg(feature = "std")]
+//extern crate serde;
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate serde_derive;
@@ -18,8 +18,6 @@ extern crate parity_codec as codec;
 extern crate substrate_primitives;
 
 // for substrate runtime
-// Needed for tests (`with_externalities`).
-#[cfg_attr(feature = "std", macro_use)]
 extern crate sr_std as rstd;
 
 extern crate sr_io as runtime_io;
@@ -185,21 +183,41 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as TokenBalances {
         /// supported token list
-        pub TokenListMap get(token_list_map): default map [u32 => (bool, Symbol)];
+        pub TokenListMap get(token_list_map): map u32 => (bool, Symbol);
         /// supported token list length
-        pub TokenListLen get(token_list_len): default u32;
+        pub TokenListLen get(token_list_len): u32;
         /// token info for every token, key is token symbol
-        pub TokenInfo get(token_info): default map [Symbol => Token<T::Precision>];
+        pub TokenInfo get(token_info): map Symbol => Token<T::Precision>;
         /// total free token of a symbol
-        pub TotalFreeToken get(total_free_token): default map [Symbol => T::TokenBalance];
+        pub TotalFreeToken get(total_free_token): map Symbol => T::TokenBalance;
         /// total locked token of a symbol
-        pub TotalLockedToken get(total_locked_token): default map [Symbol => T::TokenBalance];
+        pub TotalLockedToken get(total_locked_token): map Symbol => T::TokenBalance;
 
         /// token list of a account
-        pub TokenListOf get(token_list_of): default map [T::AccountId => Vec<Symbol>];
+        pub TokenListOf get(token_list_of): map T::AccountId => Vec<Symbol>;
 
         /// transfer token fee
-        pub TransferTokenFee get(transfer_token_fee): required T::Balance;
+        pub TransferTokenFee get(transfer_token_fee) config(): T::Balance;
+    }
+    add_extra_genesis {
+        config(token_list): Vec<(Token<T::Precision>, T::TokenBalance, T::TokenBalance)>;
+        build(
+            |storage: &mut primitives::StorageMap, config: &GenesisConfig<T>| {
+                use codec::Encode;
+                // 0 token list length
+                storage.insert(GenesisConfig::<T>::hash(<TokenListLen<T>>::key()).to_vec(), config.token_list.len().encode());
+                for (index, (token, free_token, locked_token)) in config.token_list.iter().enumerate() {
+//                    token.is_valid().map_err(|e| e.to_string())?;
+                    // 1 token balance
+                    storage.insert(GenesisConfig::<T>::hash(&<TotalFreeToken<T>>::key_for(token.symbol())).to_vec(), free_token.encode());
+                    storage.insert(GenesisConfig::<T>::hash(&<TotalLockedToken<T>>::key_for(token.symbol())).to_vec(), locked_token.encode());
+                    // 2 token info
+                    storage.insert(GenesisConfig::<T>::hash(&<TokenInfo<T>>::key_for(token.symbol())).to_vec(), token.encode());
+                    // 3 token list map
+                    storage.insert(GenesisConfig::<T>::hash(&<TokenListMap<T>>::key_for(index as u32)).to_vec(), (true, token.symbol()).encode());
+                }
+            }
+        );
     }
 }
 
@@ -239,11 +257,11 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     // token storage
     pub fn free_token_of(who: &T::AccountId, symbol: &Symbol) -> T::TokenBalance {
-        <FreeTokenOf<T>>::get(who.clone(), symbol.clone()).unwrap_or_default()
+        <FreeTokenOf<T>>::get_or_default(who.clone(), symbol.clone())
     }
 
     pub fn locked_token_of(who: &T::AccountId, symbol: &Symbol) -> T::TokenBalance {
-        <LockedTokenOf<T>>::get(who.clone(), symbol.clone()).unwrap_or_default()
+        <LockedTokenOf<T>>::get_or_default(who.clone(), symbol.clone())
     }
 
     /// The combined token balance of `who` for symbol.
@@ -610,57 +628,5 @@ impl<T: Trait> Module<T> {
         <TransferTokenFee<T>>::put(val);
         Self::deposit_event(RawEvent::SetTransferTokenFee(val));
         Ok(())
-    }
-}
-
-
-#[cfg(feature = "std")]
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-/// The genesis block configuration type. This is a simple default-capable struct that
-/// contains any fields with which this module can be configured at genesis time.
-pub struct GenesisConfig<T: Trait> {
-    /// A value with which to initialise the Dummy storage item.
-    pub token_list: Vec<(Token<T::Precision>, T::TokenBalance, T::TokenBalance)>,
-
-    pub transfer_token_fee: T::Balance,
-}
-
-#[cfg(feature = "std")]
-impl<T: Trait> Default for GenesisConfig<T> {
-    fn default() -> Self {
-        GenesisConfig {
-            token_list: Default::default(),
-            transfer_token_fee: Default::default(),
-        }
-    }
-}
-
-
-#[cfg(feature = "std")]
-impl<T: Trait> primitives::BuildStorage for GenesisConfig<T>
-{
-    fn build_storage(self) -> ::std::result::Result<primitives::StorageMap, String> {
-        use codec::Encode;
-
-        let mut r: primitives::StorageMap = map![];
-        // token list
-        // 0 token list length
-        r.insert(Self::hash(<TokenListLen<T>>::key()).to_vec(), self.token_list.len().encode());
-        for (index, (token, free_token, locked_token)) in self.token_list.into_iter().enumerate() {
-            token.is_valid().map_err(|e| e.to_string())?;
-            // 1 token balance
-            r.insert(Self::hash(&<TotalFreeToken<T>>::key_for(token.symbol())).to_vec(), free_token.encode());
-            r.insert(Self::hash(&<TotalLockedToken<T>>::key_for(token.symbol())).to_vec(), locked_token.encode());
-            // 2 token info
-            r.insert(Self::hash(&<TokenInfo<T>>::key_for(token.symbol())).to_vec(), token.encode());
-            // 3 token list map
-            r.insert(Self::hash(&<TokenListMap<T>>::key_for(index as u32)).to_vec(), (true, token.symbol()).encode());
-        }
-        // transfer token fee
-        r.insert(Self::hash(<TransferTokenFee<T>>::key()).to_vec(), self.transfer_token_fee.encode());
-
-        Ok(r)
     }
 }

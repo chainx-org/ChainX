@@ -23,6 +23,7 @@ jsonrpc-ws-server = { git = "https://github.com/paritytech/jsonrpc" }
 ctrlc = { version = "3.0", features = ["termination"] }
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
+parity-codec = { version = "2.0" }
 chainx-primitives = { path = "./primitives" }
 chainx-consensus = { path = "./consensus" }
 chainx-executor = { path = "./executor" }

@@ -62,6 +62,12 @@ use runtime_primitives::generic;
 use runtime_primitives::traits::{Convert, BlakeTwo256, DigestItem};
 use council::{motions as council_motions, voting as council_voting};
 use version::{RuntimeVersion, ApiId};
+#[cfg(any(feature = "std", test))]
+use version::NativeVersion;
+
+// for set consensus period
+pub use timestamp::BlockPeriod;
+pub use srml_support::StorageValue;
 
 #[cfg(feature = "std")]
 pub use multisig::BalancesConfigCopy;
@@ -100,6 +106,15 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     impl_version: 0,
     apis: apis_vec!([(INHERENT, 1), (VALIDATX, 1)]),
 };
+
+/// Native version.
+#[cfg(any(feature = "std", test))]
+pub fn native_version() -> NativeVersion {
+    NativeVersion {
+        runtime_version: VERSION,
+        can_author_with: Default::default(),
+    }
+}
 
 impl system::Trait for Runtime {
     type Origin = Origin;
@@ -173,6 +188,7 @@ impl council::Trait for Runtime {
 impl contract::Trait for Runtime {
     type DetermineContractAddress = contract::SimpleAddressDeterminator<Runtime>;
     type Gas = u64;
+    type Event = Event;
 }
 
 // TODO add voting and motions at here
@@ -223,25 +239,25 @@ impl DigestItem for Log {
 }
 
 construct_runtime!(
-	pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) {
-		System: system::{default, Log(ChangesTrieRoot)},
-		Consensus: consensus::{Module, Call, Storage, Config, Log(AuthoritiesChange)},
-		Balances: balances,
-		Timestamp: timestamp::{Module, Call, Storage, Config},
-		Session: session,
-		Staking: staking,
-		Democracy: democracy,
-		Council: council,
-		CouncilVoting: council_voting::{Module, Call, Storage, Event<T>},
-		CouncilMotions: council_motions::{Module, Call, Storage, Event<T>, Origin},
-		Treasury: treasury,
-		Contract: contract::{Module, Call, Config},
-		TokenBalances: tokenbalances,
-		FinancialRecords: financialrecords,
-		MultiSig: multisig,
-		// put end of this marco
-		CXSupport: cxsupport::{Module},
-	}
+    pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) {
+        System: system::{default, Log(ChangesTrieRoot)},
+        Consensus: consensus::{Module, Call, Storage, Config, Log(AuthoritiesChange)},
+        Balances: balances,
+        Timestamp: timestamp::{Module, Call, Storage, Config},
+        Session: session,
+        Staking: staking,
+        Democracy: democracy,
+        Council: council::{Module, Call, Storage, Event<T>},
+        CouncilVoting: council_voting,
+        CouncilMotions: council_motions::{Module, Call, Storage, Event<T>, Origin},
+        Treasury: treasury,
+        Contract: contract::{Module, Call, Config, Event<T>},
+        TokenBalances: tokenbalances,
+        FinancialRecords: financialrecords,
+        MultiSig: multisig,
+        // put end of this marco
+        CXSupport: cxsupport::{Module},
+    }
 );
 
 /// The address format for describing accounts.
@@ -265,19 +281,19 @@ pub type Precision = u32;
 
 pub mod api {
     impl_stubs!(
-		version => |()| super::VERSION,
-		authorities => |()| super::Consensus::authorities(),
-		initialise_block => |header| super::Executive::initialise_block(&header),
-		apply_extrinsic => |extrinsic| super::Executive::apply_extrinsic(extrinsic),
-		execute_block => |block| super::Executive::execute_block(block),
-		finalise_block => |()| super::Executive::finalise_block(),
+        version => |()| super::VERSION,
+        authorities => |()| super::Consensus::authorities(),
+        initialise_block => |header| super::Executive::initialise_block(&header),
+        apply_extrinsic => |extrinsic| super::Executive::apply_extrinsic(extrinsic),
+        execute_block => |block| super::Executive::execute_block(block),
+        finalise_block => |()| super::Executive::finalise_block(),
         inherent_extrinsics => |inherent| super::inherent_extrinsics(inherent),
-		validator_count => |()| super::Session::validator_count(),
+        validator_count => |()| super::Session::validator_count(),
         validators => |()| super::Session::validators(),
         stake_weight => |account| super::Staking::stake_weight(&account),
         timestamp => |()| super::Timestamp::get(),
-		random_seed => |()| super::System::random_seed(),
-		account_nonce => |account| super::System::account_nonce(&account),
-		lookup_address => |address| super::Balances::lookup_address(address)
-	);
+        random_seed => |()| super::System::random_seed(),
+        account_nonce => |account| super::System::account_nonce(&account),
+        lookup_address => |address| super::Balances::lookup_address(address)
+    );
 }
