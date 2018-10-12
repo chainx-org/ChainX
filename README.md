@@ -23,7 +23,7 @@
 
 ## Introduction
 
-For the time being the goal of [ChainX](https://github.com/chainx-org/ChainX) is to build a corss-chain digital asset management platform on the strength of [substrate](https://github.com/paritytech/substrate) which is next-generation framework for blockchain created by [paritytech](https://github.com/paritytech). The long-term vision of ChainX is to evolve as a general blockchain infrastrcutre platform.
+For the time being the goal of [ChainX](https://github.com/chainx-org/ChainX) is to build a cross-chain digital asset management platform on the strength of [substrate](https://github.com/paritytech/substrate) which is next-generation framework for blockchain created by [paritytech](https://github.com/paritytech). The long-term vision of ChainX is to evolve as a general blockchain infrastrcutre platform.
 
 ChainX is still at a very early stage and in an active development. The instruction as followed is not stable and may change in the future.
 
