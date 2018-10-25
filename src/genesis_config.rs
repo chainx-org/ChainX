@@ -74,7 +74,6 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             bonding_duration: 3 * MINUTES, // 3 days per bond.
             intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
             name_of_intention: initial_authorities.clone().into_iter().map(|i| (i.0.into(), b"ChainX".to_vec())).collect(),
-            url_of_intention: initial_authorities.into_iter().map(|i| (i.0.into(), b"chainx.org".to_vec())).collect(),
             minimum_validator_count: 1,
             validator_count: 4,
             candidate_count: 4 * 4,
