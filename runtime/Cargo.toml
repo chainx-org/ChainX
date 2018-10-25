@@ -36,6 +36,7 @@ cxrml-staking = { path = "../cxrml/staking" }
 cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
 cxrml-financialrecords = { path = "../cxrml/financialrecords" }
 cxrml-multisig = { path = "../cxrml/multisig" }
+cxrml-bridge-btc = { path = "../cxrml/bridge/btc" }
 
 [features]
 default = ["std"]
@@ -63,4 +64,5 @@ std = [
     "cxrml-tokenbalances/std",
     "cxrml-financialrecords/std",
     "cxrml-multisig/std",
+    "cxrml-bridge-btc/std"
 ]

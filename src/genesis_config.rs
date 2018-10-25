@@ -1,13 +1,17 @@
 // Copyright 2018 chainpool
+extern crate primitives as btc_primitives;
+extern crate chain as btc_chain;
 
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilVotingConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
                      ContractConfig, Permill, Perbill, TokenBalancesConfig, FinancialRecordsConfig,
-                     MultiSigConfig, BalancesConfigCopy};
+                     MultiSigConfig, BalancesConfigCopy, BridgeOfBTCConfig, Params};
 use super::cli::ChainSpec;
 use keyring::Keyring;
 use ed25519;
 
+use self::btc_primitives::{hash::H256, compact::Compact};
+use self::btc_chain::BlockHeader;
 
 pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
     let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
@@ -126,6 +130,26 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             exec_fee: 0,
             confirm_fee: 0,
             balances_config: balances_config_copy,
+        }),
+        bridge_btc: Some(BridgeOfBTCConfig {
+            // start genesis block: (genesis, blocknumber)
+            genesis: (BlockHeader {
+                version: 536870912,
+                previous_header_hash: H256::from_reversed_str("000000000000837bcdb53e7a106cf0e74bab6ae8bc96481243d31bea3e6b8c92"),
+                merkle_root_hash: H256::from_reversed_str("8beab73ba2318e4cbdb1c65624496bc3214d6ba93204e049fb46293a41880b9a"),
+                time: 1506023937,
+                bits: Compact::new(453021074),
+                nonce: 2001025151,
+            }, 1200000),
+            params_info: Params::new(520159231, // max_bits
+                                     2 * 60 * 60,  // block_max_future
+                                     64,  // max_fork_route_preset
+                                     2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
+                                     10 * 60,  // target_spacing_seconds
+                                     4), // retargeting_factor
+            receive_pubkey: b"mu4ivHDBPGnNGpFQtLrn3v9hdezLRoLNPe".to_vec(),
+            receive_pubkeyhash: b"mu4ivHDBPGnNGpFQtLrn3v9hdezLRoLNPe".to_vec(),
+            fee: 0,
         }),
     }
 }

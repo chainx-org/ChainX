@@ -40,6 +40,8 @@ extern crate cxrml_staking as staking;
 extern crate cxrml_tokenbalances as tokenbalances;
 extern crate cxrml_financialrecords as financialrecords;
 extern crate cxrml_multisig as multisig;
+// chainx runtime bridge
+extern crate cxrml_bridge_btc as bridge_btc;
 #[macro_use]
 extern crate sr_version as version;
 extern crate chainx_primitives;
@@ -71,6 +73,8 @@ pub use srml_support::StorageValue;
 
 #[cfg(feature = "std")]
 pub use multisig::BalancesConfigCopy;
+#[cfg(feature = "std")]
+pub use bridge_btc::Params;
 
 pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
     let mut inherent = vec![generic::UncheckedMortalExtrinsic::new_unsigned(
@@ -219,6 +223,11 @@ impl multisig::Trait for Runtime {
 
 impl cxsupport::Trait for Runtime {}
 
+// bridge
+impl bridge_btc::Trait for Runtime {
+    type Event = Event;
+}
+
 impl DigestItem for Log {
     type Hash = Hash;
     type AuthorityId = SessionKey;
@@ -255,6 +264,9 @@ construct_runtime!(
         TokenBalances: tokenbalances,
         FinancialRecords: financialrecords,
         MultiSig: multisig,
+        // bridge
+        BridgeOfBTC: bridge_btc, //::{Module, Call, Storage, Config, Event<T>},
+
         // put end of this marco
         CXSupport: cxsupport::{Module},
     }

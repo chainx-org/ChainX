@@ -1,0 +1,59 @@
+[package]
+name = "cxrml-bridge-btc"
+version = "0.1.0"
+authors = ["Chainpool <http://chainx.org>"]
+
+
+[dependencies]
+hex-literal = "0.1.0"
+serde = { version = "1.0", default-features = false }
+serde_derive = { version = "1.0", optional = true }
+parity-codec = { version = "2.0", default-features = false }
+parity-codec-derive = { version = "2.0", default-features = false }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-std = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-io = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-system = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-balances = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-consensus = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false }
+
+# bitcoin-rust
+chain = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+primitives = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+serialization = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+bitcrypto = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+merkle = { git = "https://github.com/chainx-org/merkle.git", default-features = false }
+bit-vec =  { git = "https://github.com/chainx-org/bit-vec.git", default-features = false }
+#chain = { path = "../../../../bitcoin-rust/chain", default-features = false }
+#primitives = { path = "../../../../bitcoin-rust/primitives", default-features = false }
+#serialization = { path = "../../../../bitcoin-rust/serialization", default-features = false }
+
+
+[features]
+default = ["std"]
+std=[
+    "serde/std",
+    "serde_derive",
+    "parity-codec/std",
+    "parity-codec-derive/std",
+    "substrate-primitives/std",
+    "sr-std/std",
+    "sr-io/std",
+    "sr-primitives/std",
+    "srml-support/std",
+    "srml-system/std",
+    "srml-balances/std",
+    "srml-consensus/std",
+    "srml-timestamp/std",
+
+    # bitcoin-rust
+    "chain/std",
+    "primitives/std",
+    "serialization/std",
+    "bitcrypto/std",
+    "merkle/std",
+    "bit-vec/std",
+]

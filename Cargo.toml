@@ -45,6 +45,10 @@ clap = "2.30.0"
 slog = "^2"
 log = "0.3"
 
+# bitcoin-rust
+primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
+chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
+
 [workspace]
 members = [
     "primitives",
@@ -60,4 +64,5 @@ members = [
     "cxrml/staking",
     "cxrml/financialrecords",
     "cxrml/multisig",
+    "cxrml/bridge/btc",
 ]

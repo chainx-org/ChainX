@@ -154,6 +154,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bit-vec"
+version = "0.5.0"
+source = "git+https://github.com/chainx-org/bit-vec.git#ced2a13de722307d5c966aa88eba7b4d5116e9a1"
+
+[[package]]
+name = "bitcrypto"
+version = "0.1.0"
+source = "git+https://github.com/chainx-org/bitcoin-rust#279298c7235a6bb66dfd47be0dec9c04f2ea3ae8"
+dependencies = [
+ "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "siphasher 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)",
+]
+
+[[package]]
 name = "bitflags"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -229,10 +244,27 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "chain"
+version = "0.1.0"
+source = "git+https://github.com/chainx-org/bitcoin-rust#279298c7235a6bb66dfd47be0dec9c04f2ea3ae8"
+dependencies = [
+ "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_bytes 0.10.4 (git+https://github.com/serde-rs/bytes)",
+ "serialization 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)",
+]
+
+[[package]]
 name = "chainx"
 version = "0.1.0"
 dependencies = [
  "ansi_term 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chainx-api 0.1.0",
  "chainx-consensus 0.1.0",
  "chainx-executor 0.1.0",
@@ -253,6 +285,7 @@ dependencies = [
  "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "names 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "rhododendron 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -415,6 +448,7 @@ name = "chainx-runtime"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives 0.1.0",
+ "cxrml-bridge-btc 0.1.0",
  "cxrml-financialrecords 0.1.0",
  "cxrml-multisig 0.1.0",
  "cxrml-staking 0.1.0",
@@ -600,6 +634,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "nix 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "cxrml-bridge-btc"
+version = "0.1.0"
+dependencies = [
+ "bit-vec 0.5.0 (git+https://github.com/chainx-org/bit-vec.git)",
+ "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "merkle 0.1.0 (git+https://github.com/chainx-org/merkle.git)",
+ "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serialization 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "sr-io 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
 ]
 
 [[package]]
@@ -1598,6 +1658,19 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "merkle"
+version = "0.1.0"
+source = "git+https://github.com/chainx-org/merkle.git#38d0704d612338e22b100c07b3900bf32100c545"
+dependencies = [
+ "bit-vec 0.5.0 (git+https://github.com/chainx-org/bit-vec.git)",
+ "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "serialization 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)",
+]
+
+[[package]]
 name = "mime"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1934,6 +2007,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "ansi_term 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "difference 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "primitives"
+version = "0.1.0"
+source = "git+https://github.com/chainx-org/bitcoin-rust#279298c7235a6bb66dfd47be0dec9c04f2ea3ae8"
+dependencies = [
+ "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "crunchy 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)",
+ "uint 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2274,6 +2362,14 @@ version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "serde_bytes"
+version = "0.10.4"
+source = "git+https://github.com/serde-rs/bytes#9caf3c090d9488948031c5989910a194aff6f805"
+dependencies = [
+ "serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2291,6 +2387,16 @@ dependencies = [
  "itoa 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ryu 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "serialization"
+version = "0.1.0"
+source = "git+https://github.com/chainx-org/bitcoin-rust#279298c7235a6bb66dfd47be0dec9c04f2ea3ae8"
+dependencies = [
+ "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)",
 ]
 
 [[package]]
@@ -2318,6 +2424,11 @@ dependencies = [
  "digest 0.7.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "fake-simd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "siphasher"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "skeptic"
@@ -2429,6 +2540,14 @@ dependencies = [
  "sr-std 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
  "wasmi 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "sr-std"
+version = "0.1.0"
+source = "git+https://github.com/chainx-org/sr-std#a8a04a89136b381a7f42a279d2ce0ccb54d25bf1"
+dependencies = [
+ "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3691,6 +3810,8 @@ dependencies = [
 "checksum base64 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "96434f987501f0ed4eb336a411e0631ecd1afa11574fe148587adc4ff96143c9"
 "checksum base64 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5032d51da2741729bfdaeb2664d9b8c6d9fd1e2b90715c660b6def36628499c2"
 "checksum bigint 4.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ebecac13b3c745150d7b6c3ea7572d372f09d627c2077e893bf26c5c7f70d282"
+"checksum bit-vec 0.5.0 (git+https://github.com/chainx-org/bit-vec.git)" = "<none>"
+"checksum bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)" = "<none>"
 "checksum bitflags 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4efd02e230a02e18f92fc2735f44597385ed02ad8f831e7c1c1156ee5e1ab3a5"
 "checksum bitflags 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "228047a76f468627ca71776ecdebd732a3423081fcf5125585bcd7c49886ce12"
 "checksum blake2-rfc 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)" = "5d6d530bdd2d52966a6d03b7a964add7ae1a288d25214066fd4b600f0f796400"
@@ -3703,6 +3824,7 @@ dependencies = [
 "checksum bytes 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)" = "0ce55bd354b095246fc34caf4e9e242f5297a7fd938b090cadfea6eee614aa62"
 "checksum cc 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)" = "f159dfd43363c4d08055a07703eb7a3406b0dac4d0584d96965a3262db3c9d16"
 "checksum cfg-if 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "0c4e7bb64a8ebb0d856483e1e682ea3422f883c5f5615a90d51a2c82fe87fdd3"
+"checksum chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)" = "<none>"
 "checksum chashmap 2.2.1 (git+https://github.com/redox-os/tfs)" = "<none>"
 "checksum chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)" = "45912881121cb26fad7c38c17ba7daa18764771836b34fab7d3fbd93ed633878"
 "checksum clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b957d88f4b6a63b9d70d5f454ac8011819c6efa7727858f458ab71c756ce2d3e"
@@ -3808,6 +3930,7 @@ dependencies = [
 "checksum memoffset 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0f9dc261e2b62d7a622bf416ea3c5245cdd5d9a7fcc428c0d06804dfce1775b3"
 "checksum memory-db 0.9.0 (git+https://github.com/paritytech/trie)" = "<none>"
 "checksum memory_units 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
+"checksum merkle 0.1.0 (git+https://github.com/chainx-org/merkle.git)" = "<none>"
 "checksum mime 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ba626b8a6de5da682e1caa06bdb42a335aee5a84db8e5046a3e8ab17ba0a3ae0"
 "checksum mio 0.6.16 (registry+https://github.com/rust-lang/crates.io-index)" = "71646331f2619b1026cc302f87a2b8b648d5c6dd6937846a16cc8ce0f347f432"
 "checksum mio-extras 2.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "46e73a04c2fa6250b8d802134d56d554a9ec2922bf977777c805ea5def61ce40"
@@ -3845,6 +3968,7 @@ dependencies = [
 "checksum percent-encoding 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "31010dd2e1ac33d5b46a5b413495239882813e0369f8ed8a5e266f173602f831"
 "checksum pkg-config 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "676e8eb2b1b4c9043511a9b7bea0915320d7e502b0a079fb03f9635a5252b18c"
 "checksum pretty_assertions 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "28ea5118e2f41bfbc974b28d88c07621befd1fa5d6ec23549be96302a1a59dd2"
+"checksum primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)" = "<none>"
 "checksum proc-macro-hack 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2c725b36c99df7af7bf9324e9c999b9e37d92c8f8caf106d82e1d7953218d2d8"
 "checksum proc-macro-hack-impl 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2b753ad9ed99dd8efeaa7d2fb8453c8f6bc3e54b97966d35f1bc77ca6865254a"
 "checksum proc-macro2 0.4.20 (registry+https://github.com/rust-lang/crates.io-index)" = "3d7b7eaaa90b4a90a932a9ea6666c95a389e424eff347f0f793979289429feee"
@@ -3888,12 +4012,15 @@ dependencies = [
 "checksum semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 "checksum serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)" = "84257ccd054dc351472528c8587b4de2dbf0dc0fe2e634030c1a90bfdacebaa9"
+"checksum serde_bytes 0.10.4 (git+https://github.com/serde-rs/bytes)" = "<none>"
 "checksum serde_derive 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)" = "31569d901045afbff7a9479f793177fe9259819aff10ab4f89ef69bbc5f567fe"
 "checksum serde_json 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)" = "43344e7ce05d0d8280c5940cabb4964bea626aa58b1ec0e8c73fa2a8512a38ce"
+"checksum serialization 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)" = "<none>"
 "checksum sha1 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cc30b1e1e8c40c121ca33b86c23308a090d19974ef001b4bf6e61fd1a0fb095c"
 "checksum sha1 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "171698ce4ec7cbb93babeb3190021b4d72e96ccb98e33d277ae4ea959d6f2d9e"
 "checksum sha1 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 "checksum sha2 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "9eb6be24e4c23a84d7184280d2722f7f2731fcdd4a9d886efbfe4413e4847ea0"
+"checksum siphasher 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "833011ca526bd88f16778d32c699d325a9ad302fa06381cd66f7be63351d3f6d"
 "checksum skeptic 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "24ebf8a06f5f8bae61ae5bbc7af7aac4ef6907ae975130faba1199e5fe82256a"
 "checksum slab 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "17b4fcaed89ab08ef143da37bc52adbcc04d4a69014f4c1208d6b51f0c47bc23"
 "checksum slab 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5f9776d6b986f77b35c6cf846c11ad986ff128fe0b2b63a3628e3755e8d3102d"
@@ -3906,6 +4033,7 @@ dependencies = [
 "checksum sr-io 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum sr-primitives 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum sr-sandbox 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
+"checksum sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)" = "<none>"
 "checksum sr-std 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum sr-version 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum srml-balances 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
