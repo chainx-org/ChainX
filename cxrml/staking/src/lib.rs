@@ -573,7 +573,10 @@ impl<T: Trait> Module<T> {
 
         if should_reward {
             // apply good session reward
-            let reward = Self::this_session_reward(actual_elapsed);
+            // let reward = Self::this_session_reward(actual_elapsed);
+            let session_length: u64 = <session::Module<T>>::length().as_();
+            let block_period: u64 = <timestamp::Module<T>>::block_period().as_();
+            let reward = T::Balance::sa(session_length * block_period * <RewardPerSec<T>>::get());
 
             let vals_weight = Self::validators_weight().as_();
             let cands_weight = Self::candidates_weight().as_();
