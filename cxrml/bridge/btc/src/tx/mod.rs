@@ -35,6 +35,12 @@ pub struct UTXO {
 #[derive(Clone, Encode, Decode, Default)]
 pub struct UTXOIndex(H256, u32);
 
+impl From<(H256, u32)> for UTXOIndex {
+    fn from(value: (H256, u32)) -> Self {
+        UTXOIndex(value.0, value.1)
+    }
+}
+
 struct UTXOStorage<T: Trait> (PhantomData<T>);
 
 impl<T: Trait> UTXOStorage<T> {
