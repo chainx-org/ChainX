@@ -68,6 +68,10 @@ impl<T: Trait> TxStorage<T> {
 
         <TxSet<T>>::insert(hash, (tx, who.clone()));
     }
+
+    fn check_previous(txid: &H256) -> bool {
+        <TxSet<T>>::exists(txid)
+    }
 }
 
 impl<T: Trait> RollBack<T> for TxStorage<T> {
@@ -109,7 +113,7 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
 
 pub fn validate_transaction<T: Trait>(tx: &RelayTx, who: &T::AccountId, receive_pubkeyhash: &[u8]) -> Result {
     if <HeaderNumberFor<T>>::exists(&tx.block_hash) == false {
-        return Err("this tx's block not in the main chain")
+        return Err("this tx's block not in the main chain");
     }
 
     let select_header = if let Some((header, _)) = <BlockHeaderFor<T>>::get(&tx.block_hash) {
@@ -132,18 +136,38 @@ pub fn validate_transaction<T: Trait>(tx: &RelayTx, who: &T::AccountId, receive_
         }
         Err(_) => return Err("parse partial merkle tree failed"),
     }
-    if tx.raw.inputs.iter().any(|input| {
-        input.script_sig.clone().take().ends_with(&receive_pubkeyhash)
-    }) {
+
+//    if tx.raw.inputs.iter().any(|input| {
+//        input.script_sig.clone().take().ends_with(&receive_pubkeyhash) && (<TxStorage<T>>::check_previous(&input.previous_output.hash) == false)
+//    }) {
+//        return Err("previous tx not exist");
+//    }
+//
+//    if tx.raw.inputs.iter().any(|input| {
+//        input.script_sig.clone().take().ends_with(&receive_pubkeyhash)
+//    }) {
+//        <TxStorage<T>>::store_tx(tx, who);
+//        return Ok(());
+//    }
+    let mut store_flag = false;
+    for input in tx.raw.inputs.iter() {
+        if input.script_sig.as_ref().ends_with(&receive_pubkeyhash) {
+            if <TxStorage<T>>::check_previous(&input.previous_output.hash) == false {
+                return Err("previous tx not exist yet for this input");
+            }
+            store_flag = true;
+        }
+    }
+    if store_flag {
         <TxStorage<T>>::store_tx(tx, who);
         return Ok(());
     }
 
     for output in tx.raw.outputs.iter() {
-        let script = output.script_pubkey.clone().take();
-        match script::parse_script(script.clone()) {
+        let script = &output.script_pubkey;
+        match script::parse_script(script) {
             script::ParseScript::PubKeyHash => {
-                if receive_pubkeyhash == script.as_slice() {
+                if receive_pubkeyhash == script.as_ref() {
                     <TxStorage<T>>::store_tx(tx, who);
                     return Ok(());
                 }
@@ -160,10 +184,9 @@ pub fn validate_transaction<T: Trait>(tx: &RelayTx, who: &T::AccountId, receive_
 pub fn handle_input(tx: &Transaction, receive_pubkeyhash: &[u8]) -> Vec<(H256, u32)> {
     // remove utxos.
     tx.inputs
-        .clone()
         .iter()
         .filter(|input| {
-            input.script_sig.clone().take().ends_with(
+            input.script_sig.as_ref().ends_with(
                 receive_pubkeyhash
             )
         })
@@ -178,7 +201,7 @@ pub fn handle_input(tx: &Transaction, receive_pubkeyhash: &[u8]) -> Vec<(H256, u
 
 pub fn deposit_token(tx: &Transaction, output_index: usize) -> StdResult<(H160, u64), ()> {
     // parse input pubkey hash, only handle first input
-    if let Ok(pubkey_hash) = script::parse_sigscript(tx.inputs[0].script_sig.clone().take()) {
+    if let Ok(pubkey_hash) = script::parse_sigscript(&tx.inputs[0].script_sig) {
         let balance = tx.outputs[output_index].value;
         return Ok((pubkey_hash, balance));
     }
@@ -189,8 +212,8 @@ pub fn handle_output<T: Trait>(tx: &Transaction, receive_pubkeyhash: &[u8]) -> V
     let mut new_utxos = Vec::<UTXO>::new();
     // Add utxo
     for (index, output) in tx.outputs.iter().enumerate() {
-        let script = output.script_pubkey.clone().take();
-        match script::parse_script(script.clone()) {
+        let script = &output.script_pubkey;
+        match script::parse_script(script) {
             script::ParseScript::PubKeyHash => {
                 if receive_pubkeyhash == script.as_slice() {
                     if let Ok((pubkey_hash, balance)) = deposit_token(tx, index) {

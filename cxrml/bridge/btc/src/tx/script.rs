@@ -35,8 +35,8 @@ pub enum ParseScript {
     NotSupport,
 }
 
-pub fn parse_script(script: Vec<u8>) -> ParseScript {
-    fn is_pay_to_public_key_hash(script: &Vec<u8>) -> bool {
+pub fn parse_script(script: &[u8]) -> ParseScript {
+    fn is_pay_to_public_key_hash(script: &[u8]) -> bool {
         script.len() == 25 && script[0] == Opcode::OP_DUP as u8 &&
             script[1] == Opcode::OP_HASH160 as u8 &&
             script[2] == Opcode::OP_PUSHBYTES_20 as u8 &&
@@ -44,7 +44,7 @@ pub fn parse_script(script: Vec<u8>) -> ParseScript {
             script[24] == Opcode::OP_CHECKSIG as u8
     }
 
-    fn is_pay_to_public_key(script: &Vec<u8>) -> bool {
+    fn is_pay_to_public_key(script: &[u8]) -> bool {
         let len = match script[0] {
             x if x == Opcode::OP_PUSHBYTES_33 as u8 => 35,
             x if x == Opcode::OP_PUSHBYTES_65 as u8 => 67,
@@ -55,13 +55,13 @@ pub fn parse_script(script: Vec<u8>) -> ParseScript {
         script.len() == len && script[len - 1] == Opcode::OP_CHECKSIG as u8
     }
 
-    fn is_pay_to_script_hash(script: &Vec<u8>) -> bool {
+    fn is_pay_to_script_hash(script: &[u8]) -> bool {
         script.len() == 23 && script[0] == Opcode::OP_HASH160 as u8 &&
             script[1] == Opcode::OP_PUSHBYTES_20 as u8 &&
             script[22] == Opcode::OP_EQUAL as u8
     }
 
-    fn is_null_data_script(script: &Vec<u8>) -> bool {
+    fn is_null_data_script(script: &[u8]) -> bool {
         script[0] == Opcode::OP_RETURN as u8 &&
             {
                 let mut pc = 1usize;
@@ -78,13 +78,13 @@ pub fn parse_script(script: Vec<u8>) -> ParseScript {
             }
     }
 
-    if is_pay_to_public_key_hash(&script) {
+    if is_pay_to_public_key_hash(script) {
         return ParseScript::PubKeyHash;
-    } else if is_pay_to_public_key(&script) {
+    } else if is_pay_to_public_key(script) {
         return ParseScript::PubKey;
-    } else if is_pay_to_script_hash(&script) {
+    } else if is_pay_to_script_hash(script) {
         return ParseScript::ScriptHash;
-    } else if is_null_data_script(&script) {
+    } else if is_null_data_script(script) {
         return ParseScript::NullData;
     } else {
         return ParseScript::NotSupport;
@@ -92,7 +92,7 @@ pub fn parse_script(script: Vec<u8>) -> ParseScript {
 }
 
 
-pub fn parse_sigscript(script: Vec<u8>) -> Result<H160, ()> {
+pub fn parse_sigscript(script: &[u8]) -> Result<H160, ()> {
     let mut pc = 0usize;
     let mut data: Vec<Vec<u8>> = Vec::new();
     while pc < script.len() {
