@@ -63,9 +63,9 @@ use primitives::{hash::H256, compact::Compact};
 
 pub use blockchain::BestHeader;
 
-use blockchain::{Chain};
-use tx::{UTXOIndex, validate_transaction, handle_input, handle_output};
-pub use tx::RelayTx;
+use blockchain::Chain;
+use tx::{validate_transaction, handle_input, handle_output};
+pub use tx::{RelayTx, UTXOIndex};
 
 
 pub trait Trait: system::Trait + balances::Trait + timestamp::Trait {

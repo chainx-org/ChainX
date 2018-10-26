@@ -14,7 +14,6 @@ use super::{
     Trait, ReceivePubkey, ReceivePubkeyHash,
     UTXOSet, TxSet, BlockTxids,
     BlockHeaderFor, HeaderNumberFor,
-    BestIndex,
 };
 
 mod script;
