@@ -110,10 +110,13 @@ pub fn new_test_ext(
         creation_fee: 0,
         reclaim_rebate: 0,
     }.build_storage().unwrap());
+    let initial_authorities = vec![10, 20];
     t.extend(GenesisConfig::<Test>{
         sessions_per_era,
         current_era,
         intentions: vec![10, 20],
+        name_of_intention: initial_authorities.clone().into_iter().map(|i| (i, b"ChainX".to_vec())).collect(),
+        url_of_intention: initial_authorities.into_iter().map(|i| (i, b"chainx.org".to_vec())).collect(),
         validator_count: 2,
         candidate_count: 2*4,
         reward_per_sec: 3,

@@ -209,11 +209,12 @@ decl_storage! {
         config(name_of_intention): Vec<(T::AccountId, Vec<u8>)>;
         config(url_of_intention): Vec<(T::AccountId, Vec<u8>)>;
         build(|storage: &mut primitives::StorageMap, config: &GenesisConfig<T>| {
+            use codec::Encode;
             for (acnt, name) in config.name_of_intention.iter() {
-                storage.insert(GenesisConfig::<T>::hash(&<NameOfIntention<T>>::key_for(acnt)).to_vec(), name.clone());
+                storage.insert(GenesisConfig::<T>::hash(&<NameOfIntention<T>>::key_for(acnt)).to_vec(), name.encode());
             }
             for (acnt, url) in config.url_of_intention.iter() {
-                storage.insert(GenesisConfig::<T>::hash(&<UrlOfIntention<T>>::key_for(acnt)).to_vec(), url.clone());
+                storage.insert(GenesisConfig::<T>::hash(&<UrlOfIntention<T>>::key_for(acnt)).to_vec(), url.encode());
             }
             // TODO
             // for intention in config.intentions.iter() {

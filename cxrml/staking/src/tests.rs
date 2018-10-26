@@ -297,6 +297,8 @@ fn nominating_and_rewards_should_work() {
         // session reward is calculated by session_length * block_period * REWRAD_PER_SECOND,
         // REWRAD_PER_SECOND is 3, that means session reward is 15 now.
         // [(1, 10), (1, 20)]
+        println!("{:?}", Staking::name_of_intention(&10));
+        println!("{:?}", Staking::name_of_intention(&20));
         assert_eq!(Staking::era_length(), 1);
         assert_eq!(Staking::validator_count(), 2);
         assert_eq!(Staking::bonding_duration(), 3);
