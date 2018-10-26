@@ -162,16 +162,7 @@ pub struct Proposer<C: ChainXApi + Send + Sync>
 }
 
 impl<C: ChainXApi + Send + Sync> Proposer<C> {
-    fn primary_index(&self, round_number: usize, len: usize) -> usize {
-        use primitives::uint::U256;
-
-        let big_len = U256::from(len);
-        let offset = U256::from_big_endian(&self.random_seed.0) % big_len;
-        let offset = offset.low_u64() as usize + round_number;
-        offset % len
-    }
-
-    fn primary_validator(&self, round_number: usize) -> Option<AccountId> {
+    fn primary_index(&self, round_number: usize, _len: usize) -> usize {
         use primitives::uint::U256;
 
         let mut stake_weight = self.validators.iter()
@@ -190,10 +181,15 @@ impl<C: ChainXApi + Send + Sync> Proposer<C> {
 
         for i in 0..stake_weight.len() {
             if offset < stake_weight[i] {
-                return Some(self.validators[i]);
+                return i;
             }
         }
-        return None;
+        return 0;
+    }
+
+    fn primary_validator(&self, round_number: usize) -> Option<AccountId> {
+        let i = self.primary_index(round_number, 0);
+        return Some(self.validators[i]);
     }
 }
 
