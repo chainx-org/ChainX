@@ -16,6 +16,8 @@ use self::btc_chain::BlockHeader;
 pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
     let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
     let bob = ed25519::Pair::from_seed(b"Bob                             ").public();
+    let charlie = ed25519::Pair::from_seed(b"Charlie                         ").public();
+    let dave = ed25519::Pair::from_seed(b"Dave                            ").public();
     let gavin = ed25519::Pair::from_seed(b"Gavin                           ").public();
     let satoshi = ed25519::Pair::from_seed(b"Satoshi                         ").public();
 
@@ -26,7 +28,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
     let initial_authorities = match chainspec {
         ChainSpec::Dev => vec![auth1],
         ChainSpec::Local => vec![auth1, auth2],
-        ChainSpec::Multi => vec![auth1, auth2, auth3, auth4],
+        ChainSpec::Multi => vec![auth1, auth2, auth3, auth4, charlie.into(), dave.into()],
     };
 
 
@@ -78,11 +80,11 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             current_era: 0,
             bonding_duration: 3 * MINUTES, // 3 days per bond.
             intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
-            name_of_intention: initial_authorities.clone().into_iter().map(|i| (i.0.into(), b"ChainX".to_vec())).collect(),
+            name_of_intention: initial_authorities.clone().into_iter().map(|i| (i.0.into(), initial_authorities.clone().iter().position(|&r| r == i).unwrap().to_string().into_bytes().to_vec())).collect(),
             url_of_intention: initial_authorities.into_iter().map(|i| (i.0.into(), b"chainx.org".to_vec())).collect(),
             minimum_validator_count: 1,
-            validator_count: 4,
-            candidate_count: 4 * 4,
+            validator_count: 6,
+            candidate_count: 6 * 4,
             reward_per_sec: 3, // 3 PCX per second
             sessions_per_era: 4, // 24 hours per era.
             session_reward: Perbill::from_millionths(10800),

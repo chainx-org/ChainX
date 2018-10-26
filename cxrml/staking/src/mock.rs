@@ -115,7 +115,7 @@ pub fn new_test_ext(
         sessions_per_era,
         current_era,
         intentions: vec![10, 20],
-        name_of_intention: initial_authorities.clone().into_iter().map(|i| (i, b"ChainX".to_vec())).collect(),
+        name_of_intention: initial_authorities.clone().into_iter().map(|i| (i, initial_authorities.clone().iter().position(|&r| r == i).unwrap().to_string().into_bytes().to_vec())).collect(),
         url_of_intention: initial_authorities.into_iter().map(|i| (i, b"chainx.org".to_vec())).collect(),
         validator_count: 2,
         candidate_count: 2*4,
