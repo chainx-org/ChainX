@@ -305,9 +305,12 @@ impl<T: Trait> Module<T> {
         <UrlOfIntention<T>>::insert(&who, url);
 
         <Bondage<T>>::insert(&who, T::BlockNumber::max_value());
-        intentions.push(who);
+        intentions.push(who.clone());
         <Intentions<T>>::put(intentions);
+
         <NominatorCount<T>>::put(<NominatorCount<T>>::get() + 1);
+        <NominationOfValidatorPerSe<T>>::insert(who.clone(), <balances::Module<T>>::total_balance(&who));
+
         Ok(())
     }
 
