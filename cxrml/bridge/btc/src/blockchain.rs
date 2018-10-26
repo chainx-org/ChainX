@@ -4,6 +4,7 @@ use rstd::prelude::*;
 use rstd::result::Result;
 use rstd::marker::PhantomData;
 use runtime_support::{StorageMap, StorageValue};
+use runtime_io;
 
 use primitives::hash::H256;
 use chain::BlockHeader;
@@ -179,6 +180,8 @@ impl<T: Trait> Chain<T> {
         };
 
         <HeaderNumberFor<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
+        runtime_io::print("------------");
+        runtime_io::print(new_best_header.hash.to_vec().as_slice());
         <HashForNumber<T>>::insert(new_best_header.number, new_best_header.hash.clone());
 
         <BestIndex<T>>::put(new_best_header);

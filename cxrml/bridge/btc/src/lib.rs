@@ -23,8 +23,6 @@ extern crate substrate_primitives;
 // map!, vec! marco.
 extern crate sr_std as rstd;
 // Needed for tests (`with_externalities`).
-#[cfg(test)]
-#[cfg(feature = "std")]
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 // for substrate runtime module lib
@@ -251,6 +249,9 @@ impl<T: Trait> Module<T> {
         let receive_pubkey: Vec<u8> = if let Some(h) = <ReceivePubkey<T>>::get() { h } else {
             return Err("should set RECEIVE_PUBKEY first");
         };
+        runtime_io::print("-------receive pubkeyhash & pubkey:");
+        runtime_io::print(receive_pubkeyhash.as_slice());
+        runtime_io::print(receive_pubkey.as_slice());
 
         validate_transaction::<T>(&tx, who, &receive_pubkeyhash)?;
 //        let _ = handle_input(&tx.raw, &receive_pubkey);

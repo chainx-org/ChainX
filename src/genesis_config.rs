@@ -55,6 +55,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         ],
     };
     let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
+    let pubkey_hash: Vec<u8> = vec![0x94,0x9b,0xc7,0xde,0x64,0xd3,0xc3,0x96,0xfd,0xd0,0x4a,0x66,0x34,0x83,0xa0,0x26,0xb7,0x2d,0x8e,0xae];
 
     GenesisConfig {
         consensus: Some(ConsensusConfig {
@@ -148,7 +149,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                                      10 * 60,  // target_spacing_seconds
                                      4), // retargeting_factor
             receive_pubkey: b"mu4ivHDBPGnNGpFQtLrn3v9hdezLRoLNPe".to_vec(),
-            receive_pubkeyhash: b"mu4ivHDBPGnNGpFQtLrn3v9hdezLRoLNPe".to_vec(),
+            receive_pubkeyhash: pubkey_hash,
             fee: 0,
         }),
     }

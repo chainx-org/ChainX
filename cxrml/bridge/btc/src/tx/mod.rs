@@ -8,11 +8,13 @@ use runtime_support::{StorageMap, StorageValue};
 use primitives::hash::{H160, H256};
 use chain::Transaction;
 use merkle::{PartialMerkleTree, parse_partial_merkle_tree};
+use runtime_io;
 
 use super::{
     Trait, ReceivePubkey, ReceivePubkeyHash,
     UTXOSet, TxSet, BlockTxids,
     BlockHeaderFor, HeaderNumberFor,
+    BestIndex,
 };
 
 mod script;
@@ -164,16 +166,23 @@ pub fn validate_transaction<T: Trait>(tx: &RelayTx, who: &T::AccountId, receive_
     }
 
     for output in tx.raw.outputs.iter() {
-        let script = &output.script_pubkey;
-        match script::parse_script(script) {
-            script::ParseScript::PubKeyHash => {
-                if receive_pubkeyhash == script.as_ref() {
+        let script = output.script_pubkey.clone().take();
+        runtime_io::print("------script");
+        runtime_io::print(script.as_slice());
+        for i in 0..script.len() {
+            if script[i] == receive_pubkeyhash[0] {
+                let mut sign = true;
+                for j in 1..receive_pubkeyhash.len() {
+                    if script[i + j] != receive_pubkeyhash[j] {
+                        sign = false;
+                        break;
+                    }
+                }
+                if sign {
+                    runtime_io::print("------store tx success-----");
                     <TxStorage<T>>::store_tx(tx, who);
                     return Ok(());
                 }
-            }
-            _ => {
-                continue;
             }
         }
     }
