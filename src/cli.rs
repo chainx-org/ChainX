@@ -69,6 +69,13 @@ pub fn build_cli() -> App<'static, 'static> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("key")
+                .long("key")
+                .value_name("STRING")
+                .help("Validator key seed")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("rpc-port")
                 .long("rpc-port")
                 .value_name("PORT")

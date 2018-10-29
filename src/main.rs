@@ -49,7 +49,7 @@ mod rpc;
 mod cli;
 
 use substrate_client::BlockchainEvents;
-use substrate_primitives::{ed25519, storage::StorageKey, twox_128};
+use substrate_primitives::{ed25519, ed25519::Pair, storage::StorageKey, twox_128};
 
 use chainx_network::consensus::ConsensusNetwork;
 use chainx_pool::{PoolApi, TransactionPool, Pool};
@@ -156,7 +156,7 @@ fn main() {
     }
 
     let _consensus = if validator_mode {
-        let key = match matches
+        let mut key = match matches
             .subcommand_matches("validator")
             .unwrap()
             .value_of("auth")
@@ -196,6 +196,15 @@ fn main() {
                 }
             };
 
+        if let Some(seed) = matches.value_of("key") {
+            let generate_from_seed = |seed: &str| -> Pair {
+                let mut s: [u8; 32] = [' ' as u8; 32];
+                let len = ::std::cmp::min(32, seed.len());
+                &mut s[..len].copy_from_slice(&seed.as_bytes()[..len]);
+                Pair::from_seed(&s)
+            };
+            key = generate_from_seed(seed);
+        }
 
         let block_id = BlockId::number(client.info().unwrap().chain.best_number);
         // TODO: this needs to be dynamically adjustable
