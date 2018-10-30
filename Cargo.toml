@@ -65,4 +65,5 @@ members = [
     "cxrml/financialrecords",
     "cxrml/multisig",
     "cxrml/bridge/btc",
+    "cxrml/pendingorders",
 ]
