@@ -18,6 +18,10 @@ extern crate parity_codec as codec;
 // Needed for the set of mock primitives used in our tests.
 #[cfg(feature = "std")]
 extern crate substrate_primitives;
+#[cfg(feature = "std")]
+extern crate rustc_hex as hex;
+#[cfg(feature = "std")]
+extern crate base58;
 
 // for substrate runtime
 // map!, vec! marco.
@@ -47,6 +51,8 @@ mod tests;
 mod verify_header;
 mod blockchain;
 mod tx;
+mod keys;
+mod script;
 
 use codec::Decode;
 use rstd::prelude::*;
@@ -60,12 +66,13 @@ use system::ensure_signed;
 use ser::deserialize;
 use chain::{BlockHeader, Transaction};
 use primitives::{hash::H256, compact::Compact};
+use primitives::hash;
 
 pub use blockchain::BestHeader;
 
 use blockchain::Chain;
-use tx::{validate_transaction, handle_input, handle_output};
-pub use tx::{RelayTx, UTXOIndex};
+use tx::{UTXO, validate_transaction, handle_input, handle_output};
+pub use tx::RelayTx;
 
 
 pub trait Trait: system::Trait + balances::Trait + timestamp::Trait {
@@ -138,6 +145,18 @@ impl Params {
     }
 }
 
+#[derive(PartialEq, Clone, Copy, Encode, Decode)]
+pub enum TxType {
+    Withdraw,
+    Deposit,
+    Register,
+    RegisterDeposit,
+}
+
+impl Default for TxType {
+    fn default() -> Self { TxType::Deposit }
+}
+
 decl_storage! {
     trait Store for Module<T: Trait> as BridgeOfBTC {
         // =====
@@ -155,15 +174,18 @@ decl_storage! {
         // basic
         pub GenesisInfo get(genesis_info) config(genesis): (BlockHeader, u32);
         pub ParamsInfo get(params_info) config(): Params;
+        pub NetworkId get(network_id) config(): u32;
 
         // =====
         // tx
-        pub ReceivePubkey get(receive_pubkey) config(): Option<Vec<u8>>;
-        pub ReceivePubkeyHash get(receive_pubkeyhash) config(): Option<Vec<u8>>;
+        pub ReceiveAddress get(receive_address) config(): Option<Vec<u8>>;
 
-        pub UTXOSet get(utxo_set): map UTXOIndex => Option<u64>;
-        pub TxSet get(tx_set): map H256 => Option<(Transaction, T::AccountId)>;
+        pub UTXOSet get(utxo_set): map u64 => UTXO;
+        pub UTXOMaxIndex get(utxo_max_index) config(): u64;
+        pub TxSet get(tx_set): map H256 => Option<(Transaction, T::AccountId, keys::Address, TxType, u64)>; // Address, type, balance
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
+        pub AddressMap get(address_map): map keys::Address => T::AccountId;
+//        pub AccountMap get(account_map): map T::AccountId => keys::Address;
 
         // =====
         // others
@@ -242,20 +264,22 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn process_tx(tx: RelayTx, who: &T::AccountId) -> Result {
-        let receive_pubkeyhash: Vec<u8> = if let Some(h) = <ReceivePubkeyHash<T>>::get() { h } else {
-            return Err("should set RECEIVE_PUBKEYHASH first");
+        let receive_address: Vec<u8> = if let Some(h) = <ReceiveAddress<T>>::get() { h } else {
+            return Err("should set RECEIVE_address first");
         };
 
-        let receive_pubkey: Vec<u8> = if let Some(h) = <ReceivePubkey<T>>::get() { h } else {
-            return Err("should set RECEIVE_PUBKEY first");
-        };
-        runtime_io::print("-------receive pubkeyhash & pubkey:");
-        runtime_io::print(receive_pubkeyhash.as_slice());
-        runtime_io::print(receive_pubkey.as_slice());
+        runtime_io::print("-------receive address:");
+        runtime_io::print(receive_address.as_slice());
 
-        validate_transaction::<T>(&tx, who, &receive_pubkeyhash)?;
-//        let _ = handle_input(&tx.raw, &receive_pubkey);
-        let _ = handle_output::<T>(&tx.raw, &receive_pubkeyhash);
+        let tx_type = validate_transaction::<T>(&tx, &receive_address).unwrap();
+        match tx_type {
+            TxType::Withdraw => {
+                handle_input::<T>(&tx.raw, &tx.block_hash, &who, &receive_address);
+            },
+            _ => {
+                let _utxos = handle_output::<T>(&tx.raw, &tx.block_hash, &who, &tx.previous_raw, &receive_address);
+            },
+        }
 
         Ok(())
     }

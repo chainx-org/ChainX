@@ -46,8 +46,8 @@ slog = "^2"
 log = "0.3"
 
 # bitcoin-rust
-primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
-chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
+primitives = { git = "https://github.com/chainx-org/bitcoin-rust", rev = "8b2dab29c12d19bcd75f268deb01ff19cccd7050" }
+chain = { git = "https://github.com/chainx-org/bitcoin-rust", rev = "8b2dab29c12d19bcd75f268deb01ff19cccd7050" }
 
 [workspace]
 members = [
