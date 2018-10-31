@@ -9,7 +9,7 @@ use runtime_io;
 use runtime_io::with_externalities;
 
 use super::*;
-use tokenbalances::Token;
+use tokenbalances::{Token, SymbolString, DescString, Precision};
 
 impl_outer_origin! {
         pub enum Origin for Test {}
@@ -43,15 +43,14 @@ impl cxsupport::Trait for Test {}
 
 // define tokenbalances module type
 pub type TokenBalance = u128;
-pub type Precision = u32;
 
 impl tokenbalances::Trait for Test {
+    const CHAINX_SYMBOL: SymbolString = b"pcx";
+    const CHAINX_PRECISION: Precision = 8;
+    const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
-    type Precision = Precision;
     type Event = ();
 }
-
-pub type TestPrecision = <Test as tokenbalances::Trait>::Precision;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
@@ -68,8 +67,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         reclaim_rebate: 0,
     }.build_storage().unwrap());
     // token balance
-    let t: Token<TestPrecision> = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
-    let t2: Token<TestPrecision> = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
+    let t: Token = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
+    let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
     r.extend(tokenbalances::GenesisConfig::<Test> {
         token_list: vec![
@@ -139,10 +138,13 @@ fn test_normal2() {
 
         assert_eq!(FinancialRecords::records_len_of(&a), 4);
 
-        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &btc_symbol).unwrap(), 0);
-        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &btc_symbol).unwrap(), 2);
-        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &eth_symbol).unwrap(), 1);
-        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &eth_symbol).unwrap(), 3);
+        let key1 = (a, btc_symbol.clone());
+        let key2 = (a, eth_symbol.clone());
+
+        assert_eq!(FinancialRecords::last_deposit_index_of(&key1).unwrap(), 0);
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&key1).unwrap(), 2);
+        assert_eq!(FinancialRecords::last_deposit_index_of(&key2).unwrap(), 1);
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&key2).unwrap(), 3);
 
         assert_eq!(Balances::free_balance(&a), 960);
     })
@@ -171,15 +173,15 @@ fn test_last_not_finish() {
         assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 50));  // 3. deposit success
 
         assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 150);
-        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 100);
+        assert_eq!(TokenBalances::free_token(&(a.clone(), btc_symbol.clone())), 100);
 
         assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, false)); // 4. withdrawal failed
-        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 150);
+        assert_eq!(TokenBalances::free_token(&(a.clone(), btc_symbol.clone())), 150);
 
         assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 25));
         assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true));  // destroy token here 5. withdrawal success
         assert_eq!(FinancialRecords::records_len_of(&a), 5);
-        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 125);
+        assert_eq!(TokenBalances::free_token(&(a.clone(), btc_symbol.clone())), 125);
 
         assert_eq!(TokenBalances::total_token(&btc_symbol), 225);
 
@@ -228,7 +230,8 @@ fn test_multi_sym() {
         let a: u64 = 1; // accountid
         let btc_symbol = b"x-btc".to_vec();
         let eth_symbol = b"x-eth".to_vec();
-
+        let key1 =(a, btc_symbol.clone());
+        let key2 =(a, eth_symbol.clone());
 
         assert_err!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true), "have not executed withdrawal() or withdrawal_init() yet for this record");
         assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "the account has no deposit record for this token yet");
@@ -237,9 +240,9 @@ fn test_multi_sym() {
         assert_ok!(FinancialRecords::deposit(&a, &eth_symbol, 100));  // eth 100 index = 1
         assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 100));  // btc 200 index = 2
 
-        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &btc_symbol), Some(2));
-        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &eth_symbol), Some(1));
-        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &eth_symbol), None);
+        assert_eq!(FinancialRecords::last_deposit_index_of(&key1), Some(2));
+        assert_eq!(FinancialRecords::last_deposit_index_of(&key2), Some(1));
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&key2), None);
 
         assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 200);
         assert_eq!(TokenBalances::total_token_of(&a, &eth_symbol), 100);
@@ -250,12 +253,12 @@ fn test_multi_sym() {
 
         assert_ok!(FinancialRecords::withdrawal(&a, &eth_symbol, 50));  // parallel withdraw  index = 4
 
-        assert_eq!(TokenBalances::free_token_of(&a, &btc_symbol), 150);
-        assert_eq!(TokenBalances::free_token_of(&a, &eth_symbol), 50);
+        assert_eq!(TokenBalances::free_token(&(a.clone(), btc_symbol.clone())), 150);
+        assert_eq!(TokenBalances::free_token(&(a.clone(), eth_symbol.clone())), 50);
 
         assert_ok!(FinancialRecords::deposit(&a, &eth_symbol, 50));  // deposit while withdraw  index = 5
 
-        assert_eq!(TokenBalances::free_token_of(&a, &eth_symbol), 100);
+        assert_eq!(TokenBalances::free_token(&(a.clone(), eth_symbol.clone())), 100);
 
         assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true));
         assert_ok!(FinancialRecords::withdrawal_finish(&a, &eth_symbol, false));
@@ -263,12 +266,11 @@ fn test_multi_sym() {
         assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 150);
         assert_eq!(TokenBalances::total_token_of(&a, &eth_symbol), 150);
 
-        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &btc_symbol), Some(2));
-        assert_eq!(FinancialRecords::last_deposit_index_of(&a, &eth_symbol), Some(5));
+        assert_eq!(FinancialRecords::last_deposit_index_of(&key1), Some(2));
+        assert_eq!(FinancialRecords::last_deposit_index_of(&key2), Some(5));
 
-        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &btc_symbol), Some(3));
-        assert_eq!(FinancialRecords::last_withdrawal_index_of(&a, &eth_symbol), Some(4));
-
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&key1), Some(3));
+        assert_eq!(FinancialRecords::last_withdrawal_index_of(&key2), Some(4));
 
         assert_eq!(FinancialRecords::records_len_of(&a), 6);
     })

@@ -7,7 +7,7 @@ use primitives::traits::BlakeTwo256;
 use primitives::testing::{Digest, DigestItem, Header};
 use runtime_io;
 
-use {GenesisConfig, Module, Trait, system, balances, cxsupport, Token};
+use super::*;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -41,15 +41,14 @@ impl cxsupport::Trait for Test {}
 
 // define tokenbalances module type
 pub type TokenBalance = u128;
-pub type Precision = u32;
 
 impl Trait for Test {
+    const CHAINX_SYMBOL: SymbolString = b"pcx";
+    const CHAINX_PRECISION: Precision = 8;
+    const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
-    type Precision = Precision;
     type Event = ();
 }
-
-pub type TestPrecision = <Test as Trait>::Precision;
 
 pub type TokenBalances = Module<Test>;
 pub type Balances = balances::Module<Test>;
@@ -69,9 +68,34 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         reclaim_rebate: 0,
     }.build_storage().unwrap());
     // token
-    let t: Token<TestPrecision> = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
-    let t2: Token<TestPrecision> = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
+    let t: Token = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
+    let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
+    r.extend(GenesisConfig::<Test> {
+        token_list: vec![
+            (t, 100, 0),
+            (t2, 100, 0),
+        ],
+        transfer_token_fee: 10,
+    }.build_storage().unwrap());
+    r.into()
+}
+
+pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
+    let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+    // balance
+    r.extend(balances::GenesisConfig::<Test> {
+        balances: vec![(1, 1000), (2, 510)],
+        transaction_base_fee: 0,
+        transaction_byte_fee: 0,
+        existential_deposit: 0,
+        transfer_fee: 0,
+        creation_fee: 0,
+        reclaim_rebate: 0,
+    }.build_storage().unwrap());
+    // token
+    let t: Token = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
+    let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
     r.extend(GenesisConfig::<Test> {
         token_list: vec![

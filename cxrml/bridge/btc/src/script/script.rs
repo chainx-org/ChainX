@@ -33,8 +33,8 @@ pub struct ScriptAddress {
 	pub hash: AddressHash,
 }
 
-impl From<&keys::Address> for ScriptAddress {
-    fn from(address: &keys::Address) -> Self {
+impl<'a> From<&'a keys::Address> for ScriptAddress {
+    fn from(address: &'a keys::Address) -> Self {
         match address.kind {
             keys::Type::P2PKH => ScriptAddress::new_p2pkh(address.hash.clone()),
             keys::Type::P2SH => ScriptAddress::new_p2sh(address.hash.clone()),

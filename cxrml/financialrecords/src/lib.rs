@@ -44,12 +44,13 @@ extern crate cxrml_tokenbalances as tokenbalances;
 mod tests;
 
 use rstd::prelude::*;
-use rstd::result::Result;
-use runtime_support::dispatch::Result as DispatchResult;
+use rstd::result::Result as StdResult;
+use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use runtime_primitives::traits::OnFinalise;
 
-use cxsupport::StorageDoubleMap;
+use system::ensure_signed;
+
 use tokenbalances::Symbol;
 
 pub trait Trait: tokenbalances::Trait {
@@ -59,11 +60,11 @@ pub trait Trait: tokenbalances::Trait {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        // no call for this module
+        fn withdraw(origin, sym: Symbol, value: T::TokenBalance) -> Result;
         /// set deposit fee, call by ROOT
-        fn set_deposit_fee(val: T::Balance) -> DispatchResult;
+        fn set_deposit_fee(val: T::Balance) -> Result;
         /// set withdrawal fee, call by ROOT
-        fn set_withdrawal_fee(val: T::Balance) -> DispatchResult;
+        fn set_withdrawal_fee(val: T::Balance) -> Result;
     }
 }
 
@@ -208,41 +209,48 @@ decl_storage! {
     trait Store for Module<T: Trait> as FinancialRecords {
         /// Record list length of every account
         pub RecordsLenOf get(records_len_of): map T::AccountId => u32;
+        /// Record list for every account, use accountid and index to index the record of account
+        pub RecordsOf: map (T::AccountId, u32) => Option<Record<Symbol, T::TokenBalance, T::BlockNumber>>;
+        /// Last deposit index of a account and related symbol
+        pub LastDepositIndexOf get(last_deposit_index_of): map (T::AccountId, Symbol) => Option<u32>;
+        /// Last withdrawal index of a account and related symbol
+        pub LastWithdrawalIndexOf get(last_withdrawal_index_of): map (T::AccountId, Symbol) => Option<u32>;
+
         /// Fee for deposit, can change by Root
         pub DepositFee get(deposit_fee) config(): T::Balance;
         /// Fee for withdrawal, can change by Root
         pub WithdrawalFee get(withdrawal_fee) config(): T::Balance;
     }
 }
-/// Record list for every account, use accountid and index to index the record of account
-pub(crate) struct RecordsOf<T>(::rstd::marker::PhantomData<T>);
+///// Record list for every account, use accountid and index to index the record of account
+//pub(crate) struct RecordsOf<T>(::rstd::marker::PhantomData<T>);
+//
+//impl<T: Trait> StorageDoubleMap for RecordsOf<T> {
+//    type Key1 = T::AccountId;
+//    type Key2 = u32;
+//    type Value = Record<Symbol, T::TokenBalance, T::BlockNumber>;
+//    const PREFIX: &'static [u8] = b"FinancialRecords RecordsOf";
+//}
 
-impl<T: Trait> StorageDoubleMap for RecordsOf<T> {
-    type Key1 = T::AccountId;
-    type Key2 = u32;
-    type Value = Record<Symbol, T::TokenBalance, T::BlockNumber>;
-    const PREFIX: &'static [u8] = b"FinancialRecords RecordsOf";
-}
-
-/// Last deposit index of a account and related symbol
-pub(crate) struct LastDepositIndexOf<T>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> StorageDoubleMap for LastDepositIndexOf<T> {
-    type Key1 = T::AccountId;
-    type Key2 = Symbol;
-    type Value = u32;
-    const PREFIX: &'static [u8] = b"FinancialRecords LastDepositIndexOf";
-}
-
-/// Last withdrawal index of a account and related symbol
-pub(crate) struct LastWithdrawalIndexOf<T>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> StorageDoubleMap for LastWithdrawalIndexOf<T> {
-    type Key1 = T::AccountId;
-    type Key2 = Symbol;
-    type Value = u32;
-    const PREFIX: &'static [u8] = b"FinancialRecords LastWithdrawalIndexOf";
-}
+///// Last deposit index of a account and related symbol
+//pub(crate) struct LastDepositIndexOf<T>(::rstd::marker::PhantomData<T>);
+//
+//impl<T: Trait> StorageDoubleMap for LastDepositIndexOf<T> {
+//    type Key1 = T::AccountId;
+//    type Key2 = Symbol;
+//    type Value = u32;
+//    const PREFIX: &'static [u8] = b"FinancialRecords LastDepositIndexOf";
+//}
+//
+///// Last withdrawal index of a account and related symbol
+//pub(crate) struct LastWithdrawalIndexOf<T>(::rstd::marker::PhantomData<T>);
+//
+//impl<T: Trait> StorageDoubleMap for LastWithdrawalIndexOf<T> {
+//    type Key1 = T::AccountId;
+//    type Key2 = Symbol;
+//    type Value = u32;
+//    const PREFIX: &'static [u8] = b"FinancialRecords LastWithdrawalIndexOf";
+//}
 
 
 impl<T: Trait> Module<T> {
@@ -251,15 +259,19 @@ impl<T: Trait> Module<T> {
         <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
     }
     // public call
-    fn set_deposit_fee(val: T::Balance) -> DispatchResult {
+    fn set_deposit_fee(val: T::Balance) -> Result {
         <DepositFee<T>>::put(val);
         Self::deposit_event(RawEvent::SetDepositFee(val));
         Ok(())
     }
-    fn set_withdrawal_fee(val: T::Balance) -> DispatchResult {
+    fn set_withdrawal_fee(val: T::Balance) -> Result {
         <WithdrawalFee<T>>::put(val);
         Self::deposit_event(RawEvent::SetWithdrawalFee(val));
         Ok(())
+    }
+    fn withdraw(origin: T::Origin, sym: Symbol, value: T::TokenBalance) -> Result {
+        let who = ensure_signed(origin)?;
+        Self::withdrawal(&who, &sym, value)
     }
 }
 
@@ -269,7 +281,7 @@ impl<T: Trait> Module<T> {
         let mut records: Vec<RecordT<T>> = Vec::new();
         let len: u32 = Self::records_len_of(who);
         for i in 0..len {
-            if let Some(r) = <RecordsOf<T>>::get(who.clone(), i) {
+            if let Some(r) = <RecordsOf<T>>::get(&(who.clone(), i)) {
                 records.push(r);
             }
         }
@@ -282,32 +294,29 @@ impl<T: Trait> Module<T> {
             None
         } else {
             let index = len - 1;
-            <RecordsOf<T>>::get(who.clone(), index).map(|r| (index, r))
+            <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r))
         }
     }
 
-    pub fn last_deposit_index_of(who: &T::AccountId, sym: &Symbol) -> Option<u32> {
-        <LastDepositIndexOf<T>>::get(who.clone(), sym.clone())
-    }
-
-    pub fn last_withdrawal_index_of(who: &T::AccountId, sym: &Symbol) -> Option<u32> {
-        <LastWithdrawalIndexOf<T>>::get(who.clone(), sym.clone())
-    }
 
     pub fn last_deposit_of(who: &T::AccountId, sym: &Symbol) -> Option<(u32, RecordT<T>)> {
-        Self::last_deposit_index_of(who, sym).and_then(|index| {
-            <RecordsOf<T>>::get(who.clone(), index).map(|r| (index, r))
+        Self::last_deposit_index_of((who.clone(), sym.clone())).and_then(|index| {
+            <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r))
         })
     }
 
     pub fn last_withdrawal_of(who: &T::AccountId, sym: &Symbol) -> Option<(u32, RecordT<T>)> {
-        Self::last_withdrawal_index_of(who, sym).and_then(|index| {
-            <RecordsOf<T>>::get(who.clone(), index).map(|r| (index, r))
+        Self::last_withdrawal_index_of((who.clone(), sym.clone())).and_then(|index| {
+            <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r))
         })
     }
 
     /// deposit/withdrawal pre-process
-    fn before(who: &T::AccountId, sym: &Symbol, is_withdrawal: bool) -> Result<(), &'static str> {
+    fn before(who: &T::AccountId, sym: &Symbol, is_withdrawal: bool) -> Result {
+        if sym.as_slice() == T::CHAINX_SYMBOL {
+            return Err("can't deposit/withdrawal chainx token");
+        }
+
         let r = if is_withdrawal {
             match Self::last_deposit_of(who, sym) {
                 None => return Err("the account has no deposit record for this token yet"),
@@ -331,16 +340,17 @@ impl<T: Trait> Module<T> {
     }
 
     /// insert a new record for a account, notice the record state must be init state
-    fn new_record(who: &T::AccountId, record: &RecordT<T>) -> Result<u32, &'static str> {
+    fn new_record(who: &T::AccountId, record: &RecordT<T>) -> StdResult<u32, &'static str> {
         if !record.is_init() {
             return Err("new record should be Invalid state first");
         }
         let len: u32 = Self::records_len_of(who);
-        <RecordsOf<T>>::insert(who.clone(), len, record.clone());
+        <RecordsOf<T>>::insert(&(who.clone(), len), record.clone());
         <RecordsLenOf<T>>::insert(who, len + 1);  // len is more than 1 to max index
+        let key = (who.clone(), record.symbol());
         match record.action() {
-            Action::Deposit(_) => <LastDepositIndexOf<T>>::insert(who.clone(), record.symbol(), len),
-            Action::Withdrawal(_) => <LastWithdrawalIndexOf<T>>::insert(who.clone(), record.symbol(), len),
+            Action::Deposit(_) => <LastDepositIndexOf<T>>::insert(&key, len),
+            Action::Withdrawal(_) => <LastWithdrawalIndexOf<T>>::insert(&key, len),
         }
         Ok(len)
     }
@@ -348,20 +358,20 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
     /// deposit, notice this func has include deposit_init and deposit_finish (not wait for block confirm process)
-    pub fn deposit(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> DispatchResult {
+    pub fn deposit(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
         let index = Self::deposit_with_index(who, sym, balance)?;
         Self::deposit_finish_with_index(who, index, true).map(|_| ())
     }
 
     /// withdrawal, notice this func has include withdrawal_init and withdrawal_locking
-    pub fn withdrawal(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> DispatchResult {
+    fn withdrawal(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
         let index = Self::withdrawal_with_index(who, sym, balance)?;
         Self::withdrawal_locking_with_index(who, index).map(|_| ())
     }
 
     /// withdrawal finish, let the locking token destroy
-    pub fn withdrawal_finish(who: &T::AccountId, sym: &Symbol, success: bool) -> DispatchResult {
-        let r = Self::last_withdrawal_index_of(who, sym);
+    pub fn withdrawal_finish(who: &T::AccountId, sym: &Symbol, success: bool) -> Result {
+        let r = Self::last_withdrawal_index_of(&(who.clone(), sym.clone()));
         if r.is_none() {
             return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
         }
@@ -369,33 +379,33 @@ impl<T: Trait> Module<T> {
     }
 
     /// deposit init, use for record a deposit process begin, usually for start block confirm process
-    pub fn deposit_init(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> DispatchResult {
+    pub fn deposit_init(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
         Self::deposit_with_index(who, sym, balance).map(|_| ())
     }
     /// deposit finish, use for change the deposit record to final, success mark the deposit if success
-    pub fn deposit_finish(who: &T::AccountId, sym: &Symbol, success: bool) -> DispatchResult {
-        let r = Self::last_deposit_index_of(who, sym);
+    pub fn deposit_finish(who: &T::AccountId, sym: &Symbol, success: bool) -> Result {
+        let r = Self::last_deposit_index_of(&(who.clone(), sym.clone()));
         if r.is_none() {
             return Err("have not executed deposit_init() yet for this record");
         }
         Self::deposit_finish_with_index(who, r.unwrap(), success).map(|_| ())
     }
 
-    /// withdrawal init, use for record a withdrawal start, should call withdrawal_locking after it
-    pub fn withdrawal_init(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> DispatchResult {
-        Self::withdrawal_with_index(who, sym, balance).map(|_| ())
-    }
-    /// change the free token to locking state
-    pub fn withdrawal_locking(who: &T::AccountId, sym: &Symbol) -> DispatchResult {
-        let r = Self::last_withdrawal_index_of(who, sym);
-        if r.is_none() {
-            return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
-        }
-        Self::withdrawal_locking_with_index(who, r.unwrap()).map(|_| ())
-    }
+//    /// withdrawal init, use for record a withdrawal start, should call withdrawal_locking after it
+//    fn withdrawal_init(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
+//        Self::withdrawal_with_index(who, sym, balance).map(|_| ())
+//    }
+//    /// change the free token to locking state
+//    fn withdrawal_locking(who: &T::AccountId, sym: &Symbol) -> Result {
+//        let r = Self::last_withdrawal_index_of(&(who.clone(), sym.clone()));
+//        if r.is_none() {
+//            return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
+//        }
+//        Self::withdrawal_locking_with_index(who, r.unwrap()).map(|_| ())
+//    }
 
     /// deposit init, notice this func return index to show the index of records for this account
-    pub fn deposit_with_index(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result<u32, &'static str> {
+    pub fn deposit_with_index(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> StdResult<u32, &'static str> {
         Self::before(who, sym, false)?;
 
         <tokenbalances::Module<T>>::is_valid_token(sym)?;
@@ -411,8 +421,9 @@ impl<T: Trait> Module<T> {
         Ok(index)
     }
     /// deposit finish, should use index to find the old deposit record, success flag mark the success
-    pub fn deposit_finish_with_index(who: &T::AccountId, index: u32, success: bool) -> Result<u32, &'static str> {
-        if let Some(ref mut r) = <RecordsOf<T>>::get(who.clone(), index) {
+    pub fn deposit_finish_with_index(who: &T::AccountId, index: u32, success: bool) -> StdResult<u32, &'static str> {
+        let key = (who.clone(), index);
+        if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
                 return Err("the deposit record should not be a finish state");
             }
@@ -436,19 +447,19 @@ impl<T: Trait> Module<T> {
                 }
                 _ => return Err("err action type in deposit_finish"),
             }
-            <RecordsOf<T>>::insert(who.clone(), index, r.clone());
+            <RecordsOf<T>>::insert(&key, r.clone());
             Ok(index)
         } else {
             return Err("the deposit record for this (accountid, index) not exist");
         }
     }
     /// withdrawal init, notice this func return index to show the index of records for this account
-    pub fn withdrawal_with_index(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result<u32, &'static str> {
+    pub fn withdrawal_with_index(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> StdResult<u32, &'static str> {
         Self::before(who, sym, true)?;
 
         <tokenbalances::Module<T>>::is_valid_token_for(who, sym)?;
         // check token balance
-        if <tokenbalances::Module<T>>::free_token_of(who, sym) < balance {
+        if <tokenbalances::Module<T>>::free_token(&(who.clone(), sym.clone())) < balance {
             return Err("not enough free token to withdraw");
         }
 
@@ -463,8 +474,9 @@ impl<T: Trait> Module<T> {
         Ok(index)
     }
     /// withdrawal lock, should use index to find out which record to change to locking state
-    pub fn withdrawal_locking_with_index(who: &T::AccountId, index: u32) -> Result<u32, &'static str> {
-        if let Some(ref mut r) = <RecordsOf<T>>::get(who.clone(), index) {
+    pub fn withdrawal_locking_with_index(who: &T::AccountId, index: u32) -> StdResult<u32, &'static str> {
+        let key = (who.clone(), index);
+        if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
                 return Err("the deposit record should not be a finish state");
             }
@@ -478,7 +490,7 @@ impl<T: Trait> Module<T> {
                         WithdrawalState::Invalid => {
                             *state = WithdrawalState::Locking;
 
-                            <tokenbalances::Module<T>>::lock_destroy_token(who, &sym, bal)?;
+                            <tokenbalances::Module<T>>::reserve(who, &sym, bal)?;
 
                             Self::deposit_event(RawEvent::WithdrawalLocking(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
                         }
@@ -487,7 +499,7 @@ impl<T: Trait> Module<T> {
                 }
                 _ => return Err("err action type in deposit_finish"),
             }
-            <RecordsOf<T>>::insert(who.clone(), index, r.clone());
+            <RecordsOf<T>>::insert(&key, r.clone());
 
             Ok(index)
         } else {
@@ -495,8 +507,9 @@ impl<T: Trait> Module<T> {
         }
     }
     /// withdrawal finish, should use index to find out which record to changed to final, success flag mark success, if false, release the token to free
-    pub fn withdrawal_finish_with_index(who: &T::AccountId, index: u32, success: bool) -> Result<u32, &'static str> {
-        if let Some(ref mut r) = <RecordsOf<T>>::get(who.clone(), index) {
+    pub fn withdrawal_finish_with_index(who: &T::AccountId, index: u32, success: bool) -> StdResult<u32, &'static str> {
+        let key = (who.clone(), index);
+        if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
                 return Err("the deposit record should not be a finish state");
             }
@@ -518,7 +531,7 @@ impl<T: Trait> Module<T> {
                             } else {
                                 *state = WithdrawalState::Failed;
 
-                                <tokenbalances::Module<T>>::unlock_destroy_token(who, &sym, bal)?;
+                                <tokenbalances::Module<T>>::unreserve(who, &sym, bal)?;
 
                                 Self::deposit_event(RawEvent::WithdrawalFailed(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
                             }
@@ -528,7 +541,7 @@ impl<T: Trait> Module<T> {
                 }
                 _ => return Err("err action type in deposit_finish")
             }
-            <RecordsOf<T>>::insert(who.clone(), index, r.clone());
+            <RecordsOf<T>>::insert(&key, r.clone());
 
             Ok(index)
         } else {
@@ -536,37 +549,3 @@ impl<T: Trait> Module<T> {
         }
     }
 }
-
-
-//#[cfg(feature = "std")]
-//#[derive(Serialize, Deserialize)]
-//#[serde(rename_all = "camelCase")]
-//#[serde(deny_unknown_fields)]
-///// The genesis block configuration type. This is a simple default-capable struct that
-///// contains any fields with which this module can be configured at genesis time.
-//pub struct GenesisConfig<T: Trait> {
-//    pub deposit_fee: T::Balance,
-//    pub withdrawal_fee: T::Balance,
-//}
-//
-//#[cfg(feature = "std")]
-//impl<T: Trait> Default for GenesisConfig<T> {
-//    fn default() -> Self {
-//        GenesisConfig {
-//            deposit_fee: Default::default(),
-//            withdrawal_fee: Default::default(),
-//        }
-//    }
-//}
-//
-//#[cfg(feature = "std")]
-//impl<T: Trait> runtime_primitives::BuildStorage for GenesisConfig<T>
-//{
-//    fn build_storage(self) -> ::std::result::Result<runtime_primitives::StorageMap, String> {
-//        use codec::Encode;
-//        Ok(map![
-//            Self::hash(<DepositFee<T>>::key()).to_vec() => self.deposit_fee.encode(),
-//            Self::hash(<WithdrawalFee<T>>::key()).to_vec() => self.withdrawal_fee.encode()
-//        ])
-//    }
-//}

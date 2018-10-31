@@ -43,24 +43,37 @@ use runtime_support::{StorageValue, StorageMap, Parameter};
 use runtime_support::dispatch::Result;
 use primitives::traits::{SimpleArithmetic, As, Member, CheckedAdd, CheckedSub, OnFinalise};
 
-use cxsupport::StorageDoubleMap;
+//use cxsupport::StorageDoubleMap;
 
 // substrate mod
 use system::ensure_signed;
 use balances::address::Address;
 use balances::EnsureAccountLiquid;
 
+
+//#[cfg(feature = "std")]
+//pub type SymbolString = ::std::borrow::Cow<'static, [u8]>;
+//#[cfg(not(feature = "std"))]
+pub type SymbolString = &'static [u8];
+
+//#[cfg(feature = "std")]
+//pub type TokenString = SymbolString;
+//#[cfg(not(feature = "std"))]
+pub type DescString = SymbolString;
+
 pub trait Trait: balances::Trait + cxsupport::Trait {
+    const CHAINX_SYMBOL: SymbolString;
+    const CHAINX_PRECISION: Precision;
+    const CHAINX_TOKEN_DESC: DescString;
     /// The token balance.
-    type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<u8> + As<u16> + As<u32> + As<u64> + As<u128> + As<usize> + Copy + Default;
-    /// The token precision, for example, btc, 1BTC=1000mBTC=1000000Bits, and decide a precision for btc
-    type Precision: Parameter + Member + Codec + As<u8> + As<u16> + As<u32> + As<usize> + Copy + Default;
+    type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<u64> + As<u128> + Copy + Default;
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 pub type Symbol = Vec<u8>;
 pub type TokenDesc = Vec<u8>;
+pub type Precision = u16;
 
 const MAX_SYMBOL_LEN: usize = 32;
 const MAX_TOKENDESC_LEN: usize = 128;
@@ -102,9 +115,7 @@ pub fn is_valid_token_desc(v: &[u8]) -> Result {
 /// Token struct.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct Token<Precision> where
-    Precision: As<u8> + As<u16> + As<u32> + As<usize> + Copy,
-{
+pub struct Token {
     /// Validator should ensure this many more slashes than is necessary before being unstaked.
     symbol: Symbol,
     /// token description
@@ -113,10 +124,8 @@ pub struct Token<Precision> where
     precision: Precision,
 }
 
-impl<Precision> Token<Precision> where
-    Precision: As<u8> + As<u16> + As<u32> + As<usize> + Copy,
-{
-    pub fn new(symbol: Symbol, token_desc: TokenDesc, precision: Precision) -> Token<Precision> {
+impl Token {
+    pub fn new(symbol: Symbol, token_desc: TokenDesc, precision: Precision) -> Self {
         Token { symbol, token_desc, precision }
     }
 
@@ -146,7 +155,7 @@ impl<Precision> Token<Precision> where
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         /// register_token to module, should allow by root
-        fn register_token(token: Token<T::Precision>, free: T::TokenBalance, locked: T::TokenBalance) -> Result;
+        fn register_token(token: Token, free: T::TokenBalance, reversed: T::TokenBalance) -> Result;
         /// transfer between account
         fn transfer_token(origin, dest: Address<T::AccountId, T::AccountIndex>, sym: Symbol, value: T::TokenBalance) -> Result;
         // set transfer token fee
@@ -158,7 +167,6 @@ decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
         <T as Trait>::TokenBalance,
-        <T as Trait>::Precision,
         <T as balances::Trait>::Balance
     {
         /// register new token (token.symbol(), token.token_desc, token.precision)
@@ -167,10 +175,11 @@ decl_event!(
         CancelToken(Symbol),
         /// issue succeeded (who, symbol, balance)
         IssueToken(AccountId, Symbol, TokenBalance),
+        // TODO
         /// lock destroy (who, symbol, balance)
-        LockToken(AccountId, Symbol, TokenBalance),
+        ReverseToken(AccountId, Symbol, TokenBalance),
         /// unlock destroy (who, symbol, balance)
-        UnlockToken(AccountId, Symbol, TokenBalance),
+        UnreverseToken(AccountId, Symbol, TokenBalance),
         /// destroy
         DestroyToken(AccountId, Symbol, TokenBalance),
         /// Transfer succeeded (from, to, symbol, value, fees).
@@ -183,61 +192,57 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as TokenBalances {
         /// supported token list
-        pub TokenListMap get(token_list_map): map u32 => (bool, Symbol);
+        pub TokenListMap get(token_list_map): map u32 => Symbol;
         /// supported token list length
         pub TokenListLen get(token_list_len): u32;
         /// token info for every token, key is token symbol
-        pub TokenInfo get(token_info): map Symbol => Token<T::Precision>;
+        pub TokenInfo get(token_info): map Symbol => Option<(Token, bool)>;
+
         /// total free token of a symbol
         pub TotalFreeToken get(total_free_token): map Symbol => T::TokenBalance;
+
+        pub FreeToken: map (T::AccountId, Symbol) => T::TokenBalance;
+
         /// total locked token of a symbol
-        pub TotalLockedToken get(total_locked_token): map Symbol => T::TokenBalance;
+        pub TotalReservedToken get(total_reserved_token): map Symbol => T::TokenBalance;
+
+        pub ReservedToken get(reserved_token): map (T::AccountId, Symbol) => T::TokenBalance;
 
         /// token list of a account
-        pub TokenListOf get(token_list_of): map T::AccountId => Vec<Symbol>;
+        pub TokenListOf get(token_list_of): map T::AccountId => Vec<Symbol> = [T::CHAINX_SYMBOL.to_vec()].to_vec();
 
         /// transfer token fee
         pub TransferTokenFee get(transfer_token_fee) config(): T::Balance;
     }
     add_extra_genesis {
-        config(token_list): Vec<(Token<T::Precision>, T::TokenBalance, T::TokenBalance)>;
+        config(token_list): Vec<(Token, T::TokenBalance, T::TokenBalance)>;
         build(
             |storage: &mut primitives::StorageMap, config: &GenesisConfig<T>| {
                 use codec::Encode;
+                let mut list_count = 0_u32;
+                // insert chainx token symbol
+                let chainx: Symbol = T::CHAINX_SYMBOL.to_vec();
+                storage.insert(GenesisConfig::<T>::hash(&<TokenListMap<T>>::key_for(&list_count)).to_vec(), chainx.clone().encode());
+                // token info
+                let t: Token = Token::new(chainx.clone(), T::CHAINX_TOKEN_DESC.to_vec(), T::CHAINX_PRECISION);
+                storage.insert(GenesisConfig::<T>::hash(&<TokenInfo<T>>::key_for(&chainx)).to_vec(), (t, true).encode());
+                list_count += 1;
+
                 // 0 token list length
-                storage.insert(GenesisConfig::<T>::hash(<TokenListLen<T>>::key()).to_vec(), config.token_list.len().encode());
-                for (index, (token, free_token, locked_token)) in config.token_list.iter().enumerate() {
+                storage.insert(GenesisConfig::<T>::hash(&<TokenListLen<T>>::key()).to_vec(), (config.token_list.len() as u32 + list_count).encode());
+                for (index, (token, free_token, reserved_token)) in config.token_list.iter().enumerate() {
 //                    token.is_valid().map_err(|e| e.to_string())?;
                     // 1 token balance
                     storage.insert(GenesisConfig::<T>::hash(&<TotalFreeToken<T>>::key_for(token.symbol())).to_vec(), free_token.encode());
-                    storage.insert(GenesisConfig::<T>::hash(&<TotalLockedToken<T>>::key_for(token.symbol())).to_vec(), locked_token.encode());
-                    // 2 token info
-                    storage.insert(GenesisConfig::<T>::hash(&<TokenInfo<T>>::key_for(token.symbol())).to_vec(), token.encode());
-                    // 3 token list map
-                    storage.insert(GenesisConfig::<T>::hash(&<TokenListMap<T>>::key_for(index as u32)).to_vec(), (true, token.symbol()).encode());
+                    storage.insert(GenesisConfig::<T>::hash(&<TotalReservedToken<T>>::key_for(token.symbol())).to_vec(), reserved_token.encode());
+                    // 2 token list map
+                    storage.insert(GenesisConfig::<T>::hash(&<TokenListMap<T>>::key_for(index as u32 + list_count)).to_vec(), token.symbol().encode());
+                    // 3 token info
+                    storage.insert(GenesisConfig::<T>::hash(&<TokenInfo<T>>::key_for(token.symbol())).to_vec(), (token, true).encode());
                 }
             }
         );
     }
-}
-
-// account token storage
-pub(crate) struct FreeTokenOf<T>(::rstd::marker::PhantomData<T>);
-
-pub(crate) struct LockedTokenOf<T>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> StorageDoubleMap for FreeTokenOf<T> {
-    type Key1 = T::AccountId;
-    type Key2 = Symbol;
-    type Value = T::TokenBalance;
-    const PREFIX: &'static [u8] = b"TokenBalances FreeTokenOf";
-}
-
-impl<T: Trait> StorageDoubleMap for LockedTokenOf<T> {
-    type Key1 = T::AccountId;
-    type Key2 = Symbol;
-    type Value = T::TokenBalance;
-    const PREFIX: &'static [u8] = b"TokenBalances LockedTokenOf";
 }
 
 // This trait expresses what should happen when the block is finalised.
@@ -256,22 +261,26 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
     // token storage
-    pub fn free_token_of(who: &T::AccountId, symbol: &Symbol) -> T::TokenBalance {
-        <FreeTokenOf<T>>::get_or_default(who.clone(), symbol.clone())
-    }
-
-    pub fn locked_token_of(who: &T::AccountId, symbol: &Symbol) -> T::TokenBalance {
-        <LockedTokenOf<T>>::get_or_default(who.clone(), symbol.clone())
+    pub fn free_token(who_sym: &(T::AccountId, Symbol)) -> T::TokenBalance {
+        if who_sym.1.as_slice() == T::CHAINX_SYMBOL {
+            As::sa(balances::FreeBalance::<T>::get(&who_sym.0).as_())
+        } else {
+            <FreeToken<T>>::get(who_sym)
+        }
     }
 
     /// The combined token balance of `who` for symbol.
     pub fn total_token_of(who: &T::AccountId, symbol: &Symbol) -> T::TokenBalance {
-        Self::free_token_of(who, symbol) + Self::locked_token_of(who, symbol)
+        Self::free_token(&(who.clone(), symbol.clone())) + Self::reserved_token((who.clone(), symbol.clone()))
     }
 
     /// tatal_token of a token symbol
     pub fn total_token(symbol: &Symbol) -> T::TokenBalance {
-        Self::total_free_token(symbol) + Self::total_locked_token(symbol)
+        if symbol.as_slice() == T::CHAINX_SYMBOL {
+            As::sa(balances::TotalIssuance::<T>::get().as_())
+        } else {
+            Self::total_free_token(symbol) + Self::total_reserved_token(symbol)
+        }
     }
 }
 
@@ -279,10 +288,11 @@ impl<T: Trait> Module<T> {
     // token symol
     // public call
     /// register a token into token list ans init
-    pub fn register_token(token: Token<T::Precision>, free: T::TokenBalance, locked: T::TokenBalance) -> Result {
+    pub fn register_token(token: Token, free: T::TokenBalance, reserved: T::TokenBalance) -> Result {
         token.is_valid()?;
-        Self::add_token(&token.symbol(), free, locked)?;
-        <TokenInfo<T>>::insert(token.symbol(), token.clone());
+        let sym = token.symbol();
+        Self::add_token(&sym, free, reserved)?;
+        <TokenInfo<T>>::insert(&sym, (token.clone(), true));
 
         Self::deposit_event(RawEvent::RegisterToken(token.symbol(), token.token_desc(), token.precision()));
         Ok(())
@@ -296,38 +306,52 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// retuan all token list with valid flag
-    pub fn all_token_list() -> Vec<(bool, Symbol)> {
+    pub fn token_list() -> Vec<Symbol> {
         let len: u32 = <TokenListLen<T>>::get();
-        let mut v: Vec<(bool, Symbol)> = Vec::new();
+        let mut v: Vec<Symbol> = Vec::new();
         for i in 0..len {
-            let (flag, symbol) = <TokenListMap<T>>::get(i);
-            if symbol != b"".to_vec() {
-                v.push((flag, symbol));
-            }
+            let symbol = <TokenListMap<T>>::get(i);
+            v.push(symbol);
         }
         v
     }
 
-    /// return valid token list, only valid token
-    pub fn token_list() -> Vec<Symbol> {
-        Self::all_token_list().into_iter()
-            .filter(|(flag, _)| *flag == true)
-            .map(|(_, sym)| sym)
+    pub fn valid_token_list() -> Vec<Symbol> {
+        Self::token_list().into_iter()
+            .filter(|s| {
+                if let Some(t) = TokenInfo::<T>::get(s) {
+                    t.1
+                } else { false }
+            })
             .collect()
     }
 
+//    /// return valid token list, only valid token
+//    pub fn token_list() -> Vec<Symbol> {
+//        Self::all_token_list().into_iter()
+//            .filter(|(flag, _)| *flag == true)
+//            .map(|(_, sym)| sym)
+//            .collect()
+//    }
+
     pub fn is_valid_token(symbol: &Symbol) -> Result {
         is_valid_symbol(symbol)?;
-        if Self::token_list().contains(symbol) {
-            Ok(())
-        } else {
-            Err("not in the valid token list")
+        if let Some(info) = TokenInfo::<T>::get(symbol) {
+            if info.1 == true {
+                return Ok(());
+            }
+            return Err("not a valid token");
         }
+        Err("not a registered token")
+//        if Self::token_list().contains(symbol) {
+//            Ok(())
+//        } else {
+//            Err("not in the valid token list")
+//        }
     }
 
     pub fn is_valid_token_for(who: &T::AccountId, symbol: &Symbol) -> Result {
-        is_valid_symbol(symbol)?;
+        Self::is_valid_token(symbol)?;
         if Self::token_list_of(who).contains(symbol) {
             Ok(())
         } else {
@@ -335,53 +359,47 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn add_token(symbol: &Symbol, free: T::TokenBalance, locked: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        let list = Self::all_token_list();
-        if !list.iter().find(|(_, sym)| *sym == *symbol).is_none() {
+    fn add_token(symbol: &Symbol, free: T::TokenBalance, reserved: T::TokenBalance) -> Result {
+
+//        let list = Self::all_token_list();
+//        if !list.iter().find(|(_, sym)| *sym == *symbol).is_none() {
+//            return Err("already has this token symbol");
+//        }
+        if TokenInfo::<T>::exists(symbol) {
             return Err("already has this token symbol");
         }
 
         let len: u32 = <TokenListLen<T>>::get();
         // mark new symbol valid
-        <TokenListMap<T>>::insert(len, (true, symbol.clone()));
+        <TokenListMap<T>>::insert(len, symbol.clone());
         <TokenListLen<T>>::put(len + 1);
 
-        Self::init_token_balance(symbol, free, locked);
+        Self::init_token_balance(symbol, free, reserved);
 
         Ok(())
     }
 
     fn remove_token(symbol: &Symbol) -> Result {
         is_valid_symbol(symbol)?;
-        let list = Self::token_list();
-
-        let index = if let Some(i) = list.iter().position(|sym| *sym == *symbol) {
-            i
+//        let list = Self::token_list();
+        if let Some(mut info) = TokenInfo::<T>::get(symbol) {
+            info.1 = false;
+            TokenInfo::<T>::insert(symbol.clone(), info);
+            Ok(())
         } else {
-            return Err("this token symbol dose not register yet or is invalid");
-        };
-
-        <TokenListMap<T>>::mutate(index as u32, |value| {
-            let (ref mut flag, _) = *value;
-            *flag = false;
-        });
-
-        // do not remove token balance from storage
-        // Self::remove_token_balance();
-
-        Ok(())
+            Err("this token symbol dose not register yet or is invalid")
+        }
     }
 
-    fn init_token_balance(symbol: &Symbol, free: T::TokenBalance, locked: T::TokenBalance) {
+    fn init_token_balance(symbol: &Symbol, free: T::TokenBalance, reserved: T::TokenBalance) {
         <TotalFreeToken<T>>::insert(symbol, free);
-        <TotalLockedToken<T>>::insert(symbol, locked);
+        <TotalReservedToken<T>>::insert(symbol, reserved);
     }
 
-    #[allow(dead_code)]
+    #[allow(unused)]
     fn remove_token_balance(symbol: &Symbol) {
         <TotalFreeToken<T>>::remove(symbol);
-        <TotalLockedToken<T>>::remove(symbol);
+        <TotalReservedToken<T>>::remove(symbol);
     }
 }
 
@@ -393,203 +411,198 @@ impl<T: Trait> Module<T> {
     }
 
     /// issue from real coin to chainx token, notice it become free token directly
-    pub fn issue(who: &T::AccountId, symbol: &Symbol, balance: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
+    pub fn issue(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
+        if symbol.as_slice() == T::CHAINX_SYMBOL {
+            return Err("can't issue chainx token");
+        }
+
         Self::is_valid_token(symbol)?;
 
         <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
 
-        // increase for all, overflow would exist at this point
-        Self::increase_total_free_token_by(symbol, balance)?;
-
-        // init for account
+        // get storage
+        let key = (who.clone(), symbol.clone());
+        let total_free_token = TotalFreeToken::<T>::get(symbol);
+        let free_token = FreeToken::<T>::get(&key);
+        // check
+        let new_free_token = match free_token.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("free token too high to issue"),
+        };
+        let new_total_free_token = match total_free_token.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("total free token too high to issue"),
+        };
+        // set to storage
         Self::init_token_for(who, symbol);
-        // increase for this account
-        Self::increase_account_free_token_by(who, symbol, balance)?;
+        TotalFreeToken::<T>::insert(symbol, new_total_free_token);
+        FreeToken::<T>::insert(&key, new_free_token);
 
-        Self::deposit_event(RawEvent::IssueToken(who.clone(), symbol.clone(), balance));
+        Self::deposit_event(RawEvent::IssueToken(who.clone(), symbol.clone(), value));
         Ok(())
     }
 
-    /// destroy token must be lock first, and become locked state
-    pub fn lock_destroy_token(who: &T::AccountId, symbol: &Symbol, balance: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        Self::is_valid_token(symbol)?;
+    pub fn destroy(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
+        if symbol.as_slice() == T::CHAINX_SYMBOL {
+            return Err("can't destroy chainx token");
+        }
         Self::is_valid_token_for(who, symbol)?;
-
         <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        //TODO validator
 
-        // for all token
-        if Self::total_free_token(symbol) < balance {
-            return Err("not enough free token to lock");
-        }
-        // for account
-        if Self::free_token_of(who, symbol) < balance {
-            return Err("not enough free token to lock for this account");
-        }
-        // modify store
-        // for all token
-        // would exist if overflow
-        Self::decrease_total_free_token_by(symbol, balance)?;
-        Self::increase_total_locked_token_by(symbol, balance)?;
-        // for account
-        Self::decrease_account_free_token_by(who, symbol, balance)?;
-        Self::increase_account_locked_token_by(who, symbol, balance)?;
+        // get storage
+        let key = (who.clone(), symbol.clone());
+        let total_reserved_token = TotalReservedToken::<T>::get(symbol);
+        let reserved_token = ReservedToken::<T>::get(&key);
+        // check
+        let new_reserved_token = match reserved_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("reserved token too low to destroy"),
+        };
+        let new_total_reserved_token = match total_reserved_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("total reserved token too low to destroy"),
+        };
+        // set to storage
+        TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
+        ReservedToken::<T>::insert(&key, new_reserved_token);
 
-        Self::deposit_event(RawEvent::LockToken(who.clone(), symbol.clone(), balance));
+        Self::deposit_event(RawEvent::DestroyToken(who.clone(), symbol.clone(), value));
         Ok(())
     }
 
-    /// unlock locked token if destroy failed
-    pub fn unlock_destroy_token(who: &T::AccountId, symbol: &Symbol, balance: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        Self::is_valid_token(symbol)?;
+    pub fn reserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
         Self::is_valid_token_for(who, symbol)?;
-
         <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        //TODO validator
 
-        // for all token
-        if Self::total_locked_token(symbol) < balance {
-            return Err("not enough locked token to unlock");
-        }
-        // for account
-        if Self::locked_token_of(who, symbol) < balance {
-            return Err("not enough locked token to lock for this account");
-        }
-        // modify store
-        // for all token
-        // would exist if overflow
-        Self::decrease_total_locked_token_by(symbol, balance)?;
-        Self::increase_total_free_token_by(symbol, balance)?;
-        // for account
-        Self::decrease_account_locked_token_by(who, symbol, balance)?;
-        Self::increase_account_free_token_by(who, symbol, balance)?;
+        let key = (who.clone(), symbol.clone());
+        // for chainx
+        if symbol.as_slice() == T::CHAINX_SYMBOL {
+            let value: T::Balance = As::sa(value.as_() as u64); // change to balance for balances module
+            let free_token: T::Balance = balances::FreeBalance::<T>::get(who);
+            let reserved_token = ReservedToken::<T>::get(&key);
+            let total_reserved_token = TotalReservedToken::<T>::get(symbol);
+            match free_token.checked_sub(&value) {
+                Some(b) => b,
+                None => return Err("chainx free token too low to reserve"),
+            };
+            let val: T::TokenBalance = As::sa(value.as_() as u128); // tokenbalance is large than balance
+            let new_reserved_token = match reserved_token.checked_add(&val) {
+                Some(b) => b,
+                None => return Err("chainx reserved token too high to reserve"),
+            };
+            let new_total_reserved_token = match total_reserved_token.checked_add(&val) {
+                Some(b) => b,
+                None => return Err("chainx total reserved token too high to reserve"),
+            };
+            // would subtract freebalance and add to reversed balance
+            balances::Module::<T>::reserve(who, value)?;
+            ReservedToken::<T>::insert(key, new_reserved_token);
+            TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
 
-        Self::deposit_event(RawEvent::UnlockToken(who.clone(), symbol.clone(), balance));
+            Self::deposit_event(RawEvent::ReverseToken(who.clone(), T::CHAINX_SYMBOL.to_vec(), val));
+            return Ok(());
+        }
+
+        // for other token
+        // get from storage
+        let total_free_token = TotalFreeToken::<T>::get(symbol);
+        let total_reserved_token = TotalReservedToken::<T>::get(symbol);
+        let free_token = FreeToken::<T>::get(&key);
+        let reserved_token = ReservedToken::<T>::get(&key);
+        // test overflow
+        let new_free_token = match free_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("free token too low to reserve"),
+        };
+        let new_reserved_token = match reserved_token.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("reserved token too high to reserve"),
+        };
+        let new_total_free_token = match total_free_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("total free token too low to reserve"),
+        };
+        let new_total_reserved_token = match total_reserved_token.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("total reserved token too high to reserve"),
+        };
+        // set to storage
+        TotalFreeToken::<T>::insert(symbol, new_total_free_token);
+        TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
+        FreeToken::<T>::insert(&key, new_free_token);
+        ReservedToken::<T>::insert(&key, new_reserved_token);
+
+        Self::deposit_event(RawEvent::ReverseToken(who.clone(), symbol.clone(), value));
         Ok(())
     }
 
-    /// real destroy token, only decrease in account locked token
-    pub fn destroy(who: &T::AccountId, symbol: &Symbol, balance: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        Self::is_valid_token(symbol)?;
+    pub fn unreserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
         Self::is_valid_token_for(who, symbol)?;
-
         <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        //TODO validator
 
-        // for all token
-        if Self::total_locked_token(symbol) < balance {
-            return Err("not enough locked token to destroy");
-        }
-        // for account
-        if Self::locked_token_of(who, symbol) < balance {
-            return Err("not enough locked token to destroy for this account");
-        }
-        // destroy token
-        // for all token
-        // would exist if overflow
-        Self::decrease_total_locked_token_by(symbol, balance)?;
-        // for account
-        Self::decrease_account_locked_token_by(who, symbol, balance)?;
+        let key = (who.clone(), symbol.clone());
+        // for chainx
+        if symbol.as_slice() == T::CHAINX_SYMBOL {
+            let value: T::Balance = As::sa(value.as_() as u64); // change to balance for balances module
+            let free_token: T::Balance = balances::FreeBalance::<T>::get(who);
+            let reserved_token = ReservedToken::<T>::get(&key);
+            let total_reserved_token = TotalReservedToken::<T>::get(symbol);
+            match free_token.checked_add(&value) {
+                Some(b) => b,
+                None => return Err("chainx free token too high to unreserve"),
+            };
+            let val: T::TokenBalance = As::sa(value.as_() as u128); // tokenbalance is large than balance
+            let new_reserved_token = match reserved_token.checked_sub(&val) {
+                Some(b) => b,
+                None => return Err("chainx reserved token too low to unreserve"),
+            };
+            let new_total_reserved_token = match total_reserved_token.checked_sub(&val) {
+                Some(b) => b,
+                None => return Err("chainx total reserved token too low to unreserve"),
+            };
+            // would subtract reservedbalance and add to free balance
+            balances::Module::<T>::unreserve(who, value);
+            ReservedToken::<T>::insert(key, new_reserved_token);
+            TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
 
-        Self::deposit_event(RawEvent::DestroyToken(who.clone(), symbol.clone(), balance));
+            Self::deposit_event(RawEvent::UnreverseToken(who.clone(), T::CHAINX_SYMBOL.to_vec(), val));
+            return Ok(());
+        }
+
+        // for other token
+        // get from storage
+        let total_free_token = TotalFreeToken::<T>::get(symbol);
+        let total_reserved_token = TotalReservedToken::<T>::get(symbol);
+        let free_token = FreeToken::<T>::get(&key);
+        let reserved_token = ReservedToken::<T>::get(&key);
+        // test overflow
+        let new_free_token = match free_token.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("free token too high to unreserve"),
+        };
+        let new_reserved_token = match reserved_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("reserved token too low to unreserve"),
+        };
+        let new_total_free_token = match total_free_token.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("total free token too high to unreserve"),
+        };
+        let new_total_reserved_token = match total_reserved_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("total reserved token too low to unreserve"),
+        };
+        // set to storage
+        TotalFreeToken::<T>::insert(symbol, new_total_free_token);
+        TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
+        FreeToken::<T>::insert(&key, new_free_token);
+        ReservedToken::<T>::insert(&key, new_reserved_token);
+
+        Self::deposit_event(RawEvent::UnreverseToken(who.clone(), symbol.clone(), value));
         Ok(())
-    }
-
-    // token calc
-    /// Increase TotalFreeToken by Value.
-    fn increase_total_free_token_by(symbol: &Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        if let Some(v) = Self::total_free_token(symbol).checked_add(&value) {
-            <TotalFreeToken<T>>::mutate(symbol, |b: &mut T::TokenBalance| {
-                *b = v;
-            });
-            Ok(())
-        } else {
-            Err("Overflow in increase_total_free_token_by")
-        }
-    }
-    /// Decrease TotalFreeToken by Value.
-    fn decrease_total_free_token_by(symbol: &Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        if let Some(v) = Self::total_free_token(symbol).checked_sub(&value) {
-            <TotalFreeToken<T>>::mutate(symbol, |b: &mut T::TokenBalance| {
-                *b = v;
-            });
-            Ok(())
-        } else {
-            Err("Overflow in decrease_total_free_token_by")
-        }
-    }
-
-    /// Increase TotalLockedToken by Value.
-    fn increase_total_locked_token_by(symbol: &Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        if let Some(v) = Self::total_locked_token(symbol).checked_add(&value) {
-            <TotalLockedToken<T>>::mutate(symbol, |b: &mut T::TokenBalance| {
-                *b = v;
-            });
-            Ok(())
-        } else {
-            Err("Overflow in increase_total_locked_token_by")
-        }
-    }
-    /// Decrease TotalLockedToken by Value.
-    fn decrease_total_locked_token_by(symbol: &Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        if let Some(v) = Self::total_locked_token(symbol).checked_sub(&value) {
-            <TotalLockedToken<T>>::mutate(symbol, |b: &mut T::TokenBalance| {
-                *b = v;
-            });
-            Ok(())
-        } else {
-            Err("Overflow in decrease_total_locked_token_by")
-        }
-    }
-
-    /// Increase FreeToken balance to account for a symbol by Value.
-    fn increase_account_free_token_by(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        let b: T::TokenBalance = Self::free_token_of(who, symbol);
-        if let Some(v) = b.checked_add(&value) {
-            <FreeTokenOf<T>>::insert(who.clone(), symbol.clone(), v);
-            Ok(())
-        } else {
-            Err("Overflow in increase_account_free_token_by for account")
-        }
-    }
-    /// Decrease FreeToken balance to account for a symbol by Value.
-    fn decrease_account_free_token_by(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        let b: T::TokenBalance = Self::free_token_of(who, symbol);
-        if let Some(v) = b.checked_sub(&value) {
-            <FreeTokenOf<T>>::insert(who.clone(), symbol.clone(), v);
-            Ok(())
-        } else {
-            Err("Overflow in decrease_account_free_token_by for account")
-        }
-    }
-    /// Increase LockedToken balance to account for a symbol by Value.
-    fn increase_account_locked_token_by(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        let b: T::TokenBalance = Self::locked_token_of(who, symbol);
-        if let Some(v) = b.checked_add(&value) {
-            <LockedTokenOf<T>>::insert(who.clone(), symbol.clone(), v);
-            Ok(())
-        } else {
-            Err("Overflow in increase_account_locked_token_by for account")
-        }
-    }
-    /// Decrease LockedToken balance to account for a symbol by Value.
-    fn decrease_account_locked_token_by(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(symbol)?;
-        let b: T::TokenBalance = Self::locked_token_of(who, symbol);
-        if let Some(v) = b.checked_sub(&value) {
-            <LockedTokenOf<T>>::insert(who.clone(), symbol.clone(), v);
-            Ok(())
-        } else {
-            Err("Overflow in decrease_account_locked_token_by for account")
-        }
     }
 }
 
@@ -597,25 +610,38 @@ impl<T: Trait> Module<T> {
     // public call
     /// transfer token between accountid, notice the fee is chainx
     pub fn transfer_token(origin: T::Origin, dest: balances::Address<T>, sym: Symbol, value: T::TokenBalance) -> Result {
-        is_valid_symbol(&sym)?;
+        if sym.as_slice() == T::CHAINX_SYMBOL {
+            return Err("not allow to transfer chainx use transfer_token");
+        }
         let transactor = ensure_signed(origin)?;
-        let dest = <balances::Module<T>>::lookup(dest)?;
-
-        Self::is_valid_token(&sym)?;
         Self::is_valid_token_for(&transactor, &sym)?;
-        // Self::is_valid_token_for(&dest, &sym)?;
+        let dest = <balances::Module<T>>::lookup(dest)?;
         Self::init_token_for(&dest, &sym);
-
+//
         let fee = Self::transfer_token_fee();
+
+        let key_from = (transactor.clone(), sym.clone());
+        let key_to = (dest.clone(), sym.clone());
+
         let sender = &transactor;
         let receiver = &dest;
         <cxsupport::Module<T>>::handle_fee_after(sender, fee, true, || {
-            if Self::free_token_of(&sender, &sym) < value {
-                return Err("transactor's free token balance too low, can't transfer this token");
-            }
+            // get storage
+            let from_token = FreeToken::<T>::get(&key_from);
+            let to_token = FreeToken::<T>::get(&key_to);
+            // check
+            let new_from_token = match from_token.checked_sub(&value) {
+                Some(b) => b,
+                None => return Err("free token too low to send value"),
+            };
+            let new_to_token = match to_token.checked_add(&value) {
+                Some(b) => b,
+                None => return Err("destination free token too high to receive value"),
+            };
             if sender != receiver {
-                Self::decrease_account_free_token_by(sender, &sym, value)?;
-                Self::increase_account_free_token_by(receiver, &sym, value)?;
+                // set to storage
+                FreeToken::<T>::insert(&key_from, new_from_token);
+                FreeToken::<T>::insert(&key_to, new_to_token);
                 Self::deposit_event(RawEvent::TransferToken(sender.clone(), receiver.clone(), sym.clone(), value, fee));
             }
             Ok(())

@@ -207,8 +207,10 @@ impl council::motions::Trait for Runtime {
 }
 
 impl tokenbalances::Trait for Runtime {
+    const CHAINX_SYMBOL: tokenbalances::SymbolString = b"pcx";
+    const CHAINX_PRECISION: tokenbalances::Precision = 8;
+    const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"pcx token for ChainX";
     type TokenBalance = TokenBalance;
-    type Precision = Precision;
     type Event = Event;
 }
 

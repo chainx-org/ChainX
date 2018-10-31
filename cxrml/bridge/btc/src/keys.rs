@@ -67,8 +67,8 @@ pub struct Address {
     pub hash: AddressHash,
 }
 
-impl From<&ScriptAddress> for Address {
-    fn from(address: &ScriptAddress) -> Self {
+impl<'a> From<&'a ScriptAddress> for Address {
+    fn from(address: &'a ScriptAddress) -> Self {
         let network = if NETWORK_ID == 1 { Network::Testnet } else { Network::Mainnet };
         Address {
             kind: address.kind,
