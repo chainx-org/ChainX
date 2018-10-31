@@ -115,6 +115,8 @@ pub fn new_test_ext(
         current_era,
         intentions: vec![10, 20],
         validator_count: 2,
+        candidate_count: 2*4,
+        reward_per_sec: 3,
         minimum_validator_count: 0,
         bonding_duration: sessions_per_era * session_length * 3,
         session_reward: Perbill::from_millionths((1000000 * reward / balance_factor) as u32),

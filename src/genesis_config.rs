@@ -38,14 +38,16 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
     let balances_config = BalancesConfig {
         transaction_base_fee: 1,
         transaction_byte_fee: 0,
-        existential_deposit: 500,
+        existential_deposit: 0,
         transfer_fee: 0,
         creation_fee: 0,
         reclaim_rebate: 0,
         balances: vec![
-            (Keyring::Alice.to_raw_public().into(), 1000000),
-            (Keyring::Bob.to_raw_public().into(), 1000000),
-            (Keyring::Charlie.to_raw_public().into(), 1000000),
+            (Keyring::Alice.to_raw_public().into(), 1_000_000),
+            (Keyring::Bob.to_raw_public().into(), 1_000_000),
+            (Keyring::Charlie.to_raw_public().into(), 1_000_000),
+            (Keyring::Dave.to_raw_public().into(), 1_000_000),
+            (Keyring::Ferdie.to_raw_public().into(), 996_000_000),
         ],
     };
     let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
@@ -65,18 +67,22 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                 .cloned()
                 .map(Into::into)
                 .collect(),
-            session_length: 1 * HOURS, // that's 1 hour per session.
+            session_length: 1 * MINUTES, // that's 1 hour per session.
         }),
         staking: Some(StakingConfig {
             current_era: 0,
-            bonding_duration: 90 * DAYS, // 90 days per bond.
-            intentions: vec![],
+            bonding_duration: 3 * MINUTES, // 3 days per bond.
+            intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
+            name_of_intention: initial_authorities.clone().into_iter().map(|i| (i.0.into(), b"ChainX".to_vec())).collect(),
+            url_of_intention: initial_authorities.into_iter().map(|i| (i.0.into(), b"chainx.org".to_vec())).collect(),
             minimum_validator_count: 1,
-            validator_count: 2,
-            sessions_per_era: 24, // 24 hours per era.
-            session_reward: Perbill::from_millionths(100),
+            validator_count: 4,
+            candidate_count: 4 * 4,
+            reward_per_sec: 3, // 3 PCX per second
+            sessions_per_era: 4, // 24 hours per era.
+            session_reward: Perbill::from_millionths(10800),
             offline_slash_grace: 0,
-            offline_slash: Perbill::from_millionths(1000),
+            offline_slash: Perbill::from_millionths(0),
             current_offline_slash: 0,
             current_session_reward: 0,
         }),

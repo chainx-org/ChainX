@@ -24,13 +24,12 @@ extern crate srml_balances as balances;
 extern crate srml_consensus as consensus;
 extern crate srml_session as session;
 extern crate srml_system as system;
+extern crate srml_timestamp as timestamp;
 
 #[cfg(test)]
 extern crate substrate_primitives;
 #[cfg(test)]
 extern crate sr_io as runtime_io;
-#[cfg(test)]
-extern crate srml_timestamp as timestamp;
 
 use rstd::prelude::*;
 use rstd::cmp;
@@ -86,9 +85,9 @@ pub trait Trait: balances::Trait + session::Trait {
 decl_module! {
     #[cfg_attr(feature = "std", serde(bound(deserialize = "T::Balance: ::serde::de::DeserializeOwned")))]
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn stake(origin) -> Result;
+        fn stake(origin, name: Vec<u8>, url: Vec<u8>) -> Result;
         fn unstake(origin, intentions_index: u32) -> Result;
-        fn nominate(origin, target: Address<T::AccountId, T::AccountIndex>) -> Result;
+        fn nominate(origin, target: Address<T::AccountId, T::AccountIndex>, value: T::Balance) -> Result;
         fn unnominate(origin, target_index: u32) -> Result;
         fn register_preferences(origin, intentions_index: u32, prefs: ValidatorPrefs<T::Balance>) -> Result;
 
@@ -124,6 +123,8 @@ decl_storage! {
         pub MinimumValidatorCount get(minimum_validator_count) config(): u32 = DEFAULT_MINIMUM_VALIDATOR_COUNT;
         /// The length of a staking era in sessions.
         pub SessionsPerEra get(sessions_per_era) config(): T::BlockNumber = T::BlockNumber::sa(1000);
+        /// Reward, per second, that is provided per acceptable session.
+        pub RewardPerSec get(reward_per_sec) config(): u64;
         /// Maximum reward, per validator, that is provided per acceptable session.
         pub SessionReward get(session_reward) config(): Perbill = Perbill::from_billionths(60);
         /// Slash, per validator that is taken for the first time they are found to be offline.
@@ -160,7 +161,7 @@ decl_storage! {
 
         /// The highest and lowest staked validator slashable balances.
         pub StakeRange get(stake_range): PairOf<T::Balance>;
-        
+
         /// The total stake.
         pub TotalStake get(total_stake): T::Balance;
 
@@ -171,10 +172,70 @@ decl_storage! {
 
         /// We are forcing a new era.
         pub ForcingNewEra get(forcing_new_era): Option<()>;
+
+        /// All nominator -> nominees
+        pub NomineesOf get(nominees_of): map T::AccountId => Vec<T::AccountId>;
+
+        /// nominations by validator himself
+        pub NominationOfValidatorPerSe get(nomination_of_validator_per_se): map T::AccountId => T::Balance;
+        /// nominations of nominators for a particular validator
+        pub NominationsForValidator get(nominations_for_validator): map T::AccountId => T::Balance;
+        /// All nominator -> all funds a nominator has nominated
+        pub NominationsOf get(nominations_of): map T::AccountId => T::Balance;
+
+        pub NameOfIntention get(name_of_intention): map T::AccountId => Vec<u8>;
+        pub UrlOfIntention get(url_of_intention): map T::AccountId => Vec<u8>;
+
+        /// (nominator, nominee) => value
+        pub NominationTo get(nomination_to): map (T::AccountId, T::AccountId) => T::Balance;
+        /// (nominator, unlock_block) => unlock_value
+        pub LockedOf get(locked_of): map (T::AccountId, T::BlockNumber) => T::Balance;
+
+        /// All block number -> accounts waiting to be unlocked at that block
+        pub LockedAccountsOf get(locked_accounts_of): map T::BlockNumber => Vec<T::AccountId>;
+
+        /// The number of accounts who has non-zero nominations, including these who have staked for they nominate themselves actually.
+        pub NominatorCount get(nominator_count): u32;
+
+        /// The current set of candidates.
+        pub Candidates get(candidates): Vec<T::AccountId>;
+        /// The ideal number of staking runner-ups. candidates : validators = 4:1
+        pub CandidateCount get(candidate_count) config(): u32;
+        /// All (potential) validator -> reward for each session
+        pub SessionRewardOf get(session_reward_of): map T::AccountId => T::Balance;
+    }
+
+    add_extra_genesis {
+        config(name_of_intention): Vec<(T::AccountId, Vec<u8>)>;
+        config(url_of_intention): Vec<(T::AccountId, Vec<u8>)>;
+        build(|storage: &mut primitives::StorageMap, config: &GenesisConfig<T>| {
+            for (acnt, name) in config.name_of_intention.iter() {
+                storage.insert(GenesisConfig::<T>::hash(&<NameOfIntention<T>>::key_for(acnt)).to_vec(), name.clone());
+            }
+            for (acnt, url) in config.url_of_intention.iter() {
+                storage.insert(GenesisConfig::<T>::hash(&<UrlOfIntention<T>>::key_for(acnt)).to_vec(), url.clone());
+            }
+            // TODO
+            // for intention in config.intentions.iter() {
+                // storage.insert(GenesisConfig::<T>::hash(&<NominationOfValidatorPerSe<T>>::key_for(intention)).to_vec(), <balances::Module<T>>::total_balance(intention)::encode());
+            // }
+        });
     }
 }
 
 impl<T: Trait> Module<T> {
+
+    /// Nomination of a nominator to his some nominee
+    pub fn nomination_of(nominator: &T::AccountId, nominee: &T::AccountId) -> T::Balance {
+        <NominationTo<T>>::get((nominator.clone(), nominee.clone()))
+    }
+
+    /// All funds a nominator has nominated to his nominees
+    pub fn total_nomination_of(nominator: &T::AccountId) -> T::Balance {
+        Self::nominees_of(nominator).into_iter()
+            .map(|x| Self::nomination_of(nominator, &x))
+            .fold(Zero::zero(), |acc: T::Balance, x| acc + x)
+    }
 
     /// Deposit one of this module's events.
     fn deposit_event(event: Event<T>) {
@@ -188,18 +249,30 @@ impl<T: Trait> Module<T> {
         Self::sessions_per_era() * <session::Module<T>>::length()
     }
 
-    /// Balance of a (potential) validator that includes all nominators.
+    /// Balance of a (potential) validator that only includes all nominators.
     pub fn nomination_balance(who: &T::AccountId) -> T::Balance {
-        Self::nominators_for(who).iter()
-            .map(<balances::Module<T>>::total_balance)
-            .fold(Zero::zero(), |acc, x| acc + x)
+        Self::nominators_for(who).into_iter()
+            .map(|x| Self::nomination_of(&x, who))
+            .fold(Zero::zero(), |acc: T::Balance, x| acc + x)
     }
 
     /// The total balance that can be slashed from an account.
     pub fn slashable_balance(who: &T::AccountId) -> T::Balance {
-        Self::nominators_for(who).iter()
-            .map(<balances::Module<T>>::total_balance)
-            .fold(<balances::Module<T>>::total_balance(who), |acc, x| acc + x)
+        Self::nominators_for(who).into_iter()
+            .map(|x| Self::nomination_of(&x, who))
+            .fold(<balances::Module<T>>::total_balance(who), |acc: T::Balance, x| acc + x)
+    }
+
+    pub fn validators_weight() -> T::Balance {
+        <session::Module<T>>::validators().into_iter()
+            .map(|v| Self::slashable_balance(&v))
+            .fold(Zero::zero(), |acc: T::Balance, x| acc + x)
+    }
+
+    pub fn candidates_weight() -> T::Balance {
+        <Candidates<T>>::get().into_iter()
+            .map(|v| Self::slashable_balance(&v))
+            .fold(Zero::zero(), |acc: T::Balance, x| acc + x)
     }
 
     /// The block at which the `who`'s funds become entirely liquid.
@@ -216,16 +289,24 @@ impl<T: Trait> Module<T> {
     /// Declare the desire to stake for the transactor.
     ///
     /// Effects will be felt at the beginning of the next era.
-    fn stake(origin: T::Origin) -> Result {
+    fn stake(origin: T::Origin, name: Vec<u8>, url: Vec<u8>) -> Result {
         let who = ensure_signed(origin)?;
+
+        ensure!(name.len() <= 32, "name too long");
+        ensure!(url.len() <= 32, "url too long");
+
         ensure!(Self::nominating(&who).is_none(), "Cannot stake if already nominating.");
         let mut intentions = <Intentions<T>>::get();
         // can't be in the list twice.
         ensure!(intentions.iter().find(|&t| t == &who).is_none(), "Cannot stake if already staked.");
 
+        <NameOfIntention<T>>::insert(&who, name);
+        <UrlOfIntention<T>>::insert(&who, url);
+
         <Bondage<T>>::insert(&who, T::BlockNumber::max_value());
         intentions.push(who);
         <Intentions<T>>::put(intentions);
+        <NominatorCount<T>>::put(<NominatorCount<T>>::get() + 1);
         Ok(())
     }
 
@@ -241,51 +322,97 @@ impl<T: Trait> Module<T> {
         Self::apply_unstake(&who, intentions_index as usize)
     }
 
-    fn nominate(origin: T::Origin, target: Address<T::AccountId, T::AccountIndex>) -> Result {
+    fn nominate(origin: T::Origin, target: Address<T::AccountId, T::AccountIndex>, value: T::Balance) -> Result {
         let who = ensure_signed(origin)?;
         let target = <balances::Module<T>>::lookup(target)?;
 
-        ensure!(Self::nominating(&who).is_none(), "Cannot nominate if already nominating.");
-        ensure!(Self::intentions().iter().find(|&t| t == &who).is_none(), "Cannot nominate if already staked.");
+        ensure!(Self::intentions().into_iter().any(|t| t == target), "Cannot nominate if target is outside the intentions list.");
+        ensure!(<balances::Module<T>>::free_balance(&who) >= value, "Cannot nominate if free balance too low.");
+        ensure!(!value.is_zero(), "Cannot nominate zero.");
+
+        // reserve nominated balance
+        <balances::Module<T>>::reserve(&who, value)?;
+
+        // update votes of who => target
+        let v = <NominationTo<T>>::get((who.clone(), target.clone()));
+        <NominationTo<T>>::insert((who.clone(), target.clone()), v + value);
 
         // update nominators_for
-        let mut t = Self::nominators_for(&target);
-        t.push(who.clone());
-        <NominatorsFor<T>>::insert(&target, t);
+        let mut noms = Self::nominators_for(&target);
+        if noms.iter().find(|&n| n == &who).is_none() {
+            noms.push(who.clone());
+            <NominatorsFor<T>>::insert(&target, noms);
+        }
+
+        // update nominatings_of
+        let mut ns = Self::nominees_of(&who);
+        if ns.is_empty() {
+            <NominatorCount<T>>::put(<NominatorCount<T>>::get() + 1);
+        }
+        if ns.iter().find(|&n| n == &target).is_none() {
+            ns.push(target.clone());
+            <NomineesOf<T>>::insert(&who, ns);
+        }
 
         // update nominating
+        // Now this indicates the last nominee of the nominator
         <Nominating<T>>::insert(&who, &target);
 
-        // Update bondage
-        <Bondage<T>>::insert(&who, T::BlockNumber::max_value());
+        <NominationsOf<T>>::insert(&who, Self::total_nomination_of(&who));
+        <NominationsForValidator<T>>::insert(&target, Self::nomination_balance(&target));
 
         Ok(())
     }
 
     /// Will panic if called when source isn't currently nominating target.
     /// Updates Nominating, NominatorsFor and NominationBalance.
+    /// target_index is the index of nominee list, 4 => [3, 2], unnominate 3, target_index = 0
     fn unnominate(origin: T::Origin, target_index: u32) -> Result {
         let source = ensure_signed(origin)?;
         let target_index = target_index as usize;
 
-        let target = <Nominating<T>>::get(&source).ok_or("Account must be nominating")?;
-
-        let mut t = Self::nominators_for(&target);
-        if t.get(target_index) != Some(&source) {
-            return Err("Invalid target index")
-        }
+        let ns = Self::nominees_of(&source);
+        let target = ns.get(target_index).ok_or("Invalid target index")?;
 
         // Ok - all valid.
 
         // update nominators_for
-        t.swap_remove(target_index);
-        <NominatorsFor<T>>::insert(&target, t);
+        let mut noms = Self::nominators_for(target);
+        if let Some(index) = noms.iter().position(|x| *x == source) {
+            noms.swap_remove(index);
+            <NominatorsFor<T>>::insert(target, noms);
+        }
 
-        // update nominating
-        <Nominating<T>>::remove(&source);
+        // update nominees_of
+        let mut ns = Self::nominees_of(&source);
+        ns.swap_remove(target_index);
+        <NomineesOf<T>>::insert(&source, ns);
 
-        // update bondage
-        <Bondage<T>>::insert(source, <system::Module<T>>::block_number() + Self::bonding_duration());
+        // update last nominating relationship
+        if Self::nominees_of(&source).is_empty() {
+            <Nominating<T>>::remove(&source);
+            <NominatorCount<T>>::put(<NominatorCount<T>>::get() - 1);
+        }
+
+        // update nominee: [nominator : value]
+        let locked = <NominationTo<T>>::take((source.clone(), target.clone()));
+        let lock_until = <system::Module<T>>::block_number() + Self::bonding_duration();
+
+        // update all locked accounts at some block
+        let mut acnts = <LockedAccountsOf<T>>::get(lock_until);
+        if acnts.iter().find(|&a| a == &source).is_none() {
+            acnts.push(source.clone());
+            <LockedAccountsOf<T>>::insert(lock_until, acnts);
+        }
+
+        // update all locked balance of a certain account at some block
+        // a nominator could nominate/unnominate multiple nominees in a block at the same time.
+        let l = <LockedOf<T>>::get((source.clone(), lock_until));
+        <LockedOf<T>>::insert((source.clone(), lock_until), l + locked);
+
+        <NominationsOf<T>>::insert(&source, Self::total_nomination_of(&source));
+        <NominationsForValidator<T>>::insert(target, Self::nomination_balance(target));
+
         Ok(())
     }
 
@@ -370,22 +497,22 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    /// Reward a given validator by a specific amount. Add the reward to their, and their nominators'
+    /// Reward a given (potential) validator by a specific amount. Add the reward to their, and their nominators'
     /// balance, pro-rata.
-    fn reward_validator(who: &T::AccountId, reward: T::Balance) {
-        let off_the_table = reward.min(Self::validator_preferences(who).validator_payment);
+    fn reward(who: &T::AccountId, reward: T::Balance) {
+        // let off_the_table = reward.min(Self::validator_preferences(who).validator_payment);
+        let off_the_table = T::Balance::sa(reward.as_() * 2 / 10);
         let reward = reward - off_the_table;
         let validator_cut = if reward.is_zero() {
             Zero::zero()
         } else {
-            let noms = Self::current_nominators_for(who);
-            let total = noms.iter()
-                .map(<balances::Module<T>>::total_balance)
-                .fold(<balances::Module<T>>::total_balance(who), |acc, x| acc + x)
-                .max(One::one());
+            let total = Self::nomination_balance(who) + <balances::Module<T>>::total_balance(who);
+
             let safe_mul_rational = |b| b * reward / total;// TODO: avoid overflow
-            for n in noms.iter() {
-                let _ = <balances::Module<T>>::reward(n, safe_mul_rational(<balances::Module<T>>::total_balance(n)));
+
+            let noms = Self::nominators_for(who);
+            for nom in noms.iter() {
+                let _ = <balances::Module<T>>::reward(nom, safe_mul_rational(Self::nomination_of(nom, who)));
             }
             safe_mul_rational(<balances::Module<T>>::total_balance(who))
         };
@@ -404,6 +531,13 @@ impl<T: Trait> Module<T> {
         <ValidatorPreferences<T>>::remove(who);
         <SlashCount<T>>::remove(who);
         <Bondage<T>>::insert(who, <system::Module<T>>::block_number() + Self::bonding_duration());
+
+        <NominationOfValidatorPerSe<T>>::remove(who);
+
+        <NameOfIntention<T>>::remove(who);
+        <UrlOfIntention<T>>::remove(who);
+
+        <NominatorCount<T>>::put(<NominatorCount<T>>::get() - 1);
         Ok(())
     }
 
@@ -417,16 +551,59 @@ impl<T: Trait> Module<T> {
         Self::current_session_reward() * T::Balance::sa(per65536) / T::Balance::sa(65536u64)
     }
 
+    /// Unlock all matured locked_accounts
+    fn unlock_matured_reservation() {
+        let block_number = <system::Module<T>>::block_number();
+        let locked_accounts = <LockedAccountsOf<T>>::get(block_number);
+
+        for account in locked_accounts.into_iter() {
+            let locked = <LockedOf<T>>::take((account.clone(), block_number));
+            <balances::Module<T>>::unreserve(&account, locked);
+        }
+
+        <LockedAccountsOf<T>>::remove(block_number);
+    }
+
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or
     /// move to a new era.
     fn new_session(actual_elapsed: T::Moment, should_reward: bool) {
+
+        Self::unlock_matured_reservation();
+
         if should_reward {
             // apply good session reward
             let reward = Self::this_session_reward(actual_elapsed);
+
+            let vals_weight = Self::validators_weight().as_();
+            let cands_weight = Self::candidates_weight().as_();
+            let valid_cands_weight = cands_weight * 7 / 10;
+            let total_weight = vals_weight + valid_cands_weight;
+
+            let vals_reward = vals_weight * reward.as_() / total_weight;
+            let cands_reward = valid_cands_weight * reward.as_() / total_weight;
+
+            //// reward validators
             let validators = <session::Module<T>>::validators();
-            for v in validators.iter() {
-                Self::reward_validator(v, reward);
+            if vals_reward > 0 {
+                for v in validators.iter() {
+                    let val_reward = Self::slashable_balance(v).as_() * vals_reward / vals_weight;
+                    <SessionRewardOf<T>>::insert(v, T::Balance::sa(val_reward));
+                    Self::reward(v, T::Balance::sa(val_reward));
+
+                    <NominationOfValidatorPerSe<T>>::insert(v, <balances::Module<T>>::total_balance(v));
+                }
             }
+
+            //// reward candidates
+            let candidates = <Candidates<T>>::get();
+            if cands_reward > 0 {
+                for c in candidates.iter() {
+                    let cand_reward = Self::slashable_balance(c).as_() * cands_reward / cands_weight;
+                    <SessionRewardOf<T>>::insert(c, T::Balance::sa(cand_reward));
+                    Self::reward(c, T::Balance::sa(cand_reward));
+                }
+            }
+
             Self::deposit_event(RawEvent::Reward(reward));
             let total_minted = reward * <T::Balance as As<usize>>::sa(validators.len());
             T::OnRewardMinted::on_dilution(total_minted, Self::total_stake());
@@ -483,8 +660,8 @@ impl<T: Trait> Module<T> {
         };
         <StakeRange<T>>::put(&stake_range);
 
-        for i in 0..intentions.len() {
-            <StakeWeight<T>>::insert(intentions[i].clone().1, intentions[i].clone().0);
+        for (slashable, intention) in intentions.iter() {
+            <StakeWeight<T>>::insert(intention, slashable);
         }
 
         let vals = &intentions.clone().into_iter()
@@ -500,6 +677,21 @@ impl<T: Trait> Module<T> {
         }
         <session::Module<T>>::set_validators(vals);
 
+        let candidate_count = <CandidateCount<T>>::get() as usize;
+        let vals_and_candidates = &intentions.clone().into_iter()
+            .map(|(_, v)| v)
+            .take(desired_validator_count + candidate_count)
+            .collect::<Vec<_>>();
+
+        let mut candidates: Vec<T::AccountId> = Vec::new();
+        if vals_and_candidates.len() > vals.len() {
+            let start = vals.len();
+            for i in start..vals_and_candidates.len() {
+                candidates.push(vals_and_candidates[i].clone());
+            }
+        }
+        <Candidates<T>>::put(candidates);
+
         let vals = &intentions.into_iter()
             .map(|(_, v)| v)
             .take(n)
@@ -514,11 +706,17 @@ impl<T: Trait> Module<T> {
             .fold(Zero::zero(), |acc, x| acc + x);
 
         <TotalStake<T>>::put(&total_stake);
-        let average_stake = total_stake / T::Balance::sa(n as u64);
+        let _average_stake = total_stake / T::Balance::sa(n as u64);
 
         // Update the balances for slashing/rewarding according to the stakes.
-        <CurrentOfflineSlash<T>>::put(Self::offline_slash().times(average_stake));
-        <CurrentSessionReward<T>>::put(Self::session_reward().times(average_stake));
+        // <CurrentOfflineSlash<T>>::put(Self::offline_slash().times(average_stake));
+        // <CurrentSessionReward<T>>::put(Self::session_reward().times(average_stake));
+
+        // Disable slash mechanism
+        <CurrentOfflineSlash<T>>::put(T::Balance::sa(0u64));
+        let session_length: u64 = <session::Module<T>>::length().as_();
+        let block_period: u64 = <timestamp::Module<T>>::block_period().as_();
+        <CurrentSessionReward<T>>::put(T::Balance::sa(session_length * block_period * <RewardPerSec<T>>::get()));
     }
 }
 

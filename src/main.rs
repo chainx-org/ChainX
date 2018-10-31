@@ -174,6 +174,22 @@ fn main() {
                     info!("Auth is gavin");
                     ed25519::Pair::from_seed(b"Gavin                           ")
                 }
+                "charlie" => {
+                    info!("Auth is charlie");
+                    ed25519::Pair::from_seed(b"Charlie                         ")
+                }
+                "dave" => {
+                    info!("Auth is dave");
+                    ed25519::Pair::from_seed(b"Dave                            ")
+                }
+                "eve" => {
+                    info!("Auth is eve");
+                    ed25519::Pair::from_seed(b"Eve                             ")
+                }
+                "ferdie" => {
+                    info!("Auth is ferdie");
+                    ed25519::Pair::from_seed(b"Ferdie                          ")
+                }
                 "satoshi" | _ => {
                     info!("Auth is satoshi");
                     ed25519::Pair::from_seed(b"Satoshi                         ")
