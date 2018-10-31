@@ -264,6 +264,7 @@ name = "chainx"
 version = "0.1.0"
 dependencies = [
  "ansi_term 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust?rev=8b2dab29c12d19bcd75f268deb01ff19cccd7050)",
  "chainx-api 0.1.0",
  "chainx-consensus 0.1.0",

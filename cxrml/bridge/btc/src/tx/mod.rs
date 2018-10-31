@@ -49,28 +49,28 @@ impl<T: Trait> UTXOStorage<T> {
 
     fn update(utxos: Vec<UTXO>, is_spent: bool) {
         for u in utxos {
-            let mut index = <UTXOMaxIndex<T>>::get() - 1;
-            while index >= 0 {
+            let mut index = <UTXOMaxIndex<T>>::get();
+            while index > 0 {
+                index -= 1;
                let utxo = <UTXOSet<T>>::get(index);
                if utxo == u {
                    <UTXOSet<T>>::mutate(index, |utxo| utxo.is_spent = is_spent);
                    break;
                }
-               index -= 1;
             }
         }
     }
 
     fn update_from_outpoint(out_point_set: Vec<OutPoint>, is_spent: bool) {
         for out_point in out_point_set {
-            let mut index = <UTXOMaxIndex<T>>::get() - 1;
-            while index >= 0 {
+            let mut index = <UTXOMaxIndex<T>>::get();
+            while index > 0 {
+                index -= 1;
                 let utxo = <UTXOSet<T>>::get(index);
                 if out_point.hash == utxo.txid && out_point.index == utxo.index {
                     <UTXOSet<T>>::mutate(index, |utxo| utxo.is_spent = is_spent );
                     break;
                 }
-                index -= 1;
             }
         }
     }

@@ -1,7 +1,9 @@
 // Copyright 2018 chainpool
 extern crate primitives as btc_primitives;
 extern crate chain as btc_chain;
+extern crate base58;
 
+use self::base58::FromBase58;
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilVotingConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
                      ContractConfig, Permill, Perbill, TokenBalancesConfig, FinancialRecordsConfig,
@@ -151,7 +153,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                                      4), // retargeting_factor
             network_id: 1,
             utxo_max_index: 0,
-            receive_address: b"mu4ivHDBPGnNGpFQtLrn3v9hdezLRoLNPe".to_vec(),
+            receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
             fee: 0,
         }),
     }
