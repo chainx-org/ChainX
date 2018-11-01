@@ -331,3 +331,16 @@ impl From<H520> for CompactSignature {
         CompactSignature(h)
     }
 }
+
+#[cfg(test)]
+mod tests {
+     use super::Address;
+     use super::DisplayLayout;
+
+     #[test]
+     fn test_layout() {
+         let v = &[111, 41, 168, 159, 89, 51, 97, 179, 153, 104, 9, 74,
+            184, 193, 251, 6, 131, 166, 121, 3, 1, 241, 112, 101, 146];
+         Address::from_layout(v).unwrap();
+     }
+}

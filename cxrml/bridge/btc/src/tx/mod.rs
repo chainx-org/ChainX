@@ -47,32 +47,36 @@ impl<T: Trait> UTXOStorage<T> {
         <UTXOMaxIndex<T>>::mutate(|inc| *inc = index);
     }
 
-    fn update(utxos: Vec<UTXO>, is_spent: bool) {
+    fn update(utxos: Vec<UTXO>, is_spent: bool) -> u64 {
+        let mut update_balance = 0;
         for u in utxos {
             let mut index = <UTXOMaxIndex<T>>::get();
             while index > 0 {
                 index -= 1;
                let utxo = <UTXOSet<T>>::get(index);
                if utxo == u {
-                   <UTXOSet<T>>::mutate(index, |utxo| utxo.is_spent = is_spent);
+                   <UTXOSet<T>>::mutate(index, |utxo| { update_balance += utxo.balance; utxo.is_spent = is_spent; } );
                    break;
                }
             }
         }
+        update_balance
     }
 
-    fn update_from_outpoint(out_point_set: Vec<OutPoint>, is_spent: bool) {
+    fn update_from_outpoint(out_point_set: Vec<OutPoint>, is_spent: bool) -> u64 {
+        let mut update_balance = 0;
         for out_point in out_point_set {
             let mut index = <UTXOMaxIndex<T>>::get();
             while index > 0 {
                 index -= 1;
                 let utxo = <UTXOSet<T>>::get(index);
                 if out_point.hash == utxo.txid && out_point.index == utxo.index {
-                    <UTXOSet<T>>::mutate(index, |utxo| utxo.is_spent = is_spent );
+                    <UTXOSet<T>>::mutate(index, |utxo| { update_balance += utxo.balance; utxo.is_spent = is_spent; } );
                     break;
                 }
             }
         }
+        update_balance
     }
 }
 
@@ -92,7 +96,7 @@ impl<T: Trait> TxStorage<T> {
         // todo 检查block是否存在
         <BlockTxids<T>>::mutate(block_hash, |v| v.push(hash.clone()));
 
-        <TxSet<T>>::insert(hash, (tx, who.clone(), address, tx_type, balance));
+        <TxSet<T>>::insert(hash, (who.clone(), address, tx_type, balance, tx));
     }
 
     fn check_previous(txid: &H256) -> bool {
@@ -110,11 +114,18 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
 
         let txids = <BlockTxids<T>>::get(header);
         for txid in txids.iter() {
-            let (tx, _, _, tx_type, _) = <TxSet<T>>::get(txid).unwrap();
+            let (_, _, tx_type, _, tx) = <TxSet<T>>::get(txid).unwrap();
             match tx_type {
                 TxType::Withdraw => {
                          let out_point_set = tx.inputs.iter().map(|input| input.previous_output.clone()).collect();
                          <UTXOStorage<T>>::update_from_outpoint(out_point_set, false);
+			             let receive_address = keys::Address::from_layout(&receive_address).unwrap();
+                         let mut out_point_set2: Vec<OutPoint> = Vec::new();
+                         let mut index = 0;
+			             tx.outputs.iter().map(|output| {
+				              if is_key(&output.script_pubkey, &receive_address) {
+					              out_point_set2.push(OutPoint{hash: txid.clone(), index: index}) } index += 1; () });
+                         <UTXOStorage<T>>::update_from_outpoint(out_point_set2, true);
                      },
                 TxType::Register => {},
                 _ => {
@@ -175,29 +186,37 @@ pub fn validate_transaction<T: Trait>(
     }
     // detect deposit
     for output in tx.raw.outputs.iter() {
-        let script = output.script_pubkey.clone().take();
-        runtime_io::print("------script");
-        runtime_io::print(script.as_slice());
-        let script: Script = script.clone().into();
-        let script_addresses = script.extract_destinations().unwrap_or(vec![]);
-        if script_addresses.len() == 1 {
-            if receive_address.hash == script_addresses[0].hash {
-                return Ok(TxType::RegisterDeposit);
-            }
+        if is_key(&output.script_pubkey, &receive_address) {
+            return Ok(TxType::RegisterDeposit);
         }
     }
 
     Err("not found our pubkey, may be an unrelated tx")
 }
 
+fn is_key(script_pubkey: &[u8], receive_address: &keys::Address) -> bool {
+        runtime_io::print("------script");
+        runtime_io::print(script_pubkey);
+        let script: Vec<u8> = script_pubkey.iter().cloned().collect();
+        let script: Script = script.into();
+        let script_addresses = script.extract_destinations().unwrap_or(vec![]);
+        if script_addresses.len() == 1 {
+            if receive_address.hash == script_addresses[0].hash {
+                return true;
+            }
+        }
+        return false;
+}
+
 pub fn handle_input<T: Trait>(tx: &Transaction, block_hash: &H256, who: &T::AccountId, receive_address: &[u8]){
     let out_point_set = tx.inputs.iter().map(|input| {
             input.previous_output.clone() }).collect();
-    <UTXOStorage<T>>::update_from_outpoint(out_point_set, true);
+    let mut update_balance = <UTXOStorage<T>>::update_from_outpoint(out_point_set, true);
     let receive_address = keys::Address::from_layout(receive_address).unwrap();
-    let mut total_balance = 0;
-    tx.outputs.iter().map(|output| { total_balance += output.value; ()});
-    <TxStorage<T>>::store_tx(tx, block_hash, who, receive_address.clone(), TxType::Withdraw, total_balance);
+    tx.outputs.iter().map(|output| {
+        if is_key(&output.script_pubkey, &receive_address) {
+            update_balance -= output.value; } () });
+    <TxStorage<T>>::store_tx(tx, block_hash, who, receive_address.clone(), TxType::Withdraw, update_balance);
 }
 
 fn deposit_token<T: Trait>(_address: keys::Address, _balance: u64) {

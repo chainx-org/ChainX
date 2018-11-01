@@ -53,18 +53,19 @@ mod blockchain;
 mod tx;
 mod keys;
 mod script;
+mod b58;
 
 use codec::Decode;
 use rstd::prelude::*;
 //use rstd::result::Result as StdResult;
-use runtime_support::dispatch::Result;
+use runtime_support::dispatch::{Result, Parameter};
 use runtime_support::{StorageValue, StorageMap};
 use runtime_primitives::traits::OnFinalise;
 
 use system::ensure_signed;
 
 use ser::deserialize;
-use chain::{BlockHeader, Transaction};
+use chain::{BlockHeader, Transaction as BTCTransaction};
 use primitives::{hash::H256, compact::Compact};
 use primitives::hash;
 
@@ -92,6 +93,7 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn push_header(origin, header: Vec<u8>) -> Result;
         fn push_transaction(origin, tx: Vec<u8>) -> Result;
+        fn propose_transaction(origin, tx: Vec<u8>) -> Result;
     }
 }
 
@@ -153,6 +155,13 @@ pub enum TxType {
     RegisterDeposit,
 }
 
+#[derive(PartialEq, Clone, Encode, Decode)]
+pub struct Proposal<AccountId: Parameter + Ord + Default > {
+    proposer: Vec<AccountId>,
+    tx: BTCTransaction,
+    perfection: bool,
+}
+
 impl Default for TxType {
     fn default() -> Self { TxType::Deposit }
 }
@@ -182,9 +191,10 @@ decl_storage! {
 
         pub UTXOSet get(utxo_set): map u64 => UTXO;
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
-        pub TxSet get(tx_set): map H256 => Option<(Transaction, T::AccountId, keys::Address, TxType, u64)>; // Address, type, balance
+        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, BTCTransaction)>; // Address, type, balance
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
         pub AddressMap get(address_map): map keys::Address => T::AccountId;
+        pub TxProposal get(tx_proposal): map H256 => Option<Proposal<T::AccountId>>;
 //        pub AccountMap get(account_map): map T::AccountId => keys::Address;
 
         // =====
@@ -236,6 +246,14 @@ impl<T: Trait> Module<T> {
         Self::process_tx(tx, &from)?;
         Ok(())
     }
+
+    pub fn propose_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
+        let from = ensure_signed(origin)?;
+
+        let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("parse transaction err")?;
+        Self::process_btc_tx(tx, &from)?;
+        Ok(())
+    }
 }
 
 
@@ -282,5 +300,9 @@ impl<T: Trait> Module<T> {
         }
 
         Ok(())
+    }
+
+    pub fn process_btc_tx(tx: BTCTransaction, who: &T::AccountId) -> Result {
+         Ok(())
     }
 }

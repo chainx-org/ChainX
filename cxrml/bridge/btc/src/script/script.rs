@@ -425,6 +425,21 @@ impl Script {
 		return 1;
 	}
 
+    pub fn extract_multi_scriptsig(&self) -> Result<(Vec<Bytes>, Script), keys::Error> { //[sig], redeem
+		let mut pc = 1;
+        let mut vec: Vec<Bytes> = Vec::new();
+		while pc < self.len() - 2 {
+			let instruction = self.get_instruction(pc).expect("this method depends on previous check in script_type()");
+			let data = instruction.data.expect("this method depends on previous check in script_type()");
+            vec.push(data.into()); 
+			pc += instruction.step;
+		}
+        if let Some(script) = vec.pop() {
+            return Ok((vec, script.into()));
+        }
+        return Err(keys::Error::InvalidSignature);
+    }
+
 	pub fn extract_destinations(&self) -> Result<Vec<ScriptAddress>, keys::Error> {
 		match self.script_type() {
 			ScriptType::NonStandard => {
@@ -605,225 +620,40 @@ pub fn is_witness_commitment_script(script: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-	use {Builder, Opcode};
-    /// Maximum number of bytes pushable to the stack
-    const MAX_SCRIPT_ELEMENT_SIZE: usize = 520;
+    use super::*;
+    const redeem: &'static str = "52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae";
+    const scriptsig1: &'static str = "00483045022100c0076941e39126f1bd0102d6df278470802ca8b694f8e39467121dc9ecc4d46802204ab7e3128bd0a93a30d1d5ea4db57cc8ba2d4c39172c2d2e536787e0b152bffe014c6952210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae";
+    const scriptsig2: &'static str = "00483045022100c0076941e39126f1bd0102d6df278470802ca8b694f8e39467121dc9ecc4d46802204ab7e3128bd0a93a30d1d5ea4db57cc8ba2d4c39172c2d2e536787e0b152bffe014730440220731394ffbf7d068393a2b6146e09f16bd9e39c16d04f38461a4c6991a725609202202633acd7cbf14883736f8e6376aa9090d0adacf73bc76ff5f95dca069caad593014c6952210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae";
+    const sig1: &'static str = "3045022100c0076941e39126f1bd0102d6df278470802ca8b694f8e39467121dc9ecc4d46802204ab7e3128bd0a93a30d1d5ea4db57cc8ba2d4c39172c2d2e536787e0b152bffe01";
+    const sig2: &'static str = "30440220731394ffbf7d068393a2b6146e09f16bd9e39c16d04f38461a4c6991a725609202202633acd7cbf14883736f8e6376aa9090d0adacf73bc76ff5f95dca069caad59301";
+    #[test]
+    fn redeem_script() {
+        let script: Script = redeem.into();
+        assert_eq!(script.is_multisig_script(), true); 
+    }
 
+    #[test]
+    fn input_1() {
+       let script: Script = scriptsig1.into();
+       let (sigs, dem) = script.extract_multi_scriptsig().unwrap(); 
+       let sig_bytes: Bytes = sig1.into();
+       assert_eq!(sig_bytes, sigs[0]);
+       let script: Script = redeem.into();
+       assert_eq!(script, dem);
+       assert_eq!(sigs.len(), 1);
+    }
 
-	use super::{Script, ScriptType, ScriptAddress};
-	use keys::{Address, Public};
-
-	#[test]
-	fn test_is_pay_to_script_hash() {
-		let script: Script = "a9143b80842f4ea32806ce5e723a255ddd6490cfd28d87".into();
-		let script2: Script = "a9143b80842f4ea32806ce5e723a255ddd6490cfd28d88".into();
-		assert!(script.is_pay_to_script_hash());
-		assert!(!script2.is_pay_to_script_hash());
-	}
-
-	#[test]
-	fn test_is_pay_to_witness_key_hash() {
-		let script: Script = "00140000000000000000000000000000000000000000".into();
-		let script2: Script = "01140000000000000000000000000000000000000000".into();
-		assert!(script.is_pay_to_witness_key_hash());
-		assert!(!script2.is_pay_to_witness_key_hash());
-	}
-
-	#[test]
-	fn test_is_pay_to_witness_script_hash() {
-		let script: Script = "00203b80842f4ea32806ce5e723a255ddd6490cfd28dac38c58bf9254c0577330693".into();
-		let script2: Script = "01203b80842f4ea32806ce5e723a255ddd6490cfd28dac38c58bf9254c0577330693".into();
-		assert!(script.is_pay_to_witness_script_hash());
-		assert!(!script2.is_pay_to_witness_script_hash());
-	}
-
-   #[cfg(feature = "std")]
-	#[test]
-	fn test_script_debug() {
-		use std::fmt::Write;
-
-		let script = Builder::default()
-			.push_num(3.into())
-			.push_num(2.into())
-			.push_opcode(Opcode::OP_ADD)
-			.into_script();
-		let s = "Script { data: 0103010293 }";
-		let mut res = String::new();
-		write!(&mut res, "{:?}", script).unwrap();
-		assert_eq!(s.to_string(), res);
-	}
-
-	#[test]
-	fn test_script_display() {
-		let script = Builder::default()
-			.push_num(3.into())
-			.push_num(2.into())
-			.push_opcode(Opcode::OP_ADD)
-			.into_script();
-		let s = r#"OP_PUSHBYTES_1 0x03
-OP_PUSHBYTES_1 0x02
-OP_ADD
-"#;
-		assert_eq!(script.to_string(), s.to_string());
-	}
-
-	#[test]
-	fn test_script_without_op_codeseparator() {
-		let script: Script = "ab00270025512102e485fdaa062387c0bbb5ab711a093b6635299ec155b7b852fce6b992d5adbfec51ae".into();
-		let scr_goal: Script = "00270025512102e485fdaa062387c0bbb5ab711a093b6635299ec155b7b852fce6b992d5adbfec51ae".into();
-		assert_eq!(script.without_separators(), scr_goal);
-	}
-
-	#[test]
-	fn test_script_is_multisig() {
-		let script: Script = "524104a882d414e478039cd5b52a92ffb13dd5e6bd4515497439dffd691a0f12af9575fa349b5694ed3155b136f09e63975a1700c9f4d4df849323dac06cf3bd6458cd41046ce31db9bdd543e72fe3039a1f1c047dab87037c36a669ff90e28da1848f640de68c2fe913d363a51154a0c62d7adea1b822d05035077418267b1a1379790187410411ffd36c70776538d079fbae117dc38effafb33304af83ce4894589747aee1ef992f63280567f52f5ba870678b4ab4ff6c8ea600bd217870a8b4f1f09f3a8e8353ae".into();
-		let not: Script = "ab00270025512102e485fdaa062387c0bbb5ab711a093b6635299ec155b7b852fce6b992d5adbfec51ae".into();
-		assert!(script.is_multisig_script());
-		assert!(!not.is_multisig_script());
-	}
-
-	// https://github.com/libbtc/libbtc/blob/998badcdac95a226a8f8c00c8f6abbd8a77917c1/test/tx_tests.c#L640
-	#[test]
-	fn test_script_type() {
-		assert_eq!(ScriptType::PubKeyHash, Script::from("76a914aab76ba4877d696590d94ea3e02948b55294815188ac").script_type());
-		assert_eq!(ScriptType::Multisig, Script::from("522102004525da5546e7603eefad5ef971e82f7dad2272b34e6b3036ab1fe3d299c22f21037d7f2227e6c646707d1c61ecceb821794124363a2cf2c1d2a6f28cf01e5d6abe52ae").script_type());
-		assert_eq!(ScriptType::ScriptHash, Script::from("a9146262b64aec1f4a4c1d21b32e9c2811dd2171fd7587").script_type());
-		assert_eq!(ScriptType::PubKey, Script::from("4104ae1a62fe09c5f51b13905f07f06b99a2f7159b2225f374cd378d71302fa28414e7aab37397f554a7df5f142c21c1b7303b8a0626f1baded5c72a704f7e6cd84cac").script_type());
-	}
-
-	#[test]
-	fn test_sigops_count() {
-		assert_eq!(1usize, Script::from("76a914aab76ba4877d696590d94ea3e02948b55294815188ac").sigops_count(false));
-		assert_eq!(2usize, Script::from("522102004525da5546e7603eefad5ef971e82f7dad2272b34e6b3036ab1fe3d299c22f21037d7f2227e6c646707d1c61ecceb821794124363a2cf2c1d2a6f28cf01e5d6abe52ae").sigops_count(true));
-		assert_eq!(20usize, Script::from("522102004525da5546e7603eefad5ef971e82f7dad2272b34e6b3036ab1fe3d299c22f21037d7f2227e6c646707d1c61ecceb821794124363a2cf2c1d2a6f28cf01e5d6abe52ae").sigops_count(false));
-		assert_eq!(0usize, Script::from("a9146262b64aec1f4a4c1d21b32e9c2811dd2171fd7587").sigops_count(false));
-		assert_eq!(1usize, Script::from("4104ae1a62fe09c5f51b13905f07f06b99a2f7159b2225f374cd378d71302fa28414e7aab37397f554a7df5f142c21c1b7303b8a0626f1baded5c72a704f7e6cd84cac").sigops_count(false));
-	}
-
-	#[test]
-	fn test_sigops_count_b73() {
-		let max_block_sigops = 20000;
-		let block_sigops = 0;
-		let mut script = vec![Opcode::OP_CHECKSIG as u8; max_block_sigops - block_sigops + MAX_SCRIPT_ELEMENT_SIZE + 1 + 5 + 1];
-		script[max_block_sigops - block_sigops] = Opcode::OP_PUSHDATA4 as u8;
-		let overmax = MAX_SCRIPT_ELEMENT_SIZE + 1;
-		script[max_block_sigops - block_sigops + 1] = overmax as u8;
-		script[max_block_sigops - block_sigops + 2] = (overmax >> 8) as u8;
-		script[max_block_sigops - block_sigops + 3] = (overmax >> 16) as u8;
-		script[max_block_sigops - block_sigops + 4] = (overmax >> 24) as u8;
-		let script: Script = script.into();
-		assert_eq!(script.sigops_count(false), 20001);
-	}
-
-	#[test]
-	fn test_sigops_count_b74() {
-		let max_block_sigops = 20000;
-		let block_sigops = 0;
-		let mut script = vec![Opcode::OP_CHECKSIG as u8; max_block_sigops - block_sigops + MAX_SCRIPT_ELEMENT_SIZE + 42];
-		script[max_block_sigops - block_sigops + 1] = Opcode::OP_PUSHDATA4 as u8;
-		script[max_block_sigops - block_sigops + 2] = 0xfe;
-		script[max_block_sigops - block_sigops + 3] = 0xff;
-		script[max_block_sigops - block_sigops + 4] = 0xff;
-		script[max_block_sigops - block_sigops + 5] = 0xff;
-		let script: Script = script.into();
-		assert_eq!(script.sigops_count(false), 20001);
-	}
-
-	#[test]
-	fn test_script_empty_find_and_delete() {
-		let s: Script = vec![Opcode::OP_0 as u8].into();
-		let result = s.find_and_delete(&[]);
-		assert_eq!(s, result);
-	}
-
-	#[test]
-	fn test_extract_destinations_pub_key_compressed() {
-		let pubkey_bytes = [0; 33];
-		let address = Public::from_slice(&pubkey_bytes).unwrap().address_hash();
-		let script = Builder::default()
-			.push_bytes(&pubkey_bytes)
-			.push_opcode(Opcode::OP_CHECKSIG)
-			.into_script();
-		assert_eq!(script.script_type(), ScriptType::PubKey);
-		assert_eq!(script.extract_destinations(), Ok(vec![
-			ScriptAddress::new_p2pkh(address),
-		]));
-	}
-
-	#[test]
-	fn test_extract_destinations_pub_key_normal() {
-		let pubkey_bytes = [0; 65];
-		let address = Public::from_slice(&pubkey_bytes).unwrap().address_hash();
-		let script = Builder::default()
-			.push_bytes(&pubkey_bytes)
-			.push_opcode(Opcode::OP_CHECKSIG)
-			.into_script();
-		assert_eq!(script.script_type(), ScriptType::PubKey);
-		assert_eq!(script.extract_destinations(), Ok(vec![
-			ScriptAddress::new_p2pkh(address),
-		]));
-	}
-
-	#[test]
-	fn test_extract_destinations_pub_key_hash() {
-		let address = Address::from("13NMTpfNVVJQTNH4spP4UeqBGqLdqDo27S").hash;
-		let script = Builder::build_p2pkh(&address);
-		assert_eq!(script.script_type(), ScriptType::PubKeyHash);
-		assert_eq!(script.extract_destinations(), Ok(vec![
-			ScriptAddress::new_p2pkh(address),
-		]));
-	}
-
-	#[test]
-	fn test_extract_destinations_script_hash() {
-		let address = Address::from("13NMTpfNVVJQTNH4spP4UeqBGqLdqDo27S").hash;
-		let script = Builder::build_p2sh(&address);
-		assert_eq!(script.script_type(), ScriptType::ScriptHash);
-		assert_eq!(script.extract_destinations(), Ok(vec![
-			ScriptAddress::new_p2sh(address),
-		]));
-	}
-
-	#[test]
-	fn test_extract_destinations_multisig() {
-		let pubkey1_bytes = [0; 33];
-		let address1 = Public::from_slice(&pubkey1_bytes).unwrap().address_hash();
-		let pubkey2_bytes = [1; 65];
-		let address2 = Public::from_slice(&pubkey2_bytes).unwrap().address_hash();
-		let script = Builder::default()
-			.push_opcode(Opcode::OP_2)
-			.push_bytes(&pubkey1_bytes)
-			.push_bytes(&pubkey2_bytes)
-			.push_opcode(Opcode::OP_2)
-			.push_opcode(Opcode::OP_CHECKMULTISIG)
-			.into_script();
-		assert_eq!(script.script_type(), ScriptType::Multisig);
-		assert_eq!(script.extract_destinations(), Ok(vec![
-			ScriptAddress::new_p2pkh(address1),
-			ScriptAddress::new_p2pkh(address2),
-		]));
-	}
-
-	#[test]
-	fn test_num_signatures_required() {
-		let script = Builder::default()
-			.push_opcode(Opcode::OP_3)
-			.push_bytes(&[0; 33])
-			.push_bytes(&[0; 65])
-			.push_bytes(&[0; 65])
-			.push_bytes(&[0; 65])
-			.push_opcode(Opcode::OP_4)
-			.push_opcode(Opcode::OP_CHECKMULTISIG)
-			.into_script();
-		assert_eq!(script.script_type(), ScriptType::Multisig);
-		assert_eq!(script.num_signatures_required(), 3);
-
-		let script = Builder::default()
-			.push_opcode(Opcode::OP_HASH160)
-			.push_bytes(&[0; 20])
-			.push_opcode(Opcode::OP_EQUAL)
-			.into_script();
-		assert_eq!(script.script_type(), ScriptType::ScriptHash);
-		assert_eq!(script.num_signatures_required(), 1);
-	}
+    #[test]
+    fn input_2() {
+       let script: Script = scriptsig2.into();
+       let (sigs, dem) = script.extract_multi_scriptsig().unwrap(); 
+       let sig_bytes1: Bytes = sig1.into();
+       assert_eq!(sig_bytes1, sigs[0]);
+       let sig_bytes2: Bytes = sig2.into();
+       assert_eq!(sig_bytes2, sigs[1]);
+       let script: Script = redeem.into();
+       assert_eq!(script, dem);
+       assert_eq!(sigs.len(), 2);
+      
+    }
 }

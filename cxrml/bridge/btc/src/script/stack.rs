@@ -156,7 +156,7 @@ impl<T> Stack<T> {
 
 #[cfg(test)]
 mod tests {
-	use Error;
+	use super::Error;
 	use super::Stack;
 
 	#[test]

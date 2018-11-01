@@ -7,7 +7,7 @@ use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::testing::{Digest, DigestItem, Header};
 use runtime_io;
 use runtime_io::with_externalities;
-
+use self::base58::FromBase58;
 use codec::{Decode, Encode};
 use runtime_support::{StorageMap, StorageValue};
 use super::*;
@@ -80,6 +80,9 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                                  2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
                                  10 * 60,  // target_spacing_seconds
                                  4), // retargeting_factor
+        network_id: 1,
+        utxo_max_index: 0,
+        receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
         fee: 0,
     }.build_storage().unwrap());
     r.into()
@@ -161,6 +164,9 @@ pub fn new_test_mock_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                                  2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
                                  10 * 60,  // target_spacing_seconds
                                  4), // retargeting_factor
+        network_id: 1,
+        utxo_max_index: 0,
+        receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
         fee: 0,
     }.build_storage().unwrap());
     r.into()
@@ -416,6 +422,9 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
                                  2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
                                  10 * 60,  // target_spacing_seconds
                                  4), // retargeting_factor
+        network_id: 1,
+        utxo_max_index: 0,
+        receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
         fee: 0,
     }.build_storage().unwrap());
     r.into()
@@ -459,6 +468,9 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
                                  2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
                                  10 * 60,  // target_spacing_seconds
                                  4), // retargeting_factor
+        network_id: 1,
+        utxo_max_index: 0,
+        receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
         fee: 0,
     }.build_storage().unwrap());
     r.into()
