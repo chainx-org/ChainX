@@ -81,6 +81,32 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     r.into()
 }
 
+pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+    let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+    // balance
+    r.extend(balances::GenesisConfig::<Test> {
+        balances: vec![(1, 1000), (2, 510)],
+        transaction_base_fee: 0,
+        transaction_byte_fee: 0,
+        existential_deposit: 500,
+        transfer_fee: 0,
+        creation_fee: 0,
+        reclaim_rebate: 0,
+    }.build_storage().unwrap());
+    // token
+    let t: Token = Token::new(b"x-btc?...".to_vec(), b"btc token".to_vec(), 8);
+    let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
+
+    r.extend(GenesisConfig::<Test> {
+        token_list: vec![
+            (t, 100, 0),
+            (t2, 100, 0),
+        ],
+        transfer_token_fee: 10,
+    }.build_storage().unwrap());
+    r.into()
+}
+
 pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
     // balance

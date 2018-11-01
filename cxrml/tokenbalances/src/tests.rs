@@ -30,6 +30,12 @@ fn test_genesis() {
 }
 
 #[test]
+#[should_panic]
+fn test_err_genesis() {
+    with_externalities(&mut err_test_ext(), || {})
+}
+
+#[test]
 fn test_register() {
     with_externalities(&mut new_test_ext(), || {
         let t_sym: Symbol = b"x-eos".to_vec(); //slice_to_u8_8(b"x-eos");
@@ -369,5 +375,28 @@ fn test_chainx_err() {
         let max_balance: TokenBalance = i as u128;
         assert_eq!(max_balance as u64, 18446744073709551615);
         assert_err!(TokenBalances::reserve(&a, &sym, max_balance), "chainx free token too low to reserve");
+    })
+}
+
+#[test]
+fn test_move() {
+    with_externalities(&mut new_test_ext2(), || {
+        let a: u64 = 1; // accountid
+        let b: u64 = 2; // accountid
+        let sym = Test::CHAINX_SYMBOL.to_vec();
+        assert_ok!(TokenBalances::move_free_token(&a, &b, &sym, 100));
+        assert_err!(TokenBalances::move_free_token(&a, &b, &sym, 1000), TokenErr::NotEnough);
+        assert_eq!(Balances::free_balance(&a), 900);
+        assert_eq!(Balances::free_balance(&b), 510 + 100);
+
+        let sym = b"x-btc".to_vec();
+        assert_err!(TokenBalances::move_free_token(&a, &b, &sym, 100), TokenErr::InvalidToken);
+
+        TokenBalances::issue(&a, &sym, 100).unwrap();
+        assert_ok!(TokenBalances::move_free_token(&a, &b, &sym, 100));
+        assert_err!(TokenBalances::move_free_token(&a, &b, &sym, 1000), TokenErr::NotEnough);
+
+        assert_eq!(TokenBalances::free_token(&(a.clone(), sym.clone())), 0);
+        assert_eq!(TokenBalances::free_token(&(b.clone(), sym.clone())), 100);
     })
 }

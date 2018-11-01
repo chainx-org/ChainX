@@ -38,27 +38,19 @@ mod mock;
 mod tests;
 
 use rstd::prelude::*;
+pub use rstd::result::Result as StdResult;
 use codec::Codec;
 use runtime_support::{StorageValue, StorageMap, Parameter};
 use runtime_support::dispatch::Result;
 use primitives::traits::{SimpleArithmetic, As, Member, CheckedAdd, CheckedSub, OnFinalise};
-
-//use cxsupport::StorageDoubleMap;
 
 // substrate mod
 use system::ensure_signed;
 use balances::address::Address;
 use balances::EnsureAccountLiquid;
 
-
-//#[cfg(feature = "std")]
-//pub type SymbolString = ::std::borrow::Cow<'static, [u8]>;
-//#[cfg(not(feature = "std"))]
 pub type SymbolString = &'static [u8];
 
-//#[cfg(feature = "std")]
-//pub type TokenString = SymbolString;
-//#[cfg(not(feature = "std"))]
 pub type DescString = SymbolString;
 
 pub trait Trait: balances::Trait + cxsupport::Trait {
@@ -184,6 +176,8 @@ decl_event!(
         DestroyToken(AccountId, Symbol, TokenBalance),
         /// Transfer succeeded (from, to, symbol, value, fees).
         TransferToken(AccountId, AccountId, Symbol, TokenBalance, Balance),
+        /// Move Free Token, include chainx (from, to, symbol, value)
+        MoveFreeToken(AccountId, AccountId, Symbol, TokenBalance),
         /// set transfer token fee
         SetTransferTokenFee(Balance),
     }
@@ -231,7 +225,9 @@ decl_storage! {
                 // 0 token list length
                 storage.insert(GenesisConfig::<T>::hash(&<TokenListLen<T>>::key()).to_vec(), (config.token_list.len() as u32 + list_count).encode());
                 for (index, (token, free_token, reserved_token)) in config.token_list.iter().enumerate() {
-//                    token.is_valid().map_err(|e| e.to_string())?;
+                    if let Err(e) = token.is_valid() {
+                        panic!(e);
+                    }
                     // 1 token balance
                     storage.insert(GenesisConfig::<T>::hash(&<TotalFreeToken<T>>::key_for(token.symbol())).to_vec(), free_token.encode());
                     storage.insert(GenesisConfig::<T>::hash(&<TotalReservedToken<T>>::key_for(token.symbol())).to_vec(), reserved_token.encode());
@@ -326,14 +322,6 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-//    /// return valid token list, only valid token
-//    pub fn token_list() -> Vec<Symbol> {
-//        Self::all_token_list().into_iter()
-//            .filter(|(flag, _)| *flag == true)
-//            .map(|(_, sym)| sym)
-//            .collect()
-//    }
-
     pub fn is_valid_token(symbol: &Symbol) -> Result {
         is_valid_symbol(symbol)?;
         if let Some(info) = TokenInfo::<T>::get(symbol) {
@@ -343,11 +331,6 @@ impl<T: Trait> Module<T> {
             return Err("not a valid token");
         }
         Err("not a registered token")
-//        if Self::token_list().contains(symbol) {
-//            Ok(())
-//        } else {
-//            Err("not in the valid token list")
-//        }
     }
 
     pub fn is_valid_token_for(who: &T::AccountId, symbol: &Symbol) -> Result {
@@ -360,11 +343,6 @@ impl<T: Trait> Module<T> {
     }
 
     fn add_token(symbol: &Symbol, free: T::TokenBalance, reserved: T::TokenBalance) -> Result {
-
-//        let list = Self::all_token_list();
-//        if !list.iter().find(|(_, sym)| *sym == *symbol).is_none() {
-//            return Err("already has this token symbol");
-//        }
         if TokenInfo::<T>::exists(symbol) {
             return Err("already has this token symbol");
         }
@@ -381,7 +359,6 @@ impl<T: Trait> Module<T> {
 
     fn remove_token(symbol: &Symbol) -> Result {
         is_valid_symbol(symbol)?;
-//        let list = Self::token_list();
         if let Some(mut info) = TokenInfo::<T>::get(symbol) {
             info.1 = false;
             TokenInfo::<T>::insert(symbol.clone(), info);
@@ -604,6 +581,72 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::UnreverseToken(who.clone(), symbol.clone(), value));
         Ok(())
     }
+
+    pub fn move_free_token(from: &T::AccountId, to: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> StdResult<(), TokenErr> {
+        Self::is_valid_token_for(from, symbol).map_err(|_| TokenErr::InvalidToken)?;
+        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(from).map_err(|_| TokenErr::InvalidAccount)?;
+        //TODO validator`
+
+        // for chainx
+        if symbol.as_slice() == T::CHAINX_SYMBOL {
+            let value: T::Balance = As::sa(value.as_() as u64); // change to balance for balances module
+            let from_token: T::Balance = balances::FreeBalance::<T>::get(from);
+            let to_token: T::Balance = balances::FreeBalance::<T>::get(to);
+
+            let new_from_token = match from_token.checked_sub(&value) {
+                Some(b) => b,
+                None => return Err(TokenErr::NotEnough),
+            };
+            let new_to_token = match to_token.checked_add(&value) {
+                Some(b) => b,
+                None => return Err(TokenErr::OverFlow),
+            };
+            balances::FreeBalance::<T>::insert(from, new_from_token);
+            balances::FreeBalance::<T>::insert(to, new_to_token);
+            Self::deposit_event(RawEvent::MoveFreeToken(from.clone(), to.clone(), symbol.clone(), As::sa(value.as_())));
+            return Ok(());
+        }
+
+        Self::init_token_for(to, symbol);
+        let key_from = (from.clone(), symbol.clone());
+        let key_to = (to.clone(), symbol.clone());
+
+        let from_token: T::TokenBalance = FreeToken::<T>::get(&key_from);
+        let to_token: T::TokenBalance = FreeToken::<T>::get(&key_to);
+
+        let new_from_token = match from_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err(TokenErr::NotEnough),
+        };
+        let new_to_token = match to_token.checked_add(&value) {
+            Some(b) => b,
+            None => return Err(TokenErr::OverFlow),
+        };
+        FreeToken::<T>::insert(key_from, new_from_token);
+        FreeToken::<T>::insert(key_to, new_to_token);
+        Self::deposit_event(RawEvent::MoveFreeToken(from.clone(), to.clone(), symbol.clone(), value));
+        Ok(())
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum TokenErr {
+    NotEnough,
+    OverFlow,
+    InvalidToken,
+    InvalidAccount,
+}
+
+impl TokenErr {
+    pub fn info(&self) -> &'static str {
+        match *self {
+            TokenErr::NotEnough => "free token too low",
+            TokenErr::OverFlow => "overflow for this value",
+            TokenErr::InvalidToken => "not a valid token for this account",
+            TokenErr::InvalidAccount => "Account Locked",
+        }
+    }
 }
 
 impl<T: Trait> Module<T> {
@@ -617,7 +660,7 @@ impl<T: Trait> Module<T> {
         Self::is_valid_token_for(&transactor, &sym)?;
         let dest = <balances::Module<T>>::lookup(dest)?;
         Self::init_token_for(&dest, &sym);
-//
+
         let fee = Self::transfer_token_fee();
 
         let key_from = (transactor.clone(), sym.clone());
