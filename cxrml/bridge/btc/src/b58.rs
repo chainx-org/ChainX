@@ -25,7 +25,10 @@ static BASE58_DIGITS: [Option<u8>; 128] = [
 
 pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
     // 11/15 is just over log_256(58)
-    let mut scratch = vec![0u8; 1 + data.len() * 11 / 15];
+    let mut scratch = Vec::new();
+    for _i in 0..1 + data.len() * 11 / 15 {
+        scratch.push(0);
+    }
     // Build in base 256
     for d58 in data.clone() {
         // Compute "X = X * 58 + next_digit" in base 256
@@ -34,7 +37,9 @@ pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
         }
         let mut carry = match BASE58_DIGITS[d58 as usize] {
             Some(d58) => d58 as u32,
-            None => { return Err("BadByte"); }
+            None => {
+                return Err("BadByte");
+            }
         };
         for d256 in scratch.iter_mut().rev() {
             carry += *d256 as u32 * 58;
@@ -45,9 +50,10 @@ pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
     }
 
     // Copy leading zeroes directly
-    let mut ret: Vec<u8> = data.iter().take_while(|&x| *x == BASE58_CHARS[0])
-                                       .map(|_| 0)
-                                       .collect();
+    let mut ret: Vec<u8> = data.iter()
+        .take_while(|&x| *x == BASE58_CHARS[0])
+        .map(|_| 0)
+        .collect();
     // Copy rest of string
     ret.extend(scratch.into_iter().skip_while(|&x| x == 0));
     Ok(ret)
@@ -59,9 +65,33 @@ mod tests {
     #[test]
     fn test_from() {
         let s = String::from("mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b");
-        let v = &[111, 41, 168, 159, 89, 51, 97, 179, 153, 104, 9, 74,
-            184, 193, 251, 6, 131, 166, 121, 3, 1, 241, 112, 101, 146];
+        let v = &[
+            111,
+            41,
+            168,
+            159,
+            89,
+            51,
+            97,
+            179,
+            153,
+            104,
+            9,
+            74,
+            184,
+            193,
+            251,
+            6,
+            131,
+            166,
+            121,
+            3,
+            1,
+            241,
+            112,
+            101,
+            146,
+        ];
         assert_eq!(from(s.as_bytes().to_vec()).unwrap(), v);
     }
 }
-

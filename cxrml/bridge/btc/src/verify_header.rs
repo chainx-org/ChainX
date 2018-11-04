@@ -4,16 +4,15 @@ use rstd::cmp;
 use rstd::result::Result as StdResult;
 
 use primitives::compact::Compact;
-use primitives::{hash::H256, U256};
+use primitives::hash::H256;
+use primitives::U256;
 use chain::BlockHeader;
 
 use timestamp;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use runtime_primitives::traits::As;
-use super::{Trait, HeaderNumberFor, HashForNumber, BlockHeaderFor,
-            ParamsInfo, Params,
-            GenesisInfo};
+use super::{Trait, HeaderNumberFor, HashForNumber, BlockHeaderFor, ParamsInfo, Params, GenesisInfo};
 use blockchain::ChainErr;
 
 pub struct HeaderVerifier<'a> {
@@ -35,7 +34,11 @@ impl<'a> HeaderVerifier<'a> {
                 prev_height = h + i;
                 break;
             } else {
-                prev_hash = <BlockHeaderFor<T>>::get(&prev_hash).unwrap().0.previous_header_hash.clone();
+                prev_hash = <BlockHeaderFor<T>>::get(&prev_hash)
+                    .unwrap()
+                    .0
+                    .previous_header_hash
+                    .clone();
             }
         }
         if count == params.max_fork_route_preset {
@@ -107,7 +110,11 @@ pub fn is_retarget_height(height: u32, p: Params) -> bool {
 }
 
 /// Algorithm used for retargeting work every 2 weeks
-pub fn work_required_retarget<T: Trait>(parent_header: BlockHeader, height: u32, params: Params) -> Compact {
+pub fn work_required_retarget<T: Trait>(
+    parent_header: BlockHeader,
+    height: u32,
+    params: Params,
+) -> Compact {
     let retarget_num = height - params.retargeting_interval;
 
     let (genesis_header, genesis_num) = <GenesisInfo<T>>::get();
@@ -129,9 +136,14 @@ pub fn work_required_retarget<T: Trait>(parent_header: BlockHeader, height: u32,
     let mut retarget: U256 = last_bits.into();
     let maximum: U256 = params.max_bits().into();
 
-    retarget = retarget * U256::from(retarget_timespan(retarget_timestamp, last_timestamp, params));
+    retarget = retarget *
+        U256::from(retarget_timespan(
+            retarget_timestamp,
+            last_timestamp,
+            params,
+        ));
     retarget = retarget / U256::from(params.target_timespan_seconds);
-//    retarget = retarget / U256::from(TARGET_TIMESPAN_SECONDS);
+    //    retarget = retarget / U256::from(TARGET_TIMESPAN_SECONDS);
     if retarget > maximum {
         params.max_bits()
     } else {
@@ -157,9 +169,7 @@ pub struct HeaderProofOfWork<'a> {
 
 impl<'a> HeaderProofOfWork<'a> {
     fn new(header: &'a BlockHeader) -> Self {
-        HeaderProofOfWork {
-            header: header,
-        }
+        HeaderProofOfWork { header: header }
     }
 
     fn check<T: Trait>(&self) -> Result {

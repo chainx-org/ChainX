@@ -38,12 +38,14 @@ extern crate srml_balances as balances;
 extern crate srml_timestamp as timestamp;
 
 // bitcoin-rust
-extern crate primitives;
-extern crate chain;
 extern crate serialization as ser;
+extern crate primitives;
 extern crate bitcrypto;
-extern crate merkle;
 extern crate bit_vec;
+extern crate script;
+extern crate merkle;
+extern crate chain;
+extern crate keys;
 
 #[cfg(test)]
 mod tests;
@@ -51,8 +53,6 @@ mod tests;
 mod verify_header;
 mod blockchain;
 mod tx;
-mod keys;
-mod script;
 mod b58;
 
 use codec::Decode;
@@ -66,13 +66,13 @@ use system::ensure_signed;
 
 use ser::deserialize;
 use chain::{BlockHeader, Transaction as BTCTransaction};
-use primitives::{hash::H256, compact::Compact};
-use primitives::hash;
+use primitives::hash::H256;
+use primitives::compact::Compact;
 
 pub use blockchain::BestHeader;
 
 use blockchain::Chain;
-use tx::{UTXO, validate_transaction, handle_input, handle_output};
+use tx::{UTXO, validate_transaction, handle_input, handle_output, handle_proposal};
 pub use tx::RelayTx;
 
 
@@ -123,8 +123,14 @@ pub struct Params {
 }
 
 impl Params {
-    pub fn new(max_bits: u32, block_max_future: u32, max_fork_route_preset: u32,
-               target_timespan_seconds: u32, target_spacing_seconds: u32, retargeting_factor: u32) -> Params {
+    pub fn new(
+        max_bits: u32,
+        block_max_future: u32,
+        max_fork_route_preset: u32,
+        target_timespan_seconds: u32,
+        target_spacing_seconds: u32,
+        retargeting_factor: u32,
+    ) -> Params {
         Params {
             max_bits: max_bits,
             block_max_future: block_max_future,
@@ -156,14 +162,16 @@ pub enum TxType {
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]
-pub struct Proposal<AccountId: Parameter + Ord + Default > {
-    proposer: Vec<AccountId>,
-    tx: BTCTransaction,
-    perfection: bool,
+pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
+    pub proposer: Vec<AccountId>,
+    pub tx: BTCTransaction,
+    pub perfection: bool,
 }
 
 impl Default for TxType {
-    fn default() -> Self { TxType::Deposit }
+    fn default() -> Self {
+        TxType::Deposit
+    }
 }
 
 decl_storage! {
@@ -188,14 +196,18 @@ decl_storage! {
         // =====
         // tx
         pub ReceiveAddress get(receive_address) config(): Option<Vec<u8>>;
+        pub RedeemScript get(redeem_script) config(): Option<Vec<u8>>;
 
         pub UTXOSet get(utxo_set): map u64 => UTXO;
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
         pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, BTCTransaction)>; // Address, type, balance
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
-        pub AddressMap get(address_map): map keys::Address => T::AccountId;
-        pub TxProposal get(tx_proposal): map H256 => Option<Proposal<T::AccountId>>;
+        pub AddressMap get(address_map): map keys::Address => Option<T::AccountId>;
+        pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
 //        pub AccountMap get(account_map): map T::AccountId => keys::Address;
+
+        pub AccountsMaxIndex get(accounts_max_index) config(): u64;
+        pub AccountsSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, u32, TxType)>;
 
         // =====
         // others
@@ -234,7 +246,9 @@ impl<T: Trait> Module<T> {
     pub fn push_header(origin: T::Origin, header: Vec<u8>) -> Result {
         let from = ensure_signed(origin)?;
         // parse header
-        let header: BlockHeader = deserialize(header.as_slice()).map_err(|_| "can't deserialize the header vec")?;
+        let header: BlockHeader = deserialize(header.as_slice()).map_err(
+            |_| "can't deserialize the header vec",
+        )?;
         Self::process_header(header, &from)?;
         Ok(())
     }
@@ -242,7 +256,9 @@ impl<T: Trait> Module<T> {
     pub fn push_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
         let from = ensure_signed(origin)?;
 
-        let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("parse RelayTx err")?;
+        let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or(
+            "parse RelayTx err",
+        )?;
         Self::process_tx(tx, &from)?;
         Ok(())
     }
@@ -250,7 +266,9 @@ impl<T: Trait> Module<T> {
     pub fn propose_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
         let from = ensure_signed(origin)?;
 
-        let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("parse transaction err")?;
+        let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or(
+            "parse transaction err",
+        )?;
         Self::process_btc_tx(tx, &from)?;
         Ok(())
     }
@@ -266,11 +284,15 @@ impl<T: Trait> Module<T> {
 
         // orphan block check
         if <BlockHeaderFor<T>>::exists(&header.previous_header_hash) == false {
-            return Err("can't find the prev header in ChainX, may be a orphan block");
+            return Err(
+                "can't find the prev header in ChainX, may be a orphan block",
+            );
         }
         // check
         {
-            let c = verify_header::HeaderVerifier::new::<T>(&header).map_err(|e| e.info())?;
+            let c = verify_header::HeaderVerifier::new::<T>(&header).map_err(
+                |e| e.info(),
+            )?;
             c.check::<T>()?;
         }
         // insert valid header into storage
@@ -282,7 +304,9 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn process_tx(tx: RelayTx, who: &T::AccountId) -> Result {
-        let receive_address: Vec<u8> = if let Some(h) = <ReceiveAddress<T>>::get() { h } else {
+        let receive_address: Vec<u8> = if let Some(h) = <ReceiveAddress<T>>::get() {
+            h
+        } else {
             return Err("should set RECEIVE_address first");
         };
 
@@ -293,16 +317,22 @@ impl<T: Trait> Module<T> {
         match tx_type {
             TxType::Withdraw => {
                 handle_input::<T>(&tx.raw, &tx.block_hash, &who, &receive_address);
-            },
+            }
             _ => {
-                let _utxos = handle_output::<T>(&tx.raw, &tx.block_hash, &who, &tx.previous_raw, &receive_address);
-            },
+                let _utxos = handle_output::<T>(
+                    &tx.raw,
+                    &tx.block_hash,
+                    &who,
+                    &tx.previous_raw,
+                    &receive_address,
+                );
+            }
         }
 
         Ok(())
     }
 
     pub fn process_btc_tx(tx: BTCTransaction, who: &T::AccountId) -> Result {
-         Ok(())
+        handle_proposal::<T>(tx, who)
     }
 }

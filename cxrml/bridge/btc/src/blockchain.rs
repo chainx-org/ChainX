@@ -10,11 +10,13 @@ use primitives::hash::H256;
 use chain::BlockHeader;
 
 use super::{Trait,
-//            OrphanIndexFor,
+            //            OrphanIndexFor,
             BlockHeaderFor,
             BestIndex,
-            HeaderNumberFor, HashForNumber,
-            ParamsInfo, Params};
+            HeaderNumberFor,
+            HashForNumber,
+            ParamsInfo,
+            Params};
 
 use tx::{TxStorage, RollBack};
 
@@ -63,9 +65,7 @@ pub struct SideChainOrigin {
 #[derive(Clone)]
 pub enum BlockOrigin {
     KnownBlock,
-    CanonChain {
-        block_number: u32,
-    },
+    CanonChain { block_number: u32 },
     SideChain(SideChainOrigin),
     SideChainBecomingCanonChain(SideChainOrigin),
 }
@@ -105,7 +105,7 @@ impl ChainErr {
     }
 }
 
-pub struct Chain<T: Trait> (PhantomData<T>);
+pub struct Chain<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> Chain<T> {
     pub fn insert_best_header(header: BlockHeader) -> Result<(), ChainErr> {
@@ -126,9 +126,7 @@ impl<T: Trait> Chain<T> {
                 Ok(())
             }
             // case 3: block has been added to the side branch without reorganization to this branch
-            BlockOrigin::SideChain(_origin) => {
-                Ok(())
-            }
+            BlockOrigin::SideChain(_origin) => Ok(()),
         }
     }
 
@@ -138,17 +136,24 @@ impl<T: Trait> Chain<T> {
         let best_bumber = best_index.number;
 
         //todo change unwrap
-        let (best_header, _): (BlockHeader, T::AccountId) = <BlockHeaderFor<T>>::get(&best_hash).unwrap();
+        let (best_header, _): (BlockHeader, T::AccountId) = <BlockHeaderFor<T>>::get(&best_hash)
+            .unwrap();
         let new_best_header = BestHeader {
             hash: best_header.previous_header_hash.clone(),
-            number: if best_bumber > 0 { best_bumber - 1 } else {
-                if best_header.previous_header_hash != Default::default() { return Err(ChainErr::DecanonizeMustZero); }
+            number: if best_bumber > 0 {
+                best_bumber - 1
+            } else {
+                if best_header.previous_header_hash != Default::default() {
+                    return Err(ChainErr::DecanonizeMustZero);
+                }
                 0
             },
         };
 
         // remove related tx
-        TxStorage::<T>::rollback_tx(&best_hash).map_err(|s| ChainErr::OtherErr(s))?;
+        TxStorage::<T>::rollback_tx(&best_hash).map_err(|s| {
+            ChainErr::OtherErr(s)
+        })?;
 
         <HeaderNumberFor<T>>::remove(&best_hash);
         // do not need to remove HashForNumber
@@ -172,7 +177,9 @@ impl<T: Trait> Chain<T> {
         let new_best_header = BestHeader {
             hash: hash.clone(),
             number: if header.previous_header_hash == Default::default() {
-                if best_number != 0 { return Err(ChainErr::CanonizeMustZero); }
+                if best_number != 0 {
+                    return Err(ChainErr::CanonizeMustZero);
+                }
                 0
             } else {
                 best_number + 1
@@ -212,14 +219,15 @@ impl<T: Trait> Chain<T> {
     fn block_origin(header: &BlockHeader) -> Result<BlockOrigin, ChainErr> {
         let best_index: BestHeader = <BestIndex<T>>::get();
         // TODO change unwrap
-        let (best_header, _): (BlockHeader, T::AccountId) = <BlockHeaderFor<T>>::get(&best_index.hash).unwrap();
+        let (best_header, _): (BlockHeader, T::AccountId) =
+            <BlockHeaderFor<T>>::get(&best_index.hash).unwrap();
         if <HeaderNumberFor<T>>::exists(header.hash()) {
             return Ok(BlockOrigin::KnownBlock);
         }
 
         if best_header.hash() == header.previous_header_hash {
             return Ok(BlockOrigin::CanonChain {
-                block_number: best_index.number + 1
+                block_number: best_index.number + 1,
             });
         }
 
@@ -248,7 +256,8 @@ impl<T: Trait> Chain<T> {
                     let origin = SideChainOrigin {
                         ancestor: number,
                         canonized_route: sidechain_route.into_iter().rev().collect(),
-                        decanonized_route: (number + 1..best_index.number + 1).into_iter()
+                        decanonized_route: (number + 1..best_index.number + 1)
+                            .into_iter()
                             .filter_map(|decanonized_bn| {
                                 let hash = <HashForNumber<T>>::get(decanonized_bn);
                                 if hash == Default::default() {

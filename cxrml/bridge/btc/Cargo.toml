@@ -21,10 +21,12 @@ srml-consensus = { git = "https://github.com/paritytech/substrate", default-feat
 srml-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false }
 
 # bitcoin-rust
-chain = { git = "https://github.com/chainx-org/bitcoin-rust", rev = "8b2dab29c12d19bcd75f268deb01ff19cccd7050", default-features = false }
-primitives = { git = "https://github.com/chainx-org/bitcoin-rust", rev = "8b2dab29c12d19bcd75f268deb01ff19cccd7050", default-features = false }
-serialization = { git = "https://github.com/chainx-org/bitcoin-rust", rev = "8b2dab29c12d19bcd75f268deb01ff19cccd7050", default-features = false }
-bitcrypto = { git = "https://github.com/chainx-org/bitcoin-rust", rev = "8b2dab29c12d19bcd75f268deb01ff19cccd7050", default-features = false }
+chain = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+primitives = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+serialization = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+bitcrypto = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+script = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+keys = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
 merkle = { git = "https://github.com/chainx-org/merkle.git", default-features = false }
 bit-vec =  { git = "https://github.com/chainx-org/bit-vec.git", default-features = false }
 rustc-hex = { version = "2", optional = true }
@@ -52,9 +54,11 @@ std=[
 
     # bitcoin-rust
     "chain/std",
+    "keys/std",
     "primitives/std",
     "serialization/std",
     "bitcrypto/std",
+    "script/std",
     "merkle/std",
     "bit-vec/std",
 ]

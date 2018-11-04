@@ -153,7 +153,9 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                                      4), // retargeting_factor
             network_id: 1,
             utxo_max_index: 0,
+            accounts_max_index: 0,
             receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
+            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }),
     }
