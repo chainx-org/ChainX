@@ -43,6 +43,7 @@ extern crate cxrml_tokenbalances as tokenbalances;
 #[cfg(test)]
 mod tests;
 
+use codec::Codec;
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 use runtime_support::dispatch::Result;
@@ -52,6 +53,9 @@ use runtime_primitives::traits::OnFinalise;
 use system::ensure_signed;
 
 use tokenbalances::Symbol;
+use cxsupport::storage::linked_node::{
+    Node, NodeT, LinkedNodeCollection, MultiNodeIndex,
+};
 
 pub trait Trait: tokenbalances::Trait {
     /// The overarching event type.
@@ -61,8 +65,6 @@ pub trait Trait: tokenbalances::Trait {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn withdraw(origin, sym: Symbol, value: T::TokenBalance) -> Result;
-        /// set deposit fee, call by ROOT
-        fn set_deposit_fee(val: T::Balance) -> Result;
         /// set withdrawal fee, call by ROOT
         fn set_withdrawal_fee(val: T::Balance) -> Result;
     }
@@ -97,8 +99,6 @@ decl_event!(
         /// withdraw failed, record failed blocknumber, for example meet not collect enough sign
         WithdrawalFailed(AccountId, u32, Symbol, TokenBalance, BlockNumber),
 
-        /// set deposit fee, by Root
-        SetDepositFee(Balance),
         /// set withdrawal fee, by Root
         SetWithdrawalFee(Balance),
     }
@@ -205,6 +205,38 @@ impl<Symbol, TokenBalance, BlockNumber> Record<Symbol, TokenBalance, BlockNumber
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub struct WithdrawLog<AccountId>
+    where AccountId: Codec + Clone + Ord + Default,
+{
+    accountid: AccountId,
+    index: u32,
+}
+
+impl<AccountId> NodeT for WithdrawLog<AccountId>
+    where AccountId: Codec + Clone + Ord + Default,
+{
+    type Index = (AccountId, u32);
+
+    fn index(&self) -> Self::Index { (self.accountid.clone(), self.index) }
+}
+
+impl<AccountId> WithdrawLog<AccountId>
+    where AccountId: Codec + Clone + Ord + Default,
+{
+    pub fn accountid(&self) -> AccountId { self.accountid.clone() }
+    pub fn index(&self) -> u32 { self.index }
+}
+
+pub struct LinkedMultiKey<T: Trait> (runtime_support::storage::generator::PhantomData<T>);
+
+impl<T: Trait> LinkedNodeCollection for LinkedMultiKey<T> {
+    type Header = LogHeaderFor<T>;
+    type NodeMap = WithdrawLogCache<T>;
+    type Tail = LogTailFor<T>;
+}
+
 decl_storage! {
     trait Store for Module<T: Trait> as FinancialRecords {
         /// Record list length of every account
@@ -216,41 +248,17 @@ decl_storage! {
         /// Last withdrawal index of a account and related symbol
         pub LastWithdrawalIndexOf get(last_withdrawal_index_of): map (T::AccountId, Symbol) => Option<u32>;
 
-        /// Fee for deposit, can change by Root
-        pub DepositFee get(deposit_fee) config(): T::Balance;
+        /// withdraw log linked node header
+        pub LogHeaderFor get(log_header_for): map Symbol => Option<MultiNodeIndex<Symbol, WithdrawLog<T::AccountId>>>;
+        /// withdraw log linked node tail
+        pub LogTailFor get(log_tail_for): map Symbol => Option<MultiNodeIndex<Symbol, WithdrawLog<T::AccountId>>>;
+        /// withdraw log linked node collection
+        pub WithdrawLogCache get(withdraw_log_cache): map (T::AccountId, u32) => Option<Node<WithdrawLog<T::AccountId>>>;
+
         /// Fee for withdrawal, can change by Root
         pub WithdrawalFee get(withdrawal_fee) config(): T::Balance;
     }
 }
-///// Record list for every account, use accountid and index to index the record of account
-//pub(crate) struct RecordsOf<T>(::rstd::marker::PhantomData<T>);
-//
-//impl<T: Trait> StorageDoubleMap for RecordsOf<T> {
-//    type Key1 = T::AccountId;
-//    type Key2 = u32;
-//    type Value = Record<Symbol, T::TokenBalance, T::BlockNumber>;
-//    const PREFIX: &'static [u8] = b"FinancialRecords RecordsOf";
-//}
-
-///// Last deposit index of a account and related symbol
-//pub(crate) struct LastDepositIndexOf<T>(::rstd::marker::PhantomData<T>);
-//
-//impl<T: Trait> StorageDoubleMap for LastDepositIndexOf<T> {
-//    type Key1 = T::AccountId;
-//    type Key2 = Symbol;
-//    type Value = u32;
-//    const PREFIX: &'static [u8] = b"FinancialRecords LastDepositIndexOf";
-//}
-//
-///// Last withdrawal index of a account and related symbol
-//pub(crate) struct LastWithdrawalIndexOf<T>(::rstd::marker::PhantomData<T>);
-//
-//impl<T: Trait> StorageDoubleMap for LastWithdrawalIndexOf<T> {
-//    type Key1 = T::AccountId;
-//    type Key2 = Symbol;
-//    type Value = u32;
-//    const PREFIX: &'static [u8] = b"FinancialRecords LastWithdrawalIndexOf";
-//}
 
 
 impl<T: Trait> Module<T> {
@@ -259,11 +267,6 @@ impl<T: Trait> Module<T> {
         <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
     }
     // public call
-    fn set_deposit_fee(val: T::Balance) -> Result {
-        <DepositFee<T>>::put(val);
-        Self::deposit_event(RawEvent::SetDepositFee(val));
-        Ok(())
-    }
     fn set_withdrawal_fee(val: T::Balance) -> Result {
         <WithdrawalFee<T>>::put(val);
         Self::deposit_event(RawEvent::SetWithdrawalFee(val));
@@ -366,6 +369,17 @@ impl<T: Trait> Module<T> {
     /// withdrawal, notice this func has include withdrawal_init and withdrawal_locking
     fn withdrawal(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
         let index = Self::withdrawal_with_index(who, sym, balance)?;
+
+        // set to withdraw cache
+        let n = Node::new(WithdrawLog::<T::AccountId> { accountid: who.clone(), index });
+        n.init_storage_withkey::<LinkedMultiKey<T>, Symbol>(sym.clone());
+
+        if let Some(tail_index) = Self::log_tail_for(sym) {
+            if let Some(mut tail_node) = Self::withdraw_log_cache(tail_index.index()) {
+                tail_node.add_option_node_after_withkey::<LinkedMultiKey<T>, Symbol>(n, sym.clone())?;
+            }
+        }
+
         Self::withdrawal_locking_with_index(who, index).map(|_| ())
     }
 
@@ -375,6 +389,23 @@ impl<T: Trait> Module<T> {
         if r.is_none() {
             return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
         }
+
+        // remove withdraw cache
+        if let Some(header) = Self::log_header_for(sym) {
+            let mut index = header.index();
+
+            while let Some(mut node) = Self::withdraw_log_cache(&index) {
+                if node.data.accountid() == *who && node.data.index() == r.unwrap() {
+                    // remove cache
+                    node.remove_option_node_withkey::<LinkedMultiKey<T>, Symbol>(sym.clone())?;
+                    break;
+                }
+                if let Some(next) = node.next() {
+                    index = next;
+                } else { return Err("not found this withdraw log in cache"); }
+            }
+        } else { return Err("the withdraw log node header not exist for this symbol"); }
+
         Self::withdrawal_finish_with_index(who, r.unwrap(), success).map(|_| ())
     }
 
@@ -410,13 +441,9 @@ impl<T: Trait> Module<T> {
 
         <tokenbalances::Module<T>>::is_valid_token(sym)?;
 
-        let mut index = 0_u32;
-        <cxsupport::Module<T>>::handle_fee_after(who, Self::deposit_fee(), true, || {
-            let r = Record { action: Action::Deposit(Default::default()), symbol: sym.clone(), balance: balance, init_blocknum: <system::Module<T>>::block_number() };
-            index = Self::new_record(who, &r)?;
-            Self::deposit_event(RawEvent::DepositInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));
-            Ok(())
-        })?;
+        let r = Record { action: Action::Deposit(Default::default()), symbol: sym.clone(), balance: balance, init_blocknum: <system::Module<T>>::block_number() };
+        let index = Self::new_record(who, &r)?;
+        Self::deposit_event(RawEvent::DepositInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));
 
         Ok(index)
     }

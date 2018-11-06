@@ -488,6 +488,17 @@ mod tests {
             assert_eq!(node3.next(), None);
             assert_eq!(Module::<Test>::multi_header(99).unwrap().index(), node3.index());
             assert_eq!(Module::<Test>::multi_tail(99).unwrap().index(), node3.index());
+
+
+            let index = Module::<Test>::multi_header(99).unwrap().index();
+            assert_eq!(node3.index(), 3);
+            let mut node3 = Module::<Test>::op_node_map2(index).unwrap();
+            assert_eq!(node3.index(), 3);
+            node3.remove_option_node_withkey::<LinkedOptionMultiKey<Test>, u32>(99).unwrap();
+            assert_eq!(node3.prev(), None);
+            assert_eq!(node3.next(), None);
+            assert_eq!(Module::<Test>::multi_header(99) == None, true);
+            assert_eq!(Module::<Test>::multi_tail(99) == None, true);
         })
     }
 }

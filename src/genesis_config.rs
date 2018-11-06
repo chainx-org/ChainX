@@ -125,7 +125,6 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             transfer_token_fee: 10,
         }),
         financialrecords: Some(FinancialRecordsConfig {
-            deposit_fee: 10,
             withdrawal_fee: 10,
         }),
         multisig: Some(MultiSigConfig {

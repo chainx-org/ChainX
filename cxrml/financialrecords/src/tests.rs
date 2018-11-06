@@ -79,7 +79,36 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     }.build_storage().unwrap());
     // financialrecords
     r.extend(GenesisConfig::<Test> {
-        deposit_fee: 10,
+        withdrawal_fee: 10,
+    }.build_storage().unwrap());
+    r.into()
+}
+
+pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
+    let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+    // balance
+    r.extend(balances::GenesisConfig::<Test> {
+        balances: vec![(1, 1000), (2, 510)],
+        transaction_base_fee: 0,
+        transaction_byte_fee: 0,
+        existential_deposit: 0,
+        transfer_fee: 0,
+        creation_fee: 0,
+        reclaim_rebate: 0,
+    }.build_storage().unwrap());
+    // token balance
+    let t: Token = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
+    let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
+
+    r.extend(tokenbalances::GenesisConfig::<Test> {
+        token_list: vec![
+            (t, 0, 0),
+            (t2, 0, 0),
+        ],
+        transfer_token_fee: 10,
+    }.build_storage().unwrap());
+    // financialrecords
+    r.extend(GenesisConfig::<Test> {
         withdrawal_fee: 10,
     }.build_storage().unwrap());
     r.into()
@@ -146,7 +175,7 @@ fn test_normal2() {
         assert_eq!(FinancialRecords::last_deposit_index_of(&key2).unwrap(), 1);
         assert_eq!(FinancialRecords::last_withdrawal_index_of(&key2).unwrap(), 3);
 
-        assert_eq!(Balances::free_balance(&a), 960);
+        assert_eq!(Balances::free_balance(&a), 980);
     })
 }
 
@@ -186,8 +215,8 @@ fn test_last_not_finish() {
         assert_eq!(TokenBalances::total_token(&btc_symbol), 225);
 
         // 1. deposit failed 2. deposit success 3. deposit success 4. withdrawal failed 5. withdrawal success
-        // 10 + 10 + 10 + 10 = 50
-        assert_eq!(Balances::free_balance(&a), 950);
+        // (withdrawal) 10 + 10 = 50
+        assert_eq!(Balances::free_balance(&a), 980);
     })
 }
 
@@ -209,9 +238,11 @@ fn test_fee() {
         let b: u64 = 2; // accountid
         let btc_symbol = b"x-btc".to_vec();
         assert_ok!(FinancialRecords::deposit(&b, &btc_symbol, 100));
+        assert_ok!(FinancialRecords::withdrawal(&b, &btc_symbol, 25));
+        assert_ok!(FinancialRecords::withdrawal_finish(&b, &btc_symbol, true));
 
         assert_err!(FinancialRecords::withdrawal(&b, &btc_symbol, 50), "chainx balance is not enough after this tx, not allow to be killed at here");
-        assert_eq!(FinancialRecords::records_len_of(&b), 1);
+        assert_eq!(FinancialRecords::records_len_of(&b), 2);
     })
 }
 
@@ -230,8 +261,8 @@ fn test_multi_sym() {
         let a: u64 = 1; // accountid
         let btc_symbol = b"x-btc".to_vec();
         let eth_symbol = b"x-eth".to_vec();
-        let key1 =(a, btc_symbol.clone());
-        let key2 =(a, eth_symbol.clone());
+        let key1 = (a, btc_symbol.clone());
+        let key2 = (a, eth_symbol.clone());
 
         assert_err!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true), "have not executed withdrawal() or withdrawal_init() yet for this record");
         assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "the account has no deposit record for this token yet");
@@ -273,5 +304,119 @@ fn test_multi_sym() {
         assert_eq!(FinancialRecords::last_withdrawal_index_of(&key2), Some(4));
 
         assert_eq!(FinancialRecords::records_len_of(&a), 6);
+    })
+}
+
+#[test]
+fn test_withdraw_log_cache() {
+    with_externalities(&mut new_test_ext2(), || {
+        // issue
+        let a: u64 = 1; // accountid
+        let b: u64 = 2; // accountid
+        let btc_symbol = b"x-btc".to_vec();
+        let eth_symbol = b"x-eth".to_vec();
+        // let key_a_btc = (a, btc_symbol.clone());
+        // let key_a_eth = (a, eth_symbol.clone());
+        // let key_b_btc = (b, btc_symbol.clone());
+        // let key_b_eth = (b, eth_symbol.clone());
+
+        FinancialRecords::deposit(&a, &btc_symbol, 1000).unwrap();
+        FinancialRecords::deposit(&b, &btc_symbol, 1000).unwrap();
+        FinancialRecords::deposit(&a, &eth_symbol, 1000).unwrap();
+        FinancialRecords::deposit(&b, &eth_symbol, 1000).unwrap();
+
+        assert_eq!(FinancialRecords::records_len_of(&a), 2);
+        assert_eq!(FinancialRecords::records_len_of(&b), 2);
+
+        // withdraw
+        let origin = system::RawOrigin::Signed(a).into();
+        FinancialRecords::withdraw(origin, btc_symbol.clone(), 100).unwrap();
+        assert_eq!(FinancialRecords::records_len_of(&a), 3);
+        let origin = system::RawOrigin::Signed(b).into();
+        FinancialRecords::withdraw(origin, btc_symbol.clone(), 100).unwrap();
+        assert_eq!(FinancialRecords::records_len_of(&a), 3);
+
+        let log_a = FinancialRecords::withdraw_log_cache((a, 2)).unwrap();
+        assert_eq!(log_a.prev(), None);
+        assert_eq!(log_a.next(), Some((2, 2)));
+        let log_b = FinancialRecords::withdraw_log_cache((b, 2)).unwrap();
+        assert_eq!(log_b.prev(), Some((1, 2)));
+        assert_eq!(log_b.next(), None);
+
+        let origin = system::RawOrigin::Signed(a).into();
+        FinancialRecords::withdraw(origin, eth_symbol.clone(), 100).unwrap();
+        let origin = system::RawOrigin::Signed(b).into();
+        FinancialRecords::withdraw(origin, eth_symbol.clone(), 100).unwrap();
+
+        // btc cache
+        if let Some(btc_header) = FinancialRecords::log_header_for(&btc_symbol) {
+            let mut index = btc_header.index();
+            let mut v = vec![];
+            while let Some(node) = FinancialRecords::withdraw_log_cache(&index) {
+                v.push((node.data.accountid(), node.data.index()));
+                if let Some(next) = node.next() {
+                    index = next;
+                } else { break; }
+            }
+            assert_eq!(v.as_slice(), [(a, 2), (b, 2)]);
+        } else { panic!("unreachable!") }
+        // eth cache
+        if let Some(eth_header) = FinancialRecords::log_header_for(&eth_symbol) {
+            let mut index = eth_header.index();
+            let mut v = vec![];
+            while let Some(node) = FinancialRecords::withdraw_log_cache(&index) {
+                v.push((node.data.accountid(), node.data.index()));
+                if let Some(next) = node.next() {
+                    index = next;
+                } else { break; }
+            }
+            assert_eq!(v.as_slice(), [(a, 3), (b, 3)]);
+        } else { panic!("unreachable!") }
+
+        // withdraw finish
+        // loop linked node collection and find out
+
+        // for example
+        // loop cache and withdraw for b finish
+        // btc relay withdraw finish
+        assert_ok!(FinancialRecords::withdrawal_finish(&b, &btc_symbol, true));
+
+        if let Some(btc_header) = FinancialRecords::log_header_for(&btc_symbol) {
+            let mut index = btc_header.index();
+            let mut v = vec![];
+            while let Some(node) = FinancialRecords::withdraw_log_cache(&index) {
+                v.push((node.data.accountid(), node.data.index()));
+                if let Some(next) = node.next() {
+                    index = next;
+                } else { break; }
+            }
+            assert_eq!(v.as_slice(), [(a, 2)]);
+        } else { panic!("unreachable!") }
+
+        let log = FinancialRecords::withdraw_log_cache((a, 2)).unwrap();
+        assert_eq!(log.prev(), None);
+        assert_eq!(log.next(), None);
+
+        // btc relay withdraw err
+        assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, false));
+        // all cache removed
+        assert_eq!(FinancialRecords::log_header_for(&btc_symbol) == None, true);
+
+        // eth relay withdraw
+        assert_ok!(FinancialRecords::withdrawal_finish(&a, &eth_symbol, true));
+        if let Some(eth_header) = FinancialRecords::log_header_for(&eth_symbol) {
+            let mut index = eth_header.index();
+            let mut v = vec![];
+            while let Some(node) = FinancialRecords::withdraw_log_cache(&index) {
+                v.push((node.data.accountid(), node.data.index()));
+                if let Some(next) = node.next() {
+                    index = next;
+                } else { break; }
+            }
+            assert_eq!(v.as_slice(), [(b, 3)]);
+        } else { panic!("unreachable!") }
+
+        assert_ok!(FinancialRecords::withdrawal_finish(&b, &eth_symbol, true));
+        assert_eq!(FinancialRecords::log_header_for(&btc_symbol) == None, true);
     })
 }
