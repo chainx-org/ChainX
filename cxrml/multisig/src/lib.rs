@@ -53,8 +53,6 @@ use runtime_primitives::traits::{OnFinalise, Hash};
 
 use system::ensure_signed;
 
-use cxsupport::StorageDoubleMap;
-
 use transaction::{TransactionType, Transaction, TransferT};
 
 pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
@@ -99,7 +97,7 @@ decl_event!(
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-//        fn deploy(origin, owners: Vec<(T::AccountId, bool)>, value: T::Balance) -> Result;
+        // fn deploy(origin, owners: Vec<(T::AccountId, bool)>, value: T::Balance) -> Result;
 
         fn execute(origin, multi_sig_addr: T::AccountId, tx_type: TransactionType, data: Vec<u8>) -> Result;
         fn confirm(origin, multi_sig_addr: T::AccountId, multi_sig_id: T::Hash) -> Result;
@@ -132,16 +130,28 @@ const MAX_OWNERS: u32 = 32;
 
 decl_storage! {
     trait Store for Module<T: Trait> as MultiSig {
+        /// multisig deployer for this multisig addr
         pub MultiSigOwnerFor get(multi_sig_owner_for): map T::AccountId => Option<T::AccountId>;
+        /// multisig owners for this multisig addr
         pub MultiSigListOwnerFor get(multi_sig_list_owner_for): map T::AccountId => Option<Vec<(T::AccountId, bool)>>;
 
+        /// required num for this multisig addr
         pub RequiredNumFor get(required_num_for): map T::AccountId => Option<u32>;
+        /// all owners count for this multisig addr
         pub NumOwnerFor get(num_owner_for): map T::AccountId => Option<u32>;
 
+        /// pending state list for a multisig addr, can find out the index for a pending state
         pub PendingListLenFor get(pending_list_len_for): map T::AccountId => u32;
+        pub PendingListItemFor get(pending_list_item_for): map (T::AccountId, u32) => Option<T::Hash>;
+        /// pending state for a multisig addr
+        pub PendingStateFor get(pending_state_for): map (T::AccountId, T::Hash) => PendingState;
+        /// transaction behavior for a pending state
+        pub TransactionFor get(transaction_for): map (T::AccountId, T::Hash) => Option<Transaction>;
 
         // for deployer
+        /// the deployed multisig addr for a account
         pub MultiSigListLenFor get(multi_sig_list_len_for): map T::AccountId => u32;
+        pub MultiSigListItemFor get(multi_sig_list_item_for): map (T::AccountId, u32) => Option<T::AccountId>;
 
         // for fee
         pub DeployFee get(deploy_fee) config(): T::Balance;
@@ -174,44 +184,6 @@ decl_storage! {
         });
     }
 }
-
-pub(crate) struct PendingStateFor<T>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> StorageDoubleMap for PendingStateFor<T> {
-    type Key1 = T::AccountId;
-    type Key2 = T::Hash;
-    type Value = PendingState;
-    const PREFIX: &'static [u8] = b"MultiSig PendingStateFor";
-}
-
-pub(crate) struct PendingListItemFor<T>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> StorageDoubleMap for PendingListItemFor<T> {
-    type Key1 = T::AccountId;
-    type Key2 = u32;
-    type Value = T::Hash;
-    const PREFIX: &'static [u8] = b"MultiSig PendingListItemFor";
-}
-
-pub(crate) struct TransactionFor<T>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> StorageDoubleMap for TransactionFor<T> {
-    type Key1 = T::AccountId;
-    type Key2 = T::Hash;
-    type Value = Transaction;
-    const PREFIX: &'static [u8] = b"MultiSig TransactionFor";
-}
-
-// for deployer
-pub(crate) struct MultiSigListItemFor<T>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> StorageDoubleMap for MultiSigListItemFor<T> {
-    type Key1 = T::AccountId;
-    type Key2 = u32;
-    type Value = T::AccountId;
-    const PREFIX: &'static [u8] = b"MultiSig MultiSigListItemFor";
-}
-
 
 //impl trait
 /// Simple MultiSigIdFor struct
@@ -247,25 +219,6 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    // storage
-    fn pending_state_for(key1: &T::AccountId, key2: T::Hash) -> PendingState {
-        <PendingStateFor<T>>::get_or_default(key1.clone(), key2)
-    }
-    #[allow(unused)]
-    fn pending_list_item_for(key1: &T::AccountId, key2: u32) -> Option<T::Hash> {
-        <PendingListItemFor<T>>::get(key1.clone(), key2)
-    }
-
-    fn transaction_for(key1: &T::AccountId, key2: T::Hash) -> Option<Transaction> {
-        <TransactionFor<T>>::get(key1.clone(), key2)
-    }
-    #[allow(unused)]
-    fn multi_sig_list_item_for(key1: &T::AccountId, key2: u32) -> Option<T::AccountId> {
-        <MultiSigListItemFor<T>>::get(key1.clone(), key2)
-    }
-}
-
-impl<T: Trait> Module<T> {
 //    fn remove_multi_sig_addr(multi_sig_addr: &T::AccountId) {
 //        <PendingStateFor<T>>::remove_prefix(multi_sig_addr.clone());
 //        <TransactionFor<T>>::remove_prefix(multi_sig_addr.clone());
@@ -281,13 +234,12 @@ impl<T: Trait> Module<T> {
     }
 
     fn remove_pending_for(multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) {
-        if let Some(pending) = <PendingStateFor<T>>::take(multi_sig_addr.clone(), multi_sig_id) {
-            <PendingListItemFor<T>>::remove(multi_sig_addr.clone(), pending.index);
-        }
+        let pending = <PendingStateFor<T>>::take((multi_sig_addr.clone(), multi_sig_id));
+        <PendingListItemFor<T>>::remove((multi_sig_addr.clone(), pending.index));
     }
 
     fn remove_tx_for(multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) {
-        <TransactionFor<T>>::remove(multi_sig_addr.clone(), multi_sig_id);
+        <TransactionFor<T>>::remove((multi_sig_addr.clone(), multi_sig_id));
     }
 
     fn is_owner(who: &T::AccountId, addr: &T::AccountId, required: bool) -> StdResult<u32, &'static str> {
@@ -310,18 +262,19 @@ impl<T: Trait> Module<T> {
     fn confirm_and_check(who: &T::AccountId, multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) -> StdResult<bool, &'static str> {
         let index = Self::is_owner(who, multi_sig_addr, false)?;
 
-        if let None = Self::transaction_for(multi_sig_addr, multi_sig_id) {
+        let key = (multi_sig_addr.clone(), multi_sig_id);
+        if let None = Self::transaction_for(&key) {
             return Err("no pending tx for this addr and id or it has finished");
         }
 
-        let mut pending: PendingState = Self::pending_state_for(multi_sig_addr, multi_sig_id);
+        let mut pending: PendingState = Self::pending_state_for(&key);
         if pending.yet_needed == 0 {
             pending.yet_needed = Self::required_num_for(multi_sig_addr).unwrap_or_default();
             pending.owners_done = 0;
 
             pending.index = Self::pending_list_len_for(multi_sig_addr);
             <PendingListLenFor<T>>::insert(multi_sig_addr.clone(), pending.index + 1);
-            <PendingListItemFor<T>>::insert(multi_sig_addr.clone(), pending.index, multi_sig_id);
+            <PendingListItemFor<T>>::insert((multi_sig_addr.clone(), pending.index), multi_sig_id);
         }
 
         let ret: bool;
@@ -331,13 +284,12 @@ impl<T: Trait> Module<T> {
             if pending.yet_needed <= 1 {
                 // enough confirmations
                 Self::remove_pending_for(multi_sig_addr, multi_sig_id);
-//                return Ok(true);
                 ret = true;
             } else {
                 pending.yet_needed -= 1;
                 pending.owners_done |= index_bit;
                 // update pending state
-                <PendingStateFor<T>>::insert(multi_sig_addr.clone(), multi_sig_id, pending);
+                <PendingStateFor<T>>::insert((multi_sig_addr.clone(), multi_sig_id), pending);
                 ret = false;
             }
             Self::deposit_event(RawEvent::Confirm(who.clone(), multi_sig_addr.clone(), multi_sig_id, pending.yet_needed, pending.index, ret));
@@ -388,7 +340,7 @@ impl<T: Trait> Module<T> {
 
             // 1
             let len = Self::multi_sig_list_len_for(account_id);
-            <MultiSigListItemFor<T>>::insert(account_id.clone(), len, multi_addr.clone());
+            <MultiSigListItemFor<T>>::insert((account_id.clone(), len), multi_addr.clone());
             <MultiSigListLenFor<T>>::insert(account_id.clone(), len + 1);  // length inc
             // 2
             <MultiSigOwnerFor<T>>::insert(multi_addr.clone(), account_id.clone());
@@ -426,7 +378,7 @@ impl<T: Trait> Module<T> {
                 } else {
                     // determine multi sig id
                     multi_sig_id = T::MultiSig::multi_sig_id_for(&from, &multi_sig_addr, &data);
-                    <TransactionFor<T>>::insert(multi_sig_addr.clone(), multi_sig_id, t.clone());
+                    <TransactionFor<T>>::insert((multi_sig_addr.clone(), multi_sig_id), t.clone());
                     // confirm for self
                     let origin = system::RawOrigin::Signed(from.clone()).into();
                     Self::confirm(origin, multi_sig_addr.clone(), multi_sig_id)?;
@@ -446,7 +398,7 @@ impl<T: Trait> Module<T> {
         let ret = Self::only_many_owner(&from, &multi_sig_addr, multi_sig_id)?;
 
         if ret == true {
-            let ret = Self::transaction_for(&multi_sig_addr, multi_sig_id);
+            let ret = Self::transaction_for((multi_sig_addr.clone(), multi_sig_id));
             if let None = ret {
                 return Err("no pending tx for this addr and id or it has finished");
             }

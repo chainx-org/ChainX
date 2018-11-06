@@ -157,21 +157,21 @@ fn test_genesis() {
 
         // for 1
         for i in 0..MultiSig::multi_sig_list_len_for(&1.into()) {
-            let addr = MultiSig::multi_sig_list_item_for(&a, i).unwrap();
+            let addr = MultiSig::multi_sig_list_item_for((a.clone(), i)).unwrap();
             println!("{:?} {:} {:?}", a, i, addr);
             assert_eq!(Balances::total_balance(&addr), if i == 0 { 1000 } else { 300 });
             assert_eq!(MultiSig::num_owner_for(&addr).unwrap(), if i == 0 { 5 } else { 3 });
             assert_eq!(MultiSig::required_num_for(&addr).unwrap(), 3);
         }
         // for 2
-        let addr = MultiSig::multi_sig_list_item_for(&b, 0).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((b.clone(), 0)).unwrap();
         println!("{:?} {:} {:?}", b, 0, addr);
         assert_eq!(Balances::total_balance(&addr), 100);
         assert_eq!(MultiSig::num_owner_for(&addr).unwrap(), 3);
         assert_eq!(MultiSig::required_num_for(&addr).unwrap(), 2);
 
         // for 3
-        let addr = MultiSig::multi_sig_list_item_for(&c, 0).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((c.clone(), 0)).unwrap();
         println!("{:?} {:} {:?}", c, 0, addr);
         assert_eq!(Balances::total_balance(&addr), 100);
         assert_eq!(MultiSig::num_owner_for(&addr).unwrap(), 2);
@@ -203,7 +203,7 @@ fn test_multisig() {
         let d: H256 = 4.into();
         let e: H256 = 5.into();
 
-        let addr = MultiSig::multi_sig_list_item_for(&a, 0).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((a.clone(), 0)).unwrap();
 
         let origin = system::RawOrigin::Signed(a.clone()).into();
         // transfer
@@ -211,8 +211,8 @@ fn test_multisig() {
         assert_ok!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t.encode()));
 
         assert_eq!(MultiSig::pending_list_len_for(addr), 1);
-        let multi_sig_id = MultiSig::pending_list_item_for(&addr, 0).unwrap();
-        assert_eq!(MultiSig::pending_state_for(&addr, multi_sig_id), PendingState { yet_needed: 2, owners_done: 1, index: 0 });
+        let multi_sig_id = MultiSig::pending_list_item_for((addr.clone(), 0)).unwrap();
+        assert_eq!(MultiSig::pending_state_for((addr.clone(), multi_sig_id)), PendingState { yet_needed: 2, owners_done: 1, index: 0 });
 
         //b
         let origin = system::RawOrigin::Signed(b.clone()).into();
@@ -229,10 +229,10 @@ fn test_multisig() {
         assert_eq!(Balances::total_balance(&a), 8660 - 10 + 100);
 
         // has delete
-        assert_eq!(MultiSig::transaction_for(&addr, multi_sig_id), None);
-        assert_eq!(MultiSig::pending_list_item_for(&addr, 0), None);
+        assert_eq!(MultiSig::transaction_for((addr.clone(), multi_sig_id)), None);
+        assert_eq!(MultiSig::pending_list_item_for((addr.clone(), 0)), None);
 
-        assert_eq!(MultiSig::pending_state_for(&addr, multi_sig_id), PendingState { yet_needed: 0, owners_done: 0, index: 0 });
+        assert_eq!(MultiSig::pending_state_for((addr.clone(), multi_sig_id)), PendingState { yet_needed: 0, owners_done: 0, index: 0 });
 
         //d
         let origin = system::RawOrigin::Signed(d.clone()).into();
@@ -247,7 +247,7 @@ fn test_not_required_owner() {
         let b: H256 = 2.into();
         let c: H256 = 3.into();
 
-        let addr = MultiSig::multi_sig_list_item_for(&c, 0).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((c.clone(), 0)).unwrap();
         let origin = system::RawOrigin::Signed(c.clone()).into();
         assert_ok!(MultiSig::is_owner_for(origin, addr));
         assert_err!(MultiSig::is_owner(&c, &addr, true), "it's the owner but not required owner");
@@ -263,7 +263,7 @@ fn test_not_required_owner() {
         let origin = system::RawOrigin::Signed(a.clone()).into();
         assert_ok!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t.encode()));
         // confirm success
-        let multi_sig_id = MultiSig::pending_list_item_for(&addr, 0).unwrap();
+        let multi_sig_id = MultiSig::pending_list_item_for((addr.clone(), 0)).unwrap();
 
         let origin = system::RawOrigin::Signed(c.clone()).into();
         assert_ok!(MultiSig::confirm(origin, addr, multi_sig_id));
@@ -283,12 +283,11 @@ fn test_not_exist() {
         assert_err!(MultiSig::confirm(origin, 0.into(), 0.into()), "the multi sig addr not exist");
 
 
-        let addr = MultiSig::multi_sig_list_item_for(&a, 0).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((a.clone(), 0)).unwrap();
         let origin = system::RawOrigin::Signed(a.clone()).into();
         // transfer
         let t = TransferT::<Test> { to: a, value: 100 };
         assert_ok!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t.encode()));
-//        let multi_sig_id = MultiSig::pending_list_item_for(&addr, 0).unwrap();
         let origin = system::RawOrigin::Signed(a.clone()).into();
         assert_err!(MultiSig::confirm(origin, addr, 0.into()), "no pending tx for this addr and id or it has finished");
     })
@@ -302,34 +301,34 @@ fn test_remove() {
         let c: H256 = 3.into();
         let e: H256 = 5.into();
 
-        let addr = MultiSig::multi_sig_list_item_for(&a, 0).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((a.clone(), 0)).unwrap();
         let origin = system::RawOrigin::Signed(a.clone()).into();
         // transfer
         // a
         let t = TransferT::<Test> { to: a, value: 100 };
         assert_ok!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t.encode()));
 
-        let multi_sig_id = MultiSig::pending_list_item_for(&addr, 0).unwrap();
+        let multi_sig_id = MultiSig::pending_list_item_for((addr.clone(), 0)).unwrap();
         // b
         let origin = system::RawOrigin::Signed(b.clone()).into();
         assert_ok!(MultiSig::confirm(origin, addr, multi_sig_id));
 
         // yet need 1
-        assert_eq!(MultiSig::pending_state_for(&addr, multi_sig_id), PendingState { yet_needed: 1, owners_done: 3, index: 0 });
+        assert_eq!(MultiSig::pending_state_for((addr.clone(), multi_sig_id)), PendingState { yet_needed: 1, owners_done: 3, index: 0 });
 
         // remove the pending
         // e can't remove
         let origin = system::RawOrigin::Signed(e.clone()).into();
         assert_err!(MultiSig::remove_multi_sig_for(origin, addr, multi_sig_id), "it's the owner but not required owner");
-        assert_eq!(MultiSig::pending_state_for(&addr, multi_sig_id), PendingState { yet_needed: 1, owners_done: 3, index: 0 });
+        assert_eq!(MultiSig::pending_state_for((addr.clone(), multi_sig_id)), PendingState { yet_needed: 1, owners_done: 3, index: 0 });
 
         // c remove
         let origin = system::RawOrigin::Signed(c.clone()).into();
         assert_ok!(MultiSig::remove_multi_sig_for(origin, addr, multi_sig_id));
 
         // has del
-        assert_eq!(MultiSig::transaction_for(&addr, multi_sig_id), None);
-        assert_eq!(MultiSig::pending_state_for(&addr, multi_sig_id), PendingState { yet_needed: 0, owners_done: 0, index: 0 });
+        assert_eq!(MultiSig::transaction_for((addr.clone(), multi_sig_id)), None);
+        assert_eq!(MultiSig::pending_state_for((addr.clone(), multi_sig_id)), PendingState { yet_needed: 0, owners_done: 0, index: 0 });
 
         let origin = system::RawOrigin::Signed(b.clone()).into();
         assert_err!(MultiSig::confirm(origin, addr, multi_sig_id), "no pending tx for this addr and id or it has finished");
@@ -343,20 +342,20 @@ fn test_conflict() {
         let b: H256 = 2.into();
         let c: H256 = 3.into();
 
-        let addr = MultiSig::multi_sig_list_item_for(&a, 1).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((a.clone(), 1)).unwrap();
         // transfer1
         // a
         let t = TransferT::<Test> { to: a, value: 250 };
         let origin = system::RawOrigin::Signed(a.clone()).into();
         assert_ok!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t.encode()));
-        let multi_sig_id = MultiSig::pending_list_item_for(&addr, 0).unwrap();
+        let multi_sig_id = MultiSig::pending_list_item_for((addr.clone(), 0)).unwrap();
 
         // transfer2
         // a
         let t2 = TransferT::<Test> { to: b, value: 250 };
         let origin = system::RawOrigin::Signed(b.clone()).into();
         assert_ok!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t2.encode()));
-        let multi_sig_id2 = MultiSig::pending_list_item_for(&addr, 1).unwrap();
+        let multi_sig_id2 = MultiSig::pending_list_item_for((addr.clone(), 1)).unwrap();
 
         // confirm b sign for id1
         let origin = system::RawOrigin::Signed(b.clone()).into();
@@ -370,8 +369,8 @@ fn test_conflict() {
         let origin = system::RawOrigin::Signed(c.clone()).into();
         assert_ok!(MultiSig::confirm(origin, addr, multi_sig_id2));
         // has del
-        assert_eq!(MultiSig::transaction_for(&addr, multi_sig_id2), None);
-        assert_eq!(MultiSig::pending_state_for(&addr, multi_sig_id2), PendingState { yet_needed: 0, owners_done: 0, index: 0 });
+        assert_eq!(MultiSig::transaction_for((addr.clone(), multi_sig_id2)), None);
+        assert_eq!(MultiSig::pending_state_for((addr.clone(), multi_sig_id2)), PendingState { yet_needed: 0, owners_done: 0, index: 0 });
 
 
         assert_eq!(Balances::total_balance(&addr), 300 - 250 - 10);  // 300 - 250 - 10(fee)
@@ -380,8 +379,8 @@ fn test_conflict() {
         let origin = system::RawOrigin::Signed(c.clone()).into();
         assert_err!(MultiSig::confirm(origin, addr, multi_sig_id), "balance too low to send value");
         // has del
-        assert_eq!(MultiSig::transaction_for(&addr, multi_sig_id), None);
-        assert_eq!(MultiSig::pending_state_for(&addr, multi_sig_id), PendingState { yet_needed: 0, owners_done: 0, index: 0 });
+        assert_eq!(MultiSig::transaction_for((addr.clone(), multi_sig_id)), None);
+        assert_eq!(MultiSig::pending_state_for((addr.clone(), multi_sig_id)), PendingState { yet_needed: 0, owners_done: 0, index: 0 });
 
         assert_eq!(Balances::total_balance(&addr), 300 - 250 - 10);  // 300 - 250 - 10(fee)
     })
@@ -392,7 +391,7 @@ fn test_parse_err() {
     with_externalities(&mut new_test_ext(), || {
         let a: H256 = 1.into();
 
-        let addr = MultiSig::multi_sig_list_item_for(&a, 1).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((a.clone(), 1)).unwrap();
         // transfer1
         // a
         let t: Vec<u8> = vec![b't', b'e', b's', b't', ];
@@ -421,7 +420,7 @@ fn test_single() {
         let c: H256 = 3.into();
         let d: H256 = 4.into();
 
-        let addr = MultiSig::multi_sig_list_item_for(&d, 0).unwrap();
+        let addr = MultiSig::multi_sig_list_item_for((d.clone(), 0)).unwrap();
 
         // a
         let t = TransferT::<Test> { to: a, value: 5 };
@@ -429,7 +428,7 @@ fn test_single() {
         assert_ok!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t.encode()));
 
         assert_eq!(Balances::total_balance(&addr), 100 - 5 - 10);
-        assert_eq!(MultiSig::pending_list_item_for(&addr, 0), None); // no pending state
+        assert_eq!(MultiSig::pending_list_item_for((addr.clone(), 0)), None); // no pending state
 
         // b
         let t = TransferT::<Test> { to: a, value: 5 };
@@ -437,7 +436,7 @@ fn test_single() {
         assert_ok!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t.encode()));
 
         assert_eq!(Balances::total_balance(&addr), 100 - 5 - 10 - 5 - 10);
-        assert_eq!(MultiSig::pending_list_item_for(&addr, 0), None); // no pending state
+        assert_eq!(MultiSig::pending_list_item_for((addr.clone(), 0)), None); // no pending state
 
         // c can't
         let t = TransferT::<Test> { to: a, value: 5 };
@@ -445,6 +444,6 @@ fn test_single() {
         assert_err!(MultiSig::execute(origin, addr, TransactionType::TransferChainX, t.encode()), "it's the owner but not required owner");
 
         assert_eq!(Balances::total_balance(&addr), 100 - 5 - 10 - 5 - 10);
-        assert_eq!(MultiSig::pending_list_item_for(&addr, 0), None); // no pending state
+        assert_eq!(MultiSig::pending_list_item_for((addr.clone(), 0)), None); // no pending state
     })
 }
