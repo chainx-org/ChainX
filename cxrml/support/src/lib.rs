@@ -2,31 +2,26 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate parity_codec as codec;
+#[macro_use]
+extern crate parity_codec_derive;
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate serde_derive;
-
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
-
-extern crate sr_std as rstd;
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as primitives;
-
+extern crate sr_std as rstd;
+extern crate srml_balances as balances;
 #[macro_use]
 extern crate srml_support as runtime_support;
 extern crate srml_system as system;
-extern crate srml_balances as balances;
-
-pub mod storage;
-
-use primitives::traits::{CheckedSub, OnFinalise};
-use runtime_support::dispatch::Result;
 
 use balances::EnsureAccountLiquid;
-
+use primitives::traits::{CheckedSub, OnFinalise};
+use runtime_support::dispatch::Result;
 pub use storage::double_map::StorageDoubleMap;
 
+pub mod storage;
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {

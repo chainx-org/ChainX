@@ -67,4 +67,5 @@ members = [
     "cxrml/multisig",
     "cxrml/bridge/btc",
     "cxrml/pendingorders",
+    "cxrml/example",
 ]
