@@ -179,6 +179,7 @@ impl<T: NodeT + Codec> Node<T> {
             <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: OptionT<OptionType=Node<T>>,
     {
         let i = self.index();
+        if i == node.index() { return Ok(()); }
         match &self.prev {
             Some(p) => {
                 C::NodeMap::mutate(p, |prev| {
@@ -215,6 +216,7 @@ impl<T: NodeT + Codec> Node<T> {
             <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: OptionT<OptionType=Node<T>>,
     {
         let i = self.index();
+        if i == node.index() { return Ok(()); }
         match &self.next {
             Some(n) => {
                 C::NodeMap::mutate(n, |next| {
@@ -326,6 +328,7 @@ impl<T: NodeT + Codec> Node<T> {
             <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: NormalNodeT<NodeType=Node<T>>,
     {
         let i = self.index();
+        if i == node.index() { return Ok(()); }
         match &self.prev {
             Some(p) => {
                 C::NodeMap::mutate(p, |prev_node| {
@@ -362,6 +365,7 @@ impl<T: NodeT + Codec> Node<T> {
             <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: NormalNodeT<NodeType=Node<T>>,
     {
         let i = self.index();
+        if i == node.index() { return Ok(()); }
         match &self.next {
             Some(n) => {
                 C::NodeMap::mutate(n, |next_node| {
@@ -508,6 +512,7 @@ impl<T: NodeT + Codec> Node<T> {
             <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: OptionT<OptionType=Node<T>>,
     {
         let i = self.index();
+        if i == node.index() { return Ok(()); }
         match &self.prev {
             Some(p) => {
                 C::NodeMap::mutate(p, |prev| {
@@ -546,6 +551,7 @@ impl<T: NodeT + Codec> Node<T> {
             <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: OptionT<OptionType=Node<T>>,
     {
         let i = self.index();
+        if i == node.index() { return Ok(()); }
         match &self.next {
             Some(n) => {
                 C::NodeMap::mutate(n, |next| {
