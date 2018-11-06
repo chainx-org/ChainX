@@ -20,6 +20,7 @@ pub fn build_network(
     client: Arc<super::client::TClient>,
     tx_pool: Arc<TransactionPool<super::Hash, super::Block>>,
     multi_address: clap::Values<'_>,
+    net_config_path: &str,
     is_validator: bool,
 ) -> Arc<NetworkService> {
     let mut net_conf = substrate_network_libp2p::NetworkConfiguration::new();
@@ -36,6 +37,7 @@ pub fn build_network(
         ];
     }
     net_conf.boot_nodes = boot_nodes;
+    net_conf.net_config_path = Some(net_config_path.to_string());
     let mut config = substrate_network::ProtocolConfig::default();
     if is_validator {
         config.roles = Roles::AUTHORITY;

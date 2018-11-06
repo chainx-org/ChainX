@@ -119,6 +119,7 @@ fn main() {
         client.clone(),
         extrinsic_pool.clone(),
         multi_address,
+        db_path,
         validator_mode,
     );
 
