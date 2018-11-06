@@ -32,12 +32,14 @@ extern crate cxrml_support as cxsupport;
 use rstd::prelude::*;
 use codec::Codec;
 use support::StorageValue;
-//use support::dispatch::Result;
+use support::dispatch::Result;
 use primitives::traits::{SimpleArithmetic, As, OnFinalise};
 
 //use system::ensure_signed;
 
-use cxsupport::storage::linked_node::{Node, NodeT, NodeIndex, LinkedNodeCollection};
+use cxsupport::storage::linked_node::{Node, NodeT, NodeIndex, LinkedNodeCollection,
+                                      MultiNodeIndex, MultiNodeIndexT,
+};
 
 
 pub trait Trait: balances::Trait {
@@ -59,7 +61,7 @@ decl_event!(
 
 /// for linked node data, must be Decode, Encode, and Default, the Index(this example is AccountId)
 /// must be Ord and Clone
-#[derive(Decode, Encode, Clone, Default)]
+#[derive(Decode, Encode, Eq, PartialEq, Clone, Default)]
 pub struct Order<AccountId, Balance>
     where AccountId: Codec + Clone + Ord + Default, Balance: Codec + SimpleArithmetic + Ord + As<u64> + Clone + Copy + Default
 {
@@ -99,6 +101,15 @@ impl<T: Trait> LinkedNodeCollection for LinkedOptionNodes<T> {
     type Tail = OpNodeTail<T>;
 }
 
+#[allow(unused)]
+struct LinkedOptionMultiKey<T: Trait> (support::storage::generator::PhantomData<T>);
+
+impl<T: Trait> LinkedNodeCollection for LinkedOptionMultiKey<T> {
+    type Header = MultiHeader<T>;
+    type NodeMap = OpNodeMap2<T>;
+    type Tail = MultiTail<T>;
+}
+
 /// 3 create Node elements,
 /// 3.2 create Option Node elements
 decl_storage! {
@@ -121,6 +132,9 @@ decl_storage! {
         /// must be wrapped by Option
         pub OpNodeMap get(op_node_map): map T::AccountId => Option<Node<Order<T::AccountId, T::Balance>>>;
 
+        pub MultiHeader get(multi_header): map <MultiNodeIndex<u32, Order<T::AccountId, T::Balance>> as MultiNodeIndexT>::KeyType => Option<MultiNodeIndex<u32, Order<T::AccountId, T::Balance>>>;
+        pub MultiTail get(multi_tail): map <MultiNodeIndex<u32, Order<T::AccountId, T::Balance>> as MultiNodeIndexT>::KeyType => Option<MultiNodeIndex<u32, Order<T::AccountId, T::Balance>>>;
+        pub OpNodeMap2 get(op_node_map2): map T::AccountId => Option<Node<Order<T::AccountId, T::Balance>>>;
     }
 }
 
@@ -140,15 +154,26 @@ impl<T: Trait> Module<T> {
     /// 3. lookup the node by youself
     /// 4. call `add_node_before`, `add_node_after`, `remove_node` to modify the linked node collection
     #[allow(unused)]
-    fn for_linkednode_example(node: NodeOrder<T>) {
+    fn for_linkednode_example(node: NodeOrder<T>) -> Result {
         let mut n: NodeOrder<T> = Node::new(Default::default());
         n.init_storage::<LinkedNodes<T>>();
-        n.add_node_before::<LinkedNodes<T>>(node);
+        n.add_node_before::<LinkedNodes<T>>(node)?;
         // n.add_node_after::<NodeMap<T>, NodeTail<T>>(node);
         // n.remove_node::<NodeMap<T>, NodeHeader<T>, NodeTail<T>>();
 
         // option type
         // n.add_option_node_before::<LinkedOptionNodes<T>>(node);
+        Ok(())
+    }
+
+    #[allow(unused)]
+    fn for_linkednode_multikey_example(node: NodeOrder<T>) -> Result {
+        // option type
+        let mut n: NodeOrder<T> = Node::new(Default::default());
+        n.init_storage_withkey::<LinkedOptionMultiKey<T>, u32>(1);
+        n.add_option_node_before_withkey::<LinkedOptionMultiKey<T>, u32>(node, 1)?;
+
+        Ok(())
     }
 }
 
@@ -398,6 +423,71 @@ mod tests {
             node3.remove_option_node::<LinkedOptionNodes<Test>>().unwrap();
             assert_eq!(OpNodeHeader::<Test>::exists(), false);
             assert_eq!(OpNodeTail::<Test>::exists(), false);
+        })
+    }
+
+    #[test]
+    fn test_linked_multi_index_node() {
+        with_externalities(&mut new_test_ext(), || {
+            let mut node0 = Node::new(Order { id: 0, data: 0 });
+            let node1 = Node::new(Order { id: 1, data: 1 });
+            let node2 = Node::new(Order { id: 2, data: 2 });
+            let node3 = Node::new(Order { id: 3, data: 3 });
+            let mut node4 = Node::new(Order { id: 4, data: 4 });
+
+            // add
+            // 0
+            node0.init_storage_withkey::<LinkedOptionMultiKey<Test>, u32>(10);
+            // 4
+            node4.init_storage_withkey::<LinkedOptionMultiKey<Test>, u32>(99);
+            // 2 0 1
+            node0.add_option_node_after_withkey::<LinkedOptionMultiKey<Test>, u32>(node1, 10).unwrap();
+            node0.add_option_node_before_withkey::<LinkedOptionMultiKey<Test>, u32>(node2, 10).unwrap();
+
+            node4.add_option_node_before_withkey::<LinkedOptionMultiKey<Test>, u32>(node3, 99).unwrap();
+
+            // test key 10
+            let test_v = [2_u64, 0, 1];
+            let mut index = Module::<Test>::multi_header(10).unwrap().index();
+            let mut v = vec![];
+            loop {
+                if let Some(node) = Module::<Test>::op_node_map2(&index) {
+                    v.push(node.index());
+                    if let Some(next) = node.next() {
+                        index = next;
+                    } else { break; }
+                } else { break; }
+            }
+            assert_eq!(v.as_slice(), test_v);
+
+            let test_v = [3_u64, 4];
+            let mut index = Module::<Test>::multi_header(99).unwrap().index();
+            let mut v = vec![];
+            loop {
+                if let Some(node) = Module::<Test>::op_node_map2(&index) {
+                    v.push(node.index());
+                    if let Some(next) = node.next() {
+                        index = next;
+                    } else { break; }
+                } else { break; }
+            }
+            assert_eq!(v.as_slice(), test_v);
+
+            let r = Module::<Test>::multi_tail(50) == None;
+            assert_eq!(r, true);
+
+            // key 99 tail
+            let index = Module::<Test>::multi_tail(99).unwrap().index();
+            assert_eq!(index, 4);
+            // 3 (4)
+            let mut node4 = Module::<Test>::op_node_map2(index).unwrap();
+            assert_eq!(node4.index(), 4);
+            node4.remove_option_node_withkey::<LinkedOptionMultiKey<Test>, u32>(99).unwrap();
+            let node3 = Module::<Test>::op_node_map2(3).unwrap();
+            assert_eq!(node3.prev(), None);
+            assert_eq!(node3.next(), None);
+            assert_eq!(Module::<Test>::multi_header(99).unwrap().index(), node3.index());
+            assert_eq!(Module::<Test>::multi_tail(99).unwrap().index(), node3.index());
         })
     }
 }
