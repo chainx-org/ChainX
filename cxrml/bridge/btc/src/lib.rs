@@ -36,6 +36,7 @@ extern crate srml_support as runtime_support;
 extern crate srml_system as system;
 extern crate srml_balances as balances;
 extern crate srml_timestamp as timestamp;
+extern crate cxrml_financialrecords as finacial_recordes;
 
 // bitcoin-rust
 extern crate serialization as ser;
@@ -76,7 +77,7 @@ use tx::{UTXO, validate_transaction, handle_input, handle_output, handle_proposa
 pub use tx::RelayTx;
 
 
-pub trait Trait: system::Trait + balances::Trait + timestamp::Trait {
+pub trait Trait: system::Trait + balances::Trait + timestamp::Trait  + finacial_recordes::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
@@ -199,10 +200,12 @@ decl_storage! {
 
         pub UTXOSet get(utxo_set): map u64 => UTXO;
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
+        pub IrrBlock get(irr_block) config(): u32;
         pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, BTCTransaction)>; // Address, type, balance
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
         pub AddressMap get(address_map): map keys::Address => Option<T::AccountId>;
         pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
+        pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
 //        pub AccountMap get(account_map): map T::AccountId => keys::Address;
 
         pub AccountsMaxIndex get(accounts_max_index) config(): u64;

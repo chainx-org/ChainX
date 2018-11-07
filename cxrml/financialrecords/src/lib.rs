@@ -52,7 +52,7 @@ use runtime_primitives::traits::OnFinalise;
 
 use system::ensure_signed;
 
-use tokenbalances::Symbol;
+pub use tokenbalances::Symbol;
 use cxsupport::storage::linked_node::{
     Node, NodeT, LinkedNodeCollection, MultiNodeIndex,
 };

@@ -23,7 +23,7 @@ use timestamp;
 use runtime_primitives::traits::As;
 use super::{TxType, Trait, ReceiveAddress, NetworkId, RedeemScript, AddressMap, UTXOSet, TxSet,
             BlockTxids, BlockHeaderFor, NumberForHash, UTXOMaxIndex, AccountsMaxIndex,
-            AccountsSet, TxProposal, CandidateTx};
+            AccountsSet, TxProposal, CandidateTx, DepositCache};
 pub use self::proposal::{handle_proposal, Proposal};
 
 mod proposal;
@@ -200,16 +200,19 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
                         };
                     let mut out_point_set2: Vec<OutPoint> = Vec::new();
                     let mut index = 0;
-                    let _ = tx.outputs.iter().map(|output| {
-                        if is_key(&output.script_pubkey, &receive_address) {
-                            out_point_set2.push(OutPoint {
-                                hash: txid.clone(),
-                                index: index,
-                            })
-                        }
-                        index += 1;
-                        ()
-                    }).collect::<()>();
+                    let _ = tx.outputs
+                        .iter()
+                        .map(|output| {
+                            if is_key(&output.script_pubkey, &receive_address) {
+                                out_point_set2.push(OutPoint {
+                                    hash: txid.clone(),
+                                    index: index,
+                                })
+                            }
+                            index += 1;
+                            ()
+                        })
+                        .collect::<()>();
                     <UTXOStorage<T>>::update_from_outpoint(out_point_set2, true);
                 }
                 TxType::Register => {}
@@ -331,12 +334,20 @@ pub fn handle_input<T: Trait>(
             return ();
         };
 
-    let _ = tx.outputs.iter().map(|output| {
-        if is_key(&output.script_pubkey, &receive_address) {
-            update_balance -= output.value;
-        }
-        ()
-    }).collect::<()>();
+    let mut new_utxo: Vec<UTXO> = Vec::new();
+    let mut index = 0;
+    let _ = tx.outputs
+        .iter()
+        .map(|output| {
+            if is_key(&output.script_pubkey, &receive_address) {
+                update_balance -= output.value;
+                new_utxo.push(UTXO{txid: tx.hash(), index: index, balance: output.value, is_spent: false });
+            }
+            index += 1;
+            ()
+        })
+        .collect::<()>();
+    <UTXOStorage<T>>::add(new_utxo);
     <TxStorage<T>>::store_tx(
         tx,
         block_hash,
@@ -347,8 +358,16 @@ pub fn handle_input<T: Trait>(
     );
 }
 
-fn deposit_token<T: Trait>(_address: keys::Address, _balance: u64) {
-    // to do:
+fn deposit_token<T: Trait>(address: keys::Address, balance: u64, block_hash: &H256) -> Result {
+    let account = <AddressMap<T>>::get(address).unwrap();
+    let mut vec: Vec<(T::AccountId, u64, H256)> = match <DepositCache<T>>::take() {
+        Some(vec) => vec,
+        None => Vec::new(),
+    };
+    vec.push((account, balance, block_hash.clone()));
+    <DepositCache<T>>::put(vec);
+
+    return Ok(());
 }
 
 fn inspect_address<T: Trait>(tx: &Transaction, outpoint: OutPoint) -> Option<keys::Address> {
@@ -421,7 +440,7 @@ pub fn handle_output<T: Trait>(
         if script_addresses.len() == 1 {
             if receive_address.hash == script_addresses[0].hash {
                 runtime_io::print("------deposit_token-----");
-                deposit_token::<T>(send_address.clone(), output.value);
+                deposit_token::<T>(send_address.clone(), output.value, block_hash);
                 total_balance += output.value;
                 new_utxos.push(UTXO {
                     txid: tx.hash(),

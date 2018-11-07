@@ -54,6 +54,7 @@ pub use balances::address::Address as RawAddress;
 pub use checked_block::CheckedBlock;
 pub use consensus::Call as ConsensusCall;
 pub use runtime_primitives::{Permill, Perbill};
+pub use tokenbalances::Token;
 
 use rstd::prelude::*;
 use substrate_primitives::u32_trait::{_2, _4};

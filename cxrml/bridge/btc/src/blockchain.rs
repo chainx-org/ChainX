@@ -4,10 +4,14 @@ use rstd::prelude::*;
 use rstd::result::Result;
 use rstd::marker::PhantomData;
 use runtime_support::{StorageMap, StorageValue};
+use runtime_primitives::traits::As;
+use IrrBlock;
 use runtime_io;
 
 use primitives::hash::H256;
 use chain::BlockHeader;
+use finacial_recordes::Symbol;
+use finacial_recordes;
 
 use super::{Trait,
             BlockHeaderFor,
@@ -15,7 +19,7 @@ use super::{Trait,
             NumberForHash,
             HashsForNumber,
             ParamsInfo,
-            Params};
+            Params, DepositCache};
 
 use tx::{TxStorage, RollBack};
 
@@ -164,6 +168,24 @@ impl<T: Trait> Chain<T> {
                 best_number + 1
             },
         };
+        if let Some(vec) = <DepositCache<T>>::take() {
+            let mut uncomplete_cache: Vec<(T::AccountId, u64, H256)> = Vec::new();
+            for (account_id, amount, block_hash) in vec {
+                let symbol: Symbol = b"x-btc".to_vec();
+                let irr_block = <IrrBlock<T>>::get();
+                match <NumberForHash<T>>::get(block_hash.clone()) {
+                    Some(height) => {
+                        if new_best_header.number > height + irr_block {
+                            <finacial_recordes::Module<T>>::deposit(&account_id, &symbol, As::sa(amount));
+                        } else {
+                            uncomplete_cache.push((account_id, amount, block_hash));
+                        }
+                    },
+                    None => { uncomplete_cache.push((account_id, amount, block_hash)); }, // Optmise
+                }
+            }
+            <DepositCache<T>>::put(uncomplete_cache);
+        }
 
         <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
         runtime_io::print("------------");
