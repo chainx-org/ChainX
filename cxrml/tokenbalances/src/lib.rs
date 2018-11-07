@@ -167,7 +167,6 @@ decl_event!(
         CancelToken(Symbol),
         /// issue succeeded (who, symbol, balance)
         IssueToken(AccountId, Symbol, TokenBalance),
-        // TODO
         /// lock destroy (who, symbol, balance)
         ReverseToken(AccountId, Symbol, TokenBalance),
         /// unlock destroy (who, symbol, balance)
@@ -209,35 +208,42 @@ decl_storage! {
         pub TransferTokenFee get(transfer_token_fee) config(): T::Balance;
     }
     add_extra_genesis {
-        config(token_list): Vec<(Token, T::TokenBalance, T::TokenBalance)>;
+        config(token_list): Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>;
         build(
             |storage: &mut primitives::StorageMap, config: &GenesisConfig<T>| {
-                use codec::Encode;
-                let mut list_count = 0_u32;
-                // insert chainx token symbol
-                let chainx: Symbol = T::CHAINX_SYMBOL.to_vec();
-                storage.insert(GenesisConfig::<T>::hash(&<TokenListMap<T>>::key_for(&list_count)).to_vec(), chainx.clone().encode());
-                // token info
-                let t: Token = Token::new(chainx.clone(), T::CHAINX_TOKEN_DESC.to_vec(), T::CHAINX_PRECISION);
-                storage.insert(GenesisConfig::<T>::hash(&<TokenInfo<T>>::key_for(&chainx)).to_vec(), (t, true).encode());
-                list_count += 1;
+                use runtime_io::with_externalities;
+                use substrate_primitives::Blake2Hasher;
 
-                // 0 token list length
-                storage.insert(GenesisConfig::<T>::hash(&<TokenListLen<T>>::key()).to_vec(), (config.token_list.len() as u32 + list_count).encode());
-                for (index, (token, free_token, reserved_token)) in config.token_list.iter().enumerate() {
-                    if let Err(e) = token.is_valid() {
+                // for token_list
+                let src_r = storage.clone().build_storage().unwrap();
+                let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
+                with_externalities(&mut tmp_storage, || {
+                    // register chainx
+                    let chainx: Symbol = T::CHAINX_SYMBOL.to_vec();
+                    let t: Token = Token::new(chainx.clone(), T::CHAINX_TOKEN_DESC.to_vec(), T::CHAINX_PRECISION);
+                    let zero: T::TokenBalance = Default::default();
+                    if let Err(e) = Module::<T>::register_token(t, zero, zero) {
                         panic!(e);
                     }
-                    // 1 token balance
-                    storage.insert(GenesisConfig::<T>::hash(&<TotalFreeToken<T>>::key_for(token.symbol())).to_vec(), free_token.encode());
-                    storage.insert(GenesisConfig::<T>::hash(&<TotalReservedToken<T>>::key_for(token.symbol())).to_vec(), reserved_token.encode());
-                    // 2 token list map
-                    storage.insert(GenesisConfig::<T>::hash(&<TokenListMap<T>>::key_for(index as u32 + list_count)).to_vec(), token.symbol().encode());
-                    // 3 token info
-                    storage.insert(GenesisConfig::<T>::hash(&<TokenInfo<T>>::key_for(token.symbol())).to_vec(), (token, true).encode());
-                }
-            }
-        );
+                    // register other token, and set genesis issue
+                    for (token, info) in config.token_list.iter() {
+                        if let Err(e) = token.is_valid() {
+                            panic!(e);
+                        }
+                        let sym = token.symbol();
+                        if let Err(e) = Module::<T>::register_token(token.clone(), zero, zero) {
+                            panic!(e);
+                        }
+                        for (account_id, value) in info.iter() {
+                            if let Err(e) = Module::<T>::issue(account_id, &sym, value.clone()) {
+                                panic!(e);
+                            }
+                        }
+                    }
+                });
+                let map: primitives::StorageMap = tmp_storage.into();
+                storage.extend(map);
+        });
     }
 }
 

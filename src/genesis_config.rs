@@ -121,6 +121,8 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             block_gas_limit: 10_000_000,
         }),
         tokenbalances: Some(TokenBalancesConfig {
+            // token_list: Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>
+            // e.g. [("btc", [(account1, value), (account2, value)].to_vec()), ("eth", [(account1, value), (account2, value)].to_vec())]
             token_list: vec![],
             transfer_token_fee: 10,
         }),

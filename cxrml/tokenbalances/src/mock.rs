@@ -59,7 +59,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
     // balance
     r.extend(balances::GenesisConfig::<Test> {
-        balances: vec![(1, 1000), (2, 510)],
+        balances: vec![(1, 1000), (2, 510), (3, 1000)],
         transaction_base_fee: 0,
         transaction_byte_fee: 0,
         existential_deposit: 500,
@@ -73,8 +73,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(GenesisConfig::<Test> {
         token_list: vec![
-            (t, 100, 0),
-            (t2, 100, 0),
+            (t, [(3, 100)].to_vec()),
+            (t2, [(3, 100)].to_vec()),
         ],
         transfer_token_fee: 10,
     }.build_storage().unwrap());
@@ -85,7 +85,7 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
     // balance
     r.extend(balances::GenesisConfig::<Test> {
-        balances: vec![(1, 1000), (2, 510)],
+        balances: vec![(1, 1000), (2, 510), (3, 1000)],
         transaction_base_fee: 0,
         transaction_byte_fee: 0,
         existential_deposit: 500,
@@ -99,8 +99,8 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(GenesisConfig::<Test> {
         token_list: vec![
-            (t, 100, 0),
-            (t2, 100, 0),
+            (t, [(3, 100)].to_vec()),
+            (t2, [(3, 100)].to_vec()),
         ],
         transfer_token_fee: 10,
     }.build_storage().unwrap());
@@ -111,7 +111,7 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
     // balance
     r.extend(balances::GenesisConfig::<Test> {
-        balances: vec![(1, 1000), (2, 510)],
+        balances: vec![(1, 1000), (2, 510), (3, 1000)],
         transaction_base_fee: 0,
         transaction_byte_fee: 0,
         existential_deposit: 0,
@@ -125,8 +125,8 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(GenesisConfig::<Test> {
         token_list: vec![
-            (t, 100, 0),
-            (t2, 100, 0),
+            (t, [(3, 100)].to_vec()),
+            (t2, [(3, 100)].to_vec()),
         ],
         transfer_token_fee: 10,
     }.build_storage().unwrap());

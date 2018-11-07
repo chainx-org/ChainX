@@ -30,6 +30,17 @@ fn test_genesis() {
 }
 
 #[test]
+fn test_genesis_token_issue() {
+    with_externalities(&mut new_test_ext(), || {
+        let btc_symbol = b"x-btc".to_vec();
+        let eth_symbol = b"x-eth".to_vec();
+        assert_eq!(TokenBalances::free_token(&(3, Test::CHAINX_SYMBOL.to_vec())), 1000);
+        assert_eq!(TokenBalances::free_token(&(3, btc_symbol.clone())), 100);
+        assert_eq!(TokenBalances::free_token(&(3, eth_symbol.clone())), 100);
+    })
+}
+
+#[test]
 #[should_panic]
 fn test_err_genesis() {
     with_externalities(&mut err_test_ext(), || {})
