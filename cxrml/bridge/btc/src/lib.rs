@@ -76,8 +76,9 @@ use blockchain::Chain;
 use tx::{UTXO, validate_transaction, handle_input, handle_output, handle_proposal};
 pub use tx::RelayTx;
 
-
-pub trait Trait: system::Trait + balances::Trait + timestamp::Trait  + finacial_recordes::Trait {
+pub trait Trait
+    : system::Trait + balances::Trait + timestamp::Trait + finacial_recordes::Trait
+    {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
@@ -167,6 +168,7 @@ pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
     pub proposer: Vec<AccountId>,
     pub tx: BTCTransaction,
     pub perfection: bool,
+    pub block_hash: H256,
 }
 
 impl Default for TxType {
@@ -201,12 +203,13 @@ decl_storage! {
         pub UTXOSet get(utxo_set): map u64 => UTXO;
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
         pub IrrBlock get(irr_block) config(): u32;
+        pub BtcFee get(btc_fee) config(): u64;
         pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, BTCTransaction)>; // Address, type, balance
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
         pub AddressMap get(address_map): map keys::Address => Option<T::AccountId>;
+        pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
         pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
         pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
-//        pub AccountMap get(account_map): map T::AccountId => keys::Address;
 
         pub AccountsMaxIndex get(accounts_max_index) config(): u64;
         pub AccountsSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, u32, TxType)>;
@@ -299,7 +302,11 @@ impl<T: Trait> Module<T> {
             c.check::<T>()?;
         }
         // insert valid header into storage
-        <BlockHeaderFor<T>>::insert(header.hash(), (header.clone(), who.clone(), <system::Module<T>>::block_number()));
+        <BlockHeaderFor<T>>::insert(header.hash(), (
+            header.clone(),
+            who.clone(),
+            <system::Module<T>>::block_number(),
+        ));
 
         <Chain<T>>::insert_best_header(header).map_err(|e| e.info())?;
 

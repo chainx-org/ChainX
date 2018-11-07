@@ -409,6 +409,26 @@ impl<T: Trait> Module<T> {
         Self::withdrawal_finish_with_index(who, r.unwrap(), success).map(|_| ())
     }
 
+    pub fn get_withdraw_cache(sym: &Symbol) -> Option<Vec<(T::AccountId, T::TokenBalance)>> {
+        let mut vec = Vec::new();
+        if let Some(header) = Self::log_header_for(sym) {
+            let mut index = header.index();
+
+            while let Some(node) = Self::withdraw_log_cache(&index) {
+               let key = (node.data.accountid().clone(), node.data.index());
+               if let Some(r) = <RecordsOf<T>>::get(&key) {
+                   vec.push((node.data.accountid().clone(), r.balance()));
+               }
+               if let Some(next) = node.next() {
+                   index = next;
+               } else {
+                   return Some(vec);
+               }
+            }
+        }
+        None
+    }
+
     /// deposit init, use for record a deposit process begin, usually for start block confirm process
     pub fn deposit_init(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
         Self::deposit_with_index(who, sym, balance).map(|_| ())

@@ -21,9 +21,9 @@ use keys::DisplayLayout;
 use b58::from;
 use timestamp;
 use runtime_primitives::traits::As;
-use super::{TxType, Trait, ReceiveAddress, NetworkId, RedeemScript, AddressMap, UTXOSet, TxSet,
-            BlockTxids, BlockHeaderFor, NumberForHash, UTXOMaxIndex, AccountsMaxIndex,
-            AccountsSet, TxProposal, CandidateTx, DepositCache};
+use super::{TxType, Trait, ReceiveAddress, NetworkId, RedeemScript, AddressMap, AccountMap,
+            UTXOSet, TxSet, BlockTxids, BlockHeaderFor, NumberForHash, UTXOMaxIndex,
+            AccountsMaxIndex, AccountsSet, TxProposal, CandidateTx, DepositCache};
 pub use self::proposal::{handle_proposal, Proposal};
 
 mod proposal;
@@ -316,12 +316,37 @@ fn is_key(script_pubkey: &[u8], receive_address: &keys::Address) -> bool {
     return false;
 }
 
+fn compare_transaction(tx1: &Transaction, tx2: &Transaction) -> bool {
+    if tx1.version == tx2.version && tx1.outputs == tx2.outputs && tx1.lock_time == tx2.lock_time {
+        if tx1.inputs.len() == tx2.inputs.len() {
+            for i in 0..tx1.inputs.len() {
+                if tx1.inputs[i].previous_output == tx2.inputs[i].previous_output &&
+                    tx1.inputs[i].sequence == tx2.inputs[i].sequence
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    return false;
+}
+
 pub fn handle_input<T: Trait>(
     tx: &Transaction,
     block_hash: &H256,
     who: &T::AccountId,
     receive_address: &[u8],
 ) {
+    let tx2 = <TxProposal<T>>::get();
+    if tx2.is_some() && compare_transaction(tx, &tx2.clone().unwrap().tx) {
+        let mut candidate = tx2.unwrap();
+        candidate.block_hash = block_hash.clone();
+        <TxProposal<T>>::put(candidate);
+    } else {
+        // To do: handle_input error not expect
+        runtime_io::print("------handle_input error not expect-----");
+    }
     let out_point_set = tx.inputs
         .iter()
         .map(|input| input.previous_output.clone())
@@ -341,7 +366,12 @@ pub fn handle_input<T: Trait>(
         .map(|output| {
             if is_key(&output.script_pubkey, &receive_address) {
                 update_balance -= output.value;
-                new_utxo.push(UTXO{txid: tx.hash(), index: index, balance: output.value, is_spent: false });
+                new_utxo.push(UTXO {
+                    txid: tx.hash(),
+                    index: index,
+                    balance: output.value,
+                    is_spent: false,
+                });
             }
             index += 1;
             ()
@@ -431,7 +461,8 @@ pub fn handle_output<T: Trait>(
                     is_in_accounts = false
                 }
             };
-            <AddressMap<T>>::insert(send_address.clone(), id);
+            <AddressMap<T>>::insert(send_address.clone(), id.clone());
+            <AccountMap<T>>::insert(id, send_address.clone());
             register = true;
             continue;
         }

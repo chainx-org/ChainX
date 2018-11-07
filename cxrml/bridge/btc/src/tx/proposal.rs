@@ -90,6 +90,7 @@ pub fn handle_proposal<T: Trait>(tx: Transaction, who: &T::AccountId) -> Result 
         proposer: proposer,
         tx: tx,
         perfection: sigs.len() == siglen as usize,
+        block_hash: Default::default(),
     });
 
     Ok(())
@@ -98,7 +99,7 @@ pub fn handle_proposal<T: Trait>(tx: Transaction, who: &T::AccountId) -> Result 
 pub struct Proposal<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> Proposal<T> {
-    fn create_proposal(address: Vec<(Address, u64)>, fee: u64) -> Result {
+    pub fn create_proposal(address: Vec<(Address, u64)>, fee: u64) -> Result {
         if None != <TxProposal<T>>::get() {
             return Err(
                 "There are candidates to reflect that the transaction is being processed",
@@ -167,6 +168,7 @@ impl<T: Trait> Proposal<T> {
             proposer: Vec::new(),
             tx: tx,
             perfection: false,
+            block_hash: Default::default(),
         });
 
         Ok(())
