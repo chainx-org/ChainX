@@ -10,11 +10,10 @@ use primitives::hash::H256;
 use chain::BlockHeader;
 
 use super::{Trait,
-            //            OrphanIndexFor,
             BlockHeaderFor,
             BestIndex,
-            HeaderNumberFor,
-            HashForNumber,
+            NumberForHash,
+            HashsForNumber,
             ParamsInfo,
             Params};
 
@@ -29,26 +28,6 @@ pub struct BestHeader {
     /// Hash of the best block
     pub hash: H256,
 }
-
-//pub struct OrphanBlocksPool<T: Trait> (PhantomData<T>);
-//
-//impl<T: Trait> OrphanBlocksPool<T> {
-//    /// Insert orphaned block, for which we have already requested its parent block
-//    pub fn insert_orphaned_header(header: BlockHeader) {
-////        <OrphanedHeaderFor<T>>::insert(header.previous_header_hash.clone(), header.hash(), header);
-//        <OrphanIndexFor<T>>::mutate(&header.previous_header_hash.clone(), |v| {
-//            v.push(header.hash());
-//        });
-//    }
-//
-//    pub fn remove_headers_for_parent(hash: &H256) -> Vec<H256> {
-//        <OrphanIndexFor<T>>::take(hash)
-//    }
-//
-//    pub fn get_headers_for_parent(hash: &H256) -> Vec<H256> {
-//        <OrphanIndexFor<T>>::get(hash)
-//    }
-//}
 
 #[derive(Clone)]
 pub struct SideChainOrigin {
@@ -136,7 +115,7 @@ impl<T: Trait> Chain<T> {
         let best_bumber = best_index.number;
 
         //todo change unwrap
-        let (best_header, _): (BlockHeader, T::AccountId) = <BlockHeaderFor<T>>::get(&best_hash)
+        let (best_header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) = <BlockHeaderFor<T>>::get(&best_hash)
             .unwrap();
         let new_best_header = BestHeader {
             hash: best_header.previous_header_hash.clone(),
@@ -155,8 +134,8 @@ impl<T: Trait> Chain<T> {
             ChainErr::OtherErr(s)
         })?;
 
-        <HeaderNumberFor<T>>::remove(&best_hash);
-        // do not need to remove HashForNumber
+        <NumberForHash<T>>::remove(&best_hash);
+        // do not need to remove HashsForNumber
 
         <BestIndex<T>>::put(new_best_header);
         Ok(best_hash)
@@ -169,7 +148,7 @@ impl<T: Trait> Chain<T> {
         let best_number = best_index.number;
 
         //todo change unwrap
-        let (header, _): (BlockHeader, T::AccountId) = <BlockHeaderFor<T>>::get(hash).unwrap();
+        let (header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) = <BlockHeaderFor<T>>::get(hash).unwrap();
         if best_hash != header.previous_header_hash {
             return Err(ChainErr::CannotCanonize);
         }
@@ -186,10 +165,15 @@ impl<T: Trait> Chain<T> {
             },
         };
 
-        <HeaderNumberFor<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
+        <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
         runtime_io::print("------------");
         runtime_io::print(new_best_header.hash.to_vec().as_slice());
-        <HashForNumber<T>>::insert(new_best_header.number, new_best_header.hash.clone());
+        <HashsForNumber<T>>::mutate(new_best_header.number, |v| {
+            let h = new_best_header.hash.clone();
+            if v.contains(&h) == false {
+                v.push(h);
+            }
+        });
 
         <BestIndex<T>>::put(new_best_header);
         Ok(())
@@ -219,9 +203,9 @@ impl<T: Trait> Chain<T> {
     fn block_origin(header: &BlockHeader) -> Result<BlockOrigin, ChainErr> {
         let best_index: BestHeader = <BestIndex<T>>::get();
         // TODO change unwrap
-        let (best_header, _): (BlockHeader, T::AccountId) =
+        let (best_header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) =
             <BlockHeaderFor<T>>::get(&best_index.hash).unwrap();
-        if <HeaderNumberFor<T>>::exists(header.hash()) {
+        if <NumberForHash<T>>::exists(header.hash()) {
             return Ok(BlockOrigin::KnownBlock);
         }
 
@@ -240,7 +224,7 @@ impl<T: Trait> Chain<T> {
         let mut sidechain_route = Vec::new();
         let mut next_hash = header.previous_header_hash.clone();
         for fork_len in 0..params.max_fork_route_preset {
-            let num = <HeaderNumberFor<T>>::get(&next_hash);
+            let num = <NumberForHash<T>>::get(&next_hash);
             match num {
                 None => {
                     sidechain_route.push(next_hash.clone());
@@ -259,12 +243,14 @@ impl<T: Trait> Chain<T> {
                         decanonized_route: (number + 1..best_index.number + 1)
                             .into_iter()
                             .filter_map(|decanonized_bn| {
-                                let hash = <HashForNumber<T>>::get(decanonized_bn);
-                                if hash == Default::default() {
-                                    None
-                                } else {
-                                    Some(hash)
+                                let hash_list = <HashsForNumber<T>>::get(decanonized_bn);
+                                for h in hash_list {
+                                    // look up in main chain
+                                    if <NumberForHash<T>>::get(&h).is_some() {
+                                        return Some(h);
+                                    }
                                 }
+                                None
                             })
                             .collect(),
                         block_number: block_number,

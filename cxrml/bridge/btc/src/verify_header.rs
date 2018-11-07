@@ -12,7 +12,7 @@ use timestamp;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use runtime_primitives::traits::As;
-use super::{Trait, HeaderNumberFor, HashForNumber, BlockHeaderFor, ParamsInfo, Params, GenesisInfo};
+use super::{Trait, NumberForHash, HashsForNumber, BlockHeaderFor, ParamsInfo, Params, GenesisInfo};
 use blockchain::ChainErr;
 
 pub struct HeaderVerifier<'a> {
@@ -29,7 +29,7 @@ impl<'a> HeaderVerifier<'a> {
         let mut prev_hash = header.previous_header_hash.clone();
         let mut count = 0;
         for i in 0..params.max_fork_route_preset {
-            if let Some(h) = <HeaderNumberFor<T>>::get(&prev_hash) {
+            if let Some(h) = <NumberForHash<T>>::get(&prev_hash) {
                 count = i;
                 prev_height = h + i;
                 break;
@@ -118,12 +118,18 @@ pub fn work_required_retarget<T: Trait>(
     let retarget_num = height - params.retargeting_interval;
 
     let (genesis_header, genesis_num) = <GenesisInfo<T>>::get();
-    let retarget_header: BlockHeader;
+    let mut retarget_header = parent_header.clone();
     if retarget_num < genesis_num {
         retarget_header = genesis_header;
     } else {
-        let h = <HashForNumber<T>>::get(&retarget_num);
-        retarget_header = <BlockHeaderFor<T>>::get(&h).unwrap().0;
+        let hash_list = <HashsForNumber<T>>::get(&retarget_num);
+        for h in hash_list {
+            // look up in main chain
+            if <NumberForHash<T>>::get(&h).is_some() {
+                retarget_header = <BlockHeaderFor<T>>::get(&h).unwrap().0;
+                break;
+            }
+        }
     }
 
     // timestamp of block(height - RETARGETING_INTERVAL)

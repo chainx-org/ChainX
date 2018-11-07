@@ -317,6 +317,16 @@ fn current_time() -> u64 {
         .as_secs()
 }
 
+#[test]
+fn test() {
+    with_externalities(&mut new_test_ext(), || {
+        use substrate_primitives::hexdisplay::HexDisplay;
+        let r = <BlockHeaderFor<Test>>::key_for(&H256::from_reversed_str("00000000000025c23a19cc91ad8d3e33c2630ce1df594e1ae0bf0eabe30a9176"));
+        let a = substrate_primitives::twox_128(&r);
+        println!("0x{:}", HexDisplay::from(&a));
+    })
+}
+
 
 #[test]
 fn test_init_blocks() {
@@ -404,11 +414,11 @@ fn test_genesis() {
         );
         assert_eq!(num, 0);
 
-        assert_eq!(header.hash(), BridgeOfBTC::hash_for_number(0));
-        assert_eq!(BridgeOfBTC::header_num_for(header.hash()).unwrap(), 0);
+        assert_eq!(header.hash(), *BridgeOfBTC::hashs_for_num(0).get(0).unwrap());
+        assert_eq!(BridgeOfBTC::num_for_hash(header.hash()).unwrap(), 0);
 
-        let hh = BridgeOfBTC::hash_for_number(0);
-        if let Some((a, b)) = BridgeOfBTC::block_header_for(&hh) {
+        let hh = BridgeOfBTC::hashs_for_num(0).get(0).unwrap().clone();
+        if let Some((a, b, _)) = BridgeOfBTC::block_header_for(&hh) {
             assert_eq!(b, AccountId::default());
             assert_eq!(a.hash(), header.hash());
         } else {
@@ -436,8 +446,8 @@ fn test_normal() {
         assert_eq!(best.hash, c1.get(2).unwrap().hash());
         assert_eq!(best.number, 2);
 
-        assert_eq!(BridgeOfBTC::hash_for_number(1), c1.get(1).unwrap().hash());
-        assert_eq!(BridgeOfBTC::hash_for_number(2), c1.get(2).unwrap().hash());
+        assert_eq!(BridgeOfBTC::hashs_for_num(1), [c1.get(1).unwrap().hash()].to_vec());
+        assert_eq!(BridgeOfBTC::hashs_for_num(2), [c1.get(2).unwrap().hash()].to_vec());
     })
 }
 
@@ -462,13 +472,13 @@ fn test_fork() {
         let best = BridgeOfBTC::best_index();
         assert_eq!(best.hash, c1.get(1).unwrap().hash());
         assert_eq!(best.number, 1);
-        assert_eq!(BridgeOfBTC::hash_for_number(1), c1.get(1).unwrap().hash());
+        assert_eq!(BridgeOfBTC::hashs_for_num(1), [c1.get(1).unwrap().hash()].to_vec());
 
         assert_eq!(
-            BridgeOfBTC::header_num_for(c1.get(1).unwrap().hash()),
+            BridgeOfBTC::num_for_hash(c1.get(1).unwrap().hash()),
             Some(1)
         );
-        assert_eq!(BridgeOfBTC::header_num_for(c2.get(1).unwrap().hash()), None);
+        assert_eq!(BridgeOfBTC::num_for_hash(c2.get(1).unwrap().hash()), None);
 
         // insert fork
         assert_ok!(BridgeOfBTC::process_header(c2.get(2).unwrap().clone(), &3));
@@ -478,7 +488,7 @@ fn test_fork() {
         assert_eq!(best.number, 2);
 
         // number 1 hash is the fork chain hash
-        assert_eq!(BridgeOfBTC::hash_for_number(1), c2.get(1).unwrap().hash());
+        assert_eq!(BridgeOfBTC::hashs_for_num(1), [c1.get(1).unwrap().hash(), c2.get(1).unwrap().hash()].to_vec());
 
         // insert source 2,3, switch to source
         assert_ok!(BridgeOfBTC::process_header(c1.get(2).unwrap().clone(), &2));
@@ -488,8 +498,8 @@ fn test_fork() {
         assert_eq!(best.hash, c1.get(3).unwrap().hash());
         assert_eq!(best.number, 3);
 
-        assert_eq!(BridgeOfBTC::hash_for_number(1), c1.get(1).unwrap().hash());
-        assert_eq!(BridgeOfBTC::hash_for_number(2), c1.get(2).unwrap().hash());
+        assert_eq!(BridgeOfBTC::hashs_for_num(1), [c1.get(1).unwrap().hash(), c2.get(1).unwrap().hash()].to_vec());
+        assert_eq!(BridgeOfBTC::hashs_for_num(2), [c2.get(2).unwrap().hash(), c1.get(2).unwrap().hash()].to_vec());
     })
 }
 
@@ -516,8 +526,8 @@ fn test_call() {
         let v = ser::serialize(c1.get(1).unwrap());
         let v = v.take();
         assert_ok!(BridgeOfBTC::push_header(origin, v));
-        let h = BridgeOfBTC::hash_for_number(1);
-        let (_, who) = BridgeOfBTC::block_header_for(&h).unwrap();
+        let h = BridgeOfBTC::hashs_for_num(1).get(0).unwrap().clone();
+        let (_, who, _) = BridgeOfBTC::block_header_for(&h).unwrap();
         assert_eq!(who, 99);
     })
 }

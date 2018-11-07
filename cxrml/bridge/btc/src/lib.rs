@@ -181,12 +181,11 @@ decl_storage! {
         pub BestIndex get(best_index): BestHeader;
 
         // all valid blockheader (include orphan blockheader)
-        pub BlockHeaderFor get(block_header_for): map H256 => Option<(BlockHeader, T::AccountId)>;
+        pub BlockHeaderFor get(block_header_for): map H256 => Option<(BlockHeader, T::AccountId, T::BlockNumber)>;
 
         // only main chain could has this number
-        pub HeaderNumberFor get(header_num_for): map H256 => Option<u32>;
-        pub HashForNumber get(hash_for_number): map u32 => H256;
-//        pub OrphanIndexFor get(orphan_index_for): map H256 => Vec<H256>;
+        pub NumberForHash get(num_for_hash): map H256 => Option<u32>;
+        pub HashsForNumber get(hashs_for_num): map u32 => Vec<H256>;
 
         // basic
         pub GenesisInfo get(genesis_info) config(genesis): (BlockHeader, u32);
@@ -219,13 +218,14 @@ decl_storage! {
             let (genesis, number): (BlockHeader, u32) = config.genesis.clone();
             let h = genesis.hash();
             let who: T::AccountId = Default::default();
+            let block_number: T::BlockNumber = Default::default();
             // insert genesis
             storage.insert(GenesisConfig::<T>::hash(&<BlockHeaderFor<T>>::key_for(&h)).to_vec(),
-                (genesis, who).encode());
-            storage.insert(GenesisConfig::<T>::hash(&<HeaderNumberFor<T>>::key_for(&h)).to_vec(),
+                (genesis, who, block_number).encode());
+            storage.insert(GenesisConfig::<T>::hash(&<NumberForHash<T>>::key_for(&h)).to_vec(),
                 number.encode());
-            storage.insert(GenesisConfig::<T>::hash(&<HashForNumber<T>>::key_for(number)).to_vec(),
-                h.encode());
+            storage.insert(GenesisConfig::<T>::hash(&<HashsForNumber<T>>::key_for(number)).to_vec(),
+                [h.clone()].to_vec().encode());
 
             let best = BestHeader { number: number, hash: h };
             storage.insert(GenesisConfig::<T>::hash(&<BestIndex<T>>::key()).to_vec(), best.encode());
@@ -296,7 +296,7 @@ impl<T: Trait> Module<T> {
             c.check::<T>()?;
         }
         // insert valid header into storage
-        <BlockHeaderFor<T>>::insert(header.hash(), (header.clone(), who.clone()));
+        <BlockHeaderFor<T>>::insert(header.hash(), (header.clone(), who.clone(), <system::Module<T>>::block_number()));
 
         <Chain<T>>::insert_best_header(header).map_err(|e| e.info())?;
 

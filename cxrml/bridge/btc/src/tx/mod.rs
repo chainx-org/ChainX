@@ -22,7 +22,7 @@ use b58::from;
 use timestamp;
 use runtime_primitives::traits::As;
 use super::{TxType, Trait, ReceiveAddress, NetworkId, RedeemScript, AddressMap, UTXOSet, TxSet,
-            BlockTxids, BlockHeaderFor, HeaderNumberFor, UTXOMaxIndex, AccountsMaxIndex,
+            BlockTxids, BlockHeaderFor, NumberForHash, UTXOMaxIndex, AccountsMaxIndex,
             AccountsSet, TxProposal, CandidateTx};
 pub use self::proposal::{handle_proposal, Proposal};
 
@@ -200,7 +200,7 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
                         };
                     let mut out_point_set2: Vec<OutPoint> = Vec::new();
                     let mut index = 0;
-                    tx.outputs.iter().map(|output| {
+                    let _ = tx.outputs.iter().map(|output| {
                         if is_key(&output.script_pubkey, &receive_address) {
                             out_point_set2.push(OutPoint {
                                 hash: txid.clone(),
@@ -209,7 +209,7 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
                         }
                         index += 1;
                         ()
-                    });
+                    }).collect::<()>();
                     <UTXOStorage<T>>::update_from_outpoint(out_point_set2, true);
                 }
                 TxType::Register => {}
@@ -246,11 +246,11 @@ pub fn validate_transaction<T: Trait>(
     tx: &RelayTx,
     receive_address: &[u8],
 ) -> StdResult<TxType, &'static str> {
-    if <HeaderNumberFor<T>>::exists(&tx.block_hash) == false {
+    if <NumberForHash<T>>::exists(&tx.block_hash) == false {
         return Err("this tx's block not in the main chain");
     }
 
-    let select_header = if let Some((header, _)) = <BlockHeaderFor<T>>::get(&tx.block_hash) {
+    let select_header = if let Some((header, _, _)) = <BlockHeaderFor<T>>::get(&tx.block_hash) {
         header
     } else {
         return Err("not has this block header yet");
@@ -331,12 +331,12 @@ pub fn handle_input<T: Trait>(
             return ();
         };
 
-    tx.outputs.iter().map(|output| {
+    let _ = tx.outputs.iter().map(|output| {
         if is_key(&output.script_pubkey, &receive_address) {
             update_balance -= output.value;
         }
         ()
-    });
+    }).collect::<()>();
     <TxStorage<T>>::store_tx(
         tx,
         block_hash,
@@ -487,6 +487,7 @@ pub fn handle_output<T: Trait>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_accountId() {
         let script = Script::from(
