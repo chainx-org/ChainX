@@ -37,6 +37,8 @@ fn test_genesis_token_issue() {
         assert_eq!(TokenBalances::free_token(&(3, Test::CHAINX_SYMBOL.to_vec())), 1000);
         assert_eq!(TokenBalances::free_token(&(3, btc_symbol.clone())), 100);
         assert_eq!(TokenBalances::free_token(&(3, eth_symbol.clone())), 100);
+
+        assert_eq!(TokenBalances::token_list_of(&3), [Test::CHAINX_SYMBOL.to_vec(), btc_symbol, eth_symbol]);
     })
 }
 

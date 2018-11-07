@@ -58,7 +58,7 @@ pub trait Trait: balances::Trait + cxsupport::Trait {
     const CHAINX_PRECISION: Precision;
     const CHAINX_TOKEN_DESC: DescString;
     /// The token balance.
-    type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<u64> + As<u128> + Copy + Default;
+    type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<usize> + As<u32> + As<u64> + As<u128> + Copy + Default;
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -231,6 +231,7 @@ decl_storage! {
                             panic!(e);
                         }
                         let sym = token.symbol();
+                        if sym == chainx { panic!("can't issue chainx token!"); }
                         if let Err(e) = Module::<T>::register_token(token.clone(), zero, zero) {
                             panic!(e);
                         }
