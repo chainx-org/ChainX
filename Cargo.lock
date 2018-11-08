@@ -654,6 +654,8 @@ dependencies = [
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "cxrml-financialrecords 0.1.0",
+ "cxrml-support 0.1.0",
+ "cxrml-tokenbalances 0.1.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "merkle 0.1.0 (git+https://github.com/chainx-org/merkle.git)",

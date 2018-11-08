@@ -55,6 +55,20 @@ impl timestamp::Trait for Test {
     type Moment = u64;
 }
 
+impl cxsupport::Trait for Test {}
+
+impl tokenbalances::Trait for Test {
+    const CHAINX_SYMBOL: tokenbalances::SymbolString = b"pcx";
+    const CHAINX_PRECISION: tokenbalances::Precision = 8;
+    const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"this is pcx for mock";
+    type TokenBalance = u128;
+    type Event = ();
+}
+
+impl finacial_recordes::Trait for Test {
+    type Event = ();
+}
+
 impl Trait for Test {
     type Event = ();
 }
@@ -91,6 +105,50 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             ), // retargeting_factor
             network_id: 1,
             utxo_max_index: 0,
+            irr_block: 6,
+            accounts_max_index: 0,
+            receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
+            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
+            fee: 0,
+        }.build_storage()
+            .unwrap(),
+    );
+    r.into()
+}
+
+pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Hasher> {
+    let mut r = system::GenesisConfig::<Test>::default()
+        .build_storage()
+        .unwrap();
+
+    // bridge btc
+    r.extend(
+        GenesisConfig::<Test> {
+            // start genesis block: (genesis, blocknumber)
+            genesis: (
+                BlockHeader {
+                    version: 1,
+                    previous_header_hash: Default::default(),
+                    merkle_root_hash: H256::from_reversed_str(
+                        "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
+                    ),
+                    time: 1296688602,
+                    bits: Compact::new(486604799),
+                    nonce: 414098458,
+                },
+                5,
+            ),
+            params_info: Params::new(
+                520159231, // max_bits
+                2 * 60 * 60, // block_max_future
+                64, // max_fork_route_preset
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60, // target_spacing_seconds
+                4,
+            ), // retargeting_factor
+            network_id: 0,
+            utxo_max_index: 0,
+            irr_block: 6,
             accounts_max_index: 0,
             receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
@@ -206,6 +264,7 @@ pub fn new_test_mock_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             ), // retargeting_factor
             network_id: 1,
             utxo_max_index: 0,
+            irr_block: 6,
             accounts_max_index: 0,
             receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
@@ -358,19 +417,6 @@ fn test_init_blocks() {
 
 #[test]
 fn test_init_mock_blocks() {
-    //    use verify_header::HeaderProofOfWork;
-
-    //    with_externalities(&mut new_test_mock_ext(), || {
-    //        let (c1, c2) = generate_mock_blocks();
-    //        assert_eq!(format!("{:?}", c1.get(0).unwrap().hash().reversed()).to_string(), "0305b6acb0feee5bd7f5f74606190c35877299b881691db2e56a53452e3929f9");
-    //        println!("{:?}", ser::serialize(c1.get(1).unwrap()));
-    //        println!("{:?}", c1.get(1).unwrap().hash());
-    //
-    //        let v = HeaderProofOfWork::new(c1.get(1).unwrap());
-    //        let r = v.check::<Test>();
-    //        println!("{:?}", r);
-    //
-    //    });
     let (c1, c2) = generate_mock_blocks();
     assert_eq!(
         format!("{:?}", c1.get(0).unwrap().hash().reversed()).to_string(),
@@ -433,6 +479,12 @@ fn test_genesis() {
         let best = BridgeOfBTC::best_index();
         assert_eq!(best.hash, header.hash());
     })
+}
+
+#[test]
+#[should_panic]
+fn test_err_genesis_startnumber() {
+    with_externalities(&mut new_test_ext_err_genesisblock(), || {})
 }
 
 #[test]
@@ -591,6 +643,7 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
             ), // retargeting_factor
             network_id: 1,
             utxo_max_index: 0,
+            irr_block: 6,
             accounts_max_index: 0,
             receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
@@ -662,6 +715,7 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
             ), // retargeting_factor
             network_id: 1,
             utxo_max_index: 0,
+            irr_block: 6,
             accounts_max_index: 0,
             receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),

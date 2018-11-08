@@ -36,6 +36,10 @@ extern crate srml_support as runtime_support;
 extern crate srml_system as system;
 extern crate srml_balances as balances;
 extern crate srml_timestamp as timestamp;
+#[cfg(test)]
+extern crate cxrml_support as cxsupport;
+#[cfg(test)]
+extern crate cxrml_tokenbalances as tokenbalances;
 extern crate cxrml_financialrecords as finacial_recordes;
 
 // bitcoin-rust
@@ -225,6 +229,14 @@ decl_storage! {
             let h = genesis.hash();
             let who: T::AccountId = Default::default();
             let block_number: T::BlockNumber = Default::default();
+
+            // check blocknumber is a new epoch
+            if config.network_id == 0 {
+                if number % config.params_info.retargeting_interval != 0 {
+                    panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
+                }
+            }
+
             // insert genesis
             storage.insert(GenesisConfig::<T>::hash(&<BlockHeaderFor<T>>::key_for(&h)).to_vec(),
                 (genesis, who, block_number).encode());

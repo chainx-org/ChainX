@@ -12,7 +12,7 @@ use timestamp;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use runtime_primitives::traits::As;
-use super::{Trait, NumberForHash, HashsForNumber, BlockHeaderFor, ParamsInfo, Params, GenesisInfo};
+use super::{Trait, NumberForHash, HashsForNumber, BlockHeaderFor, ParamsInfo, NetworkId, Params, GenesisInfo};
 use blockchain::ChainErr;
 
 pub struct HeaderVerifier<'a> {
@@ -58,8 +58,12 @@ impl<'a> HeaderVerifier<'a> {
     }
 
     pub fn check<T: Trait>(&self) -> Result {
-        self.work.check::<T>()?;
-        self.proof_of_work.check::<T>()?;
+        let params: Params = ParamsInfo::<T>::get();
+        let network_id: u32 = NetworkId::<T>::get();
+        if network_id == 0 {
+            self.work.check::<T>(&params)?;
+        }
+        self.proof_of_work.check(&params)?;
         self.timestamp.check()?;
         Ok(())
     }
@@ -78,9 +82,9 @@ impl<'a> HeaderWork<'a> {
         }
     }
 
-    fn check<T: Trait>(&self) -> Result {
+    fn check<T: Trait>(&self, p: &Params) -> Result {
         let previous_header_hash = self.header.previous_header_hash.clone();
-        let work = work_required::<T>(previous_header_hash, self.height);
+        let work = work_required::<T>(previous_header_hash, self.height, p);
         if work == self.header.bits {
             Ok(())
         } else {
@@ -89,8 +93,7 @@ impl<'a> HeaderWork<'a> {
     }
 }
 
-pub fn work_required<T: Trait>(parent_hash: H256, height: u32) -> Compact {
-    let params: Params = <ParamsInfo<T>>::get();
+pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &Params) -> Compact {
     let max_bits = params.max_bits().into();
     if height == 0 {
         return max_bits;
@@ -105,7 +108,7 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32) -> Compact {
     parent_header.bits
 }
 
-pub fn is_retarget_height(height: u32, p: Params) -> bool {
+pub fn is_retarget_height(height: u32, p: &Params) -> bool {
     height % p.retargeting_interval == 0
 }
 
@@ -113,7 +116,7 @@ pub fn is_retarget_height(height: u32, p: Params) -> bool {
 pub fn work_required_retarget<T: Trait>(
     parent_header: BlockHeader,
     height: u32,
-    params: Params,
+    params: &Params,
 ) -> Compact {
     let retarget_num = height - params.retargeting_interval;
 
@@ -158,7 +161,7 @@ pub fn work_required_retarget<T: Trait>(
 }
 
 /// Returns constrained number of seconds since last retarget
-pub fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, p: Params) -> u32 {
+pub fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, p: &Params) -> u32 {
     // subtract unsigned 32 bit numbers in signed 64 bit space in
     // order to prevent underflow before applying the range constraint.
     let timespan = last_timestamp as i64 - retarget_timestamp as i64;
@@ -178,8 +181,7 @@ impl<'a> HeaderProofOfWork<'a> {
         HeaderProofOfWork { header: header }
     }
 
-    fn check<T: Trait>(&self) -> Result {
-        let p: Params = <ParamsInfo<T>>::get();
+    fn check(&self, p: &Params) -> Result {
         if is_valid_proof_of_work(p.max_bits(), self.header.bits, &self.header.hash()) {
             Ok(())
         } else {
