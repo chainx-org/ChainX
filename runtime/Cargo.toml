@@ -37,6 +37,8 @@ cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
 cxrml-financialrecords = { path = "../cxrml/financialrecords" }
 cxrml-multisig = { path = "../cxrml/multisig" }
 cxrml-bridge-btc = { path = "../cxrml/bridge/btc" }
+cxrml-pendingorders = { path = "../cxrml/pendingorders" }
+cxrml-matchorder = { path = "../cxrml/matchorder" }
 
 [features]
 default = ["std"]
@@ -64,5 +66,7 @@ std = [
     "cxrml-tokenbalances/std",
     "cxrml-financialrecords/std",
     "cxrml-multisig/std",
-    "cxrml-bridge-btc/std"
+    "cxrml-bridge-btc/std",
+    "cxrml-pendingorders/std",
+    "cxrml-matchorder/std",
 ]

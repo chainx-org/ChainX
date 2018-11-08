@@ -32,6 +32,9 @@ chainx-network = { path = "./network" }
 chainx-pool = { path = "./pool" }
 chainx-rpc = { path = "./rpc" }
 chainx-api = { path = "./api" }
+cxrml-pendingorders = { path = "./cxrml/pendingorders" }
+cxrml-tokenbalances = { path = "./cxrml/tokenbalances" }
+
 env_logger = "0.5.13"
 rhododendron = "0.3"
 hex-literal = "0.1"
@@ -67,5 +70,6 @@ members = [
     "cxrml/multisig",
     "cxrml/bridge/btc",
     "cxrml/pendingorders",
+    "cxrml/matchorder",
     "cxrml/example",
 ]

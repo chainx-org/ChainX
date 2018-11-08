@@ -38,6 +38,9 @@ extern crate srml_treasury as treasury;
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_staking as staking;
 extern crate cxrml_tokenbalances as tokenbalances;
+extern crate cxrml_pendingorders as pendingorders;
+extern crate cxrml_matchorder as matchorder;
+
 extern crate cxrml_financialrecords as financialrecords;
 extern crate cxrml_multisig as multisig;
 // chainx runtime bridge
@@ -218,6 +221,14 @@ impl tokenbalances::Trait for Runtime {
 impl financialrecords::Trait for Runtime {
     type Event = Event;
 }
+impl pendingorders::Trait for Runtime {
+    type Event = Event;
+    type Amount = TokenBalance;
+    type Price = TokenBalance;
+}
+impl matchorder::Trait for Runtime {
+    type Event = Event;
+}
 
 impl multisig::Trait for Runtime {
     type MultiSig = multisig::SimpleMultiSigIdFor<Runtime>;
@@ -267,8 +278,10 @@ construct_runtime!(
         TokenBalances: tokenbalances,
         FinancialRecords: financialrecords,
         MultiSig: multisig,
+        PendingOrders : pendingorders,
+        MatchOrder : matchorder,
         // bridge
-        BridgeOfBTC: bridge_btc, //::{Module, Call, Storage, Config, Event<T>},
+        BridgeOfBTC: bridge_btc,
 
         // put end of this marco
         CXSupport: cxsupport::{Module},
@@ -292,7 +305,6 @@ pub type Executive = executive::Executive<Runtime, Block, balances::ChainContext
 
 // define tokenbalances module type
 pub type TokenBalance = u128;
-pub type Precision = u32;
 
 pub mod api {
     impl_stubs!(

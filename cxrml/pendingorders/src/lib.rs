@@ -11,6 +11,9 @@
 #[macro_use]
 extern crate serde_derive;
 
+#[macro_use]
+extern crate log;
+
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
 #[macro_use]
 extern crate parity_codec_derive;
@@ -40,47 +43,45 @@ extern crate srml_system as system;
 // for chainx runtime module lib
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_tokenbalances as tokenbalances;
-
+//extern crate cxrml_matchorder as matchorder;
 
 #[cfg(test)]
 mod tests;
 
 use codec::Codec;
 use rstd::prelude::*;
-//use runtime_primitives::traits::OnFinalise;
+use runtime_primitives::traits::OnFinalise;
 use runtime_primitives::traits::{As, Member, SimpleArithmetic, Zero};
 use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
-use system::{ensure_inherent, ensure_signed};
+use system::ensure_signed;
 use tokenbalances::Symbol;
 
 pub trait Trait: tokenbalances::Trait {
     type Amount: Parameter
-        + Member
-        + Codec
-        + SimpleArithmetic
-        + As<u8>
-        + As<u16>
-        + As<u32>
-        + As<u64>
-        + As<u128>
-        + As<usize>
-        + Copy
-        + Zero
-        + Default;
+    + Member
+    + Codec
+    + SimpleArithmetic
+    + As<u8>
+    + As<u16>
+    + As<u32>
+    + As<u64>
+    + As<u128>
+    + Copy
+    + Zero
+    + Default;
     type Price: Parameter
-        + Member
-        + Codec
-        + SimpleArithmetic
-        + As<u8>
-        + As<u16>
-        + As<u32>
-        + As<u64>
-        + As<u128>
-        + As<usize>
-        + Copy
-        + Zero
-        + Default;
+    + Member
+    + Codec
+    + SimpleArithmetic
+    + As<u8>
+    + As<u16>
+    + As<u32>
+    + As<u64>
+    + As<u128>
+    + Copy
+    + Zero
+    + Default;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -92,8 +93,6 @@ decl_module! {
         /// pub call
         fn put_order(origin,pair: OrderPair,ordertype: OrderType,amount: T::Amount,price:T::Price) -> Result;
         fn cancel_order(origin,pair:OrderPair,index:u64) -> Result;
-        /// inherent call
-        fn fill_order(origin,pair:OrderPair,maker_user:T::AccountId,taker_user:T::AccountId,maker_user_order_index:u64,taker_user_order_index:u64,price:T::Price,maker_amount:T::Amount,taker_amount:T::Amount,maker_fee:T::Amount, taker_fee:T::Amount)->Result;
 
     }
 }
@@ -109,7 +108,7 @@ decl_event!(
         ///  User Put Order 
         PutOrder(AccountId, OrderPair,u64, OrderType,Amount,Price, BlockNumber),
         ///  Fill Order
-        FillOrder(OrderPair,u128,AccountId,AccountId,u64,u64,Price, Amount,Amount,Amount,Amount,BlockNumber),
+        FillOrder(OrderPair,u128,AccountId,AccountId,u64,u64,Price, Amount,Amount,Amount,BlockNumber),
         ///  User Cancel Order
         CancelOrder(AccountId, OrderPair,u64, BlockNumber),
 
@@ -122,14 +121,25 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as PendingOrders {
         pub OrderFee get(order_fee) config(): T::Balance;
-        pub OrderPairList get(pair_list) config():  Vec<OrderPair>;
+        pub OrderPairList get(pair_list) config():  Vec<OrderPair> = [
+            OrderPair {
+                first: b"pcx".to_vec(),
+                second: b"btc".to_vec(),
+                precision: 8,
+            }].to_vec();
         pub FillIndexOf get(fill_index_of):  map OrderPair => u128; //交易对的成交历史的index
         pub OrdersOf get(order_of):map (T::AccountId, OrderPair,u64) => Option<OrderT<T>>;
         pub LastOrderIndexOf get(last_order_index_of): map(T::AccountId,OrderPair)=>Option<u64>;
         pub FillsOf get(fill_of): map (OrderPair,u128) => Option<FillT<T>>;
+
+        pub MaxCommandId get(max_command_id) config():u64; //每个块 最后重制为0
+        pub CommandOf get(command_of) : map(u64) =>Option<(T::AccountId,OrderPair,u64,CommandType,u128)>; //存放当前块的所有挂单（需要撮合) matchorder 会从这里读取，然后清空
     }
 }
 
+impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
+    fn on_finalise(_time: T::BlockNumber) {}
+}
 
 impl<T: Trait> Module<T> {
     /// Deposit one of this module's events.
@@ -139,6 +149,7 @@ impl<T: Trait> Module<T> {
     // 增加交易对
     pub fn add_pair(pair: OrderPair) -> Result {
         if let Err(_) = Self::is_valid_pair(&pair) {
+            info!("add_pair:{:?}", pair.clone());
             let mut pair_list: Vec<OrderPair> = <OrderPairList<T>>::get();
             pair_list.push(pair);
             <OrderPairList<T>>::put(pair_list);
@@ -153,10 +164,11 @@ impl<T: Trait> Module<T> {
         if pair_list.contains(pair) {
             Ok(())
         } else {
-            Err("not a existed pair in orderpair list")
+            Err("have a existed pair in orderpair list")
         }
     }
     pub fn set_order_fee(val: T::Balance) -> Result {
+        info!("set_order_fee:{:?}", val);
         <OrderFee<T>>::put(val);
         Self::deposit_event(RawEvent::SetOrderFee(val));
         Ok(())
@@ -172,15 +184,19 @@ impl<T: Trait> Module<T> {
         price: T::Price,
     ) -> Result {
         let transactor = ensure_signed(origin)?;
+        info!("put_order:{:?} {:?} {:?} {:?} {:?}  ", transactor.clone(), pair.clone(), ordertype, amount, price);
         //判断交易对是否存在
         if let Err(_) = Self::is_valid_pair(&pair) {
+            error!("put_order: not a existed pair in orderpair list {:?}", pair.clone());
             return Err("not a existed pair in orderpair list");
         }
         //判定 数量和价格
         if amount == Zero::zero() {
+            error!("put_order:  amount cann't be zero");
             return Err("amount cann't be zero");
         }
         if price == Zero::zero() {
+            error!("put_order:price cann't be zero");
             return Err("price cann't be zero");
         }
         //手续费
@@ -191,24 +207,43 @@ impl<T: Trait> Module<T> {
             let sum: <T as tokenbalances::Trait>::TokenBalance = As::sa(amount.as_() * price.as_());
             match ordertype {
                 OrderType::Buy => {
-                    if <tokenbalances::Module<T>>::free_token_of(&sender, &pair.second) < sum {
-                        return Err("transactor's free token balance too low, can't put buy order");
-                    }
-                    // 锁定用户资产
+                    if <tokenbalances::Module<T>>::free_token(&(
+                        sender.clone(),
+                        pair.second.clone(),
+                    )) < sum
+                        {
+                            error!("put_order: transactor's free token balance too low, can't put buy order");
+                            return Err("transactor's free token balance too low, can't put buy order");
+                        }
+                    //  锁定用户资产
+                    if let Err(msg) = <tokenbalances::Module<T>>::reserve(sender, &pair.second, sum)
+                        {
+                            error!("put_order: buy tokenbalance reserve:{:?}", msg);
+                            return Err(msg);
+                        }
                 }
                 OrderType::Sell => {
-                    if <tokenbalances::Module<T>>::free_token_of(&sender, &pair.first)
+                    if <tokenbalances::Module<T>>::free_token(&(sender.clone(), pair.first.clone()))
                         < As::sa(amount.as_())
-                    {
-                        return Err("transactor's free token balance too low, can't put sell order");
+                        {
+                            error!("put_order: transactor's free token balance too low, can't put sell order");
+                            return Err("transactor's free token balance too low, can't put sell order");
+                        }
+                    //  锁定用户资产
+                    if let Err(msg) = <tokenbalances::Module<T>>::reserve(
+                        sender,
+                        &pair.first,
+                        As::sa(amount.as_()),
+                    ) {
+                        error!("put_order: sell tokenbalance reserve:{:?}", msg);
+                        return Err(msg);
                     }
-                    // 锁定用户资产
-
                 }
             }
 
             // 更新用户的交易对的挂单index
-            let new_last_index = Self::last_order_index_of((sender.clone(), pair.clone())).unwrap_or_default() + 1;
+            let new_last_index =
+                Self::last_order_index_of((sender.clone(), pair.clone())).unwrap_or_default() + 1;
             <LastOrderIndexOf<T>>::insert((sender.clone(), pair.clone()), new_last_index);
             //新增挂单记录
             let order = Order {
@@ -224,8 +259,8 @@ impl<T: Trait> Module<T> {
                 status: OrderStatus::FillNo,
                 fill_index: Default::default(),
             };
-            Self::insert_order(new_last_index, &order)?;
-
+            Self::insert_order(new_last_index, &order);
+            info!("put_order: insert new order {:?} {:?} {}", sender.clone(), pair.clone(), new_last_index);
             // 记录日志
             Self::deposit_event(RawEvent::PutOrder(
                 sender.clone(),
@@ -237,19 +272,41 @@ impl<T: Trait> Module<T> {
                 <system::Module<T>>::block_number(),
             ));
 
-            // 去调用撮合模块，更新盘口队列
+            // 先缓存，ordermatch模块会清空
+            let las_command_id = Self::max_command_id() + 1;
+            <CommandOf<T>>::insert(
+                las_command_id,
+                (
+                    order.user.clone(),
+                    order.pair.clone(),
+                    order.index,
+                    CommandType::Match,
+                    0,
+                ),
+            );
+            <MaxCommandId<T>>::put(las_command_id);
+
             Ok(())
         })?;
 
         Ok(())
     }
-    fn insert_order(index: u64, order: &OrderT<T>) -> Result {
-        <OrdersOf<T>>::insert((order.user.clone(), order.pair.clone(), index), order.clone());
-
-        Ok(())
+    pub fn update_command_of(command_id: u64, bid: u128) {
+        if let Some(mut command) = Self::command_of(command_id) {
+            command.4 = bid;
+            <CommandOf<T>>::insert(command_id, command);
+        }
     }
-    fn cancel_order(origin: T::Origin, pair: OrderPair, index: u64) -> Result {
+    fn insert_order(index: u64, order: &OrderT<T>) {
+        <OrdersOf<T>>::insert(
+            (order.user.clone(), order.pair.clone(), index),
+            order.clone(),
+        );
+    }
+    pub fn cancel_order(origin: T::Origin, pair: OrderPair, index: u64) -> Result {
         let transactor = ensure_signed(origin)?;
+        info!("cancel_order:{:?} {:?} {:?} ", transactor.clone(), pair.clone(), index);
+
         if let Some(mut order) = Self::order_of((transactor.clone(), pair.clone(), index)) {
             match order.status {
                 OrderStatus::FillNo | OrderStatus::FillPart => {
@@ -260,10 +317,46 @@ impl<T: Trait> Module<T> {
                         OrderStatus::Cancel
                     };
                     order.lastupdate_time = <system::Module<T>>::block_number();
-                    Self::insert_order(index, &order)?;
+                    Self::insert_order(index, &order);
+                    info!("cancel_order:{:?} {} {:?}", transactor.clone(), index, order.status);
                     //回退用户资产
+                    let back_symbol: Symbol = match order.class {
+                        OrderType::Sell => pair.clone().first,
+                        OrderType::Buy => pair.clone().second,
+                    };
 
-                    //调用撮合，更新盘口
+                    let back_amount: <T as tokenbalances::Trait>::TokenBalance = match order.class {
+                        OrderType::Sell => {
+                            As::sa(order.amount.as_() - order.hasfill_amount.as_())
+                        }
+                        OrderType::Buy => As::sa(
+                            (order.amount.as_() - order.hasfill_amount.as_()) * order.price.as_(),
+                        ),
+                    };
+
+                    if let Err(msg) = <tokenbalances::Module<T>>::unreserve(
+                        &transactor.clone(),
+                        &back_symbol,
+                        back_amount,
+                    ) {
+                        error!("cancel_order:{:?}", msg);
+                        return Err(msg);
+                    }
+
+                    //通知撮合，更新盘口
+                    //先缓存，ordermatch模块会清空
+                    let las_command_id = Self::max_command_id() + 1;
+                    <CommandOf<T>>::insert(
+                        las_command_id,
+                        (
+                            order.user.clone(),
+                            order.pair.clone(),
+                            order.index,
+                            CommandType::Cancel,
+                            0,
+                        ),
+                    );
+                    <MaxCommandId<T>>::put(las_command_id);
 
                     //记录日志
                     Self::deposit_event(RawEvent::CancelOrder(
@@ -274,6 +367,7 @@ impl<T: Trait> Module<T> {
                     ));
                 }
                 _ => {
+                    error!("cancel_order:order status error( FiillAll|FillPartAndCancel|Cancel) cann't be cancel");
                     return Err(
                         "order status error( FiillAll|FillPartAndCancel|Cancel) cann't be cancel",
                     );
@@ -281,64 +375,68 @@ impl<T: Trait> Module<T> {
             }
             Ok(())
         } else {
+            error!("cancel_order:cann't find this index of order");
             Err("cann't find this index of order")
         }
     }
 
-    fn fill_order(
-        origin: T::Origin,
+    pub fn fill_order(
         pair: OrderPair,
         maker_user: T::AccountId,
         taker_user: T::AccountId,
         maker_user_order_index: u64,
         taker_user_order_index: u64,
         price: T::Price,
-        maker_amount: T::Amount,
-        taker_amount: T::Amount,
+        amount: T::Amount,
         maker_fee: T::Amount,
         taker_fee: T::Amount,
     ) -> Result {
-        ensure_inherent(origin)?;
+        info!("fill_order:{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", pair.clone(), maker_user, taker_user, maker_user_order_index, taker_user_order_index, price, amount, maker_fee, taker_fee);
+
         //逻辑校验 在调用方撮合模块中实现，此处只维护挂单、成交历史、资产转移
         let new_last_fill_index = Self::last_fill_index_of_pair(&pair) + 1;
 
         //更新maker对应的订单
         let maker_order = if let Some(mut maker_order) =
-            Self::order_of((maker_user.clone(), pair.clone(), maker_user_order_index))
-        {
-            maker_order.fill_index.push(new_last_fill_index);
-            maker_order.hasfill_amount = maker_order.hasfill_amount + maker_amount;
-            if maker_order.hasfill_amount == maker_order.amount {
-                maker_order.status = OrderStatus::FillAll;
-            } else if maker_order.hasfill_amount < maker_order.amount{
-                maker_order.status = OrderStatus::FillPart;
-            } else {
-                return Err(" maker order has not enough amount");
-            }
+        Self::order_of((maker_user.clone(), pair.clone(), maker_user_order_index))
+            {
+                maker_order.fill_index.push(new_last_fill_index);
+                maker_order.hasfill_amount = maker_order.hasfill_amount + amount;
+                if maker_order.hasfill_amount == maker_order.amount {
+                    maker_order.status = OrderStatus::FillAll;
+                } else if maker_order.hasfill_amount < maker_order.amount {
+                    maker_order.status = OrderStatus::FillPart;
+                } else {
+                    error!("fill_order: maker order has not enough amount");
+                    return Err(" maker order has not enough amount");
+                }
 
-            maker_order.lastupdate_time = <system::Module<T>>::block_number();
-            maker_order
-        } else {
+                maker_order.lastupdate_time = <system::Module<T>>::block_number();
+                maker_order
+            } else {
+            error!("fill_order: maker cann't find this maker order");
             return Err("cann't find this maker order");
         };
 
         //更新taker对应的订单
         let taker_order = if let Some(mut taker_order) =
-            Self::order_of((taker_user.clone(), pair.clone(), taker_user_order_index))
-        {
-            taker_order.fill_index.push(new_last_fill_index);
-            taker_order.hasfill_amount = taker_order.hasfill_amount + taker_amount;
-            if taker_order.hasfill_amount == taker_order.amount {
-                taker_order.status = OrderStatus::FillAll;
-            } else if taker_order.hasfill_amount < taker_order.amount{
-                taker_order.status = OrderStatus::FillPart;
-            } else {
-                return Err(" taker order has not enough amount");
-            }
+        Self::order_of((taker_user.clone(), pair.clone(), taker_user_order_index))
+            {
+                taker_order.fill_index.push(new_last_fill_index);
+                taker_order.hasfill_amount = taker_order.hasfill_amount + amount;
+                if taker_order.hasfill_amount == taker_order.amount {
+                    taker_order.status = OrderStatus::FillAll;
+                } else if taker_order.hasfill_amount < taker_order.amount {
+                    taker_order.status = OrderStatus::FillPart;
+                } else {
+                    error!("fill_order: taker order has not enough amount");
+                    return Err(" taker order has not enough amount");
+                }
 
-            taker_order.lastupdate_time = <system::Module<T>>::block_number();
-            taker_order
-        } else {
+                taker_order.lastupdate_time = <system::Module<T>>::block_number();
+                taker_order
+            } else {
+            error!("fill_order: taker cann't find this maker order");
             return Err("cann't find this taker order");
         };
 
@@ -346,24 +444,91 @@ impl<T: Trait> Module<T> {
         let fill = Fill {
             pair: pair.clone(),
             index: new_last_fill_index,
-            maker_user: maker_user,
-            taker_user: taker_user,
+            maker_user: maker_user.clone(),
+            taker_user: taker_user.clone(),
             maker_user_order_index: maker_order.index,
             taker_user_order_index: taker_order.index,
             price: price,
-            maker_amount: maker_amount,
-            taker_amount: taker_amount,
+            amount: amount,
             maker_fee: maker_fee,
             taker_fee: taker_fee,
             time: <system::Module<T>>::block_number(),
         };
-        Self::insert_fill(&fill)?;
+        Self::insert_fill(&fill);
         <FillIndexOf<T>>::insert(&pair, new_last_fill_index);
         //插入更新后的maker对应的订单
-        Self::insert_order(maker_order.index(),&maker_order);
+        Self::insert_order(maker_order.index(), &maker_order);
         //插入更新后的taker对应的订单
-         Self::insert_order(taker_order.index(),&taker_order);
+        Self::insert_order(taker_order.index(), &taker_order);
+        info!("fill_order:insert new fill {}", new_last_fill_index);
         //转移 maker和taker中的资产
+        //move_free_token(from: &T::AccountId, to: &T::AccountId, symbol: &Symbol, value: T::TokenBalance)
+        match maker_order.class {
+            OrderType::Sell => {
+                //卖家先解锁first token 并move给买家，和手续费账户
+                let maker_back_symbol: Symbol = pair.clone().first;
+                let maker_back_amount: <T as tokenbalances::Trait>::TokenBalance =
+                    As::sa(amount.as_());
+                if let Err(msg) = Self::move_token(
+                    &maker_back_symbol,
+                    maker_back_amount,
+                    As::sa(maker_fee.as_()),
+                    &maker_user.clone(),
+                    &taker_user.clone(),
+                    &maker_user.clone(),
+                ) {
+                    error!("fill_order: sell maker move_token {:?}", msg);
+                    return Err(msg);
+                }
+                //计算买家的数量，解锁second,并move 给卖家,和手续费账户
+                let taker_back_symbol: Symbol = pair.clone().second;
+                let taker_back_amount: <T as tokenbalances::Trait>::TokenBalance =
+                    As::sa(amount.as_() * price.as_());
+                if let Err(msg) = Self::move_token(
+                    &taker_back_symbol,
+                    taker_back_amount,
+                    As::sa(taker_fee.as_()),
+                    &taker_user.clone(),
+                    &maker_user.clone(),
+                    &taker_user.clone(),
+                ) {
+                    error!("fill_order: sell taker move_token {:?}", msg);
+                    return Err(msg);
+                }
+            }
+            OrderType::Buy => {
+                //买先解锁first token 并move给卖家，和手续费账户
+                let maker_back_symbol: Symbol = pair.clone().second;
+                let maker_back_amount: <T as tokenbalances::Trait>::TokenBalance =
+                    As::sa(amount.as_() * price.as_());
+                if let Err(msg) = Self::move_token(
+                    &maker_back_symbol,
+                    maker_back_amount,
+                    As::sa(maker_fee.as_()),
+                    &maker_user.clone(),
+                    &taker_user.clone(),
+                    &maker_user.clone(),
+                ) {
+                    error!("fill_order: sell maker move_token {:?}", msg);
+                    return Err(msg);
+                }
+                //计算卖家的数量，解锁second,并move 给买家,和手续费账户
+                let taker_back_symbol: Symbol = pair.clone().first;
+                let taker_back_amount: <T as tokenbalances::Trait>::TokenBalance =
+                    As::sa(amount.as_());
+                if let Err(msg) = Self::move_token(
+                    &taker_back_symbol,
+                    taker_back_amount,
+                    As::sa(taker_fee.as_()),
+                    &taker_user.clone(),
+                    &maker_user.clone(),
+                    &taker_user.clone(),
+                ) {
+                    error!("fill_order: sell taker move_token {:?}", msg);
+                    return Err(msg);
+                }
+            }
+        }
 
         // 记录日志
         Self::deposit_event(RawEvent::FillOrder(
@@ -374,24 +539,47 @@ impl<T: Trait> Module<T> {
             fill.maker_user_order_index,
             fill.taker_user_order_index,
             fill.price,
-            fill.maker_amount,
-            fill.taker_amount,
+            fill.amount,
             fill.maker_fee,
             fill.taker_fee,
             <system::Module<T>>::block_number(),
         ));
-        // 撮合模块注意在最后需要自动更新盘口
-        
-        Ok(())
-    }
-    fn insert_fill(fill: &FillT<T>) -> Result {
-        <FillsOf<T>>::insert((fill.pair.clone(), fill.index), fill.clone());
+
+        // 这里要处理撮合手续费 将其移动到固定账户中，并在下个块开始时，自动生成购买pcx的订单
 
         Ok(())
+    }
+    fn move_token(
+        symbol: &Symbol,
+        value: <T as tokenbalances::Trait>::TokenBalance,
+        fee: <T as tokenbalances::Trait>::TokenBalance,
+        from: &T::AccountId,
+        to: &T::AccountId,
+        _fee_account: &T::AccountId,
+    ) -> Result {
+        if let Err(msg) = <tokenbalances::Module<T>>::unreserve(from, symbol, value) {
+            return Err(msg);
+        }
+        //fee 外部算好了
+        if let Err(e) = <tokenbalances::Module<T>>::move_free_token(
+            &from.clone(),
+            &to.clone(),
+            &symbol.clone(),
+            value - fee,
+        ) {
+            return Err(e.info());
+        }
+
+        Ok(())
+    }
+
+    fn insert_fill(fill: &FillT<T>) {
+        <FillsOf<T>>::insert((fill.pair.clone(), fill.index), fill.clone());
+    }
+    pub fn clear_command() {
+        <MaxCommandId<T>>::put(0);
     }
 }
-
-
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
@@ -429,12 +617,23 @@ pub struct OrderPair {
     second: Symbol,
     precision: u32, //价格精度
 }
+
+impl OrderPair {
+    pub fn new(first: Symbol, second: Symbol, precision: u32) -> Self {
+        return OrderPair {
+            first: first,
+            second: second,
+            precision: precision,
+        };
+    }
+}
+
 impl Default for OrderPair {
     fn default() -> Self {
         OrderPair {
             first: Default::default(),
             second: Default::default(),
-            precision:0,
+            precision: 0,
         }
     }
 }
@@ -443,12 +642,12 @@ impl Default for OrderPair {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Fill<Pair, AccountId, Amount, Price, BlockNumber>
-where
-    Pair: Clone,
-    AccountId: Clone,
-    Amount: Copy,
-    Price: Copy,
-    BlockNumber: Copy,
+    where
+        Pair: Clone,
+        AccountId: Clone,
+        Amount: Copy,
+        Price: Copy,
+        BlockNumber: Copy,
 {
     pair: Pair,
     index: u128,
@@ -457,20 +656,19 @@ where
     maker_user_order_index: u64,
     taker_user_order_index: u64,
     price: Price,
-    maker_amount: Amount,
-    taker_amount: Amount,
+    amount: Amount,
     maker_fee: Amount,
     taker_fee: Amount,
     time: BlockNumber,
 }
 
 impl<Pair, AccountId, Amount, Price, BlockNumber> Fill<Pair, AccountId, Amount, Price, BlockNumber>
-where
-    Pair: Clone,
-    AccountId: Clone,
-    Amount: Copy,
-    Price: Copy,
-    BlockNumber: Copy,
+    where
+        Pair: Clone,
+        AccountId: Clone,
+        Amount: Copy,
+        Price: Copy,
+        BlockNumber: Copy,
 {
     pub fn pair(&self) -> Pair {
         self.pair.clone()
@@ -493,11 +691,9 @@ where
     pub fn price(&self) -> Price {
         self.price
     }
-    pub fn maker_amount(&self) -> Amount {
-        self.maker_amount
-    }
-    pub fn taker_amount(&self) -> Amount {
-        self.taker_amount
+
+    pub fn amount(&self) -> Amount {
+        self.amount
     }
     pub fn maker_fee(&self) -> Amount {
         self.maker_fee
@@ -509,6 +705,7 @@ where
         self.time
     }
 }
+
 pub type FillT<T> = Fill<
     OrderPair,
     <T as system::Trait>::AccountId,
@@ -521,12 +718,12 @@ pub type FillT<T> = Fill<
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Order<Pair, AccountId, Amount, Price, BlockNumber>
-where
-    Pair: Clone,
-    AccountId: Clone,
-    Amount: Copy,
-    Price: Copy,
-    BlockNumber: Copy,
+    where
+        Pair: Clone,
+        AccountId: Clone,
+        Amount: Copy,
+        Price: Copy,
+        BlockNumber: Copy,
 {
     pair: Pair,
     index: u64,
@@ -540,14 +737,42 @@ where
     status: OrderStatus,
     fill_index: Vec<u128>, // 填充历史记录的索引
 }
+
 impl<Pair, AccountId, Amount, Price, BlockNumber> Order<Pair, AccountId, Amount, Price, BlockNumber>
-where
-    Pair: Clone,
-    AccountId: Clone,
-    Amount: Copy,
-    Price: Copy,
-    BlockNumber: Copy,
+    where
+        Pair: Clone,
+        AccountId: Clone,
+        Amount: Copy,
+        Price: Copy,
+        BlockNumber: Copy,
 {
+    pub fn new(
+        pair: Pair,
+        index: u64,
+        class: OrderType,
+        user: AccountId,
+        amount: Amount,
+        hasfill_amount: Amount,
+        price: Price,
+        create_time: BlockNumber,
+        lastupdate_time: BlockNumber,
+        status: OrderStatus,
+        fill_index: Vec<u128>,
+    ) -> Self {
+        return Order {
+            pair: pair,
+            index: index,
+            class: class,
+            user: user,
+            amount: amount,
+            hasfill_amount: hasfill_amount,
+            price: price,
+            create_time: create_time,
+            lastupdate_time: lastupdate_time,
+            status: status,
+            fill_index: fill_index,
+        };
+    }
     pub fn pair(&self) -> Pair {
         self.pair.clone()
     }
@@ -591,14 +816,25 @@ pub type OrderT<T> = Order<
     <T as system::Trait>::BlockNumber,
 >;
 
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum CommandType {
+    Match,
+    Cancel,
+}
+
+impl Default for CommandType {
+    fn default() -> Self {
+        CommandType::Match
+    }
+}
 
 impl<T: Trait> Module<T> {
-   
     /// get the order list for a account
     pub fn order_list(who: &T::AccountId, pair: &OrderPair) -> Vec<OrderT<T>> {
         let mut records: Vec<OrderT<T>> = Vec::new();
         let last_index = Self::last_order_index_of((who.clone(), pair.clone())).unwrap_or_default();
-        for i in (1..(last_index+1)).rev() {
+        for i in (1..(last_index + 1)).rev() {
             if let Some(r) = <OrdersOf<T>>::get((who.clone(), pair.clone(), i)) {
                 records.push(r);
             }
@@ -606,9 +842,7 @@ impl<T: Trait> Module<T> {
 
         records
     }
-    
 }
-
 
 const FILL_PAGE_SIZE: u128 = 1000;
 
@@ -616,7 +850,7 @@ impl<T: Trait> Module<T> {
     pub fn last_fill_index_of_pair(pair: &OrderPair) -> u128 {
         Self::fill_index_of(pair.clone())
     }
-   
+
     /// 成交历史记录
     /// 每次只返回 1000条
     /// 必须加分page逻辑
@@ -646,4 +880,3 @@ impl<T: Trait> Module<T> {
         records
     }
 }
-
