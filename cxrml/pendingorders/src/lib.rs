@@ -55,7 +55,7 @@ use runtime_primitives::traits::{As, Member, SimpleArithmetic, Zero};
 use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
-use tokenbalances::Symbol;
+use tokenbalances::{Symbol, ReservedType};
 
 pub trait Trait: tokenbalances::Trait {
     type Amount: Parameter
@@ -216,7 +216,7 @@ impl<T: Trait> Module<T> {
                             return Err("transactor's free token balance too low, can't put buy order");
                         }
                     //  锁定用户资产
-                    if let Err(msg) = <tokenbalances::Module<T>>::reserve(sender, &pair.second, sum)
+                    if let Err(msg) = <tokenbalances::Module<T>>::reserve(sender, &pair.second, sum, ReservedType::Exchange)
                         {
                             error!("put_order: buy tokenbalance reserve:{:?}", msg);
                             return Err(msg);
@@ -234,6 +234,7 @@ impl<T: Trait> Module<T> {
                         sender,
                         &pair.first,
                         As::sa(amount.as_()),
+                        ReservedType::Exchange,
                     ) {
                         error!("put_order: sell tokenbalance reserve:{:?}", msg);
                         return Err(msg);
@@ -338,6 +339,7 @@ impl<T: Trait> Module<T> {
                         &transactor.clone(),
                         &back_symbol,
                         back_amount,
+                        ReservedType::Exchange,
                     ) {
                         error!("cancel_order:{:?}", msg);
                         return Err(msg);
@@ -557,7 +559,7 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         _fee_account: &T::AccountId,
     ) -> Result {
-        if let Err(msg) = <tokenbalances::Module<T>>::unreserve(from, symbol, value) {
+        if let Err(msg) = <tokenbalances::Module<T>>::unreserve(from, symbol, value, ReservedType::Exchange) {
             return Err(msg);
         }
         //fee 外部算好了

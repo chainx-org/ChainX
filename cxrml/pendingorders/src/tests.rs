@@ -188,7 +188,7 @@ fn test_order() {
 
         //500-200
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 300);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 200);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 200);
 
         //挂卖单
         let sell = OrderType::Sell;
@@ -200,7 +200,7 @@ fn test_order() {
 
         //500-100
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 400);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone())), 100);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)), 100);
 
         let last_order_index_of_eos_eth =
             PendingOrders::last_order_index_of((a.clone(), p1.clone())).unwrap();
@@ -224,7 +224,7 @@ fn test_order() {
         assert_eq!(Ok(()), cancel);
         //500-200+200
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         let cancel_order_1 =
             PendingOrders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth - 1))
@@ -323,18 +323,18 @@ fn test_fill() {
         let buy = OrderType::Buy;
         let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5);
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 500);
 
         //挂卖单
         let sell = OrderType::Sell;
         let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5);
         assert_eq!(b_order, Ok(()));
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone())), 50);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)), 50);
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1000);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         print_order_list(a, p1.clone());
         print_order_list(b, p1.clone());
@@ -344,17 +344,17 @@ fn test_fill() {
 
         //1000+250
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1050);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         //1000-500
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
         //500-250
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 250);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 250);
 
         //1000-50
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1250);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         assert_eq!(1, PendingOrders::last_fill_index_of_pair(&p1.clone()));
         let last_fill = PendingOrders::fill_of((p1.clone(), 1)).unwrap();

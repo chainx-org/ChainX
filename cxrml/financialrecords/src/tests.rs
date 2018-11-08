@@ -72,8 +72,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(tokenbalances::GenesisConfig::<Test> {
         token_list: vec![
-            (t, 100, 0),
-            (t2, 100, 0),
+            (t, vec![]),
+            (t2, vec![]),
         ],
         transfer_token_fee: 10,
     }.build_storage().unwrap());
@@ -102,8 +102,8 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(tokenbalances::GenesisConfig::<Test> {
         token_list: vec![
-            (t, 0, 0),
-            (t2, 0, 0),
+            (t, vec![]),
+            (t2, vec![]),
         ],
         transfer_token_fee: 10,
     }.build_storage().unwrap());
@@ -212,7 +212,7 @@ fn test_last_not_finish() {
         assert_eq!(FinancialRecords::records_len_of(&a), 5);
         assert_eq!(TokenBalances::free_token(&(a.clone(), btc_symbol.clone())), 125);
 
-        assert_eq!(TokenBalances::total_token(&btc_symbol), 225);
+        assert_eq!(TokenBalances::total_token(&btc_symbol), 125);
 
         // 1. deposit failed 2. deposit success 3. deposit success 4. withdrawal failed 5. withdrawal success
         // (withdrawal) 10 + 10 = 50

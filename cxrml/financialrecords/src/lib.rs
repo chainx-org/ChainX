@@ -52,7 +52,7 @@ use runtime_primitives::traits::OnFinalise;
 
 use system::ensure_signed;
 
-pub use tokenbalances::Symbol;
+pub use tokenbalances::{Symbol, ReservedType};
 use cxsupport::storage::linked_node::{
     Node, NodeT, LinkedNodeCollection, MultiNodeIndex,
 };
@@ -415,15 +415,15 @@ impl<T: Trait> Module<T> {
             let mut index = header.index();
 
             while let Some(node) = Self::withdraw_log_cache(&index) {
-               let key = (node.data.accountid().clone(), node.data.index());
-               if let Some(r) = <RecordsOf<T>>::get(&key) {
-                   vec.push((node.data.accountid().clone(), r.balance()));
-               }
-               if let Some(next) = node.next() {
-                   index = next;
-               } else {
-                   return Some(vec);
-               }
+                let key = (node.data.accountid().clone(), node.data.index());
+                if let Some(r) = <RecordsOf<T>>::get(&key) {
+                    vec.push((node.data.accountid().clone(), r.balance()));
+                }
+                if let Some(next) = node.next() {
+                    index = next;
+                } else {
+                    return Some(vec);
+                }
             }
         }
         None
@@ -537,7 +537,7 @@ impl<T: Trait> Module<T> {
                         WithdrawalState::Invalid => {
                             *state = WithdrawalState::Locking;
 
-                            <tokenbalances::Module<T>>::reserve(who, &sym, bal)?;
+                            <tokenbalances::Module<T>>::reserve(who, &sym, bal, ReservedType::Funds)?;
 
                             Self::deposit_event(RawEvent::WithdrawalLocking(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
                         }
@@ -572,13 +572,13 @@ impl<T: Trait> Module<T> {
                             if success {
                                 *state = WithdrawalState::Success;
 
-                                <tokenbalances::Module<T>>::destroy(who, &sym, bal)?;
+                                <tokenbalances::Module<T>>::destroy(who, &sym, bal, ReservedType::Funds)?;
 
                                 Self::deposit_event(RawEvent::WithdrawalSuccess(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
                             } else {
                                 *state = WithdrawalState::Failed;
 
-                                <tokenbalances::Module<T>>::unreserve(who, &sym, bal)?;
+                                <tokenbalances::Module<T>>::unreserve(who, &sym, bal, ReservedType::Funds)?;
 
                                 Self::deposit_event(RawEvent::WithdrawalFailed(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
                             }

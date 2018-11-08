@@ -38,6 +38,7 @@ mod mock;
 mod tests;
 
 use rstd::prelude::*;
+use rstd::slice::Iter;
 pub use rstd::result::Result as StdResult;
 use codec::Codec;
 use runtime_support::{StorageValue, StorageMap, Parameter};
@@ -58,7 +59,7 @@ pub trait Trait: balances::Trait + cxsupport::Trait {
     const CHAINX_PRECISION: Precision;
     const CHAINX_TOKEN_DESC: DescString;
     /// The token balance.
-    type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<u8> + As<u16>+ As<u32> + As<u64> + As<u128>  + Copy + Default;
+    type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<u8> + As<u16> + As<u32> + As<u64> + As<u128> + Copy + Default;
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -144,6 +145,28 @@ impl Token {
     }
 }
 
+///
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum ReservedType {
+    Others,
+    Funds,
+    Exchange,
+}
+
+impl ReservedType {
+    pub fn iterator() -> Iter<'static, ReservedType> {
+        static TYPES: [ReservedType; 3] = [ReservedType::Others, ReservedType::Funds, ReservedType::Exchange];
+        TYPES.into_iter()
+    }
+}
+
+impl Default for ReservedType {
+    fn default() -> Self {
+        ReservedType::Others
+    }
+}
+
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         /// register_token to module, should allow by root
@@ -199,7 +222,7 @@ decl_storage! {
         /// total locked token of a symbol
         pub TotalReservedToken get(total_reserved_token): map Symbol => T::TokenBalance;
 
-        pub ReservedToken get(reserved_token): map (T::AccountId, Symbol) => T::TokenBalance;
+        pub ReservedToken get(reserved_token): map (T::AccountId, Symbol, ReservedType) => T::TokenBalance;
 
         /// token list of a account
         pub TokenListOf get(token_list_of): map T::AccountId => Vec<Symbol> = [T::CHAINX_SYMBOL.to_vec()].to_vec();
@@ -274,7 +297,11 @@ impl<T: Trait> Module<T> {
 
     /// The combined token balance of `who` for symbol.
     pub fn total_token_of(who: &T::AccountId, symbol: &Symbol) -> T::TokenBalance {
-        Self::free_token(&(who.clone(), symbol.clone())) + Self::reserved_token((who.clone(), symbol.clone()))
+        let mut v = Self::free_token(&(who.clone(), symbol.clone()));
+        for t in ReservedType::iterator() {
+            v += Self::reserved_token((who.clone(), symbol.clone(), *t))
+        }
+        v
     }
 
     /// tatal_token of a token symbol
@@ -426,7 +453,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn destroy(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
+    pub fn destroy(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
         if symbol.as_slice() == T::CHAINX_SYMBOL {
             return Err("can't destroy chainx token");
         }
@@ -435,7 +462,7 @@ impl<T: Trait> Module<T> {
         //TODO validator
 
         // get storage
-        let key = (who.clone(), symbol.clone());
+        let key = (who.clone(), symbol.clone(), t);
         let total_reserved_token = TotalReservedToken::<T>::get(symbol);
         let reserved_token = ReservedToken::<T>::get(&key);
         // check
@@ -455,17 +482,18 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn reserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
+    pub fn reserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
         Self::is_valid_token_for(who, symbol)?;
         <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
 
         let key = (who.clone(), symbol.clone());
+        let reserved_key = (who.clone(), symbol.clone(), t);
         // for chainx
         if symbol.as_slice() == T::CHAINX_SYMBOL {
             let value: T::Balance = As::sa(value.as_() as u64); // change to balance for balances module
             let free_token: T::Balance = balances::FreeBalance::<T>::get(who);
-            let reserved_token = ReservedToken::<T>::get(&key);
+            let reserved_token = ReservedToken::<T>::get(&reserved_key);
             let total_reserved_token = TotalReservedToken::<T>::get(symbol);
             match free_token.checked_sub(&value) {
                 Some(b) => b,
@@ -482,7 +510,7 @@ impl<T: Trait> Module<T> {
             };
             // would subtract freebalance and add to reversed balance
             balances::Module::<T>::reserve(who, value)?;
-            ReservedToken::<T>::insert(key, new_reserved_token);
+            ReservedToken::<T>::insert(reserved_key, new_reserved_token);
             TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
 
             Self::deposit_event(RawEvent::ReverseToken(who.clone(), T::CHAINX_SYMBOL.to_vec(), val));
@@ -494,7 +522,7 @@ impl<T: Trait> Module<T> {
         let total_free_token = TotalFreeToken::<T>::get(symbol);
         let total_reserved_token = TotalReservedToken::<T>::get(symbol);
         let free_token = FreeToken::<T>::get(&key);
-        let reserved_token = ReservedToken::<T>::get(&key);
+        let reserved_token = ReservedToken::<T>::get(&reserved_key);
         // test overflow
         let new_free_token = match free_token.checked_sub(&value) {
             Some(b) => b,
@@ -516,23 +544,24 @@ impl<T: Trait> Module<T> {
         TotalFreeToken::<T>::insert(symbol, new_total_free_token);
         TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
         FreeToken::<T>::insert(&key, new_free_token);
-        ReservedToken::<T>::insert(&key, new_reserved_token);
+        ReservedToken::<T>::insert(&reserved_key, new_reserved_token);
 
         Self::deposit_event(RawEvent::ReverseToken(who.clone(), symbol.clone(), value));
         Ok(())
     }
 
-    pub fn unreserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> Result {
+    pub fn unreserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
         Self::is_valid_token_for(who, symbol)?;
         <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
 
         let key = (who.clone(), symbol.clone());
+        let reserved_key = (who.clone(), symbol.clone(), t);
         // for chainx
         if symbol.as_slice() == T::CHAINX_SYMBOL {
             let value: T::Balance = As::sa(value.as_() as u64); // change to balance for balances module
             let free_token: T::Balance = balances::FreeBalance::<T>::get(who);
-            let reserved_token = ReservedToken::<T>::get(&key);
+            let reserved_token = ReservedToken::<T>::get(&reserved_key);
             let total_reserved_token = TotalReservedToken::<T>::get(symbol);
             match free_token.checked_add(&value) {
                 Some(b) => b,
@@ -549,7 +578,7 @@ impl<T: Trait> Module<T> {
             };
             // would subtract reservedbalance and add to free balance
             balances::Module::<T>::unreserve(who, value);
-            ReservedToken::<T>::insert(key, new_reserved_token);
+            ReservedToken::<T>::insert(reserved_key, new_reserved_token);
             TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
 
             Self::deposit_event(RawEvent::UnreverseToken(who.clone(), T::CHAINX_SYMBOL.to_vec(), val));
@@ -561,7 +590,7 @@ impl<T: Trait> Module<T> {
         let total_free_token = TotalFreeToken::<T>::get(symbol);
         let total_reserved_token = TotalReservedToken::<T>::get(symbol);
         let free_token = FreeToken::<T>::get(&key);
-        let reserved_token = ReservedToken::<T>::get(&key);
+        let reserved_token = ReservedToken::<T>::get(&reserved_key);
         // test overflow
         let new_free_token = match free_token.checked_add(&value) {
             Some(b) => b,
@@ -583,7 +612,7 @@ impl<T: Trait> Module<T> {
         TotalFreeToken::<T>::insert(symbol, new_total_free_token);
         TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
         FreeToken::<T>::insert(&key, new_free_token);
-        ReservedToken::<T>::insert(&key, new_reserved_token);
+        ReservedToken::<T>::insert(&reserved_key, new_reserved_token);
 
         Self::deposit_event(RawEvent::UnreverseToken(who.clone(), symbol.clone(), value));
         Ok(())
