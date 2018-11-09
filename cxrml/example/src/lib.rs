@@ -41,6 +41,8 @@ use cxsupport::storage::linked_node::{Node, NodeT, NodeIndex, LinkedNodeCollecti
                                       MultiNodeIndex, MultiNodeIndexT,
 };
 
+use cxsupport::storage::btree_map::CodecBTreeMap;
+
 
 pub trait Trait: balances::Trait {
     /// The overarching event type.
@@ -115,6 +117,9 @@ impl<T: Trait> LinkedNodeCollection for LinkedOptionMultiKey<T> {
 decl_storage! {
     trait Store for Module<T: Trait> as CXExample {
         pub Fee get(fee) config(): T::Balance;
+        /// btreemap
+        pub Map get(map): CodecBTreeMap<T::AccountId, T::Balance>;
+
         // no Option node group
         /// linked node header, must use `NodeIndex` to wrap the data struct, and the type must be `StorageValue`
         pub NodeHeader get(node_header): NodeIndex<Order<T::AccountId, T::Balance>>;
