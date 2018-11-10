@@ -117,7 +117,6 @@ pub fn new_test_ext(
         intentions: vec![10, 20],
         intention_profiles: initial_authorities.clone().into_iter().map(|i| (i, initial_authorities.clone().iter().position(|&r| r == i).unwrap().to_string().into_bytes().to_vec(), b"chianx.org".to_vec())).collect(),
         validator_count: 2,
-        candidate_count: 2*4,
         reward_per_sec: 3,
         minimum_validator_count: 0,
         bonding_duration: sessions_per_era * session_length,

@@ -340,7 +340,7 @@ fn nominating_and_rewards_should_work() {
         System::set_block_number(4);
         assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 12));
         assert_ok!(Staking::nominate(Origin::signed(2), 1.into(), 10));
-        assert_ok!(Staking::deactive(Origin::signed(2), 3));
+        assert_ok!(Staking::deactivate(Origin::signed(2), 3));
         Session::check_rotate_session(System::block_number());
 
         assert_eq!(Session::validators(), [3, 1]);

@@ -787,6 +787,7 @@ dependencies = [
 name = "cxrml-staking"
 version = "0.1.0"
 dependencies = [
+ "cxrml-support 0.1.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",

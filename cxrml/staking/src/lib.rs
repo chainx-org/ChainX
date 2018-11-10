@@ -26,6 +26,8 @@ extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 
+extern crate cxrml_support as cxsupport;
+
 #[cfg(test)]
 extern crate sr_io as runtime_io;
 #[cfg(test)]
@@ -42,6 +44,8 @@ use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use session::OnSessionChange;
 use system::ensure_signed;
+
+use cxsupport::storage::btree_map::CodecBTreeMap;
 
 mod mock;
 mod tests;
@@ -80,16 +84,16 @@ impl<B: Default> Default for ValidatorPrefs<B> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Stats<AccountId, Balance> {
     pub nominator_count: u64,
-    pub total_stake: Balance,
     pub candidates: Vec<AccountId>,
+    pub total_stake: Balance,
 }
 
 impl<B: Default, C: Default> Default for Stats<B, C> {
     fn default() -> Self {
         Stats {
             nominator_count: 0,
-            total_stake: Default::default(),
             candidates: Default::default(),
+            total_stake: Default::default(),
         }
     }
 }
@@ -98,9 +102,9 @@ impl<B: Default, C: Default> Default for Stats<B, C> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct IntentionProfs<AccountId, Balance, BlockNumber> {
-    pub name: Vec<u8>,
-    pub url: Vec<u8>,
     pub is_active: bool,
+    pub url: Vec<u8>,
+    pub name: Vec<u8>,
     pub jackpot: Balance,
     pub nominators: Vec<AccountId>,
     pub total_nomination: Balance,
@@ -111,9 +115,9 @@ pub struct IntentionProfs<AccountId, Balance, BlockNumber> {
 impl<B: Default, C: Default, D: Default> Default for IntentionProfs<B, C, D> {
     fn default() -> Self {
         IntentionProfs {
-            name: Default::default(),
-            url: Default::default(),
             is_active: false,
+            url: Default::default(),
+            name: Default::default(),
             jackpot: Default::default(),
             nominators: Default::default(),
             total_nomination: Default::default(),
@@ -135,9 +139,9 @@ pub struct NominatorProfs<AccountId, Balance> {
 impl<B: Default, C: Default> Default for NominatorProfs<B, C> {
     fn default() -> Self {
         NominatorProfs {
-            total_nomination: Default::default(),
             locked: Default::default(),
             nominees: Default::default(),
+            total_nomination: Default::default(),
         }
     }
 }
@@ -175,7 +179,7 @@ decl_module! {
         fn stake(origin, name: Vec<u8>, url: Vec<u8>, value: T::Balance) -> Result;
         fn update_stake(origin, value: T::Balance) -> Result;
         fn update_registration(origin, name: Vec<u8>, url: Vec<u8>) -> Result;
-        fn deactive(origin, intentions_index: u32) -> Result;
+        fn deactivate(origin, intentions_index: u32) -> Result;
         fn nominate(origin, target: Address<T::AccountId, T::AccountIndex>, value: T::Balance) -> Result;
         fn unnominate(origin, target_index: u32, value: T::Balance) -> Result;
         fn register_preferences(origin, intentions_index: u32, prefs: ValidatorPrefs<T::Balance>) -> Result;
@@ -201,7 +205,7 @@ decl_event!(
     }
 );
 
-pub type PairOf<T> = (T, T);
+pub type Nominations<T> = CodecBTreeMap<<T as system::Trait>::AccountId, NominationRecord<<T as balances::Trait>::Balance, <T as system::Trait>::BlockNumber>>;
 
 decl_storage! {
     trait Store for Module<T: Trait> as Staking {
@@ -245,10 +249,6 @@ decl_storage! {
 
         pub StakeWeight get(stake_weight): map T::AccountId => u64;
 
-        /// The current set of candidates.
-        // pub Candidates get(candidates): Vec<T::AccountId>;
-        /// The ideal number of staking runner-ups. candidates : validators = 4:1
-        pub CandidateCount get(candidate_count) config(): u32;
         /// All (potential) validator -> reward for each session
         pub SessionRewardOf get(session_reward_of): map T::AccountId => T::Balance;
 
@@ -256,10 +256,11 @@ decl_storage! {
         pub IntentionProfiles get(intention_profiles): map T::AccountId => IntentionProfs<T::AccountId, T::Balance, T::BlockNumber>;
         /// All nominator -> profiles
         pub NominatorProfiles get(nominator_profiles): map T::AccountId => NominatorProfs<T::AccountId, T::Balance>;
+        /// All nominator -> nomination records
+        pub NominationRecords get(nominations_of) : map T::AccountId => Nominations<T>;
         /// Whole staking statistics
         pub StakingStats get(staking_stats): Stats<T::AccountId, T::Balance>;
-        /// All nomination record, (nominator, nominee) -> nomination,last_vote_weight,last_vote_weight_update
-        pub NominationRecordOf get(nomination_record_of) : map PairOf<T::AccountId> => NominationRecord<T::Balance, T::BlockNumber>;
+
         /// All block number -> accounts waiting to be unlocked at that block
         pub LockedAccountsOf get(locked_accounts_of): map T::BlockNumber => Vec<T::AccountId>;
         /// (nominator, unlock_block) => unlock_value
@@ -296,12 +297,27 @@ impl<T: Trait> Module<T> {
 
     /// Nomination of a nominator to his some nominee
     pub fn nomination_of(nominator: &T::AccountId, nominee: &T::AccountId) -> T::Balance {
-        <NominationRecordOf<T>>::get((nominator.clone(), nominee.clone())).nomination
+        if let Some(record) = <NominationRecords<T>>::get(nominator).0.get(nominee) {
+            return record.nomination
+        }
+        Zero::zero()
+    }
+
+    pub fn nomination_record_of(nominator: &T::AccountId, nominee: &T::AccountId) -> NominationRecord<T::Balance, T::BlockNumber> {
+        if let Some(record) = <NominationRecords<T>>::get(nominator).0.get(nominee) {
+            return record.clone()
+        }
+        <NominationRecord<T::Balance, T::BlockNumber>>::default()
+    }
+
+    pub fn insert_nomination_record(nominator: &T::AccountId, nominee: &T::AccountId, record: NominationRecord<T::Balance, T::BlockNumber>) {
+        let mut nominations = <NominationRecords<T>>::get(nominator);
+        nominations.0.insert(nominee.clone(), record);
+        <NominationRecords<T>>::insert(nominator, nominations);
     }
 
     /// All funds a nominator has nominated to his nominees
     pub fn total_nomination_of(nominator: &T::AccountId) -> T::Balance {
-        // Self::nominees_of(nominator)
         <NominatorProfiles<T>>::get(nominator)
             .nominees
             .into_iter()
@@ -403,7 +419,7 @@ impl<T: Trait> Module<T> {
         );
 
         let free_balance = <balances::Module<T>>::free_balance(who.clone());
-        let record = <NominationRecordOf<T>>::get((who.clone(), who.clone()));
+        let record = Self::nomination_record_of(&who, &who);
 
         ensure!(value.as_() > 0, "Cannot update non-positive.");
         ensure!(
@@ -430,13 +446,13 @@ impl<T: Trait> Module<T> {
     /// Retract the desire to stake for the transactor.
     ///
     /// Effects will be felt at the beginning of the next era.
-    fn deactive(origin: T::Origin, intentions_index: u32) -> Result {
+    fn deactivate(origin: T::Origin, intentions_index: u32) -> Result {
         let who = ensure_signed(origin)?;
-        // deactive fails in degenerate case of having too few existing staked parties
+        // deactivate fails in degenerate case of having too few existing staked parties
         if Self::intentions().len() <= Self::minimum_validator_count() as usize {
-            return Err("cannot deactive when there are too few staked participants");
+            return Err("cannot deactivate when there are too few staked participants");
         }
-        Self::apply_deactive(&who, intentions_index as usize)
+        Self::apply_deactivate(&who, intentions_index as usize)
     }
 
     fn nominate(
@@ -470,7 +486,7 @@ impl<T: Trait> Module<T> {
         // update stats and nominator per se, i.e., nominator
         let mut nprof = <NominatorProfiles<T>>::get(&who);
         // update (nominator, nominee) => nomination, last_vote_weight, last_era_length_change
-        let mut record = <NominationRecordOf<T>>::get((who.clone(), target.clone()));
+        let mut record = Self::nomination_record_of(&who, &target);
 
         let mut stats = <StakingStats<T>>::get();
 
@@ -501,7 +517,7 @@ impl<T: Trait> Module<T> {
 
         <IntentionProfiles<T>>::insert(&target, iprof);
         <NominatorProfiles<T>>::insert(&who, nprof);
-        <NominationRecordOf<T>>::insert((who.clone(), target.clone()), record);
+        Self::insert_nomination_record(&who, &target, record);
         <StakingStats<T>>::put(stats);
 
         Ok(())
@@ -522,7 +538,7 @@ impl<T: Trait> Module<T> {
         let current_block = <system::Module<T>>::block_number();
 
         let mut iprof = <IntentionProfiles<T>>::get(target);
-        let mut record = <NominationRecordOf<T>>::get((source.clone(), target.clone()));
+        let mut record = Self::nomination_record_of(&source, &target);
 
         // latest vote weight for nominator and nominee
         let total_vote_weight = iprof.last_total_vote_weight
@@ -543,7 +559,7 @@ impl<T: Trait> Module<T> {
         iprof.last_total_vote_weight_update = current_block;
 
         <IntentionProfiles<T>>::insert(target.clone(), iprof);
-        <NominationRecordOf<T>>::insert((source.clone(), target.clone()), record);
+        Self::insert_nomination_record(&source, &target, record);
 
         Ok(())
     }
@@ -564,7 +580,7 @@ impl<T: Trait> Module<T> {
 
         ensure!(value.as_() > 0, "Cannot unnominate non-positive.");
 
-        let mut record = <NominationRecordOf<T>>::get((source.clone(), target.clone()));
+        let mut record = Self::nomination_record_of(&source, &target);
 
         let current_nomination = record.nomination;
         ensure!(
@@ -619,7 +635,7 @@ impl<T: Trait> Module<T> {
 
         <IntentionProfiles<T>>::insert(target, iprof);
         <NominatorProfiles<T>>::insert(&source, nprof);
-        <NominationRecordOf<T>>::insert((source.clone(), target.clone()), record);
+        Self::insert_nomination_record(&source, &target, record);
         <StakingStats<T>>::put(stats);
 
         Ok(())
@@ -707,7 +723,9 @@ impl<T: Trait> Module<T> {
     fn apply_update_stake(who: &T::AccountId, value: T::Balance) -> Result {
         let mut iprof = <IntentionProfiles<T>>::get(who);
         let mut nprof = <NominatorProfiles<T>>::get(who);
-        let mut record = <NominationRecordOf<T>>::get((who.clone(), who.clone()));
+
+        let mut record = Self::nomination_record_of(&who, &who);
+
         let mut stats = <StakingStats<T>>::get();
 
         let current_block = <system::Module<T>>::block_number();
@@ -748,15 +766,17 @@ impl<T: Trait> Module<T> {
 
         <IntentionProfiles<T>>::insert(who.clone(), iprof);
         <NominatorProfiles<T>>::insert(who.clone(), nprof);
-        <NominationRecordOf<T>>::insert((who.clone(), who.clone()), record);
+
+        Self::insert_nomination_record(&who, &who, record);
+
         <StakingStats<T>>::put(stats);
 
         Ok(())
     }
 
-    /// Actually carry out the deactive operation.
+    /// Actually carry out the deactivate operation.
     /// Assumes `intentions()[intentions_index] == who`.
-    fn apply_deactive(who: &T::AccountId, intentions_index: usize) -> Result {
+    fn apply_deactivate(who: &T::AccountId, intentions_index: usize) -> Result {
         let mut intentions = Self::intentions();
         if intentions.get(intentions_index) != Some(who) {
             return Err("Invalid index");
@@ -764,7 +784,9 @@ impl<T: Trait> Module<T> {
 
         let current_block = <system::Module<T>>::block_number();
         let mut iprof = <IntentionProfiles<T>>::get(who);
-        let mut record = <NominationRecordOf<T>>::get((who.clone(), who.clone()));
+
+        let mut record = Self::nomination_record_of(&who, &who);
+
         let mut nprof = <NominatorProfiles<T>>::get(who);
         let mut stats = <StakingStats<T>>::get();
 
@@ -804,7 +826,7 @@ impl<T: Trait> Module<T> {
 
         <IntentionProfiles<T>>::insert(who, iprof);
         <NominatorProfiles<T>>::insert(who, nprof);
-        <NominationRecordOf<T>>::insert((who.clone(), who.clone()), record);
+        Self::insert_nomination_record(&who, &who, record);
         <StakingStats<T>>::put(stats);
 
         intentions.swap_remove(intentions_index);
@@ -905,6 +927,7 @@ impl<T: Trait> Module<T> {
             }
 
             Self::deposit_event(RawEvent::Reward(reward));
+            //// FIXME total_minted
             let total_minted = reward * <T::Balance as As<usize>>::sa(validators.len());
             //// TODO Self::total_stake?
             let stats = <StakingStats<T>>::get();

@@ -22,6 +22,8 @@ srml-system = { git = "https://github.com/paritytech/substrate", default_feature
 srml-session = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-timestamp = { git = "https://github.com/paritytech/substrate", default_features = false }
 
+cxrml-support = { path = "../support",  default_features = false }
+
 [features]
 default = ["std"]
 std = [
@@ -39,5 +41,6 @@ std = [
     "srml-balances/std",
     "srml-session/std",
     "srml-system/std",
-    "srml-timestamp/std"
+    "srml-timestamp/std",
+    "cxrml-support/std"
 ]
