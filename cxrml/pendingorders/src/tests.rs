@@ -69,9 +69,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             transfer_fee: 0,
             creation_fee: 0,
             reclaim_rebate: 0,
-        }
-            .build_storage()
-            .unwrap(),
+        }.build_storage()
+        .unwrap(),
     );
 
     r.extend(
@@ -79,9 +78,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             order_fee: 10,
             pair_list: vec![],
             max_command_id: 0,
-        }
-            .build_storage()
-            .unwrap(),
+        }.build_storage()
+        .unwrap(),
     );
     r.into()
 }
