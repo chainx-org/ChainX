@@ -24,6 +24,7 @@ use runtime_io::with_externalities;
 #[allow(unused_imports)]
 use mock::{Balances, Session, Staking, System, Timestamp, Test, new_test_ext, Origin};
 
+/*
 #[test]
 fn note_null_offline_should_work() {
     with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
@@ -99,6 +100,7 @@ fn note_offline_grace_should_work() {
         assert!(Staking::forcing_new_era().is_none());
     });
 }
+*/
 
 // #[test]
 // fn note_offline_force_unstake_session_change_should_work() {
@@ -296,94 +298,87 @@ fn nominating_and_rewards_should_work() {
     with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 15), || {
         // session reward is calculated by session_length * block_period * REWRAD_PER_SECOND,
         // REWRAD_PER_SECOND is 3, that means session reward is 15 now.
-        // [(1, 10), (1, 20)]
-        println!("{:?}", Staking::name_of_intention(&10));
-        println!("{:?}", Staking::name_of_intention(&20));
+        // (total_vote_weight, intention) trending: [(0, 10), (0, 20)]
         assert_eq!(Staking::era_length(), 1);
         assert_eq!(Staking::validator_count(), 2);
-        assert_eq!(Staking::bonding_duration(), 3);
+        assert_eq!(Staking::bonding_duration(), 1);
         assert_eq!(Session::validators(), vec![10, 20]);
         assert_eq!(Staking::current_era(), 0);
 
         System::set_block_number(1);
-        assert_ok!(Staking::stake(Origin::signed(1), String::from("1").into_bytes(), String::from("url").into_bytes()));
-        assert_ok!(Staking::stake(Origin::signed(2), String::from("2").into_bytes(), String::from("url").into_bytes()));
-        assert_ok!(Staking::stake(Origin::signed(3), String::from("3").into_bytes(), String::from("url").into_bytes()));
-        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 30));
-        assert_eq!(Staking::nominator_count(), 4);
-        Session::check_rotate_session(System::block_number());
-        assert_eq!(Staking::current_era(), 1);
-        assert_eq!(Session::validators(), [1, 3]);
-        assert_eq!(Staking::nominations_of(&4), 30);
-        // 10: 15 * 1 / 2 = 7, 7+1 = 8
-        // 20: 15 * 1 / 2 = 7, 7+1 = 8
-        assert_eq!(Balances::total_balance(&10), 8);
-        assert_eq!(Balances::total_balance(&20), 8);
-        // [(40=10+30, 1), (30, 3), (20, 2), (8, 10), (8, 20)]
+
+        assert_ok!(Staking::stake(Origin::signed(1), String::from("1").into_bytes(), String::from("url").into_bytes(), 10));
+        assert_ok!(Staking::stake(Origin::signed(2), String::from("2").into_bytes(), String::from("url").into_bytes(), 10));
+        assert_ok!(Staking::stake(Origin::signed(3), String::from("3").into_bytes(), String::from("url").into_bytes(), 20));
 
         System::set_block_number(2);
-        assert_ok!(Staking::nominate(Origin::signed(4), 2.into(), 10));
-        assert_eq!(Staking::nominations_of(&4), 40);
-        assert_eq!(Staking::nominator_count(), 4);
+        assert_ok!(Staking::nominate(Origin::signed(4), 2.into(), 30));
+        assert_ok!(Staking::update_stake(Origin::signed(2), 5));
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Session::validators(), [3, 1]);
+        assert_eq!(Balances::free_balance(&10), 1);
+        assert_eq!(Balances::free_balance(&20), 1);
+        assert_eq!(Balances::free_balance(&1), 0);
+        assert_eq!(Balances::free_balance(&2), 10);
+        assert_eq!(Staking::locked(&2), 5);
+        assert_eq!(Balances::free_balance(&3), 10);
+        assert_eq!(Balances::free_balance(&4), 10);
+
+        System::set_block_number(3);
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Session::validators(), [2, 3]);
+        assert_eq!(Balances::free_balance(&1), 0);
+        assert_eq!(Staking::locked(&2), 0);
+        assert_eq!(Balances::free_balance(&2), 16);
+        assert_eq!(Balances::free_balance(&3), 11);
+        assert_eq!(Balances::free_balance(&4), 10);
+        assert_ok!(Staking::claim(Origin::signed(4), 0));
+        assert_eq!(Balances::free_balance(&4), 12);
+
+        System::set_block_number(4);
+        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 12));
+        assert_ok!(Staking::nominate(Origin::signed(2), 1.into(), 10));
+        assert_ok!(Staking::deactive(Origin::signed(2), 3));
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Session::validators(), [3, 1]);
+        assert_ok!(Staking::claim(Origin::signed(4), 0));
+        assert_eq!(Balances::free_balance(&4), 3);
+
+        System::set_block_number(5);
+        assert_ok!(Staking::unnominate(Origin::signed(4), 0, 30));
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Session::validators(), [3, 1]);
+        assert_eq!(Balances::free_balance(&1), 1);
+        assert_eq!(Balances::free_balance(&2), 7);
+        assert_eq!(Balances::free_balance(&3), 13);
+        assert_eq!(Balances::free_balance(&4), 3);
+        assert_eq!(Staking::locked(&4), 30);
+
+        System::set_block_number(6);
+        assert_eq!(Balances::free_balance(&2), 7);
+        assert_ok!(Staking::claim(Origin::signed(2), 0));
+        assert_eq!(Balances::free_balance(&2), 9);
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Session::validators(), [3, 1]);
+
+        System::set_block_number(7);
+        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 30));
+        assert_ok!(Staking::nominate(Origin::signed(2), 3.into(), 9));
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Session::validators(), [3, 1]);
+
+        System::set_block_number(8);
         Session::check_rotate_session(System::block_number());
         assert_eq!(Session::validators(), [1, 3]);
 
-        // validators_weight 40 + 30 = 70
-        // candidates_weight 30(= 20+10 [4 => 2]) + 8 + 8 = 46, 46 * 7 / 10 = 32
-        //
-        // session reward: 15
-        //
-        // to validators: 70 * 15 / (70+32) = 10
-        //
-        // => 1 : 40 * 10 / 70 = 5
-        //
-        //      => 1: 10 * 5 / 40 = 1
-        //      => 4: 30 * 5 / 40 = 3
-        //
-        // => 3 : 30 * 10 / 70 = 4
-        assert_eq!(Balances::total_balance(&1), 11);
-        assert_eq!(Balances::total_balance(&3), 34);
-
-        // to candidates: 32 * 15 / (70+32) = 4
-        //
-        // => 2 : 30 * 4 / 46 = 2
-        //      => 2 20 * 2 / 30 = 1
-        //      => 4 10 * 2 / 30 = 0
-        assert_eq!(Balances::free_balance(&2), 21);
-        // 4 : 3 + 0 = 3
-        assert_eq!(Balances::free_balance(&4), 3);
-        assert_eq!(Staking::nominees_of(&4), [1, 2]);
-
-        System::set_block_number(3);
-        assert_ok!(Staking::unnominate(Origin::signed(4), 0));
-        assert_eq!(Staking::nominations_of(&4), 10);
-        assert_eq!(Staking::nominees_of(&4), [2]);
-        assert_eq!(Staking::nominator_count(), 4);
+        System::set_block_number(9);
         Session::check_rotate_session(System::block_number());
-        assert_eq!(Balances::free_balance(&4), 3);
 
-        System::set_block_number(4);
-        Session::check_rotate_session(System::block_number());
-        assert_eq!(Balances::free_balance(&4), 4);
-
-        System::set_block_number(5);
-        Session::check_rotate_session(System::block_number());
-        assert_eq!(Balances::free_balance(&4), 5);
-
-        System::set_block_number(6);
-        Session::check_rotate_session(System::block_number());
-        // unreserved 30 + 6 = 36
-        assert_eq!(Balances::free_balance(&4), 36);
-
-        System::set_block_number(6);
-        Session::check_rotate_session(System::block_number());
-        assert_eq!(Balances::free_balance(&4), 37);
-
-        assert_ok!(Staking::unnominate(Origin::signed(4), 0));
-        assert_eq!(Staking::nominations_of(&4), 0);
-        assert_eq!(Staking::nominees_of(&4), []);
-        assert_eq!(Staking::nominator_count(), 3);
-        assert_noop!(Staking::nominate(Origin::signed(4), 3.into(), 1000), "Cannot nominate if free balance too low.");
     });
 }
 
