@@ -16,7 +16,7 @@ extern crate srml_balances as balances;
 extern crate srml_support as runtime_support;
 extern crate srml_system as system;
 
-use balances::EnsureAccountLiquid;
+// use balances::EnsureAccountLiquid;
 use primitives::traits::{CheckedSub, OnFinalise};
 use runtime_support::dispatch::Result;
 pub use storage::double_map::StorageDoubleMap;
@@ -47,7 +47,7 @@ impl<T: Trait> Module<T> {
             Some(b) => b,
             None => return Err("chainx balance too low to exec this option"),
         };
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         if check_after_open && new_from_balance < <balances::Module<T>>::existential_deposit() {
             return Err("chainx balance is not enough after this tx, not allow to be killed at here");
         }
@@ -69,7 +69,7 @@ impl<T: Trait> Module<T> {
             Some(b) => b,
             None => return Err("chainx balance too low to exec this option"),
         };
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         if check_after_open && new_from_balance < <balances::Module<T>>::existential_deposit() {
             return Err("chainx balance is not enough after this tx, not allow to be killed at here");
         }

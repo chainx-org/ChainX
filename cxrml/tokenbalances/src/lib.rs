@@ -48,7 +48,7 @@ use primitives::traits::{SimpleArithmetic, As, Member, CheckedAdd, CheckedSub, O
 // substrate mod
 use system::ensure_signed;
 use balances::address::Address;
-use balances::EnsureAccountLiquid;
+// use balances::EnsureAccountLiquid;
 
 pub type SymbolString = &'static [u8];
 
@@ -429,7 +429,7 @@ impl<T: Trait> Module<T> {
 
         Self::is_valid_token(symbol)?;
 
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
 
         // get storage
         let key = (who.clone(), symbol.clone());
@@ -458,7 +458,7 @@ impl<T: Trait> Module<T> {
             return Err("can't destroy chainx token");
         }
         Self::is_valid_token_for(who, symbol)?;
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
 
         // get storage
@@ -484,7 +484,7 @@ impl<T: Trait> Module<T> {
 
     pub fn reserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
         Self::is_valid_token_for(who, symbol)?;
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
 
         let key = (who.clone(), symbol.clone());
@@ -552,7 +552,7 @@ impl<T: Trait> Module<T> {
 
     pub fn unreserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
         Self::is_valid_token_for(who, symbol)?;
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
+        // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
 
         let key = (who.clone(), symbol.clone());
@@ -620,7 +620,7 @@ impl<T: Trait> Module<T> {
 
     pub fn move_free_token(from: &T::AccountId, to: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> StdResult<(), TokenErr> {
         Self::is_valid_token_for(from, symbol).map_err(|_| TokenErr::InvalidToken)?;
-        <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(from).map_err(|_| TokenErr::InvalidAccount)?;
+        // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(from).map_err(|_| TokenErr::InvalidAccount)?;
         //TODO validator`
 
         // for chainx
