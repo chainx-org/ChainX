@@ -44,7 +44,6 @@ pub type TokenBalance = u128;
 
 impl Trait for Test {
     const CHAINX_SYMBOL: SymbolString = b"pcx";
-    const CHAINX_PRECISION: Precision = 8;
     const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
     type Event = ();
@@ -72,6 +71,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
     r.extend(GenesisConfig::<Test> {
+        chainx_precision: 8,
         token_list: vec![
             (t, [(3, 100)].to_vec()),
             (t2, [(3, 100)].to_vec()),
@@ -98,6 +98,7 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
     r.extend(GenesisConfig::<Test> {
+        chainx_precision: 8,
         token_list: vec![
             (t, [(3, 100)].to_vec()),
             (t2, [(3, 100)].to_vec()),
@@ -124,6 +125,7 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
     let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
     r.extend(GenesisConfig::<Test> {
+        chainx_precision: 8,
         token_list: vec![
             (t, [(3, 100)].to_vec()),
             (t2, [(3, 100)].to_vec()),

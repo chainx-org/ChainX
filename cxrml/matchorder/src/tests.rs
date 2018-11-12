@@ -11,7 +11,7 @@ use runtime_primitives::BuildStorage;
 use super::*;
 use pendingorders::{Order, OrderPair, OrderStatus, OrderType};
 use std::str;
-use tokenbalances::{DescString, Precision, SymbolString, Token};
+use tokenbalances::{DescString, SymbolString, Token, ReservedType};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -54,7 +54,6 @@ pub type TokenBalance = u128;
 
 impl tokenbalances::Trait for Test {
     const CHAINX_SYMBOL: SymbolString = b"pcx";
-    const CHAINX_PRECISION: Precision = 8;
     const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
     type Event = ();
@@ -82,6 +81,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(
         tokenbalances::GenesisConfig::<Test> {
+            chainx_precision: 8,
             token_list: vec![],
             transfer_token_fee: 10,
         }.build_storage()
@@ -156,18 +156,18 @@ fn test_match_part() {
         let buy = OrderType::Buy;
         let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5);
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 500);
 
         //挂卖单
         let sell = OrderType::Sell;
         let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5);
         assert_eq!(b_order, Ok(()));
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone())), 50);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)), 50);
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1000);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         print_bid(p1.clone(), OrderType::Sell);
         print_bid(p1.clone(), OrderType::Buy);
@@ -176,17 +176,17 @@ fn test_match_part() {
 
         //1000+250
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1050);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         //1000-500
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
         //500-250
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 250);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 250);
 
         //1000-50
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1250);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         print_bid(p1.clone(), OrderType::Sell);
         print_bid(p1.clone(), OrderType::Buy);
@@ -226,18 +226,18 @@ fn test_match_all() {
         let buy = OrderType::Buy;
         let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5);
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 500);
 
         //挂卖单
         let sell = OrderType::Sell;
         let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 100, 5);
         assert_eq!(b_order, Ok(()));
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 900);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone())), 100);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)), 100);
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1000);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         print_bid(p1.clone(), OrderType::Sell);
         print_bid(p1.clone(), OrderType::Buy);
@@ -246,17 +246,17 @@ fn test_match_all() {
 
         //1000+250
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1100);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         //1000-500
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
         //500-250
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         //1000-50
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 900);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)), 0);
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1500);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         print_bid(p1.clone(), OrderType::Sell);
         print_bid(p1.clone(), OrderType::Buy);
@@ -301,9 +301,9 @@ fn test_match_no() {
         let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 7);
 
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 900);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone())), 100);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)), 100);
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
-        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)), 500);
 
         //挂卖单
         let sell = OrderType::Sell;
@@ -314,18 +314,18 @@ fn test_match_no() {
         let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 7);
 
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 900);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone())), 100);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)), 100);
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1000);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         //取消挂单
         let cancel = PendingOrders::cancel_order(Some(b).into(), p1.clone(), 2);
         assert_eq!(Ok(()), cancel);
 
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone())), 50);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)), 50);
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1000);
-        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone())), 0);
+        assert_eq!(TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)), 0);
 
         <MatchOrder as OnFinalise<u64>>::on_finalise(1);
 

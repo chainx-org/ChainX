@@ -9,7 +9,7 @@ use runtime_io;
 use runtime_io::with_externalities;
 
 use super::*;
-use tokenbalances::{Token, SymbolString, DescString, Precision};
+use tokenbalances::{Token, SymbolString, DescString};
 
 impl_outer_origin! {
         pub enum Origin for Test {}
@@ -46,7 +46,6 @@ pub type TokenBalance = u128;
 
 impl tokenbalances::Trait for Test {
     const CHAINX_SYMBOL: SymbolString = b"pcx";
-    const CHAINX_PRECISION: Precision = 8;
     const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
     type Event = ();
@@ -71,6 +70,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
     r.extend(tokenbalances::GenesisConfig::<Test> {
+        chainx_precision: 8,
         token_list: vec![
             (t, vec![]),
             (t2, vec![]),
@@ -101,6 +101,7 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
     let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
 
     r.extend(tokenbalances::GenesisConfig::<Test> {
+        chainx_precision: 8,
         token_list: vec![
             (t, vec![]),
             (t2, vec![]),

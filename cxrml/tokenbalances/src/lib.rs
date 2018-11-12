@@ -56,7 +56,6 @@ pub type DescString = SymbolString;
 
 pub trait Trait: balances::Trait + cxsupport::Trait {
     const CHAINX_SYMBOL: SymbolString;
-    const CHAINX_PRECISION: Precision;
     const CHAINX_TOKEN_DESC: DescString;
     /// The token balance.
     type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<u8> + As<u16> + As<u32> + As<u64> + As<u128> + Copy + Default;
@@ -207,6 +206,9 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as TokenBalances {
+        /// chainx token precision
+        pub ChainXPrecision get(chainx_precision) config(): Precision;
+
         /// supported token list
         pub TokenListMap get(token_list_map): map u32 => Symbol;
         /// supported token list length
@@ -243,7 +245,7 @@ decl_storage! {
                 with_externalities(&mut tmp_storage, || {
                     // register chainx
                     let chainx: Symbol = T::CHAINX_SYMBOL.to_vec();
-                    let t: Token = Token::new(chainx.clone(), T::CHAINX_TOKEN_DESC.to_vec(), T::CHAINX_PRECISION);
+                    let t: Token = Token::new(chainx.clone(), T::CHAINX_TOKEN_DESC.to_vec(), config.chainx_precision);
                     let zero: T::TokenBalance = Default::default();
                     if let Err(e) = Module::<T>::register_token(t, zero, zero) {
                         panic!(e);

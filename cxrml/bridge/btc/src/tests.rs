@@ -59,7 +59,6 @@ impl cxsupport::Trait for Test {}
 
 impl tokenbalances::Trait for Test {
     const CHAINX_SYMBOL: tokenbalances::SymbolString = b"pcx";
-    const CHAINX_PRECISION: tokenbalances::Precision = 8;
     const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"this is pcx for mock";
     type TokenBalance = u128;
     type Event = ();

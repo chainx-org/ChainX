@@ -10,7 +10,7 @@ use runtime_primitives::BuildStorage;
 
 use super::*;
 use std::str;
-use tokenbalances::{DescString, Precision, SymbolString, Token};
+use tokenbalances::{DescString, SymbolString, Token};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -47,7 +47,6 @@ pub type TokenBalance = u128;
 
 impl tokenbalances::Trait for Test {
     const CHAINX_SYMBOL: SymbolString = b"pcx";
-    const CHAINX_PRECISION: Precision = 8;
     const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
     type Event = ();

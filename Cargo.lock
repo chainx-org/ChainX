@@ -913,7 +913,7 @@ dependencies = [
 [[package]]
 name = "eth-secp256k1"
 version = "0.5.7"
-source = "git+https://github.com/koushiro/rust-secp256k1?branch=add_no_std_support#8d84459d22c3c691c0c0610d29b1f51c18c621df"
+source = "git+https://github.com/koushiro/rust-secp256k1?branch=add_no_std_support#fcb8d60a7a9043b23d99a07a45caf8fdfc5c4445"
 dependencies = [
  "arrayvec 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
