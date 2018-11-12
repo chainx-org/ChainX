@@ -52,6 +52,7 @@ log = "0.3"
 # bitcoin-rust
 primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
 chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
+keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
 
 [workspace]
 members = [

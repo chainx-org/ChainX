@@ -4,6 +4,7 @@ extern crate chain as btc_chain;
 extern crate base58;
 extern crate cxrml_pendingorders;
 extern crate cxrml_tokenbalances;
+extern crate keys;
 
 use self::cxrml_pendingorders::{OrderPair};
 use self::base58::FromBase58;
@@ -18,6 +19,7 @@ use ed25519;
 
 use self::btc_primitives::{hash::H256, compact::Compact};
 use self::btc_chain::BlockHeader;
+use self::keys::DisplayLayout;
 
 pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
     let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
@@ -126,7 +128,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             // token_list: Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>
             // e.g. [("btc", [(account1, value), (account2, value)].to_vec()), ("eth", [(account1, value), (account2, value)].to_vec())]
             token_list: vec![
-                (Token::new(b"btc".to_vec(),b"btc token".to_vec(),8),[(Keyring::Alice.to_raw_public().into(),1_000_000),(Keyring::Bob.to_raw_public().into(),1_000_000)].to_vec())
+                (Token::new(b"x-btc".to_vec(),b"btc token".to_vec(),8),[(Keyring::Alice.to_raw_public().into(),1_000_000),(Keyring::Bob.to_raw_public().into(),1_000_000)].to_vec())
             ],
 
             transfer_token_fee: 10,
@@ -145,12 +147,12 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: (BlockHeader {
                 version: 536870912,
-                previous_header_hash: H256::from_reversed_str("000000000000837bcdb53e7a106cf0e74bab6ae8bc96481243d31bea3e6b8c92"),
-                merkle_root_hash: H256::from_reversed_str("8beab73ba2318e4cbdb1c65624496bc3214d6ba93204e049fb46293a41880b9a"),
-                time: 1506023937,
-                bits: Compact::new(453021074),
-                nonce: 2001025151,
-            }, 1200000),
+                previous_header_hash: H256::from_reversed_str("000000000000012651bf407efcc567df3529049085711572eaee8d243ec815d4"),
+                merkle_root_hash: H256::from_reversed_str("ecec3d2eb31c04a844dc18b233c819c64b6a56c2a51bc77078ef4cc8f434bc21"),
+                time: 1541642229,
+                bits: Compact::new(436299432),
+                nonce: 937513642,
+            }, 1442480),
             params_info: Params::new(520159231, // max_bits
                                      2 * 60 * 60,  // block_max_future
                                      64,  // max_fork_route_preset
@@ -159,10 +161,10 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                                      4), // retargeting_factor
             network_id: 1,
             utxo_max_index: 0,
-            irr_block: 6,
+            irr_block: 0,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }),

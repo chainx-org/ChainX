@@ -143,18 +143,11 @@ impl<T: Trait> Proposal<T> {
         let ret_balance = ins_balance - out_balance - fee;
 
         if ret_balance > 0 {
-            let receive_address = if let Some(h) = <ReceiveAddress<T>>::get() {
+            let receive_address: keys::Address = if let Some(h) = <ReceiveAddress<T>>::get() {
                 h
             } else {
                 return Err("should set RECEIVE_ADDRESS first");
             };
-            let receive_address =
-                if let Ok(receive_address) = keys::Address::from_layout(&receive_address) {
-                    receive_address
-                } else {
-                    return Err("Invalid Address");
-                };
-
             let script = match receive_address.kind {
                 Type::P2PKH => Builder::build_p2pkh(&receive_address.hash),
                 Type::P2SH => Builder::build_p2sh(&receive_address.hash),

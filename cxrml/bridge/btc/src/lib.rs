@@ -201,7 +201,7 @@ decl_storage! {
 
         // =====
         // tx
-        pub ReceiveAddress get(receive_address) config(): Option<Vec<u8>>;
+        pub ReceiveAddress get(receive_address) config(): Option<keys::Address>;
         pub RedeemScript get(redeem_script) config(): Option<Vec<u8>>;
 
         pub UTXOSet get(utxo_set): map u64 => UTXO;
@@ -216,7 +216,7 @@ decl_storage! {
         pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
 
         pub AccountsMaxIndex get(accounts_max_index) config(): u64;
-        pub AccountsSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, u32, TxType)>;
+        pub AccountsSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, T::BlockNumber, TxType)>;
 
         // =====
         // others
@@ -326,14 +326,11 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn process_tx(tx: RelayTx, who: &T::AccountId) -> Result {
-        let receive_address: Vec<u8> = if let Some(h) = <ReceiveAddress<T>>::get() {
+        let receive_address: keys::Address = if let Some(h) = <ReceiveAddress<T>>::get() {
             h
         } else {
             return Err("should set RECEIVE_address first");
         };
-
-        runtime_io::print("-------receive address:");
-        runtime_io::print(receive_address.as_slice());
 
         let tx_type = validate_transaction::<T>(&tx, &receive_address).unwrap();
         match tx_type {

@@ -161,7 +161,7 @@ source = "git+https://github.com/chainx-org/bit-vec.git#ced2a13de722307d5c966aa8
 [[package]]
 name = "bitcrypto"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#753a7cb5cb9f77fccf612c14ed477cb47a8fbcd9"
+source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
 dependencies = [
  "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "rand 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -248,7 +248,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "chain"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#753a7cb5cb9f77fccf612c14ed477cb47a8fbcd9"
+source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
 dependencies = [
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -287,6 +287,7 @@ dependencies = [
  "jsonrpc-http-server 9.0.0 (git+https://github.com/paritytech/jsonrpc.git)",
  "jsonrpc-macros 9.0.0 (git+https://github.com/paritytech/jsonrpc.git)",
  "jsonrpc-ws-server 9.0.0 (git+https://github.com/paritytech/jsonrpc.git)",
+ "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "names 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -912,15 +913,15 @@ dependencies = [
 [[package]]
 name = "eth-secp256k1"
 version = "0.5.7"
-source = "git+https://github.com/chainx-org/rust-secp256k1#f28414e9fa6be765d414c245af881ad4b17a8926"
+source = "git+https://github.com/koushiro/rust-secp256k1?branch=add_no_std_support#8d84459d22c3c691c0c0610d29b1f51c18c621df"
 dependencies = [
  "arrayvec 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "cfg-if 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "clippy 0.0.302 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.43 (git+https://github.com/rust-lang/libc)",
+ "libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)",
+ "wee_alloc 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1305,16 +1306,20 @@ dependencies = [
 [[package]]
 name = "keys"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#b5778f689a0845c3133f86131e61ff68a7dba398"
+source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
- "eth-secp256k1 0.5.7 (git+https://github.com/chainx-org/rust-secp256k1)",
+ "eth-secp256k1 0.5.7 (git+https://github.com/koushiro/rust-secp256k1?branch=add_no_std_support)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "rand 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_bytes 0.10.4 (git+https://github.com/serde-rs/bytes)",
+ "serde_derive 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serialization 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)",
 ]
 
@@ -1365,11 +1370,6 @@ dependencies = [
 name = "lazycell"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "libc"
-version = "0.2.43"
-source = "git+https://github.com/rust-lang/libc#9c5e70ae306463a23ec02179ac2c9fe05c3fb44e"
 
 [[package]]
 name = "libc"
@@ -1778,6 +1778,11 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "memory_units"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "merkle"
 version = "0.1.0"
 source = "git+https://github.com/chainx-org/merkle.git#2fe1c26c2d294d013821e3239c504c6eae59ac39"
@@ -2132,7 +2137,7 @@ dependencies = [
 [[package]]
 name = "primitives"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#753a7cb5cb9f77fccf612c14ed477cb47a8fbcd9"
+source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
 dependencies = [
  "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "crunchy 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2451,7 +2456,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "script"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#b5778f689a0845c3133f86131e61ff68a7dba398"
+source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
 dependencies = [
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
@@ -2530,7 +2535,7 @@ dependencies = [
 [[package]]
 name = "serialization"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#753a7cb5cb9f77fccf612c14ed477cb47a8fbcd9"
+source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
 dependencies = [
  "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
@@ -3835,6 +3840,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "wee_alloc"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cfg-if 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)",
+ "memory_units 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unreachable 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "winapi"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3999,7 +4016,7 @@ dependencies = [
 "checksum env_logger 0.5.13 (registry+https://github.com/rust-lang/crates.io-index)" = "15b0a4d2e39f8420210be8b27eeda28029729e2fd4291019455016c348240c38"
 "checksum environmental 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "db746025e3ea695bfa0ae744dbacd5fcfc8db51b9760cf8bd0ab69708bb93c49"
 "checksum error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "07e791d3be96241c77c43846b665ef1384606da2cd2a48730abe606a12906e02"
-"checksum eth-secp256k1 0.5.7 (git+https://github.com/chainx-org/rust-secp256k1)" = "<none>"
+"checksum eth-secp256k1 0.5.7 (git+https://github.com/koushiro/rust-secp256k1?branch=add_no_std_support)" = "<none>"
 "checksum eth-secp256k1 0.5.7 (git+https://github.com/paritytech/rust-secp256k1)" = "<none>"
 "checksum etrace 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f17311e68ea07046ee809b8513f6c259518bc10173681d98c21f8c3926f56f40"
 "checksum exit-future 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9aa7b56cef68c4182db7212dece19cc9f6e2916cf9412e57e6cea53ec02f316d"
@@ -4049,7 +4066,6 @@ dependencies = [
 "checksum lazy_static 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)" = "76f033c7ad61445c5b347c7382dd1237847eb1bce590fe50365dcb33d546be73"
 "checksum lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ca488b89a5657b0a2ecd45b95609b3e848cf1755da332a0da46e2b2b1cb371a7"
 "checksum lazycell 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ddba4c30a78328befecec92fc94970e53b3ae385827d28620f0f5bb2493081e0"
-"checksum libc 0.2.43 (git+https://github.com/rust-lang/libc)" = "<none>"
 "checksum libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)" = "76e3a3ef172f1a0b9a9ff0dd1491ae5e6c948b94479a3021819ba7d860c8645d"
 "checksum libloading 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9c3ad660d7cb8c5822cd83d10897b0f1f1526792737a179e73896152f85b88c2"
 "checksum libp2p 0.1.0 (git+https://github.com/tomaka/libp2p-rs?rev=8111062f0177fd7423626f2db9560273644a4c4d)" = "<none>"
@@ -4081,6 +4097,7 @@ dependencies = [
 "checksum memoffset 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0f9dc261e2b62d7a622bf416ea3c5245cdd5d9a7fcc428c0d06804dfce1775b3"
 "checksum memory-db 0.9.0 (git+https://github.com/paritytech/trie)" = "<none>"
 "checksum memory_units 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
+"checksum memory_units 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 "checksum merkle 0.1.0 (git+https://github.com/chainx-org/merkle.git)" = "<none>"
 "checksum mime 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ba626b8a6de5da682e1caa06bdb42a335aee5a84db8e5046a3e8ab17ba0a3ae0"
 "checksum mio 0.6.16 (registry+https://github.com/rust-lang/crates.io-index)" = "71646331f2619b1026cc302f87a2b8b648d5c6dd6937846a16cc8ce0f347f432"
@@ -4284,6 +4301,7 @@ dependencies = [
 "checksum want 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "797464475f30ddb8830cc529aaaae648d581f99e2036a928877dfde027ddf6b3"
 "checksum wasmi 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d184c4b7081f30316f74f8d73c197314dcb56ea7af9323522b42a2fa9cb19453"
 "checksum websocket 0.20.3 (git+https://github.com/tomaka/rust-websocket?branch=send)" = "<none>"
+"checksum wee_alloc 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "27875be1daf838fa18f3e94fd19fd12638e34615b42f56da2610c8f46be80cc6"
 "checksum winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "167dc9d6949a9b857f3451275e911c3f44255842c1f7a76f33c55103a909087a"
 "checksum winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "92c1eb33641e276cfa214a0522acad57be5c56b10cb348b3c5117db75f3ac4b0"
 "checksum winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2d315eee3b34aca4797b2da6b13ed88266e6d612562a0c46390af8299fc699bc"

@@ -19,13 +19,12 @@ use script::{SignatureChecker, builder, TransactionSignatureChecker, Transaction
 use keys;
 use keys::DisplayLayout;
 use b58::from;
-use timestamp;
 use runtime_primitives::traits::As;
 use super::{TxType, Trait, ReceiveAddress, NetworkId, RedeemScript, AddressMap, AccountMap,
             UTXOSet, TxSet, BlockTxids, BlockHeaderFor, NumberForHash, UTXOMaxIndex,
             AccountsMaxIndex, AccountsSet, TxProposal, CandidateTx, DepositCache};
 pub use self::proposal::{handle_proposal, Proposal};
-
+use system;
 mod proposal;
 
 #[derive(Clone, Encode, Decode)]
@@ -43,15 +42,6 @@ pub struct UTXO {
     pub balance: u64,
     pub is_spent: bool,
 }
-
-//#[derive(PartialEq, Clone, Encode, Decode, Default)]
-//pub struct Accounts {
-//    pub txid: H256,
-//    pub btcaddr: keys::Address,
-//    pub chainxaddr: AccountId,
-//    pub regtimestamp: u32,
-//    pub regtype: TxType,
-//}
 
 struct UTXOStorage<T: Trait>(PhantomData<T>);
 
@@ -176,7 +166,7 @@ impl<T: Trait> TxStorage<T> {
 
 impl<T: Trait> RollBack<T> for TxStorage<T> {
     fn rollback_tx(header: &H256) -> Result {
-        let receive_address = if let Some(h) = <ReceiveAddress<T>>::get() {
+        let receive_address: keys::Address = if let Some(h) = <ReceiveAddress<T>>::get() {
             h
         } else {
             return Err("should set RECEIVE_ADDRESS first");
@@ -192,12 +182,6 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
                         .map(|input| input.previous_output.clone())
                         .collect();
                     <UTXOStorage<T>>::update_from_outpoint(out_point_set, false);
-                    let receive_address =
-                        if let Ok(receive_address) = keys::Address::from_layout(&receive_address) {
-                            receive_address
-                        } else {
-                            return Err("Invalid Address");
-                        };
                     let mut out_point_set2: Vec<OutPoint> = Vec::new();
                     let mut index = 0;
                     let _ = tx.outputs
@@ -237,7 +221,7 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
 struct AccountsStorage<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> AccountsStorage<T> {
-    fn add(accounts: (H256, keys::Address, T::AccountId, u32, TxType)) {
+    fn add(accounts: (H256, keys::Address, T::AccountId, T::BlockNumber, TxType)) {
         let mut index = <AccountsMaxIndex<T>>::get();
         <AccountsSet<T>>::insert(index, accounts.clone());
         index += 1;
@@ -247,7 +231,7 @@ impl<T: Trait> AccountsStorage<T> {
 
 pub fn validate_transaction<T: Trait>(
     tx: &RelayTx,
-    receive_address: &[u8],
+    receive_address: &keys::Address,
 ) -> StdResult<TxType, &'static str> {
     if <NumberForHash<T>>::exists(&tx.block_hash) == false {
         return Err("this tx's block not in the main chain");
@@ -277,13 +261,6 @@ pub fn validate_transaction<T: Trait>(
     if previous_txid != tx.raw.inputs[0].previous_output.hash {
         return Err("previous tx id not right");
     }
-    let receive_address =
-        if let Ok(receive_address) = keys::Address::from_layout(&receive_address) {
-            receive_address
-        } else {
-            return Err("Invalid Address");
-        };
-
     // detect withdraw
     for input in tx.raw.inputs.iter() {
         let outpoint = input.previous_output.clone();
@@ -336,7 +313,7 @@ pub fn handle_input<T: Trait>(
     tx: &Transaction,
     block_hash: &H256,
     who: &T::AccountId,
-    receive_address: &[u8],
+    receive_address: &keys::Address,
 ) {
     let tx2 = <TxProposal<T>>::get();
     if tx2.is_some() && compare_transaction(tx, &tx2.clone().unwrap().tx) {
@@ -352,12 +329,6 @@ pub fn handle_input<T: Trait>(
         .map(|input| input.previous_output.clone())
         .collect();
     let mut update_balance = <UTXOStorage<T>>::update_from_outpoint(out_point_set, true);
-    let receive_address =
-        if let Ok(receive_address) = keys::Address::from_layout(&receive_address) {
-            receive_address
-        } else {
-            return ();
-        };
 
     let mut new_utxo: Vec<UTXO> = Vec::new();
     let mut index = 0;
@@ -429,19 +400,14 @@ pub fn handle_output<T: Trait>(
     block_hash: &H256,
     who: &T::AccountId,
     previous_tx: &Transaction,
-    receive_address: &[u8],
+    receive_address: &keys::Address,
 ) -> Vec<UTXO> {
     let mut new_utxos = Vec::<UTXO>::new();
     let mut total_balance: u64 = 0;
     let mut register = false;
-    let mut is_in_accounts = false;
+    let mut new_account = false;
+    let mut tx_type;
     // Add utxo
-    let receive_address =
-        if let Ok(receive_address) = keys::Address::from_layout(&receive_address) {
-            receive_address
-        } else {
-            return Vec::new();
-        };
     let outpoint = tx.inputs[0].previous_output.clone();
     let send_address = inspect_address::<T>(previous_tx, outpoint).unwrap();
     for (index, output) in tx.outputs.iter().enumerate() {
@@ -451,14 +417,17 @@ pub fn handle_output<T: Trait>(
         if script.is_null_data_script() {
             let data = script.extract_rear(':');
             runtime_io::print("------opreturn account data-----");
-            runtime_io::print(&data[..]);
-            let account = from(data).unwrap();
+            let slice = from(data).unwrap();
+            let slice = slice.as_slice();
+            let mut account: Vec<u8> = Vec::new();
+            account.extend_from_slice(&slice[1..33]);
+            runtime_io::print(&account[..]);
             let id: T::AccountId = Decode::decode(&mut account.as_slice()).unwrap();
             match <AddressMap<T>>::get(send_address.clone()) {
-                Some(_a) => is_in_accounts = true,
+                Some(_a) => new_account = false,
                 None => {
                     runtime_io::print("------new account-----");
-                    is_in_accounts = false
+                    new_account = true
                 }
             };
             <AddressMap<T>>::insert(send_address.clone(), id.clone());
@@ -491,8 +460,9 @@ pub fn handle_output<T: Trait>(
             TxType::Register,
             total_balance,
         );
+        tx_type = TxType::Register;
     } else {
-        let tx_type = if register {
+        if register {
             <TxStorage<T>>::store_tx(
                 tx,
                 block_hash,
@@ -501,7 +471,7 @@ pub fn handle_output<T: Trait>(
                 TxType::RegisterDeposit,
                 total_balance,
             );
-            TxType::RegisterDeposit
+           tx_type = TxType::RegisterDeposit;
         } else {
             <TxStorage<T>>::store_tx(
                 tx,
@@ -511,24 +481,24 @@ pub fn handle_output<T: Trait>(
                 TxType::Deposit,
                 total_balance,
             );
-            TxType::Deposit
+           tx_type = TxType::Deposit;
         };
         <UTXOStorage<T>>::add(new_utxos.clone());
 
-        if !is_in_accounts {
-            let now: T::Moment = <timestamp::Now<T>>::get();
-            let current_time: u32 = now.as_() as u32;
-            let chainxaddr = <AddressMap<T>>::get(send_address.clone()).unwrap();
-            let account = (
-                tx.hash(),
-                send_address.clone(),
-                chainxaddr,
-                current_time,
-                tx_type,
-            );
-            <AccountsStorage<T>>::add(account);
-            runtime_io::print("------insert new account in AccountsMap-----");
-        }
+    }
+    if new_account {
+        runtime_io::print("----new account-------");
+        let time = <system::Module<T>>::block_number();
+        let chainxaddr = <AddressMap<T>>::get(send_address.clone()).unwrap();
+        let account = (
+            tx.hash(),
+            send_address.clone(),
+            chainxaddr,
+            time,
+            tx_type,
+        );
+        <AccountsStorage<T>>::add(account);
+        runtime_io::print("------insert new account in AccountsMap-----");
     }
     runtime_io::print("------store tx success-----");
     new_utxos
@@ -541,15 +511,19 @@ mod tests {
     #[test]
     fn test_accountId() {
         let script = Script::from(
-            "chainx:mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b"
+            "chainx:5HnDcuKFCvsR42s8Tz2j2zLHLZAaiHG4VNyJDa7iLRunRuhM"
                 .as_bytes()
                 .to_vec(),
         );
         let data = script.extract_rear(':');
         println!("data :{:?}", data);
-        let account = from(data).unwrap();
+        let slice = from(data).unwrap();
+        let slice = slice.as_slice();
+        let mut account: Vec<u8> = Vec::new();
+        account.extend_from_slice(&slice[1..33]);
         println!("account :{:?}", account);
-        let id: u64 = Decode::decode(&mut account.as_slice()).unwrap();
+        assert_eq!(account.len(), 32);
+        let id: H256 = Decode::decode(&mut account.as_slice()).unwrap();
         println!("id :{:?}", id);
     }
 }
