@@ -175,12 +175,12 @@ impl<C: ChainXApi + Send + Sync> Proposer<C> {
         for i in 1..self.validators.len() {
             stake_weight[i] = stake_weight[i] + stake_weight[i - 1];
         }
-        let big_len = stake_weight[self.validators.len() - 1];
+        let big_len = stake_weight[self.validators.len() - 1] as u128;
         let big_value = U256::from_big_endian(&self.random_seed.0).low_u64() as u128;
         let offset = (big_value * big_value + round_number as u128) % big_len;
 
         for i in 0..stake_weight.len() {
-            if offset < stake_weight[i] {
+            if offset < stake_weight[i] as u128 {
                 return i;
             }
         }

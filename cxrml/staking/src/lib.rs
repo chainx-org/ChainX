@@ -893,8 +893,7 @@ impl<T: Trait> Module<T> {
 
             let vals_weight = Self::validators_weight();
             let cands_weight = Self::candidates_weight();
-            let valid_cands_weight = cands_weight * 7 / 10;
-            let total_weight = vals_weight + valid_cands_weight;
+            let total_weight = vals_weight + cands_weight;
 
             // TODO Genesis vote weight is 0
             let vals_reward = match total_weight {
@@ -903,16 +902,18 @@ impl<T: Trait> Module<T> {
             };
             let cands_reward = match total_weight {
                 0 => 0,
-                _ => valid_cands_weight * reward.as_() / total_weight,
+                _ => cands_weight * reward.as_() / total_weight,
             };
 
+            let mut total_minted: T::Balance = Zero::zero();
             //// reward validators
             let validators = <session::Module<T>>::validators();
             if vals_reward > 0 {
                 for v in validators.iter() {
-                    let val_reward = Self::total_vote_weight(v) * vals_reward / vals_weight;
-                    <SessionRewardOf<T>>::insert(v, T::Balance::sa(val_reward));
-                    Self::reward(v, T::Balance::sa(val_reward));
+                    let val_reward = T::Balance::sa(Self::total_vote_weight(v) * vals_reward / vals_weight);
+                    <SessionRewardOf<T>>::insert(v, val_reward);
+                    total_minted += val_reward;
+                    Self::reward(v, val_reward);
                 }
             }
 
@@ -920,15 +921,14 @@ impl<T: Trait> Module<T> {
             let candidates = <StakingStats<T>>::get().candidates;
             if cands_reward > 0 {
                 for c in candidates.iter() {
-                    let cand_reward = Self::total_vote_weight(c) * cands_reward / cands_weight;
-                    <SessionRewardOf<T>>::insert(c, T::Balance::sa(cand_reward));
-                    Self::reward(c, T::Balance::sa(cand_reward));
+                    let cand_reward = T::Balance::sa(Self::total_vote_weight(c) * cands_reward / cands_weight);
+                    <SessionRewardOf<T>>::insert(c, cand_reward);
+                    total_minted += cand_reward;
+                    Self::reward(c, cand_reward);
                 }
             }
 
             Self::deposit_event(RawEvent::Reward(reward));
-            //// FIXME total_minted
-            let total_minted = reward * <T::Balance as As<usize>>::sa(validators.len());
             //// TODO Self::total_stake?
             let stats = <StakingStats<T>>::get();
             T::OnRewardMinted::on_dilution(total_minted, stats.total_stake);
@@ -978,7 +978,7 @@ impl<T: Trait> Module<T> {
         intentions.sort_unstable_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(&b1));
 
         for (total_vote_weight, intention) in intentions.iter() {
-            <StakeWeight<T>>::insert(intention, total_vote_weight.clone());
+            <StakeWeight<T>>::insert(intention, *total_vote_weight);
         }
 
         let desired_validator_count = <ValidatorCount<T>>::get() as usize;

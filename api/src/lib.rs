@@ -15,7 +15,7 @@ extern crate chainx_executor;
 
 use primitives::{
     AccountId, Block, BlockId, Hash, Index, SessionKey, Timestamp, BlockNumber,
-    UncheckedExtrinsic, InherentData, Balance,
+    UncheckedExtrinsic, InherentData,
 };
 use runtime_primitives::{transaction_validity::TransactionValidity, traits::{CurrentHeight, BlockNumberToHash}};
 use client::block_builder::BlockBuilder as ClientBlockBuilder;
@@ -55,7 +55,7 @@ pub trait ChainXApi: CurrentHeight<BlockNumber=BlockNumber> + BlockNumberToHash<
     fn validators(&self, at: &BlockId) -> Result<Vec<AccountId>>;
 
     /// Get a validator stake weight at a given block.
-    fn stake_weight(&self, at: &BlockId, account: AccountId) -> Result<Balance>;
+    fn stake_weight(&self, at: &BlockId, account: AccountId) -> Result<u64>;
 
     /// Get the value of the randomness beacon at a given block.
     fn random_seed(&self, at: &BlockId) -> Result<Hash>;

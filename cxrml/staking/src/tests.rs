@@ -335,7 +335,7 @@ fn nominating_and_rewards_should_work() {
         assert_eq!(Balances::free_balance(&3), 11);
         assert_eq!(Balances::free_balance(&4), 10);
         assert_ok!(Staking::claim(Origin::signed(4), 0));
-        assert_eq!(Balances::free_balance(&4), 12);
+        assert_eq!(Balances::free_balance(&4), 13);
 
         System::set_block_number(4);
         assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 12));
@@ -345,7 +345,7 @@ fn nominating_and_rewards_should_work() {
 
         assert_eq!(Session::validators(), [3, 1]);
         assert_ok!(Staking::claim(Origin::signed(4), 0));
-        assert_eq!(Balances::free_balance(&4), 3);
+        assert_eq!(Balances::free_balance(&4), 4);
 
         System::set_block_number(5);
         assert_ok!(Staking::unnominate(Origin::signed(4), 0, 30));
@@ -355,7 +355,7 @@ fn nominating_and_rewards_should_work() {
         assert_eq!(Balances::free_balance(&1), 1);
         assert_eq!(Balances::free_balance(&2), 7);
         assert_eq!(Balances::free_balance(&3), 13);
-        assert_eq!(Balances::free_balance(&4), 3);
+        assert_eq!(Balances::free_balance(&4), 4);
         assert_eq!(Staking::locked(&4), 30);
 
         System::set_block_number(6);

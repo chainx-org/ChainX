@@ -23,7 +23,7 @@ impl ChainXApi for TClient {
         self.call_api_at(at, "validators", &())
     }
 
-    fn stake_weight(&self, at: &BlockId, account: AccountId) -> Result<Balance> {
+    fn stake_weight(&self, at: &BlockId, account: AccountId) -> Result<u64> {
         self.call_api_at(at, "stake_weight", &account)
     }
 
