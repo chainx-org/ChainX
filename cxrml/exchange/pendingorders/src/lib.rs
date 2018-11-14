@@ -43,7 +43,7 @@ extern crate srml_system as system;
 // for chainx runtime module lib
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_tokenbalances as tokenbalances;
-//extern crate cxrml_matchorder as matchorder;
+//extern crate cxrml_exchange_matchorder as matchorder;
 
 #[cfg(test)]
 mod tests;

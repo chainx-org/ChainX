@@ -38,9 +38,8 @@ extern crate srml_balances as balances;
 extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate cxrml_support as cxsupport;
-#[cfg(test)]
 extern crate cxrml_tokenbalances as tokenbalances;
-extern crate cxrml_financialrecords as finacial_recordes;
+extern crate cxrml_funds_financialrecords as finacial_recordes;
 
 // bitcoin-rust
 extern crate serialization as ser;
@@ -80,8 +79,8 @@ pub use blockchain::BestHeader;
 pub use keys::{Address, Error as AddressError};
 
 pub trait Trait
-    : system::Trait + balances::Trait + timestamp::Trait + finacial_recordes::Trait
-    {
+: system::Trait + balances::Trait + timestamp::Trait + finacial_recordes::Trait
+{
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
@@ -99,6 +98,14 @@ decl_module! {
         fn push_header(origin, header: Vec<u8>) -> Result;
         fn push_transaction(origin, tx: Vec<u8>) -> Result;
         fn propose_transaction(origin, tx: Vec<u8>) -> Result;
+    }
+}
+
+impl<T: Trait> tokenbalances::TokenT for Module<T> {
+    const SYMBOL: &'static [u8] = b"btc";
+    fn check_addr(addr: &[u8], _: &[u8]) -> Result {
+        Self::verify_btc_address(addr).map_err(|_| "verify btc addr err")?;
+        Ok(())
     }
 }
 

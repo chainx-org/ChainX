@@ -2,16 +2,20 @@
 extern crate primitives as btc_primitives;
 extern crate chain as btc_chain;
 extern crate base58;
-extern crate cxrml_pendingorders;
+extern crate cxrml_exchange_pendingorders;
 extern crate cxrml_tokenbalances;
 extern crate keys;
 
-use self::cxrml_pendingorders::{OrderPair};
+use self::cxrml_exchange_pendingorders::OrderPair;
 use self::base58::FromBase58;
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilVotingConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
-                     ContractConfig, Permill, Perbill, TokenBalancesConfig, FinancialRecordsConfig,
-                     MultiSigConfig, BalancesConfigCopy, BridgeOfBTCConfig, Params, Token, PendingOrdersConfig, MatchOrderConfig};
+                     ContractConfig, Permill, Perbill,
+                     TokenBalancesConfig, Token,
+                     MultiSigConfig, BalancesConfigCopy,
+                     FinancialRecordsConfig, WithdrawalConfig,
+                     BridgeOfBTCConfig, Params, BridgeOfBTC,
+                     PendingOrdersConfig, MatchOrderConfig};
 
 use super::cli::ChainSpec;
 use keyring::Keyring;
@@ -20,6 +24,7 @@ use ed25519;
 use self::btc_primitives::{hash::H256, compact::Compact};
 use self::btc_chain::BlockHeader;
 use self::keys::DisplayLayout;
+use self::cxrml_tokenbalances::TokenT;
 
 pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
     let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
@@ -129,13 +134,10 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             // token_list: Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>
             // e.g. [("btc", [(account1, value), (account2, value)].to_vec()), ("eth", [(account1, value), (account2, value)].to_vec())]
             token_list: vec![
-                (Token::new(b"x-btc".to_vec(),b"btc token".to_vec(),8),[(Keyring::Alice.to_raw_public().into(),1_000_000),(Keyring::Bob.to_raw_public().into(),1_000_000)].to_vec())
+                (Token::new(BridgeOfBTC::SYMBOL.to_vec(), b"btc token".to_vec(), 8), [(Keyring::Alice.to_raw_public().into(), 1_000_000), (Keyring::Bob.to_raw_public().into(), 1_000_000)].to_vec())
             ],
 
             transfer_token_fee: 10,
-        }),
-        financialrecords: Some(FinancialRecordsConfig {
-            withdrawal_fee: 10,
         }),
         multisig: Some(MultiSigConfig {
             genesis_multi_sig: vec![],
@@ -143,6 +145,12 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             exec_fee: 0,
             confirm_fee: 0,
             balances_config: balances_config_copy,
+        }),
+        financialrecords: Some(FinancialRecordsConfig {
+            withdrawal_fee: 10,
+        }),
+        withdrawal: Some(WithdrawalConfig {
+            withdrawal_fee: 10,
         }),
         bridge_btc: Some(BridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)

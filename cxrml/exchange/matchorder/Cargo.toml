@@ -1,5 +1,5 @@
 [package]
-name = "cxrml-matchorder"
+name = "cxrml-exchange-matchorder"
 version = "0.1.0"
 authors = ["Chainpool <https://www.chainx.org>"]
 
@@ -21,7 +21,7 @@ log = "0.4"
 # cxrml module
 cxrml-support = { path = "../../support",  default_features = false }
 cxrml-tokenbalances = { path = "../../tokenbalances",  default_features = false }
-cxrml-pendingorders = { path = "../pendingorders",  default_features = false }
+cxrml-exchange-pendingorders = { path = "../pendingorders",  default_features = false }
 
 [features]
 default = ["std"]
@@ -39,5 +39,5 @@ std=[
     "srml-balances/std",
     "cxrml-support/std",
     "cxrml-tokenbalances/std",
-    "cxrml-pendingorders/std",
+    "cxrml-exchange-pendingorders/std",
 ]

@@ -41,7 +41,7 @@ extern crate srml_balances as balances;
 extern crate srml_system as system;
 
 // for chainx runtime module lib
-extern crate cxrml_pendingorders as pendingorders;
+extern crate cxrml_exchange_pendingorders as pendingorders;
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_tokenbalances as tokenbalances;
 

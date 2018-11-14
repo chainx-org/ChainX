@@ -50,8 +50,6 @@ use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use runtime_primitives::traits::OnFinalise;
 
-use system::ensure_signed;
-
 pub use tokenbalances::{Symbol, ReservedType};
 use cxsupport::storage::linked_node::{
     Node, NodeT, LinkedNodeCollection, MultiNodeIndex,
@@ -64,9 +62,6 @@ pub trait Trait: tokenbalances::Trait {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn withdraw(origin, sym: Symbol, value: T::TokenBalance) -> Result;
-        /// set withdrawal fee, call by ROOT
-        fn set_withdrawal_fee(val: T::Balance) -> Result;
     }
 }
 
@@ -147,7 +142,7 @@ impl Default for Action {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Record<Symbol, TokenBalance, BlockNumber> where
     Symbol: Clone, TokenBalance: Copy, BlockNumber: Copy,
@@ -156,6 +151,8 @@ pub struct Record<Symbol, TokenBalance, BlockNumber> where
     symbol: Symbol,
     balance: TokenBalance,
     init_blocknum: BlockNumber,
+    addr: Vec<u8>,
+    ext: Vec<u8>,
 }
 
 type RecordT<T> = Record<Symbol, <T as tokenbalances::Trait>::TokenBalance, <T as system::Trait>::BlockNumber>;
@@ -167,6 +164,8 @@ impl<Symbol, TokenBalance, BlockNumber> Record<Symbol, TokenBalance, BlockNumber
     pub fn mut_action(&mut self) -> &mut Action { &mut self.action }
     pub fn symbol(&self) -> Symbol { self.symbol.clone() }
     pub fn balance(&self) -> TokenBalance { self.balance }
+    pub fn addr(&self) -> Vec<u8> { self.addr.clone() }
+    pub fn ext(&self) -> Vec<u8> { self.ext.clone() }
     /// block num for the record init time.
     pub fn blocknum(&self) -> BlockNumber { self.init_blocknum }
 }
@@ -266,16 +265,6 @@ impl<T: Trait> Module<T> {
     fn deposit_event(event: Event<T>) {
         <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
     }
-    // public call
-    fn set_withdrawal_fee(val: T::Balance) -> Result {
-        <WithdrawalFee<T>>::put(val);
-        Self::deposit_event(RawEvent::SetWithdrawalFee(val));
-        Ok(())
-    }
-    fn withdraw(origin: T::Origin, sym: Symbol, value: T::TokenBalance) -> Result {
-        let who = ensure_signed(origin)?;
-        Self::withdrawal(&who, &sym, value)
-    }
 }
 
 impl<T: Trait> Module<T> {
@@ -367,8 +356,8 @@ impl<T: Trait> Module<T> {
     }
 
     /// withdrawal, notice this func has include withdrawal_init and withdrawal_locking
-    fn withdrawal(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
-        let index = Self::withdrawal_with_index(who, sym, balance)?;
+    pub fn withdrawal(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance, addr: Vec<u8>, ext: Vec<u8>) -> Result {
+        let index = Self::withdrawal_with_index(who, sym, balance, addr, ext)?;
 
         // set to withdraw cache
         let n = Node::new(WithdrawLog::<T::AccountId> { accountid: who.clone(), index });
@@ -461,7 +450,7 @@ impl<T: Trait> Module<T> {
 
         <tokenbalances::Module<T>>::is_valid_token(sym)?;
 
-        let r = Record { action: Action::Deposit(Default::default()), symbol: sym.clone(), balance: balance, init_blocknum: <system::Module<T>>::block_number() };
+        let r = Record { action: Action::Deposit(Default::default()), symbol: sym.clone(), balance: balance, init_blocknum: <system::Module<T>>::block_number(), addr: Vec::new(), ext: Vec::new() };
         let index = Self::new_record(who, &r)?;
         Self::deposit_event(RawEvent::DepositInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));
 
@@ -501,7 +490,7 @@ impl<T: Trait> Module<T> {
         }
     }
     /// withdrawal init, notice this func return index to show the index of records for this account
-    pub fn withdrawal_with_index(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> StdResult<u32, &'static str> {
+    fn withdrawal_with_index(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance, addr: Vec<u8>, ext: Vec<u8>) -> StdResult<u32, &'static str> {
         Self::before(who, sym, true)?;
 
         <tokenbalances::Module<T>>::is_valid_token_for(who, sym)?;
@@ -510,18 +499,13 @@ impl<T: Trait> Module<T> {
             return Err("not enough free token to withdraw");
         }
 
-        let mut index = 0_u32;
-        <cxsupport::Module<T>>::handle_fee_after(who, Self::withdrawal_fee(), true, || {
-            let r = Record { action: Action::Withdrawal(Default::default()), symbol: sym.clone(), balance: balance, init_blocknum: <system::Module<T>>::block_number() };
-            index = Self::new_record(who, &r)?;
-            Self::deposit_event(RawEvent::WithdrawalInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));
-            Ok(())
-        })?;
-
+        let r = Record { action: Action::Withdrawal(Default::default()), symbol: sym.clone(), balance: balance, init_blocknum: <system::Module<T>>::block_number(), addr, ext };
+        let index = Self::new_record(who, &r)?;
+        Self::deposit_event(RawEvent::WithdrawalInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));
         Ok(index)
     }
     /// withdrawal lock, should use index to find out which record to change to locking state
-    pub fn withdrawal_locking_with_index(who: &T::AccountId, index: u32) -> StdResult<u32, &'static str> {
+    fn withdrawal_locking_with_index(who: &T::AccountId, index: u32) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
         if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
@@ -554,7 +538,7 @@ impl<T: Trait> Module<T> {
         }
     }
     /// withdrawal finish, should use index to find out which record to changed to final, success flag mark success, if false, release the token to free
-    pub fn withdrawal_finish_with_index(who: &T::AccountId, index: u32, success: bool) -> StdResult<u32, &'static str> {
+    fn withdrawal_finish_with_index(who: &T::AccountId, index: u32, success: bool) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
         if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {

@@ -21,7 +21,7 @@ srml-consensus = { git = "https://github.com/paritytech/substrate", default-feat
 srml-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false }
 cxrml-support = { path = "../../support", default-features = false }
 cxrml-tokenbalances = { path = "../../tokenbalances", default-features = false }
-cxrml-financialrecords = { path = "../../funds/financialrecords", default-features = false }
+cxrml-funds-financialrecords = { path = "../../funds/financialrecords", default-features = false }
 
 # bitcoin-rust
 chain = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
@@ -56,7 +56,7 @@ std=[
     "srml-timestamp/std",
     "cxrml-support/std",
     "cxrml-tokenbalances/std",
-    "cxrml-financialrecords/std",
+    "cxrml-funds-financialrecords/std",
 
     # bitcoin-rust
     "chain/std",

@@ -121,7 +121,7 @@ impl Trait for Test {
 
 type FinancialRecords = Module<Test>;
 type TokenBalances = tokenbalances::Module<Test>;
-type Balances = balances::Module<Test>;
+//type Balances = balances::Module<Test>;
 
 #[test]
 fn test_normal() {
@@ -134,7 +134,7 @@ fn test_normal() {
         assert_eq!(index, 0);
         FinancialRecords::deposit_finish_with_index(&a, index, true).unwrap();
         // withdraw
-        let index = FinancialRecords::withdrawal_with_index(&a, &btc_symbol, 50).unwrap();
+        let index = FinancialRecords::withdrawal_with_index(&a, &btc_symbol, 50, vec![], vec![]).unwrap();
         assert_eq!(index, 1);
         FinancialRecords::withdrawal_locking_with_index(&a, index).unwrap();
         assert_eq!(FinancialRecords::withdrawal_finish_with_index(&a, index, true), Ok(1));
@@ -157,8 +157,8 @@ fn test_normal2() {
         assert_eq!(TokenBalances::total_token_of(&a, &eth_symbol), 100);
 
         // withdraw
-        FinancialRecords::withdrawal(&a, &btc_symbol, 50).unwrap();
-        FinancialRecords::withdrawal(&a, &eth_symbol, 50).unwrap();
+        FinancialRecords::withdrawal(&a, &btc_symbol, 50, vec![], vec![]).unwrap();
+        FinancialRecords::withdrawal(&a, &eth_symbol, 50, vec![], vec![]).unwrap();
 
         assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true));
         assert_ok!(FinancialRecords::withdrawal_finish(&a, &eth_symbol, false));
@@ -175,8 +175,6 @@ fn test_normal2() {
         assert_eq!(FinancialRecords::last_withdrawal_index_of(&key1).unwrap(), 2);
         assert_eq!(FinancialRecords::last_deposit_index_of(&key2).unwrap(), 1);
         assert_eq!(FinancialRecords::last_withdrawal_index_of(&key2).unwrap(), 3);
-
-        assert_eq!(Balances::free_balance(&a), 980);
     })
 }
 
@@ -186,19 +184,19 @@ fn test_last_not_finish() {
         let a: u64 = 1; // accountid
         let btc_symbol = b"x-btc".to_vec();
         FinancialRecords::deposit_init(&a, &btc_symbol, 100).unwrap();
-        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50),
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50, vec![], vec![]),
             "the account has no deposit record for this token yet");
         // let deposit fail
         assert_ok!(FinancialRecords::deposit_finish(&a, &btc_symbol, false)); // 1. deposit failed
         assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol), 0);
 
-        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "not a existed token in this account token list");
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50, vec![], vec![]), "not a existed token in this account token list");
         assert_eq!(FinancialRecords::records_len_of(&a), 1);
 
         FinancialRecords::deposit_init(&a, &btc_symbol, 100).unwrap();
         assert_ok!(FinancialRecords::deposit_finish(&a, &btc_symbol, true));  // 2. deposit success
 
-        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 50));
+        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 50, vec![], vec![]));
 
         assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 50));  // 3. deposit success
 
@@ -208,16 +206,12 @@ fn test_last_not_finish() {
         assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, false)); // 4. withdrawal failed
         assert_eq!(TokenBalances::free_token(&(a.clone(), btc_symbol.clone())), 150);
 
-        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 25));
+        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 25, vec![], vec![]));
         assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true));  // destroy token here 5. withdrawal success
         assert_eq!(FinancialRecords::records_len_of(&a), 5);
         assert_eq!(TokenBalances::free_token(&(a.clone(), btc_symbol.clone())), 125);
 
         assert_eq!(TokenBalances::total_token(&btc_symbol), 125);
-
-        // 1. deposit failed 2. deposit success 3. deposit success 4. withdrawal failed 5. withdrawal success
-        // (withdrawal) 10 + 10 = 50
-        assert_eq!(Balances::free_balance(&a), 980);
     })
 }
 
@@ -228,22 +222,8 @@ fn test_withdrawal_larger() {
         let btc_symbol = b"x-btc".to_vec();
         assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 10));
 
-        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "not enough free token to withdraw");
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50, vec![], vec![]), "not enough free token to withdraw");
         assert_eq!(FinancialRecords::records_len_of(&a), 1);
-    })
-}
-
-#[test]
-fn test_fee() {
-    with_externalities(&mut new_test_ext(), || {
-        let b: u64 = 2; // accountid
-        let btc_symbol = b"x-btc".to_vec();
-        assert_ok!(FinancialRecords::deposit(&b, &btc_symbol, 100));
-        assert_ok!(FinancialRecords::withdrawal(&b, &btc_symbol, 25));
-        assert_ok!(FinancialRecords::withdrawal_finish(&b, &btc_symbol, true));
-
-        assert_err!(FinancialRecords::withdrawal(&b, &btc_symbol, 50), "chainx balance is not enough after this tx, not allow to be killed at here");
-        assert_eq!(FinancialRecords::records_len_of(&b), 2);
     })
 }
 
@@ -252,7 +232,7 @@ fn test_withdrawal_first() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
         let btc_symbol = b"x-btc".to_vec();
-        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "the account has no deposit record for this token yet");
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50, vec![], vec![]), "the account has no deposit record for this token yet");
     })
 }
 
@@ -266,7 +246,7 @@ fn test_multi_sym() {
         let key2 = (a, eth_symbol.clone());
 
         assert_err!(FinancialRecords::withdrawal_finish(&a, &btc_symbol, true), "have not executed withdrawal() or withdrawal_init() yet for this record");
-        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50), "the account has no deposit record for this token yet");
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 50, vec![], vec![]), "the account has no deposit record for this token yet");
 
         assert_ok!(FinancialRecords::deposit(&a, &btc_symbol, 100));  // index = 0
         assert_ok!(FinancialRecords::deposit(&a, &eth_symbol, 100));  // eth 100 index = 1
@@ -280,10 +260,10 @@ fn test_multi_sym() {
         assert_eq!(TokenBalances::total_token_of(&a, &eth_symbol), 100);
 
         // withdraw
-        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 50));  // index = 3
-        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 25), "the last action have not finished yet! only if the last deposit/withdrawal have finished you can do a new action.");
+        assert_ok!(FinancialRecords::withdrawal(&a, &btc_symbol, 50, vec![], vec![]));  // index = 3
+        assert_err!(FinancialRecords::withdrawal(&a, &btc_symbol, 25, vec![], vec![]), "the last action have not finished yet! only if the last deposit/withdrawal have finished you can do a new action.");
 
-        assert_ok!(FinancialRecords::withdrawal(&a, &eth_symbol, 50));  // parallel withdraw  index = 4
+        assert_ok!(FinancialRecords::withdrawal(&a, &eth_symbol, 50, vec![], vec![]));  // parallel withdraw  index = 4
 
         assert_eq!(TokenBalances::free_token(&(a.clone(), btc_symbol.clone())), 150);
         assert_eq!(TokenBalances::free_token(&(a.clone(), eth_symbol.clone())), 50);
@@ -330,11 +310,9 @@ fn test_withdraw_log_cache() {
         assert_eq!(FinancialRecords::records_len_of(&b), 2);
 
         // withdraw
-        let origin = system::RawOrigin::Signed(a).into();
-        FinancialRecords::withdraw(origin, btc_symbol.clone(), 100).unwrap();
+        FinancialRecords::withdrawal(&a, &btc_symbol, 100, vec![], vec![]).unwrap();
         assert_eq!(FinancialRecords::records_len_of(&a), 3);
-        let origin = system::RawOrigin::Signed(b).into();
-        FinancialRecords::withdraw(origin, btc_symbol.clone(), 100).unwrap();
+        FinancialRecords::withdrawal(&b, &btc_symbol, 100, vec![], vec![]).unwrap();
         assert_eq!(FinancialRecords::records_len_of(&a), 3);
 
         let log_a = FinancialRecords::withdraw_log_cache((a, 2)).unwrap();
@@ -344,10 +322,8 @@ fn test_withdraw_log_cache() {
         assert_eq!(log_b.prev(), Some((1, 2)));
         assert_eq!(log_b.next(), None);
 
-        let origin = system::RawOrigin::Signed(a).into();
-        FinancialRecords::withdraw(origin, eth_symbol.clone(), 100).unwrap();
-        let origin = system::RawOrigin::Signed(b).into();
-        FinancialRecords::withdraw(origin, eth_symbol.clone(), 100).unwrap();
+        FinancialRecords::withdrawal(&a, &eth_symbol, 100, vec![], vec![]).unwrap();
+        FinancialRecords::withdrawal(&b, &eth_symbol, 100, vec![], vec![]).unwrap();
 
         // btc cache
         if let Some(btc_header) = FinancialRecords::log_header_for(&btc_symbol) {

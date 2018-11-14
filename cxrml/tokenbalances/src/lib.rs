@@ -104,6 +104,11 @@ pub fn is_valid_token_desc(v: &[u8]) -> Result {
     }
 }
 
+pub trait TokenT {
+    const SYMBOL: SymbolString;
+    fn check_addr(addr: &[u8], ext: &[u8]) -> Result;
+}
+
 /// Token struct.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]

@@ -34,13 +34,15 @@ chainx-primitives = { path = "../primitives" }
 cxrml-support = { path = "../cxrml/support" }
 cxrml-staking = { path = "../cxrml/staking" }
 cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
-cxrml-financialrecords = { path = "../cxrml/funds/financialrecords" }
 cxrml-multisig = { path = "../cxrml/multisig" }
 # bridge
 cxrml-bridge-btc = { path = "../cxrml/bridge/btc" }
+# funds
+cxrml-funds-financialrecords = { path = "../cxrml/funds/financialrecords" }
+cxrml-funds-withdrawal = { path = "../cxrml/funds/withdrawal" }
 # exchange
-cxrml-pendingorders = { path = "../cxrml/exchange/pendingorders" }
-cxrml-matchorder = { path = "../cxrml/exchange/matchorder" }
+cxrml-exchange-pendingorders = { path = "../cxrml/exchange/pendingorders" }
+cxrml-exchange-matchorder = { path = "../cxrml/exchange/matchorder" }
 
 [features]
 default = ["std"]
@@ -66,9 +68,10 @@ std = [
     "cxrml-support/std",
     "cxrml-staking/std",
     "cxrml-tokenbalances/std",
-    "cxrml-financialrecords/std",
     "cxrml-multisig/std",
     "cxrml-bridge-btc/std",
-    "cxrml-pendingorders/std",
-    "cxrml-matchorder/std",
+    "cxrml-funds-financialrecords/std",
+    "cxrml-funds-withdrawal/std",
+    "cxrml-exchange-pendingorders/std",
+    "cxrml-exchange-matchorder/std",
 ]

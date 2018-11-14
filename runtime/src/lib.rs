@@ -35,16 +35,21 @@ extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
+// cx runtime module
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_staking as staking;
 extern crate cxrml_tokenbalances as tokenbalances;
-extern crate cxrml_pendingorders as pendingorders;
-extern crate cxrml_matchorder as matchorder;
-
-extern crate cxrml_financialrecords as financialrecords;
 extern crate cxrml_multisig as multisig;
 // chainx runtime bridge
 extern crate cxrml_bridge_btc as bridge_btc;
+// funds
+extern crate cxrml_funds_financialrecords as financialrecords;
+extern crate cxrml_funds_withdrawal as withdrawal;
+// exchange
+extern crate cxrml_exchange_pendingorders as pendingorders;
+extern crate cxrml_exchange_matchorder as matchorder;
+
+
 #[macro_use]
 extern crate sr_version as version;
 extern crate chainx_primitives;
@@ -217,29 +222,36 @@ impl tokenbalances::Trait for Runtime {
     type Event = Event;
 }
 
-impl financialrecords::Trait for Runtime {
-    type Event = Event;
-}
-impl pendingorders::Trait for Runtime {
-    type Event = Event;
-    type Amount = TokenBalance;
-    type Price = TokenBalance;
-}
-impl matchorder::Trait for Runtime {
-    type Event = Event;
-}
-
 impl multisig::Trait for Runtime {
     type MultiSig = multisig::SimpleMultiSigIdFor<Runtime>;
     type Event = Event;
 }
 
-impl cxsupport::Trait for Runtime {}
-
 // bridge
 impl bridge_btc::Trait for Runtime {
     type Event = Event;
 }
+
+// funds
+impl financialrecords::Trait for Runtime {
+    type Event = Event;
+}
+
+impl withdrawal::Trait for Runtime {}
+
+// exchange
+impl pendingorders::Trait for Runtime {
+    type Event = Event;
+    type Amount = TokenBalance;
+    type Price = TokenBalance;
+}
+
+impl matchorder::Trait for Runtime {
+    type Event = Event;
+}
+
+impl cxsupport::Trait for Runtime {}
+
 
 impl DigestItem for Log {
     type Hash = Hash;
@@ -275,8 +287,11 @@ construct_runtime!(
         Treasury: treasury,
         Contract: contract::{Module, Call, Config, Event<T>},
         TokenBalances: tokenbalances,
-        FinancialRecords: financialrecords,
         MultiSig: multisig,
+        // funds
+        FinancialRecords: financialrecords,
+        Withdrawal: withdrawal::{Module, Call, Config},
+        // exchange
         PendingOrders : pendingorders,
         MatchOrder : matchorder,
         // bridge
@@ -321,6 +336,7 @@ pub mod api {
         timestamp => |()| super::Timestamp::get(),
         random_seed => |()| super::System::random_seed(),
         account_nonce => |account| super::System::account_nonce(&account),
-        lookup_address => |address| super::Balances::lookup_address(address)
+        lookup_address => |address| super::Balances::lookup_address(address),
+        verify_addr => |(sym, addr, ext)| super::Withdrawal::verify_address(sym, addr, ext)
     );
 }

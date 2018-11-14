@@ -1,7 +1,8 @@
 [package]
-name = "cxrml-exchange-pendingorders"
+name = "cxrml-funds-withdrawal"
 version = "0.1.0"
-authors = ["Chainpool <https://www.chainx.org>"]
+authors = ["Chainpool <http://chainx.org>"]
+
 
 [dependencies]
 hex-literal = "0.1.0"
@@ -16,12 +17,18 @@ sr-primitives = { git = "https://github.com/paritytech/substrate", default_featu
 srml-support = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-system = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-balances = { git = "https://github.com/paritytech/substrate", default_features = false }
+srml-timestamp = { git = "https://github.com/paritytech/substrate", default_features = false }
+srml-consensus = { git = "https://github.com/paritytech/substrate", default_features = false }
 
-log = "0.4"
-
-# cxrml module
+# cxrml
 cxrml-support = { path = "../../support", default_features = false }
 cxrml-tokenbalances = { path = "../../tokenbalances", default_features = false }
+cxrml-funds-financialrecords = { path = "../financialrecords", default_features = false }
+
+# bridge
+cxrml-bridge-btc = { path = "../../bridge/btc", default_features = false }
+
+base58 = { version = "0.1", optional = true }
 
 [features]
 default = ["std"]
@@ -37,6 +44,14 @@ std=[
     "srml-support/std",
     "srml-system/std",
     "srml-balances/std",
+    "srml-timestamp/std",
+    "srml-consensus/std",
     "cxrml-support/std",
     "cxrml-tokenbalances/std",
+    "cxrml-funds-financialrecords/std",
+    # bridge
+    "cxrml-bridge-btc/std",
+
+    # other
+    "base58",
 ]
