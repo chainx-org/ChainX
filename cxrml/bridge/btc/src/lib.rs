@@ -62,23 +62,22 @@ mod b58;
 
 use codec::Decode;
 use rstd::prelude::*;
-//use rstd::result::Result as StdResult;
+use rstd::result::Result as StdResult;
 use runtime_support::dispatch::{Result, Parameter};
 use runtime_support::{StorageValue, StorageMap};
 use runtime_primitives::traits::OnFinalise;
-
 use system::ensure_signed;
-
 use ser::deserialize;
 use chain::{BlockHeader, Transaction as BTCTransaction};
 use primitives::hash::H256;
 use primitives::compact::Compact;
 
-pub use blockchain::BestHeader;
-
 use blockchain::Chain;
 use tx::{UTXO, validate_transaction, handle_input, handle_output, handle_proposal};
+use keys::DisplayLayout;
 pub use tx::RelayTx;
+pub use blockchain::BestHeader;
+pub use keys::{Address, Error as AddressError};
 
 pub trait Trait
     : system::Trait + balances::Trait + timestamp::Trait + finacial_recordes::Trait
@@ -201,22 +200,22 @@ decl_storage! {
 
         // =====
         // tx
-        pub ReceiveAddress get(receive_address) config(): Option<keys::Address>;
+        pub ReceiveAddress get(receive_address) config(): Option<Address>;
         pub RedeemScript get(redeem_script) config(): Option<Vec<u8>>;
 
         pub UTXOSet get(utxo_set): map u64 => UTXO;
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
         pub IrrBlock get(irr_block) config(): u32;
         pub BtcFee get(btc_fee) config(): u64;
-        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, BTCTransaction)>; // Address, type, balance
+        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, Address, TxType, u64, BTCTransaction)>; // Address, type, balance
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
-        pub AddressMap get(address_map): map keys::Address => Option<T::AccountId>;
-        pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
+        pub AddressMap get(address_map): map Address => Option<T::AccountId>;
+        pub AccountMap get(account_map): map T::AccountId => Option<Address>;
         pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
         pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
 
         pub AccountsMaxIndex get(accounts_max_index) config(): u64;
-        pub AccountsSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, T::BlockNumber, TxType)>;
+        pub AccountsSet get(accounts_set): map u64 => Option<(H256, Address, T::AccountId, T::BlockNumber, TxType)>;
 
         // =====
         // others
@@ -294,6 +293,10 @@ impl<T: Trait> Module<T> {
 
 
 impl<T: Trait> Module<T> {
+    pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
+        Address::from_layout(data)
+    }
+
     pub fn process_header(header: BlockHeader, who: &T::AccountId) -> Result {
         // Check for duplicate
         if let Some(_) = Self::block_header_for(&header.hash()) {
@@ -326,7 +329,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn process_tx(tx: RelayTx, who: &T::AccountId) -> Result {
-        let receive_address: keys::Address = if let Some(h) = <ReceiveAddress<T>>::get() {
+        let receive_address: Address = if let Some(h) = <ReceiveAddress<T>>::get() {
             h
         } else {
             return Err("should set RECEIVE_address first");

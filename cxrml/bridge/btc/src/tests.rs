@@ -107,7 +107,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             irr_block: 6,
             btc_fee: 10, 
             accounts_max_index: 0,
-            receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
+            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -151,7 +151,7 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
             irr_block: 6,
             btc_fee: 10, 
             accounts_max_index: 0,
-            receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
+            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -268,7 +268,7 @@ pub fn new_test_mock_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             irr_block: 6,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
+            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -456,7 +456,7 @@ fn test_init_mock_blocks() {
 fn test_genesis() {
     with_externalities(&mut new_test_ext(), || {
         let (header, num) = BridgeOfBTC::genesis_info();
-        let r = <GenesisInfo<Test>>::get();
+        let _r = <GenesisInfo<Test>>::get();
         let h = header.hash().reversed();
         assert_eq!(
             format!("{:?}", h).to_string(),
@@ -648,7 +648,7 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
             irr_block: 6,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
+            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -721,7 +721,7 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
             irr_block: 6,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: "mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap(),
+            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -751,7 +751,7 @@ fn test_changebit() {
             "0000000089d757fd95d79f7fcc2bc25ca7fc16492dca9aa610730ea05d9d3de9"
         );
 
-        let b2 = BlockHeader {
+        let _b2 = BlockHeader {
             version: 1,
             previous_header_hash: H256::from_reversed_str(
                 "00000000864b744c5025331036aa4a16e9ed1cbb362908c625272150fa059b29",
@@ -769,4 +769,10 @@ fn test_changebit() {
             "0000000089d757fd95d79f7fcc2bc25ca7fc16492dca9aa610730ea05d9d3de9"
         );
     })
+}
+
+#[test]
+pub fn test_address() {
+    BridgeOfBTC::verify_btc_address(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap())
+        .unwrap();
 }

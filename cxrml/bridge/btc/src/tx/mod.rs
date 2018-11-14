@@ -17,9 +17,7 @@ use script::script::Script;
 use script::{SignatureChecker, builder, TransactionSignatureChecker, TransactionInputSigner,
              SignatureVersion};
 use keys;
-use keys::DisplayLayout;
 use b58::from;
-use runtime_primitives::traits::As;
 use super::{TxType, Trait, ReceiveAddress, NetworkId, RedeemScript, AddressMap, AccountMap,
             UTXOSet, TxSet, BlockTxids, BlockHeaderFor, NumberForHash, UTXOMaxIndex,
             AccountsMaxIndex, AccountsSet, TxProposal, CandidateTx, DepositCache};
@@ -149,10 +147,6 @@ impl<T: Trait> TxStorage<T> {
         <BlockTxids<T>>::mutate(block_hash, |v| v.push(hash.clone()));
 
         <TxSet<T>>::insert(hash, (who.clone(), address, tx_type, balance, tx));
-    }
-
-    fn check_previous(txid: &H256) -> bool {
-        <TxSet<T>>::exists(txid)
     }
 
     fn find_tx(txid: &H256) -> Option<Transaction> {
@@ -359,7 +353,7 @@ pub fn handle_input<T: Trait>(
     );
 }
 
-fn deposit_token<T: Trait>(address: keys::Address, balance: u64, block_hash: &H256) -> Result {
+fn deposit_token<T: Trait>(address: keys::Address, balance: u64, block_hash: &H256) {
     let account = <AddressMap<T>>::get(address).unwrap();
     let mut vec: Vec<(T::AccountId, u64, H256)> = match <DepositCache<T>>::take() {
         Some(vec) => vec,
@@ -367,8 +361,6 @@ fn deposit_token<T: Trait>(address: keys::Address, balance: u64, block_hash: &H2
     };
     vec.push((account, balance, block_hash.clone()));
     <DepositCache<T>>::put(vec);
-
-    return Ok(());
 }
 
 fn inspect_address<T: Trait>(tx: &Transaction, outpoint: OutPoint) -> Option<keys::Address> {
@@ -406,7 +398,7 @@ pub fn handle_output<T: Trait>(
     let mut total_balance: u64 = 0;
     let mut register = false;
     let mut new_account = false;
-    let mut tx_type;
+    let tx_type;
     // Add utxo
     let outpoint = tx.inputs[0].previous_output.clone();
     let send_address = inspect_address::<T>(previous_tx, outpoint).unwrap();

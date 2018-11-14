@@ -1,5 +1,3 @@
-//#![cfg_attr(not(feature = "std"), no_std)]
-
 use rstd::prelude::*;
 use rstd::result::Result;
 use rstd::marker::PhantomData;
@@ -235,7 +233,7 @@ impl<T: Trait> Chain<T> {
                                 }
                             }
                             let btc_fee = <BtcFee<T>>::get();
-                            <Proposal<T>>::create_proposal(address_vec, btc_fee);
+                            let _ = <Proposal<T>>::create_proposal(address_vec, btc_fee);
                         } else {
                             <TxProposal<T>>::kill();
                         }

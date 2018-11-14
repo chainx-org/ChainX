@@ -7,7 +7,6 @@ use super::builder::Builder;
 use super::keys::{Address, Type, Public};
 use super::{PhantomData, Vec};
 use super::StorageValue;
-use super::DisplayLayout;
 use super::{SignatureChecker, TransactionSignatureChecker, TransactionInputSigner,
             SignatureVersion};
 
