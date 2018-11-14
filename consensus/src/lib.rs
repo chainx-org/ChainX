@@ -165,26 +165,27 @@ impl<C: ChainXApi + Send + Sync> Proposer<C> {
     fn primary_index(&self, round_number: usize, _len: usize) -> usize {
         use primitives::uint::U256;
 
+        let validators_len = self.validators.len();
         let mut stake_weight = self.validators.iter()
             .map(|account| {
                 let weight = self.client.stake_weight(&self.parent_id, *account).unwrap();
                 if weight == 0 { 1 } else { weight }
             })
             .collect::<Vec<_>>();
-        trace!("validator stake weight:{:?}", stake_weight);
-        for i in 1..self.validators.len() {
+        info!("validator stake weight:{:?}, round_numer:{:?}", stake_weight, round_number);
+        for i in 1..validators_len {
             stake_weight[i] = stake_weight[i] + stake_weight[i - 1];
         }
-        let big_len = stake_weight[self.validators.len() - 1] as u128;
+        let big_len = stake_weight[validators_len - 1] as u128;
         let big_value = U256::from_big_endian(&self.random_seed.0).low_u64() as u128;
-        let offset = (big_value * big_value + round_number as u128) % big_len;
+        let offset = (big_value * big_value) % big_len;
 
-        for i in 0..stake_weight.len() {
+        for i in 0..validators_len {
             if offset < stake_weight[i] as u128 {
-                return i;
+                return (i + round_number) % validators_len;
             }
         }
-        return 0;
+        return round_number % validators_len;
     }
 
     fn primary_validator(&self, round_number: usize) -> Option<AccountId> {
@@ -259,7 +260,7 @@ impl<C> bft::Proposer<Block> for Proposer<C>
 
         let block = block_builder.bake()?;
 
-        info!("Proposing block [number: {}; hash: {}; parent_hash: {}; extrinsics: [{}]]",
+        trace!("Proposing block [number: {}; hash: {}; parent_hash: {}; extrinsics: [{}]]",
               block.header.number,
               Hash::from(block.header.hash()),
               block.header.parent_hash,
@@ -283,7 +284,7 @@ impl<C> bft::Proposer<Block> for Proposer<C>
     }
 
     fn evaluate(&self, unchecked_proposal: &Block) -> Self::Evaluate {
-        info!(target: "bft", "evaluating block on top of parent ({}, {:?})", self.parent_number, self.parent_hash);
+        trace!(target: "bft", "evaluating block on top of parent ({}, {:?})", self.parent_number, self.parent_hash);
 
         let current_timestamp = current_timestamp();
 

@@ -27,8 +27,8 @@ use chainx_primitives::{Block, Header};
 use chainx_api::ChainXApi;
 use TransactionPool;
 
-const TIMER_DELAY_MS: Duration = Duration::from_millis(2000);
-const TIMER_INTERVAL_MS: Duration = Duration::from_millis(200);
+const TIMER_DELAY_MS: Duration = Duration::from_millis(3000);
+const TIMER_INTERVAL_MS: Duration = Duration::from_millis(300);
 
 // spin up an instance of BFT agreement on the current thread's executor.
 // panics if there is no current thread executor.
@@ -130,7 +130,7 @@ impl Service {
                             let hash = best_block.hash();
 
                             if hash == prev_best {
-                                debug!(target: "bft", "Starting consensus round after a timeout");
+                                trace!(target: "bft", "Starting consensus round after a timeout");
                                 start_bft(best_block, s.clone());
                             }
                             prev_best = hash;
