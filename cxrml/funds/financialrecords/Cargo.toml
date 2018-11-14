@@ -18,8 +18,8 @@ srml-system = { git = "https://github.com/paritytech/substrate", default_feature
 srml-balances = { git = "https://github.com/paritytech/substrate", default_features = false }
 
 # cxrml module
-cxrml-support = { path = "../support", default_features = false }
-cxrml-tokenbalances = { path = "../tokenbalances", default_features = false }
+cxrml-support = { path = "../../support", default_features = false }
+cxrml-tokenbalances = { path = "../../tokenbalances", default_features = false }
 
 [features]
 default = ["std"]

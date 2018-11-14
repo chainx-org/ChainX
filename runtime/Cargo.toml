@@ -34,11 +34,13 @@ chainx-primitives = { path = "../primitives" }
 cxrml-support = { path = "../cxrml/support" }
 cxrml-staking = { path = "../cxrml/staking" }
 cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
-cxrml-financialrecords = { path = "../cxrml/financialrecords" }
+cxrml-financialrecords = { path = "../cxrml/funds/financialrecords" }
 cxrml-multisig = { path = "../cxrml/multisig" }
+# bridge
 cxrml-bridge-btc = { path = "../cxrml/bridge/btc" }
-cxrml-pendingorders = { path = "../cxrml/pendingorders" }
-cxrml-matchorder = { path = "../cxrml/matchorder" }
+# exchange
+cxrml-pendingorders = { path = "../cxrml/exchange/pendingorders" }
+cxrml-matchorder = { path = "../cxrml/exchange/matchorder" }
 
 [features]
 default = ["std"]

@@ -33,9 +33,14 @@ chainx-primitives = { path = "../../primitives", default-features = false }
 cxrml-support = { path = "../../cxrml/support", default-features = false }
 cxrml-staking = { path = "../../cxrml/staking", default-features = false }
 cxrml-tokenbalances = { path = "../../cxrml/tokenbalances", default-features = false }
-cxrml-financialrecords = { path = "../../cxrml/financialrecords", default-features = false }
 cxrml-multisig = { path = "../../cxrml/multisig", default-features = false }
+# bridge
 cxrml-bridge-btc = { path = "../../cxrml/bridge/btc", default-features = false }
+# funds
+cxrml-financialrecords = { path = "../../cxrml/funds/financialrecords", default-features = false }
+# exchange
+cxrml-pendingorders = { path = "../../cxrml/exchange/pendingorders", default-features = false }
+cxrml-matchorder = { path = "../../cxrml/exchange/matchorder", default-features = false }
 
 [features]
 default = []
@@ -63,7 +68,9 @@ std = [
     "cxrml-tokenbalances/std",
     "cxrml-financialrecords/std",
     "cxrml-multisig/std",
-    "cxrml-bridge-btc/std"
+    "cxrml-bridge-btc/std",
+    "cxrml-pendingorders/std",
+    "cxrml-matchorder/std",
 ]
 
 [profile.release]

@@ -16,11 +16,12 @@ sr-primitives = { git = "https://github.com/paritytech/substrate", default_featu
 srml-support = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-system = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-balances = { git = "https://github.com/paritytech/substrate", default_features = false }
-cxrml-tokenbalances = { path = "../tokenbalances" }
+
 log = "0.4"
 
 # cxrml module
-cxrml-support = { path = "../support",  default_features = false }
+cxrml-support = { path = "../../support", default_features = false }
+cxrml-tokenbalances = { path = "../../tokenbalances", default_features = false }
 
 [features]
 default = ["std"]
@@ -37,4 +38,5 @@ std=[
     "srml-system/std",
     "srml-balances/std",
     "cxrml-support/std",
+    "cxrml-tokenbalances/std",
 ]
