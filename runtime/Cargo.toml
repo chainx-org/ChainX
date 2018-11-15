@@ -31,6 +31,7 @@ sr-version = { git = "https://github.com/paritytech/substrate" }
 chainx-primitives = { path = "../primitives" }
 
 # chainx runtime module
+cxrml-system = { path = "../cxrml/system" }
 cxrml-support = { path = "../cxrml/support" }
 cxrml-staking = { path = "../cxrml/staking" }
 cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
@@ -65,6 +66,7 @@ std = [
     "serde_derive",
     "serde/std",
     "safe-mix/std",
+    "cxrml-system/std",
     "cxrml-support/std",
     "cxrml-staking/std",
     "cxrml-tokenbalances/std",

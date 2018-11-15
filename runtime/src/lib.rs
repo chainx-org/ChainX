@@ -36,6 +36,7 @@ extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
 // cx runtime module
+extern crate cxrml_system as cxsystem;
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_staking as staking;
 extern crate cxrml_tokenbalances as tokenbalances;
@@ -60,7 +61,6 @@ mod checked_block;
 pub use balances::address::Address as RawAddress;
 #[cfg(feature = "std")]
 pub use checked_block::CheckedBlock;
-pub use consensus::Call as ConsensusCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use tokenbalances::Token;
 
@@ -68,6 +68,8 @@ use rstd::prelude::*;
 use substrate_primitives::u32_trait::{_2, _4};
 use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature};
 use timestamp::Call as TimestampCall;
+pub use consensus::Call as ConsensusCall;
+use cxsystem::Call as CXSystemCall;
 use chainx_primitives::InherentData;
 use runtime_primitives::generic;
 use runtime_primitives::traits::{Convert, BlakeTwo256, DigestItem};
@@ -90,6 +92,10 @@ pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
         Call::Timestamp(TimestampCall::set(data.timestamp))
     )];
 
+    inherent.push(generic::UncheckedMortalExtrinsic::new_unsigned(
+        Call::CXSystem(CXSystemCall::set_block_producer(data.block_producer))
+    ));
+
     if !data.offline_indices.is_empty() {
         inherent.push(generic::UncheckedMortalExtrinsic::new_unsigned(
             Call::Consensus(ConsensusCall::note_offline(data.offline_indices))
@@ -109,6 +115,8 @@ const VALIDATX: ApiId = *b"validatx";
 pub const TIMESTAMP_SET_POSITION: u32 = 0;
 /// The position of the offline nodes noting extrinsic.
 pub const NOTE_OFFLINE_POSITION: u32 = 2;
+
+pub const BLOCK_PRODUCER_POSITION: u32 = 1;
 
 /// Runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -215,6 +223,12 @@ impl council::motions::Trait for Runtime {
     type Event = Event;
 }
 
+// cxrml trait
+
+impl cxsystem::Trait for Runtime {}
+
+impl cxsupport::Trait for Runtime {}
+
 impl tokenbalances::Trait for Runtime {
     const CHAINX_SYMBOL: tokenbalances::SymbolString = b"pcx";
     const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"pcx token for ChainX";
@@ -250,8 +264,6 @@ impl matchorder::Trait for Runtime {
     type Event = Event;
 }
 
-impl cxsupport::Trait for Runtime {}
-
 
 impl DigestItem for Log {
     type Hash = Hash;
@@ -286,6 +298,7 @@ construct_runtime!(
         CouncilMotions: council_motions::{Module, Call, Storage, Event<T>, Origin},
         Treasury: treasury,
         Contract: contract::{Module, Call, Config, Event<T>},
+        // chainx runtime module
         TokenBalances: tokenbalances,
         MultiSig: multisig,
         // funds
@@ -299,6 +312,8 @@ construct_runtime!(
 
         // put end of this marco
         CXSupport: cxsupport::{Module},
+        // must put end of all chainx runtime module
+        CXSystem: cxsystem::{Module, Call, Storage},
     }
 );
 

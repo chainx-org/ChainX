@@ -2,9 +2,10 @@
 
 //! Typesafe block interaction.
 
-use super::{Call, Block, TIMESTAMP_SET_POSITION, NOTE_OFFLINE_POSITION};
+use super::{Call, Block, AccountId, TIMESTAMP_SET_POSITION, NOTE_OFFLINE_POSITION, BLOCK_PRODUCER_POSITION};
 use timestamp::Call as TimestampCall;
 //use session::Call as SessionCall;
+use cxsystem::Call as CXSystemCall;
 
 /// Provides a type-safe wrapper around a structurally valid block.
 pub struct CheckedBlock {
@@ -71,6 +72,16 @@ impl CheckedBlock {
                 _ => None,
             })
             .unwrap_or(&[])
+    }
+
+    pub fn block_producer(&self) -> Option<AccountId> {
+        self.inner
+            .extrinsics
+            .get(BLOCK_PRODUCER_POSITION as usize)
+            .and_then(|xt| match xt.function {
+                Call::CXSystem(CXSystemCall::set_block_producer(x)) => Some(x),
+                _ => None,
+            })
     }
 
     /// Convert into inner block.

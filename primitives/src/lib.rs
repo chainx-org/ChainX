@@ -96,6 +96,8 @@ pub struct InherentData {
     pub timestamp: Timestamp,
     /// Indices of offline validators.
     pub offline_indices: Vec<u32>,
+    /// block producer
+    pub block_producer: AccountId,
 }
 
 /// Candidate receipt type.

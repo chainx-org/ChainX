@@ -226,9 +226,12 @@ impl<C> bft::Proposer<Block> for Proposer<C>
             )
         }
 
+        let block_producer: AccountId = self.local_key.public().0.into();
+
         let inherent_data = InherentData {
             timestamp,
             offline_indices,
+            block_producer: block_producer.clone(),
         };
 
         let mut block_builder = self.client.build_block(&self.parent_id, inherent_data)?;
@@ -259,15 +262,15 @@ impl<C> bft::Proposer<Block> for Proposer<C>
         }
 
         let block = block_builder.bake()?;
-
+        info!("generate a new block#{:}, producer:[{:}]", block.header.number, block_producer);
         trace!("Proposing block [number: {}; hash: {}; parent_hash: {}; extrinsics: [{}]]",
-              block.header.number,
-              Hash::from(block.header.hash()),
-              block.header.parent_hash,
-              block.extrinsics.iter()
-                  .map(|xt| format!("{}", BlakeTwo256::hash_of(xt)))
-                  .collect::<Vec<_>>()
-                  .join(", ")
+               block.header.number,
+               Hash::from(block.header.hash()),
+               block.header.parent_hash,
+               block.extrinsics.iter()
+                   .map(|xt| format!("{}", BlakeTwo256::hash_of(xt)))
+                   .collect::<Vec<_>>()
+                   .join(", ")
         );
 
         let substrate_block = Decode::decode(&mut block.encode().as_slice())
@@ -336,6 +339,13 @@ impl<C> bft::Proposer<Block> for Proposer<C>
             {
                 return Box::new(futures::empty());
             }
+
+        // check block_producer
+        match proposal.block_producer() {
+            Some(a) => { info!("current block#{:}, producer is [{:}]", self.parent_number + 1, a); }
+            None => { info!("current block#{:}, not set producer", self.parent_number + 1); }
+        }
+
 
         // evaluate whether the block is actually valid.
         // TODO: is it better to delay this until the delays are finished?
