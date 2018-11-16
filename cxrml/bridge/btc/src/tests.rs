@@ -6,6 +6,7 @@ use self::base58::FromBase58;
 use super::*;
 use runtime_io;
 use runtime_io::with_externalities;
+use self::keys::DisplayLayout;
 use runtime_primitives::testing::{Digest, DigestItem, Header};
 use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;
@@ -112,7 +113,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             irr_block: 6,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -156,7 +157,7 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
             irr_block: 6,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -273,7 +274,7 @@ pub fn new_test_mock_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             irr_block: 6,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -650,7 +651,7 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
             irr_block: 6,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()
@@ -723,7 +724,7 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
             irr_block: 6,
             btc_fee: 10,
             accounts_max_index: 0,
-            receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
             fee: 0,
         }.build_storage()

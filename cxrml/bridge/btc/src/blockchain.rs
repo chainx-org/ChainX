@@ -13,8 +13,8 @@ use primitives::hash::H256;
 use script::Script;
 
 use {
-    AccountMap, BestIndex, BlockHeaderFor, DepositCache, HashsForNumber, NumberForHash, Params,
-    ParamsInfo, Trait, TxProposal,
+    AccountMap, BestIndex, BlockHeaderFor, CertCache, DepositCache, HashsForNumber, NumberForHash,
+    Params, ParamsInfo, Trait, TxProposal,
 };
 
 use tx::{Proposal, RollBack, TxStorage};
@@ -240,6 +240,12 @@ impl<T: Trait> Chain<T> {
                 }
                 None => {}
             }
+        }
+
+        // SendCert
+        if let Some(certInfo) = <CertCache<T>>::take() {
+            runtime_io::print("------CertCache take");
+            //TO DO
         }
 
         <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);

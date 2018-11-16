@@ -161,7 +161,7 @@ source = "git+https://github.com/chainx-org/bit-vec.git#ced2a13de722307d5c966aa8
 [[package]]
 name = "bitcrypto"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
+source = "git+https://github.com/chainx-org/bitcoin-rust#221a76ec2a7995d497965c4ee2bf6b76a1372870"
 dependencies = [
  "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "rand 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -248,7 +248,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "chain"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
+source = "git+https://github.com/chainx-org/bitcoin-rust#221a76ec2a7995d497965c4ee2bf6b76a1372870"
 dependencies = [
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -638,6 +638,11 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "crunchy"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "ctr"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -993,7 +998,7 @@ dependencies = [
 [[package]]
 name = "eth-secp256k1"
 version = "0.5.7"
-source = "git+https://github.com/koushiro/rust-secp256k1?branch=add_no_std_support#fcb8d60a7a9043b23d99a07a45caf8fdfc5c4445"
+source = "git+https://github.com/koushiro/rust-secp256k1?branch=add_no_std_support#4be05902db0d46a0c1c28b8eaecd83b124cf8b18"
 dependencies = [
  "arrayvec 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1386,7 +1391,7 @@ dependencies = [
 [[package]]
 name = "keys"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
+source = "git+https://github.com/chainx-org/bitcoin-rust#221a76ec2a7995d497965c4ee2bf6b76a1372870"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
@@ -2217,15 +2222,15 @@ dependencies = [
 [[package]]
 name = "primitives"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
+source = "git+https://github.com/chainx-org/bitcoin-rust#221a76ec2a7995d497965c4ee2bf6b76a1372870"
 dependencies = [
  "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "crunchy 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "crunchy 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-std 0.1.0 (git+https://github.com/chainx-org/sr-std)",
- "uint 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "uint 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2536,7 +2541,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "script"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
+source = "git+https://github.com/chainx-org/bitcoin-rust#221a76ec2a7995d497965c4ee2bf6b76a1372870"
 dependencies = [
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
@@ -2615,7 +2620,7 @@ dependencies = [
 [[package]]
 name = "serialization"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#59a74b6ffde7a0f1b9891c81fd467231b6bcc35e"
+source = "git+https://github.com/chainx-org/bitcoin-rust#221a76ec2a7995d497965c4ee2bf6b76a1372870"
 dependencies = [
  "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
@@ -3774,6 +3779,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "uint"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "crunchy 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "unicase"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4086,6 +4101,7 @@ dependencies = [
 "checksum crossbeam-utils 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "2760899e32a1d58d5abb31129f8fae5de75220bc2176e77ff7c627ae45c918d9"
 "checksum crossbeam-utils 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "677d453a17e8bd2b913fa38e8b9cf04bcdbb5be790aa294f2389661d72036015"
 "checksum crunchy 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "a2f4a431c5c9f662e1200b7c7f02c34e91361150e382089a8f2dec3ba680cbda"
+"checksum crunchy 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c240f247c278fa08a6d4820a6a222bfc6e0d999e51ba67be94f44c905b2161f2"
 "checksum ctr 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "50ac3add446ec1f8fe3dc007cd838f5b22bbf33186394feac505451ecc43c018"
 "checksum ctrlc 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "630391922b1b893692c6334369ff528dcc3a9d8061ccf4c803aa8f83cb13db5e"
 "checksum datastore 0.1.0 (git+https://github.com/tomaka/libp2p-rs?rev=8111062f0177fd7423626f2db9560273644a4c4d)" = "<none>"
@@ -4362,6 +4378,7 @@ dependencies = [
 "checksum typenum 1.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "612d636f949607bdf9b123b4a6f6d966dedf3ff669f7f045890d3a4a73948169"
 "checksum ucd-util 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "fd2be2d6639d0f8fe6cdda291ad456e23629558d466e2789d2c3e9892bda285d"
 "checksum uint 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "754ba11732b9161b94c41798e5197e5e75388d012f760c42adb5000353e98646"
+"checksum uint 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "082df6964410f6aa929a61ddfafc997e4f32c62c22490e439ac351cec827f436"
 "checksum unicase 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7f4765f83163b74f957c797ad9253caf97f103fb064d3999aea9568d09fc8a33"
 "checksum unicase 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9d3218ea14b4edcaccfa0df0a64a3792a2c32cc706f1b336e48867f9d3147f90"
 "checksum unicode-bidi 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "49f2bd0c6468a8230e1db229cff8029217cf623c767ea5d60bfbd42729ea54d5"

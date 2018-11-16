@@ -80,7 +80,7 @@ use blockchain::Chain;
 use keys::DisplayLayout;
 pub use keys::{Address, Error as AddressError};
 pub use tx::RelayTx;
-use tx::{handle_input, handle_output, handle_proposal, validate_transaction, UTXO};
+use tx::{handle_input, handle_output, handle_proposal, handle_cert, validate_transaction, UTXO};
 
 pub trait Trait:
     system::Trait + balances::Trait + timestamp::Trait + financial_records::Trait
@@ -175,6 +175,7 @@ pub enum TxType {
     Deposit,
     Register,
     RegisterDeposit,
+    SendCert,
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]
@@ -213,20 +214,23 @@ decl_storage! {
         // tx
         pub ReceiveAddress get(receive_address) config(): Option<Address>;
         pub RedeemScript get(redeem_script) config(): Option<Vec<u8>>;
+        pub CertAddress get(cert_address) config(): Option<keys::Address>;
+        pub CertRedeemScript get(cert_redeem_script) config(): Option<Vec<u8>>;
 
         pub UTXOSet get(utxo_set): map u64 => UTXO;
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
         pub IrrBlock get(irr_block) config(): u32;
         pub BtcFee get(btc_fee) config(): u64;
-        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, Address, TxType, u64, BTCTransaction)>; // Address, type, balance
+        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, BTCTransaction, H256)>; // Address, type, balance
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
         pub AddressMap get(address_map): map Address => Option<T::AccountId>;
         pub AccountMap get(account_map): map T::AccountId => Option<Address>;
         pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
         pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
 
-        pub AccountsMaxIndex get(accounts_max_index) config(): u64;
-        pub AccountsSet get(accounts_set): map u64 => Option<(H256, Address, T::AccountId, T::BlockNumber, TxType)>;
+        pub RegInfoMaxIndex get(accounts_max_index) config(): u64;
+        pub RegInfoSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, T::BlockNumber, Vec<u8>, TxType)>;
+        pub CertCache get(cert_cache): Option<(Vec<u8>, T::AccountId)>;
 
         // =====
         // others
@@ -339,11 +343,19 @@ impl<T: Trait> Module<T> {
         } else {
             return Err("should set RECEIVE_address first");
         };
-
-        let tx_type = validate_transaction::<T>(&tx, &receive_address).unwrap();
+        let cert_address: keys::Address = if let Some(h) = <CertAddress<T>>::get() {
+            h
+        } else {
+            return Err("should set CERT_address first");
+        };
+        let tx_type = validate_transaction::<T>(&tx, (&receive_address, &cert_address)).unwrap();
         match tx_type {
             TxType::Withdraw => {
                 handle_input::<T>(&tx.raw, &tx.block_hash, &who, &receive_address);
+            }
+            TxType::SendCert => {
+                handle_cert::<T>(&tx.raw, &tx.block_hash, &who, &cert_address);
+
             }
             _ => {
                 let _utxos = handle_output::<T>(

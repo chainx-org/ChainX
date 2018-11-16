@@ -10,9 +10,9 @@ use runtime_support::{StorageMap, StorageValue};
 
 pub use self::proposal::{handle_proposal, Proposal};
 use super::{
-    AccountMap, AccountsMaxIndex, AccountsSet, AddressMap, BlockHeaderFor, BlockTxids, CandidateTx,
-    DepositCache, NetworkId, NumberForHash, ReceiveAddress, RedeemScript, Trait, TxProposal, TxSet,
-    TxType, UTXOMaxIndex, UTXOSet,
+    AccountMap, AddressMap, BlockHeaderFor, BlockTxids, CertCache, CandidateTx, DepositCache,
+    NetworkId, NumberForHash, RegInfoMaxIndex, RegInfoSet, ReceiveAddress, RedeemScript, Trait,
+    TxProposal, TxSet, TxType, UTXOMaxIndex, UTXOSet,
 };
 use b58::from;
 use chain::{OutPoint, Transaction, TransactionInput, TransactionOutput};
@@ -147,9 +147,9 @@ impl<T: Trait> TxStorage<T> {
         let tx = tx.clone();
 
         // todo 检查block是否存在
-        <BlockTxids<T>>::mutate(block_hash, |v| v.push(hash.clone()));
+        <BlockTxids<T>>::mutate(block_hash.clone(), |v| v.push(hash.clone()));
 
-        <TxSet<T>>::insert(hash, (who.clone(), address, tx_type, balance, tx));
+        <TxSet<T>>::insert(hash, (who.clone(), address, tx_type, balance, tx, block_hash));
     }
 
     fn find_tx(txid: &H256) -> Option<Transaction> {
@@ -171,7 +171,7 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
 
         let txids = <BlockTxids<T>>::get(header);
         for txid in txids.iter() {
-            let (_, _, tx_type, _, tx) = <TxSet<T>>::get(txid).unwrap();
+            let (_, _, tx_type, _, tx, _,) = <TxSet<T>>::get(txid).unwrap();
             match tx_type {
                 TxType::Withdraw => {
                     let out_point_set = tx
@@ -217,20 +217,20 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
     }
 }
 
-struct AccountsStorage<T: Trait>(PhantomData<T>);
+struct RegInfoStorage<T: Trait>(PhantomData<T>);
 
-impl<T: Trait> AccountsStorage<T> {
-    fn add(accounts: (H256, keys::Address, T::AccountId, T::BlockNumber, TxType)) {
-        let mut index = <AccountsMaxIndex<T>>::get();
-        <AccountsSet<T>>::insert(index, accounts.clone());
+impl<T: Trait> RegInfoStorage<T> {
+    fn add(accounts: (H256, keys::Address, T::AccountId, T::BlockNumber, Vec<u8>, TxType)) {
+        let mut index = <RegInfoMaxIndex<T>>::get();
+        <RegInfoSet<T>>::insert(index, accounts.clone());
         index += 1;
-        <AccountsMaxIndex<T>>::mutate(|inc| *inc = index);
+        <RegInfoMaxIndex<T>>::mutate(|inc| *inc = index);
     }
 }
 
 pub fn validate_transaction<T: Trait>(
     tx: &RelayTx,
-    receive_address: &keys::Address,
+    address: (&keys::Address, &keys::Address),
 ) -> StdResult<TxType, &'static str> {
     if <NumberForHash<T>>::exists(&tx.block_hash) == false {
         return Err("this tx's block not in the main chain");
@@ -260,17 +260,26 @@ pub fn validate_transaction<T: Trait>(
     if previous_txid != tx.raw.inputs[0].previous_output.hash {
         return Err("previous tx id not right");
     }
+    // detect cert
+    for input in tx.raw.inputs.iter() {
+        let outpoint = input.previous_output.clone();
+        let send_address = inspect_address::<T>(&tx.previous_raw, outpoint).unwrap();
+        if send_address.hash == address.1.hash {
+            return Ok(TxType::SendCert);
+        }
+    }
+
     // detect withdraw
     for input in tx.raw.inputs.iter() {
         let outpoint = input.previous_output.clone();
         let send_address = inspect_address::<T>(&tx.previous_raw, outpoint).unwrap();
-        if send_address.hash == receive_address.hash {
+        if send_address.hash == address.0.hash {
             return Ok(TxType::Withdraw);
         }
     }
     // detect deposit
     for output in tx.raw.outputs.iter() {
-        if is_key(&output.script_pubkey, &receive_address) {
+        if is_key(&output.script_pubkey, &address.0) {
             return Ok(TxType::RegisterDeposit);
         }
     }
@@ -406,6 +415,7 @@ pub fn handle_output<T: Trait>(
     let mut register = false;
     let mut new_account = false;
     let tx_type;
+    let mut channel = Vec::<u8>::new();
     // Add utxo
     let outpoint = tx.inputs[0].previous_output.clone();
     let send_address = inspect_address::<T>(previous_tx, outpoint).unwrap();
@@ -426,6 +436,7 @@ pub fn handle_output<T: Trait>(
                 Some(_a) => new_account = false,
                 None => {
                     runtime_io::print("------new account-----");
+                    channel = script.extract_pre(':');
                     new_account = true
                 }
             };
@@ -488,12 +499,39 @@ pub fn handle_output<T: Trait>(
         runtime_io::print("----new account-------");
         let time = <system::Module<T>>::block_number();
         let chainxaddr = <AddressMap<T>>::get(send_address.clone()).unwrap();
-        let account = (tx.hash(), send_address.clone(), chainxaddr, time, tx_type);
-        <AccountsStorage<T>>::add(account);
+        let account = (tx.hash(), send_address.clone(), chainxaddr, time,
+                       channel[2..].to_vec(),tx_type);
+        <RegInfoStorage<T>>::add(account);
         runtime_io::print("------insert new account in AccountsMap-----");
     }
     runtime_io::print("------store tx success-----");
     new_utxos
+}
+
+pub fn handle_cert<T: Trait>(
+    tx: &Transaction,
+    block_hash: &H256,
+    who: &T::AccountId,
+    cert_address: &keys::Address,
+) {
+    for (index, output) in tx.outputs.iter().enumerate() {
+        let script = &output.script_pubkey;
+        let script: Script = script.clone().into();
+        if script.is_null_data_script() {
+            runtime_io::print("------opreturn cert data-----");
+            let owner = script.extract_rear(':');
+            let name = script.extract_pre(':');
+
+            let slice = from(owner).unwrap();
+            let slice = slice.as_slice();
+            let mut account: Vec<u8> = Vec::new();
+            account.extend_from_slice(&slice[1..33]);
+            runtime_io::print(&account[..]);
+            let id: T::AccountId = Decode::decode(&mut account.as_slice()).unwrap();
+
+            <CertCache<T>>::put((name[2..].to_vec(),id));
+        }
+    }
 }
 
 #[cfg(test)]
