@@ -35,29 +35,31 @@ impl ChainXApi for TClient {
         self.call_api_at(at, "timestamp", &())
     }
 
-    fn evaluate_block(&self, at: &BlockId, block: Block) -> Result<bool> {
-        let res: Result<()> = self.call_api_at(at, "execute_block", &block);
-        match res {
-            Ok(_) => Ok(true),
-            Err(err) => {
-                match err.kind() {
-                    &ErrorKind::Execution(_) => Ok(false),
-                    _ => Err(err),
-                }
-            }
-        }
-    }
-
-    fn validate_transaction(&self, at: &BlockId, tx: UncheckedExtrinsic) -> Result<TransactionValidity> {
-        self.call_api_at(at, "validate_transaction", &tx)
-    }
-
     fn index(&self, at: &BlockId, account: AccountId) -> Result<Index> {
         self.call_api_at(at, "account_nonce", &account)
     }
 
     fn lookup(&self, at: &BlockId, address: Address) -> Result<Option<AccountId>> {
         self.call_api_at(at, "lookup_address", &address)
+    }
+
+    fn evaluate_block(&self, at: &BlockId, block: Block) -> Result<bool> {
+        let res: Result<()> = self.call_api_at(at, "execute_block", &block);
+        match res {
+            Ok(_) => Ok(true),
+            Err(err) => match err.kind() {
+                &ErrorKind::Execution(_) => Ok(false),
+                _ => Err(err),
+            },
+        }
+    }
+
+    fn validate_transaction(
+        &self,
+        at: &BlockId,
+        tx: UncheckedExtrinsic,
+    ) -> Result<TransactionValidity> {
+        self.call_api_at(at, "validate_transaction", &tx)
     }
 
     fn build_block(&self, at: &BlockId, inherent_data: InherentData) -> Result<Self::BlockBuilder> {

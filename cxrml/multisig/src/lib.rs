@@ -33,31 +33,31 @@ extern crate sr_primitives as runtime_primitives;
 // Needed for type-safe access to storage DB.
 #[macro_use]
 extern crate srml_support as runtime_support;
-extern crate srml_system as system;
 extern crate srml_balances as balances;
+extern crate srml_system as system;
 
 // for chainx runtime module lib
 #[cfg(test)]
-extern crate cxrml_system as cxsystem;
-#[cfg(test)]
 extern crate cxrml_associations as associations;
 extern crate cxrml_support as cxsupport;
+#[cfg(test)]
+extern crate cxrml_system as cxsystem;
 
-mod transaction;
 #[cfg(test)]
 mod tests;
+mod transaction;
 
 use codec::{Codec, Decode, Encode};
-use rstd::prelude::*;
 use rstd::marker::PhantomData;
+use rstd::prelude::*;
 use rstd::result::Result as StdResult;
+use runtime_primitives::traits::{Hash, OnFinalise};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
-use runtime_primitives::traits::{OnFinalise, Hash};
 
 use system::ensure_signed;
 
-use transaction::{TransactionType, Transaction, TransferT};
+use transaction::{Transaction, TransactionType, TransferT};
 
 pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
     /// generate multisig addr for a accountid
@@ -194,13 +194,14 @@ decl_storage! {
 pub struct SimpleMultiSigIdFor<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> MultiSigFor<T::AccountId, T::Hash> for SimpleMultiSigIdFor<T>
-    where T::AccountId: From<T::Hash>
+where
+    T::AccountId: From<T::Hash>,
 {
     fn multi_sig_addr_for(who: &T::AccountId) -> T::AccountId {
         let mut buf = Vec::<u8>::new();
         buf.extend_from_slice(&who.encode());
         buf.extend_from_slice(&<system::Module<T>>::account_nonce(who).encode());
-        buf.extend_from_slice(&<Module<T>>::multi_sig_list_len_for(who).encode());  // in case same nonce in genesis
+        buf.extend_from_slice(&<Module<T>>::multi_sig_list_len_for(who).encode()); // in case same nonce in genesis
         T::Hashing::hash(&buf[..]).into()
     }
 
@@ -223,18 +224,21 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-//    fn remove_multi_sig_addr(multi_sig_addr: &T::AccountId) {
-//        <PendingStateFor<T>>::remove_prefix(multi_sig_addr.clone());
-//        <TransactionFor<T>>::remove_prefix(multi_sig_addr.clone());
-//        <MultiSigOwnerFor<T>>::remove(multi_sig_addr);
-//        <MultiSigListOwnerFor<T>>::remove(multi_sig_addr);
-//    }
+    //    fn remove_multi_sig_addr(multi_sig_addr: &T::AccountId) {
+    //        <PendingStateFor<T>>::remove_prefix(multi_sig_addr.clone());
+    //        <TransactionFor<T>>::remove_prefix(multi_sig_addr.clone());
+    //        <MultiSigOwnerFor<T>>::remove(multi_sig_addr);
+    //        <MultiSigListOwnerFor<T>>::remove(multi_sig_addr);
+    //    }
 
     fn remove_multi_sig_id(multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) {
         Self::remove_pending_for(multi_sig_addr, multi_sig_id);
         Self::remove_tx_for(multi_sig_addr, multi_sig_id);
         // event
-        Self::deposit_event(RawEvent::RemoveMultiSigIdFor(multi_sig_addr.clone(), multi_sig_id));
+        Self::deposit_event(RawEvent::RemoveMultiSigIdFor(
+            multi_sig_addr.clone(),
+            multi_sig_id,
+        ));
     }
 
     fn remove_pending_for(multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) {
@@ -246,7 +250,11 @@ impl<T: Trait> Module<T> {
         <TransactionFor<T>>::remove((multi_sig_addr.clone(), multi_sig_id));
     }
 
-    fn is_owner(who: &T::AccountId, addr: &T::AccountId, required: bool) -> StdResult<u32, &'static str> {
+    fn is_owner(
+        who: &T::AccountId,
+        addr: &T::AccountId,
+        required: bool,
+    ) -> StdResult<u32, &'static str> {
         if let Some(list_owner) = Self::multi_sig_list_owner_for(addr) {
             for (index, (id, req)) in list_owner.iter().enumerate() {
                 if id == who {
@@ -263,7 +271,11 @@ impl<T: Trait> Module<T> {
         Err("it's not the owner")
     }
 
-    fn confirm_and_check(who: &T::AccountId, multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) -> StdResult<bool, &'static str> {
+    fn confirm_and_check(
+        who: &T::AccountId,
+        multi_sig_addr: &T::AccountId,
+        multi_sig_id: T::Hash,
+    ) -> StdResult<bool, &'static str> {
         let index = Self::is_owner(who, multi_sig_addr, false)?;
 
         let key = (multi_sig_addr.clone(), multi_sig_id);
@@ -296,7 +308,14 @@ impl<T: Trait> Module<T> {
                 <PendingStateFor<T>>::insert((multi_sig_addr.clone(), multi_sig_id), pending);
                 ret = false;
             }
-            Self::deposit_event(RawEvent::Confirm(who.clone(), multi_sig_addr.clone(), multi_sig_id, pending.yet_needed, pending.index, ret));
+            Self::deposit_event(RawEvent::Confirm(
+                who.clone(),
+                multi_sig_addr.clone(),
+                multi_sig_id,
+                pending.yet_needed,
+                pending.index,
+                ret,
+            ));
         } else {
             return Err("this account has confirmed for this multi sig addr and id");
         }
@@ -304,10 +323,18 @@ impl<T: Trait> Module<T> {
     }
 
     // func alias
-    fn only_owner(who: &T::AccountId, addr: &T::AccountId, required: bool) -> StdResult<u32, &'static str> {
+    fn only_owner(
+        who: &T::AccountId,
+        addr: &T::AccountId,
+        required: bool,
+    ) -> StdResult<u32, &'static str> {
         Self::is_owner(who, addr, required)
     }
-    fn only_many_owner(who: &T::AccountId, multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) -> StdResult<bool, &'static str> {
+    fn only_many_owner(
+        who: &T::AccountId,
+        multi_sig_addr: &T::AccountId,
+        multi_sig_id: T::Hash,
+    ) -> StdResult<bool, &'static str> {
         Self::confirm_and_check(who, multi_sig_addr, multi_sig_id)
     }
 }
@@ -315,14 +342,30 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     // public call
     #[allow(unused)]
-    fn deploy(origin: T::Origin, owners: Vec<(T::AccountId, bool)>, required_num: u32, value: T::Balance) -> Result {
+    fn deploy(
+        origin: T::Origin,
+        owners: Vec<(T::AccountId, bool)>,
+        required_num: u32,
+        value: T::Balance,
+    ) -> Result {
         let from = ensure_signed(origin)?;
         Self::deploy_for(&from, owners, required_num, value)
     }
 
-    fn deploy_for(account_id: &T::AccountId, owners: Vec<(T::AccountId, bool)>, required_num: u32, value: T::Balance) -> Result {
+    fn deploy_for(
+        account_id: &T::AccountId,
+        owners: Vec<(T::AccountId, bool)>,
+        required_num: u32,
+        value: T::Balance,
+    ) -> Result {
         let mut owners = owners;
-        if let None = owners.iter().find(|(a, _)| { if *a == *account_id { return true; } else { return false; } }) {
+        if let None = owners.iter().find(|(a, _)| {
+            if *a == *account_id {
+                return true;
+            } else {
+                return false;
+            }
+        }) {
             owners.push((account_id.clone(), true));
         }
 
@@ -345,8 +388,8 @@ impl<T: Trait> Module<T> {
             // 1
             let len = Self::multi_sig_list_len_for(account_id);
             <MultiSigListItemFor<T>>::insert((account_id.clone(), len), multi_addr.clone());
-            <MultiSigListLenFor<T>>::insert(account_id.clone(), len + 1);  // length inc
-            // 2
+            <MultiSigListLenFor<T>>::insert(account_id.clone(), len + 1); // length inc
+                                                                          // 2
             <MultiSigOwnerFor<T>>::insert(multi_addr.clone(), account_id.clone());
             // 3
             <MultiSigListOwnerFor<T>>::insert(multi_addr.clone(), owners.clone());
@@ -354,7 +397,13 @@ impl<T: Trait> Module<T> {
             <RequiredNumFor<T>>::insert(multi_addr.clone(), required_num);
             <NumOwnerFor<T>>::insert(multi_addr.clone(), owners_len);
             // event
-            Self::deposit_event(RawEvent::DeployMultiSig(account_id.clone(), multi_addr.clone(), owners_len, required_num, value));
+            Self::deposit_event(RawEvent::DeployMultiSig(
+                account_id.clone(),
+                multi_addr.clone(),
+                owners_len,
+                required_num,
+                value,
+            ));
             Ok(())
         })
     }
@@ -364,7 +413,12 @@ impl<T: Trait> Module<T> {
         Self::is_owner(&from, &multi_sig_addr, false).map(|_| ())
     }
 
-    fn execute(origin: T::Origin, multi_sig_addr: T::AccountId, tx_type: TransactionType, data: Vec<u8>) -> Result {
+    fn execute(
+        origin: T::Origin,
+        multi_sig_addr: T::AccountId,
+        tx_type: TransactionType,
+        data: Vec<u8>,
+    ) -> Result {
         let from: T::AccountId = ensure_signed(origin)?;
         Self::only_owner(&from, &multi_sig_addr, true)?;
 
@@ -387,7 +441,12 @@ impl<T: Trait> Module<T> {
                     let origin = system::RawOrigin::Signed(from.clone()).into();
                     Self::confirm(origin, multi_sig_addr.clone(), multi_sig_id)?;
                 }
-                Self::deposit_event(RawEvent::ExecMultiSig(from.clone(), multi_sig_addr.clone(), multi_sig_id, tx_type));
+                Self::deposit_event(RawEvent::ExecMultiSig(
+                    from.clone(),
+                    multi_sig_addr.clone(),
+                    multi_sig_id,
+                    tx_type,
+                ));
                 Ok(())
             })?;
         } else {
@@ -417,13 +476,20 @@ impl<T: Trait> Module<T> {
             })?;
         } else {
             // log event
-            Self::deposit_event(RawEvent::ConfirmFinish(multi_sig_addr.clone(), multi_sig_id));
+            Self::deposit_event(RawEvent::ConfirmFinish(
+                multi_sig_addr.clone(),
+                multi_sig_id,
+            ));
         }
 
         Ok(())
     }
 
-    fn remove_multi_sig_for(origin: T::Origin, multi_sig_addr: T::AccountId, multi_sig_id: T::Hash) -> Result {
+    fn remove_multi_sig_for(
+        origin: T::Origin,
+        multi_sig_addr: T::AccountId,
+        multi_sig_id: T::Hash,
+    ) -> Result {
         let from: T::AccountId = ensure_signed(origin)?;
         Self::only_owner(&from, &multi_sig_addr, true)?;
 
@@ -478,22 +544,20 @@ impl<T: Trait> Module<T> {
 }
 
 #[cfg(feature = "std")]
-pub struct BalancesConfigCopy<T: Trait> (balances::GenesisConfig<T>);
+pub struct BalancesConfigCopy<T: Trait>(balances::GenesisConfig<T>);
 
 #[cfg(feature = "std")]
 impl<T: Trait> BalancesConfigCopy<T> {
     pub fn create_from_src(config: &balances::GenesisConfig<T>) -> BalancesConfigCopy<T> {
-        BalancesConfigCopy(
-            balances::GenesisConfig::<T> {
-                balances: config.balances.clone(),
-                transaction_base_fee: config.transaction_base_fee.clone(),
-                transaction_byte_fee: config.transaction_byte_fee.clone(),
-                transfer_fee: config.transfer_fee.clone(),
-                creation_fee: config.creation_fee.clone(),
-                reclaim_rebate: config.reclaim_rebate.clone(),
-                existential_deposit: config.existential_deposit.clone(),
-            }
-        )
+        BalancesConfigCopy(balances::GenesisConfig::<T> {
+            balances: config.balances.clone(),
+            transaction_base_fee: config.transaction_base_fee.clone(),
+            transaction_byte_fee: config.transaction_byte_fee.clone(),
+            transfer_fee: config.transfer_fee.clone(),
+            creation_fee: config.creation_fee.clone(),
+            reclaim_rebate: config.reclaim_rebate.clone(),
+            existential_deposit: config.existential_deposit.clone(),
+        })
     }
     pub fn src(self) -> balances::GenesisConfig<T> {
         self.0

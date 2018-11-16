@@ -3,14 +3,14 @@
 use std::path::PathBuf;
 use Arc;
 
-use substrate_client;
 use client_db;
 use state_db;
+use substrate_client;
 
-pub use chainx_api::{TBackend, TExecutor, TClient, TClientBlockBuilder};
-use state_machine::ExecutionStrategy;
+pub use chainx_api::{TBackend, TClient, TClientBlockBuilder, TExecutor};
 use chainx_executor::NativeExecutor;
 use cli::ChainSpec;
+use state_machine::ExecutionStrategy;
 
 const FINALIZATION_WINDOW: u64 = 32;
 
@@ -23,13 +23,13 @@ pub fn build_client(db_path: &str, chainspec: ChainSpec) -> Arc<TClient> {
                 pruning: state_db::PruningMode::default(),
             },
             FINALIZATION_WINDOW,
-        ).unwrap(),
+        )
+        .unwrap(),
     );
 
     let executor = substrate_client::LocalCallExecutor::new(backend.clone(), NativeExecutor::new());
 
     let genesis_config = super::genesis_config::testnet_genesis(chainspec);
-
 
     Arc::new(
         TClient::new(
@@ -38,6 +38,7 @@ pub fn build_client(db_path: &str, chainspec: ChainSpec) -> Arc<TClient> {
             genesis_config,
             ExecutionStrategy::NativeWhenPossible,
             ExecutionStrategy::NativeWhenPossible,
-        ).unwrap(),
+        )
+        .unwrap(),
     )
 }

@@ -1,18 +1,18 @@
 // Copyright 2018 chainpool
 
-use jsonrpc_http_server::Server as HttpServer;
-use jsonrpc_ws_server::Server as WsServer;
-use chainx_pool::TransactionPool;
-use tokio::runtime::TaskExecutor;
 use chainx_api::ChainXApi;
 use chainx_api::TClient;
+use chainx_pool::TransactionPool;
 use chainx_primitives;
 use chainx_rpc;
-use rpc_server;
-use std::io;
-use Arc;
 use clap;
 use cli;
+use jsonrpc_http_server::Server as HttpServer;
+use jsonrpc_ws_server::Server as WsServer;
+use rpc_server;
+use std::io;
+use tokio::runtime::TaskExecutor;
+use Arc;
 
 pub fn start<A>(
     client: &Arc<TClient>,
@@ -22,7 +22,8 @@ pub fn start<A>(
 ) -> (
     Result<Option<HttpServer>, io::Error>,
     Result<Option<WsServer>, io::Error>,
-) where
+)
+where
     A: ChainXApi + Send + Sync + 'static,
 {
     let handler = || {
@@ -36,7 +37,16 @@ pub fn start<A>(
             extrinsic_pool.inner().clone(),
             subscriptions.clone(),
         );
-        chainx_rpc::servers::rpc_handler::<chainx_primitives::Block, chainx_primitives::Hash, _, _, _, _, _, _>(
+        chainx_rpc::servers::rpc_handler::<
+            chainx_primitives::Block,
+            chainx_primitives::Hash,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+        >(
             state,
             chain,
             chain_ext,
@@ -44,8 +54,16 @@ pub fn start<A>(
             chainx_rpc::default_rpc_config(),
         )
     };
-    let rpc_interface: &str = if matches.is_present("rpc-external") { "0.0.0.0" } else { "127.0.0.1" };
-    let ws_interface: &str = if matches.is_present("ws-external") { "0.0.0.0" } else { "127.0.0.1" };
+    let rpc_interface: &str = if matches.is_present("rpc-external") {
+        "0.0.0.0"
+    } else {
+        "127.0.0.1"
+    };
+    let ws_interface: &str = if matches.is_present("ws-external") {
+        "0.0.0.0"
+    } else {
+        "127.0.0.1"
+    };
     let rpc_http_addr = Some(
         cli::parse_address(&format!("{}:{}", rpc_interface, 8081), "rpc-port", &matches).unwrap(),
     );

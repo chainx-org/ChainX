@@ -36,15 +36,13 @@ extern crate srml_system as system;
 mod tests;
 
 use rstd::prelude::*;
+use runtime_primitives::traits::OnFinalise;
 use runtime_support::dispatch::Result;
 use runtime_support::StorageValue;
-use runtime_primitives::traits::OnFinalise;
 
 use system::ensure_inherent;
 
-
 pub trait Trait: system::Trait {}
-
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -72,5 +70,3 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 }
-
-

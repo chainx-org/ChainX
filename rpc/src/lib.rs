@@ -10,12 +10,12 @@ extern crate jsonrpc_http_server as http;
 extern crate jsonrpc_pubsub as pubsub;
 extern crate jsonrpc_ws_server as ws;
 extern crate serde;
+extern crate sr_primitives as runtime_primitives;
 extern crate substrate_client as client;
 extern crate substrate_primitives as primitives;
 extern crate substrate_rpc;
 pub extern crate substrate_rpc as apis;
 extern crate substrate_rpc_servers as rpc_server;
-extern crate sr_primitives as runtime_primitives;
 extern crate tokio;
 #[macro_use]
 extern crate error_chain;
@@ -66,8 +66,8 @@ pub fn maybe_start_server<T, F>(
     address: Option<SocketAddr>,
     start: F,
 ) -> Result<Option<T>, io::Error>
-    where
-        F: Fn(&SocketAddr) -> Result<T, io::Error>,
+where
+    F: Fn(&SocketAddr) -> Result<T, io::Error>,
 {
     Ok(match address {
         Some(mut address) => Some(start(&address).or_else(|e| match e.kind() {

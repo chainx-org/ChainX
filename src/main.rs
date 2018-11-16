@@ -23,46 +23,44 @@ extern crate chainx_primitives;
 extern crate chainx_rpc;
 extern crate chainx_runtime;
 
-
+extern crate ansi_term;
 extern crate clap;
 extern crate ctrlc;
 extern crate env_logger;
 extern crate exit_future;
 extern crate hex_literal;
-extern crate parity_codec as codec;
 extern crate jsonrpc_http_server;
 extern crate jsonrpc_ws_server;
-extern crate rhododendron;
-extern crate ansi_term;
-extern crate sysinfo;
 extern crate names;
+extern crate parity_codec as codec;
+extern crate rhododendron;
+extern crate sysinfo;
 extern crate tokio;
 #[macro_use]
 extern crate slog;
 #[macro_use]
 extern crate log;
 
-mod genesis_config;
-mod telemetry;
-mod network;
-mod client;
-mod rpc;
 mod cli;
+mod client;
+mod genesis_config;
+mod network;
+mod rpc;
+mod telemetry;
 
 use substrate_client::BlockchainEvents;
 use substrate_primitives::{ed25519, ed25519::Pair, storage::StorageKey, twox_128};
 
-use chainx_network::consensus::ConsensusNetwork;
-use chainx_pool::{PoolApi, TransactionPool, Pool};
-use chainx_primitives::{Block, Hash, BlockId, Timestamp};
 use chainx_api::TClient;
-use chainx_runtime::{BlockPeriod, StorageValue, Runtime as ChainXRuntime};
+use chainx_network::consensus::ConsensusNetwork;
+use chainx_pool::{Pool, PoolApi, TransactionPool};
+use chainx_primitives::{Block, BlockId, Hash, Timestamp};
+use chainx_runtime::{BlockPeriod, Runtime as ChainXRuntime, StorageValue};
 use cli::ChainSpec;
 
-
 use codec::Decode;
-use std::sync::Arc;
 use names::{Generator, Name};
+use std::sync::Arc;
 use tokio::prelude::Future;
 use tokio::prelude::Stream;
 use tokio::runtime::Runtime;
@@ -134,10 +132,13 @@ fn main() {
             .import_notification_stream()
             .for_each(move |notification| {
                 network.on_block_imported(notification.hash, &notification.header);
-                txpool.inner().cull(&BlockId::hash(notification.hash))
+                txpool
+                    .inner()
+                    .cull(&BlockId::hash(notification.hash))
                     .map_err(|e| warn!("Error removing extrinsics: {:?}", e))?;
                 Ok(())
-            }).select(exit.clone())
+            })
+            .select(exit.clone())
             .then(|_| Ok(()));
         task_executor.spawn(events);
     }
@@ -146,7 +147,9 @@ fn main() {
         // extrinsic notifications
         let network = network.clone();
         let txpool = extrinsic_pool.clone();
-        let events = txpool.inner().import_notification_stream()
+        let events = txpool
+            .inner()
+            .import_notification_stream()
             // TODO [ToDr] Consider throttling?
             .for_each(move |_| {
                 network.trigger_repropagate();
@@ -164,40 +167,40 @@ fn main() {
             .unwrap()
             .value_of("auth")
             .unwrap_or("alice")
-            {
-                "alice" => {
-                    info!("Auth is alice");
-                    ed25519::Pair::from_seed(b"Alice                           ")
-                }
-                "bob" => {
-                    info!("Auth is bob");
-                    ed25519::Pair::from_seed(b"Bob                             ")
-                }
-                "gavin" => {
-                    info!("Auth is gavin");
-                    ed25519::Pair::from_seed(b"Gavin                           ")
-                }
-                "charlie" => {
-                    info!("Auth is charlie");
-                    ed25519::Pair::from_seed(b"Charlie                         ")
-                }
-                "dave" => {
-                    info!("Auth is dave");
-                    ed25519::Pair::from_seed(b"Dave                            ")
-                }
-                "eve" => {
-                    info!("Auth is eve");
-                    ed25519::Pair::from_seed(b"Eve                             ")
-                }
-                "ferdie" => {
-                    info!("Auth is ferdie");
-                    ed25519::Pair::from_seed(b"Ferdie                          ")
-                }
-                "satoshi" | _ => {
-                    info!("Auth is satoshi");
-                    ed25519::Pair::from_seed(b"Satoshi                         ")
-                }
-            };
+        {
+            "alice" => {
+                info!("Auth is alice");
+                ed25519::Pair::from_seed(b"Alice                           ")
+            }
+            "bob" => {
+                info!("Auth is bob");
+                ed25519::Pair::from_seed(b"Bob                             ")
+            }
+            "gavin" => {
+                info!("Auth is gavin");
+                ed25519::Pair::from_seed(b"Gavin                           ")
+            }
+            "charlie" => {
+                info!("Auth is charlie");
+                ed25519::Pair::from_seed(b"Charlie                         ")
+            }
+            "dave" => {
+                info!("Auth is dave");
+                ed25519::Pair::from_seed(b"Dave                            ")
+            }
+            "eve" => {
+                info!("Auth is eve");
+                ed25519::Pair::from_seed(b"Eve                             ")
+            }
+            "ferdie" => {
+                info!("Auth is ferdie");
+                ed25519::Pair::from_seed(b"Ferdie                          ")
+            }
+            "satoshi" | _ => {
+                info!("Auth is satoshi");
+                ed25519::Pair::from_seed(b"Satoshi                         ")
+            }
+        };
 
         if let Some(seed) = matches.value_of("key") {
             let generate_from_seed = |seed: &str| -> Pair {
@@ -211,7 +214,12 @@ fn main() {
 
         let block_id = BlockId::number(client.info().unwrap().chain.best_number);
         // TODO: this needs to be dynamically adjustable
-        let block_delay = client.storage(&block_id, &StorageKey(twox_128(BlockPeriod::<ChainXRuntime>::key()).to_vec())).unwrap()
+        let block_delay = client
+            .storage(
+                &block_id,
+                &StorageKey(twox_128(BlockPeriod::<ChainXRuntime>::key()).to_vec()),
+            )
+            .unwrap()
             .and_then(|data| Timestamp::decode(&mut data.0.as_slice()))
             .unwrap_or_else(|| {
                 warn!("Block period is missing in the storage.");

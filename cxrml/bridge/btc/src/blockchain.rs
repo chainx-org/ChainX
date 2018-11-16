@@ -1,22 +1,23 @@
+use rstd::marker::PhantomData;
 use rstd::prelude::*;
 use rstd::result::Result;
-use rstd::marker::PhantomData;
-use runtime_support::{StorageMap, StorageValue};
-use runtime_primitives::traits::As;
-use {IrrBlock, BtcFee, NetworkId, AddressMap};
 use runtime_io;
+use runtime_primitives::traits::As;
+use runtime_support::{StorageMap, StorageValue};
+use {AddressMap, BtcFee, IrrBlock, NetworkId};
 
-use primitives::hash::H256;
 use chain::BlockHeader;
-use finacial_recordes::Symbol;
-use finacial_recordes;
+use financial_records;
+use financial_records::Symbol;
+use primitives::hash::H256;
 use script::Script;
 
-use {Trait, BlockHeaderFor, BestIndex, NumberForHash, HashsForNumber, ParamsInfo, AccountMap,
-     Params, DepositCache, TxProposal};
+use {
+    AccountMap, BestIndex, BlockHeaderFor, DepositCache, HashsForNumber, NumberForHash, Params,
+    ParamsInfo, Trait, TxProposal,
+};
 
-use tx::{TxStorage, RollBack, Proposal};
-
+use tx::{Proposal, RollBack, TxStorage};
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -128,9 +129,7 @@ impl<T: Trait> Chain<T> {
         };
 
         // remove related tx
-        TxStorage::<T>::rollback_tx(&best_hash).map_err(|s| {
-            ChainErr::OtherErr(s)
-        })?;
+        TxStorage::<T>::rollback_tx(&best_hash).map_err(|s| ChainErr::OtherErr(s))?;
 
         <NumberForHash<T>>::remove(&best_hash);
         // do not need to remove HashsForNumber
@@ -174,8 +173,8 @@ impl<T: Trait> Chain<T> {
                 match <NumberForHash<T>>::get(block_hash.clone()) {
                     Some(height) => {
                         if new_best_header.number > height + irr_block {
-                            runtime_io::print("------finacial_recordes deposit");
-                            <finacial_recordes::Module<T>>::deposit(
+                            runtime_io::print("------financial_records deposit");
+                            <financial_records::Module<T>>::deposit(
                                 &account_id,
                                 &symbol,
                                 As::sa(amount),
@@ -211,19 +210,19 @@ impl<T: Trait> Chain<T> {
                             };
                             let address = keys::Address {
                                 kind: script_address[0].kind,
-                                network: network,
+                                network,
                                 hash: script_address[0].hash.clone(),
                             };
                             let account_id = <AddressMap<T>>::get(address);
                             if account_id.is_some() {
-                                <finacial_recordes::Module<T>>::withdrawal_finish(
+                                <financial_records::Module<T>>::withdrawal_finish(
                                     &account_id.unwrap(),
                                     &symbol,
                                     true,
                                 );
                             }
                         }
-                        let vec = <finacial_recordes::Module<T>>::get_withdraw_cache(&symbol);
+                        let vec = <financial_records::Module<T>>::get_withdraw_cache(&symbol);
                         if vec.is_some() {
                             let mut address_vec = Vec::new();
                             for (account_id, balance) in vec.unwrap() {
@@ -331,7 +330,7 @@ impl<T: Trait> Chain<T> {
                                 None
                             })
                             .collect(),
-                        block_number: block_number,
+                        block_number,
                     };
                     if block_number > best_index.number {
                         return Ok(BlockOrigin::SideChainBecomingCanonChain(origin));

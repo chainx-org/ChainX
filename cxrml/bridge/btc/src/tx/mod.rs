@@ -1,27 +1,31 @@
 // Copyright 2018 Chainpool
 
-use rstd::prelude::*;
-use rstd::marker::PhantomData;
-use rstd::result::Result as StdResult;
 use codec::Decode;
+use rstd::marker::PhantomData;
+use rstd::prelude::*;
+use rstd::result::Result as StdResult;
 
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
-use primitives::hash::H256;
+pub use self::proposal::{handle_proposal, Proposal};
+use super::{
+    AccountMap, AccountsMaxIndex, AccountsSet, AddressMap, BlockHeaderFor, BlockTxids, CandidateTx,
+    DepositCache, NetworkId, NumberForHash, ReceiveAddress, RedeemScript, Trait, TxProposal, TxSet,
+    TxType, UTXOMaxIndex, UTXOSet,
+};
+use b58::from;
+use chain::{OutPoint, Transaction, TransactionInput, TransactionOutput};
+use keys;
+use merkle::{parse_partial_merkle_tree, PartialMerkleTree};
 use primitives::bytes::Bytes;
-use chain::{Transaction, OutPoint, TransactionOutput, TransactionInput};
-use merkle::{PartialMerkleTree, parse_partial_merkle_tree};
+use primitives::hash::H256;
 use runtime_io;
 use script::script::Script;
-use script::{SignatureChecker, builder, TransactionSignatureChecker, TransactionInputSigner,
-             SignatureVersion};
-use keys;
-use b58::from;
-use super::{TxType, Trait, ReceiveAddress, NetworkId, RedeemScript, AddressMap, AccountMap,
-            UTXOSet, TxSet, BlockTxids, BlockHeaderFor, NumberForHash, UTXOMaxIndex,
-            AccountsMaxIndex, AccountsSet, TxProposal, CandidateTx, DepositCache};
-pub use self::proposal::{handle_proposal, Proposal};
+use script::{
+    builder, SignatureChecker, SignatureVersion, TransactionInputSigner,
+    TransactionSignatureChecker,
+};
 use system;
 mod proposal;
 
@@ -123,7 +127,6 @@ impl<T: Trait> UTXOStorage<T> {
     }
 }
 
-
 pub trait RollBack<T: Trait> {
     fn rollback_tx(header: &H256) -> Result;
 }
@@ -171,14 +174,16 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
             let (_, _, tx_type, _, tx) = <TxSet<T>>::get(txid).unwrap();
             match tx_type {
                 TxType::Withdraw => {
-                    let out_point_set = tx.inputs
+                    let out_point_set = tx
+                        .inputs
                         .iter()
                         .map(|input| input.previous_output.clone())
                         .collect();
                     <UTXOStorage<T>>::update_from_outpoint(out_point_set, false);
                     let mut out_point_set2: Vec<OutPoint> = Vec::new();
                     let mut index = 0;
-                    let _ = tx.outputs
+                    let _ = tx
+                        .outputs
                         .iter()
                         .map(|output| {
                             if is_key(&output.script_pubkey, &receive_address) {
@@ -291,8 +296,8 @@ fn compare_transaction(tx1: &Transaction, tx2: &Transaction) -> bool {
     if tx1.version == tx2.version && tx1.outputs == tx2.outputs && tx1.lock_time == tx2.lock_time {
         if tx1.inputs.len() == tx2.inputs.len() {
             for i in 0..tx1.inputs.len() {
-                if tx1.inputs[i].previous_output == tx2.inputs[i].previous_output &&
-                    tx1.inputs[i].sequence == tx2.inputs[i].sequence
+                if tx1.inputs[i].previous_output == tx2.inputs[i].previous_output
+                    && tx1.inputs[i].sequence == tx2.inputs[i].sequence
                 {
                     return true;
                 }
@@ -318,7 +323,8 @@ pub fn handle_input<T: Trait>(
         // To do: handle_input error not expect
         runtime_io::print("------handle_input error not expect-----");
     }
-    let out_point_set = tx.inputs
+    let out_point_set = tx
+        .inputs
         .iter()
         .map(|input| input.previous_output.clone())
         .collect();
@@ -326,7 +332,8 @@ pub fn handle_input<T: Trait>(
 
     let mut new_utxo: Vec<UTXO> = Vec::new();
     let mut index = 0;
-    let _ = tx.outputs
+    let _ = tx
+        .outputs
         .iter()
         .map(|output| {
             if is_key(&output.script_pubkey, &receive_address) {
@@ -463,7 +470,7 @@ pub fn handle_output<T: Trait>(
                 TxType::RegisterDeposit,
                 total_balance,
             );
-           tx_type = TxType::RegisterDeposit;
+            tx_type = TxType::RegisterDeposit;
         } else {
             <TxStorage<T>>::store_tx(
                 tx,
@@ -473,22 +480,15 @@ pub fn handle_output<T: Trait>(
                 TxType::Deposit,
                 total_balance,
             );
-           tx_type = TxType::Deposit;
+            tx_type = TxType::Deposit;
         };
         <UTXOStorage<T>>::add(new_utxos.clone());
-
     }
     if new_account {
         runtime_io::print("----new account-------");
         let time = <system::Module<T>>::block_number();
         let chainxaddr = <AddressMap<T>>::get(send_address.clone()).unwrap();
-        let account = (
-            tx.hash(),
-            send_address.clone(),
-            chainxaddr,
-            time,
-            tx_type,
-        );
+        let account = (tx.hash(), send_address.clone(), chainxaddr, time, tx_type);
         <AccountsStorage<T>>::add(account);
         runtime_io::print("------insert new account in AccountsMap-----");
     }

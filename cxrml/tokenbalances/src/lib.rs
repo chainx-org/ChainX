@@ -26,32 +26,32 @@ extern crate sr_primitives as primitives;
 // for substrate runtime module lib
 #[macro_use]
 extern crate srml_support as runtime_support;
-extern crate srml_system as system;
 extern crate srml_balances as balances;
+extern crate srml_system as system;
 
 // for chainx runtime module lib
 #[cfg(test)]
-extern crate cxrml_system as cxsystem;
-#[cfg(test)]
 extern crate cxrml_associations as associations;
 extern crate cxrml_support as cxsupport;
+#[cfg(test)]
+extern crate cxrml_system as cxsystem;
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 
-use rstd::prelude::*;
-use rstd::slice::Iter;
-pub use rstd::result::Result as StdResult;
 use codec::Codec;
-use runtime_support::{StorageValue, StorageMap, Parameter};
+use primitives::traits::{As, CheckedAdd, CheckedSub, Member, OnFinalise, SimpleArithmetic};
+use rstd::prelude::*;
+pub use rstd::result::Result as StdResult;
+use rstd::slice::Iter;
 use runtime_support::dispatch::Result;
-use primitives::traits::{SimpleArithmetic, As, Member, CheckedAdd, CheckedSub, OnFinalise};
+use runtime_support::{Parameter, StorageMap, StorageValue};
 
 // substrate mod
-use system::ensure_signed;
 use balances::address::Address;
+use system::ensure_signed;
 // use balances::EnsureAccountLiquid;
 
 pub type SymbolString = &'static [u8];
@@ -62,7 +62,17 @@ pub trait Trait: balances::Trait + cxsupport::Trait {
     const CHAINX_SYMBOL: SymbolString;
     const CHAINX_TOKEN_DESC: DescString;
     /// The token balance.
-    type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + As<u8> + As<u16> + As<u32> + As<u64> + As<u128> + Copy + Default;
+    type TokenBalance: Parameter
+        + Member
+        + Codec
+        + SimpleArithmetic
+        + As<u8>
+        + As<u16>
+        + As<u32>
+        + As<u64>
+        + As<u128>
+        + Copy
+        + Default;
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -86,8 +96,11 @@ pub fn is_valid_symbol(v: &[u8]) -> Result {
                 || (*c == 0x2D) // -
                 || (*c == 0x2E) // .
                 || (*c == 0x7C) // |
-                || (*c == 0x7E) // ~
-                { continue; } else {
+                || (*c == 0x7E)
+            // ~
+            {
+                continue;
+            } else {
                 return Err("not a valid symbol char for number, capital/small letter or '-', '.', '|', '~'");
             }
         }
@@ -96,11 +109,14 @@ pub fn is_valid_symbol(v: &[u8]) -> Result {
 }
 
 pub fn is_valid_token_desc(v: &[u8]) -> Result {
-    if v.len() > MAX_TOKENDESC_LEN { Err("token desc length too long") } else {
+    if v.len() > MAX_TOKENDESC_LEN {
+        Err("token desc length too long")
+    } else {
         for c in v.iter() {
             // ascii visible char
-            if *c >= 20 && *c <= 0x7E
-                { continue; } else {
+            if *c >= 20 && *c <= 0x7E {
+                continue;
+            } else {
                 return Err("not a valid ascii visible char");
             }
         }
@@ -127,7 +143,11 @@ pub struct Token {
 
 impl Token {
     pub fn new(symbol: Symbol, token_desc: TokenDesc, precision: Precision) -> Self {
-        Token { symbol, token_desc, precision }
+        Token {
+            symbol,
+            token_desc,
+            precision,
+        }
     }
 
     pub fn symbol(&self) -> Symbol {
@@ -164,7 +184,11 @@ pub enum ReservedType {
 
 impl ReservedType {
     pub fn iterator() -> Iter<'static, ReservedType> {
-        static TYPES: [ReservedType; 3] = [ReservedType::Others, ReservedType::Funds, ReservedType::Exchange];
+        static TYPES: [ReservedType; 3] = [
+            ReservedType::Others,
+            ReservedType::Funds,
+            ReservedType::Exchange,
+        ];
         TYPES.into_iter()
     }
 }
@@ -329,13 +353,21 @@ impl<T: Trait> Module<T> {
     // token symol
     // public call
     /// register a token into token list ans init
-    pub fn register_token(token: Token, free: T::TokenBalance, reserved: T::TokenBalance) -> Result {
+    pub fn register_token(
+        token: Token,
+        free: T::TokenBalance,
+        reserved: T::TokenBalance,
+    ) -> Result {
         token.is_valid()?;
         let sym = token.symbol();
         Self::add_token(&sym, free, reserved)?;
         <TokenInfo<T>>::insert(&sym, (token.clone(), true));
 
-        Self::deposit_event(RawEvent::RegisterToken(token.symbol(), token.token_desc(), token.precision()));
+        Self::deposit_event(RawEvent::RegisterToken(
+            token.symbol(),
+            token.token_desc(),
+            token.precision(),
+        ));
         Ok(())
     }
     /// cancel a token from token list but not remove it
@@ -358,11 +390,14 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn valid_token_list() -> Vec<Symbol> {
-        Self::token_list().into_iter()
+        Self::token_list()
+            .into_iter()
             .filter(|s| {
                 if let Some(t) = TokenInfo::<T>::get(s) {
                     t.1
-                } else { false }
+                } else {
+                    false
+                }
             })
             .collect()
     }
@@ -464,7 +499,12 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn destroy(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
+    pub fn destroy(
+        who: &T::AccountId,
+        symbol: &Symbol,
+        value: T::TokenBalance,
+        t: ReservedType,
+    ) -> Result {
         if symbol.as_slice() == T::CHAINX_SYMBOL {
             return Err("can't destroy chainx token");
         }
@@ -493,7 +533,12 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn reserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
+    pub fn reserve(
+        who: &T::AccountId,
+        symbol: &Symbol,
+        value: T::TokenBalance,
+        t: ReservedType,
+    ) -> Result {
         Self::is_valid_token_for(who, symbol)?;
         // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
@@ -524,7 +569,11 @@ impl<T: Trait> Module<T> {
             ReservedToken::<T>::insert(reserved_key, new_reserved_token);
             TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
 
-            Self::deposit_event(RawEvent::ReverseToken(who.clone(), T::CHAINX_SYMBOL.to_vec(), val));
+            Self::deposit_event(RawEvent::ReverseToken(
+                who.clone(),
+                T::CHAINX_SYMBOL.to_vec(),
+                val,
+            ));
             return Ok(());
         }
 
@@ -561,7 +610,12 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn unreserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
+    pub fn unreserve(
+        who: &T::AccountId,
+        symbol: &Symbol,
+        value: T::TokenBalance,
+        t: ReservedType,
+    ) -> Result {
         Self::is_valid_token_for(who, symbol)?;
         // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
@@ -592,7 +646,11 @@ impl<T: Trait> Module<T> {
             ReservedToken::<T>::insert(reserved_key, new_reserved_token);
             TotalReservedToken::<T>::insert(symbol, new_total_reserved_token);
 
-            Self::deposit_event(RawEvent::UnreverseToken(who.clone(), T::CHAINX_SYMBOL.to_vec(), val));
+            Self::deposit_event(RawEvent::UnreverseToken(
+                who.clone(),
+                T::CHAINX_SYMBOL.to_vec(),
+                val,
+            ));
             return Ok(());
         }
 
@@ -629,7 +687,12 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn move_free_token(from: &T::AccountId, to: &T::AccountId, symbol: &Symbol, value: T::TokenBalance) -> StdResult<(), TokenErr> {
+    pub fn move_free_token(
+        from: &T::AccountId,
+        to: &T::AccountId,
+        symbol: &Symbol,
+        value: T::TokenBalance,
+    ) -> StdResult<(), TokenErr> {
         Self::is_valid_token_for(from, symbol).map_err(|_| TokenErr::InvalidToken)?;
         // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(from).map_err(|_| TokenErr::InvalidAccount)?;
         //TODO validator`
@@ -650,7 +713,12 @@ impl<T: Trait> Module<T> {
             };
             balances::FreeBalance::<T>::insert(from, new_from_token);
             balances::FreeBalance::<T>::insert(to, new_to_token);
-            Self::deposit_event(RawEvent::MoveFreeToken(from.clone(), to.clone(), symbol.clone(), As::sa(value.as_())));
+            Self::deposit_event(RawEvent::MoveFreeToken(
+                from.clone(),
+                to.clone(),
+                symbol.clone(),
+                As::sa(value.as_()),
+            ));
             return Ok(());
         }
 
@@ -671,7 +739,12 @@ impl<T: Trait> Module<T> {
         };
         FreeToken::<T>::insert(key_from, new_from_token);
         FreeToken::<T>::insert(key_to, new_to_token);
-        Self::deposit_event(RawEvent::MoveFreeToken(from.clone(), to.clone(), symbol.clone(), value));
+        Self::deposit_event(RawEvent::MoveFreeToken(
+            from.clone(),
+            to.clone(),
+            symbol.clone(),
+            value,
+        ));
         Ok(())
     }
 }
@@ -699,7 +772,12 @@ impl TokenErr {
 impl<T: Trait> Module<T> {
     // public call
     /// transfer token between accountid, notice the fee is chainx
-    pub fn transfer_token(origin: T::Origin, dest: balances::Address<T>, sym: Symbol, value: T::TokenBalance) -> Result {
+    pub fn transfer_token(
+        origin: T::Origin,
+        dest: balances::Address<T>,
+        sym: Symbol,
+        value: T::TokenBalance,
+    ) -> Result {
         if sym.as_slice() == T::CHAINX_SYMBOL {
             return Err("not allow to transfer chainx use transfer_token");
         }
@@ -732,7 +810,13 @@ impl<T: Trait> Module<T> {
                 // set to storage
                 FreeToken::<T>::insert(&key_from, new_from_token);
                 FreeToken::<T>::insert(&key_to, new_to_token);
-                Self::deposit_event(RawEvent::TransferToken(sender.clone(), receiver.clone(), sym.clone(), value, fee));
+                Self::deposit_event(RawEvent::TransferToken(
+                    sender.clone(),
+                    receiver.clone(),
+                    sym.clone(),
+                    value,
+                    fee,
+                ));
             }
             Ok(())
         })?;

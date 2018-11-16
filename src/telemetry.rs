@@ -1,18 +1,18 @@
 // Copyright 2018 chainpool
 
-use substrate_network::{SyncState, SyncProvider};
-use sr_primitives::traits::{Header, As};
+use sr_primitives::traits::{As, Header};
 use substrate_client::BlockchainEvents;
-use ::{PoolApi, Pool};
-use ::TClient;
+use substrate_network::{SyncProvider, SyncState};
 use tel;
+use TClient;
+use {Pool, PoolApi};
 
-use sysinfo::{get_current_pid, ProcessExt, System, SystemExt};
-use std::time::{Duration, Instant};
-use tokio::runtime::TaskExecutor;
-use tokio::prelude::{Future, Stream};
-use tokio::timer::Interval;
 use ansi_term::Colour;
+use std::time::{Duration, Instant};
+use sysinfo::{get_current_pid, ProcessExt, System, SystemExt};
+use tokio::prelude::{Future, Stream};
+use tokio::runtime::TaskExecutor;
+use tokio::timer::Interval;
 
 const TIMER_INTERVAL_MS: u64 = 5000;
 
@@ -22,11 +22,10 @@ pub fn build_telemetry(
     name: String,
 ) -> Option<tel::Telemetry> {
     let telemetry = match telemetry_url {
-        Some(url) => {
-            Some(tel::init_telemetry(tel::TelemetryConfig {
-                url: url,
-                on_connect: Box::new(move || {
-                    telemetry!("system.connected";
+        Some(url) => Some(tel::init_telemetry(tel::TelemetryConfig {
+            url,
+            on_connect: Box::new(move || {
+                telemetry!("system.connected";
                             "name" => name.clone(),
                             "implementation" => "chainx",
                             "version" => "0.1",
@@ -34,9 +33,8 @@ pub fn build_telemetry(
                             "chain" => "ChainX",
                             "authority" => is_authority
                         );
-                }),
-            }))
-        }
+            }),
+        })),
         None => None,
     };
     telemetry
@@ -55,23 +53,28 @@ pub fn run_telemetry(
     let self_pid = get_current_pid();
     let client1 = client.clone();
     let txpool1 = txpool.clone();
-    let display_notifications = interval.map_err(|e| debug!("Timer error: {:?}", e)).for_each(move |_| {
-        let sync_status = network.status();
-        if let Ok(best_block) = client1.best_block_header() {
-            let hash = best_block.hash();
-            let num_peers = sync_status.num_peers;
-            let best_number: u64 = best_block.number().as_();
-            let speed = move || speed(best_number, last_number);
-            let (status, target) =
-                match (sync_status.sync.state, sync_status.sync.best_seen_block) {
-                    (SyncState::Idle, _) => ("Idle".into(), "".into()),
-                    (SyncState::Downloading, None) => (format!("Syncing{}", speed()), "".into()),
-                    (SyncState::Downloading, Some(n)) =>
-                        (format!("Syncing{}", speed()), format!(", target=#{}", n)),
-                };
-            last_number = Some(best_number);
-            let txpool_status = txpool1.light_status();
-            info!(
+    let display_notifications = interval
+        .map_err(|e| debug!("Timer error: {:?}", e))
+        .for_each(move |_| {
+            let sync_status = network.status();
+            if let Ok(best_block) = client1.best_block_header() {
+                let hash = best_block.hash();
+                let num_peers = sync_status.num_peers;
+                let best_number: u64 = best_block.number().as_();
+                let speed = move || speed(best_number, last_number);
+                let (status, target) =
+                    match (sync_status.sync.state, sync_status.sync.best_seen_block) {
+                        (SyncState::Idle, _) => ("Idle".into(), "".into()),
+                        (SyncState::Downloading, None) => {
+                            (format!("Syncing{}", speed()), "".into())
+                        }
+                        (SyncState::Downloading, Some(n)) => {
+                            (format!("Syncing{}", speed()), format!(", target=#{}", n))
+                        }
+                    };
+                last_number = Some(best_number);
+                let txpool_status = txpool1.light_status();
+                info!(
                 target: "substrate",
                 "{}{} ({} peers), best: #{} ({})",
                 Colour::White.bold().paint(&status),
@@ -81,12 +84,16 @@ pub fn run_telemetry(
                 hash
             );
 
-            // get cpu usage and memory usage of this process
-            let (cpu_usage, memory) = if sys.refresh_process(self_pid) {
-                let proc = sys.get_process(self_pid).expect("Above refresh_process succeeds, this should be Some(), qed");
-                (proc.cpu_usage(), proc.memory())
-            } else { (0.0, 0) };
-            telemetry!(
+                // get cpu usage and memory usage of this process
+                let (cpu_usage, memory) = if sys.refresh_process(self_pid) {
+                    let proc = sys
+                        .get_process(self_pid)
+                        .expect("Above refresh_process succeeds, this should be Some(), qed");
+                    (proc.cpu_usage(), proc.memory())
+                } else {
+                    (0.0, 0)
+                };
+                telemetry!(
                 "system.interval";
                 "status" => format!("{}{}", status, target),
                 "peers" => num_peers,
@@ -96,11 +103,11 @@ pub fn run_telemetry(
                 "cpu" => cpu_usage,
                 "memory" => memory
             );
-        } else {
-            warn!("Error getting best block information");
-        }
-        Ok(())
-    });
+            } else {
+                warn!("Error getting best block information");
+            }
+            Ok(())
+        });
 
     let display_block_import = client.import_notification_stream().for_each(|n| {
         info!(target: "substrate", "Imported #{} ({})", n.header.number(), n.hash);

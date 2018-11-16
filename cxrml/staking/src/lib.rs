@@ -205,7 +205,10 @@ decl_event!(
     }
 );
 
-pub type Nominations<T> = CodecBTreeMap<<T as system::Trait>::AccountId, NominationRecord<<T as balances::Trait>::Balance, <T as system::Trait>::BlockNumber>>;
+pub type Nominations<T> = CodecBTreeMap<
+    <T as system::Trait>::AccountId,
+    NominationRecord<<T as balances::Trait>::Balance, <T as system::Trait>::BlockNumber>,
+>;
 
 decl_storage! {
     trait Store for Module<T: Trait> as Staking {
@@ -298,19 +301,26 @@ impl<T: Trait> Module<T> {
     /// Nomination of a nominator to his some nominee
     pub fn nomination_of(nominator: &T::AccountId, nominee: &T::AccountId) -> T::Balance {
         if let Some(record) = <NominationRecords<T>>::get(nominator).0.get(nominee) {
-            return record.nomination
+            return record.nomination;
         }
         Zero::zero()
     }
 
-    pub fn nomination_record_of(nominator: &T::AccountId, nominee: &T::AccountId) -> NominationRecord<T::Balance, T::BlockNumber> {
+    pub fn nomination_record_of(
+        nominator: &T::AccountId,
+        nominee: &T::AccountId,
+    ) -> NominationRecord<T::Balance, T::BlockNumber> {
         if let Some(record) = <NominationRecords<T>>::get(nominator).0.get(nominee) {
-            return record.clone()
+            return record.clone();
         }
         <NominationRecord<T::Balance, T::BlockNumber>>::default()
     }
 
-    pub fn insert_nomination_record(nominator: &T::AccountId, nominee: &T::AccountId, record: NominationRecord<T::Balance, T::BlockNumber>) {
+    pub fn insert_nomination_record(
+        nominator: &T::AccountId,
+        nominee: &T::AccountId,
+        record: NominationRecord<T::Balance, T::BlockNumber>,
+    ) {
         let mut nominations = <NominationRecords<T>>::get(nominator);
         nominations.0.insert(nominee.clone(), record);
         <NominationRecords<T>>::insert(nominator, nominations);
@@ -347,7 +357,8 @@ impl<T: Trait> Module<T> {
 
     /// Sum of all candidates' total vote weight
     pub fn candidates_weight() -> u64 {
-        <StakingStats<T>>::get().candidates
+        <StakingStats<T>>::get()
+            .candidates
             .into_iter()
             .map(|v| Self::total_vote_weight(&v))
             .fold(0, |acc, x| acc + x)
@@ -910,7 +921,8 @@ impl<T: Trait> Module<T> {
             let validators = <session::Module<T>>::validators();
             if vals_reward > 0 {
                 for v in validators.iter() {
-                    let val_reward = T::Balance::sa(Self::total_vote_weight(v) * vals_reward / vals_weight);
+                    let val_reward =
+                        T::Balance::sa(Self::total_vote_weight(v) * vals_reward / vals_weight);
                     <SessionRewardOf<T>>::insert(v, val_reward);
                     total_minted += val_reward;
                     Self::reward(v, val_reward);
@@ -921,7 +933,8 @@ impl<T: Trait> Module<T> {
             let candidates = <StakingStats<T>>::get().candidates;
             if cands_reward > 0 {
                 for c in candidates.iter() {
-                    let cand_reward = T::Balance::sa(Self::total_vote_weight(c) * cands_reward / cands_weight);
+                    let cand_reward =
+                        T::Balance::sa(Self::total_vote_weight(c) * cands_reward / cands_weight);
                     <SessionRewardOf<T>>::insert(c, cand_reward);
                     total_minted += cand_reward;
                     Self::reward(c, cand_reward);
@@ -972,7 +985,7 @@ impl<T: Trait> Module<T> {
         // Avoid reevaluate validator set if it would leave us with fewer than the minimum
         // needed validators
         if intentions.len() < Self::minimum_validator_count() as usize {
-            return
+            return;
         }
 
         intentions.sort_unstable_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(&b1));

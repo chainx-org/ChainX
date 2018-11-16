@@ -19,16 +19,16 @@ pub fn internal<E: ::std::fmt::Debug>(e: E) -> rpccore::Error {
 }
 
 error_chain! {
-	links {
-		Client(client::error::Error, client::error::ErrorKind) #[doc = "Client error"];
-	}
-	errors {
-		/// Not implemented yet
-		Unimplemented {
-			description("not yet implemented"),
-			display("Method Not Implemented"),
-		}
-	}
+    links {
+        Client(client::error::Error, client::error::ErrorKind) #[doc = "Client error"];
+    }
+    errors {
+        /// Not implemented yet
+        Unimplemented {
+            description("not yet implemented"),
+            display("Method Not Implemented"),
+        }
+    }
 }
 
 impl From<Error> for rpccore::Error {

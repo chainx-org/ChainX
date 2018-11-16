@@ -30,16 +30,16 @@ extern crate sr_primitives as runtime_primitives;
 // Needed for type-safe access to storage DB.
 #[macro_use]
 extern crate srml_support as runtime_support;
-extern crate srml_system as system;
 extern crate srml_balances as balances;
+extern crate srml_system as system;
 
 #[cfg(test)]
 mod tests;
 
 use rstd::prelude::*;
+use runtime_primitives::traits::{CheckedAdd, CheckedSub, OnFinalise};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
-use runtime_primitives::traits::{OnFinalise, CheckedAdd, CheckedSub};
 
 use system::ensure_signed;
 
@@ -48,7 +48,9 @@ pub trait OnCalcFee<AccountId, Balance> {
 }
 
 impl<AccountId, Balance> OnCalcFee<AccountId, Balance> for () {
-    fn on_calc_fee(_: &AccountId, _: Balance) -> Result { Ok(()) }
+    fn on_calc_fee(_: &AccountId, _: Balance) -> Result {
+        Ok(())
+    }
 }
 
 pub trait Trait: system::Trait + balances::Trait {
@@ -148,4 +150,3 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 }
-

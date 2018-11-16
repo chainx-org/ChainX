@@ -5,9 +5,9 @@
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
 extern crate parity_codec as codec;
-extern crate substrate_primitives as primitives;
 extern crate sr_primitives as runtime_primitives;
 extern crate sr_std as rstd;
+extern crate substrate_primitives as primitives;
 
 #[cfg(test)]
 extern crate substrate_serializer;
@@ -24,8 +24,8 @@ extern crate parity_codec_derive;
 use primitives::bytes;
 
 use rstd::prelude::*;
-use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::generic;
+use runtime_primitives::traits::BlakeTwo256;
 
 /// Signature on candidate's block data by a collator.
 pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
@@ -63,7 +63,6 @@ pub type AccountId = primitives::H256;
 /// The type for looking up accounts. We don't expect more than 4 billion of them, but you
 /// never know...
 pub type AccountIndex = u64;
-
 
 /// Indentifier for a chain. 32-bit should be plenty.
 pub type ChainId = u32;
@@ -126,7 +125,10 @@ impl CandidateReceipt {
     pub fn check_signature(&self) -> Result<(), ()> {
         use runtime_primitives::traits::Verify;
 
-        if self.signature.verify(&self.block_data_hash.0[..], &self.collator) {
+        if self
+            .signature
+            .verify(&self.block_data_hash.0[..], &self.collator)
+        {
             Ok(())
         } else {
             Err(())

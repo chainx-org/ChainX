@@ -1,23 +1,28 @@
 // Copyright 2018 Chainpool.
 
-use extrinsic_pool::{Pool, ChainApi, VerifiedFor, ExtrinsicFor, scoring,
-                     Readiness, VerifiedTransaction, Transaction, Options, scoring::Choice};
-use runtime_primitives::traits::{Hash as HashT, Bounded, Checkable, BlakeTwo256, Lookup, CurrentHeight, BlockNumberToHash};
-use std::{cmp::Ordering, collections::HashMap, sync::Arc};
-use chainx_primitives::{Block, Hash, BlockId, AccountId, Index, BlockNumber};
-use chainx_runtime::{UncheckedExtrinsic, Address};
-use substrate_executor::NativeExecutor;
-use substrate_client::{self, Client};
-use extrinsic_pool::IntoPoolError;
-use codec::{Encode, Decode};
 use chainx_api::ChainXApi;
-use substrate_client_db;
-use substrate_network;
 use chainx_executor;
-use extrinsic_pool;
+use chainx_primitives::{AccountId, Block, BlockId, BlockNumber, Hash, Index};
+use chainx_runtime::{Address, UncheckedExtrinsic};
+use codec::{Decode, Encode};
 use error::{Error, ErrorKind, Result};
+use extrinsic_pool;
+use extrinsic_pool::IntoPoolError;
+use extrinsic_pool::{
+    scoring, scoring::Choice, ChainApi, ExtrinsicFor, Options, Pool, Readiness, Transaction,
+    VerifiedFor, VerifiedTransaction,
+};
+use runtime_primitives::traits::{
+    BlakeTwo256, BlockNumberToHash, Bounded, Checkable, CurrentHeight, Hash as HashT, Lookup,
+};
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
+use substrate_client::{self, Client};
+use substrate_client_db;
+use substrate_executor::NativeExecutor;
+use substrate_network;
 
-type Executor = substrate_client::LocalCallExecutor<Backend, NativeExecutor<chainx_executor::Executor>>;
+type Executor =
+    substrate_client::LocalCallExecutor<Backend, NativeExecutor<chainx_executor::Executor>>;
 type Backend = substrate_client_db::Backend<Block>;
 
 const MAX_TRANSACTION_SIZE: usize = 4 * 1024 * 1024;
@@ -58,12 +63,12 @@ impl VerifiedTransaction for VerifiedExtrinsic {
         &self.hash
     }
 
-    fn sender(&self) -> &Self::Sender {
-        &self.sender
-    }
-
     fn mem_usage(&self) -> usize {
         self.encoded_size
+    }
+
+    fn sender(&self) -> &Self::Sender {
+        &self.sender
     }
 }
 
@@ -85,45 +90,44 @@ impl<'a, A: 'a + ChainXApi> Lookup for LocalContext<'a, A> {
     type Source = Address;
     type Target = AccountId;
     fn lookup(&self, a: Address) -> ::std::result::Result<AccountId, &'static str> {
-        self.0.lookup(&BlockId::number(self.current_height()), a).unwrap_or(None).ok_or("error with lookup")
+        self.0
+            .lookup(&BlockId::number(self.current_height()), a)
+            .unwrap_or(None)
+            .ok_or("error with lookup")
     }
 }
 
-pub struct PoolApi<A>{
-    api:Arc<A>,
+pub struct PoolApi<A> {
+    api: Arc<A>,
 }
 
-impl<A> PoolApi<A> where
+impl<A> PoolApi<A>
+where
     A: ChainXApi,
 {
     /// Create a new instance.
     pub fn new(api: Arc<A>) -> Self {
-        PoolApi {
-            api,
-        }
+        PoolApi { api }
     }
 }
 
-impl<A> ChainApi for PoolApi<A> where
+impl<A> ChainApi for PoolApi<A>
+where
     A: ChainXApi + Send + Sync,
 {
-    type Ready = HashMap<AccountId, u64>;
+    type Block = Block;
+    type Hash = Hash;
     type Sender = AccountId;
     type VEx = VerifiedExtrinsic;
-    type Block = Block;
+    type Ready = HashMap<AccountId, u64>;
     type Error = Error;
-    type Hash = Hash;
     type Score = u64;
     type Event = ();
 
-    fn verify_transaction(
-        &self,
-        _at: &BlockId,
-        xt: &ExtrinsicFor<Self>,
-    ) -> Result<Self::VEx> {
-
+    fn verify_transaction(&self, _at: &BlockId, xt: &ExtrinsicFor<Self>) -> Result<Self::VEx> {
         let encoded = xt.encode();
-        let uxt = UncheckedExtrinsic::decode(&mut encoded.as_slice()).ok_or_else(|| ErrorKind::InvalidExtrinsicFormat)?;
+        let uxt = UncheckedExtrinsic::decode(&mut encoded.as_slice())
+            .ok_or_else(|| ErrorKind::InvalidExtrinsicFormat)?;
 
         if !uxt.is_signed() {
             bail!(ErrorKind::IsInherent(uxt))
@@ -134,9 +138,11 @@ impl<A> ChainApi for PoolApi<A> where
             bail!(ErrorKind::TooLarge(encoded_size, MAX_TRANSACTION_SIZE));
         }
 
-       debug!(target: "transaction-pool", "Transaction submitted: {}", ::substrate_primitives::hexdisplay::HexDisplay::from(&encoded));
+        debug!(target: "transaction-pool", "Transaction submitted: {}", ::substrate_primitives::hexdisplay::HexDisplay::from(&encoded));
         let checked = uxt.clone().check(&LocalContext(&self.api))?;
-        let (sender, index) = checked.signed.expect("function previously bailed unless uxt.is_signed(); qed");
+        let (sender, index) = checked
+            .signed
+            .expect("function previously bailed unless uxt.is_signed(); qed");
 
         if encoded_size < 1024 {
             debug!(target: "transaction-pool", "Transaction verified: {} => {:?}", hash, uxt);
@@ -168,8 +174,11 @@ impl<A> ChainApi for PoolApi<A> where
         // TODO: find a way to handle index error properly -- will need changes to
         // transaction-pool trait.
         let api = &self.api;
-        let next_index = known_nonces.entry(sender)
-            .or_insert_with(|| api.index(at, sender).ok().unwrap_or_else(Bounded::max_value));
+        let next_index = known_nonces.entry(sender).or_insert_with(|| {
+            api.index(at, sender)
+                .ok()
+                .unwrap_or_else(Bounded::max_value)
+        });
 
         let result = match xt.verified.index.cmp(&next_index) {
             Ordering::Greater => Readiness::Future,
@@ -200,7 +209,7 @@ impl<A> ChainApi for PoolApi<A> where
         _change: scoring::Change<()>,
     ) {
         for i in 0..xts.len() {
-           scores[i] = 1;
+            scores[i] = 1;
         }
     }
 
@@ -209,18 +218,22 @@ impl<A> ChainApi for PoolApi<A> where
     }
 
     fn latest_hash(&self) -> Hash {
-        self.api.block_number_to_hash(self.api.current_height()).expect("Latest block number always has a hash; qed")
+        self.api
+            .block_number_to_hash(self.api.current_height())
+            .expect("Latest block number always has a hash; qed")
     }
 }
 
-pub struct TransactionPool<A> where
+pub struct TransactionPool<A>
+where
     A: ChainXApi + Send + Sync,
 {
     inner: Arc<Pool<PoolApi<A>>>,
     client: Arc<Client<Backend, Executor, Block>>,
 }
 
-impl<A> TransactionPool<A> where
+impl<A> TransactionPool<A>
+where
     A: ChainXApi + Send + Sync,
 {
     /// Create a new transaction pool.
@@ -247,7 +260,8 @@ impl<A> TransactionPool<A> where
     }
 }
 
-impl<A> substrate_network::TransactionPool<Hash, Block> for TransactionPool<A> where
+impl<A> substrate_network::TransactionPool<Hash, Block> for TransactionPool<A>
+where
     A: ChainXApi + Send + Sync,
 {
     fn transactions(&self) -> Vec<(Hash, ExtrinsicFor<PoolApi<A>>)> {
@@ -260,7 +274,7 @@ impl<A> substrate_network::TransactionPool<Hash, Block> for TransactionPool<A> w
                 pending
                     .map(|t| {
                         let hash = t.hash().clone();
-                        let ex:ExtrinsicFor<PoolApi<A>> = t.original.clone();
+                        let ex: ExtrinsicFor<PoolApi<A>> = t.original.clone();
                         (hash, ex)
                     })
                     .collect()
@@ -279,19 +293,21 @@ impl<A> substrate_network::TransactionPool<Hash, Block> for TransactionPool<A> w
                 Ok(xt) => Some(*xt.hash()),
                 Err(e) => match e.into_pool_error() {
                     Ok(e) => match e.kind() {
-                        extrinsic_pool::ErrorKind::AlreadyImported(hash) =>
-                            Some(::std::str::FromStr::from_str(&hash).map_err(|_| {})
-                                .expect("Hash string is always valid")),
+                        extrinsic_pool::ErrorKind::AlreadyImported(hash) => Some(
+                            ::std::str::FromStr::from_str(&hash)
+                                .map_err(|_| {})
+                                .expect("Hash string is always valid"),
+                        ),
                         _ => {
                             debug!("Error adding transaction to the pool: {:?}", e);
                             None
-                        },
+                        }
                     },
                     Err(e) => {
                         debug!("Error converting pool error: {:?}", e);
                         None
                     }
-                }
+                },
             }
         } else {
             debug!("Error decoding transaction");

@@ -5,7 +5,7 @@
 use chainx_primitives::AccountId;
 
 use std::collections::HashMap;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 // time before we report a validator.
 const REPORT_TIME: Duration = Duration::from_secs(60 * 5);
@@ -50,7 +50,9 @@ pub struct OfflineTracker {
 impl OfflineTracker {
     /// Create a new tracker.
     pub fn new() -> Self {
-        OfflineTracker { observed: HashMap::new() }
+        OfflineTracker {
+            observed: HashMap::new(),
+        }
     }
 
     /// Note new consensus is starting with the given set of validators.
@@ -63,7 +65,8 @@ impl OfflineTracker {
 
     /// Note that a round has ended.
     pub fn note_round_end(&mut self, validator: AccountId, was_online: bool) {
-        self.observed.entry(validator)
+        self.observed
+            .entry(validator)
             .or_insert_with(Observed::new)
             .note_round_end(was_online);
     }
@@ -73,10 +76,12 @@ impl OfflineTracker {
         validators
             .iter()
             .enumerate()
-            .filter_map(|(i, v)| if self.is_online(v) {
-                None
-            } else {
-                Some(i as u32)
+            .filter_map(|(i, v)| {
+                if self.is_online(v) {
+                    None
+                } else {
+                    Some(i as u32)
+                }
             })
             .collect()
     }
@@ -96,7 +101,10 @@ impl OfflineTracker {
     }
 
     fn is_online(&self, v: &AccountId) -> bool {
-        self.observed.get(v).map(Observed::is_active).unwrap_or(true)
+        self.observed
+            .get(v)
+            .map(Observed::is_active)
+            .unwrap_or(true)
     }
 }
 

@@ -33,15 +33,15 @@ extern crate sr_primitives as runtime_primitives;
 // Needed for type-safe access to storage DB.
 #[macro_use]
 extern crate srml_support as runtime_support;
-extern crate srml_system as system;
 extern crate srml_balances as balances;
+extern crate srml_system as system;
 
 // for chainx runtime module lib
 #[cfg(test)]
-extern crate cxrml_system as cxsystem;
-#[cfg(test)]
 extern crate cxrml_associations as associations;
 extern crate cxrml_support as cxsupport;
+#[cfg(test)]
+extern crate cxrml_system as cxsystem;
 extern crate cxrml_tokenbalances as tokenbalances;
 
 #[cfg(test)]
@@ -50,14 +50,12 @@ mod tests;
 use codec::Codec;
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
+use runtime_primitives::traits::OnFinalise;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
-use runtime_primitives::traits::OnFinalise;
 
-pub use tokenbalances::{Symbol, ReservedType};
-use cxsupport::storage::linked_node::{
-    Node, NodeT, LinkedNodeCollection, MultiNodeIndex,
-};
+use cxsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
+pub use tokenbalances::{ReservedType, Symbol};
 
 pub trait Trait: tokenbalances::Trait {
     /// The overarching event type.
@@ -148,8 +146,11 @@ impl Default for Action {
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct Record<Symbol, TokenBalance, BlockNumber> where
-    Symbol: Clone, TokenBalance: Copy, BlockNumber: Copy,
+pub struct Record<Symbol, TokenBalance, BlockNumber>
+where
+    Symbol: Clone,
+    TokenBalance: Copy,
+    BlockNumber: Copy,
 {
     action: Action,
     symbol: Symbol,
@@ -159,51 +160,76 @@ pub struct Record<Symbol, TokenBalance, BlockNumber> where
     ext: Vec<u8>,
 }
 
-type RecordT<T> = Record<Symbol, <T as tokenbalances::Trait>::TokenBalance, <T as system::Trait>::BlockNumber>;
+type RecordT<T> =
+    Record<Symbol, <T as tokenbalances::Trait>::TokenBalance, <T as system::Trait>::BlockNumber>;
 
-impl<Symbol, TokenBalance, BlockNumber> Record<Symbol, TokenBalance, BlockNumber> where
-    Symbol: Clone, TokenBalance: Copy, BlockNumber: Copy,
+impl<Symbol, TokenBalance, BlockNumber> Record<Symbol, TokenBalance, BlockNumber>
+where
+    Symbol: Clone,
+    TokenBalance: Copy,
+    BlockNumber: Copy,
 {
-    pub fn action(&self) -> Action { self.action }
-    pub fn mut_action(&mut self) -> &mut Action { &mut self.action }
-    pub fn symbol(&self) -> Symbol { self.symbol.clone() }
-    pub fn balance(&self) -> TokenBalance { self.balance }
-    pub fn addr(&self) -> Vec<u8> { self.addr.clone() }
-    pub fn ext(&self) -> Vec<u8> { self.ext.clone() }
+    pub fn action(&self) -> Action {
+        self.action
+    }
+    pub fn mut_action(&mut self) -> &mut Action {
+        &mut self.action
+    }
+    pub fn symbol(&self) -> Symbol {
+        self.symbol.clone()
+    }
+    pub fn balance(&self) -> TokenBalance {
+        self.balance
+    }
+    pub fn addr(&self) -> Vec<u8> {
+        self.addr.clone()
+    }
+    pub fn ext(&self) -> Vec<u8> {
+        self.ext.clone()
+    }
     /// block num for the record init time.
-    pub fn blocknum(&self) -> BlockNumber { self.init_blocknum }
+    pub fn blocknum(&self) -> BlockNumber {
+        self.init_blocknum
+    }
 }
 
-impl<Symbol, TokenBalance, BlockNumber> Record<Symbol, TokenBalance, BlockNumber> where
-    Symbol: Clone, TokenBalance: Copy, BlockNumber: Copy,
+impl<Symbol, TokenBalance, BlockNumber> Record<Symbol, TokenBalance, BlockNumber>
+where
+    Symbol: Clone,
+    TokenBalance: Copy,
+    BlockNumber: Copy,
 {
     fn is_init(&self) -> bool {
         match self.action {
             Action::Deposit(ref state) => {
-                if let DepositState::Invalid = state { true } else { false }
+                if let DepositState::Invalid = state {
+                    true
+                } else {
+                    false
+                }
             }
             Action::Withdrawal(ref state) => {
-                if let WithdrawalState::Invalid = state { true } else { false }
+                if let WithdrawalState::Invalid = state {
+                    true
+                } else {
+                    false
+                }
             }
         }
     }
 
     fn is_finish(&self) -> bool {
         match self.action {
-            Action::Deposit(ref state) => {
-                match state {
-                    DepositState::Success => true,
-                    DepositState::Failed => true,
-                    _ => false,
-                }
-            }
-            Action::Withdrawal(ref state) => {
-                match state {
-                    WithdrawalState::Success => true,
-                    WithdrawalState::Failed => true,
-                    _ => false,
-                }
-            }
+            Action::Deposit(ref state) => match state {
+                DepositState::Success => true,
+                DepositState::Failed => true,
+                _ => false,
+            },
+            Action::Withdrawal(ref state) => match state {
+                WithdrawalState::Success => true,
+                WithdrawalState::Failed => true,
+                _ => false,
+            },
         }
     }
 }
@@ -211,28 +237,37 @@ impl<Symbol, TokenBalance, BlockNumber> Record<Symbol, TokenBalance, BlockNumber
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct WithdrawLog<AccountId>
-    where AccountId: Codec + Clone + Ord + Default,
+where
+    AccountId: Codec + Clone + Ord + Default,
 {
     accountid: AccountId,
     index: u32,
 }
 
 impl<AccountId> NodeT for WithdrawLog<AccountId>
-    where AccountId: Codec + Clone + Ord + Default,
+where
+    AccountId: Codec + Clone + Ord + Default,
 {
     type Index = (AccountId, u32);
 
-    fn index(&self) -> Self::Index { (self.accountid.clone(), self.index) }
+    fn index(&self) -> Self::Index {
+        (self.accountid.clone(), self.index)
+    }
 }
 
 impl<AccountId> WithdrawLog<AccountId>
-    where AccountId: Codec + Clone + Ord + Default,
+where
+    AccountId: Codec + Clone + Ord + Default,
 {
-    pub fn accountid(&self) -> AccountId { self.accountid.clone() }
-    pub fn index(&self) -> u32 { self.index }
+    pub fn accountid(&self) -> AccountId {
+        self.accountid.clone()
+    }
+    pub fn index(&self) -> u32 {
+        self.index
+    }
 }
 
-pub struct LinkedMultiKey<T: Trait> (runtime_support::storage::generator::PhantomData<T>);
+pub struct LinkedMultiKey<T: Trait>(runtime_support::storage::generator::PhantomData<T>);
 
 impl<T: Trait> LinkedNodeCollection for LinkedMultiKey<T> {
     type Header = LogHeaderFor<T>;
@@ -262,7 +297,6 @@ decl_storage! {
         pub WithdrawalFee get(withdrawal_fee) config(): T::Balance;
     }
 }
-
 
 impl<T: Trait> Module<T> {
     /// Deposit one of this module's events.
@@ -294,17 +328,14 @@ impl<T: Trait> Module<T> {
         }
     }
 
-
     pub fn last_deposit_of(who: &T::AccountId, sym: &Symbol) -> Option<(u32, RecordT<T>)> {
-        Self::last_deposit_index_of((who.clone(), sym.clone())).and_then(|index| {
-            <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r))
-        })
+        Self::last_deposit_index_of((who.clone(), sym.clone()))
+            .and_then(|index| <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r)))
     }
 
     pub fn last_withdrawal_of(who: &T::AccountId, sym: &Symbol) -> Option<(u32, RecordT<T>)> {
-        Self::last_withdrawal_index_of((who.clone(), sym.clone())).and_then(|index| {
-            <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r))
-        })
+        Self::last_withdrawal_index_of((who.clone(), sym.clone()))
+            .and_then(|index| <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r)))
     }
 
     /// deposit/withdrawal pre-process
@@ -316,16 +347,17 @@ impl<T: Trait> Module<T> {
         let r = if is_withdrawal {
             match Self::last_deposit_of(who, sym) {
                 None => return Err("the account has no deposit record for this token yet"),
-                Some((_, record)) =>
-                    {
-                        if !record.is_finish() {
-                            return Err("the account has no deposit record for this token yet");
-                        }
+                Some((_, record)) => {
+                    if !record.is_finish() {
+                        return Err("the account has no deposit record for this token yet");
                     }
+                }
             }
 
             Self::last_withdrawal_of(who, sym)
-        } else { Self::last_deposit_of(who, sym) };
+        } else {
+            Self::last_deposit_of(who, sym)
+        };
 
         if let Some((_, record)) = r {
             if !record.is_finish() {
@@ -342,7 +374,7 @@ impl<T: Trait> Module<T> {
         }
         let len: u32 = Self::records_len_of(who);
         <RecordsOf<T>>::insert(&(who.clone(), len), record.clone());
-        <RecordsLenOf<T>>::insert(who, len + 1);  // len is more than 1 to max index
+        <RecordsLenOf<T>>::insert(who, len + 1); // len is more than 1 to max index
         let key = (who.clone(), record.symbol());
         match record.action() {
             Action::Deposit(_) => <LastDepositIndexOf<T>>::insert(&key, len),
@@ -360,16 +392,26 @@ impl<T: Trait> Module<T> {
     }
 
     /// withdrawal, notice this func has include withdrawal_init and withdrawal_locking
-    pub fn withdrawal(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance, addr: Vec<u8>, ext: Vec<u8>) -> Result {
+    pub fn withdrawal(
+        who: &T::AccountId,
+        sym: &Symbol,
+        balance: T::TokenBalance,
+        addr: Vec<u8>,
+        ext: Vec<u8>,
+    ) -> Result {
         let index = Self::withdrawal_with_index(who, sym, balance, addr, ext)?;
 
         // set to withdraw cache
-        let n = Node::new(WithdrawLog::<T::AccountId> { accountid: who.clone(), index });
+        let n = Node::new(WithdrawLog::<T::AccountId> {
+            accountid: who.clone(),
+            index,
+        });
         n.init_storage_withkey::<LinkedMultiKey<T>, Symbol>(sym.clone());
 
         if let Some(tail_index) = Self::log_tail_for(sym) {
             if let Some(mut tail_node) = Self::withdraw_log_cache(tail_index.index()) {
-                tail_node.add_option_node_after_withkey::<LinkedMultiKey<T>, Symbol>(n, sym.clone())?;
+                tail_node
+                    .add_option_node_after_withkey::<LinkedMultiKey<T>, Symbol>(n, sym.clone())?;
             }
         }
 
@@ -395,9 +437,13 @@ impl<T: Trait> Module<T> {
                 }
                 if let Some(next) = node.next() {
                     index = next;
-                } else { return Err("not found this withdraw log in cache"); }
+                } else {
+                    return Err("not found this withdraw log in cache");
+                }
             }
-        } else { return Err("the withdraw log node header not exist for this symbol"); }
+        } else {
+            return Err("the withdraw log node header not exist for this symbol");
+        }
 
         Self::withdrawal_finish_with_index(who, r.unwrap(), success).map(|_| ())
     }
@@ -435,33 +481,54 @@ impl<T: Trait> Module<T> {
         Self::deposit_finish_with_index(who, r.unwrap(), success).map(|_| ())
     }
 
-//    /// withdrawal init, use for record a withdrawal start, should call withdrawal_locking after it
-//    fn withdrawal_init(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
-//        Self::withdrawal_with_index(who, sym, balance).map(|_| ())
-//    }
-//    /// change the free token to locking state
-//    fn withdrawal_locking(who: &T::AccountId, sym: &Symbol) -> Result {
-//        let r = Self::last_withdrawal_index_of(&(who.clone(), sym.clone()));
-//        if r.is_none() {
-//            return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
-//        }
-//        Self::withdrawal_locking_with_index(who, r.unwrap()).map(|_| ())
-//    }
+    //    /// withdrawal init, use for record a withdrawal start, should call withdrawal_locking after it
+    //    fn withdrawal_init(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
+    //        Self::withdrawal_with_index(who, sym, balance).map(|_| ())
+    //    }
+    //    /// change the free token to locking state
+    //    fn withdrawal_locking(who: &T::AccountId, sym: &Symbol) -> Result {
+    //        let r = Self::last_withdrawal_index_of(&(who.clone(), sym.clone()));
+    //        if r.is_none() {
+    //            return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
+    //        }
+    //        Self::withdrawal_locking_with_index(who, r.unwrap()).map(|_| ())
+    //    }
 
     /// deposit init, notice this func return index to show the index of records for this account
-    pub fn deposit_with_index(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> StdResult<u32, &'static str> {
+    pub fn deposit_with_index(
+        who: &T::AccountId,
+        sym: &Symbol,
+        balance: T::TokenBalance,
+    ) -> StdResult<u32, &'static str> {
         Self::before(who, sym, false)?;
 
         <tokenbalances::Module<T>>::is_valid_token(sym)?;
 
-        let r = Record { action: Action::Deposit(Default::default()), symbol: sym.clone(), balance: balance, init_blocknum: <system::Module<T>>::block_number(), addr: Vec::new(), ext: Vec::new() };
+        let r = Record {
+            action: Action::Deposit(Default::default()),
+            symbol: sym.clone(),
+            balance,
+            init_blocknum: <system::Module<T>>::block_number(),
+            addr: Vec::new(),
+            ext: Vec::new(),
+        };
         let index = Self::new_record(who, &r)?;
-        Self::deposit_event(RawEvent::DepositInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));
+        Self::deposit_event(RawEvent::DepositInit(
+            who.clone(),
+            index,
+            r.symbol(),
+            r.balance(),
+            r.blocknum(),
+        ));
 
         Ok(index)
     }
     /// deposit finish, should use index to find the old deposit record, success flag mark the success
-    pub fn deposit_finish_with_index(who: &T::AccountId, index: u32, success: bool) -> StdResult<u32, &'static str> {
+    pub fn deposit_finish_with_index(
+        who: &T::AccountId,
+        index: u32,
+        success: bool,
+    ) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
         if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
@@ -478,11 +545,23 @@ impl<T: Trait> Module<T> {
                         // call tokenbalances to issue token for this accountid
                         <tokenbalances::Module<T>>::issue(who, &sym, bal)?;
 
-                        Self::deposit_event(RawEvent::DepositSuccess(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
+                        Self::deposit_event(RawEvent::DepositSuccess(
+                            who.clone(),
+                            index,
+                            sym,
+                            bal,
+                            <system::Module<T>>::block_number(),
+                        ));
                     } else {
                         *state = DepositState::Failed;
 
-                        Self::deposit_event(RawEvent::DepositFailed(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
+                        Self::deposit_event(RawEvent::DepositFailed(
+                            who.clone(),
+                            index,
+                            sym,
+                            bal,
+                            <system::Module<T>>::block_number(),
+                        ));
                     }
                 }
                 _ => return Err("err action type in deposit_finish"),
@@ -494,7 +573,13 @@ impl<T: Trait> Module<T> {
         }
     }
     /// withdrawal init, notice this func return index to show the index of records for this account
-    fn withdrawal_with_index(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance, addr: Vec<u8>, ext: Vec<u8>) -> StdResult<u32, &'static str> {
+    fn withdrawal_with_index(
+        who: &T::AccountId,
+        sym: &Symbol,
+        balance: T::TokenBalance,
+        addr: Vec<u8>,
+        ext: Vec<u8>,
+    ) -> StdResult<u32, &'static str> {
         Self::before(who, sym, true)?;
 
         <tokenbalances::Module<T>>::is_valid_token_for(who, sym)?;
@@ -503,13 +588,29 @@ impl<T: Trait> Module<T> {
             return Err("not enough free token to withdraw");
         }
 
-        let r = Record { action: Action::Withdrawal(Default::default()), symbol: sym.clone(), balance: balance, init_blocknum: <system::Module<T>>::block_number(), addr, ext };
+        let r = Record {
+            action: Action::Withdrawal(Default::default()),
+            symbol: sym.clone(),
+            balance,
+            init_blocknum: <system::Module<T>>::block_number(),
+            addr,
+            ext,
+        };
         let index = Self::new_record(who, &r)?;
-        Self::deposit_event(RawEvent::WithdrawalInit(who.clone(), index, r.symbol(), r.balance(), r.blocknum()));
+        Self::deposit_event(RawEvent::WithdrawalInit(
+            who.clone(),
+            index,
+            r.symbol(),
+            r.balance(),
+            r.blocknum(),
+        ));
         Ok(index)
     }
     /// withdrawal lock, should use index to find out which record to change to locking state
-    fn withdrawal_locking_with_index(who: &T::AccountId, index: u32) -> StdResult<u32, &'static str> {
+    fn withdrawal_locking_with_index(
+        who: &T::AccountId,
+        index: u32,
+    ) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
         if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
@@ -520,18 +621,22 @@ impl<T: Trait> Module<T> {
             let bal = r.balance();
             // change state
             match r.mut_action() {
-                Action::Withdrawal(ref mut state) => {
-                    match state {
-                        WithdrawalState::Invalid => {
-                            *state = WithdrawalState::Locking;
+                Action::Withdrawal(ref mut state) => match state {
+                    WithdrawalState::Invalid => {
+                        *state = WithdrawalState::Locking;
 
-                            <tokenbalances::Module<T>>::reserve(who, &sym, bal, ReservedType::Funds)?;
+                        <tokenbalances::Module<T>>::reserve(who, &sym, bal, ReservedType::Funds)?;
 
-                            Self::deposit_event(RawEvent::WithdrawalLocking(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
-                        }
-                        _ => return Err("the withdrawal state must be Invalid."),
+                        Self::deposit_event(RawEvent::WithdrawalLocking(
+                            who.clone(),
+                            index,
+                            sym,
+                            bal,
+                            <system::Module<T>>::block_number(),
+                        ));
                     }
-                }
+                    _ => return Err("the withdrawal state must be Invalid."),
+                },
                 _ => return Err("err action type in deposit_finish"),
             }
             <RecordsOf<T>>::insert(&key, r.clone());
@@ -542,7 +647,11 @@ impl<T: Trait> Module<T> {
         }
     }
     /// withdrawal finish, should use index to find out which record to changed to final, success flag mark success, if false, release the token to free
-    fn withdrawal_finish_with_index(who: &T::AccountId, index: u32, success: bool) -> StdResult<u32, &'static str> {
+    fn withdrawal_finish_with_index(
+        who: &T::AccountId,
+        index: u32,
+        success: bool,
+    ) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
         if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
@@ -554,27 +663,47 @@ impl<T: Trait> Module<T> {
 
             // change state
             match r.mut_action() {
-                Action::Withdrawal(ref mut state) => {
-                    match state {
-                        WithdrawalState::Locking => {
-                            if success {
-                                *state = WithdrawalState::Success;
+                Action::Withdrawal(ref mut state) => match state {
+                    WithdrawalState::Locking => {
+                        if success {
+                            *state = WithdrawalState::Success;
 
-                                <tokenbalances::Module<T>>::destroy(who, &sym, bal, ReservedType::Funds)?;
+                            <tokenbalances::Module<T>>::destroy(
+                                who,
+                                &sym,
+                                bal,
+                                ReservedType::Funds,
+                            )?;
 
-                                Self::deposit_event(RawEvent::WithdrawalSuccess(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
-                            } else {
-                                *state = WithdrawalState::Failed;
+                            Self::deposit_event(RawEvent::WithdrawalSuccess(
+                                who.clone(),
+                                index,
+                                sym,
+                                bal,
+                                <system::Module<T>>::block_number(),
+                            ));
+                        } else {
+                            *state = WithdrawalState::Failed;
 
-                                <tokenbalances::Module<T>>::unreserve(who, &sym, bal, ReservedType::Funds)?;
+                            <tokenbalances::Module<T>>::unreserve(
+                                who,
+                                &sym,
+                                bal,
+                                ReservedType::Funds,
+                            )?;
 
-                                Self::deposit_event(RawEvent::WithdrawalFailed(who.clone(), index, sym, bal, <system::Module<T>>::block_number()));
-                            }
+                            Self::deposit_event(RawEvent::WithdrawalFailed(
+                                who.clone(),
+                                index,
+                                sym,
+                                bal,
+                                <system::Module<T>>::block_number(),
+                            ));
                         }
-                        _ => return Err("the withdrawal state must be Locking."),
                     }
-                }
-                _ => return Err("err action type in deposit_finish")
+                    _ => return Err("the withdrawal state must be Locking."),
+                },
+                _ => return Err("err action type in deposit_finish"),
             }
             <RecordsOf<T>>::insert(&key, r.clone());
 

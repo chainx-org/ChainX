@@ -1,47 +1,47 @@
 // Copyright 2018 Chainpool.
 
 //! ChainX block evaluation and evaluation errors.
+use chainx_primitives::{Block, BlockNumber, Hash, Timestamp};
 use chainx_runtime::{Block as ChainXGenericBlock, CheckedBlock};
-use chainx_primitives::{Block, Hash, BlockNumber, Timestamp};
 
 use super::MAX_TRANSACTIONS_SIZE;
 
 use codec::{Decode, Encode};
 
 error_chain! {
-	links {
-		ChainXApi(::chainx_api::Error, ::chainx_api::ErrorKind);
-	}
+    links {
+        ChainXApi(::chainx_api::Error, ::chainx_api::ErrorKind);
+    }
 
-	errors {
-		ProposalNotForChainX {
-			description("Proposal provided not a ChainX block."),
-			display("Proposal provided not a ChainX block."),
-		}
-		TimestampInFuture {
-			description("Proposal had timestamp too far in the future."),
-			display("Proposal had timestamp too far in the future."),
-		}
-		TooManyCandidates(expected: usize, got: usize) {
-			description("Proposal included more candidates than is possible."),
-			display("Proposal included {} candidates for {} parachains", got, expected),
-		}
-		WrongParentHash(expected: Hash, got: Hash) {
-			description("Proposal had wrong parent hash."),
-			display("Proposal had wrong parent hash. Expected {:?}, got {:?}", expected, got),
-		}
-		WrongNumber(expected: BlockNumber, got: BlockNumber) {
-			description("Proposal had wrong number."),
-			display("Proposal had wrong number. Expected {:?}, got {:?}", expected, got),
-		}
-		ProposalTooLarge(size: usize) {
-			description("Proposal exceeded the maximum size."),
-			display(
-				"Proposal exceeded the maximum size of {} by {} bytes.",
-				MAX_TRANSACTIONS_SIZE, MAX_TRANSACTIONS_SIZE.saturating_sub(*size)
-			),
-		}
-	}
+    errors {
+        ProposalNotForChainX {
+            description("Proposal provided not a ChainX block."),
+            display("Proposal provided not a ChainX block."),
+        }
+        TimestampInFuture {
+            description("Proposal had timestamp too far in the future."),
+            display("Proposal had timestamp too far in the future."),
+        }
+        TooManyCandidates(expected: usize, got: usize) {
+            description("Proposal included more candidates than is possible."),
+            display("Proposal included {} candidates for {} parachains", got, expected),
+        }
+        WrongParentHash(expected: Hash, got: Hash) {
+            description("Proposal had wrong parent hash."),
+            display("Proposal had wrong parent hash. Expected {:?}, got {:?}", expected, got),
+        }
+        WrongNumber(expected: BlockNumber, got: BlockNumber) {
+            description("Proposal had wrong number."),
+            display("Proposal had wrong number. Expected {:?}, got {:?}", expected, got),
+        }
+        ProposalTooLarge(size: usize) {
+            description("Proposal exceeded the maximum size."),
+            display(
+                "Proposal exceeded the maximum size of {} by {} bytes.",
+                MAX_TRANSACTIONS_SIZE, MAX_TRANSACTIONS_SIZE.saturating_sub(*size)
+            ),
+        }
+    }
 }
 
 /// Attempt to evaluate a substrate block as a chainx block, returning error
@@ -59,9 +59,10 @@ pub fn evaluate_initial(
         .and_then(|b| CheckedBlock::new(b).ok())
         .ok_or_else(|| ErrorKind::ProposalNotForChainX)?;
 
-    let transactions_size = proposal.extrinsics.iter().fold(0, |a, tx| {
-        a + Encode::encode(tx).len()
-    });
+    let transactions_size = proposal
+        .extrinsics
+        .iter()
+        .fold(0, |a, tx| a + Encode::encode(tx).len());
 
     if transactions_size > MAX_TRANSACTIONS_SIZE {
         bail!(ErrorKind::ProposalTooLarge(transactions_size))

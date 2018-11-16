@@ -3,17 +3,20 @@
 use rstd::cmp;
 use rstd::result::Result as StdResult;
 
+use chain::BlockHeader;
 use primitives::compact::Compact;
 use primitives::hash::H256;
 use primitives::U256;
-use chain::BlockHeader;
 
-use timestamp;
+use super::{
+    BlockHeaderFor, GenesisInfo, HashsForNumber, NetworkId, NumberForHash, Params, ParamsInfo,
+    Trait,
+};
+use blockchain::ChainErr;
+use runtime_primitives::traits::As;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
-use runtime_primitives::traits::As;
-use super::{Trait, NumberForHash, HashsForNumber, BlockHeaderFor, ParamsInfo, NetworkId, Params, GenesisInfo};
-use blockchain::ChainErr;
+use timestamp;
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,
@@ -49,7 +52,6 @@ impl<'a> HeaderVerifier<'a> {
         let now: T::Moment = <timestamp::Now<T>>::get();
         let current_time: u32 = now.as_() as u32;
 
-
         Ok(HeaderVerifier {
             work: HeaderWork::new(header, this_height),
             proof_of_work: HeaderProofOfWork::new(header),
@@ -76,10 +78,7 @@ pub struct HeaderWork<'a> {
 
 impl<'a> HeaderWork<'a> {
     fn new(header: &'a BlockHeader, height: u32) -> Self {
-        HeaderWork {
-            header: header,
-            height: height,
-        }
+        HeaderWork { header, height }
     }
 
     fn check<T: Trait>(&self, p: &Params) -> Result {
@@ -145,8 +144,8 @@ pub fn work_required_retarget<T: Trait>(
     let mut retarget: U256 = last_bits.into();
     let maximum: U256 = params.max_bits().into();
 
-    retarget = retarget *
-        U256::from(retarget_timespan(
+    retarget = retarget
+        * U256::from(retarget_timespan(
             retarget_timestamp,
             last_timestamp,
             params,
@@ -178,7 +177,7 @@ pub struct HeaderProofOfWork<'a> {
 
 impl<'a> HeaderProofOfWork<'a> {
     fn new(header: &'a BlockHeader) -> Self {
-        HeaderProofOfWork { header: header }
+        HeaderProofOfWork { header }
     }
 
     fn check(&self, p: &Params) -> Result {
@@ -189,7 +188,6 @@ impl<'a> HeaderProofOfWork<'a> {
         }
     }
 }
-
 
 pub fn is_valid_proof_of_work(max_work_bits: Compact, bits: Compact, hash: &H256) -> bool {
     let maximum = match max_work_bits.to_u256() {
@@ -215,9 +213,9 @@ pub struct HeaderTimestamp<'a> {
 impl<'a> HeaderTimestamp<'a> {
     fn new(header: &'a BlockHeader, current_time: u32, max_future: u32) -> Self {
         HeaderTimestamp {
-            header: header,
-            current_time: current_time,
-            max_future: max_future,
+            header,
+            current_time,
+            max_future,
         }
     }
 

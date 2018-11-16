@@ -5,22 +5,22 @@
 //! each time consensus begins on a new chain head.
 
 use bft;
-use substrate_primitives::ed25519;
-use substrate_network::{self as net, generic_message as msg};
-use substrate_network::consensus_gossip::ConsensusMessage;
 use rhododendron;
+use substrate_network::consensus_gossip::ConsensusMessage;
+use substrate_network::{self as net, generic_message as msg};
+use substrate_primitives::ed25519;
 
-use chainx_primitives::{Block, Hash, SessionKey};
 use chainx_api::ChainXApi;
 use chainx_consensus::Network;
+use chainx_primitives::{Block, Hash, SessionKey};
 
 use futures::prelude::*;
 use futures::sync::mpsc;
 
 use std::sync::Arc;
 
-use tokio::runtime::TaskExecutor;
 use tokio::executor::Executor;
+use tokio::runtime::TaskExecutor;
 
 use super::NetworkService;
 
@@ -36,29 +36,40 @@ impl<E> Sink for BftSink<E> {
     // TODO: replace this with the ! type when that's stabilized
     type SinkError = E;
 
-    fn start_send(&mut self, message: bft::Communication<Block>)
-                  -> ::futures::StartSend<bft::Communication<Block>, E>
-    {
+    fn start_send(
+        &mut self,
+        message: bft::Communication<Block>,
+    ) -> ::futures::StartSend<bft::Communication<Block>, E> {
         let network_message = net::LocalizedBftMessage {
             message: match message {
                 rhododendron::Communication::Consensus(c) => msg::BftMessage::Consensus(match c {
-                    rhododendron::LocalizedMessage::Propose(proposal) => msg::SignedConsensusMessage::Propose(msg::SignedConsensusProposal {
-                        round_number: proposal.round_number as u32,
-                        proposal: proposal.proposal,
-                        digest: proposal.digest,
-                        sender: proposal.sender,
-                        digest_signature: proposal.digest_signature.signature,
-                        full_signature: proposal.full_signature.signature,
-                    }),
-                    rhododendron::LocalizedMessage::Vote(vote) => msg::SignedConsensusMessage::Vote(msg::SignedConsensusVote {
-                        sender: vote.sender,
-                        signature: vote.signature.signature,
-                        vote: match vote.vote {
-                            rhododendron::Vote::Prepare(r, h) => msg::ConsensusVote::Prepare(r as u32, h),
-                            rhododendron::Vote::Commit(r, h) => msg::ConsensusVote::Commit(r as u32, h),
-                            rhododendron::Vote::AdvanceRound(r) => msg::ConsensusVote::AdvanceRound(r as u32),
-                        },
-                    }),
+                    rhododendron::LocalizedMessage::Propose(proposal) => {
+                        msg::SignedConsensusMessage::Propose(msg::SignedConsensusProposal {
+                            round_number: proposal.round_number as u32,
+                            proposal: proposal.proposal,
+                            digest: proposal.digest,
+                            sender: proposal.sender,
+                            digest_signature: proposal.digest_signature.signature,
+                            full_signature: proposal.full_signature.signature,
+                        })
+                    }
+                    rhododendron::LocalizedMessage::Vote(vote) => {
+                        msg::SignedConsensusMessage::Vote(msg::SignedConsensusVote {
+                            sender: vote.sender,
+                            signature: vote.signature.signature,
+                            vote: match vote.vote {
+                                rhododendron::Vote::Prepare(r, h) => {
+                                    msg::ConsensusVote::Prepare(r as u32, h)
+                                }
+                                rhododendron::Vote::Commit(r, h) => {
+                                    msg::ConsensusVote::Commit(r as u32, h)
+                                }
+                                rhododendron::Vote::AdvanceRound(r) => {
+                                    msg::ConsensusVote::AdvanceRound(r as u32)
+                                }
+                            },
+                        })
+                    }
                 }),
                 rhododendron::Communication::Auxiliary(justification) => {
                     let unchecked: bft::UncheckedJustification<_> = justification.uncheck().into();
@@ -67,9 +78,10 @@ impl<E> Sink for BftSink<E> {
             },
             parent_hash: self.parent_hash,
         };
-        self.network.with_spec(
-            move |spec, ctx| spec.consensus_gossip.multicast_bft_message(ctx, network_message)
-        );
+        self.network.with_spec(move |spec, ctx| {
+            spec.consensus_gossip
+                .multicast_bft_message(ctx, network_message)
+        });
         Ok(::futures::AsyncSink::Ready)
     }
 
@@ -83,33 +95,38 @@ fn process_bft_message(
     msg: msg::LocalizedBftMessage<Block, Hash>,
     local_id: &SessionKey,
     authorities: &[SessionKey],
-) -> Result<Option<bft::Communication<Block>>, bft::Error>
-{
+) -> Result<Option<bft::Communication<Block>>, bft::Error> {
     Ok(Some(match msg.message {
         msg::BftMessage::Consensus(c) => rhododendron::Communication::Consensus(match c {
-            msg::SignedConsensusMessage::Propose(proposal) => rhododendron::LocalizedMessage::Propose({
-                if &proposal.sender == local_id { return Ok(None); }
-                let proposal = rhododendron::LocalizedProposal {
-                    round_number: proposal.round_number as usize,
-                    proposal: proposal.proposal,
-                    digest: proposal.digest,
-                    sender: proposal.sender,
-                    digest_signature: ed25519::LocalizedSignature {
-                        signature: proposal.digest_signature,
-                        signer: ed25519::Public(proposal.sender.into()),
-                    },
-                    full_signature: ed25519::LocalizedSignature {
-                        signature: proposal.full_signature,
-                        signer: ed25519::Public(proposal.sender.into()),
-                    },
-                };
-                bft::check_proposal(authorities, &msg.parent_hash, &proposal)?;
+            msg::SignedConsensusMessage::Propose(proposal) => {
+                rhododendron::LocalizedMessage::Propose({
+                    if &proposal.sender == local_id {
+                        return Ok(None);
+                    }
+                    let proposal = rhododendron::LocalizedProposal {
+                        round_number: proposal.round_number as usize,
+                        proposal: proposal.proposal,
+                        digest: proposal.digest,
+                        sender: proposal.sender,
+                        digest_signature: ed25519::LocalizedSignature {
+                            signature: proposal.digest_signature,
+                            signer: ed25519::Public(proposal.sender.into()),
+                        },
+                        full_signature: ed25519::LocalizedSignature {
+                            signature: proposal.full_signature,
+                            signer: ed25519::Public(proposal.sender.into()),
+                        },
+                    };
+                    bft::check_proposal(authorities, &msg.parent_hash, &proposal)?;
 
-                trace!(target: "bft", "importing proposal message for round {} from {}", proposal.round_number, Hash::from(proposal.sender.0));
-                proposal
-            }),
+                    trace!(target: "bft", "importing proposal message for round {} from {}", proposal.round_number, Hash::from(proposal.sender.0));
+                    proposal
+                })
+            }
             msg::SignedConsensusMessage::Vote(vote) => rhododendron::LocalizedMessage::Vote({
-                if &vote.sender == local_id { return Ok(None); }
+                if &vote.sender == local_id {
+                    return Ok(None);
+                }
                 let vote = rhododendron::LocalizedVote {
                     sender: vote.sender,
                     signature: ed25519::LocalizedSignature {
@@ -117,9 +134,15 @@ fn process_bft_message(
                         signer: ed25519::Public(vote.sender.0),
                     },
                     vote: match vote.vote {
-                        msg::ConsensusVote::Prepare(r, h) => rhododendron::Vote::Prepare(r as usize, h),
-                        msg::ConsensusVote::Commit(r, h) => rhododendron::Vote::Commit(r as usize, h),
-                        msg::ConsensusVote::AdvanceRound(r) => rhododendron::Vote::AdvanceRound(r as usize),
+                        msg::ConsensusVote::Prepare(r, h) => {
+                            rhododendron::Vote::Prepare(r as usize, h)
+                        }
+                        msg::ConsensusVote::Commit(r, h) => {
+                            rhododendron::Vote::Commit(r as usize, h)
+                        }
+                        msg::ConsensusVote::AdvanceRound(r) => {
+                            rhododendron::Vote::AdvanceRound(r as usize)
+                        }
                     },
                 };
                 bft::check_vote::<Block>(authorities, &msg.parent_hash, &vote)?;
@@ -131,8 +154,12 @@ fn process_bft_message(
         msg::BftMessage::Auxiliary(a) => {
             let justification = bft::UncheckedJustification::from(a);
             // TODO: get proper error
-            let justification: Result<_, bft::Error> = bft::check_prepare_justification::<Block>(authorities, msg.parent_hash, justification)
-                .map_err(|_| bft::ErrorKind::InvalidJustification.into());
+            let justification: Result<_, bft::Error> = bft::check_prepare_justification::<Block>(
+                authorities,
+                msg.parent_hash,
+                justification,
+            )
+            .map_err(|_| bft::ErrorKind::InvalidJustification.into());
             rhododendron::Communication::Auxiliary(justification?)
         }
     }))
@@ -182,9 +209,11 @@ impl Future for MessageProcessTask {
     fn poll(&mut self) -> Poll<(), ()> {
         loop {
             match self.inner_stream.poll() {
-                Ok(Async::Ready(Some(val))) => if let Some(async) = self.process_message(val) {
-                    return Ok(async);
-                },
+                Ok(Async::Ready(Some(val))) => {
+                    if let Some(async) = self.process_message(val) {
+                        return Ok(async);
+                    }
+                }
                 Ok(Async::Ready(None)) => return Ok(Async::Ready(())),
                 Ok(Async::NotReady) => return Ok(Async::NotReady),
                 Err(e) => {
@@ -208,7 +237,7 @@ impl Stream for InputAdapter {
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.input.poll() {
             Err(_) | Ok(Async::Ready(None)) => Err(bft::InputStreamConcluded.into()),
-            Ok(x) => Ok(x)
+            Ok(x) => Ok(x),
         }
     }
 }
@@ -245,12 +274,12 @@ impl<P: ChainXApi + Send + Sync + 'static> Network for ConsensusNetwork<P> {
 
     /// Get input and output streams of BFT messages.
     fn communication_for(
-        &self, validators: &[SessionKey],
+        &self,
+        validators: &[SessionKey],
         local_id: SessionKey,
         parent_hash: Hash,
         mut task_executor: TaskExecutor,
-    ) -> (Self::Input, Self::Output)
-    {
+    ) -> (Self::Input, Self::Output) {
         let sink = BftSink {
             network: self.network.clone(),
             parent_hash,

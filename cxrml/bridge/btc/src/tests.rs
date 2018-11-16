@@ -1,16 +1,15 @@
 extern crate srml_consensus as consensus;
 
-use substrate_primitives::{H256 as S_H256, Blake2Hasher};
+use substrate_primitives::{Blake2Hasher, H256 as S_H256};
 
-use runtime_primitives::BuildStorage;
-use runtime_primitives::traits::BlakeTwo256;
-use runtime_primitives::testing::{Digest, DigestItem, Header};
+use self::base58::FromBase58;
+use super::*;
 use runtime_io;
 use runtime_io::with_externalities;
-use self::base58::FromBase58;
+use runtime_primitives::testing::{Digest, DigestItem, Header};
+use runtime_primitives::traits::BlakeTwo256;
+use runtime_primitives::BuildStorage;
 use runtime_support::StorageValue;
-use super::*;
-
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -20,7 +19,6 @@ pub type AccountId = u64;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
-
 
 impl system::Trait for Test {
     type Origin = Origin;
@@ -71,7 +69,7 @@ impl tokenbalances::Trait for Test {
     type Event = ();
 }
 
-impl finacial_recordes::Trait for Test {
+impl financial_records::Trait for Test {
     type Event = ();
 }
 
@@ -112,7 +110,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             network_id: 1,
             utxo_max_index: 0,
             irr_block: 6,
-            btc_fee: 10, 
+            btc_fee: 10,
             accounts_max_index: 0,
             receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
@@ -156,7 +154,7 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
             network_id: 0,
             utxo_max_index: 0,
             irr_block: 6,
-            btc_fee: 10, 
+            btc_fee: 10,
             accounts_max_index: 0,
             receive_address: keys::Address::from_layout(&"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
@@ -376,7 +374,6 @@ fn generate_mock_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
     (vec![b0.clone(), b1, b2, b3, b4], vec![b0, b1_fork, b2_fork])
 }
 
-
 fn current_time() -> u64 {
     use std::time;
     time::SystemTime::now()
@@ -396,7 +393,6 @@ fn test() {
         println!("0x{:}", HexDisplay::from(&a));
     })
 }
-
 
 #[test]
 fn test_init_blocks() {
@@ -615,7 +611,6 @@ fn test_call() {
         assert_eq!(who, 99);
     })
 }
-
 
 pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default()

@@ -25,25 +25,31 @@ pub fn rpc_handler<Block: BlockT, ExHash, PendingExtrinsics, S, C, CE, A, Y>(
     author: A,
     system: Y,
 ) -> RpcHandler
-    where
-        Block: BlockT + 'static,
-        ExHash: Send
+where
+    Block: BlockT + 'static,
+    ExHash: Send
         + Sync
         + 'static
         + runtime_primitives::Serialize
         + runtime_primitives::DeserializeOwned,
-        PendingExtrinsics: serde::Serialize + serde::de::DeserializeOwned + Send + Sync + 'static,
-        S: apis::state::StateApi<Block::Hash, Metadata=Metadata>,
-        C: apis::chain::ChainApi<
-            Block::Hash,
-            Block::Header,
-            NumberFor<Block>,
-            Block::Extrinsic,
-            Metadata=Metadata,
-        >,
-        CE: chainext::ChainApiExt<Block::Hash, Block::Header, NumberFor<Block>, Block::Extrinsic>,
-        A: apis::author::AuthorApi<ExHash, Block::Hash, Block::Extrinsic, PendingExtrinsics, Metadata=Metadata>,
-        Y: apis::system::SystemApi,
+    PendingExtrinsics: serde::Serialize + serde::de::DeserializeOwned + Send + Sync + 'static,
+    S: apis::state::StateApi<Block::Hash, Metadata = Metadata>,
+    C: apis::chain::ChainApi<
+        Block::Hash,
+        Block::Header,
+        NumberFor<Block>,
+        Block::Extrinsic,
+        Metadata = Metadata,
+    >,
+    CE: chainext::ChainApiExt<Block::Hash, Block::Header, NumberFor<Block>, Block::Extrinsic>,
+    A: apis::author::AuthorApi<
+        ExHash,
+        Block::Hash,
+        Block::Extrinsic,
+        PendingExtrinsics,
+        Metadata = Metadata,
+    >,
+    Y: apis::system::SystemApi,
 {
     let mut io = pubsub::PubSubHandler::default();
     io.extend_with(state.to_delegate());
@@ -67,13 +73,14 @@ pub fn start_http(addr: &std::net::SocketAddr, io: RpcHandler) -> io::Result<htt
 pub fn start_ws(addr: &std::net::SocketAddr, io: RpcHandler) -> io::Result<ws::Server> {
     ws::ServerBuilder::with_meta_extractor(io, |context: &ws::RequestContext| {
         Metadata::new(context.sender())
-    }).start(addr)
-        .map_err(|err| match err {
-            ws::Error(ws::ErrorKind::Io(io), _) => io,
-            ws::Error(ws::ErrorKind::ConnectionClosed, _) => io::ErrorKind::BrokenPipe.into(),
-            ws::Error(e, _) => {
-                error!("{}", e);
-                io::ErrorKind::Other.into()
-            }
-        })
+    })
+    .start(addr)
+    .map_err(|err| match err {
+        ws::Error(ws::ErrorKind::Io(io), _) => io,
+        ws::Error(ws::ErrorKind::ConnectionClosed, _) => io::ErrorKind::BrokenPipe.into(),
+        ws::Error(e, _) => {
+            error!("{}", e);
+            io::ErrorKind::Other.into()
+        }
+    })
 }

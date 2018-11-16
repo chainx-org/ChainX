@@ -1,8 +1,7 @@
 // Copyright 2018 Chainpool.
 
+use super::{balances, system, Codec};
 use rstd::prelude::*;
-use super::{Codec, system, balances};
-
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
@@ -40,7 +39,9 @@ impl Transaction {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Transfer<AccountId, Balance>
-    where AccountId: Codec, Balance: Codec,
+where
+    AccountId: Codec,
+    Balance: Codec,
 {
     pub to: AccountId,
     pub value: Balance,

@@ -8,22 +8,22 @@ extern crate parity_codec_derive;
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate serde_derive;
-#[cfg(test)]
-extern crate substrate_primitives;
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as primitives;
 extern crate sr_std as rstd;
 extern crate srml_balances as balances;
+#[cfg(test)]
+extern crate substrate_primitives;
 #[macro_use]
 extern crate srml_support as runtime_support;
 extern crate srml_system as system;
 
-extern crate cxrml_system as cxsystem;
 extern crate cxrml_associations as associations;
+extern crate cxrml_system as cxsystem;
 
 // use balances::EnsureAccountLiquid;
+use primitives::traits::{As, CheckedAdd, CheckedSub, OnFinalise, Zero};
 use rstd::prelude::*;
-use primitives::traits::{CheckedSub, CheckedAdd, OnFinalise, As, Zero};
 use runtime_support::dispatch::Result;
 pub use storage::double_map::StorageDoubleMap;
 
@@ -51,14 +51,20 @@ impl<T: Trait> associations::OnCalcFee<T::AccountId, T::Balance> for Module<T> {
 pub trait Trait: associations::Trait + cxsystem::Trait {}
 
 impl<T: Trait> Module<T> {
-    fn calc_fee_withaccount(who: &T::AccountId, fee: T::Balance, rate: &[(usize, T::AccountId)]) -> Result {
+    fn calc_fee_withaccount(
+        who: &T::AccountId,
+        fee: T::Balance,
+        rate: &[(usize, T::AccountId)],
+    ) -> Result {
         let from_balance = <balances::Module<T>>::free_balance(who);
         let new_from_balance = match from_balance.checked_sub(&fee) {
             Some(b) => b,
             None => return Err("chainx balance too low to exec this option"),
         };
 
-        if rate.len() < 1 { panic!("can't input a empty rate array") }
+        if rate.len() < 1 {
+            panic!("can't input a empty rate array")
+        }
         if rate.len() == 1 {
             let to_balance = <balances::Module<T>>::free_balance(&rate[0].1);
             let new_to_balance = match to_balance.checked_add(&fee) {
@@ -119,11 +125,16 @@ impl<T: Trait> Module<T> {
         Self::calc_fee_withaccount(from_who, fee, v.as_slice())
     }
 
-
     // util function
     /// handle the fee with the func, deduct fee before exec func, notice the fee have been deducted before func, so if the func return err, the balance already be deducted.
-    pub fn handle_fee_before<F>(who: &T::AccountId, fee: T::Balance, check_after_open: bool, mut func: F) -> Result
-        where F: FnMut() -> Result
+    pub fn handle_fee_before<F>(
+        who: &T::AccountId,
+        fee: T::Balance,
+        check_after_open: bool,
+        mut func: F,
+    ) -> Result
+    where
+        F: FnMut() -> Result,
     {
         let from_balance = <balances::Module<T>>::free_balance(who);
         let new_from_balance = match from_balance.checked_sub(&fee) {
@@ -132,7 +143,9 @@ impl<T: Trait> Module<T> {
         };
         // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         if check_after_open && new_from_balance < <balances::Module<T>>::existential_deposit() {
-            return Err("chainx balance is not enough after this tx, not allow to be killed at here");
+            return Err(
+                "chainx balance is not enough after this tx, not allow to be killed at here",
+            );
         }
 
         // deduct free
@@ -141,10 +154,15 @@ impl<T: Trait> Module<T> {
         func()
     }
 
-
     /// handle the fee with the func, deduct fee after exec func, notice the func can't do anything related with balance
-    pub fn handle_fee_after<F>(who: &T::AccountId, fee: T::Balance, check_after_open: bool, mut func: F) -> Result
-        where F: FnMut() -> Result
+    pub fn handle_fee_after<F>(
+        who: &T::AccountId,
+        fee: T::Balance,
+        check_after_open: bool,
+        mut func: F,
+    ) -> Result
+    where
+        F: FnMut() -> Result,
     {
         let from_balance = <balances::Module<T>>::free_balance(who);
         let new_from_balance = match from_balance.checked_sub(&fee) {
@@ -153,7 +171,9 @@ impl<T: Trait> Module<T> {
         };
         // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         if check_after_open && new_from_balance < <balances::Module<T>>::existential_deposit() {
-            return Err("chainx balance is not enough after this tx, not allow to be killed at here");
+            return Err(
+                "chainx balance is not enough after this tx, not allow to be killed at here",
+            );
         }
 
         func()?;

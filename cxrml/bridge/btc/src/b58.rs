@@ -4,6 +4,7 @@ use rstd::prelude::Vec;
 
 static BASE58_CHARS: &'static [u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
+#[rustfmt::skip]
 static BASE58_DIGITS: [Option<u8>; 128] = [
     None,     None,     None,     None,     None,     None,     None,     None,     // 0-7
     None,     None,     None,     None,     None,     None,     None,     None,     // 8-15
@@ -50,7 +51,8 @@ pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
     }
 
     // Copy leading zeroes directly
-    let mut ret: Vec<u8> = data.iter()
+    let mut ret: Vec<u8> = data
+        .iter()
         .take_while(|&x| *x == BASE58_CHARS[0])
         .map(|_| 0)
         .collect();
@@ -66,31 +68,8 @@ mod tests {
     fn test_from() {
         let s = String::from("mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b");
         let v = &[
-            111,
-            41,
-            168,
-            159,
-            89,
-            51,
-            97,
-            179,
-            153,
-            104,
-            9,
-            74,
-            184,
-            193,
-            251,
-            6,
-            131,
-            166,
-            121,
-            3,
-            1,
-            241,
-            112,
-            101,
-            146,
+            111, 41, 168, 159, 89, 51, 97, 179, 153, 104, 9, 74, 184, 193, 251, 6, 131, 166, 121,
+            3, 1, 241, 112, 101, 146,
         ];
         assert_eq!(from(s.as_bytes().to_vec()).unwrap(), v);
     }

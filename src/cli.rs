@@ -1,6 +1,6 @@
 // Copyright 2018 chainpool
 
-use clap::{Arg, App, SubCommand, ArgMatches};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use std::net::SocketAddr;
 
 #[derive(Clone, Debug)]
@@ -125,13 +125,15 @@ pub fn parse_address(
     port_param: &str,
     matches: &ArgMatches,
 ) -> Result<SocketAddr, String> {
-    let mut address: SocketAddr = default.parse().ok().ok_or_else(|| {
-        format!("Invalid address specified for --{}.", port_param)
-    })?;
+    let mut address: SocketAddr = default
+        .parse()
+        .ok()
+        .ok_or_else(|| format!("Invalid address specified for --{}.", port_param))?;
     if let Some(port) = matches.value_of(port_param) {
-        let port: u16 = port.parse().ok().ok_or_else(|| {
-            format!("Invalid port for --{} specified.", port_param)
-        })?;
+        let port: u16 = port
+            .parse()
+            .ok()
+            .ok_or_else(|| format!("Invalid port for --{} specified.", port_param))?;
         address.set_port(port);
     }
 

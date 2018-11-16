@@ -1,22 +1,22 @@
 // Copyright 2018 Chainpool.
 
+extern crate parity_codec as codec;
 extern crate sr_primitives as runtime_primitives;
 extern crate srml_support as runtime_support;
-extern crate substrate_primitives as primitives;
-extern crate substrate_client as client;
-extern crate parity_codec as codec;
-extern crate substrate_transaction_pool;
 extern crate substrate_bft as bft;
+extern crate substrate_client as client;
 extern crate substrate_network;
+extern crate substrate_primitives as primitives;
+extern crate substrate_transaction_pool;
 
+extern crate chainx_api;
+extern crate chainx_pool;
 extern crate chainx_primitives;
 extern crate chainx_runtime;
-extern crate chainx_pool;
-extern crate chainx_api;
 
-extern crate rhododendron;
 extern crate exit_future;
 extern crate parking_lot;
+extern crate rhododendron;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
@@ -24,33 +24,34 @@ extern crate tokio;
 #[macro_use]
 extern crate log;
 
-mod offline_tracker;
-mod evaluation;
-mod service;
 mod error;
+mod evaluation;
+mod offline_tracker;
+mod service;
 
-use chainx_primitives::{BlockId, Hash, Block, Header, AccountId, BlockNumber, Timestamp, SessionKey};
-use primitives::{AuthorityId, ed25519};
+use chainx_api::ChainXApi;
+use chainx_primitives::{
+    AccountId, Block, BlockId, BlockNumber, Hash, Header, SessionKey, Timestamp,
+};
+use codec::{Decode, Encode};
+use futures::future;
+use futures::prelude::*;
+use parking_lot::RwLock;
+use primitives::{ed25519, AuthorityId};
 use runtime_primitives::generic::Era;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::runtime::TaskExecutor;
 use tokio::timer::Delay;
-use codec::{Decode, Encode};
-use chainx_api::ChainXApi;
-use parking_lot::RwLock;
-use futures::prelude::*;
-use futures::future;
-use std::sync::Arc;
 
 type TransactionPool<A> = substrate_transaction_pool::Pool<chainx_pool::PoolApi<A>>;
 
+pub use self::error::{Error, ErrorKind};
 pub use self::offline_tracker::OfflineTracker;
-pub use self::error::{ErrorKind, Error};
 pub use service::Service;
 
 /// Shared offline validator tracker.
 pub type SharedOfflineTracker = Arc<RwLock<OfflineTracker>>;
-
 
 // block size limit.
 const MAX_TRANSACTIONS_SIZE: usize = 4 * 1024 * 1024;
@@ -58,10 +59,10 @@ const MAX_TRANSACTIONS_SIZE: usize = 4 * 1024 * 1024;
 /// A long-lived network which can create BFT message routing processes on demand.
 pub trait Network {
     /// The input stream of BFT messages. Should never logically conclude.
-    type Input: Stream<Item=bft::Communication<Block>, Error=Error>;
+    type Input: Stream<Item = bft::Communication<Block>, Error = Error>;
     /// The output sink of BFT messages. Messages sent here should eventually pass to all
     /// current authorities.
-    type Output: Sink<SinkItem=bft::Communication<Block>, SinkError=Error>;
+    type Output: Sink<SinkItem = bft::Communication<Block>, SinkError = Error>;
 
     fn communication_for(
         &self,
@@ -74,8 +75,8 @@ pub trait Network {
 
 /// ChainX proposer factory.
 pub struct ProposerFactory<N, P>
-    where
-        P: ChainXApi + Send + Sync + 'static,
+where
+    P: ChainXApi + Send + Sync + 'static,
 {
     /// The client instance.
     pub client: Arc<P>,
@@ -92,9 +93,9 @@ pub struct ProposerFactory<N, P>
 }
 
 impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
-    where
-        N: Network,
-        P: ChainXApi + Send + Sync + 'static,
+where
+    N: Network,
+    P: ChainXApi + Send + Sync + 'static,
 {
     type Proposer = Proposer<P>;
     type Input = N::Input;
@@ -107,7 +108,7 @@ impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
         authorities: &[AuthorityId],
         sign_with: Arc<ed25519::Pair>,
     ) -> Result<(Self::Proposer, Self::Input, Self::Output), Error> {
-        use runtime_primitives::traits::{Hash as HashT, BlakeTwo256};
+        use runtime_primitives::traits::{BlakeTwo256, Hash as HashT};
 
         let parent_hash = parent_header.hash().into();
 
@@ -146,8 +147,7 @@ impl<N, P> bft::Environment<Block> for ProposerFactory<N, P>
 }
 
 /// The ChainX proposer logic.
-pub struct Proposer<C: ChainXApi + Send + Sync>
-{
+pub struct Proposer<C: ChainXApi + Send + Sync> {
     client: Arc<C>,
     start: Instant,
     local_key: Arc<ed25519::Pair>,
@@ -166,13 +166,22 @@ impl<C: ChainXApi + Send + Sync> Proposer<C> {
         use primitives::uint::U256;
 
         let validators_len = self.validators.len();
-        let mut stake_weight = self.validators.iter()
+        let mut stake_weight = self
+            .validators
+            .iter()
             .map(|account| {
                 let weight = self.client.stake_weight(&self.parent_id, *account).unwrap();
-                if weight == 0 { 1 } else { weight }
+                if weight == 0 {
+                    1
+                } else {
+                    weight
+                }
             })
             .collect::<Vec<_>>();
-        info!("validator stake weight:{:?}, round_numer:{:?}", stake_weight, round_number);
+        info!(
+            "validator stake weight:{:?}, round_numer:{:?}",
+            stake_weight, round_number
+        );
         for i in 1..validators_len {
             stake_weight[i] = stake_weight[i] + stake_weight[i - 1];
         }
@@ -195,17 +204,17 @@ impl<C: ChainXApi + Send + Sync> Proposer<C> {
 }
 
 impl<C> bft::Proposer<Block> for Proposer<C>
-    where
-        C: ChainXApi + Send + Sync,
+where
+    C: ChainXApi + Send + Sync,
 {
     type Error = Error;
     type Create = Result<Block, Error>;
-    type Evaluate = Box<Future<Item=bool, Error=Error>>;
+    type Evaluate = Box<Future<Item = bool, Error = Error>>;
 
     fn propose(&self) -> Self::Create {
         use chainx_api::BlockBuilder;
-        use runtime_primitives::traits::{Hash as HashT, BlakeTwo256};
         use chainx_primitives::InherentData;
+        use runtime_primitives::traits::{BlakeTwo256, Hash as HashT};
 
         const MAX_VOTE_OFFLINE_SECONDS: Duration = Duration::from_secs(60);
 
@@ -222,7 +231,10 @@ impl<C> bft::Proposer<Block> for Proposer<C>
         if !offline_indices.is_empty() {
             info!(
                 "Submitting offline validators {:?} for slash-vote",
-                offline_indices.iter().map(|&i| self.validators[i as usize]).collect::<Vec<_>>(),
+                offline_indices
+                    .iter()
+                    .map(|&i| self.validators[i as usize])
+                    .collect::<Vec<_>>(),
             )
         }
 
@@ -238,22 +250,27 @@ impl<C> bft::Proposer<Block> for Proposer<C>
 
         {
             let mut unqueue_invalid = Vec::new();
-            let result = self.transaction_pool.cull_and_get_pending(&BlockId::hash(self.parent_hash), |pending_iterator| {
-                let mut pending_size = 0;
-                for pending in pending_iterator {
-                    if pending_size + pending.verified.encoded_size() >= MAX_TRANSACTIONS_SIZE { break; }
-
-                    match block_builder.push_extrinsic(pending.original.clone()) {
-                        Ok(()) => {
-                            pending_size += pending.verified.encoded_size();
+            let result = self.transaction_pool.cull_and_get_pending(
+                &BlockId::hash(self.parent_hash),
+                |pending_iterator| {
+                    let mut pending_size = 0;
+                    for pending in pending_iterator {
+                        if pending_size + pending.verified.encoded_size() >= MAX_TRANSACTIONS_SIZE {
+                            break;
                         }
-                        Err(e) => {
-                            trace!(target: "transaction-pool", "Invalid transaction: {}", e);
-                            unqueue_invalid.push(pending.verified.hash().clone());
+
+                        match block_builder.push_extrinsic(pending.original.clone()) {
+                            Ok(()) => {
+                                pending_size += pending.verified.encoded_size();
+                            }
+                            Err(e) => {
+                                trace!(target: "transaction-pool", "Invalid transaction: {}", e);
+                                unqueue_invalid.push(pending.verified.hash().clone());
+                            }
                         }
                     }
-                }
-            });
+                },
+            );
             if let Err(e) = result {
                 warn!("Unable to get the pending set: {:?}", e);
             }
@@ -262,15 +279,21 @@ impl<C> bft::Proposer<Block> for Proposer<C>
         }
 
         let block = block_builder.bake()?;
-        info!("generate a new block#{:}, producer:[{:}]", block.header.number, block_producer);
-        trace!("Proposing block [number: {}; hash: {}; parent_hash: {}; extrinsics: [{}]]",
-               block.header.number,
-               Hash::from(block.header.hash()),
-               block.header.parent_hash,
-               block.extrinsics.iter()
-                   .map(|xt| format!("{}", BlakeTwo256::hash_of(xt)))
-                   .collect::<Vec<_>>()
-                   .join(", ")
+        info!(
+            "generate a new block#{:}, producer:[{:}]",
+            block.header.number, block_producer
+        );
+        trace!(
+            "Proposing block [number: {}; hash: {}; parent_hash: {}; extrinsics: [{}]]",
+            block.header.number,
+            Hash::from(block.header.hash()),
+            block.header.parent_hash,
+            block
+                .extrinsics
+                .iter()
+                .map(|xt| format!("{}", BlakeTwo256::hash_of(xt)))
+                .collect::<Vec<_>>()
+                .join(", ")
         );
 
         let substrate_block = Decode::decode(&mut block.encode().as_slice())
@@ -281,7 +304,8 @@ impl<C> bft::Proposer<Block> for Proposer<C>
             timestamp,
             &self.parent_hash,
             self.parent_number,
-        ).is_ok());
+        )
+        .is_ok());
 
         Ok(substrate_block)
     }
@@ -322,9 +346,9 @@ impl<C> bft::Proposer<Block> for Proposer<C>
             };
 
             match timestamp_delay {
-                Some(duration) => future::Either::A(Delay::new(duration).map_err(
-                    |e| Error::from(ErrorKind::Timer(e)),
-                )),
+                Some(duration) => future::Either::A(
+                    Delay::new(duration).map_err(|e| Error::from(ErrorKind::Timer(e))),
+                ),
                 None => future::Either::B(future::ok(())),
             }
         };
@@ -332,24 +356,35 @@ impl<C> bft::Proposer<Block> for Proposer<C>
         // refuse to vote if this block says a validator is offline that we
         // think isn't.
         let offline = proposal.noted_offline();
-        if !self.offline.read().check_consistency(
-            &self.validators[..],
-            offline,
-        )
-            {
-                return Box::new(futures::empty());
-            }
+        if !self
+            .offline
+            .read()
+            .check_consistency(&self.validators[..], offline)
+        {
+            return Box::new(futures::empty());
+        }
 
         // check block_producer
         match proposal.block_producer() {
-            Some(a) => { info!("current block#{:}, producer is [{:}]", self.parent_number + 1, a); }
-            None => { info!("current block#{:}, not set producer", self.parent_number + 1); }
+            Some(a) => {
+                info!(
+                    "current block#{:}, producer is [{:}]",
+                    self.parent_number + 1,
+                    a
+                );
+            }
+            None => {
+                info!(
+                    "current block#{:}, not set producer",
+                    self.parent_number + 1
+                );
+            }
         }
-
 
         // evaluate whether the block is actually valid.
         // TODO: is it better to delay this until the delays are finished?
-        let evaluated = self.client
+        let evaluated = self
+            .client
             .evaluate_block(&self.parent_id, unchecked_proposal.clone())
             .map_err(Into::into);
 
@@ -367,27 +402,23 @@ impl<C> bft::Proposer<Block> for Proposer<C>
         Box::new(future) as Box<_>
     }
 
-    fn round_proposer(&self, round_number: usize, authorities: &[AuthorityId]) -> AuthorityId {
-        let offset = self.primary_index(round_number, authorities.len());
-        let proposer = authorities[offset].clone();
-        debug!(target: "bft", "proposer for round {} is {}", round_number, proposer);
-
-        proposer
-    }
-
     fn import_misbehavior(&self, misbehavior: Vec<(AuthorityId, bft::Misbehavior<Hash>)>) {
+        use chainx_primitives::UncheckedExtrinsic as GenericExtrinsic;
+        use chainx_runtime::{Call, ConsensusCall, UncheckedExtrinsic};
         use rhododendron::Misbehavior as GenericMisbehavior;
         use runtime_primitives::bft::{MisbehaviorKind, MisbehaviorReport};
-        use chainx_primitives::UncheckedExtrinsic as GenericExtrinsic;
-        use chainx_runtime::{Call, UncheckedExtrinsic, ConsensusCall};
 
         let local_id = self.local_key.public().0.into();
         let mut next_index = {
-            let cur_index = self.transaction_pool.cull_and_get_pending(&BlockId::hash(self.parent_hash), |pending| pending
-                .filter(|tx| tx.verified.sender == local_id)
-                .last()
-                .map(|tx| Ok(tx.verified.index()))
-                .unwrap_or_else(|| self.client.index(&self.parent_id, local_id)),
+            let cur_index = self.transaction_pool.cull_and_get_pending(
+                &BlockId::hash(self.parent_hash),
+                |pending| {
+                    pending
+                        .filter(|tx| tx.verified.sender == local_id)
+                        .last()
+                        .map(|tx| Ok(tx.verified.index()))
+                        .unwrap_or_else(|| self.client.index(&self.parent_id, local_id))
+                },
             );
 
             match cur_index {
@@ -411,25 +442,53 @@ impl<C> bft::Proposer<Block> for Proposer<C>
                 misbehavior: match misbehavior {
                     GenericMisbehavior::ProposeOutOfTurn(_, _, _) => continue,
                     GenericMisbehavior::DoublePropose(_, _, _) => continue,
-                    GenericMisbehavior::DoublePrepare(round, (h1, s1), (h2, s2))
-                    => MisbehaviorKind::BftDoublePrepare(round as u32, (h1, s1.signature), (h2, s2.signature)),
-                    GenericMisbehavior::DoubleCommit(round, (h1, s1), (h2, s2))
-                    => MisbehaviorKind::BftDoubleCommit(round as u32, (h1, s1.signature), (h2, s2.signature)),
+                    GenericMisbehavior::DoublePrepare(round, (h1, s1), (h2, s2)) => {
+                        MisbehaviorKind::BftDoublePrepare(
+                            round as u32,
+                            (h1, s1.signature),
+                            (h2, s2.signature),
+                        )
+                    }
+                    GenericMisbehavior::DoubleCommit(round, (h1, s1), (h2, s2)) => {
+                        MisbehaviorKind::BftDoubleCommit(
+                            round as u32,
+                            (h1, s1.signature),
+                            (h2, s2.signature),
+                        )
+                    }
                 },
             };
-            let payload = (next_index, Call::Consensus(ConsensusCall::report_misbehavior(report)));
+            let payload = (
+                next_index,
+                Call::Consensus(ConsensusCall::report_misbehavior(report)),
+            );
             let signature = self.local_key.sign(&payload.encode()).into();
             next_index += 1;
 
             let local_id = self.local_key.public().0.into();
             let extrinsic = UncheckedExtrinsic {
-                signature: Some((chainx_runtime::RawAddress::Id(local_id), signature, payload.0, Era::immortal())),
+                signature: Some((
+                    chainx_runtime::RawAddress::Id(local_id),
+                    signature,
+                    payload.0,
+                    Era::immortal(),
+                )),
                 function: payload.1,
             };
-            let uxt: GenericExtrinsic = Decode::decode(&mut extrinsic.encode().as_slice()).expect("Encoded extrinsic is valid");
-            self.transaction_pool.submit_one(&BlockId::hash(self.parent_hash), uxt)
+            let uxt: GenericExtrinsic = Decode::decode(&mut extrinsic.encode().as_slice())
+                .expect("Encoded extrinsic is valid");
+            self.transaction_pool
+                .submit_one(&BlockId::hash(self.parent_hash), uxt)
                 .expect("locally signed extrinsic is valid; qed");
         }
+    }
+
+    fn round_proposer(&self, round_number: usize, authorities: &[AuthorityId]) -> AuthorityId {
+        let offset = self.primary_index(round_number, authorities.len());
+        let proposer = authorities[offset].clone();
+        debug!(target: "bft", "proposer for round {} is {}", round_number, proposer);
+
+        proposer
     }
 
     fn on_round_end(&self, round_number: usize, was_proposed: bool) {
@@ -441,14 +500,13 @@ impl<C> bft::Proposer<Block> for Proposer<C>
             let public = ed25519::Public::from_raw(primary_validator.0);
             info!(
                 "Potential Offline Validator: {} failed to propose during assigned slot: {}",
-                public,
-                round_number,
+                public, round_number,
             );
         }
 
-        self.offline.write().note_round_end(
-            primary_validator, was_proposed,
-        );
+        self.offline
+            .write()
+            .note_round_end(primary_validator, was_proposed);
     }
 }
 

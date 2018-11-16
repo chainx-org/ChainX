@@ -18,12 +18,12 @@
 
 #![cfg(test)]
 
-use primitives::BuildStorage;
-use primitives::{Perbill, traits::Identity};
 use primitives::testing::{Digest, DigestItem, Header};
-use substrate_primitives::{H256, Blake2Hasher};
+use primitives::BuildStorage;
+use primitives::{traits::Identity, Perbill};
 use runtime_io;
-use {GenesisConfig, Module, Trait, consensus, session, system, timestamp, balances};
+use substrate_primitives::{Blake2Hasher, H256};
+use {balances, consensus, session, system, timestamp, GenesisConfig, Module, Trait};
 
 impl_outer_origin!{
     pub enum Origin for Test {}
@@ -77,58 +77,107 @@ pub fn new_test_ext(
     sessions_per_era: u64,
     current_era: u64,
     monied: bool,
-    reward: u64
+    reward: u64,
 ) -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap();
-    let balance_factor = if ext_deposit > 0 {
-        256
-    } else {
-        1
-    };
-    t.extend(consensus::GenesisConfig::<Test>{
-        code: vec![],
-        authorities: vec![],
-    }.build_storage().unwrap());
-    t.extend(session::GenesisConfig::<Test>{
-        session_length,
-        validators: vec![10, 20],
-    }.build_storage().unwrap());
-    t.extend(balances::GenesisConfig::<Test>{
-        balances: if monied {
-            if reward > 0 {
-                vec![(1, 10 * balance_factor), (2, 20 * balance_factor), (3, 30 * balance_factor), (4, 40 * balance_factor), (10, balance_factor), (20, balance_factor)]
+    let mut t = system::GenesisConfig::<Test>::default()
+        .build_storage()
+        .unwrap();
+    let balance_factor = if ext_deposit > 0 { 256 } else { 1 };
+    t.extend(
+        consensus::GenesisConfig::<Test> {
+            code: vec![],
+            authorities: vec![],
+        }
+        .build_storage()
+        .unwrap(),
+    );
+    t.extend(
+        session::GenesisConfig::<Test> {
+            session_length,
+            validators: vec![10, 20],
+        }
+        .build_storage()
+        .unwrap(),
+    );
+    t.extend(
+        balances::GenesisConfig::<Test> {
+            balances: if monied {
+                if reward > 0 {
+                    vec![
+                        (1, 10 * balance_factor),
+                        (2, 20 * balance_factor),
+                        (3, 30 * balance_factor),
+                        (4, 40 * balance_factor),
+                        (10, balance_factor),
+                        (20, balance_factor),
+                    ]
+                } else {
+                    vec![
+                        (1, 10 * balance_factor),
+                        (2, 20 * balance_factor),
+                        (3, 30 * balance_factor),
+                        (4, 40 * balance_factor),
+                    ]
+                }
             } else {
-                vec![(1, 10 * balance_factor), (2, 20 * balance_factor), (3, 30 * balance_factor), (4, 40 * balance_factor)]
-            }
-        } else {
-            vec![(10, balance_factor), (20, balance_factor)]
-        },
-        transaction_base_fee: 0,
-        transaction_byte_fee: 0,
-        existential_deposit: ext_deposit,
-        transfer_fee: 0,
-        creation_fee: 0,
-        reclaim_rebate: 0,
-    }.build_storage().unwrap());
+                vec![(10, balance_factor), (20, balance_factor)]
+            },
+            transaction_base_fee: 0,
+            transaction_byte_fee: 0,
+            existential_deposit: ext_deposit,
+            transfer_fee: 0,
+            creation_fee: 0,
+            reclaim_rebate: 0,
+        }
+        .build_storage()
+        .unwrap(),
+    );
     let initial_authorities = vec![10, 20];
-    t.extend(GenesisConfig::<Test>{
-        sessions_per_era,
-        current_era,
-        intentions: vec![10, 20],
-        intention_profiles: initial_authorities.clone().into_iter().map(|i| (i, initial_authorities.clone().iter().position(|&r| r == i).unwrap().to_string().into_bytes().to_vec(), b"chianx.org".to_vec())).collect(),
-        validator_count: 2,
-        reward_per_sec: 3,
-        minimum_validator_count: 0,
-        bonding_duration: sessions_per_era * session_length,
-        session_reward: Perbill::from_millionths((1000000 * reward / balance_factor) as u32),
-        offline_slash: if monied { Perbill::from_percent(40) } else { Perbill::zero() },
-        current_session_reward: reward,
-        current_offline_slash: 20,
-        offline_slash_grace: 0,
-    }.build_storage().unwrap());
-    t.extend(timestamp::GenesisConfig::<Test>{
-        period: 5
-    }.build_storage().unwrap());
+    t.extend(
+        GenesisConfig::<Test> {
+            sessions_per_era,
+            current_era,
+            intentions: vec![10, 20],
+            intention_profiles: initial_authorities
+                .clone()
+                .into_iter()
+                .map(|i| {
+                    (
+                        i,
+                        initial_authorities
+                            .clone()
+                            .iter()
+                            .position(|&r| r == i)
+                            .unwrap()
+                            .to_string()
+                            .into_bytes()
+                            .to_vec(),
+                        b"chianx.org".to_vec(),
+                    )
+                })
+                .collect(),
+            validator_count: 2,
+            reward_per_sec: 3,
+            minimum_validator_count: 0,
+            bonding_duration: sessions_per_era * session_length,
+            session_reward: Perbill::from_millionths((1000000 * reward / balance_factor) as u32),
+            offline_slash: if monied {
+                Perbill::from_percent(40)
+            } else {
+                Perbill::zero()
+            },
+            current_session_reward: reward,
+            current_offline_slash: 20,
+            offline_slash_grace: 0,
+        }
+        .build_storage()
+        .unwrap(),
+    );
+    t.extend(
+        timestamp::GenesisConfig::<Test> { period: 5 }
+            .build_storage()
+            .unwrap(),
+    );
     runtime_io::TestExternalities::new(t)
 }
 

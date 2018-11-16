@@ -42,12 +42,12 @@ extern crate srml_system as system;
 
 // for chainx runtime module lib
 #[cfg(test)]
-extern crate cxrml_system as cxsystem;
-#[cfg(test)]
 extern crate cxrml_associations as associations;
-extern crate cxrml_support as cxsupport;
-extern crate cxrml_tokenbalances as tokenbalances;
 extern crate cxrml_exchange_pendingorders as pendingorders;
+extern crate cxrml_support as cxsupport;
+#[cfg(test)]
+extern crate cxrml_system as cxsystem;
+extern crate cxrml_tokenbalances as tokenbalances;
 
 #[cfg(test)]
 mod tests;

@@ -1,32 +1,29 @@
 // Copyright 2018 chainpool
-extern crate primitives as btc_primitives;
-extern crate chain as btc_chain;
 extern crate base58;
+extern crate chain as btc_chain;
 extern crate cxrml_exchange_pendingorders;
 extern crate cxrml_tokenbalances;
 extern crate keys;
+extern crate primitives as btc_primitives;
 
-use self::cxrml_exchange_pendingorders::OrderPair;
 use self::base58::FromBase58;
-use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilVotingConfig, DemocracyConfig,
-                     SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
-                     ContractConfig, Permill, Perbill,
-                     CXSystemConfig,
-                     TokenBalancesConfig, Token,
-                     MultiSigConfig, BalancesConfigCopy,
-                     AssociationsConfig,
-                     WithdrawalConfig,
-                     BridgeOfBTCConfig, Params, BridgeOfBTC,
-                     PendingOrdersConfig, MatchOrderConfig};
+use self::cxrml_exchange_pendingorders::OrderPair;
+use chainx_runtime::{
+    AssociationsConfig, BalancesConfig, BalancesConfigCopy, BridgeOfBTC, BridgeOfBTCConfig,
+    CXSystemConfig, ConsensusConfig, ContractConfig, CouncilVotingConfig, DemocracyConfig,
+    GenesisConfig, MatchOrderConfig, MultiSigConfig, Params, PendingOrdersConfig, Perbill, Permill,
+    SessionConfig, StakingConfig, TimestampConfig, Token, TokenBalancesConfig, TreasuryConfig,
+    WithdrawalConfig,
+};
 
 use super::cli::ChainSpec;
-use keyring::Keyring;
 use ed25519;
+use keyring::Keyring;
 
-use self::btc_primitives::{hash::H256, compact::Compact};
 use self::btc_chain::BlockHeader;
-use self::keys::DisplayLayout;
+use self::btc_primitives::{compact::Compact, hash::H256};
 use self::cxrml_tokenbalances::TokenT;
+use self::keys::DisplayLayout;
 
 pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
     let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
@@ -46,10 +43,9 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         ChainSpec::Multi => vec![auth1, auth2, auth3, auth4],
     };
 
-
-//    const MILLICENTS: u128 = 1_000_000_000;
-//    const CENTS: u128 = 1_000 * MILLICENTS;	// assume this is worth about a cent.
-//    const DOLLARS: u128 = 100 * CENTS;
+    //    const MILLICENTS: u128 = 1_000_000_000;
+    //    const CENTS: u128 = 1_000 * MILLICENTS;	// assume this is worth about a cent.
+    //    const DOLLARS: u128 = 100 * CENTS;
 
     const SECS_PER_BLOCK: u64 = 3;
     const MINUTES: u64 = 60 / SECS_PER_BLOCK;

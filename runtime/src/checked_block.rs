@@ -2,7 +2,9 @@
 
 //! Typesafe block interaction.
 
-use super::{Call, Block, AccountId, TIMESTAMP_SET_POSITION, NOTE_OFFLINE_POSITION, BLOCK_PRODUCER_POSITION};
+use super::{
+    AccountId, Block, Call, BLOCK_PRODUCER_POSITION, NOTE_OFFLINE_POSITION, TIMESTAMP_SET_POSITION,
+};
 use timestamp::Call as TimestampCall;
 //use session::Call as SessionCall;
 use cxsystem::Call as CXSystemCall;
@@ -20,8 +22,8 @@ impl CheckedBlock {
             .extrinsics
             .get(TIMESTAMP_SET_POSITION as usize)
             .map_or(false, |xt| {
-                !xt.is_signed() &&
-                    match xt.function {
+                !xt.is_signed()
+                    && match xt.function {
                         Call::Timestamp(TimestampCall::set(_)) => true,
                         _ => false,
                     }
@@ -48,7 +50,8 @@ impl CheckedBlock {
 
     /// Extract the timestamp from the block.
     pub fn timestamp(&self) -> ::chainx_primitives::Timestamp {
-        let x = self.inner
+        let x = self
+            .inner
             .extrinsics
             .get(TIMESTAMP_SET_POSITION as usize)
             .and_then(|xt| match xt.function {
@@ -102,7 +105,7 @@ impl ::std::ops::Deref for CheckedBlock {
 /// in case it isn't.
 #[macro_export]
 macro_rules! assert_chainx_block {
-	($block: expr) => {
-		$crate::CheckedBlock::new_unchecked($block, file!(), line!())
-	}
+    ($block: expr) => {
+        $crate::CheckedBlock::new_unchecked($block, file!(), line!())
+    };
 }

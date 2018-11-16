@@ -1,15 +1,16 @@
 // Copyright 2018 Chainpool
 
-use super::{Trait, Transaction, TransactionOutput, TransactionInput, UTXOStorage, OutPoint,
-            TxStorage, Bytes, ReceiveAddress, RedeemScript, Result, Script, TxProposal,
-            CandidateTx};
 use super::builder::Builder;
-use super::keys::{Address, Type, Public};
-use super::{PhantomData, Vec};
+use super::keys::{Address, Public, Type};
 use super::StorageValue;
-use super::{SignatureChecker, TransactionSignatureChecker, TransactionInputSigner,
-            SignatureVersion};
-
+use super::{
+    Bytes, CandidateTx, OutPoint, ReceiveAddress, RedeemScript, Result, Script, Trait, Transaction,
+    TransactionInput, TransactionOutput, TxProposal, TxStorage, UTXOStorage,
+};
+use super::{PhantomData, Vec};
+use super::{
+    SignatureChecker, SignatureVersion, TransactionInputSigner, TransactionSignatureChecker,
+};
 
 fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, output: &TransactionOutput) -> bool {
     let tx_signer: TransactionInputSigner = tx.clone().into();
@@ -100,9 +101,7 @@ pub struct Proposal<T: Trait>(PhantomData<T>);
 impl<T: Trait> Proposal<T> {
     pub fn create_proposal(address: Vec<(Address, u64)>, fee: u64) -> Result {
         if None != <TxProposal<T>>::get() {
-            return Err(
-                "There are candidates to reflect that the transaction is being processed",
-            );
+            return Err("There are candidates to reflect that the transaction is being processed");
         }
 
         let mut tx = Transaction {

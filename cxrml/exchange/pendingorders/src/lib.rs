@@ -42,10 +42,10 @@ extern crate srml_system as system;
 
 // for chainx runtime module lib
 #[cfg(test)]
-extern crate cxrml_system as cxsystem;
-#[cfg(test)]
 extern crate cxrml_associations as associations;
 extern crate cxrml_support as cxsupport;
+#[cfg(test)]
+extern crate cxrml_system as cxsystem;
 extern crate cxrml_tokenbalances as tokenbalances;
 //extern crate cxrml_exchange_matchorder as matchorder;
 
@@ -59,33 +59,33 @@ use runtime_primitives::traits::{As, Member, SimpleArithmetic, Zero};
 use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
-use tokenbalances::{Symbol, ReservedType};
+use tokenbalances::{ReservedType, Symbol};
 
 pub trait Trait: tokenbalances::Trait {
     type Amount: Parameter
-    + Member
-    + Codec
-    + SimpleArithmetic
-    + As<u8>
-    + As<u16>
-    + As<u32>
-    + As<u64>
-    + As<u128>
-    + Copy
-    + Zero
-    + Default;
+        + Member
+        + Codec
+        + SimpleArithmetic
+        + As<u8>
+        + As<u16>
+        + As<u32>
+        + As<u64>
+        + As<u128>
+        + Copy
+        + Zero
+        + Default;
     type Price: Parameter
-    + Member
-    + Codec
-    + SimpleArithmetic
-    + As<u8>
-    + As<u16>
-    + As<u32>
-    + As<u64>
-    + As<u128>
-    + Copy
-    + Zero
-    + Default;
+        + Member
+        + Codec
+        + SimpleArithmetic
+        + As<u8>
+        + As<u16>
+        + As<u32>
+        + As<u64>
+        + As<u128>
+        + Copy
+        + Zero
+        + Default;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -188,10 +188,20 @@ impl<T: Trait> Module<T> {
         price: T::Price,
     ) -> Result {
         let transactor = ensure_signed(origin)?;
-        info!("put_order:{:?} {:?} {:?} {:?} {:?}  ", transactor.clone(), pair.clone(), ordertype, amount, price);
+        info!(
+            "put_order:{:?} {:?} {:?} {:?} {:?}  ",
+            transactor.clone(),
+            pair.clone(),
+            ordertype,
+            amount,
+            price
+        );
         //判断交易对是否存在
         if let Err(_) = Self::is_valid_pair(&pair) {
-            error!("put_order: not a existed pair in orderpair list {:?}", pair.clone());
+            error!(
+                "put_order: not a existed pair in orderpair list {:?}",
+                pair.clone()
+            );
             return Err("not a existed pair in orderpair list");
         }
         //判定 数量和价格
@@ -215,24 +225,28 @@ impl<T: Trait> Module<T> {
                         sender.clone(),
                         pair.second.clone(),
                     )) < sum
-                        {
-                            error!("put_order: transactor's free token balance too low, can't put buy order");
-                            return Err("transactor's free token balance too low, can't put buy order");
-                        }
+                    {
+                        error!("put_order: transactor's free token balance too low, can't put buy order");
+                        return Err("transactor's free token balance too low, can't put buy order");
+                    }
                     //  锁定用户资产
-                    if let Err(msg) = <tokenbalances::Module<T>>::reserve(sender, &pair.second, sum, ReservedType::Exchange)
-                        {
-                            error!("put_order: buy tokenbalance reserve:{:?}", msg);
-                            return Err(msg);
-                        }
+                    if let Err(msg) = <tokenbalances::Module<T>>::reserve(
+                        sender,
+                        &pair.second,
+                        sum,
+                        ReservedType::Exchange,
+                    ) {
+                        error!("put_order: buy tokenbalance reserve:{:?}", msg);
+                        return Err(msg);
+                    }
                 }
                 OrderType::Sell => {
                     if <tokenbalances::Module<T>>::free_token(&(sender.clone(), pair.first.clone()))
                         < As::sa(amount.as_())
-                        {
-                            error!("put_order: transactor's free token balance too low, can't put sell order");
-                            return Err("transactor's free token balance too low, can't put sell order");
-                        }
+                    {
+                        error!("put_order: transactor's free token balance too low, can't put sell order");
+                        return Err("transactor's free token balance too low, can't put sell order");
+                    }
                     //  锁定用户资产
                     if let Err(msg) = <tokenbalances::Module<T>>::reserve(
                         sender,
@@ -256,16 +270,21 @@ impl<T: Trait> Module<T> {
                 index: new_last_index,
                 class: ordertype,
                 user: sender.clone(),
-                amount: amount,
+                amount,
                 hasfill_amount: Zero::zero(),
-                price: price,
+                price,
                 create_time: <system::Module<T>>::block_number(),
                 lastupdate_time: <system::Module<T>>::block_number(),
                 status: OrderStatus::FillNo,
                 fill_index: Default::default(),
             };
             Self::insert_order(new_last_index, &order);
-            info!("put_order: insert new order {:?} {:?} {}", sender.clone(), pair.clone(), new_last_index);
+            info!(
+                "put_order: insert new order {:?} {:?} {}",
+                sender.clone(),
+                pair.clone(),
+                new_last_index
+            );
             // 记录日志
             Self::deposit_event(RawEvent::PutOrder(
                 sender.clone(),
@@ -310,7 +329,12 @@ impl<T: Trait> Module<T> {
     }
     pub fn cancel_order(origin: T::Origin, pair: OrderPair, index: u64) -> Result {
         let transactor = ensure_signed(origin)?;
-        info!("cancel_order:{:?} {:?} {:?} ", transactor.clone(), pair.clone(), index);
+        info!(
+            "cancel_order:{:?} {:?} {:?} ",
+            transactor.clone(),
+            pair.clone(),
+            index
+        );
 
         if let Some(mut order) = Self::order_of((transactor.clone(), pair.clone(), index)) {
             match order.status {
@@ -323,7 +347,12 @@ impl<T: Trait> Module<T> {
                     };
                     order.lastupdate_time = <system::Module<T>>::block_number();
                     Self::insert_order(index, &order);
-                    info!("cancel_order:{:?} {} {:?}", transactor.clone(), index, order.status);
+                    info!(
+                        "cancel_order:{:?} {} {:?}",
+                        transactor.clone(),
+                        index,
+                        order.status
+                    );
                     //回退用户资产
                     let back_symbol: Symbol = match order.class {
                         OrderType::Sell => pair.clone().first,
@@ -331,9 +360,7 @@ impl<T: Trait> Module<T> {
                     };
 
                     let back_amount: <T as tokenbalances::Trait>::TokenBalance = match order.class {
-                        OrderType::Sell => {
-                            As::sa(order.amount.as_() - order.hasfill_amount.as_())
-                        }
+                        OrderType::Sell => As::sa(order.amount.as_() - order.hasfill_amount.as_()),
                         OrderType::Buy => As::sa(
                             (order.amount.as_() - order.hasfill_amount.as_()) * order.price.as_(),
                         ),
@@ -397,51 +424,62 @@ impl<T: Trait> Module<T> {
         maker_fee: T::Amount,
         taker_fee: T::Amount,
     ) -> Result {
-        info!("fill_order:{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", pair.clone(), maker_user, taker_user, maker_user_order_index, taker_user_order_index, price, amount, maker_fee, taker_fee);
+        info!(
+            "fill_order:{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+            pair.clone(),
+            maker_user,
+            taker_user,
+            maker_user_order_index,
+            taker_user_order_index,
+            price,
+            amount,
+            maker_fee,
+            taker_fee
+        );
 
         //逻辑校验 在调用方撮合模块中实现，此处只维护挂单、成交历史、资产转移
         let new_last_fill_index = Self::last_fill_index_of_pair(&pair) + 1;
 
         //更新maker对应的订单
         let maker_order = if let Some(mut maker_order) =
-        Self::order_of((maker_user.clone(), pair.clone(), maker_user_order_index))
-            {
-                maker_order.fill_index.push(new_last_fill_index);
-                maker_order.hasfill_amount = maker_order.hasfill_amount + amount;
-                if maker_order.hasfill_amount == maker_order.amount {
-                    maker_order.status = OrderStatus::FillAll;
-                } else if maker_order.hasfill_amount < maker_order.amount {
-                    maker_order.status = OrderStatus::FillPart;
-                } else {
-                    error!("fill_order: maker order has not enough amount");
-                    return Err(" maker order has not enough amount");
-                }
-
-                maker_order.lastupdate_time = <system::Module<T>>::block_number();
-                maker_order
+            Self::order_of((maker_user.clone(), pair.clone(), maker_user_order_index))
+        {
+            maker_order.fill_index.push(new_last_fill_index);
+            maker_order.hasfill_amount = maker_order.hasfill_amount + amount;
+            if maker_order.hasfill_amount == maker_order.amount {
+                maker_order.status = OrderStatus::FillAll;
+            } else if maker_order.hasfill_amount < maker_order.amount {
+                maker_order.status = OrderStatus::FillPart;
             } else {
+                error!("fill_order: maker order has not enough amount");
+                return Err(" maker order has not enough amount");
+            }
+
+            maker_order.lastupdate_time = <system::Module<T>>::block_number();
+            maker_order
+        } else {
             error!("fill_order: maker cann't find this maker order");
             return Err("cann't find this maker order");
         };
 
         //更新taker对应的订单
         let taker_order = if let Some(mut taker_order) =
-        Self::order_of((taker_user.clone(), pair.clone(), taker_user_order_index))
-            {
-                taker_order.fill_index.push(new_last_fill_index);
-                taker_order.hasfill_amount = taker_order.hasfill_amount + amount;
-                if taker_order.hasfill_amount == taker_order.amount {
-                    taker_order.status = OrderStatus::FillAll;
-                } else if taker_order.hasfill_amount < taker_order.amount {
-                    taker_order.status = OrderStatus::FillPart;
-                } else {
-                    error!("fill_order: taker order has not enough amount");
-                    return Err(" taker order has not enough amount");
-                }
-
-                taker_order.lastupdate_time = <system::Module<T>>::block_number();
-                taker_order
+            Self::order_of((taker_user.clone(), pair.clone(), taker_user_order_index))
+        {
+            taker_order.fill_index.push(new_last_fill_index);
+            taker_order.hasfill_amount = taker_order.hasfill_amount + amount;
+            if taker_order.hasfill_amount == taker_order.amount {
+                taker_order.status = OrderStatus::FillAll;
+            } else if taker_order.hasfill_amount < taker_order.amount {
+                taker_order.status = OrderStatus::FillPart;
             } else {
+                error!("fill_order: taker order has not enough amount");
+                return Err(" taker order has not enough amount");
+            }
+
+            taker_order.lastupdate_time = <system::Module<T>>::block_number();
+            taker_order
+        } else {
             error!("fill_order: taker cann't find this maker order");
             return Err("cann't find this taker order");
         };
@@ -454,10 +492,10 @@ impl<T: Trait> Module<T> {
             taker_user: taker_user.clone(),
             maker_user_order_index: maker_order.index,
             taker_user_order_index: taker_order.index,
-            price: price,
-            amount: amount,
-            maker_fee: maker_fee,
-            taker_fee: taker_fee,
+            price,
+            amount,
+            maker_fee,
+            taker_fee,
             time: <system::Module<T>>::block_number(),
         };
         Self::insert_fill(&fill);
@@ -563,7 +601,9 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         _fee_account: &T::AccountId,
     ) -> Result {
-        if let Err(msg) = <tokenbalances::Module<T>>::unreserve(from, symbol, value, ReservedType::Exchange) {
+        if let Err(msg) =
+            <tokenbalances::Module<T>>::unreserve(from, symbol, value, ReservedType::Exchange)
+        {
             return Err(msg);
         }
         //fee 外部算好了
@@ -627,9 +667,9 @@ pub struct OrderPair {
 impl OrderPair {
     pub fn new(first: Symbol, second: Symbol, precision: u32) -> Self {
         return OrderPair {
-            first: first,
-            second: second,
-            precision: precision,
+            first,
+            second,
+            precision,
         };
     }
 }
@@ -648,12 +688,12 @@ impl Default for OrderPair {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Fill<Pair, AccountId, Amount, Price, BlockNumber>
-    where
-        Pair: Clone,
-        AccountId: Clone,
-        Amount: Copy,
-        Price: Copy,
-        BlockNumber: Copy,
+where
+    Pair: Clone,
+    AccountId: Clone,
+    Amount: Copy,
+    Price: Copy,
+    BlockNumber: Copy,
 {
     pair: Pair,
     index: u128,
@@ -669,12 +709,12 @@ pub struct Fill<Pair, AccountId, Amount, Price, BlockNumber>
 }
 
 impl<Pair, AccountId, Amount, Price, BlockNumber> Fill<Pair, AccountId, Amount, Price, BlockNumber>
-    where
-        Pair: Clone,
-        AccountId: Clone,
-        Amount: Copy,
-        Price: Copy,
-        BlockNumber: Copy,
+where
+    Pair: Clone,
+    AccountId: Clone,
+    Amount: Copy,
+    Price: Copy,
+    BlockNumber: Copy,
 {
     pub fn pair(&self) -> Pair {
         self.pair.clone()
@@ -724,12 +764,12 @@ pub type FillT<T> = Fill<
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Order<Pair, AccountId, Amount, Price, BlockNumber>
-    where
-        Pair: Clone,
-        AccountId: Clone,
-        Amount: Copy,
-        Price: Copy,
-        BlockNumber: Copy,
+where
+    Pair: Clone,
+    AccountId: Clone,
+    Amount: Copy,
+    Price: Copy,
+    BlockNumber: Copy,
 {
     pair: Pair,
     index: u64,
@@ -745,12 +785,12 @@ pub struct Order<Pair, AccountId, Amount, Price, BlockNumber>
 }
 
 impl<Pair, AccountId, Amount, Price, BlockNumber> Order<Pair, AccountId, Amount, Price, BlockNumber>
-    where
-        Pair: Clone,
-        AccountId: Clone,
-        Amount: Copy,
-        Price: Copy,
-        BlockNumber: Copy,
+where
+    Pair: Clone,
+    AccountId: Clone,
+    Amount: Copy,
+    Price: Copy,
+    BlockNumber: Copy,
 {
     pub fn new(
         pair: Pair,
@@ -766,17 +806,17 @@ impl<Pair, AccountId, Amount, Price, BlockNumber> Order<Pair, AccountId, Amount,
         fill_index: Vec<u128>,
     ) -> Self {
         return Order {
-            pair: pair,
-            index: index,
-            class: class,
-            user: user,
-            amount: amount,
-            hasfill_amount: hasfill_amount,
-            price: price,
-            create_time: create_time,
-            lastupdate_time: lastupdate_time,
-            status: status,
-            fill_index: fill_index,
+            pair,
+            index,
+            class,
+            user,
+            amount,
+            hasfill_amount,
+            price,
+            create_time,
+            lastupdate_time,
+            status,
+            fill_index,
         };
     }
     pub fn pair(&self) -> Pair {

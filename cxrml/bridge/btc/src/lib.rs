@@ -17,11 +17,11 @@ extern crate parity_codec as codec;
 // for substrate
 // Needed for the set of mock primitives used in our tests.
 #[cfg(feature = "std")]
-extern crate substrate_primitives;
+extern crate base58;
 #[cfg(feature = "std")]
 extern crate rustc_hex as hex;
 #[cfg(feature = "std")]
-extern crate base58;
+extern crate substrate_primitives;
 
 // for substrate runtime
 // map!, vec! marco.
@@ -33,57 +33,57 @@ extern crate sr_primitives as runtime_primitives;
 // Needed for type-safe access to storage DB.
 #[macro_use]
 extern crate srml_support as runtime_support;
-extern crate srml_system as system;
-extern crate srml_balances as balances;
-extern crate srml_timestamp as timestamp;
-#[cfg(test)]
-extern crate cxrml_system as cxsystem;
 #[cfg(test)]
 extern crate cxrml_associations as associations;
+extern crate cxrml_funds_financialrecords as financial_records;
 #[cfg(test)]
 extern crate cxrml_support as cxsupport;
+#[cfg(test)]
+extern crate cxrml_system as cxsystem;
 extern crate cxrml_tokenbalances as tokenbalances;
-extern crate cxrml_funds_financialrecords as finacial_recordes;
+extern crate srml_balances as balances;
+extern crate srml_system as system;
+extern crate srml_timestamp as timestamp;
 
 // bitcoin-rust
-extern crate serialization as ser;
-extern crate primitives;
-extern crate bitcrypto;
 extern crate bit_vec;
-extern crate script;
-extern crate merkle;
+extern crate bitcrypto;
 extern crate chain;
 extern crate keys;
+extern crate merkle;
+extern crate primitives;
+extern crate script;
+extern crate serialization as ser;
 
 #[cfg(test)]
 mod tests;
 
-mod verify_header;
+mod b58;
 mod blockchain;
 mod tx;
-mod b58;
+mod verify_header;
 
+use chain::{BlockHeader, Transaction as BTCTransaction};
 use codec::Decode;
+use primitives::compact::Compact;
+use primitives::hash::H256;
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
-use runtime_support::dispatch::{Result, Parameter};
-use runtime_support::{StorageValue, StorageMap};
 use runtime_primitives::traits::OnFinalise;
-use system::ensure_signed;
+use runtime_support::dispatch::{Parameter, Result};
+use runtime_support::{StorageMap, StorageValue};
 use ser::deserialize;
-use chain::{BlockHeader, Transaction as BTCTransaction};
-use primitives::hash::H256;
-use primitives::compact::Compact;
+use system::ensure_signed;
 
-use blockchain::Chain;
-use tx::{UTXO, validate_transaction, handle_input, handle_output, handle_proposal};
-use keys::DisplayLayout;
-pub use tx::RelayTx;
 pub use blockchain::BestHeader;
+use blockchain::Chain;
+use keys::DisplayLayout;
 pub use keys::{Address, Error as AddressError};
+pub use tx::RelayTx;
+use tx::{handle_input, handle_output, handle_proposal, validate_transaction, UTXO};
 
-pub trait Trait
-: system::Trait + balances::Trait + timestamp::Trait + finacial_recordes::Trait
+pub trait Trait:
+    system::Trait + balances::Trait + timestamp::Trait + financial_records::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -148,13 +148,13 @@ impl Params {
         retargeting_factor: u32,
     ) -> Params {
         Params {
-            max_bits: max_bits,
-            block_max_future: block_max_future,
-            max_fork_route_preset: max_fork_route_preset,
+            max_bits,
+            block_max_future,
+            max_fork_route_preset,
 
-            target_timespan_seconds: target_timespan_seconds,
-            target_spacing_seconds: target_spacing_seconds,
-            retargeting_factor: retargeting_factor,
+            target_timespan_seconds,
+            target_spacing_seconds,
+            retargeting_factor,
 
             double_spacing_seconds: target_spacing_seconds / 10,
 
@@ -274,9 +274,8 @@ impl<T: Trait> Module<T> {
     pub fn push_header(origin: T::Origin, header: Vec<u8>) -> Result {
         let from = ensure_signed(origin)?;
         // parse header
-        let header: BlockHeader = deserialize(header.as_slice()).map_err(
-            |_| "can't deserialize the header vec",
-        )?;
+        let header: BlockHeader =
+            deserialize(header.as_slice()).map_err(|_| "can't deserialize the header vec")?;
         Self::process_header(header, &from)?;
         Ok(())
     }
@@ -284,9 +283,7 @@ impl<T: Trait> Module<T> {
     pub fn push_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
         let from = ensure_signed(origin)?;
 
-        let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or(
-            "parse RelayTx err",
-        )?;
+        let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("parse RelayTx err")?;
         Self::process_tx(tx, &from)?;
         Ok(())
     }
@@ -294,14 +291,12 @@ impl<T: Trait> Module<T> {
     pub fn propose_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
         let from = ensure_signed(origin)?;
 
-        let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or(
-            "parse transaction err",
-        )?;
+        let tx: BTCTransaction =
+            Decode::decode(&mut tx.as_slice()).ok_or("parse transaction err")?;
         Self::process_btc_tx(tx, &from)?;
         Ok(())
     }
 }
-
 
 impl<T: Trait> Module<T> {
     pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
@@ -316,23 +311,22 @@ impl<T: Trait> Module<T> {
 
         // orphan block check
         if <BlockHeaderFor<T>>::exists(&header.previous_header_hash) == false {
-            return Err(
-                "can't find the prev header in ChainX, may be a orphan block",
-            );
+            return Err("can't find the prev header in ChainX, may be a orphan block");
         }
         // check
         {
-            let c = verify_header::HeaderVerifier::new::<T>(&header).map_err(
-                |e| e.info(),
-            )?;
+            let c = verify_header::HeaderVerifier::new::<T>(&header).map_err(|e| e.info())?;
             c.check::<T>()?;
         }
         // insert valid header into storage
-        <BlockHeaderFor<T>>::insert(header.hash(), (
-            header.clone(),
-            who.clone(),
-            <system::Module<T>>::block_number(),
-        ));
+        <BlockHeaderFor<T>>::insert(
+            header.hash(),
+            (
+                header.clone(),
+                who.clone(),
+                <system::Module<T>>::block_number(),
+            ),
+        );
 
         <Chain<T>>::insert_best_header(header).map_err(|e| e.info())?;
 

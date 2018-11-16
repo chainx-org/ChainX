@@ -1,28 +1,31 @@
 // Copyright 2018 chainpool.
 
-extern crate sr_primitives as runtime_primitives;
-extern crate substrate_executor as substrate_executor;
-extern crate substrate_client_db as client_db;
-extern crate substrate_client as client;
 extern crate parity_codec as codec;
-extern crate substrate_primitives;
 extern crate sr_io as runtime_io;
+extern crate sr_primitives as runtime_primitives;
 extern crate srml_executive;
+extern crate substrate_client as client;
+extern crate substrate_client_db as client_db;
+extern crate substrate_executor as substrate_executor;
+extern crate substrate_primitives;
 
+extern crate chainx_executor;
 extern crate chainx_primitives as primitives;
 extern crate chainx_runtime as runtime;
-extern crate chainx_executor;
 
-use primitives::{
-    AccountId, Block, BlockId, Hash, Index, SessionKey, Timestamp, BlockNumber,
-    UncheckedExtrinsic, InherentData,
-};
-use runtime_primitives::{transaction_validity::TransactionValidity, traits::{CurrentHeight, BlockNumberToHash}};
+use chainx_executor::NativeExecutor;
 use client::block_builder::BlockBuilder as ClientBlockBuilder;
 pub use client::error::{Error, ErrorKind, Result};
-use substrate_primitives::Blake2Hasher;
-use chainx_executor::NativeExecutor;
+use primitives::{
+    AccountId, Block, BlockId, BlockNumber, Hash, Index, InherentData, SessionKey, Timestamp,
+    UncheckedExtrinsic,
+};
 use runtime::Address;
+use runtime_primitives::{
+    traits::{BlockNumberToHash, CurrentHeight},
+    transaction_validity::TransactionValidity,
+};
+use substrate_primitives::Blake2Hasher;
 
 mod implement;
 
@@ -40,11 +43,12 @@ pub type TExecutor = client::LocalCallExecutor<TBackend, NativeExecutor<chainx_e
 pub type TClient = client::Client<TBackend, TExecutor, Block>;
 pub type TClientBlockBuilder = ClientBlockBuilder<TBackend, TExecutor, Block, Blake2Hasher>;
 
-
 /// Trait encapsulating the ChainX API.
 ///
 /// All calls should fail when the exact runtime is unknown.
-pub trait ChainXApi: CurrentHeight<BlockNumber=BlockNumber> + BlockNumberToHash<BlockNumber=BlockNumber, Hash=Hash> {
+pub trait ChainXApi:
+    CurrentHeight<BlockNumber = BlockNumber> + BlockNumberToHash<BlockNumber = BlockNumber, Hash = Hash>
+{
     /// The block builder for this API type.
     type BlockBuilder: BlockBuilder;
 
@@ -73,14 +77,22 @@ pub trait ChainXApi: CurrentHeight<BlockNumber=BlockNumber> + BlockNumberToHash<
     /// and an error if we can't evaluate for some reason.
     fn evaluate_block(&self, at: &BlockId, block: Block) -> Result<bool>;
 
-    fn validate_transaction(&self, at: &BlockId, transaction: UncheckedExtrinsic) -> Result<TransactionValidity>;
+    fn validate_transaction(
+        &self,
+        at: &BlockId,
+        transaction: UncheckedExtrinsic,
+    ) -> Result<TransactionValidity>;
 
     /// Build a block on top of the given, with inherent extrinsics pre-pushed.
     fn build_block(&self, at: &BlockId, inherent_data: InherentData) -> Result<Self::BlockBuilder>;
 
     /// Attempt to produce the (encoded) inherent extrinsics for a block being built upon the given.
     /// This may vary by runtime and will fail if a runtime doesn't follow the same API.
-    fn inherent_extrinsics(&self, at: &BlockId, inherent_data: InherentData) -> Result<Vec<UncheckedExtrinsic>>;
+    fn inherent_extrinsics(
+        &self,
+        at: &BlockId,
+        inherent_data: InherentData,
+    ) -> Result<Vec<UncheckedExtrinsic>>;
 }
 
 /// Mark for all ChainX API implementations, that are making use of state data, stored locally.

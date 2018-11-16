@@ -3,7 +3,6 @@
 //! The ChainX runtime. This can be compiled with ``#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
@@ -22,12 +21,11 @@ extern crate sr_primitives as runtime_primitives;
 extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive;
-extern crate substrate_primitives;
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
+extern crate srml_balances as balances;
 extern crate srml_consensus as consensus;
 extern crate srml_contract as contract;
-extern crate srml_balances as balances;
 extern crate srml_council as council;
 extern crate srml_democracy as democracy;
 extern crate srml_executive as executive;
@@ -35,22 +33,22 @@ extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
+extern crate substrate_primitives;
 // cx runtime module
-extern crate cxrml_system as cxsystem;
-extern crate cxrml_support as cxsupport;
-extern crate cxrml_staking as staking;
-extern crate cxrml_tokenbalances as tokenbalances;
-extern crate cxrml_multisig as multisig;
 extern crate cxrml_associations as associations;
+extern crate cxrml_multisig as multisig;
+extern crate cxrml_staking as staking;
+extern crate cxrml_support as cxsupport;
+extern crate cxrml_system as cxsystem;
+extern crate cxrml_tokenbalances as tokenbalances;
 // chainx runtime bridge
 extern crate cxrml_bridge_btc as bridge_btc;
 // funds
 extern crate cxrml_funds_financialrecords as financialrecords;
 extern crate cxrml_funds_withdrawal as withdrawal;
 // exchange
-extern crate cxrml_exchange_pendingorders as pendingorders;
 extern crate cxrml_exchange_matchorder as matchorder;
-
+extern crate cxrml_exchange_pendingorders as pendingorders;
 
 #[macro_use]
 extern crate sr_version as version;
@@ -62,44 +60,46 @@ mod checked_block;
 pub use balances::address::Address as RawAddress;
 #[cfg(feature = "std")]
 pub use checked_block::CheckedBlock;
-pub use runtime_primitives::{Permill, Perbill};
+pub use runtime_primitives::{Perbill, Permill};
 pub use tokenbalances::Token;
 
-use rstd::prelude::*;
-use substrate_primitives::u32_trait::{_2, _4};
-use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature};
-use timestamp::Call as TimestampCall;
-pub use consensus::Call as ConsensusCall;
-use cxsystem::Call as CXSystemCall;
 use chainx_primitives::InherentData;
-use runtime_primitives::generic;
-use runtime_primitives::traits::{Convert, BlakeTwo256, DigestItem};
+use chainx_primitives::{
+    AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature,
+};
+pub use consensus::Call as ConsensusCall;
 use council::{motions as council_motions, voting as council_voting};
-use version::{RuntimeVersion, ApiId};
+use cxsystem::Call as CXSystemCall;
+use rstd::prelude::*;
+use runtime_primitives::generic;
+use runtime_primitives::traits::{BlakeTwo256, Convert, DigestItem};
+use substrate_primitives::u32_trait::{_2, _4};
+use timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 use version::NativeVersion;
+use version::{ApiId, RuntimeVersion};
 
 // for set consensus period
-pub use timestamp::BlockPeriod;
 pub use srml_support::StorageValue;
+pub use timestamp::BlockPeriod;
 
 #[cfg(feature = "std")]
-pub use multisig::BalancesConfigCopy;
-#[cfg(feature = "std")]
 pub use bridge_btc::Params;
+#[cfg(feature = "std")]
+pub use multisig::BalancesConfigCopy;
 
 pub fn inherent_extrinsics(data: InherentData) -> Vec<UncheckedExtrinsic> {
     let mut inherent = vec![generic::UncheckedMortalExtrinsic::new_unsigned(
-        Call::Timestamp(TimestampCall::set(data.timestamp))
+        Call::Timestamp(TimestampCall::set(data.timestamp)),
     )];
 
     inherent.push(generic::UncheckedMortalExtrinsic::new_unsigned(
-        Call::CXSystem(CXSystemCall::set_block_producer(data.block_producer))
+        Call::CXSystem(CXSystemCall::set_block_producer(data.block_producer)),
     ));
 
     if !data.offline_indices.is_empty() {
         inherent.push(generic::UncheckedMortalExtrinsic::new_unsigned(
-            Call::Consensus(ConsensusCall::note_offline(data.offline_indices))
+            Call::Consensus(ConsensusCall::note_offline(data.offline_indices)),
         ));
     }
 
@@ -261,15 +261,14 @@ impl withdrawal::Trait for Runtime {}
 
 // exchange
 impl pendingorders::Trait for Runtime {
-    type Event = Event;
     type Amount = TokenBalance;
     type Price = TokenBalance;
+    type Event = Event;
 }
 
 impl matchorder::Trait for Runtime {
     type Event = Event;
 }
-
 
 impl DigestItem for Log {
     type Hash = Hash;
@@ -337,7 +336,8 @@ pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Index, 
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, Balances, AllModules>;
+pub type Executive =
+    executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, Balances, AllModules>;
 
 // define tokenbalances module type
 pub type TokenBalance = u128;

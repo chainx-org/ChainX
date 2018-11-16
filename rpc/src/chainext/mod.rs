@@ -12,11 +12,11 @@ mod error;
 use self::error::Result;
 
 build_rpc_trait! {
-	pub trait ChainApiExt<Hash, Header, Number, Extrinsic> {
+    pub trait ChainApiExt<Hash, Header, Number, Extrinsic> {
 
-		#[rpc(name = "chainext_getBlockByNumber")]
-		fn block_info(&self, Trailing<Number>) -> Result<Option<SignedBlock<Header, Extrinsic, Hash>>>;
-	}
+        #[rpc(name = "chainext_getBlockByNumber")]
+        fn block_info(&self, Trailing<Number>) -> Result<Option<SignedBlock<Header, Extrinsic, Hash>>>;
+    }
 }
 
 pub struct ChainExt<B, E, Block: BlockT> {
@@ -30,11 +30,11 @@ impl<B, E, Block: BlockT> ChainExt<B, E, Block> {
 }
 
 impl<B, E, Block> ChainApiExt<Block::Hash, Block::Header, NumberFor<Block>, Block::Extrinsic>
-for ChainExt<B, E, Block>
-    where
-        Block: BlockT + 'static,
-        B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
-        E: client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static,
+    for ChainExt<B, E, Block>
+where
+    Block: BlockT + 'static,
+    B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
+    E: client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static,
 {
     fn block_info(
         &self,

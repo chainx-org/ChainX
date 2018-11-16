@@ -1,17 +1,16 @@
-use substrate_primitives::{H256, Blake2Hasher};
+use substrate_primitives::{Blake2Hasher, H256};
 
-use primitives::BuildStorage;
-use primitives::traits::BlakeTwo256;
 use primitives::testing::{Digest, DigestItem, Header};
+use primitives::traits::BlakeTwo256;
+use primitives::BuildStorage;
 use runtime_io;
 use runtime_io::with_externalities;
 
 use super::*;
 
-
 impl_outer_origin! {
-        pub enum Origin for Test {}
-    }
+    pub enum Origin for Test {}
+}
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
@@ -51,21 +50,29 @@ type CXSystem = cxsystem::Module<Test>;
 type CXSupport = Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut r = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+    let mut r = system::GenesisConfig::<Test>::default()
+        .build_storage()
+        .unwrap();
     // balances
-    r.extend(balances::GenesisConfig::<Test> {
-        balances: vec![(1, 1000), (2, 510), (3, 1000)],
-        transaction_base_fee: 0,
-        transaction_byte_fee: 0,
-        existential_deposit: 0,
-        transfer_fee: 0,
-        creation_fee: 0,
-        reclaim_rebate: 0,
-    }.build_storage().unwrap());
+    r.extend(
+        balances::GenesisConfig::<Test> {
+            balances: vec![(1, 1000), (2, 510), (3, 1000)],
+            transaction_base_fee: 0,
+            transaction_byte_fee: 0,
+            existential_deposit: 0,
+            transfer_fee: 0,
+            creation_fee: 0,
+            reclaim_rebate: 0,
+        }
+        .build_storage()
+        .unwrap(),
+    );
     // cxsystem
-    r.extend(cxsystem::GenesisConfig::<Test> {
-        death_account: 100,
-    }.build_storage().unwrap());
+    r.extend(
+        cxsystem::GenesisConfig::<Test> { death_account: 100 }
+            .build_storage()
+            .unwrap(),
+    );
 
     r.into()
 }
