@@ -41,6 +41,13 @@ impl balances::Trait for Test {
     type Event = ();
 }
 
+impl cxsystem::Trait for Test {}
+
+impl associations::Trait for Test {
+    type OnCalcFee = cxsupport::Module<Test>;
+    type Event = ();
+}
+
 impl cxsupport::Trait for Test {}
 
 impl pendingorders::Trait for Test {

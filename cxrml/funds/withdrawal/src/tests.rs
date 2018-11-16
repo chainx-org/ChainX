@@ -39,6 +39,13 @@ impl balances::Trait for Test {
     type Event = ();
 }
 
+impl cxsystem::Trait for Test {}
+
+impl associations::Trait for Test {
+    type OnCalcFee = cxsupport::Module<Test>;
+    type Event = ();
+}
+
 impl cxsupport::Trait for Test {}
 
 impl consensus::Trait for Test {
@@ -47,7 +54,6 @@ impl consensus::Trait for Test {
     type SessionKey = u64;
     type OnOfflineValidator = ();
 }
-
 
 impl timestamp::Trait for Test {
     const TIMESTAMP_SET_POSITION: u32 = 0;
@@ -90,8 +96,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         reclaim_rebate: 0,
     }.build_storage().unwrap());
     // token balance
-    let,
-        "verify btc addr err" t: Token = Token::new(btc::Module::<Test>::SYMBOL.to_vec(), b"btc token".to_vec(), 8);
+    let t: Token = Token::new(btc::Module::<Test>::SYMBOL.to_vec(), b"btc token".to_vec(), 8);
 
     r.extend(tokenbalances::GenesisConfig::<Test> {
         chainx_precision: 8,

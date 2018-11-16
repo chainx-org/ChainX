@@ -1,0 +1,151 @@
+//! this module is for bch-bridge
+
+#![cfg_attr(not(feature = "std"), no_std)]
+// for encode/decode
+// Needed for deriving `Serialize` and `Deserialize` for various types.
+// We only implement the serde traits for std builds - they're unneeded
+// in the wasm runtime.
+#[cfg(feature = "std")]
+#[macro_use]
+extern crate serde_derive;
+
+// Needed for deriving `Encode` and `Decode` for `RawEvent`.
+#[macro_use]
+extern crate parity_codec_derive;
+extern crate parity_codec as codec;
+
+// for substrate
+// Needed for the set of mock primitives used in our tests.
+#[cfg(feature = "std")]
+extern crate substrate_primitives;
+
+// for substrate runtime
+// map!, vec! marco.
+extern crate sr_std as rstd;
+// Needed for tests (`with_externalities`).
+#[cfg(feature = "std")]
+extern crate sr_io as runtime_io;
+extern crate sr_primitives as runtime_primitives;
+// for substrate runtime module lib
+// Needed for type-safe access to storage DB.
+#[macro_use]
+extern crate srml_support as runtime_support;
+extern crate srml_system as system;
+extern crate srml_balances as balances;
+
+#[cfg(test)]
+mod tests;
+
+use rstd::prelude::*;
+use runtime_support::dispatch::Result;
+use runtime_support::{StorageMap, StorageValue};
+use runtime_primitives::traits::{OnFinalise, CheckedAdd, CheckedSub};
+
+use system::ensure_signed;
+
+pub trait OnCalcFee<AccountId, Balance> {
+    fn on_calc_fee(who: &AccountId, total_fee: Balance) -> Result;
+}
+
+impl<AccountId, Balance> OnCalcFee<AccountId, Balance> for () {
+    fn on_calc_fee(_: &AccountId, _: Balance) -> Result { Ok(()) }
+}
+
+pub trait Trait: system::Trait + balances::Trait {
+    type OnCalcFee: OnCalcFee<Self::AccountId, Self::Balance>;
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+}
+
+decl_event!(
+    pub enum Event<T> where
+        <T as system::Trait>::AccountId,
+        <T as balances::Trait>::Balance
+    {
+        InitAccount(AccountId, AccountId, Balance),
+        InitExchangeAccount(AccountId, AccountId),
+    }
+);
+
+decl_module! {
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        fn init_account(origin, who: T::AccountId, value: T::Balance) -> Result;
+        fn init_exchange_relationship(origin, who: T::AccountId) -> Result;
+    }
+}
+
+impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
+    fn on_finalise(_: T::BlockNumber) {
+        // do nothing
+    }
+}
+
+decl_storage! {
+    trait Store for Module<T: Trait> as BridgeOfBCH {
+        pub Relationship get(relationship): map T::AccountId => Option<T::AccountId>;
+        pub TokenRelationship get(token_relationship): map (Vec<u8>, T::AccountId) => Vec<u8>;
+        pub ExchangeRelationship get(exchange_relationship): map T::AccountId => Option<T::AccountId>;
+        // fee
+        pub InitFee get(init_fee) config(): T::Balance;
+    }
+}
+
+impl<T: Trait> Module<T> {
+    // event
+    /// Deposit one of this module's events.
+    fn deposit_event(event: Event<T>) {
+        <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
+    }
+}
+
+impl<T: Trait> Module<T> {
+    pub fn init_account(origin: T::Origin, who: T::AccountId, value: T::Balance) -> Result {
+        let from = ensure_signed(origin)?;
+        // deduct fee first
+        T::OnCalcFee::on_calc_fee(&from, Self::init_fee())?;
+
+        if Self::relationship(&who).is_some() {
+            return Err("has register this account");
+        } else {
+            if balances::FreeBalance::<T>::exists(&who) {
+                return Err("this account is exist");
+            }
+        }
+        Relationship::<T>::insert(&who, from.clone());
+
+        let from_balance = balances::Module::<T>::free_balance(&from);
+        let to_balance = balances::Module::<T>::free_balance(&who);
+
+        let new_from_balance = match from_balance.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("balance too low to send value"),
+        };
+        let new_to_balance = match to_balance.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("destination balance too high to receive value"),
+        };
+
+        balances::Module::<T>::set_free_balance(&from, new_from_balance);
+        balances::Module::<T>::set_free_balance(&who, new_to_balance);
+
+        Self::deposit_event(RawEvent::InitAccount(from, who, value));
+        Ok(())
+    }
+
+    pub fn init_exchange_relationship(origin: T::Origin, who: T::AccountId) -> Result {
+        let from = ensure_signed(origin)?;
+        // deduct fee first
+        T::OnCalcFee::on_calc_fee(&from, Self::init_fee())?;
+
+        if Self::exchange_relationship(&who).is_some() {
+            return Err("has register this account");
+        } else {
+            if balances::FreeBalance::<T>::exists(&who) {
+                return Err("this account is exist");
+            }
+        }
+        ExchangeRelationship::<T>::insert(&who, from.clone());
+        Self::deposit_event(RawEvent::InitExchangeAccount(from, who));
+        Ok(())
+    }
+}
+

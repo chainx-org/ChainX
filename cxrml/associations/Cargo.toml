@@ -1,7 +1,8 @@
 [package]
-name = "cxrml-exchange-pendingorders"
+name = "cxrml-associations"
 version = "0.1.0"
-authors = ["Chainpool <https://www.chainx.org>"]
+authors = ["Chainpool <http://chainx.org>"]
+
 
 [dependencies]
 hex-literal = "0.1.0"
@@ -17,14 +18,6 @@ srml-support = { git = "https://github.com/paritytech/substrate", default_featur
 srml-system = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-balances = { git = "https://github.com/paritytech/substrate", default_features = false }
 
-log = "0.4"
-
-# cxrml module
-cxrml-system = { path = "../../system", default-features = false }
-cxrml-associations = { path = "../../associations", default-features = false }
-cxrml-support = { path = "../../support", default_features = false }
-cxrml-tokenbalances = { path = "../../tokenbalances", default_features = false }
-
 [features]
 default = ["std"]
 std=[
@@ -39,8 +32,4 @@ std=[
     "srml-support/std",
     "srml-system/std",
     "srml-balances/std",
-    "cxrml-system/std",
-    "cxrml-associations/std",
-    "cxrml-support/std",
-    "cxrml-tokenbalances/std",
 ]

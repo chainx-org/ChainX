@@ -38,6 +38,10 @@ extern crate srml_timestamp as timestamp;
 extern crate srml_consensus as consensus;
 
 // chainx runtime module
+#[cfg(test)]
+extern crate cxrml_system as cxsystem;
+#[cfg(test)]
+extern crate cxrml_associations as associations;
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_tokenbalances as tokenbalances;
 extern crate cxrml_funds_financialrecords as financialrecords;

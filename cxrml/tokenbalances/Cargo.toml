@@ -18,6 +18,8 @@ srml-system = { git = "https://github.com/paritytech/substrate", default_feature
 srml-balances = { git = "https://github.com/paritytech/substrate", default_features = false }
 
 # cxrml module
+cxrml-system = { path = "../system", default-features = false }
+cxrml-associations = { path = "../associations", default-features = false }
 cxrml-support = { path = "../support",  default_features = false }
 
 [features]
@@ -34,5 +36,7 @@ std=[
     "srml-support/std",
     "srml-system/std",
     "srml-balances/std",
+    "cxrml-system/std",
+    "cxrml-associations/std",
     "cxrml-support/std",
 ]

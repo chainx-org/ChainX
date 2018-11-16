@@ -21,6 +21,8 @@ srml-timestamp = { git = "https://github.com/paritytech/substrate", default_feat
 srml-consensus = { git = "https://github.com/paritytech/substrate", default_features = false }
 
 # cxrml
+cxrml-system = { path = "../../system", default-features = false }
+cxrml-associations = { path = "../../associations", default-features = false }
 cxrml-support = { path = "../../support", default_features = false }
 cxrml-tokenbalances = { path = "../../tokenbalances", default_features = false }
 cxrml-funds-financialrecords = { path = "../financialrecords", default_features = false }
@@ -46,6 +48,8 @@ std=[
     "srml-balances/std",
     "srml-timestamp/std",
     "srml-consensus/std",
+    "cxrml-system/std",
+    "cxrml-associations/std",
     "cxrml-support/std",
     "cxrml-tokenbalances/std",
     "cxrml-funds-financialrecords/std",

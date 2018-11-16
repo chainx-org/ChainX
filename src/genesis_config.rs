@@ -11,9 +11,11 @@ use self::base58::FromBase58;
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilVotingConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
                      ContractConfig, Permill, Perbill,
+                     CXSystemConfig,
                      TokenBalancesConfig, Token,
                      MultiSigConfig, BalancesConfigCopy,
-                     FinancialRecordsConfig, WithdrawalConfig,
+                     AssociationsConfig,
+                     WithdrawalConfig,
                      BridgeOfBTCConfig, Params, BridgeOfBTC,
                      PendingOrdersConfig, MatchOrderConfig};
 
@@ -129,6 +131,9 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             max_depth: 1024,
             block_gas_limit: 10_000_000,
         }),
+        cxsystem: Some(CXSystemConfig {
+            death_account: Default::default(),
+        }),
         tokenbalances: Some(TokenBalancesConfig {
             chainx_precision: 8,
             // token_list: Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>
@@ -146,8 +151,8 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             confirm_fee: 0,
             balances_config: balances_config_copy,
         }),
-        financialrecords: Some(FinancialRecordsConfig {
-            withdrawal_fee: 10,
+        associations: Some(AssociationsConfig {
+            init_fee: 10,
         }),
         withdrawal: Some(WithdrawalConfig {
             withdrawal_fee: 10,

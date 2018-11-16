@@ -55,6 +55,13 @@ impl timestamp::Trait for Test {
     type Moment = u64;
 }
 
+impl cxsystem::Trait for Test {}
+
+impl associations::Trait for Test {
+    type OnCalcFee = cxsupport::Module<Test>;
+    type Event = ();
+}
+
 impl cxsupport::Trait for Test {}
 
 impl tokenbalances::Trait for Test {

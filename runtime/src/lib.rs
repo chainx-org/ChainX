@@ -41,6 +41,7 @@ extern crate cxrml_support as cxsupport;
 extern crate cxrml_staking as staking;
 extern crate cxrml_tokenbalances as tokenbalances;
 extern crate cxrml_multisig as multisig;
+extern crate cxrml_associations as associations;
 // chainx runtime bridge
 extern crate cxrml_bridge_btc as bridge_btc;
 // funds
@@ -241,6 +242,11 @@ impl multisig::Trait for Runtime {
     type Event = Event;
 }
 
+impl associations::Trait for Runtime {
+    type OnCalcFee = CXSupport;
+    type Event = Event;
+}
+
 // bridge
 impl bridge_btc::Trait for Runtime {
     type Event = Event;
@@ -301,8 +307,9 @@ construct_runtime!(
         // chainx runtime module
         TokenBalances: tokenbalances,
         MultiSig: multisig,
+        Associations: associations,
         // funds
-        FinancialRecords: financialrecords,
+        FinancialRecords: financialrecords::{Module, Call, Storage, Event<T>},
         Withdrawal: withdrawal::{Module, Call, Config},
         // exchange
         PendingOrders : pendingorders,
@@ -313,7 +320,7 @@ construct_runtime!(
         // put end of this marco
         CXSupport: cxsupport::{Module},
         // must put end of all chainx runtime module
-        CXSystem: cxsystem::{Module, Call, Storage},
+        CXSystem: cxsystem::{Module, Call, Storage, Config},
     }
 );
 

@@ -19,6 +19,8 @@ srml-balances = { git = "https://github.com/paritytech/substrate", default_featu
 log = "0.4"
 
 # cxrml module
+cxrml-system = { path = "../../system", default-features = false }
+cxrml-associations = { path = "../../associations", default-features = false }
 cxrml-support = { path = "../../support",  default_features = false }
 cxrml-tokenbalances = { path = "../../tokenbalances",  default_features = false }
 cxrml-exchange-pendingorders = { path = "../pendingorders",  default_features = false }
@@ -37,6 +39,8 @@ std=[
     "srml-support/std",
     "srml-system/std",
     "srml-balances/std",
+    "cxrml-system/std",
+    "cxrml-associations/std",
     "cxrml-support/std",
     "cxrml-tokenbalances/std",
     "cxrml-exchange-pendingorders/std",

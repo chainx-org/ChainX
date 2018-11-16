@@ -35,6 +35,7 @@ cxrml-support = { path = "../../cxrml/support", default-features = false }
 cxrml-staking = { path = "../../cxrml/staking", default-features = false }
 cxrml-tokenbalances = { path = "../../cxrml/tokenbalances", default-features = false }
 cxrml-multisig = { path = "../../cxrml/multisig", default-features = false }
+cxrml-associations = { path = "../../cxrml/associations", default-features = false }
 # bridge
 cxrml-bridge-btc = { path = "../../cxrml/bridge/btc", default-features = false }
 # funds
@@ -70,6 +71,7 @@ std = [
     "cxrml-staking/std",
     "cxrml-tokenbalances/std",
     "cxrml-multisig/std",
+    "cxrml-associations/std",
     "cxrml-bridge-btc/std",
     "cxrml-funds-financialrecords/std",
     "cxrml-funds-withdrawal/std",

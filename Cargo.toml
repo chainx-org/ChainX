@@ -69,6 +69,7 @@ members = [
     "cxrml/tokenbalances",
     "cxrml/staking",
     "cxrml/multisig",
+    "cxrml/associations",
     "cxrml/bridge/btc",
     "cxrml/funds/financialrecords",
     "cxrml/funds/withdrawal",

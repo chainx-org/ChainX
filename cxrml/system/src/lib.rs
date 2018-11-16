@@ -22,7 +22,7 @@ extern crate substrate_primitives;
 // for substrate runtime
 // map!, vec! marco.
 extern crate sr_std as rstd;
-// Needed for tests (`with_externalities`).
+
 #[cfg(feature = "std")]
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
@@ -35,10 +35,7 @@ extern crate srml_system as system;
 #[cfg(test)]
 mod tests;
 
-//use codec::{Codec, Decode, Encode};
 use rstd::prelude::*;
-//use rstd::marker::PhantomData;
-//use rstd::result::Result as StdResult;
 use runtime_support::dispatch::Result;
 use runtime_support::StorageValue;
 use runtime_primitives::traits::OnFinalise;
@@ -63,12 +60,13 @@ impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
 
 decl_storage! {
     trait Store for Module<T: Trait> as CXSystem {
-        pub BlockProdocer get(block_producer) config(): Option<T::AccountId>;
+        pub BlockProdocer get(block_producer): Option<T::AccountId>;
+        pub DeathAccount get(death_account) config(): T::AccountId;
     }
 }
 
 impl<T: Trait> Module<T> {
-    fn set_block_producer(origin: T::Origin, producer: T::AccountId) -> Result {
+    pub fn set_block_producer(origin: T::Origin, producer: T::AccountId) -> Result {
         ensure_inherent(origin)?;
         BlockProdocer::<T>::put(producer);
         Ok(())
