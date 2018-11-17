@@ -46,7 +46,6 @@ impl associations::Trait for Test {
     type OnCalcFee = cxsupport::Module<Test>;
     type Event = ();
 }
-
 impl cxsupport::Trait for Test {}
 
 // define tokenbalances module type
@@ -68,15 +67,14 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     // balance
     r.extend(
         balances::GenesisConfig::<Test> {
-            balances: vec![(1, 10000), (2, 10000)],
+            balances: vec![(3, 10000), (4, 10000)],
             transaction_base_fee: 0,
             transaction_byte_fee: 0,
             existential_deposit: 500,
             transfer_fee: 0,
             creation_fee: 0,
             reclaim_rebate: 0,
-        }
-        .build_storage()
+        }.build_storage()
         .unwrap(),
     );
 
@@ -85,8 +83,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             order_fee: 10,
             pair_list: vec![],
             max_command_id: 0,
-        }
-        .build_storage()
+            average_price_len: 10000,
+        }.build_storage()
         .unwrap(),
     );
     r.into()
@@ -96,6 +94,8 @@ impl Trait for Test {
     type Event = ();
     type Amount = u128;
     type Price = u128;
+    const FEE_BUY_ACCOUNT: <Self as system::Trait>::AccountId = 1;
+    const FEE_DESTROY_ACCOUNT: <Self as system::Trait>::AccountId = 0;
 }
 
 type PendingOrders = Module<Test>;
@@ -174,7 +174,7 @@ fn test_order() {
 
         assert_eq!(PendingOrders::is_valid_pair(&p1), Ok(()));
 
-        let a: u64 = 1; // accountid
+        let a: u64 = 3; // accountid
 
         // 发放
         TokenBalances::issue(&a, &t_sym_eos.clone(), 500).unwrap();
@@ -187,7 +187,8 @@ fn test_order() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 2);
+        let order =
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 2, b"imtoken".to_vec());
         assert_eq!(order, Ok(()));
         // 10000-10
         assert_eq!(Balances::free_balance(&a), 9990);
@@ -201,7 +202,14 @@ fn test_order() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let order = PendingOrders::put_order(Some(a).into(), p1.clone(), sell, 100, 1000);
+        let order = PendingOrders::put_order(
+            Some(a).into(),
+            p1.clone(),
+            sell,
+            100,
+            1000,
+            b"imtoken".to_vec(),
+        );
         assert_eq!(order, Ok(()));
 
         // 10000-10-10
@@ -280,6 +288,7 @@ fn print_order(
     println!("class={:?}", order.class());
     println!("user={}", order.user());
     println!("amount={}", order.amount());
+    println!("channel={:?}", order.channel());
     println!("hasfill_amount={}", order.hasfill_amount());
     println!("price={}", order.price());
     println!("create_time={}", order.create_time());
@@ -302,7 +311,7 @@ fn print_order_list(account: <tests::Test as system::Trait>::AccountId, pair: Or
 }
 
 #[test]
-fn test_fill() {
+fn test_fill_no_fee() {
     with_externalities(&mut new_test_ext(), || {
         let t_sym_eos = b"x-eos".to_vec();
         let t_desc_eos = b"eos token".to_vec();
@@ -325,8 +334,8 @@ fn test_fill() {
         // 增加交易对
         PendingOrders::add_pair(p1.clone()).unwrap();
 
-        let a: u64 = 1; // accountid
-        let b: u64 = 2;
+        let a: u64 = 3; // accountid
+        let b: u64 = 4;
 
         // 发放
         TokenBalances::issue(&a, &t_sym_eos.clone(), 1000).unwrap();
@@ -336,7 +345,8 @@ fn test_fill() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5);
+        let a_order =
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5, b"imtoken".to_vec());
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
@@ -350,7 +360,8 @@ fn test_fill() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5);
+        let b_order =
+            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5, b"imtoken".to_vec());
         assert_eq!(b_order, Ok(()));
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
         assert_eq!(
@@ -394,6 +405,142 @@ fn test_fill() {
             TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)),
             0
         );
+
+        assert_eq!(1, PendingOrders::last_fill_index_of_pair(&p1.clone()));
+        let last_fill = PendingOrders::fill_of((p1.clone(), 1)).unwrap();
+
+        print_fill(last_fill.clone());
+
+        print_order_list(a, p1.clone());
+        print_order_list(b, p1.clone());
+
+        let last_order_index_of_eos_eth_alice =
+            PendingOrders::last_order_index_of((a.clone(), p1.clone())).unwrap();
+        let a_order_1 =
+            PendingOrders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth_alice))
+                .unwrap();
+        assert_eq!(50, a_order_1.hasfill_amount());
+        assert_eq!(OrderStatus::FillPart, a_order_1.status);
+
+        let last_order_index_of_eos_eth_bob =
+            PendingOrders::last_order_index_of((b.clone(), p1.clone())).unwrap();
+        let b_order_1 =
+            PendingOrders::order_of((b.clone(), p1.clone(), last_order_index_of_eos_eth_bob))
+                .unwrap();
+        assert_eq!(50, b_order_1.hasfill_amount());
+        assert_eq!(OrderStatus::FillAll, b_order_1.status);
+    })
+}
+
+#[test]
+fn test_fill_fee() {
+    with_externalities(&mut new_test_ext(), || {
+        let t_sym_eos = b"x-eos".to_vec();
+        let t_desc_eos = b"eos token".to_vec();
+        let precision = 4;
+        let t_eos: Token = Token::new(t_sym_eos.clone(), t_desc_eos.clone(), precision);
+        assert_eq!(TokenBalances::register_token(t_eos, 0, 0), Ok(()));
+
+        let t_sym_eth = b"x-eth".to_vec();
+        let t_desc_eth = b"eth token".to_vec();
+        let precision = 4;
+        let t_eth: Token = Token::new(t_sym_eth.clone(), t_desc_eth.clone(), precision);
+        assert_eq!(TokenBalances::register_token(t_eth, 0, 0), Ok(()));
+
+        let p1 = OrderPair {
+            first: t_sym_eos.clone(),
+            second: t_sym_eth.clone(),
+            precision: 0,
+        };
+
+        // 增加交易对
+        PendingOrders::add_pair(p1.clone()).unwrap();
+
+        let a: u64 = 3; // accountid
+        let b: u64 = 4;
+
+        // 发放
+        TokenBalances::issue(&a, &t_sym_eos.clone(), 1000).unwrap();
+        TokenBalances::issue(&a, &t_sym_eth.clone(), 1000).unwrap();
+        TokenBalances::issue(&b, &t_sym_eos.clone(), 1000).unwrap();
+        TokenBalances::issue(&b, &t_sym_eth.clone(), 1000).unwrap();
+
+        //挂买单
+        let buy = OrderType::Buy;
+        let a_order =
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5, b"imtoken".to_vec());
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
+        assert_eq!(
+            TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
+            0
+        );
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(
+            TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)),
+            500
+        );
+
+        //挂卖单
+        let sell = OrderType::Sell;
+        let b_order =
+            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5, b"imtoken".to_vec());
+        assert_eq!(b_order, Ok(()));
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
+        assert_eq!(
+            TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)),
+            50
+        );
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1000);
+        assert_eq!(
+            TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)),
+            0
+        );
+
+        print_order_list(a, p1.clone());
+        print_order_list(b, p1.clone());
+
+        let r_fill = PendingOrders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 50, 5, 5);
+        assert_eq!(Ok(()), r_fill);
+
+        //1000+250
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1045);
+        assert_eq!(
+            TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
+            0
+        );
+        //1000-500
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
+        //500-250
+        assert_eq!(
+            TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)),
+            250
+        );
+
+        //1000-50
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
+        assert_eq!(
+            TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)),
+            0
+        );
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1225);
+        assert_eq!(
+            TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)),
+            0
+        );
+
+        assert_eq!(
+            TokenBalances::free_token(&(Test::FEE_BUY_ACCOUNT, t_sym_eth.clone())),
+            25
+        );
+        assert_eq!(
+            TokenBalances::free_token(&(Test::FEE_BUY_ACCOUNT, t_sym_eos.clone())),
+            5
+        );
+        PendingOrders::clear_command_and_put_fee_buy_order();
+        // assert_eq!(TokenBalances::free_token(&(Test::FEE_BUY_ACCOUNT, t_sym_eth.clone())), 0);
+        // assert_eq!(TokenBalances::free_token(&(Test::FEE_BUY_ACCOUNT, t_sym_eos.clone())), 0);
+        // assert_eq!(TokenBalances::reserved_token(&(Test::FEE_BUY_ACCOUNT, t_sym_eth.clone(), ReservedType::Exchange)), 25);
+        // assert_eq!(TokenBalances::reserved_token(&(Test::FEE_BUY_ACCOUNT, t_sym_eos.clone(), ReservedType::Exchange)), 5);
 
         assert_eq!(1, PendingOrders::last_fill_index_of_pair(&p1.clone()));
         let last_fill = PendingOrders::fill_of((p1.clone(), 1)).unwrap();

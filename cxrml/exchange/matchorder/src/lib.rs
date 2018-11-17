@@ -58,7 +58,7 @@ use codec::Codec;
 use cxsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
 use pendingorders::{CommandType, OrderPair, OrderType};
 use runtime_primitives::traits::OnFinalise;
-use runtime_primitives::traits::{As, Zero};
+use runtime_primitives::traits::Zero;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
@@ -69,8 +69,10 @@ pub trait Trait: tokenbalances::Trait + pendingorders::Trait {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn set_match_fee(val: T::Balance) -> Result;
-
+        fn set_match_fee(val: T::Amount) -> Result;
+        fn set_taker_match_fee(val: T::Amount) -> Result;
+        fn set_maker_match_fee(val: T::Amount) -> Result;
+        fn set_fee_precision(val: T::Amount) -> Result;
     }
 }
 
@@ -78,11 +80,13 @@ decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
         <T as system::Trait>::BlockNumber,
-        <T as balances::Trait>::Balance,
         <T as pendingorders::Trait>::Amount,
         <T as pendingorders::Trait>::Price
     {
-        SetMatchFee(Balance),
+        SetMatchFee(Amount),
+        SetTakerMatchFee(Amount),
+        SetMakerMatchFee(Amount),
+        SetFeePrecision(Amount),
         AddBid(OrderPair,AccountId,u64,Price, Amount,BlockNumber),
         CancelBid(OrderPair,AccountId,u64,BlockNumber),
 
@@ -92,7 +96,10 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as MatchOrder {
-        pub MatchFee get(match_fee) config(): T::Balance;
+        pub MatchFee get(match_fee) config(): T::Amount;
+        pub TakerMatchFee get(taker_match_fee) config():T::Amount;
+        pub MakerMatchFee get(maker_match_fee) config():T::Amount;
+        pub FeePrecision get(fee_precision) config():T::Amount;
 
         // 维护有序，价格优先，时间优先
         pub BidListHeaderFor get(bidlist_header_for): map (OrderPair,OrderType) => Option<MultiNodeIndex<(OrderPair,OrderType), BidT<T>>>;
@@ -147,9 +154,8 @@ impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
         //先读取pendingorders模块的所有新挂单
 
         let max_command_id: u64 = <pendingorders::Module<T>>::max_command_id();
-        info!("on_finalise:max_command_id {:?}", max_command_id);
+
         for command_id in 1..(max_command_id + 1) {
-            info!("on_finalise: command id {:?}", command_id);
             if let Some(command) = <pendingorders::Module<T>>::command_of(command_id) {
                 if let Some(order) = <pendingorders::Module<T>>::order_of((
                     command.0.clone(),
@@ -211,7 +217,7 @@ impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
         Self::handle_match(time);
 
         //清空
-        <pendingorders::Module<T>>::clear_command();
+        <pendingorders::Module<T>>::clear_command_and_put_fee_buy_order();
     }
 }
 
@@ -220,11 +226,27 @@ impl<T: Trait> Module<T> {
     pub fn deposit_event(event: Event<T>) {
         <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
     }
-    pub fn set_match_fee(val: T::Balance) -> Result {
+    pub fn set_match_fee(val: T::Amount) -> Result {
         <MatchFee<T>>::put(val);
         Self::deposit_event(RawEvent::SetMatchFee(val));
         Ok(())
     }
+    pub fn set_maker_match_fee(val: T::Amount) -> Result {
+        <MakerMatchFee<T>>::put(val);
+        Self::deposit_event(RawEvent::SetMakerMatchFee(val));
+        Ok(())
+    }
+    pub fn set_taker_match_fee(val: T::Amount) -> Result {
+        <TakerMatchFee<T>>::put(val);
+        Self::deposit_event(RawEvent::SetTakerMatchFee(val));
+        Ok(())
+    }
+    pub fn set_fee_precision(val: T::Amount) -> Result {
+        <FeePrecision<T>>::put(val);
+        Self::deposit_event(RawEvent::SetFeePrecision(val));
+        Ok(())
+    }
+
     fn new_nodeid() -> u128 {
         let mut last_nodeid: u128 = <NodeId<T>>::get();
         last_nodeid = match last_nodeid.checked_add(1_u128) {
@@ -238,14 +260,10 @@ impl<T: Trait> Module<T> {
     //处理 撮合
     fn handle_match(_time: T::BlockNumber) {
         let max_command_id: u64 = <pendingorders::Module<T>>::max_command_id();
-        info!("handle_match:max_command_id {:?}", max_command_id);
+
         //遍历每个bid
         for command_id in 1..(max_command_id + 1) {
             if let Some(command) = <pendingorders::Module<T>>::command_of(command_id) {
-                info!(
-                    "handle_match: command id {:?} command {:?}",
-                    command_id, command.3
-                );
                 if let Some(mut in_bid_detail) = <BidOf<T>>::get(command.4) {
                     //找出该交易对的 目标单 列表
                     let find_type: OrderType = match in_bid_detail.order_type {
@@ -282,14 +300,13 @@ impl<T: Trait> Module<T> {
         //wait_bid_list 是价格有序 时间有序
         let mut need_fill: T::Amount = in_bid_detail.amount;
         let mut remove_from_wait_bid_list: Vec<BidT<T>> = Vec::new();
-        info!("do_match:{:?}", in_bid_detail);
 
         if let Some(header) = Self::bidlist_header_for((in_bid_detail.pair.clone(), find_type)) {
             let mut index = header.index();
 
-            let mut find_match = false;
             while let Some(mut node) = Self::bidlist_cache(&index) {
-                info!("do_match:index={:?} {:?}", index, find_match);
+                let mut find_match = false;
+
                 match in_bid_detail.order_type {
                     OrderType::Sell => {
                         if (need_fill != Zero::zero()) && (in_bid_detail.price <= node.data.price) {
@@ -302,7 +319,7 @@ impl<T: Trait> Module<T> {
                         }
                     }
                 }
-                //info!("do_match:index={:?} {:?}", index,find_match);
+
                 if find_match == true {
                     //找到匹配的 计算手续费 构建fill order
                     let mut fill_num: T::Amount;
@@ -326,8 +343,6 @@ impl<T: Trait> Module<T> {
                             let taker_user_order_index = in_bid_detail.order_index;
                             let order_price = match_bid.price;
                             let mut amount: T::Amount;
-                            let maker_fee: T::Amount = As::sa(0); //默认先0 手续费
-                            let taker_fee: T::Amount = As::sa(0); //默认先0 手续费
 
                             if fill_num >= match_bid.amount {
                                 amount = match_bid.amount;
@@ -341,8 +356,11 @@ impl<T: Trait> Module<T> {
                             }
 
                             fill_num = fill_num - amount;
-                            //成交
-                            if let Err(msg) = <pendingorders::Module<T>>::fill_order(
+
+                            let maker_fee: T::Amount = Self::calculation_maker_fee(amount); // 手续费
+                            let taker_fee: T::Amount = Self::calculation_taker_fee(amount); // 手续费
+                                                                                            //成交
+                            if let Err(_msg) = <pendingorders::Module<T>>::fill_order(
                                 in_bid_detail.pair.clone(),
                                 maker_user.clone(),
                                 taker_user.clone(),
@@ -353,7 +371,7 @@ impl<T: Trait> Module<T> {
                                 maker_fee,
                                 taker_fee,
                             ) {
-                                error!("do_match: match fail {:?}", msg);
+                                
                                 Self::deposit_event(RawEvent::MatchFail(
                                     match_bid.id,
                                     in_bid_detail.pair.clone(),
@@ -405,7 +423,6 @@ impl<T: Trait> Module<T> {
                 if node.data.list[mm] == remove_id[nn] {
                     remove = true;
                     <BidOf<T>>::remove(remove_id[nn]);
-                    info!("remove_from_bid_list:{:?}", remove_id[nn]);
                 }
             }
             if remove == false {
@@ -425,8 +442,6 @@ impl<T: Trait> Module<T> {
 
                 while let Some(mut node) = Self::bidlist_cache(&index) {
                     if node.data.price == remove_bid[nn].price {
-                        info!("remove_from_bid:{:?}", remove_bid[nn].price);
-
                         let _=node.remove_option_node_withkey::<LinkedMultiKey<T>, (OrderPair,OrderType)>((pair.clone(),order_type));
                         break;
                     }
@@ -442,8 +457,6 @@ impl<T: Trait> Module<T> {
     }
 
     fn insert_bid_list(in_bid_detail: &BidDetailT<T>) {
-        info!("insert_bid_list:{:?}", in_bid_detail);
-
         <BidOf<T>>::insert(in_bid_detail.id, in_bid_detail.clone());
 
         let mut finish = false;
@@ -460,7 +473,6 @@ impl<T: Trait> Module<T> {
 
                     <BidListCache<T>>::insert(node.index(), node);
 
-                    info!("insert_bid_list: insert add");
                     finish = true;
                     break;
                 }
@@ -482,11 +494,14 @@ impl<T: Trait> Module<T> {
 
                 if insert_head == true {
                     let new_nodeid = Self::new_nodeid();
+                    let mut list_vec:Vec<BidId>=Vec::new();
+                    list_vec.push(in_bid_detail.id);
+
                     let new_bid = Bid {
                         nodeid: new_nodeid,
                         price: in_bid_detail.price,
                         sum: in_bid_detail.amount,
-                        list: vec![in_bid_detail.id],
+                        list: list_vec,
                     };
 
                     let n = Node::new(new_bid);
@@ -497,7 +512,6 @@ impl<T: Trait> Module<T> {
 
                     let _=node.add_option_node_before_withkey::<LinkedMultiKey<T>, (OrderPair,OrderType)>(n,(in_bid_detail.pair.clone(),in_bid_detail.order_type));
 
-                    info!("insert_bid_list: insert head");
                     finish = true;
                     break;
                 }
@@ -512,11 +526,14 @@ impl<T: Trait> Module<T> {
         if finish == false {
             //追加在最后
             let new_nodeid = Self::new_nodeid();
+            let mut list_vec:Vec<BidId>=Vec::new();
+            list_vec.push(in_bid_detail.id);
+
             let new_bid = Bid {
                 nodeid: new_nodeid,
                 price: in_bid_detail.price,
                 sum: in_bid_detail.amount,
-                list: vec![in_bid_detail.id],
+                list: list_vec,
             };
             let n = Node::new(new_bid);
             n.init_storage_withkey::<LinkedMultiKey<T>, (OrderPair, OrderType)>((
@@ -535,14 +552,11 @@ impl<T: Trait> Module<T> {
                         );
                 }
             }
-
-            info!("insert_bid_list: insert tail");
         }
     }
 
     fn cancel_bid(in_bid_detail: &BidDetailT<T>) {
         <BidOf<T>>::remove(in_bid_detail.id);
-        info!("cancel_bid:{:?}", in_bid_detail);
 
         let mut remove_from_wait_bid_list: Vec<BidT<T>> = Vec::new();
         if let Some(header) =
@@ -558,7 +572,10 @@ impl<T: Trait> Module<T> {
                     }
                     for mm in 0..node.data.list.len() {
                         if in_bid_detail.id == node.data.list[mm] {
-                            Self::remove_from_bid_list(&mut node, &vec![in_bid_detail.id]);
+                            let mut list_vec:Vec<BidId>=Vec::new();
+                            list_vec.push(in_bid_detail.id);
+
+                            Self::remove_from_bid_list(&mut node, &list_vec);
                             break;
                         }
                     }
@@ -578,6 +595,16 @@ impl<T: Trait> Module<T> {
             in_bid_detail.order_type,
             &remove_from_wait_bid_list,
         ); //最后更新
+    }
+    fn calculation_taker_fee(amout: T::Amount) -> T::Amount {
+        let taker_match_fee = Self::taker_match_fee();
+        let fee_precision = Self::fee_precision();
+        (amout * taker_match_fee) / fee_precision
+    }
+    fn calculation_maker_fee(amout: T::Amount) -> T::Amount {
+        let maker_match_fee = Self::maker_match_fee();
+        let fee_precision = Self::fee_precision();
+        (amout * maker_match_fee) / fee_precision
     }
 }
 

@@ -47,13 +47,14 @@ impl associations::Trait for Test {
     type OnCalcFee = cxsupport::Module<Test>;
     type Event = ();
 }
-
 impl cxsupport::Trait for Test {}
 
 impl pendingorders::Trait for Test {
+    type Event = ();
     type Amount = u128;
     type Price = u128;
-    type Event = ();
+    const FEE_BUY_ACCOUNT: <Self as system::Trait>::AccountId = 1;
+    const FEE_DESTROY_ACCOUNT: <Self as system::Trait>::AccountId = 0;
 }
 
 // define tokenbalances module type
@@ -82,18 +83,16 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             transfer_fee: 0,
             creation_fee: 0,
             reclaim_rebate: 0,
-        }
-        .build_storage()
+        }.build_storage()
         .unwrap(),
     );
 
     r.extend(
         tokenbalances::GenesisConfig::<Test> {
-            chainx_precision: 8,
             token_list: vec![],
             transfer_token_fee: 10,
-        }
-        .build_storage()
+            chainx_precision: 8,
+        }.build_storage()
         .unwrap(),
     );
 
@@ -102,15 +101,19 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             order_fee: 10,
             pair_list: vec![],
             max_command_id: 0,
-        }
-        .build_storage()
+            average_price_len: 10000,
+        }.build_storage()
         .unwrap(),
     );
 
     r.extend(
-        GenesisConfig::<Test> { match_fee: 10 }
-            .build_storage()
-            .unwrap(),
+        GenesisConfig::<Test> {
+            match_fee: 10,
+            fee_precision: 100000,
+            maker_match_fee: 50,
+            taker_match_fee: 100,
+        }.build_storage()
+        .unwrap(),
     );
     r.into()
 }
@@ -164,7 +167,8 @@ fn test_match_part() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5);
+        let a_order =
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5, b"imtoken".to_vec());
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
@@ -178,7 +182,8 @@ fn test_match_part() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5);
+        let b_order =
+            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5, b"imtoken".to_vec());
         assert_eq!(b_order, Ok(()));
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
         assert_eq!(
@@ -258,7 +263,8 @@ fn test_match_all() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5);
+        let a_order =
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5, b"imtoken".to_vec());
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
@@ -272,7 +278,14 @@ fn test_match_all() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 100, 5);
+        let b_order = PendingOrders::put_order(
+            Some(b).into(),
+            p1.clone(),
+            sell,
+            100,
+            5,
+            b"imtoken".to_vec(),
+        );
         assert_eq!(b_order, Ok(()));
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 900);
         assert_eq!(
@@ -352,11 +365,13 @@ fn test_match_no() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5);
+        let a_order =
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5, b"imtoken".to_vec());
 
         //挂卖单
         let buy = OrderType::Sell;
-        let a_order = PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 7);
+        let a_order =
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 7, b"imtoken".to_vec());
 
         assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 900);
         assert_eq!(
@@ -371,11 +386,13 @@ fn test_match_no() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 6);
+        let b_order =
+            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 6, b"imtoken".to_vec());
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order = PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 7);
+        let b_order =
+            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 7, b"imtoken".to_vec());
 
         assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 900);
         assert_eq!(

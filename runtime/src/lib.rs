@@ -19,6 +19,7 @@ extern crate srml_support;
 #[macro_use]
 extern crate sr_primitives as runtime_primitives;
 extern crate parity_codec as codec;
+extern crate substrate_primitives as primitives;
 #[macro_use]
 extern crate parity_codec_derive;
 #[cfg_attr(not(feature = "std"), macro_use)]
@@ -264,6 +265,8 @@ impl pendingorders::Trait for Runtime {
     type Amount = TokenBalance;
     type Price = TokenBalance;
     type Event = Event;
+    const  FEE_BUY_ACCOUNT:AccountId = primitives::H256([1; 32]);
+    const FEE_DESTROY_ACCOUNT:AccountId = primitives::H256([0;32]);
 }
 
 impl matchorder::Trait for Runtime {
