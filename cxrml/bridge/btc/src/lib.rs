@@ -80,7 +80,7 @@ use blockchain::Chain;
 use keys::DisplayLayout;
 pub use keys::{Address, Error as AddressError};
 pub use tx::RelayTx;
-use tx::{handle_input, handle_output, handle_proposal, handle_cert, validate_transaction, UTXO};
+use tx::{handle_cert, handle_input, handle_output, handle_proposal, validate_transaction, UTXO};
 
 pub trait Trait:
     system::Trait + balances::Trait + timestamp::Trait + financial_records::Trait
@@ -355,7 +355,6 @@ impl<T: Trait> Module<T> {
             }
             TxType::SendCert => {
                 handle_cert::<T>(&tx.raw, &tx.block_hash, &who, &cert_address);
-
             }
             _ => {
                 let _utxos = handle_output::<T>(

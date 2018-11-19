@@ -3,10 +3,10 @@ extern crate srml_consensus as consensus;
 use substrate_primitives::{Blake2Hasher, H256 as S_H256};
 
 use self::base58::FromBase58;
+use self::keys::DisplayLayout;
 use super::*;
 use runtime_io;
 use runtime_io::with_externalities;
-use self::keys::DisplayLayout;
 use runtime_primitives::testing::{Digest, DigestItem, Header};
 use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;

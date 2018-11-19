@@ -83,7 +83,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             transfer_fee: 0,
             creation_fee: 0,
             reclaim_rebate: 0,
-        }.build_storage()
+        }
+        .build_storage()
         .unwrap(),
     );
 
@@ -92,7 +93,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             token_list: vec![],
             transfer_token_fee: 10,
             chainx_precision: 8,
-        }.build_storage()
+        }
+        .build_storage()
         .unwrap(),
     );
 
@@ -102,7 +104,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             pair_list: vec![],
             max_command_id: 0,
             average_price_len: 10000,
-        }.build_storage()
+        }
+        .build_storage()
         .unwrap(),
     );
 
@@ -112,7 +115,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             fee_precision: 100000,
             maker_match_fee: 50,
             taker_match_fee: 100,
-        }.build_storage()
+        }
+        .build_storage()
         .unwrap(),
     );
     r.into()

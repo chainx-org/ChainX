@@ -265,8 +265,8 @@ impl pendingorders::Trait for Runtime {
     type Amount = TokenBalance;
     type Price = TokenBalance;
     type Event = Event;
-    const  FEE_BUY_ACCOUNT:AccountId = primitives::H256([1; 32]);
-    const FEE_DESTROY_ACCOUNT:AccountId = primitives::H256([0;32]);
+    const FEE_BUY_ACCOUNT: AccountId = primitives::H256([1; 32]);
+    const FEE_DESTROY_ACCOUNT: AccountId = primitives::H256([0; 32]);
 }
 
 impl matchorder::Trait for Runtime {
@@ -296,7 +296,7 @@ construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) {
         System: system::{default, Log(ChangesTrieRoot)},
         Consensus: consensus::{Module, Call, Storage, Config, Log(AuthoritiesChange)},
-        Balances: balances,
+        Balances: balances::{Module, Storage, Config, Event<T>},  // no call for public
         Timestamp: timestamp::{Module, Call, Storage, Config},
         Session: session,
         Staking: staking,

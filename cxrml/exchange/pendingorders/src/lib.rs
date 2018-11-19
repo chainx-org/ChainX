@@ -244,16 +244,13 @@ impl<T: Trait> Module<T> {
     ) -> Result {
         //判断交易对是否存在
         if let Err(_) = Self::is_valid_pair(&pair) {
-            
             return Err("not a existed pair in orderpair list");
         }
         //判定 数量和价格
         if amount == Zero::zero() {
-            
             return Err("amount cann't be zero");
         }
         if price == Zero::zero() {
-            
             return Err("price cann't be zero");
         }
         //手续费
@@ -269,7 +266,6 @@ impl<T: Trait> Module<T> {
                         pair.second.clone(),
                     )) < sum
                     {
-                        
                         return Err("transactor's free token balance too low, can't put buy order");
                     }
                     //  锁定用户资产
@@ -279,7 +275,6 @@ impl<T: Trait> Module<T> {
                         sum,
                         ReservedType::Exchange,
                     ) {
-                       
                         return Err(msg);
                     }
                 }
@@ -287,7 +282,6 @@ impl<T: Trait> Module<T> {
                     if <tokenbalances::Module<T>>::free_token(&(sender.clone(), pair.first.clone()))
                         < As::sa(amount.as_())
                     {
-                        
                         return Err("transactor's free token balance too low, can't put sell order");
                     }
                     //  锁定用户资产
@@ -297,7 +291,6 @@ impl<T: Trait> Module<T> {
                         As::sa(amount.as_()),
                         ReservedType::Exchange,
                     ) {
-                        
                         return Err(msg);
                     }
                 }
@@ -420,7 +413,6 @@ impl<T: Trait> Module<T> {
                         back_amount,
                         ReservedType::Exchange,
                     ) {
-                        
                         return Err(msg);
                     }
 
@@ -448,7 +440,6 @@ impl<T: Trait> Module<T> {
                     ));
                 }
                 _ => {
-                    
                     return Err(
                         "order status error( FiillAll|FillPartAndCancel|Cancel) cann't be cancel",
                     );
@@ -456,7 +447,6 @@ impl<T: Trait> Module<T> {
             }
             Ok(())
         } else {
-            
             Err("cann't find this index of order")
         }
     }
@@ -486,14 +476,12 @@ impl<T: Trait> Module<T> {
             } else if maker_order.hasfill_amount < maker_order.amount {
                 maker_order.status = OrderStatus::FillPart;
             } else {
-                
                 return Err(" maker order has not enough amount");
             }
 
             maker_order.lastupdate_time = <system::Module<T>>::block_number();
             maker_order
         } else {
-            
             return Err("cann't find this maker order");
         };
 
@@ -508,14 +496,12 @@ impl<T: Trait> Module<T> {
             } else if taker_order.hasfill_amount < taker_order.amount {
                 taker_order.status = OrderStatus::FillPart;
             } else {
-               
                 return Err(" taker order has not enough amount");
             }
 
             taker_order.lastupdate_time = <system::Module<T>>::block_number();
             taker_order
         } else {
-            
             return Err("cann't find this taker order");
         };
 
@@ -554,7 +540,6 @@ impl<T: Trait> Module<T> {
                     &taker_user.clone(),
                     &maker_order.channel().clone(),
                 ) {
-                    
                     return Err(msg);
                 }
                 //计算买家的数量，解锁second,并move 给卖家,和手续费账户
@@ -569,7 +554,6 @@ impl<T: Trait> Module<T> {
                     &maker_user.clone(),
                     &taker_order.channel().clone(),
                 ) {
-                    
                     return Err(msg);
                 }
             }
@@ -586,7 +570,6 @@ impl<T: Trait> Module<T> {
                     &taker_user.clone(),
                     &maker_order.channel().clone(),
                 ) {
-                   
                     return Err(msg);
                 }
                 //计算卖家的数量，解锁second,并move 给买家,和手续费账户
@@ -601,7 +584,6 @@ impl<T: Trait> Module<T> {
                     &maker_user.clone(),
                     &taker_order.channel().clone(),
                 ) {
-                    
                     return Err(msg);
                 }
             }

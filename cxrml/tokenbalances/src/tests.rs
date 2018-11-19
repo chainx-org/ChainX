@@ -359,7 +359,75 @@ fn test_error_issue_and_destroy3() {
 }
 
 #[test]
-fn test_transfer() {
+fn test_transfer_not_init() {
+    with_externalities(&mut new_test_ext2(), || {
+        let a: u64 = 1; // accountid
+        let new_id: u64 = 100;
+        let btc_symbol = b"x-btc".to_vec();
+        TokenBalances::issue(&a, &btc_symbol.clone(), 50).unwrap();
+        assert_err!(
+            TokenBalances::transfer(Some(a).into(), new_id.into(), btc_symbol.clone(), 25),
+            "account not exist yet, should init account first"
+        );
+        assert_ok!(associations::Module::<Test>::init_account(
+            Some(a).into(),
+            new_id.into(),
+            25
+        ));
+        assert_ok!(TokenBalances::transfer(
+            Some(a).into(),
+            new_id.into(),
+            btc_symbol.clone(),
+            25
+        ));
+        assert_ok!(TokenBalances::transfer(
+            Some(a).into(),
+            new_id.into(),
+            Test::CHAINX_SYMBOL.to_vec(),
+            25
+        ));
+
+        assert_eq!(
+            TokenBalances::free_token(&(a, Test::CHAINX_SYMBOL.to_vec())),
+            1000 - 10 - 25 - 10 - 25 - 10
+        );
+        assert_eq!(
+            TokenBalances::free_token(&(new_id, Test::CHAINX_SYMBOL.to_vec())),
+            50
+        );
+    })
+}
+
+#[test]
+fn test_transfer_chainx() {
+    with_externalities(&mut new_test_ext2(), || {
+        let a: u64 = 1; // accountid
+        let b: u64 = 2; // accountid
+        assert_ok!(TokenBalances::transfer(
+            Some(a).into(),
+            b.into(),
+            Test::CHAINX_SYMBOL.to_vec(),
+            25
+        ));
+
+        assert_eq!(
+            TokenBalances::free_token(&(a, Test::CHAINX_SYMBOL.to_vec())),
+            1000 - 10 - 25
+        );
+        assert_eq!(
+            TokenBalances::free_token(&(b, Test::CHAINX_SYMBOL.to_vec())),
+            510 + 25
+        );
+
+        assert_err!(
+            TokenBalances::transfer(Some(a).into(), b.into(), Test::CHAINX_SYMBOL.to_vec(), 1000),
+            "balance too low to send value"
+        );
+    })
+}
+
+#[test]
+fn test_transfer_token() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
         let b: u64 = 2; // accountid
@@ -367,8 +435,7 @@ fn test_transfer() {
         // issue 50 to account 1
         TokenBalances::issue(&a, &btc_symbol.clone(), 50).unwrap();
         // transfer
-        TokenBalances::transfer_token(Some(a).into(), b.into(), btc_symbol.clone().clone(), 25)
-            .unwrap();
+        TokenBalances::transfer(Some(a).into(), b.into(), btc_symbol.clone(), 25).unwrap();
         // sum not change
         assert_eq!(TokenBalances::total_free_token(&btc_symbol.clone()), 150);
         assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol.clone()), 25);
@@ -376,7 +443,7 @@ fn test_transfer() {
         assert_eq!(Balances::free_balance(&a), 990);
 
         assert_err!(
-            TokenBalances::transfer_token(Some(a).into(), b.into(), btc_symbol.clone().clone(), 50),
+            TokenBalances::transfer(Some(a).into(), b.into(), btc_symbol.clone(), 50),
             "free token too low to send value"
         )
     })
@@ -390,8 +457,11 @@ fn test_transfer_to_self() {
         // issue 50 to account 1
         TokenBalances::issue(&a, &btc_symbol.clone(), 50).unwrap();
         // transfer
-        TokenBalances::transfer_token(Some(a).into(), a.into(), btc_symbol.clone().clone(), 25)
-            .unwrap();
+        assert_err!(
+            TokenBalances::transfer(Some(a).into(), a.into(), btc_symbol.clone(), 25),
+            "transactor and dest account are same"
+        );
+
         // sum not change
         assert_eq!(TokenBalances::total_free_token(&btc_symbol.clone()), 150);
         assert_eq!(TokenBalances::total_token_of(&a, &btc_symbol.clone()), 50);
@@ -408,8 +478,7 @@ fn test_transfer_err() {
         // issue 50 to account 2
         TokenBalances::issue(&b, &btc_symbol.clone(), 50).unwrap();
         // transfer
-        TokenBalances::transfer_token(Some(b).into(), a.into(), btc_symbol.clone().clone(), 25)
-            .unwrap();
+        TokenBalances::transfer(Some(b).into(), a.into(), btc_symbol.clone(), 25).unwrap();
         // sum not change
         assert_eq!(TokenBalances::total_free_token(&btc_symbol.clone()), 150);
         assert_eq!(TokenBalances::free_token(&(b, btc_symbol.clone())), 25);
@@ -417,10 +486,41 @@ fn test_transfer_err() {
         assert_eq!(Balances::free_balance(&b), 500);
 
         assert_err!(
-            TokenBalances::transfer_token(Some(b).into(), a.into(), btc_symbol.clone(), 1),
+            TokenBalances::transfer(Some(b).into(), a.into(), btc_symbol.clone(), 1),
             "chainx balance is not enough after this tx, not allow to be killed at here"
         );
         assert_eq!(Balances::free_balance(&b), 500);
+    })
+}
+
+#[test]
+fn test_set_token() {
+    with_externalities(&mut new_test_ext2(), || {
+        let a: u64 = 1; // accountid
+        let btc_symbol = b"x-btc".to_vec();
+        TokenBalances::issue(&a, &btc_symbol.clone(), 50).unwrap();
+        assert_ok!(TokenBalances::set_free_token(
+            a.into(),
+            Test::CHAINX_SYMBOL.to_vec(),
+            500
+        ));
+        assert_eq!(Balances::free_balance(&a), 500);
+
+        assert_ok!(TokenBalances::set_free_token(
+            a.into(),
+            btc_symbol.clone(),
+            500
+        ));
+        assert_eq!(TokenBalances::free_token(&(a, btc_symbol.clone())), 500);
+        assert_eq!(TokenBalances::total_token(&btc_symbol), 500 + 100);
+
+        assert_ok!(TokenBalances::set_free_token(
+            a.into(),
+            btc_symbol.clone(),
+            600
+        ));
+        assert_eq!(TokenBalances::free_token(&(a, btc_symbol.clone())), 600);
+        assert_eq!(TokenBalances::total_token(&btc_symbol), 600 + 100);
     })
 }
 
@@ -431,21 +531,21 @@ fn test_char_valid() {
         let origin = system::RawOrigin::Signed(1).into();
         let sym = b"".to_vec();
         assert_err!(
-            TokenBalances::transfer_token(origin, to.clone(), sym, 10),
+            TokenBalances::transfer(origin, to.clone(), sym, 10),
             "symbol length too long or zero"
         );
 
         let origin = system::RawOrigin::Signed(1).into();
         let sym = b"dfasdlfjkalsdjfklasjdflkasjdfklasjklfasjfkdlsajf".to_vec();
         assert_err!(
-            TokenBalances::transfer_token(origin, to.clone(), sym, 10),
+            TokenBalances::transfer(origin, to.clone(), sym, 10),
             "symbol length too long or zero"
         );
 
         let origin = system::RawOrigin::Signed(1).into();
         let sym = b"23jfkldae(".to_vec();
         assert_err!(
-            TokenBalances::transfer_token(origin, to.clone(), sym, 10),
+            TokenBalances::transfer(origin, to.clone(), sym, 10),
             "not a valid symbol char for number, capital/small letter or '-', '.', '|', '~'"
         );
 
@@ -466,7 +566,6 @@ fn test_char_valid() {
 fn test_chainx() {
     with_externalities(&mut new_test_ext2(), || {
         let a: u64 = 1; // accountid
-        let b: u64 = 2; // accountid
         let sym = Test::CHAINX_SYMBOL.to_vec();
         assert_err!(
             TokenBalances::issue(&a, &sym, 100),
@@ -491,11 +590,6 @@ fn test_chainx() {
         assert_err!(
             TokenBalances::destroy(&a, &sym, 50, Default::default()),
             "can't destroy chainx token"
-        );
-
-        assert_err!(
-            TokenBalances::transfer_token(Some(b).into(), a.into(), sym.clone(), 1),
-            "not allow to transfer chainx use transfer_token"
         );
     })
 }

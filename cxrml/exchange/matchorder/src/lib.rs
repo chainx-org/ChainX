@@ -371,7 +371,6 @@ impl<T: Trait> Module<T> {
                                 maker_fee,
                                 taker_fee,
                             ) {
-                                
                                 Self::deposit_event(RawEvent::MatchFail(
                                     match_bid.id,
                                     in_bid_detail.pair.clone(),
@@ -494,7 +493,7 @@ impl<T: Trait> Module<T> {
 
                 if insert_head == true {
                     let new_nodeid = Self::new_nodeid();
-                    let mut list_vec:Vec<BidId>=Vec::new();
+                    let mut list_vec: Vec<BidId> = Vec::new();
                     list_vec.push(in_bid_detail.id);
 
                     let new_bid = Bid {
@@ -526,7 +525,7 @@ impl<T: Trait> Module<T> {
         if finish == false {
             //追加在最后
             let new_nodeid = Self::new_nodeid();
-            let mut list_vec:Vec<BidId>=Vec::new();
+            let mut list_vec: Vec<BidId> = Vec::new();
             list_vec.push(in_bid_detail.id);
 
             let new_bid = Bid {
@@ -572,7 +571,7 @@ impl<T: Trait> Module<T> {
                     }
                     for mm in 0..node.data.list.len() {
                         if in_bid_detail.id == node.data.list[mm] {
-                            let mut list_vec:Vec<BidId>=Vec::new();
+                            let mut list_vec: Vec<BidId> = Vec::new();
                             list_vec.push(in_bid_detail.id);
 
                             Self::remove_from_bid_list(&mut node, &list_vec);

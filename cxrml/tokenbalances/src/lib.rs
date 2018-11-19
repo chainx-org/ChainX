@@ -30,7 +30,6 @@ extern crate srml_balances as balances;
 extern crate srml_system as system;
 
 // for chainx runtime module lib
-#[cfg(test)]
 extern crate cxrml_associations as associations;
 extern crate cxrml_support as cxsupport;
 #[cfg(test)]
@@ -51,6 +50,7 @@ use runtime_support::{Parameter, StorageMap, StorageValue};
 
 // substrate mod
 use balances::address::Address;
+use balances::EnsureAccountLiquid;
 use system::ensure_signed;
 // use balances::EnsureAccountLiquid;
 
@@ -204,7 +204,11 @@ decl_module! {
         /// register_token to module, should allow by root
         fn register_token(token: Token, free: T::TokenBalance, reversed: T::TokenBalance) -> Result;
         /// transfer between account
-        fn transfer_token(origin, dest: Address<T::AccountId, T::AccountIndex>, sym: Symbol, value: T::TokenBalance) -> Result;
+        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, sym: Symbol, value: T::TokenBalance) -> Result;
+        /// set free token for an account
+        fn set_free_token(who: Address<T::AccountId, T::AccountIndex>, sym: Symbol, free: T::TokenBalance) -> Result;
+        /// set reserved token for an account
+        fn set_reserved_token(who: Address<T::AccountId, T::AccountIndex>, sym: Symbol, reserved: T::TokenBalance, res_type: ReservedType) -> Result;
         // set transfer token fee
         fn set_transfer_token_fee(val: T::Balance) -> Result;
     }
@@ -228,8 +232,10 @@ decl_event!(
         UnreverseToken(AccountId, Symbol, TokenBalance),
         /// destroy
         DestroyToken(AccountId, Symbol, TokenBalance),
-        /// Transfer succeeded (from, to, symbol, value, fees).
-        TransferToken(AccountId, AccountId, Symbol, TokenBalance, Balance),
+        /// Transfer chainx succeeded
+        TransferChainX(AccountId, AccountId, Balance),
+        /// Transfer token succeeded (from, to, symbol, value, fees).
+        TransferToken(AccountId, AccountId, Symbol, TokenBalance),
         /// Move Free Token, include chainx (from, to, symbol, value)
         MoveFreeToken(AccountId, AccountId, Symbol, TokenBalance),
         /// set transfer token fee
@@ -257,7 +263,7 @@ decl_storage! {
         /// total locked token of a symbol
         pub TotalReservedToken get(total_reserved_token): map Symbol => T::TokenBalance;
 
-        pub ReservedToken get(reserved_token): map (T::AccountId, Symbol, ReservedType) => T::TokenBalance;
+        pub ReservedToken: map (T::AccountId, Symbol, ReservedType) => T::TokenBalance;
 
         /// token list of a account
         pub TokenListOf get(token_list_of): map T::AccountId => Vec<Symbol> = [T::CHAINX_SYMBOL.to_vec()].to_vec();
@@ -330,11 +336,19 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    pub fn reserved_token(who_sym: &(T::AccountId, Symbol, ReservedType)) -> T::TokenBalance {
+        if who_sym.1.as_slice() == T::CHAINX_SYMBOL {
+            As::sa(balances::ReservedBalance::<T>::get(&who_sym.0).as_())
+        } else {
+            <ReservedToken<T>>::get(who_sym)
+        }
+    }
+
     /// The combined token balance of `who` for symbol.
     pub fn total_token_of(who: &T::AccountId, symbol: &Symbol) -> T::TokenBalance {
         let mut v = Self::free_token(&(who.clone(), symbol.clone()));
         for t in ReservedType::iterator() {
-            v += Self::reserved_token((who.clone(), symbol.clone(), *t))
+            v += Self::reserved_token(&(who.clone(), symbol.clone(), *t))
         }
         v
     }
@@ -770,57 +784,181 @@ impl TokenErr {
 }
 
 impl<T: Trait> Module<T> {
+    fn transfer_chainx(from: &T::AccountId, to: &T::AccountId, value: T::Balance) -> Result {
+        let from_balance = balances::Module::<T>::free_balance(from);
+        let to_balance = balances::Module::<T>::free_balance(to);
+
+        let new_from_balance = match from_balance.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("balance too low to send value"),
+        };
+
+        let new_to_balance = match to_balance.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("destination balance too high to receive value"),
+        };
+
+        balances::Module::<T>::set_free_balance(&from, new_from_balance);
+        balances::Module::<T>::set_free_balance_creating(&to, new_to_balance);
+
+        Self::deposit_event(RawEvent::TransferChainX(from.clone(), to.clone(), value));
+        Ok(())
+    }
+
+    fn transfer_token(
+        from: &T::AccountId,
+        to: &T::AccountId,
+        sym: &Symbol,
+        value: T::TokenBalance,
+    ) -> Result {
+        Self::is_valid_token_for(from, sym)?;
+        Self::init_token_for(to, sym);
+
+        let key_from = (from.clone(), sym.clone());
+        let key_to = (to.clone(), sym.clone());
+
+        // get storage
+        let from_token = FreeToken::<T>::get(&key_from);
+        let to_token = FreeToken::<T>::get(&key_to);
+        // check
+        let new_from_token = match from_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("free token too low to send value"),
+        };
+        let new_to_token = match to_token.checked_add(&value) {
+            Some(b) => b,
+            None => return Err("destination free token too high to receive value"),
+        };
+        // set to storage
+        FreeToken::<T>::insert(&key_from, new_from_token);
+        FreeToken::<T>::insert(&key_to, new_to_token);
+
+        Self::deposit_event(RawEvent::TransferToken(
+            from.clone(),
+            to.clone(),
+            sym.clone(),
+            value,
+        ));
+        Ok(())
+    }
+
     // public call
     /// transfer token between accountid, notice the fee is chainx
-    pub fn transfer_token(
+    pub fn transfer(
         origin: T::Origin,
         dest: balances::Address<T>,
         sym: Symbol,
         value: T::TokenBalance,
     ) -> Result {
-        if sym.as_slice() == T::CHAINX_SYMBOL {
-            return Err("not allow to transfer chainx use transfer_token");
-        }
         let transactor = ensure_signed(origin)?;
-        Self::is_valid_token_for(&transactor, &sym)?;
-        let dest = <balances::Module<T>>::lookup(dest)?;
-        Self::init_token_for(&dest, &sym);
+        let dest = balances::Module::<T>::lookup(dest)?;
+        // sub fee first
+        cxsupport::Module::<T>::handle_fee_before(
+            &transactor,
+            Self::transfer_token_fee(),
+            true,
+            || Ok(()),
+        )?;
+        // if account not exist, init it first
+        if associations::Module::<T>::is_init(&dest) == false {
+            return Err("account not exist yet, should init account first");
+        }
 
-        let fee = Self::transfer_token_fee();
+        if transactor == dest {
+            return Err("transactor and dest account are same");
+        }
 
-        let key_from = (transactor.clone(), sym.clone());
-        let key_to = (dest.clone(), sym.clone());
+        T::EnsureAccountLiquid::ensure_account_liquid(&transactor)?;
 
-        let sender = &transactor;
-        let receiver = &dest;
-        <cxsupport::Module<T>>::handle_fee_after(sender, fee, true, || {
-            // get storage
-            let from_token = FreeToken::<T>::get(&key_from);
-            let to_token = FreeToken::<T>::get(&key_to);
-            // check
-            let new_from_token = match from_token.checked_sub(&value) {
-                Some(b) => b,
-                None => return Err("free token too low to send value"),
-            };
-            let new_to_token = match to_token.checked_add(&value) {
-                Some(b) => b,
-                None => return Err("destination free token too high to receive value"),
-            };
-            if sender != receiver {
-                // set to storage
-                FreeToken::<T>::insert(&key_from, new_from_token);
-                FreeToken::<T>::insert(&key_to, new_to_token);
-                Self::deposit_event(RawEvent::TransferToken(
-                    sender.clone(),
-                    receiver.clone(),
-                    sym.clone(),
-                    value,
-                    fee,
-                ));
+        // chainx transfer
+        if sym.as_slice() == T::CHAINX_SYMBOL {
+            let value: T::Balance = As::sa(value.as_() as u64); // change to balance for balances module
+            Self::transfer_chainx(&transactor, &dest, value)
+        } else {
+            Self::transfer_token(&transactor, &dest, &sym, value)
+        }
+    }
+
+    pub fn set_free_token(who: balances::Address<T>, sym: Symbol, free: T::TokenBalance) -> Result {
+        let who = balances::Module::<T>::lookup(who)?;
+        // for chainx
+        if sym.as_slice() == T::CHAINX_SYMBOL {
+            let free: T::Balance = As::sa(free.as_() as u64); // change to balance for balances module
+            balances::Module::<T>::set_free_balance(&who, free);
+            return Ok(());
+        }
+        // other token
+        let key = (who.clone(), sym.clone());
+        let old_free = Self::free_token(&key);
+        let old_total_free = Self::total_free_token(&sym);
+
+        if old_free == free {
+            return Err("some value for free token");
+        }
+
+        let new_total_free = if free > old_free {
+            match free.checked_sub(&old_free) {
+                None => return Err("free token too low to sub value"),
+                Some(b) => match old_total_free.checked_add(&b) {
+                    None => return Err("old total free token too high to add value"),
+                    Some(new) => new,
+                },
             }
-            Ok(())
-        })?;
+        } else {
+            match old_free.checked_sub(&free) {
+                None => return Err("old free token too low to sub value"),
+                Some(b) => match old_total_free.checked_sub(&b) {
+                    None => return Err("old total free token too low to sub value"),
+                    Some(new) => new,
+                },
+            }
+        };
+        TotalFreeToken::<T>::insert(sym, new_total_free);
+        FreeToken::<T>::insert(key, free);
+        Ok(())
+    }
 
+    pub fn set_reserved_token(
+        who: Address<T::AccountId, T::AccountIndex>,
+        sym: Symbol,
+        reserved: T::TokenBalance,
+        res_type: ReservedType,
+    ) -> Result {
+        let who = balances::Module::<T>::lookup(who)?;
+        // for chainx
+        if sym.as_slice() == T::CHAINX_SYMBOL {
+            let reserved: T::Balance = As::sa(reserved.as_() as u64); // change to balance for balances module
+            balances::Module::<T>::set_reserved_balance(&who, reserved);
+            return Ok(());
+        }
+        // other token
+        let key = (who.clone(), sym.clone(), res_type);
+        let old_reserved = Self::reserved_token(&key);
+        let old_total_reserved = Self::total_reserved_token(&sym);
+
+        if old_reserved == reserved {
+            return Err("some value for reserved token");
+        }
+
+        let new_total_reserved = if reserved > old_reserved {
+            match reserved.checked_sub(&old_reserved) {
+                None => return Err("reserved token too low to sub value"),
+                Some(b) => match old_total_reserved.checked_add(&b) {
+                    None => return Err("old total reserved token too high to add value"),
+                    Some(new) => new,
+                },
+            }
+        } else {
+            match old_reserved.checked_sub(&reserved) {
+                None => return Err("old reserved token too low to sub value"),
+                Some(b) => match old_total_reserved.checked_sub(&b) {
+                    None => return Err("old total reserved token too high to sub value"),
+                    Some(new) => new,
+                },
+            }
+        };
+        TotalReservedToken::<T>::insert(sym, new_total_reserved);
+        ReservedToken::<T>::insert(key, reserved);
         Ok(())
     }
 

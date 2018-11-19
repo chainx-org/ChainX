@@ -10,8 +10,8 @@ use runtime_support::{StorageMap, StorageValue};
 
 pub use self::proposal::{handle_proposal, Proposal};
 use super::{
-    AccountMap, AddressMap, BlockHeaderFor, BlockTxids, CertCache, CandidateTx, DepositCache,
-    NetworkId, NumberForHash, RegInfoMaxIndex, RegInfoSet, ReceiveAddress, RedeemScript, Trait,
+    AccountMap, AddressMap, BlockHeaderFor, BlockTxids, CandidateTx, CertCache, DepositCache,
+    NetworkId, NumberForHash, ReceiveAddress, RedeemScript, RegInfoMaxIndex, RegInfoSet, Trait,
     TxProposal, TxSet, TxType, UTXOMaxIndex, UTXOSet,
 };
 use b58::from;
@@ -149,7 +149,10 @@ impl<T: Trait> TxStorage<T> {
         // todo 检查block是否存在
         <BlockTxids<T>>::mutate(block_hash.clone(), |v| v.push(hash.clone()));
 
-        <TxSet<T>>::insert(hash, (who.clone(), address, tx_type, balance, block_hash, tx));
+        <TxSet<T>>::insert(
+            hash,
+            (who.clone(), address, tx_type, balance, block_hash, tx),
+        );
     }
 
     fn find_tx(txid: &H256) -> Option<Transaction> {
@@ -220,7 +223,16 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
 struct RegInfoStorage<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> RegInfoStorage<T> {
-    fn add(accounts: (H256, keys::Address, T::AccountId, T::BlockNumber, Vec<u8>, TxType)) {
+    fn add(
+        accounts: (
+            H256,
+            keys::Address,
+            T::AccountId,
+            T::BlockNumber,
+            Vec<u8>,
+            TxType,
+        ),
+    ) {
         let mut index = <RegInfoMaxIndex<T>>::get();
         <RegInfoSet<T>>::insert(index, accounts.clone());
         index += 1;
@@ -499,8 +511,14 @@ pub fn handle_output<T: Trait>(
         runtime_io::print("----new account-------");
         let time = <system::Module<T>>::block_number();
         let chainxaddr = <AddressMap<T>>::get(send_address.clone()).unwrap();
-        let account = (tx.hash(), send_address.clone(), chainxaddr, time,
-                       channel[2..].to_vec(),tx_type);
+        let account = (
+            tx.hash(),
+            send_address.clone(),
+            chainxaddr,
+            time,
+            channel[2..].to_vec(),
+            tx_type,
+        );
         <RegInfoStorage<T>>::add(account);
         runtime_io::print("------insert new account in AccountsMap-----");
     }
@@ -529,7 +547,7 @@ pub fn handle_cert<T: Trait>(
             runtime_io::print(&account[..]);
             let id: T::AccountId = Decode::decode(&mut account.as_slice()).unwrap();
 
-            <CertCache<T>>::put((name[2..].to_vec(),id));
+            <CertCache<T>>::put((name[2..].to_vec(), id));
         }
     }
 }

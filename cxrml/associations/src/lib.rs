@@ -97,6 +97,25 @@ impl<T: Trait> Module<T> {
     fn deposit_event(event: Event<T>) {
         <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
     }
+
+    fn check_no_init(who: &T::AccountId) -> Result {
+        if Self::relationship(who).is_some() {
+            return Err("has register this account");
+        } else {
+            if balances::FreeBalance::<T>::exists(who) {
+                return Err("this account is exist");
+            }
+        }
+        Ok(())
+    }
+
+    pub fn is_init(who: &T::AccountId) -> bool {
+        if let Err(_) = Self::check_no_init(who) {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 impl<T: Trait> Module<T> {
@@ -105,13 +124,8 @@ impl<T: Trait> Module<T> {
         // deduct fee first
         T::OnCalcFee::on_calc_fee(&from, Self::init_fee())?;
 
-        if Self::relationship(&who).is_some() {
-            return Err("has register this account");
-        } else {
-            if balances::FreeBalance::<T>::exists(&who) {
-                return Err("this account is exist");
-            }
-        }
+        Self::check_no_init(&who)?;
+
         Relationship::<T>::insert(&who, from.clone());
 
         let from_balance = balances::Module::<T>::free_balance(&from);
@@ -127,7 +141,7 @@ impl<T: Trait> Module<T> {
         };
 
         balances::Module::<T>::set_free_balance(&from, new_from_balance);
-        balances::Module::<T>::set_free_balance(&who, new_to_balance);
+        balances::Module::<T>::set_free_balance_creating(&who, new_to_balance);
 
         Self::deposit_event(RawEvent::InitAccount(from, who, value));
         Ok(())
