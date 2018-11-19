@@ -212,7 +212,7 @@ decl_storage! {
 
         // =====
         // tx
-        pub ReceiveAddress get(receive_address) config(): Option<Address>;
+        pub ReceiveAddress get(receive_address) config(): Option<keys::Address>;
         pub RedeemScript get(redeem_script) config(): Option<Vec<u8>>;
         pub CertAddress get(cert_address) config(): Option<keys::Address>;
         pub CertRedeemScript get(cert_redeem_script) config(): Option<Vec<u8>>;
@@ -221,10 +221,10 @@ decl_storage! {
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
         pub IrrBlock get(irr_block) config(): u32;
         pub BtcFee get(btc_fee) config(): u64;
-        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, BTCTransaction, H256)>; // Address, type, balance
+        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, H256, BTCTransaction)>; // Address, type, balance
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
         pub AddressMap get(address_map): map Address => Option<T::AccountId>;
-        pub AccountMap get(account_map): map T::AccountId => Option<Address>;
+        pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
         pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
         pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
 

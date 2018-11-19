@@ -149,12 +149,12 @@ impl<T: Trait> TxStorage<T> {
         // todo 检查block是否存在
         <BlockTxids<T>>::mutate(block_hash.clone(), |v| v.push(hash.clone()));
 
-        <TxSet<T>>::insert(hash, (who.clone(), address, tx_type, balance, tx, block_hash));
+        <TxSet<T>>::insert(hash, (who.clone(), address, tx_type, balance, block_hash, tx));
     }
 
     fn find_tx(txid: &H256) -> Option<Transaction> {
         if let Some(tuple) = <TxSet<T>>::get(txid) {
-            return Some(tuple.4);
+            return Some(tuple.5);
         } else {
             return None;
         }
@@ -171,7 +171,7 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
 
         let txids = <BlockTxids<T>>::get(header);
         for txid in txids.iter() {
-            let (_, _, tx_type, _, tx, _,) = <TxSet<T>>::get(txid).unwrap();
+            let (_, _, tx_type, _, _, tx) = <TxSet<T>>::get(txid).unwrap();
             match tx_type {
                 TxType::Withdraw => {
                     let out_point_set = tx
