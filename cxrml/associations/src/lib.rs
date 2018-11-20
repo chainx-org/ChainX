@@ -82,7 +82,7 @@ impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as BridgeOfBCH {
+    trait Store for Module<T: Trait> as Associations {
         pub Relationship get(relationship): map T::AccountId => Option<T::AccountId>;
         pub TokenRelationship get(token_relationship): map (Vec<u8>, T::AccountId) => Vec<u8>;
         pub ExchangeRelationship get(exchange_relationship): map T::AccountId => Option<T::AccountId>;
