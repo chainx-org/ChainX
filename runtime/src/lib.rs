@@ -296,7 +296,6 @@ construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) {
         System: system::{default, Log(ChangesTrieRoot)},
         Consensus: consensus::{Module, Call, Storage, Config, Log(AuthoritiesChange)},
-        Balances: balances::{Module, Storage, Config, Event<T>},  // no call for public
         Timestamp: timestamp::{Module, Call, Storage, Config},
         Session: session,
         Staking: staking,
@@ -323,6 +322,7 @@ construct_runtime!(
         CXSupport: cxsupport::{Module},
         // must put end of all chainx runtime module
         CXSystem: cxsystem::{Module, Call, Storage, Config},
+        Balances: balances::{Module, Storage, Config, Event<T>},  // no call for public
     }
 );
 
