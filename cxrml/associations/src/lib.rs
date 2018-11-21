@@ -65,6 +65,7 @@ decl_event!(
     {
         InitAccount(AccountId, AccountId, Balance),
         InitExchangeAccount(AccountId, AccountId),
+        InitChannelRelationship(Vec<u8>, AccountId),
     }
 );
 
@@ -84,7 +85,7 @@ impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
 decl_storage! {
     trait Store for Module<T: Trait> as Associations {
         pub Relationship get(relationship): map T::AccountId => Option<T::AccountId>;
-        pub TokenRelationship get(token_relationship): map (Vec<u8>, T::AccountId) => Vec<u8>;
+        pub ChannelRelationship get(channel_relationship): map Vec<u8> => Option< T::AccountId >;
         pub ExchangeRelationship get(exchange_relationship): map T::AccountId => Option<T::AccountId>;
         // fee
         pub InitFee get(init_fee) config(): T::Balance;
@@ -161,6 +162,16 @@ impl<T: Trait> Module<T> {
         }
         ExchangeRelationship::<T>::insert(&who, from.clone());
         Self::deposit_event(RawEvent::InitExchangeAccount(from, who));
+        Ok(())
+    }
+    pub fn init_channel_relationship( channel: Vec<u8>,who: &T::AccountId) -> Result {
+        
+        if Self::channel_relationship(&channel).is_some() {
+            return Err("has register this channel");
+        } 
+
+        ChannelRelationship::<T>::insert(channel.clone(), who.clone());
+        Self::deposit_event(RawEvent::InitChannelRelationship(channel, who.clone()));
         Ok(())
     }
 }

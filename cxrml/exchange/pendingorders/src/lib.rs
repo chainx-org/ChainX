@@ -44,7 +44,7 @@ extern crate srml_system as system;
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_tokenbalances as tokenbalances;
 
-#[cfg(test)]
+
 extern crate cxrml_associations as associations;
 #[cfg(test)]
 extern crate cxrml_system as cxsystem;
@@ -362,9 +362,11 @@ impl<T: Trait> Module<T> {
             return Err("channel name too long");
         }
         let transactor = ensure_signed(origin)?;
-        //TODO
-        let channel: T::AccountId = transactor.clone(); //从channel模块获得channel_name对应的account
-
+        //从channel模块获得channel_name对应的account
+        let channel: T::AccountId = match <associations::Module<T>>::channel_relationship(&channel_name) {
+            Some(relation)=>relation,
+            None=>transactor.clone(),
+        };
         Self::do_put_order(&transactor, &pair, ordertype, amount, price, &channel)
     }
     pub fn update_command_of(command_id: u64, bid: u128) {
