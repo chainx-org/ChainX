@@ -10,9 +10,10 @@ use runtime_support::{StorageMap, StorageValue};
 
 pub use self::proposal::{handle_proposal, Proposal};
 use super::{
-    AccountMap, AddressMap, BlockHeaderFor, BlockTxids, CandidateTx, CertCache, DepositCache,
-    NetworkId, NumberForHash, ReceiveAddress, RedeemScript, RegInfoMaxIndex, RegInfoSet, Trait,
-    TxProposal, TxSet, TxType, UTXOMaxIndex, UTXOSet,
+    AccountMap, AddressMap, BTCTxLog, BlockHeaderFor, BlockTxids, CandidateTx, CertCache,
+    DepositCache, LinkedNodes, NetworkId, Node, NumberForHash, ReceiveAddress, RedeemScript,
+    RegInfoMaxIndex, RegInfoSet, Trait, TxProposal, TxSet, TxSetTail, TxType, UTXOMaxIndex,
+    UTXOSet,
 };
 use b58::from;
 use chain::{OutPoint, Transaction, TransactionInput, TransactionOutput};
@@ -27,6 +28,7 @@ use script::{
     TransactionSignatureChecker,
 };
 use system;
+
 mod proposal;
 
 #[derive(Clone, Encode, Decode)]
@@ -149,15 +151,29 @@ impl<T: Trait> TxStorage<T> {
         // todo 检查block是否存在
         <BlockTxids<T>>::mutate(block_hash.clone(), |v| v.push(hash.clone()));
 
-        <TxSet<T>>::insert(
-            hash,
-            (who.clone(), address, tx_type, balance, block_hash, tx),
-        );
+        let log = BTCTxLog {
+            who: who.clone(),
+            addr: address,
+            tx_type,
+            balance,
+            block_hash,
+            tx,
+        };
+        let mut n = Node::new(log);
+        // insert to the storage, same to TxSet::<T>::insert(hash, xxx)
+        n.init_storage::<LinkedNodes<T>>();
+        if let Some(mut tail_index) = TxSetTail::<T>::get() {
+            // get tail
+            if let Some(mut tail) = TxSet::<T>::get(tail_index.index()) {
+                // add tx to tail
+                tail.add_option_node_after::<LinkedNodes<T>>(n);
+            }
+        }
     }
 
     fn find_tx(txid: &H256) -> Option<Transaction> {
-        if let Some(tuple) = <TxSet<T>>::get(txid) {
-            return Some(tuple.5);
+        if let Some(btc_tx_log) = <TxSet<T>>::get(txid) {
+            return Some(btc_tx_log.data.tx);
         } else {
             return None;
         }
@@ -174,10 +190,12 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
 
         let txids = <BlockTxids<T>>::get(header);
         for txid in txids.iter() {
-            let (_, _, tx_type, _, _, tx) = <TxSet<T>>::get(txid).unwrap();
-            match tx_type {
+            let btc_tx_log = <TxSet<T>>::get(txid).unwrap();
+            let data = btc_tx_log.data;
+            match data.tx_type {
                 TxType::Withdraw => {
-                    let out_point_set = tx
+                    let out_point_set = data
+                        .tx
                         .inputs
                         .iter()
                         .map(|input| input.previous_output.clone())
@@ -185,7 +203,8 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
                     <UTXOStorage<T>>::update_from_outpoint(out_point_set, false);
                     let mut out_point_set2: Vec<OutPoint> = Vec::new();
                     let mut index = 0;
-                    let _ = tx
+                    let _ = data
+                        .tx
                         .outputs
                         .iter()
                         .map(|output| {
@@ -204,9 +223,9 @@ impl<T: Trait> RollBack<T> for TxStorage<T> {
                 TxType::Register => {}
                 _ => {
                     let mut rollback_spent: Vec<UTXO> = Vec::new();
-                    for (index, output) in tx.outputs.iter().enumerate() {
+                    for (index, output) in data.tx.outputs.iter().enumerate() {
                         rollback_spent.push(UTXO {
-                            txid: tx.hash(),
+                            txid: data.tx.hash(),
                             index: index as u32,
                             balance: output.value,
                             is_spent: false,

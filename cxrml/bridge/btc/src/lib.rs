@@ -33,17 +33,17 @@ extern crate sr_primitives as runtime_primitives;
 // Needed for type-safe access to storage DB.
 #[macro_use]
 extern crate srml_support as runtime_support;
+extern crate srml_balances as balances;
+extern crate srml_system as system;
+extern crate srml_timestamp as timestamp;
+
 #[cfg(test)]
 extern crate cxrml_associations as associations;
 extern crate cxrml_funds_financialrecords as financial_records;
-#[cfg(test)]
 extern crate cxrml_support as cxsupport;
 #[cfg(test)]
 extern crate cxrml_system as cxsystem;
 extern crate cxrml_tokenbalances as tokenbalances;
-extern crate srml_balances as balances;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
 
 // bitcoin-rust
 extern crate bit_vec;
@@ -74,6 +74,8 @@ use runtime_support::dispatch::{Parameter, Result};
 use runtime_support::{StorageMap, StorageValue};
 use ser::deserialize;
 use system::ensure_signed;
+
+use cxsupport::storage::linked_node::{LinkedNodeCollection, Node, NodeIndex, NodeT};
 
 pub use blockchain::BestHeader;
 use blockchain::Chain;
@@ -178,6 +180,12 @@ pub enum TxType {
     SendCert,
 }
 
+impl Default for TxType {
+    fn default() -> Self {
+        TxType::Deposit
+    }
+}
+
 #[derive(PartialEq, Clone, Encode, Decode)]
 pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
     pub proposer: Vec<AccountId>,
@@ -186,10 +194,29 @@ pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
     pub block_hash: H256,
 }
 
-impl Default for TxType {
-    fn default() -> Self {
-        TxType::Deposit
+#[derive(PartialEq, Clone, Encode, Decode)]
+pub struct BTCTxLog<AccountId> {
+    pub who: AccountId,
+    pub addr: keys::Address,
+    pub tx_type: TxType,
+    pub balance: u64,
+    pub block_hash: H256,
+    pub tx: BTCTransaction,
+}
+
+impl<AccountId: Parameter + Ord + Default> NodeT for BTCTxLog<AccountId> {
+    type Index = H256;
+    fn index(&self) -> H256 {
+        self.tx.hash()
     }
+}
+
+struct LinkedNodes<T: Trait>(runtime_support::storage::generator::PhantomData<T>);
+
+impl<T: Trait> LinkedNodeCollection for LinkedNodes<T> {
+    type Header = TxSetHeader<T>;
+    type NodeMap = TxSet<T>;
+    type Tail = TxSetTail<T>;
 }
 
 decl_storage! {
@@ -221,7 +248,12 @@ decl_storage! {
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
         pub IrrBlock get(irr_block) config(): u32;
         pub BtcFee get(btc_fee) config(): u64;
-        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, H256, BTCTransaction)>; // Address, type, balance
+//        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, H256, BTCTransaction)>; // Address, type, balance
+        /// btc all related transactions set, use TxSetTail or TxSetHeader could iter them
+        TxSetHeader get(tx_list_header): Option<NodeIndex<BTCTxLog<T::AccountId>>>;
+        TxSetTail get(tx_list_tail): Option<NodeIndex<BTCTxLog<T::AccountId>>>;
+        TxSet get(tx_set): map H256 => Option<Node<BTCTxLog<T::AccountId>>>;
+
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
         pub AddressMap get(address_map): map Address => Option<T::AccountId>;
         pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
