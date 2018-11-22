@@ -265,8 +265,6 @@ impl pendingorders::Trait for Runtime {
     type Amount = TokenBalance;
     type Price = TokenBalance;
     type Event = Event;
-    const FEE_BUY_ACCOUNT: AccountId = primitives::H256([1; 32]);
-    const FEE_DESTROY_ACCOUNT: AccountId = primitives::H256([0; 32]);
 }
 
 impl matchorder::Trait for Runtime {

@@ -11,7 +11,6 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[macro_use]
 extern crate log;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
@@ -43,10 +42,7 @@ extern crate srml_system as system;
 // for chainx runtime module lib
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_tokenbalances as tokenbalances;
-
-
 extern crate cxrml_associations as associations;
-#[cfg(test)]
 extern crate cxrml_system as cxsystem;
 
 #[cfg(test)]
@@ -88,8 +84,6 @@ pub trait Trait: tokenbalances::Trait {
         + Default;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-    const FEE_DESTROY_ACCOUNT: <Self as system::Trait>::AccountId;
-    const FEE_BUY_ACCOUNT: <Self as system::Trait>::AccountId;
 }
 
 decl_module! {
@@ -613,20 +607,26 @@ impl<T: Trait> Module<T> {
     fn discount_fee(account: &T::AccountId, symbol: &Symbol, amount: T::Amount) -> T::Amount {
         match <tokenbalances::Module<T>>::token_info(symbol) {
             Some((token, _)) => {
+                //计算关联账户的额度
                 let free_token =
                     <tokenbalances::Module<T>>::free_token(&(account.clone(), symbol.clone()));
+                let father_free_token:<T as tokenbalances::Trait>::TokenBalance = match <associations::Module<T>>::exchange_relationship(account){
+                    Some(father)=> <tokenbalances::Module<T>>::free_token(&(father.clone(), symbol.clone())),
+                    None=>Zero::zero(),
+                };
+                let total_token=free_token+father_free_token;
                 //将精度考虑进去
-                let after_discount: T::Amount = if free_token > As::sa(0) {
-                    if free_token <= As::sa(10_u128.pow(token.precision().as_()) * 10000) {
+                let after_discount: T::Amount = if total_token > As::sa(0) {
+                    if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 10000) {
                         As::sa((amount.as_() * 7_u128) / 10_u128)
-                    } else if free_token <= As::sa(10_u128.pow(token.precision().as_()) * 100000) {
+                    } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 100000) {
                         As::sa((amount.as_() * 6_u128) / 10_u128)
-                    } else if free_token <= As::sa(10_u128.pow(token.precision().as_()) * 1000000) {
+                    } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 1000000) {
                         As::sa((amount.as_() * 5_u128) / 10_u128)
-                    } else if free_token <= As::sa(10_u128.pow(token.precision().as_()) * 10000000)
+                    } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 10000000)
                     {
                         As::sa((amount.as_() * 3_u128) / 10_u128)
-                    } else if free_token <= As::sa(10_u128.pow(token.precision().as_()) * 100000000)
+                    } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 100000000)
                     {
                         As::sa((amount.as_() * 2_u128) / 10_u128)
                     } else {
@@ -711,7 +711,7 @@ impl<T: Trait> Module<T> {
             return Err(msg);
         }
 
-        if to == &T::FEE_BUY_ACCOUNT
+        if to == &<cxsystem::Module<T>>::fee_buy_account()
             && symbol.clone() == <T as tokenbalances::Trait>::CHAINX_SYMBOL.to_vec()
         {
             //前面自动生成的buy交易，不计算手续费 80%直接销毁 20% 给渠道
@@ -719,12 +719,12 @@ impl<T: Trait> Module<T> {
                 symbol,
                 value,
                 from,
-                &T::FEE_DESTROY_ACCOUNT,
+                &<cxsystem::Module<T>>::death_account(),
                 &channel.clone(),
             ) {
                 return Err(msg);
             };
-        } else if from == &T::FEE_BUY_ACCOUNT {
+        } else if from == &<cxsystem::Module<T>>::fee_buy_account() {
             // 和手续费买盘的对手盘，不收手续费
             if let Err(e) = <tokenbalances::Module<T>>::move_free_token(
                 &from.clone(),
@@ -751,7 +751,7 @@ impl<T: Trait> Module<T> {
                     symbol,
                     discount_fee,
                     from,
-                    &T::FEE_DESTROY_ACCOUNT,
+                    &<cxsystem::Module<T>>::death_account(),
                     &channel.clone(),
                 ) {
                     return Err(msg);
@@ -785,7 +785,7 @@ impl<T: Trait> Module<T> {
                                 &<T as tokenbalances::Trait>::CHAINX_SYMBOL.to_vec(),
                                 discount_fee,
                                 to,
-                                &T::FEE_DESTROY_ACCOUNT,
+                                &<cxsystem::Module<T>>::death_account(),
                                 &channel.clone(),
                             ) {
                                 return Err(msg);
@@ -801,7 +801,7 @@ impl<T: Trait> Module<T> {
                             }
                             if let Err(e) = <tokenbalances::Module<T>>::move_free_token(
                                 &from.clone(),
-                                &T::FEE_BUY_ACCOUNT,
+                                &<cxsystem::Module<T>>::fee_buy_account(),
                                 &symbol.clone(),
                                 fee,
                             ) {
@@ -824,7 +824,7 @@ impl<T: Trait> Module<T> {
                         }
                         if let Err(e) = <tokenbalances::Module<T>>::move_free_token(
                             &from.clone(),
-                            &T::FEE_BUY_ACCOUNT,
+                            &<cxsystem::Module<T>>::fee_buy_account(),
                             &symbol.clone(),
                             fee,
                         ) {
@@ -879,7 +879,7 @@ impl<T: Trait> Module<T> {
         for id in 1..(fee_buy_order_max + 1) {
             if let Some(buy) = <FeeBuyOrder<T>>::get(id) {
                 let _ = Self::do_put_order(
-                    &T::FEE_BUY_ACCOUNT,
+                    &<cxsystem::Module<T>>::fee_buy_account(),
                     &buy.0,
                     OrderType::Buy,
                     buy.1,

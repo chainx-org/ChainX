@@ -60,6 +60,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as CXSystem {
         pub BlockProdocer get(block_producer): Option<T::AccountId>;
         pub DeathAccount get(death_account) config(): T::AccountId;
+        pub FeeBuyAccount get(fee_buy_account) config(): T::AccountId;
     }
 }
 

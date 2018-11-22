@@ -5,7 +5,7 @@ extern crate cxrml_exchange_pendingorders;
 extern crate cxrml_tokenbalances;
 extern crate keys;
 extern crate primitives as btc_primitives;
-
+extern crate substrate_primitives ;
 
 use self::base58::FromBase58;
 use self::cxrml_exchange_pendingorders::OrderPair;
@@ -129,7 +129,8 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             block_gas_limit: 10_000_000,
         }),
         cxsystem: Some(CXSystemConfig {
-            death_account: Default::default(),
+            death_account: substrate_primitives::H256([0; 32]),
+            fee_buy_account: substrate_primitives::H256([1; 32]),
         }),
         tokenbalances: Some(TokenBalancesConfig {
             chainx_precision: 8,

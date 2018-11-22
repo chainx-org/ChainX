@@ -11,7 +11,6 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[macro_use]
 extern crate log;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
