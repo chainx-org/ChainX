@@ -86,6 +86,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as Associations {
         pub Relationship get(relationship): map T::AccountId => Option<T::AccountId>;
         pub ChannelRelationship get(channel_relationship): map Vec<u8> => Option< T::AccountId >;
+        pub RevChannelRelationship get(channel_relationship_rev): map T::AccountId => Option< Vec<u8> >;
         pub ExchangeRelationship get(exchange_relationship): map T::AccountId => Option<T::AccountId>;
         // fee
         pub InitFee get(init_fee) config(): T::Balance;
@@ -158,6 +159,7 @@ impl<T: Trait> Module<T> {
         } 
         
         ExchangeRelationship::<T>::insert(&who, from.clone());
+
         Self::deposit_event(RawEvent::InitExchangeAccount(from, who));
         Ok(())
     }
@@ -168,6 +170,8 @@ impl<T: Trait> Module<T> {
         } 
 
         ChannelRelationship::<T>::insert(channel.clone(), who.clone());
+        RevChannelRelationship::<T>::insert(who.clone(),channel.clone());
+
         Self::deposit_event(RawEvent::InitChannelRelationship(channel, who.clone()));
         Ok(())
     }
