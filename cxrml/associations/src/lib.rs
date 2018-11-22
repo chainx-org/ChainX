@@ -155,11 +155,8 @@ impl<T: Trait> Module<T> {
 
         if Self::exchange_relationship(&who).is_some() {
             return Err("has register this account");
-        } else {
-            if balances::FreeBalance::<T>::exists(&who) {
-                return Err("this account is exist");
-            }
-        }
+        } 
+        
         ExchangeRelationship::<T>::insert(&who, from.clone());
         Self::deposit_event(RawEvent::InitExchangeAccount(from, who));
         Ok(())
