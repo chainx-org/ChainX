@@ -37,7 +37,7 @@ extern crate srml_system as system;
 mod tests;
 
 use rstd::prelude::*;
-use runtime_primitives::traits::{CheckedAdd, CheckedSub, OnFinalise};
+use runtime_primitives::traits::{CheckedAdd, CheckedSub, OnFinalise, Zero};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
@@ -71,7 +71,7 @@ decl_event!(
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn init_account(origin, who: T::AccountId, value: T::Balance) -> Result;
+        fn init_account(origin, who: T::AccountId) -> Result;
         fn init_exchange_relationship(origin, who: T::AccountId) -> Result;
     }
 }
@@ -121,7 +121,7 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn init_account(origin: T::Origin, who: T::AccountId, value: T::Balance) -> Result {
+    pub fn init_account(origin: T::Origin, who: T::AccountId) -> Result {
         let from = ensure_signed(origin)?;
         // deduct fee first
         T::OnCalcFee::on_calc_fee(&from, Self::init_fee())?;
@@ -132,7 +132,7 @@ impl<T: Trait> Module<T> {
 
         let from_balance = balances::Module::<T>::free_balance(&from);
         let to_balance = balances::Module::<T>::free_balance(&who);
-
+        let value: T::Balance = Zero::zero();
         let new_from_balance = match from_balance.checked_sub(&value) {
             Some(b) => b,
             None => return Err("balance too low to send value"),

@@ -370,7 +370,6 @@ fn test_transfer_not_init() {
         assert_err!(associations::Module::<Test>::init_account(
             Some(a).into(),
             new_id.into(),
-            25
         ), "this account is existing");
         assert_ok!(TokenBalances::transfer(
             Some(a).into(),
