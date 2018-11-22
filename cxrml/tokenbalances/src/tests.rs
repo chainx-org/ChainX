@@ -365,15 +365,13 @@ fn test_transfer_not_init() {
         let new_id: u64 = 100;
         let btc_symbol = b"x-btc".to_vec();
         TokenBalances::issue(&a, &btc_symbol.clone(), 50).unwrap();
-        assert_err!(
-            TokenBalances::transfer(Some(a).into(), new_id.into(), btc_symbol.clone(), 25),
-            "account not exist yet, should init account first"
-        );
-        assert_ok!(associations::Module::<Test>::init_account(
+        assert_ok!(TokenBalances::transfer(Some(a).into(), new_id.into(), btc_symbol.clone(), 25));
+        assert_eq!(Balances::lookup_index(3), Some(new_id));
+        assert_err!(associations::Module::<Test>::init_account(
             Some(a).into(),
             new_id.into(),
             25
-        ));
+        ), "this account is existing");
         assert_ok!(TokenBalances::transfer(
             Some(a).into(),
             new_id.into(),
@@ -389,11 +387,11 @@ fn test_transfer_not_init() {
 
         assert_eq!(
             TokenBalances::free_token(&(a, Test::CHAINX_SYMBOL.to_vec())),
-            1000 - 10 - 25 - 10 - 25 - 10
+            1000 -10 - 10 - 25 - 10
         );
         assert_eq!(
             TokenBalances::free_token(&(new_id, Test::CHAINX_SYMBOL.to_vec())),
-            50
+            25
         );
     })
 }

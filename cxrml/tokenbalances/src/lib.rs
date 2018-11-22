@@ -41,7 +41,7 @@ mod mock;
 mod tests;
 
 use codec::Codec;
-use primitives::traits::{As, CheckedAdd, CheckedSub, Member, OnFinalise, SimpleArithmetic};
+use primitives::traits::{As, CheckedAdd, CheckedSub, Zero,Member, OnFinalise, SimpleArithmetic};
 use rstd::prelude::*;
 pub use rstd::result::Result as StdResult;
 use rstd::slice::Iter;
@@ -829,6 +829,11 @@ impl<T: Trait> Module<T> {
             Some(b) => b,
             None => return Err("destination free token too high to receive value"),
         };
+
+        if associations::Module::<T>::is_init(to) == false {
+            balances::Module::<T>::set_free_balance_creating(to, Zero::zero());
+        }
+
         // set to storage
         FreeToken::<T>::insert(&key_from, new_from_token);
         FreeToken::<T>::insert(&key_to, new_to_token);
@@ -859,10 +864,6 @@ impl<T: Trait> Module<T> {
             true,
             || Ok(()),
         )?;
-        // if account not exist, init it first
-        if associations::Module::<T>::is_init(&dest) == false {
-            return Err("account not exist yet, should init account first");
-        }
 
         if transactor == dest {
             return Err("transactor and dest account are same");

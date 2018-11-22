@@ -104,7 +104,7 @@ impl<T: Trait> Module<T> {
             return Err("has register this account");
         } else {
             if balances::FreeBalance::<T>::exists(who) {
-                return Err("this account is exist");
+                return Err("this account is existing");
             }
         }
         Ok(())
