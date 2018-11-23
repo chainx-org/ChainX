@@ -40,10 +40,10 @@ extern crate srml_balances as balances;
 extern crate srml_system as system;
 
 // for chainx runtime module lib
-extern crate cxrml_support as cxsupport;
-extern crate cxrml_tokenbalances as tokenbalances;
 extern crate cxrml_associations as associations;
+extern crate cxrml_support as cxsupport;
 extern crate cxrml_system as cxsystem;
+extern crate cxrml_tokenbalances as tokenbalances;
 
 #[cfg(test)]
 mod tests;
@@ -124,7 +124,9 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as PendingOrders {
         pub OrderFee get(order_fee) config(): T::Balance;
-        pub OrderPairList get(pair_list) config():  Vec<OrderPair> ;
+        pub OrderPairList get(pair_list) :  Vec<OrderPair> ;
+        pub OrderPairDetailMap get(pair_detail_of)   :map  OrderPair => Option<OrderPairDetail>;
+
         pub FillIndexOf get(fill_index_of):  map OrderPair => u128; //交易对的成交历史的index
         pub OrdersOf get(order_of):map (T::AccountId, OrderPair,u64) => Option<OrderT<T>>;
         pub LastOrderIndexOf get(last_order_index_of): map(T::AccountId,OrderPair)=>Option<u64>;
@@ -139,6 +141,21 @@ decl_storage! {
 
             FeeBuyOrder get(fee_buy_order) : map( u64 )=>Option<(OrderPair,T::Amount,T::Price,T::AccountId)>; //存储块尾的买单
             FeeBuyOrderMax get(fee_buy_order_max) : u64;
+    }
+    add_extra_genesis {
+        config(pair_list): Vec<(OrderPair, u32)>;
+        build(
+            |storage: &mut runtime_primitives::StorageMap, config: &GenesisConfig<T>| {
+                use codec::Encode;
+
+                let mut p_list: Vec<OrderPair> = Vec::new();
+                for (pair,precision) in config.pair_list.iter() {
+                    let detail = OrderPairDetail{ precision: *precision };
+                    storage.insert(GenesisConfig::<T>::hash(&<OrderPairDetailMap<T>>::key_for(pair)).to_vec(), detail.encode());
+                    p_list.push(pair.clone());
+                }
+                storage.insert(GenesisConfig::<T>::hash(&<OrderPairList<T>>::key()).to_vec(), p_list.encode());
+        });
     }
 }
 
@@ -215,14 +232,20 @@ impl<T: Trait> Module<T> {
                     <LastAveragePrice<T>>::insert(pair.clone(), price);
                 }
                 Some(p) => {
-                    let average_sum: T::Amount = As::sa(
-                        10_u128.pow(pair.precision().as_()) * Self::average_price_len().as_(),
-                    ); //将精度考虑进去
-                    let last_average_price: T::Price = As::sa(
-                        (p.as_() * average_sum.as_() + amount.as_() * price.as_())
-                            / (average_sum.as_() + amount.as_()),
-                    );
-                    <LastAveragePrice<T>>::insert(pair.clone(), last_average_price);
+                    match Self::pair_detail_of(pair.clone()) {
+                        Some(order_pair_detail) => {
+                            let average_sum: T::Amount = As::sa(
+                                10_u128.pow(order_pair_detail.precision.as_())
+                                    * Self::average_price_len().as_(),
+                            ); //将精度考虑进去
+                            let last_average_price: T::Price = As::sa(
+                                (p.as_() * average_sum.as_() + amount.as_() * price.as_())
+                                    / (average_sum.as_() + amount.as_()),
+                            );
+                            <LastAveragePrice<T>>::insert(pair.clone(), last_average_price);
+                        }
+                        None => {}
+                    }
                 }
             }
         }
@@ -357,10 +380,11 @@ impl<T: Trait> Module<T> {
         }
         let transactor = ensure_signed(origin)?;
         //从channel模块获得channel_name对应的account
-        let channel: T::AccountId = match <associations::Module<T>>::channel_relationship(&channel_name) {
-            Some(relation)=>relation,
-            None=>transactor.clone(),
-        };
+        let channel: T::AccountId =
+            match <associations::Module<T>>::channel_relationship(&channel_name) {
+                Some(relation) => relation,
+                None => transactor.clone(),
+            };
         Self::do_put_order(&transactor, &pair, ordertype, amount, price, &channel)
     }
     pub fn update_command_of(command_id: u64, bid: u128) {
@@ -610,23 +634,29 @@ impl<T: Trait> Module<T> {
                 //计算关联账户的额度
                 let free_token =
                     <tokenbalances::Module<T>>::free_token(&(account.clone(), symbol.clone()));
-                let father_free_token:<T as tokenbalances::Trait>::TokenBalance = match <associations::Module<T>>::exchange_relationship(account){
-                    Some(father)=> <tokenbalances::Module<T>>::free_token(&(father.clone(), symbol.clone())),
-                    None=>Zero::zero(),
-                };
-                let total_token=free_token+father_free_token;
+                let father_free_token: <T as tokenbalances::Trait>::TokenBalance =
+                    match <associations::Module<T>>::exchange_relationship(account) {
+                        Some(father) => <tokenbalances::Module<T>>::free_token(&(
+                            father.clone(),
+                            symbol.clone(),
+                        )),
+                        None => Zero::zero(),
+                    };
+                let total_token = free_token + father_free_token;
                 //将精度考虑进去
                 let after_discount: T::Amount = if total_token > As::sa(0) {
                     if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 10000) {
                         As::sa((amount.as_() * 7_u128) / 10_u128)
                     } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 100000) {
                         As::sa((amount.as_() * 6_u128) / 10_u128)
-                    } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 1000000) {
+                    } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 1000000)
+                    {
                         As::sa((amount.as_() * 5_u128) / 10_u128)
                     } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 10000000)
                     {
                         As::sa((amount.as_() * 3_u128) / 10_u128)
-                    } else if total_token <= As::sa(10_u128.pow(token.precision().as_()) * 100000000)
+                    } else if total_token
+                        <= As::sa(10_u128.pow(token.precision().as_()) * 100000000)
                     {
                         As::sa((amount.as_() * 2_u128) / 10_u128)
                     } else {
@@ -925,35 +955,17 @@ impl Default for OrderStatus {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct OrderPair {
-    first: Symbol,
-    second: Symbol,
-    precision: u32, //价格精度
+    pub first: Symbol,
+    pub second: Symbol,
 }
 
-impl OrderPair {
-    pub fn new(first: Symbol, second: Symbol, precision: u32) -> Self {
-        return OrderPair {
-            first: first,
-            second: second,
-            precision: precision,
-        };
-    }
-    pub fn precision(&self) -> u32 {
-        self.precision
-    }
-}
-
-impl Default for OrderPair {
-    fn default() -> Self {
-        OrderPair {
-            first: Default::default(),
-            second: Default::default(),
-            precision: 0,
-        }
-    }
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub struct OrderPairDetail {
+    pub precision: u32, //价格精度
 }
 
 /// 成交的历史，包含了双方的挂单index

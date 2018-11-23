@@ -41,7 +41,7 @@ mod mock;
 mod tests;
 
 use codec::Codec;
-use primitives::traits::{As, CheckedAdd, CheckedSub, Zero,Member, OnFinalise, SimpleArithmetic};
+use primitives::traits::{As, CheckedAdd, CheckedSub, Member, OnFinalise, SimpleArithmetic, Zero};
 use rstd::prelude::*;
 pub use rstd::result::Result as StdResult;
 use rstd::slice::Iter;

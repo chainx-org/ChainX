@@ -96,8 +96,6 @@ impl Trait for Test {
     type Event = ();
     type Amount = u128;
     type Price = u128;
-    const FEE_BUY_ACCOUNT: <Self as system::Trait>::AccountId = 1;
-    const FEE_DESTROY_ACCOUNT: <Self as system::Trait>::AccountId = 0;
 }
 
 type PendingOrders = Module<Test>;
@@ -121,12 +119,10 @@ fn test_pair() {
         let p1 = OrderPair {
             first: b"x-btc".to_vec(),
             second: b"x-eth".to_vec(),
-            precision: 0,
         };
         let p2 = OrderPair {
             first: b"x-eos".to_vec(),
             second: b"x-eth".to_vec(),
-            precision: 0,
         };
         let mut p_list = Vec::new();
         p_list.push(p1.clone());
@@ -162,7 +158,6 @@ fn test_order() {
         let p1 = OrderPair {
             first: t_sym_eos.clone(),
             second: t_sym_eth.clone(),
-            precision: 0,
         };
 
         let mut p_list = Vec::new();
@@ -330,7 +325,6 @@ fn test_fill_no_fee() {
         let p1 = OrderPair {
             first: t_sym_eos.clone(),
             second: t_sym_eth.clone(),
-            precision: 0,
         };
 
         // 增加交易对
@@ -452,7 +446,6 @@ fn test_fill_fee() {
         let p1 = OrderPair {
             first: t_sym_eos.clone(),
             second: t_sym_eth.clone(),
-            precision: 0,
         };
 
         // 增加交易对
@@ -531,11 +524,17 @@ fn test_fill_fee() {
         );
 
         assert_eq!(
-            TokenBalances::free_token(&(Test::FEE_BUY_ACCOUNT, t_sym_eth.clone())),
+            TokenBalances::free_token(&(
+                cxsystem::Module::<Test>::fee_buy_account(),
+                t_sym_eth.clone()
+            )),
             25
         );
         assert_eq!(
-            TokenBalances::free_token(&(Test::FEE_BUY_ACCOUNT, t_sym_eos.clone())),
+            TokenBalances::free_token(&(
+                cxsystem::Module::<Test>::fee_buy_account(),
+                t_sym_eos.clone()
+            )),
             5
         );
         PendingOrders::clear_command_and_put_fee_buy_order();

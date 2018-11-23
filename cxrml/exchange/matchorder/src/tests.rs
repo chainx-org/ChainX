@@ -47,14 +47,13 @@ impl associations::Trait for Test {
     type OnCalcFee = cxsupport::Module<Test>;
     type Event = ();
 }
+
 impl cxsupport::Trait for Test {}
 
 impl pendingorders::Trait for Test {
     type Event = ();
     type Amount = u128;
     type Price = u128;
-    const FEE_BUY_ACCOUNT: <Self as system::Trait>::AccountId = 1;
-    const FEE_DESTROY_ACCOUNT: <Self as system::Trait>::AccountId = 0;
 }
 
 // define tokenbalances module type
@@ -155,7 +154,10 @@ fn test_match_part() {
         let t_eth: Token = Token::new(t_sym_eth.clone(), t_desc_eth.clone(), precision);
         assert_eq!(TokenBalances::register_token(t_eth, 0, 0), Ok(()));
 
-        let p1 = OrderPair::new(t_sym_eos.clone(), t_sym_eth.clone(), 0);
+        let p1 = OrderPair {
+            first: t_sym_eos.clone(),
+            second: t_sym_eth.clone(),
+        };
 
         // 增加交易对
         PendingOrders::add_pair(p1.clone()).unwrap();
@@ -251,7 +253,10 @@ fn test_match_all() {
         let t_eth: Token = Token::new(t_sym_eth.clone(), t_desc_eth.clone(), precision);
         assert_eq!(TokenBalances::register_token(t_eth, 0, 0), Ok(()));
 
-        let p1 = OrderPair::new(t_sym_eos.clone(), t_sym_eth.clone(), 0);
+        let p1 = OrderPair {
+            first: t_sym_eos.clone(),
+            second: t_sym_eth.clone(),
+        };
 
         // 增加交易对
         PendingOrders::add_pair(p1.clone()).unwrap();
@@ -353,7 +358,10 @@ fn test_match_no() {
         let t_eth: Token = Token::new(t_sym_eth.clone(), t_desc_eth.clone(), precision);
         assert_eq!(TokenBalances::register_token(t_eth, 0, 0), Ok(()));
 
-        let p1 = OrderPair::new(t_sym_eos.clone(), t_sym_eth.clone(), 0);
+        let p1 = OrderPair {
+            first: t_sym_eos.clone(),
+            second: t_sym_eth.clone(),
+        };
 
         // 增加交易对
         PendingOrders::add_pair(p1.clone()).unwrap();

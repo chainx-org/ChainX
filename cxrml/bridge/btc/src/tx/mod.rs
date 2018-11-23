@@ -162,7 +162,7 @@ impl<T: Trait> TxStorage<T> {
         let mut n = Node::new(log);
         // insert to the storage, same to TxSet::<T>::insert(hash, xxx)
         n.init_storage::<LinkedNodes<T>>();
-        if let Some(mut tail_index) = TxSetTail::<T>::get() {
+        if let Some(tail_index) = TxSetTail::<T>::get() {
             // get tail
             if let Some(mut tail) = TxSet::<T>::get(tail_index.index()) {
                 // add tx to tail

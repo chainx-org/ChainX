@@ -5,7 +5,7 @@ extern crate cxrml_exchange_pendingorders;
 extern crate cxrml_tokenbalances;
 extern crate keys;
 extern crate primitives as btc_primitives;
-extern crate substrate_primitives ;
+extern crate substrate_primitives;
 
 use self::base58::FromBase58;
 use self::cxrml_exchange_pendingorders::OrderPair;
@@ -185,7 +185,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         pendingorders: Some(PendingOrdersConfig {
             order_fee: 0,
             pair_list: vec![
-                OrderPair::new(b"pcx".to_vec(), BridgeOfBTC::SYMBOL.to_vec(), 8)],
+                (OrderPair{first:b"pcx".to_vec(), second:BridgeOfBTC::SYMBOL.to_vec() },8)],
             max_command_id: 0,
             average_price_len:10000,
         }),

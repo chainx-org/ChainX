@@ -156,21 +156,20 @@ impl<T: Trait> Module<T> {
 
         if Self::exchange_relationship(&who).is_some() {
             return Err("has register this account");
-        } 
-        
+        }
+
         ExchangeRelationship::<T>::insert(&who, from.clone());
 
         Self::deposit_event(RawEvent::InitExchangeAccount(from, who));
         Ok(())
     }
-    pub fn init_channel_relationship( channel: Vec<u8>,who: &T::AccountId) -> Result {
-        
+    pub fn init_channel_relationship(channel: Vec<u8>, who: &T::AccountId) -> Result {
         if Self::channel_relationship(&channel).is_some() {
             return Err("has register this channel");
-        } 
+        }
 
         ChannelRelationship::<T>::insert(channel.clone(), who.clone());
-        RevChannelRelationship::<T>::insert(who.clone(),channel.clone());
+        RevChannelRelationship::<T>::insert(who.clone(), channel.clone());
 
         Self::deposit_event(RawEvent::InitChannelRelationship(channel, who.clone()));
         Ok(())
