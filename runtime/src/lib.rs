@@ -37,8 +37,8 @@ extern crate srml_treasury as treasury;
 extern crate substrate_primitives;
 // cx runtime module
 extern crate cxrml_associations as associations;
+extern crate cxrml_mining_staking as staking;
 extern crate cxrml_multisig as multisig;
-extern crate cxrml_staking as staking;
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_system as cxsystem;
 extern crate cxrml_tokenbalances as tokenbalances;
@@ -197,6 +197,8 @@ impl treasury::Trait for Runtime {
 impl staking::Trait for Runtime {
     type OnRewardMinted = Treasury;
     type Event = Event;
+    type OnNewSessionForTokenStaking = ();
+    type OnReward = ();
 }
 
 impl democracy::Trait for Runtime {
@@ -236,6 +238,7 @@ impl tokenbalances::Trait for Runtime {
     const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"pcx token for ChainX";
     type TokenBalance = TokenBalance;
     type Event = Event;
+    type OnMoveToken = ();
 }
 
 impl multisig::Trait for Runtime {
@@ -256,6 +259,8 @@ impl bridge_btc::Trait for Runtime {
 // funds
 impl financialrecords::Trait for Runtime {
     type Event = Event;
+    type OnDepositToken = ();
+    type OnWithdrawToken = ();
 }
 
 impl withdrawal::Trait for Runtime {}

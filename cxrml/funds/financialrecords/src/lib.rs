@@ -57,9 +57,29 @@ use runtime_support::{StorageMap, StorageValue};
 use cxsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
 pub use tokenbalances::{ReservedType, Symbol};
 
+pub trait OnDepositToken<AccountId, TokenBalance> {
+    fn on_deposit_token(who: &AccountId, sym: &Symbol, value: TokenBalance);
+}
+
+pub trait OnWithdrawToken<AccountId, TokenBalance> {
+    fn on_withdraw_token(who: &AccountId, sym: &Symbol, value: TokenBalance);
+}
+
+impl<AccountId, TokenBalance> OnDepositToken<AccountId, TokenBalance> for () {
+    fn on_deposit_token(_: &AccountId, _: &Symbol, _: TokenBalance) {}
+}
+
+impl<AccountId, TokenBalance> OnWithdrawToken<AccountId, TokenBalance> for () {
+    fn on_withdraw_token(_: &AccountId, _: &Symbol, _: TokenBalance) {}
+}
+
 pub trait Trait: tokenbalances::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    /// deposit trigger
+    type OnDepositToken: OnDepositToken<Self::AccountId, Self::TokenBalance>;
+    /// withdraw trigger
+    type OnWithdrawToken: OnWithdrawToken<Self::AccountId, Self::TokenBalance>;
 }
 
 decl_module! {
@@ -524,7 +544,7 @@ impl<T: Trait> Module<T> {
         Ok(index)
     }
     /// deposit finish, should use index to find the old deposit record, success flag mark the success
-    pub fn deposit_finish_with_index(
+    fn deposit_finish_with_index(
         who: &T::AccountId,
         index: u32,
         success: bool,
@@ -544,6 +564,9 @@ impl<T: Trait> Module<T> {
                         *state = DepositState::Success;
                         // call tokenbalances to issue token for this accountid
                         <tokenbalances::Module<T>>::issue(who, &sym, bal)?;
+
+                        // withdraw trigger
+                        T::OnDepositToken::on_deposit_token(who, &sym, bal);
 
                         Self::deposit_event(RawEvent::DepositSuccess(
                             who.clone(),
@@ -674,6 +697,8 @@ impl<T: Trait> Module<T> {
                                 bal,
                                 ReservedType::Funds,
                             )?;
+                            // withdraw trigger
+                            T::OnWithdrawToken::on_withdraw_token(who, &sym, bal);
 
                             Self::deposit_event(RawEvent::WithdrawalSuccess(
                                 who.clone(),

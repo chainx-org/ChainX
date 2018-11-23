@@ -54,6 +54,7 @@ impl Trait for Test {
     const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
     type Event = ();
+    type OnMoveToken = ();
 }
 
 pub type TokenBalances = Module<Test>;

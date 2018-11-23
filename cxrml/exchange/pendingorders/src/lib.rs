@@ -124,8 +124,8 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as PendingOrders {
         pub OrderFee get(order_fee) config(): T::Balance;
-        pub OrderPairList get(pair_list) :  Vec<OrderPair> ;
-        pub OrderPairDetailMap get(pair_detail_of)   :map  OrderPair => Option<OrderPairDetail>;
+        pub OrderPairList get(pair_list):  Vec<OrderPair> ;
+        pub OrderPairDetailMap get(pair_detail_of):map  OrderPair => Option<OrderPairDetail>;
 
         pub FillIndexOf get(fill_index_of):  map OrderPair => u128; //交易对的成交历史的index
         pub OrdersOf get(order_of):map (T::AccountId, OrderPair,u64) => Option<OrderT<T>>;

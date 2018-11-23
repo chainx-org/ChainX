@@ -293,8 +293,6 @@ fn note_offline_grace_should_work() {
 #[test]
 fn nominating_and_rewards_should_work() {
     with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 15), || {
-        // session reward is calculated by session_length * block_period * REWRAD_PER_SECOND,
-        // REWRAD_PER_SECOND is 3, that means session reward is 15 now.
         // (total_vote_weight, intention) trending: [(0, 10), (0, 20)]
         assert_eq!(Staking::era_length(), 1);
         assert_eq!(Staking::validator_count(), 2);
@@ -302,22 +300,163 @@ fn nominating_and_rewards_should_work() {
         assert_eq!(Session::validators(), vec![10, 20]);
         assert_eq!(Staking::current_era(), 0);
 
-        System::set_block_number(1);
+        assert_eq!(Staking::intentions(), [10, 20]);
 
-        assert_ok!(Staking::stake(
-            Origin::signed(1),
+        System::set_block_number(1);
+        // cert owner activates intention, including registering indentity and increasing free balance according to the shares.
+        // shares * activation_per_share = 10 * 100000
+        // intention.free_balance += shares * activation_per_share
+        assert_ok!(Staking::activate(
+            Origin::signed(0),
+            1,
             String::from("1").into_bytes(),
             String::from("url").into_bytes(),
             10
         ));
-        assert_ok!(Staking::stake(
-            Origin::signed(2),
+        // 10 + 10 * 100000
+        assert_eq!(Balances::total_balance(&1), 1000010);
+        // initial activation is reserved during the frozen duration of respective cert owner
+        assert_eq!(Staking::locked(&1), 1000000);
+        assert_eq!(Balances::free_balance(&1), 10);
+
+        assert_ok!(Staking::activate(
+            Origin::signed(0),
+            2,
+            b"2".to_vec(),
+            b"url".to_vec(),
+            10
+        ));
+        assert_eq!(Balances::total_balance(&2), 1000020);
+        assert_eq!(Staking::locked(&2), 1000000);
+
+        assert_ok!(Staking::activate(
+            Origin::signed(0),
+            3,
+            b"3".to_vec(),
+            b"url".to_vec(),
+            20
+        ));
+        assert_eq!(Balances::total_balance(&3), 2000030);
+
+        assert_eq!(Staking::cert_owners(&0).remaining_shares, 5);
+        assert_eq!(Staking::intentions(), [10, 20, 1, 2, 3]);
+
+        System::set_block_number(2);
+        // 4 => 2, 30
+        assert_ok!(Staking::nominate(Origin::signed(4), 2.into(), 30));
+        assert_eq!(Staking::nomination_record_of(&4, &2).nomination, 30);
+        assert_eq!(Balances::free_balance(&4), 10);
+        // 2 => 2, 10
+        assert_ok!(Staking::stake(Origin::signed(2), 10));
+        Session::check_rotate_session(System::block_number());
+
+        // 3:2000000, 2:1000000+30+10, 1:1000000
+        assert_eq!(Session::validators(), [3, 2]);
+        assert_eq!(Staking::intentions(), [10, 20, 1, 2, 3]);
+        assert_eq!(Staking::staking_stats().total_stake, 4000042);
+        // 4000040 * 1 / 1000 = 4000
+        assert_eq!(Staking::this_session_reward(), 4000);
+
+        // 1000000 * 4000 / 4000040 = 1000
+        // 1000 * 1 / 10 = 100 => 1.free_balance += 100
+        // 1000 * 9 / 10 = 900 => 1.jackpot += 900
+        assert_eq!(Staking::total_nomination_of_intention(&1), 1000000);
+        assert_eq!(Balances::free_balance(&1), 109);
+        assert_eq!(Staking::intention_profiles(&1).jackpot, 900);
+
+        assert_eq!(Staking::total_nomination_of_intention(&2), 1000040);
+        assert_eq!(Balances::free_balance(&2), 110);
+        assert_eq!(Staking::intention_profiles(&2).jackpot, 900);
+
+        assert_eq!(Staking::total_nomination_of_intention(&3), 2000000);
+        assert_eq!(Balances::free_balance(&3), 229);
+        assert_eq!(Staking::intention_profiles(&3).jackpot, 1800);
+
+        assert_eq!(Staking::locked(&2), 1000000);
+
+        System::set_block_number(3);
+        assert_ok!(Staking::stake(Origin::signed(1), 10));
+        assert_eq!(Staking::locked(&2), 1000000);
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Session::validators(), [3, 2]);
+        // initial frozen activation is due.
+        assert_eq!(Staking::locked(&2), 0);
+
+        assert_eq!(Staking::staking_stats().total_stake, 4000052);
+
+        assert_eq!(Staking::nominator_profiles(&4).nominees, [2]);
+        assert_eq!(Staking::intention_profiles(&2).total_nomination, 1000040);
+        assert_eq!(Staking::intention_profiles(&2).jackpot, 1800);
+
+        assert_eq!(Staking::total_vote_weight_of_intention(&2), 2000040);
+        //  intention.total_vote_weight = 1000000 + 1000040 * (3-2)= 2000040
+        //  nominator.vote_weight = 0 + 30 * (3-2) = 30
+        //  dividend = 30 * 1800 / 2000040 = 0
+        assert_ok!(Staking::claim(Origin::signed(4), 0));
+        assert_eq!(Staking::total_vote_weight_of_intention(&2), 2000010);
+        assert_eq!(Staking::nomination_record_of(&4, &2).last_vote_weight, 0);
+        assert_eq!(Staking::nomination_record_of(&4, &2).nomination, 30);
+        assert_eq!(Balances::free_balance(&4), 10);
+
+        System::set_block_number(4);
+        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 10));
+        assert_eq!(Balances::free_balance(&2), 210);
+        assert_ok!(Staking::nominate(Origin::signed(2), 1.into(), 200));
+        assert_ok!(Staking::deactivate(Origin::signed(2), 3));
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Balances::free_balance(&4), 0);
+        assert_eq!(Balances::free_balance(&2), 10);
+
+        assert_eq!(Session::validators(), [3, 1]);
+        assert_ok!(Staking::claim(Origin::signed(4), 0));
+
+        System::set_block_number(5);
+        assert_ok!(Staking::unnominate(Origin::signed(4), 0, 30));
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Session::validators(), [3, 1]);
+        assert_eq!(Balances::free_balance(&1), 398);
+        assert_eq!(Balances::free_balance(&2), 10);
+        assert_eq!(Balances::free_balance(&3), 826);
+        assert_eq!(Balances::free_balance(&4), 0);
+        assert_eq!(Staking::locked(&4), 30);
+
+        System::set_block_number(6);
+        assert_eq!(Balances::free_balance(&2), 10);
+        assert_ok!(Staking::claim(Origin::signed(2), 0));
+        assert_eq!(Balances::free_balance(&2), 1809);
+        Session::check_rotate_session(System::block_number());
+
+        assert_eq!(Session::validators(), [3, 1]);
+        // decreased stake is due.
+        assert_eq!(Balances::free_balance(&4), 30);
+    });
+}
+
+#[test]
+fn test_relationship() {
+    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 15), || {
+        System::set_block_number(1);
+        assert_ok!(Staking::register(String::from("1").into_bytes(), 3, 1));
+        assert_ok!(Staking::activate(
+            Origin::signed(1),
+            1,
+            String::from("1").into_bytes(),
+            String::from("url").into_bytes(),
+            10
+        ));
+        assert_ok!(Staking::activate(
+            Origin::signed(1),
+            2,
             String::from("2").into_bytes(),
             String::from("url").into_bytes(),
             10
         ));
-        assert_ok!(Staking::stake(
-            Origin::signed(3),
+        assert_ok!(Staking::activate(
+            Origin::signed(1),
+            3,
             String::from("3").into_bytes(),
             String::from("url").into_bytes(),
             20
@@ -325,74 +464,62 @@ fn nominating_and_rewards_should_work() {
 
         System::set_block_number(2);
         assert_ok!(Staking::nominate(Origin::signed(4), 2.into(), 30));
-        assert_ok!(Staking::update_stake(Origin::signed(2), 5));
+        assert_ok!(Staking::stake(Origin::signed(2), 10));
         Session::check_rotate_session(System::block_number());
 
-        assert_eq!(Session::validators(), [3, 1]);
-        assert_eq!(Balances::free_balance(&10), 1);
-        assert_eq!(Balances::free_balance(&20), 1);
-        assert_eq!(Balances::free_balance(&1), 0);
-        assert_eq!(Balances::free_balance(&2), 10);
-        assert_eq!(Staking::locked(&2), 5);
-        assert_eq!(Balances::free_balance(&3), 10);
-        assert_eq!(Balances::free_balance(&4), 10);
+        assert_eq!(Staking::intention_profiles(&2).nominators, [2, 4]);
+        assert_eq!(Staking::nominator_profiles(&4).nominees, [2]);
+        assert_eq!(Staking::staking_stats().nominator_count, 4);
 
         System::set_block_number(3);
+        assert_ok!(Staking::stake(Origin::signed(1), 10));
         Session::check_rotate_session(System::block_number());
 
-        assert_eq!(Session::validators(), [2, 3]);
-        assert_eq!(Balances::free_balance(&1), 0);
-        assert_eq!(Staking::locked(&2), 0);
-        assert_eq!(Balances::free_balance(&2), 16);
-        assert_eq!(Balances::free_balance(&3), 11);
-        assert_eq!(Balances::free_balance(&4), 10);
-        assert_ok!(Staking::claim(Origin::signed(4), 0));
-        assert_eq!(Balances::free_balance(&4), 13);
+        assert_eq!(Staking::intention_profiles(&1).nominators, [1]);
 
         System::set_block_number(4);
-        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 12));
+        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 10));
         assert_ok!(Staking::nominate(Origin::signed(2), 1.into(), 10));
-        assert_ok!(Staking::deactivate(Origin::signed(2), 3));
         Session::check_rotate_session(System::block_number());
 
-        assert_eq!(Session::validators(), [3, 1]);
-        assert_ok!(Staking::claim(Origin::signed(4), 0));
-        assert_eq!(Balances::free_balance(&4), 4);
+        assert_eq!(Staking::intention_profiles(&1).nominators, [1, 4, 2]);
+        assert_eq!(Staking::nominator_profiles(&2).nominees, [2, 1]);
+        assert_eq!(Staking::nominator_profiles(&4).nominees, [2, 1]);
+        assert_eq!(Staking::staking_stats().nominator_count, 4);
 
         System::set_block_number(5);
         assert_ok!(Staking::unnominate(Origin::signed(4), 0, 30));
+        assert_eq!(Staking::intention_profiles(&2).nominators, [2]);
+
+        assert_eq!(Staking::nominator_profiles(&2).nominees, [2, 1]);
+        assert_eq!(Staking::intention_profiles(&2).nominators, [2]);
+        assert_ok!(Staking::unstake(Origin::signed(2), 1000010));
+        //???
+        assert_eq!(Staking::nominator_profiles(&2).nominees, [1]);
+        assert_eq!(Staking::intention_profiles(&2).nominators, []);
+
+        assert_eq!(Staking::nominator_profiles(&4).nominees, [1]);
+        assert_eq!(Staking::staking_stats().nominator_count, 4);
         Session::check_rotate_session(System::block_number());
 
-        assert_eq!(Session::validators(), [3, 1]);
-        assert_eq!(Balances::free_balance(&1), 1);
-        assert_eq!(Balances::free_balance(&2), 7);
-        assert_eq!(Balances::free_balance(&3), 13);
-        assert_eq!(Balances::free_balance(&4), 4);
-        assert_eq!(Staking::locked(&4), 30);
+        System::set_block_number(5);
+        assert_ok!(Staking::deactivate(Origin::signed(2), 3));
+        assert_ok!(Staking::deactivate(Origin::signed(1), 2));
 
-        System::set_block_number(6);
-        assert_eq!(Balances::free_balance(&2), 7);
-        assert_ok!(Staking::claim(Origin::signed(2), 0));
-        assert_eq!(Balances::free_balance(&2), 9);
-        Session::check_rotate_session(System::block_number());
+        assert_eq!(Staking::nominator_profiles(&4).nominees, [1]);
+        assert_ok!(Staking::unnominate(Origin::signed(4), 0, 10));
+        assert_eq!(Staking::nominator_profiles(&4).nominees, []);
+        assert_eq!(Staking::intention_profiles(&1).nominators, [1, 2]);
+        assert_eq!(Staking::staking_stats().nominator_count, 3);
 
-        assert_eq!(Session::validators(), [3, 1]);
+        assert_ok!(Staking::unnominate(Origin::signed(2), 0, 10));
+        assert_eq!(Staking::nominator_profiles(&2).nominees, []);
 
-        System::set_block_number(7);
-        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 30));
-        assert_ok!(Staking::nominate(Origin::signed(2), 3.into(), 9));
-        Session::check_rotate_session(System::block_number());
-        assert_eq!(Session::validators(), [3, 1]);
-
-        System::set_block_number(8);
-        Session::check_rotate_session(System::block_number());
-        assert_eq!(Session::validators(), [1, 3]);
-
-        System::set_block_number(9);
+        assert_eq!(Staking::staking_stats().nominator_count, 2);
+        assert_eq!(Staking::intention_profiles(&1).nominators, [1]);
         Session::check_rotate_session(System::block_number());
     });
 }
-
 // TODO change to current
 // #[test]
 // fn nominating_and_rewards_should_work() {

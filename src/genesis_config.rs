@@ -94,13 +94,16 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             intention_profiles: initial_authorities.clone().into_iter().map(|i| (i.0.into(), b"ChainX".to_vec(), b"chainx.org".to_vec())).collect(),
             minimum_validator_count: 1,
             validator_count: 6,
-            reward_per_sec: 3, // 3 PCX per second
             sessions_per_era: 4, // 24 hours per era.
-            session_reward: Perbill::from_millionths(10800),
+            shares_per_cert: 45,
+            activation_per_share: 100000,
+            maximum_cert_owner_count: 200,
+            intention_threshold: 9000,
             offline_slash_grace: 0,
             offline_slash: Perbill::from_millionths(0),
             current_offline_slash: 0,
             current_session_reward: 0,
+            cert_owner: auth1.0.into(),
         }),
         democracy: Some(DemocracyConfig {
             launch_period: 120 * 24 * 14, // 2 weeks per public referendum

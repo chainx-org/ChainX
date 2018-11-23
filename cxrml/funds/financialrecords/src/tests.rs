@@ -56,6 +56,13 @@ impl tokenbalances::Trait for Test {
     const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
     type Event = ();
+    type OnMoveToken = ();
+}
+
+impl Trait for Test {
+    type Event = ();
+    type OnDepositToken = ();
+    type OnWithdrawToken = ();
 }
 
 // This function basically just builds a genesis storage key/value store according to
@@ -138,10 +145,6 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
             .unwrap(),
     );
     r.into()
-}
-
-impl Trait for Test {
-    type Event = ();
 }
 
 type FinancialRecords = Module<Test>;

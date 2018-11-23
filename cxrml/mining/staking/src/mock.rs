@@ -23,7 +23,11 @@ use primitives::BuildStorage;
 use primitives::{traits::Identity, Perbill};
 use runtime_io;
 use substrate_primitives::{Blake2Hasher, H256};
-use {balances, consensus, session, system, timestamp, GenesisConfig, Module, Trait};
+use tokenbalances::{DescString, SymbolString};
+use {
+    balances, consensus, cxrml_associations, cxrml_system, cxsupport, session, system, timestamp,
+    tokenbalances, GenesisConfig, Module, Trait,
+};
 
 impl_outer_origin!{
     pub enum Origin for Test {}
@@ -66,9 +70,28 @@ impl timestamp::Trait for Test {
     const TIMESTAMP_SET_POSITION: u32 = 0;
     type Moment = u64;
 }
-impl Trait for Test {
-    type OnRewardMinted = ();
+impl cxsupport::Trait for Test {}
+impl cxrml_system::Trait for Test {}
+impl cxrml_associations::Trait for Test {
+    type OnCalcFee = cxsupport::Module<Test>;
     type Event = ();
+}
+pub type TokenBalance = u128;
+impl tokenbalances::Trait for Test {
+    const CHAINX_SYMBOL: SymbolString = b"pcx";
+    const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
+    type TokenBalance = TokenBalance;
+    type OnMoveToken = ();
+    type Event = ();
+    type OnMoveToken = ();
+}
+impl Trait for Test {
+    type OnNewSessionForTokenStaking = ();
+    type OnRewardMinted = ();
+    type OnReward = ();
+    type Event = ();
+    type OnNewSessionForTokenStaking = ();
+    type OnReward = ();
 }
 
 pub fn new_test_ext(
@@ -152,15 +175,17 @@ pub fn new_test_ext(
                             .to_string()
                             .into_bytes()
                             .to_vec(),
-                        b"chianx.org".to_vec(),
+                        b"url".to_vec(),
                     )
                 })
                 .collect(),
             validator_count: 2,
-            reward_per_sec: 3,
+            shares_per_cert: 45,
+            activation_per_share: 100000,
+            maximum_cert_owner_count: 200,
+            intention_threshold: 9000,
             minimum_validator_count: 0,
             bonding_duration: sessions_per_era * session_length,
-            session_reward: Perbill::from_millionths((1000000 * reward / balance_factor) as u32),
             offline_slash: if monied {
                 Perbill::from_percent(40)
             } else {
@@ -169,6 +194,7 @@ pub fn new_test_ext(
             current_session_reward: reward,
             current_offline_slash: 20,
             offline_slash_grace: 0,
+            cert_owner: 0,
         }
         .build_storage()
         .unwrap(),

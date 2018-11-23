@@ -64,6 +64,7 @@ impl tokenbalances::Trait for Test {
     const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
     type TokenBalance = TokenBalance;
     type Event = ();
+    type OnMoveToken = ();
 }
 
 // This function basically just builds a genesis storage key/value store according to

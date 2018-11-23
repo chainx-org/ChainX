@@ -68,6 +68,7 @@ impl tokenbalances::Trait for Test {
     const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"this is pcx for mock";
     type TokenBalance = u128;
     type Event = ();
+    type OnMoveToken = ();
 }
 
 impl financial_records::Trait for Test {

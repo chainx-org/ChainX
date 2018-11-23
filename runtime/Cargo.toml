@@ -32,7 +32,7 @@ chainx-primitives = { path = "../primitives" }
 # chainx runtime module
 cxrml-system = { path = "../cxrml/system" }
 cxrml-support = { path = "../cxrml/support" }
-cxrml-staking = { path = "../cxrml/staking" }
+cxrml-mining-staking = { path = "../cxrml/mining/staking" }
 cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
 cxrml-multisig = { path = "../cxrml/multisig" }
 cxrml-associations = { path = "../cxrml/associations" }
@@ -68,7 +68,7 @@ std = [
     "safe-mix/std",
     "cxrml-system/std",
     "cxrml-support/std",
-    "cxrml-staking/std",
+    "cxrml-mining-staking/std",
     "cxrml-tokenbalances/std",
     "cxrml-multisig/std",
     "cxrml-associations/std",

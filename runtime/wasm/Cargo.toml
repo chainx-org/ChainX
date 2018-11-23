@@ -32,7 +32,7 @@ chainx-primitives = { path = "../../primitives", default-features = false }
 # chainx runtime module
 cxrml-system = { path = "../../cxrml/system", default-features = false }
 cxrml-support = { path = "../../cxrml/support", default-features = false }
-cxrml-staking = { path = "../../cxrml/staking", default-features = false }
+cxrml-mining-staking = { path = "../../cxrml/mining/staking", default-features = false }
 cxrml-tokenbalances = { path = "../../cxrml/tokenbalances", default-features = false }
 cxrml-multisig = { path = "../../cxrml/multisig", default-features = false }
 cxrml-associations = { path = "../../cxrml/associations", default-features = false }
@@ -68,7 +68,7 @@ std = [
     "chainx-primitives/std",
     "cxrml-system/std",
     "cxrml-support/std",
-    "cxrml-staking/std",
+    "cxrml-mining-staking/std",
     "cxrml-tokenbalances/std",
     "cxrml-multisig/std",
     "cxrml-associations/std",

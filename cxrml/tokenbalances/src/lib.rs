@@ -75,6 +75,16 @@ pub trait Trait: balances::Trait + cxsupport::Trait {
         + Default;
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+    type OnMoveToken: OnMoveToken<Self::AccountId, Self::TokenBalance>;
+}
+
+pub trait OnMoveToken<AccountId, TokenBalance> {
+    fn on_move_token(from: &AccountId, to: &AccountId, sym: &Symbol, value: TokenBalance);
+}
+
+impl<AccountId, TokenBalance> OnMoveToken<AccountId, TokenBalance> for () {
+    fn on_move_token(_: &AccountId, _: &AccountId, _: &Symbol, _: TokenBalance) {}
 }
 
 pub type Symbol = Vec<u8>;
@@ -751,6 +761,9 @@ impl<T: Trait> Module<T> {
             Some(b) => b,
             None => return Err(TokenErr::OverFlow),
         };
+
+        T::OnMoveToken::on_move_token(from, to, symbol, value);
+
         FreeToken::<T>::insert(key_from, new_from_token);
         FreeToken::<T>::insert(key_to, new_to_token);
         Self::deposit_event(RawEvent::MoveFreeToken(
@@ -833,6 +846,8 @@ impl<T: Trait> Module<T> {
         if associations::Module::<T>::is_init(to) == false {
             balances::Module::<T>::set_free_balance_creating(to, Zero::zero());
         }
+
+        T::OnMoveToken::on_move_token(from, to, sym, value);
 
         // set to storage
         FreeToken::<T>::insert(&key_from, new_from_token);
