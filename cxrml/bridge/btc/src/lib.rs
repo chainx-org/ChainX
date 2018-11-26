@@ -259,7 +259,7 @@ decl_storage! {
         pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
         pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
         pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
-
+        pub DepositRecords get(deposit_records): map Address => Option<Vec<(H256, u32, u64, H256)>>;
         pub RegInfoMaxIndex get(accounts_max_index) config(): u64;
         pub RegInfoSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, T::BlockNumber, Vec<u8>, TxType)>;
         pub CertCache get(cert_cache): Option<(Vec<u8>, T::AccountId)>;
@@ -318,7 +318,7 @@ impl<T: Trait> Module<T> {
 
     pub fn push_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
         let from = ensure_signed(origin)?;
-
+        runtime_io::print("---------push_transaction--------");
         let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("parse RelayTx err")?;
         Self::process_tx(tx, &from)?;
         Ok(())
@@ -370,6 +370,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn process_tx(tx: RelayTx, who: &T::AccountId) -> Result {
+        runtime_io::print("---------process_tx--------");
         let receive_address: Address = if let Some(h) = <ReceiveAddress<T>>::get() {
             h
         } else {
@@ -389,7 +390,7 @@ impl<T: Trait> Module<T> {
                 handle_cert::<T>(&tx.raw, &tx.block_hash, &who, &cert_address);
             }
             _ => {
-                let _utxos = handle_output::<T>(
+                handle_output::<T>(
                     &tx.raw,
                     &tx.block_hash,
                     &who,

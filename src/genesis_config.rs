@@ -161,13 +161,13 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         bridge_btc: Some(BridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: (BlockHeader {
-                version: 536870912,
-                previous_header_hash: H256::from_reversed_str("000000000000012651bf407efcc567df3529049085711572eaee8d243ec815d4"),
-                merkle_root_hash: H256::from_reversed_str("ecec3d2eb31c04a844dc18b233c819c64b6a56c2a51bc77078ef4cc8f434bc21"),
-                time: 1541642229,
-                bits: Compact::new(436299432),
-                nonce: 937513642,
-            }, 1442480),
+                version: 545259520,
+                previous_header_hash: H256::from_reversed_str("0000000000000119cb529b757340de5a642b21938930646c646241f19ab10789"),
+                merkle_root_hash: H256::from_reversed_str("53a5a6865051ad1f350de8a8bd65700f9929808bae3c7e82c792647e767c2eab"),
+                time: 1542972675,
+                bits: Compact::new(436296509),
+                nonce: 1691442840,
+            }, 1444850),
             params_info: Params::new(520159231, // max_bits
                                      2 * 60 * 60,  // block_max_future
                                      64,  // max_fork_route_preset
@@ -177,12 +177,12 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             network_id: 1,
             utxo_max_index: 0,
             irr_block: 0,
-            btc_fee: 10,
+            btc_fee: 1000,
             accounts_max_index: 0,
-            cert_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
-            cert_redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
-            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
-            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
+            cert_address: keys::Address::from_layout(&"2N6JXYKYLqN4e2A96FLnY5J1Mjj5MHXhp6b".from_base58().unwrap()).unwrap(),
+            cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
+            receive_address: keys::Address::from_layout(&"2N8tR484JD32i1DY2FnRPLwBVaNuXSfzoAv".from_base58().unwrap()).unwrap(),
+            redeem_script: b"52210306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd2102a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee2103f72c448a0e59f48d4adef86cba7b278214cece8e56ef32ba1d179e0a8129bdba53ae".to_vec(),
             fee: 0,
         }),
         pendingorders: Some(PendingOrdersConfig {

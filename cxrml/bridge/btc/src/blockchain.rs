@@ -15,9 +15,12 @@ use script::Script;
 use {
     AccountMap, BestIndex, BlockHeaderFor, CertCache, DepositCache, HashsForNumber, NumberForHash,
     Params, ParamsInfo, Trait, TxProposal,
+    Module,
 };
 
 use tx::{Proposal, RollBack, TxStorage};
+
+use tokenbalances::TokenT;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -162,18 +165,17 @@ impl<T: Trait> Chain<T> {
                 best_number + 1
             },
         };
-
-        let symbol: Symbol = b"x-btc".to_vec();
+        let symbol: Symbol = Module::<T>::SYMBOL.to_vec();
         let irr_block = <IrrBlock<T>>::get();
         // Deposit
         if let Some(vec) = <DepositCache<T>>::take() {
-            runtime_io::print("------DepositCache take");
+            runtime_io::print("-----------DepositCache take");
             let mut uncomplete_cache: Vec<(T::AccountId, u64, H256)> = Vec::new();
             for (account_id, amount, block_hash) in vec {
                 match <NumberForHash<T>>::get(block_hash.clone()) {
                     Some(height) => {
                         if new_best_header.number > height + irr_block {
-                            runtime_io::print("------financial_records deposit");
+                            runtime_io::print("-----------financial_records deposit");
                             <financial_records::Module<T>>::deposit(
                                 &account_id,
                                 &symbol,
@@ -198,6 +200,7 @@ impl<T: Trait> Chain<T> {
             match <NumberForHash<T>>::get(tx.block_hash) {
                 Some(height) => {
                     if new_best_header.number > height + irr_block {
+                        runtime_io::print("----new_best_header.number-----");
                         for output in tx.tx.outputs.iter() {
                             let script: Script = output.clone().script_pubkey.into();
                             let script_address =
@@ -215,6 +218,7 @@ impl<T: Trait> Chain<T> {
                             };
                             let account_id = <AddressMap<T>>::get(address);
                             if account_id.is_some() {
+                                runtime_io::print("----account_id.is_some()-----");
                                 <financial_records::Module<T>>::withdrawal_finish(
                                     &account_id.unwrap(),
                                     &symbol,
@@ -224,6 +228,7 @@ impl<T: Trait> Chain<T> {
                         }
                         let vec = <financial_records::Module<T>>::get_withdraw_cache(&symbol);
                         if vec.is_some() {
+                            runtime_io::print("----account_id.is_some()-----");
                             let mut address_vec = Vec::new();
                             for (account_id, balance) in vec.unwrap() {
                                 let address = <AccountMap<T>>::get(account_id);
@@ -240,10 +245,23 @@ impl<T: Trait> Chain<T> {
                 }
                 None => {}
             }
+        } else {
+            let vec = <financial_records::Module<T>>::get_withdraw_cache(&symbol);
+            if vec.is_some() {
+                runtime_io::print("-----------first withdraw");
+                let mut address_vec = Vec::new();
+                for (account_id, balance) in vec.unwrap() {
+                    let address = <AccountMap<T>>::get(account_id);
+                    if address.is_some() {
+                        address_vec.push((address.unwrap(), balance.as_() as u64));
+                    }
+                }
+                let btc_fee = <BtcFee<T>>::get();
+                let _ = <Proposal<T>>::create_proposal(address_vec, btc_fee);
+            }
         }
-
         // SendCert
-        if let Some(certInfo) = <CertCache<T>>::take() {
+        if let Some(_cert_info) = <CertCache<T>>::take() {
             runtime_io::print("------CertCache take");
             //TO DO
         }

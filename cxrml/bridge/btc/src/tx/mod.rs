@@ -11,7 +11,7 @@ use runtime_support::{StorageMap, StorageValue};
 pub use self::proposal::{handle_proposal, Proposal};
 use super::{
     AccountMap, AddressMap, BTCTxLog, BlockHeaderFor, BlockTxids, CandidateTx, CertCache,
-    DepositCache, LinkedNodes, NetworkId, Node, NumberForHash, ReceiveAddress, RedeemScript,
+    DepositCache, DepositRecords, LinkedNodes, NetworkId, Node, NumberForHash, ReceiveAddress, RedeemScript,
     RegInfoMaxIndex, RegInfoSet, Trait, TxProposal, TxSet, TxSetTail, TxType, UTXOMaxIndex,
     UTXOSet,
 };
@@ -159,7 +159,7 @@ impl<T: Trait> TxStorage<T> {
             block_hash,
             tx,
         };
-        let mut n = Node::new(log);
+        let n = Node::new(log);
         // insert to the storage, same to TxSet::<T>::insert(hash, xxx)
         n.init_storage::<LinkedNodes<T>>();
         if let Some(tail_index) = TxSetTail::<T>::get() {
@@ -263,6 +263,11 @@ pub fn validate_transaction<T: Trait>(
     tx: &RelayTx,
     address: (&keys::Address, &keys::Address),
 ) -> StdResult<TxType, &'static str> {
+
+    if <TxSet<T>>::exists(&tx.raw.hash()) == true {
+        return Err("this tx already store");
+    }
+
     if <NumberForHash<T>>::exists(&tx.block_hash) == false {
         return Err("this tx's block not in the main chain");
     }
@@ -296,6 +301,7 @@ pub fn validate_transaction<T: Trait>(
         let outpoint = input.previous_output.clone();
         let send_address = inspect_address::<T>(&tx.previous_raw, outpoint).unwrap();
         if send_address.hash == address.1.hash {
+            runtime_io::print("-----------TxType::SendCert");
             return Ok(TxType::SendCert);
         }
     }
@@ -305,12 +311,14 @@ pub fn validate_transaction<T: Trait>(
         let outpoint = input.previous_output.clone();
         let send_address = inspect_address::<T>(&tx.previous_raw, outpoint).unwrap();
         if send_address.hash == address.0.hash {
+            runtime_io::print("-----------TxType::Withdraw");
             return Ok(TxType::Withdraw);
         }
     }
     // detect deposit
     for output in tx.raw.outputs.iter() {
         if is_key(&output.script_pubkey, &address.0) {
+            runtime_io::print("-----------TxType::RegisterDeposit");
             return Ok(TxType::RegisterDeposit);
         }
     }
@@ -339,12 +347,15 @@ fn compare_transaction(tx1: &Transaction, tx2: &Transaction) -> bool {
                 if tx1.inputs[i].previous_output == tx2.inputs[i].previous_output
                     && tx1.inputs[i].sequence == tx2.inputs[i].sequence
                 {
+                    runtime_io::print("-----------compare_transaction ture");
                     return true;
                 }
             }
         }
+        runtime_io::print("-----------compare_transaction false");
         return false;
     }
+    runtime_io::print("-----------compare_transaction false");
     return false;
 }
 
@@ -361,7 +372,7 @@ pub fn handle_input<T: Trait>(
         <TxProposal<T>>::put(candidate);
     } else {
         // To do: handle_input error not expect
-        runtime_io::print("------handle_input error not expect-----");
+        runtime_io::print("-----------handle_input error not expect");
     }
     let out_point_set = tx
         .inputs
@@ -400,14 +411,21 @@ pub fn handle_input<T: Trait>(
     );
 }
 
-fn deposit_token<T: Trait>(address: keys::Address, balance: u64, block_hash: &H256) {
-    let account = <AddressMap<T>>::get(address).unwrap();
+fn deposit_token<T: Trait>(address: keys::Address, balance: u64, block_hash: &H256) -> bool {
+    let account = match <AddressMap<T>>::get(address) {
+        Some(account) => account,
+        None => {
+            return false;
+        }
+    };
+
     let mut vec: Vec<(T::AccountId, u64, H256)> = match <DepositCache<T>>::take() {
         Some(vec) => vec,
         None => Vec::new(),
     };
     vec.push((account, balance, block_hash.clone()));
     <DepositCache<T>>::put(vec);
+    return true;
 }
 
 fn inspect_address<T: Trait>(tx: &Transaction, outpoint: OutPoint) -> Option<keys::Address> {
@@ -440,55 +458,98 @@ pub fn handle_output<T: Trait>(
     who: &T::AccountId,
     previous_tx: &Transaction,
     receive_address: &keys::Address,
-) -> Vec<UTXO> {
+) {
     let mut new_utxos = Vec::<UTXO>::new();
     let mut total_balance: u64 = 0;
     let mut register = false;
-    let mut new_account = false;
     let tx_type;
     let mut channel = Vec::<u8>::new();
     // Add utxo
     let outpoint = tx.inputs[0].previous_output.clone();
     let send_address = inspect_address::<T>(previous_tx, outpoint).unwrap();
+    runtime_io::print("-----------handle_output");
     for (index, output) in tx.outputs.iter().enumerate() {
         let script = &output.script_pubkey;
         let script: Script = script.clone().into();
         // bind address [btc address --> chainx AccountId]
         if script.is_null_data_script() {
             let data = script.extract_rear(':');
-            runtime_io::print("------opreturn account data-----");
-            let slice = from(data).unwrap();
+            runtime_io::print("-----------opreturn account data");
+            let slice: Vec<u8> = match from(data) {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
             let slice = slice.as_slice();
+            if slice.len() < 32 {
+                continue;
+            }
             let mut account: Vec<u8> = Vec::new();
             account.extend_from_slice(&slice[1..33]);
             runtime_io::print(&account[..]);
-            let id: T::AccountId = Decode::decode(&mut account.as_slice()).unwrap();
+            let id: T::AccountId = match Decode::decode(&mut account.as_slice()) {
+                Some(a) => a,
+                None => continue,
+            };
             match <AddressMap<T>>::get(send_address.clone()) {
-                Some(_a) => new_account = false,
+                Some(_a) => {
+                    register = false;
+                }
                 None => {
-                    runtime_io::print("------new account-----");
+                    runtime_io::print("-----------new account");
                     channel = script.extract_pre(':');
-                    new_account = true
+                    <AddressMap<T>>::insert(send_address.clone(), id.clone());
+                    <AccountMap<T>>::insert(id, send_address.clone());
+                    register = true;
+                    match <DepositRecords<T>>::get(send_address.clone()) {
+                        Some(records) => {
+                            runtime_io::print("------------process history deposit");
+                            for rec in records.iter() {
+                                if deposit_token::<T>(send_address.clone(), rec.2, &rec.3) {
+                                    total_balance += output.value;
+                                    new_utxos.push(UTXO {
+                                        txid: rec.0.clone(),
+                                        index: rec.1,
+                                        balance: rec.2,
+                                        is_spent: false,
+                                    });
+                                    runtime_io::print("-----------history deposit token success");
+                                    runtime_io::print(rec.2);
+                                }
+                            }
+                            <DepositRecords<T>>::remove(&send_address.clone());
+                        }
+                        None => {}
+                    }
                 }
             };
-            <AddressMap<T>>::insert(send_address.clone(), id.clone());
-            <AccountMap<T>>::insert(id, send_address.clone());
-            register = true;
             continue;
         }
         // deposit money
         let script_addresses = script.extract_destinations().unwrap_or(Vec::new());
         if script_addresses.len() == 1 {
             if receive_address.hash == script_addresses[0].hash {
-                runtime_io::print("------deposit_token-----");
-                deposit_token::<T>(send_address.clone(), output.value, block_hash);
-                total_balance += output.value;
-                new_utxos.push(UTXO {
-                    txid: tx.hash(),
-                    index: index as u32,
-                    balance: output.value,
-                    is_spent: false,
-                });
+                runtime_io::print("-----------deposit_token");
+                if deposit_token::<T>(send_address.clone(), output.value, block_hash) {
+                    total_balance += output.value;
+                    new_utxos.push(UTXO {
+                        txid: tx.hash(),
+                        index: index as u32,
+                        balance: output.value,
+                        is_spent: false,
+                    });
+                    runtime_io::print("-----------deposit token success");
+                    runtime_io::print(output.value);
+                } else {
+                    let mut vec: Vec<(H256, u32, u64, H256)> =
+                        match <DepositRecords<T>>::get(send_address.clone()) {
+                            Some(vec) => vec,
+                            None => Vec::new(),
+                        };
+                    vec.push((tx.hash(), index as u32, output.value, (*block_hash).clone()));
+                    <DepositRecords<T>>::remove(&send_address.clone());
+                    <DepositRecords<T>>::insert(send_address.clone(), vec.clone());
+                    runtime_io::print("-----------deposit token failed, save in DepositRecords");
+                }
             }
         }
     }
@@ -526,8 +587,7 @@ pub fn handle_output<T: Trait>(
         };
         <UTXOStorage<T>>::add(new_utxos.clone());
     }
-    if new_account {
-        runtime_io::print("----new account-------");
+    if register {
         let time = <system::Module<T>>::block_number();
         let chainxaddr = <AddressMap<T>>::get(send_address.clone()).unwrap();
         let account = (
@@ -542,20 +602,19 @@ pub fn handle_output<T: Trait>(
         runtime_io::print("------insert new account in AccountsMap-----");
     }
     runtime_io::print("------store tx success-----");
-    new_utxos
 }
 
 pub fn handle_cert<T: Trait>(
     tx: &Transaction,
-    block_hash: &H256,
-    who: &T::AccountId,
-    cert_address: &keys::Address,
+    _block_hash: &H256,
+    _who: &T::AccountId,
+    _cert_address: &keys::Address,
 ) {
-    for (index, output) in tx.outputs.iter().enumerate() {
+    for (_index, output) in tx.outputs.iter().enumerate() {
         let script = &output.script_pubkey;
         let script: Script = script.clone().into();
         if script.is_null_data_script() {
-            runtime_io::print("------opreturn cert data-----");
+            runtime_io::print("-----------opreturn cert data");
             let owner = script.extract_rear(':');
             let name = script.extract_pre(':');
 

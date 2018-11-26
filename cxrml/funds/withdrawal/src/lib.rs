@@ -115,6 +115,7 @@ impl<T: Trait> Module<T> {
         let d = Self::verify_addr(&sym, &addr, &ext)?;
 
         financialrecords::Module::<T>::withdrawal(&who, &sym, value, addr, ext)?;
+        runtime_io::print("-----------withdraw ok");
         Ok(())
     }
 
