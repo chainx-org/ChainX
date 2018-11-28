@@ -32,10 +32,12 @@ chainx-primitives = { path = "../../primitives", default-features = false }
 # chainx runtime module
 cxrml-system = { path = "../../cxrml/system", default-features = false }
 cxrml-support = { path = "../../cxrml/support", default-features = false }
-cxrml-mining-staking = { path = "../../cxrml/mining/staking", default-features = false }
 cxrml-tokenbalances = { path = "../../cxrml/tokenbalances", default-features = false }
 cxrml-multisig = { path = "../../cxrml/multisig", default-features = false }
 cxrml-associations = { path = "../../cxrml/associations", default-features = false }
+# mining
+cxrml-mining-staking = { path = "../../cxrml/mining/staking", default-features = false }
+cxrml-mining-tokenstaking = { path = "../../cxrml/mining/tokenstaking", default-features = false }
 # bridge
 cxrml-bridge-btc = { path = "../../cxrml/bridge/btc", default-features = false }
 # funds
@@ -68,10 +70,11 @@ std = [
     "chainx-primitives/std",
     "cxrml-system/std",
     "cxrml-support/std",
-    "cxrml-mining-staking/std",
     "cxrml-tokenbalances/std",
     "cxrml-multisig/std",
     "cxrml-associations/std",
+    "cxrml-mining-staking/std",
+    "cxrml-mining-tokenstaking/std",
     "cxrml-bridge-btc/std",
     "cxrml-funds-financialrecords/std",
     "cxrml-funds-withdrawal/std",

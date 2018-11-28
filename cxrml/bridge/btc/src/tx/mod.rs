@@ -11,9 +11,9 @@ use runtime_support::{StorageMap, StorageValue};
 pub use self::proposal::{handle_proposal, Proposal};
 use super::{
     AccountMap, AddressMap, BTCTxLog, BlockHeaderFor, BlockTxids, CandidateTx, CertCache,
-    DepositCache, DepositRecords, LinkedNodes, NetworkId, Node, NumberForHash, ReceiveAddress, RedeemScript,
-    RegInfoMaxIndex, RegInfoSet, Trait, TxProposal, TxSet, TxSetTail, TxType, UTXOMaxIndex,
-    UTXOSet,
+    DepositCache, DepositRecords, LinkedNodes, NetworkId, Node, NumberForHash, ReceiveAddress,
+    RedeemScript, RegInfoMaxIndex, RegInfoSet, Trait, TxProposal, TxSet, TxSetTail, TxType,
+    UTXOMaxIndex, UTXOSet,
 };
 use b58::from;
 use chain::{OutPoint, Transaction, TransactionInput, TransactionOutput};
@@ -263,7 +263,6 @@ pub fn validate_transaction<T: Trait>(
     tx: &RelayTx,
     address: (&keys::Address, &keys::Address),
 ) -> StdResult<TxType, &'static str> {
-
     if <TxSet<T>>::exists(&tx.raw.hash()) == true {
         return Err("this tx already store");
     }

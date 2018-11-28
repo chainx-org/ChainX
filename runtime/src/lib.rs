@@ -37,11 +37,13 @@ extern crate srml_treasury as treasury;
 extern crate substrate_primitives;
 // cx runtime module
 extern crate cxrml_associations as associations;
-extern crate cxrml_mining_staking as staking;
 extern crate cxrml_multisig as multisig;
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_system as cxsystem;
 extern crate cxrml_tokenbalances as tokenbalances;
+// chainx mining staking
+extern crate cxrml_mining_staking as staking;
+extern crate cxrml_mining_tokenstaking as tokenstaking;
 // chainx runtime bridge
 extern crate cxrml_bridge_btc as bridge_btc;
 // funds
@@ -194,13 +196,6 @@ impl treasury::Trait for Runtime {
     type Event = Event;
 }
 
-impl staking::Trait for Runtime {
-    type OnRewardMinted = Treasury;
-    type Event = Event;
-    type OnNewSessionForTokenStaking = ();
-    type OnReward = ();
-}
-
 impl democracy::Trait for Runtime {
     type Proposal = Call;
     type Event = Event;
@@ -248,6 +243,18 @@ impl multisig::Trait for Runtime {
 
 impl associations::Trait for Runtime {
     type OnCalcFee = CXSupport;
+    type Event = Event;
+}
+
+// mining staking
+impl staking::Trait for Runtime {
+    type OnRewardMinted = Treasury;
+    type Event = Event;
+    type OnNewSessionForTokenStaking = ();
+    type OnReward = ();
+}
+
+impl tokenstaking::Trait for Runtime {
     type Event = Event;
 }
 
@@ -320,6 +327,8 @@ construct_runtime!(
         MatchOrder : matchorder,
         // bridge
         BridgeOfBTC: bridge_btc,
+        // mining staking
+        TokenStaking: tokenstaking,
 
         // put end of this marco
         CXSupport: cxsupport::{Module},

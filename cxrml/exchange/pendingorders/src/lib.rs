@@ -232,8 +232,8 @@ impl<T: Trait> Module<T> {
                     <LastAveragePrice<T>>::insert(pair.clone(), price);
                 }
                 Some(p) => {
-                     match <tokenbalances::Module<T>>::token_info(pair.second.clone()) { 
-                        Some((token,_)) => {
+                    match <tokenbalances::Module<T>>::token_info(pair.second.clone()) {
+                        Some((token, _)) => {
                             let average_sum: T::Amount = As::sa(
                                 10_u128.pow(token.precision().as_())
                                     * Self::average_price_len().as_(),

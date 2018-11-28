@@ -13,9 +13,8 @@ use primitives::hash::H256;
 use script::Script;
 
 use {
-    AccountMap, BestIndex, BlockHeaderFor, CertCache, DepositCache, HashsForNumber, NumberForHash,
-    Params, ParamsInfo, Trait, TxProposal,
-    Module,
+    AccountMap, BestIndex, BlockHeaderFor, CertCache, DepositCache, HashsForNumber, Module,
+    NumberForHash, Params, ParamsInfo, Trait, TxProposal,
 };
 
 use tx::{Proposal, RollBack, TxStorage};

@@ -83,15 +83,12 @@ impl tokenbalances::Trait for Test {
     type TokenBalance = TokenBalance;
     type OnMoveToken = ();
     type Event = ();
-    type OnMoveToken = ();
 }
 impl Trait for Test {
     type OnNewSessionForTokenStaking = ();
     type OnRewardMinted = ();
     type OnReward = ();
     type Event = ();
-    type OnNewSessionForTokenStaking = ();
-    type OnReward = ();
 }
 
 pub fn new_test_ext(
@@ -195,6 +192,14 @@ pub fn new_test_ext(
             current_offline_slash: 20,
             offline_slash_grace: 0,
             cert_owner: 0,
+            register_fee: 1,
+            claim_fee: 1,
+            stake_fee: 1,
+            unstake_fee: 1,
+            activate_fee: 1,
+            deactivate_fee: 1,
+            nominate_fee: 1,
+            unnominate_fee: 1,
         }
         .build_storage()
         .unwrap(),

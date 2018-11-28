@@ -55,7 +55,7 @@ pub mod vote_weight;
 mod mock;
 mod tests;
 
-pub use vote_weight::VoteWeight;
+pub use vote_weight::{Jackpot, VoteWeight};
 
 /// Preference of what happens on a slash event.
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
@@ -94,7 +94,7 @@ pub struct IntentionProfs<Balance: Default, BlockNumber: Default> {
     pub name: Vec<u8>,
     pub frozen: Balance,
     pub jackpot: Balance,
-    pub activator: Vec<u8>,
+    pub activator_index: u32,
     pub total_nomination: Balance,
     pub last_total_vote_weight: u64,
     pub last_total_vote_weight_update: BlockNumber,
@@ -131,7 +131,8 @@ pub struct CertProfs<AccountId: Default, BlockNumber: Default> {
     pub name: Vec<u8>,
     pub index: u32,
     pub owner: AccountId,
-    pub frozen_until: BlockNumber,
+    pub issued_on: BlockNumber,
+    pub frozen_duration: u32,
     pub remaining_shares: u32,
 }
 
@@ -169,7 +170,7 @@ impl<AccountId: Default + Codec, Balance> OnReward<AccountId, Balance> for () {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum Validator<AccountId: Default + Codec> {
     AccountId(AccountId),
-    Token(Vec<u8>),
+    Token(tokenbalances::Symbol),
 }
 
 impl<AccountId: Default + Codec> Default for Validator<AccountId> {
@@ -191,7 +192,7 @@ decl_module! {
         fn unnominate(origin, target: Address<T::AccountId, T::AccountIndex>, value: T::Balance) -> Result;
         fn register_preferences(origin, intentions_index: u32, prefs: ValidatorPrefs<T::Balance>) -> Result;
 
-        fn issue(cert_name: Vec<u8>, frozen_duration: T::BlockNumber, cert_owner: T::AccountId) -> Result;
+        fn issue(cert_name: Vec<u8>, frozen_duration: u32, cert_owner: T::AccountId) -> Result;
 
         fn set_sessions_per_era(new: T::BlockNumber) -> Result;
         fn set_bonding_duration(new: T::BlockNumber) -> Result;
@@ -257,6 +258,15 @@ decl_storage! {
         /// Slash, per validator that is taken for the first time they are found to be offline.
         pub CurrentOfflineSlash get(current_offline_slash) config(): T::Balance;
 
+        pub RegisterFee get(register_fee) config(): T::Balance;
+        pub ClaimFee get(claim_fee) config(): T::Balance;
+        pub StakeFee get(stake_fee) config(): T::Balance;
+        pub UnstakeFee get(unstake_fee) config(): T::Balance;
+        pub ActivateFee get(activate_fee) config(): T::Balance;
+        pub DeactivateFee get(deactivate_fee) config(): T::Balance;
+        pub NominateFee get(nominate_fee) config(): T::Balance;
+        pub UnnominateFee get(unnominate_fee) config(): T::Balance;
+
         /// The next value of sessions per era.
         pub NextSessionsPerEra get(next_sessions_per_era): Option<T::BlockNumber>;
         /// The session index at which the era length last changed.
@@ -312,7 +322,7 @@ decl_storage! {
             let mut cert: CertProfs<T::AccountId, T::BlockNumber> = CertProfs::default();
             cert.name = b"Alice".to_vec();
             cert.index = 0;
-            cert.frozen_until = T::BlockNumber::sa(3);
+            cert.frozen_duration = 1;
             cert.remaining_shares = config.shares_per_cert;
             cert.owner = config.cert_owner.clone();
             storage.insert(GenesisConfig::<T>::hash(&<CertProfiles<T>>::key_for(0u32)).to_vec(), cert.encode());
@@ -390,6 +400,10 @@ impl<T: Trait> Module<T> {
         <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
     }
 
+    fn day_to_block(n: u32) -> T::BlockNumber {
+        T::BlockNumber::sa((n * 24 * 60 * 60) as u64 / <timestamp::Module<T>>::block_period().as_())
+    }
+
     // PUBLIC IMMUTABLES
 
     /// The length of a staking era in blocks.
@@ -400,11 +414,9 @@ impl<T: Trait> Module<T> {
     // PUBLIC DISPATCH
 
     /// Issue cert.
-    pub fn issue(
-        cert_name: Vec<u8>,
-        frozen_duration: T::BlockNumber,
-        cert_owner: T::AccountId,
-    ) -> Result {
+    pub fn issue(cert_name: Vec<u8>, frozen_duration: u32, cert_owner: T::AccountId) -> Result {
+        tokenbalances::is_valid_symbol(&cert_name)?;
+
         let index = <CertOwnerIndex<T>>::get();
         if index >= Self::maximum_cert_owner_count() {
             return Err("cannot issue when there are too many cert owners.");
@@ -414,7 +426,8 @@ impl<T: Trait> Module<T> {
         cert.name = cert_name.clone();
         cert.index = index;
         cert.owner = cert_owner.clone();
-        cert.frozen_until = <system::Module<T>>::block_number() + frozen_duration;
+        cert.issued_on = <system::Module<T>>::block_number();
+        cert.frozen_duration = frozen_duration;
         cert.remaining_shares = Self::shares_per_cert();
 
         <CertProfiles<T>>::insert(index, cert);
@@ -444,30 +457,36 @@ impl<T: Trait> Module<T> {
         share_count: u32,
     ) -> Result {
         let who = ensure_signed(origin)?;
+        cxsupport::Module::<T>::handle_fee_before(&who, Self::register_fee(), true, || Ok(()))?;
 
-        ensure!(share_count > 0, "Cannot activate zero share.");
+        ensure!(share_count > 0, "Cannot register zero share.");
 
         let cert = <CertProfiles<T>>::get(cert_index);
         ensure!(
             cert.owner == who,
-            "Cannot activate if owner of requested cert mismatches."
+            "Cannot register if owner of requested cert mismatches."
         );
 
         ensure!(
             cert.remaining_shares > 0,
-            "Cannot activate if there are no remaining shares."
+            "Cannot register if there are no remaining shares."
         );
         ensure!(
             share_count <= cert.remaining_shares,
-            "Cannot activate if greater than your remaining shares."
+            "Cannot register if greater than your remaining shares."
         );
+
+        tokenbalances::is_valid_symbol(&name)?;
+        tokenbalances::is_valid_symbol(&url)?;
+
         ensure!(
-            !<IntentionProfiles<T>>::get(&intention).is_active,
-            "Cannot activate if already activated."
+            !<IntentionProfiles<T>>::get(&intention).name.is_empty(),
+            "Cannot register if already registered."
         );
+
         ensure!(
             Self::intentions().len() <= Self::intention_threshold() as usize,
-            "Cannot activate if there are too many intentions already."
+            "Cannot register if there are too many intentions already."
         );
 
         let value = T::Balance::sa((share_count * Self::activation_per_share()) as u64);
@@ -479,17 +498,16 @@ impl<T: Trait> Module<T> {
         let mut nprof = <NominatorProfiles<T>>::get(&intention);
         let mut intentions = <Intentions<T>>::get();
         let mut stats = <StakingStats<T>>::get();
-
-        if <system::Module<T>>::block_number() < cert.frozen_until {
+        let frozen_until = cert.issued_on + Self::day_to_block(cert.frozen_duration);
+        if <system::Module<T>>::block_number() < frozen_until {
             iprof.frozen = value;
 
-            let frozen_until = cert.frozen_until;
             let mut accounts = <LockedAccountsOf<T>>::get(frozen_until);
             accounts.to_unfreeze.push(intention.clone());
             <LockedAccountsOf<T>>::insert(frozen_until, accounts);
         }
 
-        iprof.activator = cert.name;
+        iprof.activator_index = cert.index;
 
         nprof.nominees.push(intention.clone());
 
@@ -515,6 +533,7 @@ impl<T: Trait> Module<T> {
     /// Show the desire to stake for the transactor.
     fn activate(origin: T::Origin) -> Result {
         let who = ensure_signed(origin)?;
+        cxsupport::Module::<T>::handle_fee_before(&who, Self::activate_fee(), true, || Ok(()))?;
 
         ensure!(
             Self::intentions().iter().find(|&t| t == &who).is_some(),
@@ -537,6 +556,7 @@ impl<T: Trait> Module<T> {
     /// Effects will be felt at the beginning of the next era.
     fn deactivate(origin: T::Origin) -> Result {
         let who = ensure_signed(origin)?;
+        cxsupport::Module::<T>::handle_fee_before(&who, Self::deactivate_fee(), true, || Ok(()))?;
 
         ensure!(
             Self::intentions().iter().find(|&t| t == &who).is_some(),
@@ -549,7 +569,7 @@ impl<T: Trait> Module<T> {
 
         ensure!(
             <IntentionProfiles<T>>::get(&who).is_active,
-            "Cannot deactivate if already deactivated."
+            "Cannot deactivate if already inactive."
         );
 
         let mut iprof = <IntentionProfiles<T>>::get(&who);
@@ -562,6 +582,7 @@ impl<T: Trait> Module<T> {
     /// Increase the stake
     fn stake(origin: T::Origin, value: T::Balance) -> Result {
         let who = ensure_signed(origin)?;
+        cxsupport::Module::<T>::handle_fee_before(&who, Self::stake_fee(), true, || Ok(()))?;
 
         ensure!(value.as_() > 0, "Cannot stake zero.");
         // TODO Take care of precision later
@@ -587,6 +608,7 @@ impl<T: Trait> Module<T> {
     /// Decrease the stake
     fn unstake(origin: T::Origin, value: T::Balance) -> Result {
         let who = ensure_signed(origin)?;
+        cxsupport::Module::<T>::handle_fee_before(&who, Self::unstake_fee(), true, || Ok(()))?;
 
         ensure!(
             Self::intentions().iter().find(|&t| t == &who).is_some(),
@@ -628,9 +650,16 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
     ) -> Result {
         let who = ensure_signed(origin)?;
+        cxsupport::Module::<T>::handle_fee_before(&who, Self::nominate_fee(), true, || Ok(()))?;
+
         let target = <balances::Module<T>>::lookup(target)?;
 
         ensure!(value.as_() > 0, "Cannot stake zero.");
+
+        if Self::intentions().iter().find(|&t| t == &who).is_some() {
+            ensure!(who != target, "cannot nominate per se as an intention.");
+        }
+
         // ensure!(
         // value.as_() % 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32) == 0,
         // "Cannot stake decimal."
@@ -644,8 +673,6 @@ impl<T: Trait> Module<T> {
             value <= <balances::Module<T>>::free_balance(&who),
             "Cannot nominate if greater than your avaliable free balance."
         );
-
-        // TODO charge fee
 
         // reserve nominated balance
         <balances::Module<T>>::reserve(&who, value)?;
@@ -680,6 +707,8 @@ impl<T: Trait> Module<T> {
     /// Claim dividend from intention's jackpot
     fn claim(origin: T::Origin, target: Address<T::AccountId, T::AccountIndex>) -> Result {
         let source = ensure_signed(origin)?;
+        cxsupport::Module::<T>::handle_fee_before(&source, Self::claim_fee(), true, || Ok(()))?;
+
         let target = <balances::Module<T>>::lookup(target)?;
 
         let nprof = <NominatorProfiles<T>>::get(&source);
@@ -689,28 +718,10 @@ impl<T: Trait> Module<T> {
             "Cannot claim if target is not your nominee."
         );
 
-        let current_block = <system::Module<T>>::block_number();
-
         let mut iprof = Self::intention_profiles(&target);
         let mut record = Self::nomination_record_of(&source, &target);
 
-        // latest vote weight for nominator and nominee
-        let total_vote_weight = iprof.last_total_vote_weight
-            + iprof.total_nomination.as_()
-                * (current_block - iprof.last_total_vote_weight_update).as_();
-
-        let vote_weight = record.last_vote_weight
-            + record.nomination.as_() * (current_block - record.last_vote_weight_update).as_();
-
-        let dividend = T::Balance::sa(vote_weight * iprof.jackpot.as_() / total_vote_weight);
-        <balances::Module<T>>::reward(&source, dividend)?;
-        iprof.jackpot -= dividend;
-
-        record.last_vote_weight = 0;
-        record.last_vote_weight_update = current_block;
-
-        iprof.last_total_vote_weight = total_vote_weight - vote_weight;
-        iprof.last_total_vote_weight_update = current_block;
+        Self::generic_claim(&mut record, &mut iprof, &source)?;
 
         <IntentionProfiles<T>>::insert(target.clone(), iprof);
         Self::insert_nomination_record(&source, &target, record);
@@ -726,6 +737,13 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
     ) -> Result {
         let source = ensure_signed(origin)?;
+        cxsupport::Module::<T>::handle_fee_before(
+            &source,
+            Self::unnominate_fee(),
+            true,
+            || Ok(()),
+        )?;
+
         let target = <balances::Module<T>>::lookup(target)?;
 
         let nprof = <NominatorProfiles<T>>::get(&source);
@@ -1012,7 +1030,6 @@ impl<T: Trait> Module<T> {
             if !total_active_stake.is_zero() {
                 for (v, s) in active_intentions.iter() {
                     let i_reward = *s * reward / total_active_stake;
-
                     // TODO session reward
                     <SessionRewardOf<T>>::insert(v, i_reward);
                     total_minted += i_reward;

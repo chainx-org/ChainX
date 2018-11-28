@@ -16,6 +16,7 @@ sr-io = { git = "https://github.com/paritytech/substrate", default_features = fa
 sr-primitives = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-support = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-system = { git = "https://github.com/paritytech/substrate", default_features = false }
+srml-timestamp = { git = "https://github.com/paritytech/substrate", default_features = false }
 srml-balances = { git = "https://github.com/paritytech/substrate", default_features = false }
 
 # chainx runtime module
@@ -26,6 +27,7 @@ cxrml-tokenbalances = { path = "../../tokenbalances", default_features = false }
 cxrml-mining-staking = { path = "../staking", default_features = false }
 cxrml-funds-financialrecords = { path = "../../funds/financialrecords", default_features = false }
 cxrml-exchange-pendingorders = { path = "../../exchange/pendingorders", default_features = false }
+cxrml-bridge-btc = { path = "../../bridge/btc", default_features = false }
 
 [features]
 default = ["std"]
@@ -40,6 +42,7 @@ std=[
     "sr-primitives/std",
     "srml-support/std",
     "srml-system/std",
+    "srml-timestamp/std",
     "srml-balances/std",
     # cxrml
     "cxrml-system/std",
@@ -49,4 +52,5 @@ std=[
     "cxrml-mining-staking/std",
     "cxrml-funds-financialrecords/std",
     "cxrml-exchange-pendingorders/std",
+    "cxrml-bridge-btc/std",
 ]

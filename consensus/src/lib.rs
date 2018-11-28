@@ -283,7 +283,7 @@ where
             "generate a new block#{:}, producer:[{:}]",
             block.header.number, block_producer
         );
-        trace!(
+        info!(
             "Proposing block [number: {}; hash: {}; parent_hash: {}; extrinsics: [{}]]",
             block.header.number,
             Hash::from(block.header.hash()),

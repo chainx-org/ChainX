@@ -13,8 +13,8 @@ use chainx_runtime::{
     AssociationsConfig, BalancesConfig, BalancesConfigCopy, BridgeOfBTC, BridgeOfBTCConfig,
     CXSystemConfig, ConsensusConfig, ContractConfig, CouncilVotingConfig, DemocracyConfig,
     GenesisConfig, MatchOrderConfig, MultiSigConfig, Params, PendingOrdersConfig, Perbill, Permill,
-    SessionConfig, StakingConfig, TimestampConfig, Token, TokenBalancesConfig, TreasuryConfig,
-    WithdrawalConfig,
+    SessionConfig, StakingConfig, TimestampConfig, Token, TokenBalancesConfig, TokenStakingConfig,
+    TreasuryConfig, WithdrawalConfig,
 };
 
 use super::cli::ChainSpec;
@@ -87,24 +87,6 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                 .collect(),
             session_length: 1 * MINUTES, // that's 1 hour per session.
         }),
-        staking: Some(StakingConfig {
-            current_era: 0,
-            bonding_duration: 3 * MINUTES, // 3 days per bond.
-            intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
-            intention_profiles: initial_authorities.clone().into_iter().map(|i| (i.0.into(), b"ChainX".to_vec(), b"chainx.org".to_vec())).collect(),
-            minimum_validator_count: 1,
-            validator_count: 6,
-            sessions_per_era: 4, // 24 hours per era.
-            shares_per_cert: 45,
-            activation_per_share: 100000,
-            maximum_cert_owner_count: 200,
-            intention_threshold: 9000,
-            offline_slash_grace: 0,
-            offline_slash: Perbill::from_millionths(0),
-            current_offline_slash: 0,
-            current_session_reward: 0,
-            cert_owner: auth1.0.into(),
-        }),
         democracy: Some(DemocracyConfig {
             launch_period: 120 * 24 * 14, // 2 weeks per public referendum
             voting_period: 120 * 24 * 28, // 4 weeks to discuss & vote on an active referendum
@@ -154,6 +136,35 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         }),
         associations: Some(AssociationsConfig {
             init_fee: 10,
+        }),
+        staking: Some(StakingConfig {
+            current_era: 0,
+            bonding_duration: 3 * MINUTES, // 3 days per bond.
+            intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
+            intention_profiles: initial_authorities.clone().into_iter().map(|i| (i.0.into(), b"ChainX".to_vec(), b"chainx.org".to_vec())).collect(),
+            minimum_validator_count: 1,
+            validator_count: 6,
+            sessions_per_era: 4, // 24 hours per era.
+            shares_per_cert: 45,
+            activation_per_share: 100000,
+            maximum_cert_owner_count: 200,
+            intention_threshold: 9000,
+            offline_slash_grace: 0,
+            offline_slash: Perbill::from_millionths(0),
+            current_offline_slash: 0,
+            current_session_reward: 0,
+            cert_owner: auth1.0.into(),
+            register_fee: 1,
+            claim_fee: 1,
+            stake_fee: 1,
+            unstake_fee: 1,
+            activate_fee: 1,
+            deactivate_fee: 1,
+            nominate_fee: 1,
+            unnominate_fee: 1,
+        }),
+        tokenstaking: Some(TokenStakingConfig {
+            fee: 10
         }),
         withdrawal: Some(WithdrawalConfig {
             withdrawal_fee: 10,
