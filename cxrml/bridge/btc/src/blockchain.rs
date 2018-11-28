@@ -11,6 +11,7 @@ use financial_records;
 use financial_records::Symbol;
 use primitives::hash::H256;
 use script::Script;
+use staking;
 
 use {
     AccountMap, BestIndex, BlockHeaderFor, CertCache, DepositCache, HashsForNumber, Module,
@@ -169,8 +170,8 @@ impl<T: Trait> Chain<T> {
         // Deposit
         if let Some(vec) = <DepositCache<T>>::take() {
             runtime_io::print("-----------DepositCache take");
-            let mut uncomplete_cache: Vec<(T::AccountId, u64, H256)> = Vec::new();
-            for (account_id, amount, block_hash) in vec {
+            let mut uncomplete_cache: Vec<(T::AccountId, u64, H256, H256)> = Vec::new();
+            for (account_id, amount, tx_hash, block_hash) in vec {
                 match <NumberForHash<T>>::get(block_hash.clone()) {
                     Some(height) => {
                         if new_best_header.number > height + irr_block {
@@ -179,13 +180,14 @@ impl<T: Trait> Chain<T> {
                                 &account_id,
                                 &symbol,
                                 As::sa(amount),
+                                Some(tx_hash.as_ref().to_vec()),
                             );
                         } else {
-                            uncomplete_cache.push((account_id, amount, block_hash));
+                            uncomplete_cache.push((account_id, amount, tx_hash, block_hash));
                         }
                     }
                     None => {
-                        uncomplete_cache.push((account_id, amount, block_hash));
+                        uncomplete_cache.push((account_id, amount, tx_hash, block_hash));
                     } // Optmise
                 }
             }
@@ -200,6 +202,7 @@ impl<T: Trait> Chain<T> {
                 Some(height) => {
                     if new_best_header.number > height + irr_block {
                         runtime_io::print("----new_best_header.number-----");
+                        let txid = tx.tx.hash();
                         for output in tx.tx.outputs.iter() {
                             let script: Script = output.clone().script_pubkey.into();
                             let script_address =
@@ -217,17 +220,15 @@ impl<T: Trait> Chain<T> {
                             };
                             let account_id = <AddressMap<T>>::get(address);
                             if account_id.is_some() {
-                                runtime_io::print("----account_id.is_some()-----");
                                 <financial_records::Module<T>>::withdrawal_finish(
                                     &account_id.unwrap(),
                                     &symbol,
-                                    true,
+                                    Some(txid.as_ref().to_vec()),
                                 );
                             }
                         }
                         let vec = <financial_records::Module<T>>::get_withdraw_cache(&symbol);
                         if vec.is_some() {
-                            runtime_io::print("----account_id.is_some()-----");
                             let mut address_vec = Vec::new();
                             for (account_id, balance) in vec.unwrap() {
                                 let address = <AccountMap<T>>::get(account_id);
@@ -236,7 +237,9 @@ impl<T: Trait> Chain<T> {
                                 }
                             }
                             let btc_fee = <BtcFee<T>>::get();
-                            let _ = <Proposal<T>>::create_proposal(address_vec, btc_fee);
+                            if let Err(e) = <Proposal<T>>::create_proposal(address_vec, btc_fee) {
+                                return Err(ChainErr::OtherErr(e));
+                            }
                         } else {
                             <TxProposal<T>>::kill();
                         }
@@ -256,13 +259,17 @@ impl<T: Trait> Chain<T> {
                     }
                 }
                 let btc_fee = <BtcFee<T>>::get();
-                let _ = <Proposal<T>>::create_proposal(address_vec, btc_fee);
+                if let Err(e) = <Proposal<T>>::create_proposal(address_vec, btc_fee) {
+                    return Err(ChainErr::OtherErr(e));
+                }
             }
         }
         // SendCert
-        if let Some(_cert_info) = <CertCache<T>>::take() {
+        if let Some(cert_info) = <CertCache<T>>::take() {
             runtime_io::print("------CertCache take");
-            //TO DO
+            if let Err(e) = <staking::Module<T>>::issue(cert_info.0, cert_info.1, cert_info.2) {
+                return Err(ChainErr::OtherErr(e));
+            }
         }
 
         <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);

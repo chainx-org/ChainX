@@ -13,8 +13,8 @@ use chainx_runtime::{
     AssociationsConfig, BalancesConfig, BalancesConfigCopy, BridgeOfBTC, BridgeOfBTCConfig,
     CXSystemConfig, ConsensusConfig, ContractConfig, CouncilVotingConfig, DemocracyConfig,
     GenesisConfig, MatchOrderConfig, MultiSigConfig, Params, PendingOrdersConfig, Perbill, Permill,
-    SessionConfig, StakingConfig, TimestampConfig, Token, TokenBalancesConfig, TokenStakingConfig,
-    TreasuryConfig, WithdrawalConfig,
+    Runtime, SessionConfig, StakingConfig, TimestampConfig, Token, TokenBalancesConfig,
+    TokenStakingConfig, TreasuryConfig, WithdrawalConfig,
 };
 
 use super::cli::ChainSpec;
@@ -23,7 +23,7 @@ use keyring::Keyring;
 
 use self::btc_chain::BlockHeader;
 use self::btc_primitives::{compact::Compact, hash::H256};
-use self::cxrml_tokenbalances::TokenT;
+use self::cxrml_tokenbalances::{TokenT, Trait};
 use self::keys::DisplayLayout;
 
 pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
@@ -122,7 +122,9 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             // token_list: Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>
             // e.g. [("btc", [(account1, value), (account2, value)].to_vec()), ("eth", [(account1, value), (account2, value)].to_vec())]
             token_list: vec![
-                (Token::new(BridgeOfBTC::SYMBOL.to_vec(), b"btc token".to_vec(), 8), [(Keyring::Alice.to_raw_public().into(), 1_000_000), (Keyring::Bob.to_raw_public().into(), 1_000_000)].to_vec())
+                (Token::new(BridgeOfBTC::SYMBOL.to_vec(), b"btc token".to_vec(), 8),
+                // [(Keyring::Alice.to_raw_public().into(), 1_000_000), (Keyring::Bob.to_raw_public().into(), 1_000_000)].to_vec())
+                vec![])
             ],
 
             transfer_token_fee: 10,
@@ -199,7 +201,8 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         pendingorders: Some(PendingOrdersConfig {
             order_fee: 0,
             pair_list: vec![
-                (OrderPair{first:b"pcx".to_vec(), second:BridgeOfBTC::SYMBOL.to_vec() },8)],
+                (OrderPair { first: Runtime::CHAINX_SYMBOL.to_vec(), second: BridgeOfBTC::SYMBOL.to_vec() }, 8)
+            ],
             max_command_id: 0,
             average_price_len:10000,
         }),

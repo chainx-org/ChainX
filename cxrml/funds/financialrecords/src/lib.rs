@@ -176,6 +176,7 @@ where
     symbol: Symbol,
     balance: TokenBalance,
     init_blocknum: BlockNumber,
+    txid: Vec<u8>,
     addr: Vec<u8>,
     ext: Vec<u8>,
 }
@@ -200,6 +201,9 @@ where
     }
     pub fn balance(&self) -> TokenBalance {
         self.balance
+    }
+    pub fn txid(&self) -> Vec<u8> {
+        self.txid.clone()
     }
     pub fn addr(&self) -> Vec<u8> {
         self.addr.clone()
@@ -406,9 +410,14 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
     /// deposit, notice this func has include deposit_init and deposit_finish (not wait for block confirm process)
-    pub fn deposit(who: &T::AccountId, sym: &Symbol, balance: T::TokenBalance) -> Result {
+    pub fn deposit(
+        who: &T::AccountId,
+        sym: &Symbol,
+        balance: T::TokenBalance,
+        txid: Option<Vec<u8>>,
+    ) -> Result {
         let index = Self::deposit_with_index(who, sym, balance)?;
-        Self::deposit_finish_with_index(who, index, true).map(|_| ())
+        Self::deposit_finish_with_index(who, index, txid).map(|_| ())
     }
 
     /// withdrawal, notice this func has include withdrawal_init and withdrawal_locking
@@ -439,7 +448,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// withdrawal finish, let the locking token destroy
-    pub fn withdrawal_finish(who: &T::AccountId, sym: &Symbol, success: bool) -> Result {
+    pub fn withdrawal_finish(who: &T::AccountId, sym: &Symbol, txid: Option<Vec<u8>>) -> Result {
         let r = Self::last_withdrawal_index_of(&(who.clone(), sym.clone()));
         if r.is_none() {
             return Err("have not executed withdrawal() or withdrawal_init() yet for this record");
@@ -465,7 +474,7 @@ impl<T: Trait> Module<T> {
             return Err("the withdraw log node header not exist for this symbol");
         }
 
-        Self::withdrawal_finish_with_index(who, r.unwrap(), success).map(|_| ())
+        Self::withdrawal_finish_with_index(who, r.unwrap(), txid).map(|_| ())
     }
 
     pub fn get_withdraw_cache(sym: &Symbol) -> Option<Vec<(T::AccountId, T::TokenBalance)>> {
@@ -493,12 +502,12 @@ impl<T: Trait> Module<T> {
         Self::deposit_with_index(who, sym, balance).map(|_| ())
     }
     /// deposit finish, use for change the deposit record to final, success mark the deposit if success
-    pub fn deposit_finish(who: &T::AccountId, sym: &Symbol, success: bool) -> Result {
+    pub fn deposit_finish(who: &T::AccountId, sym: &Symbol, txid: Option<Vec<u8>>) -> Result {
         let r = Self::last_deposit_index_of(&(who.clone(), sym.clone()));
         if r.is_none() {
             return Err("have not executed deposit_init() yet for this record");
         }
-        Self::deposit_finish_with_index(who, r.unwrap(), success).map(|_| ())
+        Self::deposit_finish_with_index(who, r.unwrap(), txid).map(|_| ())
     }
 
     //    /// withdrawal init, use for record a withdrawal start, should call withdrawal_locking after it
@@ -529,6 +538,7 @@ impl<T: Trait> Module<T> {
             symbol: sym.clone(),
             balance,
             init_blocknum: <system::Module<T>>::block_number(),
+            txid: Vec::new(),
             addr: Vec::new(),
             ext: Vec::new(),
         };
@@ -547,20 +557,22 @@ impl<T: Trait> Module<T> {
     fn deposit_finish_with_index(
         who: &T::AccountId,
         index: u32,
-        success: bool,
+        txid: Option<Vec<u8>>,
     ) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
-        if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
+        if let Some(mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
                 return Err("the deposit record should not be a finish state");
             }
 
+            let deposit_txid: Vec<u8>;
             let sym = r.symbol();
             let bal = r.balance();
             // change state
             match r.mut_action() {
                 Action::Deposit(ref mut state) => {
-                    if success {
+                    if let Some(txid) = txid {
+                        deposit_txid = txid;
                         *state = DepositState::Success;
                         // call tokenbalances to issue token for this accountid
                         <tokenbalances::Module<T>>::issue(who, &sym, bal)?;
@@ -576,6 +588,7 @@ impl<T: Trait> Module<T> {
                             <system::Module<T>>::block_number(),
                         ));
                     } else {
+                        deposit_txid = b"".to_vec();
                         *state = DepositState::Failed;
 
                         Self::deposit_event(RawEvent::DepositFailed(
@@ -589,7 +602,8 @@ impl<T: Trait> Module<T> {
                 }
                 _ => return Err("err action type in deposit_finish"),
             }
-            <RecordsOf<T>>::insert(&key, r.clone());
+            r.txid = deposit_txid;
+            <RecordsOf<T>>::insert(&key, r);
             Ok(index)
         } else {
             return Err("the deposit record for this (accountid, index) not exist");
@@ -616,6 +630,7 @@ impl<T: Trait> Module<T> {
             symbol: sym.clone(),
             balance,
             init_blocknum: <system::Module<T>>::block_number(),
+            txid: Vec::new(),
             addr,
             ext,
         };
@@ -673,14 +688,15 @@ impl<T: Trait> Module<T> {
     fn withdrawal_finish_with_index(
         who: &T::AccountId,
         index: u32,
-        success: bool,
+        txid: Option<Vec<u8>>,
     ) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
-        if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
+        if let Some(mut r) = <RecordsOf<T>>::get(&key) {
             if r.is_finish() {
                 return Err("the deposit record should not be a finish state");
             }
 
+            let withdraw_txid: Vec<u8>;
             let sym = r.symbol();
             let bal = r.balance();
 
@@ -688,7 +704,8 @@ impl<T: Trait> Module<T> {
             match r.mut_action() {
                 Action::Withdrawal(ref mut state) => match state {
                     WithdrawalState::Locking => {
-                        if success {
+                        if let Some(txid) = txid {
+                            withdraw_txid = txid;
                             *state = WithdrawalState::Success;
 
                             <tokenbalances::Module<T>>::destroy(
@@ -708,6 +725,7 @@ impl<T: Trait> Module<T> {
                                 <system::Module<T>>::block_number(),
                             ));
                         } else {
+                            withdraw_txid = b"".to_vec();
                             *state = WithdrawalState::Failed;
 
                             <tokenbalances::Module<T>>::unreserve(
@@ -730,7 +748,8 @@ impl<T: Trait> Module<T> {
                 },
                 _ => return Err("err action type in deposit_finish"),
             }
-            <RecordsOf<T>>::insert(&key, r.clone());
+            r.txid = withdraw_txid;
+            <RecordsOf<T>>::insert(&key, r);
 
             Ok(index)
         } else {

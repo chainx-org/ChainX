@@ -9,9 +9,9 @@ pub trait NodeT {
 
 #[derive(Decode, Encode, Clone, Default)]
 pub struct Node<T: NodeT> {
-    pub data: T,
     prev: Option<T::Index>,
     next: Option<T::Index>,
+    pub data: T,
 }
 
 impl<T: NodeT> Node<T> {
@@ -87,8 +87,8 @@ pub struct MultiNodeIndex<K, T: NodeT>
 where
     K: Codec + Clone + Eq + PartialEq + Default,
 {
-    multi_key: K,
     index: T::Index,
+    multi_key: K,
 }
 
 impl<K, T: NodeT> MultiNodeIndex<K, T>
@@ -183,9 +183,9 @@ pub trait LinkedNodeCollection {
 impl<T: NodeT + Codec> Node<T> {
     pub fn new(data: T) -> Node<T> {
         Node::<T> {
-            data,
             prev: None,
             next: None,
+            data,
         }
     }
 
@@ -554,8 +554,8 @@ impl<T: NodeT + Codec> Node<T> {
             C::Header::insert(
                 key.clone(),
                 MultiNodeIndex::<K, T> {
-                    multi_key: key.clone(),
                     index: self.index(),
+                    multi_key: key.clone(),
                 },
             );
         }
@@ -563,8 +563,8 @@ impl<T: NodeT + Codec> Node<T> {
             C::Tail::insert(
                 key.clone(),
                 MultiNodeIndex::<K, T> {
-                    multi_key: key.clone(),
                     index: self.index(),
+                    multi_key: key.clone(),
                 },
             );
         }
@@ -605,8 +605,8 @@ impl<T: NodeT + Codec> Node<T> {
                 C::Header::insert(
                     key.clone(),
                     MultiNodeIndex::<K, T> {
-                        multi_key: key,
                         index: node.index(),
+                        multi_key: key,
                     },
                 );
             }
@@ -657,8 +657,8 @@ impl<T: NodeT + Codec> Node<T> {
                 C::Tail::insert(
                     key.clone(),
                     MultiNodeIndex::<K, T> {
-                        multi_key: key,
                         index: node.index(),
+                        multi_key: key,
                     },
                 );
             }
@@ -713,8 +713,8 @@ impl<T: NodeT + Codec> Node<T> {
                             C::Header::insert(
                                 key.clone(),
                                 MultiNodeIndex::<K, T> {
-                                    multi_key: key,
                                     index: next_node.index(),
+                                    multi_key: key,
                                 },
                             );
                             C::NodeMap::remove(self.index());
@@ -736,8 +736,8 @@ impl<T: NodeT + Codec> Node<T> {
                             C::Tail::insert(
                                 key.clone(),
                                 MultiNodeIndex::<K, T> {
-                                    multi_key: key,
                                     index: prev_node.index(),
+                                    multi_key: key,
                                 },
                             );
                             C::NodeMap::remove(self.index());

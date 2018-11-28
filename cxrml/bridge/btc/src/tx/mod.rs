@@ -143,6 +143,7 @@ impl<T: Trait> TxStorage<T> {
         address: keys::Address,
         tx_type: TxType,
         balance: u64,
+        time: T::BlockNumber,
     ) {
         let hash = tx.hash();
         let block_hash = block_hash.clone();
@@ -157,6 +158,7 @@ impl<T: Trait> TxStorage<T> {
             tx_type,
             balance,
             block_hash,
+            time,
             tx,
         };
         let n = Node::new(log);
@@ -166,7 +168,7 @@ impl<T: Trait> TxStorage<T> {
             // get tail
             if let Some(mut tail) = TxSet::<T>::get(tail_index.index()) {
                 // add tx to tail
-                tail.add_option_node_after::<LinkedNodes<T>>(n);
+                let _ = tail.add_option_node_after::<LinkedNodes<T>>(n);
             }
         }
     }
@@ -380,6 +382,7 @@ pub fn handle_input<T: Trait>(
         .collect();
     let mut update_balance = <UTXOStorage<T>>::update_from_outpoint(out_point_set, true);
 
+    let time = <system::Module<T>>::block_number();
     let mut new_utxo: Vec<UTXO> = Vec::new();
     let mut index = 0;
     let _ = tx
@@ -407,10 +410,16 @@ pub fn handle_input<T: Trait>(
         receive_address.clone(),
         TxType::Withdraw,
         update_balance,
+        time,
     );
 }
 
-fn deposit_token<T: Trait>(address: keys::Address, balance: u64, block_hash: &H256) -> bool {
+fn deposit_token<T: Trait>(
+    address: &keys::Address,
+    balance: u64,
+    txid: &H256,
+    block_hash: &H256,
+) -> bool {
     let account = match <AddressMap<T>>::get(address) {
         Some(account) => account,
         None => {
@@ -418,11 +427,11 @@ fn deposit_token<T: Trait>(address: keys::Address, balance: u64, block_hash: &H2
         }
     };
 
-    let mut vec: Vec<(T::AccountId, u64, H256)> = match <DepositCache<T>>::take() {
+    let mut vec: Vec<(T::AccountId, u64, H256, H256)> = match <DepositCache<T>>::take() {
         Some(vec) => vec,
         None => Vec::new(),
     };
-    vec.push((account, balance, block_hash.clone()));
+    vec.push((account, balance, txid.clone(), block_hash.clone()));
     <DepositCache<T>>::put(vec);
     return true;
 }
@@ -464,6 +473,7 @@ pub fn handle_output<T: Trait>(
     let tx_type;
     let mut channel = Vec::<u8>::new();
     // Add utxo
+    let tx_hash = tx.hash();
     let outpoint = tx.inputs[0].previous_output.clone();
     let send_address = inspect_address::<T>(previous_tx, outpoint).unwrap();
     runtime_io::print("-----------handle_output");
@@ -489,21 +499,21 @@ pub fn handle_output<T: Trait>(
                 Some(a) => a,
                 None => continue,
             };
-            match <AddressMap<T>>::get(send_address.clone()) {
+            match <AddressMap<T>>::get(&send_address) {
                 Some(_a) => {
                     register = false;
                 }
                 None => {
                     runtime_io::print("-----------new account");
                     channel = script.extract_pre(':');
-                    <AddressMap<T>>::insert(send_address.clone(), id.clone());
+                    <AddressMap<T>>::insert(&send_address, id.clone());
                     <AccountMap<T>>::insert(id, send_address.clone());
                     register = true;
-                    match <DepositRecords<T>>::get(send_address.clone()) {
+                    match <DepositRecords<T>>::get(&send_address) {
                         Some(records) => {
                             runtime_io::print("------------process history deposit");
                             for rec in records.iter() {
-                                if deposit_token::<T>(send_address.clone(), rec.2, &rec.3) {
+                                if deposit_token::<T>(&send_address, rec.2, &rec.0, &rec.3) {
                                     total_balance += output.value;
                                     new_utxos.push(UTXO {
                                         txid: rec.0.clone(),
@@ -528,7 +538,7 @@ pub fn handle_output<T: Trait>(
         if script_addresses.len() == 1 {
             if receive_address.hash == script_addresses[0].hash {
                 runtime_io::print("-----------deposit_token");
-                if deposit_token::<T>(send_address.clone(), output.value, block_hash) {
+                if deposit_token::<T>(&send_address, output.value, &tx_hash, block_hash) {
                     total_balance += output.value;
                     new_utxos.push(UTXO {
                         txid: tx.hash(),
@@ -540,54 +550,40 @@ pub fn handle_output<T: Trait>(
                     runtime_io::print(output.value);
                 } else {
                     let mut vec: Vec<(H256, u32, u64, H256)> =
-                        match <DepositRecords<T>>::get(send_address.clone()) {
+                        match <DepositRecords<T>>::get(&send_address) {
                             Some(vec) => vec,
                             None => Vec::new(),
                         };
-                    vec.push((tx.hash(), index as u32, output.value, (*block_hash).clone()));
-                    <DepositRecords<T>>::remove(&send_address.clone());
-                    <DepositRecords<T>>::insert(send_address.clone(), vec.clone());
+                    total_balance += output.value;
+                    vec.push((tx.hash(), index as u32, output.value, block_hash.clone()));
+                    <DepositRecords<T>>::insert(&send_address, vec.clone());
                     runtime_io::print("-----------deposit token failed, save in DepositRecords");
                 }
             }
         }
     }
-    if total_balance == 0 {
-        <TxStorage<T>>::store_tx(
-            tx,
-            block_hash,
-            who,
-            send_address.clone(),
-            TxType::Register,
-            total_balance,
-        );
-        tx_type = TxType::Register;
-    } else {
-        if register {
-            <TxStorage<T>>::store_tx(
-                tx,
-                block_hash,
-                who,
-                send_address.clone(),
-                TxType::RegisterDeposit,
-                total_balance,
-            );
-            tx_type = TxType::RegisterDeposit;
-        } else {
-            <TxStorage<T>>::store_tx(
-                tx,
-                block_hash,
-                who,
-                send_address.clone(),
-                TxType::Deposit,
-                total_balance,
-            );
-            tx_type = TxType::Deposit;
-        };
-        <UTXOStorage<T>>::add(new_utxos.clone());
-    }
+    let time = <system::Module<T>>::block_number();
     if register {
-        let time = <system::Module<T>>::block_number();
+        if total_balance == 0 {
+            tx_type = TxType::Register;
+        } else {
+            tx_type = TxType::RegisterDeposit;
+        }
+    } else {
+        tx_type = TxType::Deposit;
+    };
+    <TxStorage<T>>::store_tx(
+        tx,
+        block_hash,
+        who,
+        send_address.clone(),
+        tx_type,
+        total_balance,
+        time,
+    );
+    <UTXOStorage<T>>::add(new_utxos.clone());
+
+    if register {
         let chainxaddr = <AddressMap<T>>::get(send_address.clone()).unwrap();
         let account = (
             tx.hash(),
@@ -603,28 +599,33 @@ pub fn handle_output<T: Trait>(
     runtime_io::print("------store tx success-----");
 }
 
-pub fn handle_cert<T: Trait>(
-    tx: &Transaction,
-    _block_hash: &H256,
-    _who: &T::AccountId,
-    _cert_address: &keys::Address,
-) {
+pub fn handle_cert<T: Trait>(tx: &Transaction) {
     for (_index, output) in tx.outputs.iter().enumerate() {
         let script = &output.script_pubkey;
         let script: Script = script.clone().into();
         if script.is_null_data_script() {
             runtime_io::print("-----------opreturn cert data");
-            let owner = script.extract_rear(':');
             let name = script.extract_pre(':');
-
+            let rear = script.extract_rear(':');
+            let mut date = Vec::new();
+            let mut owner = Vec::new();
+            let mut current = 0;
+            while current < rear.len() {
+                if rear[current] == ':' as u8 {
+                    break;
+                }
+                current += 1;
+            }
+            owner.extend_from_slice(&rear[0..current]);
+            date.extend_from_slice(&rear[current + 1..]);
+            let frozen_duration = String::from_utf8(date).unwrap().parse().unwrap();
             let slice = from(owner).unwrap();
             let slice = slice.as_slice();
             let mut account: Vec<u8> = Vec::new();
             account.extend_from_slice(&slice[1..33]);
             runtime_io::print(&account[..]);
             let id: T::AccountId = Decode::decode(&mut account.as_slice()).unwrap();
-
-            <CertCache<T>>::put((name[2..].to_vec(), id));
+            <CertCache<T>>::put((name[2..].to_vec(), frozen_duration, id));
         }
     }
 }

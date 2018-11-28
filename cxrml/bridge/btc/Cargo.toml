@@ -24,6 +24,7 @@ cxrml-associations = { path = "../../associations", default-features = false }
 cxrml-support = { path = "../../support", default-features = false }
 cxrml-tokenbalances = { path = "../../tokenbalances", default-features = false }
 cxrml-funds-financialrecords = { path = "../../funds/financialrecords", default-features = false }
+cxrml-mining-staking = { path = "../../mining/staking", default-features = false }
 
 # bitcoin-rust
 chain = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
@@ -61,6 +62,7 @@ std=[
     "cxrml-support/std",
     "cxrml-tokenbalances/std",
     "cxrml-funds-financialrecords/std",
+    "cxrml-mining-staking/std",
 
     # bitcoin-rust
     "chain/std",

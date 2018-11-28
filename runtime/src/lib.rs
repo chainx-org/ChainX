@@ -229,8 +229,8 @@ impl cxsystem::Trait for Runtime {}
 impl cxsupport::Trait for Runtime {}
 
 impl tokenbalances::Trait for Runtime {
-    const CHAINX_SYMBOL: tokenbalances::SymbolString = b"pcx";
-    const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"pcx token for ChainX";
+    const CHAINX_SYMBOL: tokenbalances::SymbolString = b"PCX";
+    const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"Polkadot ChainX";
     type TokenBalance = TokenBalance;
     type Event = Event;
     type OnMoveToken = ();

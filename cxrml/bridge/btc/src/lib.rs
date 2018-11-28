@@ -40,6 +40,7 @@ extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate cxrml_associations as associations;
 extern crate cxrml_funds_financialrecords as financial_records;
+extern crate cxrml_mining_staking as staking;
 extern crate cxrml_support as cxsupport;
 #[cfg(test)]
 extern crate cxrml_system as cxsystem;
@@ -85,7 +86,7 @@ pub use tx::RelayTx;
 use tx::{handle_cert, handle_input, handle_output, handle_proposal, validate_transaction, UTXO};
 
 pub trait Trait:
-    system::Trait + balances::Trait + timestamp::Trait + financial_records::Trait
+    system::Trait + balances::Trait + timestamp::Trait + financial_records::Trait + staking::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -108,7 +109,7 @@ decl_module! {
 }
 
 impl<T: Trait> tokenbalances::TokenT for Module<T> {
-    const SYMBOL: &'static [u8] = b"btc";
+    const SYMBOL: &'static [u8] = b"BTC";
     fn check_addr(addr: &[u8], _: &[u8]) -> Result {
         Self::verify_btc_address(addr).map_err(|_| "verify btc addr err")?;
         Ok(())
@@ -195,16 +196,19 @@ pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]
-pub struct BTCTxLog<AccountId> {
+pub struct BTCTxLog<AccountId, BlockNumber> {
     pub who: AccountId,
     pub addr: keys::Address,
     pub tx_type: TxType,
     pub balance: u64,
     pub block_hash: H256,
+    pub time: BlockNumber,
     pub tx: BTCTransaction,
 }
 
-impl<AccountId: Parameter + Ord + Default> NodeT for BTCTxLog<AccountId> {
+impl<AccountId: Parameter + Ord + Default, BlockNumber: Parameter + Copy + Default> NodeT
+    for BTCTxLog<AccountId, BlockNumber>
+{
     type Index = H256;
     fn index(&self) -> H256 {
         self.tx.hash()
@@ -250,19 +254,21 @@ decl_storage! {
         pub BtcFee get(btc_fee) config(): u64;
 //        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, H256, BTCTransaction)>; // Address, type, balance
         /// btc all related transactions set, use TxSetTail or TxSetHeader could iter them
-        TxSetHeader get(tx_list_header): Option<NodeIndex<BTCTxLog<T::AccountId>>>;
-        TxSetTail get(tx_list_tail): Option<NodeIndex<BTCTxLog<T::AccountId>>>;
-        TxSet get(tx_set): map H256 => Option<Node<BTCTxLog<T::AccountId>>>;
+        TxSetHeader get(tx_list_header): Option<NodeIndex<BTCTxLog<T::AccountId, T::BlockNumber>>>;
+        TxSetTail get(tx_list_tail): Option<NodeIndex<BTCTxLog<T::AccountId, T::BlockNumber>>>;
+        TxSet get(tx_set): map H256 => Option<Node<BTCTxLog<T::AccountId, T::BlockNumber>>>;
 
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
         pub AddressMap get(address_map): map Address => Option<T::AccountId>;
         pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
         pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
-        pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
+        /// account, btc value, txhash, blockhash
+        pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256, H256)>>;
+        /// tx_hash, utxo index, btc value, blockhash
         pub DepositRecords get(deposit_records): map Address => Option<Vec<(H256, u32, u64, H256)>>;
         pub RegInfoMaxIndex get(accounts_max_index) config(): u64;
         pub RegInfoSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, T::BlockNumber, Vec<u8>, TxType)>;
-        pub CertCache get(cert_cache): Option<(Vec<u8>, T::AccountId)>;
+        pub CertCache get(cert_cache): Option<(Vec<u8>, u32, T::AccountId)>;
 
         // =====
         // others
@@ -336,7 +342,8 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
     pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
-        Address::from_layout(data)
+        let r = b58::from(data.to_vec()).map_err(|_| AddressError::InvalidAddress)?;
+        Address::from_layout(&r)
     }
 
     pub fn process_header(header: BlockHeader, who: &T::AccountId) -> Result {
@@ -387,7 +394,7 @@ impl<T: Trait> Module<T> {
                 handle_input::<T>(&tx.raw, &tx.block_hash, &who, &receive_address);
             }
             TxType::SendCert => {
-                handle_cert::<T>(&tx.raw, &tx.block_hash, &who, &cert_address);
+                handle_cert::<T>(&tx.raw);
             }
             _ => {
                 handle_output::<T>(

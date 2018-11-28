@@ -160,3 +160,22 @@ fn test_check_btc_addr() {
         ));
     })
 }
+
+#[test]
+fn test_check_btc_addr2() {
+    with_externalities(&mut new_test_ext(), || {
+        let r = Module::<Test>::verify_addr(
+            &btc::Module::<Test>::SYMBOL.to_vec(),
+            b"2N8tR484JD32i1DY2FnRPLwBVaNuXSfzoAv",
+            b"",
+        );
+        assert_eq!(r, Ok(()));
+
+        let r = Module::<Test>::verify_addr(
+            &btc::Module::<Test>::SYMBOL.to_vec(),
+            b"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b",
+            b"",
+        );
+        assert_eq!(r, Ok(()));
+    })
+}

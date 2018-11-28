@@ -699,6 +699,7 @@ dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "cxrml-associations 0.1.0",
  "cxrml-funds-financialrecords 0.1.0",
+ "cxrml-mining-staking 0.1.0",
  "cxrml-support 0.1.0",
  "cxrml-system 0.1.0",
  "cxrml-tokenbalances 0.1.0",
