@@ -123,6 +123,7 @@ impl<T: Trait> LinkedNodeCollection for LinkedOptionMultiKey<T> {
 decl_storage! {
     trait Store for Module<T: Trait> as CXExample {
         pub Fee get(fee) config(): T::Balance;
+        pub Fee2 get(fee2) config(): Option<T::Balance>;
         /// btreemap
         pub Map get(map): CodecBTreeMap<T::AccountId, T::Balance>;
 
