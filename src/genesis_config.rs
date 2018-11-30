@@ -53,6 +53,8 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
     const HOURS: u64 = MINUTES * 60;
     const DAYS: u64 = HOURS * 24;
 
+    let pcx_precision = 3_u16;
+    let normalize = |n: u128| n * 10_u128.pow(pcx_precision as u32);
     let balances_config = BalancesConfig {
         transaction_base_fee: 1,
         transaction_byte_fee: 0,
@@ -61,11 +63,17 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         creation_fee: 0,
         reclaim_rebate: 0,
         balances: vec![
-            (Keyring::Alice.to_raw_public().into(), 1_000_000),
-            (Keyring::Bob.to_raw_public().into(), 1_000_000),
-            (Keyring::Charlie.to_raw_public().into(), 1_000_000),
-            (Keyring::Dave.to_raw_public().into(), 1_000_000),
-            (Keyring::Ferdie.to_raw_public().into(), 996_000_000),
+            (Keyring::Alice.to_raw_public().into(), normalize(1_000_000)),
+            (Keyring::Bob.to_raw_public().into(), normalize(1_000_000)),
+            (
+                Keyring::Charlie.to_raw_public().into(),
+                normalize(1_000_000),
+            ),
+            (Keyring::Dave.to_raw_public().into(), normalize(1_000_000)),
+            (
+                Keyring::Ferdie.to_raw_public().into(),
+                normalize(996_000_000),
+            ),
         ],
     };
     let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
@@ -118,7 +126,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             fee_buy_account: substrate_primitives::H256([1; 32]),
         }),
         tokenbalances: Some(TokenBalancesConfig {
-            chainx_precision: 8,
+            chainx_precision: pcx_precision,
             // token_list: Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>
             // e.g. [("btc", [(account1, value), (account2, value)].to_vec()), ("eth", [(account1, value), (account2, value)].to_vec())]
             token_list: vec![

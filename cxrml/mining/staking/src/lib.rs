@@ -480,7 +480,7 @@ impl<T: Trait> Module<T> {
         tokenbalances::is_valid_symbol(&url)?;
 
         ensure!(
-            !<IntentionProfiles<T>>::get(&intention).name.is_empty(),
+            <IntentionProfiles<T>>::get(&intention).name.is_empty(),
             "Cannot register if already registered."
         );
 
@@ -536,12 +536,13 @@ impl<T: Trait> Module<T> {
         cxsupport::Module::<T>::handle_fee_before(&who, Self::activate_fee(), true, || Ok(()))?;
 
         ensure!(
+            !<IntentionProfiles<T>>::get(&who).is_active,
+            "Cannot activate if already active."
+        );
+
+        ensure!(
             Self::intentions().iter().find(|&t| t == &who).is_some(),
             "Cannot activate if transactor is not an intention."
-        );
-        ensure!(
-            !<IntentionProfiles<T>>::get(&who).is_active,
-            "Cannot activate if already activated."
         );
 
         let mut iprof = <IntentionProfiles<T>>::get(&who);
@@ -559,18 +560,19 @@ impl<T: Trait> Module<T> {
         cxsupport::Module::<T>::handle_fee_before(&who, Self::deactivate_fee(), true, || Ok(()))?;
 
         ensure!(
+            <IntentionProfiles<T>>::get(&who).is_active,
+            "Cannot deactivate if already inactive."
+        );
+
+        ensure!(
             Self::intentions().iter().find(|&t| t == &who).is_some(),
             "Cannot deactivate if transactor is not an intention."
         );
+
         // deactivate fails in degenerate case of having too few existing staked parties
         if Self::intentions().len() <= Self::minimum_validator_count() as usize {
             return Err("cannot deactivate when there are too few staked participants");
         }
-
-        ensure!(
-            <IntentionProfiles<T>>::get(&who).is_active,
-            "Cannot deactivate if already inactive."
-        );
 
         let mut iprof = <IntentionProfiles<T>>::get(&who);
         iprof.is_active = false;
@@ -585,19 +587,15 @@ impl<T: Trait> Module<T> {
         cxsupport::Module::<T>::handle_fee_before(&who, Self::stake_fee(), true, || Ok(()))?;
 
         ensure!(value.as_() > 0, "Cannot stake zero.");
-        // TODO Take care of precision later
-        // ensure!(
-        // value.as_() % 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32) == 0,
-        // "Cannot stake decimal."
-        // );
-
-        // let value = T::Balance::sa(
-        // value.as_() / 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32),
-        // );
 
         ensure!(
             value <= <balances::Module<T>>::free_balance(&who),
             "Cannot stake if amount greater than your free balance."
+        );
+
+        ensure!(
+            Self::intentions().iter().find(|&t| t == &who).is_some(),
+            "Cannot stake if transactor is not an intention."
         );
 
         Self::apply_stake(&who, value)?;
@@ -610,25 +608,18 @@ impl<T: Trait> Module<T> {
         let who = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(&who, Self::unstake_fee(), true, || Ok(()))?;
 
+        ensure!(value.as_() > 0, "Cannot unstake zero.");
+
+        let current_nomination = Self::nomination_record_of(&who, &who).nomination;
+
+        ensure!(
+            value <= current_nomination,
+            "Cannot unstake if amount greater than your current nomination."
+        );
+
         ensure!(
             Self::intentions().iter().find(|&t| t == &who).is_some(),
             "Cannot unstake if transactor is not an intention."
-        );
-
-        ensure!(value.as_() > 0, "Cannot unstake zero.");
-        // ensure!(
-        // value.as_() % 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32) == 0,
-        // "Cannot stake decimal."
-        // );
-
-        // let value = T::Balance::sa(
-        // value.as_() / 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32),
-        // );
-
-        let current_nomination = Self::nomination_record_of(&who, &who).nomination;
-        ensure!(
-            value <= current_nomination,
-            "Cannot unstake if amount greater than your free balance."
         );
 
         let mut nprof = <NominatorProfiles<T>>::get(&who);
@@ -656,18 +647,14 @@ impl<T: Trait> Module<T> {
 
         ensure!(value.as_() > 0, "Cannot stake zero.");
 
+        ensure!(
+            Self::intentions().iter().find(|&t| t == &target).is_some(),
+            "cannot nominate if target is not an intention."
+        );
+
         if Self::intentions().iter().find(|&t| t == &who).is_some() {
             ensure!(who != target, "cannot nominate per se as an intention.");
         }
-
-        // ensure!(
-        // value.as_() % 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32) == 0,
-        // "Cannot stake decimal."
-        // );
-
-        // let value = T::Balance::sa(
-        // value.as_() / 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32),
-        // );
 
         ensure!(
             value <= <balances::Module<T>>::free_balance(&who),
@@ -744,6 +731,8 @@ impl<T: Trait> Module<T> {
             || Ok(()),
         )?;
 
+        ensure!(value.as_() > 0, "Cannot unnominate zero.");
+
         let target = <balances::Module<T>>::lookup(target)?;
 
         let nprof = <NominatorProfiles<T>>::get(&source);
@@ -752,16 +741,6 @@ impl<T: Trait> Module<T> {
             nprof.nominees.iter().find(|&t| t == &target).is_some(),
             "Cannot claim if target is not your nominee."
         );
-
-        ensure!(value.as_() > 0, "Cannot unnominate zero.");
-        // ensure!(
-        // value.as_() % 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32) == 0,
-        // "Cannot stake decimal."
-        // );
-
-        // let value = T::Balance::sa(
-        // value.as_() / 10_u64.pow(<tokenbalances::Module<T>>::chainx_precision() as u32),
-        // );
 
         let mut record = Self::nomination_record_of(&source, &target);
 

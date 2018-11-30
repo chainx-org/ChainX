@@ -293,11 +293,10 @@ where
                 Ok(xt) => Some(*xt.hash()),
                 Err(e) => match e.into_pool_error() {
                     Ok(e) => match e.kind() {
-                        extrinsic_pool::ErrorKind::AlreadyImported(hash) => Some(
-                            ::std::str::FromStr::from_str(&hash)
-                                .map_err(|_| {})
-                                .expect("Hash string is always valid"),
-                        ),
+                        extrinsic_pool::ErrorKind::AlreadyImported(hash) => {
+                            warn!("{:?} already imported", hash);
+                            None
+                        }
                         _ => {
                             debug!("Error adding transaction to the pool: {:?}", e);
                             None
