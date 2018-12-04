@@ -18,8 +18,7 @@ extern crate sr_std as rstd;
 #[macro_use]
 extern crate parity_codec_derive;
 
-#[cfg(test)]
-extern crate cxrml_associations;
+extern crate cxrml_associations as associations;
 extern crate cxrml_support as cxsupport;
 extern crate cxrml_system;
 extern crate cxrml_tokenbalances as tokenbalances;
@@ -36,7 +35,8 @@ extern crate sr_io as runtime_io;
 #[cfg(test)]
 extern crate substrate_primitives;
 
-use balances::{address::Address, OnDilution};
+use associations::{ChannelRelationship, RevChannelRelationship};
+use balances::{address::Address, FreeBalance, OnDilution, ReservedBalance};
 use codec::Codec;
 use primitives::{
     traits::{As, OnFinalise, One, Zero},
@@ -136,7 +136,9 @@ pub struct CertProfs<AccountId: Default, BlockNumber: Default> {
     pub remaining_shares: u32,
 }
 
-pub trait Trait: balances::Trait + session::Trait + tokenbalances::Trait {
+pub trait Trait:
+    balances::Trait + session::Trait + tokenbalances::Trait + associations::Trait
+{
     /// Some tokens minted.
     type OnRewardMinted: OnDilution<<Self as balances::Trait>::Balance>;
 
@@ -307,25 +309,61 @@ decl_storage! {
 
         build(|storage: &mut primitives::StorageMap, config: &GenesisConfig<T>| {
             use codec::Encode;
+            use rstd::collections::btree_map::BTreeMap;
+
+            let index = 0u32;
+
+            let mut cert: CertProfs<T::AccountId, T::BlockNumber> = CertProfs::default();
+            cert.name = b"genesis_cert".to_vec();
+            cert.index = index;
+            cert.frozen_duration = 1;
+            cert.remaining_shares = config.shares_per_cert - config.intention_profiles.len() as u32;
+            cert.owner = config.cert_owner.clone();
+            storage.insert(GenesisConfig::<T>::hash(&<CertProfiles<T>>::key_for(0u32)).to_vec(), cert.encode());
+
             let mut stats: Stats<T::AccountId, T::Balance> = Stats::default();
+
             for (acnt, name, url) in config.intention_profiles.iter() {
+
+                let mut nprof: NominatorProfs<T::AccountId, T::Balance> = NominatorProfs::default();
+                let mut nominees = Vec::new();
+                nominees.push(acnt.clone());
+                nprof.nominees = nominees;
+                storage.insert(GenesisConfig::<T>::hash(&<NominatorProfiles<T>>::key_for(acnt)).to_vec(), nprof.encode());
+
                 let mut iprof: IntentionProfs<T::Balance, T::BlockNumber> = IntentionProfs::default();
                 iprof.name = name.clone();
                 iprof.url = url.clone();
                 iprof.is_active = true;
-                iprof.total_nomination = T::Balance::sa(1);
-                stats.total_stake += T::Balance::sa(1);
+                iprof.activator_index = 0;
+                iprof.total_nomination = T::Balance::sa(config.activation_per_share as u64);
+                stats.total_stake += T::Balance::sa(config.activation_per_share as u64);
                 storage.insert(GenesisConfig::<T>::hash(&<IntentionProfiles<T>>::key_for(acnt)).to_vec(), iprof.encode());
+
+                let reserved = iprof.total_nomination;
+                storage.insert(GenesisConfig::<T>::hash(&<ReservedBalance<T>>::key_for(acnt)).to_vec(), reserved.encode());
+
+                let free = T::Balance::sa(100_000_000_000 - config.activation_per_share as u64);
+                storage.insert(GenesisConfig::<T>::hash(&<FreeBalance<T>>::key_for(acnt)).to_vec(), free.encode());
+
+                let mut nominations: BTreeMap<T::AccountId, NominationRecord<T::Balance, T::BlockNumber>> = BTreeMap::new();
+                let mut record = NominationRecord::default();
+                record.nomination = iprof.total_nomination;
+                record.last_vote_weight = 0;
+                record.last_vote_weight_update = T::BlockNumber::sa(0);
+                nominations.insert(acnt.clone(), record);
+                storage.insert(GenesisConfig::<T>::hash(&<NominationRecords<T>>::key_for(acnt)).to_vec(), CodecBTreeMap(nominations).encode());
+
+                let channel = name.clone();
+                let intention = acnt.clone();
+                storage.insert(GenesisConfig::<T>::hash(&<ChannelRelationship<T>>::key_for(channel.clone())).to_vec(), intention.clone().encode());
+                storage.insert(GenesisConfig::<T>::hash(&<RevChannelRelationship<T>>::key_for(intention)).to_vec(), channel.encode());
             }
+
             storage.insert(GenesisConfig::<T>::hash(&<StakingStats<T>>::key()).to_vec(), stats.encode());
 
-            let mut cert: CertProfs<T::AccountId, T::BlockNumber> = CertProfs::default();
-            cert.name = b"Alice".to_vec();
-            cert.index = 0;
-            cert.frozen_duration = 1;
-            cert.remaining_shares = config.shares_per_cert;
-            cert.owner = config.cert_owner.clone();
-            storage.insert(GenesisConfig::<T>::hash(&<CertProfiles<T>>::key_for(0u32)).to_vec(), cert.encode());
+            let cert_index = index + 1;
+            storage.insert(GenesisConfig::<T>::hash(&<CertOwnerIndex<T>>::key()).to_vec(), cert_index.encode());
 
         });
     }
@@ -524,8 +562,10 @@ impl<T: Trait> Module<T> {
         <Intentions<T>>::put(intentions);
         <StakingStats<T>>::put(stats);
 
-        Self::apply_register_identity(&intention, name, url)?;
+        Self::apply_register_identity(&intention, name.clone(), url)?;
         Self::apply_stake(&intention, value)?;
+
+        <associations::Module<T>>::init_channel_relationship(name, &intention)?;
 
         Ok(())
     }
@@ -613,8 +653,8 @@ impl<T: Trait> Module<T> {
         let current_nomination = Self::nomination_record_of(&who, &who).nomination;
 
         ensure!(
-            value <= current_nomination,
-            "Cannot unstake if amount greater than your current nomination."
+            value <= current_nomination - Self::intention_profiles(&who).frozen,
+            "Cannot unstake if amount greater than your revocable stake."
         );
 
         ensure!(
@@ -936,18 +976,18 @@ impl<T: Trait> Module<T> {
     fn this_session_reward() -> T::Balance {
         let total_stake = <StakingStats<T>>::get().total_stake.as_();
         let reward = match total_stake {
-            0...100_000_000 => total_stake * 1 / 1000,
-            100_000_001...200_000_000 => total_stake * 9 / 10000,
-            200_000_001...300_000_000 => total_stake * 8 / 10000,
-            300_000_001...400_000_000 => total_stake * 7 / 10000,
-            400_000_001...500_000_000 => total_stake * 6 / 10000,
-            500_000_001...600_000_000 => total_stake * 5 / 10000,
-            600_000_001...700_000_000 => total_stake * 4 / 10000,
-            700_000_001...800_000_000 => total_stake * 3 / 10000,
-            800_000_001...900_000_000 => total_stake * 2 / 10000,
+            0...100_000_000_000 => total_stake * 1 / 1000,
+            100_000_000_001...200_000_000_000 => total_stake * 9 / 10000,
+            200_000_000_001...300_000_000_000 => total_stake * 8 / 10000,
+            300_000_000_001...400_000_000_000 => total_stake * 7 / 10000,
+            400_000_000_001...500_000_000_000 => total_stake * 6 / 10000,
+            500_000_000_001...600_000_000_000 => total_stake * 5 / 10000,
+            600_000_000_001...700_000_000_000 => total_stake * 4 / 10000,
+            700_000_000_001...800_000_000_000 => total_stake * 3 / 10000,
+            800_000_000_001...900_000_000_000 => total_stake * 2 / 10000,
             _ => total_stake * 1 / 10000,
         };
-        T::Balance::sa(reward)
+        T::Balance::sa(reward / 1000)
     }
 
     /// Acutally unreserve the locked stake.

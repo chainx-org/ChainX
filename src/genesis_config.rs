@@ -62,19 +62,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         transfer_fee: 0,
         creation_fee: 0,
         reclaim_rebate: 0,
-        balances: vec![
-            (Keyring::Alice.to_raw_public().into(), normalize(1_000_000)),
-            (Keyring::Bob.to_raw_public().into(), normalize(1_000_000)),
-            (
-                Keyring::Charlie.to_raw_public().into(),
-                normalize(1_000_000),
-            ),
-            (Keyring::Dave.to_raw_public().into(), normalize(1_000_000)),
-            (
-                Keyring::Ferdie.to_raw_public().into(),
-                normalize(996_000_000),
-            ),
-        ],
+        balances: vec![],
     };
     let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
 
@@ -93,7 +81,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                 .cloned()
                 .map(Into::into)
                 .collect(),
-            session_length: 1 * MINUTES, // that's 1 hour per session.
+            session_length: 28, // 28 blocks per session
         }),
         democracy: Some(DemocracyConfig {
             launch_period: 120 * 24 * 14, // 2 weeks per public referendum
@@ -130,7 +118,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             // token_list: Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>
             // e.g. [("btc", [(account1, value), (account2, value)].to_vec()), ("eth", [(account1, value), (account2, value)].to_vec())]
             token_list: vec![
-                (Token::new(BridgeOfBTC::SYMBOL.to_vec(), b"btc token".to_vec(), 8),
+                (Token::new(BridgeOfBTC::SYMBOL.to_vec(), b"BTC Token".to_vec(), 8),
                 // [(Keyring::Alice.to_raw_public().into(), 1_000_000), (Keyring::Bob.to_raw_public().into(), 1_000_000)].to_vec())
                 vec![])
             ],
@@ -149,14 +137,14 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         }),
         staking: Some(StakingConfig {
             current_era: 0,
-            bonding_duration: 3 * MINUTES, // 3 days per bond.
+            bonding_duration: 28,
             intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
-            intention_profiles: initial_authorities.clone().into_iter().map(|i| (i.0.into(), b"ChainX".to_vec(), b"chainx.org".to_vec())).collect(),
+            intention_profiles: vec![(auth1.0.into(), b"ChainX1".to_vec(), b"chainx.org".to_vec())],
             minimum_validator_count: 1,
-            validator_count: 6,
-            sessions_per_era: 4, // 24 hours per era.
+            validator_count: 7,
+            sessions_per_era: 5,
             shares_per_cert: 45,
-            activation_per_share: 100000,
+            activation_per_share: normalize(100000) as u32,
             maximum_cert_owner_count: 200,
             intention_threshold: 9000,
             offline_slash_grace: 0,
@@ -182,13 +170,13 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
         bridge_btc: Some(BridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: (BlockHeader {
-                version: 545259520,
-                previous_header_hash: H256::from_reversed_str("0000000000000119cb529b757340de5a642b21938930646c646241f19ab10789"),
-                merkle_root_hash: H256::from_reversed_str("53a5a6865051ad1f350de8a8bd65700f9929808bae3c7e82c792647e767c2eab"),
-                time: 1542972675,
-                bits: Compact::new(436296509),
-                nonce: 1691442840,
-            }, 1444850),
+                version: 536870912,
+                previous_header_hash: H256::from_reversed_str("0000000000169686808d64b2c2bb83b1024375f5af10c77bd90ea58db63ec786"),
+                merkle_root_hash: H256::from_reversed_str("7b0d2a0d34c92a0b79ece325478260d75d6c51fe07e606ded0945490f9ecc8de"),
+                time: 1543471789,
+                bits: Compact::new(436289080),
+                nonce: 1307552987,
+            }, 1445850),
             params_info: Params::new(520159231, // max_bits
                                      2 * 60 * 60,  // block_max_future
                                      64,  // max_fork_route_preset
@@ -197,13 +185,13 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
                                      4), // retargeting_factor
             network_id: 1,
             utxo_max_index: 0,
-            irr_block: 0,
+            irr_block: 2,
             btc_fee: 1000,
             accounts_max_index: 0,
             cert_address: keys::Address::from_layout(&"2N6JXYKYLqN4e2A96FLnY5J1Mjj5MHXhp6b".from_base58().unwrap()).unwrap(),
             cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
-            receive_address: keys::Address::from_layout(&"2N8tR484JD32i1DY2FnRPLwBVaNuXSfzoAv".from_base58().unwrap()).unwrap(),
-            redeem_script: b"52210306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd2102a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee2103f72c448a0e59f48d4adef86cba7b278214cece8e56ef32ba1d179e0a8129bdba53ae".to_vec(),
+            receive_address: keys::Address::from_layout(&"2N8fUxnFttG5UgPUQDDKXmyRJbr5ZkV4kx3".from_base58().unwrap()).unwrap(),
+            redeem_script: b"52210227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c321020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f2102a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b9953ae".to_vec(),
             fee: 0,
         }),
         pendingorders: Some(PendingOrdersConfig {

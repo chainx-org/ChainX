@@ -23,7 +23,6 @@ extern crate substrate_primitives;
 // map!, vec! marco.
 extern crate sr_std as rstd;
 // Needed for tests (`with_externalities`).
-#[cfg(feature = "std")]
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 // for substrate runtime module lib

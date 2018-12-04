@@ -161,7 +161,7 @@ source = "git+https://github.com/chainx-org/bit-vec.git#ced2a13de722307d5c966aa8
 [[package]]
 name = "bitcrypto"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#4ae9b0600a3c6b930c284ba6d64fe2f52bfedbf8"
+source = "git+https://github.com/chainx-org/bitcoin-rust#ae1be6ef10dd6012b7b32e1f995a2f0ca420fb1a"
 dependencies = [
  "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "rand 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -257,7 +257,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "chain"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#4ae9b0600a3c6b930c284ba6d64fe2f52bfedbf8"
+source = "git+https://github.com/chainx-org/bitcoin-rust#ae1be6ef10dd6012b7b32e1f995a2f0ca420fb1a"
 dependencies = [
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1456,7 +1456,7 @@ dependencies = [
 [[package]]
 name = "keys"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#4ae9b0600a3c6b930c284ba6d64fe2f52bfedbf8"
+source = "git+https://github.com/chainx-org/bitcoin-rust#ae1be6ef10dd6012b7b32e1f995a2f0ca420fb1a"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
@@ -2295,7 +2295,7 @@ dependencies = [
 [[package]]
 name = "primitives"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#4ae9b0600a3c6b930c284ba6d64fe2f52bfedbf8"
+source = "git+https://github.com/chainx-org/bitcoin-rust#ae1be6ef10dd6012b7b32e1f995a2f0ca420fb1a"
 dependencies = [
  "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "crunchy 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2614,7 +2614,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "script"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#4ae9b0600a3c6b930c284ba6d64fe2f52bfedbf8"
+source = "git+https://github.com/chainx-org/bitcoin-rust#ae1be6ef10dd6012b7b32e1f995a2f0ca420fb1a"
 dependencies = [
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
@@ -2693,7 +2693,7 @@ dependencies = [
 [[package]]
 name = "serialization"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/bitcoin-rust#4ae9b0600a3c6b930c284ba6d64fe2f52bfedbf8"
+source = "git+https://github.com/chainx-org/bitcoin-rust#ae1be6ef10dd6012b7b32e1f995a2f0ca420fb1a"
 dependencies = [
  "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",

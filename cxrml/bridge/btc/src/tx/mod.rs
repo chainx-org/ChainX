@@ -10,8 +10,8 @@ use runtime_support::{StorageMap, StorageValue};
 
 pub use self::proposal::{handle_proposal, Proposal};
 use super::{
-    AccountMap, AddressMap, BTCTxLog, BlockHeaderFor, BlockTxids, CandidateTx, CertCache,
-    DepositCache, DepositRecords, LinkedNodes, NetworkId, Node, NumberForHash, ReceiveAddress,
+    AccountMap, AddressMap, BTCTxLog, BlockHeaderFor, BlockTxids, CandidateTx, CertCache, DepositCache,
+    DepositRecords, LinkedNodes, Module, NetworkId, Node, NumberForHash, ReceiveAddress,
     RedeemScript, RegInfoMaxIndex, RegInfoSet, Trait, TxProposal, TxSet, TxSetTail, TxType,
     UTXOMaxIndex, UTXOSet,
 };
@@ -28,7 +28,7 @@ use script::{
     TransactionSignatureChecker,
 };
 use system;
-
+use utils::vec_to_u32;
 mod proposal;
 
 #[derive(Clone, Encode, Decode)]
@@ -58,7 +58,7 @@ impl<T: Trait> UTXOStorage<T> {
         while index > 0 {
             index -= 1;
             let utxo = <UTXOSet<T>>::get(index);
-            if utxo.is_spent == false {
+            if utxo.is_spent == false && utxo.balance > 0 {
                 utxo_set.push(utxo.clone());
                 count_balance += utxo.balance;
                 if count_balance >= balance {
@@ -293,6 +293,8 @@ pub fn validate_transaction<T: Trait>(
         }
         Err(_) => return Err("parse partial merkle tree failed"),
     }
+
+    // To do: All inputs relay
     let previous_txid = tx.previous_raw.hash();
     if previous_txid != tx.raw.inputs[0].previous_output.hash {
         return Err("previous tx id not right");
@@ -307,15 +309,14 @@ pub fn validate_transaction<T: Trait>(
         }
     }
 
-    // detect withdraw
-    for input in tx.raw.inputs.iter() {
-        let outpoint = input.previous_output.clone();
-        let send_address = inspect_address::<T>(&tx.previous_raw, outpoint).unwrap();
-        if send_address.hash == address.0.hash {
-            runtime_io::print("-----------TxType::Withdraw");
-            return Ok(TxType::Withdraw);
-        }
+    // detect withdraw: To do: All inputs relay
+    let outpoint = tx.raw.inputs[0].previous_output.clone();
+    let send_address = inspect_address::<T>(&tx.previous_raw, outpoint).unwrap();
+    if send_address.hash == address.0.hash {
+        runtime_io::print("-----------TxType::Withdraw");
+        return Ok(TxType::Withdraw);
     }
+
     // detect deposit
     for output in tx.raw.outputs.iter() {
         if is_key(&output.script_pubkey, &address.0) {
@@ -366,14 +367,24 @@ pub fn handle_input<T: Trait>(
     who: &T::AccountId,
     receive_address: &keys::Address,
 ) {
-    let tx2 = <TxProposal<T>>::get();
-    if tx2.is_some() && compare_transaction(tx, &tx2.clone().unwrap().tx) {
-        let mut candidate = tx2.unwrap();
-        candidate.block_hash = block_hash.clone();
-        <TxProposal<T>>::put(candidate);
-    } else {
-        // To do: handle_input error not expect
-        runtime_io::print("-----------handle_input error not expect");
+    let len = Module::<T>::tx_proposal_len();
+    if len > 0 {
+        let tx2 = <TxProposal<T>>::get(len - 1);
+        if tx2.is_some() {
+            let mut candidate = tx2.clone().unwrap();
+            if candidate.confirmed == false {
+                 // 当提上来的提现交易和待签名原文不一致时， 说明系统BTC托管有异常，标记unexpect
+                if compare_transaction(tx, &tx2.unwrap().tx) {
+                     candidate.block_hash = block_hash.clone();
+                } else {
+                    candidate.unexpect = true;
+                }
+                <TxProposal<T>>::insert(len - 1, candidate);
+            }
+        } else {
+            // To do: handle_input error not expect
+            runtime_io::print("-----------handle_input error not expect");
+        }
     }
     let out_point_set = tx
         .inputs
@@ -514,13 +525,6 @@ pub fn handle_output<T: Trait>(
                             runtime_io::print("------------process history deposit");
                             for rec in records.iter() {
                                 if deposit_token::<T>(&send_address, rec.2, &rec.0, &rec.3) {
-                                    total_balance += output.value;
-                                    new_utxos.push(UTXO {
-                                        txid: rec.0.clone(),
-                                        index: rec.1,
-                                        balance: rec.2,
-                                        is_spent: false,
-                                    });
                                     runtime_io::print("-----------history deposit token success");
                                     runtime_io::print(rec.2);
                                 }
@@ -539,13 +543,6 @@ pub fn handle_output<T: Trait>(
             if receive_address.hash == script_addresses[0].hash {
                 runtime_io::print("-----------deposit_token");
                 if deposit_token::<T>(&send_address, output.value, &tx_hash, block_hash) {
-                    total_balance += output.value;
-                    new_utxos.push(UTXO {
-                        txid: tx.hash(),
-                        index: index as u32,
-                        balance: output.value,
-                        is_spent: false,
-                    });
                     runtime_io::print("-----------deposit token success");
                     runtime_io::print(output.value);
                 } else {
@@ -554,10 +551,18 @@ pub fn handle_output<T: Trait>(
                             Some(vec) => vec,
                             None => Vec::new(),
                         };
-                    total_balance += output.value;
                     vec.push((tx.hash(), index as u32, output.value, block_hash.clone()));
                     <DepositRecords<T>>::insert(&send_address, vec.clone());
                     runtime_io::print("-----------deposit token failed, save in DepositRecords");
+                }
+                if output.value > 0 {
+                    total_balance += output.value;
+                    new_utxos.push(UTXO {
+                        txid: tx.hash(),
+                        index: index as u32,
+                        balance: output.value,
+                        is_spent: false,
+                    });
                 }
             }
         }
@@ -608,7 +613,7 @@ pub fn handle_cert<T: Trait>(tx: &Transaction) {
             let name = script.extract_pre(':');
             let rear = script.extract_rear(':');
             let mut date = Vec::new();
-            let mut owner = Vec::new();
+            let mut cert = Vec::new();
             let mut current = 0;
             while current < rear.len() {
                 if rear[current] == ':' as u8 {
@@ -616,10 +621,14 @@ pub fn handle_cert<T: Trait>(tx: &Transaction) {
                 }
                 current += 1;
             }
-            owner.extend_from_slice(&rear[0..current]);
-            date.extend_from_slice(&rear[current + 1..]);
-            let frozen_duration = String::from_utf8(date).unwrap().parse().unwrap();
-            let slice = from(owner).unwrap();
+            date.extend_from_slice(&rear[0..current]);
+            cert.extend_from_slice(&rear[current + 1..]);
+            let frozen_duration = if let Some(date) = vec_to_u32(date.clone()){
+                date
+            } else {
+                0
+            };
+            let slice = from(cert).unwrap();
             let slice = slice.as_slice();
             let mut account: Vec<u8> = Vec::new();
             account.extend_from_slice(&slice[1..33]);
@@ -651,5 +660,35 @@ mod tests {
         assert_eq!(account.len(), 32);
         let id: H256 = Decode::decode(&mut account.as_slice()).unwrap();
         println!("id :{:?}", id);
+    }
+
+    #[test]
+    fn test_cert(){
+        let script = Script::from(
+            "chainx:66990:5HnDcuKFCvsR42s8Tz2j2zLHLZAaiHG4VNyJDa7iLRunRuhM"
+                .as_bytes()
+                .to_vec(),
+        );
+
+        let name = script.extract_pre(':');
+        let rear = script.extract_rear(':');
+        let mut date = Vec::new();
+        let mut owner = Vec::new();
+        let mut current = 0;
+        while current < rear.len() {
+            if rear[current] == ':' as u8 {
+                break;
+            }
+            current += 1;
+        }
+        date.extend_from_slice(&rear[0..current]);
+        owner.extend_from_slice(&rear[current + 1..]);
+
+        let frozen_duration = if let Some(date) = vec_to_u32(date){
+            date
+        } else {
+            0
+        };
+        assert_eq!(66990, frozen_duration);
     }
 }

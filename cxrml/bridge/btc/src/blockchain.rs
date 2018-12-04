@@ -14,8 +14,8 @@ use script::Script;
 use staking;
 
 use {
-    AccountMap, BestIndex, BlockHeaderFor, CertCache, DepositCache, HashsForNumber, Module,
-    NumberForHash, Params, ParamsInfo, Trait, TxProposal,
+    BestIndex, BlockHeaderFor, CertCache, DepositCache, HashsForNumber, Module, NumberForHash,
+    Params, ParamsInfo, Trait, TxProposal,
 };
 
 use tx::{Proposal, RollBack, TxStorage};
@@ -165,6 +165,20 @@ impl<T: Trait> Chain<T> {
                 best_number + 1
             },
         };
+
+        <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
+        runtime_io::print("------------");
+        runtime_io::print(new_best_header.hash.to_vec().as_slice());
+        <HashsForNumber<T>>::mutate(new_best_header.number, |v| {
+            let h = new_best_header.hash.clone();
+            if v.contains(&h) == false {
+                v.push(h);
+            }
+        });
+        // best chain choose finish
+        <BestIndex<T>>::put(new_best_header.clone());
+
+        // deposit/withdraw handle start
         let symbol: Symbol = Module::<T>::SYMBOL.to_vec();
         let irr_block = <IrrBlock<T>>::get();
         // Deposit
@@ -174,9 +188,10 @@ impl<T: Trait> Chain<T> {
             for (account_id, amount, tx_hash, block_hash) in vec {
                 match <NumberForHash<T>>::get(block_hash.clone()) {
                     Some(height) => {
-                        if new_best_header.number > height + irr_block {
+                        if new_best_header.number >= height + irr_block {
                             runtime_io::print("-----------financial_records deposit");
-                            <financial_records::Module<T>>::deposit(
+                            // TODO handle err
+                            let _ = <financial_records::Module<T>>::deposit(
                                 &account_id,
                                 &symbol,
                                 As::sa(amount),
@@ -195,75 +210,86 @@ impl<T: Trait> Chain<T> {
         }
 
         // Withdraw
-        let candidate = <TxProposal<T>>::get();
-        if candidate.is_some() {
-            let tx = candidate.unwrap();
-            match <NumberForHash<T>>::get(tx.block_hash) {
-                Some(height) => {
-                    if new_best_header.number > height + irr_block {
-                        runtime_io::print("----new_best_header.number-----");
-                        let txid = tx.tx.hash();
-                        for output in tx.tx.outputs.iter() {
-                            let script: Script = output.clone().script_pubkey.into();
-                            let script_address =
-                                script.extract_destinations().unwrap_or(Vec::new());
-                            let network_id = <NetworkId<T>>::get();
-                            let network = if network_id == 1 {
-                                keys::Network::Testnet
-                            } else {
-                                keys::Network::Mainnet
-                            };
-                            let address = keys::Address {
-                                kind: script_address[0].kind,
-                                network,
-                                hash: script_address[0].hash.clone(),
-                            };
-                            let account_id = <AddressMap<T>>::get(address);
-                            if account_id.is_some() {
-                                <financial_records::Module<T>>::withdrawal_finish(
-                                    &account_id.unwrap(),
-                                    &symbol,
-                                    Some(txid.as_ref().to_vec()),
-                                );
+        let len = Module::<T>::tx_proposal_len();
+        // get last proposal
+        if len > 0 {
+            let mut candidate = Module::<T>::tx_proposal(len - 1).unwrap();
+                // candidate: CandidateTx
+                if candidate.confirmed == false {
+                    match <NumberForHash<T>>::get(&candidate.block_hash) {
+                        Some(height) => {
+                            if new_best_header.number >= height + irr_block {
+                                runtime_io::print("----new_best_header.number-----");
+                                let txid = candidate.tx.hash();
+                                /*for output in candidate.tx.outputs.iter() {
+                                    let script: Script = output.clone().script_pubkey.into();
+                                    let script_address =
+                                        script.extract_destinations().unwrap_or(Vec::new());
+                                    let network_id = <NetworkId<T>>::get();
+                                    let network = if network_id == 1 {
+                                        keys::Network::Testnet
+                                    } else {
+                                        keys::Network::Mainnet
+                                    };
+                                    let address = keys::Address {
+                                        kind: script_address[0].kind,
+                                        network,
+                                        hash: script_address[0].hash.clone(),
+                                    };*/
+                                    //let account_id = <AddressMap<T>>::get(address);
+                                    //if account_id.is_some() {
+                                  for (account_id, _) in candidate.outs.clone() {
+                                      // TODO handle err
+                                      let _ = <financial_records::Module<T>>::withdrawal_finish(
+                                          &account_id,
+                                          &symbol,
+                                          Some(txid.as_ref().to_vec()),
+                                       );
+                                  }
+                                //}
+                                candidate.confirmed = true;
+                                // mark this tx withdraw finish!
+                                TxProposal::<T>::insert(len - 1, candidate);
                             }
                         }
-                        let vec = <financial_records::Module<T>>::get_withdraw_cache(&symbol);
-                        if vec.is_some() {
-                            let mut address_vec = Vec::new();
-                            for (account_id, balance) in vec.unwrap() {
-                                let address = <AccountMap<T>>::get(account_id);
-                                if address.is_some() {
-                                    address_vec.push((address.unwrap(), balance.as_() as u64));
-                                }
-                            }
-                            let btc_fee = <BtcFee<T>>::get();
-                            if let Err(e) = <Proposal<T>>::create_proposal(address_vec, btc_fee) {
-                                return Err(ChainErr::OtherErr(e));
-                            }
-                        } else {
-                            <TxProposal<T>>::kill();
-                        }
+                        None => {}
                     }
                 }
-                None => {}
-            }
-        } else {
-            let vec = <financial_records::Module<T>>::get_withdraw_cache(&symbol);
-            if vec.is_some() {
-                runtime_io::print("-----------first withdraw");
-                let mut address_vec = Vec::new();
-                for (account_id, balance) in vec.unwrap() {
-                    let address = <AccountMap<T>>::get(account_id);
-                    if address.is_some() {
-                        address_vec.push((address.unwrap(), balance.as_() as u64));
-                    }
-                }
-                let btc_fee = <BtcFee<T>>::get();
-                if let Err(e) = <Proposal<T>>::create_proposal(address_vec, btc_fee) {
-                    return Err(ChainErr::OtherErr(e));
-                }
-            }
         }
+        
+            // case 0: 当刚启动时Candidate lenth = 0 时 
+            // case 1: 所有提现交易都是正常逻辑执行，会confirmed. 
+            // case 2:  非正常逻辑提现，candidate.unexpect 会在handle_input时设置， 
+            // 标记该链上这笔proposal由于BTC 托管人没有按着正常逻辑签名广播， 该proposal可能永远不会confirmed.
+            // 所以开始重新创建proposal.
+            if len == 0 {
+			        // no withdraw cache would return None
+					if let Some(indexs) = financial_records::Module::<T>::withdrawal_cache_indexs(&symbol) {
+						let btc_fee = <BtcFee<T>>::get();
+						if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
+							return Err(ChainErr::OtherErr(e));
+						}
+					}
+
+            }
+            if len > 0  {
+                let candidate = Module::<T>::tx_proposal(len - 1).unwrap();
+                if candidate.confirmed || candidate.unexpect {
+					// no withdraw cache would return None
+					if let Some(indexs) = financial_records::Module::<T>::withdrawal_cache_indexs(&symbol) {
+						let btc_fee = <BtcFee<T>>::get();
+						if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
+							return Err(ChainErr::OtherErr(e));
+						}
+					}
+                 }
+            }
+        //        let candidate = <TxProposal<T>>::get();
+        //        if candidate.is_some() {
+        //            let tx = candidate.unwrap();
+        //        } else {
+        //
+        //        }
         // SendCert
         if let Some(cert_info) = <CertCache<T>>::take() {
             runtime_io::print("------CertCache take");
@@ -272,17 +298,6 @@ impl<T: Trait> Chain<T> {
             }
         }
 
-        <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
-        runtime_io::print("------------");
-        runtime_io::print(new_best_header.hash.to_vec().as_slice());
-        <HashsForNumber<T>>::mutate(new_best_header.number, |v| {
-            let h = new_best_header.hash.clone();
-            if v.contains(&h) == false {
-                v.push(h);
-            }
-        });
-
-        <BestIndex<T>>::put(new_best_header);
         Ok(())
     }
     /// Rollbacks single best block

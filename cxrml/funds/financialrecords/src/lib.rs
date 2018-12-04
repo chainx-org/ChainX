@@ -304,7 +304,7 @@ decl_storage! {
         /// Record list length of every account
         pub RecordsLenOf get(records_len_of): map T::AccountId => u32;
         /// Record list for every account, use accountid and index to index the record of account
-        pub RecordsOf: map (T::AccountId, u32) => Option<Record<Symbol, T::TokenBalance, T::BlockNumber>>;
+        pub RecordOf get(record_of): map (T::AccountId, u32) => Option<Record<Symbol, T::TokenBalance, T::BlockNumber>>;
         /// Last deposit index of a account and related symbol
         pub LastDepositIndexOf get(last_deposit_index_of): map (T::AccountId, Symbol) => Option<u32>;
         /// Last withdrawal index of a account and related symbol
@@ -335,7 +335,7 @@ impl<T: Trait> Module<T> {
         let mut records: Vec<RecordT<T>> = Vec::new();
         let len: u32 = Self::records_len_of(who);
         for i in 0..len {
-            if let Some(r) = <RecordsOf<T>>::get(&(who.clone(), i)) {
+            if let Some(r) = <RecordOf<T>>::get(&(who.clone(), i)) {
                 records.push(r);
             }
         }
@@ -348,18 +348,18 @@ impl<T: Trait> Module<T> {
             None
         } else {
             let index = len - 1;
-            <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r))
+            <RecordOf<T>>::get(&(who.clone(), index)).map(|r| (index, r))
         }
     }
 
     pub fn last_deposit_of(who: &T::AccountId, sym: &Symbol) -> Option<(u32, RecordT<T>)> {
         Self::last_deposit_index_of((who.clone(), sym.clone()))
-            .and_then(|index| <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r)))
+            .and_then(|index| <RecordOf<T>>::get(&(who.clone(), index)).map(|r| (index, r)))
     }
 
     pub fn last_withdrawal_of(who: &T::AccountId, sym: &Symbol) -> Option<(u32, RecordT<T>)> {
         Self::last_withdrawal_index_of((who.clone(), sym.clone()))
-            .and_then(|index| <RecordsOf<T>>::get(&(who.clone(), index)).map(|r| (index, r)))
+            .and_then(|index| <RecordOf<T>>::get(&(who.clone(), index)).map(|r| (index, r)))
     }
 
     /// deposit/withdrawal pre-process
@@ -397,7 +397,7 @@ impl<T: Trait> Module<T> {
             return Err("new record should be Invalid state first");
         }
         let len: u32 = Self::records_len_of(who);
-        <RecordsOf<T>>::insert(&(who.clone(), len), record.clone());
+        <RecordOf<T>>::insert(&(who.clone(), len), record.clone());
         <RecordsLenOf<T>>::insert(who, len + 1); // len is more than 1 to max index
         let key = (who.clone(), record.symbol());
         match record.action() {
@@ -477,16 +477,17 @@ impl<T: Trait> Module<T> {
         Self::withdrawal_finish_with_index(who, r.unwrap(), txid).map(|_| ())
     }
 
-    pub fn get_withdraw_cache(sym: &Symbol) -> Option<Vec<(T::AccountId, T::TokenBalance)>> {
+    pub fn withdrawal_cache_indexs(sym: &Symbol) -> Option<Vec<(T::AccountId, u32)>> {
         let mut vec = Vec::new();
         if let Some(header) = Self::log_header_for(sym) {
             let mut index = header.index();
 
             while let Some(node) = Self::withdraw_log_cache(&index) {
-                let key = (node.data.accountid().clone(), node.data.index());
-                if let Some(r) = <RecordsOf<T>>::get(&key) {
-                    vec.push((node.data.accountid().clone(), r.balance()));
-                }
+                //                let key = (node.data.accountid(), node.data.index());
+                //                if let Some(r) = <RecordOf<T>>::get(&key) {
+                //                    vec.push((node.data.accountid(), r.balance(), r.addr(), r.ext()));
+                //                }
+                vec.push(node.index());
                 if let Some(next) = node.next() {
                     index = next;
                 } else {
@@ -560,7 +561,7 @@ impl<T: Trait> Module<T> {
         txid: Option<Vec<u8>>,
     ) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
-        if let Some(mut r) = <RecordsOf<T>>::get(&key) {
+        if let Some(mut r) = <RecordOf<T>>::get(&key) {
             if r.is_finish() {
                 return Err("the deposit record should not be a finish state");
             }
@@ -603,7 +604,7 @@ impl<T: Trait> Module<T> {
                 _ => return Err("err action type in deposit_finish"),
             }
             r.txid = deposit_txid;
-            <RecordsOf<T>>::insert(&key, r);
+            <RecordOf<T>>::insert(&key, r);
             Ok(index)
         } else {
             return Err("the deposit record for this (accountid, index) not exist");
@@ -650,7 +651,7 @@ impl<T: Trait> Module<T> {
         index: u32,
     ) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
-        if let Some(ref mut r) = <RecordsOf<T>>::get(&key) {
+        if let Some(ref mut r) = <RecordOf<T>>::get(&key) {
             if r.is_finish() {
                 return Err("the deposit record should not be a finish state");
             }
@@ -677,7 +678,7 @@ impl<T: Trait> Module<T> {
                 },
                 _ => return Err("err action type in deposit_finish"),
             }
-            <RecordsOf<T>>::insert(&key, r.clone());
+            <RecordOf<T>>::insert(&key, r.clone());
 
             Ok(index)
         } else {
@@ -691,7 +692,7 @@ impl<T: Trait> Module<T> {
         txid: Option<Vec<u8>>,
     ) -> StdResult<u32, &'static str> {
         let key = (who.clone(), index);
-        if let Some(mut r) = <RecordsOf<T>>::get(&key) {
+        if let Some(mut r) = <RecordOf<T>>::get(&key) {
             if r.is_finish() {
                 return Err("the deposit record should not be a finish state");
             }
@@ -749,7 +750,7 @@ impl<T: Trait> Module<T> {
                 _ => return Err("err action type in deposit_finish"),
             }
             r.txid = withdraw_txid;
-            <RecordsOf<T>>::insert(&key, r);
+            <RecordOf<T>>::insert(&key, r);
 
             Ok(index)
         } else {

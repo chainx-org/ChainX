@@ -146,13 +146,13 @@ fn test_order() {
     with_externalities(&mut new_test_ext(), || {
         let t_sym_eos = b"x-eos".to_vec();
         let t_desc_eos = b"eos token".to_vec();
-        let precision = 4;
+        let precision = 3;
         let t_eos: Token = Token::new(t_sym_eos.clone(), t_desc_eos.clone(), precision);
         assert_eq!(TokenBalances::register_token(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"x-eth".to_vec();
         let t_desc_eth = b"eth token".to_vec();
-        let precision = 4;
+        let precision = 3;
         let t_eth: Token = Token::new(t_sym_eth.clone(), t_desc_eth.clone(), precision);
         assert_eq!(TokenBalances::register_token(t_eth, 0, 0), Ok(()));
 
@@ -186,16 +186,16 @@ fn test_order() {
         //挂买单
         let buy = OrderType::Buy;
         let order =
-            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 2, b"imtoken".to_vec());
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 20, b"imtoken".to_vec());
         assert_eq!(order, Ok(()));
         // 10000-10
         assert_eq!(Balances::free_balance(&a), 9990);
 
         //500-200
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 300);
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 498);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)),
-            200
+            2
         );
 
         //挂卖单
@@ -292,6 +292,7 @@ fn print_order(
     println!("create_time={}", order.create_time());
     println!("lastupdate_time={}", order.lastupdate_time());
     println!("status={:?}", order.status());
+    println!("reserve_last={:?}", order.reserve_last());
     let fill_index = order.fill_index();
 
     println!("--fill_index--");
@@ -335,21 +336,21 @@ fn test_fill_no_fee() {
         let b: u64 = 4;
 
         // 发放
-        TokenBalances::issue(&a, &t_sym_eos.clone(), 1000).unwrap();
-        TokenBalances::issue(&a, &t_sym_eth.clone(), 1000).unwrap();
-        TokenBalances::issue(&b, &t_sym_eos.clone(), 1000).unwrap();
-        TokenBalances::issue(&b, &t_sym_eth.clone(), 1000).unwrap();
+        TokenBalances::issue(&a, &t_sym_eos.clone(), 10000000).unwrap();
+        TokenBalances::issue(&a, &t_sym_eth.clone(), 10000000).unwrap();
+        TokenBalances::issue(&b, &t_sym_eos.clone(), 10000000).unwrap();
+        TokenBalances::issue(&b, &t_sym_eth.clone(), 10000000).unwrap();
 
         //挂买单
         let buy = OrderType::Buy;
         let a_order =
-            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5, b"imtoken".to_vec());
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 1000000, 5, b"imtoken".to_vec());
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 10000000);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
             0
         );
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 9999500);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)),
             500
@@ -358,14 +359,14 @@ fn test_fill_no_fee() {
         //挂卖单
         let sell = OrderType::Sell;
         let b_order =
-            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5, b"imtoken".to_vec());
+            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 500000, 5, b"imtoken".to_vec());
         assert_eq!(b_order, Ok(()));
-        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 9500000);
         assert_eq!(
             TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)),
-            50
+            500000
         );
-        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1000);
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 10000000);
         assert_eq!(
             TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)),
             0
@@ -374,17 +375,17 @@ fn test_fill_no_fee() {
         print_order_list(a, p1.clone());
         print_order_list(b, p1.clone());
 
-        let r_fill = PendingOrders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 50, 0, 0);
+        let r_fill = PendingOrders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 500000, 0, 0);
         assert_eq!(Ok(()), r_fill);
 
         //1000+250
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1050);
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 10500000);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
             0
         );
         //1000-500
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 9999500);
         //500-250
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)),
@@ -392,12 +393,12 @@ fn test_fill_no_fee() {
         );
 
         //1000-50
-        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 9500000);
         assert_eq!(
             TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)),
             0
         );
-        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1250);
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 10000250);
         assert_eq!(
             TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)),
             0
@@ -416,7 +417,7 @@ fn test_fill_no_fee() {
         let a_order_1 =
             PendingOrders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth_alice))
                 .unwrap();
-        assert_eq!(50, a_order_1.hasfill_amount());
+        assert_eq!(500000, a_order_1.hasfill_amount());
         assert_eq!(OrderStatus::FillPart, a_order_1.status);
 
         let last_order_index_of_eos_eth_bob =
@@ -424,7 +425,7 @@ fn test_fill_no_fee() {
         let b_order_1 =
             PendingOrders::order_of((b.clone(), p1.clone(), last_order_index_of_eos_eth_bob))
                 .unwrap();
-        assert_eq!(50, b_order_1.hasfill_amount());
+        assert_eq!(500000, b_order_1.hasfill_amount());
         assert_eq!(OrderStatus::FillAll, b_order_1.status);
     })
 }
@@ -434,13 +435,13 @@ fn test_fill_fee() {
     with_externalities(&mut new_test_ext(), || {
         let t_sym_eos = b"x-eos".to_vec();
         let t_desc_eos = b"eos token".to_vec();
-        let precision = 4;
+        let precision = 3;
         let t_eos: Token = Token::new(t_sym_eos.clone(), t_desc_eos.clone(), precision);
         assert_eq!(TokenBalances::register_token(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"x-eth".to_vec();
         let t_desc_eth = b"eth token".to_vec();
-        let precision = 4;
+        let precision = 3;
         let t_eth: Token = Token::new(t_sym_eth.clone(), t_desc_eth.clone(), precision);
         assert_eq!(TokenBalances::register_token(t_eth, 0, 0), Ok(()));
 
@@ -456,37 +457,37 @@ fn test_fill_fee() {
         let b: u64 = 4;
 
         // 发放
-        TokenBalances::issue(&a, &t_sym_eos.clone(), 1000).unwrap();
-        TokenBalances::issue(&a, &t_sym_eth.clone(), 1000).unwrap();
-        TokenBalances::issue(&b, &t_sym_eos.clone(), 1000).unwrap();
-        TokenBalances::issue(&b, &t_sym_eth.clone(), 1000).unwrap();
+        TokenBalances::issue(&a, &t_sym_eos.clone(), 1001).unwrap();
+        TokenBalances::issue(&a, &t_sym_eth.clone(), 1001).unwrap();
+        TokenBalances::issue(&b, &t_sym_eos.clone(), 1001).unwrap();
+        TokenBalances::issue(&b, &t_sym_eth.clone(), 1001).unwrap();
 
         //挂买单
         let buy = OrderType::Buy;
         let a_order =
-            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 100, 5, b"imtoken".to_vec());
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1000);
+            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 1001, 5, b"imtoken".to_vec());
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1001);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
             0
         );
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 996);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)),
-            500
+            5
         );
 
         //挂卖单
         let sell = OrderType::Sell;
         let b_order =
-            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 50, 5, b"imtoken".to_vec());
+            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 500, 5, b"imtoken".to_vec());
         assert_eq!(b_order, Ok(()));
-        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 501);
         assert_eq!(
             TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)),
-            50
+            500
         );
-        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1000);
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1001);
         assert_eq!(
             TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)),
             0
@@ -495,30 +496,32 @@ fn test_fill_fee() {
         print_order_list(a, p1.clone());
         print_order_list(b, p1.clone());
 
-        let r_fill = PendingOrders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 50, 5, 5);
+        let r_fill = PendingOrders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 500, 5, 5);
         assert_eq!(Ok(()), r_fill);
 
         //1000+250
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1045);
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eos.clone())), 1496);
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eos.clone(), ReservedType::Exchange)),
             0
         );
         //1000-500
-        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 500);
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 996);
         //500-250
         assert_eq!(
             TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)),
-            250
+            3
         );
 
+
+
         //1000-50
-        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 950);
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eos.clone())), 501);
         assert_eq!(
             TokenBalances::reserved_token(&(b, t_sym_eos.clone(), ReservedType::Exchange)),
             0
         );
-        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1225);
+        assert_eq!(TokenBalances::free_token(&(b, t_sym_eth.clone())), 1003);
         assert_eq!(
             TokenBalances::reserved_token(&(b, t_sym_eth.clone(), ReservedType::Exchange)),
             0
@@ -529,7 +532,7 @@ fn test_fill_fee() {
                 cxsystem::Module::<Test>::fee_buy_account(),
                 t_sym_eth.clone()
             )),
-            25
+            0
         );
         assert_eq!(
             TokenBalances::free_token(&(
@@ -557,7 +560,7 @@ fn test_fill_fee() {
         let a_order_1 =
             PendingOrders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth_alice))
                 .unwrap();
-        assert_eq!(50, a_order_1.hasfill_amount());
+        assert_eq!(500, a_order_1.hasfill_amount());
         assert_eq!(OrderStatus::FillPart, a_order_1.status);
 
         let last_order_index_of_eos_eth_bob =
@@ -565,8 +568,29 @@ fn test_fill_fee() {
         let b_order_1 =
             PendingOrders::order_of((b.clone(), p1.clone(), last_order_index_of_eos_eth_bob))
                 .unwrap();
-        assert_eq!(50, b_order_1.hasfill_amount());
+        assert_eq!(500, b_order_1.hasfill_amount());
         assert_eq!(OrderStatus::FillAll, b_order_1.status);
+
+        let cancel = PendingOrders::cancel_order(
+            Some(a).into(),
+            p1.clone(),
+            1,
+        );
+
+        let cancel_order_1 =
+            PendingOrders::order_of((a.clone(), p1.clone(), 1))
+                .unwrap();
+        assert_eq!(OrderStatus::FillPartAndCancel, cancel_order_1.status());
+        //1000-500
+        assert_eq!(TokenBalances::free_token(&(a, t_sym_eth.clone())), 999);
+        //500-250
+        assert_eq!(
+            TokenBalances::reserved_token(&(a, t_sym_eth.clone(), ReservedType::Exchange)),
+            0
+        );
+        print_order_list(a, p1.clone());
+        print_order_list(b, p1.clone());
+
     })
 }
 

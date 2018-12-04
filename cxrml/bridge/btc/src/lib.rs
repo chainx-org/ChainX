@@ -63,6 +63,7 @@ mod b58;
 mod blockchain;
 mod tx;
 mod verify_header;
+mod utils;
 
 use chain::{BlockHeader, Transaction as BTCTransaction};
 use codec::Decode;
@@ -189,10 +190,25 @@ impl Default for TxType {
 
 #[derive(PartialEq, Clone, Encode, Decode)]
 pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
-    pub proposer: Vec<AccountId>,
     pub tx: BTCTransaction,
-    pub perfection: bool,
+    pub unexpect: bool,
+    pub confirmed: bool,
     pub block_hash: H256,
+    pub outs: Vec<(AccountId, u32)>,
+    pub proposers: Vec<AccountId>,
+}
+
+impl<AccountId: Parameter + Ord + Default> CandidateTx<AccountId> {
+    pub fn new(tx: BTCTransaction, outs: Vec<(AccountId, u32)>) -> Self {
+        CandidateTx {
+            tx,
+            unexpect: false,
+            confirmed: false,
+            block_hash: Default::default(),
+            outs,
+            proposers: Vec::new(),
+        }
+    }
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]
@@ -261,7 +277,12 @@ decl_storage! {
         pub BlockTxids get(block_txids): map H256 => Vec<H256>;
         pub AddressMap get(address_map): map Address => Option<T::AccountId>;
         pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
-        pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
+        /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
+//        pub WithdrawalOutsAccount get(withdrawal_outs_account): map H256 => Vec<(u32, T::AccountId)>
+
+        pub TxProposalLen get(tx_proposal_len): u32;
+        pub TxProposal get(tx_proposal): map u32 => Option<CandidateTx<T::AccountId>>;
+
         /// account, btc value, txhash, blockhash
         pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256, H256)>>;
         /// tx_hash, utxo index, btc value, blockhash
