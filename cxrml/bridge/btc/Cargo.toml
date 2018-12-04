@@ -19,6 +19,7 @@ srml-system = { git = "https://github.com/paritytech/substrate", default-feature
 srml-balances = { git = "https://github.com/paritytech/substrate", default-features = false }
 srml-consensus = { git = "https://github.com/paritytech/substrate", default-features = false }
 srml-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-session = { git = "https://github.com/paritytech/substrate", default_features = false }
 cxrml-system = { path = "../../system", default-features = false }
 cxrml-associations = { path = "../../associations", default-features = false }
 cxrml-support = { path = "../../support", default-features = false }
@@ -57,6 +58,7 @@ std=[
     "srml-balances/std",
     "srml-consensus/std",
     "srml-timestamp/std",
+    "srml-session/std",
     "cxrml-system/std",
     "cxrml-associations/std",
     "cxrml-support/std",

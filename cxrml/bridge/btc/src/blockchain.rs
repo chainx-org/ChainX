@@ -1,16 +1,14 @@
 use rstd::marker::PhantomData;
 use rstd::prelude::*;
 use rstd::result::Result;
-use runtime_io;
 use runtime_primitives::traits::As;
 use runtime_support::{StorageMap, StorageValue};
-use {AddressMap, BtcFee, IrrBlock, NetworkId};
+use {BtcFee, IrrBlock};
 
 use chain::BlockHeader;
 use financial_records;
 use financial_records::Symbol;
 use primitives::hash::H256;
-use script::Script;
 use staking;
 
 use {
@@ -167,8 +165,6 @@ impl<T: Trait> Chain<T> {
         };
 
         <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
-        runtime_io::print("------------");
-        runtime_io::print(new_best_header.hash.to_vec().as_slice());
         <HashsForNumber<T>>::mutate(new_best_header.number, |v| {
             let h = new_best_header.hash.clone();
             if v.contains(&h) == false {
@@ -183,13 +179,11 @@ impl<T: Trait> Chain<T> {
         let irr_block = <IrrBlock<T>>::get();
         // Deposit
         if let Some(vec) = <DepositCache<T>>::take() {
-            runtime_io::print("-----------DepositCache take");
             let mut uncomplete_cache: Vec<(T::AccountId, u64, H256, H256)> = Vec::new();
             for (account_id, amount, tx_hash, block_hash) in vec {
                 match <NumberForHash<T>>::get(block_hash.clone()) {
                     Some(height) => {
                         if new_best_header.number >= height + irr_block {
-                            runtime_io::print("-----------financial_records deposit");
                             // TODO handle err
                             let _ = <financial_records::Module<T>>::deposit(
                                 &account_id,
@@ -214,85 +208,61 @@ impl<T: Trait> Chain<T> {
         // get last proposal
         if len > 0 {
             let mut candidate = Module::<T>::tx_proposal(len - 1).unwrap();
-                // candidate: CandidateTx
-                if candidate.confirmed == false {
-                    match <NumberForHash<T>>::get(&candidate.block_hash) {
-                        Some(height) => {
-                            if new_best_header.number >= height + irr_block {
-                                runtime_io::print("----new_best_header.number-----");
-                                let txid = candidate.tx.hash();
-                                /*for output in candidate.tx.outputs.iter() {
-                                    let script: Script = output.clone().script_pubkey.into();
-                                    let script_address =
-                                        script.extract_destinations().unwrap_or(Vec::new());
-                                    let network_id = <NetworkId<T>>::get();
-                                    let network = if network_id == 1 {
-                                        keys::Network::Testnet
-                                    } else {
-                                        keys::Network::Mainnet
-                                    };
-                                    let address = keys::Address {
-                                        kind: script_address[0].kind,
-                                        network,
-                                        hash: script_address[0].hash.clone(),
-                                    };*/
-                                    //let account_id = <AddressMap<T>>::get(address);
-                                    //if account_id.is_some() {
-                                  for (account_id, _) in candidate.outs.clone() {
-                                      // TODO handle err
-                                      let _ = <financial_records::Module<T>>::withdrawal_finish(
-                                          &account_id,
-                                          &symbol,
-                                          Some(txid.as_ref().to_vec()),
-                                       );
-                                  }
-                                //}
-                                candidate.confirmed = true;
-                                // mark this tx withdraw finish!
-                                TxProposal::<T>::insert(len - 1, candidate);
+            // candidate: CandidateTx
+            if candidate.confirmed == false {
+                match <NumberForHash<T>>::get(&candidate.block_hash) {
+                    Some(height) => {
+                        if new_best_header.number >= height + irr_block {
+                            let txid = candidate.tx.hash();
+                            for (account_id, _) in candidate.outs.clone() {
+                                // TODO handle err
+                                let _ = <financial_records::Module<T>>::withdrawal_finish(
+                                    &account_id,
+                                    &symbol,
+                                    Some(txid.as_ref().to_vec()),
+                                );
                             }
+                            candidate.confirmed = true;
+                            // mark this tx withdraw finish!
+                            TxProposal::<T>::insert(len - 1, candidate);
                         }
-                        None => {}
+                    }
+                    None => {}
+                }
+            }
+        }
+
+        // case 0: 当刚启动时Candidate lenth = 0 时
+        // case 1: 所有提现交易都是正常逻辑执行，会confirmed.
+        // case 2:  非正常逻辑提现，candidate.unexpect 会在handle_input时设置，
+        // 标记该链上这笔proposal由于BTC 托管人没有按着正常逻辑签名广播， 该proposal可能永远不会confirmed.
+        // 所以开始重新创建proposal.
+        if len == 0 {
+            // no withdraw cache would return None
+            if let Some(indexs) = financial_records::Module::<T>::withdrawal_cache_indexs(&symbol) {
+                let btc_fee = <BtcFee<T>>::get();
+                if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
+                    return Err(ChainErr::OtherErr(e));
+                }
+            }
+        }
+        if len > 0 {
+            let candidate = Module::<T>::tx_proposal(len - 1).unwrap();
+            if candidate.confirmed || candidate.unexpect {
+                // no withdraw cache would return None
+                if let Some(indexs) =
+                    financial_records::Module::<T>::withdrawal_cache_indexs(&symbol)
+                {
+                    let btc_fee = <BtcFee<T>>::get();
+                    if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
+                        return Err(ChainErr::OtherErr(e));
                     }
                 }
+            }
         }
-        
-            // case 0: 当刚启动时Candidate lenth = 0 时 
-            // case 1: 所有提现交易都是正常逻辑执行，会confirmed. 
-            // case 2:  非正常逻辑提现，candidate.unexpect 会在handle_input时设置， 
-            // 标记该链上这笔proposal由于BTC 托管人没有按着正常逻辑签名广播， 该proposal可能永远不会confirmed.
-            // 所以开始重新创建proposal.
-            if len == 0 {
-			        // no withdraw cache would return None
-					if let Some(indexs) = financial_records::Module::<T>::withdrawal_cache_indexs(&symbol) {
-						let btc_fee = <BtcFee<T>>::get();
-						if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
-							return Err(ChainErr::OtherErr(e));
-						}
-					}
 
-            }
-            if len > 0  {
-                let candidate = Module::<T>::tx_proposal(len - 1).unwrap();
-                if candidate.confirmed || candidate.unexpect {
-					// no withdraw cache would return None
-					if let Some(indexs) = financial_records::Module::<T>::withdrawal_cache_indexs(&symbol) {
-						let btc_fee = <BtcFee<T>>::get();
-						if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
-							return Err(ChainErr::OtherErr(e));
-						}
-					}
-                 }
-            }
-        //        let candidate = <TxProposal<T>>::get();
-        //        if candidate.is_some() {
-        //            let tx = candidate.unwrap();
-        //        } else {
-        //
-        //        }
         // SendCert
         if let Some(cert_info) = <CertCache<T>>::take() {
-            runtime_io::print("------CertCache take");
             if let Err(e) = <staking::Module<T>>::issue(cert_info.0, cert_info.1, cert_info.2) {
                 return Err(ChainErr::OtherErr(e));
             }

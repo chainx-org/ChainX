@@ -62,8 +62,8 @@ mod tests;
 mod b58;
 mod blockchain;
 mod tx;
-mod verify_header;
 mod utils;
+mod verify_header;
 
 use chain::{BlockHeader, Transaction as BTCTransaction};
 use codec::Decode;
@@ -241,7 +241,6 @@ impl<T: Trait> LinkedNodeCollection for LinkedNodes<T> {
 
 decl_storage! {
     trait Store for Module<T: Trait> as BridgeOfBTC {
-        // =====
         // header
         pub BestIndex get(best_index): BestHeader;
 
@@ -257,7 +256,6 @@ decl_storage! {
         pub ParamsInfo get(params_info) config(): Params;
         pub NetworkId get(network_id) config(): u32;
 
-        // =====
         // tx
         pub ReceiveAddress get(receive_address) config(): Option<keys::Address>;
         pub RedeemScript get(redeem_script) config(): Option<Vec<u8>>;
@@ -268,7 +266,7 @@ decl_storage! {
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
         pub IrrBlock get(irr_block) config(): u32;
         pub BtcFee get(btc_fee) config(): u64;
-//        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, H256, BTCTransaction)>; // Address, type, balance
+
         /// btc all related transactions set, use TxSetTail or TxSetHeader could iter them
         TxSetHeader get(tx_list_header): Option<NodeIndex<BTCTxLog<T::AccountId, T::BlockNumber>>>;
         TxSetTail get(tx_list_tail): Option<NodeIndex<BTCTxLog<T::AccountId, T::BlockNumber>>>;
@@ -278,7 +276,6 @@ decl_storage! {
         pub AddressMap get(address_map): map Address => Option<T::AccountId>;
         pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
         /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
-//        pub WithdrawalOutsAccount get(withdrawal_outs_account): map H256 => Vec<(u32, T::AccountId)>
 
         pub TxProposalLen get(tx_proposal_len): u32;
         pub TxProposal get(tx_proposal): map u32 => Option<CandidateTx<T::AccountId>>;
@@ -291,7 +288,6 @@ decl_storage! {
         pub RegInfoSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, T::BlockNumber, Vec<u8>, TxType)>;
         pub CertCache get(cert_cache): Option<(Vec<u8>, u32, T::AccountId)>;
 
-        // =====
         // others
         pub Fee get(fee) config(): T::Balance;
     }
@@ -327,6 +323,7 @@ decl_storage! {
 impl<T: Trait> Module<T> {
     // event
     /// Deposit one of this module's events.
+    #[allow(unused)]
     fn deposit_event(event: Event<T>) {
         <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
     }
@@ -345,7 +342,6 @@ impl<T: Trait> Module<T> {
 
     pub fn push_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
         let from = ensure_signed(origin)?;
-        runtime_io::print("---------push_transaction--------");
         let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("parse RelayTx err")?;
         Self::process_tx(tx, &from)?;
         Ok(())
@@ -398,7 +394,6 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn process_tx(tx: RelayTx, who: &T::AccountId) -> Result {
-        runtime_io::print("---------process_tx--------");
         let receive_address: Address = if let Some(h) = <ReceiveAddress<T>>::get() {
             h
         } else {

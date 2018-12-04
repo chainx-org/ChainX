@@ -11,7 +11,6 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[macro_use]
 extern crate log;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
@@ -49,9 +48,9 @@ extern crate cxrml_tokenbalances as tokenbalances;
 #[cfg(test)]
 mod tests;
 
-use rstd::result::Result as StdResult;
 use codec::Codec;
 use rstd::prelude::*;
+use rstd::result::Result as StdResult;
 use runtime_primitives::traits::OnFinalise;
 use runtime_primitives::traits::{As, Member, SimpleArithmetic, Zero};
 use runtime_support::dispatch::Result;
@@ -253,26 +252,25 @@ impl<T: Trait> Module<T> {
         }
     }
     /**
-    * 返回另外一个symbol的数量
-    */
+     * 返回另外一个symbol的数量
+     */
     fn trans_amount(
-        amount: T::Amount,/*symbol的数量单位*/
-        price: T::Price,/*以另一个symbol计价的价格*/
-        symbol:&Symbol
-        ) -> Option < <T as tokenbalances::Trait>::TokenBalance > {
-            match <tokenbalances::Module<T>>::token_info(symbol) {
-                Some((token, _)) => {
-                    let trans_amount:<T as tokenbalances::Trait>::TokenBalance = As::sa((amount.as_() * price.as_())/(10_u128.pow(token.precision().as_())));
-                    if trans_amount == Zero::zero() {
-                        None
-                    } else{
-                        Some(trans_amount)
-                    }
-                }
-                None=>{
+        amount: T::Amount, /*symbol的数量单位*/
+        price: T::Price,   /*以另一个symbol计价的价格*/
+        symbol: &Symbol,
+    ) -> Option<<T as tokenbalances::Trait>::TokenBalance> {
+        match <tokenbalances::Module<T>>::token_info(symbol) {
+            Some((token, _)) => {
+                let trans_amount: <T as tokenbalances::Trait>::TokenBalance =
+                    As::sa((amount.as_() * price.as_()) / (10_u128.pow(token.precision().as_())));
+                if trans_amount == Zero::zero() {
                     None
+                } else {
+                    Some(trans_amount)
                 }
             }
+            None => None,
+        }
     }
 
     fn do_put_order(
@@ -299,19 +297,21 @@ impl<T: Trait> Module<T> {
         let sender = who;
         <cxsupport::Module<T>>::handle_fee_after(sender, fee, true, || {
             //计算总额
-            let mut reserve_last:T::Amount=Zero::zero();
+            let mut reserve_last: T::Amount = Zero::zero();
 
-            if let Some(sum) = Self::trans_amount(amount,price,&pair.clone().first) {
-                 match ordertype {
+            if let Some(sum) = Self::trans_amount(amount, price, &pair.clone().first) {
+                match ordertype {
                     OrderType::Buy => {
                         if <tokenbalances::Module<T>>::free_token(&(
                             sender.clone(),
                             pair.second.clone(),
                         )) < sum
                         {
-                            return Err("transactor's free token balance too low, can't put buy order");
+                            return Err(
+                                "transactor's free token balance too low, can't put buy order",
+                            );
                         }
-                        reserve_last=As::sa(sum.as_());
+                        reserve_last = As::sa(sum.as_());
                         //  锁定用户资产
                         if let Err(msg) = <tokenbalances::Module<T>>::reserve(
                             sender,
@@ -323,13 +323,17 @@ impl<T: Trait> Module<T> {
                         }
                     }
                     OrderType::Sell => {
-                        if <tokenbalances::Module<T>>::free_token(&(sender.clone(), pair.first.clone()))
-                            < As::sa(amount.as_())
+                        if <tokenbalances::Module<T>>::free_token(&(
+                            sender.clone(),
+                            pair.first.clone(),
+                        )) < As::sa(amount.as_())
                         {
-                            return Err("transactor's free token balance too low, can't put sell order");
+                            return Err(
+                                "transactor's free token balance too low, can't put sell order",
+                            );
                         }
                         //  锁定用户资产
-                        reserve_last=amount;
+                        reserve_last = amount;
                         if let Err(msg) = <tokenbalances::Module<T>>::reserve(
                             sender,
                             &pair.first,
@@ -340,12 +344,10 @@ impl<T: Trait> Module<T> {
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 return Err("amount*price too small");
             }
 
-           
             // 更新用户的交易对的挂单index
             let new_last_index =
                 Self::last_order_index_of((sender.clone(), pair.clone())).unwrap_or_default() + 1;
@@ -364,7 +366,7 @@ impl<T: Trait> Module<T> {
                 lastupdate_time: <system::Module<T>>::block_number(),
                 status: OrderStatus::FillNo,
                 fill_index: Default::default(),
-                reserve_last:reserve_last,
+                reserve_last: reserve_last,
             };
             Self::insert_order(new_last_index, &order);
 
@@ -417,7 +419,7 @@ impl<T: Trait> Module<T> {
         }
         let transactor = ensure_signed(origin)?;
         //从channel模块获得channel_name对应的account
-       
+
         Self::do_put_order(&transactor, &pair, ordertype, amount, price, &channel_name)
     }
     pub fn update_command_of(command_id: u64, bid: u128) {
@@ -454,7 +456,7 @@ impl<T: Trait> Module<T> {
 
                     let back_amount: <T as tokenbalances::Trait>::TokenBalance = match order.class {
                         OrderType::Sell => As::sa(order.amount.as_() - order.hasfill_amount.as_()),
-                        OrderType::Buy => As::sa(order.reserve_last.as_()),//剩余的都退回 
+                        OrderType::Buy => As::sa(order.reserve_last.as_()), //剩余的都退回
                     };
 
                     if let Err(msg) = <tokenbalances::Module<T>>::unreserve(
@@ -466,7 +468,7 @@ impl<T: Trait> Module<T> {
                         return Err(msg);
                     }
 
-                    order.reserve_last=As::sa(order.reserve_last.as_()-back_amount.as_());
+                    order.reserve_last = As::sa(order.reserve_last.as_() - back_amount.as_());
 
                     Self::insert_order(index, &order);
 
@@ -504,7 +506,7 @@ impl<T: Trait> Module<T> {
             Err("cann't find this index of order")
         }
     }
-    pub fn channel_account(order: &OrderT<T>)->T::AccountId {
+    pub fn channel_account(order: &OrderT<T>) -> T::AccountId {
         //从channel模块获得channel_name对应的account
         match <associations::Module<T>>::channel_relationship(&order.channel) {
             Some(relation) => relation,
@@ -522,7 +524,6 @@ impl<T: Trait> Module<T> {
         maker_fee: T::Amount,
         taker_fee: T::Amount,
     ) -> Result {
-       
         //逻辑校验 在调用方撮合模块中实现，此处只维护挂单、成交历史、资产转移
         let new_last_fill_index = Self::last_fill_index_of_pair(&pair) + 1;
 
@@ -566,12 +567,11 @@ impl<T: Trait> Module<T> {
             return Err("cann't find this taker order");
         };
 
-        let mut after_maker_fee:T::Amount=maker_fee;
-        let mut maker_fee_symbol:Symbol;
-        let mut after_taker_fee:T::Amount=taker_fee;
-        let mut taker_fee_symbol:Symbol;
-        
-        
+        let mut after_maker_fee: T::Amount = maker_fee;
+        let maker_fee_symbol: Symbol;
+        let mut after_taker_fee: T::Amount = taker_fee;
+        let taker_fee_symbol: Symbol;
+
         //转移 maker和taker中的资产
         match maker_order.class {
             OrderType::Sell => {
@@ -579,7 +579,8 @@ impl<T: Trait> Module<T> {
                 let maker_back_symbol: Symbol = pair.clone().first;
                 let maker_back_amount: <T as tokenbalances::Trait>::TokenBalance =
                     As::sa(amount.as_());
-                maker_order.reserve_last = As::sa(maker_order.reserve_last.as_() - maker_back_amount.as_());
+                maker_order.reserve_last =
+                    As::sa(maker_order.reserve_last.as_() - maker_back_amount.as_());
 
                 match Self::move_token_and_handle_fee(
                     &maker_back_symbol,
@@ -589,28 +590,25 @@ impl<T: Trait> Module<T> {
                     &taker_user.clone(),
                     &Self::channel_account(&maker_order.clone()).clone(),
                 ) {
-                    Ok((symbol,fee))=>{
-                        taker_fee_symbol=symbol;
-                        after_taker_fee=As::sa(fee.as_());
+                    Ok((symbol, fee)) => {
+                        taker_fee_symbol = symbol;
+                        after_taker_fee = As::sa(fee.as_());
                     }
-                    Err(msg)=>{
+                    Err(msg) => {
                         return Err(msg);
                     }
-                    
                 };
 
                 //计算买家的数量，解锁second,并move 给卖家,和手续费账户
                 let taker_back_symbol: Symbol = pair.clone().second;
-                let taker_back_amount: <T as tokenbalances::Trait>::TokenBalance = match Self::trans_amount( amount,price,&pair.clone().first) {
-                        Some(sum)=>{
-                            sum
-                        }
-                        None=>{
-                            Zero::zero()
-                        }
+                let taker_back_amount: <T as tokenbalances::Trait>::TokenBalance =
+                    match Self::trans_amount(amount, price, &pair.clone().first) {
+                        Some(sum) => sum,
+                        None => Zero::zero(),
                     };
-                taker_order.reserve_last = As::sa(taker_order.reserve_last.as_() - taker_back_amount.as_());
-                
+                taker_order.reserve_last =
+                    As::sa(taker_order.reserve_last.as_() - taker_back_amount.as_());
+
                 let maker_fee_back_amount:<T as tokenbalances::Trait>::TokenBalance = match Self::trans_amount( maker_fee,price,&pair.clone().first) {
                         Some(sum)=>{
                             sum
@@ -627,29 +625,25 @@ impl<T: Trait> Module<T> {
                     &maker_user.clone(),
                     &Self::channel_account(&taker_order.clone()).clone(),
                 ) {
-                    Ok((symbol,fee))=>{
-                        maker_fee_symbol=symbol;
-                        after_maker_fee=As::sa(fee.as_());;
+                    Ok((symbol, fee)) => {
+                        maker_fee_symbol = symbol;
+                        after_maker_fee = As::sa(fee.as_());;
                     }
-                    Err(msg)=>{
+                    Err(msg) => {
                         return Err(msg);
                     }
-                    
                 };
-                
             }
             OrderType::Buy => {
                 //买先解锁second token 并move给卖家，和手续费账户
                 let maker_back_symbol: Symbol = pair.clone().second;
-                let maker_back_amount: <T as tokenbalances::Trait>::TokenBalance =match Self::trans_amount( amount,price,&pair.clone().first) {
-                        Some(sum)=>{
-                            sum
-                        }
-                        None=>{
-                            Zero::zero()
-                        }
+                let maker_back_amount: <T as tokenbalances::Trait>::TokenBalance =
+                    match Self::trans_amount(amount, price, &pair.clone().first) {
+                        Some(sum) => sum,
+                        None => Zero::zero(),
                     };
-                maker_order.reserve_last = As::sa(maker_order.reserve_last.as_() - maker_back_amount.as_());
+                maker_order.reserve_last =
+                    As::sa(maker_order.reserve_last.as_() - maker_back_amount.as_());
 
                 let taker_fee_back_amount:<T as tokenbalances::Trait>::TokenBalance = match Self::trans_amount( taker_fee,price,&pair.clone().first) {
                         Some(sum)=>{
@@ -660,7 +654,6 @@ impl<T: Trait> Module<T> {
                         }
                     };
 
-                    
                 match Self::move_token_and_handle_fee(
                     &maker_back_symbol,
                     maker_back_amount,
@@ -669,20 +662,20 @@ impl<T: Trait> Module<T> {
                     &taker_user.clone(),
                     &Self::channel_account(&maker_order.clone()).clone(),
                 ) {
-                    Ok((symbol,fee))=>{
-                        taker_fee_symbol=symbol;
-                        after_taker_fee=As::sa(fee.as_());;
+                    Ok((symbol, fee)) => {
+                        taker_fee_symbol = symbol;
+                        after_taker_fee = As::sa(fee.as_());;
                     }
-                    Err(msg)=>{
+                    Err(msg) => {
                         return Err(msg);
                     }
-                    
                 };
                 //计算卖家的数量，解锁second,并move 给买家,和手续费账户
                 let taker_back_symbol: Symbol = pair.clone().first;
                 let taker_back_amount: <T as tokenbalances::Trait>::TokenBalance =
                     As::sa(amount.as_());
-                taker_order.reserve_last = As::sa(taker_order.reserve_last.as_() - taker_back_amount.as_());
+                taker_order.reserve_last =
+                    As::sa(taker_order.reserve_last.as_() - taker_back_amount.as_());
 
                 match Self::move_token_and_handle_fee(
                     &taker_back_symbol,
@@ -692,14 +685,13 @@ impl<T: Trait> Module<T> {
                     &maker_user.clone(),
                     &Self::channel_account(&taker_order.clone()).clone(),
                 ) {
-                    Ok((symbol,fee))=>{
-                        maker_fee_symbol=symbol;
-                        after_maker_fee=As::sa(fee.as_());;
+                    Ok((symbol, fee)) => {
+                        maker_fee_symbol = symbol;
+                        after_maker_fee = As::sa(fee.as_());;
                     }
-                    Err(msg)=>{
+                    Err(msg) => {
                         return Err(msg);
                     }
-                    
                 }
             }
         }
@@ -717,13 +709,14 @@ impl<T: Trait> Module<T> {
             maker_fee: after_maker_fee,
             maker_fee_symbol: maker_fee_symbol,
             taker_fee: after_taker_fee,
-            taker_fee_symbol:taker_fee_symbol,
+            taker_fee_symbol: taker_fee_symbol,
             time: <system::Module<T>>::block_number(),
         };
         Self::insert_fill(&fill);
         <FillIndexOf<T>>::insert(&pair, new_last_fill_index);
 
         Self::update_last_average_price(&pair.clone(), amount, price); //更新平均价格
+
         //插入更新后的maker对应的订单
         Self::insert_order(maker_order.index(), &maker_order);
         //插入更新后的taker对应的订单
@@ -821,7 +814,6 @@ impl<T: Trait> Module<T> {
                 return Err(e.info());
             }
         }
-        
 
         Ok(())
     }
@@ -833,7 +825,7 @@ impl<T: Trait> Module<T> {
         from: &T::AccountId,
         to: &T::AccountId,
         channel: &T::AccountId,
-    ) -> StdResult<(Symbol,<T as tokenbalances::Trait>::TokenBalance),&'static str> {
+    ) -> StdResult<(Symbol, <T as tokenbalances::Trait>::TokenBalance), &'static str> {
         /*
         if to == 销毁账户 && symbol==pcx
             不计算手续费 80%直接销毁 20% 给渠道
@@ -858,7 +850,7 @@ impl<T: Trait> Module<T> {
         }
         */
         let mut after_fee: <T as tokenbalances::Trait>::TokenBalance = fee;
-        let mut fee_symbol:Symbol = symbol.clone();
+        let mut fee_symbol: Symbol = symbol.clone();
         // 先把钱全部撤回
         if let Err(msg) =
             <tokenbalances::Module<T>>::unreserve(from, symbol, value, ReservedType::Exchange)
@@ -879,8 +871,7 @@ impl<T: Trait> Module<T> {
             ) {
                 return Err(msg);
             };
-            after_fee= Zero::zero();
-
+            after_fee = Zero::zero();
         } else if from == &<cxsystem::Module<T>>::fee_buy_account() {
             // 和手续费买盘的对手盘，不收手续费
             if let Err(e) = <tokenbalances::Module<T>>::move_free_token(
@@ -891,7 +882,7 @@ impl<T: Trait> Module<T> {
             ) {
                 return Err(e.info());
             }
-            after_fee= Zero::zero();
+            after_fee = Zero::zero();
         } else {
             if symbol.clone() == <T as tokenbalances::Trait>::CHAINX_SYMBOL.to_vec() {
                 let discount_fee: <T as tokenbalances::Trait>::TokenBalance =
@@ -914,7 +905,7 @@ impl<T: Trait> Module<T> {
                 ) {
                     return Err(msg);
                 };
-                after_fee= discount_fee;
+                after_fee = discount_fee;
             } else {
                 let option_average_price = match Self::get_pair_by_second_symbol(&symbol.clone()) {
                     Some(pair) => {
@@ -932,7 +923,7 @@ impl<T: Trait> Module<T> {
                                 Zero::zero()
                             }
                         };
-                        
+
                         let discount_fee:<T as tokenbalances::Trait>::TokenBalance=As::sa(Self::discount_fee(&to,&symbol.clone(),As::sa(conversion_fee.as_())).as_());
                         if <tokenbalances::Module<T>>::free_token(&(
                             to.clone(),
@@ -957,8 +948,8 @@ impl<T: Trait> Module<T> {
                             ) {
                                 return Err(msg);
                             };
-                            fee_symbol=<T as tokenbalances::Trait>::CHAINX_SYMBOL.to_vec();
-                            after_fee=discount_fee;
+                            fee_symbol = <T as tokenbalances::Trait>::CHAINX_SYMBOL.to_vec();
+                            after_fee = discount_fee;
                         } else {
                             if let Err(e) = <tokenbalances::Module<T>>::move_free_token(
                                 &from.clone(),
@@ -976,7 +967,7 @@ impl<T: Trait> Module<T> {
                             ) {
                                 return Err(e.info());
                             }
-                            after_fee=fee;
+                            after_fee = fee;
                             //fee 生成购买pcx的订单
                             Self::new_fee_buy_order(symbol, fee, channel.clone());
                         }
@@ -999,14 +990,14 @@ impl<T: Trait> Module<T> {
                         ) {
                             return Err(e.info());
                         }
-                        after_fee=fee;
+                        after_fee = fee;
                         //fee 生成购买pcx的订单
                         Self::new_fee_buy_order(symbol, fee, channel.clone());
                     }
                 }
             }
         }
-        Ok((fee_symbol,after_fee))
+        Ok((fee_symbol, after_fee))
     }
     fn new_fee_buy_order(
         symbol: &Symbol,
@@ -1047,10 +1038,11 @@ impl<T: Trait> Module<T> {
 
         for id in 1..(fee_buy_order_max + 1) {
             if let Some(buy) = <FeeBuyOrder<T>>::get(id) {
-                let channel_name=match <associations::Module<T>>::channel_relationship_rev(&buy.3.clone()) {
-                    Some(name) => name,
-                    None => b"".to_vec(),
-                };
+                let channel_name =
+                    match <associations::Module<T>>::channel_relationship_rev(&buy.3.clone()) {
+                        Some(name) => name,
+                        None => b"".to_vec(),
+                    };
                 let _ = Self::do_put_order(
                     &<cxsystem::Module<T>>::fee_buy_account(),
                     &buy.0,
@@ -1131,9 +1123,9 @@ where
     price: Price,
     amount: Amount,
     maker_fee: Amount,
-    maker_fee_symbol:Symbol,
+    maker_fee_symbol: Symbol,
     taker_fee: Amount,
-    taker_fee_symbol:Symbol,
+    taker_fee_symbol: Symbol,
     time: BlockNumber,
 }
 
@@ -1212,7 +1204,7 @@ where
     lastupdate_time: BlockNumber,
     status: OrderStatus,
     fill_index: Vec<u128>, // 填充历史记录的索引
-    reserve_last: Amount,//未被交易 未被回退
+    reserve_last: Amount,  //未被交易 未被回退
 }
 
 impl<Pair, AccountId, Amount, Price, BlockNumber> Order<Pair, AccountId, Amount, Price, BlockNumber>
@@ -1236,7 +1228,7 @@ where
         lastupdate_time: BlockNumber,
         status: OrderStatus,
         fill_index: Vec<u128>,
-        reserve_last:Amount
+        reserve_last: Amount,
     ) -> Self {
         return Order {
             pair: pair,
@@ -1251,7 +1243,7 @@ where
             lastupdate_time: lastupdate_time,
             status: status,
             fill_index: fill_index,
-            reserve_last:reserve_last
+            reserve_last: reserve_last,
         };
     }
     pub fn pair(&self) -> Pair {

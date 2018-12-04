@@ -1,22 +1,22 @@
 // Copyright 2018 Chainpool
 
 use super::builder::Builder;
-use super::keys::{Address, Public, Type};
+use super::keys::{Public, Type};
 use super::{
-    Bytes, CandidateTx, OutPoint, ReceiveAddress, RedeemScript, Result, Script, Trait, Transaction,
-    TransactionInput, TransactionOutput, TxStorage, UTXOStorage,
+    Bytes, CandidateTx, OutPoint, ReceiveAddress, Result, Script, Trait, Transaction,
+    TransactionInput, TransactionOutput, UTXOStorage,
 };
 use super::{PhantomData, Vec};
 use super::{
     SignatureChecker, SignatureVersion, TransactionInputSigner, TransactionSignatureChecker,
 };
 use super::{StorageMap, StorageValue};
-use {Module, TxProposal, TxProposalLen};
-
 use financial_records::{Record, RecordOf};
 use runtime_primitives::traits::As;
 use tokenbalances::Symbol;
+use {Module, TxProposal, TxProposalLen};
 
+#[allow(unused)]
 fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, output: &TransactionOutput) -> bool {
     let tx_signer: TransactionInputSigner = tx.clone().into();
     let checker = TransactionSignatureChecker {
@@ -42,7 +42,7 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, output: &Transact
 }
 
 // Only support inputs 0, To do: Support every input.
-pub fn handle_proposal<T: Trait>(tx: Transaction, who: &T::AccountId) -> Result {
+pub fn handle_proposal<T: Trait>(_tx: Transaction, _who: &T::AccountId) -> Result {
     //    let mut candidate = if let Some(candidate) = <TxProposal<T>>::get() {
     //        candidate
     //    } else {
@@ -111,10 +111,6 @@ impl<T: Trait> Proposal<T> {
                 }
             }
         }
-        //        if None != <TxProposal<T>>::get(&(index + 1)) {
-        //            return Err("There are candidates to reflect that the transaction is being processed");
-        //        }
-
         let mut tx = Transaction {
             version: 1,
             inputs: Vec::new(),
@@ -147,18 +143,6 @@ impl<T: Trait> Proposal<T> {
             outs.push(index);
             out_balance += balance;
         }
-
-        //        for i in 0..address.len() {
-        //            let script = match address[i].0.kind {
-        //                Type::P2PKH => Builder::build_p2pkh(&address[i].0.hash),
-        //                Type::P2SH => Builder::build_p2sh(&address[i].0.hash),
-        //            };
-        //            tx.outputs.push(TransactionOutput {
-        //                value: address[i].1,
-        //                script_pubkey: script.into(),
-        //            });
-        //            out_balance += address[i].1;
-        //        }
 
         let utxo_set = <UTXOStorage<T>>::select_utxo(out_balance + fee).unwrap();
         let mut ins_balance: u64 = 0;

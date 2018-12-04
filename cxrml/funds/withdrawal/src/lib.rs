@@ -111,14 +111,14 @@ impl<T: Trait> Module<T> {
 
         cxsupport::Module::<T>::handle_fee_before(&who, Self::withdrawal_fee(), true, || Ok(()))?;
 
-        let d = Self::verify_addr(&sym, &addr, &ext)?;
+        let _d = Self::verify_addr(&sym, &addr, &ext)?;
 
         financialrecords::Module::<T>::withdrawal(&who, &sym, value, addr, ext)?;
         runtime_io::print("-----------withdraw ok");
         Ok(())
     }
 
-    fn verify_addr(sym: &Symbol, addr: &[u8], ext: &[u8]) -> Result {
+    fn verify_addr(sym: &Symbol, addr: &[u8], _ext: &[u8]) -> Result {
         match sym.as_ref() {
             btc::Module::<T>::SYMBOL => btc::Module::<T>::check_addr(&addr, b""),
             _ => return Err("not found match token symbol addr checker"),
