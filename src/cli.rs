@@ -14,8 +14,8 @@ pub enum ChainSpec {
 }
 
 pub fn build_cli() -> App<'static, 'static> {
-    App::new("chainx")
-        .version("0.1.0")
+    App::new("ChainX")
+        .version("0.3.0")
         .about("    Cross-Chain Asset Manager")
         .arg(
             Arg::with_name("chainspec")

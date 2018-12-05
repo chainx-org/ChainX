@@ -28,7 +28,7 @@ pub fn build_telemetry(
                 telemetry!("system.connected";
                             "name" => name.clone(),
                             "implementation" => "chainx",
-                            "version" => "0.1",
+                            "version" => "0.3",
                             "config" => "",
                             "chain" => "ChainX",
                             "authority" => is_authority

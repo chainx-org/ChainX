@@ -29,9 +29,9 @@ pub mod servers;
 use std::io;
 use std::net::SocketAddr;
 
-const CHAIN_NAME: &'static str = "chainx";
+const CHAIN_NAME: &'static str = "ChainX POC-3";
 const IMPL_NAME: &'static str = "bud";
-const IMPL_VERSION: &'static str = "v0.1.0";
+const IMPL_VERSION: &'static str = "v0.3.0";
 
 #[derive(Clone)]
 pub struct RpcConfig {

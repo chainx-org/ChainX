@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-primitives"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -102,21 +102,21 @@ dependencies = [
 
 [[package]]
 name = "chainx-runtime"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "chainx-primitives 0.1.0",
- "cxrml-associations 0.1.0",
- "cxrml-bridge-btc 0.1.0",
- "cxrml-exchange-matchorder 0.1.0",
- "cxrml-exchange-pendingorders 0.1.0",
- "cxrml-funds-financialrecords 0.1.0",
- "cxrml-funds-withdrawal 0.1.0",
- "cxrml-mining-staking 0.1.0",
- "cxrml-mining-tokenstaking 0.1.0",
- "cxrml-multisig 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
- "cxrml-tokenbalances 0.1.0",
+ "chainx-primitives 0.3.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-bridge-btc 0.3.0",
+ "cxrml-exchange-matchorder 0.3.0",
+ "cxrml-exchange-pendingorders 0.3.0",
+ "cxrml-funds-financialrecords 0.3.0",
+ "cxrml-funds-withdrawal 0.3.0",
+ "cxrml-mining-staking 0.3.0",
+ "cxrml-mining-tokenstaking 0.3.0",
+ "cxrml-multisig 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
+ "cxrml-tokenbalances 0.3.0",
  "integer-sqrt 0.1.0 (git+https://github.com/paritytech/integer-sqrt-rs.git)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -204,7 +204,7 @@ dependencies = [
 
 [[package]]
 name = "cxrml-associations"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -222,18 +222,18 @@ dependencies = [
 
 [[package]]
 name = "cxrml-bridge-btc"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bit-vec 0.5.0 (git+https://github.com/chainx-org/bit-vec.git)",
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
- "cxrml-associations 0.1.0",
- "cxrml-funds-financialrecords 0.1.0",
- "cxrml-mining-staking 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
- "cxrml-tokenbalances 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-funds-financialrecords 0.3.0",
+ "cxrml-mining-staking 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
+ "cxrml-tokenbalances 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "merkle 0.1.0 (git+https://github.com/chainx-org/merkle.git)",
@@ -259,13 +259,13 @@ dependencies = [
 
 [[package]]
 name = "cxrml-exchange-matchorder"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "cxrml-associations 0.1.0",
- "cxrml-exchange-pendingorders 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
- "cxrml-tokenbalances 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-exchange-pendingorders 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
+ "cxrml-tokenbalances 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -283,12 +283,12 @@ dependencies = [
 
 [[package]]
 name = "cxrml-exchange-pendingorders"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "cxrml-associations 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
- "cxrml-tokenbalances 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
+ "cxrml-tokenbalances 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -306,12 +306,12 @@ dependencies = [
 
 [[package]]
 name = "cxrml-funds-financialrecords"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "cxrml-associations 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
- "cxrml-tokenbalances 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
+ "cxrml-tokenbalances 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -328,15 +328,15 @@ dependencies = [
 
 [[package]]
 name = "cxrml-funds-withdrawal"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cxrml-associations 0.1.0",
- "cxrml-bridge-btc 0.1.0",
- "cxrml-funds-financialrecords 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
- "cxrml-tokenbalances 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-bridge-btc 0.3.0",
+ "cxrml-funds-financialrecords 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
+ "cxrml-tokenbalances 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -355,12 +355,12 @@ dependencies = [
 
 [[package]]
 name = "cxrml-mining-staking"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "cxrml-associations 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
- "cxrml-tokenbalances 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
+ "cxrml-tokenbalances 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -382,16 +382,16 @@ dependencies = [
 
 [[package]]
 name = "cxrml-mining-tokenstaking"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "cxrml-associations 0.1.0",
- "cxrml-bridge-btc 0.1.0",
- "cxrml-exchange-pendingorders 0.1.0",
- "cxrml-funds-financialrecords 0.1.0",
- "cxrml-mining-staking 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
- "cxrml-tokenbalances 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-bridge-btc 0.3.0",
+ "cxrml-exchange-pendingorders 0.3.0",
+ "cxrml-funds-financialrecords 0.3.0",
+ "cxrml-mining-staking 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
+ "cxrml-tokenbalances 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -409,11 +409,11 @@ dependencies = [
 
 [[package]]
 name = "cxrml-multisig"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "cxrml-associations 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -430,10 +430,10 @@ dependencies = [
 
 [[package]]
 name = "cxrml-support"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "cxrml-associations 0.1.0",
- "cxrml-system 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-system 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -450,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "cxrml-system"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -467,11 +467,11 @@ dependencies = [
 
 [[package]]
 name = "cxrml-tokenbalances"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
- "cxrml-associations 0.1.0",
- "cxrml-support 0.1.0",
- "cxrml-system 0.1.0",
+ "cxrml-associations 0.3.0",
+ "cxrml-support 0.3.0",
+ "cxrml-system 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
