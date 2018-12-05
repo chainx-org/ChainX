@@ -92,10 +92,6 @@ $ brew install cmake pkg-config openssl git
 $ git clone https://github.com/chainx-org/ChainX ~/ChainX
 $ cd ~/ChainX
 
-# Build all native code, the executable binary will be present in target/debug/chainx.
-$ cargo build
-
-# If your want to run chainx in production, please build it in release mode
 $ cargo build --release
 ```
 
