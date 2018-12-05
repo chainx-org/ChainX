@@ -96,6 +96,8 @@ $ cd ~/ChainX
 $ cargo +nightly build --release
 ```
 
+When you succeed to build the project with `cargo build --release`, the `chainx` binary should be present in `target/release/chainx`.
+
 ## Testnet
 
 Connect to the public testnet of ChainX:
@@ -107,8 +109,6 @@ $ RUST_LOG=info ./chainx --chainspec=dev --telemetry --name=YOUR_NAME --bootnode
 ```
 
 ## Development
-
-When you succeed to build the project with `cargo build`, the `chainx` binary should be present in `target/release/chainx`.
 
 We assume `chainx` is in your `$PATH` in the following sections. Run this command so that `chainx` could be found in `$PATH`:
 
