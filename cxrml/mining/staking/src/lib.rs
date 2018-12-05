@@ -36,7 +36,7 @@ extern crate sr_io as runtime_io;
 extern crate substrate_primitives;
 
 use associations::{ChannelRelationship, RevChannelRelationship};
-use balances::{address::Address, FreeBalance, OnDilution, ReservedBalance};
+use balances::{address::Address, FreeBalance, OnDilution, ReservedBalance, TotalIssuance};
 use codec::Codec;
 use primitives::{
     traits::{As, OnFinalise, One, Zero},
@@ -323,6 +323,8 @@ decl_storage! {
 
             let mut stats: Stats<T::AccountId, T::Balance> = Stats::default();
 
+            let mut total_issuance = T::Balance::sa(0);
+
             for (acnt, name, url) in config.intention_profiles.iter() {
 
                 let mut nprof: NominatorProfs<T::AccountId, T::Balance> = NominatorProfs::default();
@@ -346,6 +348,8 @@ decl_storage! {
                 let free = T::Balance::sa(100_000_000_000 - config.activation_per_share as u64);
                 storage.insert(GenesisConfig::<T>::hash(&<FreeBalance<T>>::key_for(acnt)).to_vec(), free.encode());
 
+                total_issuance += iprof.total_nomination;
+
                 let mut nominations: BTreeMap<T::AccountId, NominationRecord<T::Balance, T::BlockNumber>> = BTreeMap::new();
                 let mut record = NominationRecord::default();
                 record.nomination = iprof.total_nomination;
@@ -359,6 +363,8 @@ decl_storage! {
                 storage.insert(GenesisConfig::<T>::hash(&<ChannelRelationship<T>>::key_for(channel.clone())).to_vec(), intention.clone().encode());
                 storage.insert(GenesisConfig::<T>::hash(&<RevChannelRelationship<T>>::key_for(intention)).to_vec(), channel.encode());
             }
+
+            storage.insert(GenesisConfig::<T>::hash(&<TotalIssuance<T>>::key()).to_vec(), total_issuance.encode());
 
             storage.insert(GenesisConfig::<T>::hash(&<StakingStats<T>>::key()).to_vec(), stats.encode());
 
@@ -1049,7 +1055,6 @@ impl<T: Trait> Module<T> {
             if !total_active_stake.is_zero() {
                 for (v, s) in active_intentions.iter() {
                     let i_reward = *s * reward / total_active_stake;
-                    // TODO session reward
                     <SessionRewardOf<T>>::insert(v, i_reward);
                     total_minted += i_reward;
                     match v {
@@ -1060,9 +1065,8 @@ impl<T: Trait> Module<T> {
             }
 
             Self::deposit_event(RawEvent::Reward(reward));
-            //// TODO Self::total_stake?
-            let stats = <StakingStats<T>>::get();
-            T::OnRewardMinted::on_dilution(total_minted, stats.total_stake);
+            // FIXME
+            // T::OnRewardMinted::on_dilution(total_minted, total_minted);
         }
 
         let session_index = <session::Module<T>>::current_index();

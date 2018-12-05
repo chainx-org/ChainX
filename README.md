@@ -1,22 +1,20 @@
 # ChainX
 
-[![Build Status](https://travis-ci.com/chainx-org/ChainX.svg?branch=master)](https://travis-ci.com/chainx-org/ChainX)
-
 <!-- TOC GFM -->
 
 * [Introduction](#introduction)
+* [Features](#features)
+* [Roadmap](#roadmap)
+    * [1.0: Independent Chain](#10-independent-chain)
+    * [2.0: Polkadot Parachain](#20-polkadot-parachain)
+    * [3.0: Polkadot level 2 multi-chain system](#30-polkadot-level-2-multi-chain-system)
 * [Installation](#installation)
     * [Building from source](#building-from-source)
         * [Requirement](#requirement)
         * [Build the code](#build-the-code)
+* [Testnet](#testnet)
 * [Development](#development)
-    * [Validator node](#validator-node)
-        * [Local single validator](#local-single-validator)
-        * [Local two validator node](#local-two-validator-node)
-        * [Multiple validator node](#multiple-validator-node)
-    * [Sync node](#sync-node)
-        * [Public testnet](#public-testnet)
-        * [Development](#development-1)
+    * [Run a local testnet](#run-a-local-testnet)
 * [License](#license)
 
 <!-- /TOC -->
@@ -25,13 +23,37 @@
 
 For the time being the goal of [ChainX](https://github.com/chainx-org/ChainX) is to build a cross-chain digital asset management platform on the strength of [substrate](https://github.com/paritytech/substrate) which is next-generation framework for blockchain created by [paritytech](https://github.com/paritytech). The long-term vision of ChainX is to evolve as a general blockchain infrastrcutre platform.
 
+<p align="center">
+    <a href="http://chainx.org" target="_blank">
+        <img width="800" alt="transparent" src="http://chainx.org/static/media/section2.0347a5e3.png">
+    </a>
+</p>
+
 ChainX is still at a very early stage and in an active development. The instruction as followed is not stable and may change in the future.
 
-:tada: Run this command to connect to our public testnet:
+## Features
 
-```bash
-$ chainx --chainspec=multi --telemetry --bootnodes=/ip4/47.105.73.172/tcp/30333/p2p/QmW7aJxigxGFXLmn966nJBBCexZA4nfSiydeg1JfmGFC9q --db-path=/tmp/chainx
-```
+- Built-in light client of existing blockchains.
+
+- Built-in Coin DEX.
+
+- Progressive staking and election machanism.
+
+- And more.
+
+## Roadmap
+
+### 1.0: Independent Chain
+
+ChainX 1.0 will operate as an independent chain at the very beginning, supporting the Coin DEX between the system currency PCX and BTC powed by BTC cross-chain transaction from the relay. At this stage, ChainX will continue to relay BCH, LTC, ZEC, ETH, DAI, ERC20, ERC721, ADA, EOS and other chains for Coin DEX.
+
+### 2.0: Polkadot Parachain
+
+ChainX 2.0 will begin at Q3 2019 when Polkadot releases v1. It will connect into Polkadot and transform into a para-chain, adding new applications such as decentralized stable currency collateralized by BTC and derivatives exchanges.
+
+### 3.0: Polkadot level 2 multi-chain system
+
+ChainX 3.0 will begin at 2020 when Polkadot releases v2, splited into a multi-chain architecture operating as Polkadot's level 2 relay network.
 
 ## Installation
 
@@ -39,9 +61,9 @@ $ chainx --chainspec=multi --telemetry --bootnodes=/ip4/47.105.73.172/tcp/30333/
 
 #### Requirement
 
-Ensure you have [Rust](https://www.rust-lang.org/) and the support software installed:
+Refer to [Hacking on Substrate](https://github.com/paritytech/substrate#61-hacking-on-substrate) as well.
 
-Ubuntu:
+Ensure you have [Rust](https://www.rust-lang.org/) and the support software installed:
 
 ```bash
 $ curl https://sh.rustup.rs -sSf | sh
@@ -49,7 +71,18 @@ $ rustup update nightly
 $ rustup target add wasm32-unknown-unknown --toolchain nightly
 $ rustup update stable
 $ cargo install --git https://github.com/alexcrichton/wasm-gc
+```
+
+Ubuntu:
+
+```bash
 $ sudo apt install cmake pkg-config libssl-dev git
+```
+
+Mac:
+
+```bash
+$ brew install cmake pkg-config openssl git
 ```
 
 #### Build the code
@@ -66,6 +99,14 @@ $ cargo build
 $ cargo build --release
 ```
 
+## Testnet
+
+Connect to the public testnet of ChainX:
+
+```bash
+$ RUST_LOG=info ./chainx --chainspec=dev --telemetry --bootnodes=/ip4/47.93.16.189/tcp/20222/p2p/QmRdBJk8eVPjkHcxZvRAUZdWtTq96mWivJFc7tpJ8fUEGU --db-path=/tmp/chainx
+```
+
 ## Development
 
 When you succeed to build the project with `cargo build`, the `chainx` binary should be present in `target/debug/chainx`.
@@ -76,87 +117,12 @@ We assume `chainx` is in your `$PATH` in the following sections. Run this comman
 $ export PATH=$(pwd)/target/debug:$PATH
 ```
 
-See all the avaliable options and commands via `chainx -h`.
+### Run a local testnet
 
-### Validator node
-
-#### Local single validator
-
-You can run a simple single-node development _network_ on your machine by running in a terminal:
+Start a local chainx testnet by running:
 
 ```bash
-$ RUST_LOG=info chainx --chainspec=dev --db-path=/tmp/dev-alice validator --auth=alice
-```
-
-Don't forget to run with `RUST_LOG=info` to see the logs, or you prefer to `export RUST_LOG=info` to avoid specifying every time.
-
-```bash
-$ export RUST_LOG=info
-```
-
-#### Local two validator node
-
-Run the first node:
-
-```bash
-$ chainx --chainspec=local --db-path=/tmp/local-alice validator --auth=alice
-INFO 2018-09-11T05:09:59Z: chainx: Chainspec is local mode
-INFO 2018-09-11T05:09:59Z: substrate_client::client: Initialising Genesis block/state (state: 0x1529…4159, header-hash: 0xbcf4…9a00)
-INFO 2018-09-11T05:09:59Z: substrate_network_libp2p::service: Local node address is: /ip4/127.0.0.1/tcp/20222/p2p/Qmevv1ggYD5dLf3MwAJ5zKeRGtnjfV7i85cPAsYwNaVW2o
-INFO 2018-09-11T05:10:00Z: chainx: Auth is alice
-......
-```
-
-Run the second node with option `bootnodes` from the address of first node:
-
-```bash
-$ chainx --chainspec=local --db-path=/tmp/local-bob --bootnodes=/ip4/127.0.0.1/tcp/20222/p2p/Qmevv1ggYD5dLf3MwAJ5zKeRGtnjfV7i85cPAsYwNaVW2o validator --auth=bob
-```
-
-#### Multiple validator node
-
-Run the first node:
-
-```bash
-$ chainx --chainspec=multi --db-path=/tmp/multi-alice validator --auth=alice
-```
-
-Run the second node:
-
-```bash
-$ chainx --chainspec=multi --db-path=/tmp/multi-bob --bootnodes=/ip4/127.0.0.1/tcp/20222/p2p/QmWrZEJcYn3m8HeiHsYDVH1apitFF1h4ojyRYu9AjFkTuH validator --auth=bob
-```
-
-Run the third node:
-
-```bash
-$ chainx --chainspec=multi --db-path=/tmp/multi-gavin --bootnodes=/ip4/127.0.0.1/tcp/20222/p2p/QmWrZEJcYn3m8HeiHsYDVH1apitFF1h4ojyRYu9AjFkTuH validator --auth=gavin
-```
-
-These nodes won't be able to produce blocks until the number of validators is no less than 3.
-
-We can add one more validator:
-
-```bash
-$ chainx --chainspec=multi --db-path=/tmp/multi-satoshi --bootnodes=/ip4/127.0.0.1/tcp/20222/p2p/QmWrZEJcYn3m8HeiHsYDVH1apitFF1h4ojyRYu9AjFkTuH validator --auth=satoshi
-```
-
-### Sync node
-
-#### Public testnet
-
-Run the following command to connect to our public testnet:
-
-```bash
-$ chainx --chainspec=multi --telemetry --bootnodes=/ip4/47.105.73.172/tcp/30333/p2p/QmW7aJxigxGFXLmn966nJBBCexZA4nfSiydeg1JfmGFC9q --db-path=/tmp/chainx
-```
-
-#### Development
-
-Running `chainx` without `validator` subcommand is to synchronise to the chain, e.g., synchronise to a node in local mode:
-
-```bash
-$ chainx --chainspec=local --db-path=/tmp/local-sync --bootnodes=/ip4/127.0.0.1/tcp/20222/p2p/Qmevv1ggYD5dLf3MwAJ5zKeRGtnjfV7i85cPAsYwNaVW2o
+$ chainx --chainspec=dev --key=Alice validator
 ```
 
 ## License

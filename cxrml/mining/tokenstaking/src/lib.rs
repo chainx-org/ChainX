@@ -293,7 +293,11 @@ impl<T: Trait> OnMoveToken<T::AccountId, T::TokenBalance> for Module<T> {
 impl<T: Trait> OnNewSessionForTokenStaking<T::AccountId, T::Balance> for Module<T> {
     fn token_staking_info() -> Vec<(Validator<T::AccountId>, T::Balance)> {
         runtime_io::print("new session token stake  --sym--pcx--average_price");
-        let syms: Vec<Symbol> = tokenbalances::Module::<T>::valid_token_list();
+        let mut syms: Vec<Symbol> = tokenbalances::Module::<T>::valid_token_list();
+        if let Some(index) = syms.iter().position(|x| x.as_slice() == T::CHAINX_SYMBOL) {
+            syms.remove(index);
+        }
+
         syms.into_iter()
             .filter(|s| is_valid_exchange_token::<T>(s))
             .map(|sym| {

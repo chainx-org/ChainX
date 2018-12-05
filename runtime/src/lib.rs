@@ -233,7 +233,7 @@ impl tokenbalances::Trait for Runtime {
     const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"Polkadot ChainX";
     type TokenBalance = TokenBalance;
     type Event = Event;
-    type OnMoveToken = TokenStaking;
+    type OnMoveToken = ();
 }
 
 impl multisig::Trait for Runtime {
@@ -250,8 +250,8 @@ impl associations::Trait for Runtime {
 impl staking::Trait for Runtime {
     type OnRewardMinted = Treasury;
     type Event = Event;
-    type OnNewSessionForTokenStaking = TokenStaking;
-    type OnReward = TokenStaking;
+    type OnNewSessionForTokenStaking = ();
+    type OnReward = ();
 }
 
 impl tokenstaking::Trait for Runtime {
@@ -266,8 +266,8 @@ impl bridge_btc::Trait for Runtime {
 // funds
 impl financialrecords::Trait for Runtime {
     type Event = Event;
-    type OnDepositToken = TokenStaking;
-    type OnWithdrawToken = TokenStaking;
+    type OnDepositToken = ();
+    type OnWithdrawToken = ();
 }
 
 impl withdrawal::Trait for Runtime {}

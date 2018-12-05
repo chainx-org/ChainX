@@ -19,6 +19,7 @@ use chainx_runtime::{
 
 use super::cli::ChainSpec;
 use ed25519;
+use ed25519::Public;
 
 use self::btc_chain::BlockHeader;
 use self::btc_primitives::{compact::Compact, hash::H256};
@@ -138,11 +139,11 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             current_era: 0,
             bonding_duration: 28,
             intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
-            intention_profiles: vec![(auth1.0.into(), b"ChainX1".to_vec(), b"chainx.org".to_vec())],
+            intention_profiles: vec![(auth1.0.into(), b"Genesis".to_vec(), b"chainx.org".to_vec())],
             minimum_validator_count: 1,
             validator_count: 7,
             sessions_per_era: 5,
-            shares_per_cert: 45,
+            shares_per_cert: 50,
             activation_per_share: normalize(100000) as u32,
             maximum_cert_owner_count: 200,
             intention_threshold: 9000,
@@ -150,7 +151,7 @@ pub fn testnet_genesis(chainspec: ChainSpec) -> GenesisConfig {
             offline_slash: Perbill::from_millionths(0),
             current_offline_slash: 0,
             current_session_reward: 0,
-            cert_owner: auth1.0.into(),
+            cert_owner: Public::from_ss58check("5DMo9Nn6MPEWUDefRwVSUtRp4kVguvBNgNatEgyhDJ32Zakt").unwrap().0.into(),
             register_fee: 1,
             claim_fee: 1,
             stake_fee: 1,

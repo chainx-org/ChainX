@@ -17,735 +17,231 @@
 //! Tests for the module.
 
 #![cfg(test)]
-
 use super::*;
-use consensus::OnOfflineValidator;
 #[allow(unused_imports)]
-use mock::{new_test_ext, Balances, Origin, Session, Staking, System, Test, Timestamp};
+use mock::{
+    new_test_ext, Associations, Balances, Origin, Session, Staking, System, Test, Timestamp,
+};
 use runtime_io::with_externalities;
 
-/*
 #[test]
-fn note_null_offline_should_work() {
-    with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-        assert_eq!(Staking::offline_slash_grace(), 0);
-        assert_eq!(Staking::slash_count(&10), 0);
-        assert_eq!(Balances::free_balance(&10), 1);
-        System::set_extrinsic_index(1);
-        assert_eq!(Staking::slash_count(&10), 0);
-        assert_eq!(Balances::free_balance(&10), 1);
-        assert!(Staking::forcing_new_era().is_none());
-    });
-}
-
-#[test]
-fn note_offline_should_work() {
-    with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-        Balances::set_free_balance(&10, 70);
-        assert_eq!(Staking::offline_slash_grace(), 0);
-        assert_eq!(Staking::slash_count(&10), 0);
-        assert_eq!(Balances::free_balance(&10), 70);
-        System::set_extrinsic_index(1);
-        Staking::on_offline_validator(0);
-        assert_eq!(Staking::slash_count(&10), 1);
-        assert_eq!(Balances::free_balance(&10), 50);
-        assert!(Staking::forcing_new_era().is_none());
-    });
-}
-
-#[test]
-fn note_offline_exponent_should_work() {
-    with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-        Balances::set_free_balance(&10, 150);
-        assert_eq!(Staking::offline_slash_grace(), 0);
-        assert_eq!(Staking::slash_count(&10), 0);
-        assert_eq!(Balances::free_balance(&10), 150);
-        System::set_extrinsic_index(1);
-        Staking::on_offline_validator(0);
-        assert_eq!(Staking::slash_count(&10), 1);
-        assert_eq!(Balances::free_balance(&10), 130);
-        System::set_extrinsic_index(1);
-        Staking::on_offline_validator(0);
-        assert_eq!(Staking::slash_count(&10), 2);
-        assert_eq!(Balances::free_balance(&10), 90);
-        assert!(Staking::forcing_new_era().is_none());
-    });
-}
-
-#[test]
-fn note_offline_grace_should_work() {
-    with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-        Balances::set_free_balance(&10, 70);
-        Balances::set_free_balance(&20, 70);
-        assert_ok!(Staking::set_offline_slash_grace(1));
-        assert_eq!(Staking::offline_slash_grace(), 1);
-
-        assert_eq!(Staking::slash_count(&10), 0);
-        assert_eq!(Balances::free_balance(&10), 70);
-
-        System::set_extrinsic_index(1);
-        Staking::on_offline_validator(0);
-        assert_eq!(Staking::slash_count(&10), 1);
-        assert_eq!(Balances::free_balance(&10), 70);
-        assert_eq!(Staking::slash_count(&20), 0);
-        assert_eq!(Balances::free_balance(&20), 70);
-
-        System::set_extrinsic_index(1);
-        Staking::on_offline_validator(0);
-        Staking::on_offline_validator(1);
-        assert_eq!(Staking::slash_count(&10), 2);
-        assert_eq!(Balances::free_balance(&10), 50);
-        assert_eq!(Staking::slash_count(&20), 1);
-        assert_eq!(Balances::free_balance(&20), 70);
-        assert!(Staking::forcing_new_era().is_none());
-    });
-}
-*/
-
-// #[test]
-// fn note_offline_force_unstake_session_change_should_work() {
-// with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-// Balances::set_free_balance(&10, 70);
-// Balances::set_free_balance(&20, 70);
-// assert_ok!(Staking::stake(Origin::signed(1)));
-
-// assert_eq!(Staking::slash_count(&10), 0);
-// assert_eq!(Balances::free_balance(&10), 70);
-// assert_eq!(Staking::intentions(), vec![10, 20, 1]);
-// assert_eq!(Session::validators(), vec![10, 20]);
-
-// System::set_extrinsic_index(1);
-// Staking::on_offline_validator(0);
-// assert_eq!(Balances::free_balance(&10), 50);
-// assert_eq!(Staking::slash_count(&10), 1);
-// assert_eq!(Staking::intentions(), vec![10, 20, 1]);
-
-// System::set_extrinsic_index(1);
-// Staking::on_offline_validator(0);
-// assert_eq!(Staking::intentions(), vec![1, 20]);
-// assert_eq!(Balances::free_balance(&10), 10);
-// assert!(Staking::forcing_new_era().is_some());
-// });
-// }
-
-// #[test]
-// fn note_offline_auto_unstake_session_change_should_work() {
-// with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-// Balances::set_free_balance(&10, 7000);
-// Balances::set_free_balance(&20, 7000);
-// assert_ok!(Staking::register_preferences(Origin::signed(10), 0, ValidatorPrefs { unstake_threshold: 1, validator_payment: 0 }));
-
-// assert_eq!(Staking::intentions(), vec![10, 20]);
-
-// System::set_extrinsic_index(1);
-// Staking::on_offline_validator(0);
-// Staking::on_offline_validator(1);
-// assert_eq!(Balances::free_balance(&10), 6980);
-// assert_eq!(Balances::free_balance(&20), 6980);
-// assert_eq!(Staking::intentions(), vec![10, 20]);
-// assert!(Staking::forcing_new_era().is_none());
-
-// System::set_extrinsic_index(1);
-// Staking::on_offline_validator(0);
-// Staking::on_offline_validator(1);
-// assert_eq!(Balances::free_balance(&10), 6940);
-// assert_eq!(Balances::free_balance(&20), 6940);
-// assert_eq!(Staking::intentions(), vec![20]);
-// assert!(Staking::forcing_new_era().is_some());
-
-// System::set_extrinsic_index(1);
-// Staking::on_offline_validator(1);
-// assert_eq!(Balances::free_balance(&10), 6940);
-// assert_eq!(Balances::free_balance(&20), 6860);
-// assert_eq!(Staking::intentions(), vec![20]);
-
-// System::set_extrinsic_index(1);
-// Staking::on_offline_validator(1);
-// assert_eq!(Balances::free_balance(&10), 6940);
-// assert_eq!(Balances::free_balance(&20), 6700);
-// assert_eq!(Staking::intentions(), vec![0u64; 0]);
-// });
-// }
-
-// #[test]
-// fn rewards_should_work() {
-// with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-// assert_eq!(Staking::era_length(), 9);
-// assert_eq!(Staking::sessions_per_era(), 3);
-// assert_eq!(Staking::last_era_length_change(), 0);
-// assert_eq!(Staking::current_era(), 0);
-// assert_eq!(Session::current_index(), 0);
-// assert_eq!(Balances::total_balance(&10), 1);
-
-// System::set_block_number(3);
-// Timestamp::set_timestamp(15);	// on time.
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 0);
-// assert_eq!(Session::current_index(), 1);
-// assert_eq!(Balances::total_balance(&10), 11);
-// System::set_block_number(6);
-// Timestamp::set_timestamp(31);	// a little late
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 0);
-// assert_eq!(Session::current_index(), 2);
-// assert_eq!(Balances::total_balance(&10), 20);	// less reward
-// System::set_block_number(9);
-// Timestamp::set_timestamp(50);	// very late
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 1);
-// assert_eq!(Session::current_index(), 3);
-// assert_eq!(Balances::total_balance(&10), 27);	// much less reward
-// });
-// }
-
-// #[test]
-// fn slashing_should_work() {
-// with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-// assert_eq!(Staking::era_length(), 9);
-// assert_eq!(Staking::sessions_per_era(), 3);
-// assert_eq!(Staking::last_era_length_change(), 0);
-// assert_eq!(Staking::current_era(), 0);
-// assert_eq!(Session::current_index(), 0);
-// assert_eq!(Balances::total_balance(&10), 1);
-
-// System::set_block_number(3);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 0);
-// assert_eq!(Session::current_index(), 1);
-// assert_eq!(Balances::total_balance(&10), 11);
-
-// System::set_block_number(6);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 0);
-// assert_eq!(Session::current_index(), 2);
-// assert_eq!(Balances::total_balance(&10), 21);
-
-// System::set_block_number(7);
-// System::set_extrinsic_index(1);
-// Staking::on_offline_validator(0);
-// Staking::on_offline_validator(1);
-// assert_eq!(Balances::total_balance(&10), 1);
-// });
-// }
-
-// #[test]
-// fn staking_should_work() {
-// with_externalities(&mut new_test_ext(0, 1, 2, 0, true, 0), || {
-
-// assert_eq!(Staking::era_length(), 2);
-// assert_eq!(Staking::validator_count(), 2);
-// assert_eq!(Session::validators(), vec![10, 20]);
-
-// assert_ok!(Staking::set_bonding_duration(2));
-// assert_eq!(Staking::bonding_duration(), 2);
-
-// // Block 1: Add three validators. No obvious change.
-// System::set_block_number(1);
-// assert_ok!(Staking::stake(Origin::signed(1)));
-// assert_ok!(Staking::stake(Origin::signed(2)));
-// assert_ok!(Staking::stake(Origin::signed(4)));
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 0);
-// assert_eq!(Session::validators(), vec![10, 20]);
-
-// // Block 2: New validator set now.
-// System::set_block_number(2);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 1);
-// assert_eq!(Session::validators(), vec![4, 2]);
-
-// // Block 3: Unstake highest, introduce another staker. No change yet.
-// System::set_block_number(3);
-// assert_ok!(Staking::stake(Origin::signed(3)));
-// assert_ok!(Staking::unstake(Origin::signed(4), Staking::intentions().iter().position(|&x| x == 4).unwrap() as u32));
-// assert_eq!(Staking::current_era(), 1);
-// Session::check_rotate_session(System::block_number());
-
-// // Block 4: New era - validators change.
-// System::set_block_number(4);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 2);
-// assert_eq!(Session::validators(), vec![3, 2]);
-
-// // Block 5: Transfer stake from highest to lowest. No change yet.
-// System::set_block_number(5);
-// assert_ok!(Balances::transfer(Origin::signed(4), 1.into(), 40));
-// Session::check_rotate_session(System::block_number());
-
-// // Block 6: Lowest now validator.
-// System::set_block_number(6);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::validators(), vec![1, 3]);
-
-// // Block 7: Unstake three. No change yet.
-// System::set_block_number(7);
-// assert_ok!(Staking::unstake(Origin::signed(3), Staking::intentions().iter().position(|&x| x == 3).unwrap() as u32));
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::validators(), vec![1, 3]);
-
-// // Block 8: Back to one and two.
-// System::set_block_number(8);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::validators(), vec![1, 2]);
-// });
-// }
-
-#[test]
-fn nominating_and_rewards_should_work() {
-    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 15), || {
-        // (total_vote_weight, intention) trending: [(0, 10), (0, 20)]
+fn initialize_should_work() {
+    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
         assert_eq!(Staking::era_length(), 1);
-        assert_eq!(Staking::validator_count(), 2);
-        assert_eq!(Staking::bonding_duration(), 1);
-        assert_eq!(Session::validators(), vec![10, 20]);
+        assert_eq!(Staking::sessions_per_era(), 1);
+        assert_eq!(Staking::last_era_length_change(), 0);
         assert_eq!(Staking::current_era(), 0);
+        assert_eq!(Session::current_index(), 0);
 
-        assert_eq!(Staking::intentions(), [10, 20]);
+        assert_eq!(Staking::cert_profiles(&0).remaining_shares, 44);
+        assert_eq!(Staking::cert_profiles(&0).owner, 10);
+
+        assert_eq!(Staking::intention_profiles(&10).is_active, true);
+        assert_eq!(Staking::intention_profiles(&10).activator_index, 0);
+        assert_eq!(
+            Staking::intention_profiles(&10).total_nomination,
+            100_000_000
+        );
+
+        assert_eq!(Staking::intentions(), [10]);
+        assert_eq!(Balances::reserved_balance(&10), 100_000_000);
+        assert_eq!(Balances::free_balance(&10), 99900000000);
+
+        assert_eq!(
+            Staking::nomination_record_of(&10, &10).nomination,
+            100_000_000
+        );
+
+        assert_eq!(Staking::nominator_profiles(&10).nominees, [10]);
+
+        assert_eq!(
+            Associations::channel_relationship(&b"ChainX".to_vec()),
+            Some(10)
+        );
+        assert_eq!(
+            Associations::channel_relationship_rev(&10),
+            Some(b"ChainX".to_vec())
+        );
+    });
+}
+
+#[test]
+fn session_rewards_should_work() {
+    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
+        Balances::set_free_balance(&10, 0);
 
         System::set_block_number(1);
-        // cert owner activates intention, including registering indentity and increasing free balance according to the shares.
-        // shares * activation_per_share = 10 * 100000
-        // intention.free_balance += shares * activation_per_share
-        assert_ok!(Staking::activate(
-            Origin::signed(0),
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 10);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 90);
+
+        System::set_block_number(2);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 20);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 180);
+
+        System::set_block_number(3);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 30);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 270);
+    });
+}
+
+#[test]
+fn register_should_work() {
+    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
+        Balances::set_free_balance(&10, 0);
+
+        System::set_block_number(1);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 10);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 90);
+
+        System::set_block_number(2);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 20);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 180);
+
+        System::set_block_number(3);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 30);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 270);
+    });
+}
+
+#[test]
+fn activate_and_deactivate_should_work() {
+    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
+        Balances::set_free_balance(&10, 0);
+
+        assert_eq!(Staking::intentions(), [10]);
+
+        System::set_block_number(1);
+        assert_ok!(Staking::register(
+            Origin::signed(10),
+            0,
             1,
             String::from("1").into_bytes(),
             String::from("url").into_bytes(),
-            10
+            1
         ));
-        // 10 + 10 * 100000
-        assert_eq!(Balances::total_balance(&1), 1000010);
-        // initial activation is reserved during the frozen duration of respective cert owner
-        assert_eq!(Staking::locked(&1), 1000000);
-        assert_eq!(Balances::free_balance(&1), 10);
+        assert_eq!(Staking::intentions(), [10, 1]);
+        Session::check_rotate_session(System::block_number());
 
-        assert_ok!(Staking::activate(
-            Origin::signed(0),
-            2,
-            b"2".to_vec(),
-            b"url".to_vec(),
-            10
-        ));
-        assert_eq!(Balances::total_balance(&2), 1000020);
-        assert_eq!(Staking::locked(&2), 1000000);
-
-        assert_ok!(Staking::activate(
-            Origin::signed(0),
-            3,
-            b"3".to_vec(),
-            b"url".to_vec(),
-            20
-        ));
-        assert_eq!(Balances::total_balance(&3), 2000030);
-
-        assert_eq!(Staking::cert_owners(&0).remaining_shares, 5);
-        assert_eq!(Staking::intentions(), [10, 20, 1, 2, 3]);
+        assert_ok!(Staking::activate(Origin::signed(1)));
 
         System::set_block_number(2);
-        // 4 => 2, 30
-        assert_ok!(Staking::nominate(Origin::signed(4), 2.into(), 30));
-        assert_eq!(Staking::nomination_record_of(&4, &2).nomination, 30);
-        assert_eq!(Balances::free_balance(&4), 10);
-        // 2 => 2, 10
-        assert_ok!(Staking::stake(Origin::signed(2), 10));
         Session::check_rotate_session(System::block_number());
+        assert_eq!(Session::validators(), [10, 1]);
 
-        // 3:2000000, 2:1000000+30+10, 1:1000000
-        assert_eq!(Session::validators(), [3, 2]);
-        assert_eq!(Staking::intentions(), [10, 20, 1, 2, 3]);
-        assert_eq!(Staking::staking_stats().total_stake, 4000042);
-        // 4000040 * 1 / 1000 = 4000
-        assert_eq!(Staking::this_session_reward(), 4000);
-
-        // 1000000 * 4000 / 4000040 = 1000
-        // 1000 * 1 / 10 = 100 => 1.free_balance += 100
-        // 1000 * 9 / 10 = 900 => 1.jackpot += 900
-        assert_eq!(Staking::total_nomination_of_intention(&1), 1000000);
-        assert_eq!(Balances::free_balance(&1), 109);
-        assert_eq!(Staking::intention_profiles(&1).jackpot, 900);
-
-        assert_eq!(Staking::total_nomination_of_intention(&2), 1000040);
-        assert_eq!(Balances::free_balance(&2), 110);
-        assert_eq!(Staking::intention_profiles(&2).jackpot, 900);
-
-        assert_eq!(Staking::total_nomination_of_intention(&3), 2000000);
-        assert_eq!(Balances::free_balance(&3), 229);
-        assert_eq!(Staking::intention_profiles(&3).jackpot, 1800);
-
-        assert_eq!(Staking::locked(&2), 1000000);
+        assert_ok!(Staking::deactivate(Origin::signed(1)));
 
         System::set_block_number(3);
-        assert_ok!(Staking::stake(Origin::signed(1), 10));
-        assert_eq!(Staking::locked(&2), 1000000);
         Session::check_rotate_session(System::block_number());
-
-        assert_eq!(Session::validators(), [3, 2]);
-        // initial frozen activation is due.
-        assert_eq!(Staking::locked(&2), 0);
-
-        assert_eq!(Staking::staking_stats().total_stake, 4000052);
-
-        assert_eq!(Staking::nominator_profiles(&4).nominees, [2]);
-        assert_eq!(Staking::intention_profiles(&2).total_nomination, 1000040);
-        assert_eq!(Staking::intention_profiles(&2).jackpot, 1800);
-
-        assert_eq!(Staking::total_vote_weight_of_intention(&2), 2000040);
-        //  intention.total_vote_weight = 1000000 + 1000040 * (3-2)= 2000040
-        //  nominator.vote_weight = 0 + 30 * (3-2) = 30
-        //  dividend = 30 * 1800 / 2000040 = 0
-        assert_ok!(Staking::claim(Origin::signed(4), 0));
-        assert_eq!(Staking::total_vote_weight_of_intention(&2), 2000010);
-        assert_eq!(Staking::nomination_record_of(&4, &2).last_vote_weight, 0);
-        assert_eq!(Staking::nomination_record_of(&4, &2).nomination, 30);
-        assert_eq!(Balances::free_balance(&4), 10);
+        assert_eq!(Session::validators(), [10]);
 
         System::set_block_number(4);
-        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 10));
-        assert_eq!(Balances::free_balance(&2), 210);
-        assert_ok!(Staking::nominate(Origin::signed(2), 1.into(), 200));
-        assert_ok!(Staking::deactivate(Origin::signed(2), 3));
         Session::check_rotate_session(System::block_number());
-
-        assert_eq!(Balances::free_balance(&4), 0);
-        assert_eq!(Balances::free_balance(&2), 10);
-
-        assert_eq!(Session::validators(), [3, 1]);
-        assert_ok!(Staking::claim(Origin::signed(4), 0));
 
         System::set_block_number(5);
-        assert_ok!(Staking::unnominate(Origin::signed(4), 0, 30));
         Session::check_rotate_session(System::block_number());
-
-        assert_eq!(Session::validators(), [3, 1]);
-        assert_eq!(Balances::free_balance(&1), 398);
-        assert_eq!(Balances::free_balance(&2), 10);
-        assert_eq!(Balances::free_balance(&3), 826);
-        assert_eq!(Balances::free_balance(&4), 0);
-        assert_eq!(Staking::locked(&4), 30);
 
         System::set_block_number(6);
-        assert_eq!(Balances::free_balance(&2), 10);
-        assert_ok!(Staking::claim(Origin::signed(2), 0));
-        assert_eq!(Balances::free_balance(&2), 1809);
         Session::check_rotate_session(System::block_number());
-
-        assert_eq!(Session::validators(), [3, 1]);
-        // decreased stake is due.
-        assert_eq!(Balances::free_balance(&4), 30);
     });
 }
 
 #[test]
-fn test_relationship() {
-    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 15), || {
+fn stake_should_work() {
+    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
+        Balances::set_free_balance(&10, 100_000_000);
+
+        assert_eq!(Staking::intentions(), [10]);
+
         System::set_block_number(1);
-        assert_ok!(Staking::register(String::from("1").into_bytes(), 3, 1));
-        assert_ok!(Staking::activate(
-            Origin::signed(1),
-            1,
-            String::from("1").into_bytes(),
-            String::from("url").into_bytes(),
-            10
-        ));
-        assert_ok!(Staking::activate(
-            Origin::signed(1),
-            2,
-            String::from("2").into_bytes(),
-            String::from("url").into_bytes(),
-            10
-        ));
-        assert_ok!(Staking::activate(
-            Origin::signed(1),
-            3,
-            String::from("3").into_bytes(),
-            String::from("url").into_bytes(),
-            20
-        ));
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 100_000_010);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 90);
+
+        assert_ok!(Staking::stake(Origin::signed(10), 100_000_000));
+        assert_eq!(Balances::free_balance(&10), 10);
 
         System::set_block_number(2);
-        assert_ok!(Staking::nominate(Origin::signed(4), 2.into(), 30));
-        assert_ok!(Staking::stake(Origin::signed(2), 10));
         Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 30);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 270);
 
-        assert_eq!(Staking::intention_profiles(&2).nominators, [2, 4]);
-        assert_eq!(Staking::nominator_profiles(&4).nominees, [2]);
-        assert_eq!(Staking::staking_stats().nominator_count, 4);
-
-        System::set_block_number(3);
-        assert_ok!(Staking::stake(Origin::signed(1), 10));
-        Session::check_rotate_session(System::block_number());
-
-        assert_eq!(Staking::intention_profiles(&1).nominators, [1]);
-
-        System::set_block_number(4);
-        assert_ok!(Staking::nominate(Origin::signed(4), 1.into(), 10));
-        assert_ok!(Staking::nominate(Origin::signed(2), 1.into(), 10));
-        Session::check_rotate_session(System::block_number());
-
-        assert_eq!(Staking::intention_profiles(&1).nominators, [1, 4, 2]);
-        assert_eq!(Staking::nominator_profiles(&2).nominees, [2, 1]);
-        assert_eq!(Staking::nominator_profiles(&4).nominees, [2, 1]);
-        assert_eq!(Staking::staking_stats().nominator_count, 4);
-
-        System::set_block_number(5);
-        assert_ok!(Staking::unnominate(Origin::signed(4), 0, 30));
-        assert_eq!(Staking::intention_profiles(&2).nominators, [2]);
-
-        assert_eq!(Staking::nominator_profiles(&2).nominees, [2, 1]);
-        assert_eq!(Staking::intention_profiles(&2).nominators, [2]);
-        assert_ok!(Staking::unstake(Origin::signed(2), 1000010));
-        //???
-        assert_eq!(Staking::nominator_profiles(&2).nominees, [1]);
-        assert_eq!(Staking::intention_profiles(&2).nominators, []);
-
-        assert_eq!(Staking::nominator_profiles(&4).nominees, [1]);
-        assert_eq!(Staking::staking_stats().nominator_count, 4);
-        Session::check_rotate_session(System::block_number());
-
-        System::set_block_number(5);
-        assert_ok!(Staking::deactivate(Origin::signed(2), 3));
-        assert_ok!(Staking::deactivate(Origin::signed(1), 2));
-
-        assert_eq!(Staking::nominator_profiles(&4).nominees, [1]);
-        assert_ok!(Staking::unnominate(Origin::signed(4), 0, 10));
-        assert_eq!(Staking::nominator_profiles(&4).nominees, []);
-        assert_eq!(Staking::intention_profiles(&1).nominators, [1, 2]);
-        assert_eq!(Staking::staking_stats().nominator_count, 3);
-
-        assert_ok!(Staking::unnominate(Origin::signed(2), 0, 10));
-        assert_eq!(Staking::nominator_profiles(&2).nominees, []);
-
-        assert_eq!(Staking::staking_stats().nominator_count, 2);
-        assert_eq!(Staking::intention_profiles(&1).nominators, [1]);
-        Session::check_rotate_session(System::block_number());
+        assert_eq!(
+            Staking::intention_profiles(&10).total_nomination,
+            200_000_000
+        );
     });
 }
-// TODO change to current
-// #[test]
-// fn nominating_and_rewards_should_work() {
-// with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
-// assert_eq!(Staking::era_length(), 1);
-// assert_eq!(Staking::validator_count(), 2);
-// assert_eq!(Staking::bonding_duration(), 3);
-// assert_eq!(Session::validators(), vec![10, 20]);
 
-// //////// Old
-// // session_reward 10
+#[test]
+fn claim_should_work() {
+    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
+        Balances::set_free_balance(&10, 0);
 
-// System::set_block_number(1);
-// assert_ok!(Staking::stake(Origin::signed(1)));
-// assert_ok!(Staking::stake(Origin::signed(2)));
-// assert_ok!(Staking::stake(Origin::signed(3)));
-// assert_ok!(Staking::nominate(Origin::signed(4), 1.into()));
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 1);
-// assert_eq!(Session::validators(), vec![1, 3]);	// 4 + 1, 3
-// // 1 + 10
-// assert_eq!(Balances::total_balance(&10), 11);
-// assert_eq!(Balances::total_balance(&20), 11);
-// assert_eq!(Balances::total_balance(&1), 10);
-// assert_eq!(Balances::total_balance(&2), 20);
-// assert_eq!(Balances::total_balance(&3), 30);
-// assert_eq!(Balances::total_balance(&4), 40);
-// // session reward (10+40+30+20)/3
+        System::set_block_number(1);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 10);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 90);
 
-// System::set_block_number(2);
-// assert_ok!(Staking::unnominate(Origin::signed(4), 0));
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Staking::current_era(), 2);
-// assert_eq!(Session::validators(), vec![3, 2]);
-// assert_eq!(Balances::total_balance(&10), 11);
-// assert_eq!(Balances::total_balance(&20), 11);
-// // 10 + 10 + 10 + 20 + 30 + 40 = 120
-// // average_stake = 120 / 5 = 24
-// // validator 1: 10 * 10/(10 + 40) = 4
-// // 10 + 24 * 10/(10+40) = 14
-// assert_eq!(Balances::total_balance(&1), 14);
-// assert_eq!(Balances::total_balance(&2), 20);
-// // average_stake 24
-// // Perbill(1000000000) session_reward * average_stake
-// // 30 + 24
-// assert_eq!(Balances::total_balance(&3), 54);
-// // 24 * 40 / 50 = 19
-// assert_eq!(Balances::total_balance(&4), 59);
+        assert_ok!(Staking::claim(Origin::signed(10), 10.into()));
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 0);
+        assert_eq!(Balances::free_balance(&10), 100);
 
-// System::set_block_number(3);
-// assert_ok!(Staking::stake(Origin::signed(4)));
-// assert_ok!(Staking::unstake(Origin::signed(3), Staking::intentions().iter().position(|&x| x == 3).unwrap() as u32));
-// assert_ok!(Staking::nominate(Origin::signed(3), 1.into()));
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::validators(), vec![1, 4]);
-// assert_eq!(Balances::total_balance(&1), 14);
-// assert_eq!(Balances::total_balance(&2), 42);
-// assert_eq!(Balances::total_balance(&3), 76);
-// assert_eq!(Balances::total_balance(&4), 59);
+        System::set_block_number(2);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 110);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 90);
 
-// System::set_block_number(4);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Balances::total_balance(&1), 20);
-// assert_eq!(Balances::total_balance(&2), 42);
-// assert_eq!(Balances::total_balance(&3), 111);
-// assert_eq!(Balances::total_balance(&4), 101);
-// });
-// }
+        System::set_block_number(3);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 120);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 180);
 
-//#[test]
-//fn rewards_with_off_the_table_should_work() {
-//	with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
-//		System::set_block_number(1);
-//		assert_ok!(Staking::stake(Origin::signed(1)));
-//		assert_ok!(Staking::nominate(Origin::signed(2), 1.into()));
-//		assert_ok!(Staking::stake(Origin::signed(3)));
-//		Session::check_rotate_session(System::block_number());
-//		assert_eq!(Session::validators(), vec![1, 3]);	// 1 + 2, 3
-//		assert_eq!(Balances::total_balance(&1), 10);
-//		assert_eq!(Balances::total_balance(&2), 20);
-//		assert_eq!(Balances::total_balance(&3), 30);
-//
-//		System::set_block_number(2);
-//		assert_ok!(Staking::register_preferences(Origin::signed(1), Staking::intentions().into_iter().position(|i| i == 1).unwrap() as u32, ValidatorPrefs { unstake_threshold: 3, validator_payment: 4 }));
-//		Session::check_rotate_session(System::block_number());
-//		assert_eq!(Balances::total_balance(&1), 22);
-//		assert_eq!(Balances::total_balance(&2), 37);
-//		assert_eq!(Balances::total_balance(&3), 60);
-//	});
-//}
+        assert_ok!(Staking::claim(Origin::signed(10), 10.into()));
+        assert_eq!(Balances::free_balance(&10), 300);
+    });
+}
 
-//#[test]
-//fn nominating_slashes_should_work() {
-//	with_externalities(&mut new_test_ext(0, 2, 2, 0, true, 10), || {
-//		assert_eq!(Staking::era_length(), 4);
-//		assert_eq!(Staking::validator_count(), 2);
-//		assert_eq!(Staking::bonding_duration(), 12);
-//		assert_eq!(Session::validators(), vec![10, 20]);
-//
-//		System::set_block_number(2);
-//		Session::check_rotate_session(System::block_number());
-//
-//		Timestamp::set_timestamp(15);
-//		System::set_block_number(4);
-//		assert_ok!(Staking::stake(Origin::signed(1)));
-//		assert_ok!(Staking::stake(Origin::signed(3)));
-//		assert_ok!(Staking::nominate(Origin::signed(2), 3.into()));
-//		assert_ok!(Staking::nominate(Origin::signed(4), 1.into()));
-//		Session::check_rotate_session(System::block_number());
-//
-//		assert_eq!(Staking::current_era(), 1);
-//		assert_eq!(Session::validators(), vec![1, 3]);	// 1 + 4, 3 + 2
-//		assert_eq!(Balances::total_balance(&1), 10);
-//		assert_eq!(Balances::total_balance(&2), 20);
-//		assert_eq!(Balances::total_balance(&3), 30);
-//		assert_eq!(Balances::total_balance(&4), 40);
-//
-//		System::set_block_number(5);
-//		System::set_extrinsic_index(1);
-//		Staking::on_offline_validator(0);
-//		Staking::on_offline_validator(1);
-//		assert_eq!(Balances::total_balance(&1), 0);			//slashed
-//		assert_eq!(Balances::total_balance(&2), 20);		//not slashed
-//		assert_eq!(Balances::total_balance(&3), 10);		//slashed
-//		assert_eq!(Balances::total_balance(&4), 30);		//slashed
-//		// TODO: change slash % to something sensible.
-//	});
-//}
+#[test]
+fn nominate_and_claim_should_work() {
+    with_externalities(&mut new_test_ext(0, 1, 1, 0, true, 10), || {
+        Balances::set_free_balance(&10, 0);
+        Balances::set_free_balance(&20, 100_000_000);
 
-// #[test]
-// fn double_staking_should_fail() {
-// with_externalities(&mut new_test_ext(0, 1, 2, 0, true, 0), || {
-// System::set_block_number(1);
-// assert_ok!(Staking::stake(Origin::signed(1)));
-// assert_noop!(Staking::stake(Origin::signed(1)), "Cannot stake if already staked.");
-// assert_noop!(Staking::nominate(Origin::signed(1), 1.into()), "Cannot nominate if already staked.");
-// assert_ok!(Staking::nominate(Origin::signed(2), 1.into()));
-// assert_noop!(Staking::stake(Origin::signed(2)), "Cannot stake if already nominating.");
-// assert_noop!(Staking::nominate(Origin::signed(2), 1.into()), "Cannot nominate if already nominating.");
-// });
-// }
+        System::set_block_number(1);
+        assert_ok!(Staking::nominate(
+            Origin::signed(20),
+            10.into(),
+            100_000_000
+        ));
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 20);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 180);
 
-// #[test]
-// fn staking_eras_work() {
-// with_externalities(&mut new_test_ext(0, 1, 2, 0, true, 0), || {
-// assert_eq!(Staking::era_length(), 2);
-// assert_eq!(Staking::sessions_per_era(), 2);
-// assert_eq!(Staking::last_era_length_change(), 0);
-// assert_eq!(Staking::current_era(), 0);
-// assert_eq!(Session::current_index(), 0);
+        assert_ok!(Staking::claim(Origin::signed(10), 10.into()));
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 0);
+        assert_eq!(Balances::free_balance(&10), 200);
 
-// // Block 1: No change.
-// System::set_block_number(1);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::current_index(), 1);
-// assert_eq!(Staking::sessions_per_era(), 2);
-// assert_eq!(Staking::last_era_length_change(), 0);
-// assert_eq!(Staking::current_era(), 0);
+        System::set_block_number(2);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 220);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 180);
 
-// // Block 2: Simple era change.
-// System::set_block_number(2);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::current_index(), 2);
-// assert_eq!(Staking::sessions_per_era(), 2);
-// assert_eq!(Staking::last_era_length_change(), 0);
-// assert_eq!(Staking::current_era(), 1);
+        assert_ok!(Staking::claim(Origin::signed(20), 10.into()));
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 90);
+        assert_eq!(Balances::free_balance(&20), 90);
 
-// // Block 3: Schedule an era length change; no visible changes.
-// System::set_block_number(3);
-// assert_ok!(Staking::set_sessions_per_era(3));
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::current_index(), 3);
-// assert_eq!(Staking::sessions_per_era(), 2);
-// assert_eq!(Staking::last_era_length_change(), 0);
-// assert_eq!(Staking::current_era(), 1);
+        System::set_block_number(3);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Balances::free_balance(&10), 240);
+        assert_eq!(Staking::intention_profiles(&10).jackpot, 270);
 
-// // Block 4: Era change kicks in.
-// System::set_block_number(4);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::current_index(), 4);
-// assert_eq!(Staking::sessions_per_era(), 3);
-// assert_eq!(Staking::last_era_length_change(), 4);
-// assert_eq!(Staking::current_era(), 2);
-
-// // Block 5: No change.
-// System::set_block_number(5);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::current_index(), 5);
-// assert_eq!(Staking::sessions_per_era(), 3);
-// assert_eq!(Staking::last_era_length_change(), 4);
-// assert_eq!(Staking::current_era(), 2);
-
-// // Block 6: No change.
-// System::set_block_number(6);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::current_index(), 6);
-// assert_eq!(Staking::sessions_per_era(), 3);
-// assert_eq!(Staking::last_era_length_change(), 4);
-// assert_eq!(Staking::current_era(), 2);
-
-// // Block 7: Era increment.
-// System::set_block_number(7);
-// Session::check_rotate_session(System::block_number());
-// assert_eq!(Session::current_index(), 7);
-// assert_eq!(Staking::sessions_per_era(), 3);
-// assert_eq!(Staking::last_era_length_change(), 4);
-// assert_eq!(Staking::current_era(), 3);
-// });
-// }
-
-// #[test]
-// fn staking_balance_transfer_when_bonded_should_not_work() {
-// with_externalities(&mut new_test_ext(0, 1, 3, 1, false, 0), || {
-// Balances::set_free_balance(&1, 111);
-// assert_ok!(Staking::stake(Origin::signed(1)));
-// assert_noop!(Balances::transfer(Origin::signed(1), 2.into(), 69), "cannot transfer illiquid funds");
-// });
-// }
-
-// #[test]
-// fn deducting_balance_when_bonded_should_not_work() {
-// with_externalities(&mut new_test_ext(0, 1, 3, 1, false, 0), || {
-// Balances::set_free_balance(&1, 111);
-// <Bondage<Test>>::insert(1, 2);
-// System::set_block_number(1);
-// assert_eq!(Staking::unlock_block(&1), LockStatus::LockedUntil(2));
-// assert_noop!(Balances::reserve(&1, 69), "cannot transfer illiquid funds");
-// });
-// }
+        assert_ok!(Staking::claim(Origin::signed(10), 10.into()));
+        assert_eq!(Balances::free_balance(&10), 420);
+    });
+}

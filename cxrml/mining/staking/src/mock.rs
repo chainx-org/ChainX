@@ -25,17 +25,18 @@ use runtime_io;
 use substrate_primitives::{Blake2Hasher, H256};
 use tokenbalances::{DescString, SymbolString};
 use {
-    balances, consensus, cxrml_associations, cxrml_system, cxsupport, session, system, timestamp,
+    associations, balances, consensus, cxrml_system, cxsupport, session, system, timestamp,
     tokenbalances, GenesisConfig, Module, Trait,
 };
 
-impl_outer_origin!{
+impl_outer_origin! {
     pub enum Origin for Test {}
 }
 
 // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Test;
+
 impl consensus::Trait for Test {
     const NOTE_OFFLINE_POSITION: u32 = 1;
     type Log = DigestItem;
@@ -114,7 +115,7 @@ pub fn new_test_ext(
     t.extend(
         session::GenesisConfig::<Test> {
             session_length,
-            validators: vec![10, 20],
+            validators: vec![10],
         }
         .build_storage()
         .unwrap(),
@@ -124,19 +125,19 @@ pub fn new_test_ext(
             balances: if monied {
                 if reward > 0 {
                     vec![
-                        (1, 10 * balance_factor),
-                        (2, 20 * balance_factor),
-                        (3, 30 * balance_factor),
-                        (4, 40 * balance_factor),
-                        (10, balance_factor),
-                        (20, balance_factor),
+                        (1, 10_000 * balance_factor),
+                        (2, 20_000 * balance_factor),
+                        (3, 30_000 * balance_factor),
+                        (4, 40_000 * balance_factor),
+                        (10, 1000 * balance_factor),
+                        (20, 1000 * balance_factor),
                     ]
                 } else {
                     vec![
-                        (1, 10 * balance_factor),
-                        (2, 20 * balance_factor),
-                        (3, 30 * balance_factor),
-                        (4, 40 * balance_factor),
+                        (1, 10_000 * balance_factor),
+                        (2, 20_000 * balance_factor),
+                        (3, 30_000 * balance_factor),
+                        (4, 40_000 * balance_factor),
                     ]
                 }
             } else {
@@ -152,36 +153,23 @@ pub fn new_test_ext(
         .build_storage()
         .unwrap(),
     );
-    let initial_authorities = vec![10, 20];
+    let initial_authorities = vec![10];
     t.extend(
         GenesisConfig::<Test> {
             sessions_per_era,
             current_era,
-            intentions: vec![10, 20],
+            intentions: vec![10],
             intention_profiles: initial_authorities
                 .clone()
                 .into_iter()
-                .map(|i| {
-                    (
-                        i,
-                        initial_authorities
-                            .clone()
-                            .iter()
-                            .position(|&r| r == i)
-                            .unwrap()
-                            .to_string()
-                            .into_bytes()
-                            .to_vec(),
-                        b"url".to_vec(),
-                    )
-                })
+                .map(|i| (i, b"ChainX".to_vec(), b"url".to_vec()))
                 .collect(),
-            validator_count: 2,
+            validator_count: 7,
             shares_per_cert: 45,
-            activation_per_share: 100000,
+            activation_per_share: 100_000_000,
             maximum_cert_owner_count: 200,
             intention_threshold: 9000,
-            minimum_validator_count: 0,
+            minimum_validator_count: 1,
             bonding_duration: sessions_per_era * session_length,
             offline_slash: if monied {
                 Perbill::from_percent(40)
@@ -191,15 +179,15 @@ pub fn new_test_ext(
             current_session_reward: reward,
             current_offline_slash: 20,
             offline_slash_grace: 0,
-            cert_owner: 0,
-            register_fee: 1,
-            claim_fee: 1,
-            stake_fee: 1,
-            unstake_fee: 1,
-            activate_fee: 1,
-            deactivate_fee: 1,
-            nominate_fee: 1,
-            unnominate_fee: 1,
+            cert_owner: 10,
+            register_fee: 0,
+            claim_fee: 0,
+            stake_fee: 0,
+            unstake_fee: 0,
+            activate_fee: 0,
+            deactivate_fee: 0,
+            nominate_fee: 0,
+            unnominate_fee: 0,
         }
         .build_storage()
         .unwrap(),
@@ -216,4 +204,5 @@ pub type System = system::Module<Test>;
 pub type Balances = balances::Module<Test>;
 pub type Session = session::Module<Test>;
 pub type Timestamp = timestamp::Module<Test>;
+pub type Associations = cxrml_associations::Module<Test>;
 pub type Staking = Module<Test>;
