@@ -1,3 +1,5 @@
+// Copyright 2018 Chainpool.
+
 use substrate_primitives::{Blake2Hasher, H256};
 
 use runtime_io;

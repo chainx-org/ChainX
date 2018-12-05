@@ -1,4 +1,6 @@
-//! this module is for bch-bridge
+// Copyright 2018 Chainpool.
+
+//! this module is for funds-withdrawal
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // for encode/decode
@@ -22,7 +24,7 @@ extern crate substrate_primitives;
 // for substrate runtime
 // map!, vec! marco.
 extern crate sr_std as rstd;
-// Needed for tests (`with_externalities`).
+
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 // for substrate runtime module lib
@@ -107,6 +109,7 @@ impl<T: Trait> Module<T> {
         addr: Vec<u8>,
         ext: Vec<u8>,
     ) -> Result {
+        runtime_io::print("[funds withdrawal] withdraw");
         let who = ensure_signed(origin)?;
 
         cxsupport::Module::<T>::handle_fee_before(&who, Self::withdrawal_fee(), true, || Ok(()))?;
@@ -114,7 +117,6 @@ impl<T: Trait> Module<T> {
         let _d = Self::verify_addr(&sym, &addr, &ext)?;
 
         financialrecords::Module::<T>::withdrawal(&who, &sym, value, addr, ext)?;
-        runtime_io::print("-----------withdraw ok");
         Ok(())
     }
 

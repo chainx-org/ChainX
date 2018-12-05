@@ -1,3 +1,5 @@
+// Copyright 2018 Chainpool.
+
 use rstd::prelude::Vec;
 
 pub fn vec_to_u32(date: Vec<u8>) -> Option<u32> {
