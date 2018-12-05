@@ -1,3 +1,5 @@
+// Copyright 2018 Chainpool.
+
 use codec::Codec;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};

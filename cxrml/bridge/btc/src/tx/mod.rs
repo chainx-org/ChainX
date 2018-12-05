@@ -376,7 +376,7 @@ pub fn handle_input<T: Trait>(
                 <TxProposal<T>>::insert(len - 1, candidate);
             }
         } else {
-            // To do: handle_input error not expect
+            // Todo: handle_input error not expect
             runtime_io::print("-----------handle_input error not expect");
         }
     }

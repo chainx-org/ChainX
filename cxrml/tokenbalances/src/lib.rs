@@ -870,6 +870,7 @@ impl<T: Trait> Module<T> {
         sym: Symbol,
         value: T::TokenBalance,
     ) -> Result {
+        runtime_io::print("[tokenbalances] transfer");
         let transactor = ensure_signed(origin)?;
         let dest = balances::Module::<T>::lookup(dest)?;
         // sub fee first
@@ -888,9 +889,12 @@ impl<T: Trait> Module<T> {
 
         // chainx transfer
         if sym.as_slice() == T::CHAINX_SYMBOL {
+            runtime_io::print("transfer pcx");
             let value: T::Balance = As::sa(value.as_() as u64); // change to balance for balances module
             Self::transfer_chainx(&transactor, &dest, value)
         } else {
+            runtime_io::print("transfer token ---sym");
+            runtime_io::print(sym.as_slice());
             Self::transfer_token(&transactor, &dest, &sym, value)
         }
     }

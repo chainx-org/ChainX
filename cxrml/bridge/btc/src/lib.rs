@@ -1,3 +1,5 @@
+// Copyright 2018 Chainpool.
+
 //! this module is for btc-bridge
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -26,7 +28,7 @@ extern crate substrate_primitives;
 // for substrate runtime
 // map!, vec! marco.
 extern crate sr_std as rstd;
-// Needed for tests (`with_externalities`).
+
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 // for substrate runtime module lib
@@ -332,6 +334,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     // public call
     pub fn push_header(origin: T::Origin, header: Vec<u8>) -> Result {
+        runtime_io::print("[bridge_btc] push btc header");
         let from = ensure_signed(origin)?;
         // parse header
         let header: BlockHeader =
@@ -341,6 +344,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn push_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
+        runtime_io::print("[bridge_btc] push btc tx");
         let from = ensure_signed(origin)?;
         let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("parse RelayTx err")?;
         Self::process_tx(tx, &from)?;
@@ -348,6 +352,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn propose_transaction(origin: T::Origin, tx: Vec<u8>) -> Result {
+        runtime_io::print("[bridge_btc] propose btc tx");
         let from = ensure_signed(origin)?;
 
         let tx: BTCTransaction =
@@ -375,6 +380,7 @@ impl<T: Trait> Module<T> {
         }
         // check
         {
+            runtime_io::print("check header");
             let c = verify_header::HeaderVerifier::new::<T>(&header).map_err(|e| e.info())?;
             c.check::<T>()?;
         }
@@ -404,7 +410,7 @@ impl<T: Trait> Module<T> {
         } else {
             return Err("should set CERT_address first");
         };
-        let tx_type = validate_transaction::<T>(&tx, (&receive_address, &cert_address)).unwrap();
+        let tx_type = validate_transaction::<T>(&tx, (&receive_address, &cert_address))?;
         match tx_type {
             TxType::Withdraw => {
                 handle_input::<T>(&tx.raw, &tx.block_hash, &who, &receive_address);

@@ -1,4 +1,4 @@
-//#![cfg_attr(not(feature = "std"), no_std)]
+// Copyright 2018 Chainpool.
 
 use rstd::cmp;
 use rstd::result::Result as StdResult;

@@ -1,3 +1,5 @@
+// Copyright 2018 Chainpool.
+
 //! this module is for tokenstaking, virtual mining for holding tokens
 
 #![cfg_attr(not(feature = "std"), no_std)]

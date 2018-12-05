@@ -27,8 +27,7 @@ extern crate substrate_primitives;
 // map!, vec! marco.
 //#[cfg_attr(feature = "std", macro_use)]
 extern crate sr_std as rstd;
-// Needed for tests (`with_externalities`).
-#[cfg(test)]
+
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 
@@ -411,6 +410,8 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         channel_name: Channel,
     ) -> Result {
+        runtime_io::print("[exchange pendingorders] put_order");
+
         if channel_name.len() > 32 {
             return Err("channel name too long");
         }
@@ -435,6 +436,7 @@ impl<T: Trait> Module<T> {
         );
     }
     pub fn cancel_order(origin: T::Origin, pair: OrderPair, index: u64) -> Result {
+        runtime_io::print("[exchange pendingorders] cancel_order");
         let transactor = ensure_signed(origin)?;
 
         if let Some(mut order) = Self::order_of((transactor.clone(), pair.clone(), index)) {

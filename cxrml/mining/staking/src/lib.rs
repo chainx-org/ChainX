@@ -30,7 +30,6 @@ extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 
-#[cfg(test)]
 extern crate sr_io as runtime_io;
 #[cfg(test)]
 extern crate substrate_primitives;
@@ -500,6 +499,7 @@ impl<T: Trait> Module<T> {
         url: Vec<u8>,
         share_count: u32,
     ) -> Result {
+        runtime_io::print("[mining staking] register");
         let who = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(&who, Self::register_fee(), true, || Ok(()))?;
 
@@ -578,6 +578,7 @@ impl<T: Trait> Module<T> {
 
     /// Show the desire to stake for the transactor.
     fn activate(origin: T::Origin) -> Result {
+        runtime_io::print("[mining staking] activate");
         let who = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(&who, Self::activate_fee(), true, || Ok(()))?;
 
@@ -602,6 +603,7 @@ impl<T: Trait> Module<T> {
     ///
     /// Effects will be felt at the beginning of the next era.
     fn deactivate(origin: T::Origin) -> Result {
+        runtime_io::print("[mining staking] deactivate");
         let who = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(&who, Self::deactivate_fee(), true, || Ok(()))?;
 
@@ -629,6 +631,7 @@ impl<T: Trait> Module<T> {
 
     /// Increase the stake
     fn stake(origin: T::Origin, value: T::Balance) -> Result {
+        runtime_io::print("[mining staking] stake");
         let who = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(&who, Self::stake_fee(), true, || Ok(()))?;
 
@@ -651,6 +654,7 @@ impl<T: Trait> Module<T> {
 
     /// Decrease the stake
     fn unstake(origin: T::Origin, value: T::Balance) -> Result {
+        runtime_io::print("[mining staking] unstake");
         let who = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(&who, Self::unstake_fee(), true, || Ok(()))?;
 
@@ -686,6 +690,7 @@ impl<T: Trait> Module<T> {
         target: Address<T::AccountId, T::AccountIndex>,
         value: T::Balance,
     ) -> Result {
+        runtime_io::print("[mining staking] nominate");
         let who = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(&who, Self::nominate_fee(), true, || Ok(()))?;
 
@@ -739,6 +744,7 @@ impl<T: Trait> Module<T> {
 
     /// Claim dividend from intention's jackpot
     fn claim(origin: T::Origin, target: Address<T::AccountId, T::AccountIndex>) -> Result {
+        runtime_io::print("[mining staking] claim");
         let source = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(&source, Self::claim_fee(), true, || Ok(()))?;
 
@@ -769,6 +775,7 @@ impl<T: Trait> Module<T> {
         target: Address<T::AccountId, T::AccountIndex>,
         value: T::Balance,
     ) -> Result {
+        runtime_io::print("[mining staking] unnominate");
         let source = ensure_signed(origin)?;
         cxsupport::Module::<T>::handle_fee_before(
             &source,
@@ -844,6 +851,7 @@ impl<T: Trait> Module<T> {
         intentions_index: u32,
         prefs: ValidatorPrefs<T::Balance>,
     ) -> Result {
+        runtime_io::print("[mining staking] register_preferences");
         let who = ensure_signed(origin)?;
 
         if Self::intentions().get(intentions_index as usize) != Some(&who) {
