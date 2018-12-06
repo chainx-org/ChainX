@@ -243,9 +243,9 @@ fn main() {
     let (_rpc_http, _rpc_ws) = rpc::start(&client, &task_executor, &matches, &extrinsic_pool);
 
     if matches.is_present("telemetry") {
-        let telemetry_url = match matches.value_of("telemetry_url") {
+        let telemetry_url = match matches.value_of("telemetry-url") {
             Some(url) => Some(url.to_owned()),
-            None => Some("ws://stats.chainx.org/submit/".to_owned()),
+            None => Some("wss://telemetry.polkadot.io/submit/".to_owned()),
         };
         let name = match matches.value_of("name") {
             None => Generator::with_naming(Name::Numbered).next().unwrap(),
