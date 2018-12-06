@@ -13,6 +13,7 @@
         * [Requirement](#requirement)
         * [Build the code](#build-the-code)
 * [Testnet](#testnet)
+    * [Validating on PoC 3](#validating-on-poc-3)
 * [Development](#development)
     * [Run a local testnet](#run-a-local-testnet)
 * [License](#license)
@@ -107,6 +108,22 @@ Connect to the public testnet of ChainX:
 # customize your name on the telemetry page via `--name` 
 $ RUST_LOG=info ./chainx --chainspec=dev --telemetry --name=YOUR_NAME --bootnodes=/ip4/47.93.16.189/tcp/20222/p2p/QmRdBJk8eVPjkHcxZvRAUZdWtTq96mWivJFc7tpJ8fUEGU --db-path=/tmp/chainx
 ```
+
+### Validating on PoC 3
+
+If you have succeeded to connect to our testnet, being a validator is not hard:
+
+1. follow the instruction above to start a node util it is synced.
+
+2. Create an account using [our web-based wallet](http://wallet.chainx.org). Save your seed and take note of your account's address.
+
+3. File an application to be a validator in our telegram [chainx_org](https://t.me/chainx_org), which should include your name, url and ChainX address of validator account.
+
+4. Rerestart your node with `--key=<seed> validator`:
+
+    ```bash
+    RUST_LOG=info ./chainx --chainspec=dev --telemetry --name=YOUR_NAME --bootnodes=/ip4/47.93.16.189/tcp/20222/p2p/QmRdBJk8eVPjkHcxZvRAUZdWtTq96mWivJFc7tpJ8fUEGU --db-path=/tmp/chainx --key=<seed> validator
+    ```
 
 ## Development
 
