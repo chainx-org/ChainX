@@ -104,7 +104,7 @@ When you succeed to build the project with `cargo build --release`, the `chainx`
 Connect to the public testnet of ChainX:
 
 ```bash
-# display status of your node on http://stats.chainx.org/ via `--telemetry`
+# display status of your node on https://telemetry.polkadot.io/ via `--telemetry`
 # customize your name on the telemetry page via `--name` 
 $ RUST_LOG=info ./chainx --chainspec=dev --telemetry --name=YOUR_NAME --bootnodes=/ip4/47.93.16.189/tcp/20222/p2p/QmRdBJk8eVPjkHcxZvRAUZdWtTq96mWivJFc7tpJ8fUEGU --db-path=/tmp/chainx
 ```
