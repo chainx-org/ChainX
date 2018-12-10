@@ -20,6 +20,10 @@
 
 <!-- /TOC -->
 
+❗️ To avoid distractions and move quickly, we make the hard choice of developing ChainX in a private codebase. Once it's been fully tested and audited with great care, we'll put it public again. Stay tuned!
+
+----
+
 ## Introduction
 
 For the time being the goal of [ChainX](https://github.com/chainx-org/ChainX) is to build a cross-chain digital asset management platform on the strength of [substrate](https://github.com/paritytech/substrate) which is next-generation framework for blockchain created by [paritytech](https://github.com/paritytech). The long-term vision of ChainX is to evolve as a general blockchain infrastrcutre platform.
