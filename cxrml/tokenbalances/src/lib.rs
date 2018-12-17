@@ -4,12 +4,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// for encode/decode
-//#[cfg(feature = "std")]
-//extern crate serde;
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
 #[macro_use]
 extern crate parity_codec_derive;
 extern crate parity_codec as codec;
@@ -43,9 +37,16 @@ mod tests;
 use codec::Codec;
 use primitives::traits::{As, CheckedAdd, CheckedSub, Member, OnFinalise, SimpleArithmetic, Zero};
 use rstd::prelude::*;
+use rstd::slice::Iter;
 pub use rstd::result::Result as StdResult;
 use rstd::slice::Iter;
 use runtime_support::dispatch::Result;
+<<<<<<< HEAD
+use primitives::traits::{SimpleArithmetic, As, Member, CheckedAdd, CheckedSub, MaybeSerializeDebug};
+
+// substrate mod
+use system::ensure_signed;
+=======
 use runtime_support::{Parameter, StorageMap, StorageValue};
 
 // substrate mod
@@ -53,6 +54,7 @@ use balances::address::Address;
 use balances::EnsureAccountLiquid;
 use system::ensure_signed;
 // use balances::EnsureAccountLiquid;
+>>>>>>> develop
 
 pub type SymbolString = &'static [u8];
 
@@ -62,6 +64,9 @@ pub trait Trait: balances::Trait + cxsupport::Trait {
     const CHAINX_SYMBOL: SymbolString;
     const CHAINX_TOKEN_DESC: DescString;
     /// The token balance.
+<<<<<<< HEAD
+    type TokenBalance: Parameter + Member + Codec + SimpleArithmetic + MaybeSerializeDebug + As<u8> + As<u16> + As<u32> + As<u64> + As<u128> + Copy + Default;
+=======
     type TokenBalance: Parameter
         + Member
         + Codec
@@ -73,6 +78,7 @@ pub trait Trait: balances::Trait + cxsupport::Trait {
         + As<u128>
         + Copy
         + Default;
+>>>>>>> develop
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -185,7 +191,11 @@ impl Token {
 
 ///
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
+<<<<<<< HEAD
+#[cfg_attr(feature = "std", derive(Serialize, Debug))]
+=======
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+>>>>>>> develop
 pub enum ReservedType {
     Others,
     Funds,
@@ -194,11 +204,15 @@ pub enum ReservedType {
 
 impl ReservedType {
     pub fn iterator() -> Iter<'static, ReservedType> {
+<<<<<<< HEAD
+        static TYPES: [ReservedType; 3] = [ReservedType::Others, ReservedType::Funds, ReservedType::Exchange];
+=======
         static TYPES: [ReservedType; 3] = [
             ReservedType::Others,
             ReservedType::Funds,
             ReservedType::Exchange,
         ];
+>>>>>>> develop
         TYPES.into_iter()
     }
 }
@@ -211,6 +225,9 @@ impl Default for ReservedType {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+<<<<<<< HEAD
+        fn deposit_event() = default;
+=======
         /// register_token to module, should allow by root
         fn register_token(token: Token, free: T::TokenBalance, reversed: T::TokenBalance) -> Result;
         /// transfer between account
@@ -221,6 +238,7 @@ decl_module! {
         fn set_reserved_token(who: Address<T::AccountId, T::AccountIndex>, sym: Symbol, reserved: T::TokenBalance, res_type: ReservedType) -> Result;
         // set transfer token fee
         fn set_transfer_token_fee(val: T::Balance) -> Result;
+>>>>>>> develop
     }
 }
 
@@ -273,7 +291,11 @@ decl_storage! {
         /// total locked token of a symbol
         pub TotalReservedToken get(total_reserved_token): map Symbol => T::TokenBalance;
 
+<<<<<<< HEAD
+        pub ReservedToken get(reserved_token): map (T::AccountId, Symbol, ReservedType) => T::TokenBalance;
+=======
         pub ReservedToken: map (T::AccountId, Symbol, ReservedType) => T::TokenBalance;
+>>>>>>> develop
 
         /// token list of a account
         pub TokenListOf get(token_list_of): map T::AccountId => Vec<Symbol> = [T::CHAINX_SYMBOL.to_vec()].to_vec();
@@ -284,17 +306,29 @@ decl_storage! {
     add_extra_genesis {
         config(token_list): Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>;
         build(
+<<<<<<< HEAD
+            |storage: &mut primitives::StorageMap,  _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+=======
             |storage: &mut primitives::StorageMap, config: &GenesisConfig<T>| {
+>>>>>>> develop
                 use runtime_io::with_externalities;
                 use substrate_primitives::Blake2Hasher;
 
                 // for token_list
+<<<<<<< HEAD
+                let src_r = storage.clone().build_storage().unwrap().0;
+=======
                 let src_r = storage.clone().build_storage().unwrap();
+>>>>>>> develop
                 let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
                 with_externalities(&mut tmp_storage, || {
                     // register chainx
                     let chainx: Symbol = T::CHAINX_SYMBOL.to_vec();
+<<<<<<< HEAD
+                    let t: Token = Token::new(chainx.clone(), T::CHAINX_TOKEN_DESC.to_vec(), T::CHAINX_PRECISION);
+=======
                     let t: Token = Token::new(chainx.clone(), T::CHAINX_TOKEN_DESC.to_vec(), config.chainx_precision);
+>>>>>>> develop
                     let zero: T::TokenBalance = Default::default();
                     if let Err(e) = Module::<T>::register_token(t, zero, zero) {
                         panic!(e);
@@ -319,6 +353,8 @@ decl_storage! {
                 let map: primitives::StorageMap = tmp_storage.into();
                 storage.extend(map);
         });
+<<<<<<< HEAD
+=======
     }
 }
 
@@ -333,6 +369,7 @@ impl<T: Trait> Module<T> {
     /// Deposit one of this module's events.
     fn deposit_event(event: Event<T>) {
         <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
+>>>>>>> develop
     }
 }
 
@@ -358,7 +395,11 @@ impl<T: Trait> Module<T> {
     pub fn total_token_of(who: &T::AccountId, symbol: &Symbol) -> T::TokenBalance {
         let mut v = Self::free_token(&(who.clone(), symbol.clone()));
         for t in ReservedType::iterator() {
+<<<<<<< HEAD
+            v += Self::reserved_token((who.clone(), symbol.clone(), *t))
+=======
             v += Self::reserved_token(&(who.clone(), symbol.clone(), *t))
+>>>>>>> develop
         }
         v
     }
@@ -523,12 +564,16 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+<<<<<<< HEAD
+    pub fn destroy(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
+=======
     pub fn destroy(
         who: &T::AccountId,
         symbol: &Symbol,
         value: T::TokenBalance,
         t: ReservedType,
     ) -> Result {
+>>>>>>> develop
         if symbol.as_slice() == T::CHAINX_SYMBOL {
             return Err("can't destroy chainx token");
         }
@@ -557,12 +602,16 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+<<<<<<< HEAD
+    pub fn reserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
+=======
     pub fn reserve(
         who: &T::AccountId,
         symbol: &Symbol,
         value: T::TokenBalance,
         t: ReservedType,
     ) -> Result {
+>>>>>>> develop
         Self::is_valid_token_for(who, symbol)?;
         // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
@@ -634,12 +683,16 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+<<<<<<< HEAD
+    pub fn unreserve(who: &T::AccountId, symbol: &Symbol, value: T::TokenBalance, t: ReservedType) -> Result {
+=======
     pub fn unreserve(
         who: &T::AccountId,
         symbol: &Symbol,
         value: T::TokenBalance,
         t: ReservedType,
     ) -> Result {
+>>>>>>> develop
         Self::is_valid_token_for(who, symbol)?;
         // <T as balances::Trait>::EnsureAccountLiquid::ensure_account_liquid(who)?;
         //TODO validator
@@ -777,7 +830,7 @@ impl<T: Trait> Module<T> {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", derive(Serialize, Debug))]
 pub enum TokenErr {
     NotEnough,
     OverFlow,

@@ -52,6 +52,13 @@ fn test_genesis_token_issue() {
     with_externalities(&mut new_test_ext(), || {
         let btc_symbol = b"x-btc".to_vec();
         let eth_symbol = b"x-eth".to_vec();
+<<<<<<< HEAD
+        assert_eq!(TokenBalances::free_token(&(3, Test::CHAINX_SYMBOL.to_vec())), 1000);
+        assert_eq!(TokenBalances::free_token(&(3, btc_symbol.clone())), 100);
+        assert_eq!(TokenBalances::free_token(&(3, eth_symbol.clone())), 100);
+
+        assert_eq!(TokenBalances::token_list_of(&3), [Test::CHAINX_SYMBOL.to_vec(), btc_symbol, eth_symbol]);
+=======
         assert_eq!(
             TokenBalances::free_token(&(3, Test::CHAINX_SYMBOL.to_vec())),
             1000
@@ -63,6 +70,7 @@ fn test_genesis_token_issue() {
             TokenBalances::token_list_of(&3),
             [Test::CHAINX_SYMBOL.to_vec(), btc_symbol, eth_symbol]
         );
+>>>>>>> develop
     })
 }
 
@@ -264,6 +272,16 @@ fn test_error_issue_and_destroy1() {
         assert_eq!(TokenBalances::total_token(&btc_symbol.clone()), 150);
         // destroy first
         // destroy
+<<<<<<< HEAD
+        assert_err!(TokenBalances::destroy(&a, &btc_symbol.clone(), 25, Default::default()), "reserved token too low to destroy");
+        // reserve
+        assert_eq!(TokenBalances::total_free_token(&btc_symbol.clone()), 150);
+        assert_err!(TokenBalances::reserve(&a, &btc_symbol.clone(), 100, Default::default()), "free token too low to reserve");
+        // lock first
+        assert_ok!(TokenBalances::reserve(&a, &btc_symbol.clone(), 25, Default::default()));
+        // destroy
+        assert_ok!(TokenBalances::destroy(&a, &btc_symbol.clone(), 25, Default::default()));
+=======
         assert_err!(
             TokenBalances::destroy(&a, &btc_symbol.clone(), 25, Default::default()),
             "reserved token too low to destroy"
@@ -288,6 +306,7 @@ fn test_error_issue_and_destroy1() {
             25,
             Default::default()
         ));
+>>>>>>> develop
     })
 }
 
@@ -302,6 +321,10 @@ fn test_error_issue_and_destroy2() {
         assert_eq!(TokenBalances::total_token(&btc_symbol.clone()), 150);
         // overflow
         let i: i32 = -1;
+<<<<<<< HEAD
+        assert_err!(TokenBalances::reserve(&a, &btc_symbol.clone(), i as TokenBalance, Default::default()), "free token too low to reserve");
+        assert_err!(TokenBalances::issue(&a, &btc_symbol.clone(), i as TokenBalance), "free token too high to issue");
+=======
         assert_err!(
             TokenBalances::reserve(
                 &a,
@@ -315,6 +338,7 @@ fn test_error_issue_and_destroy2() {
             TokenBalances::issue(&a, &btc_symbol.clone(), i as TokenBalance),
             "free token too high to issue"
         );
+>>>>>>> develop
     })
 }
 
@@ -324,6 +348,17 @@ fn test_error_issue_and_destroy3() {
         let a: u64 = 1; // accountid
         let btc_symbol = b"x-btc".to_vec();
         // lock or destroy without init
+<<<<<<< HEAD
+        assert_err!(TokenBalances::destroy(&a, &btc_symbol.clone(), 25, Default::default()), "not a existed token in this account token list");
+        assert_err!(TokenBalances::reserve(&a, &btc_symbol.clone(), 25, Default::default()), "not a existed token in this account token list");
+        TokenBalances::issue(&a, &btc_symbol.clone(), 0).unwrap();
+        assert_err!(TokenBalances::destroy(&a, &btc_symbol.clone(), 25, Default::default()), "reserved token too low to destroy");
+        assert_err!(TokenBalances::reserve(&a, &btc_symbol.clone(), 25, Default::default()), "free token too low to reserve");
+
+        TokenBalances::issue(&a, &btc_symbol.clone(), 100).unwrap();
+        assert_ok!(TokenBalances::reserve(&a, &btc_symbol.clone(), 25, Default::default()));
+        assert_ok!(TokenBalances::destroy(&a, &btc_symbol.clone(), 25, Default::default()));
+=======
         assert_err!(
             TokenBalances::destroy(&a, &btc_symbol.clone(), 25, Default::default()),
             "not a existed token in this account token list"
@@ -355,6 +390,7 @@ fn test_error_issue_and_destroy3() {
             25,
             Default::default()
         ));
+>>>>>>> develop
     })
 }
 
@@ -577,6 +613,17 @@ fn test_chainx() {
         assert_ok!(TokenBalances::reserve(&a, &sym, 100, Default::default()));
         assert_eq!(Balances::free_balance(&a), 900);
         assert_eq!(Balances::reserved_balance(&a), 100);
+<<<<<<< HEAD
+        assert_eq!(TokenBalances::reserved_token(&(a, sym.clone(), Default::default())), 100);
+
+        assert_ok!(TokenBalances::unreserve(&a, &sym, 50, Default::default()));
+        assert_eq!(Balances::free_balance(&a), 950);
+        assert_eq!(TokenBalances::reserved_token(&(a, sym.clone(), Default::default())), 50);
+        assert_eq!(Balances::reserved_balance(&a), 50);
+        assert_err!(TokenBalances::destroy(&a, &sym, 50, Default::default()), "can't destroy chainx token");
+
+        assert_err!(TokenBalances::transfer_token(Some(b).into(), a.into(), sym.clone(), 1), "not allow to transfer chainx use transfer_token");
+=======
         assert_eq!(
             TokenBalances::reserved_token(&(a, sym.clone(), Default::default())),
             100
@@ -593,6 +640,7 @@ fn test_chainx() {
             TokenBalances::destroy(&a, &sym, 50, Default::default()),
             "can't destroy chainx token"
         );
+>>>>>>> develop
     })
 }
 
@@ -602,6 +650,10 @@ fn test_chainx_err() {
         let a: u64 = 1; // accountid
         let sym = Test::CHAINX_SYMBOL.to_vec();
 
+<<<<<<< HEAD
+        assert_err!(TokenBalances::reserve(&a, &sym, 2000, Default::default()), "chainx free token too low to reserve");
+        assert_err!(TokenBalances::unreserve(&a, &sym, 10, Default::default()), "chainx reserved token too low to unreserve");
+=======
         assert_err!(
             TokenBalances::reserve(&a, &sym, 2000, Default::default()),
             "chainx free token too low to reserve"
@@ -610,6 +662,7 @@ fn test_chainx_err() {
             TokenBalances::unreserve(&a, &sym, 10, Default::default()),
             "chainx reserved token too low to unreserve"
         );
+>>>>>>> develop
 
         let i: i32 = -1;
         let larger_balance: TokenBalance = (i as u64) as u128 + 2;
@@ -617,21 +670,29 @@ fn test_chainx_err() {
         assert_eq!(larger_balance, 18446744073709551617);
         assert_eq!(larger_balance as u64, 1);
 
+<<<<<<< HEAD
+        assert_ok!(TokenBalances::reserve(&a, &sym, larger_balance, Default::default()));
+=======
         assert_ok!(TokenBalances::reserve(
             &a,
             &sym,
             larger_balance,
             Default::default()
         ));
+>>>>>>> develop
         assert_eq!(Balances::free_balance(&a), 999);
 
         let i: i32 = -1;
         let max_balance: TokenBalance = i as u128;
         assert_eq!(max_balance as u64, 18446744073709551615);
+<<<<<<< HEAD
+        assert_err!(TokenBalances::reserve(&a, &sym, max_balance, Default::default()), "chainx free token too low to reserve");
+=======
         assert_err!(
             TokenBalances::reserve(&a, &sym, max_balance, Default::default()),
             "chainx free token too low to reserve"
         );
+>>>>>>> develop
     })
 }
 

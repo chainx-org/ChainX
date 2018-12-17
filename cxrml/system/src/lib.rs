@@ -7,9 +7,6 @@
 // Needed for deriving `Serialize` and `Deserialize` for various types.
 // We only implement the serde traits for std builds - they're unneeded
 // in the wasm runtime.
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
 //#[macro_use]
@@ -38,7 +35,6 @@ extern crate srml_system as system;
 mod tests;
 
 use rstd::prelude::*;
-use runtime_primitives::traits::OnFinalise;
 use runtime_support::dispatch::Result;
 use runtime_support::StorageValue;
 
@@ -48,13 +44,6 @@ pub trait Trait: system::Trait {}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn set_block_producer(origin, producer: T::AccountId) -> Result;
-    }
-}
-
-impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
-    fn on_finalise(_: T::BlockNumber) {
-        BlockProdocer::<T>::kill();
     }
 }
 
@@ -67,9 +56,13 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn set_block_producer(origin: T::Origin, producer: T::AccountId) -> Result {
+    fn set_block_producer(origin: T::Origin, producer: T::AccountId) -> Result {
         ensure_inherent(origin)?;
         BlockProdocer::<T>::put(producer);
         Ok(())
+    }
+
+    fn on_finalise(_: T::BlockNumber) {
+        BlockProdocer::<T>::kill();
     }
 }

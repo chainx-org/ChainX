@@ -16,7 +16,13 @@ use blockchain::ChainErr;
 use runtime_primitives::traits::As;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
+<<<<<<< HEAD
+use runtime_primitives::traits::As;
+use super::{Trait, NumberForHash, HashsForNumber, BlockHeaderFor, ParamsInfo, NetworkId, Params, GenesisInfo};
+use blockchain::ChainErr;
+=======
 use timestamp;
+>>>>>>> develop
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,

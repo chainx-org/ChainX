@@ -24,8 +24,9 @@ extern crate parity_codec_derive;
 use primitives::bytes;
 
 use rstd::prelude::*;
+use runtime_primitives::traits::{BlakeTwo256, self};
 use runtime_primitives::generic;
-use runtime_primitives::traits::BlakeTwo256;
+pub use runtime_primitives::BasicInherentData as InherentData;
 
 /// Signature on candidate's block data by a collator.
 pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
@@ -85,53 +86,10 @@ pub type Timestamp = u64;
 pub type Balance = u128;
 
 /// "generic" block ID for the future-proof block type.
-// TODO: parameterize blockid only as necessary.
 pub type BlockId = generic::BlockId<Block>;
 
-/// Inherent data to include in a block.
-#[derive(Encode, Decode)]
-pub struct InherentData {
-    /// Current timestamp.
-    pub timestamp: Timestamp,
-    /// Indices of offline validators.
-    pub offline_indices: Vec<u32>,
-    /// block producer
-    pub block_producer: AccountId,
-}
-
-/// Candidate receipt type.
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[cfg_attr(feature = "std", serde(deny_unknown_fields))]
-pub struct CandidateReceipt {
-    /// chainx account id.
-    pub collator: AccountId,
-    /// Signature on blake2-256 of the block data by collator.
-    pub signature: CandidateSignature,
-    /// blake2-256 Hash of block data.
-    pub block_data_hash: Hash,
-}
-
-impl CandidateReceipt {
-    /// Get the blake2_256 hash
-    #[cfg(feature = "std")]
-    pub fn hash(&self) -> Hash {
-        use runtime_primitives::traits::{BlakeTwo256, Hash};
-        BlakeTwo256::hash_of(self)
-    }
-
-    /// Check integrity vs. provided block data.
-    pub fn check_signature(&self) -> Result<(), ()> {
-        use runtime_primitives::traits::Verify;
-
-        if self
-            .signature
-            .verify(&self.block_data_hash.0[..], &self.collator)
-        {
-            Ok(())
-        } else {
-            Err(())
-        }
+impl traits::Extrinsic for UncheckedExtrinsic {
+    fn is_signed(&self) -> Option<bool> {
+        None
     }
 }

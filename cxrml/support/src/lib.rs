@@ -5,42 +5,32 @@
 extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive;
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as primitives;
 extern crate sr_std as rstd;
 extern crate srml_balances as balances;
-#[cfg(test)]
-extern crate substrate_primitives;
 #[macro_use]
 extern crate srml_support as runtime_support;
 extern crate srml_system as system;
 
-extern crate cxrml_associations as associations;
-extern crate cxrml_system as cxsystem;
-
 // use balances::EnsureAccountLiquid;
-use primitives::traits::{As, CheckedAdd, CheckedSub, OnFinalise, Zero};
-use rstd::prelude::*;
+use primitives::traits::CheckedSub;
 use runtime_support::dispatch::Result;
 pub use storage::double_map::StorageDoubleMap;
 
 pub mod storage;
-#[cfg(test)]
-mod tests;
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
     }
 }
 
+/*
 impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
     fn on_finalise(_: T::BlockNumber) {
         // do nothing
     }
-}
+}*/
 
 impl<T: Trait> associations::OnCalcFee<T::AccountId, T::Balance> for Module<T> {
     fn on_calc_fee(who: &T::AccountId, total_fee: T::Balance) -> Result {

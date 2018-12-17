@@ -3,13 +3,6 @@
 //! this module is for btc-bridge
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// for encode/decode
-// Needed for deriving `Serialize` and `Deserialize` for various types.
-// We only implement the serde traits for std builds - they're unneeded
-// in the wasm runtime.
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
 #[macro_use]
@@ -38,6 +31,11 @@ extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
+#[cfg(test)]
+extern crate cxrml_support as cxsupport;
+#[cfg(test)]
+extern crate cxrml_tokenbalances as tokenbalances;
+extern crate cxrml_financialrecords as finacial_recordes;
 
 #[cfg(test)]
 extern crate cxrml_associations as associations;
@@ -72,11 +70,18 @@ use codec::Decode;
 use primitives::compact::Compact;
 use primitives::hash::H256;
 use rstd::prelude::*;
+<<<<<<< HEAD
+//use rstd::result::Result as StdResult;
+use runtime_support::dispatch::{Result, Parameter};
+use runtime_support::{StorageValue, StorageMap};
+
+=======
 use rstd::result::Result as StdResult;
 use runtime_primitives::traits::OnFinalise;
 use runtime_support::dispatch::{Parameter, Result};
 use runtime_support::{StorageMap, StorageValue};
 use ser::deserialize;
+>>>>>>> develop
 use system::ensure_signed;
 
 use cxsupport::storage::linked_node::{LinkedNodeCollection, Node, NodeIndex, NodeT};
@@ -88,9 +93,15 @@ pub use keys::{Address, Error as AddressError};
 pub use tx::RelayTx;
 use tx::{handle_cert, handle_input, handle_output, handle_proposal, validate_transaction, UTXO};
 
+<<<<<<< HEAD
+pub trait Trait
+    : system::Trait + balances::Trait + timestamp::Trait + finacial_recordes::Trait
+    {
+=======
 pub trait Trait:
     system::Trait + balances::Trait + timestamp::Trait + financial_records::Trait + staking::Trait
 {
+>>>>>>> develop
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
@@ -105,6 +116,9 @@ decl_event!(
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+<<<<<<< HEAD
+        fn deposit_event() = default;
+=======
         fn push_header(origin, header: Vec<u8>) -> Result;
         fn push_transaction(origin, tx: Vec<u8>) -> Result;
         fn propose_transaction(origin, tx: Vec<u8>) -> Result;
@@ -122,6 +136,7 @@ impl<T: Trait> tokenbalances::TokenT for Module<T> {
 impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
     fn on_finalise(_: T::BlockNumber) {
         // do nothing
+>>>>>>> develop
     }
 }
 
@@ -193,11 +208,16 @@ impl Default for TxType {
 #[derive(PartialEq, Clone, Encode, Decode)]
 pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
     pub tx: BTCTransaction,
+<<<<<<< HEAD
+    pub perfection: bool,
+    pub block_hash: H256,
+=======
     pub unexpect: bool,
     pub confirmed: bool,
     pub block_hash: H256,
     pub outs: Vec<(AccountId, u32)>,
     pub proposers: Vec<AccountId>,
+>>>>>>> develop
 }
 
 impl<AccountId: Parameter + Ord + Default> CandidateTx<AccountId> {
@@ -268,6 +288,17 @@ decl_storage! {
         pub UTXOMaxIndex get(utxo_max_index) config(): u64;
         pub IrrBlock get(irr_block) config(): u32;
         pub BtcFee get(btc_fee) config(): u64;
+<<<<<<< HEAD
+        pub TxSet get(tx_set): map H256 => Option<(T::AccountId, keys::Address, TxType, u64, BTCTransaction)>; // Address, type, balance
+        pub BlockTxids get(block_txids): map H256 => Vec<H256>;
+        pub AddressMap get(address_map): map keys::Address => Option<T::AccountId>;
+        pub AccountMap get(account_map): map T::AccountId => Option<keys::Address>;
+        pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
+        pub DepositCache get(deposit_cache): Option<Vec<(T::AccountId, u64, H256)>>; // account_id, amount, H256
+
+        pub AccountsMaxIndex get(accounts_max_index) config(): u64;
+        pub AccountsSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, T::BlockNumber, TxType)>;
+=======
 
         /// btc all related transactions set, use TxSetTail or TxSetHeader could iter them
         TxSetHeader get(tx_list_header): Option<NodeIndex<BTCTxLog<T::AccountId, T::BlockNumber>>>;
@@ -289,12 +320,13 @@ decl_storage! {
         pub RegInfoMaxIndex get(accounts_max_index) config(): u64;
         pub RegInfoSet get(accounts_set): map u64 => Option<(H256, keys::Address, T::AccountId, T::BlockNumber, Vec<u8>, TxType)>;
         pub CertCache get(cert_cache): Option<(Vec<u8>, u32, T::AccountId)>;
+>>>>>>> develop
 
         // others
         pub Fee get(fee) config(): T::Balance;
     }
     add_extra_genesis {
-        build(|storage: &mut runtime_primitives::StorageMap, config: &GenesisConfig<T>| {
+        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
             use codec::Encode;
             let (genesis, number): (BlockHeader, u32) = config.genesis.clone();
             let h = genesis.hash();
@@ -323,6 +355,8 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
+<<<<<<< HEAD
+=======
     // event
     /// Deposit one of this module's events.
     #[allow(unused)]
@@ -332,6 +366,7 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+>>>>>>> develop
     // public call
     pub fn push_header(origin: T::Origin, header: Vec<u8>) -> Result {
         runtime_io::print("[bridge_btc] push btc header");
@@ -385,6 +420,13 @@ impl<T: Trait> Module<T> {
             c.check::<T>()?;
         }
         // insert valid header into storage
+<<<<<<< HEAD
+        <BlockHeaderFor<T>>::insert(header.hash(), (
+            header.clone(),
+            who.clone(),
+            <system::Module<T>>::block_number(),
+        ));
+=======
         <BlockHeaderFor<T>>::insert(
             header.hash(),
             (
@@ -393,6 +435,7 @@ impl<T: Trait> Module<T> {
                 <system::Module<T>>::block_number(),
             ),
         );
+>>>>>>> develop
 
         <Chain<T>>::insert_best_header(header).map_err(|e| e.info())?;
 
@@ -400,17 +443,26 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn process_tx(tx: RelayTx, who: &T::AccountId) -> Result {
+<<<<<<< HEAD
+        let receive_address: keys::Address = if let Some(h) = <ReceiveAddress<T>>::get() {
+=======
         let receive_address: Address = if let Some(h) = <ReceiveAddress<T>>::get() {
+>>>>>>> develop
             h
         } else {
             return Err("should set RECEIVE_address first");
         };
+<<<<<<< HEAD
+
+        let tx_type = validate_transaction::<T>(&tx, &receive_address).unwrap();
+=======
         let cert_address: keys::Address = if let Some(h) = <CertAddress<T>>::get() {
             h
         } else {
             return Err("should set CERT_address first");
         };
         let tx_type = validate_transaction::<T>(&tx, (&receive_address, &cert_address))?;
+>>>>>>> develop
         match tx_type {
             TxType::Withdraw => {
                 handle_input::<T>(&tx.raw, &tx.block_hash, &who, &receive_address);
