@@ -20,11 +20,4 @@ members = [
     "executor",
     "runtime",
     "cli",
-#    "cxrml/support",
-#    "cxrml/tokenbalances",
-#    "cxrml/mining/staking",
-#    "cxrml/funds/financialrecords",
-#    "cxrml/multisig",
-#    "cxrml/bridge/btc",
-#    "cxrml/example",
 ]
