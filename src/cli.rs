@@ -108,6 +108,12 @@ pub fn build_cli() -> App<'static, 'static> {
                 .help("Listen to all WebSocket interfaces (default is local)")
                 .takes_value(false),
         )
+        .arg(
+            Arg::with_name("pruning")
+                .long("pruning")
+                .help("State Db PruningMode archiveall|archivecanonical|constrained (default is Constrained(256))")
+                .takes_value(true),
+        )
         .subcommand(SubCommand::with_name("validator").about(
             "Enable validator mode",
         ).arg(
