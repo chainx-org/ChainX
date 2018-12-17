@@ -1,3 +1,5 @@
+// Copyright 2018 Chainpool.
+
 use primitives::traits::As;
 use runtime_support::dispatch::Result;
 

@@ -1,4 +1,6 @@
-//! this module is for bch-bridge
+// Copyright 2018 Chainpool.
+
+//! this module is for associations
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // for encode/decode
@@ -22,8 +24,7 @@ extern crate substrate_primitives;
 // for substrate runtime
 // map!, vec! marco.
 extern crate sr_std as rstd;
-// Needed for tests (`with_externalities`).
-#[cfg(feature = "std")]
+
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 // for substrate runtime module lib
@@ -122,6 +123,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
     pub fn init_account(origin: T::Origin, who: T::AccountId) -> Result {
+        runtime_io::print("[associations] init_account");
         let from = ensure_signed(origin)?;
         // deduct fee first
         T::OnCalcFee::on_calc_fee(&from, Self::init_fee())?;
@@ -150,6 +152,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn init_exchange_relationship(origin: T::Origin, who: T::AccountId) -> Result {
+        runtime_io::print("[associations] init_exchange_relationship");
         let from = ensure_signed(origin)?;
         // deduct fee first
         T::OnCalcFee::on_calc_fee(&from, Self::init_fee())?;

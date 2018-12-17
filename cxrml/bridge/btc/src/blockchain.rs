@@ -1,6 +1,10 @@
+// Copyright 2018 Chainpool.
+
+use codec::Encode;
 use rstd::marker::PhantomData;
 use rstd::prelude::*;
 use rstd::result::Result;
+use runtime_io;
 use runtime_primitives::traits::As;
 use runtime_support::{StorageMap, StorageValue};
 use {BtcFee, IrrBlock};
@@ -73,12 +77,12 @@ impl ChainErr {
         match *self {
             ChainErr::CannotCanonize => "Cannot canonize block",
             ChainErr::UnknownParent => "Block parent is unknown",
-            ChainErr::NotFound => "not to find orphaned side chain in header collection; qed",
+            ChainErr::NotFound => "Not to find orphaned side chain in header collection; qed",
             ChainErr::AncientFork => "Fork is too long to proceed",
-            ChainErr::Unreachable => "should not occur",
+            ChainErr::Unreachable => "Should not occur",
             ChainErr::CanonizeMustZero => "[canonize] must be zero in this case",
             ChainErr::DecanonizeMustZero => "[decanonize] must be zero in this case",
-            ChainErr::ForkErr => "the hash should same",
+            ChainErr::ForkErr => "The hash should same",
             ChainErr::OtherErr(s) => s,
         }
     }
@@ -96,16 +100,21 @@ impl<T: Trait> Chain<T> {
             // case 1: block has been added to the main branch
             BlockOrigin::CanonChain { .. } => {
                 Self::canonize(&header.hash())?;
+                runtime_io::print("[Main] block has been added to the main branch");
                 Ok(())
             }
             // case 2: block has been added to the side branch with reorganization to this branch
             BlockOrigin::SideChainBecomingCanonChain(origin) => {
                 Self::fork(origin.clone())?;
                 Self::canonize(&header.hash())?;
+                runtime_io::print("[Switch to Main] block has been added to the side branch with reorganization to this branch");
                 Ok(())
             }
             // case 3: block has been added to the side branch without reorganization to this branch
-            BlockOrigin::SideChain(_origin) => Ok(()),
+            BlockOrigin::SideChain(_origin) => {
+                runtime_io::print("[Side] block has been added to the side branch without reorganization to this branch");
+                Ok(())
+            }
         }
     }
 
@@ -114,9 +123,13 @@ impl<T: Trait> Chain<T> {
         let best_hash = best_index.hash;
         let best_bumber = best_index.number;
 
-        //todo change unwrap
-        let (best_header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) =
-            <BlockHeaderFor<T>>::get(&best_hash).unwrap();
+        let best_header: BlockHeader =
+            if let Some((header, _, _)) = <BlockHeaderFor<T>>::get(&best_hash) {
+                header
+            } else {
+                return Err(ChainErr::OtherErr("not found blockheader for this hash"));
+            };
+
         let new_best_header = BestHeader {
             hash: best_header.previous_header_hash.clone(),
             number: if best_bumber > 0 {
@@ -145,9 +158,12 @@ impl<T: Trait> Chain<T> {
         let best_hash = best_index.hash;
         let best_number = best_index.number;
 
-        //todo change unwrap
-        let (header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) =
-            <BlockHeaderFor<T>>::get(hash).unwrap();
+        let header: BlockHeader = if let Some((header, _, _)) = <BlockHeaderFor<T>>::get(hash) {
+            header
+        } else {
+            return Err(ChainErr::OtherErr("not found blockheader for this hash"));
+        };
+
         if best_hash != header.previous_header_hash {
             return Err(ChainErr::CannotCanonize);
         }
@@ -171,19 +187,26 @@ impl<T: Trait> Chain<T> {
                 v.push(h);
             }
         });
+        runtime_io::print("best header");
+        runtime_io::print(new_best_header.number as u64);
         // best chain choose finish
-        <BestIndex<T>>::put(new_best_header.clone());
+        <BestIndex<T>>::put(&new_best_header);
 
         // deposit/withdraw handle start
         let symbol: Symbol = Module::<T>::SYMBOL.to_vec();
         let irr_block = <IrrBlock<T>>::get();
         // Deposit
         if let Some(vec) = <DepositCache<T>>::take() {
+            runtime_io::print("deposit start ---accountid---amount---tx_hash---blocknum");
             let mut uncomplete_cache: Vec<(T::AccountId, u64, H256, H256)> = Vec::new();
             for (account_id, amount, tx_hash, block_hash) in vec {
                 match <NumberForHash<T>>::get(block_hash.clone()) {
                     Some(height) => {
                         if new_best_header.number >= height + irr_block {
+                            runtime_io::print(account_id.encode().as_slice());
+                            runtime_io::print(amount);
+                            runtime_io::print(&tx_hash[..]);
+                            runtime_io::print(height as u64);
                             // TODO handle err
                             let _ = <financial_records::Module<T>>::deposit(
                                 &account_id,
@@ -192,10 +215,14 @@ impl<T: Trait> Chain<T> {
                                 Some(tx_hash.as_ref().to_vec()),
                             );
                         } else {
+                            runtime_io::print("not reach irr_block --best --height");
+                            runtime_io::print(new_best_header.number as u64);
+                            runtime_io::print(height as u64);
                             uncomplete_cache.push((account_id, amount, tx_hash, block_hash));
                         }
                     }
                     None => {
+                        // TODO 遇到分叉，需要从deposit cache剔除相应的交易
                         uncomplete_cache.push((account_id, amount, tx_hash, block_hash));
                     } // Optmise
                 }
@@ -210,11 +237,16 @@ impl<T: Trait> Chain<T> {
             let mut candidate = Module::<T>::tx_proposal(len - 1).unwrap();
             // candidate: CandidateTx
             if candidate.confirmed == false {
+                runtime_io::print("withdraw start ---accountid---tx_hash---blocknum");
                 match <NumberForHash<T>>::get(&candidate.block_hash) {
                     Some(height) => {
                         if new_best_header.number >= height + irr_block {
                             let txid = candidate.tx.hash();
                             for (account_id, _) in candidate.outs.clone() {
+                                runtime_io::print(account_id.encode().as_slice());
+                                runtime_io::print(&txid[..]);
+                                runtime_io::print(height as u64);
+
                                 // TODO handle err
                                 let _ = <financial_records::Module<T>>::withdrawal_finish(
                                     &account_id,
@@ -225,9 +257,15 @@ impl<T: Trait> Chain<T> {
                             candidate.confirmed = true;
                             // mark this tx withdraw finish!
                             TxProposal::<T>::insert(len - 1, candidate);
+                        } else {
+                            runtime_io::print("not reach irr_block --best --height");
+                            runtime_io::print(new_best_header.number as u64);
+                            runtime_io::print(height as u64);
                         }
                     }
-                    None => {}
+                    None => {
+                        // todo 处理分叉问题
+                    }
                 }
             }
         }
@@ -238,6 +276,7 @@ impl<T: Trait> Chain<T> {
         // 标记该链上这笔proposal由于BTC 托管人没有按着正常逻辑签名广播， 该proposal可能永远不会confirmed.
         // 所以开始重新创建proposal.
         if len == 0 {
+            runtime_io::print("crate_proposal case 1");
             // no withdraw cache would return None
             if let Some(indexs) = financial_records::Module::<T>::withdrawal_cache_indexs(&symbol) {
                 let btc_fee = <BtcFee<T>>::get();
@@ -249,6 +288,9 @@ impl<T: Trait> Chain<T> {
         if len > 0 {
             let candidate = Module::<T>::tx_proposal(len - 1).unwrap();
             if candidate.confirmed || candidate.unexpect {
+                runtime_io::print("crate_proposal case 2,3  ---confirmed---unexpect");
+                runtime_io::print(candidate.confirmed.encode().as_slice());
+                runtime_io::print(candidate.unexpect.encode().as_slice());
                 // no withdraw cache would return None
                 if let Some(indexs) =
                     financial_records::Module::<T>::withdrawal_cache_indexs(&symbol)
@@ -263,6 +305,7 @@ impl<T: Trait> Chain<T> {
 
         // SendCert
         if let Some(cert_info) = <CertCache<T>>::take() {
+            runtime_io::print("send cert start");
             if let Err(e) = <staking::Module<T>>::issue(cert_info.0, cert_info.1, cert_info.2) {
                 return Err(ChainErr::OtherErr(e));
             }
@@ -294,9 +337,14 @@ impl<T: Trait> Chain<T> {
 
     fn block_origin(header: &BlockHeader) -> Result<BlockOrigin, ChainErr> {
         let best_index: BestHeader = <BestIndex<T>>::get();
-        // TODO change unwrap
-        let (best_header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) =
-            <BlockHeaderFor<T>>::get(&best_index.hash).unwrap();
+
+        let best_header: BlockHeader =
+            if let Some((header, _, _)) = <BlockHeaderFor<T>>::get(&best_index.hash) {
+                header
+            } else {
+                return Err(ChainErr::OtherErr("not found blockheader for this hash"));
+            };
+
         if <NumberForHash<T>>::exists(header.hash()) {
             return Ok(BlockOrigin::KnownBlock);
         }

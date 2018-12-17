@@ -4,23 +4,23 @@ use std::path::PathBuf;
 use Arc;
 
 use client_db;
-use state_db;
 use substrate_client;
 
 pub use chainx_api::{TBackend, TClient, TClientBlockBuilder, TExecutor};
 use chainx_executor::NativeExecutor;
 use cli::ChainSpec;
 use state_machine::ExecutionStrategy;
+use state_db::PruningMode;
 
 const FINALIZATION_WINDOW: u64 = 32;
 
-pub fn build_client(db_path: &str, chainspec: ChainSpec) -> Arc<TClient> {
+pub fn build_client(db_path: &str, chainspec: ChainSpec, pruning: PruningMode) -> Arc<TClient> {
     let backend = Arc::new(
         TBackend::new(
             client_db::DatabaseSettings {
                 cache_size: None,
                 path: PathBuf::from(db_path),
-                pruning: state_db::PruningMode::default(),
+                pruning: pruning,
             },
             FINALIZATION_WINDOW,
         )

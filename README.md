@@ -92,7 +92,8 @@ $ brew install cmake pkg-config openssl git
 $ git clone https://github.com/chainx-org/ChainX ~/ChainX
 $ cd ~/ChainX
 
-$ cargo build --release
+# Note: build ChainX with nightly
+$ cargo +nightly build --release
 ```
 
 ## Testnet
@@ -105,12 +106,12 @@ $ RUST_LOG=info ./chainx --chainspec=dev --telemetry --bootnodes=/ip4/47.93.16.1
 
 ## Development
 
-When you succeed to build the project with `cargo build`, the `chainx` binary should be present in `target/debug/chainx`.
+When you succeed to build the project with `cargo build`, the `chainx` binary should be present in `target/release/chainx`.
 
 We assume `chainx` is in your `$PATH` in the following sections. Run this command so that `chainx` could be found in `$PATH`:
 
 ```bash
-$ export PATH=$(pwd)/target/debug:$PATH
+$ export PATH=$(pwd)/target/release:$PATH
 ```
 
 ### Run a local testnet

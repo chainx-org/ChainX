@@ -6,8 +6,6 @@ language: rust
 sudo: required
 
 rust:
-  - stable
-  - beta
   - nightly
 
 env:

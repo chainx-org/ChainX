@@ -24,8 +24,7 @@ extern crate substrate_primitives;
 // for substrate runtime
 // map!, vec! marco.
 extern crate sr_std as rstd;
-// Needed for tests (`with_externalities`).
-#[cfg(test)]
+
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 
@@ -47,10 +46,10 @@ extern crate cxrml_tokenbalances as tokenbalances;
 #[cfg(test)]
 mod tests;
 
-use codec::Codec;
+use codec::{Codec, Encode};
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
-use runtime_primitives::traits::OnFinalise;
+use runtime_primitives::traits::{OnFinalise, As};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
@@ -417,6 +416,13 @@ impl<T: Trait> Module<T> {
         txid: Option<Vec<u8>>,
     ) -> Result {
         let index = Self::deposit_with_index(who, sym, balance)?;
+
+        runtime_io::print("deposit ---who---sym---balance--index");
+        runtime_io::print(who.encode().as_slice());
+        runtime_io::print(sym.as_slice());
+        runtime_io::print(balance.as_() as u64);
+        runtime_io::print(index as u64);
+
         Self::deposit_finish_with_index(who, index, txid).map(|_| ())
     }
 
@@ -429,6 +435,11 @@ impl<T: Trait> Module<T> {
         ext: Vec<u8>,
     ) -> Result {
         let index = Self::withdrawal_with_index(who, sym, balance, addr, ext)?;
+        runtime_io::print("withdrawal ---who---sym---balance--index");
+        runtime_io::print(who.encode().as_slice());
+        runtime_io::print(sym.as_slice());
+        runtime_io::print(balance.as_() as u64);
+        runtime_io::print(index as u64);
 
         // set to withdraw cache
         let n = Node::new(WithdrawLog::<T::AccountId> {

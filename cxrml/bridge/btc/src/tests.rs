@@ -1,3 +1,5 @@
+// Copyright 2018 Chainpool.
+
 extern crate srml_consensus as consensus;
 extern crate srml_session as session;
 

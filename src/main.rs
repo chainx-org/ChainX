@@ -82,6 +82,20 @@ fn main() {
             ChainSpec::Multi
         }
     };
+    let pruning = match matches.value_of("pruning").unwrap_or("constrained") {
+        "archiveall" => {
+            info!("Pruning is ArchiveAll mode");
+            state_db::PruningMode::ArchiveAll
+        }
+        "archivecanonical" => {
+            info!("Pruning is ArchiveCanonical mode");
+            state_db::PruningMode::ArchiveCanonical
+        }
+        "constrained" | _ => {
+            info!("Pruning is Constrained mode");
+            state_db::PruningMode::default()
+        }
+    };
     let port = match matches.value_of("port") {
         Some(port) => port
             .parse()
@@ -99,7 +113,7 @@ fn main() {
     );
 
     let db_path = matches.value_of("db-path").unwrap_or("./.chainx");
-    let client = client::build_client(db_path, chainspec);
+    let client = client::build_client(db_path, chainspec, pruning);
 
     let (exit_send, exit) = exit_future::signal();
     let mut runtime = Runtime::new().expect("failed to start runtime on current thread");

@@ -301,13 +301,12 @@ pub fn validate_transaction<T: Trait>(
     if previous_txid != tx.raw.inputs[0].previous_output.hash {
         return Err("previous tx id not right");
     }
+
     // detect cert
-    for input in tx.raw.inputs.iter() {
-        let outpoint = input.previous_output.clone();
-        let send_address = inspect_address::<T>(&tx.previous_raw, outpoint).unwrap();
-        if send_address.hash == address.1.hash {
-            return Ok(TxType::SendCert);
-        }
+    let outpoint = tx.raw.inputs[0].previous_output.clone();
+    let send_address = inspect_address::<T>(&tx.previous_raw, outpoint).unwrap();
+    if send_address.hash == address.1.hash {
+        return Ok(TxType::SendCert);
     }
 
     // detect withdraw: To do: All inputs relay
@@ -376,7 +375,7 @@ pub fn handle_input<T: Trait>(
                 <TxProposal<T>>::insert(len - 1, candidate);
             }
         } else {
-            // To do: handle_input error not expect
+            // Todo: handle_input error not expect
             runtime_io::print("-----------handle_input error not expect");
         }
     }

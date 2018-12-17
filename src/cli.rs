@@ -14,8 +14,8 @@ pub enum ChainSpec {
 }
 
 pub fn build_cli() -> App<'static, 'static> {
-    App::new("chainx")
-        .version("0.1.0")
+    App::new("ChainX")
+        .version("0.3.0")
         .about("    Cross-Chain Asset Manager")
         .arg(
             Arg::with_name("chainspec")
@@ -107,6 +107,12 @@ pub fn build_cli() -> App<'static, 'static> {
                 .long("ws-external")
                 .help("Listen to all WebSocket interfaces (default is local)")
                 .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("pruning")
+                .long("pruning")
+                .help("State Db PruningMode archiveall|archivecanonical|constrained (default is Constrained(256))")
+                .takes_value(true),
         )
         .subcommand(SubCommand::with_name("validator").about(
             "Enable validator mode",
