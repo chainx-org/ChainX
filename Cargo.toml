@@ -20,5 +20,9 @@ members = [
     "executor",
     "runtime",
     "cli",
+
+    # xrml
+    "xrml/xsystem",
+    "xrml/xsupport",
     "xrml/xexecutive",
 ]

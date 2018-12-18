@@ -4320,6 +4320,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "xrml-xsupport"
+version = "0.3.0"
+dependencies = [
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+]
+
+[[package]]
+name = "xrml-xsystem"
+version = "0.4.0"
+dependencies = [
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+]
+
+[[package]]
 name = "yamux"
 version = "0.1.3"
 source = "git+https://github.com/paritytech/yamux#152063358daeebc5efbae47ef1bc91558ed6fb45"

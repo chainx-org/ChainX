@@ -366,6 +366,8 @@ impl_runtime_apis! {
                     .map(|v| (v.0, UncheckedExtrinsic::new_unsigned(Call::Consensus(v.1))))
             );
 
+            // TODO add blockproducer
+
             inherent.as_mut_slice().sort_unstable_by_key(|v| v.0);
             inherent.into_iter().map(|v| v.1).collect()
         }
