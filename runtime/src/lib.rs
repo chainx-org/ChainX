@@ -27,7 +27,7 @@ extern crate srml_contract as contract;
 extern crate srml_council as council;
 extern crate substrate_consensus_aura_primitives as consensus_aura;
 extern crate srml_democracy as democracy;
-extern crate srml_executive as executive;
+extern crate xrml_executive as executive;
 extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;

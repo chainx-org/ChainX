@@ -1,0 +1,32 @@
+[package]
+name = "xrml-executive"
+version = "0.4.0"
+authors = ["Parity Technologies <admin@parity.io> & ChainPool <http://chainx.org>"]
+
+[dependencies]
+hex-literal = "0.1.0"
+serde = { version = "1.0", default-features = false }
+parity-codec = { version = "2.1", default-features = false }
+parity-codec-derive = { version = "2.1", default-features = false }
+sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
+
+[dev-dependencies]
+substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+srml-balances = { git = "https://github.com/chainpool/substrate" }
+
+[features]
+default = ["std"]
+std = [
+	"sr-std/std",
+	"srml-support/std",
+	"serde/std",
+	"parity-codec/std",
+	"parity-codec-derive/std",
+	"sr-primitives/std",
+	"sr-io/std",
+	"srml-system/std",
+]

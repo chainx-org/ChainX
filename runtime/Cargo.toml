@@ -19,7 +19,7 @@ srml-contract = { git = "https://github.com/chainpool/substrate" }
 srml-balances = { git = "https://github.com/chainpool/substrate" }
 srml-council = { git = "https://github.com/chainpool/substrate" }
 srml-democracy = { git = "https://github.com/chainpool/substrate" }
-srml-executive = { git = "https://github.com/chainpool/substrate" }
+xrml-executive = { path = "../xrml/xexecutive" }
 sr-primitives = { git = "https://github.com/chainpool/substrate" }
 srml-session = { git = "https://github.com/chainpool/substrate" }
 srml-grandpa = { git = "https://github.com/chainpool/substrate" }
@@ -56,7 +56,7 @@ std = [
     "srml-consensus/std",
     "srml-council/std",
     "srml-democracy/std",
-    "srml-executive/std",
+    "xrml-executive/std",
     "sr-primitives/std",
     "srml-session/std",
     "srml-system/std",
