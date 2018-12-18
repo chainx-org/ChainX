@@ -1,0 +1,26 @@
+[package]
+name = "xrml-fee-manager"
+version = "0.4.0"
+authors = ["Chainpol <http://www.chainx.org>"]
+
+[dependencies]
+serde = { version = "1.0", default-features = false }
+srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-balances = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+parity-codec = { version = "2.1", default-features = false }
+parity-codec-derive = { version = "2.1", default-features = false }
+
+
+[features]
+default = ["std"]
+std = [
+        "srml-system/std",
+        "srml-balances/std",
+        "srml-support/std",
+        "serde/std",
+        "sr-primitives/std",
+        "parity-codec/std",
+        "parity-codec-derive/std",
+]

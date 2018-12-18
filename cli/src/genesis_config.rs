@@ -10,7 +10,7 @@ use self::base58::FromBase58;
 use chainx_runtime::GrandpaConfig;
 use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilVotingConfig, DemocracyConfig,
                      SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
-                     ContractConfig, Permill, Perbill, /*TokenBalancesConfig, FinancialRecordsConfig,
+                     ContractConfig, Permill, Perbill, XFeeManagerConfig, /*TokenBalancesConfig, FinancialRecordsConfig,
                      MultiSigConfig, BalancesConfigCopy, BridgeOfBTCConfig, Params, Token, PendingOrdersConfig, MatchOrderConfig*/};
 use ed25519;
 use ed25519::Public;
@@ -78,6 +78,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             authorities: initial_authorities.clone(),
         }),
         system: None,
+        fee_manager: Some(XFeeManagerConfig { switch: false, _genesis_phantom_data: Default::default(), }), 
         balances: Some(balances_config),
         session: Some(SessionConfig {
             validators: initial_authorities

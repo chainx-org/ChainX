@@ -32,6 +32,7 @@ srml-timestamp = { git = "https://github.com/chainpool/substrate" }
 srml-treasury = { git = "https://github.com/chainpool/substrate" }
 sr-version = { git = "https://github.com/chainpool/substrate" }
 chainx-primitives = { path = "../primitives" }
+xrml-fee-manager = { path = "../xrml/xfee/manager", default-features = false }
 
 # chainx runtime module
 #cxrml-system = { path = "../cxrml/system" }
@@ -57,6 +58,7 @@ std = [
     "srml-council/std",
     "srml-democracy/std",
     "xrml-executive/std",
+    "xrml-fee-manager/std",
     "sr-primitives/std",
     "srml-session/std",
     "srml-system/std",

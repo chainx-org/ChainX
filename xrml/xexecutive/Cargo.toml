@@ -13,6 +13,7 @@ sr-io = { git = "https://github.com/chainpool/substrate", default-features = fal
 sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
+xrml-fee-manager = { path = "../xfee/manager", default-features = false }
 
 [dev-dependencies]
 substrate-primitives = { git = "https://github.com/chainpool/substrate" }
@@ -29,4 +30,5 @@ std = [
 	"sr-primitives/std",
 	"sr-io/std",
 	"srml-system/std",
+    "xrml-fee-manager/std",
 ]

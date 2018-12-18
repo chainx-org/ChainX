@@ -1,4 +1,5 @@
 // Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2018 Chainpool.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -41,12 +42,14 @@ extern crate substrate_primitives;
 
 #[cfg(test)]
 extern crate srml_balances as balances;
+extern crate xrml_fee_manager;
 
 use rstd::prelude::*;
 use rstd::marker::PhantomData;
 use rstd::result;
 use primitives::traits::{self, Header, Zero, One, Checkable, Applyable, CheckEqual, OnFinalise,
-	MakePayment, Hash, As, Digest};
+	Hash, As, Digest};
+use xrml_fee_manager::MakePayment;
 use runtime_support::Dispatchable;
 use codec::{Codec, Encode};
 use system::extrinsics_root;
@@ -172,6 +175,7 @@ impl<
 		// Verify the signature is good.
 		let xt = uxt.check(&Default::default()).map_err(internal::ApplyError::BadSignature)?;
 
+
 		if let (Some(sender), Some(index)) = (xt.sender(), xt.index()) {
 			// check index
 			let expected_index = <system::Module<System>>::account_nonce(sender);
@@ -180,7 +184,7 @@ impl<
 			) }
 
 			// pay any fees.
-			Payment::make_payment(sender, encoded_len).map_err(|_| internal::ApplyError::CantPay)?;
+			Payment::make_payment(sender, encoded_len, 0).map_err(|_| internal::ApplyError::CantPay)?;
 
 			// AUDIT: Under no circumstances may this function panic from here onwards.
 
@@ -188,8 +192,9 @@ impl<
 			<system::Module<System>>::inc_account_nonce(sender);
 		}
 
-		// decode parameters and dispatch
 		let (f, s) = xt.deconstruct();
+        // To do: Find pay from map according f.
+		// decode parameters and dispatch
 		let r = f.dispatch(s.into());
 		<system::Module<System>>::note_applied_extrinsic(&r);
 
@@ -235,9 +240,10 @@ impl<
 			Err(_) => return TransactionValidity::Invalid,
 		};
 
-		if let (Some(sender), Some(index)) = (xt.sender(), xt.index()) {
+		if let (Some(sender), Some(index)) = (xt.sender().clone(), xt.index().clone()) {
+            // To do: Find pay from map according f.
 			// pay any fees.
-			if Payment::make_payment(sender, encoded_len).is_err() {
+			if Payment::make_payment(sender, encoded_len, 0).is_err() {
 				return TransactionValidity::Invalid
 			}
 

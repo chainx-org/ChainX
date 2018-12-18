@@ -34,6 +34,7 @@ extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
 extern crate substrate_primitives;
 extern crate srml_staking as staking;
+extern crate xrml_fee_manager as fee_manager;
 // cx runtime module
 //extern crate cxrml_associations as associations;
 /*extern crate cxrml_multisig as multisig;
@@ -145,6 +146,10 @@ impl balances::Trait for Runtime {
     type AccountIndex = AccountIndex;
     type OnFreeBalanceZero = (Staking, Contract);
     type EnsureAccountLiquid = Staking;
+    type Event = Event;
+}
+
+impl fee_manager::Trait for Runtime {
     type Event = Event;
 }
 
@@ -276,6 +281,7 @@ construct_runtime!(
         Balances: balances,
         Session: session,
         Staking: staking,
+        XFeeManager: fee_manager,
         Democracy: democracy,
         Council: council::{Module, Call, Storage, Event<T>},
         CouncilVoting: council_voting,
@@ -312,7 +318,7 @@ pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Index, 
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive =
-    executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, Balances, AllModules>;
+    executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;
 
 // define tokenbalances module type
 pub type TokenBalance = u128;
