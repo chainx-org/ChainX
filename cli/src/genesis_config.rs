@@ -9,17 +9,14 @@ extern crate substrate_primitives;
 use self::base58::FromBase58;
 use chainx_runtime::GrandpaConfig;
 use chainx_runtime::{
-    BalancesConfig, ConsensusConfig, ContractConfig, CouncilVotingConfig, DemocracyConfig,
-    GenesisConfig, Perbill, Permill, SessionConfig, StakingConfig, TimestampConfig, TreasuryConfig,
-    XFeeManagerConfig, /*TokenBalancesConfig, FinancialRecordsConfig,
-                       MultiSigConfig, BalancesConfigCopy, BridgeOfBTCConfig, Params, Token, PendingOrdersConfig, MatchOrderConfig*/
+    BalancesConfig, ConsensusConfig, GenesisConfig, Perbill, Permill, SessionConfig,
+    TimestampConfig, XAssetsConfig, XFeeManagerConfig, XSystemConfig,
 };
 use ed25519;
 use ed25519::Public;
 
 use self::btc_chain::BlockHeader;
 use self::btc_primitives::{compact::Compact, hash::H256};
-//use self::cxrml_tokenbalances::{TokenT, Trait};
 use self::keys::DisplayLayout;
 
 pub enum GenesisSpec {
@@ -81,11 +78,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             authorities: initial_authorities.clone(),
         }),
         system: None,
-        fee_manager: Some(XFeeManagerConfig {
-            switch: false,
-            _genesis_phantom_data: Default::default(),
-        }),
         balances: Some(balances_config),
+        timestamp: Some(TimestampConfig {
+            period: SECS_PER_BLOCK, // 3 second block time.
+        }),
         session: Some(SessionConfig {
             validators: initial_authorities
                 .iter()
@@ -94,130 +90,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .collect(),
             session_length: 1 * MINUTES, // that's 1 hour per session.
         }),
-        staking: Some(StakingConfig {
-            current_era: 0,
-            intentions: initial_authorities
-                .iter()
-                .cloned()
-                .map(Into::into)
-                .collect(),
-            offline_slash: Perbill::from_billionths(1_000_000),
-            session_reward: Perbill::from_billionths(2_065),
-            current_offline_slash: 0,
-            current_session_reward: 0,
-            validator_count: 7,
-            sessions_per_era: 12,
-            bonding_duration: 1 * DAYS,
-            offline_slash_grace: 4,
-            minimum_validator_count: 4,
-        }),
-        /*
-        staking: Some(StakingConfig {
-            current_era: 0,
-            bonding_duration: 3 * MINUTES, // 3 days per bond.
-            intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
-            intention_profiles: initial_authorities.clone().into_iter().map(|i| (i.0.into(), b"ChainX".to_vec(), b"chainx.org".to_vec())).collect(),
-            minimum_validator_count: 1,
-            validator_count: 6,
-            reward_per_sec: 3, // 3 PCX per second
-            sessions_per_era: 4, // 24 hours per era.
-            session_reward: Perbill::from_millionths(10800),
-            offline_slash_grace: 0,
-            offline_slash: Perbill::from_millionths(0),
-            current_offline_slash: 0,
-            current_session_reward: 0,
-        }),*/
-        democracy: Some(DemocracyConfig {
-            launch_period: 5 * MINUTES,    // 1 day per public referendum
-            voting_period: 5 * MINUTES,    // 3 days to discuss & vote on an active referendum
-            minimum_deposit: 50 * DOLLARS, // 12000 as the minimum deposit for a referendum
-            public_delay: 0,
-            max_lock_periods: 6,
-        }),
-        council_voting: Some(CouncilVotingConfig {
-            cooloff_period: 4 * DAYS,
-            voting_period: 1 * DAYS,
-            enact_delay_period: 0,
-        }),
-        timestamp: Some(TimestampConfig {
-            period: SECS_PER_BLOCK, // 3 second block time.
-        }),
-        treasury: Some(TreasuryConfig {
-            proposal_bond: Permill::from_percent(5),
-            proposal_bond_minimum: 1_000_000,
-            spend_period: 1 * DAYS,
-            burn: Permill::from_percent(50),
-        }),
-        contract: Some(ContractConfig {
-            contract_fee: 21,
-            call_base_fee: 135,
-            create_base_fee: 175,
-            gas_price: 1,
-            max_depth: 1024,
-            block_gas_limit: 10_000_000,
-            current_schedule: Default::default(),
-        }),
-        /*        cxsystem: Some(CXSystemConfig {
-            death_account: substrate_primitives::H256([0; 32]),
-            fee_buy_account: substrate_primitives::H256([1; 32]),
-        }),
-        tokenbalances: Some(TokenBalancesConfig {
-            chainx_precision: pcx_precision,
-            // token_list: Vec<(Token, Vec<(T::AccountId, T::TokenBalance)>)>
-            // e.g. [("btc", [(account1, value), (account2, value)].to_vec()), ("eth", [(account1, value), (account2, value)].to_vec())]
-            token_list: vec![
-                (Token::new(BridgeOfBTC::SYMBOL.to_vec(), b"BTC Token".to_vec(), 8),
-                // [(Keyring::Alice.to_raw_public().into(), 1_000_000), (Keyring::Bob.to_raw_public().into(), 1_000_000)].to_vec())
-                vec![])
-            ],
-
-            transfer_token_fee: 10,
-        }),
-        financialrecords: Some(FinancialRecordsConfig {
-            withdrawal_fee: 10,
-        }),
-        multisig: Some(MultiSigConfig {
-            genesis_multi_sig: vec![],
-            deploy_fee: 0,
-            exec_fee: 0,
-            confirm_fee: 0,
-            balances_config: balances_config_copy,
-            _genesis_phantom_data: Default::default(),
-        }),
-        bridge_btc: Some(BridgeOfBTCConfig {
-            // start genesis block: (genesis, blocknumber)
-            genesis: (BlockHeader {
-                version: 536870912,
-                previous_header_hash: H256::from_reversed_str("000000000000012651bf407efcc567df3529049085711572eaee8d243ec815d4"),
-                merkle_root_hash: H256::from_reversed_str("ecec3d2eb31c04a844dc18b233c819c64b6a56c2a51bc77078ef4cc8f434bc21"),
-                time: 1541642229,
-                bits: Compact::new(436299432),
-                nonce: 937513642,
-            }, 1442480),
-            params_info: Params::new(520159231, // max_bits
-                                     2 * 60 * 60,  // block_max_future
-                                     64,  // max_fork_route_preset
-                                     2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
-                                     10 * 60,  // target_spacing_seconds
-                                     4), // retargeting_factor
-            network_id: 1,
-            utxo_max_index: 0,
-            irr_block: 0,
-            btc_fee: 10,
-            accounts_max_index: 0,
-            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
-            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
-            fee: 0,
-        }),
-        pendingorders: Some(PendingOrdersConfig {
-            order_fee: 0,
-            pair_list: vec![
-                OrderPair::new(b"pcx".to_vec(), b"btc".to_vec(), 8)],
-            max_command_id: 0,
-            _genesis_phantom_data: Default::default(),
-        }),
-        matchorder: Some(MatchOrderConfig { match_fee: 10, _genesis_phantom_data: Default::default(),}),
-        */
         grandpa: Some(GrandpaConfig {
             authorities: initial_authorities
                 .clone()
@@ -225,5 +97,15 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .map(|k| (k, 1))
                 .collect(),
         }),
+        // chainx runtime module
+        xsystem: Some(XSystemConfig {
+            death_account: substrate_primitives::H256::zero(),
+            fee_buy_account: substrate_primitives::H256::repeat_byte(0x1),
+        }),
+        fee_manager: Some(XFeeManagerConfig {
+            switch: false,
+            _genesis_phantom_data: Default::default(),
+        }),
+        xassets: None,
     }
 }

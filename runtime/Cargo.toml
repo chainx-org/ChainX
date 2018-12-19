@@ -8,72 +8,78 @@ rustc-hex = "1.0"
 hex-literal = "0.1.0"
 safe-mix = { version = "1.0", default_features = false}
 serde = { version = "1.0", default_features = false }
-parity-codec = "2.0"
-parity-codec-derive = "2.0"
-sr-std = { git = "https://github.com/chainpool/substrate" }
+parity-codec = "2.1"
+parity-codec-derive = "2.1"
+
 substrate-client = { git = "https://github.com/chainpool/substrate" }
-srml-support = { git = "https://github.com/chainpool/substrate" }
 substrate-primitives = { git = "https://github.com/chainpool/substrate" }
-srml-consensus = { git = "https://github.com/chainpool/substrate" }
-srml-contract = { git = "https://github.com/chainpool/substrate" }
-srml-balances = { git = "https://github.com/chainpool/substrate" }
-srml-council = { git = "https://github.com/chainpool/substrate" }
-srml-democracy = { git = "https://github.com/chainpool/substrate" }
-xrml-executive = { path = "../xrml/xexecutive" }
-sr-primitives = { git = "https://github.com/chainpool/substrate" }
-srml-session = { git = "https://github.com/chainpool/substrate" }
-srml-grandpa = { git = "https://github.com/chainpool/substrate" }
-srml-staking = { git = "https://github.com/chainpool/substrate" }
 substrate-finality-grandpa-primitives = { git = "https://github.com/chainpool/substrate" }
 substrate-consensus-aura-primitives = { git = "https://github.com/chainpool/substrate" }
-srml-system = { git = "https://github.com/chainpool/substrate" }
-srml-aura = { git = "https://github.com/chainpool/substrate" }
-srml-timestamp = { git = "https://github.com/chainpool/substrate" }
-srml-treasury = { git = "https://github.com/chainpool/substrate" }
+
+sr-primitives = { git = "https://github.com/chainpool/substrate" }
 sr-version = { git = "https://github.com/chainpool/substrate" }
+sr-std = { git = "https://github.com/chainpool/substrate" }
+
+srml-support = { git = "https://github.com/chainpool/substrate" }
+srml-system = { git = "https://github.com/chainpool/substrate" }
+srml-balances = { git = "https://github.com/chainpool/substrate" }
+srml-timestamp = { git = "https://github.com/chainpool/substrate" }
+srml-consensus = { git = "https://github.com/chainpool/substrate" }
+srml-session = { git = "https://github.com/chainpool/substrate" }
+srml-grandpa = { git = "https://github.com/chainpool/substrate" }
+srml-aura = { git = "https://github.com/chainpool/substrate" }
+
+srml-contract = { git = "https://github.com/chainpool/substrate" }
+srml-council = { git = "https://github.com/chainpool/substrate" }
+srml-democracy = { git = "https://github.com/chainpool/substrate" }
+srml-treasury = { git = "https://github.com/chainpool/substrate" }
+
+# chainx
 chainx-primitives = { path = "../primitives" }
-xrml-fee-manager = { path = "../xrml/xfee/manager", default-features = false }
 
 # chainx runtime module
-#cxrml-system = { path = "../cxrml/system" }
-#cxrml-support = { path = "../cxrml/support" }
-#cxrml-staking = { path = "../cxrml/staking" }
-#cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
-#cxrml-funds-financialrecords = { path = "../cxrml/funds/financialrecords" }
-#cxrml-multisig = { path = "../cxrml/multisig" }
-#cxrml-bridge-btc = { path = "../cxrml/bridge/btc" }
-#cxrml-exchange-pendingorders = { path = "../cxrml/exchange/pendingorders" }
-#cxrml-exchange-matchorder = { path = "../cxrml/exchange/matchorder" }
+xrml-xsystem = { path = "../xrml/xsystem" }
+xrml-executive = { path = "../xrml/xexecutive" }
+# fee
+xrml-fee-manager = { path = "../xrml/xfee/manager" }
+# assets
+xrml-xassets-assets = { path = "../xrml/xassets/assets" }
+
 
 [features]
 default = ["std"]
 std = [
+    "serde/std",
+    "safe-mix/std",
     "parity-codec/std",
     "substrate-primitives/std",
     "substrate-consensus-aura-primitives/std",
+
+    # substrate runtime module
+    "sr-primitives/std",
+    "sr-version/std",
     "sr-std/std",
+
     "srml-support/std",
-    "srml-aura/std",
+    "srml-system/std",
+    "srml-balances/std",
+    "srml-timestamp/std",
     "srml-consensus/std",
+    "srml-session/std",
+    "srml-grandpa/std",
+    "srml-aura/std",
+
+    "srml-contract/std",
     "srml-council/std",
     "srml-democracy/std",
-    "xrml-executive/std",
-    "xrml-fee-manager/std",
-    "sr-primitives/std",
-    "srml-session/std",
-    "srml-system/std",
-    "srml-timestamp/std",
-    "sr-version/std",
+    "srml-treasury/std",
+    # chainx
     "chainx-primitives/std",
-    "safe-mix/std",
-    "serde/std",
-#    "cxrml-system/std",
-#    "cxrml-support/std",
-#    "srml-staking/std",
-#    "cxrml-tokenbalances/std",
-#    "cxrml-funds-financialrecords/std",
-#    "cxrml-multisig/std",
-#    "cxrml-bridge-btc/std",
-#    "cxrml-pendingorders/std",
-#    "cxrml-matchorder/std",
+    # chainx runtime
+    "xrml-xsystem/std",
+    "xrml-executive/std",
+    # fee
+    "xrml-fee-manager/std",
+    # asset
+    "xrml-xassets-assets/std"
 ]

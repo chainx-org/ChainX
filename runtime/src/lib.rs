@@ -6,97 +6,84 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
-#[macro_use]
-extern crate srml_support;
-#[macro_use]
-extern crate sr_primitives as runtime_primitives;
 extern crate parity_codec as codec;
-#[cfg(feature = "std")]
-extern crate serde;
-extern crate substrate_primitives as primitives;
-#[macro_use]
-extern crate substrate_client as client;
 #[macro_use]
 extern crate parity_codec_derive;
+#[cfg(feature = "std")]
+extern crate serde;
+
+#[macro_use]
+extern crate substrate_client as client;
+extern crate substrate_consensus_aura_primitives as consensus_aura;
+extern crate substrate_primitives as primitives;
+
+#[macro_use]
+extern crate sr_primitives as runtime_primitives;
+#[macro_use]
+extern crate sr_version as version;
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
+
+// substrate runtime module
+#[macro_use]
+extern crate srml_support;
 extern crate srml_aura as aura;
 extern crate srml_balances as balances;
 extern crate srml_consensus as consensus;
+extern crate srml_grandpa as grandpa;
+extern crate srml_session as session;
+extern crate srml_system as system;
+extern crate srml_timestamp as timestamp;
+// unused
 extern crate srml_contract as contract;
 extern crate srml_council as council;
 extern crate srml_democracy as democracy;
-extern crate srml_session as session;
-extern crate srml_staking as staking;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
-extern crate substrate_consensus_aura_primitives as consensus_aura;
-extern crate substrate_primitives;
-extern crate xrml_executive as executive;
-extern crate xrml_fee_manager as fee_manager;
-// cx runtime module
-//extern crate cxrml_associations as associations;
-/*extern crate cxrml_multisig as multisig;
-extern crate cxrml_support as cxsupport;
-//extern crate cxrml_staking as staking;
-extern crate cxrml_tokenbalances as tokenbalances;
-*/
-extern crate srml_grandpa as grandpa;
 
-/*
-extern crate cxrml_financialrecords as financialrecords;
-//extern crate cxrml_multisig as multisig;
-// chainx runtime bridge
-extern crate cxrml_bridge_btc as bridge_btc;
-// funds
-extern crate cxrml_funds_financialrecords as financialrecords;
-extern crate cxrml_funds_withdrawal as withdrawal;
-*/
-// exchange
-//extern crate cxrml_exchange_matchorder as matchorder;
-//extern crate cxrml_exchange_pendingorders as pendingorders;
-
-#[macro_use]
-extern crate sr_version as version;
+// chainx
 extern crate chainx_primitives;
+// chainx runtime module
+extern crate xrml_executive as xexective;
+extern crate xrml_xsystem as xsystem;
+// fee;
+extern crate xrml_fee_manager as fee_manager;
+// assets;
+extern crate xrml_xassets_assets as xassets;
 
 pub use balances::address::Address as RawAddress;
 use consensus_aura::api as aura_api;
 pub use runtime_primitives::{Perbill, Permill};
-//pub use tokenbalances::Token;
 
-use chainx_primitives::{
-    AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature,
-};
-use client::{block_builder::api as block_builder_api, runtime_api as client_api};
 #[cfg(feature = "std")]
 use council::{motions as council_motions, voting as council_voting};
 use grandpa::fg_primitives::{self, ScheduledChange};
 use rstd::prelude::*;
+
+use primitives::u32_trait::{_2, _4};
+use primitives::OpaqueMetadata;
+
 use runtime_primitives::generic;
 use runtime_primitives::traits::{BlakeTwo256, Block as BlockT, Convert, DigestFor, NumberFor};
+//#[cfg(feature = "std")]
+//use council::{motions as council_motions, voting as council_voting};
 use runtime_primitives::transaction_validity::TransactionValidity;
 use runtime_primitives::{ApplyResult, BasicInherentData, CheckInherentError};
-use srml_support::inherent::ProvideInherent;
-use substrate_primitives::u32_trait::{_2, _4};
-use substrate_primitives::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
 use version::NativeVersion;
 use version::RuntimeVersion;
+
+use client::{block_builder::api as block_builder_api, runtime_api as client_api};
+
+use srml_support::inherent::ProvideInherent;
 
 // for set consensus period
 pub use srml_support::{RuntimeMetadata, StorageValue};
 pub use timestamp::BlockPeriod;
 pub use timestamp::Call as TimestampCall;
 
-//#[cfg(feature = "std")]
-//pub use multisig::BalancesConfigCopy;
-/*#[cfg(feature = "std")]
-pub use bridge_btc::Params;
-#[cfg(feature = "std")]
-pub use multisig::BalancesConfigCopy;
-*/
+use chainx_primitives::{
+    AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature,
+};
 
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
@@ -143,13 +130,17 @@ impl system::Trait for Runtime {
 impl balances::Trait for Runtime {
     type Balance = Balance;
     type AccountIndex = AccountIndex;
-    type OnFreeBalanceZero = (Staking, Contract);
-    type EnsureAccountLiquid = Staking;
+    //    type OnFreeBalanceZero = (Staking, Contract);
+    //    type EnsureAccountLiquid = Staking;
+    type OnFreeBalanceZero = ();
+    type EnsureAccountLiquid = ();
     type Event = Event;
 }
 
-impl fee_manager::Trait for Runtime {
-    type Event = Event;
+impl timestamp::Trait for Runtime {
+    const TIMESTAMP_SET_POSITION: u32 = TIMESTAMP_SET_POSITION;
+    type Moment = u64;
+    type OnTimestampSet = Aura;
 }
 
 impl consensus::Trait for Runtime {
@@ -157,12 +148,6 @@ impl consensus::Trait for Runtime {
     type Log = Log;
     type SessionKey = SessionKey;
     type InherentOfflineReport = ();
-}
-
-impl timestamp::Trait for Runtime {
-    const TIMESTAMP_SET_POSITION: u32 = TIMESTAMP_SET_POSITION;
-    type Moment = u64;
-    type OnTimestampSet = Aura;
 }
 
 /// Session key conversion.
@@ -176,84 +161,8 @@ impl Convert<AccountId, SessionKey> for SessionKeyConversion {
 
 impl session::Trait for Runtime {
     type ConvertAccountIdToSessionKey = SessionKeyConversion;
-    type OnSessionChange = (Staking, grandpa::SyncedAuthorities<Runtime>);
-    type Event = Event;
-}
-
-impl treasury::Trait for Runtime {
-    type ApproveOrigin = council_motions::EnsureMembers<_4>;
-    type RejectOrigin = council_motions::EnsureMembers<_2>;
-    type Event = Event;
-}
-
-impl democracy::Trait for Runtime {
-    type Proposal = Call;
-    type Event = Event;
-}
-
-impl council::Trait for Runtime {
-    type Event = Event;
-}
-
-impl contract::Trait for Runtime {
-    type DetermineContractAddress = contract::SimpleAddressDeterminator<Runtime>;
-    type Gas = u64;
-    type Event = Event;
-}
-
-// TODO add voting and motions at here
-impl council::voting::Trait for Runtime {
-    type Event = Event;
-}
-
-impl council::motions::Trait for Runtime {
-    type Origin = Origin;
-    type Proposal = Call;
-    type Event = Event;
-}
-
-// cxrml trait
-
-/*
-//impl cxsystem::Trait for Runtime {}
-
-impl cxsupport::Trait for Runtime {}
-
-impl tokenbalances::Trait for Runtime {
-    const CHAINX_SYMBOL: tokenbalances::SymbolString = b"PCX";
-    const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"Polkadot ChainX";
-    type TokenBalance = TokenBalance;
-    type Event = Event;
-    type OnMoveToken = ();
-}
-
-impl multisig::Trait for Runtime {
-    type MultiSig = multisig::SimpleMultiSigIdFor<Runtime>;
-    type Event = Event;
-}
-
-impl tokenstaking::Trait for Runtime {
-    type Event = Event;
-}
-
-// bridge
-impl bridge_btc::Trait for Runtime {
-    type Event = Event;
-}
-
-impl pendingorders::Trait for Runtime {
-    type Event = Event;
-    type Amount = TokenBalance;
-    type Price = TokenBalance;
-}
-impl matchorder::Trait for Runtime {
-    type Event = Event;
-}
-*/
-
-// mining staking
-impl staking::Trait for Runtime {
-    type OnRewardMinted = Treasury;
+    //    type OnSessionChange = (Staking, grandpa::SyncedAuthorities<Runtime>);
+    type OnSessionChange = grandpa::SyncedAuthorities<Runtime>;
     type Event = Event;
 }
 
@@ -264,7 +173,54 @@ impl grandpa::Trait for Runtime {
 }
 
 impl aura::Trait for Runtime {
-    type HandleReport = aura::StakingSlasher<Runtime>;
+    //    type HandleReport = aura::StakingSlasher<Runtime>;
+    type HandleReport = ();
+}
+
+//impl treasury::Trait for Runtime {
+//    type ApproveOrigin = council_motions::EnsureMembers<_4>;
+//    type RejectOrigin = council_motions::EnsureMembers<_2>;
+//    type Event = Event;
+//}
+//
+//impl democracy::Trait for Runtime {
+//    type Proposal = Call;
+//    type Event = Event;
+//}
+//
+//impl council::Trait for Runtime {
+//    type Event = Event;
+//}
+//
+//impl contract::Trait for Runtime {
+//    type DetermineContractAddress = contract::SimpleAddressDeterminator<Runtime>;
+//    type Gas = u64;
+//    type Event = Event;
+//}
+//
+//// TODO add voting and motions at here
+//impl council::voting::Trait for Runtime {
+//    type Event = Event;
+//}
+//
+//impl council::motions::Trait for Runtime {
+//    type Origin = Origin;
+//    type Proposal = Call;
+//    type Event = Event;
+//}
+
+// cxrml trait
+impl xsystem::Trait for Runtime {
+    const XSYSTEM_SET_POSITION: u32 = 3;
+}
+// fees
+impl fee_manager::Trait for Runtime {
+    //    type Event = Event;
+}
+// assets
+impl xassets::Trait for Runtime {
+    type Event = Event;
+    type OnAssetChanged = ();
 }
 
 construct_runtime!(
@@ -274,32 +230,19 @@ construct_runtime!(
         InherentData = BasicInherentData
     {
         System: system::{default, Log(ChangesTrieRoot)},
-        Aura: aura::{Module},
+        Balances: balances,
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
-        Balances: balances,
         Session: session,
-        Staking: staking,
-        XFeeManager: fee_manager,
-        Democracy: democracy,
-        Council: council::{Module, Call, Storage, Event<T>},
-        CouncilVoting: council_voting,
-        CouncilMotions: council_motions::{Module, Call, Storage, Event<T>, Origin},
-        Treasury: treasury,
-        Contract: contract::{Module, Call, Config<T>, Event<T>},
         Grandpa: grandpa::{Module, Call, Storage, Config<T>, Log(), Event<T>},
-        /*TokenBalances: tokenbalances,
-        FinancialRecords: financialrecords,
-        //MultiSig: multisig,
-        PendingOrders : pendingorders,
-        MatchOrder : matchorder,
-        // bridge
-        BridgeOfBTC: bridge_btc,
-        // put end of this marco
-        CXSupport: cxsupport::{Module},
-        // must put end of all chainx runtime module
-        //CXSystem: cxsystem::{Module, Call, Storage, Config},
-        Balances: balances::{Module, Storage, Config, Event<T>},*/ // no call for public
+        Aura: aura::{Module},
+
+        // chainx runtime module
+        XSystem: xsystem::{Module, Call, Storage, Config<T>}, //, Inherent},
+        // fee
+        XFeeManager: fee_manager::{Module, Call, Storage, Config<T>},
+        // assets
+        XAssets: xassets,
     }
 );
 
@@ -315,10 +258,10 @@ pub type BlockId = generic::BlockId<Block>;
 pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Index, Call, Signature>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive =
-    executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;
+    xexective::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;
 
 // define tokenbalances module type
-pub type TokenBalance = u128;
+//pub type TokenBalance = u128;
 
 impl_runtime_apis! {
     impl client_api::Core<Block> for Runtime {
