@@ -8,10 +8,12 @@ extern crate substrate_primitives;
 
 use self::base58::FromBase58;
 use chainx_runtime::GrandpaConfig;
-use chainx_runtime::{GenesisConfig, ConsensusConfig, CouncilVotingConfig, DemocracyConfig,
-                     SessionConfig, StakingConfig, TimestampConfig, BalancesConfig, TreasuryConfig,
-                     ContractConfig, Permill, Perbill, XFeeManagerConfig, /*TokenBalancesConfig, FinancialRecordsConfig,
-                     MultiSigConfig, BalancesConfigCopy, BridgeOfBTCConfig, Params, Token, PendingOrdersConfig, MatchOrderConfig*/};
+use chainx_runtime::{
+    BalancesConfig, ConsensusConfig, ContractConfig, CouncilVotingConfig, DemocracyConfig,
+    GenesisConfig, Perbill, Permill, SessionConfig, StakingConfig, TimestampConfig, TreasuryConfig,
+    XFeeManagerConfig, /*TokenBalancesConfig, FinancialRecordsConfig,
+                       MultiSigConfig, BalancesConfigCopy, BridgeOfBTCConfig, Params, Token, PendingOrdersConfig, MatchOrderConfig*/
+};
 use ed25519;
 use ed25519::Public;
 
@@ -21,7 +23,7 @@ use self::btc_primitives::{compact::Compact, hash::H256};
 use self::keys::DisplayLayout;
 
 pub enum GenesisSpec {
-    Dev, 
+    Dev,
     Local,
     Multi,
 }
@@ -49,7 +51,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     //    const DOLLARS: u128 = 100 * CENTS;
 
     const MILLICENTS: u128 = 1_000_000_000;
-    const CENTS: u128 = 1_000 * MILLICENTS;	// assume this is worth about a cent.
+    const CENTS: u128 = 1_000 * MILLICENTS; // assume this is worth about a cent.
     const DOLLARS: u128 = 100 * CENTS;
 
     const SECS_PER_BLOCK: u64 = 1;
@@ -74,11 +76,15 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
             "../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm"
-            ).to_vec(),
+            )
+            .to_vec(),
             authorities: initial_authorities.clone(),
         }),
         system: None,
-        fee_manager: Some(XFeeManagerConfig { switch: false, _genesis_phantom_data: Default::default(), }), 
+        fee_manager: Some(XFeeManagerConfig {
+            switch: false,
+            _genesis_phantom_data: Default::default(),
+        }),
         balances: Some(balances_config),
         session: Some(SessionConfig {
             validators: initial_authorities
@@ -90,7 +96,11 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         staking: Some(StakingConfig {
             current_era: 0,
-            intentions: initial_authorities.iter().cloned().map(Into::into).collect(),
+            intentions: initial_authorities
+                .iter()
+                .cloned()
+                .map(Into::into)
+                .collect(),
             offline_slash: Perbill::from_billionths(1_000_000),
             session_reward: Perbill::from_billionths(2_065),
             current_offline_slash: 0,
@@ -101,7 +111,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             offline_slash_grace: 4,
             minimum_validator_count: 4,
         }),
-/*
+        /*
         staking: Some(StakingConfig {
             current_era: 0,
             bonding_duration: 3 * MINUTES, // 3 days per bond.
@@ -120,7 +130,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         democracy: Some(DemocracyConfig {
             launch_period: 5 * MINUTES,    // 1 day per public referendum
             voting_period: 5 * MINUTES,    // 3 days to discuss & vote on an active referendum
-            minimum_deposit: 50 * DOLLARS,    // 12000 as the minimum deposit for a referendum
+            minimum_deposit: 50 * DOLLARS, // 12000 as the minimum deposit for a referendum
             public_delay: 0,
             max_lock_periods: 6,
         }),
@@ -130,7 +140,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             enact_delay_period: 0,
         }),
         timestamp: Some(TimestampConfig {
-            period: SECS_PER_BLOCK,                  // 3 second block time.
+            period: SECS_PER_BLOCK, // 3 second block time.
         }),
         treasury: Some(TreasuryConfig {
             proposal_bond: Permill::from_percent(5),
@@ -147,7 +157,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             block_gas_limit: 10_000_000,
             current_schedule: Default::default(),
         }),
-/*        cxsystem: Some(CXSystemConfig {
+        /*        cxsystem: Some(CXSystemConfig {
             death_account: substrate_primitives::H256([0; 32]),
             fee_buy_account: substrate_primitives::H256([1; 32]),
         }),
@@ -209,7 +219,11 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         matchorder: Some(MatchOrderConfig { match_fee: 10, _genesis_phantom_data: Default::default(),}),
         */
         grandpa: Some(GrandpaConfig {
-            authorities: initial_authorities.clone().into_iter().map(|k| (k, 1)).collect(),
-        })
+            authorities: initial_authorities
+                .clone()
+                .into_iter()
+                .map(|k| (k, 1))
+                .collect(),
+        }),
     }
 }

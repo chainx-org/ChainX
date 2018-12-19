@@ -24,8 +24,8 @@ extern crate parity_codec_derive;
 use primitives::bytes;
 
 use rstd::prelude::*;
-use runtime_primitives::traits::{BlakeTwo256, self};
 use runtime_primitives::generic;
+use runtime_primitives::traits::{self, BlakeTwo256};
 pub use runtime_primitives::BasicInherentData as InherentData;
 
 /// Signature on candidate's block data by a collator.

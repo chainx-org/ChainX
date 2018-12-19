@@ -26,11 +26,11 @@ extern crate parity_codec_derive;
 #[cfg_attr(test, macro_use)]
 extern crate srml_support as runtime_support;
 
+extern crate parity_codec as codec;
+extern crate sr_io as runtime_io;
+extern crate sr_primitives as primitives;
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
-extern crate sr_io as runtime_io;
-extern crate parity_codec as codec;
-extern crate sr_primitives as primitives;
 extern crate srml_system as system;
 
 #[cfg(test)]
@@ -42,41 +42,42 @@ extern crate substrate_primitives;
 
 #[cfg(test)]
 extern crate srml_balances as balances;
+extern crate xrml_fee_config;
 extern crate xrml_fee_manager;
 
-use rstd::prelude::*;
-use rstd::marker::PhantomData;
-use rstd::result;
-use primitives::traits::{self, Header, Zero, One, Checkable, Applyable, CheckEqual, OnFinalise,
-	Hash, As, Digest};
-use xrml_fee_manager::MakePayment;
-use runtime_support::Dispatchable;
 use codec::{Codec, Encode};
+use primitives::traits::{
+    self, Applyable, As, CheckEqual, Checkable, Digest, Hash, Header, Member, OnFinalise, One, Zero,
+};
+use primitives::transaction_validity::{
+    TransactionLongevity, TransactionPriority, TransactionValidity,
+};
+use primitives::{ApplyError, ApplyOutcome};
+use rstd::marker::PhantomData;
+use rstd::prelude::*;
+use rstd::result;
+use runtime_support::Dispatchable;
 use system::extrinsics_root;
-use primitives::{ApplyOutcome, ApplyError};
-use primitives::transaction_validity::{TransactionValidity, TransactionPriority, TransactionLongevity};
+use xrml_fee_config::FeeMap;
+use xrml_fee_manager::MakePayment;
 
 mod internal {
-	pub enum ApplyError {
-		BadSignature(&'static str),
-		Stale,
-		Future,
-		CantPay,
-	}
+    pub enum ApplyError {
+        BadSignature(&'static str),
+        Stale,
+        Future,
+        CantPay,
+    }
 
-	pub enum ApplyOutcome {
-		Success,
-		Fail(&'static str),
-	}
+    pub enum ApplyOutcome {
+        Success,
+        Fail(&'static str),
+    }
 }
 
-pub struct Executive<
-	System,
-	Block,
-	Context,
-	Payment,
-	Finalisation,
->(PhantomData<(System, Block, Context, Payment, Finalisation)>);
+pub struct Executive<System, Block, Context, Payment, Finalisation>(
+    PhantomData<(System, Block, Context, Payment, Finalisation)>,
+);
 
 impl<
 	Context: Default,
@@ -87,7 +88,7 @@ impl<
 > Executive<System, Block, Context, Payment, Finalisation> where
 	Block::Extrinsic: Checkable<Context> + Codec,
 	<Block::Extrinsic as Checkable<Context>>::Checked: Applyable<Index=System::Index, AccountId=System::AccountId>,
-	<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call: Dispatchable,
+	<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call: Dispatchable + Member,
 	<<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call as Dispatchable>::Origin: From<Option<System::AccountId>>
 {
 	/// Start the execution of a particular block.
@@ -174,25 +175,27 @@ impl<
 	fn apply_extrinsic_no_note_with_len(uxt: Block::Extrinsic, encoded_len: usize) -> result::Result<internal::ApplyOutcome, internal::ApplyError> {
 		// Verify the signature is good.
 		let xt = uxt.check(&Default::default()).map_err(internal::ApplyError::BadSignature)?;
-
-
 		if let (Some(sender), Some(index)) = (xt.sender(), xt.index()) {
 			// check index
 			let expected_index = <system::Module<System>>::account_nonce(sender);
 			if index != &expected_index { return Err(
 				if index < &expected_index { internal::ApplyError::Stale } else { internal::ApplyError::Future }
 			) }
+		}
 
-			// pay any fees.
-			Payment::make_payment(sender, encoded_len, 0).map_err(|_| internal::ApplyError::CantPay)?;
+		let (f, s) = xt.deconstruct();
+        let fee_map = FeeMap::<<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call>{_marker: Default::default(),};
+        if let Some(pay) = fee_map.find(&f) {
+			Payment::make_payment(&s.clone().unwrap(), encoded_len, pay).map_err(|_| internal::ApplyError::CantPay)?;
 
 			// AUDIT: Under no circumstances may this function panic from here onwards.
 
 			// increment nonce in storage
-			<system::Module<System>>::inc_account_nonce(sender);
-		}
+			<system::Module<System>>::inc_account_nonce(&s.clone().unwrap());
+         } else {
+            return Err(internal::ApplyError::CantPay);
+         }
 
-		let (f, s) = xt.deconstruct();
         // To do: Find pay from map according f.
 		// decode parameters and dispatch
 		let r = f.dispatch(s.into());
@@ -240,13 +243,7 @@ impl<
 			Err(_) => return TransactionValidity::Invalid,
 		};
 
-		if let (Some(sender), Some(index)) = (xt.sender().clone(), xt.index().clone()) {
-            // To do: Find pay from map according f.
-			// pay any fees.
-			if Payment::make_payment(sender, encoded_len, 0).is_err() {
-				return TransactionValidity::Invalid
-			}
-
+		let valid = if let (Some(sender), Some(index)) = (xt.sender(), xt.index()) {
 			// check index
 			let mut expected_index = <system::Module<System>>::account_nonce(sender);
 			if index < &expected_index {
@@ -269,146 +266,203 @@ impl<
 				longevity: TransactionLongevity::max_value(),
 			}
 		} else {
-			return TransactionValidity::Invalid
-		}
+			TransactionValidity::Invalid
+		};
+
+		let (f, s) = xt.deconstruct();
+        let fee_map = FeeMap::<<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call>{_marker: Default::default(),};
+        if let Some(pay) = fee_map.find(&f) {
+			if Payment::make_payment(&s.clone().unwrap(), encoded_len, pay).is_err() {
+				return TransactionValidity::Invalid
+			} else {
+                 return valid
+            }
+         } else {
+            return TransactionValidity::Invalid
+         }
 	}
 }
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use balances::Call;
-	use runtime_io::with_externalities;
-	use substrate_primitives::{H256, Blake2Hasher};
-	use primitives::BuildStorage;
-	use primitives::traits::{Header as HeaderT, BlakeTwo256};
-	use primitives::testing::{Digest, DigestItem, Header, Block};
-	use system;
+    use super::*;
+    use balances::Call;
+    use primitives::testing::{Block, Digest, DigestItem, Header};
+    use primitives::traits::{BlakeTwo256, Header as HeaderT};
+    use primitives::BuildStorage;
+    use runtime_io::with_externalities;
+    use substrate_primitives::{Blake2Hasher, H256};
+    use system;
 
-	impl_outer_origin! {
-		pub enum Origin for Runtime {
-		}
-	}
+    impl_outer_origin! {
+        pub enum Origin for Runtime {
+        }
+    }
 
-	impl_outer_event!{
-		pub enum MetaEvent for Runtime {
-			balances<T>,
-		}
-	}
+    impl_outer_event! {
+        pub enum MetaEvent for Runtime {
+            balances<T>,
+        }
+    }
 
-	// Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
-	#[derive(Clone, Eq, PartialEq)]
-	pub struct Runtime;
-	impl system::Trait for Runtime {
-		type Origin = Origin;
-		type Index = u64;
-		type BlockNumber = u64;
-		type Hash = substrate_primitives::H256;
-		type Hashing = BlakeTwo256;
-		type Digest = Digest;
-		type AccountId = u64;
-		type Header = Header;
-		type Event = MetaEvent;
-		type Log = DigestItem;
-	}
-	impl balances::Trait for Runtime {
-		type Balance = u64;
-		type AccountIndex = u64;
-		type OnFreeBalanceZero = ();
-		type EnsureAccountLiquid = ();
-		type Event = MetaEvent;
-	}
+    // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
+    #[derive(Clone, Eq, PartialEq)]
+    pub struct Runtime;
+    impl system::Trait for Runtime {
+        type Origin = Origin;
+        type Index = u64;
+        type BlockNumber = u64;
+        type Hash = substrate_primitives::H256;
+        type Hashing = BlakeTwo256;
+        type Digest = Digest;
+        type AccountId = u64;
+        type Header = Header;
+        type Event = MetaEvent;
+        type Log = DigestItem;
+    }
+    impl balances::Trait for Runtime {
+        type Balance = u64;
+        type AccountIndex = u64;
+        type OnFreeBalanceZero = ();
+        type EnsureAccountLiquid = ();
+        type Event = MetaEvent;
+    }
 
-	type TestXt = primitives::testing::TestXt<Call<Runtime>>;
-	type Executive = super::Executive<Runtime, Block<TestXt>, balances::ChainContext<Runtime>, balances::Module<Runtime>, ()>;
+    type TestXt = primitives::testing::TestXt<Call<Runtime>>;
+    type Executive = super::Executive<
+        Runtime,
+        Block<TestXt>,
+        balances::ChainContext<Runtime>,
+        balances::Module<Runtime>,
+        (),
+    >;
 
-	#[test]
-	fn balance_transfer_dispatch_works() {
-		let mut t = system::GenesisConfig::<Runtime>::default().build_storage().unwrap().0;
-		t.extend(balances::GenesisConfig::<Runtime> {
-			balances: vec![(1, 111)],
-			transaction_base_fee: 10,
-			transaction_byte_fee: 0,
-			existential_deposit: 0,
-			transfer_fee: 0,
-			creation_fee: 0,
-			reclaim_rebate: 0,
-		}.build_storage().unwrap().0);
-		let xt = primitives::testing::TestXt(Some(1), 0, Call::transfer(2.into(), 69.into()));
-		let mut t = runtime_io::TestExternalities::<Blake2Hasher>::new(t);
-		with_externalities(&mut t, || {
-			Executive::initialise_block(&Header::new(1, H256::default(), H256::default(),
-				[69u8; 32].into(), Digest::default()));
-			Executive::apply_extrinsic(xt).unwrap();
-			assert_eq!(<balances::Module<Runtime>>::total_balance(&1), 32);
-			assert_eq!(<balances::Module<Runtime>>::total_balance(&2), 69);
-		});
-	}
+    #[test]
+    fn balance_transfer_dispatch_works() {
+        let mut t = system::GenesisConfig::<Runtime>::default()
+            .build_storage()
+            .unwrap()
+            .0;
+        t.extend(
+            balances::GenesisConfig::<Runtime> {
+                balances: vec![(1, 111)],
+                transaction_base_fee: 10,
+                transaction_byte_fee: 0,
+                existential_deposit: 0,
+                transfer_fee: 0,
+                creation_fee: 0,
+                reclaim_rebate: 0,
+            }
+            .build_storage()
+            .unwrap()
+            .0,
+        );
+        let xt = primitives::testing::TestXt(Some(1), 0, Call::transfer(2.into(), 69.into()));
+        let mut t = runtime_io::TestExternalities::<Blake2Hasher>::new(t);
+        with_externalities(&mut t, || {
+            Executive::initialise_block(&Header::new(
+                1,
+                H256::default(),
+                H256::default(),
+                [69u8; 32].into(),
+                Digest::default(),
+            ));
+            Executive::apply_extrinsic(xt).unwrap();
+            assert_eq!(<balances::Module<Runtime>>::total_balance(&1), 32);
+            assert_eq!(<balances::Module<Runtime>>::total_balance(&2), 69);
+        });
+    }
 
-	fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-		let mut t = system::GenesisConfig::<Runtime>::default().build_storage().unwrap().0;
-		t.extend(balances::GenesisConfig::<Runtime>::default().build_storage().unwrap().0);
-		t.into()
-	}
+    fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+        let mut t = system::GenesisConfig::<Runtime>::default()
+            .build_storage()
+            .unwrap()
+            .0;
+        t.extend(
+            balances::GenesisConfig::<Runtime>::default()
+                .build_storage()
+                .unwrap()
+                .0,
+        );
+        t.into()
+    }
 
-	#[test]
-	fn block_import_works() {
-		with_externalities(&mut new_test_ext(), || {
-			Executive::execute_block(Block {
-				header: Header {
-					parent_hash: [69u8; 32].into(),
-					number: 1,
-					state_root: hex!("d9e26179ed13b3df01e71ad0bf622d56f2066a63e04762a83c0ae9deeb4da1d0").into(),
-					extrinsics_root: hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314").into(),
-					digest: Digest { logs: vec![], },
-				},
-				extrinsics: vec![],
-			});
-		});
-	}
+    #[test]
+    fn block_import_works() {
+        with_externalities(&mut new_test_ext(), || {
+            Executive::execute_block(Block {
+                header: Header {
+                    parent_hash: [69u8; 32].into(),
+                    number: 1,
+                    state_root: hex!(
+                        "d9e26179ed13b3df01e71ad0bf622d56f2066a63e04762a83c0ae9deeb4da1d0"
+                    )
+                    .into(),
+                    extrinsics_root: hex!(
+                        "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314"
+                    )
+                    .into(),
+                    digest: Digest { logs: vec![] },
+                },
+                extrinsics: vec![],
+            });
+        });
+    }
 
-	#[test]
-	#[should_panic]
-	fn block_import_of_bad_state_root_fails() {
-		with_externalities(&mut new_test_ext(), || {
-			Executive::execute_block(Block {
-				header: Header {
-					parent_hash: [69u8; 32].into(),
-					number: 1,
-					state_root: [0u8; 32].into(),
-					extrinsics_root: hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314").into(),
-					digest: Digest { logs: vec![], },
-				},
-				extrinsics: vec![],
-			});
-		});
-	}
+    #[test]
+    #[should_panic]
+    fn block_import_of_bad_state_root_fails() {
+        with_externalities(&mut new_test_ext(), || {
+            Executive::execute_block(Block {
+                header: Header {
+                    parent_hash: [69u8; 32].into(),
+                    number: 1,
+                    state_root: [0u8; 32].into(),
+                    extrinsics_root: hex!(
+                        "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314"
+                    )
+                    .into(),
+                    digest: Digest { logs: vec![] },
+                },
+                extrinsics: vec![],
+            });
+        });
+    }
 
-	#[test]
-	#[should_panic]
-	fn block_import_of_bad_extrinsic_root_fails() {
-		with_externalities(&mut new_test_ext(), || {
-			Executive::execute_block(Block {
-				header: Header {
-					parent_hash: [69u8; 32].into(),
-					number: 1,
-					state_root: hex!("d9e26179ed13b3df01e71ad0bf622d56f2066a63e04762a83c0ae9deeb4da1d0").into(),
-					extrinsics_root: [0u8; 32].into(),
-					digest: Digest { logs: vec![], },
-				},
-				extrinsics: vec![],
-			});
-		});
-	}
+    #[test]
+    #[should_panic]
+    fn block_import_of_bad_extrinsic_root_fails() {
+        with_externalities(&mut new_test_ext(), || {
+            Executive::execute_block(Block {
+                header: Header {
+                    parent_hash: [69u8; 32].into(),
+                    number: 1,
+                    state_root: hex!(
+                        "d9e26179ed13b3df01e71ad0bf622d56f2066a63e04762a83c0ae9deeb4da1d0"
+                    )
+                    .into(),
+                    extrinsics_root: [0u8; 32].into(),
+                    digest: Digest { logs: vec![] },
+                },
+                extrinsics: vec![],
+            });
+        });
+    }
 
-	#[test]
-	fn bad_extrinsic_not_inserted() {
-		let mut t = new_test_ext();
-		let xt = primitives::testing::TestXt(Some(1), 42, Call::transfer(33.into(), 69.into()));
-		with_externalities(&mut t, || {
-			Executive::initialise_block(&Header::new(1, H256::default(), H256::default(), [69u8; 32].into(), Digest::default()));
-			assert!(Executive::apply_extrinsic(xt).is_err());
-			assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(0));
-		});
-	}
+    #[test]
+    fn bad_extrinsic_not_inserted() {
+        let mut t = new_test_ext();
+        let xt = primitives::testing::TestXt(Some(1), 42, Call::transfer(33.into(), 69.into()));
+        with_externalities(&mut t, || {
+            Executive::initialise_block(&Header::new(
+                1,
+                H256::default(),
+                H256::default(),
+                [69u8; 32].into(),
+                Digest::default(),
+            ));
+            assert!(Executive::apply_extrinsic(xt).is_err());
+            assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(0));
+        });
+    }
 }

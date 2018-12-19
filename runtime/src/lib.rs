@@ -11,9 +11,9 @@ extern crate srml_support;
 #[macro_use]
 extern crate sr_primitives as runtime_primitives;
 extern crate parity_codec as codec;
-extern crate substrate_primitives as primitives;
 #[cfg(feature = "std")]
 extern crate serde;
+extern crate substrate_primitives as primitives;
 #[macro_use]
 extern crate substrate_client as client;
 #[macro_use]
@@ -25,15 +25,15 @@ extern crate srml_balances as balances;
 extern crate srml_consensus as consensus;
 extern crate srml_contract as contract;
 extern crate srml_council as council;
-extern crate substrate_consensus_aura_primitives as consensus_aura;
 extern crate srml_democracy as democracy;
-extern crate xrml_executive as executive;
 extern crate srml_session as session;
+extern crate srml_staking as staking;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 extern crate srml_treasury as treasury;
+extern crate substrate_consensus_aura_primitives as consensus_aura;
 extern crate substrate_primitives;
-extern crate srml_staking as staking;
+extern crate xrml_executive as executive;
 extern crate xrml_fee_manager as fee_manager;
 // cx runtime module
 //extern crate cxrml_associations as associations;
@@ -62,34 +62,33 @@ extern crate sr_version as version;
 extern crate chainx_primitives;
 
 pub use balances::address::Address as RawAddress;
-pub use consensus::Call as ConsensusCall;
 use consensus_aura::api as aura_api;
-pub use runtime_primitives::{Permill, Perbill};
+pub use runtime_primitives::{Perbill, Permill};
 //pub use tokenbalances::Token;
 
+use chainx_primitives::{
+    AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature,
+};
+use client::{block_builder::api as block_builder_api, runtime_api as client_api};
+#[cfg(feature = "std")]
+use council::{motions as council_motions, voting as council_voting};
 use grandpa::fg_primitives::{self, ScheduledChange};
 use rstd::prelude::*;
 use runtime_primitives::generic;
+use runtime_primitives::traits::{BlakeTwo256, Block as BlockT, Convert, DigestFor, NumberFor};
+use runtime_primitives::transaction_validity::TransactionValidity;
+use runtime_primitives::{ApplyResult, BasicInherentData, CheckInherentError};
+use srml_support::inherent::ProvideInherent;
 use substrate_primitives::u32_trait::{_2, _4};
-use chainx_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature};
-use runtime_primitives::traits::{Convert, BlakeTwo256, Block as BlockT, DigestFor, NumberFor};
-#[cfg(feature = "std")]
-use council::{motions as council_motions, voting as council_voting};
-use version::RuntimeVersion;
+use substrate_primitives::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
 use version::NativeVersion;
-use runtime_primitives::{ApplyResult, CheckInherentError, BasicInherentData};
-use runtime_primitives::transaction_validity::TransactionValidity;
-use client::{
-    block_builder::api as block_builder_api, runtime_api as client_api
-};
-use substrate_primitives::OpaqueMetadata;
-use srml_support::inherent::ProvideInherent;
+use version::RuntimeVersion;
 
 // for set consensus period
+pub use srml_support::{RuntimeMetadata, StorageValue};
 pub use timestamp::BlockPeriod;
 pub use timestamp::Call as TimestampCall;
-pub use srml_support::{StorageValue, RuntimeMetadata};
 
 //#[cfg(feature = "std")]
 //pub use multisig::BalancesConfigCopy;
@@ -314,8 +313,6 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Index, Call, Signature>;
-/// Extrinsic type that has already been checked.
-pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive =
     executive::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;

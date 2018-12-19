@@ -26,4 +26,5 @@ members = [
     "xrml/xsupport",
     "xrml/xexecutive",
     "xrml/xfee/manager",
+    "xrml/xfee/config",
 ]

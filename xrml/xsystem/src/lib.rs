@@ -28,10 +28,10 @@ mod tests;
 
 use rstd::prelude::*;
 use rstd::result;
+use runtime_primitives::traits::{Block as BlockT, ProvideInherent};
+use runtime_primitives::CheckInherentError;
 use runtime_support::dispatch::Result;
 use runtime_support::StorageValue;
-use runtime_primitives::CheckInherentError;
-use runtime_primitives::traits::{ProvideInherent, Block as BlockT};
 
 use system::ensure_inherent;
 
@@ -45,17 +45,17 @@ decl_module! {
             ensure_inherent(origin)?;
 
             assert!(
-				<system::Module<T>>::extrinsic_index() == Some(T::XSYSTEM_SET_POSITION),
-				"BlockProducer extrinsic must be at position {} in the block",
-				T::XSYSTEM_SET_POSITION
-			);
+                <system::Module<T>>::extrinsic_index() == Some(T::XSYSTEM_SET_POSITION),
+                "BlockProducer extrinsic must be at position {} in the block",
+                T::XSYSTEM_SET_POSITION
+            );
 
             BlockProdocer::<T>::put(producer);
             Ok(())
         }
         fn on_finalise(_n: T::BlockNumber) {
-			BlockProdocer::<T>::kill();
-		}
+            BlockProdocer::<T>::kill();
+        }
     }
 }
 
@@ -77,7 +77,9 @@ impl<T: Trait> ProvideInherent for Module<T> {
     }
 
     fn check_inherent<Block: BlockT, F: Fn(&Block::Extrinsic) -> Option<&Self::Call>>(
-        _block: &Block, _data: Self::Inherent, _extract_function: &F
+        _block: &Block,
+        _data: Self::Inherent,
+        _extract_function: &F,
     ) -> result::Result<(), CheckInherentError> {
         Ok(())
     }
