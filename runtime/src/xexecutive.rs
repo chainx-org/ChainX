@@ -17,49 +17,22 @@
 
 //! Executive: Handles all of the top-level stuff; essentially just executing blocks/extrinsics.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-#[cfg(test)]
-#[macro_use]
-extern crate parity_codec_derive;
-
-#[cfg_attr(test, macro_use)]
-extern crate srml_support as runtime_support;
-
-extern crate parity_codec as codec;
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as primitives;
-#[cfg_attr(not(feature = "std"), macro_use)]
-extern crate sr_std as rstd;
-extern crate srml_system as system;
-
-#[cfg(test)]
-#[macro_use]
-extern crate hex_literal;
-
-#[cfg(test)]
-extern crate substrate_primitives;
-
-#[cfg(test)]
-extern crate srml_balances as balances;
-extern crate xrml_fee_config;
-extern crate xrml_fee_manager;
-
 use codec::{Codec, Encode};
-use primitives::traits::{
-    self, Applyable, As, CheckEqual, Checkable, Digest, Hash, Header, Member, OnFinalise, One, Zero,
-};
-use primitives::transaction_validity::{
-    TransactionLongevity, TransactionPriority, TransactionValidity,
-};
-use primitives::{ApplyError, ApplyOutcome};
+use fee::CheckFee;
+use fee_manager::MakePayment;
 use rstd::marker::PhantomData;
 use rstd::prelude::*;
 use rstd::result;
-use runtime_support::Dispatchable;
+use runtime_io;
+use runtime_primitives::traits::{
+    self, Applyable, As, CheckEqual, Checkable, Digest, Hash, Header, OnFinalise, One, Zero,
+};
+use runtime_primitives::transaction_validity::{
+    TransactionLongevity, TransactionPriority, TransactionValidity,
+};
+use runtime_primitives::{ApplyError, ApplyOutcome};
+use srml_support::Dispatchable;
 use system::extrinsics_root;
-use xrml_fee_config::FeeMap;
-use xrml_fee_manager::MakePayment;
 
 mod internal {
     pub enum ApplyError {
@@ -88,7 +61,7 @@ impl<
 > Executive<System, Block, Context, Payment, Finalisation> where
 	Block::Extrinsic: Checkable<Context> + Codec,
 	<Block::Extrinsic as Checkable<Context>>::Checked: Applyable<Index=System::Index, AccountId=System::AccountId>,
-	<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call: Dispatchable + Member,
+	<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call: Dispatchable + CheckFee,
 	<<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call as Dispatchable>::Origin: From<Option<System::AccountId>>
 {
 	/// Start the execution of a particular block.
@@ -184,9 +157,8 @@ impl<
 		}
 
 		let (f, s) = xt.deconstruct();
-        let fee_map = FeeMap::<<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call>{_marker: Default::default(),};
-        if let Some(pay) = fee_map.find(&f) {
-			Payment::make_payment(&s.clone().unwrap(), encoded_len, pay).map_err(|_| internal::ApplyError::CantPay)?;
+        if let Some(fee_power) = f.check_fee() {
+			Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power).map_err(|_| internal::ApplyError::CantPay)?;
 
 			// AUDIT: Under no circumstances may this function panic from here onwards.
 
@@ -270,9 +242,8 @@ impl<
 		};
 
 		let (f, s) = xt.deconstruct();
-        let fee_map = FeeMap::<<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call>{_marker: Default::default(),};
-        if let Some(pay) = fee_map.find(&f) {
-			if Payment::make_payment(&s.clone().unwrap(), encoded_len, pay).is_err() {
+        if let Some(fee_power) = f.check_fee() {
+			if Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power).is_err() {
 				return TransactionValidity::Invalid
 			} else {
                  return valid
@@ -287,11 +258,11 @@ impl<
 mod tests {
     use super::*;
     use balances::Call;
-    use primitives::testing::{Block, Digest, DigestItem, Header};
-    use primitives::traits::{BlakeTwo256, Header as HeaderT};
-    use primitives::BuildStorage;
+    use primitives::{Blake2Hasher, H256};
     use runtime_io::with_externalities;
-    use substrate_primitives::{Blake2Hasher, H256};
+    use runtime_primitives::testing::{Block, Digest, DigestItem, Header};
+    use runtime_primitives::traits::{BlakeTwo256, Header as HeaderT};
+    use runtime_primitives::BuildStorage;
     use system;
 
     impl_outer_origin! {
@@ -327,13 +298,21 @@ mod tests {
         type EnsureAccountLiquid = ();
         type Event = MetaEvent;
     }
+    impl fee_manager::Trait for Runtime {}
 
-    type TestXt = primitives::testing::TestXt<Call<Runtime>>;
+    impl CheckFee for Call<Runtime> {
+        fn check_fee(&self) -> Option<u64> {
+            // ret fee_power,     total_fee = base_fee * fee_power + byte_fee * bytes
+            Some(1)
+        }
+    }
+
+    type TestXt = runtime_primitives::testing::TestXt<Call<Runtime>>;
     type Executive = super::Executive<
         Runtime,
         Block<TestXt>,
         balances::ChainContext<Runtime>,
-        balances::Module<Runtime>,
+        fee_manager::Module<Runtime>,
         (),
     >;
 
@@ -357,7 +336,8 @@ mod tests {
             .unwrap()
             .0,
         );
-        let xt = primitives::testing::TestXt(Some(1), 0, Call::transfer(2.into(), 69.into()));
+        let xt =
+            runtime_primitives::testing::TestXt(Some(1), 0, Call::transfer(2.into(), 69.into()));
         let mut t = runtime_io::TestExternalities::<Blake2Hasher>::new(t);
         with_externalities(&mut t, || {
             Executive::initialise_block(&Header::new(
@@ -452,7 +432,8 @@ mod tests {
     #[test]
     fn bad_extrinsic_not_inserted() {
         let mut t = new_test_ext();
-        let xt = primitives::testing::TestXt(Some(1), 42, Call::transfer(33.into(), 69.into()));
+        let xt =
+            runtime_primitives::testing::TestXt(Some(1), 42, Call::transfer(33.into(), 69.into()));
         with_externalities(&mut t, || {
             Executive::initialise_block(&Header::new(
                 1,

@@ -24,10 +24,8 @@ members = [
     # xrml
     "xrml/xsystem",
     "xrml/xsupport",
-    "xrml/xexecutive",
     # xrml/xfee
     "xrml/xfee/manager",
-    "xrml/xfee/config",
     # xrml/assets
     "xrml/xassets/assets",
 ]

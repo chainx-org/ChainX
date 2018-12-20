@@ -401,6 +401,7 @@ dependencies = [
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-version 0.1.0 (git+https://github.com/chainpool/substrate)",
@@ -420,7 +421,6 @@ dependencies = [
  "substrate-consensus-aura-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-executive 0.4.0",
  "xrml-fee-manager 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xsystem 0.4.0",
@@ -4305,38 +4305,10 @@ version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "xrml-executive"
-version = "0.4.0"
-dependencies = [
- "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-fee-config 0.4.0",
- "xrml-fee-manager 0.4.0",
-]
-
-[[package]]
-name = "xrml-fee-config"
-version = "0.4.0"
-dependencies = [
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
-]
-
-[[package]]
 name = "xrml-fee-manager"
 version = "0.4.0"
 dependencies = [
  "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",

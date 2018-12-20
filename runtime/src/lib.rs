@@ -6,6 +6,10 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
+#[cfg(test)]
+#[macro_use]
+extern crate hex_literal;
+
 extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive;
@@ -14,6 +18,7 @@ extern crate serde;
 
 #[macro_use]
 extern crate substrate_client as client;
+extern crate sr_io as runtime_io;
 extern crate substrate_consensus_aura_primitives as consensus_aura;
 extern crate substrate_primitives as primitives;
 
@@ -42,24 +47,22 @@ extern crate srml_treasury as treasury;
 
 // chainx
 extern crate chainx_primitives;
-// chainx runtime module
-extern crate xrml_executive as xexective;
 extern crate xrml_xsystem as xsystem;
 // fee;
 extern crate xrml_fee_manager as fee_manager;
 // assets;
 extern crate xrml_xassets_assets as xassets;
 
+mod fee;
+mod xexecutive;
+
 pub use balances::address::Address as RawAddress;
 use consensus_aura::api as aura_api;
 pub use runtime_primitives::{Perbill, Permill};
 
-#[cfg(feature = "std")]
-use council::{motions as council_motions, voting as council_voting};
 use grandpa::fg_primitives::{self, ScheduledChange};
 use rstd::prelude::*;
 
-use primitives::u32_trait::{_2, _4};
 use primitives::OpaqueMetadata;
 
 use runtime_primitives::generic;
@@ -258,7 +261,7 @@ pub type BlockId = generic::BlockId<Block>;
 pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Index, Call, Signature>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive =
-    xexective::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;
+    xexecutive::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;
 
 // define tokenbalances module type
 //pub type TokenBalance = u128;

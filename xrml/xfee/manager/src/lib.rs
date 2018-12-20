@@ -5,10 +5,8 @@ extern crate srml_balances as balances;
 extern crate srml_system as system;
 #[macro_use]
 extern crate srml_support as runtime_support;
-extern crate sr_primitives;
-#[macro_use]
-extern crate parity_codec_derive;
 extern crate parity_codec as codec;
+extern crate sr_primitives;
 
 use runtime_support::dispatch::Result;
 use runtime_support::StorageValue;
@@ -45,10 +43,10 @@ decl_storage! {
 }
 
 impl<T: Trait> MakePayment<T::AccountId> for Module<T> {
-    fn make_payment(transactor: &T::AccountId, encoded_len: usize, pay: u64) -> Result {
+    fn make_payment(transactor: &T::AccountId, encoded_len: usize, power: u64) -> Result {
         let b = <balances::Module<T>>::free_balance(transactor);
         let transaction_fee = <balances::Module<T>>::transaction_base_fee()
-            + T::Balance::sa(pay)
+            * <T::Balance as As<u64>>::sa(power)
             + <balances::Module<T>>::transaction_byte_fee()
                 * <T::Balance as As<u64>>::sa(encoded_len as u64);
         if b < transaction_fee + <balances::Module<T>>::existential_deposit() {

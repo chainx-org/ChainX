@@ -19,6 +19,7 @@ substrate-consensus-aura-primitives = { git = "https://github.com/chainpool/subs
 sr-primitives = { git = "https://github.com/chainpool/substrate" }
 sr-version = { git = "https://github.com/chainpool/substrate" }
 sr-std = { git = "https://github.com/chainpool/substrate" }
+sr-io = { git = "https://github.com/chainpool/substrate" }
 
 srml-support = { git = "https://github.com/chainpool/substrate" }
 srml-system = { git = "https://github.com/chainpool/substrate" }
@@ -39,7 +40,6 @@ chainx-primitives = { path = "../primitives" }
 
 # chainx runtime module
 xrml-xsystem = { path = "../xrml/xsystem" }
-xrml-executive = { path = "../xrml/xexecutive" }
 # fee
 xrml-fee-manager = { path = "../xrml/xfee/manager" }
 # assets
@@ -77,7 +77,6 @@ std = [
     "chainx-primitives/std",
     # chainx runtime
     "xrml-xsystem/std",
-    "xrml-executive/std",
     # fee
     "xrml-fee-manager/std",
     # asset

@@ -10,7 +10,6 @@ srml-balances = { git = "https://github.com/chainpool/substrate", default-featur
 srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 parity-codec = { version = "2.1", default-features = false }
-parity-codec-derive = { version = "2.1", default-features = false }
 
 
 [features]
@@ -22,5 +21,4 @@ std = [
         "serde/std",
         "sr-primitives/std",
         "parity-codec/std",
-        "parity-codec-derive/std",
 ]
