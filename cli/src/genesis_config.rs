@@ -10,7 +10,7 @@ use self::base58::FromBase58;
 use chainx_runtime::GrandpaConfig;
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, Perbill, Permill, SessionConfig,
-    TimestampConfig, XAssetsConfig, XFeeManagerConfig, XSystemConfig,
+    TimestampConfig, XAssetsConfig, XFeeManagerConfig, XSystemConfig, XAccountsConfig,
 };
 use ed25519;
 use ed25519::Public;
@@ -102,10 +102,15 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             death_account: substrate_primitives::H256::zero(),
             fee_buy_account: substrate_primitives::H256::repeat_byte(0x1),
         }),
+        xaccounts: None,
         fee_manager: Some(XFeeManagerConfig {
             switch: false,
             _genesis_phantom_data: Default::default(),
         }),
-        xassets: None,
+        xassets: Some(XAssetsConfig {
+            pcx: (pcx_precision, b"PCX onchain token".to_vec()),
+            remark_len: 128,
+            asset_list: vec![],
+        }),
     }
 }

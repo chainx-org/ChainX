@@ -48,6 +48,7 @@ extern crate srml_treasury as treasury;
 // chainx
 extern crate chainx_primitives;
 extern crate xrml_xsystem as xsystem;
+extern crate xrml_xaccounts as xaccounts;
 // fee;
 extern crate xrml_fee_manager as fee_manager;
 // assets;
@@ -216,6 +217,8 @@ impl aura::Trait for Runtime {
 impl xsystem::Trait for Runtime {
     const XSYSTEM_SET_POSITION: u32 = 3;
 }
+
+impl xaccounts::Trait for Runtime { }
 // fees
 impl fee_manager::Trait for Runtime {
     //    type Event = Event;
@@ -242,6 +245,7 @@ construct_runtime!(
 
         // chainx runtime module
         XSystem: xsystem::{Module, Call, Storage, Config<T>}, //, Inherent},
+        XAccounts: xaccounts::{Module, Storage, Config<T>}, //, Inherent},
         // fee
         XFeeManager: fee_manager::{Module, Call, Storage, Config<T>},
         // assets

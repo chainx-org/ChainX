@@ -23,19 +23,22 @@ extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 extern crate srml_system as system;
 
+extern crate xrml_xaccounts as xaccounts;
+
 //#[cfg(test)]
 //mod mock;
 //#[cfg(test)]
 //mod tests;
 
 pub mod assetdef;
+pub mod remark;
 
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 use rstd::slice::Iter;
 use runtime_support::dispatch::Result;
 
-use primitives::traits::{As, CheckedAdd, CheckedSub};
+use primitives::traits::{As, CheckedAdd, CheckedSub, Zero};
 use runtime_support::{StorageMap, StorageValue};
 // substrate mod
 //use balances::address::Address as RawAddress;
@@ -48,9 +51,11 @@ pub use assetdef::{
     TokenString,
 };
 
+pub use remark::is_valid_remark;
+
 pub type Address<AccountId, AccountIndex> = balances::address::Address<AccountId, AccountIndex>;
 
-pub trait Trait: balances::Trait {
+pub trait Trait: balances::Trait + xaccounts::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -136,13 +141,19 @@ decl_module! {
         }
 
         /// transfer between account
-        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance) -> Result {
+        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, remark: Vec<u8>) -> Result {
             runtime_io::print("[tokenbalances] transfer");
             let transactor = ensure_signed(origin)?;
             let dest = balances::Module::<T>::lookup(dest)?;
+
+            is_valid_remark::<T>(&remark)?;
+
             if transactor == dest {
                 return Err("transactor and dest account are same");
             }
+
+            Self::init_account(&transactor, &dest);
+
             Self::move_free_balance(&transactor, &dest, &token, value).map_err(|e| e.info())
         }
     }
@@ -177,9 +188,12 @@ decl_storage! {
 
         /// price
         pub PCXPriceFor get(pcx_price_for): map Token => Option<T::Balance>;
+
+        /// remark len
+        pub RemarkLen get(remark_len) config(): u32;
     }
     add_extra_genesis {
-        config(token_list): Vec<(Asset, Vec<(T::AccountId, u64)>)>;
+        config(asset_list): Vec<(Asset, Vec<(T::AccountId, u64)>)>;
         config(pcx): (Precision, Desc);
         build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
                 use runtime_io::with_externalities;
@@ -426,7 +440,7 @@ impl<T: Trait> Module<T> {
             let free_token: T::Balance = balances::FreeBalance::<T>::get(who);
             let reserved_token = XReservedBalance::<T>::get(&reserved_key);
             let total_reserved_token = TotalXReservedBalance::<T>::get(token);
-            match free_token.checked_sub(&value) {
+            let new_free_token = match free_token.checked_sub(&value) {
                 Some(b) => b,
                 None => return Err("chainx free token too low to reserve"),
             };
@@ -440,6 +454,7 @@ impl<T: Trait> Module<T> {
             };
             // do not call reserve in balance
             //            balances::Module::<T>::reserve(who, value)?;
+            balances::Module::<T>::set_free_balance(who, new_free_token);
             XReservedBalance::<T>::insert(reserved_key, new_reserved_token);
             TotalXReservedBalance::<T>::insert(token, new_total_reserved_token);
         } else {
@@ -491,7 +506,7 @@ impl<T: Trait> Module<T> {
             let free_token: T::Balance = balances::FreeBalance::<T>::get(who);
             let reserved_token = XReservedBalance::<T>::get(&reserved_key);
             let total_reserved_token = TotalXReservedBalance::<T>::get(token);
-            match free_token.checked_add(&value) {
+            let new_free_token = match free_token.checked_add(&value) {
                 Some(b) => b,
                 None => return Err("chainx free token too high to unreserve"),
             };
@@ -505,6 +520,7 @@ impl<T: Trait> Module<T> {
             };
             // do not call unreserve in balance
             //            balances::Module::<T>::unreserve(who, value);
+            balances::Module::<T>::set_free_balance(who, new_free_token);
             XReservedBalance::<T>::insert(reserved_key, new_reserved_token);
             TotalXReservedBalance::<T>::insert(token, new_total_reserved_token);
         } else {
@@ -541,6 +557,15 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    pub fn init_account(from: &T::AccountId, to: &T::AccountId) {
+        if let None = xaccounts::Module::<T>::account_relationships(to) {
+            if balances::FreeBalance::<T>::exists(to) == false {
+                xaccounts::AccountRelationships::<T>::insert(to, from);
+                balances::Module::<T>::set_free_balance_creating(&to, Zero::zero());
+            }
+        }
+    }
+
     pub fn move_free_balance(
         from: &T::AccountId,
         to: &T::AccountId,
@@ -551,8 +576,8 @@ impl<T: Trait> Module<T> {
 
         // for chainx
         if token.as_slice() == <Self as ChainT>::TOKEN {
-            let from_token: T::Balance = balances::FreeBalance::<T>::get(from);
-            let to_token: T::Balance = balances::FreeBalance::<T>::get(to);
+            let from_token: T::Balance = balances::Module::<T>::free_balance(from);
+            let to_token: T::Balance = balances::Module::<T>::free_balance(to);
 
             let new_from_token = match from_token.checked_sub(&value) {
                 Some(b) => b,
@@ -562,8 +587,10 @@ impl<T: Trait> Module<T> {
                 Some(b) => b,
                 None => return Err(TokenErr::OverFlow),
             };
-            balances::FreeBalance::<T>::insert(from, new_from_token);
-            balances::FreeBalance::<T>::insert(to, new_to_token);
+//            balances::FreeBalance::<T>::insert(from, new_from_token);
+//            balances::FreeBalance::<T>::insert(to, new_to_token);
+            balances::Module::<T>::set_free_balance(from, new_from_token);
+            balances::Module::<T>::set_free_balance(to, new_to_token);
         } else {
             Self::init_asset_for(to, token);
             let key_from = (from.clone(), token.clone());

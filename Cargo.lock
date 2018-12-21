@@ -422,6 +422,7 @@ dependencies = [
  "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xrml-fee-manager 0.4.0",
+ "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
@@ -4354,6 +4355,7 @@ dependencies = [
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-xaccounts 0.4.0",
 ]
 
 [[package]]

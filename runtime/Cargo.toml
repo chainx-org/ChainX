@@ -40,6 +40,7 @@ chainx-primitives = { path = "../primitives" }
 
 # chainx runtime module
 xrml-xsystem = { path = "../xrml/xsystem" }
+xrml-xaccounts = { path = "../xrml/xaccounts" }
 # fee
 xrml-fee-manager = { path = "../xrml/xfee/manager" }
 # assets
@@ -77,6 +78,7 @@ std = [
     "chainx-primitives/std",
     # chainx runtime
     "xrml-xsystem/std",
+    "xrml-xaccounts/std",
     # fee
     "xrml-fee-manager/std",
     # asset
