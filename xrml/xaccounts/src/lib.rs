@@ -33,8 +33,6 @@ extern crate srml_system as system;
 #[cfg(test)]
 extern crate srml_timestamp as timestamp;
 
-extern crate xrml_xassets_assets as xassets;
-
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
