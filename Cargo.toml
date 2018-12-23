@@ -20,6 +20,8 @@ members = [
     "executor",
     "runtime",
     "cli",
+    "rpc",
+    "rpc-servers",
 
     # xrml
     "xrml/xsystem",

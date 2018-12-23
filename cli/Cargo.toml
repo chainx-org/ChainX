@@ -29,6 +29,7 @@ chainx-executor = { path = "../executor" }
 primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
 chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
 keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
+substrate-rpc-servers = { path = "../rpc-servers" }
 structopt = "0.2.13"
 
 [dev-dependencies]

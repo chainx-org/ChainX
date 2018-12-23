@@ -37,6 +37,7 @@ extern crate substrate_finality_grandpa as grandpa;
 #[macro_use]
 extern crate substrate_service;
 extern crate chainx_executor;
+extern crate substrate_rpc_servers as rpc;
 
 #[macro_use]
 extern crate log;
@@ -47,6 +48,7 @@ mod chain_spec;
 mod genesis_config;
 mod params;
 mod service;
+mod native_rpc;
 
 pub use cli::{IntoExit, VersionInfo};
 use params::Params as NodeParams;
@@ -157,13 +159,14 @@ where
 
 fn run_until_exit<T, C, E>(runtime: &mut Runtime, service: T, e: E) -> error::Result<()>
 where
-    T: Deref<Target = substrate_service::Service<C>>,
+    T: Deref<Target = substrate_service::Service<C>> + native_rpc::Rpc,
     C: substrate_service::Components,
     E: IntoExit,
 {
     let (exit_send, exit) = exit_future::signal();
 
     let executor = runtime.executor();
+    let (_http, _ws) = service.start_rpc(executor.clone());
     cli::informant::start(&service, exit.clone(), executor.clone());
 
     let _ = runtime.block_on(e.into_exit());

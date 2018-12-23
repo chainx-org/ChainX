@@ -1,0 +1,31 @@
+[package]
+name = "substrate-rpc"
+version = "0.1.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+
+[dependencies]
+error-chain = "0.12"
+jsonrpc-core = { git="https://github.com/paritytech/jsonrpc.git" }
+jsonrpc-macros = { git="https://github.com/paritytech/jsonrpc.git" }
+jsonrpc-pubsub = { git="https://github.com/paritytech/jsonrpc.git" }
+log = "0.4"
+parking_lot = "0.4"
+parity-codec = "2.1"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+substrate-client = { git = "https://github.com/chainpool/substrate" }
+substrate-executor = { git = "https://github.com/chainpool/substrate" }
+substrate-network = { git = "https://github.com/chainpool/substrate" }
+substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+substrate-transaction-pool = { git = "https://github.com/chainpool/substrate" }
+sr-primitives = { git = "https://github.com/chainpool/substrate" }
+sr-version = { git = "https://github.com/chainpool/substrate" }
+tokio = "0.1.7"
+
+[dev-dependencies]
+assert_matches = "1.1"
+substrate-test-client = { git = "https://github.com/chainpool/substrate" }
+substrate-consensus-common = { git = "https://github.com/chainpool/substrate" }
+rustc-hex = "2.0"
+hex-literal = "0.1"
