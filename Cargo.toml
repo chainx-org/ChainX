@@ -31,4 +31,5 @@ members = [
     "xrml/xfee/manager",
     # xrml/assets
     "xrml/xassets/assets",
+    "xrml/xassets/records",
 ]
