@@ -32,4 +32,5 @@ members = [
     # xrml/assets
     "xrml/xassets/assets",
     "xrml/xassets/records",
+    "xrml/xassets/process",
 ]

@@ -4,11 +4,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // for encode/decode
-// Needed for deriving `Serialize` and `Deserialize` for various types.
-// We only implement the serde traits for std builds - they're unneeded
-// in the wasm runtime.
 #[cfg(feature = "std")]
-#[macro_use]
 extern crate serde_derive;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
@@ -72,7 +68,6 @@ decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
         <T as balances::Trait>::Balance
-//        <T as system::Trait>::BlockNumber
     {
         Deposit(AccountId, u32, Token, Balance, Option<Vec<u8>>),
         Withdrawal(AccountId, u32, Token, Balance, Option<Vec<u8>>, Vec<u8>, Vec<u8>),
@@ -225,7 +220,7 @@ impl<T: Trait> LinkedNodeCollection for LinkedMultiKey<T> {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as FinancialRecords {
+    trait Store for Module<T: Trait> as XAssetsRecords {
         /// Record list length of every account
         pub RecordListLenOf get(record_list_len_of): map T::AccountId => u32;
         /// Record list for every account, use accountid and index to index the record of account

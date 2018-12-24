@@ -45,6 +45,8 @@ xrml-xaccounts = { path = "../xrml/xaccounts", default-features = false }
 xrml-fee-manager = { path = "../../xrml/xfee/manager", default-features = false }
 # assets
 xrml-xassets-assets = { path = "../../xrml/xassets/assets", default-features = false }
+xrml-xassets-records = { path = "../../xrml/xassets/records", default-features = false }
+xrml-xassets-process = { path = "../../xrml/xassets/process", default-features = false }
 
 [features]
 default = []
@@ -81,7 +83,9 @@ std = [
     # fee
     "xrml-fee-manager/std",
     # asset
-    "xrml-xassets-assets/std"
+    "xrml-xassets-assets/std",
+    "xrml-xassets-records/std",
+    "xrml-xassets-process/std",
 ]
 
 [profile.release]

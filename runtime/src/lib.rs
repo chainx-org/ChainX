@@ -53,6 +53,8 @@ extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_fee_manager as fee_manager;
 // assets;
 extern crate xrml_xassets_assets as xassets;
+extern crate xrml_xassets_records as xrecords;
+extern crate xrml_xassets_process as xprocess;
 
 mod fee;
 mod xexecutive;
@@ -229,6 +231,13 @@ impl xassets::Trait for Runtime {
     type OnAssetChanged = ();
 }
 
+impl xrecords::Trait for Runtime {
+    type Event = Event;
+}
+
+impl xprocess::Trait for Runtime {
+}
+
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
         Block = Block,
@@ -236,7 +245,7 @@ construct_runtime!(
         InherentData = BasicInherentData
     {
         System: system::{default, Log(ChangesTrieRoot)},
-        Balances: balances,
+        Balances: balances::{Module, Storage, Config<T>, Event<T>},
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
         Session: session,
@@ -250,6 +259,8 @@ construct_runtime!(
         XFeeManager: fee_manager::{Module, Call, Storage, Config<T>},
         // assets
         XAssets: xassets,
+        XAssetsRecords: xrecords::{Module, Storage, Event<T>},
+        XAssetsProcess: xprocess::{Module, Call, Storage},
     }
 );
 
