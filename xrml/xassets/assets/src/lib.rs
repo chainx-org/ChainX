@@ -82,18 +82,20 @@ impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum ReservedType {
     Others,
-    Funds,
     Staking,
-    Exchange,
+    AssetsWithdrawal,
+    DexSpot,
+    DexFuture,
 }
 
 impl ReservedType {
     pub fn iterator() -> Iter<'static, ReservedType> {
-        static TYPES: [ReservedType; 4] = [
+        static TYPES: [ReservedType; 5] = [
             ReservedType::Others,
-            ReservedType::Funds,
             ReservedType::Staking,
-            ReservedType::Exchange,
+            ReservedType::AssetsWithdrawal,
+            ReservedType::DexSpot,
+            ReservedType::DexFuture,
         ];
         TYPES.into_iter()
     }
