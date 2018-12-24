@@ -33,4 +33,6 @@ members = [
     "xrml/xassets/assets",
     "xrml/xassets/records",
     "xrml/xassets/process",
+    # xrml/mining
+    "xrml/xmining/staking",
 ]

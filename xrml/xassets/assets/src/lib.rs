@@ -757,4 +757,15 @@ impl<T: Trait> Module<T> {
     pub fn lookup_address(a: Address<T::AccountId, T::AccountIndex>) -> Option<T::AccountId> {
         balances::Module::<T>::lookup_address(a)
     }
+
+    pub fn lookup(
+        a: Address<T::AccountId, T::AccountIndex>,
+    ) -> StdResult<T::AccountId, &'static str> {
+        match a {
+            balances::address::Address::Id(i) => Ok(i),
+            balances::address::Address::Index(i) => {
+                balances::Module::<T>::lookup_index(i).ok_or("invalid account index")
+            }
+        }
+    }
 }

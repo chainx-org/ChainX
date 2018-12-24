@@ -89,6 +89,8 @@ decl_storage! {
         /// cert name => cert owner
         pub CertOwnerOf get(cert_owner_of): map Vec<u8> => Option<T::AccountId>;
 
+        pub Certs get(certs): Vec<Vec<u8>>;
+
         pub CertImmutablePropertiesOf get(cert_immutable_props_of): map Vec<u8> => CertImmutableProps<T::BlockNumber>;
 
         pub RemainingSharesOf get(remaining_shares_of): map Vec<u8> => u32;
@@ -98,7 +100,7 @@ decl_storage! {
         /// intention name => intention
         pub IntentionOf get(intention_of): map Vec<u8> => Option<T::AccountId>;
 
-        pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => IntentionImmutableProps;
+        pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps>;
 
         pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps;
     }
@@ -145,6 +147,7 @@ impl<T: Trait> Module<T> {
 
         <RemainingSharesOf<T>>::insert(&cert_name, Self::shares_per_cert());
 
+        <Certs<T>>::mutate(|certs| certs.push(cert_name.clone()));
         <CertNamesOf<T>>::mutate(&cert_owner, |names| names.push(cert_name));
         <TotalIssued<T>>::put(Self::total_issued() + 1);
 

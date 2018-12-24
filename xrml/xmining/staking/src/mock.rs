@@ -3,14 +3,13 @@
 
 #![cfg(test)]
 
-use super::*;
 use runtime_io;
-use runtime_io::with_externalities;
 use runtime_primitives::testing::{Digest, DigestItem, Header};
 use runtime_primitives::traits::{BlakeTwo256, Identity};
 use runtime_primitives::BuildStorage;
+use runtime_primitives::Perbill;
 use substrate_primitives::{Blake2Hasher, H256};
-use {balances, consensus, session, system, timestamp, GenesisConfig, Module, Trait};
+use {balances, consensus, session, system, timestamp, xassets, GenesisConfig, Module, Trait};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -44,6 +43,11 @@ impl balances::Trait for Test {
     type EnsureAccountLiquid = ();
     type Event = ();
 }
+impl xaccounts::Trait for Test {}
+impl xassets::Trait for Test {
+    type Event = ();
+    type OnAssetChanged = ();
+}
 impl timestamp::Trait for Test {
     const TIMESTAMP_SET_POSITION: u32 = 0;
     type Moment = u64;
@@ -51,7 +55,7 @@ impl timestamp::Trait for Test {
 }
 impl session::Trait for Test {
     type ConvertAccountIdToSessionKey = Identity;
-    type OnSessionChange = ();
+    type OnSessionChange = Staking;
     type Event = ();
 }
 impl Trait for Test {}
@@ -69,6 +73,12 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .build_storage()
         .unwrap()
         .0,
+    );
+    t.extend(
+        timestamp::GenesisConfig::<Test> { period: 3 }
+            .build_storage()
+            .unwrap()
+            .0,
     );
     t.extend(
         session::GenesisConfig::<Test> {
@@ -94,7 +104,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .0,
     );
     t.extend(
-        GenesisConfig::<Test> {
+        xaccounts::GenesisConfig::<Test> {
             _genesis_phantom_data: ::std::marker::PhantomData::<Test>,
             shares_per_cert: 50,
             activation_per_share: 100_000_000,
@@ -105,30 +115,38 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .unwrap()
         .0,
     );
+    t.extend(
+        xassets::GenesisConfig::<Test> {
+            pcx: (3, b"PCX".to_vec()),
+            remark_len: 128,
+            asset_list: vec![],
+        }
+        .build_storage()
+        .unwrap()
+        .0,
+    );
+    t.extend(
+        GenesisConfig::<Test> {
+            intentions: vec![10, 20],
+            current_era: 0,
+            current_session_reward: 100,
+            validator_count: 2,
+            bonding_duration: 1,
+            minimum_validator_count: 0,
+            sessions_per_era: 1,
+            offline_slash: Perbill::zero(),
+            current_offline_slash: 20,
+            offline_slash_grace: 0,
+        }
+        .build_storage()
+        .unwrap()
+        .0,
+    );
     runtime_io::TestExternalities::new(t)
 }
 
 pub type System = system::Module<Test>;
-pub type XAccounts = Module<Test>;
-
-#[test]
-fn issue_should_work() {
-    with_externalities(&mut new_test_ext(), || {
-        System::set_block_number(10);
-        assert_ok!(XAccounts::issue(b"alice".to_vec(), 1, 1));
-        assert_eq!(XAccounts::total_issued(), 3);
-        assert_eq!(
-            XAccounts::cert_immutable_props_of(b"alice".to_vec()),
-            CertImmutableProps {
-                issued_at: 10,
-                frozen_duration: 1
-            }
-        );
-        assert_eq!(XAccounts::certs(), [b"alice".to_vec()]);
-        assert_eq!(XAccounts::remaining_shares_of(b"alice".to_vec()), 50);
-        assert_noop!(
-            XAccounts::issue(b"alice".to_vec(), 1, 1),
-            "Cert name already exists."
-        );
-    });
-}
+pub type Session = session::Module<Test>;
+pub type XAssets = xassets::Module<Test>;
+pub type XAccounts = xaccounts::Module<Test>;
+pub type Staking = Module<Test>;
