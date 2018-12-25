@@ -28,6 +28,28 @@ use runtime_primitives::generic;
 use runtime_primitives::traits::{self, BlakeTwo256};
 pub use runtime_primitives::BasicInherentData as InherentData;
 
+pub static mut LOCAL_KEY: Option<AccountId> = None;
+
+pub fn set_blockproducer(producer: AccountId) {
+    unsafe {
+        LOCAL_KEY = Some(producer);
+    }
+}
+
+pub trait BlockProducer {
+    fn block_producer() -> Option<&'static AccountId> {
+        unsafe {
+            match LOCAL_KEY {
+                None => None,
+                Some(ref k) => Some(k)
+            }
+        }
+    }
+}
+
+impl BlockProducer for InherentData { }
+
+
 /// Signature on candidate's block data by a collator.
 pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
 

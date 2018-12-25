@@ -12,6 +12,7 @@ extern crate substrate_primitives;
 
 // for substrate runtime
 // map!, vec! marco.
+#[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
 
 #[cfg(feature = "std")]

@@ -6,19 +6,12 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
-#[cfg(test)]
-#[macro_use]
-extern crate hex_literal;
-
-extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive;
-#[cfg(feature = "std")]
-extern crate serde;
+extern crate parity_codec as codec;
 
 #[macro_use]
 extern crate substrate_client as client;
-extern crate sr_io as runtime_io;
 extern crate substrate_consensus_aura_primitives as consensus_aura;
 extern crate substrate_primitives as primitives;
 
@@ -28,6 +21,7 @@ extern crate sr_primitives as runtime_primitives;
 extern crate sr_version as version;
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
+extern crate sr_io as runtime_io;
 
 // substrate runtime module
 #[macro_use]
@@ -88,7 +82,7 @@ pub use timestamp::BlockPeriod;
 pub use timestamp::Call as TimestampCall;
 
 use chainx_primitives::{
-    AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature,
+    AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature, BlockProducer
 };
 
 #[cfg(any(feature = "std", test))]
@@ -330,7 +324,13 @@ impl_runtime_apis! {
                     .map(|v| (v.0, UncheckedExtrinsic::new_unsigned(Call::Consensus(v.1))))
             );
 
-            // TODO add blockproducer
+            if let Some(ref k) = BasicInherentData::block_producer() {
+                inherent.extend(
+                    XSystem::create_inherent_extrinsics(*k.clone())
+                        .into_iter()
+                        .map(|v| (v.0, UncheckedExtrinsic::new_unsigned(Call::XSystem(v.1))))
+                );
+            }
 
             inherent.as_mut_slice().sort_unstable_by_key(|v| v.0);
             inherent.into_iter().map(|v| v.1).collect()

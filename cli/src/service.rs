@@ -19,7 +19,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 use chainx_executor;
-use chainx_primitives::{Block, InherentData};
+use chainx_primitives::{Block, InherentData, set_blockproducer};
 use chainx_runtime::{GenesisConfig, RuntimeApi};
 use client;
 use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
@@ -114,6 +114,10 @@ construct_service_factory! {
                 } else {
                     None
                 };
+
+                if let Some(ref k) = local_key {
+                    set_blockproducer(k.public().0.into());
+                }
 
                 let voter = grandpa::run_grandpa(
                     grandpa::Config {
