@@ -1,6 +1,6 @@
 [package]
-name = "xrml-xdex-spot-pendingorders"
-version = "0.4.0"
+name = "xrml-xdex-spot-xmatchorder"
+version = "0.3.0"
 authors = ["Chainpool <https://www.chainx.org>"]
 
 [dependencies]
@@ -16,7 +16,6 @@ sr-primitives = { git = "https://github.com/chainpool/substrate", default_featur
 srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
-
 log = "0.4"
 
 # cxrml module
@@ -24,6 +23,7 @@ xrml-xsystem = { path = "../../../xsystem", default-features = false }
 xrml-xaccounts = { path = "../../../xaccounts", default-features = false }
 xrml-xsupport = { path = "../../../xsupport", default_features = false }
 xrml-xassets-assets = { path = "../../../xassets/assets", default_features = false }
+xrml-xdex-spot-xpendingorders = { path = "../xpendingorders",  default_features = false }
 
 [features]
 default = ["std"]
@@ -43,4 +43,5 @@ std=[
     "xrml-xaccounts/std",
     "xrml-xsupport/std",
     "xrml-xassets-assets/std",
+    "xrml-xdex-spot-xpendingorders/std",
 ]

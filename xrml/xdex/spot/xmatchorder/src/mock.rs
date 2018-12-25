@@ -8,7 +8,7 @@ use runtime_primitives::testing::{Digest, DigestItem, Header};
 use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;
 
-use {GenesisConfig, Module, Trait,  system,  balances};
+use {GenesisConfig, Module, Trait,  system,  balances,xsystem,xaccounts,xpendingorders};
 
 use super::*;
 use std::str;
@@ -46,7 +46,22 @@ impl xsystem::Trait for Test {
     const XSYSTEM_SET_POSITION: u32 = 3;
 }
 
+impl assets::Trait for Test {
+     type Event = ();
+     type OnAssetChanged = ();
+}
+impl  xaccounts::Trait for Test {}
 
+
+impl xpendingorders::Trait for Test {
+    type Event = ();
+    type Amount = u128;
+    type Price = u128;
+}
+
+impl Trait for Test {
+    type Event = ();
+}
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
@@ -81,29 +96,26 @@ pub fn new_test_ext(
         creation_fee: 0,
         reclaim_rebate: 0,
     }.build_storage().unwrap().0);
-    t.extend(GenesisConfig::<Test>{
+    t.extend(xpendingorders::GenesisConfig::<Test>{
         order_fee: 10,
             pair_list: vec![],
             max_command_id: 0,
             average_price_len: 10000,
     }.build_storage().unwrap().0);
-    
+    t.extend(GenesisConfig::<Test> {
+            match_fee: 10,
+            fee_precision: 100000,
+            maker_match_fee: 50,
+            taker_match_fee: 100,
+        }.build_storage().unwrap().0);
+
     runtime_io::TestExternalities::new(t)
 
 }
 
 
-impl assets::Trait for Test {
-     type Event = ();
-     type OnAssetChanged = ();
-}
-impl  xaccounts::Trait for Test {}
-impl Trait for Test {
-    type Event = ();
-    type Amount = u128;
-    type Price = u128;
-}
 
-pub type PendingOrders = Module<Test>;
+pub type PendingOrders = xpendingorders::Module<Test>;
 pub type Assets = assets::Module<Test>;
 pub type Balances = balances::Module<Test>;
+pub type MatchOrder = Module<Test>;

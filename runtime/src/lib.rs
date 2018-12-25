@@ -50,6 +50,10 @@ extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_records as xrecords;
 extern crate xrml_xassets_process as xprocess;
 
+// dex
+extern crate xrml_xdex_spot_xmatchorder  as xmatchorder;
+extern crate xrml_xdex_spot_xpendingorders  as xpendingorders;
+
 mod fee;
 mod xexecutive;
 
@@ -232,6 +236,16 @@ impl xrecords::Trait for Runtime {
 impl xprocess::Trait for Runtime {
 }
 
+impl xpendingorders::Trait for Runtime {
+    type Event = Event;
+    type Amount = u128;
+    type Price = u128;
+}
+
+impl xmatchorder::Trait for Runtime {
+    type Event = Event;
+}
+
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
         Block = Block,
@@ -255,6 +269,10 @@ construct_runtime!(
         XAssets: xassets,
         XAssetsRecords: xrecords::{Module, Storage, Event<T>},
         XAssetsProcess: xprocess::{Module, Call, Storage},
+        // dex
+        XPendingOrders: xpendingorders,
+        XMatchOrder: xmatchorder,
+
     }
 );
 

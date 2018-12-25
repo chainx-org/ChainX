@@ -48,6 +48,9 @@ xrml-xassets-assets = { path = "../xrml/xassets/assets" }
 xrml-xassets-records = { path = "../xrml/xassets/records" }
 xrml-xassets-process = { path = "../xrml/xassets/process" }
 
+# dex
+xrml-xdex-spot-xmatchorder = { path = "../xrml/xdex/spot/xmatchorder" }
+xrml-xdex-spot-xpendingorders = { path = "../xrml/xdex/spot/xpendingorders" }
 
 [features]
 default = ["std"]

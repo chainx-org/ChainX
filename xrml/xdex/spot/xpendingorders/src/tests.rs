@@ -12,15 +12,15 @@ use super::*;
 use std::str;
 use assets::assetdef::{ChainT, Token,Chain,Asset};
 
-use mock::{Balances, Assets, PendingOrders,  Test, new_test_ext, Origin};
+use mock::{Balances, Assets, Pendingorders,  Test, new_test_ext, Origin};
 
 
 #[test]
 fn test_fee() {
     with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-        PendingOrders::set_order_fee(20);
+        Pendingorders::set_order_fee(20);
 
-        assert_eq!(PendingOrders::order_fee(), 20);
+        assert_eq!(Pendingorders::order_fee(), 20);
     })
 }
 
@@ -42,14 +42,14 @@ fn test_pair() {
         p_list.push(p2.clone());
 
         // add_pair
-        PendingOrders::add_pair(p1.clone()).unwrap();
-        PendingOrders::add_pair(p2.clone()).unwrap();
+        Pendingorders::add_pair(p1.clone()).unwrap();
+        Pendingorders::add_pair(p2.clone()).unwrap();
 
-        let r_list = PendingOrders::pair_list();
+        let r_list = Pendingorders::pair_list();
         assert_eq!(r_list, p_list);
 
-        assert_eq!(PendingOrders::is_valid_pair(&p1), Ok(()));
-        assert_eq!(PendingOrders::is_valid_pair(&p2), Ok(()));
+        assert_eq!(Pendingorders::is_valid_pair(&p1), Ok(()));
+        assert_eq!(Pendingorders::is_valid_pair(&p2), Ok(()));
     })
 }
 
@@ -77,12 +77,12 @@ fn test_order() {
         p_list.push(p1.clone());
 
         // add_pair
-        PendingOrders::add_pair(p1.clone()).unwrap();
+        Pendingorders::add_pair(p1.clone()).unwrap();
 
-        let r_list = PendingOrders::pair_list();
+        let r_list = Pendingorders::pair_list();
         assert_eq!(r_list, p_list);
 
-        assert_eq!(PendingOrders::is_valid_pair(&p1), Ok(()));
+        assert_eq!(Pendingorders::is_valid_pair(&p1), Ok(()));
 
         let a: u64 = 3; // accountid
 
@@ -97,7 +97,7 @@ fn test_order() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let order = PendingOrders::put_order(
+        let order = Pendingorders::put_order(
             Some(a).into(),
             p1.clone(),
             buy,
@@ -118,7 +118,7 @@ fn test_order() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let order = PendingOrders::put_order(
+        let order = Pendingorders::put_order(
             Some(a).into(),
             p1.clone(),
             sell,
@@ -139,20 +139,20 @@ fn test_order() {
         );
 
         let last_order_index_of_eos_eth =
-            PendingOrders::last_order_index_of((a.clone(), p1.clone())).unwrap();
+            Pendingorders::last_order_index_of((a.clone(), p1.clone())).unwrap();
         assert_eq!(2, last_order_index_of_eos_eth);
 
         let order_2 =
-            PendingOrders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth)).unwrap();
+            Pendingorders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth)).unwrap();
         let order_1 =
-            PendingOrders::order_of((a.clone(), p1.clone(), (last_order_index_of_eos_eth - 1)))
+            Pendingorders::order_of((a.clone(), p1.clone(), (last_order_index_of_eos_eth - 1)))
                 .unwrap();
 
         print_order(order_1.clone());
         print_order(order_2.clone());
 
         //取消挂单
-        let cancel = PendingOrders::cancel_order(
+        let cancel = Pendingorders::cancel_order(
             Some(a).into(),
             p1.clone(),
             last_order_index_of_eos_eth - 1,
@@ -166,14 +166,14 @@ fn test_order() {
         );
 
         let cancel_order_1 =
-            PendingOrders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth - 1))
+            Pendingorders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth - 1))
                 .unwrap();
         assert_eq!(OrderStatus::Cancel, cancel_order_1.status());
 
         print_order(cancel_order_1.clone());
         print_order(order_2.clone());
 
-        let list = PendingOrders::order_list(&a, &p1.clone());
+        let list = Pendingorders::order_list(&a, &p1.clone());
         assert_eq!(2, list.len());
         println!("-------------------------------------------order list -----------------------------------------");
         for o in list {
@@ -220,7 +220,7 @@ fn print_order(
 }
 
 fn print_order_list(account: <tests::Test as system::Trait>::AccountId, pair: OrderPair) {
-    let list = PendingOrders::order_list(&account.clone(), &pair.clone());
+    let list = Pendingorders::order_list(&account.clone(), &pair.clone());
     println!("-------------------------------------------order {} list -----------------------------------------", account);
     for o in list {
         print_order(o);
@@ -251,7 +251,7 @@ fn test_fill_no_fee() {
         };
 
         // 增加交易对
-        PendingOrders::add_pair(p1.clone()).unwrap();
+        Pendingorders::add_pair(p1.clone()).unwrap();
 
         let a: u64 = 3; // accountid
         let b: u64 = 4;
@@ -264,7 +264,7 @@ fn test_fill_no_fee() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order = PendingOrders::put_order(
+        let a_order = Pendingorders::put_order(
             Some(a).into(),
             p1.clone(),
             buy,
@@ -285,7 +285,7 @@ fn test_fill_no_fee() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order = PendingOrders::put_order(
+        let b_order = Pendingorders::put_order(
             Some(b).into(),
             p1.clone(),
             sell,
@@ -309,7 +309,7 @@ fn test_fill_no_fee() {
         print_order_list(b, p1.clone());
 
         let r_fill =
-            PendingOrders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 500000, 0, 0);
+            Pendingorders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 500000, 0, 0);
         assert_eq!(Ok(()), r_fill);
 
         //1000+250
@@ -338,26 +338,26 @@ fn test_fill_no_fee() {
             0
         );
 
-        assert_eq!(1, PendingOrders::last_fill_index_of_pair(&p1.clone()));
-        let last_fill = PendingOrders::fill_of((p1.clone(), 1)).unwrap();
+        assert_eq!(1, Pendingorders::last_fill_index_of_pair(&p1.clone()));
+        // let last_fill = Pendingorders::fill_of((p1.clone(), 1)).unwrap();
 
-        print_fill(last_fill.clone());
+        // print_fill(last_fill.clone());
 
         print_order_list(a, p1.clone());
         print_order_list(b, p1.clone());
 
         let last_order_index_of_eos_eth_alice =
-            PendingOrders::last_order_index_of((a.clone(), p1.clone())).unwrap();
+            Pendingorders::last_order_index_of((a.clone(), p1.clone())).unwrap();
         let a_order_1 =
-            PendingOrders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth_alice))
+            Pendingorders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth_alice))
                 .unwrap();
         assert_eq!(500000, a_order_1.hasfill_amount());
         assert_eq!(OrderStatus::FillPart, a_order_1.status);
 
         let last_order_index_of_eos_eth_bob =
-            PendingOrders::last_order_index_of((b.clone(), p1.clone())).unwrap();
+            Pendingorders::last_order_index_of((b.clone(), p1.clone())).unwrap();
         let b_order_1 =
-            PendingOrders::order_of((b.clone(), p1.clone(), last_order_index_of_eos_eth_bob))
+            Pendingorders::order_of((b.clone(), p1.clone(), last_order_index_of_eos_eth_bob))
                 .unwrap();
         assert_eq!(500000, b_order_1.hasfill_amount());
         assert_eq!(OrderStatus::FillAll, b_order_1.status);
@@ -386,7 +386,7 @@ fn test_fill_fee() {
         };
 
         // 增加交易对
-        PendingOrders::add_pair(p1.clone()).unwrap();
+        Pendingorders::add_pair(p1.clone()).unwrap();
 
         let a: u64 = 3; // accountid
         let b: u64 = 4;
@@ -399,7 +399,7 @@ fn test_fill_fee() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order = PendingOrders::put_order(
+        let a_order = Pendingorders::put_order(
             Some(a).into(),
             p1.clone(),
             buy,
@@ -420,7 +420,7 @@ fn test_fill_fee() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order = PendingOrders::put_order(
+        let b_order = Pendingorders::put_order(
             Some(b).into(),
             p1.clone(),
             sell,
@@ -444,7 +444,7 @@ fn test_fill_fee() {
         print_order_list(b, p1.clone());
 
         let r_fill =
-            PendingOrders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 500, 5, 5);
+            Pendingorders::fill_order(p1.clone(), a.clone(), b.clone(), 1, 1, 5, 500, 5, 5);
         assert_eq!(Ok(()), r_fill);
 
         //1000+250
@@ -487,39 +487,39 @@ fn test_fill_fee() {
             )),
             5
         );
-        PendingOrders::clear_command_and_put_fee_buy_order();
+        Pendingorders::clear_command_and_put_fee_buy_order();
         // assert_eq!(Assets::free_balance(&(Test::burn_account, t_sym_eth.clone())), 0);
         // assert_eq!(Assets::free_balance(&(Test::burn_account, t_sym_eos.clone())), 0);
         // assert_eq!(Assets::reserved_balance(&(Test::burn_account, t_sym_eth.clone(), assets::ReservedType::DexSpot)), 25);
         // assert_eq!(Assets::reserved_balance(&(Test::burn_account, t_sym_eos.clone(), assets::ReservedType::DexSpot)), 5);
 
-        assert_eq!(1, PendingOrders::last_fill_index_of_pair(&p1.clone()));
-        let last_fill = PendingOrders::fill_of((p1.clone(), 1)).unwrap();
+        assert_eq!(1, Pendingorders::last_fill_index_of_pair(&p1.clone()));
+        // let last_fill = Pendingorders::fill_of((p1.clone(), 1)).unwrap();
 
-        print_fill(last_fill.clone());
+        // print_fill(last_fill.clone());
 
         print_order_list(a, p1.clone());
         print_order_list(b, p1.clone());
 
         let last_order_index_of_eos_eth_alice =
-            PendingOrders::last_order_index_of((a.clone(), p1.clone())).unwrap();
+            Pendingorders::last_order_index_of((a.clone(), p1.clone())).unwrap();
         let a_order_1 =
-            PendingOrders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth_alice))
+            Pendingorders::order_of((a.clone(), p1.clone(), last_order_index_of_eos_eth_alice))
                 .unwrap();
         assert_eq!(500, a_order_1.hasfill_amount());
         assert_eq!(OrderStatus::FillPart, a_order_1.status);
 
         let last_order_index_of_eos_eth_bob =
-            PendingOrders::last_order_index_of((b.clone(), p1.clone())).unwrap();
+            Pendingorders::last_order_index_of((b.clone(), p1.clone())).unwrap();
         let b_order_1 =
-            PendingOrders::order_of((b.clone(), p1.clone(), last_order_index_of_eos_eth_bob))
+            Pendingorders::order_of((b.clone(), p1.clone(), last_order_index_of_eos_eth_bob))
                 .unwrap();
         assert_eq!(500, b_order_1.hasfill_amount());
         assert_eq!(OrderStatus::FillAll, b_order_1.status);
 
-        let cancel = PendingOrders::cancel_order(Some(a).into(), p1.clone(), 1);
+        let cancel = Pendingorders::cancel_order(Some(a).into(), p1.clone(), 1);
 
-        let cancel_order_1 = PendingOrders::order_of((a.clone(), p1.clone(), 1)).unwrap();
+        let cancel_order_1 = Pendingorders::order_of((a.clone(), p1.clone(), 1)).unwrap();
         assert_eq!(OrderStatus::FillPartAndCancel, cancel_order_1.status());
         //1000-500
         assert_eq!(Assets::free_balance(&(a, t_sym_eth.clone())), 999);

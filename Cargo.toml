@@ -31,7 +31,8 @@ members = [
     "xrml/xfee/manager",
     # xrml/assets
     "xrml/xassets/assets",
-    "xrml/xdex/spot/pendingorders",
+    "xrml/xdex/spot/xpendingorders",
+    "xrml/xdex/spot/xmatchorder",
     "xrml/xassets/records",
     "xrml/xassets/process",
     # xrml/mining

@@ -10,7 +10,7 @@ use self::base58::FromBase58;
 use chainx_runtime::GrandpaConfig;
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, Perbill, Permill, SessionConfig,
-    TimestampConfig, XAssetsConfig, XFeeManagerConfig, XSystemConfig, XAccountsConfig,
+    TimestampConfig, XAssetsConfig, XFeeManagerConfig, XSystemConfig, XAccountsConfig,XPendingOrdersConfig,XMatchOrderConfig
 };
 use ed25519;
 use ed25519::Public;
@@ -112,5 +112,18 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             remark_len: 128,
             asset_list: vec![],
         }),
+        xpendingorders:Some(XPendingOrdersConfig{
+            order_fee: 10,
+            pair_list: vec![],
+            // (OrderPair { first: Runtime::CHAINX_SYMBOL.to_vec(), second: BridgeOfBTC::SYMBOL.to_vec() }, 8)
+            max_command_id: 0,
+            average_price_len: 10000,
+        }),
+        xmatchorder:Some(XMatchOrderConfig{
+            match_fee: 10,
+            fee_precision: 100000,
+            maker_match_fee: 50,
+            taker_match_fee: 100,
+        })
     }
 }

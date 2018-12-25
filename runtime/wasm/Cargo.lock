@@ -145,7 +145,7 @@ dependencies = [
  "cxrml-financialrecords 0.1.0",
  "cxrml-matchorder 0.1.0",
  "cxrml-multisig 0.1.0",
- "cxrml-pendingorders 0.1.0",
+ "cxrml-xxpendingorders 0.1.0",
  "cxrml-staking 0.1.0",
  "cxrml-support 0.1.0",
  "cxrml-tokenbalances 0.1.0",
@@ -154,7 +154,7 @@ dependencies = [
  "cxrml-associations 0.3.0",
  "cxrml-bridge-btc 0.3.0",
  "cxrml-exchange-matchorder 0.3.0",
- "cxrml-exchange-pendingorders 0.3.0",
+ "cxrml-exchange-xxpendingorders 0.3.0",
  "cxrml-funds-financialrecords 0.3.0",
  "cxrml-funds-withdrawal 0.3.0",
  "cxrml-mining-staking 0.3.0",
@@ -379,7 +379,7 @@ name = "cxrml-exchange-matchorder"
 version = "0.3.0"
 dependencies = [
  "cxrml-associations 0.3.0",
- "cxrml-exchange-pendingorders 0.3.0",
+ "cxrml-exchange-xxpendingorders 0.3.0",
  "cxrml-support 0.3.0",
  "cxrml-system 0.3.0",
  "cxrml-tokenbalances 0.3.0",
@@ -401,7 +401,7 @@ dependencies = [
 name = "cxrml-matchorder"
 version = "0.1.0"
 dependencies = [
- "cxrml-pendingorders 0.1.0",
+ "cxrml-xxpendingorders 0.1.0",
  "cxrml-support 0.1.0",
  "cxrml-tokenbalances 0.1.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -433,7 +433,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cxrml-exchange-pendingorders"
+name = "cxrml-exchange-xxpendingorders"
 version = "0.3.0"
 dependencies = [
  "cxrml-associations 0.3.0",
@@ -456,7 +456,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cxrml-pendingorders"
+name = "cxrml-xxpendingorders"
 version = "0.1.0"
 dependencies = [
  "cxrml-support 0.1.0",
@@ -574,7 +574,7 @@ version = "0.3.0"
 dependencies = [
  "cxrml-associations 0.3.0",
  "cxrml-bridge-btc 0.3.0",
- "cxrml-exchange-pendingorders 0.3.0",
+ "cxrml-exchange-xxpendingorders 0.3.0",
  "cxrml-funds-financialrecords 0.3.0",
  "cxrml-mining-staking 0.3.0",
  "cxrml-support 0.3.0",

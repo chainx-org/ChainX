@@ -90,7 +90,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// pub call
-        fn put_order(origin,pair: OrderPair,ordertype: OrderType,amount: T::Amount,price:T::Price,channel:Channel) -> Result{
+        pub fn put_order(origin,pair: OrderPair,ordertype: OrderType,amount: T::Amount,price:T::Price,channel:Channel) -> Result{
             runtime_io::print("[exchange pendingorders] put_order");
 
             if channel.len() > 32 {
@@ -104,11 +104,11 @@ decl_module! {
 
             Self::do_put_order(&transactor, &pair, ordertype, amount, price, &channel)
         }
-        fn cancel_order(origin,pair:OrderPair,index:u64) -> Result{
+        pub fn cancel_order(origin,pair:OrderPair,index:u64) -> Result{
             return Self::do_cancel_order(origin,pair,index);
         }
 
-        fn add_pair(pair:OrderPair)->Result{
+        pub fn add_pair(pair:OrderPair)->Result{
             if let Err(_) = Self::is_valid_pair(&pair) {
                 let mut pair_list: Vec<OrderPair> = <OrderPairList<T>>::get();
                 pair_list.push(pair);
@@ -117,7 +117,7 @@ decl_module! {
 
             Ok(())
         }
-        fn set_order_fee(val: T::Balance) -> Result{
+        pub fn set_order_fee(val: T::Balance) -> Result{
             <OrderFee<T>>::put(val);
             Self::deposit_event(RawEvent::SetOrderFee(val));
             Ok(())
@@ -136,6 +136,9 @@ decl_event!(
     {
         ///  User Put Order 
         PutOrder(AccountId, OrderPair,u64, OrderType,Amount,Price, BlockNumber),
+        UpdateOrder(OrderPair,u64,OrderType,AccountId,Amount,Channel,Amount,Price,BlockNumber,BlockNumber,OrderStatus,Vec<u128>,Amount),
+        
+
         ///  Fill Order
         FillOrder(OrderPair,u128,AccountId,AccountId,u64,u64,Price, Amount,Amount,Token,Amount,Token,BlockNumber),
         ///  User Cancel Order
@@ -158,10 +161,10 @@ decl_storage! {
         pub FillIndexOf get(fill_index_of):  map OrderPair => u128; //交易对的成交历史的index
         pub OrdersOf get(order_of):map (T::AccountId, OrderPair,u64) => Option<OrderT<T>>;
         pub LastOrderIndexOf get(last_order_index_of): map(T::AccountId,OrderPair)=>Option<u64>;
-        pub FillsOf get(fill_of): map (OrderPair,u128) => Option<FillT<T>>;
+        
 
         pub MaxCommandId get(max_command_id) config():u64; //每个块 最后重制为0
-        pub CommandOf get(command_of) : map u64 =>Option<(T::AccountId,OrderPair,u64,CommandType,u128)>; //存放当前块的所有挂单（需要撮合) matchorder 会从这里读取，然后清空
+        pub CommandOf get(command_of) : map u64 =>Option<(T::AccountId,OrderPair,u64,CommandType,u128)>; //存放当前块的所有挂单（需要撮合) xmatchorder 会从这里读取，然后清空
 
         pub AveragePriceLen get(average_price_len) config(): T::Amount;
         pub LastAveragePrice get(last_average_price) : map OrderPair  => Option<T::Price>;  //
@@ -424,6 +427,28 @@ impl<T: Trait> Module<T>     {
             (order.user.clone(), order.pair.clone(), index),
             order.clone(),
         );
+        if OrderStatus::FillAll == order.status() || OrderStatus::FillPartAndCancel == order.status() || OrderStatus::Cancel == order.status() {
+            //Note: 删除掉订单
+            //<OrdersOf<T>>::remove((order.user.clone(), order.pair.clone(), index));
+
+        }
+       // 每次更新都记录日志
+        Self::deposit_event(RawEvent::UpdateOrder(
+            order.pair().clone(),
+            order.index(),
+            order.class(),
+            order.user(),
+            order.amount(),
+            order.channel(),
+            order.hasfill_amount(),
+            order.price(),
+            order.create_time(),
+            order.lastupdate_time(),
+            order.status(),
+            order.fill_index(),
+            order.reserve_last(),
+        ));
+
     }
     fn do_cancel_order(origin: T::Origin, pair: OrderPair, index: u64) -> Result {
         runtime_io::print("[exchange pendingorders] cancel_order");
@@ -704,7 +729,7 @@ impl<T: Trait> Module<T>     {
             taker_fee_token: taker_fee_token,
             time: <system::Module<T>>::block_number(),
         };
-        Self::insert_fill(&fill);
+       
         <FillIndexOf<T>>::insert(&pair, new_last_fill_index);
 
         Self::update_last_average_price(&pair.clone(), amount, price); //更新平均价格
@@ -1013,9 +1038,7 @@ impl<T: Trait> Module<T>     {
             None => {}
         }
     }
-    fn insert_fill(fill: &FillT<T>) {
-        <FillsOf<T>>::insert((fill.pair.clone(), fill.index), fill.clone());
-    }
+   
     pub fn clear_command_and_put_fee_buy_order() {
         <MaxCommandId<T>>::put(0);
 
@@ -1315,32 +1338,5 @@ impl<T: Trait> Module<T> {
         Self::fill_index_of(pair.clone())
     }
 
-    /// 成交历史记录
-    /// 每次只返回 1000条
-    /// 必须加分page逻辑
-    pub fn fill_list(pair: &OrderPair, start_: u128) -> Vec<FillT<T>> {
-        let mut records: Vec<FillT<T>> = Vec::new();
-        let last = Self::last_fill_index_of_pair(pair);
-
-        let mut start = start_;
-        if start == Zero::zero() {
-            start = last;
-        }
-        if start > last {
-            start = last;
-        }
-        let end = if start < FILL_PAGE_SIZE {
-            0
-        } else {
-            start - FILL_PAGE_SIZE
-        };
-
-        for i in start..end {
-            if let Some(r) = Self::fill_of((pair.clone(), i)) {
-                records.push(r);
-            }
-        }
-
-        records
-    }
+ 
 }
