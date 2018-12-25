@@ -64,7 +64,7 @@ decl_storage! {
         pub BlockProdocer get(block_producer): Option<T::AccountId>;
         pub DeathAccount get(death_account) config(): T::AccountId;
         // TODO remove this to other module
-        pub FeeBuyAccount get(fee_buy_account) config(): T::AccountId;
+        pub BurnAccount get(burn_account) config(): T::AccountId;
     }
 }
 
