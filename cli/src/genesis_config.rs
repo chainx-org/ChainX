@@ -100,7 +100,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         // chainx runtime module
         xsystem: Some(XSystemConfig {
             death_account: substrate_primitives::H256::zero(),
-            fee_buy_account: substrate_primitives::H256::repeat_byte(0x1),
+            burn_account: substrate_primitives::H256::repeat_byte(0x1),
         }),
         xaccounts: None,
         fee_manager: Some(XFeeManagerConfig {
