@@ -249,7 +249,7 @@ impl<
 
         let (f, s) = xt.deconstruct();
         if let Some(fee_power) = f.check_fee() {
-            if Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power).is_err() {
+            if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power).is_err() {
                 return TransactionValidity::Invalid;
             } else {
                 return valid;
