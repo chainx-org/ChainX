@@ -84,7 +84,7 @@ impl<T: Trait> Module<T> {
         if b < transaction_fee + <balances::Module<T>>::existential_deposit() {
             return Err("not enough funds for transaction fee");
         }
-        Ok(b)
+        Ok(transaction_fee)
     }
 
     fn calc_fee(from_who: &T::AccountId, fee: T::Balance) -> Result {
