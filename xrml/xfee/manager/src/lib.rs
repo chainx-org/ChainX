@@ -13,21 +13,24 @@ extern crate srml_system as system;
 #[macro_use]
 extern crate srml_support as support;
 
-extern crate xrml_xsystem as xsystem;
 extern crate xrml_xaccounts as xaccounts;
+extern crate xrml_xsystem as xsystem;
 
 use rstd::prelude::*;
+use rstd::result::Result as StdResult;
 
+use sr_primitives::traits::{As, CheckedAdd, CheckedSub, Zero};
 use support::dispatch::Result;
 #[cfg(feature = "std")]
 use support::StorageValue;
-use sr_primitives::traits::{As, Zero, CheckedAdd, CheckedSub};
 
 /// Simple payment making trait, operating on a single generic `AccountId` type.
 pub trait MakePayment<AccountId> {
     /// Make some sort of payment concerning `who` for an extrinsic (transaction) of encoded length
     /// `encoded_len` bytes. Return true iff the payment was successful.
     fn make_payment(who: &AccountId, encoded_len: usize, pay: u64) -> Result;
+
+    fn check_payment(who: &AccountId, encoded_len: usize, pay: u64) -> Result;
 }
 
 pub trait Trait: balances::Trait + xsystem::Trait + xaccounts::Trait {
@@ -55,22 +58,35 @@ decl_storage! {
 
 impl<T: Trait> MakePayment<T::AccountId> for Module<T> {
     fn make_payment(transactor: &T::AccountId, encoded_len: usize, power: u64) -> Result {
-        let b = <balances::Module<T>>::free_balance(transactor);
-        let transaction_fee = <balances::Module<T>>::transaction_base_fee()
-            * <T::Balance as As<u64>>::sa(power)
-            + <balances::Module<T>>::transaction_byte_fee()
-            * <T::Balance as As<u64>>::sa(encoded_len as u64);
-        if b < transaction_fee + <balances::Module<T>>::existential_deposit() {
-            return Err("not enough funds for transaction fee");
-        }
-//        <balances::Module<T>>::set_free_balance(transactor, b - transaction_fee);
-//        <balances::Module<T>>::decrease_total_stake_by(transaction_fee);
+        let b = Self::calc_fee_and_check(transactor, encoded_len, power)?;
+        //        <balances::Module<T>>::set_free_balance(transactor, b - transaction_fee);
+        //        <balances::Module<T>>::decrease_total_stake_by(transaction_fee);
         Self::calc_fee(transactor, b)?;
         Ok(())
+    }
+
+    fn check_payment(transactor: &T::AccountId, encoded_len: usize, power: u64) -> Result {
+        Self::calc_fee_and_check(transactor, encoded_len, power).map(|_| ())
     }
 }
 
 impl<T: Trait> Module<T> {
+    fn calc_fee_and_check(
+        transactor: &T::AccountId,
+        encoded_len: usize,
+        power: u64,
+    ) -> StdResult<T::Balance, &'static str> {
+        let b = <balances::Module<T>>::free_balance(transactor);
+        let transaction_fee = <balances::Module<T>>::transaction_base_fee()
+            * <T::Balance as As<u64>>::sa(power)
+            + <balances::Module<T>>::transaction_byte_fee()
+                * <T::Balance as As<u64>>::sa(encoded_len as u64);
+        if b < transaction_fee + <balances::Module<T>>::existential_deposit() {
+            return Err("not enough funds for transaction fee");
+        }
+        Ok(b)
+    }
+
     fn calc_fee(from_who: &T::AccountId, fee: T::Balance) -> Result {
         let mut v = Vec::new();
         // 50% for block producer
