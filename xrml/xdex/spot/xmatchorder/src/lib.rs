@@ -45,6 +45,7 @@ extern crate xrml_xassets_assets as assets;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
 mod mock;
 
 use rstd::prelude::*;

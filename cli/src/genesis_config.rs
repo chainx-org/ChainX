@@ -72,7 +72,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
-            "../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm"
+            "../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime_wasm.compact.wasm"
             )
             .to_vec(),
             authorities: initial_authorities.clone(),

@@ -1,70 +1,76 @@
 [package]
 name = "chainx-runtime"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-rustc-hex = "1.0"
-hex-literal = "0.1.0"
-safe-mix = { version = "1.0", default_features = false}
-serde = { version = "1.0", default_features = false }
-parity-codec = "2.1"
-parity-codec-derive = "2.1"
+rustc-hex = { version = "1.0", optional = true }
+hex-literal = { version = "0.1.0", optional = true }
+safe-mix = { version = "1.0", default_features = false }
+serde = { version = "1.0", optional = true }
+parity-codec-derive = { version = "2.1" }
+parity-codec = { version = "2.1", default_features = false }
 
-substrate-client = { git = "https://github.com/chainpool/substrate" }
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
-substrate-finality-grandpa-primitives = { git = "https://github.com/chainpool/substrate" }
-substrate-consensus-aura-primitives = { git = "https://github.com/chainpool/substrate" }
+substrate-client = { git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-finality-grandpa-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-consensus-aura-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 
-sr-primitives = { git = "https://github.com/chainpool/substrate" }
-sr-version = { git = "https://github.com/chainpool/substrate" }
-sr-std = { git = "https://github.com/chainpool/substrate" }
-sr-io = { git = "https://github.com/chainpool/substrate" }
+sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-version = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }
 
-srml-support = { git = "https://github.com/chainpool/substrate" }
-srml-system = { git = "https://github.com/chainpool/substrate" }
-srml-balances = { git = "https://github.com/chainpool/substrate" }
-srml-timestamp = { git = "https://github.com/chainpool/substrate" }
-srml-consensus = { git = "https://github.com/chainpool/substrate" }
-srml-session = { git = "https://github.com/chainpool/substrate" }
-srml-grandpa = { git = "https://github.com/chainpool/substrate" }
-srml-aura = { git = "https://github.com/chainpool/substrate" }
+srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-balances = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-timestamp = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-consensus = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-session = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-grandpa = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-aura = { git = "https://github.com/chainpool/substrate", default-features = false }
 
-srml-contract = { git = "https://github.com/chainpool/substrate" }
-srml-council = { git = "https://github.com/chainpool/substrate" }
-srml-democracy = { git = "https://github.com/chainpool/substrate" }
-srml-treasury = { git = "https://github.com/chainpool/substrate" }
+srml-contract = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-council = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-democracy = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-treasury = { git = "https://github.com/chainpool/substrate", default-features = false }
 
 # chainx
-chainx-primitives = { path = "../primitives" }
+chainx-primitives = { path = "../primitives", default-features = false }
 
 # chainx runtime module
-xrml-xsystem = { path = "../xrml/xsystem" }
-xrml-xaccounts = { path = "../xrml/xaccounts" }
+xrml-xsystem = { path = "../xrml/xsystem", default-features = false }
+xrml-xaccounts = { path = "../xrml/xaccounts", default-features = false }
 # fee
-xrml-fee-manager = { path = "../xrml/xfee/manager" }
+xrml-fee-manager = { path = "../xrml/xfee/manager", default-features = false }
 # assets
-xrml-xassets-assets = { path = "../xrml/xassets/assets" }
-xrml-xassets-records = { path = "../xrml/xassets/records" }
-xrml-xassets-process = { path = "../xrml/xassets/process" }
+xrml-xassets-assets = { path = "../xrml/xassets/assets", default-features = false }
+xrml-xassets-records = { path = "../xrml/xassets/records", default-features = false }
+xrml-xassets-process = { path = "../xrml/xassets/process", default-features = false }
 
 # dex
-xrml-xdex-spot-xmatchorder = { path = "../xrml/xdex/spot/xmatchorder" }
-xrml-xdex-spot-xpendingorders = { path = "../xrml/xdex/spot/xpendingorders" }
+xrml-xdex-spot-xmatchorder = { path = "../xrml/xdex/spot/xmatchorder", default-features = false }
+xrml-xdex-spot-xpendingorders = { path = "../xrml/xdex/spot/xpendingorders", default-features = false }
 
 [features]
 default = ["std"]
 std = [
-    "serde/std",
+    "rustc-hex",
+    "hex-literal",
     "safe-mix/std",
+    "serde",
     "parity-codec/std",
+
+    "substrate-client/std",
     "substrate-primitives/std",
+    "substrate-finality-grandpa-primitives/std",
     "substrate-consensus-aura-primitives/std",
 
     # substrate runtime module
     "sr-primitives/std",
     "sr-version/std",
     "sr-std/std",
+    "sr-io/std",
 
     "srml-support/std",
     "srml-system/std",
@@ -90,4 +96,7 @@ std = [
     "xrml-xassets-assets/std",
     "xrml-xassets-records/std",
     "xrml-xassets-process/std",
+    # dex
+    "xrml-xdex-spot-xmatchorder/std",
+    "xrml-xdex-spot-xpendingorders/std",
 ]

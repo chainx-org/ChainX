@@ -341,14 +341,14 @@ impl_runtime_apis! {
                     .into_iter()
                     .map(|v| (v.0, UncheckedExtrinsic::new_unsigned(Call::Consensus(v.1))))
             );
-
-            if let Some(ref k) = BasicInherentData::block_producer() {
-                inherent.extend(
-                    XSystem::create_inherent_extrinsics(*k.clone())
-                        .into_iter()
-                        .map(|v| (v.0, UncheckedExtrinsic::new_unsigned(Call::XSystem(v.1))))
-                );
-            }
+            // todo
+//            if let Some(ref k) = BasicInherentData::block_producer() {
+//                inherent.extend(
+//                    XSystem::create_inherent_extrinsics(*k.clone())
+//                        .into_iter()
+//                        .map(|v| (v.0, UncheckedExtrinsic::new_unsigned(Call::XSystem(v.1))))
+//                );
+//            }
 
             inherent.as_mut_slice().sort_unstable_by_key(|v| v.0);
             inherent.into_iter().map(|v| v.1).collect()

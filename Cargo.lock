@@ -347,7 +347,7 @@ dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chainx-executor 0.3.0",
  "chainx-primitives 0.3.0",
- "chainx-runtime 0.3.0",
+ "chainx-runtime 0.4.0",
  "exit-future 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
@@ -376,7 +376,7 @@ dependencies = [
 name = "chainx-executor"
 version = "0.3.0"
 dependencies = [
- "chainx-runtime 0.3.0",
+ "chainx-runtime 0.4.0",
  "substrate-executor 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
 ]
@@ -398,7 +398,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-runtime"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chainx-primitives 0.3.0",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",

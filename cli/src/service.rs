@@ -86,6 +86,8 @@ construct_service_factory! {
                 let (block_import, link_half) = service.config.custom.grandpa_import_setup.take()
                     .expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
+                let mut producer = None;
+
                 let local_key = if let Some(key) = key {
                     if !service.config.custom.grandpa_authority_only {
                         info!("Using authority key {}", key.public());
@@ -103,6 +105,8 @@ construct_service_factory! {
                             proposer,
                             service.network(),
                         ));
+
+                        producer = Some(key.clone());
                     }
 
                     if service.config.custom.grandpa_authority {
@@ -115,7 +119,7 @@ construct_service_factory! {
                     None
                 };
 
-                if let Some(ref k) = local_key {
+                if let Some(ref k) = producer {
                     set_blockproducer(k.public().0.into());
                 }
 
