@@ -47,11 +47,11 @@ extern crate assert_matches;
 #[macro_use]
 extern crate hex_literal;
 #[cfg(test)]
-extern crate substrate_test_client as test_client;
+extern crate rustc_hex;
 #[cfg(test)]
 extern crate substrate_consensus_common as consensus;
 #[cfg(test)]
-extern crate rustc_hex;
+extern crate substrate_test_client as test_client;
 
 mod errors;
 mod helpers;

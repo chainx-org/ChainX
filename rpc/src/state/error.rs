@@ -20,29 +20,29 @@ use rpc;
 use errors;
 
 error_chain! {
-	links {
-		Client(client::error::Error, client::error::ErrorKind) #[doc = "Client error"];
-	}
+    links {
+        Client(client::error::Error, client::error::ErrorKind) #[doc = "Client error"];
+    }
 
-	errors {
-		/// Provided block range couldn't be resolved to a list of blocks.
-		InvalidBlockRange(from: String, to: String, details: String) {
-			description("Invalid block range"),
-			display("Cannot resolve a block range ['{:?}' ... '{:?}]. {}", from, to, details),
-		}
-		/// Not implemented yet
-		Unimplemented {
-			description("not implemented yet"),
-			display("Method Not Implemented"),
-		}
-	}
+    errors {
+        /// Provided block range couldn't be resolved to a list of blocks.
+        InvalidBlockRange(from: String, to: String, details: String) {
+            description("Invalid block range"),
+            display("Cannot resolve a block range ['{:?}' ... '{:?}]. {}", from, to, details),
+        }
+        /// Not implemented yet
+        Unimplemented {
+            description("not implemented yet"),
+            display("Method Not Implemented"),
+        }
+    }
 }
 
 impl From<Error> for rpc::Error {
-	fn from(e: Error) -> Self {
-		match e {
-			Error(ErrorKind::Unimplemented, _) => errors::unimplemented(),
-			e => errors::internal(e),
-		}
-	}
+    fn from(e: Error) -> Self {
+        match e {
+            Error(ErrorKind::Unimplemented, _) => errors::unimplemented(),
+            e => errors::internal(e),
+        }
+    }
 }

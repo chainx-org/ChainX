@@ -341,9 +341,9 @@ mod tests {
                 creation_fee: 0,
                 reclaim_rebate: 0,
             }
-                .build_storage()
-                .unwrap()
-                .0,
+            .build_storage()
+            .unwrap()
+            .0,
         );
         let xt =
             runtime_primitives::testing::TestXt(Some(1), 0, Call::transfer(2.into(), 69.into()));
@@ -386,11 +386,11 @@ mod tests {
                     state_root: hex!(
                         "d9e26179ed13b3df01e71ad0bf622d56f2066a63e04762a83c0ae9deeb4da1d0"
                     )
-                        .into(),
+                    .into(),
                     extrinsics_root: hex!(
                         "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314"
                     )
-                        .into(),
+                    .into(),
                     digest: Digest { logs: vec![] },
                 },
                 extrinsics: vec![],
@@ -410,7 +410,7 @@ mod tests {
                     extrinsics_root: hex!(
                         "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314"
                     )
-                        .into(),
+                    .into(),
                     digest: Digest { logs: vec![] },
                 },
                 extrinsics: vec![],
@@ -429,7 +429,7 @@ mod tests {
                     state_root: hex!(
                         "d9e26179ed13b3df01e71ad0bf622d56f2066a63e04762a83c0ae9deeb4da1d0"
                     )
-                        .into(),
+                    .into(),
                     extrinsics_root: [0u8; 32].into(),
                     digest: Digest { logs: vec![] },
                 },

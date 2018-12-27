@@ -9,11 +9,10 @@ use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;
 
 use super::*;
+use assets::assetdef::{Asset, Chain, ChainT, Token};
 use std::str;
-use assets::assetdef::{ChainT, Token,Chain,Asset};
 
-use mock::{Balances, Assets, Pendingorders,  Test, new_test_ext, Origin};
-
+use mock::{new_test_ext, Assets, Balances, Origin, Pendingorders, Test};
 
 #[test]
 fn test_fee() {
@@ -59,13 +58,15 @@ fn test_order() {
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 3;
-        let t_eos: Asset = Asset::new(t_sym_eos.clone(), Chain::BTC, precision,t_desc_eos.clone()).unwrap();
+        let t_eos: Asset =
+            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 3;
-        let t_eth: Asset = Asset::new(t_sym_eth.clone(), Chain::ETH,precision,t_desc_eth.clone()).unwrap();
+        let t_eth: Asset =
+            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
 
         let p1 = OrderPair {
@@ -230,20 +231,19 @@ fn print_order_list(account: <tests::Test as system::Trait>::AccountId, pair: Or
 #[test]
 fn test_fill_no_fee() {
     with_externalities(&mut new_test_ext(0, 3, 3, 0, true, 10), || {
-       
-
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 4;
-        let t_eos: Asset = Asset::new(t_sym_eos.clone(), Chain::BTC, precision,t_desc_eos.clone()).unwrap();
+        let t_eos: Asset =
+            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 4;
-        let t_eth: Asset = Asset::new(t_sym_eth.clone(), Chain::ETH,precision,t_desc_eth.clone()).unwrap();
+        let t_eth: Asset =
+            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
-
 
         let p1 = OrderPair {
             first: t_sym_eos.clone(),
@@ -370,15 +370,16 @@ fn test_fill_fee() {
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 3;
-        let t_eos: Asset = Asset::new(t_sym_eos.clone(), Chain::BTC, precision,t_desc_eos.clone()).unwrap();
+        let t_eos: Asset =
+            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 3;
-        let t_eth: Asset = Asset::new(t_sym_eth.clone(), Chain::ETH,precision,t_desc_eth.clone()).unwrap();
+        let t_eth: Asset =
+            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
-
 
         let p1 = OrderPair {
             first: t_sym_eos.clone(),
@@ -474,17 +475,11 @@ fn test_fill_fee() {
         );
 
         assert_eq!(
-            Assets::free_balance(&(
-                xsystem::Module::<Test>::burn_account(),
-                t_sym_eth.clone()
-            )),
+            Assets::free_balance(&(xsystem::Module::<Test>::burn_account(), t_sym_eth.clone())),
             0
         );
         assert_eq!(
-            Assets::free_balance(&(
-                xsystem::Module::<Test>::burn_account(),
-                t_sym_eos.clone()
-            )),
+            Assets::free_balance(&(xsystem::Module::<Test>::burn_account(), t_sym_eos.clone())),
             5
         );
         Pendingorders::clear_command_and_put_fee_buy_order();

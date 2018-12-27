@@ -16,116 +16,121 @@
 
 use super::*;
 
-use network::{self, SyncState, SyncStatus, ProtocolStatus};
+use network::{self, ProtocolStatus, SyncState, SyncStatus};
 use test_client::runtime::Block;
 
 #[derive(Default)]
 struct Status {
-	pub peers: usize,
-	pub is_syncing: bool,
-	pub is_dev: bool,
+    pub peers: usize,
+    pub is_syncing: bool,
+    pub is_dev: bool,
 }
 
 impl network::SyncProvider<Block> for Status {
-	fn status(&self) -> ProtocolStatus<Block> {
-		ProtocolStatus {
-			sync: SyncStatus {
-				state: if self.is_syncing { SyncState::Downloading } else { SyncState::Idle },
-				best_seen_block: None,
-			},
-			num_peers: self.peers,
-			num_active_peers: 0,
-		}
-	}
+    fn status(&self) -> ProtocolStatus<Block> {
+        ProtocolStatus {
+            sync: SyncStatus {
+                state: if self.is_syncing {
+                    SyncState::Downloading
+                } else {
+                    SyncState::Idle
+                },
+                best_seen_block: None,
+            },
+            num_peers: self.peers,
+            num_active_peers: 0,
+        }
+    }
 }
 
-
 fn api<T: Into<Option<Status>>>(sync: T) -> System<Block> {
-	let status = sync.into().unwrap_or_default();
-	let should_have_peers = !status.is_dev;
-	System::new(SystemInfo {
-		impl_name: "testclient".into(),
-		impl_version: "0.2.0".into(),
-		chain_name: "testchain".into(),
-		properties: Default::default(),
-	}, Arc::new(status), should_have_peers)
+    let status = sync.into().unwrap_or_default();
+    let should_have_peers = !status.is_dev;
+    System::new(
+        SystemInfo {
+            impl_name: "testclient".into(),
+            impl_version: "0.2.0".into(),
+            chain_name: "testchain".into(),
+            properties: Default::default(),
+        },
+        Arc::new(status),
+        should_have_peers,
+    )
 }
 
 #[test]
 fn system_name_works() {
-	assert_eq!(
-		api(None).system_name().unwrap(),
-		"testclient".to_owned()
-	);
+    assert_eq!(api(None).system_name().unwrap(), "testclient".to_owned());
 }
 
 #[test]
 fn system_version_works() {
-	assert_eq!(
-		api(None).system_version().unwrap(),
-		"0.2.0".to_owned()
-	);
+    assert_eq!(api(None).system_version().unwrap(), "0.2.0".to_owned());
 }
 
 #[test]
 fn system_chain_works() {
-	assert_eq!(
-		api(None).system_chain().unwrap(),
-		"testchain".to_owned()
-	);
+    assert_eq!(api(None).system_chain().unwrap(), "testchain".to_owned());
 }
 
 #[test]
 fn system_properties_works() {
-	assert_eq!(
-		api(None).system_properties().unwrap(),
-		serde_json::map::Map::new()
-	);
+    assert_eq!(
+        api(None).system_properties().unwrap(),
+        serde_json::map::Map::new()
+    );
 }
 
 #[test]
 fn system_health() {
-	assert_matches!(
-		api(None).system_health().unwrap_err().kind(),
-		error::ErrorKind::NotHealthy(Health {
-			peers: 0,
-			is_syncing: false,
-		})
-	);
+    assert_matches!(
+        api(None).system_health().unwrap_err().kind(),
+        error::ErrorKind::NotHealthy(Health {
+            peers: 0,
+            is_syncing: false,
+        })
+    );
 
-	assert_matches!(
-		api(Status {
-			peers: 5,
-			is_syncing: true,
-			is_dev: true,
-		}).system_health().unwrap_err().kind(),
-		error::ErrorKind::NotHealthy(Health {
-			peers: 5,
-			is_syncing: true,
-		})
-	);
+    assert_matches!(
+        api(Status {
+            peers: 5,
+            is_syncing: true,
+            is_dev: true,
+        })
+        .system_health()
+        .unwrap_err()
+        .kind(),
+        error::ErrorKind::NotHealthy(Health {
+            peers: 5,
+            is_syncing: true,
+        })
+    );
 
-	assert_eq!(
-		api(Status {
-			peers: 5,
-			is_syncing: false,
-			is_dev: false,
-		}).system_health().unwrap(),
-		Health {
-			peers: 5,
-			is_syncing: false,
-		}
-	);
+    assert_eq!(
+        api(Status {
+            peers: 5,
+            is_syncing: false,
+            is_dev: false,
+        })
+        .system_health()
+        .unwrap(),
+        Health {
+            peers: 5,
+            is_syncing: false,
+        }
+    );
 
-	assert_eq!(
-		api(Status {
-			peers: 0,
-			is_syncing: false,
-			is_dev: true,
-		}).system_health().unwrap(),
-		Health {
-			peers: 0,
-			is_syncing: false,
-		}
-	);
+    assert_eq!(
+        api(Status {
+            peers: 0,
+            is_syncing: false,
+            is_dev: true,
+        })
+        .system_health()
+        .unwrap(),
+        Health {
+            peers: 0,
+            is_syncing: false,
+        }
+    );
 }

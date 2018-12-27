@@ -19,9 +19,9 @@ extern crate substrate_primitives as primitives;
 extern crate sr_primitives as runtime_primitives;
 #[macro_use]
 extern crate sr_version as version;
+extern crate sr_io as runtime_io;
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
-extern crate sr_io as runtime_io;
 
 // substrate runtime module
 #[macro_use]
@@ -41,53 +41,62 @@ extern crate srml_treasury as treasury;
 
 // chainx
 extern crate chainx_primitives;
-extern crate xrml_xsystem as xsystem;
-extern crate xrml_xaccounts as xaccounts;
+pub extern crate xrml_xaccounts as xaccounts;
+pub extern crate xrml_xsystem as xsystem;
 // fee;
-extern crate xrml_fee_manager as fee_manager;
+pub extern crate xrml_fee_manager as fee_manager;
 // assets;
-extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xassets_records as xrecords;
-extern crate xrml_xassets_process as xprocess;
+pub extern crate xrml_xassets_assets as xassets;
+pub extern crate xrml_xassets_process as xprocess;
+pub extern crate xrml_xassets_records as xrecords;
+// xbridge
+pub extern crate xrml_xbridge_bitcoin as xbitcoin;
 
 // dex
-extern crate xrml_xdex_spot_xmatchorder  as xmatchorder;
-extern crate xrml_xdex_spot_xpendingorders  as xpendingorders;
+pub extern crate xrml_xdex_spot_xmatchorder as xmatchorder;
+pub extern crate xrml_xdex_spot_xpendingorders as xpendingorders;
 
 mod fee;
 mod xexecutive;
 
-pub use balances::address::Address as RawAddress;
-use consensus_aura::api as aura_api;
-pub use runtime_primitives::{Perbill, Permill};
-
-use grandpa::fg_primitives::{self, ScheduledChange};
 use rstd::prelude::*;
-
+// substrate
 use primitives::OpaqueMetadata;
-
 use runtime_primitives::generic;
 use runtime_primitives::traits::{BlakeTwo256, Block as BlockT, Convert, DigestFor, NumberFor};
 //#[cfg(feature = "std")]
 //use council::{motions as council_motions, voting as council_voting};
+use client::{block_builder::api as block_builder_api, runtime_api as client_api};
 use runtime_primitives::transaction_validity::TransactionValidity;
 use runtime_primitives::{ApplyResult, BasicInherentData, CheckInherentError};
 #[cfg(any(feature = "std", test))]
 use version::NativeVersion;
 use version::RuntimeVersion;
 
-use client::{block_builder::api as block_builder_api, runtime_api as client_api};
+// substrate runtime
+pub use balances::address::Address as RawAddress;
+use consensus_aura::api as aura_api;
+use grandpa::fg_primitives::{self, ScheduledChange};
+pub use runtime_primitives::{Perbill, Permill};
 
 use srml_support::inherent::ProvideInherent;
-
 // for set consensus period
 pub use srml_support::{RuntimeMetadata, StorageValue};
 pub use timestamp::BlockPeriod;
 pub use timestamp::Call as TimestampCall;
 
+// chainx
 use chainx_primitives::{
-    AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature, BlockProducer
+    AccountId, AccountIndex, Balance, BlockNumber, BlockProducer, Hash, Index, SessionKey,
+    Signature,
 };
+// chainx runtime
+// xassets
+//pub use xassets;
+// xbitcoin
+//pub use xbitcoin;
+#[cfg(feature = "std")]
+pub use xbitcoin::Params;
 
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
@@ -181,6 +190,11 @@ impl aura::Trait for Runtime {
     type HandleReport = ();
 }
 
+// bridge
+impl xbitcoin::Trait for Runtime {
+    type Event = Event;
+}
+
 //impl treasury::Trait for Runtime {
 //    type ApproveOrigin = council_motions::EnsureMembers<_4>;
 //    type RejectOrigin = council_motions::EnsureMembers<_2>;
@@ -218,7 +232,7 @@ impl xsystem::Trait for Runtime {
     const XSYSTEM_SET_POSITION: u32 = 3;
 }
 
-impl xaccounts::Trait for Runtime { }
+impl xaccounts::Trait for Runtime {}
 // fees
 impl fee_manager::Trait for Runtime {
     //    type Event = Event;
@@ -233,8 +247,7 @@ impl xrecords::Trait for Runtime {
     type Event = Event;
 }
 
-impl xprocess::Trait for Runtime {
-}
+impl xprocess::Trait for Runtime {}
 
 impl xpendingorders::Trait for Runtime {
     type Event = Event;
@@ -273,6 +286,8 @@ construct_runtime!(
         XPendingOrders: xpendingorders,
         XMatchOrder: xmatchorder,
 
+        // bridge
+        XBridgeOfBTC: xbitcoin::{Module, Call, Storage, Config<T>, Event<T>},
     }
 );
 

@@ -8,7 +8,6 @@
 // We only implement the serde traits for std builds - they're unneeded
 // in the wasm runtime.
 #[cfg(feature = "std")]
-#[macro_use]
 extern crate serde_derive;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
@@ -41,6 +40,8 @@ extern crate srml_timestamp as timestamp;
 // chainx runtime module
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_records as xrecords;
+// bridge
+extern crate xrml_xbridge_bitcoin as xbitcoin;
 
 #[cfg(test)]
 extern crate base58;
@@ -50,15 +51,12 @@ extern crate base58;
 
 use rstd::prelude::*;
 //use rstd::result::Result as StdResult;
-use runtime_primitives::traits::OnFinalise;
 use runtime_support::dispatch::Result;
-use runtime_support::StorageValue;
 
 use system::ensure_signed;
-use xassets::{Token, ChainT};
+use xassets::{ChainT, Token};
 
-pub trait Trait: xassets::Trait + xrecords::Trait { // + btc::Trait {
-}
+pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -82,7 +80,7 @@ decl_storage! {
 impl<T: Trait> Module<T> {
     fn verify_addr(token: &Token, addr: &[u8], _ext: &[u8]) -> Result {
         match token.as_slice() {
-//            btc::Module::<T>::Token => btc::Module::<T>::check_addr(&addr, b""),
+            <xbitcoin::Module<T> as ChainT>::TOKEN => xbitcoin::Module::<T>::check_addr(&addr, b""),
             _ => return Err("not found match token Token addr checker"),
         }
     }

@@ -1,10 +1,10 @@
 // Copyright 2018 Chainpool
 
 use rpc;
+use service;
 use std::io;
 use std::net::SocketAddr;
 use substrate_service::{ComponentBlock, ComponentExHash, TaskExecutor};
-use service;
 
 fn maybe_start_server<T, F>(address: Option<SocketAddr>, start: F) -> Result<Option<T>, io::Error>
 where
@@ -54,8 +54,11 @@ impl Rpc for substrate_service::LightComponents<service::Factory> {
             let subscriptions = rpc::apis::Subscriptions::new(task_executor.clone());
             let state = rpc::apis::state::State::new(client.clone(), subscriptions.clone());
             let chain = rpc::apis::chain::Chain::new(client.clone(), subscriptions.clone());
-            let author =
-                rpc::apis::author::Author::new(client.clone(), self.transaction_pool.clone(), subscriptions);
+            let author = rpc::apis::author::Author::new(
+                client.clone(),
+                self.transaction_pool.clone(),
+                subscriptions,
+            );
             let system = rpc::apis::system::System::new(
                 system_info.clone(),
                 self.network.clone().unwrap(),
@@ -97,8 +100,11 @@ impl Rpc for substrate_service::FullComponents<service::Factory> {
             let subscriptions = rpc::apis::Subscriptions::new(task_executor.clone());
             let state = rpc::apis::state::State::new(client.clone(), subscriptions.clone());
             let chain = rpc::apis::chain::Chain::new(client.clone(), subscriptions.clone());
-            let author =
-                rpc::apis::author::Author::new(client.clone(), self.transaction_pool.clone(), subscriptions);
+            let author = rpc::apis::author::Author::new(
+                client.clone(),
+                self.transaction_pool.clone(),
+                subscriptions,
+            );
             let system = rpc::apis::system::System::new(
                 system_info.clone(),
                 self.network.clone().unwrap(),
@@ -118,4 +124,3 @@ impl Rpc for substrate_service::FullComponents<service::Factory> {
         (rpc_http, rpc_ws)
     }
 }
-

@@ -37,4 +37,5 @@ members = [
     "xrml/xassets/process",
     # xrml/mining
     "xrml/xmining/staking",
+    "xrml/xbridge/bitcoin",
 ]

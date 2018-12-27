@@ -9,12 +9,10 @@ use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;
 
 use super::*;
+use assets::assetdef::{Asset, Chain, ChainT, Token};
 use std::str;
-use assets::assetdef::{ChainT, Token,Chain,Asset};
 
-use mock::{Balances, Assets, PendingOrders,  Test, new_test_ext, Origin,MatchOrder};
-
-
+use mock::{new_test_ext, Assets, Balances, MatchOrder, Origin, PendingOrders, Test};
 
 #[test]
 fn test_fee() {
@@ -31,13 +29,15 @@ fn test_match_part() {
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 4;
-        let t_eos: Asset = Asset::new(t_sym_eos.clone(), Chain::BTC, precision,t_desc_eos.clone()).unwrap();
+        let t_eos: Asset =
+            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 4;
-        let t_eth: Asset = Asset::new(t_sym_eth.clone(), Chain::ETH,precision,t_desc_eth.clone()).unwrap();
+        let t_eth: Asset =
+            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
 
         let p1 = OrderPair {
@@ -59,8 +59,14 @@ fn test_match_part() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order =
-            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 1000000, 5, b"imtoken".to_vec());
+        let a_order = PendingOrders::put_order(
+            Some(a).into(),
+            p1.clone(),
+            buy,
+            1000000,
+            5,
+            b"imtoken".to_vec(),
+        );
         assert_eq!(Assets::free_balance(&(a, t_sym_eos.clone())), 10000000);
         assert_eq!(
             Assets::reserved_balance(&(a, t_sym_eos.clone(), assets::ReservedType::DexSpot)),
@@ -74,8 +80,14 @@ fn test_match_part() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order =
-            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 500000, 5, b"imtoken".to_vec());
+        let b_order = PendingOrders::put_order(
+            Some(b).into(),
+            p1.clone(),
+            sell,
+            500000,
+            5,
+            b"imtoken".to_vec(),
+        );
         assert_eq!(b_order, Ok(()));
         assert_eq!(Assets::free_balance(&(b, t_sym_eos.clone())), 9500000);
         assert_eq!(
@@ -130,13 +142,15 @@ fn test_match_all() {
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 4;
-        let t_eos: Asset = Asset::new(t_sym_eos.clone(), Chain::BTC, precision,t_desc_eos.clone()).unwrap();
+        let t_eos: Asset =
+            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 4;
-        let t_eth: Asset = Asset::new(t_sym_eth.clone(), Chain::ETH,precision,t_desc_eth.clone()).unwrap();
+        let t_eth: Asset =
+            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
 
         let p1 = OrderPair {
@@ -158,8 +172,14 @@ fn test_match_all() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order =
-            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 1000000, 5, b"imtoken".to_vec());
+        let a_order = PendingOrders::put_order(
+            Some(a).into(),
+            p1.clone(),
+            buy,
+            1000000,
+            5,
+            b"imtoken".to_vec(),
+        );
         assert_eq!(Assets::free_balance(&(a, t_sym_eos.clone())), 10000000);
         assert_eq!(
             Assets::reserved_balance(&(a, t_sym_eos.clone(), assets::ReservedType::DexSpot)),
@@ -234,13 +254,15 @@ fn test_match_no() {
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 4;
-        let t_eos: Asset = Asset::new(t_sym_eos.clone(), Chain::BTC, precision,t_desc_eos.clone()).unwrap();
+        let t_eos: Asset =
+            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 4;
-        let t_eth: Asset = Asset::new(t_sym_eth.clone(), Chain::ETH,precision,t_desc_eth.clone()).unwrap();
+        let t_eth: Asset =
+            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
 
         let p1 = OrderPair {
@@ -262,13 +284,25 @@ fn test_match_no() {
 
         //挂买单
         let buy = OrderType::Buy;
-        let a_order =
-            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 1000000, 5, b"imtoken".to_vec());
+        let a_order = PendingOrders::put_order(
+            Some(a).into(),
+            p1.clone(),
+            buy,
+            1000000,
+            5,
+            b"imtoken".to_vec(),
+        );
 
         //挂卖单
         let buy = OrderType::Sell;
-        let a_order =
-            PendingOrders::put_order(Some(a).into(), p1.clone(), buy, 1000000, 7, b"imtoken".to_vec());
+        let a_order = PendingOrders::put_order(
+            Some(a).into(),
+            p1.clone(),
+            buy,
+            1000000,
+            7,
+            b"imtoken".to_vec(),
+        );
 
         assert_eq!(Assets::free_balance(&(a, t_sym_eos.clone())), 9000000);
         assert_eq!(
@@ -283,13 +317,25 @@ fn test_match_no() {
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order =
-            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 500000, 6, b"imtoken".to_vec());
+        let b_order = PendingOrders::put_order(
+            Some(b).into(),
+            p1.clone(),
+            sell,
+            500000,
+            6,
+            b"imtoken".to_vec(),
+        );
 
         //挂卖单
         let sell = OrderType::Sell;
-        let b_order =
-            PendingOrders::put_order(Some(b).into(), p1.clone(), sell, 500000, 7, b"imtoken".to_vec());
+        let b_order = PendingOrders::put_order(
+            Some(b).into(),
+            p1.clone(),
+            sell,
+            500000,
+            7,
+            b"imtoken".to_vec(),
+        );
 
         assert_eq!(Assets::free_balance(&(b, t_sym_eos.clone())), 9000000);
         assert_eq!(

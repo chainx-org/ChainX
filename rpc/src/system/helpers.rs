@@ -16,9 +16,9 @@
 
 //! Substrate system API helpers.
 
+use serde_derive::Serialize;
+use serde_json::{map::Map, Value};
 use std::fmt;
-use serde_derive::{Serialize};
-use serde_json::{Value, map::Map};
 
 /// Node properties
 pub type Properties = Map<String, Value>;
@@ -26,29 +26,32 @@ pub type Properties = Map<String, Value>;
 /// Running node's static details.
 #[derive(Clone, Debug)]
 pub struct SystemInfo {
-	/// Implementation name.
-	pub impl_name: String,
-	/// Implementation version.
-	pub impl_version: String,
-	/// Chain name.
-	pub chain_name: String,
-	/// A custom set of properties defined in the chain spec.
-	pub properties: Properties,
+    /// Implementation name.
+    pub impl_name: String,
+    /// Implementation version.
+    pub impl_version: String,
+    /// Chain name.
+    pub chain_name: String,
+    /// A custom set of properties defined in the chain spec.
+    pub properties: Properties,
 }
 
 /// Health struct returned by the RPC
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Health {
-	/// Number of connected peers
-	pub peers: usize,
-	/// Is the node syncing
-	pub is_syncing: bool,
+    /// Number of connected peers
+    pub peers: usize,
+    /// Is the node syncing
+    pub is_syncing: bool,
 }
 
 impl fmt::Display for Health {
-	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-		write!(fmt, "{} peers ({})", self.peers, if self.is_syncing {
-			"syncing"
-		} else { "idle" })
-	}
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            fmt,
+            "{} peers ({})",
+            self.peers,
+            if self.is_syncing { "syncing" } else { "idle" }
+        )
+    }
 }

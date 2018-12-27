@@ -47,7 +47,8 @@ xrml-fee-manager = { path = "../xrml/xfee/manager", default-features = false }
 xrml-xassets-assets = { path = "../xrml/xassets/assets", default-features = false }
 xrml-xassets-records = { path = "../xrml/xassets/records", default-features = false }
 xrml-xassets-process = { path = "../xrml/xassets/process", default-features = false }
-
+# bridge
+xrml-xbridge-bitcoin = {path = "../xrml/xbridge/bitcoin", default-features = false }
 # dex
 xrml-xdex-spot-xmatchorder = { path = "../xrml/xdex/spot/xmatchorder", default-features = false }
 xrml-xdex-spot-xpendingorders = { path = "../xrml/xdex/spot/xpendingorders", default-features = false }
@@ -96,6 +97,8 @@ std = [
     "xrml-xassets-assets/std",
     "xrml-xassets-records/std",
     "xrml-xassets-process/std",
+    # bridge
+    "xrml-xbridge-bitcoin/std",
     # dex
     "xrml-xdex-spot-xmatchorder/std",
     "xrml-xdex-spot-xpendingorders/std",

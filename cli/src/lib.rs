@@ -46,9 +46,9 @@ extern crate structopt;
 pub use cli::error;
 mod chain_spec;
 mod genesis_config;
+mod native_rpc;
 mod params;
 mod service;
-mod native_rpc;
 
 pub use cli::{IntoExit, VersionInfo};
 use params::Params as NodeParams;

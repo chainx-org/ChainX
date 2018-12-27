@@ -38,26 +38,26 @@ extern crate srml_system as system;
 
 // for chainx runtime module lib
 extern crate xrml_xaccounts as xaccounts;
-extern crate xrml_xdex_spot_xpendingorders  as xpendingorders;
+extern crate xrml_xassets_assets as assets;
+extern crate xrml_xdex_spot_xpendingorders as xpendingorders;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
-extern crate xrml_xassets_assets as assets;
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod mock;
+#[cfg(test)]
+mod tests;
 
 use rstd::prelude::*;
 //use runtime_primitives::traits::OnFinalise;
 use codec::Codec;
-use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
-use xpendingorders::{CommandType, OrderPair, OrderType};
 use runtime_primitives::traits::Zero;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
+use xpendingorders::{CommandType, OrderPair, OrderType};
+use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
 
-pub trait Trait: assets::Trait + xpendingorders::Trait  {
+pub trait Trait: assets::Trait + xpendingorders::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -233,10 +233,7 @@ where
     }
 }
 
-
-
 impl<T: Trait> Module<T> {
-  
     fn new_nodeid() -> u128 {
         let mut last_nodeid: u128 = <NodeId<T>>::get();
         last_nodeid = match last_nodeid.checked_add(1_u128) {

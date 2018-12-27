@@ -589,8 +589,8 @@ impl<T: Trait> Module<T> {
                 Some(b) => b,
                 None => return Err(TokenErr::OverFlow),
             };
-//            balances::FreeBalance::<T>::insert(from, new_from_token);
-//            balances::FreeBalance::<T>::insert(to, new_to_token);
+            //            balances::FreeBalance::<T>::insert(from, new_from_token);
+            //            balances::FreeBalance::<T>::insert(to, new_to_token);
             balances::Module::<T>::set_free_balance(from, new_from_token);
             balances::Module::<T>::set_free_balance(to, new_to_token);
         } else {

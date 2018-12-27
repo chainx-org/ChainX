@@ -32,8 +32,8 @@ extern crate srml_balances as balances;
 extern crate srml_system as system;
 
 // for chainx runtime module lib
-extern crate xrml_xsupport as xsupport;
 extern crate xrml_xassets_assets as xassets;
+extern crate xrml_xsupport as xsupport;
 
 //#[cfg(test)]
 //mod tests;
@@ -49,9 +49,8 @@ use runtime_primitives::traits::As;
 use runtime_support::dispatch::Result;
 use runtime_support::StorageMap;
 
+use xassets::{ChainT, ReservedType, Token};
 use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node};
-use xassets::{ReservedType, Token, ChainT};
-
 
 pub trait Trait: system::Trait + balances::Trait + xassets::Trait {
     /// The overarching event type.
@@ -120,10 +119,10 @@ impl Default for Action {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct Record<Token, Balance, BlockNumber>
-    where
-        Token: Clone,
-        Balance: Copy,
-        BlockNumber: Copy,
+where
+    Token: Clone,
+    Balance: Copy,
+    BlockNumber: Copy,
 {
     action: Action,
     token: Token,
@@ -137,10 +136,10 @@ pub struct Record<Token, Balance, BlockNumber>
 type RecordT<T> = Record<Token, <T as balances::Trait>::Balance, <T as system::Trait>::BlockNumber>;
 
 impl<Token, Balance, BlockNumber> Record<Token, Balance, BlockNumber>
-    where
-        Token: Clone,
-        Balance: Copy,
-        BlockNumber: Copy,
+where
+    Token: Clone,
+    Balance: Copy,
+    BlockNumber: Copy,
 {
     pub fn action(&self) -> Action {
         self.action
@@ -170,10 +169,10 @@ impl<Token, Balance, BlockNumber> Record<Token, Balance, BlockNumber>
 }
 
 impl<Token, Balance, BlockNumber> Record<Token, Balance, BlockNumber>
-    where
-        Token: Clone,
-        Balance: Copy,
-        BlockNumber: Copy,
+where
+    Token: Clone,
+    Balance: Copy,
+    BlockNumber: Copy,
 {
     fn is_init(&self) -> bool {
         match self.action {
@@ -210,7 +209,6 @@ impl<Token, Balance, BlockNumber> Record<Token, Balance, BlockNumber>
     }
 }
 
-
 pub struct LinkedMultiKey<T: Trait>(runtime_support::storage::generator::PhantomData<T>);
 
 impl<T: Trait> LinkedNodeCollection for LinkedMultiKey<T> {
@@ -238,7 +236,6 @@ decl_storage! {
         pub WithdrawLogCache get(withdraw_log_cache): map (T::AccountId, u32) => Option<Node<WithdrawLog<T::AccountId>>>;
     }
 }
-
 
 impl<T: Trait> Module<T> {
     /// get the record list for a account
@@ -566,7 +563,12 @@ impl<T: Trait> Module<T> {
                     WithdrawalState::Invalid => {
                         *state = WithdrawalState::Locking;
 
-                        <xassets::Module<T>>::reserve(who, &token, bal, ReservedType::AssetsWithdrawal)?;
+                        <xassets::Module<T>>::reserve(
+                            who,
+                            &token,
+                            bal,
+                            ReservedType::AssetsWithdrawal,
+                        )?;
                     }
                     _ => return Err("the withdrawal state must be Invalid."),
                 },

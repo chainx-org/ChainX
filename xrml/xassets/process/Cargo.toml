@@ -24,7 +24,7 @@ srml-consensus = { git = "https://github.com/chainpool/substrate", default_featu
 xrml-xassets-assets = { path = "../assets", default_features = false }
 xrml-xassets-records = { path = "../records", default_features = false }
 # bridge
-#xrml-xbridge-btc = { path = "../../xbridge/bitcoin", default_features = false }
+xrml-xbridge-bitcoin = { path = "../../xbridge/bitcoin", default_features = false }
 
 base58 = { version = "0.1", optional = true }
 
@@ -50,7 +50,7 @@ std=[
     "xrml-xassets-records/std",
 
     # bridge
-#    "xrml-xbridge-btc/std",
+    "xrml-xbridge-bitcoin/std",
 
     # other
     "base58",

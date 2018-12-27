@@ -4,20 +4,28 @@ extern crate chain as btc_chain;
 //extern crate cxrml_tokenbalances;
 extern crate keys;
 extern crate primitives as btc_primitives;
+extern crate substrate_keyring;
 extern crate substrate_primitives;
 
 use self::base58::FromBase58;
 use chainx_runtime::GrandpaConfig;
 use chainx_runtime::{
-    BalancesConfig, ConsensusConfig, GenesisConfig, Perbill, Permill, SessionConfig,
-    TimestampConfig, XAssetsConfig, XFeeManagerConfig, XSystemConfig, XAccountsConfig,XPendingOrdersConfig,XMatchOrderConfig
+    xassets::{Asset, Chain, ChainT},
+    xbitcoin, Runtime,
 };
+use chainx_runtime::{
+    BalancesConfig, ConsensusConfig, GenesisConfig, Params, Perbill, Permill, SessionConfig,
+    TimestampConfig, XAccountsConfig, XAssetsConfig, XBridgeOfBTCConfig, XFeeManagerConfig,
+    XMatchOrderConfig, XPendingOrdersConfig, XSystemConfig,
+};
+
 use ed25519;
 use ed25519::Public;
 
 use self::btc_chain::BlockHeader;
 use self::btc_primitives::{compact::Compact, hash::H256};
 use self::keys::DisplayLayout;
+use self::substrate_keyring::Keyring;
 
 pub enum GenesisSpec {
     Dev,
@@ -65,16 +73,23 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         transfer_fee: 0,
         creation_fee: 0,
         reclaim_rebate: 0,
-        balances: vec![],
+        balances: vec![(Keyring::Alice.to_raw_public().into(), 1_000_000)],
     };
     //let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
+
+    let btc_asset = Asset::new(
+        <xbitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(), // token
+        Chain::BTC,
+        8, // bitcoin precision
+        b"BTC chainx".to_vec(),
+    )
+    .unwrap();
 
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
             "../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime_wasm.compact.wasm"
-            )
-            .to_vec(),
+            ).to_vec(),
             authorities: initial_authorities.clone(),
         }),
         system: None,
@@ -110,20 +125,49 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         xassets: Some(XAssetsConfig {
             pcx: (pcx_precision, b"PCX onchain token".to_vec()),
             remark_len: 128,
-            asset_list: vec![],
+            // Vec<(Asset, Vec<(T::AccountId, u64)>)>;
+            asset_list: vec![
+                (btc_asset, vec![])
+            ],
         }),
-        xpendingorders:Some(XPendingOrdersConfig{
+        xpendingorders: Some(XPendingOrdersConfig {
             order_fee: 10,
             pair_list: vec![],
             // (OrderPair { first: Runtime::CHAINX_SYMBOL.to_vec(), second: BridgeOfBTC::SYMBOL.to_vec() }, 8)
             max_command_id: 0,
             average_price_len: 10000,
         }),
-        xmatchorder:Some(XMatchOrderConfig{
+        xmatchorder: Some(XMatchOrderConfig {
             match_fee: 10,
             fee_precision: 100000,
             maker_match_fee: 50,
             taker_match_fee: 100,
-        })
+        }),
+        xbitcoin: Some(XBridgeOfBTCConfig {
+            // start genesis block: (genesis, blocknumber)
+            genesis: (BlockHeader {
+                version: 536870912,
+                previous_header_hash: H256::from_reversed_str("0000000000169686808d64b2c2bb83b1024375f5af10c77bd90ea58db63ec786"),
+                merkle_root_hash: H256::from_reversed_str("7b0d2a0d34c92a0b79ece325478260d75d6c51fe07e606ded0945490f9ecc8de"),
+                time: 1543471789,
+                bits: Compact::new(436289080),
+                nonce: 1307552987,
+            }, 1445850),
+            params_info: Params::new(520159231, // max_bits
+                                     2 * 60 * 60,  // block_max_future
+                                     64,  // max_fork_route_preset
+                                     2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
+                                     10 * 60,  // target_spacing_seconds
+                                     4), // retargeting_factor
+            network_id: 1,
+            utxo_len: 0,
+            irr_block: 0,
+            btc_fee: 1000,
+            cert_address: keys::Address::from_layout(&"2N6JXYKYLqN4e2A96FLnY5J1Mjj5MHXhp6b".from_base58().unwrap()).unwrap(),
+            cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
+            trustee_address: keys::Address::from_layout(&"2N8fUxnFttG5UgPUQDDKXmyRJbr5ZkV4kx3".from_base58().unwrap()).unwrap(),
+            trustee_redeem_script: b"52210227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c321020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f2102a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b9953ae".to_vec(),
+            fee: 0,
+        }),
     }
 }

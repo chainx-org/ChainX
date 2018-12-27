@@ -17,52 +17,52 @@
 //! Authoring RPC module errors.
 
 use client;
-use transaction_pool::txpool;
 use rpc;
+use transaction_pool::txpool;
 
 use errors;
 
 error_chain! {
-	links {
-		Pool(txpool::error::Error, txpool::error::ErrorKind) #[doc = "Pool error"];
-		Client(client::error::Error, client::error::ErrorKind) #[doc = "Client error"];
-	}
-	errors {
-		/// Not implemented yet
-		Unimplemented {
-			description("not yet implemented"),
-			display("Method Not Implemented"),
-		}
-		/// Incorrect extrinsic format.
-		BadFormat {
-			description("bad format"),
-			display("Invalid extrinsic format"),
-		}
-		/// Verification error
-		Verification(e: Box<::std::error::Error + Send>) {
-			description("extrinsic verification error"),
-			display("Extrinsic verification error: {}", e.description()),
-		}
-	}
+    links {
+        Pool(txpool::error::Error, txpool::error::ErrorKind) #[doc = "Pool error"];
+        Client(client::error::Error, client::error::ErrorKind) #[doc = "Client error"];
+    }
+    errors {
+        /// Not implemented yet
+        Unimplemented {
+            description("not yet implemented"),
+            display("Method Not Implemented"),
+        }
+        /// Incorrect extrinsic format.
+        BadFormat {
+            description("bad format"),
+            display("Invalid extrinsic format"),
+        }
+        /// Verification error
+        Verification(e: Box<::std::error::Error + Send>) {
+            description("extrinsic verification error"),
+            display("Extrinsic verification error: {}", e.description()),
+        }
+    }
 }
 
 const ERROR: i64 = 1000;
 
 impl From<Error> for rpc::Error {
-	fn from(e: Error) -> Self {
-		match e {
-			Error(ErrorKind::Unimplemented, _) => errors::unimplemented(),
-			Error(ErrorKind::BadFormat, _) => rpc::Error {
-				code: rpc::ErrorCode::ServerError(ERROR + 1),
-				message: "Extrinsic has invalid format.".into(),
-				data: None,
-			},
-			Error(ErrorKind::Verification(e), _) => rpc::Error {
-				code: rpc::ErrorCode::ServerError(ERROR + 2),
-				message: e.description().into(),
-				data: Some(format!("{:?}", e).into()),
-			},
-			e => errors::internal(e),
-		}
-	}
+    fn from(e: Error) -> Self {
+        match e {
+            Error(ErrorKind::Unimplemented, _) => errors::unimplemented(),
+            Error(ErrorKind::BadFormat, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 1),
+                message: "Extrinsic has invalid format.".into(),
+                data: None,
+            },
+            Error(ErrorKind::Verification(e), _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 2),
+                message: e.description().into(),
+                data: Some(format!("{:?}", e).into()),
+            },
+            e => errors::internal(e),
+        }
+    }
 }
