@@ -50,7 +50,9 @@ impl assets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
 }
-impl xaccounts::Trait for Test {}
+impl xaccounts::Trait for Test {
+    type Event = ();
+}
 
 impl xpendingorders::Trait for Test {
     type Event = ();

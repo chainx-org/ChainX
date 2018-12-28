@@ -51,6 +51,8 @@ pub extern crate xrml_xassets_process as xprocess;
 pub extern crate xrml_xassets_records as xrecords;
 // xbridge
 pub extern crate xrml_xbridge_bitcoin as xbitcoin;
+// staking
+pub extern crate xrml_mining_staking as xstaking;
 
 // dex
 pub extern crate xrml_xdex_spot_xmatchorder as xmatchorder;
@@ -232,7 +234,9 @@ impl xsystem::Trait for Runtime {
     const XSYSTEM_SET_POSITION: u32 = 3;
 }
 
-impl xaccounts::Trait for Runtime {}
+impl xaccounts::Trait for Runtime {
+    type Event = Event;
+}
 // fees
 impl fee_manager::Trait for Runtime {
     //    type Event = Event;
@@ -248,6 +252,11 @@ impl xrecords::Trait for Runtime {
 }
 
 impl xprocess::Trait for Runtime {}
+
+impl xstaking::Trait for Runtime {
+    type OnRewardMinted = ();
+    type Event = Event;
+}
 
 impl xpendingorders::Trait for Runtime {
     type Event = Event;
@@ -275,17 +284,18 @@ construct_runtime!(
 
         // chainx runtime module
         XSystem: xsystem::{Module, Call, Storage, Config<T>}, //, Inherent},
-        XAccounts: xaccounts::{Module, Storage, Config<T>}, //, Inherent},
+        XAccounts: xaccounts::{Module, Storage, Config<T>, Event<T>}, //, Inherent},
         // fee
         XFeeManager: fee_manager::{Module, Call, Storage, Config<T>},
         // assets
         XAssets: xassets,
         XAssetsRecords: xrecords::{Module, Storage, Event<T>},
         XAssetsProcess: xprocess::{Module, Call, Storage},
+        // mining
+        XStaking: xstaking,
         // dex
         XPendingOrders: xpendingorders,
         XMatchOrder: xmatchorder,
-
         // bridge
         XBridgeOfBTC: xbitcoin::{Module, Call, Storage, Config<T>, Event<T>},
     }

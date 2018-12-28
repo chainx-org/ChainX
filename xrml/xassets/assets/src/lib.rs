@@ -31,7 +31,7 @@ extern crate xrml_xaccounts as xaccounts;
 //mod tests;
 
 pub mod assetdef;
-pub mod remark;
+pub mod memo;
 
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
@@ -51,7 +51,7 @@ pub use assetdef::{
     TokenString,
 };
 
-pub use remark::is_valid_remark;
+pub use memo::is_valid_memo;
 
 pub type Address<AccountId, AccountIndex> = balances::address::Address<AccountId, AccountIndex>;
 
@@ -143,12 +143,12 @@ decl_module! {
         }
 
         /// transfer between account
-        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, remark: Vec<u8>) -> Result {
+        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, memo: Vec<u8>) -> Result {
             runtime_io::print("[tokenbalances] transfer");
             let transactor = ensure_signed(origin)?;
             let dest = balances::Module::<T>::lookup(dest)?;
 
-            is_valid_remark::<T>(&remark)?;
+            is_valid_memo::<T>(&memo)?;
 
             if transactor == dest {
                 return Err("transactor and dest account are same");
@@ -191,8 +191,8 @@ decl_storage! {
         /// price
         pub PCXPriceFor get(pcx_price_for): map Token => Option<T::Balance>;
 
-        /// remark len
-        pub RemarkLen get(remark_len) config(): u32;
+        /// memo len
+        pub MemoLen get(memo_len) config(): u32;
     }
     add_extra_genesis {
         config(asset_list): Vec<(Asset, Vec<(T::AccountId, u64)>)>;

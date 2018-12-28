@@ -1,9 +1,10 @@
 // Copyright 2018 Chainpool
 
 //use balances::Call as BalancesCall;
-use xbitcoin::Call as XbitcoinCall;
 use xassets::Call as XAssetsCall;
+use xbitcoin::Call as XbitcoinCall;
 use xprocess::Call as XAssetsProcessCall;
+use xstaking::Call as XStakingCall;
 
 use Call;
 
@@ -25,12 +26,21 @@ impl CheckFee for Call {
                 _ => None,
             },
             Call::XAssets(call) => match call {
-                XAssetsCall::transfer(_,_,_,_) => Some(1),
-                _=>None,
+                XAssetsCall::transfer(_, _, _, _) => Some(1),
+                _ => None,
             },
             Call::XAssetsProcess(call) => match call {
-                XAssetsProcessCall::withdraw(_,_,_,_) => Some(3),
-                _=>None,
+                XAssetsProcessCall::withdraw(_, _, _, _) => Some(3),
+                _ => None,
+            },
+            Call::XStaking(call) => match call {
+                XStakingCall::register(_, _, _, _, _, _) => Some(100),
+                XStakingCall::refresh(_, _) => Some(100),
+                XStakingCall::nominate(_, _, _) => Some(5),
+                XStakingCall::unnominate(_, _, _) => Some(3),
+                XStakingCall::unfreeze(_, _) => Some(2),
+                XStakingCall::claim(_) => Some(3),
+                _ => None,
             },
             _ => None,
         }

@@ -20,22 +20,21 @@ impl<AccountId: Default> Default for RewardHolder<AccountId> {
 }
 
 impl<T: Trait> Module<T> {
+    fn total_stake() -> T::Balance {
+        Self::intentions()
+            .into_iter()
+            .map(|i| Self::intention_profiles(i).total_nomination)
+            .fold(Zero::zero(), |acc: T::Balance, x| acc + x)
+    }
+
     /// Get the reward for the session, assuming it ends with this block.
     fn this_session_reward() -> T::Balance {
         let total_stake = Self::total_stake().as_();
-        let reward = match total_stake {
-            0...100_000_000_000 => total_stake * 1 / 1000,
-            100_000_000_001...200_000_000_000 => total_stake * 9 / 10000,
-            200_000_000_001...300_000_000_000 => total_stake * 8 / 10000,
-            300_000_000_001...400_000_000_000 => total_stake * 7 / 10000,
-            400_000_000_001...500_000_000_000 => total_stake * 6 / 10000,
-            500_000_000_001...600_000_000_000 => total_stake * 5 / 10000,
-            600_000_000_001...700_000_000_000 => total_stake * 4 / 10000,
-            700_000_000_001...800_000_000_000 => total_stake * 3 / 10000,
-            800_000_000_001...900_000_000_000 => total_stake * 2 / 10000,
-            _ => total_stake * 1 / 10000,
-        };
-        T::Balance::sa(reward / 1000)
+        // daily_interest: 3 / 10000
+        let daily_reward = total_stake * 3 / 10000;
+        let blocks_per_session = <session::Module<T>>::length().as_();
+        let sessions_per_day = Self::blocks_per_day() / blocks_per_session;
+        T::Balance::sa(daily_reward / sessions_per_day)
     }
 
     /// Reward a given (potential) validator by a specific amount.
@@ -44,9 +43,7 @@ impl<T: Trait> Module<T> {
         let off_the_table = T::Balance::sa(reward.as_() * 1 / 10);
         let _ = <xassets::Module<T>>::pcx_reward(who, off_the_table);
         let to_jackpot = reward - off_the_table;
-        let mut iprof = <IntentionProfiles<T>>::get(who);
-        iprof.jackpot += to_jackpot;
-        <IntentionProfiles<T>>::insert(who, iprof);
+        <IntentionProfiles<T>>::mutate(who, |iprof| iprof.jackpot += to_jackpot);
     }
 
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or
@@ -54,9 +51,8 @@ impl<T: Trait> Module<T> {
     fn new_session(_actual_elapsed: T::Moment, should_reward: bool) {
         if should_reward {
             // apply good session reward
-            let reward = Self::this_session_reward();
-
-            let mut total_minted: T::Balance = Zero::zero();
+            let mut session_reward = Self::this_session_reward();
+            Self::deposit_event(RawEvent::Reward(session_reward));
 
             let mut active_intentions: Vec<(RewardHolder<T::AccountId>, T::Balance)> =
                 Self::intentions()
@@ -73,21 +69,21 @@ impl<T: Trait> Module<T> {
             let tokens = Vec::new();
             active_intentions.extend(tokens);
 
-            let total_active_stake = active_intentions
+            let mut total_active_stake = active_intentions
                 .iter()
                 .fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + *x);
 
             if !total_active_stake.is_zero() {
                 for (holder, stake) in active_intentions.iter() {
-                    let reward = *stake * reward / total_active_stake;
-                    total_minted += reward;
+                    let reward = *stake * session_reward / total_active_stake;
                     match holder {
                         RewardHolder::AccountId(ref intention) => Self::reward(intention, reward), // TODO Reward to token entity.
                     }
+                    total_active_stake -= *stake;
+                    session_reward -= reward;
                 }
             }
 
-            // Self::deposit_event(RawEvent::Reward(reward));
             // FIXME
             // T::OnRewardMinted::on_dilution(total_minted, total_minted);
         }

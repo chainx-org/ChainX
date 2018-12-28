@@ -43,10 +43,15 @@ impl balances::Trait for Test {
     type EnsureAccountLiquid = ();
     type Event = ();
 }
-impl xaccounts::Trait for Test {}
+impl xaccounts::Trait for Test {
+    type Event = ();
+}
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
+}
+impl xsystem::Trait for Test {
+    const XSYSTEM_SET_POSITION: u32 = 3;
 }
 impl timestamp::Trait for Test {
     const TIMESTAMP_SET_POSITION: u32 = 0;
@@ -58,7 +63,10 @@ impl session::Trait for Test {
     type OnSessionChange = Staking;
     type Event = ();
 }
-impl Trait for Test {}
+impl Trait for Test {
+    type OnRewardMinted = ();
+    type Event = ();
+}
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut t = system::GenesisConfig::<Test>::default()
@@ -118,7 +126,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     t.extend(
         xassets::GenesisConfig::<Test> {
             pcx: (3, b"PCX".to_vec()),
-            remark_len: 128,
+            memo_len: 128,
             asset_list: vec![],
         }
         .build_storage()

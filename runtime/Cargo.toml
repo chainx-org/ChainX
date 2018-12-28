@@ -47,6 +47,8 @@ xrml-fee-manager = { path = "../xrml/xfee/manager", default-features = false }
 xrml-xassets-assets = { path = "../xrml/xassets/assets", default-features = false }
 xrml-xassets-records = { path = "../xrml/xassets/records", default-features = false }
 xrml-xassets-process = { path = "../xrml/xassets/process", default-features = false }
+# mining
+xrml-mining-staking = { path = "../xrml/xmining/staking", default-features = false }
 # bridge
 xrml-xbridge-bitcoin = {path = "../xrml/xbridge/bitcoin", default-features = false }
 # dex
@@ -97,6 +99,8 @@ std = [
     "xrml-xassets-assets/std",
     "xrml-xassets-records/std",
     "xrml-xassets-process/std",
+    # mining
+    "xrml-mining-staking/std",
     # bridge
     "xrml-xbridge-bitcoin/std",
     # dex

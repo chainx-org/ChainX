@@ -16,7 +16,7 @@ use chainx_runtime::{
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, Params, Perbill, Permill, SessionConfig,
     TimestampConfig, XAccountsConfig, XAssetsConfig, XBridgeOfBTCConfig, XFeeManagerConfig,
-    XMatchOrderConfig, XPendingOrdersConfig, XSystemConfig,
+    XMatchOrderConfig, XPendingOrdersConfig, XStakingConfig, XSystemConfig,
 };
 
 use ed25519;
@@ -59,7 +59,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     const CENTS: u128 = 1_000 * MILLICENTS; // assume this is worth about a cent.
     const DOLLARS: u128 = 100 * CENTS;
 
-    const SECS_PER_BLOCK: u64 = 1;
+    const SECS_PER_BLOCK: u64 = 3;
     const MINUTES: u64 = 60 / SECS_PER_BLOCK;
     const HOURS: u64 = MINUTES * 60;
     const DAYS: u64 = HOURS * 24;
@@ -103,7 +103,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .cloned()
                 .map(Into::into)
                 .collect(),
-            session_length: 1 * MINUTES, // that's 1 hour per session.
+            session_length: 30, // 30 blocks per session
         }),
         grandpa: Some(GrandpaConfig {
             authorities: initial_authorities
@@ -116,6 +116,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         xsystem: Some(XSystemConfig {
             death_account: substrate_primitives::H256::zero(),
             burn_account: substrate_primitives::H256::repeat_byte(0x1),
+            banned_account: auth1.into(),
         }),
         xaccounts: None,
         fee_manager: Some(XFeeManagerConfig {
@@ -124,11 +125,27 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         xassets: Some(XAssetsConfig {
             pcx: (pcx_precision, b"PCX onchain token".to_vec()),
-            remark_len: 128,
+            memo_len: 128,
             // Vec<(Asset, Vec<(T::AccountId, u64)>)>;
             asset_list: vec![
                 (btc_asset, vec![])
             ],
+        }),
+        xstaking: Some(XStakingConfig {
+            validator_count: 7,
+            minimum_validator_count: 1,
+            sessions_per_era: 10,
+            bonding_duration: 10,
+            current_era: 0,
+            current_offline_slash: 100,
+            offline_slash_grace: 0,
+            offline_slash: Perbill::from_millionths(0),
+            current_session_reward: 100,
+            intentions: initial_authorities
+                .clone()
+                .into_iter()
+                .map(|i| i.0.into())
+                .collect(),
         }),
         xpendingorders: Some(XPendingOrdersConfig {
             order_fee: 10,

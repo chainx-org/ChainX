@@ -175,8 +175,10 @@ impl<T: Trait> Module<T> {
         value: u128,
         to_add: bool,
     ) {
+        // Update to the latest vote weight
         Self::generic_update_vote_weight(source);
         Self::generic_update_vote_weight(target);
+        // Update the nomination balance
         Self::generic_apply_delta(source, value, to_add);
         Self::generic_apply_delta(target, value, to_add);
     }

@@ -64,6 +64,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as XSystem {
         pub BlockProdocer get(block_producer): Option<T::AccountId>;
         pub DeathAccount get(death_account) config(): T::AccountId;
+        pub BannedAccount get(banned_account) config(): T::AccountId;
         // TODO remove this to other module
         pub BurnAccount get(burn_account) config(): T::AccountId;
     }

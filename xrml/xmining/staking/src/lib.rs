@@ -19,7 +19,6 @@ extern crate sr_std as rstd;
 
 #[macro_use]
 extern crate srml_support as runtime_support;
-#[cfg(test)]
 extern crate srml_balances as balances;
 #[cfg(test)]
 extern crate srml_consensus as consensus;
@@ -30,14 +29,16 @@ extern crate srml_timestamp as timestamp;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
+extern crate xrml_xsystem as xsystem;
 
 #[cfg(test)]
 extern crate substrate_primitives;
 
+use balances::OnDilution;
 use codec::{Compact, HasCompact};
 use rstd::prelude::*;
 use runtime_primitives::{
-    traits::{As, CheckedAdd, CheckedSub, Zero},
+    traits::{As, Zero},
     Perbill,
 };
 use runtime_support::dispatch::Result;
@@ -45,7 +46,6 @@ use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 
 use xassets::Address;
-use xsupport::storage::btree_map::CodecBTreeMap;
 
 pub mod vote_weight;
 
@@ -76,18 +76,34 @@ pub struct NominationRecord<Balance: Default, BlockNumber: Default> {
     pub nomination: Balance,
     pub last_vote_weight: u64,
     pub last_vote_weight_update: BlockNumber,
+    pub revocations: Vec<(BlockNumber, Balance)>,
 }
 
-pub trait Trait: xassets::Trait + xaccounts::Trait + session::Trait + timestamp::Trait {}
+pub trait Trait:
+    xassets::Trait + xaccounts::Trait + xsystem::Trait + session::Trait + timestamp::Trait
+{
+    /// Some tokens minted.
+    type OnRewardMinted: OnDilution<<Self as balances::Trait>::Balance>;
+
+    /// The overarching event type.
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        fn deposit_event() = default;
 
         /// Transactor could be an intention.
-        fn nominate(origin, target: Address<T::AccountId, T::AccountIndex>, value: T::Balance) {
+        fn nominate(
+            origin,
+            target: Address<T::AccountId, T::AccountIndex>,
+            value: T::Balance,
+            memo: Vec<u8>
+        ) {
             let who = ensure_signed(origin)?;
             let target = <xassets::Module<T>>::lookup(target)?;
 
+            xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot nominate zero.");
             ensure!(
                 <xaccounts::Module<T>>::intention_immutable_props_of(&target).is_some(),
@@ -101,13 +117,19 @@ decl_module! {
             Self::apply_nominate(&who, &target, value)?;
         }
 
-        fn unnominate(origin, target: Address<T::AccountId, T::AccountIndex>, value: T::Balance) {
+        fn unnominate(
+            origin,
+            target: Address<T::AccountId, T::AccountIndex>,
+            value: T::Balance,
+            memo: Vec<u8>
+        ) {
             let who = ensure_signed(origin)?;
             let target = <xassets::Module<T>>::lookup(target)?;
 
+            xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot unnominate zero.");
             ensure!(
-                Self::nominees_of(&who).iter().find(|&n| n == &target).is_some(),
+                <NominationRecords<T>>::get((who.clone(), target.clone())).is_some(),
                 "Cannot unnominate if target is not your nominee."
             );
             ensure!(
@@ -123,40 +145,80 @@ decl_module! {
             let target = <xassets::Module<T>>::lookup(target)?;
 
             ensure!(
-                Self::nominees_of(&who).iter().find(|&n| n == &target).is_some(),
+                <NominationRecords<T>>::get((who.clone(), target.clone())).is_some(),
                 "Cannot claim if target is not your nominee."
             );
 
             Self::apply_claim(&who, &target)?;
         }
 
-        fn unfreeze(origin) {
+        fn unfreeze(
+            origin,
+            target: Address<T::AccountId, T::AccountIndex>,
+            revocation_index: u32
+        ) {
             let who = ensure_signed(origin)?;
+            let target = <xassets::Module<T>>::lookup(target)?;
 
-            let mut frozens = Self::remaining_frozen_of(&who);
+            ensure!(
+                <NominationRecords<T>>::get((who.clone(), target.clone())).is_some(),
+                "Cannot unfreeze if target is not your nominee."
+            );
+
+            let record = Self::nomination_record_of(&who, &target);
+            let mut revocations = record.revocations;
+
+            ensure!(
+                revocations.len() > 0,
+                "Revocation list is empty"
+            );
+
+            ensure!(
+                revocation_index < revocations.len() as u32,
+                "Revocation index out of range."
+            );
+
+            let (block, value) = revocations[revocation_index as usize];
             let current_block = <system::Module<T>>::block_number();
 
-            for block in frozens.clone().into_iter() {
-                if current_block > block {
-                    let value = <FrozenValueOf<T>>::take((who.clone(), block));
-                    <xassets::Module<T>>::pcx_staking_unreserve(&who, value)?;
-                }
+            if current_block < block {
+                return Err("The requested revocation is not due yet.");
             }
 
-            frozens.retain(|&n| n >= current_block);
-            <RemainingFrozenOf<T>>::insert(&who, frozens);
+            <xassets::Module<T>>::pcx_staking_unreserve(&who, value)?;
+            revocations.swap_remove(revocation_index as usize);
+            if let Some(mut record) = <NominationRecords<T>>::get((who.clone(), target.clone())) {
+                record.revocations = revocations;
+                <NominationRecords<T>>::insert((who, target), record);
+            }
         }
 
         /// Update the url and desire to join in elections of intention.
         fn refresh(origin, url: Vec<u8>, desire_to_run: bool) {
             let who = ensure_signed(origin)?;
 
-            <xaccounts::Module<T>>::is_valid_url(&url)?;
+            xaccounts::is_valid_url::<T>(&url)?;
 
             ensure!(
                 <xaccounts::Module<T>>::intention_immutable_props_of(&who).is_some(),
                 "Transactor is not an intention."
             );
+
+            match desire_to_run {
+                true => {
+                    if who == <xsystem::Module<T>>::banned_account() {
+                        return Err("This account has been banned.");
+                    }
+                },
+                false => {
+                    let active = Self::intentions().into_iter()
+                        .filter(|ref n| <xaccounts::Module<T>>::intention_props_of(n.clone()).is_active)
+                        .collect::<Vec<_>>();
+                    if active.len() <= Self::minimum_validator_count() as usize {
+                        return Err("cannot pull out when there are too few active intentions");
+                    }
+                }
+            }
 
             <xaccounts::IntentionPropertiesOf<T>>::mutate(&who, |props| {
                 props.url = url;
@@ -165,11 +227,20 @@ decl_module! {
         }
 
         /// Register intention by the owner of given cert name.
-        fn register(origin, cert_name: Vec<u8>, intention: T::AccountId, name: Vec<u8>, url: Vec<u8>, share_count: u32) {
+        fn register(
+            origin,
+            cert_name: Vec<u8>,
+            intention: T::AccountId,
+            name: Vec<u8>,
+            url: Vec<u8>,
+            share_count: u32,
+            memo: Vec<u8>
+        ) {
             let who = ensure_signed(origin)?;
 
-            <xaccounts::Module<T>>::is_valid_name(&name)?;
-            <xaccounts::Module<T>>::is_valid_url(&url)?;
+            xaccounts::is_valid_name::<T>(&name)?;
+            xaccounts::is_valid_url::<T>(&url)?;
+            xassets::is_valid_memo::<T>(&memo)?;
 
             ensure!(share_count > 0, "Cannot register zero share.");
             ensure!(
@@ -180,9 +251,14 @@ decl_module! {
                 <xaccounts::Module<T>>::cert_owner_of(&cert_name) == Some(who),
                 "Transactor mismatches the owner of given cert name."
             );
+            let remaining_shares = <xaccounts::Module<T>>::remaining_shares_of(&cert_name);
             ensure!(
-                <xaccounts::Module<T>>::remaining_shares_of(&cert_name) > 0,
+                remaining_shares > 0,
                 "Cannot register there are no remaining shares."
+            );
+            ensure!(
+                share_count <= remaining_shares,
+                "Cannot register if remaining shares is not adequate."
             );
             ensure!(
                 <xaccounts::Module<T>>::intention_immutable_props_of(&intention).is_none(),
@@ -224,8 +300,21 @@ decl_module! {
     }
 }
 
+/// An event in this module.
+decl_event!(
+    pub enum Event<T> where <T as balances::Trait>::Balance, <T as system::Trait>::AccountId {
+        /// All validators have been rewarded by the given balance.
+        Reward(Balance),
+        /// One validator (and their nominators) has been given a offline-warning (they're still
+        /// within their grace). The accrued number of slashes is recorded, too.
+        OfflineWarning(AccountId, u32),
+        /// One validator (and their nominators) has been slashed by the given amount.
+        OfflineSlash(AccountId, Balance),
+    }
+);
+
 decl_storage! {
-    trait Store for Module<T: Trait> as Staking {
+    trait Store for Module<T: Trait> as XStaking {
         /// The ideal number of staking participants.
         pub ValidatorCount get(validator_count) config(): u32;
         /// Minimum number of staking participants before emergency conditions are imposed.
@@ -259,32 +348,27 @@ decl_storage! {
 
         pub StakeWeight get(stake_weight): map T::AccountId => T::Balance;
 
-        pub TotalStake get(total_stake): T::Balance;
-
-        pub NomineesOf get(nominees_of): map T::AccountId => Vec<T::AccountId>;
-
         pub IntentionProfiles get(intention_profiles): map T::AccountId => IntentionProfs<T::Balance, T::BlockNumber>;
 
-        pub NominationRecords get(nomination_records): map T::AccountId => CodecBTreeMap<T::AccountId, NominationRecord<T::Balance, T::BlockNumber>>;
-
-        pub RemainingFrozenOf get(remaining_frozen_of): map T::AccountId => Vec<T::BlockNumber>;
-
-        pub FrozenValueOf get(frozen_value_of): map (T::AccountId, T::BlockNumber) => T::Balance;
+        pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
     }
 }
 
 impl<T: Trait> Module<T> {
     // Public immutables
+    fn blocks_per_day() -> u64 {
+        let period = <timestamp::Module<T>>::block_period();
+        let seconds = (24 * 60 * 60) as u64;
+        seconds / period.as_()
+    }
 
     /// Due of allocated shares that cert comes with.
     pub fn unfreeze_block_of(cert_name: Vec<u8>) -> T::BlockNumber {
         let props = <xaccounts::Module<T>>::cert_immutable_props_of(cert_name);
         let issued_at = props.issued_at;
         let frozen_duration = props.frozen_duration;
-        let period = <timestamp::Module<T>>::block_period();
-        let seconds = (frozen_duration * 24 * 60 * 60) as u64;
 
-        issued_at + T::BlockNumber::sa(seconds / period.as_())
+        issued_at + T::BlockNumber::sa(frozen_duration as u64 * Self::blocks_per_day())
     }
 
     /// If source is an intention, the revokable balance should take the frozen duration
@@ -318,30 +402,13 @@ impl<T: Trait> Module<T> {
         nominator: &T::AccountId,
         nominee: &T::AccountId,
     ) -> NominationRecord<T::Balance, T::BlockNumber> {
-        if let Some(record) = <NominationRecords<T>>::get(nominator).0.get(nominee) {
-            return record.clone();
-        }
-        <NominationRecord<T::Balance, T::BlockNumber>>::default()
+        let mut record = NominationRecord::default();
+        record.last_vote_weight_update = <system::Module<T>>::block_number();
+        <NominationRecords<T>>::get((nominator.clone(), nominee.clone())).unwrap_or(record)
     }
 
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
         <IntentionProfiles<T>>::get(intention).total_nomination
-    }
-
-    // Public mutables
-
-    /// Increase TotalStake by Value.
-    pub fn increase_total_stake_by(value: T::Balance) {
-        if let Some(v) = <Module<T>>::total_stake().checked_add(&value) {
-            <TotalStake<T>>::put(v);
-        }
-    }
-
-    /// Decrease TotalStake by Value.
-    pub fn decrease_total_stake_by(value: T::Balance) {
-        if let Some(v) = <Module<T>>::total_stake().checked_sub(&value) {
-            <TotalStake<T>>::put(v);
-        }
     }
 
     // Private mutables
@@ -351,9 +418,7 @@ impl<T: Trait> Module<T> {
         nominee: &T::AccountId,
         record: NominationRecord<T::Balance, T::BlockNumber>,
     ) {
-        let mut nominations = <NominationRecords<T>>::get(nominator);
-        nominations.0.insert(nominee.clone(), record);
-        <NominationRecords<T>>::insert(nominator, nominations);
+        <NominationRecords<T>>::insert((nominator.clone(), nominee.clone()), record);
     }
 
     // Just force_new_era without origin check.
@@ -367,24 +432,25 @@ impl<T: Trait> Module<T> {
 
         Self::apply_update_vote_weight(source, target, value, true);
 
-        let mut nominees = Self::nominees_of(source);
-        if nominees.iter().find(|&n| n == target).is_none() {
-            nominees.push(target.clone());
-        }
-        <NomineesOf<T>>::insert(source, nominees);
-
         Ok(())
     }
 
     fn apply_unnominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
         let freeze_until = <system::Module<T>>::block_number() + Self::bonding_duration();
-        let mut blocks = Self::remaining_frozen_of(source);
-        if blocks.iter().find(|&n| *n == freeze_until).is_none() {
-            blocks.push(freeze_until);
+
+        let mut revocations = Self::nomination_record_of(source, target).revocations;
+
+        if let Some(index) = revocations.iter().position(|&n| n.0 == freeze_until) {
+            let (freeze_until, old_value) = revocations[index];
+            revocations[index] = (freeze_until, old_value + value);
+        } else {
+            revocations.push((freeze_until, value));
         }
 
-        <RemainingFrozenOf<T>>::insert(source, blocks);
-        <FrozenValueOf<T>>::insert((source.clone(), freeze_until), value);
+        if let Some(mut record) = <NominationRecords<T>>::get((source.clone(), target.clone())) {
+            record.revocations = revocations;
+            <NominationRecords<T>>::insert((source.clone(), target.clone()), record);
+        }
 
         Self::apply_update_vote_weight(source, target, value, false);
 
@@ -435,14 +501,22 @@ impl<T: Trait> Module<T> {
         <xassets::Module<T>>::pcx_set_free_balance(&intention, free_balance + activation);
         <xassets::Module<T>>::increase_total_stake_by(activation);
 
-        Self::apply_nominate(&intention, &intention, activation)?;
-
         <Intentions<T>>::mutate(|i| i.push(intention.clone()));
+
+        let iprof = IntentionProfs {
+            jackpot: Zero::zero(),
+            total_nomination: Zero::zero(),
+            last_total_vote_weight: 0,
+            last_total_vote_weight_update: <system::Module<T>>::block_number(),
+        };
+        <IntentionProfiles<T>>::insert(&intention, iprof);
+
+        Self::apply_nominate(&intention, &intention, activation)?;
 
         Ok(())
     }
 
-    /// Actually update the vote weight of source and target.
+    /// Actually update the vote weight and nomination balance of source and target.
     fn apply_update_vote_weight(
         source: &T::AccountId,
         target: &T::AccountId,
@@ -453,11 +527,6 @@ impl<T: Trait> Module<T> {
         let mut record = Self::nomination_record_of(source, target);
 
         Self::update_vote_weight_both_way(&mut iprof, &mut record, value.as_() as u128, to_add);
-
-        match to_add {
-            true => Self::increase_total_stake_by(value),
-            false => Self::decrease_total_stake_by(value),
-        }
 
         <IntentionProfiles<T>>::insert(target, iprof);
         Self::mutate_nomination_record(source, target, record);

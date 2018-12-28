@@ -39,7 +39,10 @@ use runtime_support::{StorageMap, StorageValue};
 
 mod tests;
 
-pub trait Trait: system::Trait {}
+pub trait Trait: system::Trait {
+    /// The overarching event type.
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+}
 
 /// Cert immutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
@@ -68,9 +71,17 @@ pub struct IntentionProps {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-
+        fn deposit_event() = default;
     }
 }
+
+/// An event in this module.
+decl_event!(
+    pub enum Event<T> where <T as system::Trait>::AccountId {
+        /// A cert has been issued.
+        Issue(Vec<u8>, u32, AccountId),
+    }
+);
 
 decl_storage! {
     trait Store for Module<T: Trait> as XAccounts {
@@ -89,8 +100,6 @@ decl_storage! {
         /// cert name => cert owner
         pub CertOwnerOf get(cert_owner_of): map Vec<u8> => Option<T::AccountId>;
 
-        pub Certs get(certs): Vec<Vec<u8>>;
-
         pub CertImmutablePropertiesOf get(cert_immutable_props_of): map Vec<u8> => CertImmutableProps<T::BlockNumber>;
 
         pub RemainingSharesOf get(remaining_shares_of): map Vec<u8> => u32;
@@ -107,35 +116,23 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
-    // TODO more precise name and url checker
-    pub fn is_valid_name(name: &[u8]) -> Result {
-        if name.len() > 16 || name.len() < 2 {
-            return Err("The length of name must be in range [2, 16].");
-        }
-
-        Ok(())
-    }
-
-    pub fn is_valid_url(url: &[u8]) -> Result {
-        if url.len() > 32 || url.len() < 1 {
-            return Err("The length of url must be in range [1, 32].");
-        }
-
-        Ok(())
-    }
-
     /// Issue new cert triggered by relayed transaction.
     pub fn issue(cert_name: Vec<u8>, frozen_duration: u32, cert_owner: T::AccountId) -> Result {
-        Self::is_valid_name(&cert_name)?;
+        is_valid_name::<T>(&cert_name)?;
 
         ensure!(
             Self::cert_owner_of(&cert_name).is_none(),
-            "Cert name already exists."
+            "Cannot issue if this cert name already exists."
         );
 
         ensure!(
             Self::total_issued() < Self::maximum_cert_count(),
             "Cannot issue when there are too many certs."
+        );
+
+        ensure!(
+            frozen_duration <= 365,
+            "Cannot issue if frozen duration out of range."
         );
 
         <CertOwnerOf<T>>::insert(&cert_name, cert_owner.clone());
@@ -147,10 +144,47 @@ impl<T: Trait> Module<T> {
 
         <RemainingSharesOf<T>>::insert(&cert_name, Self::shares_per_cert());
 
-        <Certs<T>>::mutate(|certs| certs.push(cert_name.clone()));
-        <CertNamesOf<T>>::mutate(&cert_owner, |names| names.push(cert_name));
+        <CertNamesOf<T>>::mutate(&cert_owner, |names| names.push(cert_name.clone()));
         <TotalIssued<T>>::put(Self::total_issued() + 1);
+
+        Self::deposit_event(RawEvent::Issue(cert_name, frozen_duration, cert_owner));
 
         Ok(())
     }
+}
+
+pub fn is_valid_name<T: Trait>(name: &[u8]) -> Result {
+    if name.len() > 12 || name.len() < 2 {
+        return Err("The length of name must be in range [2, 12].");
+    }
+
+    Ok(())
+}
+
+pub fn is_valid_url<T: Trait>(url: &[u8]) -> Result {
+    if url.len() > 24 || url.len() < 4 {
+        return Err("The length of url must be in range [4, 24].");
+    }
+    let is_valid = |n: &u8| -> bool {
+        // number, capital letter, lowercase letter, .
+        if *n >= 0x30 && *n <= 0x39
+            || *n >= 0x41 && *n <= 0x5A
+            || *n >= 0x61 && *n <= 0x7A
+            || *n == 0x2E
+        {
+            return true;
+        }
+        return false;
+    };
+
+    if url
+        .into_iter()
+        .filter(|n| !is_valid(n))
+        .collect::<Vec<_>>()
+        .len()
+        > 0
+    {
+        return Err("Only numbers, letters and . are allowed.");
+    }
+    Ok(())
 }

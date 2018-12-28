@@ -54,7 +54,9 @@ impl session::Trait for Test {
     type OnSessionChange = ();
     type Event = ();
 }
-impl Trait for Test {}
+impl Trait for Test {
+    type Event = ();
+}
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut t = system::GenesisConfig::<Test>::default()
@@ -124,11 +126,10 @@ fn issue_should_work() {
                 frozen_duration: 1
             }
         );
-        assert_eq!(XAccounts::certs(), [b"alice".to_vec()]);
         assert_eq!(XAccounts::remaining_shares_of(b"alice".to_vec()), 50);
         assert_noop!(
             XAccounts::issue(b"alice".to_vec(), 1, 1),
-            "Cert name already exists."
+            "Cannot issue if this cert name already exists."
         );
     });
 }
