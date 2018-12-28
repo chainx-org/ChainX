@@ -2,6 +2,9 @@
 
 //use balances::Call as BalancesCall;
 use xbitcoin::Call as XbitcoinCall;
+use xassets::Call as XAssetsCall;
+use xprocess::Call as XAssetsProcessCall;
+
 use Call;
 
 pub trait CheckFee {
@@ -17,9 +20,17 @@ impl CheckFee for Call {
             //                _ => None,
             //            },
             Call::XBridgeOfBTC(call) => match call {
-                XbitcoinCall::push_header(_) => Some(2),
-                XbitcoinCall::push_transaction(_) => Some(2),
+                XbitcoinCall::push_header(_) => Some(20),
+                XbitcoinCall::push_transaction(_) => Some(10),
                 _ => None,
+            },
+            Call::XAssets(call) => match call {
+                XAssetsCall::transfer(_,_,_,_) => Some(1),
+                _=>None,
+            },
+            Call::XAssetsProcess(call) => match call {
+                XAssetsProcessCall::withdraw(_,_,_,_) => Some(3),
+                _=>None,
             },
             _ => None,
         }
