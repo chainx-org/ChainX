@@ -14,6 +14,20 @@ primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
 chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
 keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
 
+[features]
+msgbus-redis = [
+	"chainx-cli/msgbus-redis"
+]
+
+msgbus-redis-keyhash = [
+	"msgbus-redis",
+	"chainx-cli/msgbus-redis-keyhash",
+]
+
+cache-lru = [
+	"chainx-cli/cache-lru"
+]
+
 [workspace]
 members = [
     "primitives",

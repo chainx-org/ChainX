@@ -39,3 +39,15 @@ base58 = "0.1"
 
 [dev-dependencies]
 substrate-service-test = { git = "https://github.com/chainpool/substrate" }
+
+[features]
+msgbus-redis = [
+    "substrate-cli/msgbus-redis"
+]
+msgbus-redis-keyhash = [
+    "msgbus-redis",
+    "substrate-cli/msgbus-redis-keyhash",
+]
+cache-lru = [
+    "substrate-cli/cache-lru"
+]
