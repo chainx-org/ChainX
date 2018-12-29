@@ -12,9 +12,9 @@ use super::{
 };
 use super::{StorageMap, StorageValue};
 use runtime_primitives::traits::As;
-use {Module, TxProposal, TxProposalLen};
-use xrecords::{Record, RecordListOf};
 use xassets::Token;
+use xrecords::{Record, RecordListOf};
+use {Module, TxProposal, TxProposalLen};
 
 #[allow(unused)]
 fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, output: &TransactionOutput) -> bool {

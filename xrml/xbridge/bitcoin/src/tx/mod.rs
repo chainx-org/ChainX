@@ -485,7 +485,9 @@ pub fn handle_output<T: Trait>(
                             &rec.block_hash,
                             deposit_channel.clone(),
                         ) {
-                            runtime_io::print("=================== handle_output DepositRecordsMap ");
+                            runtime_io::print(
+                                "=================== handle_output DepositRecordsMap ",
+                            );
                             runtime_io::print(rec.btc_balance);
                         }
                     }

@@ -34,7 +34,7 @@ fn development_config_genesis() -> GenesisConfig {
 pub fn development_config() -> ChainSpec {
     ChainSpec::from_genesis(
         "Development",
-        "development",
+        "dev",
         development_config_genesis,
         vec![],
         None,

@@ -44,6 +44,7 @@ extern crate log;
 extern crate structopt;
 
 pub use cli::error;
+
 mod chain_spec;
 mod genesis_config;
 mod native_rpc;
@@ -81,7 +82,8 @@ impl ChainSpec {
 
     pub(crate) fn from(s: &str) -> Option<Self> {
         match s {
-            "dev" => Some(ChainSpec::Development),
+            // TODO wait for substrate fix for command sequence
+            "dev" | "" => Some(ChainSpec::Development),
             "local" => Some(ChainSpec::LocalTestnet),
             "staging" => Some(ChainSpec::StagingTestnet),
             _ => None,
@@ -117,17 +119,19 @@ where
     };
 
     let (spec, mut config) =
-        cli::parse_matches::<service::Factory, _>(load_spec, version, "substrate-node", &matches)?;
+        cli::parse_matches::<service::Factory, _>(load_spec, version, "chainx-node", &matches)?;
 
-    if matches.is_present("grandpa_authority_only") {
-        config.custom.grandpa_authority = true;
-        config.custom.grandpa_authority_only = true;
-        // Authority Setup is only called if validator is set as true
-        config.roles = ServiceRoles::AUTHORITY;
-    } else if matches.is_present("grandpa_authority") {
-        config.custom.grandpa_authority = true;
-        // Authority Setup is only called if validator is set as true
-        config.roles = ServiceRoles::AUTHORITY;
+    if cfg!(feature = "msgbus-redis") == false {
+        if matches.is_present("grandpa_authority_only") {
+            config.custom.grandpa_authority = true;
+            config.custom.grandpa_authority_only = true;
+            // Authority Setup is only called if validator is set as true
+            config.roles = ServiceRoles::AUTHORITY;
+        } else if matches.is_present("grandpa_authority") {
+            config.custom.grandpa_authority = true;
+            // Authority Setup is only called if validator is set as true
+            config.roles = ServiceRoles::AUTHORITY;
+        }
     }
     match cli::execute_default::<service::Factory, _>(spec, exit, &matches, &config)? {
         cli::Action::ExecutedInternally => (),
