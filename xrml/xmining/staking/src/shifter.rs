@@ -10,13 +10,32 @@ use xassets;
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum RewardHolder<AccountId: Default> {
-    AccountId(AccountId),
+    Intention(AccountId),
+    PseduIntention(Token),
 }
 
 impl<AccountId: Default> Default for RewardHolder<AccountId> {
     fn default() -> Self {
-        RewardHolder::AccountId(Default::default())
+        RewardHolder::Intention(Default::default())
     }
+}
+
+pub trait OnRewardCalculation<AccountId: Default, Balance> {
+    fn psedu_intentions_info() -> Vec<(RewardHolder<AccountId>, Balance)>;
+}
+
+impl<AccountId: Default, Balance> OnRewardCalculation<AccountId, Balance> for () {
+    fn psedu_intentions_info() -> Vec<(RewardHolder<AccountId>, Balance)> {
+        Vec::new()
+    }
+}
+
+pub trait OnReward<AccountId: Default, Balance> {
+    fn reward(_: &Token, _: Balance);
+}
+
+impl<AccountId: Default, Balance> OnReward<AccountId, Balance> for () {
+    fn reward(_: &Token, _: Balance) {}
 }
 
 impl<T: Trait> Module<T> {
@@ -60,14 +79,13 @@ impl<T: Trait> Module<T> {
                     .filter(|i| <xaccounts::Module<T>>::intention_props_of(i).is_active)
                     .map(|id| {
                         let total_nomination = Self::total_nomination_of(&id);
-                        (RewardHolder::AccountId(id), total_nomination)
+                        (RewardHolder::Intention(id), total_nomination)
                     })
                     .collect::<Vec<_>>();
 
-            // TODO Add non account reward holders
-            // let token_list = T::OnNewSessionForTokenStaking::token_staking_info();
-            let tokens = Vec::new();
-            active_intentions.extend(tokens);
+            // Extend non-intention reward holders, i.e., Tokens currently.
+            let psedu_intentions = T::OnRewardCalculation::psedu_intentions_info();
+            active_intentions.extend(psedu_intentions);
 
             let mut total_active_stake = active_intentions
                 .iter()
@@ -77,7 +95,11 @@ impl<T: Trait> Module<T> {
                 for (holder, stake) in active_intentions.iter() {
                     let reward = *stake * session_reward / total_active_stake;
                     match holder {
-                        RewardHolder::AccountId(ref intention) => Self::reward(intention, reward), // TODO Reward to token entity.
+                        RewardHolder::Intention(ref intention) => Self::reward(intention, reward),
+                        RewardHolder::PseduIntention(ref token) => {
+                            // Reward to token entity.
+                            T::OnReward::reward(token, reward)
+                        }
                     }
                     total_active_stake -= *stake;
                     session_reward -= reward;

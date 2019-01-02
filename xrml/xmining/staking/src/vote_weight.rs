@@ -12,18 +12,17 @@ use IntentionProfs;
 use NominationRecord;
 
 pub trait VoteWeight<BlockNumber: As<u64>> {
-    fn amount(&self) -> u128;
-    fn last_acum_weight(&self) -> u128;
-    fn last_acum_weight_update(&self) -> u128;
+    fn amount(&self) -> u64;
+    fn last_acum_weight(&self) -> u64;
+    fn last_acum_weight_update(&self) -> u64;
 
-    fn latest_acum_weight(&self, current_block: BlockNumber) -> u128 {
+    fn latest_acum_weight(&self, current_block: BlockNumber) -> u64 {
         Self::last_acum_weight(&self)
-            + Self::amount(&self)
-                * (current_block.as_() as u128 - Self::last_acum_weight_update(&self))
+            + Self::amount(&self) * (current_block.as_() - Self::last_acum_weight_update(&self))
     }
 
-    fn set_amount(&mut self, value: u128, to_add: bool);
-    fn set_last_acum_weight(&mut self, s: u128);
+    fn set_amount(&mut self, value: u64, to_add: bool);
+    fn set_last_acum_weight(&mut self, s: u64);
     fn set_last_acum_weight_update(&mut self, num: BlockNumber);
 }
 
@@ -51,30 +50,30 @@ where
     B: Default + As<u64> + Clone,
     C: Default + As<u64> + Clone,
 {
-    fn amount(&self) -> u128 {
-        self.total_nomination.clone().as_() as u128
+    fn amount(&self) -> u64 {
+        self.total_nomination.clone().as_()
     }
 
-    fn last_acum_weight(&self) -> u128 {
-        self.last_total_vote_weight as u128
+    fn last_acum_weight(&self) -> u64 {
+        self.last_total_vote_weight as u64
     }
 
-    fn last_acum_weight_update(&self) -> u128 {
-        self.last_total_vote_weight_update.clone().as_() as u128
+    fn last_acum_weight_update(&self) -> u64 {
+        self.last_total_vote_weight_update.clone().as_()
     }
 
-    fn set_amount(&mut self, value: u128, to_add: bool) {
+    fn set_amount(&mut self, value: u64, to_add: bool) {
         let mut amount = Self::amount(self);
         if to_add {
             amount += value;
         } else {
             amount -= value;
         }
-        self.total_nomination = B::sa(amount as u64);
+        self.total_nomination = B::sa(amount);
     }
 
-    fn set_last_acum_weight(&mut self, latest_vote_weight: u128) {
-        self.last_total_vote_weight = latest_vote_weight as u64;
+    fn set_last_acum_weight(&mut self, latest_vote_weight: u64) {
+        self.last_total_vote_weight = latest_vote_weight;
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: C) {
@@ -87,30 +86,30 @@ where
     B: Default + As<u64> + Clone,
     C: Default + As<u64> + Clone,
 {
-    fn amount(&self) -> u128 {
-        self.nomination.clone().as_() as u128
+    fn amount(&self) -> u64 {
+        self.nomination.clone().as_()
     }
 
-    fn last_acum_weight(&self) -> u128 {
-        self.last_vote_weight as u128
+    fn last_acum_weight(&self) -> u64 {
+        self.last_vote_weight
     }
 
-    fn last_acum_weight_update(&self) -> u128 {
-        self.last_vote_weight_update.clone().as_() as u128
+    fn last_acum_weight_update(&self) -> u64 {
+        self.last_vote_weight_update.clone().as_()
     }
 
-    fn set_amount(&mut self, value: u128, to_add: bool) {
+    fn set_amount(&mut self, value: u64, to_add: bool) {
         let mut amount = Self::amount(self);
         if to_add {
             amount += value;
         } else {
             amount -= value;
         }
-        self.nomination = B::sa(amount as u64);
+        self.nomination = B::sa(amount);
     }
 
-    fn set_last_acum_weight(&mut self, latest_vote_weight: u128) {
-        self.last_vote_weight = latest_vote_weight as u64;
+    fn set_last_acum_weight(&mut self, latest_vote_weight: u64) {
+        self.last_vote_weight = latest_vote_weight;
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: C) {
@@ -128,7 +127,7 @@ impl<T: Trait> Module<T> {
         who.set_last_acum_weight_update(current_block);
     }
 
-    fn generic_apply_delta<V: VoteWeight<T::BlockNumber>>(who: &mut V, value: u128, to_add: bool) {
+    fn generic_apply_delta<V: VoteWeight<T::BlockNumber>>(who: &mut V, value: u64, to_add: bool) {
         who.set_amount(value, to_add);
     }
 
@@ -149,9 +148,7 @@ impl<T: Trait> Module<T> {
 
         let jackpot = target.jackpot();
 
-        let dividend = T::Balance::sa(
-            (source_vote_weight * jackpot.as_() as u128 / target_vote_weight) as u64,
-        );
+        let dividend = T::Balance::sa(source_vote_weight * jackpot.as_() / target_vote_weight);
 
         <xassets::Module<T>>::pcx_reward(who, dividend)?;
 
@@ -172,7 +169,7 @@ impl<T: Trait> Module<T> {
     >(
         source: &mut U,
         target: &mut V,
-        value: u128,
+        value: u64,
         to_add: bool,
     ) {
         // Update to the latest vote weight

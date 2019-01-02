@@ -126,9 +126,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         xassets: Some(XAssetsConfig {
             pcx: (pcx_precision, b"PCX onchain token".to_vec()),
             memo_len: 128,
-            // Vec<(Asset, Vec<(T::AccountId, u64)>)>;
+            // asset, is_psedu_intention, init for account
+            // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
             asset_list: vec![
-                (btc_asset, vec![])
+                (btc_asset, true, vec![])
             ],
         }),
         xstaking: Some(XStakingConfig {

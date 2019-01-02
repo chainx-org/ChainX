@@ -60,11 +60,13 @@ pub trait Trait: balances::Trait + xaccounts::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, Self::Balance>;
+
+    type OnAssetRegistration: OnAssetRegistration;
 }
 
 pub trait OnAssetChanged<AccountId, Balance> {
     fn on_move(from: &AccountId, to: &AccountId, token: &Token, value: Balance);
-    fn on_issue(who: &AccountId, token: &Token, value: Balance);
+    fn on_issue(who: &AccountId, token: &Token, value: Balance) -> Result;
     fn on_destroy(who: &AccountId, token: &Token, value: Balance);
     fn on_reserve(_who: &AccountId, _token: &Token, _value: Balance) {}
     fn on_unreserve(_who: &AccountId, _token: &Token, _value: Balance) {}
@@ -74,8 +76,20 @@ pub trait OnAssetChanged<AccountId, Balance> {
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {
     fn on_move(_: &AccountId, _: &AccountId, _: &Token, _: Balance) {}
-    fn on_issue(_: &AccountId, _: &Token, _: Balance) {}
+    fn on_issue(_: &AccountId, _: &Token, _: Balance) -> Result {
+        Ok(())
+    }
     fn on_destroy(_: &AccountId, _: &Token, _: Balance) {}
+}
+
+pub trait OnAssetRegistration {
+    fn register_psedu_intention(_: Token) -> Result;
+}
+
+impl OnAssetRegistration for () {
+    fn register_psedu_intention(_: Token) -> Result {
+        Ok(())
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
@@ -118,8 +132,11 @@ decl_event!(
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         /// register_asset to module, should allow by root
-        fn register_asset(asset: Asset, free: T::Balance, reserved: T::Balance) -> Result {
+        fn register_asset(asset: Asset, is_psedu_intention: bool, free: T::Balance, reserved: T::Balance) -> Result {
             asset.is_valid()?;
+            if is_psedu_intention {
+                T::OnAssetRegistration::register_psedu_intention(asset.token())?;
+            }
             Self::add_asset(asset, free, reserved)?;
             Ok(())
         }
@@ -195,18 +212,28 @@ decl_storage! {
         pub MemoLen get(memo_len) config(): u32;
     }
     add_extra_genesis {
-        config(asset_list): Vec<(Asset, Vec<(T::AccountId, u64)>)>;
+        config(asset_list): Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
         config(pcx): (Precision, Desc);
         build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
                 use runtime_io::with_externalities;
                 use substrate_primitives::Blake2Hasher;
-                use primitives::traits::Zero;
+                use primitives::traits::{Zero, As};
                 let src_r = storage.clone().build_storage().unwrap().0;
                 let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
                 with_externalities(&mut tmp_storage, || {
                     let chainx: Token = <Module<T> as ChainT>::TOKEN.to_vec();
                     let pcx = Asset::new(chainx, Chain::PCX, config.pcx.0, config.pcx.1.clone()).unwrap();
                     Module::<T>::add_asset(pcx, Zero::zero(), Zero::zero()).unwrap();
+                    // init for asset_list
+                    for (asset, is_psedu_intention, init_list) in config.asset_list.iter() {
+                        let t = asset.token();
+                        Module::<T>::register_asset(asset.clone(), *is_psedu_intention, Zero::zero(), Zero::zero()).unwrap();
+
+                        for (accountid, value) in init_list {
+                            Module::<T>::issue(&accountid, &t, As::sa(*value)).unwrap();
+                        }
+                    }
+
                 });
                 let map: primitives::StorageMap = tmp_storage.into();
                 storage.extend(map);
@@ -391,7 +418,7 @@ impl<T: Trait> Module<T> {
         TotalXFreeBalance::<T>::insert(token, new_total_free_token);
         XFreeBalance::<T>::insert(&key, new_free_token);
 
-        T::OnAssetChanged::on_issue(who, token, value);
+        T::OnAssetChanged::on_issue(who, token, value)?;
         Ok(())
     }
 

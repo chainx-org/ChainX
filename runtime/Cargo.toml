@@ -49,6 +49,7 @@ xrml-xassets-records = { path = "../xrml/xassets/records", default-features = fa
 xrml-xassets-process = { path = "../xrml/xassets/process", default-features = false }
 # mining
 xrml-mining-staking = { path = "../xrml/xmining/staking", default-features = false }
+xrml-mining-tokens = { path = "../xrml/xmining/tokens", default-features = false }
 # bridge
 xrml-xbridge-bitcoin = {path = "../xrml/xbridge/bitcoin", default-features = false }
 # dex
@@ -101,6 +102,7 @@ std = [
     "xrml-xassets-process/std",
     # mining
     "xrml-mining-staking/std",
+    "xrml-mining-tokens/std",
     # bridge
     "xrml-xbridge-bitcoin/std",
     # dex

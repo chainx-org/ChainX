@@ -53,6 +53,7 @@ pub extern crate xrml_xassets_records as xrecords;
 pub extern crate xrml_xbridge_bitcoin as xbitcoin;
 // staking
 pub extern crate xrml_mining_staking as xstaking;
+pub extern crate xrml_mining_tokens as xtokens;
 
 // dex
 pub extern crate xrml_xdex_spot_xmatchorder as xmatchorder;
@@ -245,7 +246,10 @@ impl fee_manager::Trait for Runtime {
 impl xassets::Trait for Runtime {
     type Event = Event;
     type OnAssetChanged = ();
+    type OnAssetRegistration = xtokens::Module<Runtime>;
 }
+
+impl xtokens::Trait for Runtime {}
 
 impl xrecords::Trait for Runtime {
     type Event = Event;
@@ -255,6 +259,8 @@ impl xprocess::Trait for Runtime {}
 
 impl xstaking::Trait for Runtime {
     type OnRewardMinted = ();
+    type OnRewardCalculation = xtokens::Module<Runtime>;
+    type OnReward = xtokens::Module<Runtime>;
     type Event = Event;
 }
 

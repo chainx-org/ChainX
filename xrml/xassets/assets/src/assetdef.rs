@@ -83,42 +83,40 @@ impl Asset {
 const MAX_TOKEN_LEN: usize = 32;
 const MAX_DESC_LEN: usize = 128;
 
+/// Token can only use numbers (0x30~0x39), capital letters (0x41~0x5A), lowercase letters (0x61~0x7A), -(0x2D), .(0x2E), |(0x7C),  ~(0x7E).
 pub fn is_valid_token(v: &[u8]) -> Result {
     if v.len() > MAX_TOKEN_LEN || v.len() == 0 {
-        Err("symbol length too long or zero")
-    } else {
-        for c in v.iter() {
-            // allow number (0x30~0x39), capital letter (0x41~0x5A), small letter (0x61~0x7A), - 0x2D, . 0x2E, | 0x7C,  ~ 0x7E
-            if (*c >= 0x30 && *c <= 0x39) // number
+        return Err("Token length is zero or too long.");
+    }
+    let is_valid = |c: &u8| -> bool {
+        (*c >= 0x30 && *c <= 0x39) // number
                 || (*c >= 0x41 && *c <= 0x5A) // capital
                 || (*c >= 0x61 && *c <= 0x7A) // small
                 || (*c == 0x2D) // -
                 || (*c == 0x2E) // .
                 || (*c == 0x7C) // |
-                || (*c == 0x7E)
-            // ~
-            {
-                continue;
-            } else {
-                return Err("not a valid symbol char for number, capital/small letter or '-', '.', '|', '~'");
-            }
+                || (*c == 0x7E) // ~
+    };
+    for c in v.iter() {
+        if !is_valid(c) {
+            return Err(
+                "Token can only use numbers, capital/lowercase letters or '-', '.', '|', '~'.",
+            );
         }
-        Ok(())
     }
+    Ok(())
 }
 
+/// Desc can only be Visible ASCII chars.
 pub fn is_valid_desc(v: &[u8]) -> Result {
     if v.len() > MAX_DESC_LEN {
-        Err("token desc length too long")
-    } else {
-        for c in v.iter() {
-            // ascii visible char
-            if *c >= 20 && *c <= 0x7E {
-                continue;
-            } else {
-                return Err("not a valid ascii visible char");
-            }
-        }
-        Ok(())
+        return Err("Token desc too long");
     }
+    for c in v.iter() {
+        // Visible ASCII char [0x20, 0x7E]
+        if *c < 0x20 || *c > 0x7E {
+            return Err("Desc can not use an invisiable ASCII char.");
+        }
+    }
+    Ok(())
 }

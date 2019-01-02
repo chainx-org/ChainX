@@ -45,7 +45,7 @@ use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 
-use xassets::Address;
+use xassets::{Address, Token};
 
 pub mod vote_weight;
 
@@ -55,6 +55,7 @@ mod mock;
 
 mod tests;
 
+pub use shifter::{OnReward, OnRewardCalculation, RewardHolder};
 pub use vote_weight::{Jackpot, VoteWeight};
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
@@ -87,6 +88,12 @@ pub trait Trait:
 
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+    /// Need to calculate the reward for non-intentions.
+    type OnRewardCalculation: OnRewardCalculation<Self::AccountId, Self::Balance>;
+
+    /// Time to distribute reward
+    type OnReward: OnReward<Self::AccountId, Self::Balance>;
 }
 
 decl_module! {
@@ -526,7 +533,7 @@ impl<T: Trait> Module<T> {
         let mut iprof = <IntentionProfiles<T>>::get(target);
         let mut record = Self::nomination_record_of(source, target);
 
-        Self::update_vote_weight_both_way(&mut iprof, &mut record, value.as_() as u128, to_add);
+        Self::update_vote_weight_both_way(&mut iprof, &mut record, value.as_(), to_add);
 
         <IntentionProfiles<T>>::insert(target, iprof);
         Self::mutate_nomination_record(source, target, record);
