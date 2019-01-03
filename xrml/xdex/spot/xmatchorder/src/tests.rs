@@ -29,15 +29,25 @@ fn test_match_part() {
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 4;
-        let t_eos: Asset =
-            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
+        let t_eos: Asset = Asset::new(
+            t_sym_eos.clone(),
+            Chain::Bitcoin,
+            precision,
+            t_desc_eos.clone(),
+        )
+        .unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 4;
-        let t_eth: Asset =
-            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
+        let t_eth: Asset = Asset::new(
+            t_sym_eth.clone(),
+            Chain::Ethereum,
+            precision,
+            t_desc_eth.clone(),
+        )
+        .unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
 
         let p1 = OrderPair {
@@ -142,15 +152,25 @@ fn test_match_all() {
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 4;
-        let t_eos: Asset =
-            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
+        let t_eos: Asset = Asset::new(
+            t_sym_eos.clone(),
+            Chain::Bitcoin,
+            precision,
+            t_desc_eos.clone(),
+        )
+        .unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 4;
-        let t_eth: Asset =
-            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
+        let t_eth: Asset = Asset::new(
+            t_sym_eth.clone(),
+            Chain::Ethereum,
+            precision,
+            t_desc_eth.clone(),
+        )
+        .unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
 
         let p1 = OrderPair {
@@ -254,15 +274,25 @@ fn test_match_no() {
         let t_sym_eos = b"BTC".to_vec();
         let t_desc_eos = b"BTC".to_vec();
         let precision = 4;
-        let t_eos: Asset =
-            Asset::new(t_sym_eos.clone(), Chain::BTC, precision, t_desc_eos.clone()).unwrap();
+        let t_eos: Asset = Asset::new(
+            t_sym_eos.clone(),
+            Chain::Bitcoin,
+            precision,
+            t_desc_eos.clone(),
+        )
+        .unwrap();
         assert_eq!(Assets::add_asset(t_eos, 0, 0), Ok(()));
 
         let t_sym_eth = b"ETH".to_vec();
         let t_desc_eth = b"ETH".to_vec();
         let precision = 4;
-        let t_eth: Asset =
-            Asset::new(t_sym_eth.clone(), Chain::ETH, precision, t_desc_eth.clone()).unwrap();
+        let t_eth: Asset = Asset::new(
+            t_sym_eth.clone(),
+            Chain::Ethereum,
+            precision,
+            t_desc_eth.clone(),
+        )
+        .unwrap();
         assert_eq!(Assets::add_asset(t_eth, 0, 0), Ok(()));
 
         let p1 = OrderPair {

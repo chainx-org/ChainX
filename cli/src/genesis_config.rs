@@ -79,7 +79,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     let btc_asset = Asset::new(
         <xbitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(), // token
-        Chain::BTC,
+        Chain::Bitcoin,
         8, // bitcoin precision
         b"BTC chainx".to_vec(),
     )

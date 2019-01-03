@@ -114,8 +114,13 @@ pub fn new_test_ext(
 impl assets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
+    type OnAssetRegistration = ();
 }
-impl xaccounts::Trait for Test {}
+
+impl xaccounts::Trait for Test {
+    type Event = ();
+}
+
 impl Trait for Test {
     type Event = ();
     type Amount = u128;

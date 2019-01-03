@@ -2,6 +2,7 @@
 
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
+use rstd::slice::Iter;
 
 use runtime_support::dispatch::Result;
 
@@ -22,14 +23,21 @@ pub trait ChainT {
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum Chain {
-    PCX,
-    BTC,
-    ETH,
+    ChainX,
+    Bitcoin,
+    Ethereum,
 }
 
 impl Default for Chain {
     fn default() -> Self {
-        Chain::PCX
+        Chain::ChainX
+    }
+}
+
+impl Chain {
+    pub fn iterator() -> Iter<'static, Chain> {
+        static CHAINS: [Chain; 3] = [Chain::ChainX, Chain::Bitcoin, Chain::Ethereum];
+        CHAINS.into_iter()
     }
 }
 

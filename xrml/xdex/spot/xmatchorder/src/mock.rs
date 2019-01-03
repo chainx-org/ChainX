@@ -49,6 +49,7 @@ impl xsystem::Trait for Test {
 impl assets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
+    type OnAssetRegistration = ();
 }
 impl xaccounts::Trait for Test {
     type Event = ();

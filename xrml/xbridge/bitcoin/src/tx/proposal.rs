@@ -12,8 +12,7 @@ use super::{
 };
 use super::{StorageMap, StorageValue};
 use runtime_primitives::traits::As;
-use xassets::Token;
-use xrecords::{Record, RecordListOf};
+use xrecords::{Application, ApplicationMap};
 use {Module, TxProposal, TxProposalLen};
 
 #[allow(unused)]
@@ -101,7 +100,7 @@ pub fn handle_proposal<T: Trait>(_tx: Transaction, _who: &T::AccountId) -> Resul
 pub struct Proposal<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> Proposal<T> {
-    pub fn create_proposal(withdrawal_record_indexs: Vec<(T::AccountId, u32)>, fee: u64) -> Result {
+    pub fn create_proposal(withdrawal_record_indexs: Vec<u32>, fee: u64) -> Result {
         let len = Module::<T>::tx_proposal_len();
         if len > 0 {
             if let Some(last_candidate) = Module::<T>::tx_proposal(len - 1) {
@@ -118,12 +117,12 @@ impl<T: Trait> Proposal<T> {
         };
         let mut out_balance: u64 = 0;
 
-        let mut outs: Vec<(T::AccountId, u32)> = Vec::new();
+        let mut outs: Vec<u32> = Vec::new();
 
         for index in withdrawal_record_indexs.into_iter() {
-            let r: Record<Token, T::Balance, T::BlockNumber> =
-                if let Some(r) = RecordListOf::<T>::get(&index) {
-                    r
+            let r: Application<T::AccountId, T::Balance> =
+                if let Some(r) = ApplicationMap::<T>::get(&index) {
+                    r.data
                 } else {
                     return Err("not get record for this key");
                 };

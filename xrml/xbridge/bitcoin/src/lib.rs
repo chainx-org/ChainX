@@ -136,7 +136,7 @@ impl<T: Trait> ChainT for Module<T> {
     const TOKEN: &'static [u8] = b"BTC";
 
     fn chain() -> ChainDef {
-        ChainDef::BTC
+        ChainDef::Bitcoin
     }
 
     fn check_addr(addr: &[u8], _: &[u8]) -> Result {
@@ -216,12 +216,12 @@ pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
     pub unexpect: bool,
     pub confirmed: bool,
     pub block_hash: H256,
-    pub outs: Vec<(AccountId, u32)>,
+    pub outs: Vec<u32>,
     pub proposers: Vec<AccountId>,
 }
 
 impl<AccountId: Parameter + Ord + Default> CandidateTx<AccountId> {
-    pub fn new(tx: BTCTransaction, outs: Vec<(AccountId, u32)>) -> Self {
+    pub fn new(tx: BTCTransaction, outs: Vec<u32>) -> Self {
         CandidateTx {
             tx,
             unexpect: false,

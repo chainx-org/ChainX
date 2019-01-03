@@ -204,11 +204,10 @@ impl<T: Trait> Chain<T> {
                             runtime_io::print(&deposit_info.tx_hash[..]);
                             runtime_io::print(height as u64);
                             // TODO handle err
-                            let _ = <xrecords::Module<T>>::deposit(
+                            let _ = xrecords::Module::<T>::deposit(
                                 &deposit_info.account,
                                 &token,
                                 As::sa(deposit_info.btc_balance),
-                                Some(deposit_info.tx_hash.as_ref().to_vec()),
                             );
                         } else {
                             runtime_io::print("not reach irr_block --best --height");
@@ -233,22 +232,18 @@ impl<T: Trait> Chain<T> {
             let mut candidate = Module::<T>::tx_proposal(len - 1).unwrap();
             // candidate: CandidateTx
             if candidate.confirmed == false {
-                runtime_io::print("withdraw start ---accountid---tx_hash---blocknum");
+                runtime_io::print("withdraw start ---serial number---tx_hash---blocknum");
                 match <NumberForHash<T>>::get(&candidate.block_hash) {
                     Some(height) => {
                         if new_best_header.number >= height + irr_block {
                             let txid = candidate.tx.hash();
-                            for (account_id, _) in candidate.outs.clone() {
-                                runtime_io::print(account_id.encode().as_slice());
+                            for number in candidate.outs.iter() {
+                                runtime_io::print(*number as u64);
                                 runtime_io::print(&txid[..]);
                                 runtime_io::print(height as u64);
 
                                 // TODO handle err
-                                let _ = <xrecords::Module<T>>::withdrawal_finish(
-                                    &account_id,
-                                    &token,
-                                    Some(txid.as_ref().to_vec()),
-                                );
+                                let _ = <xrecords::Module<T>>::withdrawal_finish(*number);
                             }
                             candidate.confirmed = true;
                             // mark this tx withdraw finish!
@@ -274,7 +269,9 @@ impl<T: Trait> Chain<T> {
         if len == 0 {
             runtime_io::print("crate_proposal case 1");
             // no withdraw cache would return None
-            if let Some(indexs) = xrecords::Module::<T>::withdrawal_cache_indexs(&token) {
+            if let Some(indexs) =
+                xrecords::Module::<T>::withdrawal_application_numbers(xassets::Chain::Bitcoin, 10)
+            {
                 let btc_fee = <BtcFee<T>>::get();
 
                 if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
@@ -289,7 +286,11 @@ impl<T: Trait> Chain<T> {
                 runtime_io::print(candidate.confirmed.encode().as_slice());
                 runtime_io::print(candidate.unexpect.encode().as_slice());
                 // no withdraw cache would return None
-                if let Some(indexs) = xrecords::Module::<T>::withdrawal_cache_indexs(&token) {
+                // TODO config max applications
+                if let Some(indexs) = xrecords::Module::<T>::withdrawal_application_numbers(
+                    xassets::Chain::Bitcoin,
+                    10,
+                ) {
                     let btc_fee = <BtcFee<T>>::get();
                     if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
                         return Err(ChainErr::OtherErr(e));

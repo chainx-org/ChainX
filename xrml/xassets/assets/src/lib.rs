@@ -180,14 +180,8 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XAssets {
-//        /// Native asset list len
-//        pub NativeAssetsLen get(native_assets_len): map u32 => Token;
-        /// Native asset list
-        pub NativeAssets get(native_assets): Vec<Token>;
-        /// supported cross chain asset list length
-        pub CrossChainAssetsLen get(crosschain_assets_len): u32;
-        /// supported cross chain asset list
-        pub CrossChainAssets: map u32 => Token;
+        /// Asset token index list for Chain, different Chain has different token list
+        pub AssetList get(asset_list): map Chain => Vec<Token>;
 
         /// asset info for every token, key is token token
         pub AssetInfo get(asset_info): map Token => Option<(Asset, bool, T::BlockNumber)>;
@@ -222,8 +216,8 @@ decl_storage! {
                 let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
                 with_externalities(&mut tmp_storage, || {
                     let chainx: Token = <Module<T> as ChainT>::TOKEN.to_vec();
-                    let pcx = Asset::new(chainx, Chain::PCX, config.pcx.0, config.pcx.1.clone()).unwrap();
-                    Module::<T>::add_asset(pcx, Zero::zero(), Zero::zero()).unwrap();
+                    let pcx = Asset::new(chainx, Chain::ChainX, config.pcx.0, config.pcx.1.clone()).unwrap();
+                    Module::<T>::register_asset(pcx, false, Zero::zero(), Zero::zero()).unwrap();
                     // init for asset_list
                     for (asset, is_psedu_intention, init_list) in config.asset_list.iter() {
                         let t = asset.token();
@@ -244,7 +238,7 @@ decl_storage! {
 impl<T: Trait> ChainT for Module<T> {
     const TOKEN: &'static [u8] = b"PCX";
     fn chain() -> Chain {
-        Chain::PCX
+        Chain::ChainX
     }
 }
 
@@ -283,30 +277,31 @@ impl<T: Trait> Module<T> {
     /// add an asset into the storage, notice the asset must be valid
     fn add_asset(asset: Asset, free: T::Balance, reserved: T::Balance) -> Result {
         let token = asset.token();
+        let chain = asset.chain();
         if AssetInfo::<T>::exists(&token) {
             return Err("already has this token");
         }
-        match asset.chain() {
-            Chain::PCX => {
-                NativeAssets::<T>::mutate(|v| {
-                    v.push(token.clone());
-                });
-            }
-            _ => {
-                let index = Self::crosschain_assets_len();
-                CrossChainAssets::<T>::insert(index, &token);
-                CrossChainAssetsLen::<T>::put(index + 1);
-            }
-        }
 
         AssetInfo::<T>::insert(&token, (asset, true, system::Module::<T>::block_number()));
+
+        AssetList::<T>::mutate(chain, |v| {
+            v.push(token.clone());
+        });
+
         Self::init_asset_balance(&token, free, reserved);
         Ok(())
     }
+
     fn remove_asset(token: &Token) -> Result {
         if let Some(mut info) = AssetInfo::<T>::get(token) {
+            let chain = info.0.chain();
             info.1 = false;
             AssetInfo::<T>::insert(token.clone(), info);
+            // remove this token index from AssetList
+            AssetList::<T>::mutate(chain, |v| {
+                v.retain(|i| i != token);
+            });
+
             Ok(())
         } else {
             Err("this token dose not register yet or is invalid")
@@ -337,7 +332,7 @@ impl<T: Trait> Module<T> {
         Self::is_valid_asset(token)?;
         // if it's native asset
         if let Some((asset, _, _)) = Self::asset_info(token) {
-            if let Chain::PCX = asset.chain() {
+            if let Chain::ChainX = asset.chain() {
                 return Ok(());
             }
         }
@@ -350,23 +345,30 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn assets() -> Vec<Token> {
-        let mut v = Self::native_assets();
-        v.extend(Self::crosschain_assets());
+        let mut v = Vec::new();
+        for i in Chain::iterator() {
+            v.extend(Self::asset_list(i));
+        }
         v
     }
 
     pub fn assets_of(who: &T::AccountId) -> Vec<Token> {
-        let mut v = Self::native_assets();
+        let mut v = Self::asset_list(Chain::default()); // default is ChainX
         v.extend(Self::crosschain_assets_of(who));
         v
     }
 
+    pub fn native_assets() -> Vec<Token> {
+        Self::asset_list(Chain::ChainX)
+    }
+
     pub fn crosschain_assets() -> Vec<Token> {
-        let len: u32 = Self::crosschain_assets_len();
         let mut v: Vec<Token> = Vec::new();
-        for i in 0..len {
-            let token = CrossChainAssets::<T>::get(i);
-            v.push(token);
+        for c in Chain::iterator() {
+            if *c != Chain::default() {
+                // all assets except ChainX
+                v.extend(Self::asset_list(c));
+            }
         }
         v
     }
@@ -376,13 +378,24 @@ impl<T: Trait> Module<T> {
         Self::assets()
             .into_iter()
             .filter(|t| {
-                if let Some(t) = AssetInfo::<T>::get(t) {
+                if let Some(t) = Self::asset_info(t) {
                     t.1
                 } else {
                     false
                 }
             })
             .collect()
+    }
+
+    pub fn get_asset(token: &Token) -> StdResult<Asset, &'static str> {
+        if let Some((asset, valid, _)) = Self::asset_info(token) {
+            if valid == false {
+                return Err("this asset is invalid, maybe has cancelled.");
+            }
+            Ok(asset)
+        } else {
+            return Err("this token asset not exist!");
+        }
     }
 }
 
