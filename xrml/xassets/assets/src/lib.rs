@@ -70,8 +70,7 @@ pub trait OnAssetChanged<AccountId, Balance> {
     fn on_destroy(who: &AccountId, token: &Token, value: Balance);
     fn on_reserve(_who: &AccountId, _token: &Token, _value: Balance) {}
     fn on_unreserve(_who: &AccountId, _token: &Token, _value: Balance) {}
-    fn on_set_free(_who: &AccountId, _token: &Token, _value: Balance) {}
-    fn on_set_reserved(_who: &AccountId, _token: &Token, _value: Balance) {}
+    fn on_set_balance(_who: &AccountId, _token: &Token, _type: AssetType, _value: Balance) {}
 }
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {
@@ -128,24 +127,19 @@ decl_module! {
             Ok(())
         }
 
+        /// cancel asset, mark this asset is invalid
         fn cancel_asset(token: Token) -> Result {
             is_valid_token(&token)?;
             Self::remove_asset(&token)?;
             Ok(())
         }
 
-//        /// set free token for an account
-//        fn set_asset_free_balance(who: Address<T::AccountId, T::AccountIndex>, token: Token, free: T::Balance) -> Result {
-//            let who = balances::Module::<T>::lookup(who)?;
-//            Self::set_free_balance(&who, &token, free)?;
-//            Ok(())
-//        }
-//        /// set reserved token for an account
-//        fn set_asset_reserved_balance(who: Address<T::AccountId, T::AccountIndex>, token: Token, reserved: T::Balance, res_type: ReservedType) -> Result {
-//            let who = balances::Module::<T>::lookup(who)?;
-//            Self::set_reserved_balance(&who, &token, reserved, res_type)?;
-//            Ok(())
-//        }
+        /// set free token for an account
+        fn set_balance(who: Address<T::AccountId, T::AccountIndex>, token: Token, balances: CodecBTreeMap<AssetType, T::Balance>) -> Result {
+            let who = balances::Module::<T>::lookup(who)?;
+            Self::set_balance_by_root(&who, &token, balances)?;
+            Ok(())
+        }
 
         /// transfer between account
         fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, memo: Vec<u8>) -> Result {
@@ -171,8 +165,9 @@ decl_storage! {
         /// asset list of a account
         pub CrossChainAssetsOf get(crosschain_assets_of): map T::AccountId => Vec<Token>;
 
+        /// asset balance for user&token, use btree_map to accept different asset type
         pub AssetBalance: map (T::AccountId, Token) => CodecBTreeMap<AssetType, T::Balance>;
-
+        /// asset balance for a token, use btree_map to accept different asset type
         pub TotalAssetBalance: map Token => CodecBTreeMap<AssetType, T::Balance>;
 
         /// price
@@ -499,7 +494,7 @@ impl<T: Trait> Module<T> {
         Self::should_not_free_type(type_)?;
 
         // get from storage
-        let total_free_token = Self::total_asset_balance(token, AssetType::Free); //TotalXFreeBalance::<T>::get(token);
+        let total_free_token = Self::total_asset_balance(token, AssetType::Free);
         let total_reserved_token = Self::total_asset_balance(token, type_);
         let free_token = Self::asset_balance(who, token, AssetType::Free);
         let reserved_token = Self::asset_balance(who, token, type_);
@@ -540,7 +535,7 @@ impl<T: Trait> Module<T> {
         Self::should_not_free_type(type_)?;
 
         // get from storage
-        let total_free_token = Self::total_asset_balance(token, AssetType::Free); //TotalXFreeBalance::<T>::get(token);
+        let total_free_token = Self::total_asset_balance(token, AssetType::Free);
         let total_reserved_token = Self::total_asset_balance(token, type_);
         let free_token = Self::asset_balance(who, token, AssetType::Free);
         let reserved_token = Self::asset_balance(who, token, type_);
@@ -643,6 +638,43 @@ impl<T: Trait> Module<T> {
         Self::set_free_balance(from, token, new_from_token);
         Self::set_free_balance_creating(to, token, new_to_token);
         T::OnAssetChanged::on_move(from, to, token, value);
+        Ok(())
+    }
+
+    pub fn set_balance_by_root(who: &T::AccountId, token: &Token, balances: CodecBTreeMap<AssetType, T::Balance>) -> Result {
+        for (type_, val) in balances.0.into_iter() {
+            let old_val = Self::asset_balance(who, token, type_);
+            let old_total_val = Self::total_asset_balance(token, type_);
+            if old_val == val {
+                continue;
+            }
+
+            let new_total_val = if val > old_val {
+                match val.checked_sub(&old_val) {
+                    None => return Err("balance too low to sub value"),
+                    Some(b) => match old_total_val.checked_add(&b) {
+                        None => return Err("old total balance too high to add value"),
+                        Some(new) => new,
+                    },
+                }
+            } else {
+                match old_val.checked_sub(&val) {
+                    None => return Err("old balance too low to sub value"),
+                    Some(b) => match old_total_val.checked_sub(&b) {
+                        None => return Err("old total balance too low to sub value"),
+                        Some(new) => new,
+                    },
+                }
+            };
+
+            Self::set_asset_balance(who, token, type_, val);
+            if token.as_slice() == <Self as ChainT>::TOKEN && type_ == AssetType::Free {
+                balances::TotalIssuance::<T>::put(new_total_val)
+            } else {
+                Self::set_total_asset_balance(token, type_, val);
+            }
+            T::OnAssetChanged::on_set_balance(who, token, type_, val);
+        }
         Ok(())
     }
 

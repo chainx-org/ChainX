@@ -3,8 +3,8 @@
 use codec::{Decode, Encode, Input, Output};
 use rstd::collections::btree_map::BTreeMap;
 
-#[derive(Default)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Default, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct CodecBTreeMap<K: Ord, V>(pub BTreeMap<K, V>);
 
 impl<K: Encode + Ord, V: Encode> Encode for CodecBTreeMap<K, V> {
