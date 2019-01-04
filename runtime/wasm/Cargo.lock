@@ -174,6 +174,7 @@ dependencies = [
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xrml-fee-manager 0.4.0",
  "xrml-mining-staking 0.4.0",
+ "xrml-mining-tokens 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-process 0.4.0",
@@ -2248,6 +2249,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "xrml-mining-tokens"
+version = "0.4.0"
+dependencies = [
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.83 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.83 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-session 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-keyring 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-mining-staking 0.4.0",
+ "xrml-xaccounts 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xbridge-bitcoin 0.4.0",
+ "xrml-xsupport 0.4.0",
+ "xrml-xsystem 0.4.0",
+]
+
+[[package]]
 name = "xrml-xaccounts"
 version = "0.4.0"
 dependencies = [
@@ -2286,6 +2316,7 @@ dependencies = [
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xrml-xaccounts 0.4.0",
+ "xrml-xsupport 0.4.0",
 ]
 
 [[package]]

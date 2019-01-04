@@ -207,7 +207,6 @@ impl<T: Trait> Module<T> {
             if pair_list[i].first.eq(first) && pair_list[i].second.eq(second) {
                 return Some(pair_list[i].clone());
             } else {
-
             }
         }
 
@@ -313,9 +312,7 @@ impl<T: Trait> Module<T> {
         if let Some(sum) = Self::trans_amount(amount, price, &pair.clone().first) {
             match ordertype {
                 OrderType::Buy => {
-                    if <assets::Module<T>>::free_balance(&(sender.clone(), pair.second.clone()))
-                        < sum
-                    {
+                    if <assets::Module<T>>::free_balance(sender, &pair.second) < sum {
                         return Err("transactor's free token balance too low, can't put buy order");
                     }
                     reserve_last = As::sa(sum.as_());
@@ -324,14 +321,13 @@ impl<T: Trait> Module<T> {
                         sender,
                         &pair.second,
                         sum,
-                        assets::ReservedType::DexSpot,
+                        assets::AssetType::ReservedDexSpot,
                     ) {
                         return Err(msg);
                     }
                 }
                 OrderType::Sell => {
-                    if <assets::Module<T>>::free_balance(&(sender.clone(), pair.first.clone()))
-                        < As::sa(amount.as_())
+                    if <assets::Module<T>>::free_balance(sender, &pair.first) < As::sa(amount.as_())
                     {
                         return Err("transactor's free token balance too low, can't put sell order");
                     }
@@ -341,7 +337,7 @@ impl<T: Trait> Module<T> {
                         sender,
                         &pair.first,
                         As::sa(amount.as_()),
-                        assets::ReservedType::DexSpot,
+                        assets::AssetType::ReservedDexSpot,
                     ) {
                         return Err(msg);
                     }
@@ -418,7 +414,6 @@ impl<T: Trait> Module<T> {
         {
             //Note: 删除掉订单
             //<OrdersOf<T>>::remove((order.user.clone(), order.pair.clone(), index));
-
         }
         // 每次更新都记录日志
         Self::deposit_event(RawEvent::UpdateOrder(
@@ -467,7 +462,7 @@ impl<T: Trait> Module<T> {
                         &transactor.clone(),
                         &back_token,
                         back_amount,
-                        assets::ReservedType::DexSpot,
+                        assets::AssetType::ReservedDexSpot,
                     ) {
                         return Err(msg);
                     }
@@ -627,7 +622,8 @@ impl<T: Trait> Module<T> {
                 ) {
                     Ok((token, fee)) => {
                         maker_fee_token = token;
-                        after_maker_fee = As::sa(fee.as_());;
+                        after_maker_fee = As::sa(fee.as_());
+                        ;
                     }
                     Err(msg) => {
                         return Err(msg);
@@ -661,7 +657,8 @@ impl<T: Trait> Module<T> {
                 ) {
                     Ok((token, fee)) => {
                         taker_fee_token = token;
-                        after_taker_fee = As::sa(fee.as_());;
+                        after_taker_fee = As::sa(fee.as_());
+                        ;
                     }
                     Err(msg) => {
                         return Err(msg);
@@ -683,7 +680,8 @@ impl<T: Trait> Module<T> {
                 ) {
                     Ok((token, fee)) => {
                         maker_fee_token = token;
-                        after_maker_fee = As::sa(fee.as_());;
+                        after_maker_fee = As::sa(fee.as_());
+                        ;
                     }
                     Err(msg) => {
                         return Err(msg);
@@ -742,8 +740,7 @@ impl<T: Trait> Module<T> {
         match <assets::Module<T>>::asset_info(token) {
             Some((asset, _, _)) => {
                 //计算关联账户的额度
-                let total_token =
-                    <assets::Module<T>>::free_balance(&(account.clone(), asset.token().clone()));
+                let total_token = <assets::Module<T>>::free_balance(account, &asset.token());
 
                 //将精度考虑进去
                 let after_discount: T::Amount = if total_token > As::sa(0) {
@@ -839,7 +836,7 @@ impl<T: Trait> Module<T> {
         let mut fee_token: Token = token.clone();
         // 先把钱全部撤回
         if let Err(msg) =
-            <assets::Module<T>>::unreserve(from, token, value, assets::ReservedType::DexSpot)
+            <assets::Module<T>>::unreserve(from, token, value, assets::AssetType::ReservedDexSpot)
         {
             return Err(msg);
         }
@@ -917,10 +914,10 @@ impl<T: Trait> Module<T> {
                             Self::discount_fee(&to, &token.clone(), As::sa(conversion_fee.as_()))
                                 .as_(),
                         );
-                        if <assets::Module<T>>::free_balance(&(
-                            to.clone(),
-                            <assets::Module<T> as ChainT>::TOKEN.to_vec(),
-                        )) >= discount_fee
+                        if <assets::Module<T>>::free_balance(
+                            to,
+                            &<assets::Module<T> as ChainT>::TOKEN.to_vec(),
+                        ) >= discount_fee
                         {
                             // pcx余额足够
                             if let Err(e) = <assets::Module<T>>::move_free_balance(
@@ -1009,7 +1006,6 @@ impl<T: Trait> Module<T> {
                             <FeeBuyOrderMax<T>>::put(fee_buy_order_max);
                         }
                     } else {
-
                     }
                 }
             }
@@ -1189,8 +1185,9 @@ where
     create_time: BlockNumber,
     lastupdate_time: BlockNumber,
     status: OrderStatus,
-    fill_index: Vec<u128>, // 填充历史记录的索引
-    reserve_last: Amount,  //未被交易 未被回退
+    fill_index: Vec<u128>,
+    // 填充历史记录的索引
+    reserve_last: Amount, //未被交易 未被回退
 }
 
 impl<Pair, AccountId, Amount, Price, BlockNumber> Order<Pair, AccountId, Amount, Price, BlockNumber>

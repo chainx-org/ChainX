@@ -78,7 +78,7 @@ pub struct DepositRecord<'a, T: Trait> {
 
 impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
     fn amount(&self) -> u64 {
-        xassets::Module::<T>::total_balance(&self.token).as_()
+        xassets::Module::<T>::all_type_balance(&self.token).as_()
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -112,7 +112,7 @@ impl<'a, T: Trait> Jackpot<T::Balance> for PseduIntentionProfs<'a, T> {
 
 impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
     fn amount(&self) -> u64 {
-        xassets::Module::<T>::total_balance_of(&self.depositor, &self.token).as_()
+        xassets::Module::<T>::all_type_balance_of(&self.depositor, &self.token).as_()
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -315,7 +315,7 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
             .filter(|token| <xassets::Module<T>>::pcx_price_for(token).is_some())
             .map(|token| {
                 let price = <xassets::Module<T>>::pcx_price_for(&token).unwrap_or(Zero::zero());
-                let amount = <xassets::Module<T>>::total_balance(&token);
+                let amount = <xassets::Module<T>>::all_type_balance(&token);
 
                 // Apply discount for psedu intentions
                 // TODO need to be configurable?

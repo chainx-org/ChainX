@@ -47,7 +47,7 @@ use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::StorageValue;
 
-use xassets::{Chain, ChainT, ReservedType, Token};
+use xassets::{AssetType, Chain, ChainT, Token};
 use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
 
 pub trait Trait: system::Trait + balances::Trait + xassets::Trait {
@@ -204,7 +204,7 @@ impl<T: Trait> Module<T> {
             let index = tail.index();
             if let Some(mut node) = Self::application_map(index) {
                 // reserve token, wait to destroy
-                xassets::Module::<T>::reserve(who, token, balance, ReservedType::AssetsWithdrawal)?;
+                xassets::Module::<T>::reserve(who, token, balance, AssetType::ReservedWithdrawal)?;
                 node.add_option_node_after_withkey::<LinkedMultiKey<T>, Chain>(n, asset.chain())?;
             }
         }
@@ -235,7 +235,7 @@ impl<T: Trait> Module<T> {
         let token = application.token();
         let balance = application.balance();
         // destroy reserved token
-        xassets::Module::<T>::destroy(&who, &token, balance, ReservedType::AssetsWithdrawal)?;
+        xassets::Module::<T>::destroy(&who, &token, balance, AssetType::ReservedWithdrawal)?;
         Self::deposit_event(RawEvent::Withdrawal(
             who,
             token,

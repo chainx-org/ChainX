@@ -4558,6 +4558,7 @@ dependencies = [
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xrml-xaccounts 0.4.0",
+ "xrml-xsupport 0.4.0",
 ]
 
 [[package]]
