@@ -4,77 +4,54 @@ version = "0.3.0"
 authors = ["Chainpool <https://www.chainx.org>"]
 
 [dependencies]
-jsonrpc-macros = { git="https://github.com/paritytech/jsonrpc.git" }
-substrate-network = { git = "https://github.com/paritytech/substrate" }
-substrate-network-libp2p = { git = "https://github.com/paritytech/substrate" }
-sr-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-client = { git = "https://github.com/paritytech/substrate" }
-substrate-client-db = { git = "https://github.com/paritytech/substrate" }
-substrate-keyring = { git = "https://github.com/paritytech/substrate" }
-substrate-state-db = { git = "https://github.com/paritytech/substrate" }
-substrate-state-machine = { git = "https://github.com/paritytech/substrate" }
-substrate-telemetry = { git = "https://github.com/paritytech/substrate" }
-substrate-bft = { git = "https://github.com/paritytech/substrate", default_features = false }
-substrate-rpc-servers = { git = "https://github.com/paritytech/substrate" }
-srml-balances = { git = "https://github.com/paritytech/substrate" }
-jsonrpc-http-server = { git = "https://github.com/paritytech/jsonrpc" }
-jsonrpc-ws-server = { git = "https://github.com/paritytech/jsonrpc" }
+chainx-cli = { path = "./cli" }
 ctrlc = { version = "3.0", features = ["termination"] }
-serde = { version = "1.0", default_features = false }
-serde_derive = { version = "1.0", optional = true }
-parity-codec = { version = "2.0" }
-chainx-primitives = { path = "./primitives" }
-chainx-consensus = { path = "./consensus" }
-chainx-executor = { path = "./executor" }
-chainx-runtime = { path = "./runtime" }
-chainx-network = { path = "./network" }
-chainx-pool = { path = "./pool" }
-chainx-rpc = { path = "./rpc" }
-chainx-api = { path = "./api" }
-cxrml-exchange-pendingorders = { path = "./cxrml/exchange/pendingorders" }
-cxrml-tokenbalances = { path = "./cxrml/tokenbalances" }
-
-env_logger = "0.5.13"
-rhododendron = "0.3"
-hex-literal = "0.1"
-exit-future = "0.1"
+error-chain = "0.12"
 futures = "0.1.17"
-ansi_term = "0.10"
-sysinfo = "0.5.7"
-tokio = "0.1.7"
-names = '0.11.0'
-clap = "2.30.0"
-base58 = "0.1"
-slog = "^2"
-log = "0.3"
 
 # bitcoin-rust
 primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
 chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
 keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
 
+[features]
+msgbus-redis = [
+	"chainx-cli/msgbus-redis"
+]
+
+msgbus-redis-keyhash = [
+	"msgbus-redis",
+	"chainx-cli/msgbus-redis-keyhash",
+]
+
+cache-lru = [
+	"chainx-cli/cache-lru"
+]
+
 [workspace]
 members = [
     "primitives",
-    "consensus",
     "executor",
     "runtime",
-    "network",
-    "pool",
+    "cli",
     "rpc",
-    "api",
-    "cxrml/system",
-    "cxrml/support",
-    "cxrml/tokenbalances",
-    "cxrml/multisig",
-    "cxrml/associations",
-    "cxrml/bridge/btc",
-    "cxrml/mining/staking",
-    "cxrml/mining/tokenstaking",
-    "cxrml/funds/financialrecords",
-    "cxrml/funds/withdrawal",
-    "cxrml/exchange/pendingorders",
-    "cxrml/exchange/matchorder",
-    "cxrml/example",
+    "rpc-servers",
+    "xr-primitives",
+
+    # xrml
+    "xrml/xsystem",
+    "xrml/xsupport",
+    "xrml/xaccounts",
+    # xrml/xfee
+    "xrml/xfee/manager",
+    # xrml/assets
+    "xrml/xassets/assets",
+    "xrml/xdex/spot/xpendingorders",
+    "xrml/xdex/spot/xmatchorder",
+    "xrml/xassets/records",
+    "xrml/xassets/process",
+    # xrml/mining
+    "xrml/xmining/staking",
+    "xrml/xmining/tokens",
+    "xrml/xbridge/bitcoin",
 ]

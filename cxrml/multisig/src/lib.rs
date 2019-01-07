@@ -3,14 +3,6 @@
 //! this module is for multisig, but now this is just for genesis multisig addr, not open for public.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// for encode/decode
-// Needed for deriving `Serialize` and `Deserialize` for various types.
-// We only implement the serde traits for std builds - they're unneeded
-// in the wasm runtime.
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
-
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
 #[macro_use]
 extern crate parity_codec_derive;
@@ -54,10 +46,18 @@ use rstd::result::Result as StdResult;
 use runtime_primitives::traits::{Hash, OnFinalise};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
+<<<<<<< HEAD
+use runtime_primitives::traits::Hash;
+
+use system::ensure_signed;
+
+use transaction::{TransactionType, Transaction, TransferT};
+=======
 
 use system::ensure_signed;
 
 use transaction::{Transaction, TransactionType, TransferT};
+>>>>>>> develop
 
 pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
     /// generate multisig addr for a accountid
@@ -101,6 +101,9 @@ decl_event!(
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+<<<<<<< HEAD
+        fn deposit_event() = default;
+=======
         // fn deploy(origin, owners: Vec<(T::AccountId, bool)>, value: T::Balance) -> Result;
 
         fn execute(origin, multi_sig_addr: T::AccountId, tx_type: TransactionType, data: Vec<u8>) -> Result;
@@ -118,12 +121,13 @@ decl_module! {
 impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
     fn on_finalise(_: T::BlockNumber) {
         // do nothing
+>>>>>>> develop
     }
 }
 
 // struct for the status of a pending operation.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PendingState {
     yet_needed: u32,
     owners_done: u32,
@@ -165,12 +169,12 @@ decl_storage! {
     add_extra_genesis {
         config(genesis_multi_sig): Vec<(T::AccountId, Vec<(T::AccountId, bool)>, u32, T::Balance)>;
         config(balances_config): balances::GenesisConfig<T>;
-        build(|storage: &mut runtime_primitives::StorageMap, config: &GenesisConfig<T>| {
+        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
 
             // balances config storage
-            let mut src_r = BalancesConfigCopy::create_from_src(&config.balances_config).src().build_storage().unwrap();
+            let mut src_r = BalancesConfigCopy::create_from_src(&config.balances_config).src().build_storage().unwrap().0;
             src_r.extend(storage.clone());
             let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
             let genesis = config.genesis_multi_sig.clone();
@@ -216,6 +220,14 @@ where
 }
 
 impl<T: Trait> Module<T> {
+<<<<<<< HEAD
+//    fn remove_multi_sig_addr(multi_sig_addr: &T::AccountId) {
+//        <PendingStateFor<T>>::remove_prefix(multi_sig_addr.clone());
+//        <TransactionFor<T>>::remove_prefix(multi_sig_addr.clone());
+//        <MultiSigOwnerFor<T>>::remove(multi_sig_addr);
+//        <MultiSigListOwnerFor<T>>::remove(multi_sig_addr);
+//    }
+=======
     // event
     /// Deposit one of this module's events.
     fn deposit_event(event: Event<T>) {
@@ -230,6 +242,7 @@ impl<T: Trait> Module<T> {
     //        <MultiSigOwnerFor<T>>::remove(multi_sig_addr);
     //        <MultiSigListOwnerFor<T>>::remove(multi_sig_addr);
     //    }
+>>>>>>> develop
 
     fn remove_multi_sig_id(multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) {
         Self::remove_pending_for(multi_sig_addr, multi_sig_id);
@@ -383,13 +396,18 @@ impl<T: Trait> Module<T> {
             let origin = system::RawOrigin::Signed(account_id.clone()).into();
             let to: balances::Address<T> = balances::address::Address::Id(multi_addr.clone());
 
-            <balances::Module<T>>::transfer(origin, to, value)?;
+            <balances::Module<T>>::transfer(origin, to, value.into())?;
 
             // 1
             let len = Self::multi_sig_list_len_for(account_id);
             <MultiSigListItemFor<T>>::insert((account_id.clone(), len), multi_addr.clone());
+<<<<<<< HEAD
+            <MultiSigListLenFor<T>>::insert(account_id.clone(), len + 1);  // length inc
+            // 2
+=======
             <MultiSigListLenFor<T>>::insert(account_id.clone(), len + 1); // length inc
                                                                           // 2
+>>>>>>> develop
             <MultiSigOwnerFor<T>>::insert(multi_addr.clone(), account_id.clone());
             // 3
             <MultiSigListOwnerFor<T>>::insert(multi_addr.clone(), owners.clone());
@@ -536,7 +554,7 @@ impl<T: Trait> Module<T> {
                 let t = TransferT::<T>::decode(&mut data.as_slice()).unwrap();
                 let origin = system::RawOrigin::Signed(addr.clone()).into();
                 let to: balances::Address<T> = balances::address::Address::Id(t.to);
-                <balances::Module<T>>::transfer(origin, to, t.value)?;
+                <balances::Module<T>>::transfer(origin, to, t.value.into())?;
                 Ok(())
             }
         }
@@ -549,6 +567,20 @@ pub struct BalancesConfigCopy<T: Trait>(balances::GenesisConfig<T>);
 #[cfg(feature = "std")]
 impl<T: Trait> BalancesConfigCopy<T> {
     pub fn create_from_src(config: &balances::GenesisConfig<T>) -> BalancesConfigCopy<T> {
+<<<<<<< HEAD
+        BalancesConfigCopy(
+            balances::GenesisConfig::<T> {
+                balances: config.balances.clone(),
+                transaction_base_fee: config.transaction_base_fee.clone(),
+                transaction_byte_fee: config.transaction_byte_fee.clone(),
+                transfer_fee: config.transfer_fee.clone(),
+                creation_fee: config.creation_fee.clone(),
+                reclaim_rebate: config.reclaim_rebate.clone(),
+                existential_deposit: config.existential_deposit.clone(),
+                _genesis_phantom_data: Default::default(),
+            }
+        )
+=======
         BalancesConfigCopy(balances::GenesisConfig::<T> {
             balances: config.balances.clone(),
             transaction_base_fee: config.transaction_base_fee.clone(),
@@ -558,6 +590,7 @@ impl<T: Trait> BalancesConfigCopy<T> {
             reclaim_rebate: config.reclaim_rebate.clone(),
             existential_deposit: config.existential_deposit.clone(),
         })
+>>>>>>> develop
     }
     pub fn src(self) -> balances::GenesisConfig<T> {
         self.0

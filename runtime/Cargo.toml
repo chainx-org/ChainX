@@ -1,83 +1,115 @@
 [package]
 name = "chainx-runtime"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-rustc-hex = "1.0"
-hex-literal = "0.1.0"
-serde = { version = "1.0", default_features = false }
-serde_derive = { version = "1.0", optional = true }
-safe-mix = { version = "1.0", default_features = false}
-parity-codec = "2.0"
-parity-codec-derive = "2.0"
-sr-std = { git = "https://github.com/paritytech/substrate" }
-sr-io = { git = "https://github.com/paritytech/substrate" }
-srml-support = { git = "https://github.com/paritytech/substrate" }
-substrate-primitives = { git = "https://github.com/paritytech/substrate" }
-srml-consensus = { git = "https://github.com/paritytech/substrate" }
-srml-contract = { git = "https://github.com/paritytech/substrate" }
-srml-balances = { git = "https://github.com/paritytech/substrate" }
-srml-council = { git = "https://github.com/paritytech/substrate" }
-srml-democracy = { git = "https://github.com/paritytech/substrate" }
-srml-executive = { git = "https://github.com/paritytech/substrate" }
-sr-primitives = { git = "https://github.com/paritytech/substrate" }
-srml-session = { git = "https://github.com/paritytech/substrate" }
-srml-system = { git = "https://github.com/paritytech/substrate" }
-srml-timestamp = { git = "https://github.com/paritytech/substrate" }
-srml-treasury = { git = "https://github.com/paritytech/substrate" }
-sr-version = { git = "https://github.com/paritytech/substrate" }
-chainx-primitives = { path = "../primitives" }
+rustc-hex = { version = "1.0", optional = true }
+hex-literal = { version = "0.1.0", optional = true }
+safe-mix = { version = "1.0", default_features = false }
+serde = { version = "1.0", optional = true }
+parity-codec-derive = { version = "2.1" }
+parity-codec = { version = "2.1", default_features = false }
+
+substrate-client = { git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-finality-grandpa-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-consensus-aura-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+
+sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-version = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }
+
+srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-balances = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-timestamp = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-consensus = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-session = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-grandpa = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-aura = { git = "https://github.com/chainpool/substrate", default-features = false }
+
+srml-contract = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-council = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-democracy = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-treasury = { git = "https://github.com/chainpool/substrate", default-features = false }
+
+# chainx
+chainx-primitives = { path = "../primitives", default-features = false }
+
+xr-primitives = { path = "../xr-primitives", default-features = false }
 
 # chainx runtime module
-cxrml-system = { path = "../cxrml/system" }
-cxrml-support = { path = "../cxrml/support" }
-cxrml-tokenbalances = { path = "../cxrml/tokenbalances" }
-cxrml-multisig = { path = "../cxrml/multisig" }
-cxrml-associations = { path = "../cxrml/associations" }
+xrml-xsystem = { path = "../xrml/xsystem", default-features = false }
+xrml-xaccounts = { path = "../xrml/xaccounts", default-features = false }
+# fee
+xrml-fee-manager = { path = "../xrml/xfee/manager", default-features = false }
+# assets
+xrml-xassets-assets = { path = "../xrml/xassets/assets", default-features = false }
+xrml-xassets-records = { path = "../xrml/xassets/records", default-features = false }
+xrml-xassets-process = { path = "../xrml/xassets/process", default-features = false }
 # mining
-cxrml-mining-staking = { path = "../cxrml/mining/staking" }
-cxrml-mining-tokenstaking = { path = "../cxrml/mining/tokenstaking" }
+xrml-mining-staking = { path = "../xrml/xmining/staking", default-features = false }
+xrml-mining-tokens = { path = "../xrml/xmining/tokens", default-features = false }
 # bridge
-cxrml-bridge-btc = { path = "../cxrml/bridge/btc" }
-# funds
-cxrml-funds-financialrecords = { path = "../cxrml/funds/financialrecords" }
-cxrml-funds-withdrawal = { path = "../cxrml/funds/withdrawal" }
-# exchange
-cxrml-exchange-pendingorders = { path = "../cxrml/exchange/pendingorders" }
-cxrml-exchange-matchorder = { path = "../cxrml/exchange/matchorder" }
+xrml-xbridge-bitcoin = {path = "../xrml/xbridge/bitcoin", default-features = false }
+# dex
+xrml-xdex-spot-xmatchorder = { path = "../xrml/xdex/spot/xmatchorder", default-features = false }
+xrml-xdex-spot-xpendingorders = { path = "../xrml/xdex/spot/xpendingorders", default-features = false }
 
 [features]
 default = ["std"]
 std = [
+    "rustc-hex",
+    "hex-literal",
+    "safe-mix/std",
+    "serde",
     "parity-codec/std",
+
+    "substrate-client/std",
     "substrate-primitives/std",
+    "substrate-finality-grandpa-primitives/std",
+    "substrate-consensus-aura-primitives/std",
+
+    # substrate runtime module
+    "sr-primitives/std",
+    "sr-version/std",
     "sr-std/std",
     "sr-io/std",
+
     "srml-support/std",
+    "srml-system/std",
+    "srml-balances/std",
+    "srml-timestamp/std",
     "srml-consensus/std",
+    "srml-session/std",
+    "srml-grandpa/std",
+    "srml-aura/std",
+
+    "srml-contract/std",
     "srml-council/std",
     "srml-democracy/std",
-    "srml-executive/std",
-    "sr-primitives/std",
-    "srml-session/std",
-    "srml-system/std",
-    "srml-timestamp/std",
-    "sr-version/std",
+    "srml-treasury/std",
+    # chainx
     "chainx-primitives/std",
-    "serde_derive",
-    "serde/std",
-    "safe-mix/std",
-    "cxrml-system/std",
-    "cxrml-support/std",
-    "cxrml-tokenbalances/std",
-    "cxrml-multisig/std",
-    "cxrml-associations/std",
-    "cxrml-mining-staking/std",
-    "cxrml-mining-tokenstaking/std",
-    "cxrml-bridge-btc/std",
-    "cxrml-funds-financialrecords/std",
-    "cxrml-funds-withdrawal/std",
-    "cxrml-exchange-pendingorders/std",
-    "cxrml-exchange-matchorder/std",
+    # xr-primitives
+    "xr-primitives/std",
+    # chainx runtime
+    "xrml-xsystem/std",
+    "xrml-xaccounts/std",
+    # fee
+    "xrml-fee-manager/std",
+    # asset
+    "xrml-xassets-assets/std",
+    "xrml-xassets-records/std",
+    "xrml-xassets-process/std",
+    # mining
+    "xrml-mining-staking/std",
+    "xrml-mining-tokens/std",
+    # bridge
+    "xrml-xbridge-bitcoin/std",
+    # dex
+    "xrml-xdex-spot-xmatchorder/std",
+    "xrml-xdex-spot-xpendingorders/std",
 ]

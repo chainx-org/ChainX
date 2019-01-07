@@ -3,14 +3,6 @@
 //! this module is for associations
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// for encode/decode
-// Needed for deriving `Serialize` and `Deserialize` for various types.
-// We only implement the serde traits for std builds - they're unneeded
-// in the wasm runtime.
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
-
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
 #[macro_use]
 extern crate parity_codec_derive;
@@ -72,14 +64,8 @@ decl_event!(
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn init_account(origin, who: T::AccountId) -> Result;
-        fn init_exchange_relationship(origin, who: T::AccountId) -> Result;
-    }
-}
-
-impl<T: Trait> OnFinalise<T::BlockNumber> for Module<T> {
-    fn on_finalise(_: T::BlockNumber) {
-        // do nothing
+        //fn init_account(origin, who: T::AccountId) -> Result;
+        //fn init_exchange_relationship(origin, who: T::AccountId) -> Result;
     }
 }
 

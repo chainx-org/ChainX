@@ -1,83 +1,66 @@
-// Copyright 2018 Chainpool.
+// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// This file is part of Substrate.
 
-extern crate substrate_rpc as rpc;
-#[macro_use]
-extern crate log;
+// Substrate is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 
-extern crate chainx_api;
-extern crate jsonrpc_core;
-extern crate jsonrpc_http_server as http;
-extern crate jsonrpc_pubsub as pubsub;
-extern crate jsonrpc_ws_server as ws;
-extern crate serde;
+// Substrate is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
+
+//! Substrate RPC interfaces.
+
+#![warn(missing_docs)]
+
+extern crate jsonrpc_core as rpc;
+extern crate jsonrpc_pubsub;
+extern crate parity_codec as codec;
+extern crate parking_lot;
+extern crate serde_json;
 extern crate sr_primitives as runtime_primitives;
+extern crate sr_version as runtime_version;
 extern crate substrate_client as client;
+extern crate substrate_network as network;
 extern crate substrate_primitives as primitives;
-extern crate substrate_rpc;
-pub extern crate substrate_rpc as apis;
-extern crate substrate_rpc_servers as rpc_server;
+extern crate substrate_transaction_pool as transaction_pool;
 extern crate tokio;
+
 #[macro_use]
 extern crate error_chain;
-
 #[macro_use]
 extern crate jsonrpc_macros;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate serde_derive;
 
-pub mod chainext;
-pub mod servers;
+#[cfg(test)]
+#[macro_use]
+extern crate assert_matches;
+#[cfg(test)]
+#[macro_use]
+extern crate hex_literal;
+#[cfg(test)]
+extern crate rustc_hex;
+#[cfg(test)]
+extern crate substrate_consensus_common as consensus;
+#[cfg(test)]
+extern crate substrate_test_client as test_client;
 
-use std::io;
-use std::net::SocketAddr;
+mod errors;
+mod helpers;
+mod subscriptions;
 
-const CHAIN_NAME: &'static str = "ChainX POC-3";
-const IMPL_NAME: &'static str = "bud";
-const IMPL_VERSION: &'static str = "v0.3.0";
+pub use subscriptions::Subscriptions;
 
-#[derive(Clone)]
-pub struct RpcConfig {
-    chain_name: String,
-    impl_name: &'static str,
-    impl_version: &'static str,
-}
-
-impl rpc::system::SystemApi for RpcConfig {
-    fn system_name(&self) -> rpc::system::error::Result<String> {
-        Ok(self.impl_name.into())
-    }
-
-    fn system_version(&self) -> rpc::system::error::Result<String> {
-        Ok(self.impl_version.into())
-    }
-
-    fn system_chain(&self) -> rpc::system::error::Result<String> {
-        Ok(self.chain_name.clone())
-    }
-}
-
-pub fn default_rpc_config() -> RpcConfig {
-    RpcConfig {
-        chain_name: CHAIN_NAME.to_string(),
-        impl_name: IMPL_NAME,
-        impl_version: IMPL_VERSION,
-    }
-}
-
-pub fn maybe_start_server<T, F>(
-    address: Option<SocketAddr>,
-    start: F,
-) -> Result<Option<T>, io::Error>
-where
-    F: Fn(&SocketAddr) -> Result<T, io::Error>,
-{
-    Ok(match address {
-        Some(mut address) => Some(start(&address).or_else(|e| match e.kind() {
-            io::ErrorKind::AddrInUse | io::ErrorKind::PermissionDenied => {
-                warn!("Unable to bind server to {}. Trying random port.", address);
-                address.set_port(0);
-                start(&address)
-            }
-            _ => Err(e),
-        })?),
-        None => None,
-    })
-}
+pub mod author;
+pub mod chain;
+pub mod metadata;
+pub mod state;
+pub mod system;

@@ -8,9 +8,14 @@ use self::keys::DisplayLayout;
 use super::*;
 use runtime_io;
 use runtime_io::with_externalities;
+<<<<<<< HEAD
+use self::base58::FromBase58;
+use self::keys::DisplayLayout;
+=======
 use runtime_primitives::testing::{Digest, DigestItem, Header};
 use runtime_primitives::traits::{BlakeTwo256, Identity};
 use runtime_primitives::BuildStorage;
+>>>>>>> develop
 use runtime_support::StorageValue;
 use substrate_primitives::{Blake2Hasher, H256 as S_H256};
 
@@ -56,6 +61,8 @@ impl timestamp::Trait for Test {
     type Moment = u64;
 }
 
+<<<<<<< HEAD
+=======
 impl cxsystem::Trait for Test {}
 
 impl associations::Trait for Test {
@@ -63,10 +70,20 @@ impl associations::Trait for Test {
     type Event = ();
 }
 
+>>>>>>> develop
 impl cxsupport::Trait for Test {}
 
 impl tokenbalances::Trait for Test {
     const CHAINX_SYMBOL: tokenbalances::SymbolString = b"pcx";
+<<<<<<< HEAD
+    const CHAINX_PRECISION: tokenbalances::Precision = 8;
+    const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"this is pcx for mock";
+    type TokenBalance = u128;
+    type Event = ();
+}
+
+impl finacial_recordes::Trait for Test {
+=======
     const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"this is pcx for mock";
     type TokenBalance = u128;
     type Event = ();
@@ -89,6 +106,7 @@ impl staking::Trait for Test {
 impl session::Trait for Test {
     type ConvertAccountIdToSessionKey = Identity;
     type OnSessionChange = ();
+>>>>>>> develop
     type Event = ();
 }
 
@@ -129,6 +147,56 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             network_id: 1,
             utxo_max_index: 0,
             irr_block: 6,
+<<<<<<< HEAD
+            btc_fee: 10, 
+            accounts_max_index: 0,
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
+            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
+            fee: 0,
+        }.build_storage()
+            .unwrap(),
+    );
+    r.into()
+}
+
+pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Hasher> {
+    let mut r = system::GenesisConfig::<Test>::default()
+        .build_storage()
+        .unwrap();
+
+    // bridge btc
+    r.extend(
+        GenesisConfig::<Test> {
+            // start genesis block: (genesis, blocknumber)
+            genesis: (
+                BlockHeader {
+                    version: 1,
+                    previous_header_hash: Default::default(),
+                    merkle_root_hash: H256::from_reversed_str(
+                        "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
+                    ),
+                    time: 1296688602,
+                    bits: Compact::new(486604799),
+                    nonce: 414098458,
+                },
+                5,
+            ),
+            params_info: Params::new(
+                520159231, // max_bits
+                2 * 60 * 60, // block_max_future
+                64, // max_fork_route_preset
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60, // target_spacing_seconds
+                4,
+            ), // retargeting_factor
+            network_id: 0,
+            utxo_max_index: 0,
+            irr_block: 6,
+            btc_fee: 10, 
+            accounts_max_index: 0,
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
+            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
+=======
             btc_fee: 1000,
             accounts_max_index: 0,
             cert_address: keys::Address::from_layout(&"2N6JXYKYLqN4e2A96FLnY5J1Mjj5MHXhp6b".from_base58().unwrap()).unwrap(),
@@ -181,6 +249,7 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
             cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
             receive_address: keys::Address::from_layout(&"2N8fUxnFttG5UgPUQDDKXmyRJbr5ZkV4kx3".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c321020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f2102a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b9953ae".to_vec(),
+>>>>>>> develop
             fee: 0,
         }.build_storage()
             .unwrap(),
@@ -294,12 +363,19 @@ pub fn new_test_mock_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             network_id: 1,
             utxo_max_index: 0,
             irr_block: 6,
+<<<<<<< HEAD
+            btc_fee: 10,
+            accounts_max_index: 0,
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
+            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
+=======
             btc_fee: 1000,
             accounts_max_index: 0,
             cert_address: keys::Address::from_layout(&"2N6JXYKYLqN4e2A96FLnY5J1Mjj5MHXhp6b".from_base58().unwrap()).unwrap(),
             cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
             receive_address: keys::Address::from_layout(&"2N8fUxnFttG5UgPUQDDKXmyRJbr5ZkV4kx3".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c321020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f2102a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b9953ae".to_vec(),
+>>>>>>> develop
             fee: 0,
         }.build_storage()
             .unwrap(),
@@ -418,6 +494,10 @@ fn test() {
         println!("0x{:}", HexDisplay::from(&a));
     })
 }
+<<<<<<< HEAD
+
+=======
+>>>>>>> develop
 
 #[test]
 fn test_init_blocks() {
@@ -673,12 +753,19 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
             network_id: 1,
             utxo_max_index: 0,
             irr_block: 6,
+<<<<<<< HEAD
+            btc_fee: 10,
+            accounts_max_index: 0,
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
+            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
+=======
             btc_fee: 1000,
             accounts_max_index: 0,
             cert_address: keys::Address::from_layout(&"2N6JXYKYLqN4e2A96FLnY5J1Mjj5MHXhp6b".from_base58().unwrap()).unwrap(),
             cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
             receive_address: keys::Address::from_layout(&"2N8fUxnFttG5UgPUQDDKXmyRJbr5ZkV4kx3".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c321020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f2102a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b9953ae".to_vec(),
+>>>>>>> develop
             fee: 0,
         }.build_storage()
             .unwrap(),
@@ -749,12 +836,19 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
             network_id: 1,
             utxo_max_index: 0,
             irr_block: 6,
+<<<<<<< HEAD
+            btc_fee: 10,
+            accounts_max_index: 0,
+            receive_address: keys::Address::from_layout(&"2N4C127fBSmqBsNuHeLmAbZEVSPfV6GB2j2".from_base58().unwrap()).unwrap(),
+            redeem_script: b"52210257aff1270e3163aaae9d972b3d09a2385e0d4877501dbeca3ee045f8de00d21c2103fd58c689594b87bbe20a9a00091d074dc0d9f49a988a7ad4c2575adeda1b507c2102bb2a5aa53ba7c0d77bdd86bb9553f77dd0971d3a6bb6ad609787aa76eb17b6b653ae".to_vec(),
+=======
             btc_fee: 1000,
             accounts_max_index: 0,
             cert_address: keys::Address::from_layout(&"2N6JXYKYLqN4e2A96FLnY5J1Mjj5MHXhp6b".from_base58().unwrap()).unwrap(),
             cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
             receive_address: keys::Address::from_layout(&"2N8fUxnFttG5UgPUQDDKXmyRJbr5ZkV4kx3".from_base58().unwrap()).unwrap(),
             redeem_script: b"52210227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c321020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f2102a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b9953ae".to_vec(),
+>>>>>>> develop
             fee: 0,
         }.build_storage()
             .unwrap(),

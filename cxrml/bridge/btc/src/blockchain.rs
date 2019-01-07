@@ -4,12 +4,29 @@ use codec::Encode;
 use rstd::marker::PhantomData;
 use rstd::prelude::*;
 use rstd::result::Result;
+<<<<<<< HEAD
+use rstd::marker::PhantomData;
+use runtime_support::{StorageMap, StorageValue};
+use runtime_primitives::traits::As;
+use {IrrBlock, BtcFee, NetworkId, AddressMap};
+=======
+>>>>>>> develop
 use runtime_io;
 use runtime_primitives::traits::As;
 use runtime_support::{StorageMap, StorageValue};
 use {BtcFee, IrrBlock};
 
 use chain::BlockHeader;
+<<<<<<< HEAD
+use finacial_recordes::Symbol;
+use finacial_recordes;
+use script::Script;
+
+use {Trait, BlockHeaderFor, BestIndex, NumberForHash, HashsForNumber, ParamsInfo, AccountMap,
+     Params, DepositCache, TxProposal};
+
+use tx::{TxStorage, RollBack, Proposal};
+=======
 use financial_records;
 use financial_records::Symbol;
 use primitives::hash::H256;
@@ -21,6 +38,7 @@ use {
 };
 
 use tx::{Proposal, RollBack, TxStorage};
+>>>>>>> develop
 
 use tokenbalances::TokenT;
 
@@ -123,6 +141,11 @@ impl<T: Trait> Chain<T> {
         let best_hash = best_index.hash;
         let best_bumber = best_index.number;
 
+<<<<<<< HEAD
+        //todo change unwrap
+        let (best_header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) =
+            <BlockHeaderFor<T>>::get(&best_hash).unwrap();
+=======
         let best_header: BlockHeader =
             if let Some((header, _, _)) = <BlockHeaderFor<T>>::get(&best_hash) {
                 header
@@ -130,6 +153,7 @@ impl<T: Trait> Chain<T> {
                 return Err(ChainErr::OtherErr("not found blockheader for this hash"));
             };
 
+>>>>>>> develop
         let new_best_header = BestHeader {
             hash: best_header.previous_header_hash.clone(),
             number: if best_bumber > 0 {
@@ -158,12 +182,18 @@ impl<T: Trait> Chain<T> {
         let best_hash = best_index.hash;
         let best_number = best_index.number;
 
+<<<<<<< HEAD
+        //todo change unwrap
+        let (header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) =
+            <BlockHeaderFor<T>>::get(hash).unwrap();
+=======
         let header: BlockHeader = if let Some((header, _, _)) = <BlockHeaderFor<T>>::get(hash) {
             header
         } else {
             return Err(ChainErr::OtherErr("not found blockheader for this hash"));
         };
 
+>>>>>>> develop
         if best_hash != header.previous_header_hash {
             return Err(ChainErr::CannotCanonize);
         }
@@ -180,6 +210,30 @@ impl<T: Trait> Chain<T> {
             },
         };
 
+<<<<<<< HEAD
+        let symbol: Symbol = b"x-btc".to_vec();
+        let irr_block = <IrrBlock<T>>::get();
+        // Deposit
+        if let Some(vec) = <DepositCache<T>>::take() {
+            runtime_io::print("------DepositCache take");
+            let mut uncomplete_cache: Vec<(T::AccountId, u64, H256)> = Vec::new();
+            for (account_id, amount, block_hash) in vec {
+                match <NumberForHash<T>>::get(block_hash.clone()) {
+                    Some(height) => {
+                        if new_best_header.number > height + irr_block {
+                            runtime_io::print("------finacial_recordes deposit");
+                            <finacial_recordes::Module<T>>::deposit(
+                                &account_id,
+                                &symbol,
+                                As::sa(amount),
+                            );
+                        } else {
+                            uncomplete_cache.push((account_id, amount, block_hash));
+                        }
+                    }
+                    None => {
+                        uncomplete_cache.push((account_id, amount, block_hash));
+=======
         <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
         <HashsForNumber<T>>::mutate(new_best_header.number, |v| {
             let h = new_best_header.hash.clone();
@@ -224,6 +278,7 @@ impl<T: Trait> Chain<T> {
                     None => {
                         // TODO 遇到分叉，需要从deposit cache剔除相应的交易
                         uncomplete_cache.push((account_id, amount, tx_hash, block_hash));
+>>>>>>> develop
                     } // Optmise
                 }
             }
@@ -231,6 +286,67 @@ impl<T: Trait> Chain<T> {
         }
 
         // Withdraw
+<<<<<<< HEAD
+        let candidate = <TxProposal<T>>::get();
+        if candidate.is_some() {
+            let tx = candidate.unwrap();
+            match <NumberForHash<T>>::get(tx.block_hash) {
+                Some(height) => {
+                    if new_best_header.number > height + irr_block {
+                        for output in tx.tx.outputs.iter() {
+                            let script: Script = output.clone().script_pubkey.into();
+                            let script_address =
+                                script.extract_destinations().unwrap_or(Vec::new());
+                            let network_id = <NetworkId<T>>::get();
+                            let network = if network_id == 1 {
+                                keys::Network::Testnet
+                            } else {
+                                keys::Network::Mainnet
+                            };
+                            let address = keys::Address {
+                                kind: script_address[0].kind,
+                                network: network,
+                                hash: script_address[0].hash.clone(),
+                            };
+                            let account_id = <AddressMap<T>>::get(address);
+                            if account_id.is_some() {
+                                <finacial_recordes::Module<T>>::withdrawal_finish(
+                                    &account_id.unwrap(),
+                                    &symbol,
+                                    true,
+                                );
+                            }
+                        }
+                        let vec = <finacial_recordes::Module<T>>::get_withdraw_cache(&symbol);
+                        if vec.is_some() {
+                            let mut address_vec = Vec::new();
+                            for (account_id, balance) in vec.unwrap() {
+                                let address = <AccountMap<T>>::get(account_id);
+                                if address.is_some() {
+                                    address_vec.push((address.unwrap(), balance.as_() as u64));
+                                }
+                            }
+                            let btc_fee = <BtcFee<T>>::get();
+                            <Proposal<T>>::create_proposal(address_vec, btc_fee);
+                        } else {
+                            <TxProposal<T>>::kill();
+                        }
+                    }
+                }
+                None => {}
+            }
+        }
+
+        <NumberForHash<T>>::insert(new_best_header.hash.clone(), new_best_header.number);
+        runtime_io::print("------------");
+        runtime_io::print(new_best_header.hash.to_vec().as_slice());
+        <HashsForNumber<T>>::mutate(new_best_header.number, |v| {
+            let h = new_best_header.hash.clone();
+            if v.contains(&h) == false {
+                v.push(h);
+            }
+        });
+=======
         let len = Module::<T>::tx_proposal_len();
         // get last proposal
         if len > 0 {
@@ -310,6 +426,7 @@ impl<T: Trait> Chain<T> {
                 return Err(ChainErr::OtherErr(e));
             }
         }
+>>>>>>> develop
 
         Ok(())
     }
@@ -337,6 +454,11 @@ impl<T: Trait> Chain<T> {
 
     fn block_origin(header: &BlockHeader) -> Result<BlockOrigin, ChainErr> {
         let best_index: BestHeader = <BestIndex<T>>::get();
+<<<<<<< HEAD
+        // TODO change unwrap
+        let (best_header, _, _): (BlockHeader, T::AccountId, T::BlockNumber) =
+            <BlockHeaderFor<T>>::get(&best_index.hash).unwrap();
+=======
 
         let best_header: BlockHeader =
             if let Some((header, _, _)) = <BlockHeaderFor<T>>::get(&best_index.hash) {
@@ -345,6 +467,7 @@ impl<T: Trait> Chain<T> {
                 return Err(ChainErr::OtherErr("not found blockheader for this hash"));
             };
 
+>>>>>>> develop
         if <NumberForHash<T>>::exists(header.hash()) {
             return Ok(BlockOrigin::KnownBlock);
         }

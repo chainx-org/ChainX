@@ -42,6 +42,63 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, output: &Transact
 }
 
 // Only support inputs 0, To do: Support every input.
+<<<<<<< HEAD
+pub fn handle_proposal<T: Trait>(tx: Transaction, who: &T::AccountId) -> Result {
+    let redeem_script: Script = if let Some(redeem) = <RedeemScript<T>>::get() {
+        redeem.into()
+    } else {
+        return Err("should set redeem script first");
+    };
+    let script: Script = tx.inputs[0].script_sig.clone().into();
+    let (sigs, dem) = if let Ok((sigs, dem)) = script.extract_multi_scriptsig() {
+        (sigs, dem)
+    } else {
+        return Err("InvalidSignature");
+    };
+    if redeem_script != dem {
+        return Err("redeem script not equail");
+    }
+
+    let candidate = if let Some(candidate) = <TxProposal<T>>::get() {
+        candidate
+    } else {
+        return Err("No candidate tx");
+    };
+
+    let lenth = candidate.proposer.len() + 1;
+    if lenth != sigs.len() {
+        return Err("sigs lenth not right");
+    }
+
+    let spent_tx =
+        if let Some(spent_tx) = <TxStorage<T>>::find_tx(&tx.inputs[0].previous_output.hash) {
+            spent_tx
+        } else {
+            return Err("Can't find this input UTXO");
+        };
+    let output = &spent_tx.outputs[tx.inputs[0].previous_output.index as usize];
+    let (keys, siglen, _keylen) = script.parse_redeem_script().unwrap();
+    for sig in sigs.clone() {
+        let mut verify = false;
+        for key in keys.clone() {
+            if verify_sign(&sig, &key, &tx, output) {
+                verify = true;
+                break;
+            }
+        }
+        if verify == false {
+            return Err("Verify sign error");
+        }
+    }
+    let mut proposer = candidate.proposer.clone();
+    proposer.push(who.clone());
+    <TxProposal<T>>::put(&CandidateTx {
+        proposer: proposer,
+        tx: tx,
+        perfection: sigs.len() == siglen as usize,
+        block_hash: Default::default(),
+    });
+=======
 pub fn handle_proposal<T: Trait>(_tx: Transaction, _who: &T::AccountId) -> Result {
     //    let mut candidate = if let Some(candidate) = <TxProposal<T>>::get() {
     //        candidate
@@ -95,6 +152,7 @@ pub fn handle_proposal<T: Trait>(_tx: Transaction, _who: &T::AccountId) -> Resul
     //    candidate.tx = tx;
     //    candidate.proposers = proposers;
     //    TxProposal::<T>::put(condidate);
+>>>>>>> develop
 
     Ok(())
 }
@@ -102,6 +160,13 @@ pub fn handle_proposal<T: Trait>(_tx: Transaction, _who: &T::AccountId) -> Resul
 pub struct Proposal<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> Proposal<T> {
+<<<<<<< HEAD
+    pub fn create_proposal(address: Vec<(Address, u64)>, fee: u64) -> Result {
+        if None != <TxProposal<T>>::get() {
+            return Err(
+                "There are candidates to reflect that the transaction is being processed",
+            );
+=======
     pub fn create_proposal(withdrawal_record_indexs: Vec<(T::AccountId, u32)>, fee: u64) -> Result {
         let len = Module::<T>::tx_proposal_len();
         if len > 0 {
@@ -110,6 +175,7 @@ impl<T: Trait> Proposal<T> {
                     return Err("last condidate tx has not confirmed yet");
                 }
             }
+>>>>>>> develop
         }
         let mut tx = Transaction {
             version: 1,
@@ -176,9 +242,18 @@ impl<T: Trait> Proposal<T> {
                 script_pubkey: script.into(),
             });
         }
+<<<<<<< HEAD
+        <TxProposal<T>>::put(&CandidateTx {
+            proposer: Vec::new(),
+            tx: tx,
+            perfection: false,
+            block_hash: Default::default(),
+        });
+=======
 
         TxProposal::<T>::insert(len, CandidateTx::new(tx, outs));
         TxProposalLen::<T>::put(len + 1);
+>>>>>>> develop
 
         Ok(())
     }

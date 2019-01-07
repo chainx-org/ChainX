@@ -25,7 +25,29 @@ use primitives::bytes;
 
 use rstd::prelude::*;
 use runtime_primitives::generic;
-use runtime_primitives::traits::BlakeTwo256;
+use runtime_primitives::traits::{self, BlakeTwo256};
+pub use runtime_primitives::BasicInherentData as InherentData;
+
+pub static mut LOCAL_KEY: Option<AccountId> = None;
+
+pub fn set_blockproducer(producer: AccountId) {
+    unsafe {
+        LOCAL_KEY = Some(producer);
+    }
+}
+
+pub trait BlockProducer {
+    fn block_producer() -> Option<&'static AccountId> {
+        unsafe {
+            match LOCAL_KEY {
+                None => None,
+                Some(ref k) => Some(k),
+            }
+        }
+    }
+}
+
+impl BlockProducer for InherentData {}
 
 /// Signature on candidate's block data by a collator.
 pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
@@ -70,68 +92,23 @@ pub type ChainId = u32;
 /// Index of a transaction in the relay chain. 32-bit should be plenty.
 pub type Index = u64;
 
+/// Bigger Acceleration means more chances be to included in a block for a transaction.
+pub type Acceleration = u32;
+
 pub type Signature = runtime_primitives::Ed25519Signature;
 
 /// A timestamp: seconds since the unix epoch.
 pub type Timestamp = u64;
 
 /// The balance of an account.
-/// 128-bits (or 38 significant decimal figures) will allow for 10m currency (10^7) at a resolution
-/// to all for one second's worth of an annualised 50% reward be paid to a unit holder (10^11 unit
-/// denomination), or 10^18 total atomic units, to grow at 50%/year for 51 years (10^9 multiplier)
-/// for an eventual total of 10^27 units (27 significant decimal figures).
-/// We round denomination to 10^12 (12 sdf), and leave the other redundancy at the upper end so
-/// that 32 bits may be multiplied with a balance in 128 bits without worrying about overflow.
-pub type Balance = u128;
+/// u64 for chainx token and all assets type, if the asset is not suit for u64, choose a suitable precision
+pub type Balance = u64;
 
 /// "generic" block ID for the future-proof block type.
-// TODO: parameterize blockid only as necessary.
 pub type BlockId = generic::BlockId<Block>;
 
-/// Inherent data to include in a block.
-#[derive(Encode, Decode)]
-pub struct InherentData {
-    /// Current timestamp.
-    pub timestamp: Timestamp,
-    /// Indices of offline validators.
-    pub offline_indices: Vec<u32>,
-    /// block producer
-    pub block_producer: AccountId,
-}
-
-/// Candidate receipt type.
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[cfg_attr(feature = "std", serde(deny_unknown_fields))]
-pub struct CandidateReceipt {
-    /// chainx account id.
-    pub collator: AccountId,
-    /// Signature on blake2-256 of the block data by collator.
-    pub signature: CandidateSignature,
-    /// blake2-256 Hash of block data.
-    pub block_data_hash: Hash,
-}
-
-impl CandidateReceipt {
-    /// Get the blake2_256 hash
-    #[cfg(feature = "std")]
-    pub fn hash(&self) -> Hash {
-        use runtime_primitives::traits::{BlakeTwo256, Hash};
-        BlakeTwo256::hash_of(self)
-    }
-
-    /// Check integrity vs. provided block data.
-    pub fn check_signature(&self) -> Result<(), ()> {
-        use runtime_primitives::traits::Verify;
-
-        if self
-            .signature
-            .verify(&self.block_data_hash.0[..], &self.collator)
-        {
-            Ok(())
-        } else {
-            Err(())
-        }
+impl traits::Extrinsic for UncheckedExtrinsic {
+    fn is_signed(&self) -> Option<bool> {
+        None
     }
 }

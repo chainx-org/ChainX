@@ -1,0 +1,39 @@
+[package]
+name = "xrml-xassets-assets"
+version = "0.4.0"
+authors = ["Chainpool <https://www.chainx.org>"]
+
+[dependencies]
+hex-literal = "0.1.0"
+serde = { version = "1.0", default_features = false }
+serde_derive = { version = "1.0", optional = true }
+parity-codec = { version = "2.0", default-features = false }
+parity-codec-derive = { version = "2.0", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
+sr-std = { git = "https://github.com/chainpool/substrate", default_features = false }
+sr-io = { git = "https://github.com/chainpool/substrate", default_features = false }
+sr-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
+srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
+srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
+srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
+
+# chainx runtime module
+xrml-xsupport = { path = "../../xsupport", default_features = false }
+
+[features]
+default = ["std"]
+std=[
+    "serde/std",
+    "serde_derive",
+    "parity-codec/std",
+    "parity-codec-derive/std",
+    "substrate-primitives/std",
+    "sr-std/std",
+    "sr-io/std",
+    "sr-primitives/std",
+    "srml-support/std",
+    "srml-system/std",
+    "srml-balances/std",
+    # chainx runtime module
+    "xrml-xsupport/std",
+]
