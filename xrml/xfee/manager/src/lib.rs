@@ -126,7 +126,7 @@ impl<T: Trait> Module<T> {
         }
 
         assert!(
-            to_list.iter().fold(0, |acc, (rate, _)| acc + rate) != 10,
+            to_list.iter().fold(0, |acc, (rate, _)| acc + rate) == 10,
             "the rate sum must be 10 part."
         );
 
