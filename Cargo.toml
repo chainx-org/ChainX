@@ -36,6 +36,7 @@ members = [
     "cli",
     "rpc",
     "rpc-servers",
+    "xr-primitives",
 
     # xrml
     "xrml/xsystem",

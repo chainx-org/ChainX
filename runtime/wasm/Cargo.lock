@@ -172,6 +172,7 @@ dependencies = [
  "substrate-consensus-aura-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
  "xrml-fee-manager 0.4.0",
  "xrml-mining-staking 0.4.0",
  "xrml-mining-tokens 0.4.0",
@@ -2207,6 +2208,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "xr-primitives"
+version = "0.4.0"
+dependencies = [
+ "integer-sqrt 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.83 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.83 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+]
+
+[[package]]
 name = "xrml-fee-manager"
 version = "0.4.0"
 dependencies = [
@@ -2217,7 +2234,6 @@ dependencies = [
  "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-xaccounts 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
 
@@ -2315,7 +2331,6 @@ dependencies = [
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-xaccounts 0.4.0",
  "xrml-xsupport 0.4.0",
 ]
 

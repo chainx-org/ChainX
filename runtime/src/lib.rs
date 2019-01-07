@@ -6,6 +6,13 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
+#[cfg(test)]
+#[macro_use]
+extern crate hex_literal;
+
+#[cfg(test)]
+extern crate serde;
+
 #[macro_use]
 extern crate parity_codec_derive;
 extern crate parity_codec as codec;
@@ -41,6 +48,7 @@ extern crate srml_treasury as treasury;
 
 // chainx
 extern crate chainx_primitives;
+extern crate xr_primitives;
 pub extern crate xrml_xaccounts as xaccounts;
 pub extern crate xrml_xsystem as xsystem;
 // fee;
@@ -90,8 +98,7 @@ pub use timestamp::Call as TimestampCall;
 
 // chainx
 use chainx_primitives::{
-    AccountId, AccountIndex, Balance, BlockNumber, BlockProducer, Hash, Index, SessionKey,
-    Signature,
+    Acceleration, AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature,
 };
 // chainx runtime
 // xassets
@@ -315,8 +322,9 @@ pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// BlockId type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
-/// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Index, Call, Signature>;
+/// Custom Unchecked extrinsic type as expected by this runtime.
+pub type UncheckedExtrinsic =
+    xr_primitives::generic::UncheckedMortalExtrinsic<Address, Index, Call, Signature, Acceleration>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive =
     xexecutive::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;

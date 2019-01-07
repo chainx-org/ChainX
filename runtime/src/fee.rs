@@ -1,21 +1,24 @@
 // Copyright 2018 Chainpool
 
-//use balances::Call as BalancesCall;
 use xassets::Call as XAssetsCall;
 use xbitcoin::Call as XbitcoinCall;
 use xprocess::Call as XAssetsProcessCall;
 use xstaking::Call as XStakingCall;
 
+use Acceleration;
 use Call;
 
 pub trait CheckFee {
-    fn check_fee(&self) -> Option<u64>;
+    fn check_fee(&self, acc: Acceleration) -> Option<u64>;
 }
 
 impl CheckFee for Call {
-    fn check_fee(&self) -> Option<u64> {
-        // ret fee_power,     total_fee = base_fee * fee_power + byte_fee * bytes
-        match self {
+    /// Return fee_power, which is part of the total_fee.
+    /// total_fee = base_fee * fee_power + byte_fee * bytes
+    ///
+    /// fee_power = power_per_call * acceleration
+    fn check_fee(&self, acc: Acceleration) -> Option<u64> {
+        let base_power = match self {
             // xassets
             Call::XAssets(call) => match call {
                 XAssetsCall::transfer(_, _, _, _) => Some(10),
@@ -35,6 +38,7 @@ impl CheckFee for Call {
                 XbitcoinCall::push_transaction(_) => Some(10),
                 _ => None,
             },
+            // xmining
             Call::XStaking(call) => match call {
                 XStakingCall::register(_, _, _, _, _, _) => Some(100),
                 XStakingCall::refresh(_, _) => Some(100),
@@ -45,6 +49,11 @@ impl CheckFee for Call {
                 _ => None,
             },
             _ => None,
+        };
+
+        match base_power {
+            Some(p) => Some(p * acc as u64),
+            None => None,
         }
     }
 }

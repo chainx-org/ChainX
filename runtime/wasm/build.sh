@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
 if cargo --version | grep -q "nightly"; then
 	CARGO_CMD="cargo"
 else

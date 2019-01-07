@@ -92,6 +92,9 @@ pub type ChainId = u32;
 /// Index of a transaction in the relay chain. 32-bit should be plenty.
 pub type Index = u64;
 
+/// Bigger Acceleration means more chances be to included in a block for a transaction.
+pub type Acceleration = u32;
+
 pub type Signature = runtime_primitives::Ed25519Signature;
 
 /// A timestamp: seconds since the unix epoch.

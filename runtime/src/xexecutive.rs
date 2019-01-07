@@ -33,6 +33,7 @@ use runtime_primitives::transaction_validity::{
 use runtime_primitives::{ApplyError, ApplyOutcome};
 use srml_support::Dispatchable;
 use system::extrinsics_root;
+use xr_primitives::traits::Accelerable;
 
 mod internal {
     pub enum ApplyError {
@@ -60,7 +61,7 @@ impl<
     Finalisation: OnFinalise<System::BlockNumber>,
 > Executive<System, Block, Context, Payment, Finalisation> where
     Block::Extrinsic: Checkable<Context> + Codec,
-    <Block::Extrinsic as Checkable<Context>>::Checked: Applyable<Index=System::Index, AccountId=System::AccountId>,
+    <Block::Extrinsic as Checkable<Context>>::Checked: Applyable<Index=System::Index, AccountId=System::AccountId> + Accelerable<Index=System::Index, AccountId=System::AccountId>,
     <<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call: Dispatchable + CheckFee,
     <<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call as Dispatchable>::Origin: From<Option<System::AccountId>>
 {
@@ -160,9 +161,13 @@ impl<
             signed_extrinsic = true;
         }
 
+        let acc = xt.acceleration();
+
         let (f, s) = xt.deconstruct();
         if signed_extrinsic {
-            if let Some(fee_power) = f.check_fee() {
+            // Acceleration definitely exists for a signed extrinsic.
+            let acc = acc.unwrap();
+            if let Some(fee_power) = f.check_fee(acc.as_() as u32) {
                 Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power).map_err(|_| internal::ApplyError::CantPay)?;
 
                 // AUDIT: Under no circumstances may this function panic from here onwards.
@@ -221,7 +226,17 @@ impl<
             Err(_) => return TransactionValidity::Invalid,
         };
 
-        let valid = if let (Some(sender), Some(index)) = (xt.sender(), xt.index()) {
+        // Acceleration can't be zero or empty.
+        match xt.acceleration() {
+            Some(acc) => {
+                if acc.is_zero() {
+                    return TransactionValidity::Invalid;
+                }
+            },
+            None => return TransactionValidity::Invalid,
+        }
+
+        let valid = if let (Some(sender), Some(index), Some(acceleration)) = (xt.sender(), xt.index(), xt.acceleration()) {
             // check index
             let mut expected_index = <system::Module<System>>::account_nonce(sender);
             if index < &expected_index {
@@ -238,7 +253,7 @@ impl<
             }
 
             TransactionValidity::Valid {
-                priority: encoded_len as TransactionPriority,
+                priority: acceleration.as_() as TransactionPriority,
                 requires: deps,
                 provides: vec![(sender, *index).encode()],
                 longevity: TransactionLongevity::max_value(),
@@ -247,8 +262,9 @@ impl<
             TransactionValidity::Invalid
         };
 
+        let acc = xt.acceleration().unwrap();
         let (f, s) = xt.deconstruct();
-        if let Some(fee_power) = f.check_fee() {
+        if let Some(fee_power) = f.check_fee(acc.as_() as u32) {
             if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power).is_err() {
                 return TransactionValidity::Invalid;
             } else {
@@ -262,14 +278,21 @@ impl<
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use balances::Call;
+    use fee::CheckFee;
     use primitives::{Blake2Hasher, H256};
     use runtime_io::with_externalities;
     use runtime_primitives::testing::{Block, Digest, DigestItem, Header};
-    use runtime_primitives::traits::{BlakeTwo256, Header as HeaderT};
+    use runtime_primitives::traits::{
+        self, Applyable, BlakeTwo256, Checkable, Header as HeaderT, Member,
+    };
     use runtime_primitives::BuildStorage;
     use system;
+    use Acceleration;
+
+    use codec::{Codec, Encode};
+    use serde::{Serialize, Serializer};
+    use std::{fmt, fmt::Debug};
 
     impl_outer_origin! {
         pub enum Origin for Runtime {
@@ -278,7 +301,7 @@ mod tests {
 
     impl_outer_event! {
         pub enum MetaEvent for Runtime {
-            balances<T>,
+            balances<T>, xaccounts<T>,
         }
     }
 
@@ -309,14 +332,86 @@ mod tests {
 
     impl fee_manager::Trait for Runtime {}
 
+    impl xsystem::Trait for Runtime {
+        const XSYSTEM_SET_POSITION: u32 = 3;
+    }
+
+    impl xaccounts::Trait for Runtime {
+        type Event = MetaEvent;
+    }
+
     impl CheckFee for Call<Runtime> {
-        fn check_fee(&self) -> Option<u64> {
+        fn check_fee(&self, acc: Acceleration) -> Option<u64> {
             // ret fee_power,     total_fee = base_fee * fee_power + byte_fee * bytes
-            Some(1)
+            Some(1 * acc as u64)
         }
     }
 
-    type TestXt = runtime_primitives::testing::TestXt<Call<Runtime>>;
+    // Snippets from sr_primitives::testing, fitting acceleration in.
+    #[derive(PartialEq, Eq, Clone, Encode, Decode)]
+    struct XTestXt<Call>(pub Option<u64>, pub u64, pub Call, pub u32);
+
+    impl<Call> Serialize for XTestXt<Call>
+    where
+        XTestXt<Call>: Encode,
+    {
+        fn serialize<S>(&self, seq: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            self.using_encoded(|bytes| seq.serialize_bytes(bytes))
+        }
+    }
+
+    impl<Call> Debug for XTestXt<Call> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "XTestXt({:?}, {:?}, {:?})", self.0, self.1, self.3)
+        }
+    }
+
+    impl<Call: Codec + Sync + Send, Context> Checkable<Context> for XTestXt<Call> {
+        type Checked = Self;
+        fn check(self, _: &Context) -> Result<Self::Checked, &'static str> {
+            Ok(self)
+        }
+    }
+    impl<Call: Codec + Sync + Send> traits::Extrinsic for XTestXt<Call> {
+        fn is_signed(&self) -> Option<bool> {
+            None
+        }
+    }
+    impl<Call> Applyable for XTestXt<Call>
+    where
+        Call: 'static + Sized + Send + Sync + Clone + Eq + Codec + Debug,
+    {
+        type AccountId = u64;
+        type Index = u64;
+        type Call = Call;
+        fn sender(&self) -> Option<&u64> {
+            self.0.as_ref()
+        }
+        fn index(&self) -> Option<&u64> {
+            self.0.as_ref().map(|_| &self.1)
+        }
+        fn deconstruct(self) -> (Self::Call, Option<Self::AccountId>) {
+            (self.2, self.0)
+        }
+    }
+    impl<Call> xr_primitives::traits::Accelerable for XTestXt<Call>
+    where
+        Call: Member,
+    {
+        type Index = u64;
+        type AccountId = u64;
+        type Call = Call;
+        type Acceleration = u32;
+
+        fn acceleration(&self) -> Option<Self::Acceleration> {
+            Some(self.3)
+        }
+    }
+    type TestXt = XTestXt<Call<Runtime>>;
+
     type Executive = super::Executive<
         Runtime,
         Block<TestXt>,
@@ -345,8 +440,7 @@ mod tests {
             .unwrap()
             .0,
         );
-        let xt =
-            runtime_primitives::testing::TestXt(Some(1), 0, Call::transfer(2.into(), 69.into()));
+        let xt = XTestXt(Some(1), 0, Call::transfer(2.into(), 69.into()), 1);
         let mut t = runtime_io::TestExternalities::<Blake2Hasher>::new(t);
         with_externalities(&mut t, || {
             Executive::initialise_block(&Header::new(
@@ -358,6 +452,42 @@ mod tests {
             ));
             Executive::apply_extrinsic(xt).unwrap();
             assert_eq!(<balances::Module<Runtime>>::total_balance(&1), 32);
+            assert_eq!(<balances::Module<Runtime>>::total_balance(&2), 69);
+        });
+    }
+
+    #[test]
+    fn accelerate_balance_transfer_dispatch_works() {
+        let mut t = system::GenesisConfig::<Runtime>::default()
+            .build_storage()
+            .unwrap()
+            .0;
+        t.extend(
+            balances::GenesisConfig::<Runtime> {
+                balances: vec![(1, 111)],
+                transaction_base_fee: 10,
+                transaction_byte_fee: 0,
+                existential_deposit: 0,
+                transfer_fee: 0,
+                creation_fee: 0,
+                reclaim_rebate: 0,
+            }
+            .build_storage()
+            .unwrap()
+            .0,
+        );
+        let xt = XTestXt(Some(1), 0, Call::transfer(2.into(), 69.into()), 2);
+        let mut t = runtime_io::TestExternalities::<Blake2Hasher>::new(t);
+        with_externalities(&mut t, || {
+            Executive::initialise_block(&Header::new(
+                1,
+                H256::default(),
+                H256::default(),
+                [69u8; 32].into(),
+                Digest::default(),
+            ));
+            Executive::apply_extrinsic(xt).unwrap();
+            assert_eq!(<balances::Module<Runtime>>::total_balance(&1), 22);
             assert_eq!(<balances::Module<Runtime>>::total_balance(&2), 69);
         });
     }
@@ -441,8 +571,7 @@ mod tests {
     #[test]
     fn bad_extrinsic_not_inserted() {
         let mut t = new_test_ext();
-        let xt =
-            runtime_primitives::testing::TestXt(Some(1), 42, Call::transfer(33.into(), 69.into()));
+        let xt = XTestXt(Some(1), 42, Call::transfer(33.into(), 69.into()), 1);
         with_externalities(&mut t, || {
             Executive::initialise_block(&Header::new(
                 1,
