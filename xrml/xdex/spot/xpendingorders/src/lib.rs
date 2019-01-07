@@ -58,7 +58,7 @@ use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
 
-pub trait Trait: balances::Trait + xsystem::Trait + assets::Trait {
+pub trait Trait: balances::Trait + xsystem::Trait + assets::Trait + xaccounts::Trait {
     type Amount: Parameter
         + Member
         + Codec

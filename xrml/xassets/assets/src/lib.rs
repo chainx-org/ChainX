@@ -23,7 +23,6 @@ extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 extern crate srml_system as system;
 
-extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xsupport as xsupport;
 
 //#[cfg(test)]
@@ -55,7 +54,7 @@ pub use memo::is_valid_memo;
 
 pub type Address<AccountId, AccountIndex> = balances::address::Address<AccountId, AccountIndex>;
 
-pub trait Trait: balances::Trait + xaccounts::Trait {
+pub trait Trait: balances::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -259,11 +258,12 @@ impl<T: Trait> Module<T> {
 
     pub fn total_asset_balance(token: &Token, type_: AssetType) -> T::Balance {
         if token.as_slice() == <Self as ChainT>::TOKEN && type_ == AssetType::Free {
-            let other = TotalAssetBalance::<T>::get(token)
+            let other_types = TotalAssetBalance::<T>::get(token)
                 .0
                 .iter()
+                .filter(|(&k, _)| k != AssetType::Free) // remove free calc
                 .fold(Zero::zero(), |acc, (_, v)| acc + *v);
-            balances::TotalIssuance::<T>::get() - other
+            balances::TotalIssuance::<T>::get() - other_types
         } else {
             *TotalAssetBalance::<T>::get(token)
                 .0
@@ -598,15 +598,6 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn init_account(from: &T::AccountId, to: &T::AccountId) {
-        if let None = xaccounts::Module::<T>::account_relationships(to) {
-            if balances::FreeBalance::<T>::exists(to) == false {
-                xaccounts::AccountRelationships::<T>::insert(to, from);
-                balances::Module::<T>::set_free_balance_creating(&to, Zero::zero());
-            }
-        }
-    }
-
     pub fn move_free_balance(
         from: &T::AccountId,
         to: &T::AccountId,
@@ -641,7 +632,11 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn set_balance_by_root(who: &T::AccountId, token: &Token, balances: CodecBTreeMap<AssetType, T::Balance>) -> Result {
+    pub fn set_balance_by_root(
+        who: &T::AccountId,
+        token: &Token,
+        balances: CodecBTreeMap<AssetType, T::Balance>,
+    ) -> Result {
         for (type_, val) in balances.0.into_iter() {
             let old_val = Self::asset_balance(who, token, type_);
             let old_total_val = Self::total_asset_balance(token, type_);

@@ -16,21 +16,23 @@ impl CheckFee for Call {
     fn check_fee(&self) -> Option<u64> {
         // ret fee_power,     total_fee = base_fee * fee_power + byte_fee * bytes
         match self {
-            //            Call::Balances(call) => match call {
-            //                BalancesCall::transfer(_, _) => Some(1),
-            //                _ => None,
-            //            },
-            Call::XBridgeOfBTC(call) => match call {
-                XbitcoinCall::push_header(_) => Some(20),
-                XbitcoinCall::push_transaction(_) => Some(10),
-                _ => None,
-            },
+            // xassets
             Call::XAssets(call) => match call {
-                XAssetsCall::transfer(_, _, _, _) => Some(1),
+                XAssetsCall::transfer(_, _, _, _) => Some(10),
+                // root
+                XAssetsCall::set_balance(_, _, _) => Some(0),
+                XAssetsCall::register_asset(_, _, _) => Some(0),
+                XAssetsCall::cancel_asset(_) => Some(0),
                 _ => None,
             },
             Call::XAssetsProcess(call) => match call {
                 XAssetsProcessCall::withdraw(_, _, _, _) => Some(3),
+                _ => None,
+            },
+            // xbridge
+            Call::XBridgeOfBTC(call) => match call {
+                XbitcoinCall::push_header(_) => Some(20),
+                XbitcoinCall::push_transaction(_) => Some(10),
                 _ => None,
             },
             Call::XStaking(call) => match call {

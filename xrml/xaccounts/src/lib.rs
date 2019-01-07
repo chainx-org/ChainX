@@ -85,9 +85,6 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as XAccounts {
-        /// Recommended relations, Nominees => referrer
-        pub AccountRelationships get(account_relationships): map T::AccountId => Option<T::AccountId>;
-
         /// Shares per cert.
         pub SharesPerCert get(shares_per_cert) config(): u32;
 

@@ -19,7 +19,6 @@ srml-balances = { git = "https://github.com/chainpool/substrate", default_featur
 
 # chainx runtime module
 xrml-xsupport = { path = "../../xsupport", default_features = false }
-xrml-xaccounts = { path = "../../xaccounts", default_features = false }
 
 [features]
 default = ["std"]
@@ -37,5 +36,4 @@ std=[
     "srml-balances/std",
     # chainx runtime module
     "xrml-xsupport/std",
-    "xrml-xaccounts/std",
 ]
