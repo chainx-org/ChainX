@@ -9,7 +9,6 @@ use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;
 
 use super::*;
-use xassets::{DescString, TokenString, Token};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -39,82 +38,26 @@ impl balances::Trait for Test {
     type Event = ();
 }
 
-impl cxsystem::Trait for Test {}
-
-impl associations::Trait for Test {
-    type OnCalcFee = cxsupport::Module<Test>;
-    type Event = ();
-}
-
-impl cxsupport::Trait for Test {}
-
-// define xassets module type
-pub type Balance = u128;
-
+// assets
 impl xassets::Trait for Test {
-    const CHAINX_Token: TokenString = b"pcx";
-    const CHAINX_TOKEN_DESC: DescString = b"this is pcx for mock";
-    type Balance = Balance;
     type Event = ();
-    type OnMoveToken = ();
+    type OnAssetChanged = ();
+    type OnAssetRegistration = ();
 }
 
 impl Trait for Test {
     type Event = ();
-    type OnDepositToken = ();
-    type OnWithdrawToken = ();
 }
 
-// This function basically just builds a genesis storage key/value store according to
-// our desired mockup.
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default()
         .build_storage()
-        .unwrap();
+        .unwrap()
+        .0;
     // balance
     r.extend(
         balances::GenesisConfig::<Test> {
-            balances: vec![(1, 1000), (2, 510)],
-            transaction_base_fee: 0,
-            transaction_byte_fee: 0,
-            existential_deposit: 500,
-            transfer_fee: 0,
-            creation_fee: 0,
-            reclaim_rebate: 0,
-        }
-        .build_storage()
-        .unwrap(),
-    );
-    // token balance
-    let t: Token = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
-    let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
-
-    r.extend(
-        xassets::GenesisConfig::<Test> {
-            chainx_precision: 8,
-            token_list: vec![(t, vec![]), (t2, vec![])],
-            transfer_token_fee: 10,
-        }
-        .build_storage()
-        .unwrap(),
-    );
-    // financialrecords
-    r.extend(
-        GenesisConfig::<Test> { withdrawal_fee: 10 }
-            .build_storage()
-            .unwrap(),
-    );
-    r.into()
-}
-
-pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut r = system::GenesisConfig::<Test>::default()
-        .build_storage()
-        .unwrap();
-    // balance
-    r.extend(
-        balances::GenesisConfig::<Test> {
-            balances: vec![(1, 1000), (2, 510)],
+            balances: vec![(1, 1000), (2, 510), (3, 1000)],
             transaction_base_fee: 0,
             transaction_byte_fee: 0,
             existential_deposit: 0,
@@ -123,53 +66,74 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
             reclaim_rebate: 0,
         }
         .build_storage()
-        .unwrap(),
+        .unwrap()
+        .0,
     );
-    // token balance
-    let t: Token = Token::new(b"x-btc".to_vec(), b"btc token".to_vec(), 8);
-    let t2: Token = Token::new(b"x-eth".to_vec(), b"eth token".to_vec(), 4);
+
+    let btc_asset = xassets::Asset::new(
+        b"BTC".to_vec(), // token
+        Chain::Bitcoin,
+        8, // bitcoin precision
+        b"BTC chainx".to_vec(),
+    )
+    .unwrap();
+
+    let eth_asset = xassets::Asset::new(
+        b"ETH".to_vec(), // token
+        Chain::Ethereum,
+        8, // bitcoin precision
+        b"ETH chainx".to_vec(),
+    )
+    .unwrap();
 
     r.extend(
         xassets::GenesisConfig::<Test> {
-            chainx_precision: 8,
-            token_list: vec![(t, vec![]), (t2, vec![])],
-            transfer_token_fee: 10,
+            pcx: (3, b"PCX onchain token".to_vec()),
+            memo_len: 128,
+            // asset, is_psedu_intention, init for account
+            // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
+            asset_list: vec![
+                (btc_asset, true, vec![(3, 100)]),
+                (eth_asset, true, vec![(3, 100)]),
+            ],
         }
         .build_storage()
-        .unwrap(),
+        .unwrap()
+        .0,
     );
-    // financialrecords
-    r.extend(
-        GenesisConfig::<Test> { withdrawal_fee: 10 }
-            .build_storage()
-            .unwrap(),
-    );
+
     r.into()
 }
 
-type FinancialRecords = Module<Test>;
-type Balances = xassets::Module<Test>;
-//type Balances = balances::Module<Test>;
+type Records = Module<Test>;
+type XAssets = xassets::Module<Test>;
 
 #[test]
 fn test_normal() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_Token = b"x-btc".to_vec();
+        let btc_token = b"BTC".to_vec();
 
         // deposit
-        let index = FinancialRecords::deposit_with_index(&a, &btc_Token, 100).unwrap();
-        assert_eq!(index, 0);
-        FinancialRecords::deposit_finish_with_index(&a, index, Some(vec![])).unwrap();
+        assert_ok!(Records::deposit(&a, &btc_token, 100));
+        assert_eq!(XAssets::free_balance(&a, &btc_token), 100);
+
         // withdraw
-        let index =
-            FinancialRecords::withdrawal_with_index(&a, &btc_Token, 50, vec![], vec![]).unwrap();
-        assert_eq!(index, 1);
-        FinancialRecords::withdrawal_locking_with_index(&a, index).unwrap();
-        assert_eq!(
-            FinancialRecords::withdrawal_finish_with_index(&a, index, Some(vec![])),
-            Ok(1)
-        );
+        assert_ok!(Records::withdrawal(
+            &a,
+            &btc_token,
+            50,
+            b"addr".to_vec(),
+            b"ext".to_vec()
+        ));
+
+        let numbers = Records::withdrawal_application_numbers(Chain::Bitcoin, 10).unwrap();
+        assert_eq!(numbers.len(), 1);
+
+        for i in numbers {
+            assert_ok!(Records::withdrawal_finish(i));
+        }
+        assert_eq!(XAssets::free_balance(&a, &btc_token), 50);
     })
 }
 
@@ -177,126 +141,52 @@ fn test_normal() {
 fn test_normal2() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_Token = b"x-btc".to_vec();
-        let eth_Token = b"x-eth".to_vec();
+        let btc_token = b"BTC".to_vec();
+        let eth_token = b"ETH".to_vec();
 
         // deposit
-        FinancialRecords::deposit_init(&a, &btc_Token, 100).unwrap();
-        assert_ok!(FinancialRecords::deposit_finish(
-            &a,
-            &btc_Token,
-            Some(vec![])
-        ));
-        assert_ok!(FinancialRecords::deposit(
-            &a,
-            &eth_Token,
-            100,
-            Some(vec![])
-        ));
-
-        assert_eq!(Balances::total_token_of(&a, &btc_Token), 100);
-        assert_eq!(Balances::total_token_of(&a, &eth_Token), 100);
+        assert_ok!(Records::deposit(&a, &btc_token, 100));
+        assert_eq!(XAssets::free_balance(&a, &btc_token), 100);
+        assert_ok!(Records::deposit(&a, &eth_token, 500));
+        assert_eq!(XAssets::free_balance(&a, &eth_token), 500);
 
         // withdraw
-        FinancialRecords::withdrawal(&a, &btc_Token, 50, vec![], vec![]).unwrap();
-        FinancialRecords::withdrawal(&a, &eth_Token, 50, vec![], vec![]).unwrap();
-
-        assert_ok!(FinancialRecords::withdrawal_finish(
+        assert_ok!(Records::withdrawal(
             &a,
-            &btc_Token,
-            Some(vec![])
-        ));
-        assert_ok!(FinancialRecords::withdrawal_finish(&a, &eth_Token, None));
-
-        assert_eq!(Balances::total_token_of(&a, &btc_Token), 50);
-        assert_eq!(Balances::total_token_of(&a, &eth_Token), 100);
-
-        assert_eq!(FinancialRecords::record_list_len_of(&a), 4);
-
-        let key1 = (a, btc_Token.clone());
-        let key2 = (a, eth_Token.clone());
-
-        assert_eq!(FinancialRecords::last_deposit_index_of(&key1).unwrap(), 0);
-        assert_eq!(
-            FinancialRecords::last_withdrawal_index_of(&key1).unwrap(),
-            2
-        );
-        assert_eq!(FinancialRecords::last_deposit_index_of(&key2).unwrap(), 1);
-        assert_eq!(
-            FinancialRecords::last_withdrawal_index_of(&key2).unwrap(),
-            3
-        );
-    })
-}
-
-#[test]
-fn test_last_not_finish() {
-    with_externalities(&mut new_test_ext(), || {
-        let a: u64 = 1; // accountid
-        let btc_Token = b"x-btc".to_vec();
-        FinancialRecords::deposit_init(&a, &btc_Token, 100).unwrap();
-        assert_err!(
-            FinancialRecords::withdrawal(&a, &btc_Token, 50, vec![], vec![]),
-            "the account has no deposit record for this token yet"
-        );
-        // let deposit fail
-        assert_ok!(FinancialRecords::deposit_finish(&a, &btc_Token, None)); // 1. deposit failed
-        assert_eq!(Balances::total_token_of(&a, &btc_Token), 0);
-
-        assert_err!(
-            FinancialRecords::withdrawal(&a, &btc_Token, 50, vec![], vec![]),
-            "not a existed token in this account token list"
-        );
-        assert_eq!(FinancialRecords::record_list_len_of(&a), 1);
-
-        FinancialRecords::deposit_init(&a, &btc_Token, 100).unwrap();
-        assert_ok!(FinancialRecords::deposit_finish(
-            &a,
-            &btc_Token,
-            Some(vec![])
-        )); // 2. deposit success
-
-        assert_ok!(FinancialRecords::withdrawal(
-            &a,
-            &btc_Token,
+            &btc_token,
             50,
-            vec![],
-            vec![]
+            b"addr".to_vec(),
+            b"ext".to_vec()
+        ));
+        // withdrawal twice at once
+        assert_ok!(Records::withdrawal(
+            &a,
+            &eth_token,
+            100,
+            b"addr".to_vec(),
+            b"ext".to_vec()
+        ));
+        assert_ok!(Records::withdrawal(
+            &a,
+            &eth_token,
+            50,
+            b"addr".to_vec(),
+            b"ext".to_vec()
         ));
 
-        assert_ok!(FinancialRecords::deposit(&a, &btc_Token, 50, Some(vec![]))); // 3. deposit success
+        let mut numbers1 = Records::withdrawal_application_numbers(Chain::Bitcoin, 10).unwrap();
+        assert_eq!(numbers1.len(), 1);
 
-        assert_eq!(Balances::total_token_of(&a, &btc_Token), 150);
-        assert_eq!(
-            Balances::free_token(&(a.clone(), btc_Token.clone())),
-            100
-        );
+        let numbers2 = Records::withdrawal_application_numbers(Chain::Ethereum, 10).unwrap();
+        assert_eq!(numbers2.len(), 2);
 
-        assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_Token, None)); // 4. withdrawal failed
-        assert_eq!(
-            Balances::free_token(&(a.clone(), btc_Token.clone())),
-            150
-        );
+        numbers1.extend(numbers2);
 
-        assert_ok!(FinancialRecords::withdrawal(
-            &a,
-            &btc_Token,
-            25,
-            vec![],
-            vec![]
-        ));
-        assert_ok!(FinancialRecords::withdrawal_finish(
-            &a,
-            &btc_Token,
-            Some(vec![])
-        )); // destroy token here 5. withdrawal success
-        assert_eq!(FinancialRecords::record_list_len_of(&a), 5);
-        assert_eq!(
-            Balances::free_token(&(a.clone(), btc_Token.clone())),
-            125
-        );
-
-        assert_eq!(Balances::total_token(&btc_Token), 125);
+        for i in numbers1 {
+            assert_ok!(Records::withdrawal_finish(i));
+        }
+        assert_eq!(XAssets::free_balance(&a, &btc_token), 50);
+        assert_eq!(XAssets::free_balance(&a, &eth_token), 500 - 50 - 100);
     })
 }
 
@@ -304,14 +194,37 @@ fn test_last_not_finish() {
 fn test_withdrawal_larger() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_Token = b"x-btc".to_vec();
-        assert_ok!(FinancialRecords::deposit(&a, &btc_Token, 10, Some(vec![])));
+        let btc_token = b"BTC".to_vec();
+        assert_ok!(Records::deposit(&a, &btc_token, 10));
 
-        assert_err!(
-            FinancialRecords::withdrawal(&a, &btc_Token, 50, vec![], vec![]),
-            "not enough free token to withdraw"
+        assert_err!(Records::withdrawal(
+            &a,
+            &btc_token,
+            50,
+            b"addr".to_vec(),
+            b"ext".to_vec()
+        ),
+        "free balance too low to reserve"
         );
-        assert_eq!(FinancialRecords::record_list_len_of(&a), 1);
+    })
+}
+
+#[test]
+fn test_withdrawal_chainx() {
+    with_externalities(&mut new_test_ext(), || {
+        let a: u64 = 1; // accountid
+        let chainx_token = XAssets::TOKEN.to_vec();
+        assert_err!(Records::deposit(&a, &chainx_token, 10), "can\'t deposit/withdrawal chainx token");
+
+        assert_err!(Records::withdrawal(
+            &a,
+            &chainx_token,
+            50,
+            b"addr".to_vec(),
+            b"ext".to_vec()
+        ),
+        "can\'t deposit/withdrawal chainx token"
+        );
     })
 }
 
@@ -319,246 +232,10 @@ fn test_withdrawal_larger() {
 fn test_withdrawal_first() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
-        let btc_Token = b"x-btc".to_vec();
+        let btc_token = b"BTC".to_vec();
         assert_err!(
-            FinancialRecords::withdrawal(&a, &btc_Token, 50, vec![], vec![]),
-            "the account has no deposit record for this token yet"
+            Records::withdrawal(&a, &btc_token, 50, vec![], vec![]),
+            "not a existed token in this account token list"
         );
-    })
-}
-
-#[test]
-fn test_multi_token() {
-    with_externalities(&mut new_test_ext(), || {
-        let a: u64 = 1; // accountid
-        let btc_Token = b"x-btc".to_vec();
-        let eth_Token = b"x-eth".to_vec();
-        let key1 = (a, btc_Token.clone());
-        let key2 = (a, eth_Token.clone());
-
-        assert_err!(
-            FinancialRecords::withdrawal_finish(&a, &btc_Token, Some(vec![])),
-            "have not executed withdrawal() or withdrawal_init() yet for this record"
-        );
-        assert_err!(
-            FinancialRecords::withdrawal(&a, &btc_Token, 50, vec![], vec![]),
-            "the account has no deposit record for this token yet"
-        );
-
-        assert_ok!(FinancialRecords::deposit(
-            &a,
-            &btc_Token,
-            100,
-            Some(vec![])
-        )); // index = 0
-        assert_ok!(FinancialRecords::deposit(
-            &a,
-            &eth_Token,
-            100,
-            Some(vec![])
-        )); // eth 100 index = 1
-        assert_ok!(FinancialRecords::deposit(
-            &a,
-            &btc_Token,
-            100,
-            Some(vec![])
-        )); // btc 200 index = 2
-
-        assert_eq!(FinancialRecords::last_deposit_index_of(&key1), Some(2));
-        assert_eq!(FinancialRecords::last_deposit_index_of(&key2), Some(1));
-        assert_eq!(FinancialRecords::last_withdrawal_index_of(&key2), None);
-
-        assert_eq!(Balances::total_token_of(&a, &btc_Token), 200);
-        assert_eq!(Balances::total_token_of(&a, &eth_Token), 100);
-
-        // withdraw
-        assert_ok!(FinancialRecords::withdrawal(
-            &a,
-            &btc_Token,
-            50,
-            vec![],
-            vec![]
-        )); // index = 3
-        assert_err!(FinancialRecords::withdrawal(&a, &btc_Token, 25, vec![], vec![]), "the last action have not finished yet! only if the last deposit/withdrawal have finished you can do a new action.");
-
-        assert_ok!(FinancialRecords::withdrawal(
-            &a,
-            &eth_Token,
-            50,
-            vec![],
-            vec![]
-        )); // parallel withdraw  index = 4
-
-        assert_eq!(
-            Balances::free_token(&(a.clone(), btc_Token.clone())),
-            150
-        );
-        assert_eq!(
-            Balances::free_token(&(a.clone(), eth_Token.clone())),
-            50
-        );
-
-        assert_ok!(FinancialRecords::deposit(&a, &eth_Token, 50, Some(vec![]))); // deposit while withdraw  index = 5
-
-        assert_eq!(
-            Balances::free_token(&(a.clone(), eth_Token.clone())),
-            100
-        );
-
-        assert_ok!(FinancialRecords::withdrawal_finish(
-            &a,
-            &btc_Token,
-            Some(vec![])
-        ));
-        assert_ok!(FinancialRecords::withdrawal_finish(&a, &eth_Token, None));
-
-        assert_eq!(Balances::total_token_of(&a, &btc_Token), 150);
-        assert_eq!(Balances::total_token_of(&a, &eth_Token), 150);
-
-        assert_eq!(FinancialRecords::last_deposit_index_of(&key1), Some(2));
-        assert_eq!(FinancialRecords::last_deposit_index_of(&key2), Some(5));
-
-        assert_eq!(FinancialRecords::last_withdrawal_index_of(&key1), Some(3));
-        assert_eq!(FinancialRecords::last_withdrawal_index_of(&key2), Some(4));
-
-        assert_eq!(FinancialRecords::record_list_len_of(&a), 6);
-    })
-}
-
-#[test]
-fn test_withdraw_log_cache() {
-    with_externalities(&mut new_test_ext2(), || {
-        // issue
-        let a: u64 = 1; // accountid
-        let b: u64 = 2; // accountid
-        let btc_Token = b"x-btc".to_vec();
-        let eth_Token = b"x-eth".to_vec();
-        // let key_a_btc = (a, btc_Token.clone());
-        // let key_a_eth = (a, eth_Token.clone());
-        // let key_b_btc = (b, btc_Token.clone());
-        // let key_b_eth = (b, eth_Token.clone());
-
-        FinancialRecords::deposit(&a, &btc_Token, 1000, Some(vec![])).unwrap();
-        FinancialRecords::deposit(&b, &btc_Token, 1000, Some(vec![])).unwrap();
-        FinancialRecords::deposit(&a, &eth_Token, 1000, Some(vec![])).unwrap();
-        FinancialRecords::deposit(&b, &eth_Token, 1000, Some(vec![])).unwrap();
-
-        assert_eq!(FinancialRecords::record_list_len_of(&a), 2);
-        assert_eq!(FinancialRecords::record_list_len_of(&b), 2);
-
-        // withdraw
-        FinancialRecords::withdrawal(&a, &btc_Token, 100, vec![], vec![]).unwrap();
-        assert_eq!(FinancialRecords::record_list_len_of(&a), 3);
-        FinancialRecords::withdrawal(&b, &btc_Token, 100, vec![], vec![]).unwrap();
-        assert_eq!(FinancialRecords::record_list_len_of(&a), 3);
-
-        let log_a = FinancialRecords::withdraw_log_cache((a, 2)).unwrap();
-        assert_eq!(log_a.prev(), None);
-        assert_eq!(log_a.next(), Some((2, 2)));
-        let log_b = FinancialRecords::withdraw_log_cache((b, 2)).unwrap();
-        assert_eq!(log_b.prev(), Some((1, 2)));
-        assert_eq!(log_b.next(), None);
-
-        FinancialRecords::withdrawal(&a, &eth_Token, 100, vec![], vec![]).unwrap();
-        FinancialRecords::withdrawal(&b, &eth_Token, 100, vec![], vec![]).unwrap();
-
-        // btc cache
-        if let Some(btc_header) = FinancialRecords::log_cache_mheader(&btc_Token) {
-            let mut index = btc_header.index();
-            let mut v = vec![];
-            while let Some(node) = FinancialRecords::withdraw_log_cache(&index) {
-                v.push((node.data.accountid(), node.data.index()));
-                if let Some(next) = node.next() {
-                    index = next;
-                } else {
-                    break;
-                }
-            }
-            assert_eq!(v.as_slice(), [(a, 2), (b, 2)]);
-        } else {
-            panic!("unreachable!")
-        }
-        // eth cache
-        if let Some(eth_header) = FinancialRecords::log_cache_mheader(&eth_Token) {
-            let mut index = eth_header.index();
-            let mut v = vec![];
-            while let Some(node) = FinancialRecords::withdraw_log_cache(&index) {
-                v.push((node.data.accountid(), node.data.index()));
-                if let Some(next) = node.next() {
-                    index = next;
-                } else {
-                    break;
-                }
-            }
-            assert_eq!(v.as_slice(), [(a, 3), (b, 3)]);
-        } else {
-            panic!("unreachable!")
-        }
-
-        // withdraw finish
-        // loop linked node collection and find out
-
-        // for example
-        // loop cache and withdraw for b finish
-        // btc relay withdraw finish
-        assert_ok!(FinancialRecords::withdrawal_finish(
-            &b,
-            &btc_Token,
-            Some(vec![])
-        ));
-
-        if let Some(btc_header) = FinancialRecords::log_cache_mheader(&btc_Token) {
-            let mut index = btc_header.index();
-            let mut v = vec![];
-            while let Some(node) = FinancialRecords::withdraw_log_cache(&index) {
-                v.push((node.data.accountid(), node.data.index()));
-                if let Some(next) = node.next() {
-                    index = next;
-                } else {
-                    break;
-                }
-            }
-            assert_eq!(v.as_slice(), [(a, 2)]);
-        } else {
-            panic!("unreachable!")
-        }
-
-        let log = FinancialRecords::withdraw_log_cache((a, 2)).unwrap();
-        assert_eq!(log.prev(), None);
-        assert_eq!(log.next(), None);
-
-        // btc relay withdraw err
-        assert_ok!(FinancialRecords::withdrawal_finish(&a, &btc_Token, None));
-        // all cache removed
-        assert_eq!(FinancialRecords::log_cache_mheader(&btc_Token) == None, true);
-
-        // eth relay withdraw
-        assert_ok!(FinancialRecords::withdrawal_finish(
-            &a,
-            &eth_Token,
-            Some(vec![])
-        ));
-        if let Some(eth_header) = FinancialRecords::log_cache_mheader(&eth_Token) {
-            let mut index = eth_header.index();
-            let mut v = vec![];
-            while let Some(node) = FinancialRecords::withdraw_log_cache(&index) {
-                v.push((node.data.accountid(), node.data.index()));
-                if let Some(next) = node.next() {
-                    index = next;
-                } else {
-                    break;
-                }
-            }
-            assert_eq!(v.as_slice(), [(b, 3)]);
-        } else {
-            panic!("unreachable!")
-        }
-
-        assert_ok!(FinancialRecords::withdrawal_finish(
-            &b,
-            &eth_Token,
-            Some(vec![])
-        ));
-        assert_eq!(FinancialRecords::log_cache_mheader(&btc_Token) == None, true);
     })
 }
