@@ -25,10 +25,10 @@ extern crate srml_system as system;
 
 extern crate xrml_xsupport as xsupport;
 
-//#[cfg(test)]
-//mod mock;
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 pub mod assetdef;
 pub mod memo;
@@ -245,11 +245,11 @@ impl<T: Trait> Module<T> {
     }
 
     fn set_free_balance_creating(who: &T::AccountId, token: &Token, value: T::Balance) {
-        let need_create = balances::FreeBalance::<T>::exists(who);
         if token.as_slice() == <Self as ChainT>::TOKEN {
             balances::Module::<T>::set_free_balance_creating(who, value);
         } else {
-            if need_create {
+            let need_create = balances::FreeBalance::<T>::exists(who);
+            if need_create == false {
                 balances::Module::<T>::set_free_balance_creating(who, Zero::zero());
             }
             Self::set_free_balance(who, token, value)
@@ -468,11 +468,11 @@ impl<T: Trait> Module<T> {
         // check
         let new_free_token = match free_token.checked_add(&value) {
             Some(b) => b,
-            None => return Err("free token too high to issue"),
+            None => return Err("free balance too high to issue"),
         };
         let new_total_free_token = match total_free_token.checked_add(&value) {
             Some(b) => b,
-            None => return Err("total free token too high to issue"),
+            None => return Err("total free balance too high to issue"),
         };
         // set to storage
         Self::init_asset_for(who, token);
@@ -501,19 +501,19 @@ impl<T: Trait> Module<T> {
         // test overflow
         let new_free_token = match free_token.checked_sub(&value) {
             Some(b) => b,
-            None => return Err("free token too low to reserve"),
+            None => return Err("free balance too low to reserve"),
         };
         let new_reserved_token = match reserved_token.checked_add(&value) {
             Some(b) => b,
-            None => return Err("reserved token too high to reserve"),
+            None => return Err("reserved balance too high to reserve"),
         };
         let new_total_free_token = match total_free_token.checked_sub(&value) {
             Some(b) => b,
-            None => return Err("total free token too low to reserve"),
+            None => return Err("total free balance too low to reserve"),
         };
         let new_total_reserved_token = match total_reserved_token.checked_add(&value) {
             Some(b) => b,
-            None => return Err("total reserved token too high to reserve"),
+            None => return Err("total reserved balance too high to reserve"),
         };
         // set to storage
         Self::set_total_asset_balance(token, AssetType::Free, new_total_free_token);
@@ -543,19 +543,19 @@ impl<T: Trait> Module<T> {
         // test overflow
         let new_free_token = match free_token.checked_add(&value) {
             Some(b) => b,
-            None => return Err("free token too high to unreserve"),
+            None => return Err("free balance too high to unreserve"),
         };
         let new_reserved_token = match reserved_token.checked_sub(&value) {
             Some(b) => b,
-            None => return Err("reserved token too low to unreserve"),
+            None => return Err("reserved balance too low to unreserve"),
         };
         let new_total_free_token = match total_free_token.checked_add(&value) {
             Some(b) => b,
-            None => return Err("total free token too high to unreserve"),
+            None => return Err("total free balance too high to unreserve"),
         };
         let new_total_reserved_token = match total_reserved_token.checked_sub(&value) {
             Some(b) => b,
-            None => return Err("total reserved token too low to unreserve"),
+            None => return Err("total reserved balance too low to unreserve"),
         };
         // set to storage
         Self::set_total_asset_balance(token, AssetType::Free, new_total_free_token);
@@ -581,13 +581,13 @@ impl<T: Trait> Module<T> {
         let total_reserved_token = Self::total_asset_balance(token, type_);
         let reserved_token = Self::asset_balance(who, token, type_);
         // check
-        let new_total_reserved_token = match total_reserved_token.checked_sub(&value) {
-            Some(b) => b,
-            None => return Err("total reserved token too low to destroy"),
-        };
         let new_reserved_token = match reserved_token.checked_sub(&value) {
             Some(b) => b,
-            None => return Err("reserved token too low to destroy"),
+            None => return Err("reserved balance too low to destroy"),
+        };
+        let new_total_reserved_token = match total_reserved_token.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err("total reserved balance too low to destroy"),
         };
 
         // set to storage
@@ -666,84 +666,12 @@ impl<T: Trait> Module<T> {
             if token.as_slice() == <Self as ChainT>::TOKEN && type_ == AssetType::Free {
                 balances::TotalIssuance::<T>::put(new_total_val)
             } else {
-                Self::set_total_asset_balance(token, type_, val);
+                Self::set_total_asset_balance(token, type_, new_total_val);
             }
             T::OnAssetChanged::on_set_balance(who, token, type_, val);
         }
         Ok(())
     }
-
-    //    pub fn set_free_balance(who: &T::AccountId, token: &Token, free: T::Balance) -> Result {
-    //        if token.as_slice() == <Self as ChainT>::TOKEN {
-    //            balances::Module::<T>::set_free_balance(&who, free);
-    //        } else {
-    //            let key = (who.clone(), token.clone());
-    //            let old_free = XFreeBalance::<T>::get(&key);
-    //            let old_total_free = TotalXFreeBalance::<T>::get(token);
-    //            if old_free == free {
-    //                return Err("some value for free token");
-    //            }
-    //            let new_total_free = if free > old_free {
-    //                match free.checked_sub(&old_free) {
-    //                    None => return Err("free token too low to sub value"),
-    //                    Some(b) => match old_total_free.checked_add(&b) {
-    //                        None => return Err("old total free token too high to add value"),
-    //                        Some(new) => new,
-    //                    },
-    //                }
-    //            } else {
-    //                match old_free.checked_sub(&free) {
-    //                    None => return Err("old free token too low to sub value"),
-    //                    Some(b) => match old_total_free.checked_sub(&b) {
-    //                        None => return Err("old total free token too low to sub value"),
-    //                        Some(new) => new,
-    //                    },
-    //                }
-    //            };
-    //            TotalXFreeBalance::<T>::insert(token, new_total_free);
-    //            XFreeBalance::<T>::insert(key, free);
-    //        }
-    //        T::OnAssetChanged::on_set_free(who, token, free);
-    //        Ok(())
-    //    }
-    //
-    //    pub fn set_reserved_balance(
-    //        who: &T::AccountId,
-    //        token: &Token,
-    //        reserved: T::Balance,
-    //        res_type: ReservedType,
-    //    ) -> Result {
-    //        let key = (who.clone(), token.clone(), res_type);
-    //        let old_reserved = XReservedBalance::<T>::get(&key);
-    //        let old_total_reserved = TotalXReservedBalance::<T>::get(token);
-    //
-    //        if old_reserved == reserved {
-    //            return Err("some value for reserved token");
-    //        }
-    //
-    //        let new_total_reserved = if reserved > old_reserved {
-    //            match reserved.checked_sub(&old_reserved) {
-    //                None => return Err("reserved token too low to sub value"),
-    //                Some(b) => match old_total_reserved.checked_add(&b) {
-    //                    None => return Err("old total reserved token too high to add value"),
-    //                    Some(new) => new,
-    //                },
-    //            }
-    //        } else {
-    //            match old_reserved.checked_sub(&reserved) {
-    //                None => return Err("old reserved token too low to sub value"),
-    //                Some(b) => match old_total_reserved.checked_sub(&b) {
-    //                    None => return Err("old total reserved token too high to sub value"),
-    //                    Some(new) => new,
-    //                },
-    //            }
-    //        };
-    //        TotalXReservedBalance::<T>::insert(token, new_total_reserved);
-    //        XReservedBalance::<T>::insert(key, reserved);
-    //
-    //        T::OnAssetChanged::on_set_reserved(who, token, reserved);
-    //        Ok(())
-    //    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
@@ -759,7 +687,7 @@ pub enum TokenErr {
 impl TokenErr {
     pub fn info(&self) -> &'static str {
         match *self {
-            TokenErr::NotEnough => "free token too low",
+            TokenErr::NotEnough => "free balance too low",
             TokenErr::OverFlow => "overflow for this value",
             TokenErr::SomeAccount => "from and to are same account",
             TokenErr::InvalidToken => "not a valid token for this account",

@@ -35,8 +35,8 @@ extern crate srml_system as system;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
 
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod tests;
 
 mod withdrawal;
 

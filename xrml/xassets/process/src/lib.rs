@@ -46,8 +46,8 @@ extern crate xrml_xbridge_bitcoin as xbitcoin;
 #[cfg(test)]
 extern crate base58;
 
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod tests;
 
 use rstd::prelude::*;
 //use rstd::result::Result as StdResult;
