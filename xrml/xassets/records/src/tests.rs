@@ -197,14 +197,9 @@ fn test_withdrawal_larger() {
         let btc_token = b"BTC".to_vec();
         assert_ok!(Records::deposit(&a, &btc_token, 10));
 
-        assert_err!(Records::withdrawal(
-            &a,
-            &btc_token,
-            50,
-            b"addr".to_vec(),
-            b"ext".to_vec()
-        ),
-        "free balance too low to reserve"
+        assert_err!(
+            Records::withdrawal(&a, &btc_token, 50, b"addr".to_vec(), b"ext".to_vec()),
+            "free balance too low to reserve"
         );
     })
 }
@@ -214,16 +209,14 @@ fn test_withdrawal_chainx() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
         let chainx_token = XAssets::TOKEN.to_vec();
-        assert_err!(Records::deposit(&a, &chainx_token, 10), "can\'t deposit/withdrawal chainx token");
+        assert_err!(
+            Records::deposit(&a, &chainx_token, 10),
+            "can\'t deposit/withdrawal chainx token"
+        );
 
-        assert_err!(Records::withdrawal(
-            &a,
-            &chainx_token,
-            50,
-            b"addr".to_vec(),
-            b"ext".to_vec()
-        ),
-        "can\'t deposit/withdrawal chainx token"
+        assert_err!(
+            Records::withdrawal(&a, &chainx_token, 50, b"addr".to_vec(), b"ext".to_vec()),
+            "can\'t deposit/withdrawal chainx token"
         );
     })
 }
