@@ -43,6 +43,9 @@ use xr_primitives::XString;
 
 mod tests;
 
+pub type Name = XString;
+pub type URL = XString;
+
 pub trait Trait: system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -60,8 +63,8 @@ pub struct CertImmutableProps<BlockNumber: Default> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct IntentionImmutableProps {
-    pub name: XString,
-    pub activator: XString,
+    pub name: Name,
+    pub activator: Name,
     pub initial_shares: u32,
 }
 
@@ -69,7 +72,7 @@ pub struct IntentionImmutableProps {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct IntentionProps {
-    pub url: XString,
+    pub url: URL,
     pub is_active: bool,
 }
 
@@ -83,7 +86,7 @@ decl_module! {
 decl_event!(
     pub enum Event<T> where <T as system::Trait>::AccountId {
         /// A cert has been issued.
-        Issue(XString, u32, AccountId),
+        Issue(Name, u32, AccountId),
     }
 );
 
@@ -99,16 +102,16 @@ decl_storage! {
         pub TotalIssued get(total_issued) config(): u32;
 
         /// cert name => cert owner
-        pub CertOwnerOf get(cert_owner_of): map XString => Option<T::AccountId>;
+        pub CertOwnerOf get(cert_owner_of): map Name => Option<T::AccountId>;
 
-        pub CertImmutablePropertiesOf get(cert_immutable_props_of): map XString => CertImmutableProps<T::BlockNumber>;
+        pub CertImmutablePropertiesOf get(cert_immutable_props_of): map Name => CertImmutableProps<T::BlockNumber>;
 
-        pub RemainingSharesOf get(remaining_shares_of): map XString => u32;
+        pub RemainingSharesOf get(remaining_shares_of): map Name => u32;
 
-        pub CertNamesOf get(cert_names_of): map T::AccountId => Vec<XString>;
+        pub CertNamesOf get(cert_names_of): map T::AccountId => Vec<Name>;
 
         /// intention name => intention
-        pub IntentionOf get(intention_of): map XString => Option<T::AccountId>;
+        pub IntentionOf get(intention_of): map Name => Option<T::AccountId>;
 
         pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps>;
 
@@ -118,7 +121,7 @@ decl_storage! {
 
 impl<T: Trait> Module<T> {
     /// Issue new cert triggered by relayed transaction.
-    pub fn issue(cert_name: XString, frozen_duration: u32, cert_owner: T::AccountId) -> Result {
+    pub fn issue(cert_name: Name, frozen_duration: u32, cert_owner: T::AccountId) -> Result {
         is_valid_name::<T>(&cert_name)?;
 
         ensure!(

@@ -47,9 +47,8 @@ use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 
-use xr_primitives::XString;
-
-use xassets::{Address, Token};
+use xassets::{Address, Token, Memo};
+use xaccounts::{Name, URL};
 
 pub mod vote_weight;
 
@@ -109,7 +108,7 @@ decl_module! {
             origin,
             target: Address<T::AccountId, T::AccountIndex>,
             value: T::Balance,
-            memo: XString
+            memo: Memo
         ) {
             let who = ensure_signed(origin)?;
             let target = <xassets::Module<T>>::lookup(target)?;
@@ -132,7 +131,7 @@ decl_module! {
             origin,
             target: Address<T::AccountId, T::AccountIndex>,
             value: T::Balance,
-            memo: XString
+            memo: Memo
         ) {
             let who = ensure_signed(origin)?;
             let target = <xassets::Module<T>>::lookup(target)?;
@@ -205,7 +204,7 @@ decl_module! {
         }
 
         /// Update the url and desire to join in elections of intention.
-        fn refresh(origin, url: XString, desire_to_run: bool) {
+        fn refresh(origin, url: URL, desire_to_run: bool) {
             let who = ensure_signed(origin)?;
 
             xaccounts::is_valid_url::<T>(&url)?;
@@ -240,12 +239,12 @@ decl_module! {
         /// Register intention by the owner of given cert name.
         fn register(
             origin,
-            cert_name: XString,
+            cert_name: Name,
             intention: T::AccountId,
-            name: XString,
-            url: XString,
+            name: Name,
+            url: URL,
             share_count: u32,
-            memo: XString
+            memo: Memo
         ) {
             let who = ensure_signed(origin)?;
 
@@ -374,7 +373,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Due of allocated shares that cert comes with.
-    pub fn unfreeze_block_of(cert_name: XString) -> T::BlockNumber {
+    pub fn unfreeze_block_of(cert_name: Name) -> T::BlockNumber {
         let props = <xaccounts::Module<T>>::cert_immutable_props_of(cert_name);
         let issued_at = props.issued_at;
         let frozen_duration = props.frozen_duration;
@@ -482,10 +481,10 @@ impl<T: Trait> Module<T> {
 
     /// Actually register an intention.
     fn apply_register(
-        cert_name: XString,
+        cert_name: Name,
         intention: T::AccountId,
-        name: XString,
-        url: XString,
+        name: Name,
+        url: URL,
         share_count: u32,
     ) -> Result {
         <xaccounts::IntentionOf<T>>::insert(&name, intention.clone());

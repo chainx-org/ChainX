@@ -37,8 +37,6 @@ extern crate srml_system as system;
 #[cfg(test)]
 extern crate srml_timestamp as timestamp;
 
-// chainx runtime
-extern crate xr_primitives;
 // chainx runtime module
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_records as xrecords;
@@ -56,15 +54,14 @@ use runtime_support::dispatch::Result;
 
 use system::ensure_signed;
 
-use xr_primitives::XString;
-
-use xassets::{ChainT, Token};
+use xassets::{ChainT, Token, Memo};
+use xrecords::AddrStr;
 
 pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn withdraw(origin, token: XString, value: T::Balance, addr: XString, ext: XString) -> Result {
+        fn withdraw(origin, token: Token, value: T::Balance, addr: AddrStr, ext: Memo) -> Result {
             runtime_io::print("[xassets process withdrawal] withdraw");
             let who = ensure_signed(origin)?;
 
@@ -89,7 +86,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    pub fn verify_address(token: Token, addr: XString, ext: XString) -> Result {
+    pub fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result {
         Self::verify_addr(&token, &addr, &ext)
     }
 }

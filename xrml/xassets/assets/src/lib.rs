@@ -45,8 +45,6 @@ use runtime_support::{StorageMap, StorageValue};
 // substrate mod
 use system::ensure_signed;
 
-use xr_primitives::XString;
-
 use xsupport::storage::btree_map::CodecBTreeMap;
 
 pub use assetdef::{
@@ -54,7 +52,7 @@ pub use assetdef::{
     TokenString,
 };
 
-pub use memo::is_valid_memo;
+pub use memo::{is_valid_memo, Memo};
 
 pub type Address<AccountId, AccountIndex> = balances::address::Address<AccountId, AccountIndex>;
 
@@ -145,7 +143,7 @@ decl_module! {
         }
 
         /// transfer between account
-        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, memo: XString) -> Result {
+        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, memo: Memo) -> Result {
             runtime_io::print("[xassets] transfer");
             let transactor = ensure_signed(origin)?;
             let dest = balances::Module::<T>::lookup(dest)?;

@@ -51,8 +51,10 @@ use runtime_support::StorageValue;
 
 use xr_primitives::XString;
 
-use xassets::{AssetType, Chain, ChainT, Token};
+use xassets::{AssetType, Chain, ChainT, Token, Memo};
 use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
+
+pub type AddrStr = XString;
 
 pub trait Trait: system::Trait + balances::Trait + xassets::Trait {
     /// The overarching event type.
@@ -71,7 +73,7 @@ decl_event!(
         <T as balances::Trait>::Balance
     {
         Deposit(AccountId, Token, Balance),
-        Withdrawal(AccountId, Token, Balance, XString, XString),
+        Withdrawal(AccountId, Token, Balance, AddrStr, Memo),
     }
 );
 
@@ -83,8 +85,8 @@ pub struct Application<AccountId, Balance> {
     applicant: AccountId,
     token: Token,
     balance: Balance,
-    addr: XString,
-    ext: XString,
+    addr: AddrStr,
+    ext: Memo,
 }
 
 impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<AccountId, Balance> {
@@ -93,8 +95,8 @@ impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<Accoun
         applicant: AccountId,
         token: Token,
         balance: Balance,
-        addr: XString,
-        ext: XString,
+        addr: AddrStr,
+        ext: Memo,
     ) -> Self {
         Application::<AccountId, Balance> {
             id,
@@ -117,10 +119,10 @@ impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<Accoun
     pub fn balance(&self) -> Balance {
         self.balance
     }
-    pub fn addr(&self) -> XString {
+    pub fn addr(&self) -> AddrStr {
         self.addr.clone()
     }
-    pub fn ext(&self) -> XString {
+    pub fn ext(&self) -> Memo {
         self.ext.clone()
     }
 }
@@ -184,8 +186,8 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         token: &Token,
         balance: T::Balance,
-        addr: XString,
-        ext: XString,
+        addr: AddrStr,
+        ext: Memo,
     ) -> Result {
         Self::withdraw_check_before(who, token)?;
 
