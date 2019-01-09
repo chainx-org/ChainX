@@ -29,3 +29,7 @@ extern crate serde_json;
 
 pub mod generic;
 pub mod traits;
+
+use rstd::prelude::Vec;
+
+pub type XString = Vec<u8>;

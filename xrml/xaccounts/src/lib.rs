@@ -33,11 +33,18 @@ extern crate srml_system as system;
 #[cfg(test)]
 extern crate srml_timestamp as timestamp;
 
+extern crate xr_primitives;
+
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
+use xr_primitives::XString;
+
 mod tests;
+
+pub type Name = XString;
+pub type URL = XString;
 
 pub trait Trait: system::Trait {
     /// The overarching event type.
@@ -56,8 +63,8 @@ pub struct CertImmutableProps<BlockNumber: Default> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct IntentionImmutableProps {
-    pub name: Vec<u8>,
-    pub activator: Vec<u8>,
+    pub name: Name,
+    pub activator: Name,
     pub initial_shares: u32,
 }
 
@@ -65,7 +72,7 @@ pub struct IntentionImmutableProps {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct IntentionProps {
-    pub url: Vec<u8>,
+    pub url: URL,
     pub is_active: bool,
 }
 
@@ -79,7 +86,7 @@ decl_module! {
 decl_event!(
     pub enum Event<T> where <T as system::Trait>::AccountId {
         /// A cert has been issued.
-        Issue(Vec<u8>, u32, AccountId),
+        Issue(Name, u32, AccountId),
     }
 );
 
@@ -95,16 +102,16 @@ decl_storage! {
         pub TotalIssued get(total_issued) config(): u32;
 
         /// cert name => cert owner
-        pub CertOwnerOf get(cert_owner_of): map Vec<u8> => Option<T::AccountId>;
+        pub CertOwnerOf get(cert_owner_of): map Name => Option<T::AccountId>;
 
-        pub CertImmutablePropertiesOf get(cert_immutable_props_of): map Vec<u8> => CertImmutableProps<T::BlockNumber>;
+        pub CertImmutablePropertiesOf get(cert_immutable_props_of): map Name => CertImmutableProps<T::BlockNumber>;
 
-        pub RemainingSharesOf get(remaining_shares_of): map Vec<u8> => u32;
+        pub RemainingSharesOf get(remaining_shares_of): map Name => u32;
 
-        pub CertNamesOf get(cert_names_of): map T::AccountId => Vec<Vec<u8>>;
+        pub CertNamesOf get(cert_names_of): map T::AccountId => Vec<Name>;
 
         /// intention name => intention
-        pub IntentionOf get(intention_of): map Vec<u8> => Option<T::AccountId>;
+        pub IntentionOf get(intention_of): map Name => Option<T::AccountId>;
 
         pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps>;
 
@@ -114,7 +121,7 @@ decl_storage! {
 
 impl<T: Trait> Module<T> {
     /// Issue new cert triggered by relayed transaction.
-    pub fn issue(cert_name: Vec<u8>, frozen_duration: u32, cert_owner: T::AccountId) -> Result {
+    pub fn issue(cert_name: Name, frozen_duration: u32, cert_owner: T::AccountId) -> Result {
         is_valid_name::<T>(&cert_name)?;
 
         ensure!(

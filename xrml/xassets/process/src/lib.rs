@@ -49,18 +49,19 @@ extern crate base58;
 #[cfg(test)]
 mod tests;
 
-use rstd::prelude::*;
-//use rstd::result::Result as StdResult;
+//use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 
 use system::ensure_signed;
-use xassets::{ChainT, Token};
+
+use xassets::{ChainT, Token, Memo};
+use xrecords::AddrStr;
 
 pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn withdraw(origin, token: Token, value: T::Balance, addr: Vec<u8>, ext: Vec<u8>) -> Result {
+        fn withdraw(origin, token: Token, value: T::Balance, addr: AddrStr, ext: Memo) -> Result {
             runtime_io::print("[xassets process withdrawal] withdraw");
             let who = ensure_signed(origin)?;
 
@@ -85,7 +86,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    pub fn verify_address(token: Token, addr: Vec<u8>, ext: Vec<u8>) -> Result {
+    pub fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result {
         Self::verify_addr(&token, &addr, &ext)
     }
 }

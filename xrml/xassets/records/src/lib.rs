@@ -31,6 +31,8 @@ extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 extern crate srml_system as system;
 
+extern crate xr_primitives;
+
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
@@ -47,8 +49,12 @@ use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::StorageValue;
 
-use xassets::{AssetType, Chain, ChainT, Token};
+use xr_primitives::XString;
+
+use xassets::{AssetType, Chain, ChainT, Token, Memo};
 use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
+
+pub type AddrStr = XString;
 
 pub trait Trait: system::Trait + balances::Trait + xassets::Trait {
     /// The overarching event type.
@@ -67,7 +73,7 @@ decl_event!(
         <T as balances::Trait>::Balance
     {
         Deposit(AccountId, Token, Balance),
-        Withdrawal(AccountId, Token, Balance, Vec<u8>, Vec<u8>),
+        Withdrawal(AccountId, Token, Balance, AddrStr, Memo),
     }
 );
 
@@ -79,8 +85,8 @@ pub struct Application<AccountId, Balance> {
     applicant: AccountId,
     token: Token,
     balance: Balance,
-    addr: Vec<u8>,
-    ext: Vec<u8>,
+    addr: AddrStr,
+    ext: Memo,
 }
 
 impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<AccountId, Balance> {
@@ -89,8 +95,8 @@ impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<Accoun
         applicant: AccountId,
         token: Token,
         balance: Balance,
-        addr: Vec<u8>,
-        ext: Vec<u8>,
+        addr: AddrStr,
+        ext: Memo,
     ) -> Self {
         Application::<AccountId, Balance> {
             id,
@@ -113,10 +119,10 @@ impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<Accoun
     pub fn balance(&self) -> Balance {
         self.balance
     }
-    pub fn addr(&self) -> Vec<u8> {
+    pub fn addr(&self) -> AddrStr {
         self.addr.clone()
     }
-    pub fn ext(&self) -> Vec<u8> {
+    pub fn ext(&self) -> Memo {
         self.ext.clone()
     }
 }
@@ -180,8 +186,8 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         token: &Token,
         balance: T::Balance,
-        addr: Vec<u8>,
-        ext: Vec<u8>,
+        addr: AddrStr,
+        ext: Memo,
     ) -> Result {
         Self::withdraw_check_before(who, token)?;
 

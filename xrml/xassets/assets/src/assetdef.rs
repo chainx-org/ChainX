@@ -6,10 +6,12 @@ use rstd::slice::Iter;
 
 use runtime_support::dispatch::Result;
 
+use xr_primitives::XString;
+
 pub type TokenString = &'static [u8];
 pub type DescString = TokenString;
-pub type Token = Vec<u8>;
-pub type Desc = Vec<u8>;
+pub type Token = XString;
+pub type Desc = XString;
 pub type Precision = u16;
 
 pub trait ChainT {

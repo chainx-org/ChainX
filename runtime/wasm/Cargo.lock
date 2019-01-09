@@ -2261,6 +2261,7 @@ dependencies = [
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-keyring 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xsupport 0.4.0",
@@ -2316,6 +2317,7 @@ dependencies = [
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xr-primitives 0.4.0",
 ]
 
 [[package]]
@@ -2334,6 +2336,7 @@ dependencies = [
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
  "xrml-xsupport 0.4.0",
 ]
 
@@ -2377,6 +2380,7 @@ dependencies = [
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xsupport 0.4.0",
 ]
