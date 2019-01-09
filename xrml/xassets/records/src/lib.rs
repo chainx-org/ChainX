@@ -51,7 +51,7 @@ use runtime_support::StorageValue;
 
 use xr_primitives::XString;
 
-use xassets::{AssetType, Chain, ChainT, Token, Memo};
+use xassets::{AssetType, Chain, ChainT, Memo, Token};
 use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
 
 pub type AddrStr = XString;

@@ -54,7 +54,7 @@ use runtime_support::dispatch::Result;
 
 use system::ensure_signed;
 
-use xassets::{ChainT, Token, Memo};
+use xassets::{ChainT, Memo, Token};
 use xrecords::AddrStr;
 
 pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}

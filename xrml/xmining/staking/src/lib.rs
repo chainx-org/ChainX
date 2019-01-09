@@ -47,8 +47,8 @@ use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 
-use xassets::{Address, Token, Memo};
 use xaccounts::{Name, URL};
+use xassets::{Address, Memo, Token};
 
 pub mod vote_weight;
 
