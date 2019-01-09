@@ -31,6 +31,8 @@ extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 extern crate srml_system as system;
 
+extern crate xr_primitives;
+
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
@@ -46,6 +48,8 @@ use codec::Codec;
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::StorageValue;
+
+use xr_primitives::XString;
 
 use xassets::{AssetType, Chain, ChainT, Token};
 use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
@@ -67,7 +71,7 @@ decl_event!(
         <T as balances::Trait>::Balance
     {
         Deposit(AccountId, Token, Balance),
-        Withdrawal(AccountId, Token, Balance, Vec<u8>, Vec<u8>),
+        Withdrawal(AccountId, Token, Balance, XString, XString),
     }
 );
 
@@ -79,8 +83,8 @@ pub struct Application<AccountId, Balance> {
     applicant: AccountId,
     token: Token,
     balance: Balance,
-    addr: Vec<u8>,
-    ext: Vec<u8>,
+    addr: XString,
+    ext: XString,
 }
 
 impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<AccountId, Balance> {
@@ -89,8 +93,8 @@ impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<Accoun
         applicant: AccountId,
         token: Token,
         balance: Balance,
-        addr: Vec<u8>,
-        ext: Vec<u8>,
+        addr: XString,
+        ext: XString,
     ) -> Self {
         Application::<AccountId, Balance> {
             id,
@@ -113,10 +117,10 @@ impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<Accoun
     pub fn balance(&self) -> Balance {
         self.balance
     }
-    pub fn addr(&self) -> Vec<u8> {
+    pub fn addr(&self) -> XString {
         self.addr.clone()
     }
-    pub fn ext(&self) -> Vec<u8> {
+    pub fn ext(&self) -> XString {
         self.ext.clone()
     }
 }
@@ -180,8 +184,8 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         token: &Token,
         balance: T::Balance,
-        addr: Vec<u8>,
-        ext: Vec<u8>,
+        addr: XString,
+        ext: XString,
     ) -> Result {
         Self::withdraw_check_before(who, token)?;
 

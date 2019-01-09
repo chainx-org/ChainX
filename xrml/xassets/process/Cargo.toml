@@ -20,6 +20,8 @@ srml-balances = { git = "https://github.com/chainpool/substrate", default_featur
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-consensus = { git = "https://github.com/chainpool/substrate", default_features = false }
 
+# chainx runtime
+xr-primitives = { path = "../../../xr-primitives", default_features = false }
 # xrml module
 xrml-xassets-assets = { path = "../assets", default_features = false }
 xrml-xassets-records = { path = "../records", default_features = false }
@@ -44,6 +46,9 @@ std=[
     "srml-balances/std",
     "srml-timestamp/std",
     "srml-consensus/std",
+
+    # xrml module
+    "xr-primitives/std",
 
     # xrml
     "xrml-xassets-assets/std",

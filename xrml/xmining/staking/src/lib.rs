@@ -26,6 +26,8 @@ extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 
+extern crate xr_primitives;
+
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
@@ -44,6 +46,8 @@ use runtime_primitives::{
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
+
+use xr_primitives::XString;
 
 use xassets::{Address, Token};
 
@@ -105,7 +109,7 @@ decl_module! {
             origin,
             target: Address<T::AccountId, T::AccountIndex>,
             value: T::Balance,
-            memo: Vec<u8>
+            memo: XString
         ) {
             let who = ensure_signed(origin)?;
             let target = <xassets::Module<T>>::lookup(target)?;
@@ -128,7 +132,7 @@ decl_module! {
             origin,
             target: Address<T::AccountId, T::AccountIndex>,
             value: T::Balance,
-            memo: Vec<u8>
+            memo: XString
         ) {
             let who = ensure_signed(origin)?;
             let target = <xassets::Module<T>>::lookup(target)?;
@@ -201,7 +205,7 @@ decl_module! {
         }
 
         /// Update the url and desire to join in elections of intention.
-        fn refresh(origin, url: Vec<u8>, desire_to_run: bool) {
+        fn refresh(origin, url: XString, desire_to_run: bool) {
             let who = ensure_signed(origin)?;
 
             xaccounts::is_valid_url::<T>(&url)?;
@@ -236,12 +240,12 @@ decl_module! {
         /// Register intention by the owner of given cert name.
         fn register(
             origin,
-            cert_name: Vec<u8>,
+            cert_name: XString,
             intention: T::AccountId,
-            name: Vec<u8>,
-            url: Vec<u8>,
+            name: XString,
+            url: XString,
             share_count: u32,
-            memo: Vec<u8>
+            memo: XString
         ) {
             let who = ensure_signed(origin)?;
 
@@ -370,7 +374,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Due of allocated shares that cert comes with.
-    pub fn unfreeze_block_of(cert_name: Vec<u8>) -> T::BlockNumber {
+    pub fn unfreeze_block_of(cert_name: XString) -> T::BlockNumber {
         let props = <xaccounts::Module<T>>::cert_immutable_props_of(cert_name);
         let issued_at = props.issued_at;
         let frozen_duration = props.frozen_duration;
@@ -478,10 +482,10 @@ impl<T: Trait> Module<T> {
 
     /// Actually register an intention.
     fn apply_register(
-        cert_name: Vec<u8>,
+        cert_name: XString,
         intention: T::AccountId,
-        name: Vec<u8>,
-        url: Vec<u8>,
+        name: XString,
+        url: XString,
         share_count: u32,
     ) -> Result {
         <xaccounts::IntentionOf<T>>::insert(&name, intention.clone());

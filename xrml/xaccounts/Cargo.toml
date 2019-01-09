@@ -21,6 +21,9 @@ srml-session = { git = "https://github.com/chainpool/substrate", default_feature
 srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
 
+# chainx runtime
+xr-primitives = { path = "../../xr-primitives", default_features = false }
+
 [features]
 default = ["std"]
 std=[
@@ -38,4 +41,5 @@ std=[
     "srml-session/std",
     "srml-balances/std",
     "srml-timestamp/std",
+    "xr-primitives/std",
 ]

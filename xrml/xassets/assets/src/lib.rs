@@ -23,6 +23,8 @@ extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 extern crate srml_system as system;
 
+extern crate xr_primitives;
+
 extern crate xrml_xsupport as xsupport;
 
 #[cfg(test)]
@@ -42,6 +44,8 @@ use runtime_support::{StorageMap, StorageValue};
 
 // substrate mod
 use system::ensure_signed;
+
+use xr_primitives::XString;
 
 use xsupport::storage::btree_map::CodecBTreeMap;
 
@@ -141,7 +145,7 @@ decl_module! {
         }
 
         /// transfer between account
-        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, memo: Vec<u8>) -> Result {
+        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, memo: XString) -> Result {
             runtime_io::print("[xassets] transfer");
             let transactor = ensure_signed(origin)?;
             let dest = balances::Module::<T>::lookup(dest)?;
