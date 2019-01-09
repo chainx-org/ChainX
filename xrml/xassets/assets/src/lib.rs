@@ -609,7 +609,7 @@ impl<T: Trait> Module<T> {
         Self::is_valid_asset_for(from, token).map_err(|_| TokenErr::InvalidToken)?;
 
         if from == to {
-            return Err(TokenErr::SomeAccount);
+            return Ok(());
         }
 
         if token.as_slice() != <Self as ChainT>::TOKEN {
@@ -681,7 +681,6 @@ impl<T: Trait> Module<T> {
 pub enum TokenErr {
     NotEnough,
     OverFlow,
-    SomeAccount,
     InvalidToken,
     InvalidAccount,
 }
@@ -691,7 +690,6 @@ impl TokenErr {
         match *self {
             TokenErr::NotEnough => "free balance too low",
             TokenErr::OverFlow => "overflow for this value",
-            TokenErr::SomeAccount => "from and to are same account",
             TokenErr::InvalidToken => "not a valid token for this account",
             TokenErr::InvalidAccount => "Account Locked",
         }
