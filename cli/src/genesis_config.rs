@@ -9,6 +9,8 @@ extern crate substrate_primitives;
 
 use self::base58::FromBase58;
 use chainx_runtime::GrandpaConfig;
+use chainx_runtime::xassets;
+
 use chainx_runtime::{
     xassets::{Asset, Chain, ChainT},
     xbitcoin, Runtime,
@@ -16,7 +18,7 @@ use chainx_runtime::{
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, Params, Perbill, Permill, SessionConfig,
     TimestampConfig, XAccountsConfig, XAssetsConfig, XBridgeOfBTCConfig, XFeeManagerConfig,
-    XMatchOrderConfig, XPendingOrdersConfig, XStakingConfig, XSystemConfig,
+     XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use ed25519;
@@ -73,7 +75,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         transfer_fee: 0,
         creation_fee: 0,
         reclaim_rebate: 0,
-        balances: vec![(Keyring::Alice.to_raw_public().into(), 1_000_000)],
+        balances: vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)],
     };
     //let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
 
@@ -129,7 +131,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
             asset_list: vec![
-                (btc_asset, true, vec![])
+                (btc_asset, true, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)])
             ],
         }),
         xstaking: Some(XStakingConfig {
@@ -148,18 +150,11 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .map(|i| i.0.into())
                 .collect(),
         }),
-        xpendingorders: Some(XPendingOrdersConfig {
-            order_fee: 10,
-            pair_list: vec![],
+        xspot: Some(XSpotConfig {
+            pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<xbitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),5,true)],
             // (OrderPair { first: Runtime::CHAINX_SYMBOL.to_vec(), second: BridgeOfBTC::SYMBOL.to_vec() }, 8)
-            max_command_id: 0,
-            average_price_len: 10000,
-        }),
-        xmatchorder: Some(XMatchOrderConfig {
-            match_fee: 10,
-            fee_precision: 100000,
-            maker_match_fee: 50,
-            taker_match_fee: 100,
+            price_volatility: 10,
+            _genesis_phantom_data: Default::default(),
         }),
         xbitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)

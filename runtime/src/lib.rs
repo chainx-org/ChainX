@@ -64,8 +64,7 @@ pub extern crate xrml_mining_staking as xstaking;
 pub extern crate xrml_mining_tokens as xtokens;
 
 // dex
-pub extern crate xrml_xdex_spot_xmatchorder as xmatchorder;
-pub extern crate xrml_xdex_spot_xpendingorders as xpendingorders;
+pub extern crate xrml_xdex_spot as xspot;
 
 mod fee;
 mod xexecutive;
@@ -271,15 +270,11 @@ impl xstaking::Trait for Runtime {
     type Event = Event;
 }
 
-impl xpendingorders::Trait for Runtime {
+impl xspot::Trait for Runtime {
     type Event = Event;
-    type Amount = u128;
-    type Price = u128;
+    type Price = Balance;
 }
 
-impl xmatchorder::Trait for Runtime {
-    type Event = Event;
-}
 
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
@@ -307,8 +302,7 @@ construct_runtime!(
         // mining
         XStaking: xstaking,
         // dex
-        XPendingOrders: xpendingorders,
-        XMatchOrder: xmatchorder,
+        XSpot: xspot,
         // bridge
         XBridgeOfBTC: xbitcoin::{Module, Call, Storage, Config<T>, Event<T>},
     }

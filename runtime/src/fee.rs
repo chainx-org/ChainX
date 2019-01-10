@@ -4,6 +4,7 @@ use xassets::Call as XAssetsCall;
 use xbitcoin::Call as XbitcoinCall;
 use xprocess::Call as XAssetsProcessCall;
 use xstaking::Call as XStakingCall;
+use xspot::Call as XSpotCall;
 
 use Acceleration;
 use Call;
@@ -47,6 +48,11 @@ impl CheckFee for Call {
                 XStakingCall::unfreeze(_, _) => Some(2),
                 XStakingCall::claim(_) => Some(3),
                 _ => None,
+            },
+            Call::XSpot(call)=>match call{
+                XSpotCall::put_order(_,_,_,_,_) =>Some(8),
+                XSpotCall::cancel_order(_,_)=>Some(2),
+                 _ => None,
             },
             _ => None,
         };
