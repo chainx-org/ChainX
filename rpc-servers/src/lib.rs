@@ -52,17 +52,16 @@ pub fn rpc_handler<Block: BlockT, ExHash, S, C, A, Y>(
 where
     Block: BlockT + 'static,
     ExHash: Send + Sync + 'static + sr_primitives::Serialize + sr_primitives::DeserializeOwned,
-    SignedBlock<Block>: serde::Serialize + sr_primitives::DeserializeOwned,
     S: apis::state::StateApi<Block::Hash, Metadata = Metadata>,
     C: apis::chain::ChainApi<
+        NumberFor<Block>,
         Block::Hash,
         Block::Header,
-        NumberFor<Block>,
         SignedBlock<Block>,
         Metadata = Metadata,
     >,
     A: apis::author::AuthorApi<ExHash, Block::Hash, Metadata = Metadata>,
-    Y: apis::system::SystemApi,
+    Y: apis::system::SystemApi<Block::Hash, NumberFor<Block>>,
 {
     let mut io = pubsub::PubSubHandler::default();
     io.extend_with(state.to_delegate());

@@ -121,18 +121,15 @@ where
     let (spec, mut config) =
         cli::parse_matches::<service::Factory, _>(load_spec, version, "chainx-node", &matches)?;
 
-    if cfg!(feature = "msgbus-redis") == false {
-        if matches.is_present("grandpa_authority_only") {
-            config.custom.grandpa_authority = true;
-            config.custom.grandpa_authority_only = true;
-            // Authority Setup is only called if validator is set as true
-            config.roles = ServiceRoles::AUTHORITY;
-        } else if matches.is_present("grandpa_authority") {
-            config.custom.grandpa_authority = true;
-            // Authority Setup is only called if validator is set as true
-            config.roles = ServiceRoles::AUTHORITY;
-        }
-    }
+    //    if cfg!(feature = "msgbus-redis") == false {
+    //        if matches.is_present("grandpa_authority_only") {
+    //            // Authority Setup is only called if validator is set as true
+    //            config.roles = ServiceRoles::AUTHORITY;
+    //        } else if matches.is_present("grandpa_authority") {
+    //            // Authority Setup is only called if validator is set as true
+    //            config.roles = ServiceRoles::AUTHORITY;
+    //        }
+    //    }
     match cli::execute_default::<service::Factory, _>(spec, exit, &matches, &config)? {
         cli::Action::ExecutedInternally => (),
         cli::Action::RunService(exit) => {

@@ -7,9 +7,9 @@ use primitives::BuildStorage;
 use runtime_io;
 
 use super::*;
+use std::str;
 use xassets;
 use xassets::assetdef::{Asset, Chain, ChainT, Token};
-use std::str;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -55,7 +55,7 @@ impl xbitcoin::Trait for Test {
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
-    type OnAssetRegistration=();
+    type OnAssetRegistration = ();
 }
 impl xrecords::Trait for Test {
     type Event = ();
@@ -93,7 +93,12 @@ pub fn new_test_ext(
 
     t.extend(
         balances::GenesisConfig::<Test> {
-            balances: vec![(1, 1_000_000_000), (2, 1_000_000_000), (3, 1_000_000_000), (4, 1_000_000_000)],
+            balances: vec![
+                (1, 1_000_000_000),
+                (2, 1_000_000_000),
+                (3, 1_000_000_000),
+                (4, 1_000_000_000),
+            ],
             transaction_base_fee: 0,
             transaction_byte_fee: 0,
             existential_deposit: ext_deposit,
@@ -105,13 +110,20 @@ pub fn new_test_ext(
         .unwrap()
         .0,
     );
-     t.extend(
+    t.extend(
         xassets::GenesisConfig::<Test> {
-                pcx: (pcx_precision, pcx_desc),
-                memo_len: 128,
-                asset_list: vec![
-                    (btc_asset, true, vec![(1, 1_000_000_000),(2, 1_000_000_000),(3, 1_000_000_000),(4, 1_000_000_000)])
+            pcx: (pcx_precision, pcx_desc),
+            memo_len: 128,
+            asset_list: vec![(
+                btc_asset,
+                true,
+                vec![
+                    (1, 1_000_000_000),
+                    (2, 1_000_000_000),
+                    (3, 1_000_000_000),
+                    (4, 1_000_000_000),
                 ],
+            )],
         }
         .build_storage()
         .unwrap()
@@ -119,7 +131,12 @@ pub fn new_test_ext(
     );
     t.extend(
         GenesisConfig::<Test> {
-            pair_list: vec![(<xassets::Module<Test> as ChainT>::TOKEN.to_vec(),<xbitcoin::Module<Test> as ChainT>::TOKEN.to_vec(),5,true)],
+            pair_list: vec![(
+                <xassets::Module<Test> as ChainT>::TOKEN.to_vec(),
+                <xbitcoin::Module<Test> as ChainT>::TOKEN.to_vec(),
+                5,
+                true,
+            )],
             // (OrderPair { first: Runtime::CHAINX_SYMBOL.to_vec(), second: BridgeOfBTC::SYMBOL.to_vec() }, 8)
             price_volatility: 10,
             _genesis_phantom_data: Default::default(),
@@ -131,9 +148,6 @@ pub fn new_test_ext(
 
     runtime_io::TestExternalities::new(t)
 }
-
-
-
 
 pub type Spot = Module<Test>;
 pub type Assets = xassets::Module<Test>;

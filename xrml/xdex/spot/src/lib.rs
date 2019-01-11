@@ -23,10 +23,10 @@ extern crate parity_codec as codec;
 // for substrate runtime
 // map!, vec! marco.
 //#[cfg_attr(feature = "std", macro_use)]
-extern crate substrate_primitives;
 extern crate sr_io as runtime_io;
 extern crate sr_primitives as primitives;
 extern crate sr_std as rstd;
+extern crate substrate_primitives;
 
 #[macro_use]
 extern crate srml_support as runtime_support;
@@ -36,14 +36,13 @@ extern crate srml_timestamp as timestamp;
 
 #[cfg(test)]
 extern crate srml_consensus as consensus;
-extern crate xrml_xbridge_bitcoin as xbitcoin;
 extern crate xrml_xassets_records as xrecords;
+extern crate xrml_xbridge_bitcoin as xbitcoin;
 
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
-
 
 #[cfg(test)]
 mod mock;
@@ -52,17 +51,17 @@ mod tests;
 
 mod def;
 
-use xassets::assetdef::{ChainT, Token};
 use codec::Codec;
 use def::{
     Fill, Handicap, Order, OrderDirection, OrderPair, OrderPairID, OrderStatus, OrderType, ID,
 };
-use rstd::prelude::*;
 use primitives::traits::{As, Member, SimpleArithmetic, Zero};
 use primitives::traits::{CheckedAdd, CheckedSub};
+use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
+use xassets::assetdef::{ChainT, Token};
 
 pub type OrderT<T> = Order<
     OrderPairID,
@@ -79,7 +78,7 @@ pub type FillT<T> = Fill<
 >;
 pub type HandicapT<T> = Handicap<<T as Trait>::Price>;
 
-pub trait Trait: balances::Trait  + xassets::Trait + timestamp::Trait {
+pub trait Trait: balances::Trait + xassets::Trait + timestamp::Trait {
     type Price: Parameter
         + Member
         + Codec
@@ -97,7 +96,7 @@ pub trait Trait: balances::Trait  + xassets::Trait + timestamp::Trait {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn deposit_event() = default;
+        fn deposit_event<T>() = default;
 
          //委托
         pub fn put_order(origin,pairid: OrderPairID,ordertype: OrderType,direction:OrderDirection,amount: T::Balance,price:T::Price) -> Result{
@@ -125,7 +124,7 @@ decl_module! {
                 Some(_pair) => Err("have a existed pair in  list"),
                 None => {
                     let pair_len=<OrderPairLen<T>>::get();
-                    
+
                     let pair=OrderPair{
                         id:pair_len,
                         first:first,
@@ -182,11 +181,8 @@ decl_event!(
         <T as balances::Trait>::Balance,
         <T as Trait>::Price
     {
-        
         UpdateOrder(AccountId,ID,OrderPairID,Price,OrderType,OrderDirection,Balance,Balance,BlockNumber,BlockNumber,OrderStatus,Balance,Vec<ID>),
         FillOrder(ID,OrderPairID,Price,AccountId,AccountId,ID,ID, Balance,u64),
-
-        
         UpdateOrderPair(OrderPairID,Token,Token,u32,bool),
         PriceVolatility(u32),
     }
@@ -194,7 +190,7 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as XSpot {
-        
+
         //交易对列表
         pub OrderPairLen get(pair_len):  OrderPairID ;
         pub OrderPairOf get(pair_of):map ( OrderPairID ) => Option<OrderPair>;
@@ -222,7 +218,7 @@ decl_storage! {
                 let src_r = storage.clone().build_storage().unwrap().0;
                 let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
                 with_externalities(&mut tmp_storage, || {
-                    
+
                     for (first, second, precision, status) in config.pair_list.iter() {
                         Module::<T>::add_pair(first.clone(),second.clone(),*precision,*status).unwrap();
                     }
@@ -382,8 +378,7 @@ impl<T: Trait> Module<T> {
         if let Some(sum) = Self::trans_amount(amount, price, &pair) {
             match direction {
                 OrderDirection::Buy => {
-                    if <xassets::Module<T>>::free_balance(&who, &pair.second) < sum
-                    {
+                    if <xassets::Module<T>>::free_balance(&who, &pair.second) < sum {
                         return Err("transactor's free token balance too low, can't put buy order");
                     }
                     reserve_last = As::sa(sum.as_());
@@ -398,8 +393,7 @@ impl<T: Trait> Module<T> {
                     }
                 }
                 OrderDirection::Sell => {
-                    if <xassets::Module<T>>::free_balance(&who, &pair.first)
-                        < As::sa(amount.as_())
+                    if <xassets::Module<T>>::free_balance(&who, &pair.first) < As::sa(amount.as_())
                     {
                         return Err("transactor's free token balance too low, can't put sell order");
                     }
@@ -421,10 +415,10 @@ impl<T: Trait> Module<T> {
 
         // 更新用户的交易对的挂单index
         let id: ID = match <AccountOrdersLen<T>>::get(who) {
-            Some(id) => id ,
+            Some(id) => id,
             None => 0,
         };
-        <AccountOrdersLen<T>>::insert(who, id+1);
+        <AccountOrdersLen<T>>::insert(who, id + 1);
 
         //新增挂单记录
         let mut order = Order {
@@ -456,7 +450,7 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-    fn do_match(order: &mut OrderT<T>, pair: &OrderPair, handicap: &HandicapT<T>)  {
+    fn do_match(order: &mut OrderT<T>, pair: &OrderPair, handicap: &HandicapT<T>) {
         let mut opponent_price: T::Price = match order.direction {
             OrderDirection::Buy => handicap.sell,
             OrderDirection::Sell => handicap.buy,
@@ -519,7 +513,6 @@ impl<T: Trait> Module<T> {
                                 } else {
                                     amount = v1;
                                 }
-                                
 
                                 //填充成交
                                 if let Err(_msg) = Self::fill_order(
@@ -549,20 +542,23 @@ impl<T: Trait> Module<T> {
             //移动对手价
             match order.direction {
                 OrderDirection::Buy => {
-                    opponent_price = match opponent_price.checked_add(&As::sa(10_u64.pow(pair.precision.as_()))) {
+                    opponent_price = match opponent_price
+                        .checked_add(&As::sa(10_u64.pow(pair.precision.as_())))
+                    {
                         Some(v) => v,
                         None => Default::default(),
                     };
                 }
                 OrderDirection::Sell => {
-                    opponent_price = match opponent_price.checked_sub(&As::sa(10_u64.pow(pair.precision.as_()))) {
+                    opponent_price = match opponent_price
+                        .checked_sub(&As::sa(10_u64.pow(pair.precision.as_())))
+                    {
                         Some(v) => v,
                         None => Default::default(),
                     };
                 }
             }
         }
-
     }
 
     fn new_order(order: &mut OrderT<T>) {
@@ -589,7 +585,7 @@ impl<T: Trait> Module<T> {
             match order.direction {
                 OrderDirection::Buy => {
                     if let Some(mut handicap) = <HandicapMap<T>>::get(order.pair) {
-                        if order.price > handicap.buy || handicap.buy== Default::default() {
+                        if order.price > handicap.buy || handicap.buy == Default::default() {
                             handicap.buy = order.price;
                             <HandicapMap<T>>::insert(order.pair, handicap);
                         }
@@ -624,8 +620,8 @@ impl<T: Trait> Module<T> {
 
     fn fill_order(
         pairid: OrderPairID,
-        maker_order:&mut OrderT<T>,
-        taker_order:&mut OrderT<T>,
+        maker_order: &mut OrderT<T>,
+        taker_order: &mut OrderT<T>,
         price: T::Price,
         amount: T::Balance,
     ) -> Result {
@@ -654,8 +650,7 @@ impl<T: Trait> Module<T> {
             }
 
             maker_order.lastupdate_time = As::sa(<timestamp::Module<T>>::now().as_());
-            
-        } 
+        }
 
         //更新taker对应的订单
         {
@@ -673,10 +668,9 @@ impl<T: Trait> Module<T> {
             }
 
             taker_order.lastupdate_time = As::sa(<timestamp::Module<T>>::now().as_());
-            
-        } 
-        let maker_user=&maker_order.user;
-        let taker_user=&taker_order.user;
+        }
+        let maker_user = &maker_order.user;
+        let taker_user = &taker_order.user;
 
         //转移 maker和taker中的资产
         match maker_order.direction {
@@ -704,11 +698,10 @@ impl<T: Trait> Module<T> {
 
                 //计算买家的数量，解锁second,并move 给卖家
                 let taker_back_token: &Token = &pair.second;
-                let taker_back_amount: T::Balance =
-                    match Self::trans_amount(amount, price, &pair) {
-                        Some(sum) => sum,
-                        None => Zero::zero(),
-                    };
+                let taker_back_amount: T::Balance = match Self::trans_amount(amount, price, &pair) {
+                    Some(sum) => sum,
+                    None => Zero::zero(),
+                };
                 taker_order.reserve_last =
                     match taker_order.reserve_last.checked_sub(&taker_back_amount) {
                         Some(v) => v,
@@ -730,11 +723,10 @@ impl<T: Trait> Module<T> {
             OrderDirection::Buy => {
                 //买先解锁second token 并move给卖家，和手续费账户
                 let maker_back_token: &Token = &pair.second;
-                let maker_back_amount: T::Balance =
-                    match Self::trans_amount(amount, price, &pair) {
-                        Some(sum) => sum,
-                        None => Zero::zero(),
-                    };
+                let maker_back_amount: T::Balance = match Self::trans_amount(amount, price, &pair) {
+                    Some(sum) => sum,
+                    None => Zero::zero(),
+                };
                 maker_order.reserve_last =
                     match maker_order.reserve_last.checked_sub(&maker_back_amount) {
                         Some(v) => v,
@@ -785,7 +777,7 @@ impl<T: Trait> Module<T> {
             maker_user_order_index: maker_order.index,
             taker_user_order_index: taker_order.index,
             amount: amount,
-            time: (<timestamp::Module<T>>::now().as_())
+            time: (<timestamp::Module<T>>::now().as_()),
         };
 
         <FillLen<T>>::insert(pairid, new_fill_index);
@@ -829,12 +821,7 @@ impl<T: Trait> Module<T> {
         {
             return Err(msg);
         }
-        if let Err(e) = <xassets::Module<T>>::move_free_balance(
-            &from,
-            &to,
-            &token,
-            value,
-        ) {
+        if let Err(e) = <xassets::Module<T>>::move_free_balance(&from, &to, &token, value) {
             return Err(e.info());
         }
 
@@ -851,7 +838,9 @@ impl<T: Trait> Module<T> {
                     OrderDirection::Buy => {
                         //更新卖一
                         if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
-                            handicap.sell = match handicap.sell.checked_add(&As::sa(10_u64.pow(pair.precision)))
+                            handicap.sell = match handicap
+                                .sell
+                                .checked_add(&As::sa(10_u64.pow(pair.precision)))
                             {
                                 Some(v) => v,
                                 None => Default::default(),
@@ -863,7 +852,10 @@ impl<T: Trait> Module<T> {
                     OrderDirection::Sell => {
                         //更新买一
                         if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
-                            handicap.buy = match handicap.buy.checked_sub(&As::sa(10_u64.pow(pair.precision))) {
+                            handicap.buy = match handicap
+                                .buy
+                                .checked_sub(&As::sa(10_u64.pow(pair.precision)))
+                            {
                                 Some(v) => v,
                                 None => Default::default(),
                             };
@@ -880,25 +872,23 @@ impl<T: Trait> Module<T> {
         seconds / period.as_()
     }
     fn update_last_average_price(pairid: OrderPairID, price: T::Price) {
-        
-        let blocks_per_day:u64=Self::blocks_per_day();
-        let number=<system::Module<T>>::block_number();
+        let blocks_per_day: u64 = Self::blocks_per_day();
+        let number = <system::Module<T>>::block_number();
 
-        match <OrderPairPriceOf<T>>::get(pairid){
-            Some((last,mut aver,time))=>{
-                if number-time < As::sa(blocks_per_day) {
-                    let new_weight:u64=price.as_()*(number-time).as_();
-                    let old_weight:u64=aver.as_()*(blocks_per_day+time.as_()-number.as_());
-                    aver=As::sa((new_weight+old_weight)/blocks_per_day);
+        match <OrderPairPriceOf<T>>::get(pairid) {
+            Some((last, mut aver, time)) => {
+                if number - time < As::sa(blocks_per_day) {
+                    let new_weight: u64 = price.as_() * (number - time).as_();
+                    let old_weight: u64 = aver.as_() * (blocks_per_day + time.as_() - number.as_());
+                    aver = As::sa((new_weight + old_weight) / blocks_per_day);
+                } else {
+                    aver = price;
                 }
-                else {
-                    aver=price;
-                }
-                <OrderPairPriceOf<T>>::insert(pairid,(price,aver,number));
-            },
-            None=>{
-                <OrderPairPriceOf<T>>::insert(pairid,(price,price,number));
-            },
+                <OrderPairPriceOf<T>>::insert(pairid, (price, aver, number));
+            }
+            None => {
+                <OrderPairPriceOf<T>>::insert(pairid, (price, price, number));
+            }
         }
     }
     //检查和更新报价

@@ -1,5 +1,5 @@
-use xassets::assetdef::Token;
 use rstd::prelude::*;
+use xassets::assetdef::Token;
 
 pub type ID = u128;
 pub type OrderPairID = u32;
@@ -76,13 +76,7 @@ pub struct OrderPair {
     pub used: bool,
 }
 impl OrderPair {
-    pub fn new(
-        id: OrderPairID,
-        first: Token,
-        second: Token,
-        precision: u32,
-        status: bool,
-    ) -> Self {
+    pub fn new(id: OrderPairID, first: Token, second: Token, precision: u32, status: bool) -> Self {
         return OrderPair {
             id: id,
             first: first,

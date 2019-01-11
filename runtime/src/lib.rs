@@ -275,7 +275,6 @@ impl xspot::Trait for Runtime {
     type Price = Balance;
 }
 
-
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
         Block = Block,

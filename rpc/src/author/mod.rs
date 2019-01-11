@@ -57,7 +57,7 @@ build_rpc_trait! {
 
             /// Unsubscribe from extrinsic watching.
             #[rpc(name = "author_unwatchExtrinsic")]
-            fn unwatch_extrinsic(&self, Self::Metadata, SubscriptionId) -> Result<bool>;
+            fn unwatch_extrinsic(&self, Option<Self::Metadata>, SubscriptionId) -> Result<bool>;
         }
 
     }
@@ -162,7 +162,11 @@ where
         })
     }
 
-    fn unwatch_extrinsic(&self, _metadata: Self::Metadata, id: SubscriptionId) -> Result<bool> {
+    fn unwatch_extrinsic(
+        &self,
+        _metadata: Option<Self::Metadata>,
+        id: SubscriptionId,
+    ) -> Result<bool> {
         Ok(self.subscriptions.cancel(id))
     }
 }

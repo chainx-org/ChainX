@@ -54,7 +54,7 @@ pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
 
 /// The Ed25519 pub key of an session that belongs to an authority of the relay chain. This is
 /// exactly equivalent to what the substrate calls an "authority".
-pub type SessionKey = primitives::AuthorityId;
+pub type SessionKey = primitives::Ed25519AuthorityId;
 
 /// A hash of some data used by the relay chain.
 pub type Hash = primitives::H256;

@@ -82,7 +82,7 @@ build_rpc_trait! {
 
             /// Unsubscribe from runtime version subscription
             #[rpc(name = "state_unsubscribeRuntimeVersion", alias = ["chain_unsubscribeRuntimeVersion", ])]
-            fn unsubscribe_runtime_version(&self, Self::Metadata, SubscriptionId) -> RpcResult<bool>;
+            fn unsubscribe_runtime_version(&self, Option<Self::Metadata>, SubscriptionId) -> RpcResult<bool>;
         }
 
         #[pubsub(name = "state_storage")] {
@@ -92,7 +92,7 @@ build_rpc_trait! {
 
             /// Unsubscribe from storage subscription
             #[rpc(name = "state_unsubscribeStorage")]
-            fn unsubscribe_storage(&self, Self::Metadata, SubscriptionId) -> RpcResult<bool>;
+            fn unsubscribe_storage(&self, Option<Self::Metadata>, SubscriptionId) -> RpcResult<bool>;
         }
     }
 }
@@ -141,8 +141,7 @@ where
         let return_data = self
             .client
             .executor()
-            .call(&BlockId::Hash(block), &method, &data.0)?
-            .return_data;
+            .call(&BlockId::Hash(block), &method, &data.0)?;
         Ok(Bytes(return_data))
     }
 
@@ -316,7 +315,11 @@ where
         })
     }
 
-    fn unsubscribe_storage(&self, _meta: Self::Metadata, id: SubscriptionId) -> RpcResult<bool> {
+    fn unsubscribe_storage(
+        &self,
+        _meta: Option<Self::Metadata>,
+        id: SubscriptionId,
+    ) -> RpcResult<bool> {
         Ok(self.subscriptions.cancel(id))
     }
 
@@ -375,7 +378,7 @@ where
 
     fn unsubscribe_runtime_version(
         &self,
-        _meta: Self::Metadata,
+        _meta: Option<Self::Metadata>,
         id: SubscriptionId,
     ) -> RpcResult<bool> {
         Ok(self.subscriptions.cancel(id))

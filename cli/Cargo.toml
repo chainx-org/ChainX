@@ -14,6 +14,7 @@ slog = "^2"
 substrate-cli = { git = "https://github.com/chainpool/substrate" }
 substrate-client = { git = "https://github.com/chainpool/substrate" }
 substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+substrate-basic-authorship = { git = "https://github.com/chainpool/substrate" }
 substrate-service = { git = "https://github.com/chainpool/substrate" }
 substrate-transaction-pool = { git = "https://github.com/chainpool/substrate" }
 substrate-network = { git = "https://github.com/chainpool/substrate" }

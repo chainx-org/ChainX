@@ -40,10 +40,6 @@ construct_simple_protocol! {
 
 /// Node specific configuration
 pub struct NodeConfig<F: substrate_service::ServiceFactory> {
-    /// should run as a grandpa authority
-    pub grandpa_authority: bool,
-    /// should run as a grandpa authority only, don't validate as usual
-    pub grandpa_authority_only: bool,
     /// grandpa connection to import block
     // FIXME: rather than putting this on the config, let's have an actual intermediate setup state
     // https://github.com/paritytech/substrate/issues/1134
@@ -59,8 +55,6 @@ where
 {
     fn default() -> NodeConfig<F> {
         NodeConfig {
-            grandpa_authority: false,
-            grandpa_authority_only: false,
             grandpa_import_setup: None,
         }
     }
@@ -82,16 +76,13 @@ construct_service_factory! {
             { |config: FactoryFullConfiguration<Self>, executor: TaskExecutor|
                 FullComponents::<Factory>::new(config, executor) },
         AuthoritySetup = {
-            |mut service: Self::FullService, executor: TaskExecutor, key: Option<Arc<Pair>>| {
+            |mut service: Self::FullService, executor: TaskExecutor, local_key: Option<Arc<Pair>>| {
                 let (block_import, link_half) = service.config.custom.grandpa_import_setup.take()
                     .expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
-                let mut producer = None;
-
-                let local_key = if let Some(key) = key {
-                    if !service.config.custom.grandpa_authority_only {
+                if let Some(ref key) = local_key {
                         info!("Using authority key {}", key.public());
-                        let proposer = Arc::new(substrate_service::ProposerFactory {
+                        let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
                             client: service.client(),
                             transaction_pool: service.transaction_pool(),
                         });
@@ -104,26 +95,13 @@ construct_service_factory! {
                             block_import.clone(),
                             proposer,
                             service.network(),
+                            service.on_exit(),
                         ));
 
-                        producer = Some(key.clone());
-                    }
-
-                    if service.config.custom.grandpa_authority {
                         info!("Running Grandpa session as Authority {}", key.public());
-                        Some(key)
-                    } else {
-                        None
                     }
-                } else {
-                    None
-                };
 
-                if let Some(ref k) = producer {
-                    set_blockproducer(k.public().0.into());
-                }
-
-                let voter = grandpa::run_grandpa(
+                executor.spawn(grandpa::run_grandpa(
                     grandpa::Config {
                         local_key,
                         gossip_duration: Duration::new(4, 0), // FIXME: make this available through chainspec?
@@ -131,9 +109,8 @@ construct_service_factory! {
                     },
                     link_half,
                     grandpa::NetworkBridge::new(service.network()),
-                )?;
-
-                executor.spawn(voter);
+                    service.on_exit(),
+                )?);
 
                 Ok(service)
             }
