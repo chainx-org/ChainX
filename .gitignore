@@ -17,5 +17,6 @@ chainx/runtime/wasm/target/
 .vs/
 .idea/
 chainx/
+!rpc/src/chainx
 bak/
 .chainx/

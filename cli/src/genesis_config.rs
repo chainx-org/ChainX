@@ -123,7 +123,13 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             burn_account: substrate_primitives::H256::repeat_byte(0x1),
             banned_account: auth1.into(),
         }),
-        xaccounts: None,
+        xaccounts: Some(XAccountsConfig {
+            activation_per_share: 100_000_000,
+            maximum_cert_count: 180,
+            shares_per_cert: 50,
+            total_issued: 1,
+            cert_owner: auth1.into(),
+        }),
         fee_manager: Some(XFeeManagerConfig {
             switch: false,
             _genesis_phantom_data: Default::default(),

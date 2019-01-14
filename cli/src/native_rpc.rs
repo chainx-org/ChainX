@@ -65,8 +65,9 @@ impl Rpc for substrate_service::LightComponents<service::Factory> {
                 //should_have_peers,
                 false,
             );
-            rpc::rpc_handler::<ComponentBlock<Self>, ComponentExHash<Self>, _, _, _, _>(
-                state, chain, author, system,
+            let chainx = rpc::apis::chainx::ChainX::new(client.clone());
+            rpc::rpc_handler::<ComponentBlock<Self>, ComponentExHash<Self>, _, _, _, _, _>(
+                state, chain, author, system, chainx,
             )
         };
         let rpc_http: Result<Option<rpc::HttpServer>, io::Error> =
@@ -111,8 +112,9 @@ impl Rpc for substrate_service::FullComponents<service::Factory> {
                 //should_have_peers,
                 false,
             );
-            rpc::rpc_handler::<ComponentBlock<Self>, ComponentExHash<Self>, _, _, _, _>(
-                state, chain, author, system,
+            let chainext = rpc::apis::chainx::ChainX::new(client.clone());
+            rpc::rpc_handler::<ComponentBlock<Self>, ComponentExHash<Self>, _, _, _, _, _>(
+                state, chain, author, system, chainext,
             )
         };
         let rpc_http: Result<Option<rpc::HttpServer>, io::Error> =

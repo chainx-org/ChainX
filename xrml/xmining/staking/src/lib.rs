@@ -76,7 +76,7 @@ pub struct IntentionProfs<Balance: Default, BlockNumber: Default> {
 /// Nomination record of one of the nominator's nominations.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct NominationRecord<Balance: Default, BlockNumber: Default> {
+pub struct NominationRecord<Balance, BlockNumber> {
     pub nomination: Balance,
     pub last_vote_weight: u64,
     pub last_vote_weight_update: BlockNumber,
@@ -375,7 +375,7 @@ impl<T: Trait> Module<T> {
     /// Due of allocated shares that cert comes with.
     pub fn unfreeze_block_of(cert_name: Name) -> T::BlockNumber {
         let props = <xaccounts::Module<T>>::cert_immutable_props_of(cert_name);
-        let issued_at = props.issued_at;
+        let issued_at = props.issued_at.0;
         let frozen_duration = props.frozen_duration;
 
         issued_at + T::BlockNumber::sa(frozen_duration as u64 * Self::blocks_per_day())
@@ -529,6 +529,7 @@ impl<T: Trait> Module<T> {
                 name: name,
                 activator: cert_name.clone(),
                 initial_shares: share_count,
+                registered_at: <timestamp::Module<T>>::now(),
             },
         );
         <xaccounts::IntentionPropertiesOf<T>>::insert(

@@ -30,7 +30,6 @@ extern crate srml_consensus as consensus;
 #[cfg(test)]
 extern crate srml_session as session;
 extern crate srml_system as system;
-#[cfg(test)]
 extern crate srml_timestamp as timestamp;
 
 extern crate xr_primitives;
@@ -46,7 +45,7 @@ mod tests;
 pub type Name = XString;
 pub type URL = XString;
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + timestamp::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -54,18 +53,19 @@ pub trait Trait: system::Trait {
 /// Cert immutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct CertImmutableProps<BlockNumber: Default> {
-    pub issued_at: BlockNumber,
+pub struct CertImmutableProps<BlockNumber: Default, Moment: Default> {
+    pub issued_at: (BlockNumber, Moment),
     pub frozen_duration: u32,
 }
 
 /// Intention Immutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct IntentionImmutableProps {
+pub struct IntentionImmutableProps<Moment> {
     pub name: Name,
     pub activator: Name,
     pub initial_shares: u32,
+    pub registered_at: Moment,
 }
 
 /// Intention mutable properties
@@ -104,7 +104,7 @@ decl_storage! {
         /// cert name => cert owner
         pub CertOwnerOf get(cert_owner_of): map Name => Option<T::AccountId>;
 
-        pub CertImmutablePropertiesOf get(cert_immutable_props_of): map Name => CertImmutableProps<T::BlockNumber>;
+        pub CertImmutablePropertiesOf get(cert_immutable_props_of): map Name => CertImmutableProps<T::BlockNumber, T::Moment>;
 
         pub RemainingSharesOf get(remaining_shares_of): map Name => u32;
 
@@ -113,10 +113,31 @@ decl_storage! {
         /// intention name => intention
         pub IntentionOf get(intention_of): map Name => Option<T::AccountId>;
 
-        pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps>;
+        pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps<T::Moment>>;
 
         pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps;
 
+    }
+
+    add_extra_genesis {
+        config(cert_owner): T::AccountId;
+
+        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+            use runtime_io::with_externalities;
+            use substrate_primitives::Blake2Hasher;
+            use runtime_primitives::StorageMap;
+
+            let s = storage.clone().build_storage().unwrap().0;
+            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
+            with_externalities(&mut init, || {
+                let cert_name = b"genesis_cert".to_vec();
+                let frozen_duration = 1u32;
+                let cert_owner = config.cert_owner.clone();
+                Module::<T>::issue(cert_name, frozen_duration, cert_owner).unwrap();
+            });
+            let init: StorageMap = init.into();
+            storage.extend(init);
+        });
     }
 }
 
@@ -143,7 +164,10 @@ impl<T: Trait> Module<T> {
         <CertOwnerOf<T>>::insert(&cert_name, cert_owner.clone());
 
         <CertImmutablePropertiesOf<T>>::mutate(&cert_name, |cert| {
-            cert.issued_at = <system::Module<T>>::block_number();
+            cert.issued_at = (
+                <system::Module<T>>::block_number(),
+                <timestamp::Module<T>>::now(),
+            );
             cert.frozen_duration = frozen_duration;
         });
 
@@ -170,16 +194,12 @@ pub fn is_valid_url<T: Trait>(url: &[u8]) -> Result {
     if url.len() > 24 || url.len() < 4 {
         return Err("The length of url must be in range [4, 24].");
     }
+    // number, capital letter, lowercase letter, .
     let is_valid = |n: &u8| -> bool {
-        // number, capital letter, lowercase letter, .
-        if *n >= 0x30 && *n <= 0x39
+        *n >= 0x30 && *n <= 0x39
             || *n >= 0x41 && *n <= 0x5A
             || *n >= 0x61 && *n <= 0x7A
             || *n == 0x2E
-        {
-            return true;
-        }
-        return false;
     };
 
     if url

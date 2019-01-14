@@ -37,6 +37,7 @@ pub mod memo;
 
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
+use rstd::slice::Iter;
 use runtime_support::dispatch::Result;
 
 use primitives::traits::{CheckedAdd, CheckedSub, Zero};
@@ -124,6 +125,21 @@ pub enum AssetType {
     ReservedWithdrawal,
     ReservedDexSpot,
     ReservedDexFuture,
+}
+// TODO use marco to improve it
+#[cfg(feature = "std")]
+impl AssetType {
+    pub fn iterator() -> Iter<'static, AssetType> {
+        static TYPES: [AssetType; 6] = [
+            AssetType::Free,
+            AssetType::ReservedStaking,
+            AssetType::ReservedStakingRevocation,
+            AssetType::ReservedWithdrawal,
+            AssetType::ReservedDexSpot,
+            AssetType::ReservedDexFuture,
+        ];
+        TYPES.into_iter()
+    }
 }
 
 impl Default for AssetType {

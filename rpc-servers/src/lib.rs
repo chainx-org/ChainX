@@ -25,6 +25,8 @@ extern crate jsonrpc_ws_server as ws;
 extern crate serde;
 extern crate sr_primitives;
 
+extern crate chainx_primitives;
+
 #[macro_use]
 extern crate log;
 
@@ -33,6 +35,8 @@ use sr_primitives::{
     traits::{Block as BlockT, NumberFor},
 };
 use std::io;
+
+use chainx_primitives::{AccountId, Balance, BlockNumber};
 
 /// Maximal payload accepted by RPC servers
 const MAX_PAYLOAD: usize = 15 * 1024 * 1024;
@@ -43,11 +47,12 @@ pub type HttpServer = http::Server;
 pub type WsServer = ws::Server;
 
 /// Construct rpc `IoHandler`
-pub fn rpc_handler<Block: BlockT, ExHash, S, C, A, Y>(
+pub fn rpc_handler<Block: BlockT, ExHash, S, C, A, Y, X>(
     state: S,
     chain: C,
     author: A,
     system: Y,
+    chainx: X,
 ) -> RpcHandler
 where
     Block: BlockT + 'static,
@@ -62,12 +67,20 @@ where
     >,
     A: apis::author::AuthorApi<ExHash, Block::Hash, Metadata = Metadata>,
     Y: apis::system::SystemApi<Block::Hash, NumberFor<Block>>,
+    X: apis::chainx::ChainXApi<
+        NumberFor<Block>,
+        AccountId,
+        Balance,
+        BlockNumber,
+        SignedBlock<Block>,
+    >,
 {
     let mut io = pubsub::PubSubHandler::default();
     io.extend_with(state.to_delegate());
     io.extend_with(chain.to_delegate());
     io.extend_with(author.to_delegate());
     io.extend_with(system.to_delegate());
+    io.extend_with(chainx.to_delegate());
     io
 }
 

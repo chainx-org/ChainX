@@ -18,6 +18,9 @@
 
 #![warn(missing_docs)]
 
+extern crate chainx_primitives;
+extern crate chainx_runtime;
+extern crate chrono;
 extern crate jsonrpc_core as rpc;
 extern crate jsonrpc_pubsub;
 extern crate parity_codec as codec;
@@ -26,11 +29,20 @@ extern crate serde;
 extern crate serde_json;
 extern crate sr_primitives as runtime_primitives;
 extern crate sr_version as runtime_version;
+extern crate srml_balances as balances;
+extern crate srml_session as session;
+extern crate srml_support;
+extern crate srml_timestamp as timestamp;
 extern crate substrate_client as client;
 extern crate substrate_network as network;
 extern crate substrate_primitives as primitives;
+extern crate substrate_state_machine as state_machine;
 extern crate substrate_transaction_pool as transaction_pool;
 extern crate tokio;
+extern crate xrml_mining_staking as xstaking;
+extern crate xrml_xaccounts as xaccounts;
+extern crate xrml_xassets_assets as xassets;
+extern crate xrml_xsupport as xsupport;
 
 #[macro_use]
 extern crate error_chain;
@@ -38,6 +50,7 @@ extern crate error_chain;
 extern crate jsonrpc_macros;
 #[macro_use]
 extern crate log;
+#[macro_use]
 extern crate serde_derive;
 
 #[cfg(test)]
@@ -61,6 +74,7 @@ pub use subscriptions::Subscriptions;
 
 pub mod author;
 pub mod chain;
+pub mod chainx;
 pub mod metadata;
 pub mod state;
 pub mod system;
