@@ -60,7 +60,7 @@ impl<T: Trait> Module<T> {
     /// Add the reward to their balance, and their jackpot, pro-rata.
     fn reward(who: &T::AccountId, reward: T::Balance) {
         let off_the_table = T::Balance::sa(reward.as_() * 1 / 10);
-        let _ = <xassets::Module<T>>::pcx_reward(who, off_the_table);
+        let _ = <xassets::Module<T>>::pcx_issue(who, off_the_table);
         let to_jackpot = reward - off_the_table;
         <IntentionProfiles<T>>::mutate(who, |iprof| iprof.jackpot += to_jackpot);
     }

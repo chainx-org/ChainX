@@ -176,7 +176,7 @@ impl<T: Trait> Module<T> {
     /// deposit, notice this func has include deposit_init and deposit_finish (not wait for block confirm process)
     pub fn deposit(who: &T::AccountId, token: &Token, balance: T::Balance) -> Result {
         Self::before(who, token)?;
-        xassets::Module::<T>::issue(who, token, balance)?;
+        xassets::Module::<T>::issue(token, who, balance)?;
         Self::deposit_event(RawEvent::Deposit(who.clone(), token.clone(), balance));
         Ok(())
     }
@@ -210,7 +210,15 @@ impl<T: Trait> Module<T> {
             let index = tail.index();
             if let Some(mut node) = Self::application_map(index) {
                 // reserve token, wait to destroy
-                xassets::Module::<T>::reserve(who, token, balance, AssetType::ReservedWithdrawal)?;
+                xassets::Module::<T>::move_balance(
+                    token,
+                    who,
+                    AssetType::Free,
+                    who,
+                    AssetType::ReservedWithdrawal,
+                    balance,
+                )
+                .map_err(|e| e.info())?;
                 node.add_option_node_after_withkey::<LinkedMultiKey<T>, Chain>(n, asset.chain())?;
             }
         }
@@ -241,7 +249,7 @@ impl<T: Trait> Module<T> {
         let token = application.token();
         let balance = application.balance();
         // destroy reserved token
-        xassets::Module::<T>::destroy(&who, &token, balance, AssetType::ReservedWithdrawal)?;
+        xassets::Module::<T>::destroy(&token, &who, balance)?;
         Self::deposit_event(RawEvent::Withdrawal(
             who,
             token,

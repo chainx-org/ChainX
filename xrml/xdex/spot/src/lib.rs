@@ -61,7 +61,7 @@ use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
-use xassets::assetdef::{ChainT, Token};
+use xassets::assetdef::Token;
 
 pub type OrderT<T> = Order<
     OrderPairID,
@@ -281,14 +281,7 @@ impl<T: Trait> Module<T> {
                     };
 
                     //回退资产
-                    if let Err(msg) = <xassets::Module<T>>::unreserve(
-                        &transactor,
-                        &back_token,
-                        back_amount,
-                        xassets::AssetType::ReservedDexSpot,
-                    ) {
-                        return Err(msg);
-                    }
+                    Self::unreserve_token(&transactor, &back_token, back_amount)?;
 
                     order.reserve_last = match order.reserve_last.checked_sub(&back_amount) {
                         Some(v) => v,
@@ -383,14 +376,7 @@ impl<T: Trait> Module<T> {
                     }
                     reserve_last = As::sa(sum.as_());
                     //  锁定用户资产
-                    if let Err(msg) = <xassets::Module<T>>::reserve(
-                        who,
-                        &pair.second,
-                        sum,
-                        xassets::AssetType::ReservedDexSpot,
-                    ) {
-                        return Err(msg);
-                    }
+                    Self::reserve_token(who, &pair.second, sum)?;
                 }
                 OrderDirection::Sell => {
                     if <xassets::Module<T>>::free_balance(&who, &pair.first) < As::sa(amount.as_())
@@ -399,14 +385,7 @@ impl<T: Trait> Module<T> {
                     }
                     //  锁定用户资产
                     reserve_last = amount;
-                    if let Err(msg) = <xassets::Module<T>>::reserve(
-                        who,
-                        &pair.first,
-                        As::sa(amount.as_()),
-                        xassets::AssetType::ReservedDexSpot,
-                    ) {
-                        return Err(msg);
-                    }
+                    Self::reserve_token(who, &pair.first, As::sa(amount.as_()))?;
                 }
             }
         } else {
@@ -809,23 +788,45 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
+
+    fn unreserve_token(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
+        <xassets::Module<T>>::move_balance(
+            token,
+            who,
+            xassets::AssetType::ReservedDexSpot,
+            who,
+            xassets::AssetType::Free,
+            value,
+        )
+        .map_err(|e| e.info())
+    }
+
+    fn reserve_token(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
+        <xassets::Module<T>>::move_balance(
+            token,
+            who,
+            xassets::AssetType::Free,
+            who,
+            xassets::AssetType::ReservedDexSpot,
+            value,
+        )
+        .map_err(|e| e.info())
+    }
     fn move_token(
         token: &Token,
         value: T::Balance,
         from: &T::AccountId,
         to: &T::AccountId,
     ) -> Result {
-        // 先把钱全部撤回
-        if let Err(msg) =
-            <xassets::Module<T>>::unreserve(from, token, value, xassets::AssetType::ReservedDexSpot)
-        {
-            return Err(msg);
-        }
-        if let Err(e) = <xassets::Module<T>>::move_free_balance(&from, &to, &token, value) {
-            return Err(e.info());
-        }
-
-        Ok(())
+        <xassets::Module<T>>::move_balance(
+            token,
+            from,
+            xassets::AssetType::ReservedDexSpot,
+            to,
+            xassets::AssetType::Free,
+            value,
+        )
+        .map_err(|e| e.info())
     }
 
     //更新盘口

@@ -66,20 +66,43 @@ pub trait Trait: balances::Trait {
 }
 
 pub trait OnAssetChanged<AccountId, Balance> {
-    fn on_move(from: &AccountId, to: &AccountId, token: &Token, value: Balance);
-    fn on_issue(who: &AccountId, token: &Token, value: Balance) -> Result;
-    fn on_destroy(who: &AccountId, token: &Token, value: Balance);
-    fn on_reserve(_who: &AccountId, _token: &Token, _value: Balance) {}
-    fn on_unreserve(_who: &AccountId, _token: &Token, _value: Balance) {}
-    fn on_set_balance(_who: &AccountId, _token: &Token, _type: AssetType, _value: Balance) {}
+    fn on_move(
+        token: &Token,
+        from: &AccountId,
+        from_type: AssetType,
+        to: &AccountId,
+        to_type: AssetType,
+        value: Balance,
+    ) -> StdResult<(), AssetErr>;
+    fn on_issue(token: &Token, who: &AccountId, value: Balance) -> Result;
+    fn on_destroy(token: &Token, who: &AccountId, value: Balance) -> Result;
+    fn on_set_balance(
+        _token: &Token,
+        _type: AssetType,
+        _who: &AccountId,
+        _value: Balance,
+    ) -> Result {
+        Ok(())
+    }
 }
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {
-    fn on_move(_: &AccountId, _: &AccountId, _: &Token, _: Balance) {}
-    fn on_issue(_: &AccountId, _: &Token, _: Balance) -> Result {
+    fn on_move(
+        _token: &Token,
+        _from: &AccountId,
+        _from_type: AssetType,
+        _to: &AccountId,
+        _to_type: AssetType,
+        _value: Balance,
+    ) -> StdResult<(), AssetErr> {
         Ok(())
     }
-    fn on_destroy(_: &AccountId, _: &Token, _: Balance) {}
+    fn on_issue(_: &Token, _: &AccountId, _: Balance) -> Result {
+        Ok(())
+    }
+    fn on_destroy(_: &Token, _: &AccountId, _: Balance) -> Result {
+        Ok(())
+    }
 }
 
 pub trait OnAssetRegistration {
@@ -97,6 +120,7 @@ impl OnAssetRegistration for () {
 pub enum AssetType {
     Free,
     ReservedStaking,
+    ReservedStakingRevocation,
     ReservedWithdrawal,
     ReservedDexSpot,
     ReservedDexFuture,
@@ -149,8 +173,10 @@ decl_module! {
             let dest = balances::Module::<T>::lookup(dest)?;
 
             is_valid_memo::<T>(&memo)?;
-
-            Self::move_free_balance(&transactor, &dest, &token, value).map_err(|e| e.info())
+            if transactor == dest {
+                return Ok(())
+            }
+            Self::move_free_balance(&token, &transactor, &dest, value).map_err(|e| e.info())
         }
     }
 }
@@ -196,7 +222,7 @@ decl_storage! {
                         Module::<T>::register_asset(asset.clone(), *is_psedu_intention, Zero::zero()).unwrap();
 
                         for (accountid, value) in init_list {
-                            Module::<T>::issue(&accountid, &t, As::sa(*value)).unwrap();
+                            Module::<T>::issue(&t, &accountid, As::sa(*value)).unwrap();
                         }
                     }
 
@@ -461,8 +487,14 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    pub fn issue(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
-        Self::should_not_chainx(token)?;
+    pub fn issue(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
+        if token.as_slice() == Self::TOKEN {
+            balances::Module::<T>::reward(who, value)?;
+            T::OnAssetChanged::on_issue(token, who, value)?;
+            return Ok(());
+        }
+
+        // Self::should_not_chainx(token)?;
         Self::is_valid_asset(token)?;
 
         let total_free_token = Self::total_asset_balance(token, AssetType::Free);
@@ -482,102 +514,14 @@ impl<T: Trait> Module<T> {
         Self::set_total_asset_balance(token, AssetType::Free, new_total_free_token);
         Self::set_asset_balance(who, token, AssetType::Free, new_free_token);
 
-        T::OnAssetChanged::on_issue(who, token, value)?;
+        T::OnAssetChanged::on_issue(token, who, value)?;
         Ok(())
     }
 
-    pub fn reserve(
-        who: &T::AccountId,
-        token: &Token,
-        value: T::Balance,
-        type_: AssetType,
-    ) -> Result {
-        Self::is_valid_asset_for(who, token)?;
-        Self::should_not_free_type(type_)?;
-
-        // get from storage
-        let total_free_token = Self::total_asset_balance(token, AssetType::Free);
-        let total_reserved_token = Self::total_asset_balance(token, type_);
-        let free_token = Self::asset_balance(who, token, AssetType::Free);
-        let reserved_token = Self::asset_balance(who, token, type_);
-        // test overflow
-        let new_free_token = match free_token.checked_sub(&value) {
-            Some(b) => b,
-            None => return Err("free balance too low to reserve"),
-        };
-        let new_reserved_token = match reserved_token.checked_add(&value) {
-            Some(b) => b,
-            None => return Err("reserved balance too high to reserve"),
-        };
-        let new_total_free_token = match total_free_token.checked_sub(&value) {
-            Some(b) => b,
-            None => return Err("total free balance too low to reserve"),
-        };
-        let new_total_reserved_token = match total_reserved_token.checked_add(&value) {
-            Some(b) => b,
-            None => return Err("total reserved balance too high to reserve"),
-        };
-        // set to storage
-        Self::set_total_asset_balance(token, AssetType::Free, new_total_free_token);
-        Self::set_total_asset_balance(token, type_, new_total_reserved_token);
-        Self::set_asset_balance(who, token, AssetType::Free, new_free_token);
-        Self::set_asset_balance(who, token, type_, new_reserved_token);
-
-        T::OnAssetChanged::on_reserve(who, token, value);
-        Ok(())
-    }
-
-    pub fn unreserve(
-        who: &T::AccountId,
-        token: &Token,
-        value: T::Balance,
-        type_: AssetType,
-    ) -> Result {
-        Self::is_valid_asset_for(who, token)?;
-        Self::should_not_free_type(type_)?;
-
-        // get from storage
-        let total_free_token = Self::total_asset_balance(token, AssetType::Free);
-        let total_reserved_token = Self::total_asset_balance(token, type_);
-        let free_token = Self::asset_balance(who, token, AssetType::Free);
-        let reserved_token = Self::asset_balance(who, token, type_);
-
-        // test overflow
-        let new_free_token = match free_token.checked_add(&value) {
-            Some(b) => b,
-            None => return Err("free balance too high to unreserve"),
-        };
-        let new_reserved_token = match reserved_token.checked_sub(&value) {
-            Some(b) => b,
-            None => return Err("reserved balance too low to unreserve"),
-        };
-        let new_total_free_token = match total_free_token.checked_add(&value) {
-            Some(b) => b,
-            None => return Err("total free balance too high to unreserve"),
-        };
-        let new_total_reserved_token = match total_reserved_token.checked_sub(&value) {
-            Some(b) => b,
-            None => return Err("total reserved balance too low to unreserve"),
-        };
-        // set to storage
-        Self::set_total_asset_balance(token, AssetType::Free, new_total_free_token);
-        Self::set_total_asset_balance(token, type_, new_total_reserved_token);
-        Self::set_asset_balance(who, token, AssetType::Free, new_free_token);
-        Self::set_asset_balance(who, token, type_, new_reserved_token);
-
-        T::OnAssetChanged::on_unreserve(who, token, value);
-        Ok(())
-    }
-
-    pub fn destroy(
-        who: &T::AccountId,
-        token: &Token,
-        value: T::Balance,
-        type_: AssetType,
-    ) -> Result {
+    pub fn destroy(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         Self::should_not_chainx(token)?;
         Self::is_valid_asset_for(who, token)?;
-        Self::should_not_free_type(type_)?;
+        let type_ = AssetType::ReservedWithdrawal;
 
         // get storage
         let total_reserved_token = Self::total_asset_balance(token, type_);
@@ -596,42 +540,77 @@ impl<T: Trait> Module<T> {
         Self::set_total_asset_balance(token, type_, new_total_reserved_token);
         Self::set_asset_balance(who, token, type_, new_reserved_token);
 
-        T::OnAssetChanged::on_destroy(who, token, value);
+        T::OnAssetChanged::on_destroy(token, who, value)?;
+        Ok(())
+    }
+
+    pub fn move_balance(
+        token: &Token,
+        from: &T::AccountId,
+        from_type: AssetType,
+        to: &T::AccountId,
+        to_type: AssetType,
+        value: T::Balance,
+    ) -> StdResult<(), AssetErr> {
+        if from == to && from_type == to_type {
+            // same account, same type, return directly
+            return Ok(());
+        }
+
+        Self::is_valid_asset_for(from, token).map_err(|_| AssetErr::InvalidToken)?;
+        // set to storage
+        Self::init_asset_for(to, token);
+
+        let from_balance = Self::asset_balance(from, token, from_type);
+        let to_balance = Self::asset_balance(to, token, to_type);
+
+        // test overflow
+        let new_from_balance = match from_balance.checked_sub(&value) {
+            Some(b) => b,
+            None => return Err(AssetErr::NotEnough),
+        };
+        let new_to_balance = match to_balance.checked_add(&value) {
+            Some(b) => b,
+            None => return Err(AssetErr::OverFlow),
+        };
+
+        // for total
+        if from_type != to_type {
+            let total_from_balance = Self::total_asset_balance(token, from_type);
+            let total_to_balance = Self::total_asset_balance(token, to_type);
+
+            let new_total_from_balance = match total_from_balance.checked_sub(&value) {
+                Some(b) => b,
+                None => return Err(AssetErr::TotalAssetNotEnough),
+            };
+
+            let new_total_to_balance = match total_to_balance.checked_add(&value) {
+                Some(b) => b,
+                None => return Err(AssetErr::TotalAssetOverFlow),
+            };
+            // for asset to set storage
+            Self::set_total_asset_balance(token, from_type, new_total_from_balance);
+            Self::set_total_asset_balance(token, to_type, new_total_to_balance);
+        }
+        // for account to set storage
+        Self::set_asset_balance(from, token, from_type, new_from_balance);
+        if to_type == AssetType::Free {
+            Self::set_free_balance_creating(to, token, new_to_balance);
+        } else {
+            Self::set_asset_balance(to, token, to_type, new_to_balance);
+        }
+
+        T::OnAssetChanged::on_move(token, from, from_type, to, to_type, value)?;
         Ok(())
     }
 
     pub fn move_free_balance(
+        token: &Token,
         from: &T::AccountId,
         to: &T::AccountId,
-        token: &Token,
         value: T::Balance,
-    ) -> StdResult<(), TokenErr> {
-        Self::is_valid_asset_for(from, token).map_err(|_| TokenErr::InvalidToken)?;
-
-        if from == to {
-            return Ok(());
-        }
-
-        if token.as_slice() != <Self as ChainT>::TOKEN {
-            Self::init_asset_for(to, token);
-        }
-
-        let from_token: T::Balance = Self::free_balance(from, token);
-        let to_token: T::Balance = Self::free_balance(to, token);
-
-        let new_from_token = match from_token.checked_sub(&value) {
-            Some(b) => b,
-            None => return Err(TokenErr::NotEnough),
-        };
-        let new_to_token = match to_token.checked_add(&value) {
-            Some(b) => b,
-            None => return Err(TokenErr::OverFlow),
-        };
-
-        Self::set_free_balance(from, token, new_from_token);
-        Self::set_free_balance_creating(to, token, new_to_token);
-        T::OnAssetChanged::on_move(from, to, token, value);
-        Ok(())
+    ) -> StdResult<(), AssetErr> {
+        Self::move_balance(token, from, AssetType::Free, to, AssetType::Free, value)
     }
 
     pub fn set_balance_by_root(
@@ -670,7 +649,7 @@ impl<T: Trait> Module<T> {
             } else {
                 Self::set_total_asset_balance(token, type_, new_total_val);
             }
-            T::OnAssetChanged::on_set_balance(who, token, type_, val);
+            T::OnAssetChanged::on_set_balance(token, type_, who, val)?;
         }
         Ok(())
     }
@@ -678,20 +657,24 @@ impl<T: Trait> Module<T> {
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum TokenErr {
+pub enum AssetErr {
     NotEnough,
     OverFlow,
+    TotalAssetOverFlow,
+    TotalAssetNotEnough,
     InvalidToken,
     InvalidAccount,
 }
 
-impl TokenErr {
+impl AssetErr {
     pub fn info(&self) -> &'static str {
         match *self {
-            TokenErr::NotEnough => "free balance too low",
-            TokenErr::OverFlow => "overflow for this value",
-            TokenErr::InvalidToken => "not a valid token for this account",
-            TokenErr::InvalidAccount => "Account Locked",
+            AssetErr::NotEnough => "balance too low for this account",
+            AssetErr::OverFlow => "balance too high for this account",
+            AssetErr::TotalAssetOverFlow => "balance too low for this asset",
+            AssetErr::TotalAssetNotEnough => "balance too high for this asset",
+            AssetErr::InvalidToken => "not a valid token for this account",
+            AssetErr::InvalidAccount => "account Locked",
         }
     }
 }
@@ -710,25 +693,24 @@ impl<T: Trait> Module<T> {
         Self::set_free_balance(who, &<Self as ChainT>::TOKEN.to_vec(), value);
     }
 
-    pub fn pcx_reward(who: &T::AccountId, value: T::Balance) -> Result {
-        balances::Module::<T>::reward(who, value)
+    pub fn pcx_issue(who: &T::AccountId, value: T::Balance) -> Result {
+        Self::issue(&Self::TOKEN.to_vec(), who, value)
     }
 
-    pub fn pcx_staking_reserve(who: &T::AccountId, value: T::Balance) -> Result {
-        Self::reserve(
-            who,
+    pub fn pcx_move_balance(
+        from: &T::AccountId,
+        from_type: AssetType,
+        to: &T::AccountId,
+        to_type: AssetType,
+        value: T::Balance,
+    ) -> StdResult<(), AssetErr> {
+        Self::move_balance(
             &<Self as ChainT>::TOKEN.to_vec(),
+            from,
+            from_type,
+            to,
+            to_type,
             value,
-            AssetType::ReservedStaking,
-        )
-    }
-
-    pub fn pcx_staking_unreserve(who: &T::AccountId, value: T::Balance) -> Result {
-        Self::unreserve(
-            who,
-            &<Self as ChainT>::TOKEN.to_vec(),
-            value,
-            AssetType::ReservedStaking,
         )
     }
 

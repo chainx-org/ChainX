@@ -115,7 +115,7 @@ impl<T: Trait> Module<T> {
         let chainx = <xassets::Module<T> as xassets::ChainT>::TOKEN.to_vec();
         for (fee, to) in v {
             // do not handle err
-            xassets::Module::<T>::move_free_balance(from, &to, &chainx, fee)
+            xassets::Module::<T>::move_free_balance(&chainx, from, &to, fee)
                 .map_err(|e| e.info())?;
         }
 

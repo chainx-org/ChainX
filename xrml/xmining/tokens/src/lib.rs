@@ -42,7 +42,7 @@ use runtime_primitives::traits::{As, CheckedSub, Zero};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
-use xassets::{ChainT, Token};
+use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegistration};
 use xstaking::{Jackpot, OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
 
@@ -169,17 +169,27 @@ decl_storage! {
 }
 
 impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
-    fn on_move(from: &T::AccountId, to: &T::AccountId, token: &Token, value: T::Balance) {
-        // Exclude PCX
-        if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == token.clone() {
-            return;
+    fn on_move(
+        token: &Token,
+        from: &T::AccountId,
+        _: AssetType,
+        to: &T::AccountId,
+        _: AssetType,
+        value: T::Balance,
+    ) -> StdResult<(), AssetErr> {
+        // Exclude PCX and asset type changes on same account.
+        if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == token.clone()
+            || from.clone() == to.clone()
+        {
+            return Ok(());
         }
 
         Self::update_vote_weight(from, token, value, false);
         Self::update_vote_weight(to, token, value, true);
+        Ok(())
     }
 
-    fn on_issue(source: &T::AccountId, target: &Token, value: T::Balance) -> Result {
+    fn on_issue(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
         // Initialize vote weight of depositor
         let mut vote_weight = DepositVoteWeight::default();
         vote_weight.last_deposit_weight_update = <system::Module<T>>::block_number();
@@ -188,8 +198,9 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
         Self::issue_reward(source, target, value)
     }
 
-    fn on_destroy(source: &T::AccountId, target: &Token, value: T::Balance) {
+    fn on_destroy(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
         Self::update_vote_weight(source, target, value, false);
+        Ok(())
     }
 }
 
@@ -246,7 +257,7 @@ impl<T: Trait> Module<T> {
         );
 
         Self::cut_jackpot(token, &reward);
-        <xassets::Module<T>>::pcx_reward(source, reward)?;
+        <xassets::Module<T>>::pcx_issue(source, reward)?;
 
         Ok(())
     }

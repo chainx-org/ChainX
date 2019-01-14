@@ -102,21 +102,29 @@ fn test_total_balance() {
             100
         );
 
-        XAssets::issue(&0, &btc_token, 100).unwrap();
+        XAssets::issue(&btc_token, &0, 100).unwrap();
         assert_eq!(
             XAssets::total_asset_balance(&btc_token, AssetType::Free),
             200
         );
 
-        XAssets::issue(&0, &btc_token, 50).unwrap();
-        XAssets::reserve(&0, &btc_token, 50, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::issue(&btc_token, &0, 50).unwrap();
+        XAssets::move_balance(
+            &btc_token,
+            &0,
+            AssetType::Free,
+            &0,
+            AssetType::ReservedWithdrawal,
+            50,
+        )
+        .unwrap();
         assert_eq!(XAssets::all_type_balance(&btc_token), 250);
         assert_eq!(
             XAssets::total_asset_balance(&btc_token, AssetType::ReservedWithdrawal),
             50
         );
 
-        XAssets::destroy(&0, &btc_token, 25, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::destroy(&btc_token, &0, 25).unwrap();
         assert_eq!(XAssets::all_type_balance(&btc_token), 225);
         // chainx total
         let token = XAssets::TOKEN.to_vec();
@@ -124,7 +132,16 @@ fn test_total_balance() {
             XAssets::total_asset_balance(&token, AssetType::Free),
             1000 + 510 + 1000
         );
-        XAssets::reserve(&1, &token, 50, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::move_balance(
+            &token,
+            &1,
+            AssetType::Free,
+            &1,
+            AssetType::ReservedWithdrawal,
+            50,
+        )
+        .unwrap();
+
         assert_eq!(
             XAssets::total_asset_balance(&token, AssetType::Free),
             1000 + 510 + 1000 - 50
@@ -133,7 +150,16 @@ fn test_total_balance() {
             XAssets::total_asset_balance(&token, AssetType::ReservedWithdrawal),
             50
         );
-        XAssets::unreserve(&1, &token, 25, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::move_balance(
+            &token,
+            &1,
+            AssetType::ReservedWithdrawal,
+            &1,
+            AssetType::Free,
+            25,
+        )
+        .unwrap();
+
         assert_eq!(
             XAssets::total_asset_balance(&token, AssetType::Free),
             1000 + 510 + 1000 - 50 + 25
@@ -157,7 +183,7 @@ fn test_account_balance() {
         );
         assert_eq!(XAssets::all_type_balance_of(&a, &btc_token), 0);
 
-        XAssets::issue(&a, &btc_token, 100).unwrap();
+        XAssets::issue(&btc_token, &a, 100).unwrap();
         assert_eq!(XAssets::free_balance(&a, &btc_token), 100);
         assert_eq!(
             XAssets::asset_balance(&a, &btc_token, AssetType::ReservedWithdrawal),
@@ -165,8 +191,17 @@ fn test_account_balance() {
         );
         assert_eq!(XAssets::all_type_balance_of(&a, &btc_token), 100);
 
-        XAssets::reserve(&a, &btc_token, 50, AssetType::ReservedWithdrawal).unwrap();
-        XAssets::destroy(&a, &btc_token, 50, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::move_balance(
+            &btc_token,
+            &a,
+            AssetType::Free,
+            &a,
+            AssetType::ReservedWithdrawal,
+            50,
+        )
+        .unwrap();
+
+        XAssets::destroy(&btc_token, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_balance_of(&a, &btc_token), 50);
     })
 }
@@ -178,12 +213,21 @@ fn test_normal_issue_and_destroy() {
         let btc_token = b"BTC".to_vec();
 
         // issue
-        XAssets::issue(&a, &btc_token, 50).unwrap();
+        XAssets::issue(&btc_token, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_balance_of(&a, &btc_token), 50);
         assert_eq!(XAssets::all_type_balance(&btc_token), 150);
 
         // reserve
-        XAssets::reserve(&a, &btc_token, 25, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::move_balance(
+            &btc_token,
+            &a,
+            AssetType::Free,
+            &a,
+            AssetType::ReservedWithdrawal,
+            25,
+        )
+        .unwrap();
+
         assert_eq!(
             XAssets::asset_balance(&a, &btc_token, AssetType::ReservedWithdrawal),
             25
@@ -196,7 +240,7 @@ fn test_normal_issue_and_destroy() {
         );
 
         // destroy
-        XAssets::destroy(&a, &btc_token, 25, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::destroy(&btc_token, &a, 25).unwrap();
         assert_eq!(
             XAssets::asset_balance(&a, &btc_token, AssetType::ReservedWithdrawal),
             0
@@ -218,12 +262,21 @@ fn test_unlock_issue_and_destroy2() {
         let btc_token = b"BTC".to_vec();
 
         // issue
-        XAssets::issue(&a, &btc_token, 50).unwrap();
+        XAssets::issue(&btc_token, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_balance_of(&a, &btc_token), 50);
         assert_eq!(XAssets::all_type_balance(&btc_token), 150);
 
         // reserve
-        XAssets::reserve(&a, &btc_token, 25, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::move_balance(
+            &btc_token,
+            &a,
+            AssetType::Free,
+            &a,
+            AssetType::ReservedWithdrawal,
+            25,
+        )
+        .unwrap();
+
         assert_eq!(
             XAssets::asset_balance(&a, &btc_token, AssetType::ReservedWithdrawal),
             25
@@ -236,7 +289,16 @@ fn test_unlock_issue_and_destroy2() {
         );
 
         // unreserve
-        XAssets::unreserve(&a, &btc_token, 10, AssetType::ReservedWithdrawal).unwrap();
+        XAssets::move_balance(
+            &btc_token,
+            &a,
+            AssetType::ReservedWithdrawal,
+            &a,
+            AssetType::Free,
+            10,
+        )
+        .unwrap();
+
         assert_eq!(
             XAssets::asset_balance(&a, &btc_token, AssetType::ReservedWithdrawal),
             15
@@ -256,13 +318,13 @@ fn test_error_issue_and_destroy1() {
         let a: u64 = 1; // accountid
         let btc_token = b"BTC".to_vec();
         // issue
-        XAssets::issue(&a, &btc_token, 50).unwrap();
+        XAssets::issue(&btc_token, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_balance_of(&a, &btc_token), 50);
         assert_eq!(XAssets::all_type_balance(&btc_token), 150);
         // destroy first
         // destroy
         assert_err!(
-            XAssets::destroy(&a, &btc_token, 25, AssetType::ReservedWithdrawal),
+            XAssets::destroy(&btc_token, &a, 25),
             "reserved balance too low to destroy"
         );
         // reserve
@@ -270,24 +332,30 @@ fn test_error_issue_and_destroy1() {
             XAssets::total_asset_balance(&btc_token, AssetType::Free),
             150
         );
+
         assert_err!(
-            XAssets::reserve(&a, &btc_token, 100, AssetType::ReservedWithdrawal),
-            "free balance too low to reserve"
+            XAssets::move_balance(
+                &btc_token,
+                &a,
+                AssetType::Free,
+                &a,
+                AssetType::ReservedWithdrawal,
+                100
+            ),
+            AssetErr::NotEnough
         );
+
         // lock first
-        assert_ok!(XAssets::reserve(
-            &a,
+        assert_ok!(XAssets::move_balance(
             &btc_token,
-            25,
-            AssetType::ReservedWithdrawal
+            &a,
+            AssetType::Free,
+            &a,
+            AssetType::ReservedWithdrawal,
+            25
         ));
         // destroy
-        assert_ok!(XAssets::destroy(
-            &a,
-            &btc_token,
-            25,
-            AssetType::ReservedWithdrawal
-        ));
+        assert_ok!(XAssets::destroy(&btc_token, &a, 25));
     })
 }
 
@@ -297,18 +365,26 @@ fn test_error_issue_and_destroy2() {
         let a: u64 = 1; // accountid
         let btc_token = b"BTC".to_vec();
         // issue
-        XAssets::issue(&a, &btc_token, 50).unwrap();
+        XAssets::issue(&btc_token, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_balance_of(&a, &btc_token), 50);
         assert_eq!(XAssets::all_type_balance(&btc_token), 150);
         // overflow
         let i: i32 = -1;
 
         assert_err!(
-            XAssets::reserve(&a, &btc_token, i as Balance, AssetType::ReservedWithdrawal),
-            "free balance too low to reserve"
+            XAssets::move_balance(
+                &btc_token,
+                &a,
+                AssetType::Free,
+                &a,
+                AssetType::ReservedWithdrawal,
+                i as Balance,
+            ),
+            AssetErr::NotEnough
         );
+
         assert_err!(
-            XAssets::issue(&a, &btc_token, i as Balance),
+            XAssets::issue(&btc_token, &a, i as Balance),
             "free balance too high to issue"
         );
     })
@@ -321,36 +397,52 @@ fn test_error_issue_and_destroy3() {
         let btc_token = b"BTC".to_vec();
         // lock or destroy without init
         assert_err!(
-            XAssets::destroy(&a, &btc_token, 25, AssetType::ReservedWithdrawal),
+            XAssets::destroy(&btc_token, &a, 25),
             "not a existed token in this account token list"
-        );
-        assert_err!(
-            XAssets::reserve(&a, &btc_token, 25, AssetType::ReservedWithdrawal),
-            "not a existed token in this account token list"
-        );
-        XAssets::issue(&a, &btc_token, 0).unwrap();
-        assert_err!(
-            XAssets::destroy(&a, &btc_token, 25, AssetType::ReservedWithdrawal),
-            "reserved balance too low to destroy"
-        );
-        assert_err!(
-            XAssets::reserve(&a, &btc_token, 25, AssetType::ReservedWithdrawal),
-            "free balance too low to reserve"
         );
 
-        XAssets::issue(&a, &btc_token, 100).unwrap();
-        assert_ok!(XAssets::reserve(
-            &a,
+        assert_err!(
+            XAssets::move_balance(
+                &btc_token,
+                &a,
+                AssetType::Free,
+                &a,
+                AssetType::ReservedWithdrawal,
+                25
+            ),
+            AssetErr::InvalidToken
+        );
+
+        XAssets::issue(&btc_token, &a, 0).unwrap();
+        assert_err!(
+            XAssets::destroy(&btc_token, &a, 25),
+            "reserved balance too low to destroy"
+        );
+
+        assert_err!(
+            XAssets::move_balance(
+                &btc_token,
+                &a,
+                AssetType::Free,
+                &a,
+                AssetType::ReservedWithdrawal,
+                25
+            ),
+            AssetErr::NotEnough
+        );
+
+        XAssets::issue(&btc_token, &a, 100).unwrap();
+
+        assert_ok!(XAssets::move_balance(
             &btc_token,
-            25,
-            AssetType::ReservedWithdrawal
-        ));
-        assert_ok!(XAssets::destroy(
             &a,
-            &btc_token,
-            25,
-            AssetType::ReservedWithdrawal
+            AssetType::Free,
+            &a,
+            AssetType::ReservedWithdrawal,
+            25
         ));
+
+        assert_ok!(XAssets::destroy(&btc_token, &a, 25));
     })
 }
 
@@ -361,7 +453,7 @@ fn test_transfer_not_init() {
         let new_id: u64 = 1000;
         let btc_token = b"BTC".to_vec();
         let chainx_token = XAssets::TOKEN.to_vec();
-        XAssets::issue(&a, &btc_token, 50).unwrap();
+        XAssets::issue(&btc_token, &a, 50).unwrap();
         assert_ok!(XAssets::transfer(
             Some(a).into(),
             new_id.into(),
@@ -417,7 +509,7 @@ fn test_transfer_chainx() {
                 1000,
                 b"".to_vec()
             ),
-            "free balance too low"
+            "balance too low for this account"
         );
     })
 }
@@ -429,7 +521,7 @@ fn test_transfer_token() {
         let b: u64 = 2; // accountid
         let btc_token = b"BTC".to_vec();
         // issue 50 to account 1
-        XAssets::issue(&a, &btc_token, 50).unwrap();
+        XAssets::issue(&btc_token, &a, 50).unwrap();
         // transfer
         XAssets::transfer(
             Some(a).into(),
@@ -449,7 +541,7 @@ fn test_transfer_token() {
 
         assert_err!(
             XAssets::transfer(Some(a).into(), b.into(), btc_token, 50, b"".to_vec()),
-            "free balance too low"
+            "balance too low for this account"
         )
     })
 }
@@ -460,18 +552,15 @@ fn test_transfer_to_self() {
         let a: u64 = 1; // accountid
         let btc_token = b"BTC".to_vec();
         // issue 50 to account 1
-        XAssets::issue(&a, &btc_token, 50).unwrap();
+        XAssets::issue(&btc_token, &a, 50).unwrap();
         // transfer
-        assert_err!(
-            XAssets::transfer(
-                Some(a).into(),
-                a.into(),
-                btc_token.clone(),
-                25,
-                b"".to_vec()
-            ),
-            "from and to are same account"
-        );
+        assert_ok!(XAssets::transfer(
+            Some(a).into(),
+            a.into(),
+            btc_token.clone(),
+            25,
+            b"".to_vec()
+        ));
 
         // sum not change
         assert_eq!(
@@ -487,7 +576,7 @@ fn test_set_token() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
         let btc_token = b"BTC".to_vec();
-        XAssets::issue(&a, &btc_token, 50).unwrap();
+        XAssets::issue(&btc_token, &a, 50).unwrap();
         let b = CodecBTreeMap::<AssetType, Balance>(BTreeMap::from_iter(
             vec![(AssetType::Free, 500)].into_iter(),
         ));
@@ -547,38 +636,43 @@ fn test_chainx() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
         let token = XAssets::TOKEN.to_vec();
-        assert_err!(
-            XAssets::issue(&a, &token, 100),
-            "should not use chainx token here"
-        );
+        assert_ok!(XAssets::issue(&token, &a, 100));
 
-        assert_ok!(XAssets::reserve(
-            &a,
+        assert_eq!(Balances::free_balance(&a), 1100);
+
+        assert_ok!(XAssets::move_balance(
             &token,
-            100,
-            AssetType::ReservedWithdrawal
+            &a,
+            AssetType::Free,
+            &a,
+            AssetType::ReservedWithdrawal,
+            100
         ));
-        assert_eq!(Balances::free_balance(&a), 900);
+
+        assert_eq!(Balances::free_balance(&a), 1000);
         assert_eq!(Balances::reserved_balance(&a), 0);
         assert_eq!(
             XAssets::asset_balance(&a, &token, AssetType::ReservedWithdrawal),
             100
         );
 
-        assert_ok!(XAssets::unreserve(
-            &a,
+        assert_ok!(XAssets::move_balance(
             &token,
-            50,
-            AssetType::ReservedWithdrawal
+            &a,
+            AssetType::ReservedWithdrawal,
+            &a,
+            AssetType::Free,
+            50
         ));
-        assert_eq!(Balances::free_balance(&a), 950);
+
+        assert_eq!(Balances::free_balance(&a), 1050);
         assert_eq!(
             XAssets::asset_balance(&a, &token, AssetType::ReservedWithdrawal),
             50
         );
         assert_eq!(Balances::reserved_balance(&a), 0);
         assert_err!(
-            XAssets::destroy(&a, &token, 50, AssetType::ReservedWithdrawal),
+            XAssets::destroy(&token, &a, 50),
             "should not use chainx token here"
         );
     })
@@ -591,12 +685,27 @@ fn test_chainx_err() {
         let token = XAssets::TOKEN.to_vec();
 
         assert_err!(
-            XAssets::reserve(&a, &token, 2000, AssetType::ReservedWithdrawal),
-            "free balance too low to reserve"
+            XAssets::move_balance(
+                &token,
+                &a,
+                AssetType::Free,
+                &a,
+                AssetType::ReservedWithdrawal,
+                2000
+            ),
+            AssetErr::NotEnough
         );
+
         assert_err!(
-            XAssets::unreserve(&a, &token, 10, AssetType::ReservedWithdrawal),
-            "reserved balance too low to unreserve"
+            XAssets::move_balance(
+                &token,
+                &a,
+                AssetType::ReservedWithdrawal,
+                &a,
+                AssetType::Free,
+                10
+            ),
+            AssetErr::NotEnough
         );
 
         let i: i32 = -1;
@@ -605,8 +714,15 @@ fn test_chainx_err() {
         assert_eq!(larger_balance, 18446744073709551615);
 
         assert_err!(
-            XAssets::reserve(&a, &token, larger_balance, AssetType::ReservedWithdrawal),
-            "free balance too low to reserve"
+            XAssets::move_balance(
+                &token,
+                &a,
+                AssetType::Free,
+                &a,
+                AssetType::ReservedWithdrawal,
+                larger_balance
+            ),
+            AssetErr::NotEnough
         );
     })
 }
@@ -617,25 +733,25 @@ fn test_move() {
         let a: u64 = 1; // accountid
         let b: u64 = 2; // accountid
         let token = XAssets::TOKEN.to_vec();
-        assert_ok!(XAssets::move_free_balance(&a, &b, &token, 100));
+        assert_ok!(XAssets::move_free_balance(&token, &a, &b, 100));
         assert_err!(
-            XAssets::move_free_balance(&a, &b, &token, 1000),
-            TokenErr::NotEnough
+            XAssets::move_free_balance(&token, &a, &b, 1000),
+            AssetErr::NotEnough
         );
         assert_eq!(Balances::free_balance(&a), 900);
         assert_eq!(Balances::free_balance(&b), 510 + 100);
 
         let token = b"BTC".to_vec();
         assert_err!(
-            XAssets::move_free_balance(&a, &b, &token, 100),
-            TokenErr::InvalidToken
+            XAssets::move_free_balance(&token, &a, &b, 100),
+            AssetErr::InvalidToken
         );
 
-        XAssets::issue(&a, &token, 100).unwrap();
-        assert_ok!(XAssets::move_free_balance(&a, &b, &token, 100));
+        XAssets::issue(&token, &a, 100).unwrap();
+        assert_ok!(XAssets::move_free_balance(&token, &a, &b, 100));
         assert_err!(
-            XAssets::move_free_balance(&a, &b, &token, 1000),
-            TokenErr::NotEnough
+            XAssets::move_free_balance(&token, &a, &b, 1000),
+            AssetErr::NotEnough
         );
 
         assert_eq!(XAssets::free_balance(&a, &token), 0);

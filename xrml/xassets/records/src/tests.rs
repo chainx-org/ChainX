@@ -199,7 +199,7 @@ fn test_withdrawal_larger() {
 
         assert_err!(
             Records::withdrawal(&a, &btc_token, 50, b"addr".to_vec(), b"ext".to_vec()),
-            "free balance too low to reserve"
+            "balance too low for this account"
         );
     })
 }
@@ -228,7 +228,7 @@ fn test_withdrawal_first() {
         let btc_token = b"BTC".to_vec();
         assert_err!(
             Records::withdrawal(&a, &btc_token, 50, vec![], vec![]),
-            "not a existed token in this account token list"
+            "not a valid token for this account"
         );
     })
 }

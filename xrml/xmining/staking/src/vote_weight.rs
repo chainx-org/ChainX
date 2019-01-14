@@ -150,7 +150,7 @@ impl<T: Trait> Module<T> {
 
         let dividend = T::Balance::sa(source_vote_weight * jackpot.as_() / target_vote_weight);
 
-        <xassets::Module<T>>::pcx_reward(who, dividend)?;
+        <xassets::Module<T>>::pcx_issue(who, dividend)?;
 
         target.set_jackpot(jackpot - dividend);
 

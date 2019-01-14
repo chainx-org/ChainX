@@ -195,7 +195,7 @@ decl_module! {
                 return Err("The requested revocation is not due yet.");
             }
 
-            <xassets::Module<T>>::pcx_staking_unreserve(&who, value)?;
+            Self::staking_unreserve(&who, value)?;
             revocations.swap_remove(revocation_index as usize);
             if let Some(mut record) = <NominationRecords<T>>::get((who.clone(), target.clone())) {
                 record.revocations = revocations;
@@ -414,7 +414,7 @@ impl<T: Trait> Module<T> {
     ) -> NominationRecord<T::Balance, T::BlockNumber> {
         let mut record = NominationRecord::default();
         record.last_vote_weight_update = <system::Module<T>>::block_number();
-        <NominationRecords<T>>::get((nominator.clone(), nominee.clone())).unwrap_or(record)
+        <NominationRecords<T>>::get(&(nominator.clone(), nominee.clone())).unwrap_or(record)
     }
 
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
@@ -428,7 +428,40 @@ impl<T: Trait> Module<T> {
         nominee: &T::AccountId,
         record: NominationRecord<T::Balance, T::BlockNumber>,
     ) {
-        <NominationRecords<T>>::insert((nominator.clone(), nominee.clone()), record);
+        <NominationRecords<T>>::insert(&(nominator.clone(), nominee.clone()), record);
+    }
+
+    fn staking_reserve(who: &T::AccountId, value: T::Balance) -> Result {
+        <xassets::Module<T>>::pcx_move_balance(
+            who,
+            xassets::AssetType::Free,
+            who,
+            xassets::AssetType::ReservedStaking,
+            value,
+        )
+        .map_err(|e| e.info())
+    }
+
+    fn unnominate_reserve(who: &T::AccountId, value: T::Balance) -> Result {
+        <xassets::Module<T>>::pcx_move_balance(
+            who,
+            xassets::AssetType::ReservedStaking,
+            who,
+            xassets::AssetType::ReservedStakingRevocation,
+            value,
+        )
+        .map_err(|e| e.info())
+    }
+
+    fn staking_unreserve(who: &T::AccountId, value: T::Balance) -> Result {
+        <xassets::Module<T>>::pcx_move_balance(
+            who,
+            xassets::AssetType::ReservedStakingRevocation,
+            who,
+            xassets::AssetType::Free,
+            value,
+        )
+        .map_err(|e| e.info())
     }
 
     // Just force_new_era without origin check.
@@ -438,8 +471,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_nominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
-        <xassets::Module<T>>::pcx_staking_reserve(source, value)?;
-
+        Self::staking_reserve(source, value)?;
         Self::apply_update_vote_weight(source, target, value, true);
 
         Ok(())
@@ -457,9 +489,11 @@ impl<T: Trait> Module<T> {
             revocations.push((freeze_until, value));
         }
 
-        if let Some(mut record) = <NominationRecords<T>>::get((source.clone(), target.clone())) {
+        Self::unnominate_reserve(source, value)?;
+
+        if let Some(mut record) = <NominationRecords<T>>::get(&(source.clone(), target.clone())) {
             record.revocations = revocations;
-            <NominationRecords<T>>::insert((source.clone(), target.clone()), record);
+            <NominationRecords<T>>::insert(&(source.clone(), target.clone()), record);
         }
 
         Self::apply_update_vote_weight(source, target, value, false);

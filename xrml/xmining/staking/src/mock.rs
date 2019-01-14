@@ -49,6 +49,7 @@ impl xaccounts::Trait for Test {
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
+    type OnAssetRegistration = ();
 }
 impl xsystem::Trait for Test {
     const XSYSTEM_SET_POSITION: u32 = 3;
@@ -65,6 +66,8 @@ impl session::Trait for Test {
 }
 impl Trait for Test {
     type OnRewardMinted = ();
+    type OnRewardCalculation = ();
+    type OnReward = ();
     type Event = ();
 }
 
