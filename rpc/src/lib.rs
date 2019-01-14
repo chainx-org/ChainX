@@ -43,6 +43,7 @@ extern crate xrml_mining_staking as xstaking;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
+extern crate xrml_xdex_spot as xspot;
 
 #[macro_use]
 extern crate error_chain;

@@ -14,7 +14,7 @@ use state_machine::Backend;
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
-use runtime_primitives::traits::{Block as BlockT, Header, NumberFor, Zero};
+use runtime_primitives::traits::{Block as BlockT, Header, NumberFor, Zero,As};
 
 use srml_support::storage::{StorageMap, StorageValue};
 
@@ -25,50 +25,17 @@ use xaccounts::{self, CertImmutableProps, IntentionImmutableProps, IntentionProp
 use xassets::{self, assetdef::ChainT, AssetType, Token};
 use xstaking::{self, IntentionProfs, NominationRecord};
 use xsupport::storage::btree_map::CodecBTreeMap;
+use xspot::{OrderT,HandicapT};
+use xspot::def::{OrderPair,OrderPairID,ID};
 
 mod error;
+mod def;
 
 use self::error::Result;
+use self::def::{IntentionInfo,CertInfo,PairInfo,QuotationsList,OrderList};
+use chainx::error::ErrorKind::{OrderPairIDErr,QuotationssPieceErr,PageSizeErr,PageIndexErr};
 
-/// Cert info
-#[derive(Debug, PartialEq, Serialize)]
-pub struct CertInfo {
-    /// name of cert
-    pub name: String,
-    /// when is the cert issued at
-    pub issued_at: DateTime<Utc>,
-    /// frozen duration of the shares cert owner holds
-    pub frozen_duration: u32,
-    /// remaining share of the cert
-    pub remaining_shares: u32,
-}
-
-/// Intention info
-#[derive(Debug, Default, PartialEq, Serialize)]
-pub struct IntentionInfo {
-    /// name of intention
-    pub name: String,
-    /// activator
-    pub activator: String,
-    /// initial shares
-    pub initial_shares: u32,
-    /// url
-    pub url: String,
-    /// is running for the validators
-    pub is_active: bool,
-    /// is validator
-    pub is_validator: bool,
-    /// how much has intention voted for itself
-    pub self_vote: Balance,
-    /// jackpot
-    pub jackpot: Balance,
-    /// total nomination from all nominators
-    pub total_nomination: Balance,
-    /// vote weight at last update
-    pub last_total_vote_weight: u64,
-    /// last update time of vote weight
-    pub last_total_vote_weight_update: BlockNumber,
-}
+const MAX_PAGE_SIZE:u32=100;
 
 build_rpc_trait! {
     /// ChainX API
@@ -89,6 +56,16 @@ build_rpc_trait! {
 
         #[rpc(name = "chainx_getIntentions")]
         fn intentions(&self) -> Result<Option<Vec<(AccountId, DateTime<Utc>, IntentionInfo)>>>;
+
+        #[rpc(name = "chainx_getOrderPairs")]
+        fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>;
+
+        #[rpc(name = "chainx_getQuotations")]
+        fn quotationss(&self,OrderPairID,u32) -> Result<Option<QuotationsList>>;
+
+        #[rpc(name = "chainx_getOrders")]
+        fn orders(&self,AccountId,u32,u32) -> Result<Option<OrderList>>;
+
     }
 }
 
@@ -338,6 +315,180 @@ where
 
         Ok(Some(intention_info))
     }
+
+    fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>{
+        let mut pairs = Vec::new();
+        let state = self.best_state()?;
+
+        let len_key = <xspot::OrderPairLen<Runtime>>::key();
+        if let Some(len) = Self::pickout::<OrderPairID>(&state, &len_key)? {
+            for i in 0..len {
+                let key = <xspot::OrderPairOf<Runtime>>::key_for(&i);
+                if let Some(pair) =
+                    Self::pickout::<OrderPair>(&state, &key)?
+                {
+                    let mut info=PairInfo::default();
+                    info.id=pair.id;
+                    info.assets=String::from_utf8_lossy(&pair.first).into_owned();
+                    info.currency=String::from_utf8_lossy(&pair.second).into_owned();
+                    info.precision=pair.precision;
+                    info.used=pair.used;
+
+                    pairs.push(info);
+                }
+            }
+        }
+
+        Ok(Some(pairs))
+    }
+    fn quotationss(&self,id:OrderPairID,piece:u32) -> Result<Option<QuotationsList>>{
+        if piece < 1 || piece > 10 {
+            return Err(QuotationssPieceErr.into());
+        }
+        let mut quotationslist=QuotationsList::default();
+        quotationslist.id=id;
+        quotationslist.piece=piece;
+        quotationslist.sell=Vec::new();
+        quotationslist.buy=Vec::new();
+        
+        let state = self.best_state()?;
+        let pair_key=<xspot::OrderPairOf<Runtime>>::key_for(&id);
+         if let Some(pair) =Self::pickout::<OrderPair>(&state, &pair_key)? {
+
+            //盘口
+            let handicap_key=<xspot::HandicapMap<Runtime>>::key_for(&id);
+
+            if let Some(handicap)= Self::pickout::<HandicapT<Runtime>>(&state, &handicap_key)? {
+                //先买档
+                let mut opponent_price:Balance=handicap.buy;
+                let mut price_volatility:Balance=10;
+
+                let price_volatility_key=<xspot::PriceVolatility<Runtime>>::key();
+                if let Some(p)= Self::pickout::<u32>(&state, &price_volatility_key)?{
+                    price_volatility=p.into();
+                }
+
+                let max_price:Balance=(handicap.sell * ((100_u64 + price_volatility as Balance) / 100_u64));
+                let min_price:Balance=(handicap.sell * ((100_u64 - price_volatility as Balance) / 100_u64));
+                let mut n=0;
+
+                loop {
+                    if n > piece || opponent_price == 0 || opponent_price < min_price  {
+                        break;
+                    }
+                    
+                    let quotations_key=<xspot::Quotations<Runtime>>::key_for(&(id,opponent_price));
+                    if let Some(list) = Self::pickout::<Vec<(AccountId,ID)>>(&state, &quotations_key)? {
+                        let mut sum:Balance=0;
+                        for i in 0..list.len() {
+                            let order_key=<xspot::AccountOrder<Runtime>>::key_for(&list[i]);
+                            if let Some( order) = Self::pickout::<OrderT<Runtime>>(&state, &order_key)? {
+                                sum += match order.amount.checked_sub(order.hasfill_amount) {
+                                        Some(v) => v,
+                                        None => Default::default(),
+                                    };
+                            }
+                            
+                        }
+                        quotationslist.buy.push((opponent_price,sum));
+                    };
+                  
+                    opponent_price = match opponent_price.checked_sub(As::sa(10_u64.pow(pair.precision.as_())))
+                    {
+                        Some(v) => v,
+                        None => Default::default(),
+                    };
+                    n=n+1;
+                }
+                //再卖档
+                opponent_price=handicap.sell;
+                n=0;
+                loop {
+                    if n > piece || opponent_price == 0 || opponent_price > max_price {
+                        break;
+                    }
+                    
+                    let quotations_key=<xspot::Quotations<Runtime>>::key_for(&(id,opponent_price));
+                    if let Some(list) = Self::pickout::<Vec<(AccountId,ID)>>(&state, &quotations_key)? {
+                        let mut sum:Balance=0;
+                        for i in 0..list.len() {
+                            let order_key=<xspot::AccountOrder<Runtime>>::key_for(&list[i]);
+                            if let Some( order) = Self::pickout::<OrderT<Runtime>>(&state, &order_key)? {
+                                sum += match order.amount.checked_sub(order.hasfill_amount) {
+                                        Some(v) => v,
+                                        None => Default::default(),
+                                    };
+                            }
+                            
+                        }
+                        quotationslist.sell.push((opponent_price,sum));
+                    };
+                  
+                    opponent_price = match opponent_price.checked_add(As::sa(10_u64.pow(pair.precision.as_())))
+                    {
+                        Some(v) => v,
+                        None => Default::default(),
+                    };
+                    n=n+1;
+                }
+
+            };
+         }
+         else {
+            return Err(OrderPairIDErr.into());
+         }
+
+        
+        Ok(Some(quotationslist))
+    }
+
+    fn orders(&self,who:AccountId,page_index:u32,page_size:u32) -> Result<Option<OrderList>>{
+        if page_size > MAX_PAGE_SIZE || page_size < 1 {
+            return Err(PageSizeErr.into());
+        }
+
+        let mut list= OrderList::default();
+        let mut orders= Vec::new();
+        list.page_index=page_index;
+        list.page_size=page_size;
+        list.page_total=0;
+
+        let state = self.best_state()?;
+
+        let order_len_key=<xspot::AccountOrdersLen<Runtime>>::key_for(&who);
+        if let Some(len) = Self::pickout::<ID>(&state, &order_len_key)? {
+                let mut total:u32=0;
+                for i in (0..len).rev(){
+                    let order_key=<xspot::AccountOrder<Runtime>>::key_for(&(who,i));
+                    if let Some( order) = Self::pickout::<OrderT<Runtime>>(&state, &order_key)? {
+                       total=total+1;
+                    }
+                }
+
+                let total_page:u32=(total+(page_size-1) )/page_size;
+
+                list.page_total=total_page;
+
+                if page_index >= total_page && total_page > 0 {
+                    return Err(PageIndexErr.into());
+                }
+
+                let mut count:u32=0;
+                for i in (0..len).rev(){
+                    let order_key=<xspot::AccountOrder<Runtime>>::key_for(&(who,i));
+                    if let Some( order) = Self::pickout::<OrderT<Runtime>>(&state, &order_key)? {
+                        if count >= page_index*page_size && count < ((page_index+1)*page_size) {
+                            orders.push(order.clone());
+                        }
+                       
+                        count = count+1;
+                    }
+                }
+        }
+        list.data=orders;
+
+        Ok(Some(list))
+     }
 }
 
 fn datetime(timestamp: u64) -> DateTime<Utc> {

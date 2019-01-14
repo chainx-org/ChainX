@@ -38,6 +38,7 @@ extern crate srml_timestamp as timestamp;
 extern crate srml_consensus as consensus;
 extern crate xrml_bridge_bitcoin as xbitcoin;
 extern crate xrml_xassets_records as xrecords;
+extern crate xrml_xaccounts as xaccounts;
 
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
@@ -49,7 +50,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod def;
+pub mod def;
 
 use codec::Codec;
 use def::{
@@ -62,6 +63,7 @@ use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
 use xassets::assetdef::Token;
+
 
 pub type OrderT<T> = Order<
     OrderPairID,
@@ -663,17 +665,12 @@ impl<T: Trait> Module<T> {
                         None => Default::default(),
                     };
 
-                match Self::move_token(
+                Self::move_token(
                     &maker_back_token,
                     maker_back_amount,
                     &maker_user.clone(),
                     &taker_user.clone(),
-                ) {
-                    Ok(()) => {}
-                    Err(msg) => {
-                        return Err(msg);
-                    }
-                };
+                )?;
 
                 //计算买家的数量，解锁second,并move 给卖家
                 let taker_back_token: &Token = &pair.second;
@@ -687,17 +684,12 @@ impl<T: Trait> Module<T> {
                         None => Default::default(),
                     };
 
-                match Self::move_token(
+                Self::move_token(
                     &taker_back_token,
                     taker_back_amount,
                     &taker_user.clone(),
                     &maker_user.clone(),
-                ) {
-                    Ok(()) => {}
-                    Err(msg) => {
-                        return Err(msg);
-                    }
-                };
+                )?
             }
             OrderDirection::Buy => {
                 //买先解锁second token 并move给卖家，和手续费账户
@@ -712,17 +704,12 @@ impl<T: Trait> Module<T> {
                         None => Default::default(),
                     };
 
-                match Self::move_token(
+                Self::move_token(
                     &maker_back_token,
                     maker_back_amount,
                     &maker_user.clone(),
                     &taker_user.clone(),
-                ) {
-                    Ok(()) => {}
-                    Err(msg) => {
-                        return Err(msg);
-                    }
-                };
+                )?;
                 //计算卖家的数量，解锁second,并move 给买家,和手续费账户
                 let taker_back_token: &Token = &pair.first;
                 let taker_back_amount: T::Balance = As::sa(amount.as_());
@@ -732,17 +719,12 @@ impl<T: Trait> Module<T> {
                         None => Default::default(),
                     };
 
-                match Self::move_token(
+                Self::move_token(
                     &taker_back_token,
                     taker_back_amount,
                     &taker_user.clone(),
                     &maker_user.clone(),
-                ) {
-                    Ok(()) => {}
-                    Err(msg) => {
-                        return Err(msg);
-                    }
-                }
+                )?
             }
         }
 
@@ -877,7 +859,7 @@ impl<T: Trait> Module<T> {
         let number = <system::Module<T>>::block_number();
 
         match <OrderPairPriceOf<T>>::get(pairid) {
-            Some((last, mut aver, time)) => {
+            Some((_last, mut aver, time)) => {
                 if number - time < As::sa(blocks_per_day) {
                     let new_weight: u64 = price.as_() * (number - time).as_();
                     let old_weight: u64 = aver.as_() * (blocks_per_day + time.as_() - number.as_());

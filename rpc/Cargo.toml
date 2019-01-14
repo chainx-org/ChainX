@@ -34,6 +34,7 @@ xrml-xassets-assets = { path = "../xrml/xassets/assets" }
 xrml-xaccounts = { path = "../xrml/xaccounts" }
 xrml-mining-staking = { path = "../xrml/xmining/staking" }
 xrml-xsupport = { path = "../xrml/xsupport"  }
+xrml-xdex-spot = { path = "../xrml/xdex/spot"  }
 chainx-runtime = {path = "../runtime"}
 
 [dev-dependencies]

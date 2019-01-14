@@ -1,7 +1,7 @@
 // Copyright 2018 Chainpool.
 use substrate_primitives::{Blake2Hasher, H256};
 
-use primitives::testing::{Digest, DigestItem, Header};
+use primitives::testing::{Digest, DigestItem, Header,UintAuthorityId};
 use primitives::traits::BlakeTwo256;
 use primitives::BuildStorage;
 use runtime_io;
@@ -21,7 +21,7 @@ pub struct Test;
 impl consensus::Trait for Test {
     const NOTE_OFFLINE_POSITION: u32 = 1;
     type Log = DigestItem;
-    type SessionKey = u64;
+    type SessionKey = UintAuthorityId;
     type InherentOfflineReport = ();
 }
 impl system::Trait for Test {
@@ -50,6 +50,9 @@ impl timestamp::Trait for Test {
     type OnTimestampSet = ();
 }
 impl xbitcoin::Trait for Test {
+    
+}
+impl  xaccounts::Trait for Test {
     type Event = ();
 }
 impl xassets::Trait for Test {

@@ -1,7 +1,7 @@
 use rstd::prelude::*;
 use xassets::assetdef::Token;
 
-pub type ID = u128;
+pub type ID = u64;
 pub type OrderPairID = u32;
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
@@ -156,7 +156,7 @@ where
         create_time: BlockNumber,
         lastupdate_time: BlockNumber,
         status: OrderStatus,
-        fill_index: Vec<u128>,
+        fill_index: Vec<ID>,
         reserve_last: Amount,
     ) -> Self {
         return Order {

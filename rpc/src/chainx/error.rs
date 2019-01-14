@@ -32,6 +32,22 @@ error_chain! {
             description("Get cert Remaining Shares failed"),
             display("Get cert Remaining Shares failed"),
         }
+        OrderPairIDErr{
+            description("OrderPair ID Error"),
+            display("OrderPair ID Error"),
+        }
+        QuotationssPieceErr{
+            description("Quotationss Piece Err"),
+            display("Quotationss Piece Err"),
+        }
+        PageSizeErr{
+            description("Page Size Must Less 100"),
+            display("Page Size Must Less 100"),
+        }
+        PageIndexErr{
+            description("Page Index Error"),
+            display("Page Index Error"),
+        }
         /// Execution error.
         Execution(e: Box<state_machine::Error>) {
             description("state execution error"),
@@ -71,6 +87,26 @@ impl From<Error> for rpc::Error {
             Error(ErrorKind::CertRemainingSharesErr, _) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 4),
                 message: "Get cert Remaining Shares failed.".into(),
+                data: None,
+            },
+            Error(ErrorKind::QuotationssPieceErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 5),
+                message: "Quotationss Piece Err.".into(),
+                data: None,
+            },
+            Error(ErrorKind::OrderPairIDErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 6),
+                message: "OrderPair ID Error.".into(),
+                data: None,
+            },
+            Error(ErrorKind::PageSizeErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 7),
+                message: "Page Size Must Less 100.".into(),
+                data: None,
+            },
+            Error(ErrorKind::PageIndexErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 8),
+                message: "Page Index Error.".into(),
                 data: None,
             },
             e => errors::internal(e),
