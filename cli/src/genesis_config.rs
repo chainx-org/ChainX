@@ -61,8 +61,8 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     const CENTS: u128 = 1_000 * MILLICENTS; // assume this is worth about a cent.
     const DOLLARS: u128 = 100 * CENTS;
 
-    const SECS_PER_BLOCK: u64 = 3;
-    const MINUTES: u64 = 60 / SECS_PER_BLOCK;
+    const CONSENSUS_TIME: u64 = 1;
+    const MINUTES: u64 = 60 / (CONSENSUS_TIME * 2);
     const HOURS: u64 = MINUTES * 60;
     const DAYS: u64 = HOURS * 24;
 
@@ -100,7 +100,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         system: None,
         balances: Some(balances_config),
         timestamp: Some(TimestampConfig {
-            period: SECS_PER_BLOCK, // 3 second block time.
+            period: CONSENSUS_TIME, // 2 second block time.
         }),
         session: Some(SessionConfig {
             validators: initial_authorities
