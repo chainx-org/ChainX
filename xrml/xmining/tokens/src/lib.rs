@@ -26,10 +26,10 @@ extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 
+extern crate xrml_bridge_bitcoin as bitcoin;
 extern crate xrml_mining_staking as xstaking;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xbridge_bitcoin as xbitcoin;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
 
@@ -135,7 +135,7 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
 }
 
 pub trait Trait:
-    xassets::Trait + xaccounts::Trait + xsystem::Trait + xstaking::Trait + xbitcoin::Trait
+    xassets::Trait + xaccounts::Trait + xsystem::Trait + xstaking::Trait + bitcoin::Trait
 {
 }
 
@@ -225,8 +225,8 @@ impl<T: Trait> Module<T> {
         let seconds_per_block: T::Moment = timestamp::Module::<T>::block_period();
         match token.as_slice() {
             // btc
-            <xbitcoin::Module<T> as ChainT>::TOKEN => {
-                let irr_block: u32 = <xbitcoin::Module<T>>::irr_block();
+            <bitcoin::Module<T> as ChainT>::TOKEN => {
+                let irr_block: u32 = <bitcoin::Module<T>>::irr_block();
                 let seconds = (irr_block * 10 * 60) as u64;
                 Ok(seconds / seconds_per_block.as_())
             }

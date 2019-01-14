@@ -37,6 +37,7 @@ extern crate srml_balances as balances;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 
+extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_records as xrecords;
 extern crate xrml_xsupport as xsupport;
@@ -59,76 +60,87 @@ mod tests;
 mod b58;
 mod blockchain;
 mod tx;
-mod utils;
 mod verify_header;
 
+use blockchain::Chain;
+use chain::{BlockHeader, Transaction as BTCTransaction};
 use codec::Decode;
-use rstd::prelude::*;
-use rstd::result::Result as StdResult;
-
+use keys::DisplayLayout;
+use keys::{Address, Error as AddressError};
 use primitives::compact::Compact;
 use primitives::hash::H256;
-
-use chain::{BlockHeader, Transaction as BTCTransaction};
-
-//use runtime_primitives::traits::OnFinalise;
-use runtime_support::dispatch::{Parameter, Result};
+use rstd::prelude::*;
+use rstd::result::Result as StdResult;
+use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use ser::deserialize;
 use system::ensure_signed;
-
-use xassets::{Chain as ChainDef, ChainT};
-use xsupport::storage::linked_node::{LinkedNodeCollection, Node, NodeIndex, NodeT};
-
-pub use blockchain::BestHeader;
-use blockchain::Chain;
-use keys::DisplayLayout;
-pub use keys::{Address, Error as AddressError};
 pub use tx::RelayTx;
-use tx::{handle_cert, handle_input, handle_output, handle_proposal, validate_transaction, UTXO};
+use tx::{handle_tx, inspect_address, validate_transaction};
+use xassets::{Chain as ChainDef, ChainT};
 
-pub trait Trait: system::Trait + balances::Trait + timestamp::Trait + xrecords::Trait {
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+pub trait Trait:
+    system::Trait + balances::Trait + timestamp::Trait + xrecords::Trait + xaccounts::Trait
+{
+    //    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-decl_event!(
-    pub enum Event<T> where
-        <T as system::Trait>::AccountId,
-        <T as balances::Trait>::Balance
-    {
-        Fee(AccountId, Balance),
-    }
-);
+//decl_event!(
+//    pub enum Event<T> where
+//        <T as system::Trait>::AccountId,
+//        <T as balances::Trait>::Balance
+//    {
+//
+//    }
+//);
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+
         pub fn push_header(origin, header: Vec<u8>) -> Result {
             runtime_io::print("[bridge_btc] push btc header");
+
             let from = ensure_signed(origin)?;
-            // parse header
-            let header: BlockHeader =
-                deserialize(header.as_slice()).map_err(|_| "can't deserialize the header vec")?;
-            Self::process_header(header, &from)?;
+
+            let header: BlockHeader = deserialize(header.as_slice()).map_err(|_| "Cannot deserialize the header vec")?;
+
+            ensure!(
+                Self::block_header_for(&header.hash()).is_none(),
+                "Cannot push if the header already exists."
+            );
+            ensure!(
+                <BlockHeaderFor<T>>::exists(&header.previous_header_hash),
+                "Cannot push if can't find its previous header in ChainX, which may be header of some orphan block."
+            );
+
+            Self::apply_push_header(header, &from)?;
+
             Ok(())
         }
 
         pub fn push_transaction(origin, tx: Vec<u8>) -> Result {
             runtime_io::print("[bridge_btc] push btc tx");
-            let from = ensure_signed(origin)?;
+
+            ensure_signed(origin)?;
+
             let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("parse RelayTx err")?;
-            Self::process_tx(tx, &from)?;
+            let trustee_address = <TrusteeAddress<T>>::get().ok_or("Should set RECEIVE_address first.")?;
+            let cert_address = <CertAddress<T>>::get().ok_or("Should set CERT_address first.")?;
+
+            Self::apply_push_transaction(tx, trustee_address, cert_address)?;
+
             Ok(())
         }
 
-        pub fn propose_transaction(origin, tx: Vec<u8>) -> Result {
-            runtime_io::print("[bridge_btc] propose btc tx");
-            let from = ensure_signed(origin)?;
-
-            let tx: BTCTransaction =
-                Decode::decode(&mut tx.as_slice()).ok_or("parse transaction err")?;
-            Self::process_btc_tx(tx, &from)?;
-            Ok(())
-        }
+//        pub fn propose_transaction(origin, tx: Vec<u8>) -> Result {
+//            runtime_io::print("[bridge_btc] propose btc tx");
+//            let from = ensure_signed(origin)?;
+//
+//            let tx: BTCTransaction =
+//                Decode::decode(&mut tx.as_slice()).ok_or("parse transaction err")?;
+//            Self::process_btc_tx(tx, &from)?;
+//            Ok(())
+//        }
     }
 }
 
@@ -211,86 +223,61 @@ impl Default for TxType {
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]
-pub struct CandidateTx<AccountId: Parameter + Ord + Default> {
+pub struct CandidateTx {
     pub tx: BTCTransaction,
-    pub unexpect: bool,
-    pub confirmed: bool,
-    pub block_hash: H256,
     pub outs: Vec<u32>,
-    pub proposers: Vec<AccountId>,
 }
 
-impl<AccountId: Parameter + Ord + Default> CandidateTx<AccountId> {
+impl CandidateTx {
     pub fn new(tx: BTCTransaction, outs: Vec<u32>) -> Self {
-        CandidateTx {
-            tx,
-            unexpect: false,
-            confirmed: false,
-            block_hash: Default::default(),
-            outs,
-            proposers: Vec::new(),
-        }
+        CandidateTx { tx, outs }
     }
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]
-pub struct BTCTxLog {
-    pub tx_type: TxType,
-    pub tx: BTCTransaction,
+pub struct BlockHeaderInfo {
+    pub header: BlockHeader,
+    pub height: u32,
+    pub confirmed: bool,
+    pub txid: Vec<H256>,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode)]
-pub struct BindInfo<AccountId: Parameter + Ord + Default> {
-    pub account: AccountId,
-    pub channel: Vec<u8>,
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+pub struct TxInfo {
+    pub input_address: keys::Address,
+    pub raw_tx: BTCTransaction,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode)]
-pub struct DepositInfo<AccountId: Parameter + Ord + Default> {
-    pub account: AccountId,
-    pub btc_balance: u64,
-    pub tx_hash: H256,
-    pub block_hash: H256,
-    pub channel: Vec<u8>,
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+pub struct UTXO {
+    pub txid: H256,
+    pub index: u32,
+    pub balance: u64,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode)]
-pub struct DepositHistInfo {
-    pub btc_balance: u64,
-    pub tx_hash: H256,
-    pub block_hash: H256,
-    pub channel: Vec<u8>,
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+pub struct UTXOKey {
+    pub txid: H256,
+    pub index: u32,
 }
 
-impl NodeT for BTCTxLog {
-    type Index = H256;
-    fn index(&self) -> H256 {
-        self.tx.hash()
-    }
-}
-
-struct LinkedNodes<T: Trait>(runtime_support::storage::generator::PhantomData<T>);
-
-impl<T: Trait> LinkedNodeCollection for LinkedNodes<T> {
-    type Header = TxSetHeader<T>;
-    type NodeMap = TxSet<T>;
-    type Tail = TxSetTail<T>;
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+pub struct UTXOStatus {
+    pub balance: u64,
+    pub status: bool,
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as BridgeOfBTC {
         /// get bestheader
-        pub BestIndex get(best_index): BestHeader;
+        pub BestIndex get(best_index): H256;
 
         /// all valid blockheader (include orphan blockheader)
-        pub BlockHeaderFor get(block_header_for): map H256 => Option<(BlockHeader, T::AccountId, T::BlockNumber)>;
+        pub BlockHeaderFor get(block_header_for): map H256 => Option<BlockHeaderInfo>;
+        pub BlockHeightFor get(block_height_for): map u32 => Option<Vec<H256>>;
 
-        /// only main chain could has this number
-        /// get number by blockhash
-        pub NumberForHash get(num_for_hash): map H256 => Option<u32>;
-        /// get blockhash by number
-        pub HashsForNumber get(hashs_for_num): map u32 => Vec<H256>;
-
+        /// map for tx
+        pub TxFor get(tx_for): map H256 => TxInfo;
         /// get GenesisInfo from genesis_config
         pub GenesisInfo get(genesis_info) config(genesis): (BlockHeader, u32);
 
@@ -313,8 +300,11 @@ decl_storage! {
         pub CertRedeemScript get(cert_redeem_script) config(): Option<Vec<u8>>;
 
         /// utxo list
-        pub UTXOSet get(utxos): map u64 => UTXO;
-        pub UTXOSetLen get(utxo_len) config(): u64;
+        pub UTXOSet get(utxos): map UTXOKey => UTXOStatus;
+        pub UTXOSetKey get(utxo_key): Option<Vec<UTXOKey>>;
+
+        /// get IrrBlock from genesis_config
+        pub ReservedBlock get(reserved) config(): u32;
 
         /// get IrrBlock from genesis_config
         pub IrrBlock get(irr_block) config(): u32;
@@ -322,67 +312,56 @@ decl_storage! {
         /// get BtcFee from genesis_config
         pub BtcFee get(btc_fee) config(): u64;
 
-        /// btc all related transactions set, use TxSetTail or TxSetHeader could iter them
-        TxSetHeader get(tx_list_header): Option<NodeIndex<BTCTxLog>>;
-        TxSetTail get(tx_list_tail): Option<NodeIndex<BTCTxLog>>;
-        TxSet get(tx_set): map H256 => Option<Node<BTCTxLog>>;
-
-        pub BlockTxsMapKeys get(block_txids): map H256 => Vec<H256>;
-
-        /// get accountid by btc-address
-        pub AddressMap get(address_map): map Address => Option<BindInfo<T::AccountId>>;
+        pub MaxWithdrawAmount get(max_withdraw_amount) config(): u32;
 
         /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
-        pub TxProposalLen get(tx_proposal_len): u32;
-        pub TxProposal get(tx_proposal): map u32 => Option<CandidateTx<T::AccountId>>;
-
-        /// account, btc value, txhash, blockhash
-        pub DepositCache get(deposit_cache): Option<Vec<DepositInfo<T::AccountId>>>;
+        pub TxProposal get(tx_proposal): Option<CandidateTx>;
 
         /// tx_hash, utxo index, btc value, blockhash
-        pub DepositRecordsMap get(deposit_records): map Address => Option<Vec<DepositHistInfo>>;
+        pub PendingDepositMap get(pending_deposit): map Address => Option<Vec<UTXOKey>>;
 
-        /// get cert info (cert_name, frozen_duration, cert_owner)
-        pub CertCache get(cert_cache): Option<Vec<(Vec<u8>, u32, T::AccountId)>>;
-        pub Fee get(fee) config(): T::Balance;
+        /// get accountid by btc-address
+        pub AddressMap get(address_map): map Address => Option<T::AccountId>;
+
+        /// get btc-address list  by accountid
+        pub AccountMap get(account_map): map T::AccountId => Option<Vec<Address>>;
+
     }
     add_extra_genesis {
         build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
             use codec::Encode;
-            let (genesis, number): (BlockHeader, u32) = config.genesis.clone();
-            let h = genesis.hash();
-            let who: T::AccountId = Default::default();
-            let block_number: T::BlockNumber = Default::default();
+            let (header, number): (BlockHeader, u32) = config.genesis.clone();
+            let h = header.hash();
 
-            // check blocknumber is a new epoch
             if config.network_id == 0 {
                 if number % config.params_info.retargeting_interval != 0 {
                     panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
                 }
             }
-
+            let genesis = BlockHeaderInfo {
+                header: header,
+                height: number,
+                confirmed: true,
+                txid: [].to_vec(),
+            };
             // insert genesis
             storage.insert(GenesisConfig::<T>::hash(&<BlockHeaderFor<T>>::key_for(&h)).to_vec(),
-                (genesis, who, block_number).encode());
-            storage.insert(GenesisConfig::<T>::hash(&<NumberForHash<T>>::key_for(&h)).to_vec(),
-                number.encode());
-            storage.insert(GenesisConfig::<T>::hash(&<HashsForNumber<T>>::key_for(number)).to_vec(),
+                genesis.encode());
+            storage.insert(GenesisConfig::<T>::hash(&<BlockHeightFor<T>>::key_for(genesis.height)).to_vec(),
                 [h.clone()].to_vec().encode());
-
-            let best = BestHeader { number: number, hash: h };
-            storage.insert(GenesisConfig::<T>::hash(&<BestIndex<T>>::key()).to_vec(), best.encode());
+            storage.insert(GenesisConfig::<T>::hash(&<BestIndex<T>>::key()).to_vec(), h.encode());
         });
     }
 }
 
-impl<T: Trait> Module<T> {
-    // event
-    /// Deposit one of this module's events.
-    #[allow(unused)]
-    fn deposit_event(event: Event<T>) {
-        <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
-    }
-}
+//impl<T: Trait> Module<T> {
+// event
+/// Deposit one of this module's events.
+//    #[allow(unused)]
+//    fn deposit_event(event: Event<T>) {
+//        <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
+//    }
+//}
 
 impl<T: Trait> Module<T> {
     pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
@@ -390,65 +369,116 @@ impl<T: Trait> Module<T> {
         Address::from_layout(&r)
     }
 
-    pub fn process_header(header: BlockHeader, who: &T::AccountId) -> Result {
-        // Check for duplicate
-        if let Some(_) = Self::block_header_for(&header.hash()) {
-            return Err("already store this header");
-        }
-
-        // orphan block check
-        if <BlockHeaderFor<T>>::exists(&header.previous_header_hash) == false {
-            return Err("can't find the prev header in ChainX, may be a orphan block");
-        }
+    fn apply_push_header(header: BlockHeader, _who: &T::AccountId) -> Result {
         // check
-        {
-            runtime_io::print("check header");
-            let c = verify_header::HeaderVerifier::new::<T>(&header).map_err(|e| e.info())?;
-            c.check::<T>()?;
-        }
+        let c = verify_header::HeaderVerifier::new::<T>(&header).map_err(|e| e.info())?;
+        c.check::<T>()?;
+
+        let header_info = BlockHeaderInfo {
+            header: header.clone(),
+            height: c.get_height::<T>(),
+            confirmed: false,
+            txid: [].to_vec(),
+        };
+
         // insert valid header into storage
-        <BlockHeaderFor<T>>::insert(
-            header.hash(),
-            (
-                header.clone(),
-                who.clone(),
-                <system::Module<T>>::block_number(),
-            ),
-        );
+        <BlockHeaderFor<T>>::insert(&header.hash(), header_info.clone());
 
-        <Chain<T>>::insert_best_header(header).map_err(|e| e.info())?;
+        let mut height_hash: Vec<H256> =
+            <BlockHeightFor<T>>::get(&header_info.height).unwrap_or(Vec::new());
 
+        height_hash.push(header.hash());
+        <BlockHeightFor<T>>::insert(&header_info.height, height_hash);
+
+        let best_header_hash = <BestIndex<T>>::get();
+        let best_header = match <BlockHeaderFor<T>>::get(&best_header_hash) {
+            Some(info) => info,
+            None => return Err("can't find the best header in ChainX"),
+        };
+
+        if header_info.height > best_header.height {
+            //delete old header info
+            let reserved = <ReservedBlock<T>>::get();
+            let del = header_info.height - reserved;
+            if let Some(v) = <BlockHeightFor<T>>::get(&del) {
+                for h in v {
+                    <BlockHeaderFor<T>>::remove(&h);
+                }
+            }
+            <BlockHeightFor<T>>::remove(&del);
+
+            // update confirmd status
+            let params: Params = <ParamsInfo<T>>::get();
+            let mut confirm_header = header_info.clone();
+            for _index in 0..params.max_fork_route_preset {
+                if let Some(info) =
+                    <BlockHeaderFor<T>>::get(&confirm_header.header.previous_header_hash)
+                {
+                    confirm_header = info;
+                }
+            }
+            <BlockHeaderFor<T>>::mutate(&confirm_header.header.hash(), |info| {
+                if let Some(i) = info {
+                    i.confirmed = true
+                }
+            });
+
+            <BestIndex<T>>::put(header.hash());
+            // TODO 遍历待确认块的 交易哈希Vec：调用[处理交易]
+            <Chain<T>>::update_header(confirm_header.clone()).map_err(|e| e.info())?;
+        }
         Ok(())
     }
 
-    pub fn process_tx(tx: RelayTx, who: &T::AccountId) -> Result {
-        let trustee_address: Address = if let Some(h) = <TrusteeAddress<T>>::get() {
-            h
-        } else {
-            return Err("should set RECEIVE_address first");
-        };
-        let cert_address: keys::Address = if let Some(h) = <CertAddress<T>>::get() {
-            h
-        } else {
-            return Err("should set CERT_address first");
-        };
+    fn apply_push_transaction(
+        tx: RelayTx,
+        trustee_address: Address,
+        cert_address: Address,
+    ) -> Result {
         let tx_type = validate_transaction::<T>(&tx, (&trustee_address, &cert_address))?;
-        match tx_type {
-            TxType::Withdraw => {
-                handle_input::<T>(&tx.raw, &tx.block_hash, &who, &trustee_address);
+
+        //update header info
+        let mut confirmed = false;
+        <BlockHeaderFor<T>>::mutate(&tx.block_hash, |info| {
+            if let Some(i) = info {
+                i.txid.push(tx.raw.hash());
+
+                confirmed = i.confirmed;
             }
-            TxType::SendCert => {
-                handle_cert::<T>(&tx.raw);
-            }
+        });
+        let address = match tx_type {
+            TxType::Withdraw => trustee_address,
+            TxType::SendCert => cert_address,
             _ => {
-                handle_output::<T>(&tx.raw, &tx.block_hash, &tx.previous_raw, &trustee_address);
+                let outpoint = tx.raw.inputs[0].previous_output.clone();
+                match inspect_address::<T>(&tx.previous_raw, outpoint) {
+                    Some(a) => a,
+                    None => return Err("inspect address failed"),
+                }
             }
+        };
+        if !<TxFor<T>>::exists(&tx.raw.hash()) {
+            <TxFor<T>>::insert(
+                &tx.raw.hash(),
+                TxInfo {
+                    input_address: address,
+                    raw_tx: tx.raw.clone(),
+                },
+            )
+        }
+
+        if confirmed {
+            handle_tx::<T>(&tx.raw.hash()).map_err(|e| {
+                runtime_io::print("handle_tx error :");
+                runtime_io::print(tx.raw.hash().to_vec().as_slice());
+                e
+            })?;
         }
 
         Ok(())
     }
 
-    pub fn process_btc_tx(tx: BTCTransaction, who: &T::AccountId) -> Result {
-        handle_proposal::<T>(tx, who)
-    }
+    //    pub fn process_btc_tx(tx: BTCTransaction, who: &T::AccountId) -> Result {
+    //        handle_proposal::<T>(tx, who)
+    //    }
 }

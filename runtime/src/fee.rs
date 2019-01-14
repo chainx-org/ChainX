@@ -1,7 +1,8 @@
 // Copyright 2018 Chainpool
 
+//use balances::Call as BalancesCall;
+use bitcoin::Call as BitcoinCall;
 use xassets::Call as XAssetsCall;
-use xbitcoin::Call as XbitcoinCall;
 use xprocess::Call as XAssetsProcessCall;
 use xspot::Call as XSpotCall;
 use xstaking::Call as XStakingCall;
@@ -35,8 +36,8 @@ impl CheckFee for Call {
             },
             // xbridge
             Call::XBridgeOfBTC(call) => match call {
-                XbitcoinCall::push_header(_) => Some(20),
-                XbitcoinCall::push_transaction(_) => Some(10),
+                BitcoinCall::push_header(_) => Some(20),
+                BitcoinCall::push_transaction(_) => Some(10),
                 _ => None,
             },
             // xmining

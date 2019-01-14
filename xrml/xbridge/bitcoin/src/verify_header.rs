@@ -9,8 +9,7 @@ use primitives::hash::H256;
 use primitives::U256;
 
 use super::{
-    BlockHeaderFor, GenesisInfo, HashsForNumber, NetworkId, NumberForHash, Params, ParamsInfo,
-    Trait,
+    BestIndex, BlockHeaderFor, BlockHeightFor, GenesisInfo, NetworkId, Params, ParamsInfo, Trait,
 };
 use blockchain::ChainErr;
 use runtime_primitives::traits::As;
@@ -28,27 +27,28 @@ impl<'a> HeaderVerifier<'a> {
     pub fn new<T: Trait>(header: &'a BlockHeader) -> StdResult<Self, ChainErr> {
         let params: Params = <ParamsInfo<T>>::get();
 
-        let mut prev_height = 0;
-        let mut prev_hash = header.previous_header_hash.clone();
-        let mut count = 0;
-        for i in 0..params.max_fork_route_preset {
-            if let Some(h) = <NumberForHash<T>>::get(&prev_hash) {
-                count = i;
-                prev_height = h + i;
-                break;
-            } else {
-                prev_hash = <BlockHeaderFor<T>>::get(&prev_hash)
-                    .unwrap()
-                    .0
-                    .previous_header_hash
-                    .clone();
-            }
+        let prev_height;
+        let prev_hash = header.previous_header_hash.clone();
+
+        if let Some(header_info) = <BlockHeaderFor<T>>::get(&prev_hash) {
+            prev_height = header_info.height;
+        } else {
+            return Err(ChainErr::UnknownParent);
         }
-        if count == params.max_fork_route_preset {
-            return Err(ChainErr::AncientFork);
+
+        let best_header_hash = <BestIndex<T>>::get();
+        let best_height;
+        if let Some(header_info) = <BlockHeaderFor<T>>::get(&best_header_hash) {
+            best_height = header_info.height;
+        } else {
+            return Err(ChainErr::NotFound);
         }
 
         let this_height = prev_height + 1;
+        if this_height < best_height - params.max_fork_route_preset {
+            return Err(ChainErr::AncientFork);
+        }
+
         let now: T::Moment = <timestamp::Now<T>>::get();
         let current_time: u32 = now.as_() as u32;
 
@@ -68,6 +68,10 @@ impl<'a> HeaderVerifier<'a> {
         self.proof_of_work.check(&params)?;
         self.timestamp.check()?;
         Ok(())
+    }
+
+    pub fn get_height<T: Trait>(&self) -> u32 {
+        self.work.height
     }
 }
 
@@ -98,7 +102,7 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &Params) 
         return max_bits;
     }
 
-    let parent_header: BlockHeader = <BlockHeaderFor<T>>::get(&parent_hash).unwrap().0;
+    let parent_header: BlockHeader = <BlockHeaderFor<T>>::get(&parent_hash).unwrap().header;
 
     if is_retarget_height(height, params) {
         return work_required_retarget::<T>(parent_header, height, params);
@@ -124,13 +128,15 @@ pub fn work_required_retarget<T: Trait>(
     if retarget_num < genesis_num {
         retarget_header = genesis_header;
     } else {
-        let hash_list = <HashsForNumber<T>>::get(&retarget_num);
+        let hash_list = <BlockHeightFor<T>>::get(&retarget_num).unwrap();
         for h in hash_list {
             // look up in main chain
-            if <NumberForHash<T>>::get(&h).is_some() {
-                retarget_header = <BlockHeaderFor<T>>::get(&h).unwrap().0;
-                break;
-            }
+            if let Some(info) = <BlockHeaderFor<T>>::get(h) {
+                if info.confirmed == true {
+                    retarget_header = info.header;
+                    break;
+                }
+            };
         }
     }
 

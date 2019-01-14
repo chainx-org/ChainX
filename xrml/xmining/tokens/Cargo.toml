@@ -27,7 +27,7 @@ xrml-xsupport = { path = "../../xsupport",  default_features = false }
 xrml-xaccounts = { path = "../../xaccounts",  default_features = false }
 xrml-mining-staking = { path = "../staking", default_features = false }
 xrml-xassets-assets = { path = "../../xassets/assets",  default_features = false }
-xrml-xbridge-bitcoin = { path = "../../xbridge/bitcoin",  default_features = false }
+xrml-bridge-bitcoin = { path = "../../xbridge/bitcoin",  default_features = false }
 
 [features]
 default = ["std"]

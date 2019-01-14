@@ -27,7 +27,7 @@ xrml-xsystem = { path = "../../xsystem", default-features = false }
 xrml-xaccounts = { path = "../../xaccounts", default-features = false }
 xrml-xsupport = { path = "../../xsupport", default_features = false }
 xrml-xassets-assets = { path = "../../xassets/assets", default_features = false }
-xrml-xbridge-bitcoin = {path = "../../xbridge/bitcoin", default-features = false }
+xrml-bridge-bitcoin = {path = "../../xbridge/bitcoin", default-features = false }
 xrml-xassets-records = { path = "../../xassets/records", default-features = false }
 
 [features]

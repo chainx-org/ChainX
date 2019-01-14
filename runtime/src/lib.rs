@@ -57,8 +57,8 @@ pub extern crate xrml_fee_manager as fee_manager;
 pub extern crate xrml_xassets_assets as xassets;
 pub extern crate xrml_xassets_process as xprocess;
 pub extern crate xrml_xassets_records as xrecords;
-// xbridge
-pub extern crate xrml_xbridge_bitcoin as xbitcoin;
+// bridge
+pub extern crate xrml_bridge_bitcoin as bitcoin;
 // staking
 pub extern crate xrml_mining_staking as xstaking;
 pub extern crate xrml_mining_tokens as xtokens;
@@ -105,7 +105,7 @@ use chainx_primitives::{
 // xbitcoin
 //pub use xbitcoin;
 #[cfg(feature = "std")]
-pub use xbitcoin::Params;
+pub use bitcoin::Params;
 
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
@@ -200,8 +200,8 @@ impl aura::Trait for Runtime {
 }
 
 // bridge
-impl xbitcoin::Trait for Runtime {
-    type Event = Event;
+impl bitcoin::Trait for Runtime {
+    //type Event = Event;
 }
 
 //impl treasury::Trait for Runtime {
@@ -303,7 +303,7 @@ construct_runtime!(
         // dex
         XSpot: xspot,
         // bridge
-        XBridgeOfBTC: xbitcoin::{Module, Call, Storage, Config<T>, Event<T>},
+        XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>},
     }
 );
 

@@ -116,6 +116,7 @@ decl_storage! {
         pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps>;
 
         pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps;
+
     }
 }
 

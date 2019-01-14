@@ -3,17 +3,13 @@
 use super::builder::Builder;
 use super::keys::{Public, Type};
 use super::{
-    Bytes, CandidateTx, OutPoint, Result, Script, Trait, Transaction, TransactionInput,
-    TransactionOutput, TrusteeAddress, UTXOStorage,
+    select_utxo, Bytes, CandidateTx, OutPoint, PhantomData, Result, Script, SignatureChecker,
+    SignatureVersion, StorageMap, StorageValue, Trait, Transaction, TransactionInput,
+    TransactionInputSigner, TransactionOutput, TransactionSignatureChecker, TrusteeAddress, Vec,
 };
-use super::{PhantomData, Vec};
-use super::{
-    SignatureChecker, SignatureVersion, TransactionInputSigner, TransactionSignatureChecker,
-};
-use super::{StorageMap, StorageValue};
 use runtime_primitives::traits::As;
 use xrecords::{Application, ApplicationMap};
-use {Module, TxProposal, TxProposalLen};
+use {Module, TxProposal};
 
 #[allow(unused)]
 fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, output: &TransactionOutput) -> bool {
@@ -41,6 +37,7 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, output: &Transact
 }
 
 // Only support inputs 0, To do: Support every input.
+#[allow(unused)]
 pub fn handle_proposal<T: Trait>(_tx: Transaction, _who: &T::AccountId) -> Result {
     //    let mut candidate = if let Some(candidate) = <TxProposal<T>>::get() {
     //        candidate
@@ -101,14 +98,6 @@ pub struct Proposal<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> Proposal<T> {
     pub fn create_proposal(withdrawal_record_indexs: Vec<u32>, fee: u64) -> Result {
-        let len = Module::<T>::tx_proposal_len();
-        if len > 0 {
-            if let Some(last_candidate) = Module::<T>::tx_proposal(len - 1) {
-                if last_candidate.confirmed == false {
-                    return Err("last condidate tx has not confirmed yet");
-                }
-            }
-        }
         let mut tx = Transaction {
             version: 1,
             inputs: Vec::new(),
@@ -134,15 +123,24 @@ impl<T: Trait> Proposal<T> {
                 Type::P2PKH => Builder::build_p2pkh(&addr.hash),
                 Type::P2SH => Builder::build_p2sh(&addr.hash),
             };
-            tx.outputs.push(TransactionOutput {
-                value: balance,
-                script_pubkey: script.into(),
-            });
+            if balance > fee {
+                tx.outputs.push(TransactionOutput {
+                    value: balance - fee,
+                    script_pubkey: script.into(),
+                });
+            } else {
+                runtime_io::print("[bridge-btc] lack of balance");
+            }
             outs.push(index);
             out_balance += balance;
         }
-
-        let utxo_set = <UTXOStorage<T>>::select_utxo(out_balance + fee).unwrap();
+        runtime_io::print("[bridge-btc] total withdrawal balance ");
+        runtime_io::print(out_balance);
+        //let utxo_set = select_utxo::<T>(out_balance + fee).unwrap();
+        let utxo_set = match select_utxo::<T>(out_balance) {
+            Some(u) => u,
+            None => return Err("lack of balance"),
+        };
         let mut ins_balance: u64 = 0;
         for utxo in utxo_set {
             tx.inputs.push(TransactionInput {
@@ -157,26 +155,21 @@ impl<T: Trait> Proposal<T> {
             ins_balance += utxo.balance;
         }
 
-        let ret_balance = ins_balance - out_balance - fee;
-
-        if ret_balance > 0 {
-            let trustee_address: keys::Address = if let Some(h) = <TrusteeAddress<T>>::get() {
-                h
-            } else {
-                return Err("should set trustee_address first");
+        if ins_balance > (out_balance + fee) {
+            let trustee_address: keys::Address = match <TrusteeAddress<T>>::get() {
+                Some(t) => t,
+                None => return Err("should set trustee_address first"),
             };
             let script = match trustee_address.kind {
                 Type::P2PKH => Builder::build_p2pkh(&trustee_address.hash),
                 Type::P2SH => Builder::build_p2sh(&trustee_address.hash),
             };
             tx.outputs.push(TransactionOutput {
-                value: ret_balance,
+                value: ins_balance - out_balance - fee,
                 script_pubkey: script.into(),
             });
         }
-
-        TxProposal::<T>::insert(len, CandidateTx::new(tx, outs));
-        TxProposalLen::<T>::put(len + 1);
+        <TxProposal<T>>::put(CandidateTx::new(tx, outs));
         Ok(())
     }
 }

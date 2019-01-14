@@ -36,8 +36,8 @@ extern crate srml_timestamp as timestamp;
 
 #[cfg(test)]
 extern crate srml_consensus as consensus;
+extern crate xrml_bridge_bitcoin as xbitcoin;
 extern crate xrml_xassets_records as xrecords;
-extern crate xrml_xbridge_bitcoin as xbitcoin;
 
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
