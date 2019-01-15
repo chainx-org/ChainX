@@ -33,6 +33,7 @@ chainx-primitives = { path = "../primitives" }
 xrml-xassets-assets = { path = "../xrml/xassets/assets" }
 xrml-xaccounts = { path = "../xrml/xaccounts" }
 xrml-mining-staking = { path = "../xrml/xmining/staking" }
+xrml-mining-tokens = { path = "../xrml/xmining/tokens" }
 xrml-xsupport = { path = "../xrml/xsupport"  }
 xrml-xdex-spot = { path = "../xrml/xdex/spot"  }
 chainx-runtime = {path = "../runtime"}

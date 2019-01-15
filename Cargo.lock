@@ -3639,6 +3639,7 @@ dependencies = [
  "substrate-transaction-pool 0.1.0 (git+https://github.com/chainpool/substrate)",
  "tokio 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "xrml-mining-staking 0.4.0",
+ "xrml-mining-tokens 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xdex-spot 0.4.0",

@@ -40,6 +40,7 @@ extern crate substrate_state_machine as state_machine;
 extern crate substrate_transaction_pool as transaction_pool;
 extern crate tokio;
 extern crate xrml_mining_staking as xstaking;
+extern crate xrml_mining_tokens as xtokens;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;

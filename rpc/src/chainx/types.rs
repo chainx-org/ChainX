@@ -1,14 +1,8 @@
-
-use chrono::prelude::*;
-use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
-use xspot::def::{OrderPairID};
-use chainx_runtime::Runtime;
-use xspot::OrderT;
-
-
+use super::*;
 
 /// Cert info
 #[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CertInfo {
     /// name of cert
     pub name: String,
@@ -20,8 +14,17 @@ pub struct CertInfo {
     pub remaining_shares: u32,
 }
 
+#[derive(Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetInfo {
+    pub name: String,
+    pub is_native: bool,
+    pub details: CodecBTreeMap<AssetType, Balance>,
+}
+
 /// Intention info
 #[derive(Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntentionInfo {
     /// name of intention
     pub name: String,
@@ -49,6 +52,7 @@ pub struct IntentionInfo {
 
 /// OrderPair info
 #[derive(Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PairInfo {
     pub id: OrderPairID,
     pub assets: String,
@@ -57,21 +61,49 @@ pub struct PairInfo {
     pub used: bool,
 }
 
-
 #[derive(Debug, Default, PartialEq, Serialize)]
-pub struct  QuotationsList {
+#[serde(rename_all = "camelCase")]
+pub struct QuotationsList {
     pub id: OrderPairID,
-    pub piece:u32,
-    pub sell:Vec<(Balance,Balance)>,
-    pub buy:Vec<(Balance,Balance)>,
-
+    pub piece: u32,
+    pub sell: Vec<(Balance, Balance)>,
+    pub buy: Vec<(Balance, Balance)>,
 }
 
 #[derive(Debug, Default, PartialEq, Serialize)]
-pub struct  OrderList {
+pub struct OrderList {
     pub page_size: u32,
     pub page_index: u32,
-    pub page_total:u32,
-    pub data:Vec<OrderT<Runtime>>,
+    pub page_total: u32,
+    pub data: Vec<OrderT<Runtime>>,
+}
 
+/// Intention info
+#[derive(Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PseduIntentionInfo {
+    /// name of intention
+    pub id: Token,
+    /// circulation of id
+    pub circulation: Balance,
+    pub price: Balance,
+    /// jackpot
+    pub jackpot: Balance,
+    /// vote weight at last update
+    pub last_total_deposit_weight: u64,
+    /// last update time of vote weight
+    pub last_total_deposit_weight_update: BlockNumber,
+}
+
+#[derive(Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PseduNominationRecord {
+    /// name of intention
+    pub id: Token,
+    /// total deposit
+    pub balance: Balance,
+    /// vote weight at last update
+    pub last_total_deposit_weight: u64,
+    /// last update time of vote weight
+    pub last_total_deposit_weight_update: BlockNumber,
 }
