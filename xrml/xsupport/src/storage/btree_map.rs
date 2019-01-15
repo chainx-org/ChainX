@@ -5,6 +5,7 @@ use rstd::collections::btree_map::BTreeMap;
 
 #[derive(Default, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct CodecBTreeMap<K: Ord, V>(pub BTreeMap<K, V>);
 
 impl<K: Encode + Ord, V: Encode> Encode for CodecBTreeMap<K, V> {

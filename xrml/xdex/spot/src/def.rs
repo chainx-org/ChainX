@@ -46,6 +46,7 @@ impl Default for OrderStatus {
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Handicap<Price>
 where
     Price: Copy,
@@ -68,6 +69,7 @@ where
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct OrderPair {
     pub id: OrderPairID,
     pub first: Token,
@@ -90,6 +92,7 @@ impl OrderPair {
 /// 成交的历史，包含了双方的挂单编号
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Fill<Pair, AccountId, Amount, Price>
 where
     Pair: Clone,
@@ -111,6 +114,7 @@ where
 /// 用户的委托记录 包含了成交历史的index
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Order<Pair, AccountId, Amount, Price, BlockNumber>
 where
     Pair: Clone,

@@ -66,6 +66,7 @@ const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct IntentionProfs<Balance: Default, BlockNumber: Default> {
     pub jackpot: Balance,
     pub total_nomination: Balance,
@@ -76,6 +77,7 @@ pub struct IntentionProfs<Balance: Default, BlockNumber: Default> {
 /// Nomination record of one of the nominator's nominations.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct NominationRecord<Balance, BlockNumber> {
     pub nomination: Balance,
     pub last_vote_weight: u64,

@@ -29,7 +29,7 @@ pub struct CertInfo {
 pub struct AssetInfo {
     pub name: String,
     pub is_native: bool,
-    pub details: CodecBTreeMap<AssetTypeWrapper, Balance>,
+    pub details: CodecBTreeMap<AssetType, Balance>,
 }
 
 /// Intention info
@@ -114,61 +114,8 @@ pub struct PseduNominationRecord {
     pub last_total_deposit_weight_update: BlockNumber,
 }
 
-#[derive(Ord, PartialOrd, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub enum AssetTypeWrapper {
-    Free,
-    ReservedStaking,
-    ReservedStakingRevocation,
-    ReservedWithdrawal,
-    ReservedDexSpot,
-    ReservedDexFuture,
-}
-
-impl Default for AssetTypeWrapper {
-    fn default() -> Self {
-        AssetTypeWrapper::Free
-    }
-}
-
-impl AssetTypeWrapper {
-    pub fn new(type_: AssetType) -> AssetTypeWrapper {
-        match type_ {
-            AssetType::Free => AssetTypeWrapper::Free,
-            AssetType::ReservedStaking => AssetTypeWrapper::ReservedStaking,
-            AssetType::ReservedStakingRevocation => AssetTypeWrapper::ReservedStakingRevocation,
-            AssetType::ReservedWithdrawal => AssetTypeWrapper::ReservedWithdrawal,
-            AssetType::ReservedDexSpot => AssetTypeWrapper::ReservedDexSpot,
-            AssetType::ReservedDexFuture => AssetTypeWrapper::ReservedDexFuture,
-        }
-    }
-}
-
-#[derive(Ord, PartialOrd, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub enum ChainWrapper {
-    ChainX,
-    Bitcoin,
-    Ethereum,
-}
-impl ChainWrapper {
-    pub fn new(type_: Chain) -> ChainWrapper {
-        match type_ {
-            Chain::ChainX => ChainWrapper::ChainX,
-            Chain::Bitcoin => ChainWrapper::Bitcoin,
-            Chain::Ethereum => ChainWrapper::Ethereum,
-        }
-    }
-}
-
-impl Default for ChainWrapper {
-    fn default() -> Self {
-        ChainWrapper::ChainX
-    }
-}
-
 #[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+//#[serde(rename_all = "camelCase")]
 pub enum WithdrawalState {
     Applying,
     Signing,

@@ -45,6 +45,7 @@ impl Chain {
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Asset {
     token: Token,
     chain: Chain,

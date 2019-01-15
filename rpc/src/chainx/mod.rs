@@ -45,7 +45,7 @@ mod types;
 
 use self::error::Result;
 use self::types::{
-    ApplicationWrapper, AssetInfo, AssetTypeWrapper, CertInfo, IntentionInfo, PageData, PairInfo,
+    ApplicationWrapper, AssetInfo, CertInfo, IntentionInfo, PageData, PairInfo,
     PseduIntentionInfo, PseduNominationRecord, QuotationsList, WithdrawalState,
 };
 use chainx::error::ErrorKind::{OrderPairIDErr, PageIndexErr, PageSizeErr, QuotationssPieceErr};
@@ -317,10 +317,6 @@ where
                 bmap.insert(xassets::AssetType::Free, free_balance);
             }
 
-            let bmap = bmap
-                .into_iter()
-                .map(|(k, v)| (AssetTypeWrapper::new(k), v))
-                .collect();
             assets.push(AssetInfo {
                 name: String::from_utf8_lossy(&token).into_owned(),
                 is_native: true,
@@ -342,10 +338,6 @@ where
                     bmap.extend(info.0.iter());
                 }
 
-                let bmap = bmap
-                    .into_iter()
-                    .map(|(k, v)| (AssetTypeWrapper::new(k), v))
-                    .collect();
                 assets.push(AssetInfo {
                     name: String::from_utf8_lossy(&token).into_owned(),
                     is_native: false,
@@ -401,11 +393,6 @@ where
                 bmap.insert(xassets::AssetType::Free, free_issue);
             }
 
-            // TODO get chain info
-            let bmap = bmap
-                .into_iter()
-                .map(|(k, v)| (AssetTypeWrapper::new(k), v))
-                .collect();
             assets.push(AssetInfo {
                 name: String::from_utf8_lossy(&token).into_owned(),
                 is_native,

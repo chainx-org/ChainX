@@ -53,6 +53,7 @@ pub trait Trait: system::Trait + timestamp::Trait {
 /// Cert immutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct CertImmutableProps<BlockNumber: Default, Moment: Default> {
     pub issued_at: (BlockNumber, Moment),
     pub frozen_duration: u32,
@@ -61,6 +62,7 @@ pub struct CertImmutableProps<BlockNumber: Default, Moment: Default> {
 /// Intention Immutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct IntentionImmutableProps<Moment> {
     pub name: Name,
     pub activator: Name,
@@ -71,6 +73,7 @@ pub struct IntentionImmutableProps<Moment> {
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct IntentionProps {
     pub url: URL,
     pub is_active: bool,

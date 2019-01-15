@@ -114,7 +114,7 @@ decl_module! {
         }
         //取消委托
         pub fn cancel_order(origin,pairid:OrderPairID,index:ID) -> Result{
-            runtime_io::print("[exchange pendingorders] cancel_order");
+            runtime_io::print("[exchange xspot] cancel_order");
             return Self::do_cancel_order(origin,pairid,index);
         }
 

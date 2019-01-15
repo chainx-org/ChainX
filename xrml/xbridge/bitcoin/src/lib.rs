@@ -159,6 +159,7 @@ impl<T: Trait> ChainT for Module<T> {
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Params {
     max_bits: u32,
     //Compact
