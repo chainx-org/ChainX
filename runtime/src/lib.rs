@@ -49,6 +49,10 @@ extern crate srml_treasury as treasury;
 // chainx
 extern crate chainx_primitives;
 extern crate xr_primitives;
+
+extern crate runtime_api;
+
+// chainx runtime module
 pub extern crate xrml_xaccounts as xaccounts;
 pub extern crate xrml_xsystem as xsystem;
 // fee;
@@ -97,7 +101,8 @@ pub use timestamp::Call as TimestampCall;
 
 // chainx
 use chainx_primitives::{
-    Acceleration, AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey, Signature,
+    Acceleration, AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey,
+    Signature, Timestamp as TimestampU64,
 };
 // chainx runtime
 // xassets
@@ -161,7 +166,7 @@ impl balances::Trait for Runtime {
 
 impl timestamp::Trait for Runtime {
     const TIMESTAMP_SET_POSITION: u32 = TIMESTAMP_SET_POSITION;
-    type Moment = u64;
+    type Moment = TimestampU64;
     type OnTimestampSet = Aura;
 }
 
@@ -443,6 +448,20 @@ impl_runtime_apis! {
     impl aura_api::AuraApi<Block> for Runtime {
         fn slot_duration() -> u64 {
             Aura::slot_duration()
+        }
+    }
+
+    impl runtime_api::xassets_api::XAssetsApi<Block> for Runtime {
+        fn valid_assets() -> Vec<xassets::Token> {
+            XAssets::valid_assets()
+        }
+
+        fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::Application<AccountId, Balance, TimestampU64>> {
+            XAssetsRecords::withdrawal_applications(chain)
+        }
+
+        fn verify_address(token: xassets::Token, addr: xrecords::AddrStr, ext: xassets::Memo) -> Result<(), Vec<u8>> {
+            XAssetsProcess::verify_address(token, addr, ext).map_err(|e| e.as_bytes().to_vec())
         }
     }
 }

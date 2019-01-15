@@ -149,6 +149,7 @@ dependencies = [
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "runtime-api 0.4.0",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.83 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1031,6 +1032,20 @@ dependencies = [
  "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.45 (registry+https://github.com/rust-lang/crates.io-index)",
  "untrusted 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "runtime-api"
+version = "0.4.0"
+dependencies = [
+ "chainx-primitives 0.3.0",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-client 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-process 0.4.0",
+ "xrml-xassets-records 0.4.0",
 ]
 
 [[package]]
@@ -2356,6 +2371,7 @@ dependencies = [
  "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
  "xrml-xassets-assets 0.4.0",

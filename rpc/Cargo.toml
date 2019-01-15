@@ -35,6 +35,7 @@ srml-timestamp = { git = "https://github.com/chainpool/substrate", default_featu
 tokio = "0.1.7"
 chainx-primitives = { path = "../primitives" }
 xrml-xassets-assets = { path = "../xrml/xassets/assets" }
+xrml-xassets-records = { path = "../xrml/xassets/records" }
 xrml-xaccounts = { path = "../xrml/xaccounts" }
 xrml-mining-staking = { path = "../xrml/xmining/staking" }
 xrml-mining-tokens = { path = "../xrml/xmining/tokens" }
@@ -42,6 +43,8 @@ xrml-xsupport = { path = "../xrml/xsupport"  }
 xrml-xdex-spot = { path = "../xrml/xdex/spot"  }
 xrml-bridge-bitcoin = { path = "../xrml/xbridge/bitcoin"  }
 chainx-runtime = {path = "../runtime"}
+
+runtime-api = {path = "../runtime-api"}
 
 [dev-dependencies]
 assert_matches = "1.1"

@@ -423,6 +423,7 @@ dependencies = [
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "runtime-api 0.4.0",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.83 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2540,6 +2541,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "runtime-api"
+version = "0.4.0"
+dependencies = [
+ "chainx-primitives 0.3.0",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-client 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-process 0.4.0",
+ "xrml-xassets-records 0.4.0",
+]
+
+[[package]]
 name = "rust-crypto"
 version = "0.2.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3621,6 +3636,7 @@ dependencies = [
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "runtime-api 0.4.0",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "script 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "serde 1.0.83 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3646,6 +3662,7 @@ dependencies = [
  "xrml-mining-tokens 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-records 0.4.0",
  "xrml-xdex-spot 0.4.0",
  "xrml-xsupport 0.4.0",
 ]
@@ -4722,6 +4739,7 @@ dependencies = [
  "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
  "xrml-xassets-assets 0.4.0",

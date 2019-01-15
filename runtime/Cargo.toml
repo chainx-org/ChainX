@@ -39,7 +39,7 @@ srml-treasury = { git = "https://github.com/chainpool/substrate", default-featur
 chainx-primitives = { path = "../primitives", default-features = false }
 
 xr-primitives = { path = "../xr-primitives", default-features = false }
-
+runtime-api = { path = "../runtime-api", default-features = false }
 # chainx runtime module
 xrml-xsystem = { path = "../xrml/xsystem", default-features = false }
 xrml-xaccounts = { path = "../xrml/xaccounts", default-features = false }
@@ -94,6 +94,7 @@ std = [
     "chainx-primitives/std",
     # xr-primitives
     "xr-primitives/std",
+    "runtime-api/std",
     # chainx runtime
     "xrml-xsystem/std",
     "xrml-xaccounts/std",

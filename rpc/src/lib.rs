@@ -47,6 +47,7 @@ extern crate xrml_mining_staking as xstaking;
 extern crate xrml_mining_tokens as xtokens;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
+extern crate xrml_xassets_records as xrecords;
 extern crate xrml_xdex_spot as xspot;
 extern crate xrml_xsupport as xsupport;
 

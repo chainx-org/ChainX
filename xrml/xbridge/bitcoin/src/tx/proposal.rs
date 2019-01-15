@@ -109,7 +109,7 @@ impl<T: Trait> Proposal<T> {
         let mut outs: Vec<u32> = Vec::new();
 
         for index in withdrawal_record_indexs.into_iter() {
-            let r: Application<T::AccountId, T::Balance> =
+            let r: Application<T::AccountId, T::Balance, T::Moment> =
                 if let Some(r) = ApplicationMap::<T>::get(&index) {
                     r.data
                 } else {

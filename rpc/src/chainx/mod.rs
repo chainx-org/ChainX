@@ -1,4 +1,4 @@
-//! ChainX API
+extern crate runtime_api;
 
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
@@ -10,6 +10,7 @@ use codec::{Decode, Encode};
 use jsonrpc_macros::Trailing;
 use serde::Serialize;
 
+use client::runtime_api::Core as CoreAPI;
 use client::{self, runtime_api::Metadata, Client};
 use keys::Address;
 use script::Script;
@@ -18,7 +19,7 @@ use state_machine::Backend;
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
-use runtime_primitives::traits::{As, Block as BlockT, Header, NumberFor, Zero};
+use runtime_primitives::traits::{As, Block as BlockT, Header, NumberFor, ProvideRuntimeApi, Zero};
 
 use srml_support::storage::{StorageMap, StorageValue};
 
@@ -26,20 +27,28 @@ use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
 
 use xaccounts::{self, CertImmutableProps, IntentionImmutableProps, IntentionProps};
-use xassets::{self, assetdef::ChainT, AssetType, Token};
+use xassets::{self, assetdef::ChainT, Asset, AssetType, Chain, Token};
 use xbitcoin::{
-    AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TrusteeAddress, TxFor, TxInfo,
+    self, AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TrusteeAddress, TxFor,
+    TxInfo,
 };
+use xrecords::{self, Application};
 use xspot::def::{OrderPair, OrderPairID, ID};
 use xspot::{HandicapT, OrderT};
 use xstaking::{self, IntentionProfs, NominationRecord};
 use xsupport::storage::btree_map::CodecBTreeMap;
 use xtokens::{self, DepositVoteWeight, PseduIntentionVoteWeight};
+
+use self::runtime_api::xassets_api::XAssetsApi;
+
 mod error;
 mod types;
 
 use self::error::Result;
-use self::types::*;
+use self::types::{
+    ApplicationWrapper, AssetInfo, AssetTypeWrapper, CertInfo, IntentionInfo, PageData, PairInfo,
+    PseduIntentionInfo, PseduNominationRecord, QuotationsList, WithdrawalState,
+};
 use chainx::error::ErrorKind::{OrderPairIDErr, PageIndexErr, PageSizeErr, QuotationssPieceErr};
 
 const MAX_PAGE_SIZE: u32 = 100;
@@ -56,7 +65,19 @@ build_rpc_trait! {
         fn cert(&self, AccountId) -> Result<Option<Vec<CertInfo>>>;
 
         #[rpc(name = "chainx_getAssetsByAccount")]
-        fn assets_of(&self, AccountId) -> Result<Option<Vec<AssetInfo>>>;
+        fn assets_of(&self, AccountId, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
+
+        #[rpc(name = "chainx_getAssets")]
+        fn assets(&self, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
+
+        #[rpc(name = "chainx_verifyAddress")]
+        fn verify_addr(&self, xassets::Token, xrecords::AddrStr, xassets::Memo) -> Result<Option<Vec<u8>>>;
+
+        #[rpc(name = "chainx_withdrawalList")]
+        fn withdrawal_list(&self, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
+
+        #[rpc(name = "chainx_withdrawalByAccount")]
+        fn withdrawal_list_of(&self, AccountId, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
 
         #[rpc(name = "chainx_getNominationRecords")]
         fn nomination_records(&self, AccountId) -> Result<Option<Vec<(AccountId, NominationRecord<Balance, BlockNumber>)>>>;
@@ -74,10 +95,10 @@ build_rpc_trait! {
         fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>;
 
         #[rpc(name = "chainx_getQuotations")]
-        fn quotationss(&self,OrderPairID,u32) -> Result<Option<QuotationsList>>;
+        fn quotationss(&self, OrderPairID, u32) -> Result<Option<QuotationsList>>;
 
         #[rpc(name = "chainx_getOrders")]
-        fn orders(&self,AccountId,u32,u32) -> Result<Option<OrderList>>;
+        fn orders(&self, AccountId, u32, u32) -> Result<Option<PageData<OrderT<Runtime>>>>;
 
         #[rpc(name = "chainx_getDepositRecords")]
         fn deposit_records(&self, AccountId) -> Result<Option<Vec<(DateTime<Utc>, String, BlockNumber, String, Vec<(String, Balance)>)>>>;
@@ -85,16 +106,22 @@ build_rpc_trait! {
 }
 
 /// ChainX API
-pub struct ChainX<B, E, Block: BlockT, RA> {
+pub struct ChainX<B, E, Block, RA>
+where
+    B: client::backend::Backend<Block, Blake2Hasher>,
+    E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync,
+    Block: BlockT<Hash = H256>,
+    RA: CoreAPI<Block> + XAssetsApi<Block>,
+{
     client: Arc<Client<B, E, Block, RA>>,
 }
 
 impl<B, E, Block: BlockT, RA> ChainX<B, E, Block, RA>
 where
-    Block: BlockT<Hash = H256> + 'static,
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
-    E: client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static,
-    RA: Metadata<Block>,
+    E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync,
+    Block: BlockT<Hash = H256> + 'static,
+    RA: Metadata<Block> + XAssetsApi<Block>,
 {
     /// Create new ChainX API RPC handler.
     pub fn new(client: Arc<Client<B, E, Block, RA>>) -> Self {
@@ -107,14 +134,18 @@ where
     }
 
     /// Get best state of the chain.
+    fn best_number(&self) -> std::result::Result<BlockId<Block>, client::error::Error> {
+        let best_hash = self.client.info()?.chain.best_hash;
+        Ok(BlockId::Hash(best_hash))
+    }
+
     fn best_state(
         &self,
     ) -> std::result::Result<
         <B as client::backend::Backend<Block, Blake2Hasher>>::State,
         client::error::Error,
     > {
-        let best_hash = self.client.info()?.chain.best_hash;
-        let state = self.client.state_at(&BlockId::Hash(best_hash))?;
+        let state = self.client.state_at(&self.best_number()?)?;
         Ok(state)
     }
 
@@ -141,16 +172,65 @@ where
             .map(|s| Decode::decode(&mut s.0.as_slice()))
             .unwrap_or(None))
     }
+
+    fn get_asset(
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        token: &Token,
+    ) -> Result<Option<Asset>> {
+        let key = <xassets::AssetInfo<Runtime>>::key_for(token.as_ref());
+        match Self::pickout::<(Asset, bool, BlockNumber)>(&state, &key)? {
+            Some((info, _, _)) => Ok(Some(info)),
+            None => Ok(None),
+        }
+    }
+
+    fn get_applications_with_state(
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        v: Vec<Application<AccountId, Balance, Timestamp>>,
+    ) -> Result<Vec<ApplicationWrapper>> {
+        // todo change to runtime?
+        let mut handle = BTreeMap::<Chain, Vec<u32>>::new();
+        // btc
+        let key = xbitcoin::TxProposal::<Runtime>::key();
+        let ids = match Self::pickout::<xbitcoin::CandidateTx>(&state, &key)? {
+            Some(candidate_tx) => candidate_tx.outs,
+            None => vec![],
+        };
+        handle.insert(Chain::Bitcoin, ids);
+
+        let mut applications = vec![];
+        for appl in v {
+            let index = appl.id();
+            let token = appl.token();
+
+            let state = if let Some(info) = Self::get_asset(state, &token)? {
+                match handle.get(&info.chain()) {
+                    Some(list) => {
+                        if list.contains(&index) {
+                            WithdrawalState::Signing
+                        } else {
+                            WithdrawalState::Applying
+                        }
+                    }
+                    None => WithdrawalState::Unknown,
+                }
+            } else {
+                unreachable!("should not reach this branch, the token info must be exists");
+            };
+            applications.push(ApplicationWrapper::new(appl, state));
+        }
+        Ok(applications)
+    }
 }
 
 impl<B, E, Block, RA>
     ChainXApi<NumberFor<Block>, AccountId, Balance, BlockNumber, SignedBlock<Block>>
     for ChainX<B, E, Block, RA>
 where
-    Block: BlockT<Hash = H256> + 'static,
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
-    E: client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static,
-    RA: Metadata<Block>,
+    E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync + 'static,
+    Block: BlockT<Hash = H256> + 'static,
+    RA: Metadata<Block> + XAssetsApi<Block>,
 {
     fn block_info(&self, number: Trailing<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         let hash = match number.into() {
@@ -206,11 +286,14 @@ where
         Ok(Some(certs))
     }
 
-    fn assets_of(&self, who: AccountId) -> Result<Option<Vec<AssetInfo>>> {
+    fn assets_of(
+        &self,
+        who: AccountId,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<AssetInfo>>> {
         let state = self.best_state()?;
-
         let chain = <xassets::Module<Runtime> as ChainT>::chain();
-
         let mut assets = Vec::new();
 
         // Native assets
@@ -218,8 +301,6 @@ where
         let mut all_assets: Vec<Token> = Self::pickout(&state, &key)?.unwrap_or(Vec::new());
 
         for token in all_assets {
-            let mut asset = AssetInfo::default();
-
             let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
                 xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
             );
@@ -237,11 +318,15 @@ where
                 bmap.insert(xassets::AssetType::Free, free_balance);
             }
 
-            asset.name = String::from_utf8_lossy(&token).into_owned();
-            asset.is_native = true;
-            asset.details = CodecBTreeMap(bmap);
-
-            assets.push(asset);
+            let bmap = bmap
+                .into_iter()
+                .map(|(k, v)| (AssetTypeWrapper::new(k), v))
+                .collect();
+            assets.push(AssetInfo {
+                name: String::from_utf8_lossy(&token).into_owned(),
+                is_native: true,
+                details: CodecBTreeMap(bmap),
+            });
         }
 
         // Crosschain assets
@@ -260,15 +345,153 @@ where
                     bmap.extend(info.0.iter());
                 }
 
-                asset.name = String::from_utf8_lossy(&token).into_owned();
-                asset.is_native = false;
-                asset.details = CodecBTreeMap(bmap);
-
-                assets.push(asset);
+                let bmap = bmap
+                    .into_iter()
+                    .map(|(k, v)| (AssetTypeWrapper::new(k), v))
+                    .collect();
+                assets.push(AssetInfo {
+                    name: String::from_utf8_lossy(&token).into_owned(),
+                    is_native: false,
+                    details: CodecBTreeMap(bmap),
+                });
             }
         }
 
-        Ok(Some(assets))
+        into_pagedata(assets, page_index, page_size)
+    }
+
+    fn assets(&self, page_index: u32, page_size: u32) -> Result<Option<PageData<AssetInfo>>> {
+        let b = self.best_number()?;
+        let tokens: Result<Vec<Token>> = self
+            .client
+            .runtime_api()
+            .valid_assets(&b)
+            .map_err(|e| e.into());
+        let tokens = tokens?;
+
+        let state = self.best_state()?;
+
+        let mut assets = Vec::new();
+
+        for token in tokens.into_iter() {
+            let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
+                xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
+            );
+
+            let key = <xassets::TotalAssetBalance<Runtime>>::key_for(token.as_ref());
+            if let Some(info) = Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)? {
+                bmap.extend(info.0.iter());
+            }
+
+            let asset = Self::get_asset(&state, &token)?;
+            let is_native = match asset {
+                Some(info) => match info.chain() {
+                    Chain::ChainX => true,
+                    _ => false,
+                },
+                None => unreachable!("should not reach this branch, the token info must be exists"),
+            };
+
+            // PCX free balance
+            if token.as_slice() == xassets::Module::<Runtime>::TOKEN {
+                let key = <balances::TotalIssuance<Runtime>>::key();
+                let total_issue = Self::pickout::<Balance>(&state, &key)?.unwrap_or(Zero::zero());
+                let other_total: Balance = bmap
+                    .iter()
+                    .filter(|(&k, _)| k != AssetType::Free)
+                    .fold(Zero::zero(), |acc, (_, v)| acc + *v);
+                let free_issue = total_issue - other_total;
+                bmap.insert(xassets::AssetType::Free, free_issue);
+            }
+
+            // TODO get chain info
+            let bmap = bmap
+                .into_iter()
+                .map(|(k, v)| (AssetTypeWrapper::new(k), v))
+                .collect();
+            assets.push(AssetInfo {
+                name: String::from_utf8_lossy(&token).into_owned(),
+                is_native,
+                details: CodecBTreeMap(bmap),
+            });
+        }
+
+        into_pagedata(assets, page_index, page_size)
+    }
+
+    fn verify_addr(
+        &self,
+        token: xassets::Token,
+        addr: xrecords::AddrStr,
+        memo: xassets::Memo,
+    ) -> Result<Option<Vec<u8>>> {
+        let b = self.best_number()?;
+        self.client
+            .runtime_api()
+            .verify_address(&b, &token, &addr, &memo)
+            .and_then(|r| match r {
+                Ok(()) => Ok(None),
+                Err(s) => Ok(Some(s)),
+            })
+            .map_err(|e| e.into())
+    }
+
+    fn withdrawal_list(
+        &self,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<ApplicationWrapper>>> {
+        let mut v = vec![];
+        let best_number = self.best_number()?;
+        let state = self.best_state()?;
+        for c in xassets::Chain::iterator() {
+            let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
+                .client
+                .runtime_api()
+                .withdrawal_list_of(&best_number, c)
+                .map_err(|e| e.into());
+
+            let list = list?;
+            let applications = Self::get_applications_with_state(&state, list)?;
+            v.extend(applications);
+        }
+
+        into_pagedata(v, page_index, page_size)
+    }
+
+    fn withdrawal_list_of(
+        &self,
+        who: AccountId,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<ApplicationWrapper>>> {
+        let mut v = vec![];
+        let b = self.best_number()?;
+        for c in xassets::Chain::iterator() {
+            let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
+                .client
+                .runtime_api()
+                .withdrawal_list_of(&b, c)
+                .map_err(|e| e.into());
+            let list = list?;
+            v.extend(list);
+        }
+
+        //        let mut handle = BTreeMap::<Chain, Vec<u32>>::new();
+        //        // btc
+        //        let key = xbitcoin::TxProposal::<Runtime>::key();
+        //        let ids = match Self::pickout::<xbitcoin::CandidateTx>(&state, &key)? {
+        //            Some(candidate_tx) => candidate_tx.outs,
+        //            None => vec![],
+        //        };
+        //        handle.insert(Chain::Bitcoin, ids);
+
+        let v = v.into_iter().filter(|r| r.applicant() == who).collect();
+
+        let state = self.best_state()?;
+        let applications = Self::get_applications_with_state(&state, v)?;
+
+        into_pagedata(applications, page_index, page_size)
     }
 
     fn nomination_records(
@@ -451,7 +674,6 @@ where
 
         Ok(Some(pairs))
     }
-
     fn quotationss(&self, id: OrderPairID, piece: u32) -> Result<Option<QuotationsList>> {
         if piece < 1 || piece > 10 {
             return Err(QuotationssPieceErr.into());
@@ -479,9 +701,9 @@ where
                 }
 
                 let max_price: Balance =
-                    handicap.sell * ((100_u64 + price_volatility as Balance) / 100_u64);
+                    (handicap.sell * ((100_u64 + price_volatility as Balance) / 100_u64));
                 let min_price: Balance =
-                    handicap.sell * ((100_u64 - price_volatility as Balance) / 100_u64);
+                    (handicap.sell * ((100_u64 - price_volatility as Balance) / 100_u64));
                 let mut n = 0;
 
                 loop {
@@ -561,16 +783,19 @@ where
         Ok(Some(quotationslist))
     }
 
-    fn orders(&self, who: AccountId, page_index: u32, page_size: u32) -> Result<Option<OrderList>> {
+    fn orders(
+        &self,
+        who: AccountId,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<OrderT<Runtime>>>> {
         if page_size > MAX_PAGE_SIZE || page_size < 1 {
             return Err(PageSizeErr.into());
         }
 
-        let mut list = OrderList::default();
         let mut orders = Vec::new();
-        list.page_index = page_index;
-        list.page_size = page_size;
-        list.page_total = 0;
+
+        let mut page_total = 0;
 
         let state = self.best_state()?;
 
@@ -580,24 +805,38 @@ where
             for i in (0..len).rev() {
                 let order_key = <xspot::AccountOrder<Runtime>>::key_for(&(who, i));
                 if let Some(order) = Self::pickout::<OrderT<Runtime>>(&state, &order_key)? {
-                    if total >= page_index * page_size && total < ((page_index + 1) * page_size) {
-                        orders.push(order.clone());
-                    }
                     total = total + 1;
                 }
             }
 
             let total_page: u32 = (total + (page_size - 1)) / page_size;
 
-            list.page_total = total_page;
+            page_total = total_page;
 
             if page_index >= total_page && total_page > 0 {
                 return Err(PageIndexErr.into());
             }
-        }
-        list.data = orders;
 
-        Ok(Some(list))
+            let mut count: u32 = 0;
+            for i in (0..len).rev() {
+                let order_key = <xspot::AccountOrder<Runtime>>::key_for(&(who, i));
+                if let Some(order) = Self::pickout::<OrderT<Runtime>>(&state, &order_key)? {
+                    if count >= page_index * page_size && count < ((page_index + 1) * page_size) {
+                        orders.push(order.clone());
+                    }
+
+                    count = count + 1;
+                }
+            }
+        }
+        let d = PageData {
+            page_total,
+            page_index,
+            page_size,
+            data: orders,
+        };
+
+        Ok(Some(d))
     }
 
     fn deposit_records(
@@ -691,4 +930,28 @@ fn get_deposit_info(raw_tx: BTCTransaction, trustee: Address) -> Vec<(String, Ba
     }
     out_info.push((ops, balance));
     out_info
+}
+
+fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {
+    let page_total = (src.len() as u32 + (page_size - 1)) / page_size;
+    if page_index >= page_total && page_total > 0 {
+        return Err(PageIndexErr.into());
+    }
+
+    let mut count: u32 = 0;
+    let mut list = vec![];
+    for (index, item) in src.into_iter().enumerate() {
+        let index = index as u32;
+        if index >= page_index * page_size && index < ((page_index + 1) * page_size) {
+            list.push(item);
+        }
+    }
+
+    let d = PageData {
+        page_total,
+        page_index,
+        page_size,
+        data: list,
+    };
+    Ok(Some(d))
 }

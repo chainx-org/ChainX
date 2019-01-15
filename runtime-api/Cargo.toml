@@ -1,0 +1,35 @@
+[package]
+name = "runtime-api"
+version = "0.4.0"
+authors = ["Chainpool <http://www.chainx.org>"]
+
+[dependencies]
+substrate-client = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
+# substrate runtime module
+srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
+
+# chainx
+chainx-primitives = { path = "../primitives", default_features = false }
+xr-primitives = { path = "../xr-primitives", default_features = false }
+# chainx runtime module
+xrml-xassets-assets = { path = "../xrml/xassets/assets", default_features = false }
+xrml-xassets-process = { path = "../xrml/xassets/process", default_features = false }
+xrml-xassets-records = { path = "../xrml/xassets/records", default_features = false }
+
+
+[features]
+default = ["std"]
+std = [
+	"substrate-client/std",
+	"sr-std/std",
+	"srml-support/std",
+
+	# chainx
+	"chainx-primitives/std",
+	"xr-primitives/std",
+    # chainx runtime
+    "xrml-xassets-assets/std",
+    "xrml-xassets-process/std",
+    "xrml-xassets-records/std",
+]

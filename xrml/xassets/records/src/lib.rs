@@ -30,6 +30,7 @@ extern crate sr_primitives as runtime_primitives;
 extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 extern crate srml_system as system;
+extern crate srml_timestamp as timestamp;
 
 extern crate xr_primitives;
 
@@ -39,10 +40,6 @@ extern crate xrml_xsupport as xsupport;
 
 #[cfg(test)]
 mod tests;
-
-mod withdrawal;
-
-pub use withdrawal::WithdrawLog;
 
 use codec::Codec;
 use rstd::prelude::*;
@@ -56,7 +53,7 @@ use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node,
 
 pub type AddrStr = XString;
 
-pub trait Trait: system::Trait + balances::Trait + xassets::Trait {
+pub trait Trait: system::Trait + balances::Trait + xassets::Trait + timestamp::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -80,16 +77,22 @@ decl_event!(
 /// application for withdrawal
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct Application<AccountId, Balance> {
+pub struct Application<AccountId, Balance, Moment> {
     id: u32,
     applicant: AccountId,
     token: Token,
     balance: Balance,
     addr: AddrStr,
     ext: Memo,
+    time: Moment,
 }
 
-impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<AccountId, Balance> {
+impl<AccountId, Balance, Moment> Application<AccountId, Balance, Moment>
+where
+    AccountId: Codec + Clone,
+    Balance: Codec + Copy + Clone,
+    Moment: Codec + Clone,
+{
     fn new(
         id: u32,
         applicant: AccountId,
@@ -97,14 +100,16 @@ impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<Accoun
         balance: Balance,
         addr: AddrStr,
         ext: Memo,
+        time: Moment,
     ) -> Self {
-        Application::<AccountId, Balance> {
+        Application::<AccountId, Balance, Moment> {
             id,
             applicant,
             token,
             balance,
             addr,
             ext,
+            time,
         }
     }
     pub fn id(&self) -> u32 {
@@ -125,9 +130,12 @@ impl<AccountId: Codec + Clone, Balance: Codec + Copy + Clone> Application<Accoun
     pub fn ext(&self) -> Memo {
         self.ext.clone()
     }
+    pub fn time(&self) -> Moment {
+        self.time.clone()
+    }
 }
 
-impl<AccountId, Balance> NodeT for Application<AccountId, Balance> {
+impl<AccountId, Balance, Moment> NodeT for Application<AccountId, Balance, Moment> {
     type Index = u32;
     fn index(&self) -> Self::Index {
         self.id
@@ -145,11 +153,11 @@ impl<T: Trait> LinkedNodeCollection for LinkedMultiKey<T> {
 decl_storage! {
     trait Store for Module<T: Trait> as XAssetsRecords {
         /// linked node header
-        pub ApplicationMHeader get(application_mheader): map Chain => Option<MultiNodeIndex<Chain, Application<T::AccountId, T::Balance>>>;
+        pub ApplicationMHeader get(application_mheader): map Chain => Option<MultiNodeIndex<Chain, Application<T::AccountId, T::Balance, T::Moment>>>;
         /// linked node tail
-        pub ApplicationMTail get(application_mtail): map Chain => Option<MultiNodeIndex<Chain, Application<T::AccountId, T::Balance>>>;
+        pub ApplicationMTail get(application_mtail): map Chain => Option<MultiNodeIndex<Chain, Application<T::AccountId, T::Balance, T::Moment>>>;
         /// withdrawal applications collection, use serial number to mark them, and has prev and next to link them
-        pub ApplicationMap get(application_map): map u32 => Option<Node<Application<T::AccountId, T::Balance>>>;
+        pub ApplicationMap get(application_map): map u32 => Option<Node<Application<T::AccountId, T::Balance, T::Moment>>>;
         /// withdrawal application serial number
         pub SerialNumber get(number): u32 = 0;
     }
@@ -194,13 +202,14 @@ impl<T: Trait> Module<T> {
         let asset = xassets::Module::<T>::get_asset(token)?;
 
         let id = Self::number();
-        let app = Application::<T::AccountId, T::Balance>::new(
+        let app = Application::<T::AccountId, T::Balance, T::Moment>::new(
             id,
             who.clone(),
             token.clone(),
             balance,
             addr,
             ext,
+            timestamp::Module::<T>::now(),
         );
 
         let n = Node::new(app);
@@ -278,5 +287,24 @@ impl<T: Trait> Module<T> {
             return Some(vec);
         }
         None
+    }
+
+    pub fn withdrawal_applications(
+        chain: Chain,
+    ) -> Vec<Application<T::AccountId, T::Balance, T::Moment>> {
+        let mut vec = Vec::new();
+        // begin from header
+        if let Some(header) = Self::application_mheader(chain) {
+            let mut index = header.index();
+            while let Some(node) = Self::application_map(&index) {
+                if let Some(next) = node.next() {
+                    vec.push(node.data);
+                    index = next;
+                } else {
+                    break;
+                }
+            }
+        }
+        vec
     }
 }

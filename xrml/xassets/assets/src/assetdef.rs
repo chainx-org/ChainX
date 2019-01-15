@@ -22,7 +22,7 @@ pub trait ChainT {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
+#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum Chain {
     ChainX,

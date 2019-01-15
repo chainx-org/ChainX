@@ -1,5 +1,15 @@
 use super::*;
 
+// utils
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PageData<T> {
+    pub page_total: u32,
+    pub page_index: u32,
+    pub page_size: u32,
+    pub data: Vec<T>,
+}
+
 /// Cert info
 #[derive(Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,7 +29,7 @@ pub struct CertInfo {
 pub struct AssetInfo {
     pub name: String,
     pub is_native: bool,
-    pub details: CodecBTreeMap<AssetType, Balance>,
+    pub details: CodecBTreeMap<AssetTypeWrapper, Balance>,
 }
 
 /// Intention info
@@ -70,14 +80,6 @@ pub struct QuotationsList {
     pub buy: Vec<(Balance, Balance)>,
 }
 
-#[derive(Debug, Default, PartialEq, Serialize)]
-pub struct OrderList {
-    pub page_size: u32,
-    pub page_index: u32,
-    pub page_total: u32,
-    pub data: Vec<OrderT<Runtime>>,
-}
-
 /// Intention info
 #[derive(Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -106,4 +108,102 @@ pub struct PseduNominationRecord {
     pub last_total_deposit_weight: u64,
     /// last update time of vote weight
     pub last_total_deposit_weight_update: BlockNumber,
+}
+
+#[derive(Ord, PartialOrd, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum AssetTypeWrapper {
+    Free,
+    ReservedStaking,
+    ReservedStakingRevocation,
+    ReservedWithdrawal,
+    ReservedDexSpot,
+    ReservedDexFuture,
+}
+
+impl Default for AssetTypeWrapper {
+    fn default() -> Self {
+        AssetTypeWrapper::Free
+    }
+}
+
+impl AssetTypeWrapper {
+    pub fn new(type_: AssetType) -> AssetTypeWrapper {
+        match type_ {
+            AssetType::Free => AssetTypeWrapper::Free,
+            AssetType::ReservedStaking => AssetTypeWrapper::ReservedStaking,
+            AssetType::ReservedStakingRevocation => AssetTypeWrapper::ReservedStakingRevocation,
+            AssetType::ReservedWithdrawal => AssetTypeWrapper::ReservedWithdrawal,
+            AssetType::ReservedDexSpot => AssetTypeWrapper::ReservedDexSpot,
+            AssetType::ReservedDexFuture => AssetTypeWrapper::ReservedDexFuture,
+        }
+    }
+}
+
+#[derive(Ord, PartialOrd, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum ChainWrapper {
+    ChainX,
+    Bitcoin,
+    Ethereum,
+}
+impl ChainWrapper {
+    pub fn new(type_: Chain) -> ChainWrapper {
+        match type_ {
+            Chain::ChainX => ChainWrapper::ChainX,
+            Chain::Bitcoin => ChainWrapper::Bitcoin,
+            Chain::Ethereum => ChainWrapper::Ethereum,
+        }
+    }
+}
+
+impl Default for ChainWrapper {
+    fn default() -> Self {
+        ChainWrapper::ChainX
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum WithdrawalState {
+    Applying,
+    Signing,
+    Unknown,
+}
+
+impl Default for WithdrawalState {
+    fn default() -> Self {
+        WithdrawalState::Applying
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplicationWrapper {
+    id: u32,
+    applicant: AccountId,
+    token: String,
+    balance: Balance,
+    addr: String,
+    ext: String,
+    time: Timestamp,
+    state: WithdrawalState,
+}
+
+impl ApplicationWrapper {
+    pub fn new(
+        appl: Application<AccountId, Balance, Timestamp>,
+        state: WithdrawalState,
+    ) -> ApplicationWrapper {
+        ApplicationWrapper {
+            id: appl.id(),
+            applicant: appl.applicant(),
+            token: String::from_utf8_lossy(&appl.token()).into_owned(),
+            balance: appl.balance(),
+            addr: String::from_utf8_lossy(&appl.addr()).into_owned(),
+            ext: String::from_utf8_lossy(&appl.ext()).into_owned(),
+            time: appl.time(),
+            state,
+        }
+    }
 }
