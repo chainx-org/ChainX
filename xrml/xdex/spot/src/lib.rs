@@ -37,8 +37,8 @@ extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate srml_consensus as consensus;
 extern crate xrml_bridge_bitcoin as xbitcoin;
-extern crate xrml_xassets_records as xrecords;
 extern crate xrml_xaccounts as xaccounts;
+extern crate xrml_xassets_records as xrecords;
 
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
@@ -63,7 +63,6 @@ use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
 use xassets::assetdef::Token;
-
 
 pub type OrderT<T> = Order<
     OrderPairID,

@@ -18,13 +18,16 @@
 
 #![warn(missing_docs)]
 
+extern crate chain as btc_chain;
 extern crate chainx_primitives;
 extern crate chainx_runtime;
 extern crate chrono;
 extern crate jsonrpc_core as rpc;
 extern crate jsonrpc_pubsub;
+extern crate keys;
 extern crate parity_codec as codec;
 extern crate parking_lot;
+extern crate script;
 extern crate serde;
 extern crate serde_json;
 extern crate sr_primitives as runtime_primitives;
@@ -39,12 +42,13 @@ extern crate substrate_primitives as primitives;
 extern crate substrate_state_machine as state_machine;
 extern crate substrate_transaction_pool as transaction_pool;
 extern crate tokio;
+extern crate xrml_bridge_bitcoin as xbitcoin;
 extern crate xrml_mining_staking as xstaking;
 extern crate xrml_mining_tokens as xtokens;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xsupport as xsupport;
 extern crate xrml_xdex_spot as xspot;
+extern crate xrml_xsupport as xsupport;
 
 #[macro_use]
 extern crate error_chain;

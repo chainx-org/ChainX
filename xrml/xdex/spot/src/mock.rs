@@ -1,7 +1,7 @@
 // Copyright 2018 Chainpool.
 use substrate_primitives::{Blake2Hasher, H256};
 
-use primitives::testing::{Digest, DigestItem, Header,UintAuthorityId};
+use primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use primitives::traits::BlakeTwo256;
 use primitives::BuildStorage;
 use runtime_io;
@@ -49,10 +49,8 @@ impl timestamp::Trait for Test {
     type Moment = u64;
     type OnTimestampSet = ();
 }
-impl xbitcoin::Trait for Test {
-    
-}
-impl  xaccounts::Trait for Test {
+impl xbitcoin::Trait for Test {}
+impl xaccounts::Trait for Test {
     type Event = ();
 }
 impl xassets::Trait for Test {
