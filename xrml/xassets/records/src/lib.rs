@@ -298,8 +298,9 @@ impl<T: Trait> Module<T> {
         if let Some(header) = Self::application_mheader(chain) {
             let mut index = header.index();
             while let Some(node) = Self::application_map(&index) {
-                if let Some(next) = node.next() {
-                    vec.push(node.data);
+                let next = node.next().clone();
+                vec.push(node.data);
+                if let Some(next) = next {
                     index = next;
                 } else {
                     break;
