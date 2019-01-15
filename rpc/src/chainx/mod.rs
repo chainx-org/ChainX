@@ -76,7 +76,7 @@ build_rpc_trait! {
         #[rpc(name = "chainx_withdrawalList")]
         fn withdrawal_list(&self, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
 
-        #[rpc(name = "chainx_withdrawalByAccount")]
+        #[rpc(name = "chainx_withdrawalListByAccount")]
         fn withdrawal_list_of(&self, AccountId, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
 
         #[rpc(name = "chainx_getNominationRecords")]
