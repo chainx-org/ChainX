@@ -5,7 +5,6 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 
 use btc_chain::Transaction as BTCTransaction;
-use chrono::prelude::*;
 use codec::{Decode, Encode};
 use jsonrpc_macros::Trailing;
 use serde::Serialize;
@@ -70,20 +69,20 @@ build_rpc_trait! {
         #[rpc(name = "chainx_getAssets")]
         fn assets(&self, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
 
-        #[rpc(name = "chainx_verifyAddress")]
+        #[rpc(name = "chainx_getVerifyAddress")]
         fn verify_addr(&self, xassets::Token, xrecords::AddrStr, xassets::Memo) -> Result<Option<Vec<u8>>>;
 
-        #[rpc(name = "chainx_withdrawalList")]
+        #[rpc(name = "chainx_getWithdrawalList")]
         fn withdrawal_list(&self, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
 
-        #[rpc(name = "chainx_withdrawalListByAccount")]
+        #[rpc(name = "chainx_getWithdrawalListByAccount")]
         fn withdrawal_list_of(&self, AccountId, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
 
         #[rpc(name = "chainx_getNominationRecords")]
         fn nomination_records(&self, AccountId) -> Result<Option<Vec<(AccountId, NominationRecord<Balance, BlockNumber>)>>>;
 
         #[rpc(name = "chainx_getIntentions")]
-        fn intentions(&self) -> Result<Option<Vec<(AccountId, DateTime<Utc>, IntentionInfo)>>>;
+        fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>>;
 
         #[rpc(name = "chainx_getPseduIntentions")]
         fn psedu_intentions(&self) -> Result<Option<Vec<PseduIntentionInfo>>>;
@@ -101,7 +100,7 @@ build_rpc_trait! {
         fn orders(&self, AccountId, u32, u32) -> Result<Option<PageData<OrderT<Runtime>>>>;
 
         #[rpc(name = "chainx_getDepositRecords")]
-        fn deposit_records(&self, AccountId) -> Result<Option<Vec<(DateTime<Utc>, String, BlockNumber, String, Vec<(String, Balance)>)>>>;
+        fn deposit_records(&self, AccountId) -> Result<Option<Vec<(Timestamp, String, BlockNumber, String, Vec<(String, Balance)>)>>>;
     }
 }
 
@@ -277,7 +276,7 @@ where
 
             certs.push(CertInfo {
                 name: String::from_utf8_lossy(name).into_owned(),
-                issued_at: datetime(props.issued_at.1),
+                issued_at: props.issued_at.1,
                 frozen_duration: props.frozen_duration,
                 remaining_shares: shares,
             });
@@ -298,9 +297,9 @@ where
 
         // Native assets
         let key = <xassets::AssetList<Runtime>>::key_for(chain);
-        let mut all_assets: Vec<Token> = Self::pickout(&state, &key)?.unwrap_or(Vec::new());
+        let native_assets: Vec<Token> = Self::pickout(&state, &key)?.unwrap_or(Vec::new());
 
-        for token in all_assets {
+        for token in native_assets {
             let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
                 xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
             );
@@ -333,8 +332,6 @@ where
         let key = <xassets::CrossChainAssetsOf<Runtime>>::key_for(&who);
         if let Some(crosschain_assets) = Self::pickout::<Vec<Token>>(&state, &key)? {
             for token in crosschain_assets {
-                let mut asset = AssetInfo::default();
-
                 let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
                     xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
                 );
@@ -517,7 +514,7 @@ where
         Ok(Some(records))
     }
 
-    fn intentions(&self) -> Result<Option<Vec<(AccountId, DateTime<Utc>, IntentionInfo)>>> {
+    fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>> {
         let state = self.best_state()?;
         let mut intention_info = Vec::new();
 
@@ -530,7 +527,6 @@ where
         if let Some(intentions) = Self::pickout::<Vec<AccountId>>(&state, &key)? {
             for intention in intentions {
                 let mut info = IntentionInfo::default();
-                let mut registered_at = Utc::now();
 
                 let key = <xaccounts::IntentionImmutablePropertiesOf<Runtime>>::key_for(&intention);
                 if let Some(props) =
@@ -539,7 +535,7 @@ where
                     info.name = String::from_utf8_lossy(&props.name).into_owned();
                     info.activator = String::from_utf8_lossy(&props.activator).into_owned();
                     info.initial_shares = props.initial_shares;
-                    registered_at = datetime(props.registered_at);
+                    info.registered_at = props.registered_at;
                 }
 
                 let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
@@ -566,7 +562,9 @@ where
                 }
 
                 info.is_validator = validators.iter().find(|i| **i == intention).is_some();
-                intention_info.push((intention, registered_at, info));
+                info.account = intention;
+
+                intention_info.push(info);
             }
         }
 
@@ -578,38 +576,40 @@ where
         let mut psedu_intentions = Vec::new();
 
         let key = <xtokens::PseduIntentions<Runtime>>::key();
-
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key)? {
             for token in tokens {
                 let mut info = PseduIntentionInfo::default();
 
                 let key = <xtokens::PseduIntentionProfiles<Runtime>>::key_for(&token);
-                let vote_weight =
+                if let Some(vote_weight) =
                     Self::pickout::<PseduIntentionVoteWeight<Balance, BlockNumber>>(&state, &key)?
-                        .expect("Fail to decode PseduIntentionVoteWeight");
-                info.jackpot = vote_weight.jackpot;
-                info.last_total_deposit_weight = vote_weight.last_total_deposit_weight;
-                info.last_total_deposit_weight_update =
-                    vote_weight.last_total_deposit_weight_update;
+                {
+                    info.jackpot = vote_weight.jackpot;
+                    info.last_total_deposit_weight = vote_weight.last_total_deposit_weight;
+                    info.last_total_deposit_weight_update =
+                        vote_weight.last_total_deposit_weight_update;
+                }
 
                 let key = <xassets::PCXPriceFor<Runtime>>::key_for(&token);
-                let price =
-                    Self::pickout::<Balance>(&state, &key)?.expect("Fail to decode PCXPriceFor");
-                info.price = price;
+                if let Some(price) = Self::pickout::<Balance>(&state, &key)? {
+                    info.price = price;
+                }
 
                 let key = <xassets::TotalAssetBalance<Runtime>>::key_for(&token);
-                let total_asset_balance =
+                if let Some(total_asset_balance) =
                     Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)?
-                        .expect("Fail to decode TotalAssetBalance");
-                info.circulation = total_asset_balance
-                    .0
-                    .iter()
-                    .fold(Zero::zero(), |acc, (_, v)| acc + *v);
+                {
+                    info.circulation = total_asset_balance
+                        .0
+                        .iter()
+                        .fold(Zero::zero(), |acc, (_, v)| acc + *v);
+                }
 
-                info.id = token;
+                info.id = String::from_utf8_lossy(&token).into_owned();
                 psedu_intentions.push(info);
             }
         }
+
         Ok(Some(psedu_intentions))
     }
 
@@ -621,7 +621,6 @@ where
         let mut psedu_records = Vec::new();
 
         let key = <xtokens::PseduIntentions<Runtime>>::key();
-
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key)? {
             for token in tokens {
                 let mut record = PseduNominationRecord::default();
@@ -643,11 +642,12 @@ where
                     record.balance = balances.0.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v);
                 }
 
-                record.id = token;
+                record.id = String::from_utf8_lossy(&token).into_owned();
 
                 psedu_records.push(record);
             }
         }
+
         Ok(Some(psedu_records))
     }
 
@@ -701,9 +701,9 @@ where
                 }
 
                 let max_price: Balance =
-                    (handicap.sell * ((100_u64 + price_volatility as Balance) / 100_u64));
+                    handicap.sell * ((100_u64 + price_volatility as Balance) / 100_u64);
                 let min_price: Balance =
-                    (handicap.sell * ((100_u64 - price_volatility as Balance) / 100_u64));
+                    handicap.sell * ((100_u64 - price_volatility as Balance) / 100_u64);
                 let mut n = 0;
 
                 loop {
@@ -836,7 +836,7 @@ where
     ) -> Result<
         Option<
             Vec<(
-                DateTime<Utc>,
+                Timestamp,
                 String,
                 BlockNumber,
                 String,
@@ -853,7 +853,7 @@ where
             return Ok(None);
         };
         let key = <AccountMap<Runtime>>::key_for(&who);
-        let bind_list = if let Some(list) = Self::pickout::<Vec<Address>>(&state, &key)? {
+        let _bind_list = if let Some(list) = Self::pickout::<Vec<Address>>(&state, &key)? {
             list
         } else {
             return Ok(None);
@@ -869,17 +869,17 @@ where
         let key = <BestIndex<Runtime>>::key();
         if let Some(best_hash) = Self::pickout::<btc_chain::hash::H256>(&state, &key)? {
             let mut block_hash = best_hash;
-            for i in 0..irr_count {
+            for _i in 0..irr_count {
                 let key = <BlockHeaderFor<Runtime>>::key_for(&block_hash);
                 if let Some(header) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
                     for txid in header.txid {
                         let key = <TxFor<Runtime>>::key_for(&txid);
                         if let Some(info) = Self::pickout::<TxInfo>(&state, &key)? {
                             let dep = get_deposit_info(info.raw_tx, addr.clone());
-                            let utc_time = datetime(header.header.time as u64);
+                            let timestamp = header.header.time as u64;
                             let tx_hash = txid.to_string();
                             let address = info.input_address.to_string();
-                            records.push((utc_time, tx_hash, header.height as u64, address, dep));
+                            records.push((timestamp, tx_hash, header.height as u64, address, dep));
                         }
                     }
                     block_hash = header.header.previous_header_hash;
@@ -893,16 +893,11 @@ where
     }
 }
 
-fn datetime(timestamp: u64) -> DateTime<Utc> {
-    let naive_datetime = NaiveDateTime::from_timestamp(timestamp as i64, 0);
-    DateTime::from_utc(naive_datetime, Utc)
-}
-
 fn get_deposit_info(raw_tx: BTCTransaction, trustee: Address) -> Vec<(String, Balance)> {
     let mut out_info = Vec::new();
     let mut ops = String::new();
     let mut balance = 0;
-    for (index, output) in raw_tx.outputs.iter().enumerate() {
+    for (_, output) in raw_tx.outputs.iter().enumerate() {
         let script = &output.script_pubkey;
         let into_script: Script = script.clone().into();
         if into_script.is_null_data_script() {
@@ -929,7 +924,6 @@ fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Opti
         return Err(PageIndexErr.into());
     }
 
-    let mut count: u32 = 0;
     let mut list = vec![];
     for (index, item) in src.into_iter().enumerate() {
         let index = index as u32;
@@ -944,5 +938,6 @@ fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Opti
         page_size,
         data: list,
     };
+
     Ok(Some(d))
 }

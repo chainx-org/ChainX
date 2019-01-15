@@ -21,7 +21,6 @@
 extern crate chain as btc_chain;
 extern crate chainx_primitives;
 extern crate chainx_runtime;
-extern crate chrono;
 extern crate jsonrpc_core as rpc;
 extern crate jsonrpc_pubsub;
 extern crate keys;

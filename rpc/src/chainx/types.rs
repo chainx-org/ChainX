@@ -17,7 +17,7 @@ pub struct CertInfo {
     /// name of cert
     pub name: String,
     /// when is the cert issued at
-    pub issued_at: DateTime<Utc>,
+    pub issued_at: Timestamp,
     /// frozen duration of the shares cert owner holds
     pub frozen_duration: u32,
     /// remaining share of the cert
@@ -36,12 +36,16 @@ pub struct AssetInfo {
 #[derive(Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionInfo {
+    /// account id of intention
+    pub account: AccountId,
     /// name of intention
     pub name: String,
     /// activator
     pub activator: String,
     /// initial shares
     pub initial_shares: u32,
+    /// when is the intention registered
+    pub registered_at: Timestamp,
     /// url
     pub url: String,
     /// is running for the validators
@@ -85,7 +89,7 @@ pub struct QuotationsList {
 #[serde(rename_all = "camelCase")]
 pub struct PseduIntentionInfo {
     /// name of intention
-    pub id: Token,
+    pub id: String,
     /// circulation of id
     pub circulation: Balance,
     pub price: Balance,
@@ -101,7 +105,7 @@ pub struct PseduIntentionInfo {
 #[serde(rename_all = "camelCase")]
 pub struct PseduNominationRecord {
     /// name of intention
-    pub id: Token,
+    pub id: String,
     /// total deposit
     pub balance: Balance,
     /// vote weight at last update
