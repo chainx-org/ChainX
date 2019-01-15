@@ -461,7 +461,11 @@ where
                 for i in (0..len).rev(){
                     let order_key=<xspot::AccountOrder<Runtime>>::key_for(&(who,i));
                     if let Some( order) = Self::pickout::<OrderT<Runtime>>(&state, &order_key)? {
-                       total=total+1;
+                       
+                        if total >= page_index*page_size && total < ((page_index+1)*page_size) {
+                            orders.push(order.clone());
+                        }
+                        total=total+1;
                     }
                 }
 
@@ -473,17 +477,7 @@ where
                     return Err(PageIndexErr.into());
                 }
 
-                let mut count:u32=0;
-                for i in (0..len).rev(){
-                    let order_key=<xspot::AccountOrder<Runtime>>::key_for(&(who,i));
-                    if let Some( order) = Self::pickout::<OrderT<Runtime>>(&state, &order_key)? {
-                        if count >= page_index*page_size && count < ((page_index+1)*page_size) {
-                            orders.push(order.clone());
-                        }
-                       
-                        count = count+1;
-                    }
-                }
+                
         }
         list.data=orders;
 
