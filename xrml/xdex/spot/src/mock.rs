@@ -49,8 +49,9 @@ impl timestamp::Trait for Test {
     type Moment = u64;
     type OnTimestampSet = ();
 }
-impl xbitcoin::Trait for Test {}
-impl xaccounts::Trait for Test {
+impl xbitcoin::Trait for Test {
+}
+impl  xaccounts::Trait for Test {
     type Event = ();
 }
 impl xassets::Trait for Test {

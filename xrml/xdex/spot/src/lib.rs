@@ -37,8 +37,8 @@ extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate srml_consensus as consensus;
 extern crate xrml_bridge_bitcoin as xbitcoin;
-extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_records as xrecords;
+extern crate xrml_xaccounts as xaccounts;
 
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
@@ -62,6 +62,7 @@ use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
+
 use xassets::assetdef::Token;
 
 pub type OrderT<T> = Order<
@@ -417,8 +418,9 @@ impl<T: Trait> Module<T> {
             fill_index: Default::default(),
         };
         // 更新用户挂单
-        <AccountOrder<T>>::insert((order.user.clone(), order.index), &order);
         Self::event_order(&order);
+        <AccountOrder<T>>::insert((order.user.clone(), order.index), &order);
+        
 
         //撮合
         Self::do_match(&mut order, &pair, &handicap);
@@ -591,8 +593,8 @@ impl<T: Trait> Module<T> {
         } else {
             //更新状态 删除
             order.status = OrderStatus::FillAll;
-            <AccountOrder<T>>::remove((order.user.clone(), order.index));
             Self::event_order(&order);
+            <AccountOrder<T>>::remove((order.user.clone(), order.index));
         }
 
         //Event 记录order状态通知链外
@@ -743,17 +745,18 @@ impl<T: Trait> Module<T> {
         <FillLen<T>>::insert(pairid, new_fill_index);
 
         //插入更新后的订单
+        Self::event_order(&maker_order.clone());
         <AccountOrder<T>>::insert(
             (maker_order.user.clone(), maker_order.index),
             &maker_order.clone(),
         );
-        Self::event_order(&maker_order.clone());
+
+        Self::event_order(&taker_order.clone());
         <AccountOrder<T>>::insert(
             (taker_order.user.clone(), taker_order.index),
             &taker_order.clone(),
         );
-        Self::event_order(&taker_order.clone());
-
+        
         // 记录日志
         Self::deposit_event(RawEvent::FillOrder(
             fill.index,
@@ -884,10 +887,9 @@ impl<T: Trait> Module<T> {
                             || OrderStatus::FillPartAndCancel == order.status
                             || OrderStatus::Cancel == order.status
                         {
+                            Self::event_order(&order); //Event 记录挂单详情状态变更
                             //删除挂单详情
                             <AccountOrder<T>>::remove(&list[i]);
-
-                            Self::event_order(&order); //Event 记录挂单详情状态变更
                         } else {
                             new_list.push(list[i].clone());
                         }
