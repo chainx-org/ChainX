@@ -51,18 +51,18 @@ decl_module! {
                 T::XSYSTEM_SET_POSITION
             );
 
-            BlockProdocer::<T>::put(producer);
+            BlockProducer::<T>::put(producer);
             Ok(())
         }
         fn on_finalise(_n: T::BlockNumber) {
-            BlockProdocer::<T>::kill();
+            BlockProducer::<T>::kill();
         }
     }
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as XSystem {
-        pub BlockProdocer get(block_producer): Option<T::AccountId>;
+        pub BlockProducer get(block_producer): Option<T::AccountId>;
         pub DeathAccount get(death_account) config(): T::AccountId;
         pub BannedAccount get(banned_account) config(): T::AccountId;
         // TODO remove this to other module
