@@ -38,7 +38,7 @@ use xstaking::{self, IntentionProfs, NominationRecord};
 use xsupport::storage::btree_map::CodecBTreeMap;
 use xtokens::{self, DepositVoteWeight, PseduIntentionVoteWeight};
 
-use self::runtime_api::xassets_api::XAssetsApi;
+use self::runtime_api::{xassets_api::XAssetsApi, xmining_api::XMiningApi};
 
 mod error;
 mod types;
@@ -110,7 +110,7 @@ where
     B: client::backend::Backend<Block, Blake2Hasher>,
     E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync,
     Block: BlockT<Hash = H256>,
-    RA: CoreAPI<Block> + XAssetsApi<Block>,
+    RA: CoreAPI<Block> + XAssetsApi<Block> + XMiningApi<Block>,
 {
     client: Arc<Client<B, E, Block, RA>>,
 }
@@ -120,7 +120,7 @@ where
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
     E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync,
     Block: BlockT<Hash = H256> + 'static,
-    RA: Metadata<Block> + XAssetsApi<Block>,
+    RA: Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block>,
 {
     /// Create new ChainX API RPC handler.
     pub fn new(client: Arc<Client<B, E, Block, RA>>) -> Self {
@@ -229,7 +229,7 @@ where
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
     E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync + 'static,
     Block: BlockT<Hash = H256> + 'static,
-    RA: Metadata<Block> + XAssetsApi<Block>,
+    RA: Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block>,
 {
     fn block_info(&self, number: Trailing<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         let hash = match number.into() {
@@ -512,7 +512,14 @@ where
         let key = <xstaking::Intentions<Runtime>>::key();
 
         if let Some(intentions) = Self::pickout::<Vec<AccountId>>(&state, &key)? {
-            for intention in intentions {
+            let jackpot_addr_list: Result<Vec<H256>> = self
+                .client
+                .runtime_api()
+                .multi_jackpot_accountid_for(&self.best_number()?, &intentions)
+                .map_err(|e| e.into());
+            let jackpot_addr_list: Vec<H256> = jackpot_addr_list?;
+
+            for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
                 let mut info = IntentionInfo::default();
 
                 let key = <xaccounts::IntentionImmutablePropertiesOf<Runtime>>::key_for(&intention);
@@ -536,7 +543,8 @@ where
                 if let Some(profs) =
                     Self::pickout::<IntentionProfs<Balance, BlockNumber>>(&state, &key)?
                 {
-                    info.jackpot = profs.jackpot;
+                    let free = <balances::FreeBalance<Runtime>>::key_for(&jackpot_addr);
+                    info.jackpot = Self::pickout::<Balance>(&state, &free)?.unwrap_or_default();
                     info.total_nomination = profs.total_nomination;
                     info.last_total_vote_weight = profs.last_total_vote_weight;
                     info.last_total_vote_weight_update = profs.last_total_vote_weight_update;
@@ -565,14 +573,23 @@ where
 
         let key = <xtokens::PseduIntentions<Runtime>>::key();
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key)? {
-            for token in tokens {
+            let jackpot_addr_list: Result<Vec<H256>> = self
+                .client
+                .runtime_api()
+                .multi_token_jackpot_accountid_for(&self.best_number()?, &tokens)
+                .map_err(|e| e.into());
+            let jackpot_addr_list: Vec<H256> = jackpot_addr_list?;
+
+            for (token, jackpot_addr) in tokens.into_iter().zip(jackpot_addr_list) {
                 let mut info = PseduIntentionInfo::default();
 
                 let key = <xtokens::PseduIntentionProfiles<Runtime>>::key_for(&token);
                 if let Some(vote_weight) =
-                    Self::pickout::<PseduIntentionVoteWeight<Balance, BlockNumber>>(&state, &key)?
+                    Self::pickout::<PseduIntentionVoteWeight<Balance>>(&state, &key)?
                 {
-                    info.jackpot = vote_weight.jackpot;
+                    let free = <balances::FreeBalance<Runtime>>::key_for(&jackpot_addr);
+                    info.jackpot = Self::pickout::<Balance>(&state, &free)?.unwrap_or_default();
+                    //                    info.jackpot = vote_weight.jackpot;
                     info.last_total_deposit_weight = vote_weight.last_total_deposit_weight;
                     info.last_total_deposit_weight_update =
                         vote_weight.last_total_deposit_weight_update;

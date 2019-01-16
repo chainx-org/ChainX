@@ -36,23 +36,24 @@ extern crate xrml_xsystem as xsystem;
 #[cfg(test)]
 extern crate substrate_primitives;
 
+use codec::Encode;
+
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
-use runtime_primitives::traits::{As, CheckedSub, Zero};
+use runtime_primitives::traits::{As, Hash, Zero};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegistration};
-use xstaking::{Jackpot, OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
+use xstaking::{OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
 
 /// This module only tracks the vote weight related changes.
 /// All the amount related has been taken care by assets module.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct PseduIntentionVoteWeight<Balance: Default, BlockNumber: Default> {
-    pub jackpot: Balance,
+pub struct PseduIntentionVoteWeight<BlockNumber: Default> {
     pub last_total_deposit_weight: u64,
     pub last_total_deposit_weight_update: BlockNumber,
 }
@@ -69,7 +70,7 @@ pub struct DepositVoteWeight<BlockNumber: Default> {
 /// sharing the vote weight calculation logic originated from staking module.
 pub struct PseduIntentionProfs<'a, T: Trait> {
     pub token: &'a Token,
-    pub staking: &'a mut PseduIntentionVoteWeight<T::Balance, T::BlockNumber>,
+    pub staking: &'a mut PseduIntentionVoteWeight<T::BlockNumber>,
 }
 
 pub struct DepositRecord<'a, T: Trait> {
@@ -102,16 +103,6 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
     }
 }
 
-impl<'a, T: Trait> Jackpot<T::Balance> for PseduIntentionProfs<'a, T> {
-    fn jackpot(&self) -> T::Balance {
-        self.staking.jackpot
-    }
-
-    fn set_jackpot(&mut self, value: T::Balance) {
-        self.staking.jackpot = value;
-    }
-}
-
 impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
     fn amount(&self) -> u64 {
         xassets::Module::<T>::all_type_balance_of(&self.depositor, &self.token).as_()
@@ -137,8 +128,42 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
 }
 
 pub trait Trait:
-    xassets::Trait + xaccounts::Trait + xsystem::Trait + xstaking::Trait + bitcoin::Trait
+    system::Trait
+    + xassets::Trait
+    + xaccounts::Trait
+    + xsystem::Trait
+    + xstaking::Trait
+    + bitcoin::Trait
 {
+    type DetermineTokenJackpotAccountId: TokenJackpotAccountIdFor<
+        Self::AccountId,
+        Self::BlockNumber,
+    >;
+}
+
+pub trait TokenJackpotAccountIdFor<AccountId: Sized, BlockNumber> {
+    fn accountid_for(token: &Token) -> AccountId;
+}
+
+pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
+
+impl<T: Trait> TokenJackpotAccountIdFor<T::AccountId, T::BlockNumber>
+    for SimpleAccountIdDeterminator<T>
+where
+    T::AccountId: From<T::Hash>,
+    T::BlockNumber: codec::Codec,
+{
+    fn accountid_for(token: &Token) -> T::AccountId {
+        let (_, _, init_number) =
+            xassets::Module::<T>::asset_info(token).expect("the asset must be existed before");
+        let token_hash = T::Hashing::hash(token);
+        let block_num_hash = T::Hashing::hash(init_number.encode().as_ref());
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(token_hash.as_ref());
+        buf.extend_from_slice(block_num_hash.as_ref());
+        T::Hashing::hash(&buf[..]).into()
+    }
 }
 
 decl_module! {
@@ -164,7 +189,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as XTokens {
         pub PseduIntentions get(psedu_intentions): Vec<Token>;
 
-        pub PseduIntentionProfiles get(psedu_intention_profiles): map Token => PseduIntentionVoteWeight<T::Balance, T::BlockNumber>;
+        pub PseduIntentionProfiles get(psedu_intention_profiles): map Token => PseduIntentionVoteWeight<T::BlockNumber>;
 
         pub DepositRecords get(deposit_records): map (T::AccountId, Token) => DepositVoteWeight<T::BlockNumber>;
     }
@@ -209,8 +234,7 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
 impl<T: Trait> Module<T> {
     fn apply_claim(who: &T::AccountId, token: &Token) -> Result {
         let key = (who.clone(), token.clone());
-        let mut p_vote_weight: PseduIntentionVoteWeight<T::Balance, T::BlockNumber> =
-            <PseduIntentionProfiles<T>>::get(token);
+        let mut p_vote_weight = <PseduIntentionProfiles<T>>::get(token);
         let mut d_vote_weight: DepositVoteWeight<T::BlockNumber> = Self::deposit_records(&key);
 
         {
@@ -218,13 +242,15 @@ impl<T: Trait> Module<T> {
                 token: token,
                 staking: &mut p_vote_weight,
             };
+            let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
+
             let mut record = DepositRecord::<T> {
                 depositor: who,
                 token: token,
                 staking: &mut d_vote_weight,
             };
 
-            <xstaking::Module<T>>::generic_claim(&mut record, &mut prof, who)?;
+            <xstaking::Module<T>>::generic_claim(&mut record, who, &mut prof, &addr)?;
         }
 
         <PseduIntentionProfiles<T>>::insert(token, p_vote_weight);
@@ -253,34 +279,25 @@ impl<T: Trait> Module<T> {
             return Err("token's last_total_deposit_weight is zero.");
         }
         let blocks = Self::wait_blocks(token)?;
+
+        // TODO
+        let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
+        let jackpot = xassets::Module::<T>::pcx_free_balance(&addr).as_();
         let reward = T::Balance::sa(
-            psedu_intention.jackpot.as_() * blocks * value.as_()
-                / psedu_intention.last_total_deposit_weight,
+            jackpot * blocks * value.as_() / psedu_intention.last_total_deposit_weight,
         );
 
-        Self::cut_jackpot(token, &reward);
-        <xassets::Module<T>>::pcx_issue(source, reward)?;
+        xassets::Module::<T>::pcx_move_free_balance(&addr, source, reward).map_err(|e| e.info())?;
+        //        Self::cut_jackpot(token, &reward);
+        //        <xassets::Module<T>>::pcx_issue(source, reward)?;
 
         Ok(())
-    }
-
-    /// Reward to depositor from the jackpot directly,
-    /// There is no vote weight related changes with regard to psedu intention itself and other depositors.
-    fn cut_jackpot(token: &Token, value: &T::Balance) {
-        let mut psedu_intention = Self::psedu_intention_profiles(token);
-        psedu_intention.jackpot = match psedu_intention.jackpot.checked_sub(value) {
-            Some(n) => n,
-            None => Zero::zero(),
-        };
-
-        <PseduIntentionProfiles<T>>::insert(token, psedu_intention);
     }
 
     /// Actually update the vote weight and nomination balance of source and target.
     fn update_vote_weight(source: &T::AccountId, target: &Token, value: T::Balance, to_add: bool) {
         let key = (source.clone(), target.clone());
-        let mut p_vote_weight: PseduIntentionVoteWeight<T::Balance, T::BlockNumber> =
-            <PseduIntentionProfiles<T>>::get(target);
+        let mut p_vote_weight = <PseduIntentionProfiles<T>>::get(target);
         let mut d_vote_weight: DepositVoteWeight<T::BlockNumber> = Self::deposit_records(&key);
 
         {
@@ -342,8 +359,20 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
 
 impl<T: Trait> OnReward<T::AccountId, T::Balance> for Module<T> {
     fn reward(token: &Token, value: T::Balance) {
-        PseduIntentionProfiles::<T>::mutate(token, |pprof| {
-            pprof.jackpot += value;
-        });
+        let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
+        let _ = xassets::Module::<T>::pcx_issue(&addr, value);
+    }
+}
+
+impl<T: Trait> Module<T> {
+    pub fn token_jackpot_accountid_for(token: &Token) -> T::AccountId {
+        T::DetermineTokenJackpotAccountId::accountid_for(token)
+    }
+
+    pub fn multi_token_jackpot_accountid_for(tokens: &Vec<Token>) -> Vec<T::AccountId> {
+        tokens
+            .into_iter()
+            .map(|t| T::DetermineTokenJackpotAccountId::accountid_for(t))
+            .collect()
     }
 }

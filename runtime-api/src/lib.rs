@@ -14,7 +14,6 @@ extern crate xrml_xassets_process as xprocess;
 extern crate xrml_xassets_records as xrecords;
 
 pub mod xassets_api {
-    //    use srml_support::dispatch::Result;
     use chainx_primitives::{AccountId, Balance, Timestamp};
     use client::decl_runtime_apis;
     use rstd::prelude::Vec;
@@ -27,6 +26,21 @@ pub mod xassets_api {
             fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::Application<AccountId, Balance, Timestamp>>;
 
             fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result<(), Vec<u8>>;
+        }
+    }
+}
+
+pub mod xmining_api {
+    use chainx_primitives::AccountId;
+    use client::decl_runtime_apis;
+    use rstd::prelude::Vec;
+    use xassets::Token;
+    decl_runtime_apis! {
+        pub trait XMiningApi {
+            fn jackpot_accountid_for(who: AccountId) -> AccountId;
+            fn multi_jackpot_accountid_for(who: Vec<AccountId>) -> Vec<AccountId>;
+            fn token_jackpot_accountid_for(token: Token) -> AccountId;
+            fn multi_token_jackpot_accountid_for(token: Vec<Token>) -> Vec<AccountId>;
         }
     }
 }

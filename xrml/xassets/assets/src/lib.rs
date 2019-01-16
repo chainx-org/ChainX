@@ -505,7 +505,12 @@ impl<T: Trait> Module<T> {
 
     pub fn issue(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         if token.as_slice() == Self::TOKEN {
-            balances::Module::<T>::reward(who, value)?;
+            match Self::pcx_free_balance(who).checked_add(&value) {
+                Some(b) => Self::pcx_set_free_balance_creating(who, b),
+                None => return Err("free balance too high to issue"),
+            };
+            Self::increase_total_stake_by(value);
+
             T::OnAssetChanged::on_issue(token, who, value)?;
             return Ok(());
         }
@@ -705,8 +710,12 @@ impl<T: Trait> Module<T> {
         Self::all_type_balance_of(who, &<Self as ChainT>::TOKEN.to_vec())
     }
 
-    pub fn pcx_set_free_balance(who: &T::AccountId, value: T::Balance) {
-        Self::set_free_balance(who, &<Self as ChainT>::TOKEN.to_vec(), value);
+    //    fn pcx_set_free_balance(who: &T::AccountId, value: T::Balance) {
+    //        Self::set_free_balance(who, &<Self as ChainT>::TOKEN.to_vec(), value);
+    //    }
+
+    fn pcx_set_free_balance_creating(who: &T::AccountId, value: T::Balance) {
+        Self::set_free_balance_creating(who, &<Self as ChainT>::TOKEN.to_vec(), value);
     }
 
     pub fn pcx_issue(who: &T::AccountId, value: T::Balance) -> Result {
@@ -726,6 +735,21 @@ impl<T: Trait> Module<T> {
             from_type,
             to,
             to_type,
+            value,
+        )
+    }
+
+    pub fn pcx_move_free_balance(
+        from: &T::AccountId,
+        to: &T::AccountId,
+        value: T::Balance,
+    ) -> StdResult<(), AssetErr> {
+        Self::move_balance(
+            &<Self as ChainT>::TOKEN.to_vec(),
+            from,
+            AssetType::Free,
+            to,
+            AssetType::Free,
             value,
         )
     }

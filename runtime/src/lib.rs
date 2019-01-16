@@ -260,8 +260,6 @@ impl xassets::Trait for Runtime {
     type OnAssetRegistration = xtokens::Module<Runtime>;
 }
 
-impl xtokens::Trait for Runtime {}
-
 impl xrecords::Trait for Runtime {
     type Event = Event;
 }
@@ -273,6 +271,11 @@ impl xstaking::Trait for Runtime {
     type OnRewardCalculation = xtokens::Module<Runtime>;
     type OnReward = xtokens::Module<Runtime>;
     type Event = Event;
+    type DetermineJackpotAccountId = xstaking::SimpleAccountIdDeterminator<Runtime>;
+}
+
+impl xtokens::Trait for Runtime {
+    type DetermineTokenJackpotAccountId = xtokens::SimpleAccountIdDeterminator<Runtime>;
 }
 
 impl xspot::Trait for Runtime {
@@ -305,6 +308,7 @@ construct_runtime!(
         XAssetsProcess: xprocess::{Module, Call, Storage},
         // mining
         XStaking: xstaking,
+        XTokens: xtokens::{Module, Call, Storage},
         // dex
         XSpot: xspot,
         // bridge
@@ -462,6 +466,21 @@ impl_runtime_apis! {
 
         fn verify_address(token: xassets::Token, addr: xrecords::AddrStr, ext: xassets::Memo) -> Result<(), Vec<u8>> {
             XAssetsProcess::verify_address(token, addr, ext).map_err(|e| e.as_bytes().to_vec())
+        }
+    }
+
+    impl runtime_api::xmining_api::XMiningApi<Block> for Runtime {
+        fn jackpot_accountid_for(who: AccountId) -> AccountId {
+            XStaking::jackpot_accountid_for(&who)
+        }
+        fn multi_jackpot_accountid_for(whos: Vec<AccountId>) -> Vec<AccountId> {
+            XStaking::multi_jackpot_accountid_for(&whos)
+        }
+        fn token_jackpot_accountid_for(token: xassets::Token) -> AccountId {
+            XTokens::token_jackpot_accountid_for(&token)
+        }
+        fn multi_token_jackpot_accountid_for(tokens: Vec<xassets::Token>) -> Vec<AccountId> {
+            XTokens::multi_token_jackpot_accountid_for(&tokens)
         }
     }
 }

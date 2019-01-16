@@ -62,7 +62,9 @@ impl<T: Trait> Module<T> {
         let off_the_table = T::Balance::sa(reward.as_() * 1 / 10);
         let _ = <xassets::Module<T>>::pcx_issue(who, off_the_table);
         let to_jackpot = reward - off_the_table;
-        <IntentionProfiles<T>>::mutate(who, |iprof| iprof.jackpot += to_jackpot);
+        // issue to jackpot
+        let jackpot_addr = T::DetermineJackpotAccountId::accountid_for(who);
+        let _ = <xassets::Module<T>>::pcx_issue(&jackpot_addr, to_jackpot);
     }
 
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or

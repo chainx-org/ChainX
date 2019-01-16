@@ -26,25 +26,6 @@ pub trait VoteWeight<BlockNumber: As<u64>> {
     fn set_last_acum_weight_update(&mut self, num: BlockNumber);
 }
 
-pub trait Jackpot<Balance: Clone> {
-    fn jackpot(&self) -> Balance;
-    fn set_jackpot(&mut self, value: Balance);
-}
-
-impl<B, C> Jackpot<B> for IntentionProfs<B, C>
-where
-    B: Default + Clone,
-    C: Default + Clone,
-{
-    fn jackpot(&self) -> B {
-        self.jackpot.clone()
-    }
-
-    fn set_jackpot(&mut self, value: B) {
-        self.jackpot = value;
-    }
-}
-
 impl<B, C> VoteWeight<C> for IntentionProfs<B, C>
 where
     B: Default + As<u64> + Clone,
@@ -131,10 +112,15 @@ impl<T: Trait> Module<T> {
         who.set_amount(value, to_add);
     }
 
-    pub fn generic_claim<U, V>(source: &mut U, target: &mut V, who: &T::AccountId) -> Result
+    pub fn generic_claim<U, V>(
+        source: &mut U,
+        who: &T::AccountId,
+        target: &mut V,
+        target_jackpot_addr: &T::AccountId,
+    ) -> Result
     where
         U: VoteWeight<T::BlockNumber>,
-        V: VoteWeight<T::BlockNumber> + Jackpot<T::Balance>,
+        V: VoteWeight<T::BlockNumber>, // + Jackpot<T::Balance>,
     {
         let current_block = <system::Module<T>>::block_number();
 
@@ -146,13 +132,11 @@ impl<T: Trait> Module<T> {
 
         let target_vote_weight = target.latest_acum_weight(current_block);
 
-        let jackpot = target.jackpot();
+        let total_jackpot: u64 = xassets::Module::<T>::pcx_free_balance(target_jackpot_addr).as_();
+        let dividend = T::Balance::sa(source_vote_weight * total_jackpot / target_vote_weight);
 
-        let dividend = T::Balance::sa(source_vote_weight * jackpot.as_() / target_vote_weight);
-
-        <xassets::Module<T>>::pcx_issue(who, dividend)?;
-
-        target.set_jackpot(jackpot - dividend);
+        xassets::Module::<T>::pcx_move_free_balance(target_jackpot_addr, who, dividend)
+            .map_err(|e| e.info())?;
 
         source.set_last_acum_weight(0);
         source.set_last_acum_weight_update(current_block);

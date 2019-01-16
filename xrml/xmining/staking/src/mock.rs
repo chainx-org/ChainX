@@ -3,6 +3,7 @@
 
 #![cfg(test)]
 
+use super::JackpotAccountIdFor;
 use runtime_io;
 use runtime_primitives::testing::{
     ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId,
@@ -71,6 +72,14 @@ impl Trait for Test {
     type OnRewardCalculation = ();
     type OnReward = ();
     type Event = ();
+    type DetermineJackpotAccountId = DummyAccountIdFor;
+}
+
+pub struct DummyAccountIdFor;
+impl JackpotAccountIdFor<u64> for DummyAccountIdFor {
+    fn accountid_for(origin: &u64) -> u64 {
+        origin + 100
+    }
 }
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {

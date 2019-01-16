@@ -40,7 +40,7 @@ use balances::OnDilution;
 use codec::{Compact, HasCompact};
 use rstd::prelude::*;
 use runtime_primitives::{
-    traits::{As, Zero},
+    traits::{As, Hash, Zero},
     Perbill,
 };
 use runtime_support::dispatch::Result;
@@ -60,7 +60,7 @@ mod mock;
 mod tests;
 
 pub use shifter::{OnReward, OnRewardCalculation, RewardHolder};
-pub use vote_weight::{Jackpot, VoteWeight};
+pub use vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 
@@ -69,7 +69,6 @@ const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct IntentionProfs<Balance: Default, BlockNumber: Default> {
-    pub jackpot: Balance,
     pub total_nomination: Balance,
     pub last_total_vote_weight: u64,
     pub last_total_vote_weight_update: BlockNumber,
@@ -87,7 +86,12 @@ pub struct NominationRecord<Balance, BlockNumber> {
 }
 
 pub trait Trait:
-    xassets::Trait + xaccounts::Trait + xsystem::Trait + session::Trait + timestamp::Trait
+    system::Trait
+    + timestamp::Trait
+    + xassets::Trait
+    + xaccounts::Trait
+    + xsystem::Trait
+    + session::Trait
 {
     /// Some tokens minted.
     type OnRewardMinted: OnDilution<<Self as balances::Trait>::Balance>;
@@ -100,6 +104,36 @@ pub trait Trait:
 
     /// Time to distribute reward
     type OnReward: OnReward<Self::AccountId, Self::Balance>;
+
+    /// calc the jacking pool virtual accountid
+    type DetermineJackpotAccountId: JackpotAccountIdFor<Self::AccountId>;
+}
+
+pub trait JackpotAccountIdFor<AccountId: Sized> {
+    fn accountid_for(origin: &AccountId) -> AccountId;
+}
+
+pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
+
+impl<T: Trait> JackpotAccountIdFor<T::AccountId> for SimpleAccountIdDeterminator<T>
+where
+    T::AccountId: From<T::Hash> + AsRef<[u8]>,
+{
+    fn accountid_for(origin: &T::AccountId) -> T::AccountId {
+        let props = xaccounts::Module::<T>::intention_immutable_props_of(origin)
+            .expect("the origin accountid must be an exists intention.");
+        // cert_name
+        let cert_name_hash = T::Hashing::hash(&props.activator);
+        // name
+        let name_hash = T::Hashing::hash(&props.name);
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(cert_name_hash.as_ref());
+        buf.extend_from_slice(name_hash.as_ref());
+        buf.extend_from_slice(origin.as_ref());
+
+        T::Hashing::hash(&buf[..]).into()
+    }
 }
 
 decl_module! {
@@ -520,7 +554,8 @@ impl<T: Trait> Module<T> {
         let mut iprof = <IntentionProfiles<T>>::get(target);
         let mut record = Self::nomination_record_of(who, target);
 
-        Self::generic_claim(&mut record, &mut iprof, who)?;
+        let jackpot_addr = T::DetermineJackpotAccountId::accountid_for(target);
+        Self::generic_claim(&mut record, who, &mut iprof, &jackpot_addr)?;
 
         <IntentionProfiles<T>>::insert(target, iprof);
         Self::mutate_nomination_record(who, target, record);
@@ -586,16 +621,15 @@ impl<T: Trait> Module<T> {
             },
         );
 
-        let free_balance = <xassets::Module<T>>::pcx_free_balance(&intention);
         let activation = share_count * <xaccounts::Module<T>>::activation_per_share();
         let activation = T::Balance::sa(activation as u64);
-        <xassets::Module<T>>::pcx_set_free_balance(&intention, free_balance + activation);
-        <xassets::Module<T>>::increase_total_stake_by(activation);
+
+        // issue pcx to the intention
+        xassets::Module::<T>::pcx_issue(&intention, activation)?;
 
         <Intentions<T>>::mutate(|i| i.push(intention.clone()));
 
         let iprof = IntentionProfs {
-            jackpot: Zero::zero(),
             total_nomination: Zero::zero(),
             last_total_vote_weight: 0,
             last_total_vote_weight_update: <system::Module<T>>::block_number(),
@@ -621,5 +655,17 @@ impl<T: Trait> Module<T> {
 
         <IntentionProfiles<T>>::insert(target, iprof);
         Self::mutate_nomination_record(source, target, record);
+    }
+}
+
+impl<T: Trait> Module<T> {
+    pub fn jackpot_accountid_for(who: &T::AccountId) -> T::AccountId {
+        T::DetermineJackpotAccountId::accountid_for(who)
+    }
+
+    pub fn multi_jackpot_accountid_for(whos: &Vec<T::AccountId>) -> Vec<T::AccountId> {
+        whos.into_iter()
+            .map(|who| T::DetermineJackpotAccountId::accountid_for(who))
+            .collect()
     }
 }
