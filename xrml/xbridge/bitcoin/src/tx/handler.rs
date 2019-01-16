@@ -43,8 +43,8 @@ impl<'a> TxHandler<'a> {
             .map(|input| input.previous_output.clone())
             .collect();
 
-        delete_from_outpoint::<T>(out_point_set);
-        runtime_io::print("[bridge-bitcoin] handle_input delete_from_outpoint");
+        delete_utxo::<T>(out_point_set);
+        runtime_io::print("[bridge-btc] handle_input delete_from_outpoint");
 
         let mut index = 0;
         for output in tx_info.raw_tx.clone().outputs {
@@ -62,24 +62,21 @@ impl<'a> TxHandler<'a> {
             }
             index += 1;
         }
-
+        runtime_io::print("[bridge-btc] handle_input refresh_utxo");
         if let Some(data) = <TxProposal<T>>::take() {
             let candidate = data.clone();
-
             // 当提上来的提现交易和待签名原文不一致时， 说明系统BTC托管有异常
             ensure_identical(&tx_info.raw_tx, &data.tx)?;
-
-            runtime_io::print("[bridge-btc] withdrawal finish");
 
             let txid = candidate.tx.hash();
             for number in candidate.outs.iter() {
                 runtime_io::print(*number as u64);
                 runtime_io::print(&txid[..]);
-                // TODO handle err
-                let _ = <xrecords::Module<T>>::withdrawal_finish(*number);
+
+                <xrecords::Module<T>>::withdrawal_finish(*number)?;
+                runtime_io::print("[bridge-btc] withdrawal finish");
             }
         }
-
         Ok(())
     }
 
@@ -96,19 +93,7 @@ impl<'a> TxHandler<'a> {
             // bind address [btc address --> chainx AccountId]
             if into_script.is_null_data_script() {
                 let s = script.clone();
-                let account_id: T::AccountId = match Extracter::new(&s).account_id::<T>() {
-                    Some(a) => a,
-                    None => continue,
-                };
-
-                if !update_account::<T>(&account_id, &tx_info.input_address) {
-                    continue;
-                }
-                runtime_io::print("[bridge-btc] handle_output register ");
-
-                // history deposit
-                remove_pending_deposit::<T>(&tx_info.input_address, &account_id);
-                //handle next output
+                handle_opreturn::<T>(&s, &tx_info);
                 continue;
             }
 
@@ -147,7 +132,7 @@ impl<'a> TxHandler<'a> {
     }
 }
 
-fn delete_from_outpoint<T: Trait>(out_point_set: Vec<OutPoint>) -> bool {
+fn delete_utxo<T: Trait>(out_point_set: Vec<OutPoint>) -> bool {
     if let Some(mut keys) = <UTXOSetKey<T>>::take() {
         for out_point in out_point_set {
             let mut count = 0;
@@ -169,6 +154,16 @@ fn delete_from_outpoint<T: Trait>(out_point_set: Vec<OutPoint>) -> bool {
     false
 }
 
+/// Try updating the binding address, remove pending deposit if the updating goes well.
+fn handle_opreturn<T: Trait>(script: &[u8], info: &TxInfo) {
+    if let Some(account_id) = Extracter::new(&script).account_id::<T>() {
+        if update_binding::<T>(&account_id, &info.input_address) {
+            runtime_io::print("[bridge-btc] handle_output register ");
+            remove_pending_deposit::<T>(&info.input_address, &account_id);
+        }
+    }
+}
+
 fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs
@@ -176,19 +171,19 @@ fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result {
         && tx1.inputs.len() == tx2.inputs.len()
     {
         for i in 0..tx1.inputs.len() {
-            if tx1.inputs[i].previous_output == tx2.inputs[i].previous_output
-                && tx1.inputs[i].sequence == tx2.inputs[i].sequence
+            if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
+                || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
-                return Ok(());
+                return Err("The inputs of these two transactions mismatch.");
             }
         }
+        return Ok(());
     }
-
     Err("The transaction text does not match the original text to be signed.")
 }
 
-/// Update new account
-fn apply_update_new_account<T: Trait>(who: &T::AccountId, address: &keys::Address) {
+/// Actually update the binding address of original transactor.
+fn apply_update_binding<T: Trait>(who: &T::AccountId, address: &keys::Address) {
     match <AccountMap<T>>::get(who) {
         Some(mut a) => {
             a.push(address.clone());
@@ -203,11 +198,11 @@ fn apply_update_new_account<T: Trait>(who: &T::AccountId, address: &keys::Addres
     <AddressMap<T>>::insert(address, who.clone());
 }
 
-fn update_account<T: Trait>(who: &T::AccountId, address: &keys::Address) -> bool {
-    //bind account
+/// bind account
+fn update_binding<T: Trait>(who: &T::AccountId, address: &keys::Address) -> bool {
     <AddressMap<T>>::get(address).map_or_else(
         || {
-            apply_update_new_account::<T>(who, address);
+            apply_update_binding::<T>(who, address);
             return true;
         },
         |p| {
@@ -227,7 +222,7 @@ fn update_account<T: Trait>(who: &T::AccountId, address: &keys::Address) -> bool
                 }
             };
 
-            apply_update_new_account::<T>(who, address);
+            apply_update_binding::<T>(who, address);
             return true;
         },
     )

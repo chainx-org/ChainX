@@ -59,9 +59,10 @@ mod tests;
 
 mod b58;
 mod blockchain;
+mod header_proof;
 mod tx;
-mod verify_header;
 
+pub use b58::from;
 use blockchain::Chain;
 use chain::{BlockHeader, Transaction as BTCTransaction};
 use codec::Decode;
@@ -75,8 +76,8 @@ use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use ser::deserialize;
 use system::ensure_signed;
-pub use tx::RelayTx;
 use tx::{handle_tx, inspect_address, validate_transaction};
+pub use tx::RelayTx;
 use xassets::{Chain as ChainDef, ChainT};
 
 pub trait Trait:
@@ -372,7 +373,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_push_header(header: BlockHeader, _who: &T::AccountId) -> Result {
         // check
-        let c = verify_header::HeaderVerifier::new::<T>(&header).map_err(|e| e.info())?;
+        let c = header_proof::HeaderVerifier::new::<T>(&header).map_err(|e| e.info())?;
         c.check::<T>()?;
 
         let header_info = BlockHeaderInfo {

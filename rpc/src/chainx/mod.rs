@@ -28,8 +28,8 @@ use chainx_runtime::Runtime;
 use xaccounts::{self, CertImmutableProps, IntentionImmutableProps, IntentionProps};
 use xassets::{self, assetdef::ChainT, Asset, AssetType, Chain, Token};
 use xbitcoin::{
-    self, AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TrusteeAddress, TxFor,
-    TxInfo,
+    self, from, AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock,
+    TrusteeAddress, TxFor, TxInfo,
 };
 use xrecords::{self, Application};
 use xspot::def::{OrderPair, OrderPairID, ID};
@@ -100,7 +100,7 @@ build_rpc_trait! {
         fn orders(&self, AccountId, u32, u32) -> Result<Option<PageData<OrderT<Runtime>>>>;
 
         #[rpc(name = "chainx_getDepositRecords")]
-        fn deposit_records(&self, AccountId) -> Result<Option<Vec<(Timestamp, String, BlockNumber, String, Vec<(String, Balance)>)>>>;
+        fn deposit_records(&self, AccountId) -> Result<Option<Vec<(u64, String, BlockNumber, String, Balance, String)>>>;
     }
 }
 
@@ -820,17 +820,7 @@ where
     fn deposit_records(
         &self,
         who: AccountId,
-    ) -> Result<
-        Option<
-            Vec<(
-                Timestamp,
-                String,
-                BlockNumber,
-                String,
-                Vec<(String, Balance)>,
-            )>,
-        >,
-    > {
+    ) -> Result<Option<Vec<(u64, String, BlockNumber, String, Balance, String)>>> {
         let state = self.best_state()?;
         let mut records = Vec::new();
         let key = <IrrBlock<Runtime>>::key();
@@ -840,14 +830,14 @@ where
             return Ok(None);
         };
         let key = <AccountMap<Runtime>>::key_for(&who);
-        let _bind_list = if let Some(list) = Self::pickout::<Vec<Address>>(&state, &key)? {
+        let bind_list = if let Some(list) = Self::pickout::<Vec<Address>>(&state, &key)? {
             list
         } else {
             return Ok(None);
         };
 
         let key = <TrusteeAddress<Runtime>>::key();
-        let addr = if let Some(a) = Self::pickout::<keys::Address>(&state, &key)? {
+        let trustee = if let Some(a) = Self::pickout::<keys::Address>(&state, &key)? {
             a
         } else {
             return Ok(None);
@@ -862,11 +852,21 @@ where
                     for txid in header.txid {
                         let key = <TxFor<Runtime>>::key_for(&txid);
                         if let Some(info) = Self::pickout::<TxInfo>(&state, &key)? {
-                            let dep = get_deposit_info(info.raw_tx, addr.clone());
-                            let timestamp = header.header.time as u64;
-                            let tx_hash = txid.to_string();
-                            let address = info.input_address.to_string();
-                            records.push((timestamp, tx_hash, header.height as u64, address, dep));
+                            match get_deposit_info(&info.raw_tx, who, &info, &trustee, &bind_list) {
+                                Some(dep) => {
+                                    let tx_hash = txid.to_string();
+                                    let address = info.input_address.to_string();
+                                    records.push((
+                                        header.header.time as u64,
+                                        tx_hash,
+                                        header.height as u64,
+                                        address,
+                                        dep.0,
+                                        dep.1,
+                                    ));
+                                }
+                                None => continue,
+                            }
                         }
                     }
                     block_hash = header.header.previous_header_hash;
@@ -880,29 +880,57 @@ where
     }
 }
 
-fn get_deposit_info(raw_tx: BTCTransaction, trustee: Address) -> Vec<(String, Balance)> {
-    let mut out_info = Vec::new();
+fn get_deposit_info(
+    raw_tx: &BTCTransaction,
+    who: AccountId,
+    info: &TxInfo,
+    trustee: &Address,
+    bind_list: &Vec<Address>,
+) -> Option<(Balance, String)> {
     let mut ops = String::new();
     let mut balance = 0;
-    for (_, output) in raw_tx.outputs.iter().enumerate() {
+    let mut flag = bind_list
+        .into_iter()
+        .any(|a| a.hash == info.input_address.hash);
+    for output in raw_tx.outputs.iter(){
         let script = &output.script_pubkey;
         let into_script: Script = script.clone().into();
+        let s: Script = script.clone().into();
         if into_script.is_null_data_script() {
-            let s = script.clone();
-            ops = String::from_utf8(s[2..].to_vec()).unwrap();
+            let data = s.extract_rear(':');
+            match from(data.to_vec()) {
+                Ok(mut slice) => {
+                    let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice())
+                        .unwrap_or(H256::from(0));
+                    if account_id == who || flag {
+                        flag = true;
+                        ops = String::from_utf8(s[2..].to_vec()).unwrap_or(String::new());
+                    }
+                }
+                Err(_) => {
+                    if flag {
+                        ops = String::from_utf8(s[2..].to_vec()).unwrap_or(String::new());
+                    }
+                }
+            }
+
             continue;
         }
 
         // get deposit money
         let script_addresses = into_script.extract_destinations().unwrap_or(Vec::new());
         if script_addresses.len() == 1 {
-            if (trustee.hash == script_addresses[0].hash) && (output.value > 0) {
+            if (trustee.hash == script_addresses[0].hash) && (output.value > 0) && flag {
                 balance += output.value;
             }
         }
     }
-    out_info.push((ops, balance));
-    out_info
+
+    if flag {
+        Some((balance, ops))
+    } else {
+        None
+    }
 }
 
 fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {

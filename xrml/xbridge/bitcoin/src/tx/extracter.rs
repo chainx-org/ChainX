@@ -1,6 +1,7 @@
 // Copyright 2018 Chainpool.
 
 use super::*;
+use b58::from;
 use rstd::prelude::Vec;
 
 /// OP_RETURN extracter
@@ -43,9 +44,13 @@ impl<'a> Extracter<'a> {
             return None;
         }
 
-        let account = &v[1];
-        let account_id: Option<T::AccountId> = Decode::decode(&mut account.as_slice());
+        let mut account: Vec<u8> = match from(v[1].to_vec()) {
+            Ok(a) => a,
+            Err(_) => return None,
+        };
 
+        let account_id: Option<T::AccountId> =
+            Decode::decode(&mut account[1..33].to_vec().as_slice());
         account_id
     }
 
@@ -56,17 +61,19 @@ impl<'a> Extracter<'a> {
             return None;
         }
 
-        let account = &v[1];
-        let account_id: T::AccountId = match Decode::decode(&mut account.as_slice()) {
+        let mut account: Vec<u8> = match from(v[1].to_vec()) {
+            Ok(a) => a,
+            Err(_) => return None,
+        };
+
+        let account_id: T::AccountId = match Decode::decode(&mut account[1..33].to_vec().as_slice())
+        {
             Some(a) => a,
             None => return None,
         };
 
         let cert_name = &v[2];
         let duration = &v[3];
-
-        // TODO to eliminate vec_to_u32
-        // let days = u32::from_be_bytes(&v[3]);
 
         let frozen_duration = vec_to_u32(duration.to_vec()).unwrap_or(0);
         if frozen_duration <= 0 {
@@ -78,17 +85,20 @@ impl<'a> Extracter<'a> {
 }
 
 pub fn vec_to_u32(date: Vec<u8>) -> Option<u32> {
-    let mut frozen_duration = 0;
-    let maxvalue = u32::max_value();
+    let mut frozen_duration: u32 = 0;
     // ascii '0' = 48  '9' = 57
+
+    if date.len() > 9 {
+        return None;
+    }
     for i in date {
         if i > 57 || i < 48 {
             return None;
         }
-        frozen_duration = frozen_duration * 10 + u32::from(i - 48);
-        if frozen_duration > maxvalue {
-            return None;
-        }
+        frozen_duration = match (frozen_duration * 10).checked_add(u32::from(i - 48)) {
+            Some(f) => f,
+            None => return None,
+        };
     }
     Some(frozen_duration)
 }
@@ -96,7 +106,6 @@ pub fn vec_to_u32(date: Vec<u8>) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use b58::from;
 
     #[test]
     fn test_vec_to_u32() {
@@ -134,14 +143,8 @@ mod tests {
         let chainx = v[0];
         assert_eq!(&chainx[2..], OP_RETURN_FLAG);
 
-        let mut account = Vec::new();
-        account.extend_from_slice(&v[1]);
-        let slice: Vec<u8> = from(account).unwrap();
-        let slice = slice.as_slice();
-        let mut account: Vec<u8> = Vec::new();
-        account.extend_from_slice(&slice[1..33]);
-        assert_eq!(account.len(), 32);
-        let account_id: H256 = Decode::decode(&mut account.as_slice()).unwrap();
+        let mut slice: Vec<u8> = from(v[1].to_vec()).unwrap();
+        let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice()).unwrap();
         assert_eq!(
             account_id,
             H256::from("fcd66b3b5a737f8284fef82d377d9c2391628bbe11ec63eb372b032ce2618725")
@@ -151,7 +154,7 @@ mod tests {
     #[test]
     fn test_cert() {
         let script = Script::from(
-            "01ChainX:5HnDcuKFCvsR42s8Tz2j2zLHLZAaiHG4VNyJDa7iLRunRuhM:certname:6"
+            "01ChainX:5CSff76SK7qcWYq5MpvoHDVRrjWFwpxurwUu6Bqw25hKPQiy:certname:66"
                 .as_bytes()
                 .to_vec(),
         );
@@ -167,17 +170,12 @@ mod tests {
         let chainx = v[0];
         assert_eq!(&chainx[2..], OP_RETURN_FLAG);
 
-        let mut account = Vec::new();
-        account.extend_from_slice(&v[1]);
-        let slice: Vec<u8> = from(account).unwrap();
-        let slice = slice.as_slice();
-        let mut account: Vec<u8> = Vec::new();
-        account.extend_from_slice(&slice[1..33]);
-        assert_eq!(account.len(), 32);
-        let account_id: H256 = Decode::decode(&mut account.as_slice()).unwrap();
+        let mut slice: Vec<u8> = from(v[1].to_vec()).unwrap();
+        let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice()).unwrap();
+
         assert_eq!(
             account_id,
-            H256::from("fcd66b3b5a737f8284fef82d377d9c2391628bbe11ec63eb372b032ce2618725")
+            H256::from("10bffec4d267786994ee83bf76f4490ad33ce68f320dbb6403c3d1b1c96eb1ca")
         );
 
         let duration = v[3];
@@ -186,6 +184,6 @@ mod tests {
         } else {
             0
         };
-        assert_eq!(6, frozen_duration);
+        assert_eq!(66, frozen_duration);
     }
 }

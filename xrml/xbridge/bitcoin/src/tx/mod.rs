@@ -7,7 +7,7 @@ use rstd::result::Result as StdResult;
 
 use super::{
     AccountMap, AddressMap, BlockHeaderFor, CandidateTx, CertAddress, Module, NetworkId,
-    PendingDepositMap, Trait, TrusteeAddress, TxFor, TxProposal, TxType, UTXOKey, UTXOSet,
+    PendingDepositMap, Trait, TrusteeAddress, TxFor, TxInfo, TxProposal, TxType, UTXOKey, UTXOSet,
     UTXOSetKey, UTXOStatus, UTXO,
 };
 
@@ -109,30 +109,44 @@ pub fn inspect_address<T: Trait>(tx: &Transaction, outpoint: OutPoint) -> Option
 }
 
 pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
-    let trustee_address: keys::Address = match <TrusteeAddress<T>>::get() {
-        Some(h) => h,
-        None => return Err("should set RECEIVE_address first"),
-    };
-    let cert_address: keys::Address = match <CertAddress<T>>::get() {
-        Some(h) => h,
-        None => return Err("should set CERT_address first"),
-    };
+    let trustee_address = <TrusteeAddress<T>>::get().ok_or("Should set RECEIVE_address first.")?;
+    let cert_address = <CertAddress<T>>::get().ok_or("Should set CERT_address first.")?;
     let tx_info = <TxFor<T>>::get(txid);
     let input_address = tx_info.input_address;
 
     let tx_handler = TxHandler::new(&txid);
 
-    if input_address.hash == trustee_address.hash {
-        tx_handler.withdraw::<T>(&trustee_address)?;
-    } else if input_address.hash == cert_address.hash {
-        tx_handler.cert::<T>()?;
-    } else {
-        for output in tx_info.raw_tx.outputs.iter() {
-            if is_key(&output.script_pubkey, &trustee_address) {
-                tx_handler.deposit::<T>(&trustee_address);
-                break;
+    match get_tx_type(&input_address, &trustee_address, &cert_address) {
+        TxType::Withdraw => {
+            tx_handler.withdraw::<T>(&trustee_address)?;
+        }
+        TxType::SendCert => {
+            tx_handler.cert::<T>()?;
+        }
+        TxType::Deposit => {
+            for output in tx_info.raw_tx.outputs.iter() {
+                if is_key(&output.script_pubkey, &trustee_address) {
+                    tx_handler.deposit::<T>(&trustee_address);
+                    break;
+                }
             }
         }
-    }
+        _ => return Err("Unknow tx type"),
+    };
+
     Ok(())
+}
+
+fn get_tx_type(
+    input_address: &keys::Address,
+    trustee_address: &keys::Address,
+    cert_address: &keys::Address,
+) -> TxType {
+    if input_address.hash == trustee_address.hash {
+        return TxType::Withdraw;
+    } else if input_address.hash == cert_address.hash {
+        return TxType::SendCert;
+    } else {
+        return TxType::Deposit;
+    }
 }
