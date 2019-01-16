@@ -4,8 +4,10 @@
 #![cfg(test)]
 
 use runtime_io;
-use runtime_primitives::testing::{Digest, DigestItem, Header};
-use runtime_primitives::traits::{BlakeTwo256, Identity};
+use runtime_primitives::testing::{
+    ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId,
+};
+use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;
 use runtime_primitives::Perbill;
 use substrate_primitives::{Blake2Hasher, H256};
@@ -21,7 +23,7 @@ pub struct Test;
 impl consensus::Trait for Test {
     const NOTE_OFFLINE_POSITION: u32 = 1;
     type Log = DigestItem;
-    type SessionKey = u64;
+    type SessionKey = UintAuthorityId;
     type InherentOfflineReport = ();
 }
 impl system::Trait for Test {
@@ -60,7 +62,7 @@ impl timestamp::Trait for Test {
     type OnTimestampSet = ();
 }
 impl session::Trait for Test {
-    type ConvertAccountIdToSessionKey = Identity;
+    type ConvertAccountIdToSessionKey = ConvertUintAuthorityId;
     type OnSessionChange = Staking;
     type Event = ();
 }
@@ -116,11 +118,11 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     );
     t.extend(
         xaccounts::GenesisConfig::<Test> {
-            _genesis_phantom_data: ::std::marker::PhantomData::<Test>,
             shares_per_cert: 50,
             activation_per_share: 100_000_000,
             maximum_cert_count: 178,
             total_issued: 2,
+            cert_owner: 1,
         }
         .build_storage()
         .unwrap()

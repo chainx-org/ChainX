@@ -48,6 +48,8 @@ pub struct IntentionInfo {
     pub registered_at: Timestamp,
     /// url
     pub url: String,
+    /// about
+    pub about: String,
     /// is running for the validators
     pub is_active: bool,
     /// is validator

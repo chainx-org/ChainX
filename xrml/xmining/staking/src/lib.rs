@@ -49,6 +49,7 @@ use system::ensure_signed;
 
 use xaccounts::{Name, URL};
 use xassets::{Address, Memo, Token};
+use xr_primitives::XString;
 
 pub mod vote_weight;
 
@@ -205,37 +206,49 @@ decl_module! {
             }
         }
 
-        /// Update the url and desire to join in elections of intention.
-        fn refresh(origin, url: URL, desire_to_run: bool) {
+        /// Update the url, desire to join in elections of intention and session key.
+        fn refresh(
+            origin,
+            url: Option<URL>,
+            desire_to_run: Option<bool>,
+            next_key: Option<T::SessionKey>,
+            about: Option<XString>
+        ) {
             let who = ensure_signed(origin)?;
-
-            xaccounts::is_valid_url::<T>(&url)?;
 
             ensure!(
                 <xaccounts::Module<T>>::intention_immutable_props_of(&who).is_some(),
                 "Transactor is not an intention."
             );
 
-            match desire_to_run {
-                true => {
-                    if who == <xsystem::Module<T>>::banned_account() {
-                        return Err("This account has been banned.");
-                    }
-                },
-                false => {
-                    let active = Self::intentions().into_iter()
-                        .filter(|ref n| <xaccounts::Module<T>>::intention_props_of(n.clone()).is_active)
-                        .collect::<Vec<_>>();
-                    if active.len() <= Self::minimum_validator_count() as usize {
-                        return Err("cannot pull out when there are too few active intentions");
+            if let Some(url) = url.as_ref() {
+                xaccounts::is_valid_url::<T>(&url)?;
+            }
+
+            if let Some(about) = about.as_ref() {
+                xaccounts::is_valid_about::<T>(&about)?;
+            }
+
+            if let Some(desire_to_run) = desire_to_run.as_ref() {
+                match desire_to_run {
+                    true => {
+                        if who == <xsystem::Module<T>>::banned_account() {
+                            return Err("This account has been banned.");
+                        }
+                    },
+                    false => {
+                        let active = Self::intentions().into_iter()
+                            .filter(|ref n| <xaccounts::Module<T>>::intention_props_of(n.clone()).is_active)
+                            .collect::<Vec<_>>();
+                        if active.len() <= Self::minimum_validator_count() as usize {
+                            return Err("cannot pull out when there are too few active intentions");
+                        }
                     }
                 }
             }
 
-            <xaccounts::IntentionPropertiesOf<T>>::mutate(&who, |props| {
-                props.url = url;
-                props.is_active = desire_to_run;
-            });
+            Self::apply_refresh(&who, url, desire_to_run, next_key, about);
+
         }
 
         /// Register intention by the owner of given cert name.
@@ -515,6 +528,36 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    fn apply_refresh(
+        who: &T::AccountId,
+        url: Option<URL>,
+        desire_to_run: Option<bool>,
+        next_key: Option<T::SessionKey>,
+        about: Option<XString>,
+    ) {
+        if let Some(url) = url {
+            <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
+                props.url = url;
+            });
+        }
+
+        if let Some(desire_to_run) = desire_to_run {
+            <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
+                props.is_active = desire_to_run;
+            });
+        }
+
+        if let Some(next_key) = next_key {
+            <session::NextKeyFor<T>>::insert(who, next_key);
+        }
+
+        if let Some(about) = about {
+            <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
+                props.about = about;
+            });
+        }
+    }
+
     /// Actually register an intention.
     fn apply_register(
         cert_name: Name,
@@ -539,6 +582,7 @@ impl<T: Trait> Module<T> {
             xaccounts::IntentionProps {
                 url: url,
                 is_active: false,
+                about: XString::default(),
             },
         );
 

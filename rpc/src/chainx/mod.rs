@@ -28,8 +28,8 @@ use chainx_runtime::Runtime;
 use xaccounts::{self, CertImmutableProps, IntentionImmutableProps, IntentionProps};
 use xassets::{self, assetdef::ChainT, Asset, AssetType, Chain, Token};
 use xbitcoin::{
-    self, from, AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock,
-    TrusteeAddress, TxFor, TxInfo,
+    self, from, AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TrusteeAddress,
+    TxFor, TxInfo,
 };
 use xrecords::{self, Application};
 use xspot::def::{OrderPair, OrderPairID, ID};
@@ -45,8 +45,8 @@ mod types;
 
 use self::error::Result;
 use self::types::{
-    ApplicationWrapper, AssetInfo, CertInfo, IntentionInfo, PageData, PairInfo,
-    PseduIntentionInfo, PseduNominationRecord, QuotationsList, WithdrawalState,
+    ApplicationWrapper, AssetInfo, CertInfo, IntentionInfo, PageData, PairInfo, PseduIntentionInfo,
+    PseduNominationRecord, QuotationsList, WithdrawalState,
 };
 use chainx::error::ErrorKind::{OrderPairIDErr, PageIndexErr, PageSizeErr, QuotationssPieceErr};
 
@@ -529,6 +529,7 @@ where
                 if let Some(props) = Self::pickout::<IntentionProps>(&state, &key)? {
                     info.url = String::from_utf8_lossy(&props.url).into_owned();
                     info.is_active = props.is_active;
+                    info.about = String::from_utf8_lossy(&props.about).into_owned();
                 }
 
                 let key = <xstaking::IntentionProfiles<Runtime>>::key_for(&intention);
@@ -892,7 +893,7 @@ fn get_deposit_info(
     let mut flag = bind_list
         .into_iter()
         .any(|a| a.hash == info.input_address.hash);
-    for output in raw_tx.outputs.iter(){
+    for output in raw_tx.outputs.iter() {
         let script = &output.script_pubkey;
         let into_script: Script = script.clone().into();
         let s: Script = script.clone().into();

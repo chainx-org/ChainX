@@ -77,6 +77,7 @@ pub struct IntentionImmutableProps<Moment> {
 pub struct IntentionProps {
     pub url: URL,
     pub is_active: bool,
+    pub about: XString,
 }
 
 decl_module! {
@@ -188,6 +189,14 @@ impl<T: Trait> Module<T> {
 pub fn is_valid_name<T: Trait>(name: &[u8]) -> Result {
     if name.len() > 12 || name.len() < 2 {
         return Err("The length of name must be in range [2, 12].");
+    }
+
+    Ok(())
+}
+
+pub fn is_valid_about<T: Trait>(about: &[u8]) -> Result {
+    if about.len() > 128 {
+        return Err("The length of about must be in range [0, 128].");
     }
 
     Ok(())

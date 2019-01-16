@@ -6,6 +6,7 @@
 use super::*;
 use mock::{new_test_ext, Origin, Session, Staking, System, XAccounts, XAssets};
 use runtime_io::with_externalities;
+use runtime_primitives::testing::UintAuthorityId;
 
 #[test]
 fn register_should_work() {
@@ -98,16 +99,20 @@ fn refresh_should_work() {
 
         assert_ok!(Staking::refresh(
             Origin::signed(2),
-            b"new.name".to_vec(),
-            true
+            Some(b"new.name".to_vec()),
+            Some(true),
+            Some(UintAuthorityId(123).into()),
+            None
         ));
         assert_eq!(XAccounts::intention_props_of(&2).is_active, true);
         assert_eq!(XAccounts::intention_props_of(&2).url, b"new.name".to_vec());
 
         assert_ok!(Staking::refresh(
             Origin::signed(2),
-            b"new.url".to_vec(),
-            false
+            Some(b"new.url".to_vec()),
+            Some(false),
+            Some(UintAuthorityId(124).into()),
+            None
         ));
         assert_eq!(XAccounts::intention_props_of(&2).is_active, false);
     });
@@ -239,8 +244,10 @@ fn unfreeze_should_work() {
 
         assert_ok!(Staking::refresh(
             Origin::signed(2),
-            b"domainname".to_vec(),
-            true
+            Some(b"domainname".to_vec()),
+            Some(true),
+            Some(UintAuthorityId(123).into()),
+            None
         ));
 
         System::set_block_number(28801);
@@ -342,8 +349,10 @@ fn claim_should_work() {
         ));
         assert_ok!(Staking::refresh(
             Origin::signed(2),
-            b"domainname".to_vec(),
-            true
+            None,
+            Some(true),
+            None,
+            None
         ));
 
         assert_eq!(XAccounts::intention_props_of(&2).is_active, true);
