@@ -1,15 +1,17 @@
 // Copyright 2018 Chainpool.
 
 use codec::Codec;
+use primitives::traits::MaybeSerializeDebug;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
 pub trait NodeT {
-    type Index: Codec + Clone + Eq + PartialEq + Default;
+    type Index: Codec + Clone + Eq + PartialEq + Default + MaybeSerializeDebug;
     fn index(&self) -> Self::Index;
 }
 
-#[derive(Decode, Encode, Clone, Default)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct Node<T: NodeT> {
     prev: Option<T::Index>,
     next: Option<T::Index>,
@@ -23,38 +25,43 @@ impl<T: NodeT> Node<T> {
             None => None,
         }
     }
+
     pub fn next(&self) -> Option<T::Index> {
         match &self.next {
             Some(i) => Some(i.clone()),
-
             None => None,
         }
     }
+
     pub fn index(&self) -> T::Index {
         self.data.index()
     }
+
     pub fn is_none(&self) -> bool {
         self.prev.is_none() && self.next.is_none()
     }
 }
 
-pub trait NormalNodeT {
-    type NodeType;
-    fn data(&self) -> &Self::NodeType;
-    fn mut_data(&mut self) -> &mut Self::NodeType;
-}
-
-impl<T: NodeT> NormalNodeT for Node<T> {
-    type NodeType = Node<T>;
-    fn data(&self) -> &Node<T> {
-        self
-    }
-    fn mut_data(&mut self) -> &mut Node<T> {
+impl<T> AsRef<Node<T>> for Node<T>
+where
+    T: NodeT,
+{
+    fn as_ref(&self) -> &Node<T> {
         self
     }
 }
 
-#[derive(Decode, Encode, Eq, PartialEq, Clone, Default)]
+impl<T> AsMut<Node<T>> for Node<T>
+where
+    T: NodeT,
+{
+    fn as_mut(&mut self) -> &mut Node<T> {
+        self
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct NodeIndex<T: NodeT> {
     index: T::Index,
 }
@@ -65,73 +72,67 @@ impl<T: NodeT> NodeIndex<T> {
     }
 }
 
-pub trait NodeIndexT {
-    type IndexType;
-    fn data(&self) -> &Self::IndexType;
-}
-
-impl<T: NodeT> NodeIndexT for NodeIndex<T> {
-    type IndexType = NodeIndex<T>;
-    fn data(&self) -> &NodeIndex<T> {
+impl<T> AsRef<NodeIndex<T>> for NodeIndex<T>
+where
+    T: NodeT,
+{
+    fn as_ref(&self) -> &NodeIndex<T> {
         self
     }
 }
 
-pub trait MultiNodeIndexT {
-    type KeyType;
-    type IndexType;
-    fn data(&self) -> &Self::IndexType;
-    fn key(&self) -> Self::KeyType;
-}
-
-#[derive(Decode, Encode, Eq, PartialEq, Clone, Default)]
-pub struct MultiNodeIndex<K, T: NodeT>
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct MultiNodeIndex<K, T>
 where
     K: Codec + Clone + Eq + PartialEq + Default,
+    T: NodeT,
 {
-    index: T::Index,
     multi_key: K,
+    index: T::Index,
 }
 
-impl<K, T: NodeT> MultiNodeIndex<K, T>
+impl<K, T> MultiNodeIndex<K, T>
 where
     K: Codec + Clone + Eq + PartialEq + Default,
+    T: NodeT,
 {
+    pub fn key(&self) -> K {
+        self.multi_key.clone()
+    }
+
     pub fn index(&self) -> T::Index {
         self.index.clone()
     }
 }
 
-impl<K, T: NodeT> MultiNodeIndexT for MultiNodeIndex<K, T>
+impl<K, T> AsRef<MultiNodeIndex<K, T>> for MultiNodeIndex<K, T>
 where
     K: Codec + Clone + Eq + PartialEq + Default,
+    T: NodeT,
 {
-    type KeyType = K;
-    type IndexType = MultiNodeIndex<K, T>;
-    fn data(&self) -> &MultiNodeIndex<K, T> {
+    fn as_ref(&self) -> &MultiNodeIndex<K, T> {
         self
     }
-    fn key(&self) -> K {
-        self.multi_key.clone()
-    }
 }
 
-pub trait OptionT {
-    type OptionType;
-    fn data(&self) -> Option<&Self::OptionType>;
-    fn mut_data(&mut self) -> Option<&mut Self::OptionType>;
+pub trait AsRefAndMutOption<T> {
+    fn as_ref(&self) -> Option<&T>;
+    fn as_mut(&mut self) -> Option<&mut T>;
 }
 
-impl<T: NodeT> OptionT for Option<Node<T>> {
-    type OptionType = Node<T>;
-    fn data(&self) -> Option<&Node<T>> {
+impl<T> AsRefAndMutOption<Node<T>> for Option<Node<T>>
+where
+    T: NodeT,
+{
+    fn as_ref(&self) -> Option<&Node<T>> {
         match self {
             None => None,
             Some(ref i) => Some(i),
         }
     }
 
-    fn mut_data(&mut self) -> Option<&mut Node<T>> {
+    fn as_mut(&mut self) -> Option<&mut Node<T>> {
         match self {
             None => None,
             Some(ref mut i) => Some(i),
@@ -139,16 +140,18 @@ impl<T: NodeT> OptionT for Option<Node<T>> {
     }
 }
 
-impl<T: NodeT> OptionT for Option<NodeIndex<T>> {
-    type OptionType = NodeIndex<T>;
-    fn data(&self) -> Option<&NodeIndex<T>> {
+impl<T> AsRefAndMutOption<NodeIndex<T>> for Option<NodeIndex<T>>
+where
+    T: NodeT,
+{
+    fn as_ref(&self) -> Option<&NodeIndex<T>> {
         match self {
             None => None,
             Some(ref i) => Some(i),
         }
     }
 
-    fn mut_data(&mut self) -> Option<&mut NodeIndex<T>> {
+    fn as_mut(&mut self) -> Option<&mut NodeIndex<T>> {
         match self {
             None => None,
             Some(ref mut i) => Some(i),
@@ -156,19 +159,19 @@ impl<T: NodeT> OptionT for Option<NodeIndex<T>> {
     }
 }
 
-impl<K, T: NodeT> OptionT for Option<MultiNodeIndex<K, T>>
+impl<K, T> AsRefAndMutOption<MultiNodeIndex<K, T>> for Option<MultiNodeIndex<K, T>>
 where
     K: Codec + Clone + Eq + PartialEq + Default,
+    T: NodeT,
 {
-    type OptionType = MultiNodeIndex<K, T>;
-    fn data(&self) -> Option<&MultiNodeIndex<K, T>> {
+    fn as_ref(&self) -> Option<&MultiNodeIndex<K, T>> {
         match self {
             None => None,
             Some(ref i) => Some(i),
         }
     }
 
-    fn mut_data(&mut self) -> Option<&mut MultiNodeIndex<K, T>> {
+    fn as_mut(&mut self) -> Option<&mut MultiNodeIndex<K, T>> {
         match self {
             None => None,
             Some(ref mut i) => Some(i),
@@ -191,12 +194,11 @@ impl<T: NodeT + Codec> Node<T> {
         }
     }
 
-    pub fn add_option_node_before<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
+    pub fn add_option_before<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
     where
-        C::NodeMap: StorageMap<T::Index, Node<T>>,
         C::Header: StorageValue<NodeIndex<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            OptionT<OptionType = Node<T>>,
+        C::NodeMap: StorageMap<T::Index, Node<T>>,
+        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -206,7 +208,7 @@ impl<T: NodeT + Codec> Node<T> {
             Some(p) => {
                 C::NodeMap::mutate(p, |prev| {
                     // TODO add Result when substrate update
-                    if let Some(ref mut prev_node) = prev.mut_data() {
+                    if let Some(ref mut prev_node) = prev.as_mut() {
                         node.prev = Some(prev_node.index());
                         node.next = Some(i);
                         prev_node.next = Some(node.index());
@@ -233,12 +235,11 @@ impl<T: NodeT + Codec> Node<T> {
         Ok(())
     }
 
-    pub fn add_option_node_after<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
+    pub fn add_option_after<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
     where
         C::NodeMap: StorageMap<T::Index, Node<T>>,
         C::Tail: StorageValue<NodeIndex<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            OptionT<OptionType = Node<T>>,
+        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -248,7 +249,7 @@ impl<T: NodeT + Codec> Node<T> {
             Some(n) => {
                 C::NodeMap::mutate(n, |next| {
                     // TODO add Result when substrate update
-                    if let Some(ref mut next_node) = next.mut_data() {
+                    if let Some(ref mut next_node) = next.as_mut() {
                         node.prev = Some(i);
                         node.next = Some(next_node.index());
                         next_node.prev = Some(node.index());
@@ -273,26 +274,25 @@ impl<T: NodeT + Codec> Node<T> {
         Ok(())
     }
 
-    pub fn remove_option_node<C: LinkedNodeCollection>(&mut self) -> Result
+    pub fn remove_option<C: LinkedNodeCollection>(&mut self) -> Result
     where
-        C::NodeMap: StorageMap<T::Index, Node<T>>,
         C::Header: StorageValue<NodeIndex<T>>,
+        <C::Header as StorageValue<NodeIndex<T>>>::Query: AsRefAndMutOption<NodeIndex<T>>,
+        C::NodeMap: StorageMap<T::Index, Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
         C::Tail: StorageValue<NodeIndex<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            OptionT<OptionType = Node<T>>,
-        <C::Header as StorageValue<NodeIndex<T>>>::Query: OptionT<OptionType = NodeIndex<T>>,
-        <C::Tail as StorageValue<NodeIndex<T>>>::Query: OptionT<OptionType = NodeIndex<T>>,
+        <C::Tail as StorageValue<NodeIndex<T>>>::Query: AsRefAndMutOption<NodeIndex<T>>,
     {
         if self.is_none() {
             let self_index = self.index();
             C::NodeMap::remove(&self_index);
-            if let Some(header) = C::Header::get().data() {
+            if let Some(header) = C::Header::get().as_ref() {
                 if self_index == header.index {
                     C::Header::kill();
                 }
             }
 
-            if let Some(tail) = C::Tail::get().data() {
+            if let Some(tail) = C::Tail::get().as_ref() {
                 if self_index == tail.index {
                     C::Tail::kill();
                 }
@@ -305,7 +305,7 @@ impl<T: NodeT + Codec> Node<T> {
                 Some(next) => {
                     C::NodeMap::mutate(next, |next| {
                         // TODO add Result when substrate update
-                        if let Some(next_node) = next.mut_data() {
+                        if let Some(next_node) = next.as_mut() {
                             next_node.prev = None;
                             C::Header::put(NodeIndex::<T> {
                                 index: next_node.index(),
@@ -324,7 +324,7 @@ impl<T: NodeT + Codec> Node<T> {
                 Some(prev) => {
                     C::NodeMap::mutate(prev, |prev| {
                         // TODO add Result when substrate update
-                        if let Some(prev_node) = prev.mut_data() {
+                        if let Some(prev_node) = prev.as_mut() {
                             prev_node.next = None;
                             C::Tail::put(NodeIndex::<T> {
                                 index: prev_node.index(),
@@ -344,14 +344,14 @@ impl<T: NodeT + Codec> Node<T> {
 
             C::NodeMap::mutate(&prev, |prev| {
                 // TODO add Result when substrate update
-                if let Some(prev_node) = prev.mut_data() {
+                if let Some(prev_node) = prev.as_mut() {
                     prev_node.next = Some(next.clone());
                     self.prev = None;
                 }
             });
             C::NodeMap::mutate(&next, |next| {
                 // TODO add Result when substrate update
-                if let Some(next_node) = next.mut_data() {
+                if let Some(next_node) = next.as_mut() {
                     next_node.prev = Some(prev.clone());
                     self.next = None;
                 }
@@ -361,12 +361,12 @@ impl<T: NodeT + Codec> Node<T> {
         Ok(())
     }
 
-    pub fn add_node_before<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
+    pub fn add_before<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
     where
-        C::NodeMap: StorageMap<T::Index, Node<T>>,
         C::Header: StorageValue<NodeIndex<T>>,
+        C::NodeMap: StorageMap<T::Index, Node<T>>,
         <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            NormalNodeT<NodeType = Node<T>>,
+            AsRef<Node<T>> + AsMut<Node<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -374,10 +374,10 @@ impl<T: NodeT + Codec> Node<T> {
         }
         match &self.prev {
             Some(p) => C::NodeMap::mutate(p, |prev_node| {
-                if prev_node.data().is_none() == false {
-                    node.prev = Some(prev_node.data().index());
+                if prev_node.as_ref().is_none() == false {
+                    node.prev = Some(prev_node.as_ref().index());
                     node.next = Some(i);
-                    prev_node.mut_data().next = Some(node.index());
+                    prev_node.as_mut().next = Some(node.index());
                 }
             }),
             None => {
@@ -401,12 +401,12 @@ impl<T: NodeT + Codec> Node<T> {
         Ok(())
     }
 
-    pub fn add_node_after<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
+    pub fn add_after<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
     where
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        C::Tail: StorageValue<NodeIndex<T>>,
         <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            NormalNodeT<NodeType = Node<T>>,
+            AsRef<Node<T>> + AsMut<Node<T>>,
+        C::Tail: StorageValue<NodeIndex<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -414,10 +414,10 @@ impl<T: NodeT + Codec> Node<T> {
         }
         match &self.next {
             Some(n) => C::NodeMap::mutate(n, |next_node| {
-                if next_node.data().is_none() == false {
+                if next_node.as_ref().is_none() == false {
                     node.prev = Some(i);
-                    node.next = Some(next_node.data().index());
-                    next_node.mut_data().prev = Some(node.index());
+                    node.next = Some(next_node.as_ref().index());
+                    next_node.as_mut().prev = Some(node.index());
                 }
             }),
             None => {
@@ -438,22 +438,22 @@ impl<T: NodeT + Codec> Node<T> {
         Ok(())
     }
 
-    pub fn remove_node<C: LinkedNodeCollection>(&mut self) -> Result
+    pub fn remove<C: LinkedNodeCollection>(&mut self) -> Result
     where
-        C::NodeMap: StorageMap<T::Index, Node<T>>,
         C::Header: StorageValue<NodeIndex<T>>,
-        C::Tail: StorageValue<NodeIndex<T>>,
+        <C::Header as StorageValue<NodeIndex<T>>>::Query: AsRef<NodeIndex<T>>,
+        C::NodeMap: StorageMap<T::Index, Node<T>>,
         <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            NormalNodeT<NodeType = Node<T>>,
-        <C::Header as StorageValue<NodeIndex<T>>>::Query: NodeIndexT<IndexType = NodeIndex<T>>,
-        <C::Tail as StorageValue<NodeIndex<T>>>::Query: NodeIndexT<IndexType = NodeIndex<T>>,
+            AsRef<Node<T>> + AsMut<Node<T>>,
+        C::Tail: StorageValue<NodeIndex<T>>,
+        <C::Tail as StorageValue<NodeIndex<T>>>::Query: AsRef<NodeIndex<T>>,
     {
         if self.is_none() {
             let self_index = self.index();
             let head_index = C::Header::get();
             let tail_index = C::Tail::get();
             C::NodeMap::remove(&self_index);
-            if self_index == head_index.data().index && self_index == tail_index.data().index {
+            if self_index == head_index.as_ref().index && self_index == tail_index.as_ref().index {
                 C::Header::kill();
                 C::Tail::kill();
             } else {
@@ -466,10 +466,10 @@ impl<T: NodeT + Codec> Node<T> {
         if self.prev.is_none() {
             match &self.next {
                 Some(next) => C::NodeMap::mutate(next, |next_node| {
-                    if next_node.data().is_none() == false {
-                        next_node.mut_data().prev = None;
+                    if next_node.as_ref().is_none() == false {
+                        next_node.as_mut().prev = None;
                         C::Header::put(NodeIndex::<T> {
-                            index: next_node.data().index(),
+                            index: next_node.as_ref().index(),
                         });
                         C::NodeMap::remove(self.index());
                     }
@@ -482,10 +482,10 @@ impl<T: NodeT + Codec> Node<T> {
         } else if self.next.is_none() {
             match &self.prev {
                 Some(prev) => C::NodeMap::mutate(prev, |prev_node| {
-                    if prev_node.data().is_none() == false {
-                        prev_node.mut_data().next = None;
+                    if prev_node.as_ref().is_none() == false {
+                        prev_node.as_mut().next = None;
                         C::Tail::put(NodeIndex::<T> {
-                            index: prev_node.data().index(),
+                            index: prev_node.as_ref().index(),
                         });
                         C::NodeMap::remove(self.index());
                     }
@@ -500,14 +500,14 @@ impl<T: NodeT + Codec> Node<T> {
             let next = self.next.clone().unwrap_or(Default::default());
 
             C::NodeMap::mutate(&prev, |prev_node| {
-                if prev_node.data().is_none() == false {
-                    prev_node.mut_data().next = Some(next.clone());
+                if prev_node.as_ref().is_none() == false {
+                    prev_node.as_mut().next = Some(next.clone());
                     self.prev = None;
                 }
             });
             C::NodeMap::mutate(&next, |next_node| {
-                if next_node.data().is_none() == false {
-                    next_node.mut_data().prev = Some(prev.clone());
+                if next_node.as_ref().is_none() == false {
+                    next_node.as_mut().prev = Some(prev.clone());
                     self.next = None;
                 }
             });
@@ -543,14 +543,12 @@ impl<T: NodeT + Codec> Node<T> {
 
 // for multi index
 impl<T: NodeT + Codec> Node<T> {
-    pub fn init_storage_withkey<C: LinkedNodeCollection, K>(&self, key: K)
+    pub fn init_storage_with_key<C: LinkedNodeCollection, K>(&self, key: K)
     where
         K: Codec + Clone + Eq + PartialEq + Default,
+        C::Header: StorageMap<K, MultiNodeIndex<K, T>>,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        C::Header:
-            StorageMap<<MultiNodeIndex<K, T> as MultiNodeIndexT>::KeyType, MultiNodeIndex<K, T>>,
-        C::Tail:
-            StorageMap<<MultiNodeIndex<K, T> as MultiNodeIndexT>::KeyType, MultiNodeIndex<K, T>>,
+        C::Tail: StorageMap<K, MultiNodeIndex<K, T>>,
     {
         if C::Header::exists(&key) == false {
             C::Header::insert(
@@ -573,18 +571,16 @@ impl<T: NodeT + Codec> Node<T> {
         C::NodeMap::insert(self.index(), self);
     }
 
-    pub fn add_option_node_before_withkey<C: LinkedNodeCollection, K>(
+    pub fn add_option_before_with_key<C: LinkedNodeCollection, K>(
         &mut self,
         mut node: Node<T>,
         key: K,
     ) -> Result
     where
         K: Codec + Clone + Eq + PartialEq + Default,
+        C::Header: StorageMap<K, MultiNodeIndex<K, T>>,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        C::Header:
-            StorageMap<<MultiNodeIndex<K, T> as MultiNodeIndexT>::KeyType, MultiNodeIndex<K, T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            OptionT<OptionType = Node<T>>,
+        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -594,7 +590,7 @@ impl<T: NodeT + Codec> Node<T> {
             Some(p) => {
                 C::NodeMap::mutate(p, |prev| {
                     // TODO add Result when substrate update
-                    if let Some(ref mut prev_node) = prev.mut_data() {
+                    if let Some(ref mut prev_node) = prev.as_mut() {
                         node.prev = Some(prev_node.index());
                         node.next = Some(i);
                         prev_node.next = Some(node.index());
@@ -625,7 +621,7 @@ impl<T: NodeT + Codec> Node<T> {
         Ok(())
     }
 
-    pub fn add_option_node_after_withkey<C: LinkedNodeCollection, K>(
+    pub fn add_option_after_with_key<C: LinkedNodeCollection, K>(
         &mut self,
         mut node: Node<T>,
         key: K,
@@ -633,10 +629,8 @@ impl<T: NodeT + Codec> Node<T> {
     where
         K: Codec + Clone + Eq + PartialEq + Default,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        C::Tail:
-            StorageMap<<MultiNodeIndex<K, T> as MultiNodeIndexT>::KeyType, MultiNodeIndex<K, T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            OptionT<OptionType = Node<T>>,
+        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
+        C::Tail: StorageMap<K, MultiNodeIndex<K, T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -646,7 +640,7 @@ impl<T: NodeT + Codec> Node<T> {
             Some(n) => {
                 C::NodeMap::mutate(n, |next| {
                     // TODO add Result when substrate update
-                    if let Some(ref mut next_node) = next.mut_data() {
+                    if let Some(ref mut next_node) = next.as_mut() {
                         node.prev = Some(i);
                         node.next = Some(next_node.index());
                         next_node.prev = Some(node.index());
@@ -675,29 +669,28 @@ impl<T: NodeT + Codec> Node<T> {
         Ok(())
     }
 
-    pub fn remove_option_node_withkey<C: LinkedNodeCollection, K>(&mut self, key: K) -> Result
+    pub fn remove_option_with_key<C: LinkedNodeCollection, K>(&mut self, key: K) -> Result
     where
         K: Codec + Clone + Eq + PartialEq + Default,
-        C::NodeMap: StorageMap<T::Index, Node<T>>,
         C::Header: StorageMap<K, MultiNodeIndex<K, T>>,
-        C::Tail: StorageMap<K, MultiNodeIndex<K, T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            OptionT<OptionType = Node<T>>,
         <C::Header as StorageMap<K, MultiNodeIndex<K, T>>>::Query:
-            OptionT<OptionType = MultiNodeIndex<K, T>>,
+            AsRefAndMutOption<MultiNodeIndex<K, T>>,
+        C::NodeMap: StorageMap<T::Index, Node<T>>,
+        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
+        C::Tail: StorageMap<K, MultiNodeIndex<K, T>>,
         <C::Tail as StorageMap<K, MultiNodeIndex<K, T>>>::Query:
-            OptionT<OptionType = MultiNodeIndex<K, T>>,
+            AsRefAndMutOption<MultiNodeIndex<K, T>>,
     {
         if self.is_none() {
             let self_index = self.index();
             C::NodeMap::remove(&self_index);
-            if let Some(header) = C::Header::get(&key).data() {
+            if let Some(header) = C::Header::get(&key).as_ref() {
                 if self_index == header.index {
                     C::Header::remove(&key);
                 }
             }
 
-            if let Some(tail) = C::Tail::get(&key).data() {
+            if let Some(tail) = C::Tail::get(&key).as_ref() {
                 if self_index == tail.index {
                     C::Tail::remove(&key);
                 }
@@ -710,7 +703,7 @@ impl<T: NodeT + Codec> Node<T> {
                 Some(next) => {
                     C::NodeMap::mutate(next, |next| {
                         // TODO add Result when substrate update
-                        if let Some(next_node) = next.mut_data() {
+                        if let Some(next_node) = next.as_mut() {
                             next_node.prev = None;
                             C::Header::insert(
                                 key.clone(),
@@ -733,7 +726,7 @@ impl<T: NodeT + Codec> Node<T> {
                 Some(prev) => {
                     C::NodeMap::mutate(prev, |prev| {
                         // TODO add Result when substrate update
-                        if let Some(prev_node) = prev.mut_data() {
+                        if let Some(prev_node) = prev.as_mut() {
                             prev_node.next = None;
                             C::Tail::insert(
                                 key.clone(),
@@ -757,14 +750,14 @@ impl<T: NodeT + Codec> Node<T> {
 
             C::NodeMap::mutate(&prev, |prev| {
                 // TODO add Result when substrate update
-                if let Some(prev_node) = prev.mut_data() {
+                if let Some(prev_node) = prev.as_mut() {
                     prev_node.next = Some(next.clone());
                     self.prev = None;
                 }
             });
             C::NodeMap::mutate(&next, |next| {
                 // TODO add Result when substrate update
-                if let Some(next_node) = next.mut_data() {
+                if let Some(next_node) = next.as_mut() {
                     next_node.prev = Some(prev.clone());
                     self.next = None;
                 }

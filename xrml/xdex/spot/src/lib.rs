@@ -37,8 +37,8 @@ extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate srml_consensus as consensus;
 extern crate xrml_bridge_bitcoin as xbitcoin;
-extern crate xrml_xassets_records as xrecords;
 extern crate xrml_xaccounts as xaccounts;
+extern crate xrml_xassets_records as xrecords;
 
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
@@ -420,7 +420,6 @@ impl<T: Trait> Module<T> {
         // 更新用户挂单
         Self::event_order(&order);
         <AccountOrder<T>>::insert((order.user.clone(), order.index), &order);
-        
 
         //撮合
         Self::do_match(&mut order, &pair, &handicap);
@@ -756,7 +755,7 @@ impl<T: Trait> Module<T> {
             (taker_order.user.clone(), taker_order.index),
             &taker_order.clone(),
         );
-        
+
         // 记录日志
         Self::deposit_event(RawEvent::FillOrder(
             fill.index,
@@ -887,7 +886,8 @@ impl<T: Trait> Module<T> {
                             || OrderStatus::FillPartAndCancel == order.status
                             || OrderStatus::Cancel == order.status
                         {
-                            Self::event_order(&order); //Event 记录挂单详情状态变更
+                            //Event 记录挂单详情状态变更
+                            Self::event_order(&order);
                             //删除挂单详情
                             <AccountOrder<T>>::remove(&list[i]);
                         } else {

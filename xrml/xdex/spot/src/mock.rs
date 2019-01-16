@@ -24,6 +24,7 @@ impl consensus::Trait for Test {
     type SessionKey = UintAuthorityId;
     type InherentOfflineReport = ();
 }
+
 impl system::Trait for Test {
     type Origin = Origin;
     type Index = u64;
@@ -44,21 +45,25 @@ impl balances::Trait for Test {
     type EnsureAccountLiquid = ();
     type Event = ();
 }
+
 impl timestamp::Trait for Test {
     const TIMESTAMP_SET_POSITION: u32 = 0;
     type Moment = u64;
     type OnTimestampSet = ();
 }
-impl xbitcoin::Trait for Test {
-}
-impl  xaccounts::Trait for Test {
+
+impl xbitcoin::Trait for Test {}
+
+impl xaccounts::Trait for Test {
     type Event = ();
 }
+
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegistration = ();
 }
+
 impl xrecords::Trait for Test {
     type Event = ();
 }

@@ -214,7 +214,7 @@ impl<T: Trait> Module<T> {
         );
 
         let n = Node::new(app);
-        n.init_storage_withkey::<LinkedMultiKey<T>, Chain>(asset.chain());
+        n.init_storage_with_key::<LinkedMultiKey<T>, Chain>(asset.chain());
         // set from tail
         if let Some(tail) = Self::application_mtail(asset.chain()) {
             let index = tail.index();
@@ -229,7 +229,7 @@ impl<T: Trait> Module<T> {
                     balance,
                 )
                 .map_err(|e| e.info())?;
-                node.add_option_node_after_withkey::<LinkedMultiKey<T>, Chain>(n, asset.chain())?;
+                node.add_option_after_with_key::<LinkedMultiKey<T>, Chain>(n, asset.chain())?;
             }
         }
 
@@ -252,7 +252,7 @@ impl<T: Trait> Module<T> {
 
         let asset = xassets::Module::<T>::get_asset(&node.data.token())?;
 
-        node.remove_option_node_withkey::<LinkedMultiKey<T>, Chain>(asset.chain())?;
+        node.remove_option_with_key::<LinkedMultiKey<T>, Chain>(asset.chain())?;
 
         let application = node.data;
         let who = application.applicant();
