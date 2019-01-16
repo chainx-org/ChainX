@@ -76,8 +76,8 @@ use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use ser::deserialize;
 use system::ensure_signed;
-use tx::{handle_tx, inspect_address, validate_transaction};
 pub use tx::RelayTx;
+use tx::{handle_tx, inspect_address, validate_transaction};
 use xassets::{Chain as ChainDef, ChainT};
 
 pub trait Trait:

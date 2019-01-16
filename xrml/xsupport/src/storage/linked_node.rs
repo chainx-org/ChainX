@@ -198,7 +198,7 @@ impl<T: NodeT + Codec> Node<T> {
     where
         C::Header: StorageValue<NodeIndex<T>>,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -238,8 +238,8 @@ impl<T: NodeT + Codec> Node<T> {
     pub fn add_option_after<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
     where
         C::NodeMap: StorageMap<T::Index, Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
         C::Tail: StorageValue<NodeIndex<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -365,8 +365,7 @@ impl<T: NodeT + Codec> Node<T> {
     where
         C::Header: StorageValue<NodeIndex<T>>,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            AsRef<Node<T>> + AsMut<Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRef<Node<T>> + AsMut<Node<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -404,8 +403,7 @@ impl<T: NodeT + Codec> Node<T> {
     pub fn add_after<C: LinkedNodeCollection>(&mut self, mut node: Node<T>) -> Result
     where
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            AsRef<Node<T>> + AsMut<Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRef<Node<T>> + AsMut<Node<T>>,
         C::Tail: StorageValue<NodeIndex<T>>,
     {
         let i = self.index();
@@ -443,8 +441,7 @@ impl<T: NodeT + Codec> Node<T> {
         C::Header: StorageValue<NodeIndex<T>>,
         <C::Header as StorageValue<NodeIndex<T>>>::Query: AsRef<NodeIndex<T>>,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query:
-            AsRef<Node<T>> + AsMut<Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRef<Node<T>> + AsMut<Node<T>>,
         C::Tail: StorageValue<NodeIndex<T>>,
         <C::Tail as StorageValue<NodeIndex<T>>>::Query: AsRef<NodeIndex<T>>,
     {
@@ -523,8 +520,8 @@ impl<T: NodeT + Codec> Node<T> {
 
     pub fn init_storage<C: LinkedNodeCollection>(&self)
     where
-        C::NodeMap: StorageMap<T::Index, Node<T>>,
         C::Header: StorageValue<NodeIndex<T>>,
+        C::NodeMap: StorageMap<T::Index, Node<T>>,
         C::Tail: StorageValue<NodeIndex<T>>,
     {
         if C::Header::exists() == false {
@@ -580,7 +577,7 @@ impl<T: NodeT + Codec> Node<T> {
         K: Codec + Clone + Eq + PartialEq + Default,
         C::Header: StorageMap<K, MultiNodeIndex<K, T>>,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
     {
         let i = self.index();
         if i == node.index() {
@@ -629,7 +626,7 @@ impl<T: NodeT + Codec> Node<T> {
     where
         K: Codec + Clone + Eq + PartialEq + Default,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
         C::Tail: StorageMap<K, MultiNodeIndex<K, T>>,
     {
         let i = self.index();
@@ -676,7 +673,7 @@ impl<T: NodeT + Codec> Node<T> {
         <C::Header as StorageMap<K, MultiNodeIndex<K, T>>>::Query:
             AsRefAndMutOption<MultiNodeIndex<K, T>>,
         C::NodeMap: StorageMap<T::Index, Node<T>>,
-        <C::NodeMap as StorageMap<<T as NodeT>::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
+        <C::NodeMap as StorageMap<T::Index, Node<T>>>::Query: AsRefAndMutOption<Node<T>>,
         C::Tail: StorageMap<K, MultiNodeIndex<K, T>>,
         <C::Tail as StorageMap<K, MultiNodeIndex<K, T>>>::Query:
             AsRefAndMutOption<MultiNodeIndex<K, T>>,
