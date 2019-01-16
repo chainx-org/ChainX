@@ -29,11 +29,12 @@ srml-consensus = { git = "https://github.com/chainpool/substrate", default-featu
 srml-session = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-grandpa = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-aura = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-sudo = { git = "https://github.com/chainpool/substrate", default-features = false }
 
-srml-contract = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-council = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-democracy = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-treasury = { git = "https://github.com/chainpool/substrate", default-features = false }
+#srml-contract = { git = "https://github.com/chainpool/substrate", default-features = false }
+#srml-council = { git = "https://github.com/chainpool/substrate", default-features = false }
+#srml-democracy = { git = "https://github.com/chainpool/substrate", default-features = false }
+#srml-treasury = { git = "https://github.com/chainpool/substrate", default-features = false }
 
 # chainx
 chainx-primitives = { path = "../primitives", default-features = false }
@@ -85,11 +86,12 @@ std = [
     "srml-session/std",
     "srml-grandpa/std",
     "srml-aura/std",
+    "srml-sudo/std",
 
-    "srml-contract/std",
-    "srml-council/std",
-    "srml-democracy/std",
-    "srml-treasury/std",
+#    "srml-contract/std",
+#    "srml-council/std",
+#    "srml-democracy/std",
+#    "srml-treasury/std",
     # chainx
     "chainx-primitives/std",
     # xr-primitives

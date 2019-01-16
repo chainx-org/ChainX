@@ -38,13 +38,14 @@ extern crate srml_balances as balances;
 extern crate srml_consensus as consensus;
 extern crate srml_grandpa as grandpa;
 extern crate srml_session as session;
+extern crate srml_sudo as sudo;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 // unused
-extern crate srml_contract as contract;
-extern crate srml_council as council;
-extern crate srml_democracy as democracy;
-extern crate srml_treasury as treasury;
+//extern crate srml_contract as contract;
+//extern crate srml_council as council;
+//extern crate srml_democracy as democracy;
+//extern crate srml_treasury as treasury;
 
 // chainx
 extern crate chainx_primitives;
@@ -283,6 +284,11 @@ impl xspot::Trait for Runtime {
     type Price = Balance;
 }
 
+impl sudo::Trait for Runtime {
+    type Event = Event;
+    type Proposal = Call;
+}
+
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
         Block = Block,
@@ -296,6 +302,7 @@ construct_runtime!(
         Session: session,
         Grandpa: grandpa::{Module, Call, Storage, Config<T>, Log(), Event<T>},
         Aura: aura::{Module},
+        Sudo: sudo,
 
         // chainx runtime module
         XSystem: xsystem::{Module, Call, Storage, Config<T>}, //, Inherent},

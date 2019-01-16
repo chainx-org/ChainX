@@ -2,6 +2,7 @@
 
 //use balances::Call as BalancesCall;
 use bitcoin::Call as BitcoinCall;
+use sudo::Call as SudoCall;
 use xassets::Call as XAssetsCall;
 use xprocess::Call as XAssetsProcessCall;
 use xspot::Call as XSpotCall;
@@ -53,6 +54,11 @@ impl CheckFee for Call {
             Call::XSpot(call) => match call {
                 XSpotCall::put_order(_, _, _, _, _) => Some(8),
                 XSpotCall::cancel_order(_, _) => Some(2),
+                _ => None,
+            },
+            Call::Sudo(call) => match call {
+                SudoCall::sudo(_) => Some(1),
+                SudoCall::set_key(_) => Some(1),
                 _ => None,
             },
             _ => None,

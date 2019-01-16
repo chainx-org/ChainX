@@ -18,8 +18,8 @@ use chainx_runtime::{
 };
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, Params, Perbill, Permill, SessionConfig,
-    TimestampConfig, XAccountsConfig, XAssetsConfig, XBridgeOfBTCConfig, XFeeManagerConfig,
-    XSpotConfig, XStakingConfig, XSystemConfig,
+    SudoConfig, TimestampConfig, XAccountsConfig, XAssetsConfig, XBridgeOfBTCConfig,
+    XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use ed25519;
@@ -109,6 +109,9 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .map(Into::into)
                 .collect(),
             session_length: 30, // 30 blocks per session
+        }),
+        sudo: Some(SudoConfig {
+            key: auth1.into(),
         }),
         grandpa: Some(GrandpaConfig {
             authorities: initial_authorities
