@@ -40,7 +40,10 @@ use codec::Encode;
 
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
-use runtime_primitives::traits::{As, Hash, Zero};
+use runtime_primitives::{
+    traits::{As, Hash, Zero},
+    Permill,
+};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
@@ -187,6 +190,8 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XTokens {
+        pub TokenDiscount get(token_discount) config(): Permill = Permill::from_percent(30);
+
         pub PseduIntentions get(psedu_intentions): Vec<Token>;
 
         pub PseduIntentionProfiles get(psedu_intention_profiles): map Token => PseduIntentionVoteWeight<T::BlockNumber>;
@@ -359,8 +364,8 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
                 let amount = <xassets::Module<T>>::all_type_balance(&token);
 
                 // Apply discount for psedu intentions
-                // TODO need to be configurable?
-                let stake = T::Balance::sa(price.as_() * amount.as_() * 3 / 10);
+                let stake =
+                    T::Balance::sa(Self::token_discount().times(price.as_() * amount.as_()));
 
                 (RewardHolder::PseduIntention(token), stake)
             })

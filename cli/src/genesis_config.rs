@@ -156,11 +156,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             offline_slash_grace: 0,
             offline_slash: Perbill::from_millionths(0),
             current_session_reward: 100,
-            intentions: initial_authorities
-                .clone()
-                .into_iter()
-                .map(|i| i.0.into())
-                .collect(),
+            intentions: vec![],
         }),
         xspot: Some(XSpotConfig {
             pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),5,true)],

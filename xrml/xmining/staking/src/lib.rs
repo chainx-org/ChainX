@@ -105,7 +105,7 @@ pub trait Trait:
     /// Time to distribute reward
     type OnReward: OnReward<Self::AccountId, Self::Balance>;
 
-    /// calc the jacking pool virtual accountid
+    /// Generate virtual AccountId for each (psedu) intention
     type DetermineJackpotAccountId: JackpotAccountIdFor<Self::AccountId>;
 }
 
@@ -121,7 +121,7 @@ where
 {
     fn accountid_for(origin: &T::AccountId) -> T::AccountId {
         let props = xaccounts::Module::<T>::intention_immutable_props_of(origin)
-            .expect("the origin accountid must be an exists intention.");
+            .expect("The original account must be an existing intention.");
         // cert_name
         let cert_name_hash = T::Hashing::hash(&props.activator);
         // name
@@ -275,7 +275,7 @@ decl_module! {
                             .filter(|ref n| <xaccounts::Module<T>>::intention_props_of(n.clone()).is_active)
                             .collect::<Vec<_>>();
                         if active.len() <= Self::minimum_validator_count() as usize {
-                            return Err("cannot pull out when there are too few active intentions");
+                            return Err("Cannot pull out when there are too few active intentions.");
                         }
                     }
                 }
