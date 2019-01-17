@@ -67,10 +67,12 @@ decl_module! {
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
-        <T as balances::Trait>::Balance
+        <T as balances::Trait>::Balance,
+        <T as timestamp::Trait>::Moment
     {
         Deposit(AccountId, Token, Balance),
-        Withdrawal(AccountId, Token, Balance, AddrStr, Memo),
+        WithdrawalApply(u32, AccountId, Token, Balance, AddrStr, Memo, Moment),
+        WithdrawalFinish(u32, bool),
     }
 );
 
@@ -203,7 +205,7 @@ impl<T: Trait> Module<T> {
         let asset = xassets::Module::<T>::get_asset(token)?;
 
         let id = Self::number();
-        let app = Application::<T::AccountId, T::Balance, T::Moment>::new(
+        let appl = Application::<T::AccountId, T::Balance, T::Moment>::new(
             id,
             who.clone(),
             token.clone(),
@@ -213,7 +215,7 @@ impl<T: Trait> Module<T> {
             timestamp::Module::<T>::now(),
         );
 
-        let n = Node::new(app);
+        let n = Node::new(appl.clone());
         n.init_storage_with_key::<LinkedMultiKey<T>, Chain>(asset.chain());
         // set from tail
         if let Some(tail) = Self::application_mtail(asset.chain()) {
@@ -239,11 +241,21 @@ impl<T: Trait> Module<T> {
         };
         SerialNumber::<T>::put(newid);
 
+        Self::deposit_event(RawEvent::WithdrawalApply(
+            appl.id,
+            appl.applicant,
+            appl.token,
+            appl.balance,
+            appl.addr,
+            appl.ext,
+            appl.time,
+        ));
         Ok(())
     }
 
     /// withdrawal finish, let the locking token destroy
     pub fn withdrawal_finish(serial_number: u32) -> Result {
+        // TODO add success or failed
         let mut node = if let Some(node) = Self::application_map(serial_number) {
             node
         } else {
@@ -260,13 +272,7 @@ impl<T: Trait> Module<T> {
         let balance = application.balance();
         // destroy reserved token
         xassets::Module::<T>::destroy(&token, &who, balance)?;
-        Self::deposit_event(RawEvent::Withdrawal(
-            who,
-            token,
-            balance,
-            application.addr(),
-            application.ext(),
-        ));
+        Self::deposit_event(RawEvent::WithdrawalFinish(serial_number, true));
         Ok(())
     }
 

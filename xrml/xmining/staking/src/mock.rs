@@ -52,7 +52,7 @@ impl xaccounts::Trait for Test {
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
-    type OnAssetRegistration = ();
+    type OnAssetRegisterOrRevoke = ();
 }
 impl xsystem::Trait for Test {
     const XSYSTEM_SET_POSITION: u32 = 3;

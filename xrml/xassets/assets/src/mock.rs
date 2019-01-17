@@ -41,7 +41,7 @@ impl Trait for Test {
     /// Event
     type Event = ();
     type OnAssetChanged = ();
-    type OnAssetRegistration = ();
+    type OnAssetRegisterOrRevoke = ();
 }
 
 pub type XAssets = Module<Test>;

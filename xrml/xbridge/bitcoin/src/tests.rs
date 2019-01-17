@@ -84,7 +84,7 @@ impl xrecords::Trait for Test {
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
-    type OnAssetRegistration = ();
+    type OnAssetRegisterOrRevoke = ();
 }
 //
 //impl staking::Trait for Test {

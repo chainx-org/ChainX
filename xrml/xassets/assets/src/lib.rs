@@ -63,7 +63,7 @@ pub trait Trait: balances::Trait {
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, Self::Balance>;
 
-    type OnAssetRegistration: OnAssetRegistration;
+    type OnAssetRegisterOrRevoke: OnAssetRegisterOrRevoke;
 }
 
 pub trait OnAssetChanged<AccountId, Balance> {
@@ -79,8 +79,8 @@ pub trait OnAssetChanged<AccountId, Balance> {
     fn on_destroy(token: &Token, who: &AccountId, value: Balance) -> Result;
     fn on_set_balance(
         _token: &Token,
-        _type: AssetType,
         _who: &AccountId,
+        _type: AssetType,
         _value: Balance,
     ) -> Result {
         Ok(())
@@ -106,12 +106,60 @@ impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {
     }
 }
 
-pub trait OnAssetRegistration {
-    fn register_psedu_intention(_: Token) -> Result;
+pub trait OnAssetRegisterOrRevoke {
+    fn on_register(_: &Token, _: bool) -> Result;
+    fn on_revoke(_: &Token) -> Result;
 }
 
-impl OnAssetRegistration for () {
-    fn register_psedu_intention(_: Token) -> Result {
+impl OnAssetRegisterOrRevoke for () {
+    fn on_register(_: &Token, _: bool) -> Result {
+        Ok(())
+    }
+    fn on_revoke(_: &Token) -> Result {
+        Ok(())
+    }
+}
+
+struct AssetTriggerEventAfter<T: Trait>(::rstd::marker::PhantomData<T>);
+
+impl<T: Trait> AssetTriggerEventAfter<T> {
+    fn on_move(
+        token: &Token,
+        from: &T::AccountId,
+        from_type: AssetType,
+        to: &T::AccountId,
+        to_type: AssetType,
+        value: T::Balance,
+    ) -> StdResult<(), AssetErr> {
+        T::OnAssetChanged::on_move(token, from, from_type, to, to_type, value)?;
+        Module::<T>::deposit_event(RawEvent::Move(
+            token.clone(),
+            from.clone(),
+            from_type,
+            to.clone(),
+            to_type,
+            value,
+        ));
+        Ok(())
+    }
+    fn on_issue(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
+        T::OnAssetChanged::on_issue(token, who, value)?;
+        Module::<T>::deposit_event(RawEvent::Issue(token.clone(), who.clone(), value));
+        Ok(())
+    }
+    fn on_destroy(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
+        T::OnAssetChanged::on_destroy(token, who, value)?;
+        Module::<T>::deposit_event(RawEvent::Destory(token.clone(), who.clone(), value));
+        Ok(())
+    }
+    fn on_set_balance(
+        token: &Token,
+        who: &T::AccountId,
+        type_: AssetType,
+        value: T::Balance,
+    ) -> Result {
+        T::OnAssetChanged::on_set_balance(token, who, type_, value)?;
+        Module::<T>::deposit_event(RawEvent::Set(token.clone(), who.clone(), type_, value));
         Ok(())
     }
 }
@@ -126,6 +174,7 @@ pub enum AssetType {
     ReservedDexSpot,
     ReservedDexFuture,
 }
+
 // TODO use marco to improve it
 #[cfg(feature = "std")]
 impl AssetType {
@@ -150,28 +199,42 @@ impl Default for AssetType {
 
 decl_event!(
     pub enum Event<T> where
+        <T as system::Trait>::AccountId,
         <T as balances::Trait>::Balance
     {
-        Fee(Balance),
+        Move(Token, AccountId, AssetType, AccountId, AssetType, Balance),
+        Issue(Token, AccountId, Balance),
+        Destory(Token, AccountId, Balance),
+        Set(Token, AccountId, AssetType, Balance),
+        Register(Token, bool),
+        Revoke(Token),
     }
 );
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        fn deposit_event<T>() = default;
+
         /// register_asset to module, should allow by root
         fn register_asset(asset: Asset, is_psedu_intention: bool, free: T::Balance) -> Result {
             asset.is_valid()?;
-            if is_psedu_intention {
-                T::OnAssetRegistration::register_psedu_intention(asset.token())?;
-            }
+
+            let token = asset.token();
+
             Self::add_asset(asset, free)?;
+
+            T::OnAssetRegisterOrRevoke::on_register(&token, is_psedu_intention)?;
+            Self::deposit_event(RawEvent::Register(token, is_psedu_intention));
             Ok(())
         }
 
-        /// cancel asset, mark this asset is invalid
-        fn cancel_asset(token: Token) -> Result {
+        /// revoke asset, mark this asset is invalid
+        fn revoke_asset(token: Token) -> Result {
             is_valid_token(&token)?;
             Self::remove_asset(&token)?;
+
+            T::OnAssetRegisterOrRevoke::on_revoke(&token)?;
+            Self::deposit_event(RawEvent::Revoke(token));
             Ok(())
         }
 
@@ -486,7 +549,7 @@ impl<T: Trait> Module<T> {
     pub fn get_asset(token: &Token) -> StdResult<Asset, &'static str> {
         if let Some((asset, valid, _)) = Self::asset_info(token) {
             if valid == false {
-                return Err("this asset is invalid, maybe has cancelled.");
+                return Err("this asset is invalid, maybe has been revoked.");
             }
             Ok(asset)
         } else {
@@ -511,7 +574,7 @@ impl<T: Trait> Module<T> {
             };
             Self::increase_total_stake_by(value);
 
-            T::OnAssetChanged::on_issue(token, who, value)?;
+            AssetTriggerEventAfter::<T>::on_issue(token, who, value)?;
             return Ok(());
         }
 
@@ -535,7 +598,7 @@ impl<T: Trait> Module<T> {
         Self::set_total_asset_balance(token, AssetType::Free, new_total_free_token);
         Self::set_asset_balance(who, token, AssetType::Free, new_free_token);
 
-        T::OnAssetChanged::on_issue(token, who, value)?;
+        AssetTriggerEventAfter::<T>::on_issue(token, who, value)?;
         Ok(())
     }
 
@@ -561,7 +624,7 @@ impl<T: Trait> Module<T> {
         Self::set_total_asset_balance(token, type_, new_total_reserved_token);
         Self::set_asset_balance(who, token, type_, new_reserved_token);
 
-        T::OnAssetChanged::on_destroy(token, who, value)?;
+        AssetTriggerEventAfter::<T>::on_destroy(token, who, value)?;
         Ok(())
     }
 
@@ -621,7 +684,7 @@ impl<T: Trait> Module<T> {
             Self::set_asset_balance(to, token, to_type, new_to_balance);
         }
 
-        T::OnAssetChanged::on_move(token, from, from_type, to, to_type, value)?;
+        AssetTriggerEventAfter::<T>::on_move(token, from, from_type, to, to_type, value)?;
         Ok(())
     }
 
@@ -670,7 +733,7 @@ impl<T: Trait> Module<T> {
             } else {
                 Self::set_total_asset_balance(token, type_, new_total_val);
             }
-            T::OnAssetChanged::on_set_balance(token, type_, who, val)?;
+            AssetTriggerEventAfter::<T>::on_set_balance(token, who, type_, val)?;
         }
         Ok(())
     }

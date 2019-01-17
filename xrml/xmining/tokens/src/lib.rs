@@ -45,7 +45,7 @@ use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
 use xassets::{AssetErr, AssetType, ChainT, Token};
-use xassets::{OnAssetChanged, OnAssetRegistration};
+use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
 
 /// This module only tracks the vote weight related changes.
@@ -324,16 +324,27 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> OnAssetRegistration for Module<T> {
-    fn register_psedu_intention(token: Token) -> Result {
+impl<T: Trait> OnAssetRegisterOrRevoke for Module<T> {
+    fn on_register(token: &Token, is_psedu_intention: bool) -> Result {
+        if is_psedu_intention == false {
+            return Ok(());
+        }
+
         ensure!(
             Self::psedu_intentions()
                 .into_iter()
-                .find(|i| *i == token)
+                .find(|i| i == token)
                 .is_none(),
             "Cannot register psedu intention repeatedly."
         );
-        <PseduIntentions<T>>::mutate(|i| i.push(token));
+        <PseduIntentions<T>>::mutate(|i| i.push(token.clone()));
+        Ok(())
+    }
+
+    fn on_revoke(token: &Token) -> Result {
+        <PseduIntentions<T>>::mutate(|v| {
+            v.retain(|t| t != token);
+        });
         Ok(())
     }
 }

@@ -28,7 +28,7 @@ impl CheckFee for Call {
                 // root
                 XAssetsCall::set_balance(_, _, _) => Some(0),
                 XAssetsCall::register_asset(_, _, _) => Some(0),
-                XAssetsCall::cancel_asset(_) => Some(0),
+                XAssetsCall::revoke_asset(_) => Some(0),
                 _ => None,
             },
             Call::XAssetsProcess(call) => match call {

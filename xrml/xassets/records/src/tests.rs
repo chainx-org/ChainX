@@ -42,7 +42,7 @@ impl balances::Trait for Test {
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
-    type OnAssetRegistration = ();
+    type OnAssetRegisterOrRevoke = ();
 }
 
 impl Trait for Test {

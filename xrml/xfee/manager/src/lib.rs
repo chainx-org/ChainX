@@ -167,7 +167,7 @@ mod tests {
         /// Event
         type Event = ();
         type OnAssetChanged = ();
-        type OnAssetRegistration = ();
+        type OnAssetRegisterOrRevoke = ();
     }
 
     impl xsystem::Trait for Test {
