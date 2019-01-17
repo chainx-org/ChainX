@@ -44,6 +44,7 @@ mod tests;
 use codec::Codec;
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
+
 use runtime_support::StorageValue;
 
 use xr_primitives::XString;

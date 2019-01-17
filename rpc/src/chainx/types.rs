@@ -32,6 +32,34 @@ pub struct AssetInfo {
     pub details: CodecBTreeMap<AssetType, Balance>,
 }
 
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TotalAssetInfo {
+    name: String,
+    is_native: bool,
+    chain: Chain,
+    precision: u16,
+    desc: String,
+    details: CodecBTreeMap<AssetType, Balance>,
+}
+
+impl TotalAssetInfo {
+    pub fn new(asset: Asset, details: CodecBTreeMap<AssetType, Balance>) -> TotalAssetInfo {
+        TotalAssetInfo {
+            name: String::from_utf8_lossy(&asset.token()).into_owned(),
+            is_native: if asset.chain() == Chain::ChainX {
+                true
+            } else {
+                false
+            },
+            chain: asset.chain(),
+            precision: asset.precision(),
+            desc: String::from_utf8_lossy(&asset.desc()).into_owned(),
+            details,
+        }
+    }
+}
+
 /// Intention info
 #[derive(Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]

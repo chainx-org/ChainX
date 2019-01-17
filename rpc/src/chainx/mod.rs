@@ -46,7 +46,7 @@ mod types;
 use self::error::Result;
 use self::types::{
     ApplicationWrapper, AssetInfo, CertInfo, IntentionInfo, PageData, PairInfo, PseduIntentionInfo,
-    PseduNominationRecord, QuotationsList, WithdrawalState,
+    PseduNominationRecord, QuotationsList, TotalAssetInfo, WithdrawalState,
 };
 use chainx::error::ErrorKind::{OrderPairIDErr, PageIndexErr, PageSizeErr, QuotationssPieceErr};
 
@@ -67,7 +67,7 @@ build_rpc_trait! {
         fn assets_of(&self, AccountId, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
 
         #[rpc(name = "chainx_getAssets")]
-        fn assets(&self, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
+        fn assets(&self, u32, u32) -> Result<Option<PageData<TotalAssetInfo>>>;
 
         #[rpc(name = "chainx_getVerifyAddress")]
         fn verify_addr(&self, xassets::Token, xrecords::AddrStr, xassets::Memo) -> Result<Option<Vec<u8>>>;
@@ -349,7 +349,7 @@ where
         into_pagedata(assets, page_index, page_size)
     }
 
-    fn assets(&self, page_index: u32, page_size: u32) -> Result<Option<PageData<AssetInfo>>> {
+    fn assets(&self, page_index: u32, page_size: u32) -> Result<Option<PageData<TotalAssetInfo>>> {
         let b = self.best_number()?;
         let tokens: Result<Vec<Token>> = self
             .client
@@ -372,14 +372,17 @@ where
                 bmap.extend(info.0.iter());
             }
 
-            let asset = Self::get_asset(&state, &token)?;
-            let is_native = match asset {
-                Some(info) => match info.chain() {
-                    Chain::ChainX => true,
-                    _ => false,
-                },
+            let asset = match Self::get_asset(&state, &token)? {
+                Some(info) => info,
                 None => unreachable!("should not reach this branch, the token info must be exists"),
             };
+            //            let (is_native , asset) = match asset {
+            //                Some(info) => match info.chain() {
+            //                    Chain::ChainX => (true, info),
+            //                    _ => (false, info),
+            //                },
+            //                None => unreachable!("should not reach this branch, the token info must be exists"),
+            //            };
 
             // PCX free balance
             if token.as_slice() == xassets::Module::<Runtime>::TOKEN {
@@ -393,11 +396,7 @@ where
                 bmap.insert(xassets::AssetType::Free, free_issue);
             }
 
-            assets.push(AssetInfo {
-                name: String::from_utf8_lossy(&token).into_owned(),
-                is_native,
-                details: CodecBTreeMap(bmap),
-            });
+            assets.push(TotalAssetInfo::new(asset, CodecBTreeMap(bmap)));
         }
 
         into_pagedata(assets, page_index, page_size)
