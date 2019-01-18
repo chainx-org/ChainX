@@ -449,8 +449,17 @@ where
                     info.precision = pair.precision;
                     info.used = pair.used;
 
+                    let price_key=<xspot::OrderPairPriceOf<Runtime>>::key_for(&i);
+                    if let Some(price)=Self::pickout::<(Balance,Balance,BlockNumber)>(&state,&price_key)?{
+                        info.last_price=price.0;
+                        info.aver_price=price.1;
+                        info.update_height=price.2;
+                    }
+
+
                     pairs.push(info);
                 }
+
             }
         }
 
