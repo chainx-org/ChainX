@@ -223,15 +223,7 @@ impl<T: Trait> Module<T> {
             let index = tail.index();
             if let Some(mut node) = Self::application_map(index) {
                 // reserve token, wait to destroy
-                xassets::Module::<T>::move_balance(
-                    token,
-                    who,
-                    AssetType::Free,
-                    who,
-                    AssetType::ReservedWithdrawal,
-                    balance,
-                )
-                .map_err(|e| e.info())?;
+                Self::lock(who, token, balance)?;
                 node.add_option_after_with_key::<LinkedMultiKey<T>, Chain>(n, asset.chain())?;
             }
         }
@@ -255,8 +247,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// withdrawal finish, let the locking token destroy
-    pub fn withdrawal_finish(serial_number: u32) -> Result {
-        // TODO add success or failed
+    pub fn withdrawal_finish(serial_number: u32, success: bool) -> Result {
         let mut node = if let Some(node) = Self::application_map(serial_number) {
             node
         } else {
@@ -272,9 +263,42 @@ impl<T: Trait> Module<T> {
         let token = application.token();
         let balance = application.balance();
         // destroy reserved token
-        xassets::Module::<T>::destroy(&token, &who, balance)?;
-        Self::deposit_event(RawEvent::WithdrawalFinish(serial_number, true));
+        if success {
+            Self::destroy(&who, &token, balance)?;
+        } else {
+            Self::unlock(&who, &token, balance)?;
+        }
+
+        Self::deposit_event(RawEvent::WithdrawalFinish(serial_number, success));
         Ok(())
+    }
+
+    fn lock(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
+        xassets::Module::<T>::move_balance(
+            token,
+            who,
+            AssetType::Free,
+            who,
+            AssetType::ReservedWithdrawal,
+            value,
+        )
+        .map_err(|e| e.info())
+    }
+
+    fn unlock(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
+        xassets::Module::<T>::move_balance(
+            token,
+            who,
+            AssetType::ReservedWithdrawal,
+            who,
+            AssetType::Free,
+            value,
+        )
+        .map_err(|e| e.info())
+    }
+
+    fn destroy(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
+        xassets::Module::<T>::destroy(&token, &who, value)
     }
 
     pub fn withdrawal_application_numbers(chain: Chain, max_count: u32) -> Option<Vec<u32>> {

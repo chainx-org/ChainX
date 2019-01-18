@@ -32,8 +32,9 @@ impl<'a> TxHandler<'a> {
     }
 
     pub fn withdraw<T: Trait>(&self, trustee_address: &keys::Address) -> Result {
-        runtime_io::print("[bridge-btc] handle_input start");
+        runtime_io::print("[bridge-btc] handle_withdraw start");
 
+        //delete used
         let txid = self.0;
         let tx_info = <TxFor<T>>::get(txid);
         let out_point_set = tx_info
@@ -42,10 +43,10 @@ impl<'a> TxHandler<'a> {
             .iter()
             .map(|input| input.previous_output.clone())
             .collect();
-
         delete_utxo::<T>(out_point_set);
         runtime_io::print("[bridge-btc] handle_input delete_from_outpoint");
 
+        //Give change
         let mut index = 0;
         for output in tx_info.raw_tx.clone().outputs {
             if is_key(&output.script_pubkey, &trustee_address) {
@@ -66,15 +67,21 @@ impl<'a> TxHandler<'a> {
         if let Some(data) = <TxProposal<T>>::take() {
             let candidate = data.clone();
             // 当提上来的提现交易和待签名原文不一致时， 说明系统BTC托管有异常
-            ensure_identical(&tx_info.raw_tx, &data.tx)?;
+            match ensure_identical(&tx_info.raw_tx, &data.tx) {
+                Ok(()) => {
+                    let txid = candidate.tx.hash();
+                    for number in candidate.outs.iter() {
+                        runtime_io::print(*number as u64);
+                        runtime_io::print(&txid[..]);
 
-            let txid = candidate.tx.hash();
-            for number in candidate.outs.iter() {
-                runtime_io::print(*number as u64);
-                runtime_io::print(&txid[..]);
-
-                <xrecords::Module<T>>::withdrawal_finish(*number)?;
-                runtime_io::print("[bridge-btc] withdrawal finish");
+                        <xrecords::Module<T>>::withdrawal_finish(*number, true)?;
+                        runtime_io::print("[bridge-btc] withdrawal finish");
+                    }
+                }
+                Err(_) => {
+                    <TxProposal<T>>::put(data);
+                    runtime_io::print("[bridge-btc] withdrawal failed");
+                }
             }
         }
         Ok(())
