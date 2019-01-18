@@ -1,9 +1,11 @@
 // Copyright 2019 Chainpool.
 
 mod checked_extrinsic;
+mod unchecked_mortal_compact_extrinsic;
 mod unchecked_mortal_extrinsic;
 
 pub use self::checked_extrinsic::CheckedExtrinsic;
+pub use self::unchecked_mortal_compact_extrinsic::UncheckedMortalCompactExtrinsic;
 pub use self::unchecked_mortal_extrinsic::UncheckedMortalExtrinsic;
 
 use codec::Encode;

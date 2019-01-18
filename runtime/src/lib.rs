@@ -333,7 +333,7 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 /// Custom Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-    xr_primitives::generic::UncheckedMortalExtrinsic<Address, Index, Call, Signature, Acceleration>;
+    xr_primitives::generic::UncheckedMortalCompactExtrinsic<Address, Index, Call, Signature, Acceleration>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive =
     xexecutive::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;
