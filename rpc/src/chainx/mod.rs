@@ -46,8 +46,8 @@ mod types;
 
 use self::error::Result;
 use self::types::{
-    ApplicationWrapper, AssetInfo, CertInfo, IntentionInfo, PageData, PairInfo, PseduIntentionInfo,
-    PseduNominationRecord, QuotationsList, TotalAssetInfo, WithdrawalState,
+    ApplicationWrapper, AssetInfo, CertInfo, DepositInfo, IntentionInfo, PageData, PairInfo,
+    PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, WithdrawalState,
 };
 use chainx::error::ErrorKind::{OrderPairIDErr, PageIndexErr, PageSizeErr, QuotationssPieceErr};
 
@@ -101,7 +101,7 @@ build_rpc_trait! {
         fn orders(&self, AccountId, u32, u32) -> Result<Option<PageData<OrderT<Runtime>>>>;
 
         #[rpc(name = "chainx_getDepositRecords")]
-        fn deposit_records(&self, AccountId) -> Result<Option<Vec<(u64, String, BlockNumber, String, Balance, String)>>>;
+        fn deposit_records(&self, AccountId) -> Result<Option<Vec<DepositInfo>>>;
     }
 }
 

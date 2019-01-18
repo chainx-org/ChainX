@@ -188,3 +188,19 @@ impl ApplicationWrapper {
         }
     }
 }
+
+#[derive(Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DepositInfo {
+    pub time: u64,
+    /// txid
+    pub txid: String,
+    /// block height
+    pub height: u64,
+    /// btc-address
+    pub address: String,
+    /// deposit-balance
+    pub balance: Balance,
+    /// OP_RETURN
+    pub op_return: String,
+}

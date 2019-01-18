@@ -612,10 +612,7 @@ where
         Ok(Some(d))
     }
 
-    fn deposit_records(
-        &self,
-        who: AccountId,
-    ) -> Result<Option<Vec<(u64, String, BlockNumber, String, Balance, String)>>> {
+    fn deposit_records(&self, who: AccountId) -> Result<Option<Vec<DepositInfo>>> {
         let state = self.best_state()?;
         let mut records = Vec::new();
         let key = <IrrBlock<Runtime>>::key();
@@ -630,41 +627,40 @@ where
         } else {
             return Ok(None);
         };
-
         let key = <TrusteeAddress<Runtime>>::key();
         let trustee = if let Some(a) = Self::pickout::<keys::Address>(&state, &key)? {
             a
         } else {
             return Ok(None);
         };
-
         let key = <BestIndex<Runtime>>::key();
         if let Some(best_hash) = Self::pickout::<btc_chain::hash::H256>(&state, &key)? {
             let mut block_hash = best_hash;
             for _i in 0..irr_count {
                 let key = <BlockHeaderFor<Runtime>>::key_for(&block_hash);
-                if let Some(header) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
-                    for txid in header.txid {
+                if let Some(header_info) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
+                    for txid in header_info.txid {
                         let key = <TxFor<Runtime>>::key_for(&txid);
                         if let Some(info) = Self::pickout::<TxInfo>(&state, &key)? {
                             match get_deposit_info(&info.raw_tx, who, &info, &trustee, &bind_list) {
                                 Some(dep) => {
                                     let tx_hash = txid.to_string();
-                                    let address = info.input_address.to_string();
-                                    records.push((
-                                        header.header.time as u64,
-                                        tx_hash,
-                                        header.height as u64,
-                                        address,
-                                        dep.0,
-                                        dep.1,
-                                    ));
+                                    let btc_address = info.input_address.to_string();
+                                    let info = DepositInfo {
+                                        time: header_info.header.time as u64,
+                                        txid: tx_hash,
+                                        height: header_info.height as u64,
+                                        address: btc_address,
+                                        balance: dep.0,
+                                        op_return: dep.1,
+                                    };
+                                    records.push(info);
                                 }
                                 None => continue,
                             }
                         }
                     }
-                    block_hash = header.header.previous_header_hash;
+                    block_hash = header_info.header.previous_header_hash;
                 }
             }
         }
