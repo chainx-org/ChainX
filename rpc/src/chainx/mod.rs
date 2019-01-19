@@ -8,17 +8,17 @@ use btc_chain::Transaction as BTCTransaction;
 use codec::{Decode, Encode};
 use jsonrpc_macros::Trailing;
 use serde::Serialize;
+use std::str::FromStr;
 
 use client::runtime_api::Core as CoreAPI;
 use client::{self, runtime_api::Metadata, Client};
 use keys::Address;
-use script::Script;
-use state_machine::Backend;
-
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
 use runtime_primitives::traits::{As, Block as BlockT, Header, NumberFor, ProvideRuntimeApi, Zero};
+use script::Script;
+use state_machine::Backend;
 
 use srml_support::storage::{StorageMap, StorageValue};
 
@@ -42,7 +42,7 @@ use self::runtime_api::{xassets_api::XAssetsApi, xmining_api::XMiningApi};
 
 mod error;
 mod impl_rpc;
-mod types;
+pub mod types;
 
 use self::error::Result;
 use self::types::{
@@ -101,7 +101,13 @@ build_rpc_trait! {
         fn orders(&self, AccountId, u32, u32) -> Result<Option<PageData<OrderT<Runtime>>>>;
 
         #[rpc(name = "chainx_getDepositRecords")]
-        fn deposit_records(&self, AccountId) -> Result<Option<Vec<DepositInfo>>>;
+        fn deposit_records(&self, AccountId, u32, u32) -> Result<Option<PageData<DepositInfo>>>;
+
+        #[rpc(name = "chainx_getAccountByBTCAddress")]
+        fn account(&self, String) -> Result<Option<AccountId>>;
+
+        #[rpc(name = "chainx_getBTCAddressByAccount")]
+        fn address(&self, AccountId) -> Result<Option<Vec<String>>>;
     }
 }
 

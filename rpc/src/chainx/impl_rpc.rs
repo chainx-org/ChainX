@@ -173,8 +173,23 @@ where
                 let free_issue = total_issue - other_total;
                 bmap.insert(xassets::AssetType::Free, free_issue);
             }
+            let mut trustee_addr = String::default();
+            if token.as_slice() == xbitcoin::Module::<Runtime>::TOKEN {
+                let key = <TrusteeAddress<Runtime>>::key();
+                let trustee = match Self::pickout::<keys::Address>(&state, &key)? {
+                    Some(a) => a,
+                    None => unreachable!(
+                        "should not reach this branch, the trustee address info must be exists"
+                    ),
+                };
+                trustee_addr = trustee.to_string();
+            }
 
-            assets.push(TotalAssetInfo::new(asset, CodecBTreeMap(bmap)));
+            assets.push(TotalAssetInfo::new(
+                asset,
+                trustee_addr,
+                CodecBTreeMap(bmap),
+            ));
         }
 
         into_pagedata(assets, page_index, page_size)
@@ -449,17 +464,17 @@ where
                     info.precision = pair.precision;
                     info.used = pair.used;
 
-                    let price_key=<xspot::OrderPairPriceOf<Runtime>>::key_for(&i);
-                    if let Some(price)=Self::pickout::<(Balance,Balance,BlockNumber)>(&state,&price_key)?{
-                        info.last_price=price.0;
-                        info.aver_price=price.1;
-                        info.update_height=price.2;
+                    let price_key = <xspot::OrderPairPriceOf<Runtime>>::key_for(&i);
+                    if let Some(price) =
+                        Self::pickout::<(Balance, Balance, BlockNumber)>(&state, &price_key)?
+                    {
+                        info.last_price = price.0;
+                        info.aver_price = price.1;
+                        info.update_height = price.2;
                     }
-
 
                     pairs.push(info);
                 }
-
             }
         }
 
@@ -621,31 +636,39 @@ where
         Ok(Some(d))
     }
 
-    fn deposit_records(&self, who: AccountId) -> Result<Option<Vec<DepositInfo>>> {
+    fn deposit_records(
+        &self,
+        who: AccountId,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<DepositInfo>>> {
         let state = self.best_state()?;
         let mut records = Vec::new();
         let key = <IrrBlock<Runtime>>::key();
         let irr_count = if let Some(irr) = Self::pickout::<u32>(&state, &key)? {
             irr
         } else {
-            return Ok(None);
+            return into_pagedata(records, page_index, page_size);
         };
         let key = <AccountMap<Runtime>>::key_for(&who);
         let bind_list = if let Some(list) = Self::pickout::<Vec<Address>>(&state, &key)? {
             list
         } else {
-            return Ok(None);
+            return into_pagedata(records, page_index, page_size);
         };
         let key = <TrusteeAddress<Runtime>>::key();
         let trustee = if let Some(a) = Self::pickout::<keys::Address>(&state, &key)? {
             a
         } else {
-            return Ok(None);
+            return into_pagedata(records, page_index, page_size);
         };
+
+        let token = xbitcoin::Module::<Runtime>::TOKEN;
+        let stoken = String::from_utf8_lossy(&token).into_owned();
         let key = <BestIndex<Runtime>>::key();
         if let Some(best_hash) = Self::pickout::<btc_chain::hash::H256>(&state, &key)? {
             let mut block_hash = best_hash;
-            for _i in 0..irr_count {
+            for i in 0..irr_count {
                 let key = <BlockHeaderFor<Runtime>>::key_for(&block_hash);
                 if let Some(header_info) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
                     for txid in header_info.txid {
@@ -656,12 +679,14 @@ where
                                     let tx_hash = txid.to_string();
                                     let btc_address = info.input_address.to_string();
                                     let info = DepositInfo {
-                                        time: header_info.header.time as u64,
+                                        time: header_info.header.time,
                                         txid: tx_hash,
-                                        height: header_info.height as u64,
+                                        confirm: i,
+                                        total_confirm: irr_count,
                                         address: btc_address,
                                         balance: dep.0,
-                                        op_return: dep.1,
+                                        token: stoken.clone(),
+                                        remarks: dep.1,
                                     };
                                     records.push(info);
                                 }
@@ -673,10 +698,35 @@ where
                 }
             }
         }
-        if records.is_empty() {
-            return Ok(None);
+        into_pagedata(records, page_index, page_size)
+    }
+
+    fn account(&self, btc_addr: String) -> Result<Option<AccountId>> {
+        let state = self.best_state()?;
+        let addr = match Address::from_str(btc_addr.as_str()) {
+            Ok(a) => a,
+            Err(_) => return Ok(None),
+        };
+        let key = <xbitcoin::AddressMap<Runtime>>::key_for(&addr);
+        match Self::pickout::<AccountId>(&state, &key)? {
+            Some(a) => Ok(Some(a)),
+            None => Ok(None),
         }
-        Ok(Some(records))
+    }
+
+    fn address(&self, account: AccountId) -> Result<Option<Vec<String>>> {
+        let state = self.best_state()?;
+        let mut v = vec![];
+        let key = <xbitcoin::AccountMap<Runtime>>::key_for(&account);
+        match Self::pickout::<Vec<Address>>(&state, &key)? {
+            Some(addrs) => {
+                for a in addrs {
+                    v.push(a.to_string());
+                }
+                return Ok(Some(v));
+            }
+            None => Ok(Some(v)),
+        }
     }
 }
 
@@ -734,6 +784,10 @@ fn get_deposit_info(
 }
 
 fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {
+    if page_size == 0 {
+        return Err(PageSizeErr.into());
+    }
+
     let page_total = (src.len() as u32 + (page_size - 1)) / page_size;
     if page_index >= page_total && page_total > 0 {
         return Err(PageIndexErr.into());

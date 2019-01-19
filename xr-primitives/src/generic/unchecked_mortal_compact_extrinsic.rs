@@ -39,7 +39,13 @@ pub struct UncheckedMortalCompactExtrinsic<Address, Index, Call, Signature, Acce
     /// The signature, address, number of extrinsics have come before from
     /// the same signer and an era describing the longevity of this transaction,
     /// if this is a signed extrinsic.
-    pub signature: Option<(Address, Signature, Compact<Index>, Era, Compact<Acceleration>)>,
+    pub signature: Option<(
+        Address,
+        Signature,
+        Compact<Index>,
+        Era,
+        Compact<Acceleration>,
+    )>,
     /// The function that should be called.
     pub function: Call,
 }
@@ -279,7 +285,14 @@ mod tests {
             DUMMY_ACCOUNTID,
             TestSig(
                 DUMMY_ACCOUNTID,
-                (DUMMY_ACCOUNTID, DUMMY_FUNCTION, Era::immortal(), 0u64, Compact::<u32>::from(1)).encode(),
+                (
+                    DUMMY_ACCOUNTID,
+                    DUMMY_FUNCTION,
+                    Era::immortal(),
+                    0u64,
+                    Compact::<u32>::from(1),
+                )
+                    .encode(),
             ),
             Era::immortal(),
             1,

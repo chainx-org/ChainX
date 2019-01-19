@@ -41,8 +41,8 @@ error_chain! {
             display("Quotationss Piece Err"),
         }
         PageSizeErr{
-            description("Page Size Must Less 100"),
-            display("Page Size Must Less 100"),
+            description("Page Size Must Between 0~100"),
+            display("Page Size Must Between 0~100"),
         }
         PageIndexErr{
             description("Page Index Error"),
@@ -101,7 +101,7 @@ impl From<Error> for rpc::Error {
             },
             Error(ErrorKind::PageSizeErr, _) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 7),
-                message: "Page Size Must Less 100.".into(),
+                message: "Page Size Must Between 0~100.".into(),
                 data: None,
             },
             Error(ErrorKind::PageIndexErr, _) => rpc::Error {

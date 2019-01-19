@@ -11,7 +11,7 @@ pub struct PageData<T> {
 }
 
 /// Cert info
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CertInfo {
     /// name of cert
@@ -24,7 +24,7 @@ pub struct CertInfo {
     pub remaining_shares: u32,
 }
 
-#[derive(Debug, Default, PartialEq, Serialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssetInfo {
     pub name: String,
@@ -32,7 +32,7 @@ pub struct AssetInfo {
     pub details: CodecBTreeMap<AssetType, Balance>,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TotalAssetInfo {
     name: String,
@@ -40,11 +40,16 @@ pub struct TotalAssetInfo {
     chain: Chain,
     precision: u16,
     desc: String,
+    trustee_addr: String,
     details: CodecBTreeMap<AssetType, Balance>,
 }
 
 impl TotalAssetInfo {
-    pub fn new(asset: Asset, details: CodecBTreeMap<AssetType, Balance>) -> TotalAssetInfo {
+    pub fn new(
+        asset: Asset,
+        trustee: String,
+        details: CodecBTreeMap<AssetType, Balance>,
+    ) -> TotalAssetInfo {
         TotalAssetInfo {
             name: String::from_utf8_lossy(&asset.token()).into_owned(),
             is_native: if asset.chain() == Chain::ChainX {
@@ -55,13 +60,14 @@ impl TotalAssetInfo {
             chain: asset.chain(),
             precision: asset.precision(),
             desc: String::from_utf8_lossy(&asset.desc()).into_owned(),
+            trustee_addr: trustee,
             details,
         }
     }
 }
 
 /// Intention info
-#[derive(Debug, Default, PartialEq, Serialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionInfo {
     /// account id of intention
@@ -95,7 +101,7 @@ pub struct IntentionInfo {
 }
 
 /// OrderPair info
-#[derive(Debug, Default, PartialEq, Serialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PairInfo {
     pub id: OrderPairID,
@@ -103,12 +109,12 @@ pub struct PairInfo {
     pub currency: String,
     pub precision: u32, //价格精度
     pub used: bool,
-    pub last_price:Balance,
-    pub aver_price:Balance,
-    pub update_height:BlockNumber,
+    pub last_price: Balance,
+    pub aver_price: Balance,
+    pub update_height: BlockNumber,
 }
 
-#[derive(Debug, Default, PartialEq, Serialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuotationsList {
     pub id: OrderPairID,
@@ -118,7 +124,7 @@ pub struct QuotationsList {
 }
 
 /// Intention info
-#[derive(Debug, Default, PartialEq, Serialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PseduIntentionInfo {
     /// name of intention
@@ -134,7 +140,7 @@ pub struct PseduIntentionInfo {
     pub last_total_deposit_weight_update: BlockNumber,
 }
 
-#[derive(Debug, Default, PartialEq, Serialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PseduNominationRecord {
     /// name of intention
@@ -192,18 +198,22 @@ impl ApplicationWrapper {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Serialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DepositInfo {
-    pub time: u64,
+    pub time: u32,
     /// txid
     pub txid: String,
-    /// block height
-    pub height: u64,
+    /// Confirmed height
+    pub confirm: u32,
+    /// Total confirmation height
+    pub total_confirm: u32,
     /// btc-address
     pub address: String,
     /// deposit-balance
     pub balance: Balance,
+    /// token id
+    pub token: String,
     /// OP_RETURN
-    pub op_return: String,
+    pub remarks: String,
 }
