@@ -207,7 +207,7 @@ impl aura::Trait for Runtime {
 
 // bridge
 impl bitcoin::Trait for Runtime {
-    //type Event = Event;
+    type Event = Event;
 }
 
 //impl treasury::Trait for Runtime {
@@ -320,7 +320,7 @@ construct_runtime!(
         // dex
         XSpot: xspot,
         // bridge
-        XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>},
+        XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>,  Event<T>},
     }
 );
 

@@ -3,9 +3,10 @@
 use super::builder::Builder;
 use super::keys::{Public, Type};
 use super::{
-    select_utxo, Bytes, CandidateTx, OutPoint, PhantomData, Result, Script, SignatureChecker,
-    SignatureVersion, StorageMap, StorageValue, Trait, Transaction, TransactionInput,
-    TransactionInputSigner, TransactionOutput, TransactionSignatureChecker, TrusteeAddress, Vec,
+    select_utxo, Bytes, CandidateTx, OutPoint, PhantomData, RawEvent, Result, Script,
+    SignatureChecker, SignatureVersion, StorageMap, StorageValue, Trait, Transaction,
+    TransactionInput, TransactionInputSigner, TransactionOutput, TransactionSignatureChecker,
+    TrusteeAddress, Vec,
 };
 use runtime_primitives::traits::As;
 use xrecords::{Application, ApplicationMap};
@@ -136,7 +137,6 @@ impl<T: Trait> Proposal<T> {
         }
         runtime_io::print("[bridge-btc] total withdrawal balance ");
         runtime_io::print(out_balance);
-        //let utxo_set = select_utxo::<T>(out_balance + fee).unwrap();
         let utxo_set = match select_utxo::<T>(out_balance) {
             Some(u) => u,
             None => return Err("lack of balance"),
@@ -170,6 +170,12 @@ impl<T: Trait> Proposal<T> {
             });
         }
         <TxProposal<T>>::put(CandidateTx::new(tx, outs));
+        Module::<T>::deposit_event(RawEvent::CreatProposl(
+            b"Creat Proposl".to_vec(),
+            out_balance,
+            ins_balance,
+            ins_balance - out_balance - fee,
+        ));
         Ok(())
     }
 }

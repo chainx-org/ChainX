@@ -53,6 +53,7 @@ extern crate merkle;
 extern crate primitives;
 extern crate script;
 extern crate serialization as ser;
+extern crate xr_primitives;
 
 #[cfg(test)]
 mod tests;
@@ -79,24 +80,38 @@ use system::ensure_signed;
 pub use tx::RelayTx;
 use tx::{handle_tx, inspect_address, validate_transaction};
 use xassets::{Chain as ChainDef, ChainT};
+use xr_primitives::XString;
+pub type AddrStr = XString;
 
 pub trait Trait:
     system::Trait + balances::Trait + timestamp::Trait + xrecords::Trait + xaccounts::Trait
 {
-    //    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-//decl_event!(
-//    pub enum Event<T> where
-//        <T as system::Trait>::AccountId,
-//        <T as balances::Trait>::Balance
-//    {
-//
-//    }
-//);
+decl_event!(
+    pub enum Event<T> where
+        <T as system::Trait>::AccountId {
+        ///（版本、本块哈希、本块高度、前块哈希、交易根、时间戳、nonce、待确认块高度、待确认块哈希)
+        UpdateHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
+        ///（本交易哈希、区块哈希、Input地址、类别）
+        RecvTx(H256, H256, AddrStr, TxType),
+        ///（”处理证书”、交易哈希、Input地址）
+        CertTx(XString, H256, AddrStr),
+        ///（”处理提现”、交易哈希、Input地址、是否是待签原文
+        WithdrawTx(XString, H256, AddrStr, bool),
+        ///（”处理充值”、交易哈希、Input地址、金额、状态）
+        Deposit(XString, H256, AddrStr, u64, bool),
+        ///（”处理绑定”、交易哈希、Input地址、账户Address、初始绑定|更新绑定）
+        Bind(XString, H256, AddrStr, AccountId, BindStatus),
+        ///（”构造提现”、提现总金额、存款总金额、找零金额）
+        CreatProposl(XString, u64, u64, u64),
+    }
+);
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        fn deposit_event<T>() = default;
 
         pub fn push_header(origin, header: Vec<u8>) -> Result {
             runtime_io::print("[bridge_btc] push btc header");
@@ -209,12 +224,13 @@ impl Params {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Encode, Decode)]
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum TxType {
     Withdraw,
     Deposit,
-    Register,
-    RegisterDeposit,
+    Bind,
+    BindDeposit,
     SendCert,
 }
 
@@ -235,7 +251,12 @@ impl CandidateTx {
         CandidateTx { tx, outs }
     }
 }
-
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum BindStatus {
+    Init,
+    Update,
+}
 #[derive(PartialEq, Clone, Encode, Decode)]
 pub struct BlockHeaderInfo {
     pub header: BlockHeader,
@@ -357,8 +378,7 @@ decl_storage! {
 }
 
 //impl<T: Trait> Module<T> {
-// event
-/// Deposit one of this module's events.
+//    /// Deposit one of this module's events.
 //    #[allow(unused)]
 //    fn deposit_event(event: Event<T>) {
 //        <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
@@ -425,8 +445,19 @@ impl<T: Trait> Module<T> {
                 }
             });
 
+            Self::deposit_event(RawEvent::UpdateHeader(
+                header_info.header.version,
+                header_info.header.hash(),
+                header_info.height,
+                header_info.header.previous_header_hash,
+                header_info.header.merkle_root_hash,
+                header_info.header.time,
+                header_info.header.nonce,
+                confirm_header.height,
+                confirm_header.header.hash(),
+            ));
+
             <BestIndex<T>>::put(header.hash());
-            // TODO 遍历待确认块的 交易哈希Vec：调用[处理交易]
             <Chain<T>>::update_header(confirm_header.clone()).map_err(|e| e.info())?;
         }
         Ok(())
@@ -441,7 +472,7 @@ impl<T: Trait> Module<T> {
 
         //update header info
         let mut confirmed = false;
-        <BlockHeaderFor<T>>::mutate(&tx.block_hash, |info| {
+        <BlockHeaderFor<T>>::mutate(&tx.block_hash.clone(), |info| {
             if let Some(i) = info {
                 i.txid.push(tx.raw.hash());
 
@@ -463,12 +494,17 @@ impl<T: Trait> Module<T> {
             <TxFor<T>>::insert(
                 &tx.raw.hash(),
                 TxInfo {
-                    input_address: address,
+                    input_address: address.clone(),
                     raw_tx: tx.raw.clone(),
                 },
             )
         }
-
+        Self::deposit_event(RawEvent::RecvTx(
+            tx.clone().raw.hash(),
+            tx.clone().block_hash,
+            address.layout().to_vec(),
+            tx_type,
+        ));
         if confirmed {
             handle_tx::<T>(&tx.raw.hash()).map_err(|e| {
                 runtime_io::print("handle_tx error :");

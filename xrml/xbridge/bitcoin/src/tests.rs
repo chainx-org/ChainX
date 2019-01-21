@@ -1,7 +1,6 @@
 // Copyright 2018 Chainpool.
 
 extern crate srml_consensus as consensus;
-//extern crate srml_session as session;
 
 use self::base58::FromBase58;
 use self::keys::DisplayLayout;
@@ -61,20 +60,6 @@ impl xsystem::Trait for Test {
     const XSYSTEM_SET_POSITION: u32 = 0;
 }
 
-//impl associations::Trait for Test {
-//    type OnCalcFee = xsupport::Module<Test>;
-//    type Event = ();
-//}
-//impl xsupport::Trait for Test {}
-
-//impl tokenbalances::Trait for Test {
-//    const CHAINX_SYMBOL: tokenbalances::SymbolString = b"pcx";
-//    const CHAINX_TOKEN_DESC: tokenbalances::DescString = b"this is pcx for mock";
-//    type TokenBalance = u128;
-//    type Event = ();
-//    type OnMoveToken = ();
-//}
-//
 impl xaccounts::Trait for Test {
     type Event = ();
 }
@@ -86,22 +71,9 @@ impl xassets::Trait for Test {
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
 }
-//
-//impl staking::Trait for Test {
-//    type OnRewardMinted = ();
-//    type Event = ();
-//    type OnNewSessionForTokenStaking = ();
-//    type OnReward = ();
-//}
-
-//impl session::Trait for Test {
-//    type ConvertAccountIdToSessionKey = Identity;
-//    type OnSessionChange = ();
-//    type Event = ();
-//}
 
 impl Trait for Test {
-    //type Event = ();
+    type Event = ();
 }
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {

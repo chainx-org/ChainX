@@ -1,5 +1,6 @@
 use self::extracter::Extracter;
 use super::*;
+use keys::DisplayLayout;
 
 pub struct TxHandler<'a>(&'a H256);
 
@@ -24,6 +25,12 @@ impl<'a> TxHandler<'a> {
                     .ok_or("Fail to parse OP_RETURN.")?;
 
                 runtime_io::print("[bridge-btc] issue cert");
+                Module::<T>::deposit_event(RawEvent::CertTx(
+                    b"handle cert".to_vec(),
+                    tx_info.raw_tx.hash(),
+                    tx_info.input_address.layout().to_vec(),
+                ));
+
                 <xaccounts::Module<T>>::issue(cert_name, frozen_duration, cert_owner)?;
             }
         }
@@ -64,11 +71,12 @@ impl<'a> TxHandler<'a> {
             index += 1;
         }
         runtime_io::print("[bridge-btc] handle_input refresh_utxo");
+        let mut flag = false;
         if let Some(data) = <TxProposal<T>>::take() {
             let candidate = data.clone();
-            // 当提上来的提现交易和待签名原文不一致时， 说明系统BTC托管有异常
             match ensure_identical(&tx_info.raw_tx, &data.tx) {
                 Ok(()) => {
+                    flag = true;
                     let txid = candidate.tx.hash();
                     for number in candidate.outs.iter() {
                         runtime_io::print(*number as u64);
@@ -82,8 +90,14 @@ impl<'a> TxHandler<'a> {
                     <TxProposal<T>>::put(data);
                     runtime_io::print("[bridge-btc] withdrawal failed");
                 }
-            }
+            };
         }
+        Module::<T>::deposit_event(RawEvent::WithdrawTx(
+            b"handle withdraw".to_vec(),
+            tx_info.raw_tx.hash(),
+            tx_info.input_address.layout().to_vec(),
+            flag,
+        ));
         Ok(())
     }
 
@@ -133,6 +147,13 @@ impl<'a> TxHandler<'a> {
                             status: deposit_status,
                         },
                     );
+                    Module::<T>::deposit_event(RawEvent::Deposit(
+                        b"handle deposit".to_vec(),
+                        tx_info.raw_tx.hash(),
+                        tx_info.input_address.layout().to_vec(),
+                        output.value,
+                        deposit_status,
+                    ));
                 }
             }
         }
@@ -164,7 +185,7 @@ fn delete_utxo<T: Trait>(out_point_set: Vec<OutPoint>) -> bool {
 /// Try updating the binding address, remove pending deposit if the updating goes well.
 fn handle_opreturn<T: Trait>(script: &[u8], info: &TxInfo) {
     if let Some(account_id) = Extracter::<T>::new(&script).account_id() {
-        if update_binding::<T>(&account_id, &info.input_address) {
+        if update_binding::<T>(&account_id.clone(), info) {
             runtime_io::print("[bridge-btc] handle_output register ");
             remove_pending_deposit::<T>(&info.input_address, &account_id);
         }
@@ -206,10 +227,17 @@ fn apply_update_binding<T: Trait>(who: &T::AccountId, address: &keys::Address) {
 }
 
 /// bind account
-fn update_binding<T: Trait>(who: &T::AccountId, address: &keys::Address) -> bool {
-    <AddressMap<T>>::get(address).map_or_else(
+fn update_binding<T: Trait>(who: &T::AccountId, info: &TxInfo) -> bool {
+    <AddressMap<T>>::get(&info.input_address).map_or_else(
         || {
-            apply_update_binding::<T>(who, address);
+            apply_update_binding::<T>(who, &info.input_address);
+            Module::<T>::deposit_event(RawEvent::Bind(
+                b"handle bind".to_vec(),
+                info.raw_tx.hash(),
+                info.input_address.layout().to_vec(),
+                who.clone(),
+                BindStatus::Init,
+            ));
             return true;
         },
         |p| {
@@ -221,15 +249,21 @@ fn update_binding<T: Trait>(who: &T::AccountId, address: &keys::Address) -> bool
             if let Some(a) = <AccountMap<T>>::get(&p) {
                 let mut vaddr = a.clone();
                 for (index, it) in a.iter().enumerate() {
-                    if it.hash == address.hash {
+                    if it.hash == info.input_address.hash {
                         vaddr.remove(index);
                         <AccountMap<T>>::insert(&p, vaddr);
                         break;
                     }
                 }
             };
-
-            apply_update_binding::<T>(who, address);
+            apply_update_binding::<T>(who, &info.input_address);
+            Module::<T>::deposit_event(RawEvent::Bind(
+                b"handle bind".to_vec(),
+                info.raw_tx.hash(),
+                info.input_address.layout().to_vec(),
+                who.clone(),
+                BindStatus::Update,
+            ));
             return true;
         },
     )

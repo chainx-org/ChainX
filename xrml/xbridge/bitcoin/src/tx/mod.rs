@@ -6,9 +6,9 @@ use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 
 use super::{
-    AccountMap, AddressMap, BlockHeaderFor, CandidateTx, CertAddress, Module, NetworkId,
-    PendingDepositMap, Trait, TrusteeAddress, TxFor, TxInfo, TxProposal, TxType, UTXOKey, UTXOSet,
-    UTXOSetKey, UTXOStatus, UTXO,
+    AccountMap, AddressMap, BindStatus, BlockHeaderFor, CandidateTx, CertAddress, Module,
+    NetworkId, PendingDepositMap, RawEvent, Trait, TrusteeAddress, TxFor, TxInfo, TxProposal,
+    TxType, UTXOKey, UTXOSet, UTXOSetKey, UTXOStatus, UTXO,
 };
 
 use chain::{OutPoint, Transaction, TransactionInput, TransactionOutput};

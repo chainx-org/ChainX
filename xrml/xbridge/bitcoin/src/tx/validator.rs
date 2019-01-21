@@ -64,7 +64,7 @@ pub fn validate_transaction<T: Trait>(
     // detect deposit
     for output in tx.raw.outputs.iter() {
         if is_key(&output.script_pubkey, &address.0) {
-            return Ok(TxType::RegisterDeposit);
+            return Ok(TxType::BindDeposit);
         }
     }
 

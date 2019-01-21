@@ -26,6 +26,7 @@ xrml-xsystem = { path = "../../xsystem", default-features = false }
 xrml-xassets-assets = { path = "../../xassets/assets", default-features = false }
 xrml-xassets-records = { path = "../../xassets/records", default-features = false }
 xrml-xaccounts = { path = "../../xaccounts", default-features = false }
+xr-primitives = { path = "../../../xr-primitives", default_features = false }
 
 # bitcoin-rust
 chain = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
