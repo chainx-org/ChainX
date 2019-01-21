@@ -3,13 +3,14 @@
 use super::*;
 use b58::from;
 use rstd::prelude::Vec;
+use runtime_primitives::traits::Zero;
 
 /// OP_RETURN extracter
-pub struct Extracter<'a>(&'a [u8]);
+pub struct Extracter<'a, T>(&'a [u8], ::rstd::marker::PhantomData<T>);
 
-impl<'a> Extracter<'a> {
-    pub fn new(script: &[u8]) -> Extracter {
-        Extracter(script)
+impl<'a, T: Trait> Extracter<'a, T> {
+    pub fn new(script: &'a [u8]) -> Self {
+        Extracter(script, ::rstd::marker::PhantomData)
     }
 
     fn split(&self) -> Vec<Vec<u8>> {
@@ -38,7 +39,7 @@ impl<'a> Extracter<'a> {
         true
     }
 
-    pub fn account_id<T: Trait>(self) -> Option<T::AccountId> {
+    pub fn account_id(self) -> Option<T::AccountId> {
         let v = self.split();
         if !Self::quick_check(&v) {
             return None;
@@ -54,7 +55,7 @@ impl<'a> Extracter<'a> {
         account_id
     }
 
-    pub fn cert<T: Trait>(self) -> Option<(Vec<u8>, u32, T::AccountId)> {
+    pub fn cert(self) -> Option<(Vec<u8>, u32, T::AccountId)> {
         let v = self.split();
 
         if !Self::quick_check(&v) {
@@ -76,7 +77,7 @@ impl<'a> Extracter<'a> {
         let duration = &v[3];
 
         let frozen_duration = vec_to_u32(duration.to_vec()).unwrap_or(0);
-        if frozen_duration <= 0 {
+        if frozen_duration.is_zero() {
             return None;
         }
 

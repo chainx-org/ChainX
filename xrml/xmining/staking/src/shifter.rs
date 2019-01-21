@@ -73,7 +73,6 @@ impl<T: Trait> Module<T> {
         if should_reward {
             // apply good session reward
             let mut session_reward = Self::this_session_reward();
-            Self::deposit_event(RawEvent::Reward(session_reward));
 
             let mut active_intentions: Vec<(RewardHolder<T::AccountId>, T::Balance)> =
                 Self::intentions()
@@ -107,6 +106,8 @@ impl<T: Trait> Module<T> {
                     session_reward -= reward;
                 }
             }
+
+            Self::deposit_event(RawEvent::Reward(total_active_stake, session_reward));
 
             // FIXME
             // T::OnRewardMinted::on_dilution(total_minted, total_minted);
@@ -170,6 +171,7 @@ impl<T: Trait> Module<T> {
             .collect::<Vec<_>>();
 
         <session::Module<T>>::set_validators(vals);
+        Self::deposit_event(RawEvent::Rotation(vals.clone()));
 
         // Update the balances for slashing/rewarding according to the stakes.
         // <CurrentOfflineSlash<T>>::put(Self::offline_slash().times(average_stake));

@@ -16,7 +16,7 @@
 
 //! Substrate RPC servers.
 
-#[warn(missing_docs)]
+#![warn(missing_docs)]
 pub extern crate substrate_rpc as apis;
 
 extern crate chainx_primitives;

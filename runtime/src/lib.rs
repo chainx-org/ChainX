@@ -276,6 +276,7 @@ impl xstaking::Trait for Runtime {
 }
 
 impl xtokens::Trait for Runtime {
+    type Event = Event;
     type DetermineTokenJackpotAccountId = xtokens::SimpleAccountIdDeterminator<Runtime>;
 }
 
@@ -315,7 +316,7 @@ construct_runtime!(
         XAssetsProcess: xprocess::{Module, Call, Storage},
         // mining
         XStaking: xstaking,
-        XTokens: xtokens::{Module, Call, Storage},
+        XTokens: xtokens::{Module, Call, Storage, Event<T>},
         // dex
         XSpot: xspot,
         // bridge

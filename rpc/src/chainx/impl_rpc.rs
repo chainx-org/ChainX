@@ -75,14 +75,14 @@ where
 
         // Native assets
         let key = <xassets::AssetList<Runtime>>::key_for(chain);
-        let native_assets: Vec<Token> = Self::pickout(&state, &key)?.unwrap_or(Vec::new());
+        let native_assets: Vec<Token> = Self::pickout(&state, &key)?.unwrap_or_default();
 
         for token in native_assets {
             let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
                 xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
             );
 
-            let key = <xassets::AssetBalance<Runtime>>::key_for(&(who.clone(), token.clone()));
+            let key = <xassets::AssetBalance<Runtime>>::key_for(&(who, token.clone()));
             if let Some(info) = Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)? {
                 bmap.extend(info.0.iter());
             }
@@ -90,7 +90,8 @@ where
             // PCX free balance
             if token.as_slice() == xassets::Module::<Runtime>::TOKEN {
                 let free = <balances::FreeBalance<Runtime>>::key_for(&who);
-                let free_balance = Self::pickout::<Balance>(&state, &free)?.unwrap_or(Zero::zero());
+                let free_balance =
+                    Self::pickout::<Balance>(&state, &free)?.unwrap_or_else(Zero::zero);
 
                 bmap.insert(xassets::AssetType::Free, free_balance);
             }
@@ -109,7 +110,7 @@ where
                 let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
                     xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
                 );
-                let key = <xassets::AssetBalance<Runtime>>::key_for(&(who.clone(), token.clone()));
+                let key = <xassets::AssetBalance<Runtime>>::key_for(&(who, token.clone()));
                 if let Some(info) =
                     Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)?
                 {
@@ -349,7 +350,7 @@ where
                     info.self_vote = record.nomination;
                 }
 
-                info.is_validator = validators.iter().find(|i| **i == intention).is_some();
+                info.is_validator = validators.iter().any(|&i| i == intention);
                 info.account = intention;
 
                 intention_info.push(info);
@@ -523,8 +524,8 @@ where
                         Self::pickout::<Vec<(AccountId, ID)>>(&state, &quotations_key)?
                     {
                         let mut sum: Balance = 0;
-                        for i in 0..list.len() {
-                            let order_key = <xspot::AccountOrder<Runtime>>::key_for(&list[i]);
+                        for item in &list {
+                            let order_key = <xspot::AccountOrder<Runtime>>::key_for(item);
                             if let Some(order) =
                                 Self::pickout::<OrderT<Runtime>>(&state, &order_key)?
                             {
@@ -543,7 +544,7 @@ where
                         Some(v) => v,
                         None => Default::default(),
                     };
-                    n = n + 1;
+                    n += 1;
                 }
                 //再卖档
                 opponent_price = handicap.sell;
@@ -559,8 +560,8 @@ where
                         Self::pickout::<Vec<(AccountId, ID)>>(&state, &quotations_key)?
                     {
                         let mut sum: Balance = 0;
-                        for i in 0..list.len() {
-                            let order_key = <xspot::AccountOrder<Runtime>>::key_for(&list[i]);
+                        for item in &list {
+                            let order_key = <xspot::AccountOrder<Runtime>>::key_for(item);
                             if let Some(order) =
                                 Self::pickout::<OrderT<Runtime>>(&state, &order_key)?
                             {
@@ -579,7 +580,7 @@ where
                         Some(v) => v,
                         None => Default::default(),
                     };
-                    n = n + 1;
+                    n += 1;
                 }
             };
         } else {
@@ -614,7 +615,7 @@ where
                     if total >= page_index * page_size && total < ((page_index + 1) * page_size) {
                         orders.push(order.clone());
                     }
-                    total = total + 1;
+                    total += 1;
                 }
             }
 
@@ -723,7 +724,7 @@ where
                 for a in addrs {
                     v.push(a.to_string());
                 }
-                return Ok(Some(v));
+                Ok(Some(v))
             }
             None => Ok(Some(v)),
         }
@@ -735,13 +736,11 @@ fn get_deposit_info(
     who: AccountId,
     info: &TxInfo,
     trustee: &Address,
-    bind_list: &Vec<Address>,
+    bind_list: &[Address],
 ) -> Option<(Balance, String)> {
     let mut ops = String::new();
     let mut balance = 0;
-    let mut flag = bind_list
-        .into_iter()
-        .any(|a| a.hash == info.input_address.hash);
+    let mut flag = bind_list.iter().any(|a| a.hash == info.input_address.hash);
     for output in raw_tx.outputs.iter() {
         let script = &output.script_pubkey;
         let into_script: Script = script.clone().into();
@@ -751,15 +750,15 @@ fn get_deposit_info(
             match from(data.to_vec()) {
                 Ok(mut slice) => {
                     let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice())
-                        .unwrap_or(H256::from(0));
+                        .unwrap_or_else(|| H256::from(0));
                     if account_id == who || flag {
                         flag = true;
-                        ops = String::from_utf8(s[2..].to_vec()).unwrap_or(String::new());
+                        ops = String::from_utf8(s[2..].to_vec()).unwrap_or_default();
                     }
                 }
                 Err(_) => {
                     if flag {
-                        ops = String::from_utf8(s[2..].to_vec()).unwrap_or(String::new());
+                        ops = String::from_utf8(s[2..].to_vec()).unwrap_or_default();
                     }
                 }
             }
@@ -768,7 +767,7 @@ fn get_deposit_info(
         }
 
         // get deposit money
-        let script_addresses = into_script.extract_destinations().unwrap_or(Vec::new());
+        let script_addresses = into_script.extract_destinations().unwrap_or_default();
         if script_addresses.len() == 1 {
             if (trustee.hash == script_addresses[0].hash) && (output.value > 0) && flag {
                 balance += output.value;

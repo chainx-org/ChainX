@@ -52,11 +52,7 @@ impl TotalAssetInfo {
     ) -> TotalAssetInfo {
         TotalAssetInfo {
             name: String::from_utf8_lossy(&asset.token()).into_owned(),
-            is_native: if asset.chain() == Chain::ChainX {
-                true
-            } else {
-                false
-            },
+            is_native: asset.chain() == Chain::ChainX,
             chain: asset.chain(),
             precision: asset.precision(),
             desc: String::from_utf8_lossy(&asset.desc()).into_owned(),

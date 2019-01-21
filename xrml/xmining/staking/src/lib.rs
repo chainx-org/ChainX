@@ -238,6 +238,7 @@ decl_module! {
                 record.revocations = revocations;
                 <NominationRecords<T>>::insert((who, target), record);
             }
+            Self::deposit_event(RawEvent::Unfreeze());
         }
 
         /// Update the url, desire to join in elections of intention and session key.
@@ -272,7 +273,7 @@ decl_module! {
                     },
                     false => {
                         let active = Self::intentions().into_iter()
-                            .filter(|ref n| <xaccounts::Module<T>>::intention_props_of(n.clone()).is_active)
+                            .filter(|n| <xaccounts::Module<T>>::intention_props_of(n).is_active)
                             .collect::<Vec<_>>();
                         if active.len() <= Self::minimum_validator_count() as usize {
                             return Err("Cannot pull out when there are too few active intentions.");
@@ -361,14 +362,26 @@ decl_module! {
 
 /// An event in this module.
 decl_event!(
-    pub enum Event<T> where <T as balances::Trait>::Balance, <T as system::Trait>::AccountId {
+    pub enum Event<T>
+    where
+        <T as balances::Trait>::Balance,
+        <T as system::Trait>::AccountId,
+        <T as system::Trait>::BlockNumber
+    {
         /// All validators have been rewarded by the given balance.
-        Reward(Balance),
+        Reward(Balance, Balance),
         /// One validator (and their nominators) has been given a offline-warning (they're still
         /// within their grace). The accrued number of slashes is recorded, too.
         OfflineWarning(AccountId, u32),
         /// One validator (and their nominators) has been slashed by the given amount.
         OfflineSlash(AccountId, Balance),
+        Rotation(Vec<AccountId>),
+        Register(u32),
+        Unnominate(BlockNumber),
+        Nominate(AccountId, AccountId, Balance),
+        Claim(u64, u64, Balance),
+        Refresh(),
+        Unfreeze(),
     }
 );
 
@@ -522,6 +535,11 @@ impl<T: Trait> Module<T> {
     fn apply_nominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
         Self::staking_reserve(source, value)?;
         Self::apply_update_vote_weight(source, target, value, true);
+        Self::deposit_event(RawEvent::Nominate(
+            source.clone(),
+            target.clone(),
+            value.clone(),
+        ));
 
         Ok(())
     }
@@ -547,6 +565,8 @@ impl<T: Trait> Module<T> {
 
         Self::apply_update_vote_weight(source, target, value, false);
 
+        Self::deposit_event(RawEvent::Unnominate(freeze_until));
+
         Ok(())
     }
 
@@ -555,7 +575,13 @@ impl<T: Trait> Module<T> {
         let mut record = Self::nomination_record_of(who, target);
 
         let jackpot_addr = T::DetermineJackpotAccountId::accountid_for(target);
-        Self::generic_claim(&mut record, who, &mut iprof, &jackpot_addr)?;
+        let (source_vote_weight, target_vote_weight, dividend) =
+            Self::generic_claim(&mut record, who, &mut iprof, &jackpot_addr)?;
+        Self::deposit_event(RawEvent::Claim(
+            source_vote_weight,
+            target_vote_weight,
+            dividend,
+        ));
 
         <IntentionProfiles<T>>::insert(target, iprof);
         Self::mutate_nomination_record(who, target, record);
@@ -591,6 +617,8 @@ impl<T: Trait> Module<T> {
                 props.about = about;
             });
         }
+
+        Self::deposit_event(RawEvent::Refresh());
     }
 
     /// Actually register an intention.
@@ -637,6 +665,10 @@ impl<T: Trait> Module<T> {
         <IntentionProfiles<T>>::insert(&intention, iprof);
 
         Self::apply_nominate(&intention, &intention, activation)?;
+
+        Self::deposit_event(RawEvent::Register(<xaccounts::RemainingSharesOf<T>>::get(
+            &cert_name,
+        )));
 
         Ok(())
     }

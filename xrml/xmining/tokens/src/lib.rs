@@ -138,6 +138,8 @@ pub trait Trait:
     + xstaking::Trait
     + bitcoin::Trait
 {
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
     type DetermineTokenJackpotAccountId: TokenJackpotAccountIdFor<
         Self::AccountId,
         Self::BlockNumber,
@@ -169,8 +171,18 @@ where
     }
 }
 
+/// An event in this module.
+decl_event!(
+    pub enum Event<T> where <T as balances::Trait>::Balance, <T as system::Trait>::AccountId {
+        Issue(AccountId, Token, Balance),
+        Claim(AccountId, Token, u64, u64, Balance),
+    }
+);
+
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        fn deposit_event<T>() = default;
+
         fn claim(origin, token: Token) {
             let who = system::ensure_signed(origin)?;
 
@@ -244,18 +256,26 @@ impl<T: Trait> Module<T> {
 
         {
             let mut prof = PseduIntentionProfs::<T> {
-                token: token,
+                token,
                 staking: &mut p_vote_weight,
             };
             let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
 
             let mut record = DepositRecord::<T> {
                 depositor: who,
-                token: token,
+                token,
                 staking: &mut d_vote_weight,
             };
 
-            <xstaking::Module<T>>::generic_claim(&mut record, who, &mut prof, &addr)?;
+            let (source_vote_weight, target_vote_weight, dividend) =
+                <xstaking::Module<T>>::generic_claim(&mut record, who, &mut prof, &addr)?;
+            Self::deposit_event(RawEvent::Claim(
+                who.clone(),
+                token.clone(),
+                source_vote_weight,
+                target_vote_weight,
+                dividend,
+            ));
         }
 
         <PseduIntentionProfiles<T>>::insert(token, p_vote_weight);
@@ -295,6 +315,8 @@ impl<T: Trait> Module<T> {
         xassets::Module::<T>::pcx_move_free_balance(&addr, source, reward).map_err(|e| e.info())?;
         //        Self::cut_jackpot(token, &reward);
         //        <xassets::Module<T>>::pcx_issue(source, reward)?;
+
+        Self::deposit_event(RawEvent::Issue(source.clone(), token.clone(), value));
 
         Ok(())
     }

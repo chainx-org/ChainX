@@ -60,10 +60,10 @@ where
     Price: Copy,
 {
     pub fn new(buy: Price, sell: Price) -> Self {
-        return Handicap {
+        Handicap {
             buy: buy,
             sell: sell,
-        };
+        }
     }
 }
 
@@ -79,13 +79,13 @@ pub struct OrderPair {
 }
 impl OrderPair {
     pub fn new(id: OrderPairID, first: Token, second: Token, precision: u32, status: bool) -> Self {
-        return OrderPair {
+        OrderPair {
             id: id,
             first: first,
             second: second,
             precision: precision,
             used: status,
-        };
+        }
     }
 }
 
@@ -163,7 +163,7 @@ where
         fill_index: Vec<ID>,
         reserve_last: Amount,
     ) -> Self {
-        return Order {
+        Order {
             pair: pair,
             index: index,
             class: class,
@@ -177,6 +177,6 @@ where
             status: status,
             fill_index: fill_index,
             reserve_last: reserve_last,
-        };
+        }
     }
 }

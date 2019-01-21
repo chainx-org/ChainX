@@ -1,13 +1,11 @@
 // Copyright 2018 Chainpool.
 //! Vote weight calculation.
 
+use super::{Module, Trait};
+use rstd::result;
 use runtime_primitives::traits::As;
-use runtime_support::dispatch::Result;
-
 use system;
 use xassets;
-
-use super::{Module, Trait};
 use IntentionProfs;
 use NominationRecord;
 
@@ -117,7 +115,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         target: &mut V,
         target_jackpot_addr: &T::AccountId,
-    ) -> Result
+    ) -> result::Result<(u64, u64, T::Balance), &'static str>
     where
         U: VoteWeight<T::BlockNumber>,
         V: VoteWeight<T::BlockNumber>, // + Jackpot<T::Balance>,
@@ -144,7 +142,7 @@ impl<T: Trait> Module<T> {
         target.set_last_acum_weight(target_vote_weight - source_vote_weight);
         target.set_last_acum_weight_update(current_block);
 
-        Ok(())
+        Ok((source_vote_weight, target_vote_weight, dividend))
     }
 
     pub fn update_vote_weight_both_way<

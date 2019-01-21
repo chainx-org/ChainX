@@ -35,12 +35,11 @@ mod tests;
 pub mod assetdef;
 pub mod memo;
 
+use primitives::traits::{CheckedAdd, CheckedSub, Zero};
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 use rstd::slice::Iter;
 use runtime_support::dispatch::Result;
-
-use primitives::traits::{CheckedAdd, CheckedSub, Zero};
 use runtime_support::{StorageMap, StorageValue};
 
 // substrate mod
@@ -187,7 +186,7 @@ impl AssetType {
             AssetType::ReservedDexSpot,
             AssetType::ReservedDexFuture,
         ];
-        TYPES.into_iter()
+        TYPES.iter()
     }
 }
 
@@ -356,7 +355,7 @@ impl<T: Trait> Module<T> {
             balances::Module::<T>::set_free_balance_creating(who, value);
         } else {
             let need_create = balances::FreeBalance::<T>::exists(who);
-            if need_create == false {
+            if !need_create {
                 balances::Module::<T>::set_free_balance_creating(who, Zero::zero());
             }
             Self::set_free_balance(who, token, value)
@@ -561,7 +560,7 @@ impl<T: Trait> Module<T> {
 /// token issue destroy reserve/unreserve
 impl<T: Trait> Module<T> {
     fn init_asset_for(who: &T::AccountId, token: &Token) {
-        if let Err(_) = Self::is_valid_asset_for(who, token) {
+        if Self::is_valid_asset_for(who, token).is_err() {
             <CrossChainAssetsOf<T>>::mutate(who, |assets| assets.push(token.clone()));
         }
     }
@@ -751,8 +750,8 @@ pub enum AssetErr {
 }
 
 impl AssetErr {
-    pub fn info(&self) -> &'static str {
-        match *self {
+    pub fn info(self) -> &'static str {
+        match self {
             AssetErr::NotEnough => "balance too low for this account",
             AssetErr::OverFlow => "balance too high for this account",
             AssetErr::TotalAssetOverFlow => "balance too low for this asset",

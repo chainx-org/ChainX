@@ -19,8 +19,8 @@ impl<'a> TxHandler<'a> {
 
             if into_script.is_null_data_script() {
                 let s = script.clone();
-                let (cert_name, frozen_duration, cert_owner) = Extracter::new(&s)
-                    .cert::<T>()
+                let (cert_name, frozen_duration, cert_owner) = Extracter::<T>::new(&s)
+                    .cert()
                     .ok_or("Fail to parse OP_RETURN.")?;
 
                 runtime_io::print("[bridge-btc] issue cert");
@@ -163,7 +163,7 @@ fn delete_utxo<T: Trait>(out_point_set: Vec<OutPoint>) -> bool {
 
 /// Try updating the binding address, remove pending deposit if the updating goes well.
 fn handle_opreturn<T: Trait>(script: &[u8], info: &TxInfo) {
-    if let Some(account_id) = Extracter::new(&script).account_id::<T>() {
+    if let Some(account_id) = Extracter::<T>::new(&script).account_id() {
         if update_binding::<T>(&account_id, &info.input_address) {
             runtime_io::print("[bridge-btc] handle_output register ");
             remove_pending_deposit::<T>(&info.input_address, &account_id);

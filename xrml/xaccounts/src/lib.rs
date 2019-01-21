@@ -214,13 +214,7 @@ pub fn is_valid_url<T: Trait>(url: &[u8]) -> Result {
             || *n == 0x2E
     };
 
-    if url
-        .into_iter()
-        .filter(|n| !is_valid(n))
-        .collect::<Vec<_>>()
-        .len()
-        > 0
-    {
+    if url.iter().filter(|n| !is_valid(n)).count() > 0 {
         return Err("Only numbers, letters and . are allowed.");
     }
     Ok(())

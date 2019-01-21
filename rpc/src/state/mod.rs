@@ -230,7 +230,7 @@ where
                 let mut last_state: HashMap<_, Option<_>> = Default::default();
                 for block in blocks {
                     let mut changes = vec![];
-                    let id = BlockId::hash(block.clone());
+                    let id = BlockId::hash(block);
 
                     for key in &keys {
                         let (has_changed, data) = {
@@ -288,7 +288,7 @@ where
                 let changes = keys
                     .into_iter()
                     .map(|key| {
-                        self.storage(key.clone(), Some(block.clone()).into())
+                        self.storage(key.clone(), Some(block).into())
                             .map(|val| (key.clone(), val))
                             .unwrap_or_else(|_| (key, None))
                     })

@@ -39,7 +39,7 @@ impl Default for Chain {
 impl Chain {
     pub fn iterator() -> Iter<'static, Chain> {
         static CHAINS: [Chain; 3] = [Chain::ChainX, Chain::Bitcoin, Chain::Ethereum];
-        CHAINS.into_iter()
+        CHAINS.iter()
     }
 }
 
@@ -96,7 +96,7 @@ const MAX_DESC_LEN: usize = 128;
 
 /// Token can only use numbers (0x30~0x39), capital letters (0x41~0x5A), lowercase letters (0x61~0x7A), -(0x2D), .(0x2E), |(0x7C),  ~(0x7E).
 pub fn is_valid_token(v: &[u8]) -> Result {
-    if v.len() > MAX_TOKEN_LEN || v.len() == 0 {
+    if v.len() > MAX_TOKEN_LEN || v.is_empty() {
         return Err("Token length is zero or too long.");
     }
     let is_valid = |c: &u8| -> bool {

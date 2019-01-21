@@ -183,7 +183,7 @@ where
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
         token: &Token,
     ) -> Result<Option<Asset>> {
-        let key = <xassets::AssetInfo<Runtime>>::key_for(token.as_ref());
+        let key = <xassets::AssetInfo<Runtime>>::key_for(token);
         match Self::pickout::<(Asset, bool, BlockNumber)>(&state, &key)? {
             Some((info, _, _)) => Ok(Some(info)),
             None => Ok(None),
