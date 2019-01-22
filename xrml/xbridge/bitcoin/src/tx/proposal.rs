@@ -171,7 +171,6 @@ impl<T: Trait> Proposal<T> {
         }
         <TxProposal<T>>::put(CandidateTx::new(tx, outs));
         Module::<T>::deposit_event(RawEvent::CreatProposl(
-            b"Creat Proposl".to_vec(),
             out_balance,
             ins_balance,
             ins_balance - out_balance - fee,

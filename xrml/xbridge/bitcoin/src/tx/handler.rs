@@ -1,6 +1,7 @@
 use self::extracter::Extracter;
 use super::*;
 use keys::DisplayLayout;
+use b58;
 
 pub struct TxHandler<'a>(&'a H256);
 
@@ -26,7 +27,6 @@ impl<'a> TxHandler<'a> {
 
                 runtime_io::print("[bridge-btc] issue cert");
                 Module::<T>::deposit_event(RawEvent::CertTx(
-                    b"handle cert".to_vec(),
                     tx_info.raw_tx.hash(),
                     tx_info.input_address.layout().to_vec(),
                 ));
@@ -92,10 +92,10 @@ impl<'a> TxHandler<'a> {
                 }
             };
         }
+        let addr = tx_info.input_address.layout().to_vec();
         Module::<T>::deposit_event(RawEvent::WithdrawTx(
-            b"handle withdraw".to_vec(),
             tx_info.raw_tx.hash(),
-            tx_info.input_address.layout().to_vec(),
+            b58::to_base58(addr),
             flag,
         ));
         Ok(())
@@ -147,10 +147,10 @@ impl<'a> TxHandler<'a> {
                             status: deposit_status,
                         },
                     );
+                    let addr = tx_info.input_address.layout().to_vec();
                     Module::<T>::deposit_event(RawEvent::Deposit(
-                        b"handle deposit".to_vec(),
                         tx_info.raw_tx.hash(),
-                        tx_info.input_address.layout().to_vec(),
+                        b58::to_base58(addr),
                         output.value,
                         deposit_status,
                     ));
@@ -231,10 +231,10 @@ fn update_binding<T: Trait>(who: &T::AccountId, info: &TxInfo) -> bool {
     <AddressMap<T>>::get(&info.input_address).map_or_else(
         || {
             apply_update_binding::<T>(who, &info.input_address);
+            let addr = info.input_address.layout().to_vec();
             Module::<T>::deposit_event(RawEvent::Bind(
-                b"handle bind".to_vec(),
                 info.raw_tx.hash(),
-                info.input_address.layout().to_vec(),
+                b58::to_base58(addr),
                 who.clone(),
                 BindStatus::Init,
             ));
@@ -257,10 +257,10 @@ fn update_binding<T: Trait>(who: &T::AccountId, info: &TxInfo) -> bool {
                 }
             };
             apply_update_binding::<T>(who, &info.input_address);
+            let addr = info.input_address.layout().to_vec();
             Module::<T>::deposit_event(RawEvent::Bind(
-                b"handle bind".to_vec(),
                 info.raw_tx.hash(),
-                info.input_address.layout().to_vec(),
+                b58::to_base58(addr),
                 who.clone(),
                 BindStatus::Update,
             ));

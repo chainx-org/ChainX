@@ -61,9 +61,49 @@ pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
     Ok(ret)
 }
 
+
+pub fn to_base58(data: Vec<u8>) -> Vec<u8> {
+    let zcount = data.iter().take_while(|x| **x == 0).count();
+    let size: usize = (data.len() - zcount) * 138 / 100 + 1;
+
+    let mut buffer: Vec<u8> = Vec::new();
+    for _i in 0..size {
+        buffer.push(0);
+    }
+    let mut i = zcount;
+    let mut high = size - 1;
+    while i < data.len() {
+        let mut carry = data[i] as u32;
+        let mut j = size - 1;
+
+        while j > high || carry != 0 {
+            carry += 256 * buffer[j] as u32;
+            buffer[j] = (carry % 58) as u8;
+            carry /= 58;
+
+            if j  > 0 {
+                j -= 1;
+            }
+        }
+
+        i += 1;
+        high = j;
+    }
+    let mut j = buffer.iter().take_while(|x| **x == 0).count();
+    let mut result = Vec::new();
+    for _ in 0..zcount {
+        result.push('1' as u8);
+    }
+    while j < size {
+        result.push(BASE58_CHARS[buffer[j] as usize] as u8);
+        j += 1;
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
-    use super::from;
+    use super::{from, to_base58};
     #[test]
     fn test_from() {
         let s = String::from("mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b");
@@ -72,5 +112,14 @@ mod tests {
             3, 1, 241, 112, 101, 146,
         ];
         assert_eq!(from(s.as_bytes().to_vec()).unwrap(), v);
+    }
+    #[test]
+    fn test_to_base58() {
+        let s = String::from("mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b");
+        let v = &[
+            111, 41, 168, 159, 89, 51, 97, 179, 153, 104, 9, 74, 184, 193, 251, 6, 131, 166, 121,
+            3, 1, 241, 112, 101, 146,
+        ];
+        assert_eq!(to_base58(v.to_vec()), s.as_bytes());
     }
 }

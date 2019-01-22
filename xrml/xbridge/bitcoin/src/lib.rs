@@ -16,8 +16,6 @@ extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 
 #[cfg(feature = "std")]
-extern crate base58;
-#[cfg(feature = "std")]
 extern crate rustc_hex as hex;
 #[cfg(feature = "std")]
 extern crate substrate_primitives;
@@ -92,20 +90,20 @@ pub trait Trait:
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId {
-        ///（版本、本块哈希、本块高度、前块哈希、交易根、时间戳、nonce、待确认块高度、待确认块哈希)
+        /// version, block hash, block height, prev block hash, merkle root, timestamp, nonce, wait confirm block height, wait confirm block hash
         UpdateHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
-        ///（本交易哈希、区块哈希、Input地址、类别）
+        /// tx hash, block hash, input addr, tx type
         RecvTx(H256, H256, AddrStr, TxType),
-        ///（”处理证书”、交易哈希、Input地址）
-        CertTx(XString, H256, AddrStr),
-        ///（”处理提现”、交易哈希、Input地址、是否是待签原文
-        WithdrawTx(XString, H256, AddrStr, bool),
-        ///（”处理充值”、交易哈希、Input地址、金额、状态）
-        Deposit(XString, H256, AddrStr, u64, bool),
-        ///（”处理绑定”、交易哈希、Input地址、账户Address、初始绑定|更新绑定）
-        Bind(XString, H256, AddrStr, AccountId, BindStatus),
-        ///（”构造提现”、提现总金额、存款总金额、找零金额）
-        CreatProposl(XString, u64, u64, u64),
+        /// tx hash, input addr
+        CertTx(H256, AddrStr),
+        /// tx hash, input addr, is waiting signed original text
+        WithdrawTx(H256, AddrStr, bool),
+        /// tx hash, input addr, value, statue
+        Deposit(H256, AddrStr, u64, bool),
+        /// tx hash, input addr, account addr, bind state (init|update)
+        Bind(H256, AddrStr, AccountId, BindStatus),
+        /// withdrawal value, all value, cash value
+        CreatProposl(u64, u64, u64),
     }
 );
 
@@ -377,14 +375,6 @@ decl_storage! {
     }
 }
 
-//impl<T: Trait> Module<T> {
-//    /// Deposit one of this module's events.
-//    #[allow(unused)]
-//    fn deposit_event(event: Event<T>) {
-//        <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
-//    }
-//}
-
 impl<T: Trait> Module<T> {
     pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
         let r = b58::from(data.to_vec()).map_err(|_| AddressError::InvalidAddress)?;
@@ -499,12 +489,14 @@ impl<T: Trait> Module<T> {
                 },
             )
         }
+        let addr = address.layout().to_vec();
         Self::deposit_event(RawEvent::RecvTx(
             tx.clone().raw.hash(),
             tx.clone().block_hash,
-            address.layout().to_vec(),
+            b58::to_base58(addr),
             tx_type,
         ));
+
         if confirmed {
             handle_tx::<T>(&tx.raw.hash()).map_err(|e| {
                 runtime_io::print("handle_tx error :");
