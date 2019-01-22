@@ -36,12 +36,12 @@ extern crate srml_support;
 extern crate srml_aura as aura;
 extern crate srml_balances as balances;
 extern crate srml_consensus as consensus;
-extern crate xrml_grandpa as grandpa;
 extern crate srml_indices as indices;
-extern crate xrml_session as session;
 extern crate srml_sudo as sudo;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
+extern crate xrml_grandpa as grandpa;
+extern crate xrml_session as session;
 // unused
 //extern crate srml_contract as contract;
 //extern crate srml_council as council;
@@ -487,6 +487,10 @@ impl_runtime_apis! {
 
         fn verify_address(token: xassets::Token, addr: xrecords::AddrStr, ext: xassets::Memo) -> Result<(), Vec<u8>> {
             XAssetsProcess::verify_address(token, addr, ext).map_err(|e| e.as_bytes().to_vec())
+        }
+
+        fn minimal_withdrawal_value(token: xassets::Token) -> Option<Balance> {
+            XAssetsProcess::minimal_withdrawal_value(&token)
         }
     }
 

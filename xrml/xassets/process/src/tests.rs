@@ -7,7 +7,7 @@ use substrate_primitives::{Blake2Hasher, H256};
 use runtime_io;
 use runtime_io::with_externalities;
 use runtime_primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
-use runtime_primitives::traits::BlakeTwo256;
+use runtime_primitives::traits::{BlakeTwo256, IdentityLookup};
 use runtime_primitives::BuildStorage;
 
 use super::*;
@@ -28,6 +28,7 @@ impl system::Trait for Test {
     type Hashing = BlakeTwo256;
     type Digest = Digest;
     type AccountId = u64;
+    type Lookup = IdentityLookup<u64>;
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
@@ -35,8 +36,8 @@ impl system::Trait for Test {
 
 impl balances::Trait for Test {
     type Balance = u64;
-    type AccountIndex = u64;
     type OnFreeBalanceZero = ();
+    type OnNewAccount = ();
     type EnsureAccountLiquid = ();
     type Event = ();
 }
@@ -90,7 +91,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             existential_deposit: 500,
             transfer_fee: 0,
             creation_fee: 0,
-            reclaim_rebate: 0,
         }
         .build_storage()
         .unwrap()
@@ -117,6 +117,27 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .build_storage()
         .unwrap()
         .0,
+    );
+
+    // bridge btc
+    r.extend(
+        xbitcoin::GenesisConfig::<Test> {
+            // start genesis block: (genesis, blocknumber)
+            genesis: Default::default(),
+            params_info: Default::default(),
+            network_id: 1,
+            irr_block: 3,
+            reserved: 2100,
+            btc_fee: 10,
+            max_withdraw_amount: 100,
+            cert_address: Default::default(),
+            cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
+            trustee_address: Default::default(),
+            trustee_redeem_script: b"52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae".to_vec(),
+            _genesis_phantom_data: Default::default(),
+        }.build_storage()
+            .unwrap()
+            .0,
     );
 
     r.into()
@@ -186,4 +207,45 @@ fn test_check_btc_addr2() {
         );
         assert_eq!(r, Ok(()));
     })
+}
+
+#[test]
+fn test_check_min_withdrawal() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(xassets::Module::<Test>::issue(&b"BTC".to_vec(), &1, 1000));
+
+        // less
+        let origin = system::RawOrigin::Signed(1).into();
+        assert_err!(
+            Module::<Test>::withdraw(
+                origin,
+                b"BTC".to_vec(),
+                5,
+                b"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".to_vec(),
+                b"".to_vec()
+            ),
+            "withdrawal value should larger than requirement"
+        );
+        // equal
+        let origin = system::RawOrigin::Signed(1).into();
+        assert_err!(
+            Module::<Test>::withdraw(
+                origin,
+                b"BTC".to_vec(),
+                10,
+                b"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".to_vec(),
+                b"".to_vec()
+            ),
+            "withdrawal value should larger than requirement"
+        );
+        // success
+        let origin = system::RawOrigin::Signed(1).into();
+        assert_ok!(Module::<Test>::withdraw(
+            origin,
+            b"BTC".to_vec(),
+            11,
+            b"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".to_vec(),
+            b"".to_vec()
+        ));
+    });
 }

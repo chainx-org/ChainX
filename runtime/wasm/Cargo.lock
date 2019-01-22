@@ -1944,7 +1944,7 @@ name = "twox-hash"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "rand 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

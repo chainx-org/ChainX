@@ -73,6 +73,9 @@ build_rpc_trait! {
         #[rpc(name = "chainx_verifyAddressValidity")]
         fn verify_addr(&self, String, String, String) -> Result<Option<String>>;
 
+        #[rpc(name = "chainx_getMinimalWithdrawalValueByToken")]
+        fn minimal_withdrawal_value(&self, String) -> Result<Option<Balance>>;
+
         #[rpc(name = "chainx_getWithdrawalList")]
         fn withdrawal_list(&self, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
 

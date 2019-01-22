@@ -49,7 +49,7 @@ extern crate base58;
 #[cfg(test)]
 mod tests;
 
-//use rstd::prelude::*;
+use runtime_primitives::traits::As;
 use runtime_support::dispatch::Result;
 
 use system::ensure_signed;
@@ -66,6 +66,11 @@ decl_module! {
             let who = ensure_signed(origin)?;
 
             Self::verify_addr(&token, &addr, &ext)?;
+
+            let min = Self::minimal_withdrawal_value(&token).expect("all token should has minimal withdrawal value");
+            if value <= min {
+                return Err("withdrawal value should larger than requirement")
+            }
 
             xrecords::Module::<T>::withdrawal(&who, &token, value, addr, ext)?;
             Ok(())
@@ -88,5 +93,14 @@ impl<T: Trait> Module<T> {
 
     pub fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result {
         Self::verify_addr(&token, &addr, &ext)
+    }
+
+    pub fn minimal_withdrawal_value(token: &Token) -> Option<T::Balance> {
+        match token.as_slice() {
+            <xbitcoin::Module<T> as ChainT>::TOKEN => {
+                Some(As::sa(xbitcoin::Module::<T>::btc_fee()))
+            }
+            _ => None,
+        }
     }
 }

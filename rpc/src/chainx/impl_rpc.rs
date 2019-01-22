@@ -226,6 +226,20 @@ where
             .map_err(|e| e.into())
     }
 
+    fn minimal_withdrawal_value(&self, token: String) -> Result<Option<Balance>> {
+        let token: xassets::Token = token.as_bytes().to_vec();
+
+        // test valid before call runtime api
+        if let Err(_) = xassets::is_valid_token(&token) {
+            return Ok(None);
+        }
+        let b = self.best_number()?;
+        self.client
+            .runtime_api()
+            .minimal_withdrawal_value(&b, &token)
+            .map_err(|e| e.into())
+    }
+
     fn withdrawal_list(
         &self,
         page_index: u32,

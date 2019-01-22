@@ -26,6 +26,8 @@ pub mod xassets_api {
             fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::Application<AccountId, Balance, Timestamp>>;
 
             fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result<(), Vec<u8>>;
+
+            fn minimal_withdrawal_value(token: Token) -> Option<Balance>;
         }
     }
 }
