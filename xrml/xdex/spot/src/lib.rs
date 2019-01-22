@@ -56,7 +56,7 @@ use codec::Codec;
 use def::{
     Fill, Handicap, Order, OrderDirection, OrderPair, OrderPairID, OrderStatus, OrderType, ID,
 };
-use primitives::traits::{As, Member, SimpleArithmetic, Zero};
+use primitives::traits::{As, Member, SimpleArithmetic, Zero,MaybeSerializeDebug};
 use primitives::traits::{CheckedAdd, CheckedSub};
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
@@ -64,6 +64,9 @@ use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
 
 use xassets::assetdef::Token;
+
+const PRICE_MAX_ORDER:usize=1000;
+
 
 pub type OrderT<T> = Order<
     OrderPairID,
@@ -89,6 +92,7 @@ pub trait Trait: balances::Trait + xassets::Trait + timestamp::Trait {
         + As<u16>
         + As<u32>
         + As<u64>
+        + MaybeSerializeDebug
         + Copy
         + Zero
         + Default;
@@ -120,7 +124,7 @@ decl_module! {
 
 
         //增加交易对
-        pub fn add_pair(first:Token,second:Token,precision:u32,used:bool)->Result{
+        pub fn add_pair(first:Token,second:Token,precision:u32,price:T::Price,used:bool)->Result{
              runtime_io::print("[xdex spot] add_pair");
              match Self::get_pair_by(&first, &second) {
                 Some(_pair) => Err("have a existed pair in  list"),
@@ -135,6 +139,8 @@ decl_module! {
                         used:used,
                     };
                     <OrderPairOf<T>>::insert(pair.id,&pair);
+                    <OrderPairPriceOf<T>>::insert(pair.id, (price, price, <system::Module<T>>::block_number()));
+
                     <OrderPairLen<T>>::put(pair_len+1);
 
                     Self::event_pair(&pair);
@@ -213,7 +219,7 @@ decl_storage! {
         pub PriceVolatility get(price_volatility) config(): u32;//价格波动率%
     }
     add_extra_genesis {
-        config(pair_list): Vec<(Token, Token, u32, bool)>;
+        config(pair_list): Vec<(Token, Token, u32, T::Price,bool)>;
         build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
                 use runtime_io::with_externalities;
                 use substrate_primitives::Blake2Hasher;
@@ -221,8 +227,9 @@ decl_storage! {
                 let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
                 with_externalities(&mut tmp_storage, || {
 
-                    for (first, second, precision, status) in config.pair_list.iter() {
-                        Module::<T>::add_pair(first.clone(),second.clone(),*precision,*status).unwrap();
+                    for (first, second, precision, price,status) in config.pair_list.iter() {
+                       
+                        Module::<T>::add_pair(first.clone(),second.clone(),*precision,*price,*status).unwrap();
                     }
 
                 });
@@ -234,6 +241,8 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
+
+
     pub fn get_pair_by(first: &Token, second: &Token) -> Option<OrderPair> {
         let pair_len = <OrderPairLen<T>>::get();
 
@@ -342,6 +351,20 @@ impl<T: Trait> Module<T> {
             return Err("price cann't be zero");
         }
 
+        //检查不能超过最大 且方向相同
+        match <Quotations<T>>::get((pair.id, price)) {
+            Some(list) => {
+                if list.len() >= PRICE_MAX_ORDER {
+                    if let Some( order) = <AccountOrder<T>>::get(&list[0]) {
+                        if order.direction == direction {
+                            return Err("some price&direction too much order");
+                        }
+                    }
+                }
+            },
+            None=>{
+            },
+        }
         //盘口
         let handicap = match <HandicapMap<T>>::get(pairid) {
             Some(handicap) => handicap,

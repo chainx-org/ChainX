@@ -160,10 +160,9 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             intentions: vec![],
         }),
         xspot: Some(XSpotConfig {
-            pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),5,true)],
+            pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),5,100,true)],
             // (OrderPair { first: Runtime::CHAINX_SYMBOL.to_vec(), second: BridgeOfBTC::SYMBOL.to_vec() }, 8)
             price_volatility: 10,
-            _genesis_phantom_data: Default::default(),
         }),
         bitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
