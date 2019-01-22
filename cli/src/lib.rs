@@ -16,7 +16,6 @@
 
 //! Substrate CLI library.
 
-#![warn(missing_docs)]
 #![warn(unused_extern_crates)]
 
 extern crate tokio;
@@ -118,8 +117,8 @@ where
         Err(e) => e.exit(),
     };
 
-    let (spec, mut config) =
-        cli::parse_matches::<service::Factory, _>(load_spec, version, "chainx-node", &matches)?;
+    let (spec, config) =
+        cli::parse_matches::<service::Factory, _>(load_spec, &version, "chainx-node", &matches)?;
 
     //    if cfg!(feature = "msgbus-redis") == false {
     //        if matches.is_present("grandpa_authority_only") {
@@ -130,7 +129,7 @@ where
     //            config.roles = ServiceRoles::AUTHORITY;
     //        }
     //    }
-    match cli::execute_default::<service::Factory, _>(spec, exit, &matches, &config)? {
+    match cli::execute_default::<service::Factory, _>(spec, exit, &matches, &config, &version)? {
         cli::Action::ExecutedInternally => (),
         cli::Action::RunService(exit) => {
             info!("ChainX");

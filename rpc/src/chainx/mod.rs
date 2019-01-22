@@ -1,14 +1,14 @@
+// Copyright 2019 Chainpool.
+
 extern crate runtime_api;
 
 use std::collections::BTreeMap;
-use std::iter::FromIterator;
 use std::sync::Arc;
 
 use btc_chain::Transaction as BTCTransaction;
-use codec::{Decode, Encode};
+use codec::Decode;
 use jsonrpc_macros::Trailing;
 use serde::Serialize;
-use std::str::FromStr;
 
 use client::runtime_api::Core as CoreAPI;
 use client::{self, runtime_api::Metadata, Client};
@@ -16,7 +16,7 @@ use keys::Address;
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
-use runtime_primitives::traits::{As, Block as BlockT, Header, NumberFor, ProvideRuntimeApi, Zero};
+use runtime_primitives::traits::{As, Block as BlockT, NumberFor, Zero};
 use script::Script;
 use state_machine::Backend;
 
@@ -155,6 +155,7 @@ where
         Ok(state)
     }
 
+    /*
     fn timestamp(&self, number: BlockNumber) -> std::result::Result<Timestamp, error::Error> {
         let number = number.encode();
         let number: NumberFor<Block> = Decode::decode(&mut number.as_slice()).unwrap();
@@ -164,7 +165,7 @@ where
         let key = <timestamp::Now<Runtime>>::key();
 
         Ok(Self::pickout::<Timestamp>(&state, &key)?.unwrap())
-    }
+    }*/
 
     /// Pick out specified data from storage given the state and key.
     fn pickout<ReturnValue: Decode>(

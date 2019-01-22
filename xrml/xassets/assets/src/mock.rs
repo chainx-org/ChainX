@@ -1,5 +1,6 @@
 // Copyright 2018 Chainpool.
 
+extern crate srml_indices as indices;
 use substrate_primitives::{Blake2Hasher, H256};
 
 use primitives::testing::{Digest, DigestItem, Header};
@@ -24,6 +25,7 @@ impl system::Trait for Test {
     type Hashing = BlakeTwo256;
     type Digest = Digest;
     type AccountId = u64;
+    type Lookup = Indices;
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
@@ -31,9 +33,16 @@ impl system::Trait for Test {
 
 impl balances::Trait for Test {
     type Balance = u64;
-    type AccountIndex = u64;
     type OnFreeBalanceZero = ();
+    type OnNewAccount = Indices;
     type EnsureAccountLiquid = ();
+    type Event = ();
+}
+
+impl indices::Trait for Test {
+    type AccountIndex = u32;
+    type IsDeadAccount = Balances;
+    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
     type Event = ();
 }
 
@@ -46,6 +55,7 @@ impl Trait for Test {
 
 pub type XAssets = Module<Test>;
 pub type Balances = balances::Module<Test>;
+pub type Indices = indices::Module<Test>;
 pub type Balance = u64;
 
 // This function basically just builds a genesis storage key/value store according to
@@ -64,7 +74,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
-            reclaim_rebate: 0,
         }
         .build_storage()
         .unwrap()
@@ -110,7 +119,6 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
-            reclaim_rebate: 0,
         }
         .build_storage()
         .unwrap()

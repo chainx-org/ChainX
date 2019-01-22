@@ -56,7 +56,7 @@ use codec::Codec;
 use def::{
     Fill, Handicap, Order, OrderDirection, OrderPair, OrderPairID, OrderStatus, OrderType, ID,
 };
-use primitives::traits::{As, Member, SimpleArithmetic, Zero,MaybeSerializeDebug};
+use primitives::traits::{As, MaybeSerializeDebug, Member, SimpleArithmetic, Zero};
 use primitives::traits::{CheckedAdd, CheckedSub};
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
@@ -65,8 +65,7 @@ use system::ensure_signed;
 
 use xassets::assetdef::Token;
 
-const PRICE_MAX_ORDER:usize=1000;
-
+const PRICE_MAX_ORDER: usize = 1000;
 
 pub type OrderT<T> = Order<
     OrderPairID,
@@ -228,7 +227,7 @@ decl_storage! {
                 with_externalities(&mut tmp_storage, || {
 
                     for (first, second, precision, price,status) in config.pair_list.iter() {
-                       
+
                         Module::<T>::add_pair(first.clone(),second.clone(),*precision,*price,*status).unwrap();
                     }
 
@@ -241,8 +240,6 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
-
-
     pub fn get_pair_by(first: &Token, second: &Token) -> Option<OrderPair> {
         let pair_len = <OrderPairLen<T>>::get();
 
@@ -355,15 +352,14 @@ impl<T: Trait> Module<T> {
         match <Quotations<T>>::get((pair.id, price)) {
             Some(list) => {
                 if list.len() >= PRICE_MAX_ORDER {
-                    if let Some( order) = <AccountOrder<T>>::get(&list[0]) {
+                    if let Some(order) = <AccountOrder<T>>::get(&list[0]) {
                         if order.direction == direction {
                             return Err("some price&direction too much order");
                         }
                     }
                 }
-            },
-            None=>{
-            },
+            }
+            None => {}
         }
         //盘口
         let handicap = match <HandicapMap<T>>::get(pairid) {

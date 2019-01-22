@@ -39,6 +39,7 @@ quick_main!(run);
 
 fn run() -> cli::error::Result<()> {
     let version = VersionInfo {
+        name: "ChainX",
         commit: "VERGEN_SHA_SHORT",
         version: "CARGO_PKG_VERSION",
         executable_name: "ChainX",

@@ -3,6 +3,8 @@
 
 #![cfg(test)]
 
+extern crate srml_indices as indices;
+
 use super::JackpotAccountIdFor;
 use runtime_io;
 use runtime_primitives::testing::{
@@ -35,13 +37,20 @@ impl system::Trait for Test {
     type Hashing = BlakeTwo256;
     type Digest = Digest;
     type AccountId = u64;
+    type Lookup = Indices;
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
 }
+impl indices::Trait for Test {
+    type AccountIndex = u32;
+    type IsDeadAccount = Balances;
+    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
+    type Event = ();
+}
 impl balances::Trait for Test {
     type Balance = u64;
-    type AccountIndex = u64;
+    type OnNewAccount = Indices;
     type OnFreeBalanceZero = ();
     type EnsureAccountLiquid = ();
     type Event = ();
@@ -119,7 +128,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
-            reclaim_rebate: 0,
         }
         .build_storage()
         .unwrap()
@@ -171,4 +179,6 @@ pub type System = system::Module<Test>;
 pub type Session = session::Module<Test>;
 pub type XAssets = xassets::Module<Test>;
 pub type XAccounts = xaccounts::Module<Test>;
+pub type Balances = balances::Module<Test>;
 pub type Staking = Module<Test>;
+pub type Indices = indices::Module<Test>;

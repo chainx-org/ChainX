@@ -84,7 +84,7 @@ pub type AccountId = primitives::H256;
 
 /// The type for looking up accounts. We don't expect more than 4 billion of them, but you
 /// never know...
-pub type AccountIndex = u64;
+pub type AccountIndex = u32;
 
 /// Indentifier for a chain. 32-bit should be plenty.
 pub type ChainId = u32;

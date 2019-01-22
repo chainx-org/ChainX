@@ -30,6 +30,7 @@ srml-session = { git = "https://github.com/chainpool/substrate", default-feature
 srml-grandpa = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-aura = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-sudo = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-indices = { git = "https://github.com/chainpool/substrate", default-features = false }
 
 #srml-contract = { git = "https://github.com/chainpool/substrate", default-features = false }
 #srml-council = { git = "https://github.com/chainpool/substrate", default-features = false }
@@ -87,6 +88,7 @@ std = [
     "srml-grandpa/std",
     "srml-aura/std",
     "srml-sudo/std",
+    "srml-indices/std",
 
 #    "srml-contract/std",
 #    "srml-council/std",

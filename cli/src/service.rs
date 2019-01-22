@@ -19,7 +19,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 use chainx_executor;
-use chainx_primitives::{set_blockproducer, Block, InherentData};
+use chainx_primitives::{Block, InherentData};
 use chainx_runtime::{GenesisConfig, RuntimeApi};
 use client;
 use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
@@ -104,7 +104,8 @@ construct_service_factory! {
                 executor.spawn(grandpa::run_grandpa(
                     grandpa::Config {
                         local_key,
-                        gossip_duration: Duration::new(4, 0), // FIXME: make this available through chainspec?
+                        gossip_duration: Duration::new(2, 0), // FIXME: make this available through chainspec?
+                        justification_period: 4096,
                         name: Some(service.config.name.clone())
                     },
                     link_half,

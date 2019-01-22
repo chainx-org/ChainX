@@ -15,6 +15,7 @@ sr-io = { git = "https://github.com/chainpool/substrate", default_features = fal
 sr-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
+srml-indices = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
 
 # chainx runtime
@@ -35,6 +36,7 @@ std=[
     "sr-primitives/std",
     "srml-support/std",
     "srml-system/std",
+    "srml-indices/std",
     "srml-balances/std",
     # chainx runtime
     "xr-primitives/std",

@@ -40,7 +40,7 @@ use balances::OnDilution;
 use codec::{Compact, HasCompact};
 use rstd::prelude::*;
 use runtime_primitives::{
-    traits::{As, Hash, Zero},
+    traits::{As, Hash, Lookup, StaticLookup, Zero},
     Perbill,
 };
 use runtime_support::dispatch::Result;
@@ -48,7 +48,7 @@ use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 
 use xaccounts::{Name, URL};
-use xassets::{Address, Memo, Token};
+use xassets::{Memo, Token};
 use xr_primitives::XString;
 
 pub mod vote_weight;
@@ -143,12 +143,12 @@ decl_module! {
         /// Transactor could be an intention.
         fn nominate(
             origin,
-            target: Address<T::AccountId, T::AccountIndex>,
+            target: <T::Lookup as StaticLookup>::Source,
             value: T::Balance,
             memo: Memo
         ) {
             let who = ensure_signed(origin)?;
-            let target = <xassets::Module<T>>::lookup(target)?;
+            let target = system::ChainContext::<T>::default().lookup(target)?;
 
             xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot nominate zero.");
@@ -166,12 +166,12 @@ decl_module! {
 
         fn unnominate(
             origin,
-            target: Address<T::AccountId, T::AccountIndex>,
+            target: <T::Lookup as StaticLookup>::Source,
             value: T::Balance,
             memo: Memo
         ) {
             let who = ensure_signed(origin)?;
-            let target = <xassets::Module<T>>::lookup(target)?;
+            let target = system::ChainContext::<T>::default().lookup(target)?;
 
             xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot unnominate zero.");
@@ -187,9 +187,9 @@ decl_module! {
             Self::apply_unnominate(&who, &target, value)?;
         }
 
-        fn claim(origin, target: Address<T::AccountId, T::AccountIndex>) {
+        fn claim(origin, target: <T::Lookup as StaticLookup>::Source) {
             let who = ensure_signed(origin)?;
-            let target = <xassets::Module<T>>::lookup(target)?;
+            let target = system::ChainContext::<T>::default().lookup(target)?;
 
             ensure!(
                 <NominationRecords<T>>::get((who.clone(), target.clone())).is_some(),
@@ -201,11 +201,11 @@ decl_module! {
 
         fn unfreeze(
             origin,
-            target: Address<T::AccountId, T::AccountIndex>,
+            target: <T::Lookup as StaticLookup>::Source,
             revocation_index: u32
         ) {
             let who = ensure_signed(origin)?;
-            let target = <xassets::Module<T>>::lookup(target)?;
+            let target = system::ChainContext::<T>::default().lookup(target)?;
 
             ensure!(
                 <NominationRecords<T>>::get((who.clone(), target.clone())).is_some(),

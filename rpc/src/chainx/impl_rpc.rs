@@ -1,4 +1,9 @@
+// Copyright 2019 Chainpool.
+
 use super::*;
+use runtime_primitives::traits::{Header, ProvideRuntimeApi};
+use std::iter::FromIterator;
+use std::str::FromStr;
 
 impl<B, E, Block, RA>
     ChainXApi<NumberFor<Block>, AccountId, Balance, BlockNumber, SignedBlock<Block>>
@@ -758,7 +763,7 @@ fn get_deposit_info(
             match from(data.to_vec()) {
                 Ok(mut slice) => {
                     let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice())
-                        .unwrap_or_else(|| H256::from(0));
+                        .unwrap_or_else(|| [0; 32].into());
                     if account_id == who || flag {
                         flag = true;
                         ops = String::from_utf8(s[2..].to_vec()).unwrap_or_default();

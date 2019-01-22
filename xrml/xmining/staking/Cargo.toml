@@ -19,6 +19,7 @@ srml-support = { git = "https://github.com/chainpool/substrate", default_feature
 srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-consensus = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
+srml-indices = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-session = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
 
@@ -47,6 +48,7 @@ std = [
     "srml-balances/std",
     "srml-session/std",
     "srml-system/std",
+    "srml-indices/std",
     "srml-timestamp/std",
     # chainx runtime
     "xr-primitives/std",

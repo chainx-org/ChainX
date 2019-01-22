@@ -35,7 +35,7 @@ mod tests;
 pub mod assetdef;
 pub mod memo;
 
-use primitives::traits::{CheckedAdd, CheckedSub, Zero};
+use primitives::traits::{CheckedAdd, CheckedSub, StaticLookup, Zero};
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 #[cfg(feature = "std")]
@@ -54,8 +54,6 @@ pub use assetdef::{
 };
 
 pub use memo::{is_valid_memo, Memo};
-
-pub type Address<AccountId, AccountIndex> = balances::address::Address<AccountId, AccountIndex>;
 
 pub trait Trait: balances::Trait {
     /// Event
@@ -239,17 +237,17 @@ decl_module! {
         }
 
         /// set free token for an account
-        fn set_balance(who: Address<T::AccountId, T::AccountIndex>, token: Token, balances: CodecBTreeMap<AssetType, T::Balance>) -> Result {
-            let who = balances::Module::<T>::lookup(who)?;
+        fn set_balance(who: <T::Lookup as StaticLookup>::Source, token: Token, balances: CodecBTreeMap<AssetType, T::Balance>) -> Result {
+            let who = <T as system::Trait>::Lookup::lookup(who)?;
             Self::set_balance_by_root(&who, &token, balances)?;
             Ok(())
         }
 
         /// transfer between account
-        fn transfer(origin, dest: Address<T::AccountId, T::AccountIndex>, token: Token, value: T::Balance, memo: Memo) -> Result {
+        fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
             runtime_io::print("[xassets] transfer");
             let transactor = ensure_signed(origin)?;
-            let dest = balances::Module::<T>::lookup(dest)?;
+            let dest = <T as system::Trait>::Lookup::lookup(dest)?;
 
             is_valid_memo::<T>(&memo)?;
             if transactor == dest {
@@ -819,24 +817,5 @@ impl<T: Trait> Module<T> {
 
     pub fn increase_total_stake_by(value: T::Balance) {
         balances::Module::<T>::increase_total_stake_by(value);
-    }
-
-    pub fn lookup_index(index: T::AccountIndex) -> Option<T::AccountId> {
-        balances::Module::<T>::lookup_index(index)
-    }
-
-    pub fn lookup_address(a: Address<T::AccountId, T::AccountIndex>) -> Option<T::AccountId> {
-        balances::Module::<T>::lookup_address(a)
-    }
-
-    pub fn lookup(
-        a: Address<T::AccountId, T::AccountIndex>,
-    ) -> StdResult<T::AccountId, &'static str> {
-        match a {
-            balances::address::Address::Id(i) => Ok(i),
-            balances::address::Address::Index(i) => {
-                balances::Module::<T>::lookup_index(i).ok_or("invalid account index")
-            }
-        }
     }
 }

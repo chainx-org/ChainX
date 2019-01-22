@@ -37,6 +37,7 @@ extern crate srml_aura as aura;
 extern crate srml_balances as balances;
 extern crate srml_consensus as consensus;
 extern crate srml_grandpa as grandpa;
+extern crate srml_indices as indices;
 extern crate srml_session as session;
 extern crate srml_sudo as sudo;
 extern crate srml_system as system;
@@ -78,7 +79,9 @@ use rstd::prelude::*;
 // substrate
 use primitives::OpaqueMetadata;
 use runtime_primitives::generic;
-use runtime_primitives::traits::{BlakeTwo256, Block as BlockT, Convert, DigestFor, NumberFor};
+use runtime_primitives::traits::{
+    BlakeTwo256, Block as BlockT, Convert, DigestFor, NumberFor, StaticLookup,
+};
 //#[cfg(feature = "std")]
 //use council::{motions as council_motions, voting as council_voting};
 use client::{block_builder::api as block_builder_api, runtime_api as client_api};
@@ -88,8 +91,6 @@ use runtime_primitives::{ApplyResult, BasicInherentData, CheckInherentError};
 use version::NativeVersion;
 use version::RuntimeVersion;
 
-// substrate runtime
-pub use balances::address::Address as RawAddress;
 use consensus_aura::api as aura_api;
 use grandpa::fg_primitives::{self, ScheduledChange};
 pub use runtime_primitives::{Perbill, Permill};
@@ -150,6 +151,7 @@ impl system::Trait for Runtime {
     type Hashing = BlakeTwo256;
     type Digest = generic::Digest<Log>;
     type AccountId = AccountId;
+    type Lookup = Indices;
     type Header = Header;
     type Event = Event;
     type Log = Log;
@@ -157,9 +159,7 @@ impl system::Trait for Runtime {
 
 impl balances::Trait for Runtime {
     type Balance = Balance;
-    type AccountIndex = AccountIndex;
-    //    type OnFreeBalanceZero = (Staking, Contract);
-    //    type EnsureAccountLiquid = Staking;
+    type OnNewAccount = Indices;
     type OnFreeBalanceZero = ();
     type EnsureAccountLiquid = ();
     type Event = Event;
@@ -285,6 +285,13 @@ impl xspot::Trait for Runtime {
     type Price = Balance;
 }
 
+impl indices::Trait for Runtime {
+    type AccountIndex = AccountIndex;
+    type IsDeadAccount = Balances;
+    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
+    type Event = Event;
+}
+
 impl sudo::Trait for Runtime {
     type Event = Event;
     type Proposal = Call;
@@ -297,6 +304,7 @@ construct_runtime!(
         InherentData = BasicInherentData
     {
         System: system::{default, Log(ChangesTrieRoot)},
+        Indices: indices,
         Balances: balances::{Module, Storage, Config<T>, Event<T>},
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
@@ -325,7 +333,7 @@ construct_runtime!(
 );
 
 /// The address format for describing accounts.
-pub type Address = balances::Address<Runtime>;
+pub type Address = <Indices as StaticLookup>::Source;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
 /// Block type as expected by this runtime.
@@ -342,7 +350,7 @@ pub type UncheckedExtrinsic = xr_primitives::generic::UncheckedMortalCompactExtr
 >;
 /// Executive: handles dispatch to the various modules.
 pub type Executive =
-    xexecutive::Executive<Runtime, Block, balances::ChainContext<Runtime>, XFeeManager, AllModules>;
+    xexecutive::Executive<Runtime, Block, system::ChainContext<Runtime>, XFeeManager, AllModules>;
 
 // define tokenbalances module type
 //pub type TokenBalance = u128;

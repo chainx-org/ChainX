@@ -15,9 +15,6 @@
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
 //! Substrate RPC interfaces.
-
-#![warn(missing_docs)]
-
 extern crate chain as btc_chain;
 extern crate chainx_primitives;
 extern crate chainx_runtime;

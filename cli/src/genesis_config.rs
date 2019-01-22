@@ -17,7 +17,7 @@ use chainx_runtime::{
     Runtime,
 };
 use chainx_runtime::{
-    BalancesConfig, ConsensusConfig, GenesisConfig, Params, Perbill, Permill, SessionConfig,
+    BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, Params, Perbill, SessionConfig,
     SudoConfig, TimestampConfig, XAccountsConfig, XAssetsConfig, XBridgeOfBTCConfig,
     XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
@@ -53,28 +53,15 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         GenesisSpec::Multi => vec![auth1, auth2, auth3, auth4, charlie.into(), dave.into()],
     };
 
-    //    const MILLICENTS: u128 = 1_000_000_000;
-    //    const CENTS: u128 = 1_000 * MILLICENTS;	// assume this is worth about a cent.
-    //    const DOLLARS: u128 = 100 * CENTS;
-
-    const MILLICENTS: u128 = 1_000_000_000;
-    const CENTS: u128 = 1_000 * MILLICENTS; // assume this is worth about a cent.
-    const DOLLARS: u128 = 100 * CENTS;
-
     const CONSENSUS_TIME: u64 = 1;
-    const MINUTES: u64 = 60 / (CONSENSUS_TIME * 2);
-    const HOURS: u64 = MINUTES * 60;
-    const DAYS: u64 = HOURS * 24;
 
     let pcx_precision = 3_u16;
-    let normalize = |n: u128| n * 10_u128.pow(pcx_precision as u32);
     let balances_config = BalancesConfig {
         transaction_base_fee: 1,
         transaction_byte_fee: 0,
         existential_deposit: 0,
         transfer_fee: 0,
         creation_fee: 0,
-        reclaim_rebate: 0,
         balances: vec![
             (Keyring::Alice.to_raw_public().into(), 1_000_000_000),
             (Keyring::Bob.to_raw_public().into(), 1_000_000_000),
@@ -99,6 +86,9 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             authorities: initial_authorities.clone(),
         }),
         system: None,
+        indices: Some(IndicesConfig {
+            ids: initial_authorities.clone().into_iter().map(|x| x.0.into()).collect(),
+        }),
         balances: Some(balances_config),
         timestamp: Some(TimestampConfig {
             period: CONSENSUS_TIME, // 2 second block time.

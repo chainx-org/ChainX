@@ -21,8 +21,6 @@ use rstd::result::Result as StdResult;
 
 use sr_primitives::traits::{As, Zero};
 use support::dispatch::Result;
-#[cfg(feature = "std")]
-use support::StorageValue;
 
 /// Simple payment making trait, operating on a single generic `AccountId` type.
 pub trait MakePayment<AccountId> {
