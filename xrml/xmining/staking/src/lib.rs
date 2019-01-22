@@ -22,7 +22,7 @@ extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 #[cfg(test)]
 extern crate srml_consensus as consensus;
-extern crate srml_session as session;
+extern crate xrml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 
@@ -375,7 +375,7 @@ decl_event!(
         OfflineWarning(AccountId, u32),
         /// One validator (and their nominators) has been slashed by the given amount.
         OfflineSlash(AccountId, Balance),
-        Rotation(Vec<AccountId>),
+        Rotation(Vec<(AccountId, u64)>),
         Register(u32),
         Unnominate(BlockNumber),
         Nominate(AccountId, AccountId, Balance),

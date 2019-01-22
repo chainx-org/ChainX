@@ -26,8 +26,6 @@ srml-system = { git = "https://github.com/chainpool/substrate", default-features
 srml-balances = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-consensus = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-session = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-grandpa = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-aura = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-sudo = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-indices = { git = "https://github.com/chainpool/substrate", default-features = false }
@@ -45,6 +43,8 @@ runtime-api = { path = "../runtime-api", default-features = false }
 # chainx runtime module
 xrml-xsystem = { path = "../xrml/xsystem", default-features = false }
 xrml-xaccounts = { path = "../xrml/xaccounts", default-features = false }
+xrml-session = { path = "../xrml/xsession", default-features = false }
+xrml-grandpa = { path = "../xrml/xgrandpa", default-features = false }
 # fee
 xrml-fee-manager = { path = "../xrml/xfee/manager", default-features = false }
 # assets
@@ -84,8 +84,8 @@ std = [
     "srml-balances/std",
     "srml-timestamp/std",
     "srml-consensus/std",
-    "srml-session/std",
-    "srml-grandpa/std",
+    "xrml-session/std",
+    "xrml-grandpa/std",
     "srml-aura/std",
     "srml-sudo/std",
     "srml-indices/std",

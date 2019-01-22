@@ -14,9 +14,9 @@ parity-codec = "2.1"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-keys = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-chain = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-script = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
+chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
+script = { git = "https://github.com/chainx-org/bitcoin-rust" }
 
 substrate-client = { git = "https://github.com/chainpool/substrate" }
 substrate-executor = { git = "https://github.com/chainpool/substrate" }
@@ -27,15 +27,15 @@ substrate-state-machine = { git = "https://github.com/chainpool/substrate" }
 sr-primitives = { git = "https://github.com/chainpool/substrate" }
 sr-version = { git = "https://github.com/chainpool/substrate" }
 srml-support = { git = "https://github.com/chainpool/substrate" }
-srml-session = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
+srml-balances = { git = "https://github.com/chainpool/substrate" }
+srml-timestamp = { git = "https://github.com/chainpool/substrate" }
 
 tokio = "0.1.7"
 chainx-primitives = { path = "../primitives" }
 xrml-xassets-assets = { path = "../xrml/xassets/assets" }
 xrml-xassets-records = { path = "../xrml/xassets/records" }
 xrml-xaccounts = { path = "../xrml/xaccounts" }
+xrml-session = { path = "../xrml/xsession" }
 xrml-mining-staking = { path = "../xrml/xmining/staking" }
 xrml-mining-tokens = { path = "../xrml/xmining/tokens" }
 xrml-xsupport = { path = "../xrml/xsupport"  }

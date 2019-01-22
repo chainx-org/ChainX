@@ -97,7 +97,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             validators: initial_authorities
                 .iter()
                 .cloned()
-                .map(Into::into)
+                .map(|account_id| (account_id.into(), 0))
                 .collect(),
             session_length: 30, // 30 blocks per session
         }),

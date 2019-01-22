@@ -114,7 +114,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     t.extend(
         session::GenesisConfig::<Test> {
             session_length: 1,
-            validators: vec![10, 20],
+            validators: vec![(10, 100), (20, 100)],
         }
         .build_storage()
         .unwrap()

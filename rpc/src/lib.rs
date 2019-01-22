@@ -29,7 +29,7 @@ extern crate serde_json;
 extern crate sr_primitives as runtime_primitives;
 extern crate sr_version as runtime_version;
 extern crate srml_balances as balances;
-extern crate srml_session as session;
+extern crate xrml_session as session;
 extern crate srml_support;
 extern crate srml_timestamp as timestamp;
 extern crate substrate_client as client;

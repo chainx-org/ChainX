@@ -166,9 +166,9 @@ impl<T: Trait> Module<T> {
         let vals = &intentions
             .clone()
             .into_iter()
-            .map(|(_, v)| v)
+            .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
             .take(desired_validator_count)
-            .collect::<Vec<_>>();
+            .collect::<Vec<(_, _)>>();
 
         <session::Module<T>>::set_validators(vals);
         Self::deposit_event(RawEvent::Rotation(vals.clone()));

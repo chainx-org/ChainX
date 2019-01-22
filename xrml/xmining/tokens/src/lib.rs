@@ -22,7 +22,6 @@ extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
 #[cfg(test)]
 extern crate srml_consensus as consensus;
-extern crate srml_session as session;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
 

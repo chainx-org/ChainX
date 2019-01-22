@@ -43,6 +43,8 @@ members = [
     "xrml/xsystem",
     "xrml/xsupport",
     "xrml/xaccounts",
+    "xrml/xsession",
+    "xrml/xgrandpa",
     # xrml/xfee
     "xrml/xfee/manager",
     # xrml/assets
