@@ -146,11 +146,11 @@ pub fn new_test_ext(
                 <xassets::Module<Test> as ChainT>::TOKEN.to_vec(),
                 <xbitcoin::Module<Test> as ChainT>::TOKEN.to_vec(),
                 5,
+                100000,
                 true,
             )],
             // (OrderPair { first: Runtime::CHAINX_SYMBOL.to_vec(), second: BridgeOfBTC::SYMBOL.to_vec() }, 8)
             price_volatility: 10,
-            _genesis_phantom_data: Default::default(),
         }
         .build_storage()
         .unwrap()

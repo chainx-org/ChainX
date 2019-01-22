@@ -12,7 +12,7 @@ fn test_pair() {
         let a: u64 = 1; // accountid
         let first: Token = b"EOS".to_vec();
         let second: Token = b"ETH".to_vec();
-        Spot::add_pair(first.clone(), second.clone(), 2, true).unwrap();
+        Spot::add_pair(first.clone(), second.clone(), 2,100, true).unwrap();
         assert_eq!(Spot::pair_len(), 2);
 
         let pair = Spot::get_pair_by(&first, &second).unwrap();
