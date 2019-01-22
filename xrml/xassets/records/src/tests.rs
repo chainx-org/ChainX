@@ -1,10 +1,12 @@
 // Copyright 2018 Chainpool.
 
+extern crate srml_consensus;
+
 use substrate_primitives::{Blake2Hasher, H256};
 
 use runtime_io;
 use runtime_io::with_externalities;
-use runtime_primitives::testing::{Digest, DigestItem, Header};
+use runtime_primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;
 
@@ -36,6 +38,19 @@ impl balances::Trait for Test {
     type OnFreeBalanceZero = ();
     type EnsureAccountLiquid = ();
     type Event = ();
+}
+
+impl srml_consensus::Trait for Test {
+    const NOTE_OFFLINE_POSITION: u32 = 1;
+    type Log = DigestItem;
+    type SessionKey = UintAuthorityId;
+    type InherentOfflineReport = ();
+}
+
+impl timestamp::Trait for Test {
+    const TIMESTAMP_SET_POSITION: u32 = 0;
+    type Moment = u64;
+    type OnTimestampSet = ();
 }
 
 // assets
@@ -71,7 +86,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     );
 
     let btc_asset = xassets::Asset::new(
-        b"BTC".to_vec(), // token
+        b"BTC".to_vec(),     // token
+        b"Bitcoin".to_vec(), // token
         Chain::Bitcoin,
         8, // bitcoin precision
         b"BTC chainx".to_vec(),
@@ -79,7 +95,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     .unwrap();
 
     let eth_asset = xassets::Asset::new(
-        b"ETH".to_vec(), // token
+        b"ETH".to_vec(),      // token
+        b"Ethereum".to_vec(), // token
         Chain::Ethereum,
         8, // bitcoin precision
         b"ETH chainx".to_vec(),
@@ -88,7 +105,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(
         xassets::GenesisConfig::<Test> {
-            pcx: (3, b"PCX onchain token".to_vec()),
+            pcx: (b"PolkadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
             memo_len: 128,
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
@@ -131,7 +148,7 @@ fn test_normal() {
         assert_eq!(numbers.len(), 1);
 
         for i in numbers {
-            assert_ok!(Records::withdrawal_finish(i));
+            assert_ok!(Records::withdrawal_finish(i, true));
         }
         assert_eq!(XAssets::free_balance(&a, &btc_token), 50);
     })
@@ -183,7 +200,7 @@ fn test_normal2() {
         numbers1.extend(numbers2);
 
         for i in numbers1 {
-            assert_ok!(Records::withdrawal_finish(i));
+            assert_ok!(Records::withdrawal_finish(i, true));
         }
         assert_eq!(XAssets::free_balance(&a, &btc_token), 50);
         assert_eq!(XAssets::free_balance(&a, &eth_token), 500 - 50 - 100);

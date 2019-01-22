@@ -84,6 +84,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     let btc_asset = Asset::new(
         <bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(), // token
+        b"Bitcoin".to_vec(),
         Chain::Bitcoin,
         8, // bitcoin precision
         b"BTC chainx".to_vec(),
@@ -138,7 +139,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             _genesis_phantom_data: Default::default(),
         }),
         xassets: Some(XAssetsConfig {
-            pcx: (pcx_precision, b"PCX onchain token".to_vec()),
+            pcx: (b"PolkadotChainX".to_vec(), pcx_precision, b"PCX onchain token".to_vec()),
             memo_len: 128,
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;

@@ -48,6 +48,7 @@ impl Chain {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Asset {
     token: Token,
+    token_name: Token,
     chain: Chain,
     precision: Precision,
     desc: Desc,
@@ -56,12 +57,14 @@ pub struct Asset {
 impl Asset {
     pub fn new(
         token: Token,
+        token_name: Token,
         chain: Chain,
         precision: Precision,
         desc: Desc,
     ) -> StdResult<Self, &'static str> {
         let a = Asset {
             token,
+            token_name,
             chain,
             precision,
             desc,
@@ -71,11 +74,15 @@ impl Asset {
     }
     pub fn is_valid(&self) -> Result {
         is_valid_token(&self.token)?;
+        is_valid_token(&self.token_name)?;
         is_valid_desc(&self.desc)
     }
 
     pub fn token(&self) -> Token {
         self.token.clone()
+    }
+    pub fn token_name(&self) -> Token {
+        self.token_name.clone()
     }
     pub fn chain(&self) -> Chain {
         self.chain

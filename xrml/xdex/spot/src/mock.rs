@@ -52,7 +52,9 @@ impl timestamp::Trait for Test {
     type OnTimestampSet = ();
 }
 
-impl xbitcoin::Trait for Test {}
+impl xbitcoin::Trait for Test {
+    type Event = ();
+}
 
 impl xaccounts::Trait for Test {
     type Event = ();
@@ -90,11 +92,13 @@ pub fn new_test_ext(
 
     let btc_asset = Asset::new(
         <xbitcoin::Module<Test> as ChainT>::TOKEN.to_vec(), // token
+        b"Bitcoin".to_vec(),
         Chain::Bitcoin,
         8, // bitcoin precision
         b"BTC chainx".to_vec(),
     )
     .unwrap();
+    let pcx_token_name = b"PolkadotChainX".to_vec();
     let pcx_precision = 3_u16;
     let pcx_desc = b"PCX onchain token".to_vec();
 
@@ -119,7 +123,7 @@ pub fn new_test_ext(
     );
     t.extend(
         xassets::GenesisConfig::<Test> {
-            pcx: (pcx_precision, pcx_desc),
+            pcx: (pcx_token_name, pcx_precision, pcx_desc),
             memo_len: 128,
             asset_list: vec![(
                 btc_asset,

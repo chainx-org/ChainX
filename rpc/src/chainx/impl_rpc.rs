@@ -196,19 +196,27 @@ where
         into_pagedata(assets, page_index, page_size)
     }
 
-    fn verify_addr(
-        &self,
-        token: xassets::Token,
-        addr: xrecords::AddrStr,
-        memo: xassets::Memo,
-    ) -> Result<Option<Vec<u8>>> {
+    fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<String>> {
+        let token: xassets::Token = token.as_bytes().to_vec();
+        let addr: xrecords::AddrStr = addr.as_bytes().to_vec();
+        let memo: xassets::Memo = memo.as_bytes().to_vec();
+
+        // test valid before call runtime api
+        if let Err(e) = xassets::is_valid_token(&token) {
+            return Ok(Some(String::from_utf8_lossy(e.as_ref()).into_owned()));
+        }
+
+        if addr.len() > 256 || memo.len() > 256 {
+            return Ok(Some("the addr or memo may be too long".to_string()));
+        }
+
         let b = self.best_number()?;
         self.client
             .runtime_api()
             .verify_address(&b, &token, &addr, &memo)
             .and_then(|r| match r {
                 Ok(()) => Ok(None),
-                Err(s) => Ok(Some(s)),
+                Err(s) => Ok(Some(String::from_utf8_lossy(s.as_ref()).into_owned())),
             })
             .map_err(|e| e.into())
     }

@@ -1,10 +1,12 @@
 // Copyright 2018 Chainpool.
 
+extern crate xrml_xaccounts;
+
 use substrate_primitives::{Blake2Hasher, H256};
 
 use runtime_io;
 use runtime_io::with_externalities;
-use runtime_primitives::testing::{Digest, DigestItem, Header};
+use runtime_primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use runtime_primitives::traits::BlakeTwo256;
 use runtime_primitives::BuildStorage;
 
@@ -42,7 +44,7 @@ impl balances::Trait for Test {
 impl consensus::Trait for Test {
     const NOTE_OFFLINE_POSITION: u32 = 1;
     type Log = DigestItem;
-    type SessionKey = u64;
+    type SessionKey = UintAuthorityId;
     type InherentOfflineReport = ();
 }
 
@@ -50,6 +52,10 @@ impl timestamp::Trait for Test {
     const TIMESTAMP_SET_POSITION: u32 = 0;
     type Moment = u64;
     type OnTimestampSet = ();
+}
+
+impl xrml_xaccounts::Trait for Test {
+    type Event = ();
 }
 
 impl xassets::Trait for Test {
@@ -92,7 +98,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     );
     // token balance
     let btc_asset = Asset::new(
-        b"BTC".to_vec(), // token
+        b"BTC".to_vec(),     // token
+        b"Bitcoin".to_vec(), // token
         Chain::Bitcoin,
         8, // bitcoin precision
         b"BTC chainx".to_vec(),
@@ -101,7 +108,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(
         xassets::GenesisConfig::<Test> {
-            pcx: (3, b"PCX onchain token".to_vec()),
+            pcx: (b"PlokadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
             memo_len: 128,
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
@@ -153,7 +160,7 @@ fn test_check_btc_addr() {
         let nums =
             xrecords::Module::<Test>::withdrawal_application_numbers(Chain::Bitcoin, 10).unwrap();
         for n in nums {
-            assert_ok!(xrecords::Module::<Test>::withdrawal_finish(n));
+            assert_ok!(xrecords::Module::<Test>::withdrawal_finish(n, true));
         }
         assert_eq!(
             xassets::Module::<Test>::all_type_balance_of(&1, &b"BTC".to_vec()),

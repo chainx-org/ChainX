@@ -41,7 +41,7 @@ extern crate srml_timestamp as timestamp;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_records as xrecords;
 // bridge
-extern crate xrml_bridge_bitcoin as bitcoin;
+extern crate xrml_bridge_bitcoin as xbitcoin;
 
 #[cfg(test)]
 extern crate base58;
@@ -57,7 +57,7 @@ use system::ensure_signed;
 use xassets::{ChainT, Memo, Token};
 use xrecords::AddrStr;
 
-pub trait Trait: xassets::Trait + xrecords::Trait + bitcoin::Trait {}
+pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -81,7 +81,7 @@ decl_storage! {
 impl<T: Trait> Module<T> {
     fn verify_addr(token: &Token, addr: &[u8], _ext: &[u8]) -> Result {
         match token.as_slice() {
-            <bitcoin::Module<T> as ChainT>::TOKEN => bitcoin::Module::<T>::check_addr(&addr, b""),
+            <xbitcoin::Module<T> as ChainT>::TOKEN => xbitcoin::Module::<T>::check_addr(&addr, b""),
             _ => return Err("not found match token Token addr checker"),
         }
     }

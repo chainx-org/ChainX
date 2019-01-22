@@ -38,6 +38,7 @@ pub mod memo;
 use primitives::traits::{CheckedAdd, CheckedSub, Zero};
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
+#[cfg(feature = "std")]
 use rstd::slice::Iter;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
@@ -283,7 +284,7 @@ decl_storage! {
     }
     add_extra_genesis {
         config(asset_list): Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
-        config(pcx): (Precision, Desc);
+        config(pcx): (Token, Precision, Desc);
         build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
                 use runtime_io::with_externalities;
                 use substrate_primitives::Blake2Hasher;
@@ -292,7 +293,7 @@ decl_storage! {
                 let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
                 with_externalities(&mut tmp_storage, || {
                     let chainx: Token = <Module<T> as ChainT>::TOKEN.to_vec();
-                    let pcx = Asset::new(chainx, Chain::ChainX, config.pcx.0, config.pcx.1.clone()).unwrap();
+                    let pcx = Asset::new(chainx, config.pcx.0.clone(), Chain::ChainX, config.pcx.1, config.pcx.2.clone()).unwrap();
                     Module::<T>::register_asset(pcx, false, Zero::zero()).unwrap();
                     // init for asset_list
                     for (asset, is_psedu_intention, init_list) in config.asset_list.iter() {

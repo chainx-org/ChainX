@@ -50,9 +50,17 @@ fn test_err_genesis() {
 fn test_register() {
     with_externalities(&mut new_test_ext(), || {
         let token: Token = b"ETH".to_vec(); //slice_to_u8_8(b"x-eos");
+        let token_name: Token = b"Ethereum".to_vec(); //slice_to_u8_8(b"x-eos");
         let desc: Desc = b"eth token".to_vec(); //slice_to_u8_32(b"eos token");
         let precision = 4;
-        let asset = Asset::new(token.clone(), Chain::Ethereum, precision, desc).unwrap();
+        let asset = Asset::new(
+            token.clone(),
+            token_name.clone(),
+            Chain::Ethereum,
+            precision,
+            desc,
+        )
+        .unwrap();
         assert_eq!(XAssets::register_asset(asset.clone(), false, 0), Ok(()));
 
         let btc_token = b"BTC".to_vec(); //b"BTC".to_vec();
@@ -76,13 +84,21 @@ fn test_remove() {
     with_externalities(&mut new_test_ext(), || {
         // register a new token
         let token: Token = b"ETH".to_vec(); //slice_to_u8_8(b"x-eos");
+        let token_name: Token = b"Ethereum".to_vec(); //slice_to_u8_8(b"x-eos");
         let desc: Desc = b"eth token".to_vec(); //slice_to_u8_32(b"eos token");
         let precision = 4;
-        let asset = Asset::new(token.clone(), Chain::Ethereum, precision, desc).unwrap();
+        let asset = Asset::new(
+            token.clone(),
+            token_name.clone(),
+            Chain::Ethereum,
+            precision,
+            desc,
+        )
+        .unwrap();
         assert_eq!(XAssets::register_asset(asset.clone(), false, 0), Ok(()));
 
         // remove it
-        assert_eq!(XAssets::cancel_asset(token.clone()), Ok(()));
+        assert_eq!(XAssets::revoke_asset(token.clone()), Ok(()));
         assert_noop!(XAssets::is_valid_asset(&token), "not a valid token");
 
         // re-register, but must be failed
@@ -607,23 +623,47 @@ fn test_set_token() {
 fn test_char_valid() {
     with_externalities(&mut new_test_ext(), || {
         let token = b"".to_vec();
-        let asset = Asset::new(token, Chain::Ethereum, 1, b"123".to_vec());
+        let asset = Asset::new(
+            token.clone(),
+            token.clone(),
+            Chain::Ethereum,
+            1,
+            b"123".to_vec(),
+        );
         assert_err!(asset, "Token length is zero or too long.");
 
         let token = b"dfasdlfjkalsdjfklasjdflkasjdfklasjklfasjfkdlsajf".to_vec();
-        let asset = Asset::new(token, Chain::Ethereum, 1, b"123".to_vec());
+        let asset = Asset::new(
+            token.clone(),
+            token.clone(),
+            Chain::Ethereum,
+            1,
+            b"123".to_vec(),
+        );
         assert_err!(asset, "Token length is zero or too long.");
 
         let token = b"23jfkldae(".to_vec();
-        let asset = Asset::new(token, Chain::Ethereum, 1, b"123".to_vec());
+        let asset = Asset::new(
+            token.clone(),
+            token.clone(),
+            Chain::Ethereum,
+            1,
+            b"123".to_vec(),
+        );
         assert_err!(
             asset,
             "Token can only use numbers, capital/lowercase letters or \'-\', \'.\', \'|\', \'~\'."
         );
 
-        let asset = Asset::new(b"BTC2".to_vec(), Chain::Ethereum, 1, b"btc token fdsfsdfasfasdfasdfasdfasdfasdfasdfjaskldfjalskdjflk;asjdfklasjkldfjalksdjfklasjflkdasjflkjkladsjfkrtewtewrtwertrjhjwretywertwertwerrtwerrtwerrtwertwelasjdfklsajdflkaj".to_vec());
+        let asset = Asset::new(b"BTC2".to_vec(), b"Bitcoin".to_vec(), Chain::Ethereum, 1, b"btc token fdsfsdfasfasdfasdfasdfasdfasdfasdfjaskldfjalskdjflk;asjdfklasjkldfjalksdjfklasjflkdasjflkjkladsjfkrtewtewrtwertrjhjwretywertwertwerrtwerrtwerrtwertwelasjdfklsajdflkaj".to_vec());
         assert_err!(asset, "Token desc too long");
-        let asset = Asset::new(b"BTC?".to_vec(), Chain::Ethereum, 1, b"123".to_vec());
+        let asset = Asset::new(
+            b"BTC?".to_vec(),
+            b"Bitcoin".to_vec(),
+            Chain::Ethereum,
+            1,
+            b"123".to_vec(),
+        );
         assert_err!(
             asset,
             "Token can only use numbers, capital/lowercase letters or \'-\', \'.\', \'|\', \'~\'."

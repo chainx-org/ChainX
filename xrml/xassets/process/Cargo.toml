@@ -21,6 +21,7 @@ srml-timestamp = { git = "https://github.com/chainpool/substrate", default_featu
 srml-consensus = { git = "https://github.com/chainpool/substrate", default_features = false }
 
 # xrml module
+xrml-xaccounts = { path = "../../xaccounts", default_features = false }
 xrml-xassets-assets = { path = "../assets", default_features = false }
 xrml-xassets-records = { path = "../records", default_features = false }
 # bridge
@@ -46,6 +47,7 @@ std=[
     "srml-consensus/std",
 
     # xrml
+    "xrml-xaccounts/std",
     "xrml-xassets-assets/std",
     "xrml-xassets-records/std",
 

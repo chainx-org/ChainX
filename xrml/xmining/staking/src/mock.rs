@@ -139,7 +139,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     );
     t.extend(
         xassets::GenesisConfig::<Test> {
-            pcx: (3, b"PCX".to_vec()),
+            pcx: (b"PolkadotChainX".to_vec(), 3, b"PCX".to_vec()),
             memo_len: 128,
             asset_list: vec![],
         }

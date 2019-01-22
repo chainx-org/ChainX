@@ -36,6 +36,7 @@ pub struct AssetInfo {
 #[serde(rename_all = "camelCase")]
 pub struct TotalAssetInfo {
     name: String,
+    token_name: String,
     is_native: bool,
     chain: Chain,
     precision: u16,
@@ -52,6 +53,7 @@ impl TotalAssetInfo {
     ) -> TotalAssetInfo {
         TotalAssetInfo {
             name: String::from_utf8_lossy(&asset.token()).into_owned(),
+            token_name: String::from_utf8_lossy(&asset.token_name()).into_owned(),
             is_native: asset.chain() == Chain::ChainX,
             chain: asset.chain(),
             precision: asset.precision(),

@@ -70,8 +70,8 @@ build_rpc_trait! {
         #[rpc(name = "chainx_getAssets")]
         fn assets(&self, u32, u32) -> Result<Option<PageData<TotalAssetInfo>>>;
 
-        #[rpc(name = "chainx_getVerifyAddress")]
-        fn verify_addr(&self, xassets::Token, xrecords::AddrStr, xassets::Memo) -> Result<Option<Vec<u8>>>;
+        #[rpc(name = "chainx_verifyAddress")]
+        fn verify_addr(&self, String, String, String) -> Result<Option<String>>;
 
         #[rpc(name = "chainx_getWithdrawalList")]
         fn withdrawal_list(&self, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;

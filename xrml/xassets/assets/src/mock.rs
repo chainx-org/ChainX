@@ -73,6 +73,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     let btc_asset = Asset::new(
         b"BTC".to_vec(), // token
+        b"Bitcoin".to_vec(),
         Chain::Bitcoin,
         8, // bitcoin precision
         b"BTC chainx".to_vec(),
@@ -81,7 +82,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(
         GenesisConfig::<Test> {
-            pcx: (3, b"PCX onchain token".to_vec()),
+            pcx: (b"PlokadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
             memo_len: 128,
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
@@ -118,6 +119,7 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     let btc_asset = Asset::new(
         b"BTC******".to_vec(), // token
+        b"Bitcoin".to_vec(),   // token
         Chain::Bitcoin,
         8, // bitcoin precision
         b"BTC chainx".to_vec(),
@@ -126,7 +128,7 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(
         GenesisConfig::<Test> {
-            pcx: (3, b"PCX onchain token".to_vec()),
+            pcx: (b"PolkadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
             memo_len: 128,
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
