@@ -70,7 +70,7 @@ build_rpc_trait! {
         #[rpc(name = "chainx_getAssets")]
         fn assets(&self, u32, u32) -> Result<Option<PageData<TotalAssetInfo>>>;
 
-        #[rpc(name = "chainx_verifyAddress")]
+        #[rpc(name = "chainx_verifyAddressValidity")]
         fn verify_addr(&self, String, String, String) -> Result<Option<String>>;
 
         #[rpc(name = "chainx_getWithdrawalList")]
