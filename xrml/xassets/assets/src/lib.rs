@@ -295,11 +295,17 @@ decl_storage! {
                     Module::<T>::register_asset(pcx, false, Zero::zero()).unwrap();
                     // init for asset_list
                     for (asset, is_psedu_intention, init_list) in config.asset_list.iter() {
-                        let t = asset.token();
+                        let token = asset.token();
                         Module::<T>::register_asset(asset.clone(), *is_psedu_intention, Zero::zero()).unwrap();
 
                         for (accountid, value) in init_list {
-                            Module::<T>::issue(&t, &accountid, As::sa(*value)).unwrap();
+                            let value = As::sa(*value);
+                            Module::<T>::init_asset_for(&accountid, &token);
+                            let total_free_token = Module::<T>::total_asset_balance(&token, AssetType::Free);
+                            let free_token = Module::<T>::free_balance(&accountid, &token);
+                            Module::<T>::set_total_asset_balance(&token, AssetType::Free, total_free_token + value);
+                            // not create account
+                            Module::<T>::set_asset_balance(&accountid, &token, AssetType::Free, free_token + value);
                         }
                     }
 
@@ -345,19 +351,20 @@ impl<T: Trait> Module<T> {
         Self::asset_balance(who, token, AssetType::Free)
     }
 
-    fn set_free_balance(who: &T::AccountId, token: &Token, value: T::Balance) {
-        Self::set_asset_balance(who, token, AssetType::Free, value)
-    }
-
     fn set_free_balance_creating(who: &T::AccountId, token: &Token, value: T::Balance) {
+        let is_existing = balances::FreeBalance::<T>::exists(who);
         if token.as_slice() == <Self as ChainT>::TOKEN {
-            balances::Module::<T>::set_free_balance_creating(who, value);
+            if is_existing {
+                balances::Module::<T>::set_free_balance(who, value);
+            } else {
+                // set_free_balance_creating would access `existential_deposit` storage
+                balances::Module::<T>::set_free_balance_creating(who, value);
+            }
         } else {
-            let need_create = balances::FreeBalance::<T>::exists(who);
-            if !need_create {
+            if is_existing == false {
                 balances::Module::<T>::set_free_balance_creating(who, Zero::zero());
             }
-            Self::set_free_balance(who, token, value)
+            Self::set_asset_balance(who, token, AssetType::Free, value)
         }
     }
 
@@ -594,7 +601,8 @@ impl<T: Trait> Module<T> {
         Self::init_asset_for(who, token);
 
         Self::set_total_asset_balance(token, AssetType::Free, new_total_free_token);
-        Self::set_asset_balance(who, token, AssetType::Free, new_free_token);
+        //        Self::set_asset_balance(who, token, AssetType::Free, new_free_token);
+        Self::set_free_balance_creating(who, token, new_free_token);
 
         AssetTriggerEventAfter::<T>::on_issue(token, who, value)?;
         Ok(())
@@ -770,10 +778,6 @@ impl<T: Trait> Module<T> {
     pub fn pcx_total_balance(who: &T::AccountId) -> T::Balance {
         Self::all_type_balance_of(who, &<Self as ChainT>::TOKEN.to_vec())
     }
-
-    //    fn pcx_set_free_balance(who: &T::AccountId, value: T::Balance) {
-    //        Self::set_free_balance(who, &<Self as ChainT>::TOKEN.to_vec(), value);
-    //    }
 
     fn pcx_set_free_balance_creating(who: &T::AccountId, value: T::Balance) {
         Self::set_free_balance_creating(who, &<Self as ChainT>::TOKEN.to_vec(), value);

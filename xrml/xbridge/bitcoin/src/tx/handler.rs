@@ -1,7 +1,7 @@
 use self::extracter::Extracter;
 use super::*;
-use keys::DisplayLayout;
 use b58;
+use keys::DisplayLayout;
 
 pub struct TxHandler<'a>(&'a H256);
 

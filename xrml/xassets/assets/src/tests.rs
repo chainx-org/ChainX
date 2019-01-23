@@ -10,6 +10,14 @@ use runtime_io::with_externalities;
 fn test_genesis() {
     with_externalities(&mut new_test_ext(), || {
         // Check that GenesisBuilder works properly.
+        assert_eq!(Indices::lookup_index(0), Some(1));
+        assert_eq!(Indices::lookup_index(1), Some(2));
+        assert_eq!(Indices::lookup_index(2), Some(3));
+
+        assert_eq!(XAssets::pcx_free_balance(&1), 1000);
+        assert_eq!(XAssets::pcx_free_balance(&2), 510);
+        assert_eq!(XAssets::pcx_free_balance(&3), 1000);
+
         // check token_list
         let btc_token = b"BTC".to_vec();
 
@@ -31,9 +39,20 @@ fn test_genesis_token_issue() {
         let btc_token = b"BTC".to_vec();
         let chainx_token = XAssets::TOKEN.to_vec();
         assert_eq!(
+            XAssets::asset_balance(&1, &chainx_token, AssetType::Free),
+            1000
+        );
+        assert_eq!(Indices::lookup_index(0), Some(1));
+        assert_eq!(
+            XAssets::asset_balance(&2, &chainx_token, AssetType::Free),
+            510
+        );
+        assert_eq!(Indices::lookup_index(1), Some(2));
+        assert_eq!(
             XAssets::asset_balance(&3, &chainx_token, AssetType::Free),
             1000
         );
+        assert_eq!(Indices::lookup_index(2), Some(3));
         assert_eq!(XAssets::asset_balance(&3, &btc_token, AssetType::Free), 100);
 
         assert_eq!(XAssets::assets_of(&3), [chainx_token, btc_token]);
@@ -463,6 +482,41 @@ fn test_error_issue_and_destroy3() {
 }
 
 #[test]
+fn test_account_init() {
+    with_externalities(&mut new_test_ext(), || {
+        let a: u64 = 1; // accountid
+        let id1: u64 = 1000;
+        let id2: u64 = 1001;
+        let id3: u64 = 1002;
+        let btc_token = b"BTC".to_vec();
+        let chainx_token = XAssets::TOKEN.to_vec();
+        XAssets::issue(&btc_token, &a, 100).unwrap();
+
+        // issue init
+        XAssets::issue(&btc_token, &id1, 100).unwrap();
+        assert_eq!(Indices::lookup_index(3), Some(id1));
+        // transfer pcx init
+        assert_ok!(XAssets::transfer(
+            Some(a).into(),
+            id2.into(),
+            chainx_token.clone(),
+            25,
+            b"".to_vec()
+        ));
+        assert_eq!(Indices::lookup_index(4), Some(id2));
+        // transfer token init
+        assert_ok!(XAssets::transfer(
+            Some(a).into(),
+            id3.into(),
+            btc_token.clone(),
+            25,
+            b"".to_vec()
+        ));
+        assert_eq!(Indices::lookup_index(5), Some(id3));
+    })
+}
+
+#[test]
 fn test_transfer_not_init() {
     with_externalities(&mut new_test_ext(), || {
         let a: u64 = 1; // accountid
@@ -477,7 +531,7 @@ fn test_transfer_not_init() {
             25,
             b"".to_vec()
         ));
-        //assert_eq!(Indices::lookup_index(1), Some(new_id));
+        assert_eq!(Indices::lookup_index(3), Some(new_id));
         assert_ok!(XAssets::transfer(
             Some(a).into(),
             new_id.into(),
@@ -485,6 +539,7 @@ fn test_transfer_not_init() {
             25,
             b"".to_vec()
         ));
+        assert_eq!(Indices::lookup_index(4), None);
         assert_ok!(XAssets::transfer(
             Some(a).into(),
             new_id.into(),
@@ -492,7 +547,7 @@ fn test_transfer_not_init() {
             25,
             b"".to_vec()
         ));
-
+        assert_eq!(Indices::lookup_index(4), None);
         assert_eq!(XAssets::free_balance(&a, &chainx_token), 1000 - 25);
         assert_eq!(XAssets::free_balance(&new_id, &chainx_token), 25);
     })

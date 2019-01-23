@@ -61,7 +61,6 @@ pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
     Ok(ret)
 }
 
-
 pub fn to_base58(data: Vec<u8>) -> Vec<u8> {
     let zcount = data.iter().take_while(|x| **x == 0).count();
     let size: usize = (data.len() - zcount) * 138 / 100 + 1;
@@ -81,7 +80,7 @@ pub fn to_base58(data: Vec<u8>) -> Vec<u8> {
             buffer[j] = (carry % 58) as u8;
             carry /= 58;
 
-            if j  > 0 {
+            if j > 0 {
                 j -= 1;
             }
         }

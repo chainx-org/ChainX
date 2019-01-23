@@ -79,6 +79,13 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .unwrap()
         .0,
     );
+    // indices
+    r.extend(
+        indices::GenesisConfig::<Test> { ids: vec![1, 2, 3] }
+            .build_storage()
+            .unwrap()
+            .0,
+    );
 
     let btc_asset = Asset::new(
         b"BTC".to_vec(), // token
