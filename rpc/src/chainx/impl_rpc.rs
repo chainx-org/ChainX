@@ -12,7 +12,10 @@ where
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
     E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync + 'static,
     Block: BlockT<Hash = H256> + 'static,
-    RA: Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block>,
+    RA: std::marker::Send + std::marker::Sync + 'static,
+    Client<B, E, Block, RA>: ProvideRuntimeApi,
+    <Client<B, E, Block, RA> as ProvideRuntimeApi>::Api:
+        Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block>,
 {
     fn block_info(&self, number: Trailing<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         let hash = match number.into() {
@@ -218,7 +221,7 @@ where
         let b = self.best_number()?;
         self.client
             .runtime_api()
-            .verify_address(&b, &token, &addr, &memo)
+            .verify_address(&b, token, addr, memo)
             .and_then(|r| match r {
                 Ok(()) => Ok(None),
                 Err(s) => Ok(Some(String::from_utf8_lossy(s.as_ref()).into_owned())),
@@ -236,7 +239,7 @@ where
         let b = self.best_number()?;
         self.client
             .runtime_api()
-            .minimal_withdrawal_value(&b, &token)
+            .minimal_withdrawal_value(&b, token)
             .map_err(|e| e.into())
     }
 
@@ -252,7 +255,7 @@ where
             let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
                 .client
                 .runtime_api()
-                .withdrawal_list_of(&best_number, c)
+                .withdrawal_list_of(&best_number, *c)
                 .map_err(|e| e.into());
 
             let list = list?;
@@ -275,7 +278,7 @@ where
             let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
                 .client
                 .runtime_api()
-                .withdrawal_list_of(&b, c)
+                .withdrawal_list_of(&b, *c)
                 .map_err(|e| e.into());
             let list = list?;
             v.extend(list);
@@ -335,7 +338,7 @@ where
             let jackpot_addr_list: Result<Vec<H256>> = self
                 .client
                 .runtime_api()
-                .multi_jackpot_accountid_for(&self.best_number()?, &intentions)
+                .multi_jackpot_accountid_for(&self.best_number()?, intentions.clone())
                 .map_err(|e| e.into());
             let jackpot_addr_list: Vec<H256> = jackpot_addr_list?;
 
@@ -396,7 +399,7 @@ where
             let jackpot_addr_list: Result<Vec<H256>> = self
                 .client
                 .runtime_api()
-                .multi_token_jackpot_accountid_for(&self.best_number()?, &tokens)
+                .multi_token_jackpot_accountid_for(&self.best_number()?, tokens.clone())
                 .map_err(|e| e.into());
             let jackpot_addr_list: Vec<H256> = jackpot_addr_list?;
 

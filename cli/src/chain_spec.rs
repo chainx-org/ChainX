@@ -1,8 +1,10 @@
+// Copyright 2019 Chainpool
+
 use chainx_runtime::GenesisConfig;
 use genesis_config::{testnet_genesis, GenesisSpec};
 use substrate_service;
 
-const STAGING_TELEMETRY_URL: &str = "ws://stats.chainx.org/submit/";
+const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialised `ChainSpec`.
 pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
@@ -11,8 +13,8 @@ pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
 pub fn staging_testnet_config() -> ChainSpec {
     let boot_nodes = vec![];
     ChainSpec::from_genesis(
-        "Staging Testnet",
-        "staging_testnet",
+        "ChainX Staging Testnet",
+        "chainx_staging_testnet",
         staging_testnet_config_genesis,
         boot_nodes,
         Some(STAGING_TELEMETRY_URL.into()),

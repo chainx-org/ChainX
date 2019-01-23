@@ -131,7 +131,9 @@ where
     Block: BlockT<Hash = H256> + 'static,
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
     E: CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static + Clone,
-    RA: Metadata<Block>,
+    RA: Send + Sync + 'static,
+    Client<B, E, Block, RA>: ProvideRuntimeApi,
+    <Client<B, E, Block, RA> as ProvideRuntimeApi>::Api: Metadata<Block>,
 {
     type Metadata = ::metadata::Metadata;
 

@@ -10,7 +10,6 @@ use codec::Decode;
 use jsonrpc_macros::Trailing;
 use serde::Serialize;
 
-use client::runtime_api::Core as CoreAPI;
 use client::{self, runtime_api::Metadata, Client};
 use keys::Address;
 use primitives::storage::{StorageData, StorageKey};
@@ -120,7 +119,6 @@ where
     B: client::backend::Backend<Block, Blake2Hasher>,
     E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync,
     Block: BlockT<Hash = H256>,
-    RA: CoreAPI<Block> + XAssetsApi<Block> + XMiningApi<Block>,
 {
     client: Arc<Client<B, E, Block, RA>>,
 }
@@ -130,7 +128,6 @@ where
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
     E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync,
     Block: BlockT<Hash = H256> + 'static,
-    RA: Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block>,
 {
     /// Create new ChainX API RPC handler.
     pub fn new(client: Arc<Client<B, E, Block, RA>>) -> Self {

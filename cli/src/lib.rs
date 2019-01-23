@@ -36,6 +36,7 @@ extern crate substrate_finality_grandpa as grandpa;
 #[macro_use]
 extern crate substrate_service;
 extern crate chainx_executor;
+extern crate substrate_inherents as inherents;
 extern crate substrate_rpc_servers as rpc;
 
 #[macro_use]
@@ -129,7 +130,7 @@ where
     //            config.roles = ServiceRoles::AUTHORITY;
     //        }
     //    }
-    match cli::execute_default::<service::Factory, _>(spec, exit, &matches, &config, &version)? {
+    match cli::execute_default::<service::Factory, _>(spec, exit, &matches, &config)? {
         cli::Action::ExecutedInternally => (),
         cli::Action::RunService(exit) => {
             info!("ChainX");
