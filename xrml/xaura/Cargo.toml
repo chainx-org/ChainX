@@ -1,0 +1,42 @@
+[package]
+name = "xrml-aura"
+version = "0.1.0"
+authors = ["Parity Technologies <admin@parity.io> & Chainpool <chainx.org>"]
+
+[dependencies]
+hex-literal = "0.1.0"
+parity-codec = { version = "2.2", default-features = false }
+parity-codec-derive = { version = "2.1", default-features = false }
+serde = { version = "1.0", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-inherents = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-consensus = { git = "https://github.com/chainpool/substrate", default-features = false }
+srml-timestamp = { git = "https://github.com/chainpool/substrate", default-features = false }
+xrml-mining-staking = { path = "../xmining/staking", default-features = false }
+
+[dev-dependencies]
+lazy_static = "1.0"
+parking_lot = "0.7.1"
+
+[features]
+default = ["std"]
+std = [
+	"serde/std",
+	"parity-codec/std",
+	"parity-codec-derive/std",
+	"substrate-primitives/std",
+	"sr-std/std",
+	"sr-io/std",
+	"srml-support/std",
+	"sr-primitives/std",
+	"srml-system/std",
+	"srml-consensus/std",
+	"srml-timestamp/std",
+	"xrml-mining-staking/std",
+	"substrate-inherents/std",
+]

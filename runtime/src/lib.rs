@@ -33,13 +33,13 @@ extern crate sr_std as rstd;
 // substrate runtime module
 #[macro_use]
 extern crate srml_support;
-extern crate srml_aura as aura;
 extern crate srml_balances as balances;
 extern crate srml_consensus as consensus;
 extern crate srml_indices as indices;
 extern crate srml_sudo as sudo;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
+extern crate xrml_aura as aura;
 extern crate xrml_grandpa as grandpa;
 extern crate xrml_session as session;
 // unused
@@ -182,8 +182,7 @@ impl Convert<AccountId, SessionKey> for SessionKeyConversion {
 
 impl session::Trait for Runtime {
     type ConvertAccountIdToSessionKey = SessionKeyConversion;
-    //    type OnSessionChange = (Staking, grandpa::SyncedAuthorities<Runtime>);
-    type OnSessionChange = grandpa::SyncedAuthorities<Runtime>;
+    type OnSessionChange = (XStaking, grandpa::SyncedAuthorities<Runtime>);
     type Event = Event;
 }
 
@@ -194,8 +193,7 @@ impl grandpa::Trait for Runtime {
 }
 
 impl aura::Trait for Runtime {
-    //    type HandleReport = aura::StakingSlasher<Runtime>;
-    type HandleReport = ();
+    type HandleReport = aura::StakingSlasher<Runtime>;
 }
 
 // bridge

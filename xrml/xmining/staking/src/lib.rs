@@ -20,7 +20,6 @@ extern crate sr_std as rstd;
 #[macro_use]
 extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
-#[cfg(test)]
 extern crate srml_consensus as consensus;
 extern crate srml_system as system;
 extern crate srml_timestamp as timestamp;
@@ -39,10 +38,7 @@ extern crate substrate_primitives;
 use balances::OnDilution;
 use codec::{Compact, HasCompact};
 use rstd::prelude::*;
-use runtime_primitives::{
-    traits::{As, Hash, Lookup, StaticLookup, Zero},
-    Perbill,
-};
+use runtime_primitives::traits::{As, Hash, Lookup, StaticLookup, Zero};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
@@ -352,9 +348,8 @@ decl_module! {
         }
 
         /// Set the offline slash grace period.
-        fn set_offline_slash_grace(new: Compact<u32>) {
-            let new: u32 = new.into();
-            <OfflineSlashGrace<T>>::put(new);
+        fn set_penalty(new: T::Balance) {
+            <Penalty<T>>::put(new);
         }
 
     }
@@ -370,11 +365,9 @@ decl_event!(
     {
         /// All validators have been rewarded by the given balance.
         Reward(Balance, Balance),
-        /// One validator (and their nominators) has been given a offline-warning (they're still
-        /// within their grace). The accrued number of slashes is recorded, too.
-        OfflineWarning(AccountId, u32),
         /// One validator (and their nominators) has been slashed by the given amount.
         OfflineSlash(AccountId, Balance),
+        OfflineValidator(AccountId),
         Rotation(Vec<(AccountId, u64)>),
         Register(u32),
         Unnominate(BlockNumber),
@@ -393,10 +386,6 @@ decl_storage! {
         pub MinimumValidatorCount get(minimum_validator_count) config(): u32 = DEFAULT_MINIMUM_VALIDATOR_COUNT;
         /// The length of a staking era in sessions.
         pub SessionsPerEra get(sessions_per_era) config(): T::BlockNumber = T::BlockNumber::sa(1000);
-        /// Slash, per validator that is taken for the first time they are found to be offline.
-        pub OfflineSlash get(offline_slash) config(): Perbill = Perbill::from_millionths(1000); // Perbill::from_fraction() is only for std, so use from_millionths().
-        /// Number of instances of offline reports before slashing begins for validators.
-        pub OfflineSlashGrace get(offline_slash_grace) config(): u32;
         /// The length of the bonding duration in blocks.
         pub BondingDuration get(bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(1000);
 
@@ -404,11 +393,6 @@ decl_storage! {
         pub CurrentEra get(current_era) config(): T::BlockNumber;
         /// All the accounts with a desire to stake.
         pub Intentions get(intentions) config(): Vec<T::AccountId>;
-
-        /// Maximum reward, per validator, that is provided per acceptable session.
-        pub CurrentSessionReward get(current_session_reward) config(): T::Balance;
-        /// Slash, per validator that is taken for the first time they are found to be offline.
-        pub CurrentOfflineSlash get(current_offline_slash) config(): T::Balance;
 
         /// The next value of sessions per era.
         pub NextSessionsPerEra get(next_sessions_per_era): Option<T::BlockNumber>;
@@ -423,6 +407,10 @@ decl_storage! {
         pub IntentionProfiles get(intention_profiles): map T::AccountId => IntentionProfs<T::Balance, T::BlockNumber>;
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
+
+        pub Funding get(funding) config(): T::AccountId;
+        pub Penalty get(penalty) config(): T::Balance;
+        pub PunishList get(punish_list): Vec<T::AccountId>;
     }
 }
 
@@ -691,6 +679,10 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    pub fn validators() -> Vec<(T::AccountId, u64)> {
+        session::Module::<T>::validators()
+    }
+
     pub fn jackpot_accountid_for(who: &T::AccountId) -> T::AccountId {
         T::DetermineJackpotAccountId::accountid_for(who)
     }

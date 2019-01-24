@@ -45,6 +45,7 @@ members = [
     "xrml/xaccounts",
     "xrml/xsession",
     "xrml/xgrandpa",
+    "xrml/xaura",
     # xrml/xfee
     "xrml/xfee/manager",
     # xrml/assets

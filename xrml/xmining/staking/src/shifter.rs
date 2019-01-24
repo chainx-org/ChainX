@@ -67,6 +67,17 @@ impl<T: Trait> Module<T> {
         let _ = <xassets::Module<T>>::pcx_issue(&jackpot_addr, to_jackpot);
     }
 
+    /// Punish  a given (potential) validator by a specific amount.
+    fn punish(who: &T::AccountId, punish: T::Balance) -> bool {
+        let jackpot_addr = T::DetermineJackpotAccountId::accountid_for(who);
+        let fund_id = Self::funding();
+        if punish <= <xassets::Module<T>>::pcx_free_balance(&jackpot_addr) {
+            let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &fund_id, punish);
+            return true;
+        }
+        return false;
+    }
+
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or
     /// move to a new era.
     fn new_session(_actual_elapsed: T::Moment, should_reward: bool) {
@@ -163,27 +174,52 @@ impl<T: Trait> Module<T> {
 
         let desired_validator_count = <ValidatorCount<T>>::get() as usize;
 
-        let vals = &intentions
-            .clone()
-            .into_iter()
-            .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
-            .take(desired_validator_count)
-            .collect::<Vec<(_, _)>>();
+        let mut vals = Vec::new();
+        let mut count = 0;
+        let punish_list = <PunishList<T>>::take();
+        for (stake_weight, account_id) in intentions.clone().into_iter() {
+            let exist = punish_list.iter().any(|account| {
+                if account.clone() == account_id {
+                    true
+                } else {
+                    false
+                }
+            });
+            if exist {
+                Self::deposit_event(RawEvent::OfflineValidator(account_id.clone()));
+            } else {
+                count += 1;
+                vals.push((account_id.clone(), stake_weight.as_()));
+                if count == desired_validator_count {
+                    break;
+                }
+            }
+        }
 
-        <session::Module<T>>::set_validators(vals);
+        <session::Module<T>>::set_validators(&vals);
         Self::deposit_event(RawEvent::Rotation(vals.clone()));
+    }
 
-        // Update the balances for slashing/rewarding according to the stakes.
-        // <CurrentOfflineSlash<T>>::put(Self::offline_slash().times(average_stake));
-        // <CurrentSessionReward<T>>::put(Self::session_reward().times(average_stake));
-
-        // Disable slash mechanism
-        <CurrentSessionReward<T>>::put(Self::this_session_reward());
+    pub fn on_offline_validator(v: &T::AccountId) {
+        let penalty = Self::penalty();
+        if Self::punish(v, penalty) == false {
+            <PunishList<T>>::mutate(|i| i.push(v.clone()));
+        }
+        Self::deposit_event(RawEvent::OfflineSlash(v.clone(), penalty));
     }
 }
 
 impl<T: Trait> OnSessionChange<T::Moment> for Module<T> {
     fn on_session_change(elapsed: T::Moment, should_reward: bool) {
         Self::new_session(elapsed, should_reward);
+    }
+}
+
+impl<T: Trait> consensus::OnOfflineReport<Vec<u32>> for Module<T> {
+    fn handle_report(reported_indices: Vec<u32>) {
+        for validator_index in reported_indices {
+            let v = <session::Module<T>>::validators()[validator_index as usize].clone();
+            Self::on_offline_validator(&v.0);
+        }
     }
 }

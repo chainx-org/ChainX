@@ -454,7 +454,6 @@ dependencies = [
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-version 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-aura 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-indices 0.1.0 (git+https://github.com/chainpool/substrate)",
@@ -467,6 +466,7 @@ dependencies = [
  "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
+ "xrml-aura 0.1.0",
  "xrml-bridge-bitcoin 0.4.0",
  "xrml-fee-manager 0.4.0",
  "xrml-grandpa 0.1.0",
@@ -4508,6 +4508,28 @@ dependencies = [
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+]
+
+[[package]]
+name = "xrml-aura"
+version = "0.1.0"
+dependencies = [
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-inherents 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-mining-staking 0.4.0",
 ]
 
 [[package]]

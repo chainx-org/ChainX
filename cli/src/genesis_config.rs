@@ -17,7 +17,7 @@ use chainx_runtime::{
     Runtime,
 };
 use chainx_runtime::{
-    BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, Params, Perbill, SessionConfig,
+    BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, Params, SessionConfig,
     SudoConfig, TimestampConfig, XAccountsConfig, XAssetsConfig, XBridgeOfBTCConfig,
     XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
@@ -143,10 +143,8 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             sessions_per_era: 10,
             bonding_duration: 10,
             current_era: 0,
-            current_offline_slash: 100,
-            offline_slash_grace: 0,
-            offline_slash: Perbill::from_millionths(0),
-            current_session_reward: 100,
+            penalty: 100,
+            funding: Default::default(),
             intentions: vec![],
         }),
         xspot: Some(XSpotConfig {
