@@ -17,7 +17,7 @@ srml-support = { git = "https://github.com/chainpool/substrate", default_feature
 srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-consensus = { git = "https://github.com/chainpool/substrate", default_features = false }
-
+srml-indices = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
 
 log = "0.4"

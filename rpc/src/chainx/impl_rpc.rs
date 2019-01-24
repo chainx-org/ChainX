@@ -15,7 +15,7 @@ where
     RA: std::marker::Send + std::marker::Sync + 'static,
     Client<B, E, Block, RA>: ProvideRuntimeApi,
     <Client<B, E, Block, RA> as ProvideRuntimeApi>::Api:
-        Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block>,
+        Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block> + XSpotApi<Block>,
 {
     fn block_info(&self, number: Trailing<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         let hash = match number.into() {
@@ -418,10 +418,15 @@ where
                         vote_weight.last_total_deposit_weight_update;
                 }
 
-                let key = <xassets::PCXPriceFor<Runtime>>::key_for(&token);
-                if let Some(price) = Self::pickout::<Balance>(&state, &key)? {
-                    info.price = price;
-                }
+
+                let b = self.best_number()?;
+                if let Some(Some(price)) = self.client
+                    .runtime_api()
+                    .aver_asset_price(&b, token.clone())
+                    .ok(){
+                        info.price = price;
+                    };
+
 
                 let key = <xassets::TotalAssetBalance<Runtime>>::key_for(&token);
                 if let Some(total_asset_balance) =
@@ -494,6 +499,7 @@ where
                     info.currency = String::from_utf8_lossy(&pair.second).into_owned();
                     info.precision = pair.precision;
                     info.used = pair.used;
+                    info.min_unit=pair.min_unit;
 
                     let price_key = <xspot::OrderPairPriceOf<Runtime>>::key_for(&i);
                     if let Some(price) =
@@ -502,6 +508,12 @@ where
                         info.last_price = price.0;
                         info.aver_price = price.1;
                         info.update_height = price.2;
+                    }
+
+                    let handicap_key = <xspot::HandicapMap<Runtime>>::key_for(&i);
+                    if let Some(handicap) = Self::pickout::<HandicapT<Runtime>>(&state, &handicap_key)? {
+                        info.buy_one = handicap.buy;
+                        info.sell_one= handicap.sell;
                     }
 
                     pairs.push(info);
@@ -566,15 +578,16 @@ where
                             }
                         }
                         quotationslist.buy.push((opponent_price, sum));
+                        n += 1;
                     };
 
                     opponent_price = match opponent_price
-                        .checked_sub(As::sa(10_u64.pow(pair.precision.as_())))
+                        .checked_sub(As::sa(pair.min_unit))
                     {
                         Some(v) => v,
                         None => Default::default(),
                     };
-                    n += 1;
+                    
                 }
                 //再卖档
                 opponent_price = handicap.sell;
@@ -602,15 +615,16 @@ where
                             }
                         }
                         quotationslist.sell.push((opponent_price, sum));
+                        n += 1;
                     };
 
                     opponent_price = match opponent_price
-                        .checked_add(As::sa(10_u64.pow(pair.precision.as_())))
+                        .checked_add(As::sa(pair.min_unit))
                     {
                         Some(v) => v,
                         None => Default::default(),
                     };
-                    n += 1;
+                    
                 }
             };
         } else {

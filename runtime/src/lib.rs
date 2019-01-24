@@ -459,4 +459,10 @@ impl_runtime_apis! {
             XTokens::multi_token_jackpot_accountid_for(&tokens)
         }
     }
+
+    impl runtime_api::xspot_api::XSpotApi<Block> for Runtime {
+        fn aver_asset_price(token: xassets::Token) -> Option<Balance> {
+            XSpot::aver_asset_price(&token)
+        }
+    }
 }

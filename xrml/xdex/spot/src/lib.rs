@@ -63,7 +63,7 @@ use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
 
-use xassets::assetdef::Token;
+use xassets::assetdef::{ChainT,Token};
 
 const PRICE_MAX_ORDER: usize = 1000;
 
@@ -123,7 +123,7 @@ decl_module! {
 
 
         //增加交易对
-        pub fn add_pair(first:Token,second:Token,precision:u32,price:T::Price,used:bool)->Result{
+        pub fn add_pair(first:Token,second:Token,precision:u32,min:u32, price:T::Price,used:bool)->Result{
              runtime_io::print("[xdex spot] add_pair");
              match Self::get_pair_by(&first, &second) {
                 Some(_pair) => Err("have a existed pair in  list"),
@@ -135,6 +135,7 @@ decl_module! {
                         first:first,
                         second:second,
                         precision:precision,
+                        min_unit:min,
                         used:used,
                     };
                     <OrderPairOf<T>>::insert(pair.id,&pair);
@@ -149,15 +150,15 @@ decl_module! {
 
         }
         //更新交易对
-        pub fn update_pair(id:OrderPairID,precision:u32,used:bool)->Result{
+        pub fn update_pair(id:OrderPairID,min:u32,used:bool)->Result{
             runtime_io::print("[xdex spot] update_pair");
             match <OrderPairOf<T>>::get(id) {
                 None=> Err("not a existed pair in  list"),
                 Some(mut pair) => {
-                    if precision >= pair.precision {
-                        return Err("precision error!");
+                    if min < pair.min_unit {
+                        return Err("min_unit error!");
                     }
-                    pair.precision=precision;
+                    pair.min_unit=min;
                     pair.used=used;
 
                      <OrderPairOf<T>>::insert(id,&pair);
@@ -190,7 +191,7 @@ decl_event!(
     {
         UpdateOrder(AccountId,ID,OrderPairID,Price,OrderType,OrderDirection,Balance,Balance,BlockNumber,BlockNumber,OrderStatus,Balance,Vec<ID>),
         FillOrder(ID,OrderPairID,Price,AccountId,AccountId,ID,ID, Balance,u64),
-        UpdateOrderPair(OrderPairID,Token,Token,u32,bool),
+        UpdateOrderPair(OrderPairID,Token,Token,u32,u32,bool),
         PriceVolatility(u32),
     }
 );
@@ -201,7 +202,7 @@ decl_storage! {
         //交易对列表
         pub OrderPairLen get(pair_len):  OrderPairID ;
         pub OrderPairOf get(pair_of):map ( OrderPairID ) => Option<OrderPair>;
-        pub OrderPairPriceOf get(pair_price_of):map ( OrderPairID ) => Option<(T::Price,T::Price,T::BlockNumber)>;//最新价、平均价、更新高度
+        pub OrderPairPriceOf get(pair_price_of):map ( OrderPairID ) => Option<(T::Price,T::Price,T::BlockNumber)>;//最新价、成交平均价、更新高度
         //交易对的成交历史的最新编号 递增
         pub FillLen get(fill_len):  map (OrderPairID) => ID;
 
@@ -218,7 +219,7 @@ decl_storage! {
         pub PriceVolatility get(price_volatility) config(): u32;//价格波动率%
     }
     add_extra_genesis {
-        config(pair_list): Vec<(Token, Token, u32, T::Price,bool)>;
+        config(pair_list): Vec<(Token, Token, u32, u32, T::Price,bool)>;
         build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
                 use runtime_io::with_externalities;
                 use substrate_primitives::Blake2Hasher;
@@ -226,9 +227,9 @@ decl_storage! {
                 let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
                 with_externalities(&mut tmp_storage, || {
 
-                    for (first, second, precision, price,status) in config.pair_list.iter() {
+                    for (first, second, precision, min, price,status) in config.pair_list.iter() {
 
-                        Module::<T>::add_pair(first.clone(),second.clone(),*precision,*price,*status).unwrap();
+                        Module::<T>::add_pair(first.clone(),second.clone(),*precision,*min,*price,*status).unwrap();
                     }
 
                 });
@@ -242,7 +243,6 @@ decl_storage! {
 impl<T: Trait> Module<T> {
     pub fn get_pair_by(first: &Token, second: &Token) -> Option<OrderPair> {
         let pair_len = <OrderPairLen<T>>::get();
-
         for i in 0..pair_len {
             if let Some(pair) = <OrderPairOf<T>>::get(i) {
                 if pair.first.eq(first) && pair.second.eq(second) {
@@ -250,6 +250,34 @@ impl<T: Trait> Module<T> {
                 }
             }
         }
+        None
+    }
+
+    pub fn aver_asset_price(token:&Token)->Option<T::Balance> {
+        /*
+        如果交易对ID是XXX/PCX，则：
+        返回：交易对Map[交易对ID].平均价 / 10^报价精度
+        如果交易对ID是PCX/XXX，则：
+        返回：10^交易对Map[交易对ID].报价精度 / 平均价  
+        */
+        let pair_len = <OrderPairLen<T>>::get();
+        for i in 0..pair_len {
+            if let Some(pair) = <OrderPairOf<T>>::get(i) {
+                if pair.first.eq(token) && pair.second.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) {
+                    if let Some((_,aver,_))= <OrderPairPriceOf<T>>::get(i) {
+                        let price:T::Balance=As::sa(aver.as_()/(10_u64.pow(pair.precision.as_() )));
+                        return Some(price );
+                    }
+                }
+                else if pair.first.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) && pair.second.eq(token) {
+                    if let Some((_,aver,_))= <OrderPairPriceOf<T>>::get(i) {
+                        let price:T::Balance=As::sa(10_u64.pow(pair.precision.as_() )/aver.as_());
+                        return Some(price) ;
+                    }
+                }
+            }
+        }
+
         None
     }
 
@@ -344,8 +372,11 @@ impl<T: Trait> Module<T> {
         if amount == Zero::zero() {
             return Err("amount cann't be zero");
         }
-        if price == Zero::zero() {
-            return Err("price cann't be zero");
+        if price < As::sa(pair.min_unit.as_()) {
+            return Err("price cann't be less min_unit");
+        }
+        if price%As::sa(pair.min_unit) != Zero::zero() {
+            return Err("price % min_unit must be 0");
         }
 
         //检查不能超过最大 且方向相同
@@ -543,7 +574,7 @@ impl<T: Trait> Module<T> {
             match order.direction {
                 OrderDirection::Buy => {
                     opponent_price = match opponent_price
-                        .checked_add(&As::sa(10_u64.pow(pair.precision.as_())))
+                        .checked_add(&As::sa(pair.min_unit))
                     {
                         Some(v) => v,
                         None => Default::default(),
@@ -551,7 +582,7 @@ impl<T: Trait> Module<T> {
                 }
                 OrderDirection::Sell => {
                     opponent_price = match opponent_price
-                        .checked_sub(&As::sa(10_u64.pow(pair.precision.as_())))
+                        .checked_sub(&As::sa(pair.min_unit))
                     {
                         Some(v) => v,
                         None => Default::default(),
@@ -843,7 +874,7 @@ impl<T: Trait> Module<T> {
                         if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
                             handicap.sell = match handicap
                                 .sell
-                                .checked_add(&As::sa(10_u64.pow(pair.precision)))
+                                .checked_add(&As::sa(pair.min_unit))
                             {
                                 Some(v) => v,
                                 None => Default::default(),
@@ -857,7 +888,7 @@ impl<T: Trait> Module<T> {
                         if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
                             handicap.buy = match handicap
                                 .buy
-                                .checked_sub(&As::sa(10_u64.pow(pair.precision)))
+                                .checked_sub(&As::sa(pair.min_unit))
                             {
                                 Some(v) => v,
                                 None => Default::default(),
@@ -947,6 +978,7 @@ impl<T: Trait> Module<T> {
             pair.first.clone(),
             pair.second.clone(),
             pair.precision,
+            pair.min_unit,
             pair.used,
         ));
     }

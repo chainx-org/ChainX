@@ -274,9 +274,6 @@ decl_storage! {
         /// asset balance for a token, use btree_map to accept different asset type
         pub TotalAssetBalance: map Token => CodecBTreeMap<AssetType, T::Balance>;
 
-        /// price
-        pub PCXPriceFor get(pcx_price_for): map Token => Option<T::Balance>;
-
         /// memo len
         pub MemoLen get(memo_len) config(): u32;
     }

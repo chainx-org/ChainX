@@ -31,6 +31,7 @@ extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
+extern crate xrml_xdex_spot as xspot;
 
 #[cfg(test)]
 extern crate substrate_primitives;
@@ -136,6 +137,8 @@ pub trait Trait:
     + xsystem::Trait
     + xstaking::Trait
     + bitcoin::Trait
+    + xspot::Trait
+       
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -379,9 +382,9 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
     fn psedu_intentions_info() -> Vec<(RewardHolder<T::AccountId>, T::Balance)> {
         Self::psedu_intentions()
             .into_iter()
-            .filter(|token| <xassets::Module<T>>::pcx_price_for(token).is_some())
+            .filter(|token| <xspot::Module<T>>::aver_asset_price(token).is_some())
             .map(|token| {
-                let price = <xassets::Module<T>>::pcx_price_for(&token).unwrap_or(Zero::zero());
+                let price = <xspot::Module<T>>::aver_asset_price(&token).unwrap_or(Zero::zero());
                 let amount = <xassets::Module<T>>::all_type_balance(&token);
 
                 // Apply discount for psedu intentions

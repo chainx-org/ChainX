@@ -37,7 +37,7 @@ use xstaking::{self, IntentionProfs, NominationRecord};
 use xsupport::storage::btree_map::CodecBTreeMap;
 use xtokens::{self, DepositVoteWeight, PseduIntentionVoteWeight};
 
-use self::runtime_api::{xassets_api::XAssetsApi, xmining_api::XMiningApi};
+use self::runtime_api::{xassets_api::XAssetsApi, xmining_api::XMiningApi,xspot_api::XSpotApi};
 
 mod error;
 mod impl_rpc;

@@ -16,6 +16,7 @@ xr-primitives = { path = "../xr-primitives", default_features = false }
 xrml-xassets-assets = { path = "../xrml/xassets/assets", default_features = false }
 xrml-xassets-process = { path = "../xrml/xassets/process", default_features = false }
 xrml-xassets-records = { path = "../xrml/xassets/records", default_features = false }
+xrml-xdex-spot= { path = "../xrml/xdex/spot",  default_features = false }
 
 
 [features]

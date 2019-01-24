@@ -12,7 +12,7 @@ fn test_pair() {
         let a: u64 = 1; // accountid
         let first: Token = b"EOS".to_vec();
         let second: Token = b"ETH".to_vec();
-        Spot::add_pair(first.clone(), second.clone(), 2, 100, true).unwrap();
+        Spot::add_pair(first.clone(), second.clone(), 2, 1,100, true).unwrap();
         assert_eq!(Spot::pair_len(), 2);
 
         let pair = Spot::get_pair_by(&first, &second).unwrap();
@@ -168,7 +168,7 @@ fn test_order() {
 
         handicapMap = Spot::handicap_map(0).unwrap();
 
-        assert_eq!(handicapMap.buy, 100000 - 100000);
+        assert_eq!(handicapMap.buy, 100000 - 1);
         assert_eq!(handicapMap.sell, 200000);
 
         //a 第三笔挂买单
@@ -179,17 +179,17 @@ fn test_order() {
                 OrderType::Limit,
                 OrderDirection::Buy,
                 1000,
-                100
+                100000
             ),
             Ok(())
         );
         assert_eq!(
             Assets::asset_balance(&a, &BTC, Free),
-            1_000_000_000 - (1000 * 100000) - (1000 * 50) + 500 * 100000 - 1000 * 100
+            1_000_000_000 - (1000 * 100000) - (1000 * 50) + 500 * 100000 - 1000 * 100000
         );
         assert_eq!(
             Assets::asset_balance(&a, &BTC, ReservedDexSpot),
-            1000 * 100000 + 1000 * 50 - 500 * 100000 - 500 * 100000 + 1000 * 100
+            1000 * 100000 + 1000 * 50 - 500 * 100000 - 500 * 100000 + 1000 * 100000
         );
         assert_eq!(Assets::asset_balance(&a, &PCX, Free), 1_000_000_000 + 500);
         assert_eq!(Assets::asset_balance(&a, &PCX, ReservedDexSpot), 0);
@@ -198,7 +198,7 @@ fn test_order() {
 
         handicapMap = Spot::handicap_map(0).unwrap();
 
-        assert_eq!(handicapMap.buy, 100);
+        assert_eq!(handicapMap.buy, 100000);
         assert_eq!(handicapMap.sell, 200000);
     })
 }

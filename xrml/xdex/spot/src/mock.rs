@@ -1,5 +1,6 @@
 // Copyright 2018 Chainpool.
 use substrate_primitives::{Blake2Hasher, H256};
+extern crate srml_indices as indices;
 
 use primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use primitives::traits::BlakeTwo256;
@@ -19,7 +20,6 @@ impl_outer_origin! {
 pub struct Test;
 
 impl consensus::Trait for Test {
-    const NOTE_OFFLINE_POSITION: u32 = 1;
     type Log = DigestItem;
     type SessionKey = UintAuthorityId;
     type InherentOfflineReport = ();
@@ -33,21 +33,28 @@ impl system::Trait for Test {
     type Hashing = BlakeTwo256;
     type Digest = Digest;
     type AccountId = u64;
+    type Lookup = Indices;
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
 }
 
+impl indices::Trait for Test {
+    type AccountIndex = u32;
+    type IsDeadAccount = Balances;
+    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
+    type Event = ();
+}
+
 impl balances::Trait for Test {
     type Balance = u64;
-    type AccountIndex = u64;
     type OnFreeBalanceZero = ();
+    type OnNewAccount = Indices;
     type EnsureAccountLiquid = ();
     type Event = ();
 }
 
 impl timestamp::Trait for Test {
-    const TIMESTAMP_SET_POSITION: u32 = 0;
     type Moment = u64;
     type OnTimestampSet = ();
 }
@@ -115,7 +122,6 @@ pub fn new_test_ext(
             existential_deposit: ext_deposit,
             transfer_fee: 0,
             creation_fee: 0,
-            reclaim_rebate: 0,
         }
         .build_storage()
         .unwrap()
@@ -146,6 +152,7 @@ pub fn new_test_ext(
                 <xassets::Module<Test> as ChainT>::TOKEN.to_vec(),
                 <xbitcoin::Module<Test> as ChainT>::TOKEN.to_vec(),
                 5,
+                1,
                 100000,
                 true,
             )],
@@ -160,6 +167,7 @@ pub fn new_test_ext(
     runtime_io::TestExternalities::new(t)
 }
 
+pub type Indices = indices::Module<Test>;
 pub type Spot = Module<Test>;
 pub type Assets = xassets::Module<Test>;
 pub type Balances = balances::Module<Test>;

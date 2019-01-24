@@ -12,6 +12,7 @@ extern crate xr_primitives;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_process as xprocess;
 extern crate xrml_xassets_records as xrecords;
+extern crate xrml_xdex_spot as xspot;
 
 pub mod xassets_api {
     use chainx_primitives::{AccountId, Balance, Timestamp};
@@ -46,3 +47,15 @@ pub mod xmining_api {
         }
     }
 }
+
+pub mod xspot_api {
+    use chainx_primitives::Balance;
+    use client::decl_runtime_apis;
+    use xassets::Token;
+    decl_runtime_apis! {
+        pub trait XSpotApi {
+            fn aver_asset_price(token: Token) -> Option<Balance>;
+        }
+    }
+}
+
