@@ -29,9 +29,9 @@ extern crate xrml_bridge_bitcoin as bitcoin;
 extern crate xrml_mining_staking as xstaking;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
+extern crate xrml_xdex_spot as xspot;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
-extern crate xrml_xdex_spot as xspot;
 
 #[cfg(test)]
 extern crate substrate_primitives;
@@ -138,7 +138,6 @@ pub trait Trait:
     + xstaking::Trait
     + bitcoin::Trait
     + xspot::Trait
-       
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -388,8 +387,10 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
                 let amount = <xassets::Module<T>>::all_type_balance(&token);
 
                 // Apply discount for psedu intentions
-                let stake =
-                    T::Balance::sa(Self::token_discount().times(price.as_() * amount.as_()));
+                let stake = match price.as_().checked_mul(amount.as_()) {
+                    Some(x) => T::Balance::sa(Self::token_discount().times(x)),
+                    None => T::Balance::sa(u64::max_value()),
+                };
 
                 (RewardHolder::PseduIntention(token), stake)
             })

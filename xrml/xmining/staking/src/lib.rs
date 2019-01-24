@@ -9,6 +9,9 @@ extern crate serde;
 #[cfg(feature = "std")]
 extern crate serde_derive;
 
+#[cfg(feature = "std")]
+extern crate substrate_primitives;
+
 #[macro_use]
 extern crate parity_codec_derive;
 extern crate parity_codec as codec;
@@ -411,6 +414,32 @@ decl_storage! {
         pub Funding get(funding) config(): T::AccountId;
         pub Penalty get(penalty) config(): T::Balance;
         pub PunishList get(punish_list): Vec<T::AccountId>;
+    }
+
+    add_extra_genesis {
+        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+            use runtime_io::with_externalities;
+            use substrate_primitives::Blake2Hasher;
+            use runtime_primitives::StorageMap;
+
+            let s = storage.clone().build_storage().unwrap().0;
+            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
+            with_externalities(&mut init, || {
+                for intention in config.intentions.clone() {
+                    <xaccounts::IntentionImmutablePropertiesOf<T>>::insert(
+                        &intention,
+                        xaccounts::IntentionImmutableProps {
+                            name: b"genesis_intention".to_vec(),
+                            activator: b"".to_vec(),
+                            initial_shares: 0,
+                            registered_at: <timestamp::Module<T>>::now(),
+                        },
+                    );
+                }
+            });
+            let init: StorageMap = init.into();
+            storage.extend(init);
+        });
     }
 }
 

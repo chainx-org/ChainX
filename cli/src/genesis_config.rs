@@ -145,7 +145,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             current_era: 0,
             penalty: 100,
             funding: Default::default(),
-            intentions: vec![],
+            intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
         }),
         xspot: Some(XSpotConfig {
             pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),7,100,100,true)],
