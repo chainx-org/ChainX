@@ -550,9 +550,9 @@ where
                 }
 
                 let max_price: Balance =
-                    handicap.sell * ((100_u64 + price_volatility as Balance) / 100_u64);
+                    (handicap.sell * (100_u64 + price_volatility as Balance)) / 100_u64;
                 let min_price: Balance =
-                    handicap.sell * ((100_u64 - price_volatility as Balance) / 100_u64);
+                    (handicap.sell * (100_u64 - price_volatility as Balance)) / 100_u64;
                 let mut n = 0;
 
                 loop {

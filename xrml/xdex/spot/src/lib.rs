@@ -404,8 +404,8 @@ impl<T: Trait> Module<T> {
             OrderDirection::Buy => {
                 if handicap.sell > Zero::zero()
                     && price
-                        > (handicap.sell
-                            * As::sa((100_u32 + <PriceVolatility<T>>::get()) / 100_u32))
+                        > ((handicap.sell
+                            * As::sa(100_u32 + <PriceVolatility<T>>::get())) / As::sa(100_u32))
                 {
                     return Err("price cann't > PriceVolatility");
                 }
@@ -413,7 +413,7 @@ impl<T: Trait> Module<T> {
             OrderDirection::Sell => {
                 if handicap.buy > Zero::zero()
                     && price
-                        < (handicap.buy * As::sa((100_u32 - <PriceVolatility<T>>::get()) / 100_u32))
+                        < (handicap.buy * As::sa(100_u32 - <PriceVolatility<T>>::get()) / As::sa(100_u32))
                 {
                     return Err("price cann't > PriceVolatility");
                 }
