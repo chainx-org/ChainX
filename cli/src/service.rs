@@ -34,7 +34,7 @@ use substrate_service::{
 };
 use transaction_pool::{self, txpool::Pool as TransactionPool};
 
-use network_p2p::obtain_private_key;
+use network::ManageNetwork;
 
 construct_simple_protocol! {
     /// Demo protocol attachment for substrate.
@@ -119,10 +119,11 @@ construct_service_factory! {
                     service.on_exit(),
                 )?);
 
-                let local_private_key = obtain_private_key(&service.config.network).unwrap();
-                let local_public_key = local_private_key.to_public_key();
-                let local_peer_id = local_public_key.clone().into_peer_id();
-                println!("local_peer_id: {:?}", local_peer_id);
+                if let Some(addr) = service.network().node_id() {
+                    info!(target: "chainx-libp2p", "Local node address is: {}", addr);
+                } else {
+                    warn!(target: "chainx-libp2p", "can't get addr due to the port has been occupied")
+                }
 
                 Ok(service)
             }
