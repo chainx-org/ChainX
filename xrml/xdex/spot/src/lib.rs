@@ -123,7 +123,7 @@ decl_module! {
 
 
         //增加交易对
-        pub fn add_pair(first:Token,second:Token,precision:u32,min:u32, price:T::Price,used:bool)->Result{
+        pub fn add_pair(first:Token,second:Token,precision:u32,unit:u32, price:T::Price,used:bool)->Result{
              runtime_io::print("[xdex spot] add_pair");
              match Self::get_pair_by(&first, &second) {
                 Some(_pair) => Err("have a existed pair in  list"),
@@ -135,7 +135,7 @@ decl_module! {
                         first:first,
                         second:second,
                         precision:precision,
-                        min_unit:min,
+                        unit_precision:unit,
                         used:used,
                     };
                     <OrderPairOf<T>>::insert(pair.id,&pair);
@@ -147,7 +147,6 @@ decl_module! {
                     Ok(())
                 },
             }
-
         }
         //更新交易对
         pub fn update_pair(id:OrderPairID,min:u32,used:bool)->Result{
@@ -155,10 +154,10 @@ decl_module! {
             match <OrderPairOf<T>>::get(id) {
                 None=> Err("not a existed pair in  list"),
                 Some(mut pair) => {
-                    if min < pair.min_unit {
-                        return Err("min_unit error!");
+                    if min < pair.unit_precision {
+                        return Err("unit_precision error!");
                     }
-                    pair.min_unit=min;
+                    pair.unit_precision=min;
                     pair.used=used;
 
                      <OrderPairOf<T>>::insert(id,&pair);
@@ -372,10 +371,11 @@ impl<T: Trait> Module<T> {
         if amount == Zero::zero() {
             return Err("amount cann't be zero");
         }
-        if price < As::sa(pair.min_unit.as_()) {
+        let min_unit=10_u64.pow(pair.unit_precision);
+        if price < As::sa(min_unit.as_()) {
             return Err("price cann't be less min_unit");
         }
-        if price%As::sa(pair.min_unit) != Zero::zero() {
+        if price%As::sa(min_unit) != Zero::zero() {
             return Err("price % min_unit must be 0");
         }
 
@@ -486,6 +486,7 @@ impl<T: Trait> Module<T> {
             OrderDirection::Buy => handicap.sell,
             OrderDirection::Sell => handicap.buy,
         };
+        let min_unit=10_u64.pow(pair.unit_precision);
 
         loop {
             if opponent_price == Zero::zero() {
@@ -574,7 +575,7 @@ impl<T: Trait> Module<T> {
             match order.direction {
                 OrderDirection::Buy => {
                     opponent_price = match opponent_price
-                        .checked_add(&As::sa(pair.min_unit))
+                        .checked_add(&As::sa(min_unit))
                     {
                         Some(v) => v,
                         None => Default::default(),
@@ -582,7 +583,7 @@ impl<T: Trait> Module<T> {
                 }
                 OrderDirection::Sell => {
                     opponent_price = match opponent_price
-                        .checked_sub(&As::sa(pair.min_unit))
+                        .checked_sub(&As::sa(min_unit))
                     {
                         Some(v) => v,
                         None => Default::default(),
@@ -865,6 +866,8 @@ impl<T: Trait> Module<T> {
     //更新盘口
     fn update_handicap(pair: &OrderPair, price: T::Price, direction: OrderDirection) {
         //这里方向是反的，注意
+        let min_unit=10_u64.pow(pair.unit_precision);
+
         match <Quotations<T>>::get((pair.id, price)) {
             Some(_list) => {}
             None => {
@@ -874,7 +877,7 @@ impl<T: Trait> Module<T> {
                         if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
                             handicap.sell = match handicap
                                 .sell
-                                .checked_add(&As::sa(pair.min_unit))
+                                .checked_add(&As::sa(min_unit))
                             {
                                 Some(v) => v,
                                 None => Default::default(),
@@ -888,7 +891,7 @@ impl<T: Trait> Module<T> {
                         if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
                             handicap.buy = match handicap
                                 .buy
-                                .checked_sub(&As::sa(pair.min_unit))
+                                .checked_sub(&As::sa(min_unit))
                             {
                                 Some(v) => v,
                                 None => Default::default(),
@@ -978,7 +981,7 @@ impl<T: Trait> Module<T> {
             pair.first.clone(),
             pair.second.clone(),
             pair.precision,
-            pair.min_unit,
+            pair.unit_precision,
             pair.used,
         ));
     }

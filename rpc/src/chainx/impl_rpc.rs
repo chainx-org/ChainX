@@ -494,7 +494,7 @@ where
                     info.currency = String::from_utf8_lossy(&pair.second).into_owned();
                     info.precision = pair.precision;
                     info.used = pair.used;
-                    info.min_unit=pair.min_unit;
+                    info.unit_precision=pair.unit_precision;
 
                     let price_key = <xspot::OrderPairPriceOf<Runtime>>::key_for(&i);
                     if let Some(price) =
@@ -531,6 +531,8 @@ where
         let state = self.best_state()?;
         let pair_key = <xspot::OrderPairOf<Runtime>>::key_for(&id);
         if let Some(pair) = Self::pickout::<OrderPair>(&state, &pair_key)? {
+            let min_unit=10_u64.pow(pair.unit_precision);
+            
             //盘口
             let handicap_key = <xspot::HandicapMap<Runtime>>::key_for(&id);
 
@@ -577,7 +579,7 @@ where
                     };
 
                     opponent_price = match opponent_price
-                        .checked_sub(As::sa(pair.min_unit))
+                        .checked_sub(As::sa(min_unit))
                     {
                         Some(v) => v,
                         None => Default::default(),
@@ -614,7 +616,7 @@ where
                     };
 
                     opponent_price = match opponent_price
-                        .checked_add(As::sa(pair.min_unit))
+                        .checked_add(As::sa(min_unit))
                     {
                         Some(v) => v,
                         None => Default::default(),

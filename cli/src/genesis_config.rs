@@ -55,7 +55,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     const CONSENSUS_TIME: u64 = 1;
 
-    let pcx_precision = 3_u16;
+    let pcx_precision = 8_u16;
     let balances_config = BalancesConfig {
         transaction_base_fee: 1,
         transaction_byte_fee: 0,
@@ -71,7 +71,25 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         b"Bitcoin".to_vec(),
         Chain::Bitcoin,
         8, // bitcoin precision
-        b"BTC chainx".to_vec(),
+        b"BTC ChainX".to_vec(),
+    )
+    .unwrap();
+
+    let dot_asset = Asset::new(
+        b"DOT".to_vec(), // token
+        b"Polkadot".to_vec(),
+        Chain::Polkadot,
+        8, //  precision
+        b"DOT ChainX".to_vec(),
+    )
+    .unwrap();
+
+    let xdot_asset = Asset::new(
+        b"XDOT".to_vec(), // token
+        b"XDOT".to_vec(),
+        Chain::Ethereum,
+        3, //  precision
+        b"XDOT ChainX".to_vec(),
     )
     .unwrap();
 
@@ -129,7 +147,9 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
             asset_list: vec![
-                (btc_asset, true, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)])
+                (btc_asset, true, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)]),
+                (dot_asset.clone(), false, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)]),
+                (xdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)])
             ],
         }),
         xstaking: Some(XStakingConfig {
@@ -143,8 +163,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             intentions: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
         }),
         xspot: Some(XSpotConfig {
-            pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),7,100,100,true)],
-            // (OrderPair { first: Runtime::CHAINX_SYMBOL.to_vec(), second: BridgeOfBTC::SYMBOL.to_vec() }, 8)
+            pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),9,2,100000,true),
+                 (<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),dot_asset.token().to_vec(),7,2,100000,false),
+                 (xdot_asset.token().to_vec(),<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),4,2,100000,true)
+                ],
             price_volatility: 10,
         }),
         bitcoin: Some(XBridgeOfBTCConfig {

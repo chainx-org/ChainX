@@ -28,6 +28,7 @@ pub enum Chain {
     ChainX,
     Bitcoin,
     Ethereum,
+    Polkadot,
 }
 
 impl Default for Chain {

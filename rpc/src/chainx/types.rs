@@ -106,7 +106,7 @@ pub struct PairInfo {
     pub assets: String,
     pub currency: String,
     pub precision: u32, //价格精度
-    pub min_unit: u32,//最小单位
+    pub unit_precision: u32,//最小单位精度
     pub used: bool,
     pub last_price: Balance,
     pub aver_price: Balance,
