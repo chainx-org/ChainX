@@ -281,7 +281,6 @@ decl_storage! {
     add_extra_genesis {
         config(asset_list): Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
         config(pcx): (Token, Precision, Desc);
-        config(initial_reserve): Vec<(T::AccountId, T::Balance)>;
 
         build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
                 use runtime_io::with_externalities;
@@ -295,12 +294,6 @@ decl_storage! {
 
                     let pcx = Asset::new(chainx, config.pcx.0.clone(), Chain::ChainX, config.pcx.1, config.pcx.2.clone()).unwrap();
                     Module::<T>::register_asset(pcx, false, Zero::zero()).unwrap();
-
-                    // initial reserve
-                    for (intention, value) in config.initial_reserve.iter() {
-                        let _ = Module::<T>::pcx_issue(intention, *value);
-                        let _ = Module::<T>::pcx_move_balance(intention, AssetType::Free, intention, AssetType::ReservedStaking, *value);
-                    }
 
                     // init for asset_list
                     for (asset, is_psedu_intention, init_list) in config.asset_list.iter() {
@@ -652,14 +645,29 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: T::Balance,
     ) -> StdResult<(), AssetErr> {
+        Self::move_balance_with_checkflag(token, from, from_type, to, to_type, value, true)
+    }
+
+
+    pub fn move_balance_with_checkflag(
+        token: &Token,
+        from: &T::AccountId,
+        from_type: AssetType,
+        to: &T::AccountId,
+        to_type: AssetType,
+        value: T::Balance,
+        check: bool
+    ) -> StdResult<(), AssetErr> {
         if from == to && from_type == to_type {
             // same account, same type, return directly
             return Ok(());
         }
 
-        Self::is_valid_asset_for(from, token).map_err(|_| AssetErr::InvalidToken)?;
-        // set to storage
-        Self::init_asset_for(to, token);
+        if check {
+            Self::is_valid_asset_for(from, token).map_err(|_| AssetErr::InvalidToken)?;
+            // set to storage
+            Self::init_asset_for(to, token);
+        }
 
         let from_balance = Self::asset_balance(from, token, from_type);
         let to_balance = Self::asset_balance(to, token, to_type);

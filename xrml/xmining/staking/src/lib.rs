@@ -387,10 +387,13 @@ decl_storage! {
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
             use runtime_primitives::StorageMap;
+            use xassets::ChainT;
 
             let hash = |key: &[u8]| -> Vec<u8>{
                 GenesisConfig::<T>::hash(key).to_vec()
             };
+
+            let pcx = xassets::Module::<T>::TOKEN.to_vec();
 
             let s = storage.clone().build_storage().unwrap().0;
             let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
@@ -398,7 +401,23 @@ decl_storage! {
                 for (intention, value) in config.intentions.iter() {
                     let _ = Module::<T>::apply_register(intention.clone(), b"genesis_intention".to_vec());
 
-                    // ## staking_reserve actually performed in xassets module
+                    let free = T::Balance::sa(value.as_() * 1 / 10);
+                    let _ = <xassets::Module<T>>::pcx_issue(intention, free);
+
+                    let _ = <xassets::Module<T>>::move_balance_with_checkflag(
+                        &pcx,
+                        intention,
+                        xassets::AssetType::Free,
+                        intention,
+                        xassets::AssetType::ReservedStaking,
+                        free,
+                        false
+                    );
+
+                    let to_jackpot = *value - free;
+                    let jackpot = T::DetermineJackpotAccountId::accountid_for(intention);
+                    let _ = <xassets::Module<T>>::pcx_issue(&jackpot, to_jackpot);
+
                     let _ = Module::<T>::apply_update_vote_weight(intention, intention, *value, true);
 
                     let _ = Module::<T>::apply_refresh(intention, None, Some(true), None, None);
@@ -406,6 +425,7 @@ decl_storage! {
                     storage.insert(hash(&<StakeWeight<T>>::key_for(intention)), value.encode());
                 }
             });
+
             let init: StorageMap = init.into();
             storage.extend(init);
         });

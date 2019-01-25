@@ -131,7 +131,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             asset_list: vec![
                 (btc_asset, true, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)])
             ],
-            initial_reserve: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
         }),
         xstaking: Some(XStakingConfig {
             validator_count: 7,
