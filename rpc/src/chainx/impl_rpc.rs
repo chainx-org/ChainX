@@ -346,13 +346,8 @@ where
                 let mut info = IntentionInfo::default();
 
                 let key = <xaccounts::IntentionImmutablePropertiesOf<Runtime>>::key_for(&intention);
-                if let Some(props) =
-                    Self::pickout::<IntentionImmutableProps<Timestamp>>(&state, &key)?
-                {
+                if let Some(props) = Self::pickout::<IntentionImmutableProps>(&state, &key)? {
                     info.name = String::from_utf8_lossy(&props.name).into_owned();
-                    info.activator = String::from_utf8_lossy(&props.activator).into_owned();
-                    info.initial_shares = props.initial_shares;
-                    info.registered_at = props.registered_at;
                 }
 
                 let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);

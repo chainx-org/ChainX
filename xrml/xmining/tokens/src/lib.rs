@@ -386,9 +386,17 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
                 let price = <xspot::Module<T>>::aver_asset_price(&token).unwrap_or(Zero::zero());
                 let amount = <xassets::Module<T>>::all_type_balance(&token);
 
+                // FIXME validate price and amount
+
                 // Apply discount for psedu intentions
                 let stake = match price.as_().checked_mul(amount.as_()) {
-                    Some(x) => T::Balance::sa(Self::token_discount().times(x)),
+                    Some(x) => {
+                        if let Some(v) = x.checked_mul(3) {
+                            T::Balance::sa(v / 10)
+                        } else {
+                            T::Balance::sa(u64::max_value())
+                        }
+                    }
                     None => T::Balance::sa(u64::max_value()),
                 };
 

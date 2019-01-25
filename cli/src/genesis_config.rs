@@ -62,10 +62,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         existential_deposit: 0,
         transfer_fee: 0,
         creation_fee: 0,
-        balances: vec![
-            (Keyring::Alice.to_raw_public().into(), 1_000_000_000),
-            (Keyring::Bob.to_raw_public().into(), 1_000_000_000),
-        ],
+        balances: vec![],
     };
     //let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
 
@@ -77,6 +74,12 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         b"BTC chainx".to_vec(),
     )
     .unwrap();
+
+    let endowed = initial_authorities
+        .clone()
+        .into_iter()
+        .map(|x| (x, 12500))
+        .collect::<Vec<_>>();
 
     GenesisConfig {
         consensus: Some(ConsensusConfig {
@@ -94,22 +97,14 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             period: CONSENSUS_TIME, // 2 second block time.
         }),
         session: Some(SessionConfig {
-            validators: initial_authorities
-                .iter()
-                .cloned()
-                .map(|account_id| (account_id.into(), 0))
-                .collect(),
+            validators: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
             session_length: 30, // 30 blocks per session
         }),
         sudo: Some(SudoConfig {
             key: auth1.into(),
         }),
         grandpa: Some(GrandpaConfig {
-            authorities: initial_authorities
-                .clone()
-                .into_iter()
-                .map(|k| (k, 1))
-                .collect(),
+            authorities: endowed.clone(),
         }),
         // chainx runtime module
         xsystem: Some(XSystemConfig {
@@ -122,7 +117,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             maximum_cert_count: 180,
             shares_per_cert: 50,
             total_issued: 1,
-            cert_owner: auth1.into(),
+            _genesis_phantom_data: Default::default(),
         }),
         fee_manager: Some(XFeeManagerConfig {
             switch: false,
@@ -136,16 +131,17 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             asset_list: vec![
                 (btc_asset, true, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)])
             ],
+            initial_reserve: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
         }),
         xstaking: Some(XStakingConfig {
             validator_count: 7,
             minimum_validator_count: 1,
-            sessions_per_era: 10,
+            sessions_per_era: 1,
             bonding_duration: 10,
             current_era: 0,
             penalty: 100,
             funding: Default::default(),
-            intentions: initial_authorities.clone().into_iter().map(|i| i.0.into()).collect(),
+            intentions: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
         }),
         xspot: Some(XSpotConfig {
             pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),7,100,100,true)],

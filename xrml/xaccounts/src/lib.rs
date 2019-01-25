@@ -63,11 +63,8 @@ pub struct CertImmutableProps<BlockNumber: Default, Moment: Default> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct IntentionImmutableProps<Moment> {
+pub struct IntentionImmutableProps {
     pub name: Name,
-    pub activator: Name,
-    pub initial_shares: u32,
-    pub registered_at: Moment,
 }
 
 /// Intention mutable properties
@@ -117,32 +114,12 @@ decl_storage! {
         /// intention name => intention
         pub IntentionOf get(intention_of): map Name => Option<T::AccountId>;
 
-        pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps<T::Moment>>;
+        pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps>;
 
         pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps;
 
     }
 
-    add_extra_genesis {
-        config(cert_owner): T::AccountId;
-
-        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
-            use runtime_io::with_externalities;
-            use substrate_primitives::Blake2Hasher;
-            use runtime_primitives::StorageMap;
-
-            let s = storage.clone().build_storage().unwrap().0;
-            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
-            with_externalities(&mut init, || {
-                let cert_name = b"genesis_cert".to_vec();
-                let frozen_duration = 1u32;
-                let cert_owner = config.cert_owner.clone();
-                Module::<T>::issue(cert_name, frozen_duration, cert_owner).unwrap();
-            });
-            let init: StorageMap = init.into();
-            storage.extend(init);
-        });
-    }
 }
 
 impl<T: Trait> Module<T> {

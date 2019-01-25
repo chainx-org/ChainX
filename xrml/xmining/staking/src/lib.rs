@@ -35,9 +35,6 @@ extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
 
-#[cfg(test)]
-extern crate substrate_primitives;
-
 use balances::OnDilution;
 use codec::{Compact, HasCompact};
 use rstd::prelude::*;
@@ -121,13 +118,10 @@ where
     fn accountid_for(origin: &T::AccountId) -> T::AccountId {
         let props = xaccounts::Module::<T>::intention_immutable_props_of(origin)
             .expect("The original account must be an existing intention.");
-        // cert_name
-        let cert_name_hash = T::Hashing::hash(&props.activator);
         // name
         let name_hash = T::Hashing::hash(&props.name);
 
         let mut buf = Vec::new();
-        buf.extend_from_slice(cert_name_hash.as_ref());
         buf.extend_from_slice(name_hash.as_ref());
         buf.extend_from_slice(origin.as_ref());
 
@@ -286,45 +280,16 @@ decl_module! {
         }
 
         /// Register intention by the owner of given cert name.
-        fn register(
-            origin,
-            cert_name: Name,
-            intention: T::AccountId,
-            name: Name,
-            url: URL,
-            share_count: u32,
-            memo: Memo
-        ) {
+        fn register(origin, name: Name) {
             let who = ensure_signed(origin)?;
 
             xaccounts::is_valid_name::<T>(&name)?;
-            xaccounts::is_valid_url::<T>(&url)?;
-            xassets::is_valid_memo::<T>(&memo)?;
-
-            ensure!(share_count > 0, "Cannot register zero share.");
             ensure!(
-                <xaccounts::Module<T>>::cert_owner_of(&cert_name).is_some(),
-                "Cert name does not exist."
-            );
-            ensure!(
-                <xaccounts::Module<T>>::cert_owner_of(&cert_name) == Some(who),
-                "Transactor mismatches the owner of given cert name."
-            );
-            let remaining_shares = <xaccounts::Module<T>>::remaining_shares_of(&cert_name);
-            ensure!(
-                remaining_shares > 0,
-                "Cannot register there are no remaining shares."
-            );
-            ensure!(
-                share_count <= remaining_shares,
-                "Cannot register if remaining shares is not adequate."
-            );
-            ensure!(
-                <xaccounts::Module<T>>::intention_immutable_props_of(&intention).is_none(),
+                !Self::is_intention(&who),
                 "Cannot register an intention repeatedly."
             );
 
-            Self::apply_register(cert_name, intention, name, url, share_count)?;
+            Self::apply_register(who, name)?;
 
         }
 
@@ -372,7 +337,6 @@ decl_event!(
         OfflineSlash(AccountId, Balance),
         OfflineValidator(AccountId),
         Rotation(Vec<(AccountId, u64)>),
-        Register(u32),
         Unnominate(BlockNumber),
         Nominate(AccountId, AccountId, Balance),
         Claim(u64, u64, Balance),
@@ -395,7 +359,7 @@ decl_storage! {
         /// The current era index.
         pub CurrentEra get(current_era) config(): T::BlockNumber;
         /// All the accounts with a desire to stake.
-        pub Intentions get(intentions) config(): Vec<T::AccountId>;
+        pub Intentions get(intentions): Vec<T::AccountId>;
 
         /// The next value of sessions per era.
         pub NextSessionsPerEra get(next_sessions_per_era): Option<T::BlockNumber>;
@@ -417,24 +381,29 @@ decl_storage! {
     }
 
     add_extra_genesis {
+        config(intentions): Vec<(T::AccountId, T::Balance)>;
         build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+            use codec::Encode;
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
             use runtime_primitives::StorageMap;
 
+            let hash = |key: &[u8]| -> Vec<u8>{
+                GenesisConfig::<T>::hash(key).to_vec()
+            };
+
             let s = storage.clone().build_storage().unwrap().0;
             let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
             with_externalities(&mut init, || {
-                for intention in config.intentions.clone() {
-                    <xaccounts::IntentionImmutablePropertiesOf<T>>::insert(
-                        &intention,
-                        xaccounts::IntentionImmutableProps {
-                            name: b"genesis_intention".to_vec(),
-                            activator: b"".to_vec(),
-                            initial_shares: 0,
-                            registered_at: <timestamp::Module<T>>::now(),
-                        },
-                    );
+                for (intention, value) in config.intentions.iter() {
+                    let _ = Module::<T>::apply_register(intention.clone(), b"genesis_intention".to_vec());
+
+                    // ## staking_reserve actually performed in xassets module
+                    let _ = Module::<T>::apply_update_vote_weight(intention, intention, *value, true);
+
+                    let _ = Module::<T>::apply_refresh(intention, None, Some(true), None, None);
+
+                    storage.insert(hash(&<StakeWeight<T>>::key_for(intention)), value.encode());
                 }
             });
             let init: StorageMap = init.into();
@@ -460,30 +429,8 @@ impl<T: Trait> Module<T> {
         issued_at + T::BlockNumber::sa(frozen_duration as u64 * Self::blocks_per_day())
     }
 
-    /// If source is an intention, the revokable balance should take the frozen duration
-    /// of his activator into account.
     pub fn revokable_of(source: &T::AccountId, target: &T::AccountId) -> T::Balance {
-        match <xaccounts::Module<T>>::intention_immutable_props_of(source) {
-            Some(props) => {
-                let activator = props.activator;
-
-                let block_of_due = Self::unfreeze_block_of(activator);
-                let current_block = <system::Module<T>>::block_number();
-
-                // Should exclude the startup if still during the frozen duration.
-                match block_of_due >= current_block {
-                    true => {
-                        let startup = T::Balance::sa(
-                            props.initial_shares as u64
-                                * <xaccounts::Module<T>>::activation_per_share() as u64,
-                        );
-                        Self::nomination_record_of(source, target).nomination - startup
-                    }
-                    false => Self::nomination_record_of(source, target).nomination,
-                }
-            }
-            None => Self::nomination_record_of(source, target).nomination,
-        }
+        Self::nomination_record_of(source, target).nomination
     }
 
     /// How many votes nominator have nomianted for the nominee.
@@ -498,6 +445,10 @@ impl<T: Trait> Module<T> {
 
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
         <IntentionProfiles<T>>::get(intention).total_nomination
+    }
+
+    pub fn is_intention(who: &T::AccountId) -> bool {
+        <xaccounts::Module<T>>::intention_immutable_props_of(who).is_some()
     }
 
     // Private mutables
@@ -639,53 +590,26 @@ impl<T: Trait> Module<T> {
     }
 
     /// Actually register an intention.
-    fn apply_register(
-        cert_name: Name,
-        intention: T::AccountId,
-        name: Name,
-        url: URL,
-        share_count: u32,
-    ) -> Result {
+    fn apply_register(intention: T::AccountId, name: Name) -> Result {
         <xaccounts::IntentionOf<T>>::insert(&name, intention.clone());
-        <xaccounts::RemainingSharesOf<T>>::mutate(&cert_name, |shares| *shares -= share_count);
         <xaccounts::IntentionImmutablePropertiesOf<T>>::insert(
             &intention,
-            xaccounts::IntentionImmutableProps {
-                name: name,
-                activator: cert_name.clone(),
-                initial_shares: share_count,
-                registered_at: <timestamp::Module<T>>::now(),
-            },
+            xaccounts::IntentionImmutableProps { name: name },
         );
         <xaccounts::IntentionPropertiesOf<T>>::insert(
             &intention,
-            xaccounts::IntentionProps {
-                url: url,
-                is_active: false,
-                about: XString::default(),
-            },
+            xaccounts::IntentionProps::default(),
         );
 
-        let activation = share_count * <xaccounts::Module<T>>::activation_per_share();
-        let activation = T::Balance::sa(activation as u64);
-
-        // issue pcx to the intention
-        xassets::Module::<T>::pcx_issue(&intention, activation)?;
-
         <Intentions<T>>::mutate(|i| i.push(intention.clone()));
-
-        let iprof = IntentionProfs {
-            total_nomination: Zero::zero(),
-            last_total_vote_weight: 0,
-            last_total_vote_weight_update: <system::Module<T>>::block_number(),
-        };
-        <IntentionProfiles<T>>::insert(&intention, iprof);
-
-        Self::apply_nominate(&intention, &intention, activation)?;
-
-        Self::deposit_event(RawEvent::Register(<xaccounts::RemainingSharesOf<T>>::get(
-            &cert_name,
-        )));
+        <IntentionProfiles<T>>::insert(
+            &intention,
+            IntentionProfs {
+                total_nomination: Zero::zero(),
+                last_total_vote_weight: 0,
+                last_total_vote_weight_update: <system::Module<T>>::block_number(),
+            },
+        );
 
         Ok(())
     }

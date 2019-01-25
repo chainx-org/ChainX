@@ -277,19 +277,31 @@ decl_storage! {
         /// memo len
         pub MemoLen get(memo_len) config(): u32;
     }
+
     add_extra_genesis {
         config(asset_list): Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
         config(pcx): (Token, Precision, Desc);
+        config(initial_reserve): Vec<(T::AccountId, T::Balance)>;
+
         build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
                 use runtime_io::with_externalities;
                 use substrate_primitives::Blake2Hasher;
                 use primitives::traits::{Zero, As};
+
                 let src_r = storage.clone().build_storage().unwrap().0;
                 let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
                 with_externalities(&mut tmp_storage, || {
                     let chainx: Token = <Module<T> as ChainT>::TOKEN.to_vec();
+
                     let pcx = Asset::new(chainx, config.pcx.0.clone(), Chain::ChainX, config.pcx.1, config.pcx.2.clone()).unwrap();
                     Module::<T>::register_asset(pcx, false, Zero::zero()).unwrap();
+
+                    // initial reserve
+                    for (intention, value) in config.initial_reserve.iter() {
+                        let _ = Module::<T>::pcx_issue(intention, *value);
+                        let _ = Module::<T>::pcx_move_balance(intention, AssetType::Free, intention, AssetType::ReservedStaking, *value);
+                    }
+
                     // init for asset_list
                     for (asset, is_psedu_intention, init_list) in config.asset_list.iter() {
                         let token = asset.token();
@@ -480,6 +492,7 @@ impl<T: Trait> Module<T> {
 
     pub fn is_valid_asset(token: &Token) -> Result {
         is_valid_token(token)?;
+
         if let Some(info) = Self::asset_info(token) {
             if info.1 == true {
                 return Ok(());
