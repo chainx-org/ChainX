@@ -34,6 +34,8 @@ use substrate_service::{
 };
 use transaction_pool::{self, txpool::Pool as TransactionPool};
 
+use network_p2p::obtain_private_key;
+
 construct_simple_protocol! {
     /// Demo protocol attachment for substrate.
     pub struct ChainXProtocol where Block = Block { }
@@ -116,6 +118,11 @@ construct_service_factory! {
                     grandpa::NetworkBridge::new(service.network()),
                     service.on_exit(),
                 )?);
+
+                let local_private_key = obtain_private_key(&service.config.network).unwrap();
+                let local_public_key = local_private_key.to_public_key();
+                let local_peer_id = local_public_key.clone().into_peer_id();
+                println!("local_peer_id: {:?}", local_peer_id);
 
                 Ok(service)
             }

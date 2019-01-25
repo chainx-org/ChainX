@@ -18,6 +18,7 @@ substrate-basic-authorship = { git = "https://github.com/chainpool/substrate" }
 substrate-service = { git = "https://github.com/chainpool/substrate" }
 substrate-transaction-pool = { git = "https://github.com/chainpool/substrate" }
 substrate-network = { git = "https://github.com/chainpool/substrate" }
+substrate-network-libp2p = { git = "https://github.com/chainpool/substrate" }
 substrate-consensus-aura = { git = "https://github.com/chainpool/substrate" }
 substrate-finality-grandpa = { git = "https://github.com/chainpool/substrate" }
 substrate-keyring = { git = "https://github.com/chainpool/substrate" }

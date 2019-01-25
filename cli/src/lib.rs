@@ -29,6 +29,7 @@ extern crate substrate_service_test as service_test;
 extern crate substrate_transaction_pool as transaction_pool;
 #[macro_use]
 extern crate substrate_network as network;
+extern crate substrate_network_libp2p as network_p2p;
 extern crate chainx_primitives;
 extern crate substrate_client as client;
 extern crate substrate_consensus_aura as consensus;
