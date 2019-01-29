@@ -41,12 +41,12 @@ extern crate xrml_xsystem as xsystem;
 use balances::OnDilution;
 use codec::{Compact, HasCompact};
 use rstd::prelude::*;
-use runtime_primitives::traits::{As, Hash, Lookup, StaticLookup, Zero};
+use runtime_primitives::traits::{As, Lookup, StaticLookup, Zero};
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 
-use xaccounts::{Name, TrusteeEntity, TrusteeIntentionProps, URL};
+use xaccounts::{IntentionJackpotAccountIdFor, Name, TrusteeEntity, TrusteeIntentionProps, URL};
 use xassets::{Chain, Memo, Token};
 use xr_primitives::XString;
 
@@ -101,33 +101,6 @@ pub trait Trait:
 
     /// Time to distribute reward
     type OnReward: OnReward<Self::AccountId, Self::Balance>;
-
-    /// Generate virtual AccountId for each (psedu) intention
-    type DetermineJackpotAccountId: JackpotAccountIdFor<Self::AccountId>;
-}
-
-pub trait JackpotAccountIdFor<AccountId: Sized> {
-    fn accountid_for(origin: &AccountId) -> AccountId;
-}
-
-pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> JackpotAccountIdFor<T::AccountId> for SimpleAccountIdDeterminator<T>
-where
-    T::AccountId: From<T::Hash> + AsRef<[u8]>,
-{
-    fn accountid_for(origin: &T::AccountId) -> T::AccountId {
-        let name = xaccounts::Module::<T>::intention_name_of(origin)
-            .expect("The original account must be an existing intention.");
-        // name
-        let name_hash = T::Hashing::hash(&name);
-
-        let mut buf = Vec::new();
-        buf.extend_from_slice(name_hash.as_ref());
-        buf.extend_from_slice(origin.as_ref());
-
-        T::Hashing::hash(&buf[..]).into()
-    }
 }
 
 decl_module! {
@@ -431,7 +404,7 @@ decl_storage! {
                     );
 
                     let to_jackpot = *value - free;
-                    let jackpot = T::DetermineJackpotAccountId::accountid_for(intention);
+                    let jackpot = T::DetermineIntentionJackpotAccountId::accountid_for(intention);
                     let _ = <xassets::Module<T>>::pcx_issue(&jackpot, to_jackpot);
 
                     let _ = Module::<T>::apply_update_vote_weight(intention, intention, *value, true);
@@ -586,7 +559,7 @@ impl<T: Trait> Module<T> {
         let mut iprof = <IntentionProfiles<T>>::get(target);
         let mut record = Self::nomination_record_of(who, target);
 
-        let jackpot_addr = T::DetermineJackpotAccountId::accountid_for(target);
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(target);
         let (source_vote_weight, target_vote_weight, dividend) =
             Self::generic_claim(&mut record, who, &mut iprof, &jackpot_addr)?;
         Self::deposit_event(RawEvent::Claim(
@@ -678,12 +651,12 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn jackpot_accountid_for(who: &T::AccountId) -> T::AccountId {
-        T::DetermineJackpotAccountId::accountid_for(who)
+        T::DetermineIntentionJackpotAccountId::accountid_for(who)
     }
 
     pub fn multi_jackpot_accountid_for(whos: &Vec<T::AccountId>) -> Vec<T::AccountId> {
         whos.into_iter()
-            .map(|who| T::DetermineJackpotAccountId::accountid_for(who))
+            .map(|who| T::DetermineIntentionJackpotAccountId::accountid_for(who))
             .collect()
     }
 }

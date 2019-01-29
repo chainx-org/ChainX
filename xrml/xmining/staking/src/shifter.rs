@@ -4,6 +4,7 @@
 use super::*;
 use runtime_primitives::traits::{As, One, Zero};
 use session::OnSessionChange;
+use xaccounts::IntentionJackpotAccountIdFor;
 use xassets;
 
 /// RewardHolder includes intention as well as tokens.
@@ -66,13 +67,13 @@ impl<T: Trait> Module<T> {
         let _ = <xassets::Module<T>>::pcx_issue(who, off_the_table);
         let to_jackpot = reward - off_the_table;
         // issue to jackpot
-        let jackpot_addr = T::DetermineJackpotAccountId::accountid_for(who);
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
         let _ = <xassets::Module<T>>::pcx_issue(&jackpot_addr, to_jackpot);
     }
 
     /// Punish  a given (potential) validator by a specific amount.
     fn punish(who: &T::AccountId, punish: T::Balance) -> bool {
-        let jackpot_addr = T::DetermineJackpotAccountId::accountid_for(who);
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
         let fund_id = Self::funding();
         if punish <= <xassets::Module<T>>::pcx_free_balance(&jackpot_addr) {
             let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &fund_id, punish);

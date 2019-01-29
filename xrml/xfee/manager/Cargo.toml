@@ -16,6 +16,7 @@ srml-support = { git = "https://github.com/chainpool/substrate", default-feature
 
 # xrml
 xrml-xsystem = { path = "../../xsystem", default-features = false }
+xrml-xaccounts = { path = "../../xaccounts", default-features = false }
 xrml-xassets-assets = { path = "../../xassets/assets", default-features = false }
 
 [features]
@@ -33,5 +34,6 @@ std = [
 
     # xrml
     "xrml-xsystem/std",
+    "xrml-xaccounts/std",
     "xrml-xassets-assets/std",
 ]

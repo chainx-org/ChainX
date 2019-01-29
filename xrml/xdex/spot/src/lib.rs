@@ -63,7 +63,7 @@ use runtime_support::dispatch::Result;
 use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
 
-use xassets::assetdef::{ChainT,Token};
+use xassets::assetdef::{ChainT, Token};
 
 const PRICE_MAX_ORDER: usize = 1000;
 
@@ -252,26 +252,35 @@ impl<T: Trait> Module<T> {
         None
     }
 
-    pub fn aver_asset_price(token:&Token)->Option<T::Balance> {
+    pub fn aver_asset_price(token: &Token) -> Option<T::Balance> {
         /*
         如果交易对ID是XXX/PCX，则：
         返回：交易对Map[交易对ID].平均价 / 10^报价精度
         如果交易对ID是PCX/XXX，则：
-        返回：10^交易对Map[交易对ID].报价精度 / 平均价  
+        返回：10^交易对Map[交易对ID].报价精度 / 平均价
         */
         let pair_len = <OrderPairLen<T>>::get();
         for i in 0..pair_len {
             if let Some(pair) = <OrderPairOf<T>>::get(i) {
-                if pair.first.eq(token) && pair.second.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) {
-                    if let Some((_,aver,_))= <OrderPairPriceOf<T>>::get(i) {
-                        let price:T::Balance=As::sa(aver.as_()/(10_u64.pow(pair.precision.as_() )));
-                        return Some(price );
+                if pair.first.eq(token)
+                    && pair
+                        .second
+                        .eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec())
+                {
+                    if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
+                        let price: T::Balance =
+                            As::sa(aver.as_() / (10_u64.pow(pair.precision.as_())));
+                        return Some(price);
                     }
-                }
-                else if pair.first.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) && pair.second.eq(token) {
-                    if let Some((_,aver,_))= <OrderPairPriceOf<T>>::get(i) {
-                        let price:T::Balance=As::sa(10_u64.pow(pair.precision.as_() )/aver.as_());
-                        return Some(price) ;
+                } else if pair
+                    .first
+                    .eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec())
+                    && pair.second.eq(token)
+                {
+                    if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
+                        let price: T::Balance =
+                            As::sa(10_u64.pow(pair.precision.as_()) / aver.as_());
+                        return Some(price);
                     }
                 }
             }
@@ -371,11 +380,11 @@ impl<T: Trait> Module<T> {
         if amount == Zero::zero() {
             return Err("amount cann't be zero");
         }
-        let min_unit=10_u64.pow(pair.unit_precision);
+        let min_unit = 10_u64.pow(pair.unit_precision);
         if price < As::sa(min_unit.as_()) {
             return Err("price cann't be less min_unit");
         }
-        if price%As::sa(min_unit) != Zero::zero() {
+        if price % As::sa(min_unit) != Zero::zero() {
             return Err("price % min_unit must be 0");
         }
 
@@ -404,8 +413,8 @@ impl<T: Trait> Module<T> {
             OrderDirection::Buy => {
                 if handicap.sell > Zero::zero()
                     && price
-                        > ((handicap.sell
-                            * As::sa(100_u32 + <PriceVolatility<T>>::get())) / As::sa(100_u32))
+                        > ((handicap.sell * As::sa(100_u32 + <PriceVolatility<T>>::get()))
+                            / As::sa(100_u32))
                 {
                     return Err("price cann't > PriceVolatility");
                 }
@@ -413,7 +422,8 @@ impl<T: Trait> Module<T> {
             OrderDirection::Sell => {
                 if handicap.buy > Zero::zero()
                     && price
-                        < (handicap.buy * As::sa(100_u32 - <PriceVolatility<T>>::get()) / As::sa(100_u32))
+                        < (handicap.buy * As::sa(100_u32 - <PriceVolatility<T>>::get())
+                            / As::sa(100_u32))
                 {
                     return Err("price cann't > PriceVolatility");
                 }
@@ -486,7 +496,7 @@ impl<T: Trait> Module<T> {
             OrderDirection::Buy => handicap.sell,
             OrderDirection::Sell => handicap.buy,
         };
-        let min_unit=10_u64.pow(pair.unit_precision);
+        let min_unit = 10_u64.pow(pair.unit_precision);
 
         loop {
             if opponent_price == Zero::zero() {
@@ -574,17 +584,13 @@ impl<T: Trait> Module<T> {
             //移动对手价
             match order.direction {
                 OrderDirection::Buy => {
-                    opponent_price = match opponent_price
-                        .checked_add(&As::sa(min_unit))
-                    {
+                    opponent_price = match opponent_price.checked_add(&As::sa(min_unit)) {
                         Some(v) => v,
                         None => Default::default(),
                     };
                 }
                 OrderDirection::Sell => {
-                    opponent_price = match opponent_price
-                        .checked_sub(&As::sa(min_unit))
-                    {
+                    opponent_price = match opponent_price.checked_sub(&As::sa(min_unit)) {
                         Some(v) => v,
                         None => Default::default(),
                     };
@@ -866,7 +872,7 @@ impl<T: Trait> Module<T> {
     //更新盘口
     fn update_handicap(pair: &OrderPair, price: T::Price, direction: OrderDirection) {
         //这里方向是反的，注意
-        let min_unit=10_u64.pow(pair.unit_precision);
+        let min_unit = 10_u64.pow(pair.unit_precision);
 
         match <Quotations<T>>::get((pair.id, price)) {
             Some(_list) => {}
@@ -875,10 +881,7 @@ impl<T: Trait> Module<T> {
                     OrderDirection::Buy => {
                         //更新卖一
                         if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
-                            handicap.sell = match handicap
-                                .sell
-                                .checked_add(&As::sa(min_unit))
-                            {
+                            handicap.sell = match handicap.sell.checked_add(&As::sa(min_unit)) {
                                 Some(v) => v,
                                 None => Default::default(),
                             };
@@ -889,10 +892,7 @@ impl<T: Trait> Module<T> {
                     OrderDirection::Sell => {
                         //更新买一
                         if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
-                            handicap.buy = match handicap
-                                .buy
-                                .checked_sub(&As::sa(min_unit))
-                            {
+                            handicap.buy = match handicap.buy.checked_sub(&As::sa(min_unit)) {
                                 Some(v) => v,
                                 None => Default::default(),
                             };

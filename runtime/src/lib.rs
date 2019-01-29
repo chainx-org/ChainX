@@ -240,6 +240,7 @@ impl xsystem::Trait for Runtime {
 
 impl xaccounts::Trait for Runtime {
     type Event = Event;
+    type DetermineIntentionJackpotAccountId = xaccounts::SimpleAccountIdDeterminator<Runtime>;
 }
 // fees
 impl fee_manager::Trait for Runtime {
@@ -263,7 +264,6 @@ impl xstaking::Trait for Runtime {
     type OnRewardCalculation = xtokens::Module<Runtime>;
     type OnReward = xtokens::Module<Runtime>;
     type Event = Event;
-    type DetermineJackpotAccountId = xstaking::SimpleAccountIdDeterminator<Runtime>;
 }
 
 impl xtokens::Trait for Runtime {

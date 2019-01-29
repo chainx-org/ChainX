@@ -74,18 +74,25 @@ pub struct OrderPair {
     pub id: OrderPairID,
     pub first: Token,
     pub second: Token,
-    pub precision: u32, //价格精度
-    pub unit_precision:u32,//最小单位精度
+    pub precision: u32,      //价格精度
+    pub unit_precision: u32, //最小单位精度
     pub used: bool,
 }
 impl OrderPair {
-    pub fn new(id: OrderPairID, first: Token, second: Token, precision: u32, unit: u32,status: bool) -> Self {
+    pub fn new(
+        id: OrderPairID,
+        first: Token,
+        second: Token,
+        precision: u32,
+        unit: u32,
+        status: bool,
+    ) -> Self {
         OrderPair {
             id: id,
             first: first,
             second: second,
             precision: precision,
-            unit_precision:unit,
+            unit_precision: unit,
             used: status,
         }
     }

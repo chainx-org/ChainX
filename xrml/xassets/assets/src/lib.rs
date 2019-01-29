@@ -648,7 +648,6 @@ impl<T: Trait> Module<T> {
         Self::move_balance_with_checkflag(token, from, from_type, to, to_type, value, true)
     }
 
-
     pub fn move_balance_with_checkflag(
         token: &Token,
         from: &T::AccountId,
@@ -656,7 +655,7 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         to_type: AssetType,
         value: T::Balance,
-        check: bool
+        check: bool,
     ) -> StdResult<(), AssetErr> {
         if from == to && from_type == to_type {
             // same account, same type, return directly

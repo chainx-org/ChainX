@@ -58,4 +58,3 @@ pub mod xspot_api {
         }
     }
 }
-

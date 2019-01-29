@@ -38,6 +38,7 @@ extern crate xr_primitives;
 extern crate xrml_xassets_assets as xassets;
 
 use rstd::prelude::*;
+use runtime_primitives::traits::Hash;
 use runtime_support::dispatch::Result;
 
 use xassets::Chain;
@@ -51,6 +52,27 @@ pub type URL = XString;
 pub trait Trait: system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+    /// Generate virtual AccountId for each (psedu) intention
+    type DetermineIntentionJackpotAccountId: IntentionJackpotAccountIdFor<Self::AccountId>;
+}
+
+pub trait IntentionJackpotAccountIdFor<AccountId: Sized> {
+    fn accountid_for(origin: &AccountId) -> AccountId;
+}
+
+pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
+
+impl<T: Trait> IntentionJackpotAccountIdFor<T::AccountId> for SimpleAccountIdDeterminator<T>
+where
+    T::AccountId: From<T::Hash> + AsRef<[u8]>,
+{
+    fn accountid_for(origin: &T::AccountId) -> T::AccountId {
+        let name = Module::<T>::intention_name_of(origin)
+            .expect("The original account must be an existing intention.");
+        // name
+        T::Hashing::hash(&name).into()
+    }
 }
 
 /// Intention mutable properties

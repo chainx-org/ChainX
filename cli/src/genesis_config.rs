@@ -133,6 +133,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         fee_manager: Some(XFeeManagerConfig {
             switch: false,
+            producer_fee_proportion: (1, 10),
             _genesis_phantom_data: Default::default(),
         }),
         xassets: Some(XAssetsConfig {
