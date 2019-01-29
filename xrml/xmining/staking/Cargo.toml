@@ -22,6 +22,8 @@ srml-system = { git = "https://github.com/chainpool/substrate", default_features
 srml-indices = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
 
+keys = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+
 # chainx runtime
 xr-primitives = { path = "../../../xr-primitives", default_features = false }
 # xrml
@@ -30,6 +32,7 @@ xrml-xsupport = { path = "../../xsupport",  default_features = false }
 xrml-xaccounts = { path = "../../xaccounts",  default_features = false }
 xrml-xassets-assets = { path = "../../xassets/assets",  default_features = false }
 xrml-session = { path = "../../xsession", default_features = false }
+xrml-bridge-bitcoin = { path = "../../xbridge/bitcoin",  default_features = false }
 
 [features]
 default = ["std"]
@@ -57,4 +60,5 @@ std = [
     "xrml-xsupport/std",
     "xrml-xaccounts/std",
     "xrml-xassets-assets/std",
+    "xrml-bridge-bitcoin/std",
 ]

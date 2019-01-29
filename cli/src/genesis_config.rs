@@ -18,11 +18,12 @@ use chainx_runtime::{
 };
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, Params, SessionConfig,
-    SudoConfig, TimestampConfig, XAccountsConfig, XAssetsConfig, XBridgeOfBTCConfig,
-    XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    SudoConfig, TimestampConfig, XAssetsConfig, XBridgeOfBTCConfig, XFeeManagerConfig, XSpotConfig,
+    XStakingConfig, XSystemConfig, XTokensConfig,
 };
 
 use ed25519;
+use sr_primitives::Permill;
 
 use self::btc_chain::BlockHeader;
 use self::btc_primitives::{compact::Compact, hash::H256};
@@ -130,13 +131,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             burn_account: substrate_primitives::H256::repeat_byte(0x1),
             banned_account: auth1.into(),
         }),
-        xaccounts: Some(XAccountsConfig {
-            activation_per_share: 100_000_000,
-            maximum_cert_count: 180,
-            shares_per_cert: 50,
-            total_issued: 1,
-            _genesis_phantom_data: Default::default(),
-        }),
         fee_manager: Some(XFeeManagerConfig {
             switch: false,
             _genesis_phantom_data: Default::default(),
@@ -147,20 +141,25 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
             asset_list: vec![
-                (btc_asset, true, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)]),
+                (btc_asset, true, vec![(Keyring::Alice.to_raw_public().into(), 100),(Keyring::Bob.to_raw_public().into(), 100)]),
                 (dot_asset.clone(), false, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)]),
-                (xdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)])
+                (xdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 100),(Keyring::Bob.to_raw_public().into(), 100)])
             ],
         }),
         xstaking: Some(XStakingConfig {
             validator_count: 7,
             minimum_validator_count: 1,
             sessions_per_era: 1,
-            bonding_duration: 10,
+            bonding_duration: 30,
             current_era: 0,
             penalty: 100,
             funding: Default::default(),
             intentions: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
+            validator_stake_threshold: 1,
+        }),
+        xtokens: Some(XTokensConfig {
+            token_discount: Permill::from_percent(30),
+            _genesis_phantom_data: Default::default(),
         }),
         xspot: Some(XSpotConfig {
             pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),9,2,100000,true),

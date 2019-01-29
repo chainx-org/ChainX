@@ -8,6 +8,9 @@
 extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 
+#[cfg(feature = "std")]
+extern crate serde_derive;
+
 // for substrate
 #[cfg(feature = "std")]
 extern crate substrate_primitives;
@@ -30,14 +33,14 @@ extern crate srml_consensus as consensus;
 #[cfg(test)]
 extern crate srml_session as session;
 extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
 
 extern crate xr_primitives;
+extern crate xrml_xassets_assets as xassets;
 
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
-use runtime_support::{StorageMap, StorageValue};
 
+use xassets::Chain;
 use xr_primitives::XString;
 
 mod tests;
@@ -45,26 +48,9 @@ mod tests;
 pub type Name = XString;
 pub type URL = XString;
 
-pub trait Trait: system::Trait + timestamp::Trait {
+pub trait Trait: system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-}
-
-/// Cert immutable properties
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct CertImmutableProps<BlockNumber: Default, Moment: Default> {
-    pub issued_at: (BlockNumber, Moment),
-    pub frozen_duration: u32,
-}
-
-/// Intention Immutable properties
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct IntentionImmutableProps {
-    pub name: Name,
 }
 
 /// Intention mutable properties
@@ -75,6 +61,28 @@ pub struct IntentionProps {
     pub url: URL,
     pub is_active: bool,
     pub about: XString,
+}
+
+// TrusteeEntity could be a pubkey or an address depending on the different chain.
+#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum TrusteeEntity {
+    Bitcoin(Vec<u8>),
+}
+
+impl Default for TrusteeEntity {
+    fn default() -> Self {
+        TrusteeEntity::Bitcoin(Vec::default())
+    }
+}
+
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct TrusteeIntentionProps {
+    pub about: XString,
+    pub hot_entity: TrusteeEntity,
+    pub cold_entity: TrusteeEntity,
 }
 
 decl_module! {
@@ -93,75 +101,21 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as XAccounts {
-        /// Shares per cert.
-        pub SharesPerCert get(shares_per_cert) config(): u32;
-
-        pub ActivationPerShare get(activation_per_share) config(): u32;
-
-        pub MaximumCertCount get(maximum_cert_count) config(): u32;
-
-        pub TotalIssued get(total_issued) config(): u32;
-
-        /// cert name => cert owner
-        pub CertOwnerOf get(cert_owner_of): map Name => Option<T::AccountId>;
-
-        pub CertImmutablePropertiesOf get(cert_immutable_props_of): map Name => CertImmutableProps<T::BlockNumber, T::Moment>;
-
-        pub RemainingSharesOf get(remaining_shares_of): map Name => u32;
-
-        pub CertNamesOf get(cert_names_of): map T::AccountId => Vec<Name>;
-
         /// intention name => intention
         pub IntentionOf get(intention_of): map Name => Option<T::AccountId>;
 
-        pub IntentionImmutablePropertiesOf get(intention_immutable_props_of): map T::AccountId => Option<IntentionImmutableProps>;
+        /// intention => intention name
+        pub IntentionNameOf get(intention_name_of): map T::AccountId => Option<Name>;
 
         pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps;
 
-    }
+        pub TrusteeIntentions get(trustee_intentions): Vec<T::AccountId>;
 
-}
-
-impl<T: Trait> Module<T> {
-    /// Issue new cert triggered by relayed transaction.
-    pub fn issue(cert_name: Name, frozen_duration: u32, cert_owner: T::AccountId) -> Result {
-        is_valid_name::<T>(&cert_name)?;
-
-        ensure!(
-            Self::cert_owner_of(&cert_name).is_none(),
-            "Cannot issue if this cert name already exists."
-        );
-
-        ensure!(
-            Self::total_issued() < Self::maximum_cert_count(),
-            "Cannot issue when there are too many certs."
-        );
-
-        ensure!(
-            frozen_duration <= 365,
-            "Cannot issue if frozen duration out of range."
-        );
-
-        <CertOwnerOf<T>>::insert(&cert_name, cert_owner.clone());
-
-        <CertImmutablePropertiesOf<T>>::mutate(&cert_name, |cert| {
-            cert.issued_at = (
-                <system::Module<T>>::block_number(),
-                <timestamp::Module<T>>::now(),
-            );
-            cert.frozen_duration = frozen_duration;
-        });
-
-        <RemainingSharesOf<T>>::insert(&cert_name, Self::shares_per_cert());
-
-        <CertNamesOf<T>>::mutate(&cert_owner, |names| names.push(cert_name.clone()));
-        <TotalIssued<T>>::put(Self::total_issued() + 1);
-
-        Self::deposit_event(RawEvent::Issue(cert_name, frozen_duration, cert_owner));
-
-        Ok(())
+        pub TrusteeIntentionPropertiesOf get(trustee_intention_props_of): map (T::AccountId, Chain) => Option<TrusteeIntentionProps>;
     }
 }
+
+impl<T: Trait> Module<T> {}
 
 pub fn is_valid_name<T: Trait>(name: &[u8]) -> Result {
     if name.len() > 12 || name.len() < 2 {

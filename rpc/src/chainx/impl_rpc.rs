@@ -1,5 +1,6 @@
 // Copyright 2019 Chainpool.
 
+use self::types::Revocation;
 use super::*;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use std::iter::FromIterator;
@@ -31,44 +32,6 @@ where
         };
 
         Ok(self.client.block(&BlockId::Hash(block_hash))?)
-    }
-
-    fn cert(&self, owner: AccountId) -> Result<Option<Vec<CertInfo>>> {
-        let state = self.best_state()?;
-
-        let key = <xaccounts::CertNamesOf<Runtime>>::key_for(&owner);
-        let names: Vec<Vec<u8>> = if let Some(names) = Self::pickout(&state, &key)? {
-            names
-        } else {
-            return Ok(None);
-        };
-
-        let mut certs = Vec::new();
-        for name in names.iter() {
-            let key = <xaccounts::CertImmutablePropertiesOf<Runtime>>::key_for(name);
-            let props: CertImmutableProps<BlockNumber, Timestamp> =
-                if let Some(props) = Self::pickout(&state, &key)? {
-                    props
-                } else {
-                    return Ok(None);
-                };
-
-            let key = <xaccounts::RemainingSharesOf<Runtime>>::key_for(name);
-            let shares: u32 = if let Some(shares) = Self::pickout(&state, &key)? {
-                shares
-            } else {
-                return Ok(None);
-            };
-
-            certs.push(CertInfo {
-                name: String::from_utf8_lossy(name).into_owned(),
-                issued_at: props.issued_at.1,
-                frozen_duration: props.frozen_duration,
-                remaining_shares: shares,
-            });
-        }
-
-        Ok(Some(certs))
     }
 
     fn assets_of(
@@ -163,13 +126,6 @@ where
                 Some(info) => info,
                 None => unreachable!("should not reach this branch, the token info must be exists"),
             };
-            //            let (is_native , asset) = match asset {
-            //                Some(info) => match info.chain() {
-            //                    Chain::ChainX => (true, info),
-            //                    _ => (false, info),
-            //                },
-            //                None => unreachable!("should not reach this branch, the token info must be exists"),
-            //            };
 
             // PCX free balance
             if token.as_slice() == xassets::Module::<Runtime>::TOKEN {
@@ -304,7 +260,7 @@ where
     fn nomination_records(
         &self,
         who: AccountId,
-    ) -> Result<Option<Vec<(AccountId, NominationRecord<Balance, BlockNumber>)>>> {
+    ) -> Result<Option<Vec<(AccountId, NominationRecord)>>> {
         let state = self.best_state()?;
 
         let mut records = Vec::new();
@@ -314,9 +270,25 @@ where
             for intention in intentions {
                 let key = <xstaking::NominationRecords<Runtime>>::key_for(&(who, intention));
                 if let Some(record) =
-                    Self::pickout::<NominationRecord<Balance, BlockNumber>>(&state, &key)?
+                    Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(&state, &key)?
                 {
-                    records.push((intention, record));
+                    let revocations = record
+                        .revocations
+                        .iter()
+                        .map(|x| Revocation {
+                            block_numer: x.0,
+                            value: x.1,
+                        })
+                        .collect::<Vec<_>>();
+                    records.push((
+                        intention,
+                        NominationRecord {
+                            nomination: record.nomination,
+                            last_vote_weight: record.last_vote_weight,
+                            last_vote_weight_update: record.last_vote_weight_update,
+                            revocations,
+                        },
+                    ));
                 }
             }
         }
@@ -332,6 +304,11 @@ where
         let validators =
             Self::pickout::<Vec<AccountId>>(&state, &key)?.expect("Validators can't be empty");
 
+        let key = <xaccounts::TrusteeIntentions<Runtime>>::key();
+
+        // FIXME trustees should not empty
+        let trustees = Self::pickout::<Vec<AccountId>>(&state, &key)?.unwrap_or_default();
+
         let key = <xstaking::Intentions<Runtime>>::key();
 
         if let Some(intentions) = Self::pickout::<Vec<AccountId>>(&state, &key)? {
@@ -345,9 +322,9 @@ where
             for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
                 let mut info = IntentionInfo::default();
 
-                let key = <xaccounts::IntentionImmutablePropertiesOf<Runtime>>::key_for(&intention);
-                if let Some(props) = Self::pickout::<IntentionImmutableProps>(&state, &key)? {
-                    info.name = String::from_utf8_lossy(&props.name).into_owned();
+                let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
+                if let Some(name) = Self::pickout::<xaccounts::Name>(&state, &key)? {
+                    info.name = String::from_utf8_lossy(&name).into_owned();
                 }
 
                 let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
@@ -370,12 +347,13 @@ where
 
                 let key = <xstaking::NominationRecords<Runtime>>::key_for(&(intention, intention));
                 if let Some(record) =
-                    Self::pickout::<NominationRecord<Balance, BlockNumber>>(&state, &key)?
+                    Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(&state, &key)?
                 {
                     info.self_vote = record.nomination;
                 }
 
                 info.is_validator = validators.iter().any(|&i| i == intention);
+                info.is_trustee = trustees.iter().any(|&i| i == intention);
                 info.account = intention;
 
                 intention_info.push(info);
@@ -413,15 +391,15 @@ where
                         vote_weight.last_total_deposit_weight_update;
                 }
 
-
                 let b = self.best_number()?;
-                if let Some(Some(price)) = self.client
+                if let Some(Some(price)) = self
+                    .client
                     .runtime_api()
                     .aver_asset_price(&b, token.clone())
-                    .ok(){
-                        info.price = price;
-                    };
-
+                    .ok()
+                {
+                    info.price = price;
+                };
 
                 let key = <xassets::TotalAssetBalance<Runtime>>::key_for(&token);
                 if let Some(total_asset_balance) =
@@ -494,7 +472,7 @@ where
                     info.currency = String::from_utf8_lossy(&pair.second).into_owned();
                     info.precision = pair.precision;
                     info.used = pair.used;
-                    info.unit_precision=pair.unit_precision;
+                    info.unit_precision = pair.unit_precision;
 
                     let price_key = <xspot::OrderPairPriceOf<Runtime>>::key_for(&i);
                     if let Some(price) =
@@ -506,9 +484,11 @@ where
                     }
 
                     let handicap_key = <xspot::HandicapMap<Runtime>>::key_for(&i);
-                    if let Some(handicap) = Self::pickout::<HandicapT<Runtime>>(&state, &handicap_key)? {
+                    if let Some(handicap) =
+                        Self::pickout::<HandicapT<Runtime>>(&state, &handicap_key)?
+                    {
                         info.buy_one = handicap.buy;
-                        info.sell_one= handicap.sell;
+                        info.sell_one = handicap.sell;
                     }
 
                     pairs.push(info);
@@ -531,8 +511,8 @@ where
         let state = self.best_state()?;
         let pair_key = <xspot::OrderPairOf<Runtime>>::key_for(&id);
         if let Some(pair) = Self::pickout::<OrderPair>(&state, &pair_key)? {
-            let min_unit=10_u64.pow(pair.unit_precision);
-            
+            let min_unit = 10_u64.pow(pair.unit_precision);
+
             //盘口
             let handicap_key = <xspot::HandicapMap<Runtime>>::key_for(&id);
 
@@ -578,13 +558,10 @@ where
                         n += 1;
                     };
 
-                    opponent_price = match opponent_price
-                        .checked_sub(As::sa(min_unit))
-                    {
+                    opponent_price = match opponent_price.checked_sub(As::sa(min_unit)) {
                         Some(v) => v,
                         None => Default::default(),
                     };
-                    
                 }
                 //再卖档
                 opponent_price = handicap.sell;
@@ -615,13 +592,10 @@ where
                         n += 1;
                     };
 
-                    opponent_price = match opponent_price
-                        .checked_add(As::sa(min_unit))
-                    {
+                    opponent_price = match opponent_price.checked_add(As::sa(min_unit)) {
                         Some(v) => v,
                         None => Default::default(),
                     };
-                    
                 }
             };
         } else {

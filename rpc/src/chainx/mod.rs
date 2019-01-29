@@ -24,7 +24,7 @@ use srml_support::storage::{StorageMap, StorageValue};
 use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
 
-use xaccounts::{self, CertImmutableProps, IntentionImmutableProps, IntentionProps};
+use xaccounts::{self, IntentionProps};
 use xassets::{self, assetdef::ChainT, Asset, AssetType, Chain, Token};
 use xbitcoin::{
     self, from, AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TrusteeAddress,
@@ -33,11 +33,11 @@ use xbitcoin::{
 use xrecords::{self, Application};
 use xspot::def::{OrderPair, OrderPairID, ID};
 use xspot::{HandicapT, OrderT};
-use xstaking::{self, IntentionProfs, NominationRecord};
+use xstaking::{self, IntentionProfs};
 use xsupport::storage::btree_map::CodecBTreeMap;
 use xtokens::{self, DepositVoteWeight, PseduIntentionVoteWeight};
 
-use self::runtime_api::{xassets_api::XAssetsApi, xmining_api::XMiningApi,xspot_api::XSpotApi};
+use self::runtime_api::{xassets_api::XAssetsApi, xmining_api::XMiningApi, xspot_api::XSpotApi};
 
 mod error;
 mod impl_rpc;
@@ -45,8 +45,9 @@ pub mod types;
 
 use self::error::Result;
 use self::types::{
-    ApplicationWrapper, AssetInfo, CertInfo, DepositInfo, IntentionInfo, PageData, PairInfo,
-    PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, WithdrawalState,
+    ApplicationWrapper, AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData,
+    PairInfo, PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo,
+    WithdrawalState,
 };
 use chainx::error::ErrorKind::{OrderPairIDErr, PageIndexErr, PageSizeErr, QuotationssPieceErr};
 
@@ -59,9 +60,6 @@ build_rpc_trait! {
         /// Returns the block of a storage entry at a block's Number.
         #[rpc(name = "chainx_getBlockByNumber")]
         fn block_info(&self, Trailing<Number>) -> Result<Option<SignedBlock>>;
-
-        #[rpc(name = "chainx_getCertByAccount")]
-        fn cert(&self, AccountId) -> Result<Option<Vec<CertInfo>>>;
 
         #[rpc(name = "chainx_getAssetsByAccount")]
         fn assets_of(&self, AccountId, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
@@ -82,7 +80,7 @@ build_rpc_trait! {
         fn withdrawal_list_of(&self, AccountId, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
 
         #[rpc(name = "chainx_getNominationRecords")]
-        fn nomination_records(&self, AccountId) -> Result<Option<Vec<(AccountId, NominationRecord<Balance, BlockNumber>)>>>;
+        fn nomination_records(&self, AccountId) -> Result<Option<Vec<(AccountId, NominationRecord)>>>;
 
         #[rpc(name = "chainx_getIntentions")]
         fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>>;

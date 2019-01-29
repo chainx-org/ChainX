@@ -4609,6 +4609,7 @@ name = "xrml-mining-staking"
 version = "0.4.0"
 dependencies = [
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4626,6 +4627,7 @@ dependencies = [
  "substrate-keyring 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
+ "xrml-bridge-bitcoin 0.4.0",
  "xrml-session 0.1.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
@@ -4686,7 +4688,6 @@ name = "xrml-xaccounts"
 version = "0.4.0"
 dependencies = [
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4703,6 +4704,7 @@ dependencies = [
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "xr-primitives 0.4.0",
+ "xrml-xassets-assets 0.4.0",
 ]
 
 [[package]]

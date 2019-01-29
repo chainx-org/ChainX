@@ -20,6 +20,8 @@ extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 extern crate sr_std as rstd;
 
+extern crate keys;
+
 #[macro_use]
 extern crate srml_support as runtime_support;
 extern crate srml_balances as balances;
@@ -30,6 +32,7 @@ extern crate xrml_session as session;
 
 extern crate xr_primitives;
 
+extern crate xrml_bridge_bitcoin as xbitcoin;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
@@ -43,8 +46,8 @@ use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 
-use xaccounts::{Name, URL};
-use xassets::{Memo, Token};
+use xaccounts::{Name, TrusteeEntity, TrusteeIntentionProps, URL};
+use xassets::{Chain, Memo, Token};
 use xr_primitives::XString;
 
 pub mod vote_weight;
@@ -59,6 +62,9 @@ pub use shifter::{OnReward, OnRewardCalculation, RewardHolder};
 pub use vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
+const MIMIMUM_TRSUTEE_INTENSION_COUNT: u32 = 4;
+const MAXIMUM_TRSUTEE_INTENSION_COUNT: u32 = 16;
+const INITIAL_REWARD: u32 = 50_000;
 
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
@@ -82,12 +88,7 @@ pub struct NominationRecord<Balance, BlockNumber> {
 }
 
 pub trait Trait:
-    system::Trait
-    + timestamp::Trait
-    + xassets::Trait
-    + xaccounts::Trait
-    + xsystem::Trait
-    + session::Trait
+    xassets::Trait + xaccounts::Trait + xsystem::Trait + session::Trait + xbitcoin::Trait
 {
     /// Some tokens minted.
     type OnRewardMinted: OnDilution<<Self as balances::Trait>::Balance>;
@@ -116,10 +117,10 @@ where
     T::AccountId: From<T::Hash> + AsRef<[u8]>,
 {
     fn accountid_for(origin: &T::AccountId) -> T::AccountId {
-        let props = xaccounts::Module::<T>::intention_immutable_props_of(origin)
+        let name = xaccounts::Module::<T>::intention_name_of(origin)
             .expect("The original account must be an existing intention.");
         // name
-        let name_hash = T::Hashing::hash(&props.name);
+        let name_hash = T::Hashing::hash(&name);
 
         let mut buf = Vec::new();
         buf.extend_from_slice(name_hash.as_ref());
@@ -146,7 +147,7 @@ decl_module! {
             xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot nominate zero.");
             ensure!(
-                <xaccounts::Module<T>>::intention_immutable_props_of(&target).is_some(),
+                Self::is_intention(&target),
                 "Cannot nominate a non-intention."
             );
             ensure!(
@@ -208,11 +209,7 @@ decl_module! {
             let record = Self::nomination_record_of(&who, &target);
             let mut revocations = record.revocations;
 
-            ensure!(
-                revocations.len() > 0,
-                "Revocation list is empty"
-            );
-
+            ensure!(revocations.len() > 0, "Revocation list is empty");
             ensure!(
                 revocation_index < revocations.len() as u32,
                 "Revocation index out of range."
@@ -244,17 +241,14 @@ decl_module! {
         ) {
             let who = ensure_signed(origin)?;
 
-            ensure!(
-                <xaccounts::Module<T>>::intention_immutable_props_of(&who).is_some(),
-                "Transactor is not an intention."
-            );
+            ensure!(Self::is_intention(&who), "Cannot refresh if transactor is not an intention.");
 
             if let Some(url) = url.as_ref() {
-                xaccounts::is_valid_url::<T>(&url)?;
+                xaccounts::is_valid_url::<T>(url)?;
             }
 
             if let Some(about) = about.as_ref() {
-                xaccounts::is_valid_about::<T>(&about)?;
+                xaccounts::is_valid_about::<T>(about)?;
             }
 
             if let Some(desire_to_run) = desire_to_run.as_ref() {
@@ -279,18 +273,36 @@ decl_module! {
 
         }
 
-        /// Register intention by the owner of given cert name.
+        /// Register intention
         fn register(origin, name: Name) {
             let who = ensure_signed(origin)?;
 
             xaccounts::is_valid_name::<T>(&name)?;
-            ensure!(
-                !Self::is_intention(&who),
-                "Cannot register an intention repeatedly."
-            );
+
+            ensure!(!Self::is_intention(&who), "Cannot register if transactor is an intention already.");
 
             Self::apply_register(who, name)?;
+        }
 
+        fn setup_trusee(origin, chain: Chain, about: XString, hot_entity: TrusteeEntity, cold_entity: TrusteeEntity) {
+            let who = ensure_signed(origin)?;
+
+            ensure!(Self::is_intention(&who), "Transactor is not an intention.");
+            ensure!(<xaccounts::Module<T>>::intention_props_of(&who).is_active, "Intention must be active.");
+
+            xaccounts::is_valid_about::<T>(&about)?;
+
+            // TODO validate addr
+            Self::validate_trustee_entity(&chain, &hot_entity, &cold_entity)?;
+
+            <xaccounts::TrusteeIntentionPropertiesOf<T>>::insert(
+                &(who, chain),
+                TrusteeIntentionProps {
+                    about,
+                    hot_entity,
+                    cold_entity
+                }
+            );
         }
 
         /// Set the number of sessions in an era.
@@ -337,6 +349,7 @@ decl_event!(
         OfflineSlash(AccountId, Balance),
         OfflineValidator(AccountId),
         Rotation(Vec<(AccountId, u64)>),
+        NewTrustees(Vec<AccountId>),
         Unnominate(BlockNumber),
         Nominate(AccountId, AccountId, Balance),
         Claim(u64, u64, Balance),
@@ -355,6 +368,8 @@ decl_storage! {
         pub SessionsPerEra get(sessions_per_era) config(): T::BlockNumber = T::BlockNumber::sa(1000);
         /// The length of the bonding duration in blocks.
         pub BondingDuration get(bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(1000);
+
+        pub ValidatorStakeThreshold get(validator_stake_threshold) config(): T::Balance = T::Balance::sa(1);
 
         /// The current era index.
         pub CurrentEra get(current_era) config(): T::BlockNumber;
@@ -395,6 +410,7 @@ decl_storage! {
 
             let pcx = xassets::Module::<T>::TOKEN.to_vec();
 
+            // FIXME transfer to Alice, then transfer to others by Alice
             let s = storage.clone().build_storage().unwrap().0;
             let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
             with_externalities(&mut init, || {
@@ -424,6 +440,7 @@ decl_storage! {
 
                     storage.insert(hash(&<StakeWeight<T>>::key_for(intention)), value.encode());
                 }
+                // FIXME set up trustee intentions
             });
 
             let init: StorageMap = init.into();
@@ -434,21 +451,6 @@ decl_storage! {
 
 impl<T: Trait> Module<T> {
     // Public immutables
-    fn blocks_per_day() -> u64 {
-        let period = <timestamp::Module<T>>::block_period();
-        let seconds = (24 * 60 * 60) as u64;
-        seconds / period.as_()
-    }
-
-    /// Due of allocated shares that cert comes with.
-    pub fn unfreeze_block_of(cert_name: Name) -> T::BlockNumber {
-        let props = <xaccounts::Module<T>>::cert_immutable_props_of(cert_name);
-        let issued_at = props.issued_at.0;
-        let frozen_duration = props.frozen_duration;
-
-        issued_at + T::BlockNumber::sa(frozen_duration as u64 * Self::blocks_per_day())
-    }
-
     pub fn revokable_of(source: &T::AccountId, target: &T::AccountId) -> T::Balance {
         Self::nomination_record_of(source, target).nomination
     }
@@ -468,7 +470,29 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn is_intention(who: &T::AccountId) -> bool {
-        <xaccounts::Module<T>>::intention_immutable_props_of(who).is_some()
+        <xaccounts::Module<T>>::intention_name_of(who).is_some()
+    }
+
+    pub fn validate_trustee_entity(
+        chain: &Chain,
+        hot_entity: &TrusteeEntity,
+        cold_entity: &TrusteeEntity,
+    ) -> Result {
+        match chain {
+            Chain::Bitcoin => {
+                // FIXME check bitcoin pubkey
+                match hot_entity {
+                    TrusteeEntity::Bitcoin(_pubkey) => (),
+                }
+
+                match cold_entity {
+                    TrusteeEntity::Bitcoin(_pubkey) => (),
+                }
+            }
+            _ => return Err("Unsupported chain."),
+        }
+
+        Ok(())
     }
 
     // Private mutables
@@ -612,10 +636,7 @@ impl<T: Trait> Module<T> {
     /// Actually register an intention.
     fn apply_register(intention: T::AccountId, name: Name) -> Result {
         <xaccounts::IntentionOf<T>>::insert(&name, intention.clone());
-        <xaccounts::IntentionImmutablePropertiesOf<T>>::insert(
-            &intention,
-            xaccounts::IntentionImmutableProps { name: name },
-        );
+        <xaccounts::IntentionNameOf<T>>::insert(&intention, name);
         <xaccounts::IntentionPropertiesOf<T>>::insert(
             &intention,
             xaccounts::IntentionProps::default(),

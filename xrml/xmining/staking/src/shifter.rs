@@ -39,21 +39,24 @@ impl<AccountId: Default, Balance> OnReward<AccountId, Balance> for () {
 }
 
 impl<T: Trait> Module<T> {
-    fn total_stake() -> T::Balance {
-        Self::intentions()
-            .into_iter()
-            .map(|i| Self::intention_profiles(i).total_nomination)
-            .fold(Zero::zero(), |acc: T::Balance, x| acc + x)
-    }
-
     /// Get the reward for the session, assuming it ends with this block.
     fn this_session_reward() -> T::Balance {
-        let total_stake = Self::total_stake().as_();
-        // daily_interest: 3 / 10000
-        let daily_reward = total_stake * 3 / 10000;
-        let blocks_per_session = <session::Module<T>>::length().as_();
-        let sessions_per_day = Self::blocks_per_day() / blocks_per_session;
-        T::Balance::sa(daily_reward / sessions_per_day)
+        let current_index = <session::Module<T>>::current_index().as_();
+        // FIXME Precision?
+        let reward = INITIAL_REWARD / (u32::pow(2, ((current_index + 1) / 210_000) as u32));
+        T::Balance::sa(reward as u64)
+    }
+
+    /// Gather all the active intentions sorted by total nomination.
+    fn gather_candidates() -> Vec<(T::Balance, T::AccountId)> {
+        let mut intentions = Self::intentions()
+            .into_iter()
+            .filter(|v| <xaccounts::Module<T>>::intention_props_of(v).is_active)
+            .filter(|v| !Self::total_nomination_of(&v).is_zero())
+            .map(|v| (Self::total_nomination_of(&v), v))
+            .collect::<Vec<_>>();
+        intentions.sort_unstable_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(&b1));
+        intentions
     }
 
     /// Reward a given (potential) validator by a specific amount.
@@ -131,6 +134,14 @@ impl<T: Trait> Module<T> {
         {
             Self::new_era();
         }
+
+        if <xaccounts::Module<T>>::trustee_intentions().is_empty()
+            || ((session_index - Self::last_era_length_change())
+                % (Self::sessions_per_era() * T::BlockNumber::sa(10)))
+            .is_zero()
+        {
+            Self::new_trustees();
+        }
     }
 
     /// The era has changed - enact new staking set.
@@ -149,54 +160,42 @@ impl<T: Trait> Module<T> {
             }
         }
 
+        let punish_list = <PunishList<T>>::take();
+        for punished in punish_list {
+            // Force those punished to be inactive
+            <xaccounts::IntentionPropertiesOf<T>>::mutate(&punished, |props| {
+                props.is_active = false;
+            });
+            Self::deposit_event(RawEvent::OfflineValidator(punished));
+        }
+
         // evaluate desired staking amounts and nominations and optimise to find the best
         // combination of validators, then use session::internal::set_validators().
         // for now, this just orders would-be stakers by their balances and chooses the top-most
         // <ValidatorCount<T>>::get() of them.
         // TODO: this is not sound. this should be moved to an off-chain solution mechanism.
-        let mut intentions = Self::intentions()
-            .into_iter()
-            .filter(|i| <xaccounts::Module<T>>::intention_props_of(i).is_active)
-            .map(|v| (Self::total_nomination_of(&v), v))
-            .collect::<Vec<_>>();
+        let candidates = Self::gather_candidates();
 
         // Avoid reevaluate validator set if it would leave us with fewer than the minimum
         // needed validators
-        if intentions.len() < Self::minimum_validator_count() as usize {
+        if candidates.len() < Self::minimum_validator_count() as usize {
             return;
         }
 
-        intentions.sort_unstable_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(&b1));
-
-        for (total_nomination, intention) in intentions.iter() {
+        for (total_nomination, intention) in candidates.iter() {
             <StakeWeight<T>>::insert(intention, total_nomination.clone());
         }
 
         let desired_validator_count = <ValidatorCount<T>>::get() as usize;
 
-        let mut vals = Vec::new();
-        let mut count = 0;
-        let punish_list = <PunishList<T>>::take();
-        for (stake_weight, account_id) in intentions.clone().into_iter() {
-            let exist = punish_list.iter().any(|account| {
-                if account.clone() == account_id {
-                    true
-                } else {
-                    false
-                }
-            });
-            if exist {
-                Self::deposit_event(RawEvent::OfflineValidator(account_id.clone()));
-            } else {
-                count += 1;
-                vals.push((account_id.clone(), stake_weight.as_()));
-                if count == desired_validator_count {
-                    break;
-                }
-            }
-        }
+        let vals = candidates
+            .into_iter()
+            .take(desired_validator_count)
+            .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
+            .collect::<Vec<(_, _)>>();
 
         <session::Module<T>>::set_validators(&vals);
+
         Self::deposit_event(RawEvent::Rotation(vals.clone()));
     }
 
@@ -206,6 +205,23 @@ impl<T: Trait> Module<T> {
             <PunishList<T>>::mutate(|i| i.push(v.clone()));
         }
         Self::deposit_event(RawEvent::OfflineSlash(v.clone(), penalty));
+    }
+
+    fn new_trustees() {
+        let intentions = Self::gather_candidates();
+        if intentions.len() as u32 >= MIMIMUM_TRSUTEE_INTENSION_COUNT {
+            let trustees = intentions
+                .into_iter()
+                .take(MAXIMUM_TRSUTEE_INTENSION_COUNT as usize)
+                .map(|(_, v)| v)
+                .collect::<Vec<_>>();
+
+            <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());
+
+            // FIXME Generate multisig address
+
+            Self::deposit_event(RawEvent::NewTrustees(trustees));
+        }
     }
 }
 

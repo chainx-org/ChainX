@@ -33,7 +33,6 @@ extern crate xrml_xdex_spot as xspot;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
 
-#[cfg(test)]
 extern crate substrate_primitives;
 
 use codec::Encode;
@@ -205,7 +204,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as XTokens {
         pub TokenDiscount get(token_discount) config(): Permill = Permill::from_percent(30);
 
-        pub PseduIntentions get(psedu_intentions): Vec<Token>;
+        pub PseduIntentions get(psedu_intentions) : Vec<Token>;
 
         pub PseduIntentionProfiles get(psedu_intention_profiles): map Token => PseduIntentionVoteWeight<T::BlockNumber>;
 
@@ -350,6 +349,32 @@ impl<T: Trait> Module<T> {
         <PseduIntentionProfiles<T>>::insert(target, p_vote_weight);
         <DepositRecords<T>>::insert(key, d_vote_weight);
     }
+
+    fn price_for(token: &Token) -> T::Balance {
+        <xspot::Module<T>>::aver_asset_price(&token).unwrap_or(Zero::zero())
+    }
+
+    // Convert total deposited crosschain asset to PCX based on its price and apply a discount.
+    fn convert_to_stake(token: &Token) -> T::Balance {
+        let price = Self::price_for(token);
+        let amount = <xassets::Module<T>>::all_type_balance(&token);
+
+        // FIXME validate price and amount
+
+        let stake = match price.as_().checked_mul(amount.as_()) {
+            Some(x) => {
+                // FIXME discount 30%
+                if let Some(v) = x.checked_mul(3) {
+                    T::Balance::sa(v / 10)
+                } else {
+                    T::Balance::sa(u64::max_value())
+                }
+            }
+            None => T::Balance::sa(u64::max_value()),
+        };
+
+        stake
+    }
 }
 
 impl<T: Trait> OnAssetRegisterOrRevoke for Module<T> {
@@ -365,7 +390,17 @@ impl<T: Trait> OnAssetRegisterOrRevoke for Module<T> {
                 .is_none(),
             "Cannot register psedu intention repeatedly."
         );
+
         <PseduIntentions<T>>::mutate(|i| i.push(token.clone()));
+
+        <PseduIntentionProfiles<T>>::insert(
+            token,
+            PseduIntentionVoteWeight {
+                last_total_deposit_weight: 0,
+                last_total_deposit_weight_update: <system::Module<T>>::block_number(),
+            },
+        );
+
         Ok(())
     }
 
@@ -383,23 +418,7 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
             .into_iter()
             .filter(|token| <xspot::Module<T>>::aver_asset_price(token).is_some())
             .map(|token| {
-                let price = <xspot::Module<T>>::aver_asset_price(&token).unwrap_or(Zero::zero());
-                let amount = <xassets::Module<T>>::all_type_balance(&token);
-
-                // FIXME validate price and amount
-
-                // Apply discount for psedu intentions
-                let stake = match price.as_().checked_mul(amount.as_()) {
-                    Some(x) => {
-                        if let Some(v) = x.checked_mul(3) {
-                            T::Balance::sa(v / 10)
-                        } else {
-                            T::Balance::sa(u64::max_value())
-                        }
-                    }
-                    None => T::Balance::sa(u64::max_value()),
-                };
-
+                let stake = Self::convert_to_stake(&token);
                 (RewardHolder::PseduIntention(token), stake)
             })
             .collect()

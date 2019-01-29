@@ -30,8 +30,6 @@ impl<'a> TxHandler<'a> {
                     tx_info.raw_tx.hash(),
                     tx_info.input_address.layout().to_vec(),
                 ));
-
-                <xaccounts::Module<T>>::issue(cert_name, frozen_duration, cert_owner)?;
             }
         }
 

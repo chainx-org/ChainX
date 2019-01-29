@@ -10,20 +10,6 @@ pub struct PageData<T> {
     pub data: Vec<T>,
 }
 
-/// Cert info
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CertInfo {
-    /// name of cert
-    pub name: String,
-    /// when is the cert issued at
-    pub issued_at: Timestamp,
-    /// frozen duration of the shares cert owner holds
-    pub frozen_duration: u32,
-    /// remaining share of the cert
-    pub remaining_shares: u32,
-}
-
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssetInfo {
@@ -43,6 +29,22 @@ pub struct TotalAssetInfo {
     desc: String,
     trustee_addr: String,
     details: CodecBTreeMap<AssetType, Balance>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Revocation {
+    pub block_numer: BlockNumber,
+    pub value: Balance,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NominationRecord {
+    pub nomination: Balance,
+    pub last_vote_weight: u64,
+    pub last_vote_weight_update: BlockNumber,
+    pub revocations: Vec<Revocation>,
 }
 
 impl TotalAssetInfo {
@@ -72,10 +74,6 @@ pub struct IntentionInfo {
     pub account: AccountId,
     /// name of intention
     pub name: String,
-    /// activator
-    pub activator: String,
-    /// initial shares
-    pub initial_shares: u32,
     /// when is the intention registered
     pub registered_at: Timestamp,
     /// url
@@ -86,6 +84,8 @@ pub struct IntentionInfo {
     pub is_active: bool,
     /// is validator
     pub is_validator: bool,
+    /// is trustee
+    pub is_trustee: bool,
     /// how much has intention voted for itself
     pub self_vote: Balance,
     /// jackpot
@@ -105,14 +105,14 @@ pub struct PairInfo {
     pub id: OrderPairID,
     pub assets: String,
     pub currency: String,
-    pub precision: u32, //价格精度
-    pub unit_precision: u32,//最小单位精度
+    pub precision: u32,      //价格精度
+    pub unit_precision: u32, //最小单位精度
     pub used: bool,
     pub last_price: Balance,
     pub aver_price: Balance,
     pub update_height: BlockNumber,
-    pub buy_one:Balance,
-    pub sell_one:Balance,
+    pub buy_one: Balance,
+    pub sell_one: Balance,
 }
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]

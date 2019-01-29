@@ -306,7 +306,7 @@ construct_runtime!(
 
         // chainx runtime module
         XSystem: xsystem::{Module, Call, Storage, Config<T>}, //, Inherent},
-        XAccounts: xaccounts::{Module, Storage, Config<T>, Event<T>}, //, Inherent},
+        XAccounts: xaccounts::{Module, Storage, Event<T>}, //, Inherent},
         // fee
         XFeeManager: fee_manager::{Module, Call, Storage, Config<T>},
         // assets
@@ -315,7 +315,7 @@ construct_runtime!(
         XAssetsProcess: xprocess::{Module, Call, Storage},
         // mining
         XStaking: xstaking,
-        XTokens: xtokens::{Module, Call, Storage, Event<T>},
+        XTokens: xtokens::{Module, Call, Storage, Event<T>, Config<T>},
         // dex
         XSpot: xspot,
         // bridge

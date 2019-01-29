@@ -36,6 +36,7 @@ extern crate substrate_finality_grandpa as grandpa;
 #[macro_use]
 extern crate substrate_service;
 extern crate chainx_executor;
+extern crate sr_primitives;
 extern crate substrate_inherents as inherents;
 extern crate substrate_rpc_servers as rpc;
 
