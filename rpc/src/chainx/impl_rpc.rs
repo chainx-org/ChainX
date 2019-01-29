@@ -471,7 +471,7 @@ where
                     info.assets = String::from_utf8_lossy(&pair.first).into_owned();
                     info.currency = String::from_utf8_lossy(&pair.second).into_owned();
                     info.precision = pair.precision;
-                    info.used = pair.used;
+                    info.on_line = pair.on_line;
                     info.unit_precision = pair.unit_precision;
 
                     let price_key = <xspot::OrderPairPriceOf<Runtime>>::key_for(&i);

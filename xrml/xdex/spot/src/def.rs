@@ -76,7 +76,7 @@ pub struct OrderPair {
     pub second: Token,
     pub precision: u32,      //价格精度
     pub unit_precision: u32, //最小单位精度
-    pub used: bool,
+    pub on_line: bool,
 }
 impl OrderPair {
     pub fn new(
@@ -93,7 +93,7 @@ impl OrderPair {
             second: second,
             precision: precision,
             unit_precision: unit,
-            used: status,
+            on_line: status,
         }
     }
 }

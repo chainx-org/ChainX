@@ -123,7 +123,7 @@ decl_module! {
 
 
         //增加交易对
-        pub fn add_pair(first:Token,second:Token,precision:u32,unit:u32, price:T::Price,used:bool)->Result{
+        pub fn add_pair(first:Token,second:Token,precision:u32,unit:u32, price:T::Price,online:bool)->Result{
              runtime_io::print("[xdex spot] add_pair");
              match Self::get_pair_by(&first, &second) {
                 Some(_pair) => Err("have a existed pair in  list"),
@@ -136,7 +136,7 @@ decl_module! {
                         second:second,
                         precision:precision,
                         unit_precision:unit,
-                        used:used,
+                        on_line:online,
                     };
                     <OrderPairOf<T>>::insert(pair.id,&pair);
                     <OrderPairPriceOf<T>>::insert(pair.id, (price, price, <system::Module<T>>::block_number()));
@@ -149,7 +149,7 @@ decl_module! {
             }
         }
         //更新交易对
-        pub fn update_pair(id:OrderPairID,min:u32,used:bool)->Result{
+        pub fn update_pair(id:OrderPairID,min:u32,online:bool)->Result{
             runtime_io::print("[xdex spot] update_pair");
             match <OrderPairOf<T>>::get(id) {
                 None=> Err("not a existed pair in  list"),
@@ -158,7 +158,7 @@ decl_module! {
                         return Err("unit_precision error!");
                     }
                     pair.unit_precision=min;
-                    pair.used=used;
+                    pair.on_line=online;
 
                      <OrderPairOf<T>>::insert(id,&pair);
                     Self::event_pair(&pair);
@@ -982,7 +982,7 @@ impl<T: Trait> Module<T> {
             pair.second.clone(),
             pair.precision,
             pair.unit_precision,
-            pair.used,
+            pair.on_line,
         ));
     }
     fn trans_amount(
