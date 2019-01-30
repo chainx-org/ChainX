@@ -56,7 +56,7 @@ use runtime_support::dispatch::Result;
 
 use system::ensure_signed;
 
-use xassets::{ChainT, Memo, Token};
+use xassets::{Chain, ChainT, Memo, Token};
 use xrecords::AddrStr;
 
 pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}
@@ -68,6 +68,11 @@ decl_module! {
             let who = ensure_signed(origin)?;
 
             Self::check_black_list(&token)?;
+
+            let asset = xassets::Module::<T>::get_asset(&token)?;
+            if asset.chain() == Chain::ChainX {
+                return Err("Can't withdraw the asset on ChainX")
+            }
 
             Self::verify_addr(&token, &addr, &ext)?;
 

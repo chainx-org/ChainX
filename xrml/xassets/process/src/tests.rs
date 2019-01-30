@@ -307,5 +307,18 @@ fn test_check_blacklist() {
             ),
             "this token is in blacklist"
         );
+
+        // failed
+        let origin = system::RawOrigin::Signed(1).into();
+        assert_err!(
+            Module::<Test>::withdraw(
+                origin,
+                b"PCX".to_vec(),
+                11,
+                b"xxx".to_vec(),
+                b"xxx".to_vec()
+            ),
+            "Can\'t withdraw the asset on ChainX"
+        );
     });
 }

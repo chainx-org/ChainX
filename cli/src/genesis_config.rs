@@ -167,9 +167,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             _genesis_phantom_data: Default::default(),
         }),
         xspot: Some(XSpotConfig {
-            pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),9,2,100000,true),
+            pair_list: vec![
+                    (xassets::Module::<Runtime>::TOKEN.to_vec(), bitcoin::Module::<Runtime>::TOKEN.to_vec(), 9, 2, 100000, true),
                  // (<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),dot_asset.token().to_vec(),7,2,100000,false),
-                 (xdot_asset.token(), <xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),4,2,100000,true)
+                    (xdot_asset.token(), xassets::Module::<Runtime>::TOKEN.to_vec(), 4, 2, 100000, true)
                 ],
             price_volatility: 10,
         }),

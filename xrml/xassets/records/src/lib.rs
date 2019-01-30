@@ -177,9 +177,14 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn withdraw_check_before(who: &T::AccountId, token: &Token) -> Result {
+    fn withdraw_check_before(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
         Self::before(who, token)?;
-        // TODO add check for only withdraw once for a token
+
+        let free = xassets::Module::<T>::free_balance(who, token);
+        if free < value {
+            return Err("free balance not enough for this account");
+        }
+
         Ok(())
     }
 }
@@ -201,7 +206,7 @@ impl<T: Trait> Module<T> {
         addr: AddrStr,
         ext: Memo,
     ) -> Result {
-        Self::withdraw_check_before(who, token)?;
+        Self::withdraw_check_before(who, token, balance)?;
 
         let asset = xassets::Module::<T>::get_asset(token)?;
 

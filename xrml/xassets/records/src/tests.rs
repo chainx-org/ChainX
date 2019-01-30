@@ -7,7 +7,7 @@ use substrate_primitives::{Blake2Hasher, H256};
 use runtime_io;
 use runtime_io::with_externalities;
 use runtime_primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
-use runtime_primitives::traits::BlakeTwo256;
+use runtime_primitives::traits::{BlakeTwo256, IdentityLookup};
 use runtime_primitives::BuildStorage;
 
 use super::*;
@@ -27,6 +27,7 @@ impl system::Trait for Test {
     type Hashing = BlakeTwo256;
     type Digest = Digest;
     type AccountId = u64;
+    type Lookup = IdentityLookup<u64>;
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
@@ -34,21 +35,19 @@ impl system::Trait for Test {
 
 impl balances::Trait for Test {
     type Balance = u64;
-    type AccountIndex = u64;
     type OnFreeBalanceZero = ();
+    type OnNewAccount = ();
     type EnsureAccountLiquid = ();
     type Event = ();
 }
 
 impl srml_consensus::Trait for Test {
-    const NOTE_OFFLINE_POSITION: u32 = 1;
     type Log = DigestItem;
     type SessionKey = UintAuthorityId;
     type InherentOfflineReport = ();
 }
 
 impl timestamp::Trait for Test {
-    const TIMESTAMP_SET_POSITION: u32 = 0;
     type Moment = u64;
     type OnTimestampSet = ();
 }
@@ -78,7 +77,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
-            reclaim_rebate: 0,
         }
         .build_storage()
         .unwrap()
@@ -216,7 +214,7 @@ fn test_withdrawal_larger() {
 
         assert_err!(
             Records::withdrawal(&a, &btc_token, 50, b"addr".to_vec(), b"ext".to_vec()),
-            "balance too low for this account"
+            "free balance not enough for this account"
         );
     })
 }
@@ -245,7 +243,7 @@ fn test_withdrawal_first() {
         let btc_token = b"BTC".to_vec();
         assert_err!(
             Records::withdrawal(&a, &btc_token, 50, vec![], vec![]),
-            "not a valid token for this account"
+            "free balance not enough for this account"
         );
     })
 }
