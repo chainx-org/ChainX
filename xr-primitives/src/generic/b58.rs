@@ -1,6 +1,6 @@
 // Copyright 2018 Chainpool
 
-use sr_std::prelude::Vec;
+use rstd::prelude::Vec;
 
 static BASE58_CHARS: &'static [u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -27,7 +27,7 @@ static BASE58_DIGITS: [Option<u8>; 128] = [
 pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
     // 11/15 is just over log_256(58)
     let mut scratch = Vec::new();
-    for _i in 0..1 + data.len() * 11 / 15 {
+    for _i in 0..=data.len() * 11 / 15 {
         scratch.push(0);
     }
     // Build in base 256
@@ -37,13 +37,13 @@ pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
             return Err("BadByte");
         }
         let mut carry = match BASE58_DIGITS[d58 as usize] {
-            Some(d58) => d58 as u32,
+            Some(d58) => u32::from(d58),
             None => {
                 return Err("BadByte");
             }
         };
         for d256 in scratch.iter_mut().rev() {
-            carry += *d256 as u32 * 58;
+            carry += u32::from(*d256) * 58;
             *d256 = carry as u8;
             carry /= 256;
         }
@@ -72,11 +72,11 @@ pub fn to_base58(data: Vec<u8>) -> Vec<u8> {
     let mut i = zcount;
     let mut high = size - 1;
     while i < data.len() {
-        let mut carry = data[i] as u32;
+        let mut carry = u32::from(data[i]);
         let mut j = size - 1;
 
         while j > high || carry != 0 {
-            carry += 256 * buffer[j] as u32;
+            carry += 256 * u32::from(buffer[j]);
             buffer[j] = (carry % 58) as u8;
             carry /= 58;
 
@@ -91,7 +91,7 @@ pub fn to_base58(data: Vec<u8>) -> Vec<u8> {
     let mut j = buffer.iter().take_while(|x| **x == 0).count();
     let mut result = Vec::new();
     for _ in 0..zcount {
-        result.push('1' as u8);
+        result.push(b'1');
     }
     while j < size {
         result.push(BASE58_CHARS[buffer[j] as usize] as u8);

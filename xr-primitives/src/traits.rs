@@ -3,9 +3,10 @@ pub use num_traits::{
     ops::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedShl, CheckedShr, CheckedSub},
     Bounded, One, Zero,
 };
-use sr_primitives::traits::{As, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic};
-use sr_std::prelude::Vec;
-use srml_support::Parameter;
+
+use rstd::prelude::Vec;
+use runtime_primitives::traits::{As, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic};
+use support::Parameter;
 
 /// Work together with sr_primitives::traits::Applyable
 pub trait Accelerable: Sized + Send + Sync {

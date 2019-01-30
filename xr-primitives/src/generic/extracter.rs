@@ -1,16 +1,19 @@
 // Copyright 2018 Chainpool.
 
+use parity_codec::Decode;
+
+use rstd::prelude::Vec;
+use runtime_primitives::traits::{MaybeDisplay, MaybeSerializeDebug, Member};
+use support::Parameter;
+
 use super::b58::from;
-use sr_io::codec::Decode;
-use sr_primitives::traits::{MaybeDisplay, MaybeSerializeDebug, Member};
-use sr_std::prelude::Vec;
-use srml_support::Parameter;
+
 /// Definition of something that the external world might want to say; its
 /// existence implies that it has been checked and is good, particularly with
 /// regards to the signature.
 #[derive(PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct Extracter<AccountId>(Vec<u8>, ::sr_std::marker::PhantomData<AccountId>);
+pub struct Extracter<AccountId>(Vec<u8>, ::rstd::marker::PhantomData<AccountId>);
 
 impl<AccountId> ::traits::Extractable for Extracter<AccountId>
 where
@@ -19,7 +22,7 @@ where
     type AccountId = AccountId;
 
     fn new(script: Vec<u8>) -> Self {
-        Extracter(script, ::sr_std::marker::PhantomData)
+        Extracter(script, ::rstd::marker::PhantomData)
     }
 
     fn account_info(&self) -> Option<(Vec<u8>, Self::AccountId)> {
@@ -40,13 +43,6 @@ where
     }
 
     fn split(&self) -> Vec<Vec<u8>> {
-        let s = &self.0;
-        let mut iter = s.split(|x| *x == '@' as u8);
-        let mut v = Vec::new();
-        while let Some(d) = iter.next() {
-            let d: Vec<u8> = d.iter().cloned().collect();
-            v.push(d)
-        }
-        v
+        self.0.split(|x| *x == b'@').map(|d| d.to_vec()).collect()
     }
 }

@@ -1,6 +1,7 @@
 // Copyright 2018 Chainpool.
 
-use codec::{Decode, Encode, Input, Output};
+use parity_codec::{Decode, Encode, Input, Output};
+
 use rstd::collections::btree_map::BTreeMap;
 
 #[derive(Default, Eq, PartialEq, Clone)]

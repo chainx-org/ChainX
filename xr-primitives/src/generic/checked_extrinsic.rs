@@ -3,7 +3,7 @@
 //! Generic implementation of an extrinsic that has passed the verification
 //! stage.
 
-use sr_primitives::traits::{self, MaybeDisplay, Member, SimpleArithmetic};
+use runtime_primitives::traits::{self, MaybeDisplay, Member, SimpleArithmetic};
 
 /// Definition of something that the external world might want to say; its
 /// existence implies that it has been checked and is good, particularly with

@@ -4522,11 +4522,9 @@ dependencies = [
  "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
 ]
 
 [[package]]
@@ -4864,7 +4862,6 @@ dependencies = [
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
 ]
 
 [[package]]

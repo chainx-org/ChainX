@@ -6,15 +6,14 @@
 
 extern crate integer_sqrt;
 extern crate num_traits;
+extern crate parity_codec;
 #[cfg(feature = "std")]
 extern crate serde;
 
-extern crate parity_codec;
-extern crate sr_io;
-extern crate sr_primitives;
-extern crate sr_std;
-extern crate srml_support;
-extern crate substrate_primitives;
+extern crate sr_primitives as runtime_primitives;
+extern crate sr_std as rstd;
+extern crate srml_support as support;
+
 #[cfg(test)]
 #[macro_use]
 extern crate serde_derive;
@@ -25,6 +24,6 @@ extern crate parity_codec_derive;
 pub mod generic;
 pub mod traits;
 
-use sr_std::prelude::Vec;
+use rstd::prelude::Vec;
 
 pub type XString = Vec<u8>;
