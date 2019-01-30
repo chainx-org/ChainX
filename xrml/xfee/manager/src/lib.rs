@@ -174,8 +174,7 @@ mod tests {
         type OnAssetRegisterOrRevoke = ();
     }
 
-    impl xsystem::Trait for Test {
-    }
+    impl xsystem::Trait for Test {}
 
     pub struct MockDeterminator;
 

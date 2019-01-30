@@ -27,7 +27,6 @@ fn test_genesis() {
         );
 
         assert_eq!(XAssets::asset_info(&btc_token).unwrap().0.precision(), 8);
-
     });
 }
 

@@ -5,6 +5,7 @@ use super::*;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use std::iter::FromIterator;
 use std::str::FromStr;
+use xassets::ChainT;
 
 impl<B, E, Block, RA>
     ChainXApi<NumberFor<Block>, AccountId, Balance, BlockNumber, SignedBlock<Block>>
@@ -48,11 +49,14 @@ where
             .map_err(|e| e.into());
 
         let assets = assets?;
-        let final_result = assets.into_iter().map(|(token, map)| AssetInfo {
+        let final_result = assets
+            .into_iter()
+            .map(|(token, map)| AssetInfo {
                 name: String::from_utf8_lossy(&token).into_owned(),
                 is_native: true,
                 details: map,
-            }).collect();
+            })
+            .collect();
         into_pagedata(final_result, page_index, page_size)
     }
 

@@ -66,7 +66,6 @@ impl xrml_xaccounts::Trait for Test {
     type DetermineIntentionJackpotAccountId = MockDeterminator;
 }
 
-
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
@@ -116,13 +115,13 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     // token balance
     let xdot_asset = Asset::new(
-        b"XDOT".to_vec(),     // token
+        b"XDOT".to_vec(), // token
         b"XDOT".to_vec(), // token
         Chain::Ethereum,
         3,
         b"XDOT chainx".to_vec(),
     )
-        .unwrap();
+    .unwrap();
 
     // bridge btc
     r.extend(
@@ -149,9 +148,10 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         GenesisConfig::<Test> {
             token_black_list: vec![xdot_asset.token()],
             _genesis_phantom_data: Default::default(),
-        }.build_storage()
-            .unwrap()
-            .0,
+        }
+        .build_storage()
+        .unwrap()
+        .0,
     );
 
     r.extend(
@@ -160,11 +160,14 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             memo_len: 128,
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
-            asset_list: vec![(btc_asset, true, vec![(3, 100)]), (xdot_asset, true, vec![(3, 100)])],
+            asset_list: vec![
+                (btc_asset, true, vec![(3, 100)]),
+                (xdot_asset, true, vec![(3, 100)]),
+            ],
         }
-            .build_storage()
-            .unwrap()
-            .0,
+        .build_storage()
+        .unwrap()
+        .0,
     );
 
     r.into()
@@ -277,8 +280,6 @@ fn test_check_min_withdrawal() {
     });
 }
 
-
-
 #[test]
 fn test_check_blacklist() {
     with_externalities(&mut new_test_ext(), || {
@@ -296,12 +297,15 @@ fn test_check_blacklist() {
 
         // failed
         let origin = system::RawOrigin::Signed(1).into();
-        assert_err!(Module::<Test>::withdraw(
-            origin,
-            b"XDOT".to_vec(),
-            11,
-            b"xxx".to_vec(),
-            b"xxx".to_vec()
-        ), "this token is in blacklist");
+        assert_err!(
+            Module::<Test>::withdraw(
+                origin,
+                b"XDOT".to_vec(),
+                11,
+                b"xxx".to_vec(),
+                b"xxx".to_vec()
+            ),
+            "this token is in blacklist"
+        );
     });
 }

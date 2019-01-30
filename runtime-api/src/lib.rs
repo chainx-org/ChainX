@@ -20,7 +20,7 @@ pub mod xassets_api {
     use chainx_primitives::{AccountId, Balance, Timestamp};
     use client::decl_runtime_apis;
     use rstd::prelude::Vec;
-    use xassets::{Memo, Token, AssetType};
+    use xassets::{AssetType, Memo, Token};
     use xrecords::AddrStr;
     use xsupport::storage::btree_map::CodecBTreeMap;
     decl_runtime_apis! {

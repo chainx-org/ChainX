@@ -36,11 +36,11 @@ pub mod assetdef;
 pub mod memo;
 
 use primitives::traits::{CheckedAdd, CheckedSub, StaticLookup, Zero};
-use rstd::prelude::*;
 use rstd::collections::btree_map::BTreeMap;
+use rstd::iter::FromIterator;
+use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 use rstd::slice::Iter;
-use rstd::iter::FromIterator;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
@@ -543,7 +543,9 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-    pub fn valid_assets_of(who: &T::AccountId) -> Vec<(Token, CodecBTreeMap<AssetType, T::Balance>)> {
+    pub fn valid_assets_of(
+        who: &T::AccountId,
+    ) -> Vec<(Token, CodecBTreeMap<AssetType, T::Balance>)> {
         let tokens = Self::valid_assets();
         let mut list = Vec::new();
         for token in tokens.into_iter() {
@@ -575,7 +577,6 @@ impl<T: Trait> Module<T> {
 
 /// token issue destroy reserve/unreserve
 impl<T: Trait> Module<T> {
-
     pub fn issue(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         if token.as_slice() == Self::TOKEN {
             match Self::pcx_free_balance(who).checked_add(&value) {
