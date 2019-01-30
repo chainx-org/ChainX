@@ -40,63 +40,20 @@ where
         page_index: u32,
         page_size: u32,
     ) -> Result<Option<PageData<AssetInfo>>> {
-        let state = self.best_state()?;
-        let chain = <xassets::Module<Runtime> as ChainT>::chain();
-        let mut assets = Vec::new();
+        let b = self.best_number()?;
+        let assets: Result<Vec<(Token, CodecBTreeMap<AssetType, Balance>)>> = self
+            .client
+            .runtime_api()
+            .valid_assets_of(&b, who)
+            .map_err(|e| e.into());
 
-        // Native assets
-        let key = <xassets::AssetList<Runtime>>::key_for(chain);
-        let native_assets: Vec<Token> = Self::pickout(&state, &key)?.unwrap_or_default();
-
-        for token in native_assets {
-            let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
-                xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
-            );
-
-            let key = <xassets::AssetBalance<Runtime>>::key_for(&(who, token.clone()));
-            if let Some(info) = Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)? {
-                bmap.extend(info.0.iter());
-            }
-
-            // PCX free balance
-            if token.as_slice() == xassets::Module::<Runtime>::TOKEN {
-                let free = <balances::FreeBalance<Runtime>>::key_for(&who);
-                let free_balance =
-                    Self::pickout::<Balance>(&state, &free)?.unwrap_or_else(Zero::zero);
-
-                bmap.insert(xassets::AssetType::Free, free_balance);
-            }
-
-            assets.push(AssetInfo {
+        let assets = assets?;
+        let final_result = assets.into_iter().map(|(token, map)| AssetInfo {
                 name: String::from_utf8_lossy(&token).into_owned(),
                 is_native: true,
-                details: CodecBTreeMap(bmap),
-            });
-        }
-
-        // Crosschain assets
-        let key = <xassets::CrossChainAssetsOf<Runtime>>::key_for(&who);
-        if let Some(crosschain_assets) = Self::pickout::<Vec<Token>>(&state, &key)? {
-            for token in crosschain_assets {
-                let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
-                    xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
-                );
-                let key = <xassets::AssetBalance<Runtime>>::key_for(&(who, token.clone()));
-                if let Some(info) =
-                    Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)?
-                {
-                    bmap.extend(info.0.iter());
-                }
-
-                assets.push(AssetInfo {
-                    name: String::from_utf8_lossy(&token).into_owned(),
-                    is_native: false,
-                    details: CodecBTreeMap(bmap),
-                });
-            }
-        }
-
-        into_pagedata(assets, page_index, page_size)
+                details: map,
+            }).collect();
+        into_pagedata(final_result, page_index, page_size)
     }
 
     fn assets(&self, page_index: u32, page_size: u32) -> Result<Option<PageData<TotalAssetInfo>>> {

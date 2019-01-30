@@ -28,8 +28,6 @@ fn test_genesis() {
 
         assert_eq!(XAssets::asset_info(&btc_token).unwrap().0.precision(), 8);
 
-        // chainx tokenbol for every user
-        assert_eq!(XAssets::assets_of(&0), vec![XAssets::TOKEN.to_vec()]);
     });
 }
 
@@ -54,8 +52,6 @@ fn test_genesis_token_issue() {
         );
         assert_eq!(Indices::lookup_index(2), Some(3));
         assert_eq!(XAssets::asset_balance(&3, &btc_token, AssetType::Free), 100);
-
-        assert_eq!(XAssets::assets_of(&3), [chainx_token, btc_token]);
     })
 }
 
@@ -433,7 +429,7 @@ fn test_error_issue_and_destroy3() {
         // lock or destroy without init
         assert_err!(
             XAssets::destroy(&btc_token, &a, 25),
-            "not a existed token in this account token list"
+            "reserved balance too low to destroy"
         );
 
         assert_err!(
@@ -445,7 +441,7 @@ fn test_error_issue_and_destroy3() {
                 AssetType::ReservedWithdrawal,
                 25
             ),
-            AssetErr::InvalidToken
+            AssetErr::NotEnough
         );
 
         XAssets::issue(&btc_token, &a, 0).unwrap();
@@ -839,7 +835,7 @@ fn test_move() {
         let token = b"BTC".to_vec();
         assert_err!(
             XAssets::move_free_balance(&token, &a, &b, 100),
-            AssetErr::InvalidToken
+            AssetErr::NotEnough
         );
 
         XAssets::issue(&token, &a, 100).unwrap();

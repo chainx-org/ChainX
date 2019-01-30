@@ -481,6 +481,7 @@ dependencies = [
  "xrml-xassets-process 0.4.0",
  "xrml-xassets-records 0.4.0",
  "xrml-xdex-spot 0.4.0",
+ "xrml-xsupport 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
 
@@ -2573,6 +2574,7 @@ dependencies = [
  "xrml-xassets-process 0.4.0",
  "xrml-xassets-records 0.4.0",
  "xrml-xdex-spot 0.4.0",
+ "xrml-xsupport 0.4.0",
 ]
 
 [[package]]

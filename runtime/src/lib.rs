@@ -55,6 +55,8 @@ extern crate xr_primitives;
 extern crate runtime_api;
 
 // chainx runtime module
+extern crate xrml_xsupport as xsupport;
+
 pub extern crate xrml_xaccounts as xaccounts;
 pub extern crate xrml_xsystem as xsystem;
 // fee;
@@ -426,6 +428,10 @@ impl_runtime_apis! {
     impl runtime_api::xassets_api::XAssetsApi<Block> for Runtime {
         fn valid_assets() -> Vec<xassets::Token> {
             XAssets::valid_assets()
+        }
+
+        fn valid_assets_of(who: AccountId) -> Vec<(xassets::Token, xsupport::storage::btree_map::CodecBTreeMap<xassets::AssetType, Balance>)> {
+            XAssets::valid_assets_of(&who)
         }
 
         fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::Application<AccountId, Balance, TimestampU64>> {

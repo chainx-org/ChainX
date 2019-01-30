@@ -9,6 +9,8 @@ extern crate srml_support;
 extern crate chainx_primitives;
 extern crate xr_primitives;
 
+extern crate xrml_xsupport as xsupport;
+
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_process as xprocess;
 extern crate xrml_xassets_records as xrecords;
@@ -18,11 +20,14 @@ pub mod xassets_api {
     use chainx_primitives::{AccountId, Balance, Timestamp};
     use client::decl_runtime_apis;
     use rstd::prelude::Vec;
-    use xassets::{Memo, Token};
+    use xassets::{Memo, Token, AssetType};
     use xrecords::AddrStr;
+    use xsupport::storage::btree_map::CodecBTreeMap;
     decl_runtime_apis! {
         pub trait XAssetsApi {
             fn valid_assets() -> Vec<Token>;
+
+            fn valid_assets_of(who: AccountId) -> Vec<(Token, CodecBTreeMap<AssetType, Balance>)>;
 
             fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::Application<AccountId, Balance, Timestamp>>;
 

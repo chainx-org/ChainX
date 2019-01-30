@@ -37,9 +37,10 @@ pub mod memo;
 
 use primitives::traits::{CheckedAdd, CheckedSub, StaticLookup, Zero};
 use rstd::prelude::*;
+use rstd::collections::btree_map::BTreeMap;
 use rstd::result::Result as StdResult;
-#[cfg(feature = "std")]
 use rstd::slice::Iter;
+use rstd::iter::FromIterator;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
@@ -198,7 +199,6 @@ pub enum AssetType {
 }
 
 // TODO use marco to improve it
-#[cfg(feature = "std")]
 impl AssetType {
     pub fn iterator() -> Iter<'static, AssetType> {
         static TYPES: [AssetType; 6] = [
@@ -290,9 +290,6 @@ decl_storage! {
         /// asset info for every token, key is token token
         pub AssetInfo get(asset_info): map Token => Option<(Asset, bool, T::BlockNumber)>;
 
-        /// asset list of a account
-        pub CrossChainAssetsOf get(crosschain_assets_of): map T::AccountId => Vec<Token>;
-
         /// asset balance for user&token, use btree_map to accept different asset type
         pub AssetBalance: map (T::AccountId, Token) => CodecBTreeMap<AssetType, T::Balance>;
         /// asset balance for a token, use btree_map to accept different asset type
@@ -326,7 +323,6 @@ decl_storage! {
 
                         for (accountid, value) in init_list {
                             let value = As::sa(*value);
-                            Module::<T>::init_asset_for(&accountid, &token);
                             let total_free_token = Module::<T>::total_asset_balance(&token, AssetType::Free);
                             let free_token = Module::<T>::free_balance(&accountid, &token);
                             Module::<T>::set_total_asset_balance(&token, AssetType::Free, total_free_token + value);
@@ -422,22 +418,24 @@ impl<T: Trait> Module<T> {
 
     /// all type balance of `who` for token
     pub fn all_type_balance_of(who: &T::AccountId, token: &Token) -> T::Balance {
-        let key = (who.clone(), token.clone());
-        if token.as_slice() == <Self as ChainT>::TOKEN {
-            let mut b: T::Balance = Zero::zero();
-            b += balances::FreeBalance::<T>::get(who);
-            b += AssetBalance::<T>::get(&key)
-                .0
-                .iter()
-                .filter(|(&k, _)| k != AssetType::Free) // remove free calc
-                .fold(Zero::zero(), |acc, (_, v)| acc + *v);
-            b
-        } else {
-            AssetBalance::<T>::get(&key)
-                .0
-                .iter()
-                .fold(Zero::zero(), |acc, (_, v)| acc + *v)
+        let map = Self::balance_of(who, token);
+        map.0.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v)
+    }
+
+    pub fn balance_of(who: &T::AccountId, token: &Token) -> CodecBTreeMap<AssetType, T::Balance> {
+        let mut bmap = BTreeMap::<AssetType, T::Balance>::from_iter(
+            AssetType::iterator().map(|t| (*t, Zero::zero())),
+        );
+
+        let result = AssetBalance::<T>::get(&(who.clone(), token.clone()));
+        bmap.extend(result.0.iter());
+
+        // PCX free balance
+        if token.as_slice() == Self::TOKEN {
+            let free = balances::Module::<T>::free_balance(who);
+            bmap.insert(AssetType::Free, free);
         }
+        CodecBTreeMap(bmap)
     }
 
     /// all type balance of a token
@@ -519,22 +517,6 @@ impl<T: Trait> Module<T> {
         Err("not a registered token")
     }
 
-    pub fn is_valid_asset_for(who: &T::AccountId, token: &Token) -> Result {
-        Self::is_valid_asset(token)?;
-        // if it's native asset
-        if let Some((asset, _, _)) = Self::asset_info(token) {
-            if let Chain::ChainX = asset.chain() {
-                return Ok(());
-            }
-        }
-
-        if Self::crosschain_assets_of(who).contains(token) {
-            Ok(())
-        } else {
-            Err("not a existed token in this account token list")
-        }
-    }
-
     pub fn assets() -> Vec<Token> {
         let mut v = Vec::new();
         for i in Chain::iterator() {
@@ -543,25 +525,8 @@ impl<T: Trait> Module<T> {
         v
     }
 
-    pub fn assets_of(who: &T::AccountId) -> Vec<Token> {
-        let mut v = Self::asset_list(Chain::default()); // default is ChainX
-        v.extend(Self::crosschain_assets_of(who));
-        v
-    }
-
     pub fn native_assets() -> Vec<Token> {
         Self::asset_list(Chain::ChainX)
-    }
-
-    pub fn crosschain_assets() -> Vec<Token> {
-        let mut v: Vec<Token> = Vec::new();
-        for c in Chain::iterator() {
-            if *c != Chain::default() {
-                // all assets except ChainX
-                v.extend(Self::asset_list(c));
-            }
-        }
-        v
     }
 
     /// notice don't call this func in runtime
@@ -578,6 +543,24 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
+    pub fn valid_assets_of(who: &T::AccountId) -> Vec<(Token, CodecBTreeMap<AssetType, T::Balance>)> {
+        let tokens = Self::valid_assets();
+        let mut list = Vec::new();
+        for token in tokens.into_iter() {
+            let has_asset = if token.as_slice() == <Self as ChainT>::TOKEN {
+                balances::FreeBalance::<T>::exists(who)
+            } else {
+                AssetBalance::<T>::exists(&(who.clone(), token.clone()))
+            };
+
+            if has_asset {
+                let map = Self::balance_of(who, &token);
+                list.push((token, map));
+            }
+        }
+        list
+    }
+
     pub fn get_asset(token: &Token) -> StdResult<Asset, &'static str> {
         if let Some((asset, valid, _)) = Self::asset_info(token) {
             if valid == false {
@@ -592,11 +575,6 @@ impl<T: Trait> Module<T> {
 
 /// token issue destroy reserve/unreserve
 impl<T: Trait> Module<T> {
-    fn init_asset_for(who: &T::AccountId, token: &Token) {
-        if Self::is_valid_asset_for(who, token).is_err() {
-            <CrossChainAssetsOf<T>>::mutate(who, |assets| assets.push(token.clone()));
-        }
-    }
 
     pub fn issue(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         if token.as_slice() == Self::TOKEN {
@@ -624,8 +602,6 @@ impl<T: Trait> Module<T> {
             Some(b) => b,
             None => return Err("total free balance too high to issue"),
         };
-        // set to storage
-        Self::init_asset_for(who, token);
 
         Self::set_total_asset_balance(token, AssetType::Free, new_total_free_token);
         //        Self::set_asset_balance(who, token, AssetType::Free, new_free_token);
@@ -637,7 +613,7 @@ impl<T: Trait> Module<T> {
 
     pub fn destroy(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         Self::should_not_chainx(token)?;
-        Self::is_valid_asset_for(who, token)?;
+        Self::is_valid_asset(token)?;
         let type_ = AssetType::ReservedWithdrawal;
 
         // get storage
@@ -687,9 +663,7 @@ impl<T: Trait> Module<T> {
         }
 
         if check {
-            Self::is_valid_asset_for(from, token).map_err(|_| AssetErr::InvalidToken)?;
-            // set to storage
-            Self::init_asset_for(to, token);
+            Self::is_valid_asset(token).map_err(|_| AssetErr::InvalidToken)?;
         }
 
         let from_balance = Self::asset_balance(from, token, from_type);

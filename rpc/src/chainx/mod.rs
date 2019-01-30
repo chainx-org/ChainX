@@ -25,7 +25,7 @@ use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
 
 use xaccounts::{self, IntentionProps};
-use xassets::{self, assetdef::ChainT, Asset, AssetType, Chain, Token};
+use xassets::{self, Asset, AssetType, Chain, Token};
 use xbitcoin::{
     self, from, AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TrusteeAddress,
     TxFor, TxInfo,

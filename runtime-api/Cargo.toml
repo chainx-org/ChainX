@@ -13,6 +13,7 @@ srml-support = { git = "https://github.com/chainpool/substrate", default-feature
 chainx-primitives = { path = "../primitives", default_features = false }
 xr-primitives = { path = "../xr-primitives", default_features = false }
 # chainx runtime module
+xrml-xsupport = { path = "../xrml/xsupport", default_features = false }
 xrml-xassets-assets = { path = "../xrml/xassets/assets", default_features = false }
 xrml-xassets-process = { path = "../xrml/xassets/process", default_features = false }
 xrml-xassets-records = { path = "../xrml/xassets/records", default_features = false }
@@ -30,6 +31,7 @@ std = [
 	"chainx-primitives/std",
 	"xr-primitives/std",
     # chainx runtime
+    "xrml-xsupport/std",
     "xrml-xassets-assets/std",
     "xrml-xassets-process/std",
     "xrml-xassets-records/std",
