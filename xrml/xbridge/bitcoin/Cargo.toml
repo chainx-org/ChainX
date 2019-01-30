@@ -40,6 +40,7 @@ bit-vec =  { git = "https://github.com/chainx-org/bit-vec.git", default-features
 rustc-hex = { version = "2", optional = true }
 base58 = { version = "0.1", optional = true }
 
+hex = "*"
 [features]
 default = ["std"]
 std=[
@@ -52,18 +53,21 @@ std=[
     "sr-std/std",
     "sr-io/std",
     "sr-primitives/std",
+
     # substrate runtime
     "srml-support/std",
     "srml-system/std",
     "srml-balances/std",
     "srml-consensus/std",
     "srml-timestamp/std",
+
     # chainx runtime
     "xrml-xsystem/std",
     "xrml-xsupport/std",
     "xrml-xassets-assets/std",
     "xrml-xassets-records/std",
     "xrml-xaccounts/std",
+
     # bitcoin
     "chain/std",
     "keys/std",

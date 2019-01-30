@@ -20,6 +20,7 @@ srml-consensus = { git = "https://github.com/chainpool/substrate", default_featu
 srml-session = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
+keys = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
 
 # chainx runtime
 xr-primitives = { path = "../../xr-primitives", default_features = false }

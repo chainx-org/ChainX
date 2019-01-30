@@ -37,6 +37,7 @@ extern crate substrate_primitives as primitives;
 extern crate substrate_state_machine as state_machine;
 extern crate substrate_transaction_pool as transaction_pool;
 extern crate tokio;
+extern crate xr_primitives;
 extern crate xrml_bridge_bitcoin as xbitcoin;
 extern crate xrml_mining_staking as xstaking;
 extern crate xrml_mining_tokens as xtokens;

@@ -4,12 +4,9 @@ use primitives::hash::H256;
 use rstd::marker::PhantomData;
 use rstd::result::Result;
 use runtime_io;
-use runtime_support::{StorageMap, StorageValue};
+use runtime_support::StorageMap;
 use tx::handle_tx;
-use tx::Proposal;
-use xrecords;
-use BtcFee;
-use {BlockHeaderFor, BlockHeaderInfo, MaxWithdrawAmount, Module, Trait};
+use {BlockHeaderFor, BlockHeaderInfo, Trait};
 
 pub enum ChainErr {
     /// Uknown parent
@@ -59,27 +56,6 @@ impl<T: Trait> Chain<T> {
                     runtime_io::print(&txid[..]);
                 }
                 Ok(()) => (),
-            }
-        }
-
-        // Withdraw
-        match Module::<T>::tx_proposal() {
-            None => {
-                let max_application_numbers = <MaxWithdrawAmount<T>>::get();
-                // no withdraw cache would return None
-                if let Some(indexs) = xrecords::Module::<T>::withdrawal_application_numbers(
-                    xassets::Chain::Bitcoin,
-                    max_application_numbers,
-                ) {
-                    let btc_fee = <BtcFee<T>>::get();
-                    runtime_io::print("[bridge-btc] crate proposal...");
-                    if let Err(e) = <Proposal<T>>::create_proposal(indexs, btc_fee) {
-                        return Err(ChainErr::OtherErr(e));
-                    }
-                }
-            }
-            Some(_) => {
-                runtime_io::print("[bridge-btc] still have Candidate not process");
             }
         }
         Ok(())

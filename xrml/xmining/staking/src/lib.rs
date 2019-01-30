@@ -40,6 +40,7 @@ extern crate xrml_xsystem as xsystem;
 
 use balances::OnDilution;
 use codec::{Compact, HasCompact};
+use keys::DisplayLayout;
 use rstd::prelude::*;
 use runtime_primitives::traits::{As, Lookup, StaticLookup, Zero};
 use runtime_support::dispatch::Result;

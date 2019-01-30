@@ -1,8 +1,9 @@
-use self::extracter::Extracter;
 use super::*;
-use b58;
 use keys::DisplayLayout;
-
+use xaccounts;
+use xassets::Chain;
+use xr_primitives::generic::Extracter;
+use xr_primitives::traits::Extractable;
 pub struct TxHandler<'a>(&'a H256);
 
 impl<'a> TxHandler<'a> {
@@ -10,65 +11,12 @@ impl<'a> TxHandler<'a> {
         TxHandler(txid)
     }
 
-    pub fn cert<T: Trait>(&self) -> Result {
-        runtime_io::print("[bridge-btc] handle_cert start");
-
-        let txid = self.0;
-        let tx_info = <TxFor<T>>::get(txid);
-        for (_index, output) in tx_info.raw_tx.outputs.iter().enumerate() {
-            let script = &output.script_pubkey;
-            let into_script: Script = script.clone().into();
-
-            if into_script.is_null_data_script() {
-                let s = script.clone();
-                let (cert_name, frozen_duration, cert_owner) = Extracter::<T>::new(&s)
-                    .cert()
-                    .ok_or("Fail to parse OP_RETURN.")?;
-
-                runtime_io::print("[bridge-btc] issue cert");
-                Module::<T>::deposit_event(RawEvent::CertTx(
-                    tx_info.raw_tx.hash(),
-                    tx_info.input_address.layout().to_vec(),
-                ));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn withdraw<T: Trait>(&self, trustee_address: &keys::Address) -> Result {
+    pub fn withdraw<T: Trait>(&self) -> Result {
         runtime_io::print("[bridge-btc] handle_withdraw start");
 
         //delete used
         let txid = self.0;
         let tx_info = <TxFor<T>>::get(txid);
-        let out_point_set = tx_info
-            .raw_tx
-            .inputs
-            .iter()
-            .map(|input| input.previous_output.clone())
-            .collect();
-        delete_utxo::<T>(out_point_set);
-        runtime_io::print("[bridge-btc] handle_input delete_from_outpoint");
-
-        //Give change
-        let mut index = 0;
-        for output in tx_info.raw_tx.clone().outputs {
-            if is_key(&output.script_pubkey, &trustee_address) {
-                refresh_utxo::<T>(
-                    UTXOKey {
-                        txid: txid.clone(),
-                        index: index as u32,
-                    },
-                    UTXOStatus {
-                        balance: output.value,
-                        status: true,
-                    },
-                );
-            }
-            index += 1;
-        }
-        runtime_io::print("[bridge-btc] handle_input refresh_utxo");
         let mut flag = false;
         if let Some(data) = <TxProposal<T>>::take() {
             let candidate = data.clone();
@@ -90,10 +38,9 @@ impl<'a> TxHandler<'a> {
                 }
             };
         }
-        let addr = tx_info.input_address.layout().to_vec();
         Module::<T>::deposit_event(RawEvent::WithdrawTx(
             tx_info.raw_tx.hash(),
-            b58::to_base58(addr),
+            tx_info.input_address.layout().to_vec(),
             flag,
         ));
         Ok(())
@@ -101,91 +48,61 @@ impl<'a> TxHandler<'a> {
 
     pub fn deposit<T: Trait>(&self, trustee_address: &keys::Address) {
         runtime_io::print("[bridge-btc] handle_output start");
-
+        let mut deposit_balance = 0;
         let txid = self.0;
         let tx_info = <TxFor<T>>::get(txid);
-        // Add utxo
-        for (index, output) in tx_info.raw_tx.outputs.iter().enumerate() {
+
+        for (_index, output) in tx_info.raw_tx.outputs.iter().enumerate() {
             let script = &output.script_pubkey;
             let into_script: Script = script.clone().into();
 
             // bind address [btc address --> chainx AccountId]
             if into_script.is_null_data_script() {
                 let s = script.clone();
-                handle_opreturn::<T>(&s, &tx_info);
+                handle_opreturn::<T>(&s[2..], &tx_info);
                 continue;
             }
 
             // get deposit money
-            // FIXME should detect if the script_addresses exists in a better way.
             let script_addresses = into_script.extract_destinations().unwrap_or(Vec::new());
             if script_addresses.len() == 1 {
                 if (trustee_address.hash == script_addresses[0].hash) && (output.value > 0) {
-                    let mut deposit_status = false;
-                    let input_address = &tx_info.input_address;
-
-                    <AddressMap<T>>::get(input_address).map_or_else(
-                        || insert_pending_deposit::<T>(input_address, txid.clone(), index as u32),
-                        |account| {
-                            deposit_token::<T>(&account, output.value);
-                            runtime_io::print("[bridge-btc] handle_output deposit_token: ");
-                            deposit_status = true;
-                        },
-                    );
-
-                    runtime_io::print(output.value);
-
-                    refresh_utxo::<T>(
-                        UTXOKey {
-                            txid: txid.clone(),
-                            index: index as u32,
-                        },
-                        UTXOStatus {
-                            balance: output.value,
-                            status: deposit_status,
-                        },
-                    );
-                    let addr = tx_info.input_address.layout().to_vec();
-                    Module::<T>::deposit_event(RawEvent::Deposit(
-                        tx_info.raw_tx.hash(),
-                        b58::to_base58(addr),
-                        output.value,
-                        deposit_status,
-                    ));
+                    deposit_balance += output.value;
                 }
             }
         }
-    }
-}
 
-fn delete_utxo<T: Trait>(out_point_set: Vec<OutPoint>) -> bool {
-    if let Some(mut keys) = <UTXOSetKey<T>>::take() {
-        for out_point in out_point_set {
-            let mut count = 0;
-            for (i, k) in keys.iter().enumerate() {
-                if out_point.hash == k.txid && out_point.index == k.index {
-                    <UTXOSet<T>>::remove(k);
-                    count = i;
-                    break;
-                }
-            }
-            keys.remove(count);
+        if deposit_balance > 0 {
+            let mut deposit_status = false;
+            let input_address = tx_info.input_address.clone();
+            <xaccounts::CrossChainAddressMapOf<T>>::get((Chain::Bitcoin, input_address.layout().to_vec()))
+                .map_or_else(
+                    || insert_pending_deposit::<T>(&input_address, txid.clone(), deposit_balance),
+                    |a| {
+                        deposit_token::<T>(&a.0, deposit_balance);
+                        runtime_io::print("[bridge-btc] handle_output deposit_token: ");
+                        deposit_status = true;
+                    },
+                );
+
+            let addr = tx_info.input_address.layout().to_vec();
+            runtime_io::print(deposit_balance);
+            Module::<T>::deposit_event(RawEvent::Deposit(
+                tx_info.raw_tx.hash(),
+                b58::to_base58(addr),
+                deposit_balance,
+                deposit_status,
+            ));
         }
-
-        <UTXOSetKey<T>>::put(keys);
-
-        return true;
     }
-
-    false
 }
 
 /// Try updating the binding address, remove pending deposit if the updating goes well.
 fn handle_opreturn<T: Trait>(script: &[u8], info: &TxInfo) {
-    if let Some(account_id) = Extracter::<T>::new(&script).account_id() {
-        if update_binding::<T>(&account_id.clone(), info) {
+    if let Some(a) = Extracter::<T::AccountId>::new(script.to_vec()).account_info() {
+        if update_binding::<T>(a.0, a.1.clone(), info) {
             runtime_io::print("[bridge-btc] handle_output register ");
-            remove_pending_deposit::<T>(&info.input_address, &account_id);
+            remove_pending_deposit::<T>(&info.input_address, &a.1);
         }
     }
 }
@@ -209,26 +126,31 @@ fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result {
 }
 
 /// Actually update the binding address of original transactor.
-fn apply_update_binding<T: Trait>(who: &T::AccountId, address: &keys::Address) {
-    match <AccountMap<T>>::get(who) {
+fn apply_update_binding<T: Trait>(who: T::AccountId, channle_id: T::AccountId, address: Vec<u8>) {
+    //let chain_id = Module::<T>::chain();
+
+    match <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, who.clone())) {
         Some(mut a) => {
             a.push(address.clone());
-            <AccountMap<T>>::insert(who, a);
+            <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, who.clone()), a);
         }
         None => {
             let mut a = Vec::new();
             a.push(address.clone());
-            <AccountMap<T>>::insert(who, a);
+            <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, who.clone()), a);
         }
     }
-    <AddressMap<T>>::insert(address, who.clone());
+    <xaccounts::CrossChainAddressMapOf<T>>::insert((Chain::Bitcoin, address), (who.clone(), channle_id));
 }
 
 /// bind account
-fn update_binding<T: Trait>(who: &T::AccountId, info: &TxInfo) -> bool {
-    <AddressMap<T>>::get(&info.input_address).map_or_else(
+fn update_binding<T: Trait>(node_name: Vec<u8>, who: T::AccountId, info: &TxInfo) -> bool {
+    let input_addr = info.input_address.layout().to_vec();
+    <xaccounts::CrossChainAddressMapOf<T>>::get((Chain::Bitcoin, input_addr.clone())).map_or_else(
         || {
-            apply_update_binding::<T>(who, &info.input_address);
+            let channle_id =
+                <xaccounts::IntentionOf<T>>::get(node_name.clone()).unwrap_or_default();
+            apply_update_binding::<T>(who.clone(), channle_id.clone(), input_addr.clone());
             let addr = info.input_address.layout().to_vec();
             Module::<T>::deposit_event(RawEvent::Bind(
                 info.raw_tx.hash(),
@@ -239,22 +161,25 @@ fn update_binding<T: Trait>(who: &T::AccountId, info: &TxInfo) -> bool {
             return true;
         },
         |p| {
-            if p == *who {
+            let channle_id =
+                <xaccounts::IntentionOf<T>>::get(node_name.clone()).unwrap_or_default();
+            if p.0 == who.clone() && p.1 == channle_id.clone() {
                 return false;
             }
-
             //delete old bind
-            if let Some(a) = <AccountMap<T>>::get(&p) {
+            if let Some(a) = <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, p.0)) {
                 let mut vaddr = a.clone();
                 for (index, it) in a.iter().enumerate() {
-                    if it.hash == info.input_address.hash {
+                    let addr: Address =
+                        Decode::decode(&mut it.as_slice()).unwrap_or(Default::default());
+                    if addr.hash == info.input_address.hash {
                         vaddr.remove(index);
-                        <AccountMap<T>>::insert(&p, vaddr);
+                        <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, who.clone()), vaddr);
                         break;
                     }
                 }
             };
-            apply_update_binding::<T>(who, &info.input_address);
+            apply_update_binding::<T>(who.clone(), channle_id, input_addr.clone());
             let addr = info.input_address.layout().to_vec();
             Module::<T>::deposit_event(RawEvent::Bind(
                 info.raw_tx.hash(),
@@ -270,15 +195,9 @@ fn update_binding<T: Trait>(who: &T::AccountId, info: &TxInfo) -> bool {
 fn remove_pending_deposit<T: Trait>(input_address: &keys::Address, who: &T::AccountId) {
     if let Some(record) = <PendingDepositMap<T>>::get(input_address) {
         for r in record {
-            let mut balance = 0;
-            <UTXOSet<T>>::mutate(r, |utxos| {
-                utxos.status = true;
-                balance = utxos.balance;
-            });
-
-            deposit_token::<T>(who, balance);
+            deposit_token::<T>(who, r.balance);
             runtime_io::print("[bridge-btc] handle_output PendingDepositMap ");
-            runtime_io::print(balance);
+            runtime_io::print(r.balance);
         }
         <PendingDepositMap<T>>::remove(input_address);
     }
@@ -289,8 +208,8 @@ fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
     let _ = <xrecords::Module<T>>::deposit(&who, &token, As::sa(balance));
 }
 
-fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: H256, index: u32) {
-    let k = UTXOKey { txid, index };
+fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: H256, balance: u64) {
+    let k = DepositCache { txid, balance };
     match <PendingDepositMap<T>>::get(input_address) {
         Some(mut key) => {
             key.push(k);
@@ -299,27 +218,11 @@ fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: H256, i
             runtime_io::print("[bridge-btc]（Some）handle_output PendingDeposit token: ");
         }
         None => {
-            let mut cache: Vec<UTXOKey> = Vec::new();
+            let mut cache: Vec<DepositCache> = Vec::new();
             cache.push(k);
             <PendingDepositMap<T>>::insert(input_address, cache);
 
             runtime_io::print("[bridge-btc]（None）handle_output PendingDeposit token: ");
-        }
-    };
-}
-
-fn refresh_utxo<T: Trait>(k: UTXOKey, v: UTXOStatus) {
-    <UTXOSet<T>>::insert(k.clone(), v);
-
-    match <UTXOSetKey<T>>::take() {
-        Some(mut key) => {
-            key.push(k);
-            <UTXOSetKey<T>>::put(key);
-        }
-        None => {
-            let mut cache: Vec<UTXOKey> = Vec::new();
-            cache.push(k);
-            <UTXOSetKey<T>>::put(cache);
         }
     };
 }

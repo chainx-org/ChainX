@@ -107,6 +107,14 @@ pub struct TrusteeIntentionProps {
     pub cold_entity: TrusteeEntity,
 }
 
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct TrusteeAddressPair {
+    pub hot_address: Vec<u8>,
+    pub cold_address: Vec<u8>,
+}
+
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
@@ -134,6 +142,12 @@ decl_storage! {
         pub TrusteeIntentions get(trustee_intentions): Vec<T::AccountId>;
 
         pub TrusteeIntentionPropertiesOf get(trustee_intention_props_of): map (T::AccountId, Chain) => Option<TrusteeIntentionProps>;
+
+        pub CrossChainAddressMapOf get(address_map): map (Chain, Vec<u8>) => Option<(T::AccountId, T::AccountId)>;
+
+        pub CrossChainBindOf get(account_map): map (Chain, T::AccountId) => Option<Vec<Vec<u8>>>;
+
+        pub TrusteeAddress get(trustee_address): map Chain => Option<TrusteeAddressPair>;
     }
 }
 

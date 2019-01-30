@@ -23,6 +23,7 @@ use srml_support::storage::{StorageMap, StorageValue};
 
 use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
+use xr_primitives::generic::b58;
 
 use xaccounts::{self, IntentionProps};
 use xassets::{self, Asset, AssetType, Chain, Token};
@@ -102,9 +103,6 @@ build_rpc_trait! {
 
         #[rpc(name = "chainx_getDepositRecords")]
         fn deposit_records(&self, AccountId, u32, u32) -> Result<Option<PageData<DepositInfo>>>;
-
-        #[rpc(name = "chainx_getAccountByBTCAddress")]
-        fn account(&self, String) -> Result<Option<AccountId>>;
 
         #[rpc(name = "chainx_getBTCAddressByAccount")]
         fn address(&self, AccountId) -> Result<Option<Vec<String>>>;

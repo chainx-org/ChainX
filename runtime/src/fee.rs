@@ -39,6 +39,8 @@ impl CheckFee for Call {
             Call::XBridgeOfBTC(call) => match call {
                 BitcoinCall::push_header(_) => Some(20),
                 BitcoinCall::push_transaction(_) => Some(10),
+                BitcoinCall::create_withdraw_tx(_, _) => Some(50),
+                BitcoinCall::sign_withdraw_tx(_, _) => Some(50),
                 _ => None,
             },
             // xmining

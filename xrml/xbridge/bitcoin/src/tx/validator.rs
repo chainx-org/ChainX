@@ -1,8 +1,14 @@
 use super::*;
 
+use super::keys::Public;
+use super::{
+    Bytes, Result, Script, SignatureChecker, SignatureVersion, StorageMap, Trait, Transaction,
+    TransactionInputSigner, TransactionSignatureChecker,
+};
+
 pub fn validate_transaction<T: Trait>(
     tx: &RelayTx,
-    address: (&keys::Address, &keys::Address),
+    address: &keys::Address,
 ) -> StdResult<TxType, &'static str> {
     let verify_txid = tx.raw.hash();
     match <BlockHeaderFor<T>>::get(&tx.block_hash) {
@@ -41,32 +47,87 @@ pub fn validate_transaction<T: Trait>(
         return Err("previous tx id not right");
     }
 
-    // detect cert
-    let outpoint = tx.raw.inputs[0].previous_output.clone();
-    let send_address = match inspect_address::<T>(&tx.previous_raw, outpoint) {
-        Some(a) => a,
-        None => return Err("inspect address failed at detect cert-tx "),
-    };
-    if send_address.hash == address.1.hash {
-        return Ok(TxType::SendCert);
-    }
-
     // detect withdraw: To do: All inputs relay
     let outpoint = tx.raw.inputs[0].previous_output.clone();
     let send_address = match inspect_address::<T>(&tx.previous_raw, outpoint) {
         Some(a) => a,
         None => return Err("inspect address failed at detect withdraw-tx "),
     };
-    if send_address.hash == address.0.hash {
+    if send_address.hash == address.hash {
         return Ok(TxType::Withdraw);
     }
 
     // detect deposit
     for output in tx.raw.outputs.iter() {
-        if is_key(&output.script_pubkey, &address.0) {
+        if is_key(&output.script_pubkey, &address) {
             return Ok(TxType::BindDeposit);
         }
     }
 
     Err("not found our pubkey, may be an unrelated tx")
+}
+
+fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Bytes) -> bool {
+    let tx_signer: TransactionInputSigner = tx.clone().into();
+    let checker = TransactionSignatureChecker {
+        input_index: 0,
+        input_amount: 0,
+        signer: tx_signer,
+    };
+    let sighashtype = 0x41; // Sighsh all
+    let signature = sign.clone().take().into();
+    let public = if let Ok(public) = Public::from_slice(&pubkey) {
+        public
+    } else {
+        return false;
+    };
+
+    //privous tx's output script_pubkey
+    let script_code: Script = script_pubkey.clone().into();
+    return checker.check_signature(
+        &signature,
+        &public,
+        &script_code,
+        sighashtype,
+        SignatureVersion::Base,
+    );
+}
+
+pub fn handle_condidate<T: Trait>(tx: Transaction) -> Result {
+    let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
+        .ok_or("Should set RECEIVE_address first.")?;
+    let hot_address: Address =
+        Decode::decode(&mut trustee_address.hot_address.as_slice()).unwrap_or(Default::default());
+    let pk = hot_address.hash.clone().to_vec();
+    let mut script_pubkey = Bytes::new();
+    script_pubkey.push(Opcode::OP_HASH160 as u8);
+    script_pubkey.push(Opcode::OP_PUSHBYTES_20 as u8);
+    for p in pk {
+        script_pubkey.push(p)
+    }
+    script_pubkey.push(Opcode::OP_EQUAL as u8);
+
+    let script: Script = tx.inputs[0].script_sig.clone().into();
+    let (sigs, _dem) = if let Ok((sigs, dem)) = script.extract_multi_scriptsig() {
+        (sigs, dem)
+    } else {
+        return Err("InvalidSignature");
+    };
+    let (keys, _siglen, _keylen) = match script.parse_redeem_script() {
+        Some((k, s, l)) => (k, s, l),
+        None => return Err("InvalidSignature"),
+    };
+    for sig in sigs.clone() {
+        let mut verify = false;
+        for key in keys.clone() {
+            if verify_sign(&sig, &key, &tx, &script_pubkey) {
+                verify = true;
+                break;
+            }
+        }
+        if verify == false {
+            return Err("Verify sign error");
+        }
+    }
+    Ok(())
 }

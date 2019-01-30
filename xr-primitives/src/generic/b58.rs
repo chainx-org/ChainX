@@ -1,6 +1,6 @@
 // Copyright 2018 Chainpool
 
-use rstd::prelude::Vec;
+use sr_std::prelude::Vec;
 
 static BASE58_CHARS: &'static [u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 

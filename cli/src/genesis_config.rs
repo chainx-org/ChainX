@@ -1,13 +1,10 @@
 // Copyright 2018 chainpool
-extern crate base58;
 extern crate chain as btc_chain;
 //extern crate cxrml_tokenbalances;
-extern crate keys;
 extern crate primitives as btc_primitives;
 extern crate substrate_keyring;
 extern crate substrate_primitives;
 
-use self::base58::FromBase58;
 use chainx_runtime::xassets;
 use chainx_runtime::GrandpaConfig;
 
@@ -27,7 +24,6 @@ use sr_primitives::Permill;
 
 use self::btc_chain::BlockHeader;
 use self::btc_primitives::{compact::Compact, hash::H256};
-use self::keys::DisplayLayout;
 use self::substrate_keyring::Keyring;
 
 pub enum GenesisSpec {
@@ -195,10 +191,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             reserved: 2100,
             btc_fee: 1000,
             max_withdraw_amount: 100,
-            cert_address: keys::Address::from_layout(&"2N6JXYKYLqN4e2A96FLnY5J1Mjj5MHXhp6b".from_base58().unwrap()).unwrap(),
-            cert_redeem_script: b"522102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402103ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d7078053ae".to_vec(),
-            trustee_address: keys::Address::from_layout(&"2MtAUgQmdobnz2mu8zRXGSTwUv9csWcNwLU".from_base58().unwrap()).unwrap(),
-            trustee_redeem_script: b"52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae".to_vec(),
             _genesis_phantom_data: Default::default(),
         }),
     }

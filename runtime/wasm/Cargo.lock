@@ -405,6 +405,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "hex"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "hex-literal"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2074,6 +2079,7 @@ dependencies = [
  "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
 ]
 
@@ -2105,6 +2111,7 @@ dependencies = [
  "bit-vec 0.5.0 (git+https://github.com/chainx-org/bit-vec.git)",
  "bitcrypto 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "merkle 0.1.0 (git+https://github.com/chainx-org/merkle.git)",
@@ -2254,6 +2261,7 @@ name = "xrml-xaccounts"
 version = "0.4.0"
 dependencies = [
  "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2448,6 +2456,7 @@ dependencies = [
 "checksum hash-db 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "dc5ec43724866bbc8337e09cab4d4b5f9fdbbe589f04bdc8bfda906a639ad338"
 "checksum hash256-std-hasher 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "811bd8c26961527b7d5623b71162d865325639f8ca204d4ec90b5b87473a122d"
 "checksum heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1679e6ea370dee694f91f1dc469bf94cf8f52051d147aec3e1f9497c6fc22461"
+"checksum hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
 "checksum hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4da5f0e01bd8a71a224a4eedecaacfcabda388dbb7a80faf04d3514287572d95"
 "checksum hex-literal-impl 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1d340b6514f232f6db1bd16db65302a5278a04fef9ce867cb932e7e5fa21130a"
 "checksum hmac 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7a13f4163aa0c5ca1be584aace0e2212b2e41be5478218d4f657f5f778b2ae2a"

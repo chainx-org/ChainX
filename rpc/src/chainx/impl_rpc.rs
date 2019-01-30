@@ -101,14 +101,15 @@ where
             }
             let mut trustee_addr = String::default();
             if token.as_slice() == xbitcoin::Module::<Runtime>::TOKEN {
-                let key = <TrusteeAddress<Runtime>>::key();
-                let trustee = match Self::pickout::<keys::Address>(&state, &key)? {
-                    Some(a) => a,
-                    None => unreachable!(
-                        "should not reach this branch, the trustee address info must be exists"
-                    ),
+                let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(xassets::Chain::Bitcoin);
+                match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
+                    Some(a) => {
+                        let hot_address: Address = Decode::decode(&mut a.hot_address.as_slice())
+                            .unwrap_or(Default::default());
+                        trustee_addr = hot_address.to_string()
+                    }
+                    None => Default::default(),
                 };
-                trustee_addr = trustee.to_string();
             }
 
             assets.push(TotalAssetInfo::new(
@@ -627,17 +628,20 @@ where
         } else {
             return into_pagedata(records, page_index, page_size);
         };
-        let key = <AccountMap<Runtime>>::key_for(&who);
-        let bind_list = if let Some(list) = Self::pickout::<Vec<Address>>(&state, &key)? {
+        let key = <xaccounts::CrossChainBindOf<Runtime>>::key_for((Chain::Bitcoin, who));
+        let bind_list = if let Some(list) = Self::pickout::<Vec<Vec<u8>>>(&state, &key)? {
             list
         } else {
             return into_pagedata(records, page_index, page_size);
         };
-        let key = <TrusteeAddress<Runtime>>::key();
-        let trustee = if let Some(a) = Self::pickout::<keys::Address>(&state, &key)? {
-            a
-        } else {
-            return into_pagedata(records, page_index, page_size);
+        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(xassets::Chain::Bitcoin);
+        let trustee = match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
+            Some(a) => {
+                let hot_address: Address =
+                    Decode::decode(&mut a.hot_address.as_slice()).unwrap_or(Default::default());
+                hot_address
+            }
+            None => return into_pagedata(records, page_index, page_size),
         };
 
         let token = xbitcoin::Module::<Runtime>::TOKEN;
@@ -678,23 +682,10 @@ where
         into_pagedata(records, page_index, page_size)
     }
 
-    fn account(&self, btc_addr: String) -> Result<Option<AccountId>> {
-        let state = self.best_state()?;
-        let addr = match Address::from_str(btc_addr.as_str()) {
-            Ok(a) => a,
-            Err(_) => return Ok(None),
-        };
-        let key = <xbitcoin::AddressMap<Runtime>>::key_for(&addr);
-        match Self::pickout::<AccountId>(&state, &key)? {
-            Some(a) => Ok(Some(a)),
-            None => Ok(None),
-        }
-    }
-
-    fn address(&self, account: AccountId) -> Result<Option<Vec<String>>> {
+    fn address(&self, who: AccountId) -> Result<Option<Vec<String>>> {
         let state = self.best_state()?;
         let mut v = vec![];
-        let key = <xbitcoin::AccountMap<Runtime>>::key_for(&account);
+        let key = <xaccounts::CrossChainBindOf<Runtime>>::key_for((Chain::Bitcoin, who));
         match Self::pickout::<Vec<Address>>(&state, &key)? {
             Some(addrs) => {
                 for a in addrs {
@@ -712,18 +703,21 @@ fn get_deposit_info(
     who: AccountId,
     info: &TxInfo,
     trustee: &Address,
-    bind_list: &[Address],
+    bind_list: &Vec<Vec<u8>>,
 ) -> Option<(Balance, String)> {
     let mut ops = String::new();
     let mut balance = 0;
-    let mut flag = bind_list.iter().any(|a| a.hash == info.input_address.hash);
+    let mut flag = bind_list.iter().any(|a| {
+        let addr: Address = Decode::decode(&mut a.as_slice()).unwrap_or(Default::default());
+        addr.hash == info.input_address.hash
+    });
     for output in raw_tx.outputs.iter() {
         let script = &output.script_pubkey;
         let into_script: Script = script.clone().into();
         let s: Script = script.clone().into();
         if into_script.is_null_data_script() {
             let data = s.extract_rear(':');
-            match from(data.to_vec()) {
+            match b58::from(data.to_vec()) {
                 Ok(mut slice) => {
                     let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice())
                         .unwrap_or_else(|| [0; 32].into());
