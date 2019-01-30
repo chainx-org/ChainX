@@ -414,6 +414,7 @@ dependencies = [
  "substrate-service-test 0.3.0 (git+https://github.com/chainpool/substrate)",
  "substrate-transaction-pool 0.1.0 (git+https://github.com/chainpool/substrate)",
  "tokio 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xrml-xsystem 0.4.0",
 ]
 
 [[package]]
@@ -4835,6 +4836,7 @@ dependencies = [
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-inherents 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
 ]
 

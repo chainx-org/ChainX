@@ -30,6 +30,8 @@ chainx-primitives = { path = "../primitives" }
 
 chainx-executor = { path = "../executor" }
 
+xrml-xsystem = { path = "../xrml/xsystem" }
+
 # bitcoin
 primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
 chain = { git = "https://github.com/chainx-org/bitcoin-rust" }

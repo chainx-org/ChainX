@@ -18,8 +18,10 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
+extern crate xrml_xsystem;
+
 use chainx_executor;
-use chainx_primitives::Block;
+use chainx_primitives::{Block, AccountId};
 use chainx_runtime::{GenesisConfig, RuntimeApi};
 use client;
 use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
@@ -35,6 +37,10 @@ use substrate_service::{
 use transaction_pool::{self, txpool::Pool as TransactionPool};
 
 use network::ManageNetwork;
+
+use self::xrml_xsystem::InherentDataProvider;
+
+type XSystemInherentDataProvider = InherentDataProvider<AccountId>;
 
 construct_simple_protocol! {
     /// Demo protocol attachment for substrate.
@@ -93,6 +99,11 @@ construct_service_factory! {
                         });
 
                         let client = service.client();
+
+                        let accountid: AccountId = key.public().as_array_ref().clone().into();
+                        service.config.custom.inherent_data_providers
+			                .register_provider(XSystemInherentDataProvider::new(&accountid)).expect("blockproducer set err; qed");
+
                         executor.spawn(start_aura(
                             SlotDuration::get_or_compute(&*client)?,
                             key.clone(),

@@ -235,7 +235,6 @@ impl bitcoin::Trait for Runtime {
 
 // cxrml trait
 impl xsystem::Trait for Runtime {
-    const XSYSTEM_SET_POSITION: u32 = 3;
 }
 
 impl xaccounts::Trait for Runtime {
@@ -305,8 +304,8 @@ construct_runtime!(
         Sudo: sudo,
 
         // chainx runtime module
-        XSystem: xsystem::{Module, Call, Storage, Config<T>}, //, Inherent},
-        XAccounts: xaccounts::{Module, Storage, Event<T>}, //, Inherent},
+        XSystem: xsystem::{Module, Call, Storage, Config<T>, Inherent}, //, Inherent},
+        XAccounts: xaccounts::{Module, Storage, Config<T>, Event<T>}, //, Inherent},
         // fee
         XFeeManager: fee_manager::{Module, Call, Storage, Config<T>},
         // assets
