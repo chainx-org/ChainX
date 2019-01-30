@@ -171,6 +171,7 @@ dependencies = [
  "xr-primitives 0.4.0",
  "xrml-aura 0.1.0",
  "xrml-bridge-bitcoin 0.4.0",
+ "xrml-bridge-xdot 0.6.0",
  "xrml-fee-manager 0.4.0",
  "xrml-grandpa 0.1.0",
  "xrml-mining-staking 0.4.0",
@@ -554,6 +555,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "libsecp256k1"
 version = "0.2.1"
 source = "git+https://github.com/koushiro/libsecp256k1-rs?branch=support_der_lax#4efb997d10bca7324c211426fb0f901921e01a21"
+dependencies = [
+ "arrayref 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "digest 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hmac-drbg 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sha2 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typenum 1.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "libsecp256k1"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayref 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "digest 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1739,6 +1753,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tiny-keccak"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "crunchy 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "tokio"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2141,6 +2163,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "xrml-bridge-xdot"
+version = "0.6.0"
+dependencies = [
+ "libsecp256k1 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "tiny-keccak 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xr-primitives 0.4.0",
+ "xrml-xaccounts 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-records 0.4.0",
+ "xrml-xsupport 0.4.0",
+ "xrml-xsystem 0.4.0",
+]
+
+[[package]]
 name = "xrml-fee-manager"
 version = "0.4.0"
 dependencies = [
@@ -2475,6 +2522,7 @@ dependencies = [
 "checksum lazycell 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b294d6fa9ee409a054354afc4352b0b9ef7ca222c69b8812cbea9e7d2bf3783f"
 "checksum libc 0.2.47 (registry+https://github.com/rust-lang/crates.io-index)" = "48450664a984b25d5b479554c29cc04e3150c97aa4c01da5604a2d4ed9151476"
 "checksum libsecp256k1 0.2.1 (git+https://github.com/koushiro/libsecp256k1-rs?branch=support_der_lax)" = "<none>"
+"checksum libsecp256k1 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "688e8d65e495567c2c35ea0001b26b9debf0b4ea11f8cccc954233b75fc3428a"
 "checksum lock_api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "62ebf1391f6acad60e5c8b43706dde4582df75c06698ab44511d15016bc2442c"
 "checksum log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
 "checksum log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c84ec4b527950aa83a329754b01dbe3f58361d1c5efacd1f6d68c494d08a17c6"
@@ -2588,6 +2636,7 @@ dependencies = [
 "checksum take_mut 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
 "checksum thread_local 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c6b53e329000edc2b34dbe8545fd20e55a333362d0a321909685a19bd28c3f1b"
 "checksum time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "db8dcfca086c1143c9270ac42a2bbd8a7ee477b78ac8e45b19abfb0cbede4b6f"
+"checksum tiny-keccak 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e9175261fbdb60781fcd388a4d6cc7e14764a2b629a7ad94abb439aed223a44f"
 "checksum tokio 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "4790d0be6f4ba6ae4f48190efa2ed7780c9e3567796abdb285003cf39840d9c5"
 "checksum tokio-codec 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5c501eceaf96f0e1793cf26beb63da3d11c738c4a943fdf3746d81d64684c39f"
 "checksum tokio-current-thread 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "331c8acc267855ec06eb0c94618dcbbfea45bed2d20b77252940095273fb58f6"

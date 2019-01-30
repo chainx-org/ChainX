@@ -9,6 +9,7 @@ tokio = "0.1.7"
 exit-future = "0.1"
 hex-literal = "0.1"
 parity-codec = { version = "2.1" }
+rustc-hex = "2.0.1"
 slog = "^2"
 # substrate
 substrate-cli = { git = "https://github.com/chainpool/substrate" }

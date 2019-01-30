@@ -2,9 +2,11 @@
 extern crate chain as btc_chain;
 //extern crate cxrml_tokenbalances;
 extern crate primitives as btc_primitives;
+extern crate rustc_hex;
 extern crate substrate_keyring;
 extern crate substrate_primitives;
 
+use self::rustc_hex::FromHex;
 use chainx_runtime::xassets;
 use chainx_runtime::GrandpaConfig;
 
@@ -16,7 +18,8 @@ use chainx_runtime::{
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, Params, SessionConfig,
     SudoConfig, TimestampConfig, XAssetsConfig, XAssetsProcessConfig, XBridgeOfBTCConfig,
-    XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
+    XBridgeOfXDOTConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    XTokensConfig,
 };
 
 use ed25519;
@@ -33,6 +36,11 @@ pub enum GenesisSpec {
 }
 
 pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
+    let tmp_eth_address = "004927472a848c6015f5eb02defc13272937d2d5"
+        .from_hex::<Vec<_>>()
+        .unwrap();
+    let mut eth_address: [u8; 20] = [0u8; 20];
+    eth_address.copy_from_slice(&tmp_eth_address);
     let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
     let bob = ed25519::Pair::from_seed(b"Bob                             ").public();
     let charlie = ed25519::Pair::from_seed(b"Charlie                         ").public();
@@ -169,6 +177,9 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                     (xdot_asset.token(), xassets::Module::<Runtime>::TOKEN.to_vec(), 4, 2, 100000, true)
                 ],
             price_volatility: 10,
+        }),
+        xdot: Some(XBridgeOfXDOTConfig {
+            claims: vec![(eth_address, 1_000_000),],
         }),
         bitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)

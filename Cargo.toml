@@ -57,4 +57,5 @@ members = [
     "xrml/xmining/staking",
     "xrml/xmining/tokens",
     "xrml/xbridge/bitcoin",
+    "xrml/xbridge/xdot",
 ]

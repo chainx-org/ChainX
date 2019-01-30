@@ -27,10 +27,7 @@ use xr_primitives::generic::b58;
 
 use xaccounts::{self, IntentionProps};
 use xassets::{self, Asset, AssetType, Chain, Token};
-use xbitcoin::{
-    self, from, AccountMap, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TrusteeAddress,
-    TxFor, TxInfo,
-};
+use xbitcoin::{self, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TxFor, TxInfo};
 use xrecords::{self, Application};
 use xspot::def::{OrderPair, OrderPairID, ID};
 use xspot::{HandicapT, OrderT};

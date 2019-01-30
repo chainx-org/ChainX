@@ -4,7 +4,6 @@ use self::types::Revocation;
 use super::*;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use std::iter::FromIterator;
-use std::str::FromStr;
 use xassets::ChainT;
 
 impl<B, E, Block, RA>

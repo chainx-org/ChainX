@@ -3,8 +3,8 @@
 //! The ChainX runtime. This can be compiled with ``#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
-#![recursion_limit = "256"]
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
+#![recursion_limit = "512"]
 
 #[cfg(test)]
 #[macro_use]
@@ -67,6 +67,7 @@ pub extern crate xrml_xassets_process as xprocess;
 pub extern crate xrml_xassets_records as xrecords;
 // bridge
 pub extern crate xrml_bridge_bitcoin as bitcoin;
+pub extern crate xrml_bridge_xdot as xdot;
 // staking
 pub extern crate xrml_mining_staking as xstaking;
 pub extern crate xrml_mining_tokens as xtokens;
@@ -203,6 +204,10 @@ impl bitcoin::Trait for Runtime {
     type Event = Event;
 }
 
+impl xdot::Trait for Runtime {
+    type Event = Event;
+}
+
 //impl treasury::Trait for Runtime {
 //    type ApproveOrigin = council_motions::EnsureMembers<_4>;
 //    type RejectOrigin = council_motions::EnsureMembers<_2>;
@@ -320,6 +325,7 @@ construct_runtime!(
         XSpot: xspot,
         // bridge
         XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>,  Event<T>},
+        XBridgeOfXDOT: xdot::{Module, Call, Storage, Config<T>,  Event<T>},
     }
 );
 

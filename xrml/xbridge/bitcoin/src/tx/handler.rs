@@ -1,3 +1,5 @@
+// Copyright 2019 Chainpool
+
 use super::*;
 use keys::DisplayLayout;
 use xaccounts;
@@ -75,15 +77,18 @@ impl<'a> TxHandler<'a> {
         if deposit_balance > 0 {
             let mut deposit_status = false;
             let input_address = tx_info.input_address.clone();
-            <xaccounts::CrossChainAddressMapOf<T>>::get((Chain::Bitcoin, input_address.layout().to_vec()))
-                .map_or_else(
-                    || insert_pending_deposit::<T>(&input_address, txid.clone(), deposit_balance),
-                    |a| {
-                        deposit_token::<T>(&a.0, deposit_balance);
-                        runtime_io::print("[bridge-btc] handle_output deposit_token: ");
-                        deposit_status = true;
-                    },
-                );
+            <xaccounts::CrossChainAddressMapOf<T>>::get((
+                Chain::Bitcoin,
+                input_address.layout().to_vec(),
+            ))
+            .map_or_else(
+                || insert_pending_deposit::<T>(&input_address, txid.clone(), deposit_balance),
+                |a| {
+                    deposit_token::<T>(&a.0, deposit_balance);
+                    runtime_io::print("[bridge-btc] handle_output deposit_token: ");
+                    deposit_status = true;
+                },
+            );
 
             let addr = tx_info.input_address.layout().to_vec();
             runtime_io::print(deposit_balance);
@@ -140,7 +145,10 @@ fn apply_update_binding<T: Trait>(who: T::AccountId, channle_id: T::AccountId, a
             <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, who.clone()), a);
         }
     }
-    <xaccounts::CrossChainAddressMapOf<T>>::insert((Chain::Bitcoin, address), (who.clone(), channle_id));
+    <xaccounts::CrossChainAddressMapOf<T>>::insert(
+        (Chain::Bitcoin, address),
+        (who.clone(), channle_id),
+    );
 }
 
 /// bind account
@@ -174,7 +182,10 @@ fn update_binding<T: Trait>(node_name: Vec<u8>, who: T::AccountId, info: &TxInfo
                         Decode::decode(&mut it.as_slice()).unwrap_or(Default::default());
                     if addr.hash == info.input_address.hash {
                         vaddr.remove(index);
-                        <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, who.clone()), vaddr);
+                        <xaccounts::CrossChainBindOf<T>>::insert(
+                            (Chain::Bitcoin, who.clone()),
+                            vaddr,
+                        );
                         break;
                     }
                 }

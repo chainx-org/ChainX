@@ -57,6 +57,7 @@ xrml-mining-staking = { path = "../xrml/xmining/staking", default-features = fal
 xrml-mining-tokens = { path = "../xrml/xmining/tokens", default-features = false }
 # bridge
 xrml-bridge-bitcoin = {path = "../xrml/xbridge/bitcoin", default-features = false }
+xrml-bridge-xdot = {path = "../xrml/xbridge/xdot", default-features = false }
 # dex
 xrml-xdex-spot = { path = "../xrml/xdex/spot", default-features = false }
 
@@ -115,6 +116,7 @@ std = [
     "xrml-mining-tokens/std",
     # bridge
     "xrml-bridge-bitcoin/std",
+    "xrml-bridge-xdot/std",
     # dex
     "xrml-xdex-spot/std",
 ]
