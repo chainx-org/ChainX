@@ -5,15 +5,18 @@
 #[cfg(feature = "std")]
 use std::fmt;
 
-use super::checked_extrinsic::CheckedExtrinsic;
-use codec::{Decode, Encode, Input};
-use rstd::prelude::*;
-use sr_primitives::generic::Era;
-use sr_primitives::traits::{
-    self, BlockNumberToHash, Checkable, CurrentHeight, Extrinsic, Lookup, MaybeDisplay, Member,
-    SimpleArithmetic,
+use parity_codec::{Decode, Encode, Input};
+use sr_std::prelude::*;
+use sr_primitives::{
+    generic::Era,
+    traits::{
+        self, BlockNumberToHash, Checkable, CurrentHeight, Extrinsic, Lookup, MaybeDisplay, Member,
+        SimpleArithmetic,
+    },
+    verify_encoded_lazy,
 };
-use sr_primitives::verify_encoded_lazy;
+
+use super::checked_extrinsic::CheckedExtrinsic;
 
 const TRANSACTION_VERSION: u8 = 1;
 
@@ -204,13 +207,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use codec::{Decode, Encode};
-    use generic::CheckedExtrinsic;
-    use generic::UncheckedMortalExtrinsic;
-    use sr_primitives::generic::Era;
-    use sr_primitives::traits::{
-        self, BlockNumberToHash, Checkable, CurrentHeight, Extrinsic, Lookup,
-    };
+    use super::*;
 
     struct TestContext;
     impl Lookup for TestContext {

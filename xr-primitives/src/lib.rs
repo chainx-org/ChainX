@@ -6,30 +6,25 @@
 
 #[cfg(feature = "std")]
 extern crate serde;
+extern crate integer_sqrt;
+extern crate num_traits;
 
-#[cfg(all(test, feature = "std"))]
+extern crate parity_codec;
+extern crate sr_io;
+extern crate sr_primitives;
+extern crate sr_std;
+extern crate substrate_primitives;
+
+#[cfg(test)]
 #[macro_use]
 extern crate serde_derive;
-
 #[cfg(test)]
 #[macro_use]
 extern crate parity_codec_derive;
 
-extern crate integer_sqrt;
-extern crate num_traits;
-#[doc(hidden)]
-pub extern crate parity_codec as codec;
-extern crate sr_io as runtime_io;
-extern crate sr_primitives;
-extern crate sr_std as rstd;
-extern crate substrate_primitives;
-
-#[cfg(test)]
-extern crate serde_json;
-
 pub mod generic;
 pub mod traits;
 
-use rstd::prelude::Vec;
+use sr_std::prelude::Vec;
 
 pub type XString = Vec<u8>;

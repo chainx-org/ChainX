@@ -1,8 +1,8 @@
 pub use integer_sqrt::IntegerSquareRoot;
-pub use num_traits::ops::checked::{
-    CheckedAdd, CheckedDiv, CheckedMul, CheckedShl, CheckedShr, CheckedSub,
+pub use num_traits::{
+    ops::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedShl, CheckedShr, CheckedSub},
+    Bounded, One, Zero,
 };
-pub use num_traits::{Bounded, One, Zero};
 
 use sr_primitives::traits::{As, MaybeDisplay, Member, SimpleArithmetic};
 

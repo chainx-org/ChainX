@@ -26,8 +26,8 @@ where
     Acceleration: Member + MaybeDisplay + SimpleArithmetic,
     Call: Member,
 {
-    type Index = Index;
     type AccountId = AccountId;
+    type Index = Index;
     type Call = Call;
 
     fn index(&self) -> Option<&Self::Index> {
@@ -51,8 +51,8 @@ where
     Call: Member,
     Acceleration: Member + MaybeDisplay + SimpleArithmetic + Copy,
 {
-    type Index = Index;
     type AccountId = AccountId;
+    type Index = Index;
     type Call = Call;
     type Acceleration = Acceleration;
 
