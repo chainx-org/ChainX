@@ -43,21 +43,29 @@ impl balances::Trait for Test {
 }
 
 impl consensus::Trait for Test {
-    const NOTE_OFFLINE_POSITION: u32 = 1;
     type Log = DigestItem;
     type SessionKey = UintAuthorityId;
     type InherentOfflineReport = ();
 }
 
 impl timestamp::Trait for Test {
-    const TIMESTAMP_SET_POSITION: u32 = 0;
     type Moment = u64;
     type OnTimestampSet = ();
 }
 
+pub struct MockDeterminator;
+
+impl xrml_xaccounts::IntentionJackpotAccountIdFor<u64> for MockDeterminator {
+    fn accountid_for(_: &u64) -> u64 {
+        1000
+    }
+}
+
 impl xrml_xaccounts::Trait for Test {
     type Event = ();
+    type DetermineIntentionJackpotAccountId = MockDeterminator;
 }
+
 
 impl xassets::Trait for Test {
     type Event = ();
@@ -106,18 +114,15 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     )
     .unwrap();
 
-    r.extend(
-        xassets::GenesisConfig::<Test> {
-            pcx: (b"PlokadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
-            memo_len: 128,
-            // asset, is_psedu_intention, init for account
-            // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
-            asset_list: vec![(btc_asset, true, vec![(3, 100)])],
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
+    // token balance
+    let xdot_asset = Asset::new(
+        b"XDOT".to_vec(),     // token
+        b"XDOT".to_vec(), // token
+        Chain::Ethereum,
+        3,
+        b"XDOT chainx".to_vec(),
+    )
+        .unwrap();
 
     // bridge btc
     r.extend(
@@ -136,6 +141,28 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             trustee_redeem_script: b"52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae".to_vec(),
             _genesis_phantom_data: Default::default(),
         }.build_storage()
+            .unwrap()
+            .0,
+    );
+
+    r.extend(
+        GenesisConfig::<Test> {
+            token_black_list: vec![xdot_asset.token()],
+            _genesis_phantom_data: Default::default(),
+        }.build_storage()
+            .unwrap()
+            .0,
+    );
+
+    r.extend(
+        xassets::GenesisConfig::<Test> {
+            pcx: (b"PlokadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
+            memo_len: 128,
+            // asset, is_psedu_intention, init for account
+            // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
+            asset_list: vec![(btc_asset, true, vec![(3, 100)]), (xdot_asset, true, vec![(3, 100)])],
+        }
+            .build_storage()
             .unwrap()
             .0,
     );
@@ -247,5 +274,34 @@ fn test_check_min_withdrawal() {
             b"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".to_vec(),
             b"".to_vec()
         ));
+    });
+}
+
+
+
+#[test]
+fn test_check_blacklist() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(xassets::Module::<Test>::issue(&b"BTC".to_vec(), &1, 1000));
+
+        // success
+        let origin = system::RawOrigin::Signed(1).into();
+        assert_ok!(Module::<Test>::withdraw(
+            origin,
+            b"BTC".to_vec(),
+            11,
+            b"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".to_vec(),
+            b"".to_vec()
+        ));
+
+        // failed
+        let origin = system::RawOrigin::Signed(1).into();
+        assert_err!(Module::<Test>::withdraw(
+            origin,
+            b"XDOT".to_vec(),
+            11,
+            b"xxx".to_vec(),
+            b"xxx".to_vec()
+        ), "this token is in blacklist");
     });
 }

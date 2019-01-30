@@ -234,8 +234,7 @@ impl bitcoin::Trait for Runtime {
 //}
 
 // cxrml trait
-impl xsystem::Trait for Runtime {
-}
+impl xsystem::Trait for Runtime {}
 
 impl xaccounts::Trait for Runtime {
     type Event = Event;
@@ -311,7 +310,7 @@ construct_runtime!(
         // assets
         XAssets: xassets,
         XAssetsRecords: xrecords::{Module, Storage, Event<T>},
-        XAssetsProcess: xprocess::{Module, Call, Storage},
+        XAssetsProcess: xprocess::{Module, Call, Storage, Config<T>},
         // mining
         XStaking: xstaking,
         XTokens: xtokens::{Module, Call, Storage, Event<T>, Config<T>},

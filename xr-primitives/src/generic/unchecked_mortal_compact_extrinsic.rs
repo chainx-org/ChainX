@@ -21,7 +21,6 @@
 use std::fmt;
 
 use parity_codec::{Compact, Decode, Encode, Input};
-use sr_std::prelude::*;
 use sr_primitives::{
     generic::Era,
     traits::{
@@ -30,6 +29,7 @@ use sr_primitives::{
     },
     verify_encoded_lazy,
 };
+use sr_std::prelude::*;
 
 use super::checked_extrinsic::CheckedExtrinsic;
 

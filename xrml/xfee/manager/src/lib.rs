@@ -175,7 +175,6 @@ mod tests {
     }
 
     impl xsystem::Trait for Test {
-        const XSYSTEM_SET_POSITION: u32 = 1;
     }
 
     pub struct MockDeterminator;

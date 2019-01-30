@@ -49,6 +49,8 @@ extern crate base58;
 #[cfg(test)]
 mod tests;
 
+use rstd::prelude::Vec;
+
 use runtime_primitives::traits::As;
 use runtime_support::dispatch::Result;
 
@@ -65,6 +67,8 @@ decl_module! {
             runtime_io::print("[xassets process withdrawal] withdraw");
             let who = ensure_signed(origin)?;
 
+            Self::check_black_list(&token)?;
+
             Self::verify_addr(&token, &addr, &ext)?;
 
             let min = Self::minimal_withdrawal_value(&token).expect("all token should has minimal withdrawal value");
@@ -80,10 +84,19 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as Withdrawal {
+        TokenBlackList get(token_black_list) config(): Vec<Token>;
     }
 }
 
 impl<T: Trait> Module<T> {
+    fn check_black_list(token: &Token) -> Result {
+        let list = Self::token_black_list();
+        if list.contains(token) {
+            return Err("this token is in blacklist");
+        }
+        Ok(())
+    }
+
     fn verify_addr(token: &Token, addr: &[u8], _ext: &[u8]) -> Result {
         match token.as_slice() {
             <xbitcoin::Module<T> as ChainT>::TOKEN => xbitcoin::Module::<T>::check_addr(&addr, b""),

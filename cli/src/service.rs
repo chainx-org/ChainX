@@ -21,7 +21,7 @@
 extern crate xrml_xsystem;
 
 use chainx_executor;
-use chainx_primitives::{Block, AccountId};
+use chainx_primitives::{AccountId, Block};
 use chainx_runtime::{GenesisConfig, RuntimeApi};
 use client;
 use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
@@ -102,7 +102,7 @@ construct_service_factory! {
 
                         let accountid: AccountId = key.public().as_array_ref().clone().into();
                         service.config.custom.inherent_data_providers
-			                .register_provider(XSystemInherentDataProvider::new(&accountid)).expect("blockproducer set err; qed");
+                            .register_provider(XSystemInherentDataProvider::new(&accountid)).expect("blockproducer set err; qed");
 
                         executor.spawn(start_aura(
                             SlotDuration::get_or_compute(&*client)?,

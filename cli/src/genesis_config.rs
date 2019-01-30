@@ -18,8 +18,8 @@ use chainx_runtime::{
 };
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, Params, SessionConfig,
-    SudoConfig, TimestampConfig, XAssetsConfig, XBridgeOfBTCConfig, XFeeManagerConfig, XSpotConfig,
-    XStakingConfig, XSystemConfig, XTokensConfig,
+    SudoConfig, TimestampConfig, XAssetsConfig, XAssetsProcessConfig, XBridgeOfBTCConfig,
+    XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
 };
 
 use ed25519;
@@ -147,6 +147,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 (xdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 100),(Keyring::Bob.to_raw_public().into(), 100)])
             ],
         }),
+        xprocess: Some(XAssetsProcessConfig {
+            token_black_list: vec![xdot_asset.token()],
+            _genesis_phantom_data: Default::default(),
+        }),
         xstaking: Some(XStakingConfig {
             validator_count: 7,
             minimum_validator_count: 1,
@@ -165,7 +169,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         xspot: Some(XSpotConfig {
             pair_list: vec![(<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),<bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(),9,2,100000,true),
                  // (<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),dot_asset.token().to_vec(),7,2,100000,false),
-                 (xdot_asset.token().to_vec(),<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),4,2,100000,true)
+                 (xdot_asset.token(), <xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),4,2,100000,true)
                 ],
             price_volatility: 10,
         }),
