@@ -64,6 +64,7 @@ use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
 
 use xassets::assetdef::{ChainT, Token};
+use xassets::OnAssetRegisterOrRevoke;
 
 const PRICE_MAX_ORDER: usize = 1000;
 
@@ -237,6 +238,26 @@ decl_storage! {
         });
     }
 
+}
+
+impl<T: Trait> OnAssetRegisterOrRevoke for Module<T> {
+    fn on_register(_token: &Token, _is_psedu_intention: bool) -> Result {
+        Ok(())
+    }
+
+    fn on_revoke(token: &Token) -> Result {
+        let pair_len = <OrderPairLen<T>>::get();
+        for i in 0..pair_len {
+            if let Some(mut pair) = <OrderPairOf<T>>::get(i) {
+                if pair.first.eq(token) || pair.second.eq(token) {
+                    pair.on_line = false;
+                    <OrderPairOf<T>>::insert(i, &pair);
+                    Self::event_pair(&pair);
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<T: Trait> Module<T> {

@@ -118,6 +118,30 @@ impl OnAssetRegisterOrRevoke for () {
     }
 }
 
+impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRevoke for (A, B) {
+    fn on_register(token: &Token, is_psedu_intention: bool) -> Result {
+        let r = A::on_register(token, is_psedu_intention);
+        let r2 = B::on_register(token, is_psedu_intention);
+        if r.is_ok() == false {
+            return r;
+        } else if r2.is_ok() == false {
+            return r2;
+        }
+        Ok(())
+    }
+
+    fn on_revoke(token: &Token) -> Result {
+        let r = A::on_revoke(token);
+        let r2 = B::on_revoke(token);
+        if r.is_ok() == false {
+            return r;
+        } else if r2.is_ok() == false {
+            return r2;
+        }
+        Ok(())
+    }
+}
+
 struct AssetTriggerEventAfter<T: Trait>(::rstd::marker::PhantomData<T>);
 
 impl<T: Trait> AssetTriggerEventAfter<T> {

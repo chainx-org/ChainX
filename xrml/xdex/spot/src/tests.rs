@@ -168,7 +168,7 @@ fn test_order() {
 
         handicapMap = Spot::handicap_map(0).unwrap();
 
-        assert_eq!(handicapMap.buy, 100000 - 1);
+        assert_eq!(handicapMap.buy, 100000 - 10);
         assert_eq!(handicapMap.sell, 200000);
 
         //a 第三笔挂买单

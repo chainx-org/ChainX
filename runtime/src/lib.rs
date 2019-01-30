@@ -250,7 +250,7 @@ impl fee_manager::Trait for Runtime {
 impl xassets::Trait for Runtime {
     type Event = Event;
     type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = xtokens::Module<Runtime>;
+    type OnAssetRegisterOrRevoke = (XTokens, XSpot);
 }
 
 impl xrecords::Trait for Runtime {
@@ -261,8 +261,8 @@ impl xprocess::Trait for Runtime {}
 
 impl xstaking::Trait for Runtime {
     type OnRewardMinted = ();
-    type OnRewardCalculation = xtokens::Module<Runtime>;
-    type OnReward = xtokens::Module<Runtime>;
+    type OnRewardCalculation = XTokens;
+    type OnReward = XTokens;
     type Event = Event;
 }
 
