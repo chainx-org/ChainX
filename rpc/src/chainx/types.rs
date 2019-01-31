@@ -14,7 +14,6 @@ pub struct PageData<T> {
 #[serde(rename_all = "camelCase")]
 pub struct AssetInfo {
     pub name: String,
-    pub is_native: bool,
     pub details: CodecBTreeMap<AssetType, Balance>,
 }
 
@@ -23,12 +22,10 @@ pub struct AssetInfo {
 pub struct TotalAssetInfo {
     name: String,
     token_name: String,
-    is_native: bool,
     chain: Chain,
     precision: u16,
     desc: String,
     online: bool,
-    trustee_addr: String,
     details: CodecBTreeMap<AssetType, Balance>,
 }
 
@@ -52,18 +49,15 @@ impl TotalAssetInfo {
     pub fn new(
         asset: Asset,
         online: bool,
-        trustee: String,
         details: CodecBTreeMap<AssetType, Balance>,
     ) -> TotalAssetInfo {
         TotalAssetInfo {
             name: String::from_utf8_lossy(&asset.token()).into_owned(),
             token_name: String::from_utf8_lossy(&asset.token_name()).into_owned(),
-            is_native: asset.chain() == Chain::ChainX,
             chain: asset.chain(),
             precision: asset.precision(),
             desc: String::from_utf8_lossy(&asset.desc()).into_owned(),
             online,
-            trustee_addr: trustee,
             details,
         }
     }

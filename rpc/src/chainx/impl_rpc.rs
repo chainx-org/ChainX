@@ -52,7 +52,6 @@ where
             .into_iter()
             .map(|(token, map)| AssetInfo {
                 name: String::from_utf8_lossy(&token).into_owned(),
-                is_native: true,
                 details: map,
             })
             .collect();
@@ -92,25 +91,8 @@ where
                 let free_issue = total_issue - other_total;
                 bmap.insert(xassets::AssetType::Free, free_issue);
             }
-            let mut trustee_addr = String::default();
-            if asset.token().as_slice() == xbitcoin::Module::<Runtime>::TOKEN {
-                let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(xassets::Chain::Bitcoin);
-                match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
-                    Some(a) => {
-                        let hot_address =
-                            Address::from_layout(&a.hot_address.as_slice()).unwrap_or_default();
-                        trustee_addr = hot_address.to_string()
-                    }
-                    None => Default::default(),
-                };
-            }
 
-            all_assets.push(TotalAssetInfo::new(
-                asset,
-                valid,
-                trustee_addr,
-                CodecBTreeMap(bmap),
-            ));
+            all_assets.push(TotalAssetInfo::new(asset, valid, CodecBTreeMap(bmap)));
         }
 
         into_pagedata(all_assets, page_index, page_size)
