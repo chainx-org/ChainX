@@ -12,6 +12,10 @@ error_chain! {
             description("not yet implemented"),
             display("Method Not Implemented"),
         }
+        ChainErr {
+            description("Not has this chain id"),
+            display("Not has this chain id"),
+        }
         /// Get certlist failed
         CertNameErr {
             description("Get cert name list failed"),

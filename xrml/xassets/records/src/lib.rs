@@ -41,6 +41,8 @@ extern crate xrml_xsupport as xsupport;
 #[cfg(test)]
 mod tests;
 
+pub mod types;
+
 use codec::Codec;
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;

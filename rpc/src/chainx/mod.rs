@@ -28,7 +28,7 @@ use xr_primitives::generic::b58;
 use xaccounts::{self, IntentionProps};
 use xassets::{self, Asset, AssetType, Chain, Token};
 use xbitcoin::{self, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TxFor, TxInfo};
-use xrecords::{self, Application};
+use xrecords::{self, Application, types::{DepositLog as DL, WithdrawalLog as WL}};
 use xspot::def::{OrderPair, OrderPairID, ID};
 use xspot::{HandicapT, OrderT};
 use xstaking::{self, IntentionProfs};
@@ -43,13 +43,15 @@ pub mod types;
 
 use self::error::Result;
 use self::types::{
-    ApplicationWrapper, AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData,
-    PairInfo, PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo,
-    WithdrawalState,
+    AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData, PairInfo,
+    PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo,
 };
-use chainx::error::ErrorKind::{OrderPairIDErr, PageIndexErr, PageSizeErr, QuotationssPieceErr};
+use chainx::error::ErrorKind::*;
 
 const MAX_PAGE_SIZE: u32 = 100;
+
+type WithdrawalLog = WL<AccountId, Balance, Timestamp>;
+type DepositLog = DL<AccountId, Balance, Timestamp>;
 
 build_rpc_trait! {
     /// ChainX API
@@ -71,11 +73,11 @@ build_rpc_trait! {
         #[rpc(name = "chainx_getMinimalWithdrawalValueByToken")]
         fn minimal_withdrawal_value(&self, String) -> Result<Option<Balance>>;
 
-        #[rpc(name = "chainx_getWithdrawalList")]
-        fn withdrawal_list(&self, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
+        #[rpc(name = "chainx_getDepositList")]
+        fn deposit_list(&self, String, u32, u32) -> Result<Option<PageData<DepositLog>>>;
 
-        #[rpc(name = "chainx_getWithdrawalListByAccount")]
-        fn withdrawal_list_of(&self, AccountId, u32, u32) -> Result<Option<PageData<ApplicationWrapper>>>;
+        #[rpc(name = "chainx_getWithdrawalList")]
+        fn withdrawal_list(&self, String, u32, u32) -> Result<Option<PageData<WithdrawalLog>>>;
 
         #[rpc(name = "chainx_getNominationRecords")]
         fn nomination_records(&self, AccountId) -> Result<Option<Vec<(AccountId, NominationRecord)>>>;
@@ -173,52 +175,52 @@ where
             .unwrap_or(None))
     }
 
-    fn get_asset(
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        token: &Token,
-    ) -> Result<Option<Asset>> {
-        let key = <xassets::AssetInfo<Runtime>>::key_for(token);
-        match Self::pickout::<(Asset, bool, BlockNumber)>(&state, &key)? {
-            Some((info, _, _)) => Ok(Some(info)),
-            None => Ok(None),
-        }
-    }
+    //    fn get_asset(
+    //        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+    //        token: &Token,
+    //    ) -> Result<Option<Asset>> {
+    //        let key = <xassets::AssetInfo<Runtime>>::key_for(token);
+    //        match Self::pickout::<(Asset, bool, BlockNumber)>(&state, &key)? {
+    //            Some((info, _, _)) => Ok(Some(info)),
+    //            None => Ok(None),
+    //        }
+    //    }
 
-    fn get_applications_with_state(
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        v: Vec<Application<AccountId, Balance, Timestamp>>,
-    ) -> Result<Vec<ApplicationWrapper>> {
-        // todo change to runtime?
-        let mut handle = BTreeMap::<Chain, Vec<u32>>::new();
-        // btc
-        let key = xbitcoin::TxProposal::<Runtime>::key();
-        let ids = match Self::pickout::<xbitcoin::CandidateTx>(&state, &key)? {
-            Some(candidate_tx) => candidate_tx.outs,
-            None => vec![],
-        };
-        handle.insert(Chain::Bitcoin, ids);
-
-        let mut applications = vec![];
-        for appl in v {
-            let index = appl.id();
-            let token = appl.token();
-
-            let state = if let Some(info) = Self::get_asset(state, &token)? {
-                match handle.get(&info.chain()) {
-                    Some(list) => {
-                        if list.contains(&index) {
-                            WithdrawalState::Signing
-                        } else {
-                            WithdrawalState::Applying
-                        }
-                    }
-                    None => WithdrawalState::Unknown,
-                }
-            } else {
-                unreachable!("should not reach this branch, the token info must be exists");
-            };
-            applications.push(ApplicationWrapper::new(appl, state));
-        }
-        Ok(applications)
-    }
+    //    fn get_applications_with_state(
+    //        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+    //        v: Vec<Application<AccountId, Balance, Timestamp>>,
+    //    ) -> Result<Vec<ApplicationWrapper>> {
+    //        // todo change to runtime?
+    //        let mut handle = BTreeMap::<Chain, Vec<u32>>::new();
+    //        // btc
+    //        let key = xbitcoin::TxProposal::<Runtime>::key();
+    //        let ids = match Self::pickout::<xbitcoin::CandidateTx>(&state, &key)? {
+    //            Some(candidate_tx) => candidate_tx.outs,
+    //            None => vec![],
+    //        };
+    //        handle.insert(Chain::Bitcoin, ids);
+    //
+    //        let mut applications = vec![];
+    //        for appl in v {
+    //            let index = appl.id();
+    //            let token = appl.token();
+    //
+    //            let state = if let Some(info) = Self::get_asset(state, &token)? {
+    //                match handle.get(&info.chain()) {
+    //                    Some(list) => {
+    //                        if list.contains(&index) {
+    //                            WithdrawalState::Signing
+    //                        } else {
+    //                            WithdrawalState::Applying
+    //                        }
+    //                    }
+    //                    None => WithdrawalState::Unknown,
+    //                }
+    //            } else {
+    //                unreachable!("should not reach this branch, the token info must be exists");
+    //            };
+    //            applications.push(ApplicationWrapper::new(appl, state));
+    //        }
+    //        Ok(applications)
+    //    }
 }

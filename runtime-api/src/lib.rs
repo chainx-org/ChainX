@@ -20,12 +20,14 @@ pub mod xassets_api {
     use chainx_primitives::{AccountId, Balance, Timestamp};
     use client::decl_runtime_apis;
     use rstd::prelude::Vec;
-    use xassets::{AssetType, Memo, Token};
+    use xassets::{Asset, AssetType, Memo, Token};
     use xrecords::AddrStr;
     use xsupport::storage::btree_map::CodecBTreeMap;
     decl_runtime_apis! {
         pub trait XAssetsApi {
             fn valid_assets() -> Vec<Token>;
+
+            fn all_assets() -> Vec<(Asset, bool)>;
 
             fn valid_assets_of(who: AccountId) -> Vec<(Token, CodecBTreeMap<AssetType, Balance>)>;
 

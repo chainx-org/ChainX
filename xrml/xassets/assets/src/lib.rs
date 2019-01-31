@@ -491,13 +491,13 @@ impl<T: Trait> Module<T> {
 
     fn remove_asset(token: &Token) -> Result {
         if let Some(mut info) = AssetInfo::<T>::get(token) {
-            let chain = info.0.chain();
+            // let chain = info.0.chain();
             info.1 = false;
             AssetInfo::<T>::insert(token.clone(), info);
             // remove this token index from AssetList
-            AssetList::<T>::mutate(chain, |v| {
-                v.retain(|i| i != token);
-            });
+            // AssetList::<T>::mutate(chain, |v| {
+            //     v.retain(|i| i != token);
+            // });
 
             Ok(())
         } else {
@@ -525,8 +525,15 @@ impl<T: Trait> Module<T> {
         v
     }
 
-    pub fn native_assets() -> Vec<Token> {
-        Self::asset_list(Chain::ChainX)
+    pub fn all_assets() -> Vec<(Asset, bool)> {
+        let list = Self::assets();
+        let mut v = Vec::new();
+        for token in list {
+            if let Some((asset, valid, _)) = Self::asset_info(token) {
+                v.push((asset, valid))
+            }
+        }
+        v
     }
 
     /// notice don't call this func in runtime

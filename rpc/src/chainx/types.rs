@@ -27,6 +27,7 @@ pub struct TotalAssetInfo {
     chain: Chain,
     precision: u16,
     desc: String,
+    online: bool,
     trustee_addr: String,
     details: CodecBTreeMap<AssetType, Balance>,
 }
@@ -50,6 +51,7 @@ pub struct NominationRecord {
 impl TotalAssetInfo {
     pub fn new(
         asset: Asset,
+        online: bool,
         trustee: String,
         details: CodecBTreeMap<AssetType, Balance>,
     ) -> TotalAssetInfo {
@@ -60,6 +62,7 @@ impl TotalAssetInfo {
             chain: asset.chain(),
             precision: asset.precision(),
             desc: String::from_utf8_lossy(&asset.desc()).into_owned(),
+            online,
             trustee_addr: trustee,
             details,
         }
@@ -154,50 +157,50 @@ pub struct PseduNominationRecord {
     pub last_total_deposit_weight_update: BlockNumber,
 }
 
-#[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
+//#[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
+////#[serde(rename_all = "camelCase")]
+//pub enum WithdrawalState {
+//    Applying,
+//    Signing,
+//    Unknown,
+//}
+
+//impl Default for WithdrawalState {
+//    fn default() -> Self {
+//        WithdrawalState::Applying
+//    }
+//}
+//
+//#[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
 //#[serde(rename_all = "camelCase")]
-pub enum WithdrawalState {
-    Applying,
-    Signing,
-    Unknown,
-}
-
-impl Default for WithdrawalState {
-    fn default() -> Self {
-        WithdrawalState::Applying
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct ApplicationWrapper {
-    id: u32,
-    applicant: AccountId,
-    token: String,
-    balance: Balance,
-    addr: String,
-    ext: String,
-    time: Timestamp,
-    state: WithdrawalState,
-}
-
-impl ApplicationWrapper {
-    pub fn new(
-        appl: Application<AccountId, Balance, Timestamp>,
-        state: WithdrawalState,
-    ) -> ApplicationWrapper {
-        ApplicationWrapper {
-            id: appl.id(),
-            applicant: appl.applicant(),
-            token: String::from_utf8_lossy(&appl.token()).into_owned(),
-            balance: appl.balance(),
-            addr: String::from_utf8_lossy(&appl.addr()).into_owned(),
-            ext: String::from_utf8_lossy(&appl.ext()).into_owned(),
-            time: appl.time(),
-            state,
-        }
-    }
-}
+//pub struct ApplicationWrapper {
+//    id: u32,
+//    applicant: AccountId,
+//    token: String,
+//    balance: Balance,
+//    addr: String,
+//    ext: String,
+//    time: Timestamp,
+//    state: WithdrawalState,
+//}
+//
+//impl ApplicationWrapper {
+//    pub fn new(
+//        appl: Application<AccountId, Balance, Timestamp>,
+//        state: WithdrawalState,
+//    ) -> ApplicationWrapper {
+//        ApplicationWrapper {
+//            id: appl.id(),
+//            applicant: appl.applicant(),
+//            token: String::from_utf8_lossy(&appl.token()).into_owned(),
+//            balance: appl.balance(),
+//            addr: String::from_utf8_lossy(&appl.addr()).into_owned(),
+//            ext: String::from_utf8_lossy(&appl.ext()).into_owned(),
+//            time: appl.time(),
+//            state,
+//        }
+//    }
+//}
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

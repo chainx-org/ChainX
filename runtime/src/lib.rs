@@ -436,6 +436,10 @@ impl_runtime_apis! {
             XAssets::valid_assets()
         }
 
+        fn all_assets() -> Vec<(xassets::Asset, bool)> {
+            XAssets::all_assets()
+        }
+
         fn valid_assets_of(who: AccountId) -> Vec<(xassets::Token, xsupport::storage::btree_map::CodecBTreeMap<xassets::AssetType, Balance>)> {
             XAssets::valid_assets_of(&who)
         }

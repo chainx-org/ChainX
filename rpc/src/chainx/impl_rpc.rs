@@ -61,34 +61,28 @@ where
 
     fn assets(&self, page_index: u32, page_size: u32) -> Result<Option<PageData<TotalAssetInfo>>> {
         let b = self.best_number()?;
-        let tokens: Result<Vec<Token>> = self
+        let assets: Result<Vec<(Asset, bool)>> = self
             .client
             .runtime_api()
-            .valid_assets(&b)
+            .all_assets(&b)
             .map_err(|e| e.into());
-        let tokens = tokens?;
+        let assets = assets?;
 
         let state = self.best_state()?;
 
-        let mut assets = Vec::new();
+        let mut all_assets = Vec::new();
 
-        for token in tokens.into_iter() {
+        for (asset, valid) in assets.into_iter() {
             let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
                 xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
             );
 
-            let key = <xassets::TotalAssetBalance<Runtime>>::key_for(token.as_ref());
+            let key = <xassets::TotalAssetBalance<Runtime>>::key_for(asset.token().as_ref());
             if let Some(info) = Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)? {
                 bmap.extend(info.0.iter());
             }
-
-            let asset = match Self::get_asset(&state, &token)? {
-                Some(info) => info,
-                None => unreachable!("should not reach this branch, the token info must be exists"),
-            };
-
             // PCX free balance
-            if token.as_slice() == xassets::Module::<Runtime>::TOKEN {
+            if asset.token().as_slice() == xassets::Module::<Runtime>::TOKEN {
                 let key = <balances::TotalIssuance<Runtime>>::key();
                 let total_issue = Self::pickout::<Balance>(&state, &key)?.unwrap_or(Zero::zero());
                 let other_total: Balance = bmap
@@ -99,7 +93,7 @@ where
                 bmap.insert(xassets::AssetType::Free, free_issue);
             }
             let mut trustee_addr = String::default();
-            if token.as_slice() == xbitcoin::Module::<Runtime>::TOKEN {
+            if asset.token().as_slice() == xbitcoin::Module::<Runtime>::TOKEN {
                 let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(xassets::Chain::Bitcoin);
                 match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
                     Some(a) => {
@@ -111,14 +105,15 @@ where
                 };
             }
 
-            assets.push(TotalAssetInfo::new(
+            all_assets.push(TotalAssetInfo::new(
                 asset,
+                valid,
                 trustee_addr,
                 CodecBTreeMap(bmap),
             ));
         }
 
-        into_pagedata(assets, page_index, page_size)
+        into_pagedata(all_assets, page_index, page_size)
     }
 
     fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<String>> {
@@ -160,62 +155,52 @@ where
             .map_err(|e| e.into())
     }
 
-    fn withdrawal_list(
+    fn deposit_list(
         &self,
+        chain: String,
         page_index: u32,
         page_size: u32,
-    ) -> Result<Option<PageData<ApplicationWrapper>>> {
-        let mut v = vec![];
+    ) -> Result<Option<PageData<DepositLog>>> {
+        let c = serde_json::from_str::<Chain>(chain.as_str()).map_err(|_| ChainErr)?;
+
         let best_number = self.best_number()?;
         let state = self.best_state()?;
-        for c in xassets::Chain::iterator() {
-            let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
-                .client
-                .runtime_api()
-                .withdrawal_list_of(&best_number, *c)
-                .map_err(|e| e.into());
-
-            let list = list?;
-            let applications = Self::get_applications_with_state(&state, list)?;
-            v.extend(applications);
+        match c {
+            Chain::Bitcoin => {
+                let list = vec![];
+                //                let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
+                //                    .client
+                //                    .runtime_api()
+                //                    .withdrawal_list(&best_number, *c)
+                //                    .map_err(|e| e.into());
+                into_pagedata(list, page_index, page_size)
+            }
+            _ => return Ok(None),
         }
-
-        into_pagedata(v, page_index, page_size)
     }
 
-    fn withdrawal_list_of(
+    fn withdrawal_list(
         &self,
-        who: AccountId,
+        chain: String,
         page_index: u32,
         page_size: u32,
-    ) -> Result<Option<PageData<ApplicationWrapper>>> {
-        let mut v = vec![];
-        let b = self.best_number()?;
-        for c in xassets::Chain::iterator() {
-            let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
-                .client
-                .runtime_api()
-                .withdrawal_list_of(&b, *c)
-                .map_err(|e| e.into());
-            let list = list?;
-            v.extend(list);
-        }
+    ) -> Result<Option<PageData<WithdrawalLog>>> {
+        let c = serde_json::from_str::<Chain>(chain.as_str()).map_err(|_| ChainErr)?;
 
-        //        let mut handle = BTreeMap::<Chain, Vec<u32>>::new();
-        //        // btc
-        //        let key = xbitcoin::TxProposal::<Runtime>::key();
-        //        let ids = match Self::pickout::<xbitcoin::CandidateTx>(&state, &key)? {
-        //            Some(candidate_tx) => candidate_tx.outs,
-        //            None => vec![],
-        //        };
-        //        handle.insert(Chain::Bitcoin, ids);
-
-        let v = v.into_iter().filter(|r| r.applicant() == who).collect();
-
+        let best_number = self.best_number()?;
         let state = self.best_state()?;
-        let applications = Self::get_applications_with_state(&state, v)?;
-
-        into_pagedata(applications, page_index, page_size)
+        match c {
+            Chain::Bitcoin => {
+                let list = vec![];
+                //                let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
+                //                    .client
+                //                    .runtime_api()
+                //                    .withdrawal_list(&best_number, *c)
+                //                    .map_err(|e| e.into());
+                into_pagedata(list, page_index, page_size)
+            }
+            _ => return Ok(None),
+        }
     }
 
     fn nomination_records(
