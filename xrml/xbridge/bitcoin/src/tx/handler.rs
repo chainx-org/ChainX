@@ -27,7 +27,7 @@ impl<'a> TxHandler<'a> {
                     flag = true;
                     let txid = candidate.tx.hash();
                     for number in candidate.outs.iter() {
-                        runtime_io::print(*number as u64);
+                        runtime_io::print(u64::from(*number));
                         runtime_io::print(&txid[..]);
 
                         <xrecords::Module<T>>::withdrawal_finish(*number, true)?;
@@ -66,7 +66,7 @@ impl<'a> TxHandler<'a> {
             }
 
             // get deposit money
-            let script_addresses = into_script.extract_destinations().unwrap_or(Vec::new());
+            let script_addresses = into_script.extract_destinations().unwrap_or_default();
             if script_addresses.len() == 1 {
                 if (trustee_address.hash == script_addresses[0].hash) && (output.value > 0) {
                     deposit_balance += output.value;
@@ -105,7 +105,7 @@ impl<'a> TxHandler<'a> {
 /// Try updating the binding address, remove pending deposit if the updating goes well.
 fn handle_opreturn<T: Trait>(script: &[u8], info: &TxInfo) {
     if let Some(a) = Extracter::<T::AccountId>::new(script.to_vec()).account_info() {
-        if update_binding::<T>(a.0, a.1.clone(), info) {
+        if update_binding::<T>(a.0.as_slice(), a.1.clone(), info) {
             runtime_io::print("[bridge-btc] handle_output register ");
             remove_pending_deposit::<T>(&info.input_address, &a.1);
         }
@@ -130,35 +130,18 @@ fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result {
     Err("The transaction text does not match the original text to be signed.")
 }
 
-/// Actually update the binding address of original transactor.
-fn apply_update_binding<T: Trait>(who: T::AccountId, channle_id: T::AccountId, address: Vec<u8>) {
-    //let chain_id = Module::<T>::chain();
-
-    match <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, who.clone())) {
-        Some(mut a) => {
-            a.push(address.clone());
-            <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, who.clone()), a);
-        }
-        None => {
-            let mut a = Vec::new();
-            a.push(address.clone());
-            <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, who.clone()), a);
-        }
-    }
-    <xaccounts::CrossChainAddressMapOf<T>>::insert(
-        (Chain::Bitcoin, address),
-        (who.clone(), channle_id),
-    );
-}
-
 /// bind account
-fn update_binding<T: Trait>(node_name: Vec<u8>, who: T::AccountId, info: &TxInfo) -> bool {
+fn update_binding<T: Trait>(node_name: &[u8], who: T::AccountId, info: &TxInfo) -> bool {
     let input_addr = info.input_address.layout().to_vec();
+    let channle_id = <xaccounts::IntentionOf<T>>::get(node_name.to_vec()).unwrap_or_default();
     <xaccounts::CrossChainAddressMapOf<T>>::get((Chain::Bitcoin, input_addr.clone())).map_or_else(
         || {
-            let channle_id =
-                <xaccounts::IntentionOf<T>>::get(node_name.clone()).unwrap_or_default();
-            apply_update_binding::<T>(who.clone(), channle_id.clone(), input_addr.clone());
+            xaccounts::apply_update_binding::<T>(
+                who.clone(),
+                input_addr.clone(),
+                node_name.to_vec(),
+                Chain::Bitcoin,
+            );
             let addr = info.input_address.layout().to_vec();
             Module::<T>::deposit_event(RawEvent::Bind(
                 info.raw_tx.hash(),
@@ -166,11 +149,9 @@ fn update_binding<T: Trait>(node_name: Vec<u8>, who: T::AccountId, info: &TxInfo
                 who.clone(),
                 BindStatus::Init,
             ));
-            return true;
+            true
         },
         |p| {
-            let channle_id =
-                <xaccounts::IntentionOf<T>>::get(node_name.clone()).unwrap_or_default();
             if p.0 == who.clone() && p.1 == channle_id.clone() {
                 return false;
             }
@@ -178,8 +159,10 @@ fn update_binding<T: Trait>(node_name: Vec<u8>, who: T::AccountId, info: &TxInfo
             if let Some(a) = <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, p.0)) {
                 let mut vaddr = a.clone();
                 for (index, it) in a.iter().enumerate() {
-                    let addr: Address =
-                        Decode::decode(&mut it.as_slice()).unwrap_or(Default::default());
+                    let addr = match Address::from_layout(&it.as_slice()) {
+                        Ok(a) => a,
+                        Err(_) => return false,
+                    };
                     if addr.hash == info.input_address.hash {
                         vaddr.remove(index);
                         <xaccounts::CrossChainBindOf<T>>::insert(
@@ -190,7 +173,12 @@ fn update_binding<T: Trait>(node_name: Vec<u8>, who: T::AccountId, info: &TxInfo
                     }
                 }
             };
-            apply_update_binding::<T>(who.clone(), channle_id, input_addr.clone());
+            xaccounts::apply_update_binding::<T>(
+                who.clone(),
+                input_addr.clone(),
+                node_name.to_vec(),
+                Chain::Bitcoin,
+            );
             let addr = info.input_address.layout().to_vec();
             Module::<T>::deposit_event(RawEvent::Bind(
                 info.raw_tx.hash(),
@@ -198,7 +186,7 @@ fn update_binding<T: Trait>(node_name: Vec<u8>, who: T::AccountId, info: &TxInfo
                 who.clone(),
                 BindStatus::Update,
             ));
-            return true;
+            true
         },
     )
 }

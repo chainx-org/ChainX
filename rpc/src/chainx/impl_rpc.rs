@@ -97,8 +97,8 @@ where
                 let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(xassets::Chain::Bitcoin);
                 match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
                     Some(a) => {
-                        let hot_address: Address = Decode::decode(&mut a.hot_address.as_slice())
-                            .unwrap_or(Default::default());
+                        let hot_address =
+                            Address::from_layout(&a.hot_address.as_slice()).unwrap_or_default();
                         trustee_addr = hot_address.to_string()
                     }
                     None => Default::default(),
@@ -621,8 +621,8 @@ where
         let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(xassets::Chain::Bitcoin);
         let trustee = match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
             Some(a) => {
-                let hot_address: Address =
-                    Decode::decode(&mut a.hot_address.as_slice()).unwrap_or(Default::default());
+                let hot_address = Address::from_layout(&a.hot_address.as_slice())
+                    .map_err(|_| "Invalid Address")?;
                 hot_address
             }
             None => return into_pagedata(records, page_index, page_size),
@@ -666,13 +666,14 @@ where
         into_pagedata(records, page_index, page_size)
     }
 
-    fn address(&self, who: AccountId) -> Result<Option<Vec<String>>> {
+    fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>> {
         let state = self.best_state()?;
         let mut v = vec![];
-        let key = <xaccounts::CrossChainBindOf<Runtime>>::key_for((Chain::Bitcoin, who));
-        match Self::pickout::<Vec<Address>>(&state, &key)? {
+        let key = <xaccounts::CrossChainBindOf<Runtime>>::key_for((chain, who));
+        match Self::pickout::<Vec<Vec<u8>>>(&state, &key)? {
             Some(addrs) => {
-                for a in addrs {
+                for addr in addrs {
+                    let a = Address::from_layout(&addr.as_slice()).unwrap_or_default();
                     v.push(a.to_string());
                 }
                 Ok(Some(v))
@@ -692,7 +693,7 @@ fn get_deposit_info(
     let mut ops = String::new();
     let mut balance = 0;
     let mut flag = bind_list.iter().any(|a| {
-        let addr: Address = Decode::decode(&mut a.as_slice()).unwrap_or(Default::default());
+        let addr = Address::from_layout(&a.as_slice()).unwrap_or_default();
         addr.hash == info.input_address.hash
     });
     for output in raw_tx.outputs.iter() {
@@ -700,7 +701,7 @@ fn get_deposit_info(
         let into_script: Script = script.clone().into();
         let s: Script = script.clone().into();
         if into_script.is_null_data_script() {
-            let data = s.extract_rear(':');
+            let data = s.extract_pre('@');
             match b58::from(data.to_vec()) {
                 Ok(mut slice) => {
                     let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice())

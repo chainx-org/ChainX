@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool.
+// Copyright 2019 Chainpool.
 
 //! this module is for chainx accounts
 
@@ -39,8 +39,7 @@ extern crate xrml_xassets_assets as xassets;
 
 use rstd::prelude::*;
 use runtime_primitives::traits::Hash;
-use runtime_support::dispatch::Result;
-
+use runtime_support::{dispatch::Result, StorageMap};
 use xassets::Chain;
 use xr_primitives::XString;
 
@@ -185,4 +184,26 @@ pub fn is_valid_url<T: Trait>(url: &[u8]) -> Result {
         return Err("Only numbers, letters and . are allowed.");
     }
     Ok(())
+}
+
+/// Actually update the binding address of original transactor.
+pub fn apply_update_binding<T: Trait>(
+    who: T::AccountId,
+    address: Vec<u8>,
+    node_name: Vec<u8>,
+    chain: Chain,
+) {
+    let channle_id = <IntentionOf<T>>::get(node_name).unwrap_or_default();
+    match <CrossChainBindOf<T>>::get((chain, who.clone())) {
+        Some(mut a) => {
+            a.push(address.clone());
+            <CrossChainBindOf<T>>::insert((chain, who.clone()), a);
+        }
+        None => {
+            let mut a = Vec::new();
+            a.push(address.clone());
+            <CrossChainBindOf<T>>::insert((chain, who.clone()), a);
+        }
+    }
+    <CrossChainAddressMapOf<T>>::insert((chain, address), (who.clone(), channle_id));
 }

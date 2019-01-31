@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool.
+// Copyright 2019 Chainpool.
 
 use rstd::cmp;
 use rstd::result::Result as StdResult;
@@ -169,8 +169,12 @@ pub fn work_required_retarget<T: Trait>(
 pub fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, p: &Params) -> u32 {
     // subtract unsigned 32 bit numbers in signed 64 bit space in
     // order to prevent underflow before applying the range constraint.
-    let timespan = last_timestamp as i64 - retarget_timestamp as i64;
-    range_constrain(timespan, p.min_timespan as i64, p.max_timespan as i64) as u32
+    let timespan = last_timestamp as i64 - i64::from(retarget_timestamp);
+    range_constrain(
+        timespan,
+        i64::from(p.min_timespan),
+        i64::from(p.max_timespan),
+    ) as u32
 }
 
 fn range_constrain(value: i64, min: i64, max: i64) -> i64 {

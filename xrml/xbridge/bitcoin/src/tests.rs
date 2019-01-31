@@ -1,13 +1,15 @@
-// Copyright 2018 Chainpool.
+// Copyright 2019 Chainpool.
 
 extern crate base58;
 extern crate hex;
+extern crate rustc_hex;
 extern crate sr_primitives;
 extern crate srml_consensus as consensus;
 use self::base58::FromBase58;
 use self::hex::FromHex;
-use self::hex::ToHex;
+//use self::rustc_hex::FromHex;
 use self::keys::DisplayLayout;
+use self::rustc_hex::ToHex;
 use super::*;
 use crypto::dhash160;
 use runtime_io;
@@ -61,12 +63,19 @@ impl timestamp::Trait for Test {
     type OnTimestampSet = ();
 }
 
-impl xsystem::Trait for Test {
-    const XSYSTEM_SET_POSITION: u32 = 0;
+impl xsystem::Trait for Test {}
+
+pub struct MockDeterminator;
+
+impl xaccounts::IntentionJackpotAccountIdFor<u64> for MockDeterminator {
+    fn accountid_for(_: &u64) -> u64 {
+        1000
+    }
 }
 
 impl xaccounts::Trait for Test {
     type Event = ();
+    type DetermineIntentionJackpotAccountId = MockDeterminator;
 }
 
 impl xrecords::Trait for Test {
@@ -93,31 +102,39 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     r.extend(
         GenesisConfig::<Test> {
             // start genesis block: (genesis, blocknumber)
-            genesis: (BlockHeader {
-                version: 536870912,
-                previous_header_hash: H256::from_reversed_str("00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01"),
-                merkle_root_hash: H256::from_reversed_str("815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707"),
-                time: 1546999089,
-                bits: Compact::new(436290411),
-                nonce: 562223693,
-            }, 1451572),
-            params_info: Params::new(520159231, // max_bits
-                                     2 * 60 * 60,  // block_max_future
-                                     3,  // max_fork_route_preset
-                                     2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
-                                     10 * 60,  // target_spacing_seconds
-                                     4), // retargeting_factor
+            genesis: (
+                BlockHeader {
+                    version: 536870912,
+                    previous_header_hash: H256::from_reversed_str(
+                        "00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01",
+                    ),
+                    merkle_root_hash: H256::from_reversed_str(
+                        "815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707",
+                    ),
+                    time: 1546999089,
+                    bits: Compact::new(436290411),
+                    nonce: 562223693,
+                },
+                1451572,
+            ),
+            params_info: Params::new(
+                520159231,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                3,                    // max_fork_route_preset
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,
+            ), // retargeting_factor
             network_id: 1,
             irr_block: 3,
             reserved: 2100,
             btc_fee: 1000,
             max_withdraw_amount: 100,
-            trustee_address: keys::Address::from_layout(&"2MtAUgQmdobnz2mu8zRXGSTwUv9csWcNwLU".from_base58().unwrap()).unwrap(),
-            trustee_redeem_script: b"52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae".to_vec(),
             _genesis_phantom_data: Default::default(),
-        }.build_storage()
-            .unwrap()
-            .0,
+        }
+        .build_storage()
+        .unwrap()
+        .0,
     );
     r.into()
 }
@@ -132,31 +149,39 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
     r.extend(
         GenesisConfig::<Test> {
             // start genesis block: (genesis, blocknumber)
-            genesis: (BlockHeader {
-                version: 536870912,
-                previous_header_hash: H256::from_reversed_str("00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01"),
-                merkle_root_hash: H256::from_reversed_str("815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707"),
-                time: 1546999089,
-                bits: Compact::new(436290411),
-                nonce: 562223693,
-            }, 1451572),
-            params_info: Params::new(520159231, // max_bits
-                                     2 * 60 * 60,  // block_max_future
-                                     3,  // max_fork_route_preset
-                                     2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
-                                     10 * 60,  // target_spacing_seconds
-                                     4), // retargeting_factor
+            genesis: (
+                BlockHeader {
+                    version: 536870912,
+                    previous_header_hash: H256::from_reversed_str(
+                        "00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01",
+                    ),
+                    merkle_root_hash: H256::from_reversed_str(
+                        "815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707",
+                    ),
+                    time: 1546999089,
+                    bits: Compact::new(436290411),
+                    nonce: 562223693,
+                },
+                1451572,
+            ),
+            params_info: Params::new(
+                520159231,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                3,                    // max_fork_route_preset
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,
+            ), // retargeting_factor
             network_id: 1,
             irr_block: 3,
             reserved: 2100,
             btc_fee: 1000,
             max_withdraw_amount: 100,
-            trustee_address: keys::Address::from_layout(&"2MtAUgQmdobnz2mu8zRXGSTwUv9csWcNwLU".from_base58().unwrap()).unwrap(),
-            trustee_redeem_script: b"52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae".to_vec(),
             _genesis_phantom_data: Default::default(),
-        }.build_storage()
-            .unwrap()
-            .0,
+        }
+        .build_storage()
+        .unwrap()
+        .0,
     );
     r.into()
 }
@@ -475,31 +500,39 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
     r.extend(
         GenesisConfig::<Test> {
             // start genesis block: (genesis, blocknumber)
-            genesis: (BlockHeader {
-                version: 536870912,
-                previous_header_hash: H256::from_reversed_str("00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01"),
-                merkle_root_hash: H256::from_reversed_str("815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707"),
-                time: 1546999089,
-                bits: Compact::new(436290411),
-                nonce: 562223693,
-            }, 1451572),
-            params_info: Params::new(520159231, // max_bits
-                                     2 * 60 * 60,  // block_max_future
-                                     3,  // max_fork_route_preset
-                                     2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
-                                     10 * 60,  // target_spacing_seconds
-                                     4), // retargeting_factor
+            genesis: (
+                BlockHeader {
+                    version: 536870912,
+                    previous_header_hash: H256::from_reversed_str(
+                        "00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01",
+                    ),
+                    merkle_root_hash: H256::from_reversed_str(
+                        "815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707",
+                    ),
+                    time: 1546999089,
+                    bits: Compact::new(436290411),
+                    nonce: 562223693,
+                },
+                1451572,
+            ),
+            params_info: Params::new(
+                520159231,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                3,                    // max_fork_route_preset
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,
+            ), // retargeting_factor
             network_id: 1,
             irr_block: 3,
             reserved: 2100,
             btc_fee: 1000,
             max_withdraw_amount: 100,
-            trustee_address: keys::Address::from_layout(&"2MtAUgQmdobnz2mu8zRXGSTwUv9csWcNwLU".from_base58().unwrap()).unwrap(),
-            trustee_redeem_script: b"52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae".to_vec(),
             _genesis_phantom_data: Default::default(),
-        }.build_storage()
-            .unwrap()
-            .0,
+        }
+        .build_storage()
+        .unwrap()
+        .0,
     );
     r.into()
 }
@@ -539,31 +572,39 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
     r.extend(
         GenesisConfig::<Test> {
             // start genesis block: (genesis, blocknumber)
-            genesis: (BlockHeader {
-                version: 536870912,
-                previous_header_hash: H256::from_reversed_str("00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01"),
-                merkle_root_hash: H256::from_reversed_str("815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707"),
-                time: 1546999089,
-                bits: Compact::new(436290411),
-                nonce: 562223693,
-            }, 1451572),
-            params_info: Params::new(520159231, // max_bits
-                                     2 * 60 * 60,  // block_max_future
-                                     3,  // max_fork_route_preset
-                                     2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
-                                     10 * 60,  // target_spacing_seconds
-                                     4), // retargeting_factor
+            genesis: (
+                BlockHeader {
+                    version: 536870912,
+                    previous_header_hash: H256::from_reversed_str(
+                        "00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01",
+                    ),
+                    merkle_root_hash: H256::from_reversed_str(
+                        "815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707",
+                    ),
+                    time: 1546999089,
+                    bits: Compact::new(436290411),
+                    nonce: 562223693,
+                },
+                1451572,
+            ),
+            params_info: Params::new(
+                520159231,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                3,                    // max_fork_route_preset
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,
+            ), // retargeting_factor
             network_id: 1,
             irr_block: 3,
             reserved: 2100,
             btc_fee: 1000,
             max_withdraw_amount: 100,
-            trustee_address: keys::Address::from_layout(&"2MtAUgQmdobnz2mu8zRXGSTwUv9csWcNwLU".from_base58().unwrap()).unwrap(),
-            trustee_redeem_script: b"52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae".to_vec(),
             _genesis_phantom_data: Default::default(),
-        }.build_storage()
-            .unwrap()
-            .0,
+        }
+        .build_storage()
+        .unwrap()
+        .0,
     );
     r.into()
 }
@@ -663,24 +704,44 @@ fn create_multi_address(pubkeys: Vec<Vec<u8>>) -> Address {
 }
 
 #[test]
-fn test_create_multi_address_by_vec() {
+fn test_create_multi_address() {
+    let pubkey1_bytes =
+        hex::decode("0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40").unwrap();
+    let pubkey2_bytes =
+        hex::decode("02e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2").unwrap();
+    let pubkey3_bytes =
+        hex::decode("023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d").unwrap();
+    let mut hot_keys = Vec::new();
+    let mut cold_keys = Vec::new();
+    hot_keys.push(pubkey1_bytes.clone());
+    hot_keys.push(pubkey2_bytes.clone());
+    hot_keys.push(pubkey3_bytes.clone());
+    cold_keys.push(pubkey1_bytes);
+    cold_keys.push(pubkey2_bytes);
+    cold_keys.push(pubkey3_bytes);
+    let hot_addr = create_multi_address(hot_keys);
+    let cold_addr = create_multi_address(cold_keys);
+
+    assert_eq!(hot_addr, cold_addr);
+
+    let layout_addr = cold_addr.layout().to_vec();
+    let layout = [
+        196, 10, 18, 79, 99, 6, 23, 210, 211, 220, 115, 137, 86, 4, 75, 195, 77, 76, 168, 39, 29,
+        191, 246, 217, 153,
+    ];
+
+    assert_eq!(layout_addr, layout);
+
+    let addr = Address::from_layout(&mut layout_addr.as_slice()).unwrap();
+
+    assert_eq!(cold_addr, addr);
+
     let pks = [
         169, 20, 10, 18, 79, 99, 6, 23, 210, 211, 220, 115, 137, 86, 4, 75, 195, 77, 76, 168, 39,
         29, 135,
     ];
-    let pub1 = String::from("0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40");
-    let pub2 = String::from("02e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2");
-    let pub3 = String::from("023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d");
 
-    let pubkey1_bytes = hex::decode(pub1).unwrap();
-    let pubkey2_bytes = hex::decode(pub2).unwrap();
-    let pubkey3_bytes = hex::decode(pub3).unwrap();
-    let mut pubkeys = Vec::new();
-    pubkeys.push(pubkey1_bytes);
-    pubkeys.push(pubkey2_bytes);
-    pubkeys.push(pubkey3_bytes);
-    let a = create_multi_address(pubkeys);
-    let pk = a.hash.clone().to_vec();
+    let pk = addr.hash.clone().to_vec();
     let mut pubkeys = Vec::new();
     pubkeys.push(Opcode::OP_HASH160 as u8);
     pubkeys.push(Opcode::OP_PUSHBYTES_20 as u8);
@@ -689,4 +750,17 @@ fn test_create_multi_address_by_vec() {
     }
     pubkeys.push(Opcode::OP_EQUAL as u8);
     assert_eq!(pubkeys, pks);
+}
+
+#[test]
+fn test_accountid() {
+    let acc_btc = H256::from("f4a03666cceb90cb1d50c7d17e87da34fee209550d65c7622c924e82c95aee43");
+    let acc_xiaomi = H256::from("10bffec4d267786994ee83bf76f4490ad33ce68f320dbb6403c3d1b1c96eb1ca");
+    let acc_zte = H256::from("1d7dcb4d81134b6103d0a21423e7fb7bbd3d17256c195263285cc8457d6cb714");
+    let mut init = Vec::new();
+    init.push(acc_btc);
+    init.push(acc_xiaomi);
+    init.push(acc_zte);
+    println!("init[0] {:?}", init[0]);
+    println!("init {:?}", init);
 }

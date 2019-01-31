@@ -12,6 +12,7 @@ extern crate parity_codec as codec;
 extern crate sr_primitives;
 extern crate sr_std as rstd;
 extern crate srml_balances as balances;
+extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_records as xrecords;
 #[cfg(test)]
@@ -44,7 +45,7 @@ impl<T: Trait> ChainT for Module<T> {
 }
 
 /// Configuration trait.
-pub trait Trait: xassets::Trait + xrecords::Trait {
+pub trait Trait: xassets::Trait + xrecords::Trait + xaccounts::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -112,7 +113,7 @@ fn contains(lvec: Vec<u8>, svec: Vec<u8>) -> Option<Vec<u8>> {
         }
         op_vec.remove(0);
     }
-    return None;
+    None
 }
 
 fn deposit_token<T: Trait>(who: &T::AccountId, balance: T::Balance) {
@@ -131,7 +132,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             let input = contains(sign_data.clone(), input_data).ok_or("sign_data not contains input_data")?;
-            let (_node_name, who) = Extracter::<T::AccountId>::new(input).account_info().ok_or("extracter account_id error")?;
+            let (node_name, who) = Extracter::<T::AccountId>::new(input).account_info().ok_or("extracter account_id error")?;
 
             let signer = eth_recover(&ethereum_signature, &sign_data).ok_or("Invalid Ethereum signature")?;
 
@@ -145,7 +146,7 @@ decl_module! {
             });
             deposit_token::<T>(&who, balance_due);
 
-            // To do: bind xaccount (signer, _node_name, who)
+            xaccounts::apply_update_binding::<T>(who, signer.to_vec(), node_name, ChainDef::Ethereum);
             // Let's deposit an event to let the outside world know this happened.
             Self::deposit_event(RawEvent::Claimed(sender, signer, balance_due));
         }

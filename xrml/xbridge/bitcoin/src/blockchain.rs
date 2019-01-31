@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool.
+// Copyright 2019 Chainpool.
 
 use primitives::hash::H256;
 use rstd::marker::PhantomData;

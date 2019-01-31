@@ -1,6 +1,6 @@
 use super::*;
 
-use super::keys::Public;
+use super::keys::{DisplayLayout, Public};
 use super::{
     Bytes, Result, Script, SignatureChecker, SignatureVersion, StorageMap, Trait, Transaction,
     TransactionInputSigner, TransactionSignatureChecker,
@@ -96,8 +96,8 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &B
 pub fn handle_condidate<T: Trait>(tx: Transaction) -> Result {
     let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
         .ok_or("Should set RECEIVE_address first.")?;
-    let hot_address: Address =
-        Decode::decode(&mut trustee_address.hot_address.as_slice()).unwrap_or(Default::default());
+    let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
+        .map_err(|_| "Invalid Address")?;
     let pk = hot_address.hash.clone().to_vec();
     let mut script_pubkey = Bytes::new();
     script_pubkey.push(Opcode::OP_HASH160 as u8);
@@ -125,7 +125,7 @@ pub fn handle_condidate<T: Trait>(tx: Transaction) -> Result {
                 break;
             }
         }
-        if verify == false {
+        if !verify {
             return Err("Verify sign error");
         }
     }

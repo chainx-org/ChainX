@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool.
+// Copyright 2019 Chainpool.
 
 //! this module is for btc-bridge
 
@@ -333,8 +333,7 @@ decl_module! {
 
             let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("parse RelayTx err")?;
             let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin).ok_or("Should set RECEIVE_address first.")?;
-            let hot_address: Address =
-                Decode::decode(&mut trustee_address.hot_address.as_slice()).unwrap_or(Default::default());
+            let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice()).map_err(|_|"Invalid Address")?;
             Self::apply_push_transaction(tx, hot_address)?;
 
             Ok(())
@@ -393,11 +392,9 @@ impl<T: Trait> Module<T> {
                 Some(intention) => {
                     match intention.hot_entity {
                         TrusteeEntity::Bitcoin(pubkey) => hot_keys.push(pubkey),
-                        _ => return Err(AddressError::InvalidPublic),
                     }
                     match intention.cold_entity {
                         TrusteeEntity::Bitcoin(pubkey) => cold_keys.push(pubkey),
-                        _ => return Err(AddressError::InvalidPublic),
                     }
                 }
                 None => continue,
@@ -419,7 +416,7 @@ impl<T: Trait> Module<T> {
         if node_list.iter().any(|n| n == who) {
             return Ok(());
         }
-        return Err("Commiter no in the trustee node list");
+        Err("Commiter no in the trustee node list")
     }
 
     fn apply_push_header(header: BlockHeader, _who: &T::AccountId) -> Result {
@@ -438,7 +435,7 @@ impl<T: Trait> Module<T> {
         <BlockHeaderFor<T>>::insert(&header.hash(), header_info.clone());
 
         let mut height_hash: Vec<H256> =
-            <BlockHeightFor<T>>::get(&header_info.height).unwrap_or(Vec::new());
+            <BlockHeightFor<T>>::get(&header_info.height).unwrap_or_default();
 
         height_hash.push(header.hash());
         <BlockHeightFor<T>>::insert(&header_info.height, height_hash);
@@ -547,14 +544,14 @@ impl<T: Trait> Module<T> {
     fn apply_create_withdraw(tx: BTCTransaction, withdraw_id: Vec<u32>) -> Result {
         let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
             .ok_or("Should set RECEIVE_address first.")?;
-        let hot_address: Address = Decode::decode(&mut trustee_address.hot_address.as_slice())
-            .unwrap_or(Default::default());
+        let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
+            .map_err(|_| "Invalid Address")?;
         check_withdraw_tx::<T>(tx, withdraw_id, hot_address)?;
         Ok(())
     }
 
     fn apply_sign_withdraw(who: T::AccountId, tx: Vec<u8>, vote_state: bool) -> Result {
-        if tx.len() != 0 && vote_state {
+        if !tx.is_empty() && vote_state {
             let tx: BTCTransaction =
                 Decode::decode(&mut tx.as_slice()).ok_or("parse Transaction err")?;
             handle_condidate::<T>(tx.clone())?;
@@ -571,11 +568,11 @@ impl<T: Trait> Module<T> {
             VoteResult::FinishWithReject => {
                 <VoteNode<T>>::kill();
                 <TxProposal<T>>::kill();
-                return Ok(());
+                Ok(())
             }
-            VoteResult::FinishWithFavor => return Ok(()),
-            VoteResult::Unfinish => return Ok(()),
-            VoteResult::Invalid => return Err("Invalid veto"),
+            VoteResult::FinishWithFavor => Ok(()),
+            VoteResult::Unfinish => Ok(()),
+            VoteResult::Invalid => Err("Invalid veto"),
         }
     }
 }

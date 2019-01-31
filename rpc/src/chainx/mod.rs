@@ -11,7 +11,7 @@ use jsonrpc_macros::Trailing;
 use serde::Serialize;
 
 use client::{self, runtime_api::Metadata, Client};
-use keys::Address;
+use keys::{Address, DisplayLayout};
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
@@ -28,7 +28,11 @@ use xr_primitives::generic::b58;
 use xaccounts::{self, IntentionProps};
 use xassets::{self, Asset, AssetType, Chain, Token};
 use xbitcoin::{self, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TxFor, TxInfo};
-use xrecords::{self, Application, types::{DepositLog as DL, WithdrawalLog as WL}};
+use xrecords::{
+    self,
+    types::{DepositLog as DL, WithdrawalLog as WL},
+    Application,
+};
 use xspot::def::{OrderPair, OrderPairID, ID};
 use xspot::{HandicapT, OrderT};
 use xstaking::{self, IntentionProfs};
@@ -103,8 +107,8 @@ build_rpc_trait! {
         #[rpc(name = "chainx_getDepositRecords")]
         fn deposit_records(&self, AccountId, u32, u32) -> Result<Option<PageData<DepositInfo>>>;
 
-        #[rpc(name = "chainx_getBTCAddressByAccount")]
-        fn address(&self, AccountId) -> Result<Option<Vec<String>>>;
+        #[rpc(name = "chainx_getAddressByAccount")]
+        fn address(&self, AccountId, Chain) -> Result<Option<Vec<String>>>;
     }
 }
 
