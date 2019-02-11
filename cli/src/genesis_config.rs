@@ -68,8 +68,8 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         transfer_fee: 0,
         creation_fee: 0,
         balances: vec![],
+        vesting: vec![],
     };
-    //let balances_config_copy = BalancesConfigCopy::create_from_src(&balances_config).src();
 
     let btc_asset = Asset::new(
         <bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(), // token
@@ -100,9 +100,19 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     let apply_prec = |x| x * 10_u64.pow(pcx_precision as u32);
     let mut full_endowed = vec![
-        (auth1, apply_prec(30), b"Alice".to_vec(), b"Alice.com".to_vec()),
+        (
+            auth1,
+            apply_prec(30),
+            b"Alice".to_vec(),
+            b"Alice.com".to_vec(),
+        ),
         (auth2, apply_prec(10), b"Bob".to_vec(), b"Bob.com".to_vec()),
-        (auth3, apply_prec(10), b"Charlie".to_vec(), b"Charlie".to_vec()),
+        (
+            auth3,
+            apply_prec(10),
+            b"Charlie".to_vec(),
+            b"Charlie".to_vec(),
+        ),
     ];
     full_endowed.truncate(initial_authorities.len());
     let endowed = full_endowed

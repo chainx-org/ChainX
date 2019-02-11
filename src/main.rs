@@ -45,6 +45,7 @@ fn run() -> cli::error::Result<()> {
         executable_name: "ChainX",
         author: "ChainX community",
         description: "Fully Decentralized Interchain Crypto Asset Management on Polkadot",
+        support_url: "https://github.com/chainx-org/ChainX",
     };
     cli::run(::std::env::args(), Exit, version)
 }

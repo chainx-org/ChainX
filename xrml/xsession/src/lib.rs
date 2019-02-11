@@ -24,9 +24,6 @@ extern crate sr_std as rstd;
 #[macro_use]
 extern crate srml_support as runtime_support;
 
-#[macro_use]
-extern crate parity_codec_derive;
-
 extern crate parity_codec as codec;
 #[cfg(test)]
 extern crate sr_io as runtime_io;
@@ -37,7 +34,6 @@ extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate substrate_primitives;
 
-use codec::HasCompact;
 use primitives::traits::{As, Convert, One, Zero};
 use rstd::ops::Mul;
 use rstd::prelude::*;
@@ -89,8 +85,8 @@ decl_module! {
         }
 
         /// Set a new session length. Won't kick in until the next session change (at current length).
-        fn set_length(new: <T::BlockNumber as HasCompact>::Type) {
-            <NextSessionLength<T>>::put(new.into());
+        fn set_length(#[compact] new: T::BlockNumber) {
+            <NextSessionLength<T>>::put(new);
         }
 
         /// Forces a new session.

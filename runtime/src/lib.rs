@@ -13,8 +13,6 @@ extern crate hex_literal;
 #[cfg(test)]
 extern crate serde;
 
-#[macro_use]
-extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 
 #[macro_use]
@@ -83,7 +81,7 @@ use rstd::prelude::*;
 use primitives::OpaqueMetadata;
 use runtime_primitives::generic;
 use runtime_primitives::traits::{
-    BlakeTwo256, Block as BlockT, Convert, DigestFor, Extrinsic, NumberFor, StaticLookup,
+    BlakeTwo256, Block as BlockT, Convert, DigestFor, NumberFor, StaticLookup,
 };
 //#[cfg(feature = "std")]
 //use council::{motions as council_motions, voting as council_voting};
@@ -97,12 +95,11 @@ use runtime_primitives::ApplyResult;
 use version::NativeVersion;
 use version::RuntimeVersion;
 
-use consensus_aura::api as aura_api;
 use grandpa::fg_primitives::{self, ScheduledChange};
 pub use runtime_primitives::{Perbill, Permill};
 
 // for set consensus period
-pub use srml_support::{RuntimeMetadata, StorageValue};
+pub use srml_support::StorageValue;
 pub use timestamp::BlockPeriod;
 pub use timestamp::Call as TimestampCall;
 
@@ -265,7 +262,6 @@ impl xrecords::Trait for Runtime {
 impl xprocess::Trait for Runtime {}
 
 impl xstaking::Trait for Runtime {
-    type OnRewardMinted = ();
     type OnRewardCalculation = XTokens;
     type OnReward = XTokens;
     type Event = Event;
@@ -425,7 +421,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl aura_api::AuraApi<Block> for Runtime {
+    impl consensus_aura::AuraApi<Block> for Runtime {
         fn slot_duration() -> u64 {
             Aura::slot_duration()
         }

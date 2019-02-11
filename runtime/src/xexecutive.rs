@@ -182,7 +182,7 @@ impl<
         // To do: Find pay from map according f.
         // decode parameters and dispatch
         let r = f.dispatch(s.into());
-        <system::Module<System>>::note_applied_extrinsic(&r);
+        <system::Module<System>>::note_applied_extrinsic(&r, encoded_len as u32);
 
         r.map(|_| internal::ApplyOutcome::Success).or_else(|e| Ok(internal::ApplyOutcome::Fail(e)))
     }
@@ -214,36 +214,43 @@ impl<
     ///
     /// Changes made to the storage should be discarded.
     pub fn validate_transaction(uxt: Block::Extrinsic) -> TransactionValidity {
+        // Note errors > 0 are from ApplyError
+        const UNKNOWN_ERROR: i8 = -127;
+        const MISSING_SENDER: i8 = -20;
+        const INVALID_INDEX: i8 = -10;
+        const ACC_ERROR: i8 = -30;
+
         let encoded_len = uxt.encode().len();
 
         let xt = match uxt.check(&Default::default()) {
             // Checks out. Carry on.
             Ok(xt) => xt,
             // An unknown account index implies that the transaction may yet become valid.
-            Err("invalid account index") => return TransactionValidity::Unknown,
+            Err("invalid account index") => return TransactionValidity::Unknown(INVALID_INDEX),
+            Err(runtime_primitives::BAD_SIGNATURE) => return TransactionValidity::Invalid(ApplyError::BadSignature as i8),
             // Technically a bad signature could also imply an out-of-date account index, but
             // that's more of an edge case.
-            Err(_) => return TransactionValidity::Invalid,
+            Err(_) => return TransactionValidity::Invalid(UNKNOWN_ERROR),
         };
 
         // Acceleration can't be zero or empty.
         match xt.acceleration() {
             Some(acc) => {
                 if acc.is_zero() {
-                    return TransactionValidity::Invalid;
+                    return TransactionValidity::Invalid(ACC_ERROR);
                 }
             },
-            None => return TransactionValidity::Invalid,
+            None => return TransactionValidity::Invalid(ACC_ERROR),
         }
 
         let valid = if let (Some(sender), Some(index), Some(acceleration)) = (xt.sender(), xt.index(), xt.acceleration()) {
             // check index
             let mut expected_index = <system::Module<System>>::account_nonce(sender);
             if index < &expected_index {
-                return TransactionValidity::Invalid;
+                return TransactionValidity::Invalid(ApplyError::Stale as i8);
             }
             if *index > expected_index + As::sa(256) {
-                return TransactionValidity::Unknown;
+                return TransactionValidity::Unknown(ApplyError::Future as i8);
             }
 
             let mut deps = Vec::new();
@@ -259,19 +266,23 @@ impl<
                 longevity: TransactionLongevity::max_value(),
             }
         } else {
-            TransactionValidity::Invalid
+            TransactionValidity::Invalid(if xt.sender().is_none() {
+                MISSING_SENDER
+            } else {
+                INVALID_INDEX
+            })
         };
 
         let acc = xt.acceleration().unwrap();
         let (f, s) = xt.deconstruct();
         if let Some(fee_power) = f.check_fee(acc.as_() as u32) {
             if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power).is_err() {
-                return TransactionValidity::Invalid;
+                return TransactionValidity::Invalid(ApplyError::CantPay as i8);
             } else {
                 return valid;
             }
         } else {
-            return TransactionValidity::Invalid;
+            return TransactionValidity::Invalid(ApplyError::CantPay as i8);
         }
     }
 }

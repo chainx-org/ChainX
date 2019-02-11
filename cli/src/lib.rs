@@ -42,21 +42,15 @@ extern crate substrate_rpc_servers as rpc;
 
 #[macro_use]
 extern crate log;
-extern crate structopt;
-
-pub use cli::error;
 
 mod chain_spec;
 mod genesis_config;
 mod native_rpc;
-mod params;
 mod service;
 
-pub use cli::{IntoExit, VersionInfo};
-use params::Params as NodeParams;
+pub use cli::{error, IntoExit, NoCustom, VersionInfo};
 use primitives::ed25519;
 use std::ops::Deref;
-use structopt::StructOpt;
 use substrate_service::{Roles as ServiceRoles, ServiceFactory};
 use tokio::runtime::Runtime;
 
@@ -105,61 +99,42 @@ where
     T: Into<std::ffi::OsString> + Clone,
     E: IntoExit,
 {
-    let full_version =
-        substrate_service::config::full_version_from_strs(version.version, version.commit);
-
-    let matches = match NodeParams::clap()
-        .name(version.executable_name)
-        .author(version.author)
-        .about(version.description)
-        .version(&(full_version + "\n")[..])
-        .get_matches_from_safe(args)
-    {
-        Ok(m) => m,
-        Err(e) => e.exit(),
-    };
-
-    let (spec, config) =
-        cli::parse_matches::<service::Factory, _>(load_spec, &version, "chainx-node", &matches)?;
-
-    //    if cfg!(feature = "msgbus-redis") == false {
-    //        if matches.is_present("grandpa_authority_only") {
-    //            // Authority Setup is only called if validator is set as true
-    //            config.roles = ServiceRoles::AUTHORITY;
-    //        } else if matches.is_present("grandpa_authority") {
-    //            // Authority Setup is only called if validator is set as true
-    //            config.roles = ServiceRoles::AUTHORITY;
-    //        }
-    //    }
-    match cli::execute_default::<service::Factory, _>(spec, exit, &matches, &config)? {
-        cli::Action::ExecutedInternally => (),
-        cli::Action::RunService(exit) => {
-            info!("ChainX");
+    cli::parse_and_execute::<service::Factory, NoCustom, NoCustom, _, _, _, _, _>(
+        load_spec,
+        &version,
+        "substrate-node",
+        args,
+        exit,
+        |exit, _custom_args, config| {
+            info!("{}", version.name);
             info!("  version {}", config.full_version());
-            info!("  by ChainPool, ");
+            info!("  by Chainpool, 2018-2019");
             info!("Chain specification: {}", config.chain_spec.name());
             info!("Node name: {}", config.name);
             info!("Roles: {:?}", config.roles);
-            let mut runtime = Runtime::new()?;
+            let runtime = Runtime::new().map_err(|e| format!("{:?}", e))?;
             let executor = runtime.executor();
-            match config.roles == ServiceRoles::LIGHT {
-                true => run_until_exit(
-                    &mut runtime,
-                    service::Factory::new_light(config, executor)?,
+            match config.roles {
+                ServiceRoles::LIGHT => run_until_exit(
+                    runtime,
+                    service::Factory::new_light(config, executor)
+                        .map_err(|e| format!("{:?}", e))?,
                     exit,
-                )?,
-                false => run_until_exit(
-                    &mut runtime,
-                    service::Factory::new_full(config, executor)?,
+                ),
+                _ => run_until_exit(
+                    runtime,
+                    service::Factory::new_full(config, executor).map_err(|e| format!("{:?}", e))?,
                     exit,
-                )?,
+                ),
             }
-        }
-    }
-    Ok(())
+            .map_err(|e| format!("{:?}", e))
+        },
+    )
+    .map_err(Into::into)
+    .map(|_| ())
 }
 
-fn run_until_exit<T, C, E>(runtime: &mut Runtime, service: T, e: E) -> error::Result<()>
+fn run_until_exit<T, C, E>(mut runtime: Runtime, service: T, e: E) -> error::Result<()>
 where
     T: Deref<Target = substrate_service::Service<C>> + native_rpc::Rpc,
     C: substrate_service::Components,

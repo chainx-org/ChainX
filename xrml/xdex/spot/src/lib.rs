@@ -366,11 +366,7 @@ impl<T: Trait> Module<T> {
                     //更新挂单
                     Self::check_and_delete_quotations(order.pair, order.price);
                     //更新盘口
-                    Self::update_handicap(
-                        &pair,
-                        order.price,
-                        order.direction ,
-                    );
+                    Self::update_handicap(&pair, order.price, order.direction);
                 }
                 _ => {
                     return Err(
@@ -513,7 +509,7 @@ impl<T: Trait> Module<T> {
         Self::do_match(&mut order, &pair, &handicap);
 
         /*********************** 更新报价 盘口**********************/
-        Self::new_order(&pair,&mut order);
+        Self::new_order(&pair, &mut order);
 
         //Event 记录状态变更
 
@@ -602,10 +598,14 @@ impl<T: Trait> Module<T> {
                         //删除更新被完全撮合的单
                         Self::check_and_delete_quotations(pair.id, opponent_price);
                         //更新盘口
-                        Self::update_handicap(&pair, opponent_price, match order.direction {
-                            OrderDirection::Sell => OrderDirection::Buy,
-                            OrderDirection::Buy => OrderDirection::Sell,
-                        });
+                        Self::update_handicap(
+                            &pair,
+                            opponent_price,
+                            match order.direction {
+                                OrderDirection::Sell => OrderDirection::Buy,
+                                OrderDirection::Buy => OrderDirection::Sell,
+                            },
+                        );
                     }
                     None => {
                         //do nothing
@@ -631,7 +631,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn new_order(pair: &OrderPair,order: &mut OrderT<T>) {
+    fn new_order(pair: &OrderPair, order: &mut OrderT<T>) {
         if order.amount > order.hasfill_amount {
             if order.hasfill_amount > Zero::zero() {
                 order.status = OrderStatus::FillPart;
@@ -657,21 +657,28 @@ impl<T: Trait> Module<T> {
                     if let Some(mut handicap) = <HandicapMap<T>>::get(order.pair) {
                         if order.price > handicap.buy || handicap.buy == Default::default() {
                             handicap.buy = order.price;
-                            Self::event_handicap(order.pair,handicap.buy,OrderDirection::Buy);
+                            Self::event_handicap(order.pair, handicap.buy, OrderDirection::Buy);
 
                             if handicap.buy >= handicap.sell {
-                                handicap.sell=match handicap.buy.checked_add(&As::sa(10_u64.pow(pair.unit_precision))) {
+                                handicap.sell = match handicap
+                                    .buy
+                                    .checked_add(&As::sa(10_u64.pow(pair.unit_precision)))
+                                {
                                     Some(v) => v,
                                     None => Default::default(),
                                 };
-                                Self::event_handicap(order.pair,handicap.sell,OrderDirection::Sell);
+                                Self::event_handicap(
+                                    order.pair,
+                                    handicap.sell,
+                                    OrderDirection::Sell,
+                                );
                             }
                             <HandicapMap<T>>::insert(order.pair, handicap);
                         }
                     } else {
                         let mut handicap: HandicapT<T> = Default::default();
                         handicap.buy = order.price;
-                        Self::event_handicap(order.pair,handicap.buy,OrderDirection::Buy);
+                        Self::event_handicap(order.pair, handicap.buy, OrderDirection::Buy);
                         <HandicapMap<T>>::insert(order.pair, handicap);
                     }
                 }
@@ -679,22 +686,24 @@ impl<T: Trait> Module<T> {
                     if let Some(mut handicap) = <HandicapMap<T>>::get(order.pair) {
                         if order.price < handicap.sell || handicap.sell == Default::default() {
                             handicap.sell = order.price;
-                            Self::event_handicap(order.pair,handicap.sell,OrderDirection::Sell);
+                            Self::event_handicap(order.pair, handicap.sell, OrderDirection::Sell);
 
                             if handicap.sell <= handicap.buy {
-                                handicap.buy=match handicap.sell.checked_sub(&As::sa(10_u64.pow(pair.unit_precision))) {
+                                handicap.buy = match handicap
+                                    .sell
+                                    .checked_sub(&As::sa(10_u64.pow(pair.unit_precision)))
+                                {
                                     Some(v) => v,
                                     None => Default::default(),
                                 };
-                                Self::event_handicap(order.pair,handicap.buy,OrderDirection::Buy);
+                                Self::event_handicap(order.pair, handicap.buy, OrderDirection::Buy);
                             }
                             <HandicapMap<T>>::insert(order.pair, handicap);
                         }
-
                     } else {
                         let mut handicap: HandicapT<T> = Default::default();
                         handicap.sell = order.price;
-                        Self::event_handicap(order.pair,handicap.sell,OrderDirection::Sell);
+                        Self::event_handicap(order.pair, handicap.sell, OrderDirection::Sell);
                         <HandicapMap<T>>::insert(order.pair, handicap);
                     }
                 }
@@ -738,9 +747,9 @@ impl<T: Trait> Module<T> {
                 maker_order.status = OrderStatus::FillPart;
             } else {
                 Self::deposit_event(RawEvent::FillOrderErr(
-                   pairid,
-                   maker_order.user.clone(),
-                   maker_order.index
+                    pairid,
+                    maker_order.user.clone(),
+                    maker_order.index,
                 ));
                 return Err(" maker order has not enough amount");
             }
@@ -761,9 +770,9 @@ impl<T: Trait> Module<T> {
                 taker_order.status = OrderStatus::FillPart;
             } else {
                 Self::deposit_event(RawEvent::FillOrderErr(
-                   pairid,
-                   taker_order.user.clone(),
-                   taker_order.index
+                    pairid,
+                    taker_order.user.clone(),
+                    taker_order.index,
                 ));
                 return Err(" taker order has not enough amount");
             }
@@ -947,7 +956,7 @@ impl<T: Trait> Module<T> {
                                 Some(v) => v,
                                 None => Default::default(),
                             };
-                            Self::event_handicap(pair.id,handicap.sell,OrderDirection::Sell);
+                            Self::event_handicap(pair.id, handicap.sell, OrderDirection::Sell);
                             <HandicapMap<T>>::insert(pair.id, handicap);
                         }
                     }
@@ -958,7 +967,7 @@ impl<T: Trait> Module<T> {
                                 Some(v) => v,
                                 None => Default::default(),
                             };
-                            Self::event_handicap(pair.id,handicap.buy,OrderDirection::Buy);
+                            Self::event_handicap(pair.id, handicap.buy, OrderDirection::Buy);
                             <HandicapMap<T>>::insert(pair.id, handicap);
                         }
                     }
@@ -1008,10 +1017,9 @@ impl<T: Trait> Module<T> {
                             <AccountOrder<T>>::remove(&list[i]);
 
                             Self::deposit_event(RawEvent::RemoveUserQuotations(
-                               order.user,
-                               order.index,
+                                order.user,
+                                order.index,
                             ));
-
                         } else {
                             new_list.push(list[i].clone());
                         }
@@ -1019,10 +1027,7 @@ impl<T: Trait> Module<T> {
                 }
                 //空了就删除
                 if new_list.len() < 1 {
-                    Self::deposit_event(RawEvent::RemoveQuotationsSlot(
-                               id,
-                               price,
-                            ));
+                    Self::deposit_event(RawEvent::RemoveQuotationsSlot(id, price));
                     <Quotations<T>>::remove((id, price));
                 } else {
                     <Quotations<T>>::insert((id, price), new_list)
@@ -1058,12 +1063,8 @@ impl<T: Trait> Module<T> {
             pair.online,
         ));
     }
-    fn event_handicap(id:OrderPairID,price:T::Price,direction:OrderDirection){
-        Self::deposit_event(RawEvent::Handicap(
-            id,
-            price,
-            direction,
-        ));
+    fn event_handicap(id: OrderPairID, price: T::Price, direction: OrderDirection) {
+        Self::deposit_event(RawEvent::Handicap(id, price, direction));
     }
     fn trans_amount(
         amount: T::Balance, /*first的数量单位*/

@@ -38,9 +38,7 @@ extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
 
-use balances::OnDilution;
-use codec::{Compact, HasCompact};
-use keys::DisplayLayout;
+use codec::Compact;
 use rstd::prelude::*;
 use runtime_primitives::traits::{As, Lookup, StaticLookup, Zero};
 use runtime_support::dispatch::Result;
@@ -93,9 +91,6 @@ pub struct NominationRecord<Balance, BlockNumber> {
 pub trait Trait:
     xassets::Trait + xaccounts::Trait + xsystem::Trait + session::Trait + xbitcoin::Trait
 {
-    /// Some tokens minted.
-    type OnRewardMinted: OnDilution<<Self as balances::Trait>::Balance>;
-
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -282,13 +277,13 @@ decl_module! {
         }
 
         /// Set the number of sessions in an era.
-        fn set_sessions_per_era(new: <T::BlockNumber as HasCompact>::Type) {
-            <NextSessionsPerEra<T>>::put(new.into());
+        fn set_sessions_per_era(#[compact] new: T::BlockNumber) {
+            <NextSessionsPerEra<T>>::put(new);
         }
 
         /// The length of the bonding duration in eras.
-        fn set_bonding_duration(new: <T::BlockNumber as HasCompact>::Type) {
-            <BondingDuration<T>>::put(new.into());
+        fn set_bonding_duration(#[compact] new: T::BlockNumber) {
+            <BondingDuration<T>>::put(new);
         }
 
         /// The ideal number of validators.
