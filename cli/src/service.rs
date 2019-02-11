@@ -117,7 +117,8 @@ construct_service_factory! {
 
                         info!("Running Grandpa session as Authority {}", key.public());
                     }
-
+                #[cfg(not(feature = "msgbus-redis"))] {
+                // remove grandpa in msgbus mod for revert block
                 executor.spawn(grandpa::run_grandpa(
                     grandpa::Config {
                         local_key,
@@ -129,11 +130,6 @@ construct_service_factory! {
                     grandpa::NetworkBridge::new(service.network()),
                     service.on_exit(),
                 )?);
-
-                if let Some(addr) = service.network().node_id() {
-                    info!(target: "chainx-libp2p", "Local node address is: {}", addr);
-                } else {
-                    warn!(target: "chainx-libp2p", "can't get addr due to the port has been occupied")
                 }
 
                 Ok(service)
