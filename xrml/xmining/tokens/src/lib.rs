@@ -210,6 +210,29 @@ decl_storage! {
 
         pub DepositRecords get(deposit_records): map (T::AccountId, Token) => DepositVoteWeight<T::BlockNumber>;
     }
+
+    add_extra_genesis {
+        config(endowed_users): Vec<(Token, Vec<(T::AccountId, T::Balance)>)>;
+
+        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+            use runtime_io::with_externalities;
+            use substrate_primitives::Blake2Hasher;
+            use runtime_primitives::StorageMap;
+
+            let s = storage.clone().build_storage().unwrap().0;
+            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
+            with_externalities(&mut init, || {
+                for (token, value_of) in config.endowed_users.iter() {
+                    for (who, value) in value_of {
+                        Module::<T>::update_vote_weight(who, token, *value, true);
+                    }
+                }
+            });
+
+            let init: StorageMap = init.into();
+            storage.extend(init);
+        });
+    }
 }
 
 impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
@@ -357,23 +380,35 @@ impl<T: Trait> Module<T> {
     // Convert total deposited crosschain asset to PCX based on its price and apply a discount.
     fn convert_to_stake(token: &Token) -> T::Balance {
         let price = Self::price_for(token);
-        let amount = <xassets::Module<T>>::all_type_balance(&token);
+
+        let asset = <xassets::Module<T>>::get_asset(token).expect("Asset definitely exist.");
+
+        // FIXME refine later
+        // Need to take care of precision!
+        let amount = <xassets::Module<T>>::all_type_balance(&token).as_();
+
+        let precision = 10_u64.pow(asset.precision() as u32);
+
+        let pcx = xassets::Module::<T>::TOKEN.to_vec();
+        let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
+        let pcx_precision = 10_u64.pow(pcx_asset.precision() as u32);
 
         // FIXME validate price and amount
 
-        let stake = match price.as_().checked_mul(amount.as_()) {
-            Some(x) => {
-                // FIXME discount 30%
-                if let Some(v) = x.checked_mul(3) {
-                    T::Balance::sa(v / 10)
-                } else {
-                    T::Balance::sa(u64::max_value())
-                }
-            }
-            None => T::Balance::sa(u64::max_value()),
+        let stake = match price.as_().checked_mul(amount) {
+            Some(x) => x,
+            None => panic!("Overflow when apply price multiplies amount."),
         };
 
-        stake
+        // Apply precision at last
+        let times = pcx_precision / precision;
+
+        let stake = match stake.checked_mul(times) {
+            Some(s) => s,
+            None => panic!("Overflow when apply stake times"),
+        };
+
+        T::Balance::sa(stake)
     }
 }
 

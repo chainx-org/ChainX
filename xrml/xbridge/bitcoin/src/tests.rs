@@ -186,7 +186,7 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
     r.into()
 }
 
-type BridgeOfBTC = Module<Test>;
+type XBridgeOfBTC = Module<Test>;
 type Timestamp = timestamp::Module<Test>;
 
 fn generate_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
@@ -436,7 +436,7 @@ fn test_init_mock_blocks() {
 #[test]
 fn test_genesis() {
     with_externalities(&mut new_test_ext(), || {
-        let (header, num) = BridgeOfBTC::genesis_info();
+        let (header, num) = XBridgeOfBTC::genesis_info();
         let _r = <GenesisInfo<Test>>::get();
         let h = header.hash().reversed();
         assert_eq!(
@@ -445,7 +445,7 @@ fn test_genesis() {
         );
         assert_eq!(num, 1451572);
 
-        let best_hash = BridgeOfBTC::best_index();
+        let best_hash = XBridgeOfBTC::best_index();
         assert_eq!(best_hash, header.hash());
     })
 }
@@ -461,19 +461,19 @@ fn test_normal() {
         Timestamp::set_timestamp(current_time());
         let (c1, _) = generate_blocks();
         assert_err!(
-            BridgeOfBTC::apply_push_header(c1.get(0).unwrap().clone(), &1),
+            XBridgeOfBTC::apply_push_header(c1.get(0).unwrap().clone(), &1),
             "Block parent is unknown"
         );
-        assert_ok!(BridgeOfBTC::apply_push_header(
+        assert_ok!(XBridgeOfBTC::apply_push_header(
             c1.get(1).unwrap().clone(),
             &2
         ));
-        assert_ok!(BridgeOfBTC::apply_push_header(
+        assert_ok!(XBridgeOfBTC::apply_push_header(
             c1.get(2).unwrap().clone(),
             &3
         ));
 
-        let best_hash = BridgeOfBTC::best_index();
+        let best_hash = XBridgeOfBTC::best_index();
         assert_eq!(best_hash, c1.get(2).unwrap().hash());
     })
 }
@@ -486,7 +486,7 @@ fn test_call() {
         let origin = system::RawOrigin::Signed(99).into();
         let v = ser::serialize(c1.get(1).unwrap());
         let v = v.take();
-        assert_ok!(BridgeOfBTC::push_header(origin, v));
+        assert_ok!(XBridgeOfBTC::push_header(origin, v));
     })
 }
 
@@ -543,18 +543,18 @@ fn test_genesis2() {
         Timestamp::set_timestamp(current_time());
         let (c1, _) = generate_blocks();
         assert_err!(
-            BridgeOfBTC::apply_push_header(c1.get(0).unwrap().clone(), &1),
+            XBridgeOfBTC::apply_push_header(c1.get(0).unwrap().clone(), &1),
             "Block parent is unknown"
         );
-        assert_ok!(BridgeOfBTC::apply_push_header(
+        assert_ok!(XBridgeOfBTC::apply_push_header(
             c1.get(1).unwrap().clone(),
             &1
         ));
-        assert_ok!(BridgeOfBTC::apply_push_header(
+        assert_ok!(XBridgeOfBTC::apply_push_header(
             c1.get(2).unwrap().clone(),
             &1
         ));
-        assert_ok!(BridgeOfBTC::apply_push_header(
+        assert_ok!(XBridgeOfBTC::apply_push_header(
             c1.get(3).unwrap().clone(),
             &1
         ));
@@ -652,7 +652,7 @@ fn test_changebit() {
 
 #[test]
 pub fn test_address() {
-    BridgeOfBTC::verify_btc_address(&b"mqVznxoxdeSNYgDCg6ZVE5pc6476BY6zHK".to_vec()).unwrap();
+    XBridgeOfBTC::verify_btc_address(&b"mqVznxoxdeSNYgDCg6ZVE5pc6476BY6zHK".to_vec()).unwrap();
 }
 
 #[test]

@@ -44,7 +44,7 @@ impl<T: Trait> Module<T> {
     fn this_session_reward() -> T::Balance {
         let current_index = <session::Module<T>>::current_index().as_();
         // FIXME Precision?
-        let reward = INITIAL_REWARD / (u32::pow(2, ((current_index + 1) / 210_000) as u32));
+        let reward = INITIAL_REWARD / (u32::pow(2, ((current_index + 1) / 210_000) as u32)) as u64;
         T::Balance::sa(reward as u64)
     }
 
@@ -109,7 +109,13 @@ impl<T: Trait> Module<T> {
 
             if !total_active_stake.is_zero() {
                 for (holder, stake) in active_intentions.iter() {
-                    let reward = *stake * session_reward / total_active_stake;
+                    // FIXME overflow
+                    // let reward = *stake * session_reward / total_active_stake;
+                    let s_reward = session_reward.as_();
+                    let reward = match s_reward.checked_mul(stake.as_()) {
+                        Some(x) => T::Balance::sa(x / total_active_stake.as_()),
+                        None => T::Balance::sa(u64::max_value() / total_active_stake.as_()),
+                    };
                     match holder {
                         RewardHolder::Intention(ref intention) => Self::reward(intention, reward),
                         RewardHolder::PseduIntention(ref token) => {

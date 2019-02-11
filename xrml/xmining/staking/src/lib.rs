@@ -65,7 +65,9 @@ pub use vote_weight::VoteWeight;
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const MIMIMUM_TRSUTEE_INTENSION_COUNT: u32 = 4;
 const MAXIMUM_TRSUTEE_INTENSION_COUNT: u32 = 16;
-const INITIAL_REWARD: u32 = 50_000;
+
+// FIXME lazy static
+const INITIAL_REWARD: u64 = 5_000_000_000;
 
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
@@ -255,7 +257,7 @@ decl_module! {
 
             ensure!(!Self::is_intention(&who), "Cannot register if transactor is an intention already.");
 
-            Self::apply_register(who, name)?;
+            Self::apply_register(&who, name)?;
         }
 
         fn setup_trusee(origin, chain: Chain, about: XString, hot_entity: TrusteeEntity, cold_entity: TrusteeEntity) {
@@ -370,7 +372,7 @@ decl_storage! {
     }
 
     add_extra_genesis {
-        config(intentions): Vec<(T::AccountId, T::Balance)>;
+        config(intentions): Vec<(T::AccountId, T::Balance, Name, URL)>;
         build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
             use codec::Encode;
             use runtime_io::with_externalities;
@@ -388,31 +390,25 @@ decl_storage! {
             let s = storage.clone().build_storage().unwrap().0;
             let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
             with_externalities(&mut init, || {
-                for (intention, value) in config.intentions.iter() {
-                    let _ = Module::<T>::apply_register(intention.clone(), b"genesis_intention".to_vec());
+                for (intention, value, name, url) in config.intentions.clone().into_iter() {
+                    let _ = Module::<T>::apply_register(&intention, name);
 
-                    let free = T::Balance::sa(value.as_() * 1 / 10);
-                    let _ = <xassets::Module<T>>::pcx_issue(intention, free);
+                    let _ = <xassets::Module<T>>::pcx_issue(&intention, value);
 
                     let _ = <xassets::Module<T>>::move_balance_with_checkflag(
                         &pcx,
-                        intention,
+                        &intention,
                         xassets::AssetType::Free,
-                        intention,
+                        &intention,
                         xassets::AssetType::ReservedStaking,
-                        free,
+                        value,
                         false
                     );
 
-                    let to_jackpot = *value - free;
-                    let jackpot = T::DetermineIntentionJackpotAccountId::accountid_for(intention);
-                    let _ = <xassets::Module<T>>::pcx_issue(&jackpot, to_jackpot);
+                    let _ = Module::<T>::apply_refresh(&intention, Some(url), Some(true), None, None);
+                    let _ = Module::<T>::apply_update_vote_weight(&intention, &intention, value, true);
 
-                    let _ = Module::<T>::apply_update_vote_weight(intention, intention, *value, true);
-
-                    let _ = Module::<T>::apply_refresh(intention, None, Some(true), None, None);
-
-                    storage.insert(hash(&<StakeWeight<T>>::key_for(intention)), value.encode());
+                    storage.insert(hash(&<StakeWeight<T>>::key_for(&intention)), value.encode());
                 }
                 // FIXME set up trustee intentions
             });
@@ -608,17 +604,17 @@ impl<T: Trait> Module<T> {
     }
 
     /// Actually register an intention.
-    fn apply_register(intention: T::AccountId, name: Name) -> Result {
+    fn apply_register(intention: &T::AccountId, name: Name) -> Result {
         <xaccounts::IntentionOf<T>>::insert(&name, intention.clone());
-        <xaccounts::IntentionNameOf<T>>::insert(&intention, name);
+        <xaccounts::IntentionNameOf<T>>::insert(intention, name);
         <xaccounts::IntentionPropertiesOf<T>>::insert(
-            &intention,
+            intention,
             xaccounts::IntentionProps::default(),
         );
 
         <Intentions<T>>::mutate(|i| i.push(intention.clone()));
         <IntentionProfiles<T>>::insert(
-            &intention,
+            intention,
             IntentionProfs {
                 total_nomination: Zero::zero(),
                 last_total_vote_weight: 0,

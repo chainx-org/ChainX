@@ -71,8 +71,6 @@ pub struct IntentionInfo {
     pub account: AccountId,
     /// name of intention
     pub name: String,
-    /// when is the intention registered
-    pub registered_at: Timestamp,
     /// url
     pub url: String,
     /// about
@@ -104,7 +102,7 @@ pub struct PairInfo {
     pub currency: String,
     pub precision: u32,      //价格精度
     pub unit_precision: u32, //最小单位精度
-    pub on_line: bool,
+    pub online: bool,
     pub last_price: Balance,
     pub aver_price: Balance,
     pub update_height: BlockNumber,

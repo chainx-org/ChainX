@@ -229,8 +229,9 @@ where
         let mut intention_info = Vec::new();
 
         let key = <session::Validators<Runtime>>::key();
-        let validators =
-            Self::pickout::<Vec<AccountId>>(&state, &key)?.expect("Validators can't be empty");
+        let validators = Self::pickout::<Vec<(AccountId, u64)>>(&state, &key)?
+            .expect("Validators can't be empty");
+        let validators: Vec<AccountId> = validators.into_iter().map(|(who, _)| who).collect();
 
         let key = <xaccounts::TrusteeIntentions<Runtime>>::key();
 
@@ -399,7 +400,7 @@ where
                     info.assets = String::from_utf8_lossy(&pair.first).into_owned();
                     info.currency = String::from_utf8_lossy(&pair.second).into_owned();
                     info.precision = pair.precision;
-                    info.on_line = pair.on_line;
+                    info.online = pair.online;
                     info.unit_precision = pair.unit_precision;
 
                     let price_key = <xspot::OrderPairPriceOf<Runtime>>::key_for(&i);

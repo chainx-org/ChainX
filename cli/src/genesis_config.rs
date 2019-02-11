@@ -50,12 +50,12 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     let auth1 = alice.into();
     let auth2 = bob.into();
-    let auth3 = gavin.into();
+    let auth3 = charlie.into();
     let auth4 = satoshi.into();
     let initial_authorities = match genesis_spec {
         GenesisSpec::Dev => vec![auth1],
-        GenesisSpec::Local => vec![auth1, auth2],
-        GenesisSpec::Multi => vec![auth1, auth2, auth3, auth4, charlie.into(), dave.into()],
+        GenesisSpec::Local => vec![auth1, auth2, auth3],
+        GenesisSpec::Multi => vec![auth1, auth2, auth3, auth4, gavin.into(), dave.into()],
     };
 
     const CONSENSUS_TIME: u64 = 1;
@@ -98,12 +98,18 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     )
     .unwrap();
 
-    let endowed = initial_authorities
+    let apply_prec = |x| x * 10_u64.pow(pcx_precision as u32);
+    let mut full_endowed = vec![
+        (auth1, apply_prec(30), b"Alice".to_vec(), b"Alice.com".to_vec()),
+        (auth2, apply_prec(10), b"Bob".to_vec(), b"Bob.com".to_vec()),
+        (auth3, apply_prec(10), b"Charlie".to_vec(), b"Charlie".to_vec()),
+    ];
+    full_endowed.truncate(initial_authorities.len());
+    let endowed = full_endowed
         .clone()
         .into_iter()
-        .map(|x| (x, 12500))
+        .map(|(auth, balance, _, _)| (auth, balance))
         .collect::<Vec<_>>();
-
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
@@ -121,7 +127,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         session: Some(SessionConfig {
             validators: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
-            session_length: 30, // 30 blocks per session
+            session_length: 10, // 30 blocks per session
         }),
         sudo: Some(SudoConfig {
             key: auth1.into(),
@@ -146,9 +152,9 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // asset, is_psedu_intention, init for account
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
             asset_list: vec![
-                (btc_asset, true, vec![(Keyring::Alice.to_raw_public().into(), 100),(Keyring::Bob.to_raw_public().into(), 100)]),
+                (btc_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 100_000),(Keyring::Bob.to_raw_public().into(), 100_000)]),
                 // (dot_asset.clone(), false, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)]),
-                (xdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 100),(Keyring::Bob.to_raw_public().into(), 100)])
+                (xdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
             ],
         }),
         xprocess: Some(XAssetsProcessConfig {
@@ -161,14 +167,17 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             sessions_per_era: 1,
             bonding_duration: 30,
             current_era: 0,
-            penalty: 100,
+            penalty: 0,
             funding: Default::default(),
-            intentions: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
+            intentions: full_endowed.into_iter().map(|(who, value, name, url)| (who.into(), value, name, url)).collect(),
             validator_stake_threshold: 1,
         }),
         xtokens: Some(XTokensConfig {
             token_discount: Permill::from_percent(30),
-            _genesis_phantom_data: Default::default(),
+            endowed_users: vec![
+                (btc_asset.token(), vec![(Keyring::Alice.to_raw_public().into(), 100_000),(Keyring::Bob.to_raw_public().into(), 100_000)]),
+                (xdot_asset.token(), vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
+            ],
         }),
         xspot: Some(XSpotConfig {
             pair_list: vec![

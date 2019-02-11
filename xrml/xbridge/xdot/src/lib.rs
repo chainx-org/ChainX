@@ -69,14 +69,11 @@ decl_event!(
 );
 
 decl_storage! {
-    // A macro for the Storage trait, and its implementation, for this module.
-    // This allows for type-safe usage of the Substrate storage database, so you can
-    // keep things around between blocks.
-    trait Store for Module<T: Trait> as Claims {
-        Claims get(claims) build(|config: &GenesisConfig<T>| {
+    trait Store for Module<T: Trait> as XBridgeOfXDOT {
+        pub Claims get(claims) build(|config: &GenesisConfig<T>| {
             config.claims.iter().map(|(a, b)| (a.clone(), b.clone())).collect::<Vec<_>>()
         }): map EthereumAddress => Option<T::Balance>;
-        Total get(total) build(|config: &GenesisConfig<T>| {
+        pub Total get(total) build(|config: &GenesisConfig<T>| {
             config.claims.iter().fold(Zero::zero(), |acc: T::Balance, &(_, n)| acc + n)
         }): T::Balance;
     }
