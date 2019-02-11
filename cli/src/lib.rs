@@ -102,7 +102,7 @@ where
     cli::parse_and_execute::<service::Factory, NoCustom, NoCustom, _, _, _, _, _>(
         load_spec,
         &version,
-        "substrate-node",
+        "ChainX",
         args,
         exit,
         |exit, _custom_args, config| {

@@ -1,3 +1,5 @@
+// Copyright 2019 Chainpool.
+
 extern crate chainx_cli as cli;
 extern crate ctrlc;
 extern crate futures;
@@ -40,8 +42,8 @@ quick_main!(run);
 fn run() -> cli::error::Result<()> {
     let version = VersionInfo {
         name: "ChainX",
-        commit: "VERGEN_SHA_SHORT",
-        version: "CARGO_PKG_VERSION",
+        commit: env!("VERGEN_SHA_SHORT"),
+        version: env!("CARGO_PKG_VERSION"),
         executable_name: "ChainX",
         author: "ChainX community",
         description: "Fully Decentralized Interchain Crypto Asset Management on Polkadot",
