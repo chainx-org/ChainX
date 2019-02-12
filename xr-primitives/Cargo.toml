@@ -9,6 +9,7 @@ integer-sqrt = "0.1.2"
 num-traits = { version = "0.2", default-features = false }
 parity-codec = { version = "3.0", default-features = false }
 
+sr-io = { git = "https://github.com/chainpool/substrate", default_features = false }
 sr-std = { git = "https://github.com/chainpool/substrate", default_features = false }
 sr-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
@@ -23,6 +24,7 @@ std = [
     "serde",
     "num-traits/std",
     "parity-codec/std",
+    "sr-io/std",
     "sr-std/std",
     "sr-primitives/std",
     "srml-support/std"

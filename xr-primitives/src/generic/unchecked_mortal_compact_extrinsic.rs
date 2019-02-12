@@ -23,13 +23,13 @@ use std::fmt;
 use parity_codec::{Compact, Decode, Encode, Input};
 
 use rstd::prelude::*;
+use runtime_io::blake2_256;
 use runtime_primitives::{
     generic::Era,
     traits::{
         self, BlockNumberToHash, Checkable, CurrentHeight, Extrinsic, Lookup, MaybeDisplay, Member,
         SimpleArithmetic,
     },
-    verify_encoded_lazy,
 };
 
 use super::checked_extrinsic::CheckedExtrinsic;
@@ -117,14 +117,20 @@ where
                         era.birth(context.current_height().as_()),
                     ))
                     .ok_or("transaction birth block ancient")?;
-                let payload = (index, self.function, era, h, acceleration);
+                let raw_payload = (index, self.function, era, h, acceleration);
                 let signed = context.lookup(signed)?;
-                if !verify_encoded_lazy(&signature, &payload, &signed) {
+                if !raw_payload.using_encoded(|payload| {
+                    if payload.len() > 256 {
+                        signature.verify(&blake2_256(payload)[..], &signed)
+                    } else {
+                        signature.verify(payload, &signed)
+                    }
+                }) {
                     return Err("bad signature in extrinsic");
                 }
                 CheckedExtrinsic {
-                    signed: Some((signed, (payload.0).0, (payload.4).0)),
-                    function: payload.1,
+                    signed: Some((signed, (raw_payload.0).0, (raw_payload.4).0)),
+                    function: raw_payload.1,
                 }
             }
             None => CheckedExtrinsic {
@@ -236,6 +242,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runtime_io::blake2_256;
 
     struct TestContext;
     impl Lookup for TestContext {
@@ -268,15 +275,14 @@ mod tests {
         }
     }
 
-    const DUMMY_FUNCTION: u64 = 0;
     const DUMMY_ACCOUNTID: u64 = 0;
 
-    type Ex = UncheckedMortalCompactExtrinsic<u64, u64, u64, TestSig, u32>;
-    type CEx = CheckedExtrinsic<u64, u64, u64, u32>;
+    type Ex = UncheckedMortalCompactExtrinsic<u64, u64, Vec<u8>, TestSig, u32>;
+    type CEx = CheckedExtrinsic<u64, u64, Vec<u8>, u32>;
 
     #[test]
     fn unsigned_codec_should_work() {
-        let ux = Ex::new_unsigned(DUMMY_FUNCTION);
+        let ux = Ex::new_unsigned(vec![0u8; 0]);
         let encoded = ux.encode();
         assert_eq!(Ex::decode(&mut &encoded[..]), Some(ux));
     }
@@ -285,13 +291,13 @@ mod tests {
     fn signed_codec_should_work() {
         let ux = Ex::new_signed(
             0,
-            DUMMY_FUNCTION,
+            vec![0u8; 0],
             DUMMY_ACCOUNTID,
             TestSig(
                 DUMMY_ACCOUNTID,
                 (
                     DUMMY_ACCOUNTID,
-                    DUMMY_FUNCTION,
+                    vec![0u8; 0],
                     Era::immortal(),
                     0u64,
                     Compact::<u32>::from(1),
@@ -307,7 +313,7 @@ mod tests {
 
     #[test]
     fn unsigned_check_should_work() {
-        let ux = Ex::new_unsigned(DUMMY_FUNCTION);
+        let ux = Ex::new_unsigned(vec![0u8; 0]);
         assert!(!ux.is_signed().unwrap_or(false));
         assert!(<Ex as Checkable<TestContext>>::check(ux, &TestContext).is_ok());
     }
@@ -316,7 +322,7 @@ mod tests {
     fn badly_signed_check_should_fail() {
         let ux = Ex::new_signed(
             0,
-            DUMMY_FUNCTION,
+            vec![0u8; 0],
             DUMMY_ACCOUNTID,
             TestSig(DUMMY_ACCOUNTID, vec![0u8]),
             Era::immortal(),
@@ -333,13 +339,13 @@ mod tests {
     fn immortal_signed_check_should_work() {
         let ux = Ex::new_signed(
             0,
-            DUMMY_FUNCTION,
+            vec![0u8; 0],
             DUMMY_ACCOUNTID,
             TestSig(
                 DUMMY_ACCOUNTID,
                 (
                     Compact::from(DUMMY_ACCOUNTID),
-                    DUMMY_FUNCTION,
+                    vec![0u8; 0],
                     Era::immortal(),
                     0u64,
                     Compact::<u32>::from(1),
@@ -354,7 +360,7 @@ mod tests {
             <Ex as Checkable<TestContext>>::check(ux, &TestContext),
             Ok(CEx {
                 signed: Some((DUMMY_ACCOUNTID, 0, 1)),
-                function: DUMMY_FUNCTION
+                function: vec![0u8; 0]
             })
         );
     }
@@ -363,13 +369,13 @@ mod tests {
     fn mortal_signed_check_should_work() {
         let ux = Ex::new_signed(
             0,
-            DUMMY_FUNCTION,
+            vec![0u8; 0],
             DUMMY_ACCOUNTID,
             TestSig(
                 DUMMY_ACCOUNTID,
                 (
                     Compact::from(DUMMY_ACCOUNTID),
-                    DUMMY_FUNCTION,
+                    vec![0u8; 0],
                     Era::mortal(32, 42),
                     42u64,
                     Compact::<u32>::from(1),
@@ -384,7 +390,7 @@ mod tests {
             <Ex as Checkable<TestContext>>::check(ux, &TestContext),
             Ok(CEx {
                 signed: Some((DUMMY_ACCOUNTID, 0, 1)),
-                function: DUMMY_FUNCTION
+                function: vec![0u8; 0]
             })
         );
     }
@@ -393,13 +399,13 @@ mod tests {
     fn later_mortal_signed_check_should_work() {
         let ux = Ex::new_signed(
             0,
-            DUMMY_FUNCTION,
+            vec![0u8; 0],
             DUMMY_ACCOUNTID,
             TestSig(
                 DUMMY_ACCOUNTID,
                 (
                     Compact::from(DUMMY_ACCOUNTID),
-                    DUMMY_FUNCTION,
+                    vec![0u8; 0],
                     Era::mortal(32, 11),
                     11u64,
                     Compact::<u32>::from(1),
@@ -414,7 +420,7 @@ mod tests {
             <Ex as Checkable<TestContext>>::check(ux, &TestContext),
             Ok(CEx {
                 signed: Some((DUMMY_ACCOUNTID, 0, 1)),
-                function: DUMMY_FUNCTION
+                function: vec![0u8; 0]
             })
         );
     }
@@ -423,13 +429,13 @@ mod tests {
     fn too_late_mortal_signed_check_should_fail() {
         let ux = Ex::new_signed(
             0,
-            DUMMY_FUNCTION,
+            vec![0u8; 0],
             DUMMY_ACCOUNTID,
             TestSig(
                 DUMMY_ACCOUNTID,
                 (
                     DUMMY_ACCOUNTID,
-                    DUMMY_FUNCTION,
+                    vec![0u8; 0],
                     Era::mortal(32, 10),
                     10u64,
                     Compact::<u32>::from(1),
@@ -450,13 +456,13 @@ mod tests {
     fn too_early_mortal_signed_check_should_fail() {
         let ux = Ex::new_signed(
             0,
-            DUMMY_FUNCTION,
+            vec![0u8; 0],
             DUMMY_ACCOUNTID,
             TestSig(
                 DUMMY_ACCOUNTID,
                 (
                     DUMMY_ACCOUNTID,
-                    DUMMY_FUNCTION,
+                    vec![0u8; 0],
                     Era::mortal(32, 43),
                     43u64,
                     Compact::<u32>::from(1),
@@ -475,7 +481,7 @@ mod tests {
 
     #[test]
     fn encoding_matches_vec() {
-        let ex = Ex::new_unsigned(DUMMY_FUNCTION);
+        let ex = Ex::new_unsigned(vec![0u8; 0]);
         let encoded = ex.encode();
         let decoded = Ex::decode(&mut encoded.as_slice()).unwrap();
         assert_eq!(decoded, ex);

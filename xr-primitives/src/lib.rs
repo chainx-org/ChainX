@@ -10,6 +10,7 @@ extern crate parity_codec;
 #[cfg(feature = "std")]
 extern crate serde;
 
+extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
 extern crate sr_std as rstd;
 extern crate srml_support as support;
