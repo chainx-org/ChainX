@@ -277,13 +277,18 @@ impl<T: Trait> Module<T> {
         None
     }
 
+    //返回以PCX计价的"单位"token的价格，已含pcx精度
+    //譬如1BTC=10000PCX，返回的是10000*（10.pow(pcx精度))
     pub fn aver_asset_price(token: &Token) -> Option<T::Balance> {
         /*
         如果交易对ID是XXX/PCX，则：
-        返回：交易对Map[交易对ID].平均价 / 10^报价精度
+        返回：(交易对Map[交易对ID].平均价*（10^PCX精度)) / 10^报价精度
         如果交易对ID是PCX/XXX，则：
-        返回：10^交易对Map[交易对ID].报价精度 / 平均价
+        返回：(10^交易对Map[交易对ID].报价精度*（10^PCX精度)) / 平均价
         */
+        let pcx = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
+        let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
+        
         let pair_len = <OrderPairLen<T>>::get();
         for i in 0..pair_len {
             if let Some(pair) = <OrderPairOf<T>>::get(i) {
@@ -293,8 +298,13 @@ impl<T: Trait> Module<T> {
                         .eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec())
                 {
                     if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
+                        let mul_price: u64 = match aver.as_().checked_mul(10_u64.pow(pcx_asset.precision() as u32)) {
+                            Some(x) => x,
+                            None => panic!("Overflow when apply aver price multiplies pcx precision."),
+                        };
+
                         let price: T::Balance =
-                            As::sa(aver.as_() / (10_u64.pow(pair.precision.as_())));
+                            As::sa(mul_price / (10_u64.pow(pair.precision.as_())));
                         return Some(price);
                     }
                 } else if pair
@@ -303,12 +313,39 @@ impl<T: Trait> Module<T> {
                     && pair.second.eq(token)
                 {
                     if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
+                        let mul_price: u64 = match (10_u64.pow(pair.precision.as_())).checked_mul(10_u64.pow(pcx_asset.precision() as u32)) {
+                            Some(x) => x,
+                            None => panic!("Overflow when apply aver price precision multiplies pcx precision."),
+                        };
+
                         let price: T::Balance =
-                            As::sa(10_u64.pow(pair.precision.as_()) / aver.as_());
+                            As::sa(mul_price / aver.as_());
                         return Some(price);
                     }
                 }
             }
+        }
+
+        None
+    }
+    //资产总发行折合成PCX，已含PCX精度
+    //aver_asset_price(token)*token的总发行量[含token的精度]/(10^token的精度)
+    pub fn trans_pcx_stake(token: &Token) -> Option<T::Balance> {
+        if let Some(price) = Self::aver_asset_price(token){
+            match <xassets::Module<T>>::get_asset(token) {
+                Ok(asset)=>{
+                    let pow_precision = 10_u64.pow(asset.precision() as u32);
+                    let total = <xassets::Module<T>>::all_type_balance(&token).as_();
+                    let sum: u64 = match price.as_().checked_mul(total.as_()) {
+                            Some(x) => x,
+                            None => panic!("Overflow when apply aver price  multiplies total."),
+                        };
+                    let total:T::Balance=As::sa(sum / pow_precision );
+                    return Some(total);
+                },
+                _=>{}
+            }
+            
         }
 
         None
@@ -1075,8 +1112,13 @@ impl<T: Trait> Module<T> {
         match <xassets::Module<T>>::asset_info(&pair.first) {
             Some((first, _, _)) => match <xassets::Module<T>>::asset_info(&pair.second) {
                 Some((second, _, _)) => {
+                    let sum:u64 = match amount.as_().checked_mul(price.as_() * (10_u64.pow(second.precision().as_()))) {
+                            Some(x) => x,
+                            None => Zero::zero(),
+                        };
+
                     let trans_amount: T::Balance = As::sa(
-                        (amount.as_() * price.as_() * (10_u64.pow(second.precision().as_())))
+                        sum
                             / (10_u64.pow(first.precision().as_())
                                 * 10_u64.pow(pair.precision.as_())),
                     );

@@ -328,6 +328,11 @@ where
                     .ok()
                 {
                     info.price = price;
+                    //注意 
+                    //这里返回的是以PCX计价的"单位"token的价格，已含pcx精度
+                    //譬如1BTC=10000PCX，则返回的是10000*（10.pow(pcx精度))
+                    //因此，如果前端要换算折合投票数的时候
+                    //应该=(资产数量[含精度的数字]*price)/(10^资产精度)=PCX[含PCX精度]
                 };
 
                 let key = <xassets::TotalAssetBalance<Runtime>>::key_for(&token);
