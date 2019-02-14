@@ -298,13 +298,11 @@ impl<T: Trait> Module<T> {
                         .eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec())
                 {
                     if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
-                        let mul_price: u64 = match aver.as_().checked_mul(10_u64.pow(pcx_asset.precision() as u32)) {
-                            Some(x) => x,
-                            None => panic!("Overflow when apply aver price multiplies pcx precision."),
-                        };
+                        let pow_pcx_precision=10_u64.pow(pcx_asset.precision() as u32);
+                        let pow_pair_precision=10_u64.pow(pair.precision.as_());
 
-                        let price: T::Balance =
-                            As::sa(mul_price / (10_u64.pow(pair.precision.as_())));
+                        let price=T::Balance::sa( ( ( pow_pcx_precision as f64 / pow_pair_precision as f64) *  (aver.as_() as f64 ) ) as u64 );
+
                         return Some(price);
                     }
                 } else if pair
@@ -313,13 +311,12 @@ impl<T: Trait> Module<T> {
                     && pair.second.eq(token)
                 {
                     if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
-                        let mul_price: u64 = match (10_u64.pow(pair.precision.as_())).checked_mul(10_u64.pow(pcx_asset.precision() as u32)) {
-                            Some(x) => x,
-                            None => panic!("Overflow when apply aver price precision multiplies pcx precision."),
-                        };
+                        
+                        let pow_pcx_precision=10_u64.pow(pcx_asset.precision() as u32);
+                        let pow_pair_precision=10_u64.pow(pair.precision.as_());
+                        let price=T::Balance::sa( ( ( pow_pcx_precision as f64 / aver.as_() as f64) *  (pow_pair_precision as f64 ) ) as u64 );
 
-                        let price: T::Balance =
-                            As::sa(mul_price / aver.as_());
+
                         return Some(price);
                     }
                 }
@@ -335,12 +332,10 @@ impl<T: Trait> Module<T> {
             match <xassets::Module<T>>::get_asset(token) {
                 Ok(asset)=>{
                     let pow_precision = 10_u64.pow(asset.precision() as u32);
-                    let total = <xassets::Module<T>>::all_type_balance(&token).as_();
-                    let sum: u64 = match price.as_().checked_mul(total.as_()) {
-                            Some(x) => x,
-                            None => panic!("Overflow when apply aver price  multiplies total."),
-                        };
-                    let total:T::Balance=As::sa(sum / pow_precision );
+                    let total_balance = <xassets::Module<T>>::all_type_balance(&token).as_();
+
+                    let total=T::Balance::sa( ( ( total_balance as f64 / pow_precision as f64) *  ( price.as_() as f64 ) ) as u64 );
+
                     return Some(total);
                 },
                 _=>{}
@@ -1112,16 +1107,10 @@ impl<T: Trait> Module<T> {
         match <xassets::Module<T>>::asset_info(&pair.first) {
             Some((first, _, _)) => match <xassets::Module<T>>::asset_info(&pair.second) {
                 Some((second, _, _)) => {
-                    let sum:u64 = match amount.as_().checked_mul(price.as_() * (10_u64.pow(second.precision().as_()))) {
-                            Some(x) => x,
-                            None => Zero::zero(),
-                        };
 
-                    let trans_amount: T::Balance = As::sa(
-                        sum
-                            / (10_u64.pow(first.precision().as_())
-                                * 10_u64.pow(pair.precision.as_())),
-                    );
+                    let trans_amount=T::Balance::sa( (((price.as_() * (10_u64.pow(second.precision().as_()))) as f64 / (10_u64.pow(first.precision().as_())
+                                * 10_u64.pow(pair.precision.as_())) as f64) * amount.as_() as f64) as u64);
+
                     if trans_amount == Zero::zero() {
                         None
                     } else {
