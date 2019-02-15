@@ -22,7 +22,7 @@ use chainx_runtime::{
     XTokensConfig,
 };
 
-use ed25519;
+use ed25519::{self, Public};
 use sr_primitives::Permill;
 
 use self::btc_chain::BlockHeader;
@@ -98,28 +98,51 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     )
     .unwrap();
 
-    let apply_prec = |x| x * 10_u64.pow(pcx_precision as u32);
+    let apply_prec = |x| (x * 10_u64.pow(pcx_precision as u32) as f64) as u64;
+
     let mut full_endowed = vec![
         (
-            auth1,
-            apply_prec(30),
-            b"Alice".to_vec(),
-            b"Alice.com".to_vec(),
+            auth1,                                                                          // auth
+            apply_prec(12.5),      // balance
+            b"Alice".to_vec(),     // name
+            b"Alice.com".to_vec(), // url
+            b"03f72c448a0e59f48d4adef86cba7b278214cece8e56ef32ba1d179e0a8129bdba".to_vec(), // hot_entity
+            b"02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee".to_vec(), // cold_entity
         ),
-        (auth2, apply_prec(10), b"Bob".to_vec(), b"Bob.com".to_vec()),
+        (
+            auth2,
+            apply_prec(12.5),
+            b"Bob".to_vec(),
+            b"Bob.com".to_vec(),
+            b"0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd".to_vec(),
+            b"03ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d70780".to_vec(),
+        ),
         (
             auth3,
-            apply_prec(10),
+            apply_prec(12.5),
             b"Charlie".to_vec(),
-            b"Charlie".to_vec(),
+            b"Charlie.com".to_vec(),
+            b"0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40".to_vec(),
+            b"02e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2".to_vec(),
+        ),
+        (
+            auth4,
+            apply_prec(12.5),
+            b"Satoshi".to_vec(),
+            b"Satoshi.com".to_vec(),
+            b"0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3".to_vec(),
+            b"020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f".to_vec(),
         ),
     ];
+
     full_endowed.truncate(initial_authorities.len());
+
     let endowed = full_endowed
         .clone()
         .into_iter()
-        .map(|(auth, balance, _, _)| (auth, balance))
+        .map(|(auth, balance, _, _, _, _)| (auth, balance))
         .collect::<Vec<_>>();
+
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
@@ -137,7 +160,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         session: Some(SessionConfig {
             validators: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
-            session_length: 10, // 30 blocks per session
+            session_length: 150, // 150 blocks per session
         }),
         sudo: Some(SudoConfig {
             key: auth1.into(),
@@ -172,15 +195,20 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             _genesis_phantom_data: Default::default(),
         }),
         xstaking: Some(XStakingConfig {
-            validator_count: 7,
-            minimum_validator_count: 1,
-            sessions_per_era: 1,
-            bonding_duration: 30,
+            initial_reward: apply_prec(50.0),
+            validator_count: 100,
+            minimum_validator_count: 4,
+            sessions_per_era: 12,  // update validators set per 12 sessions
+            sessions_per_epoch: 12 * 10, // update trustees set per 120 sessions
+            bonding_duration: 150 * 12, // 150 blocks per bonding
+            intention_bonding_duration: 150 * 12 * 10,
             current_era: 0,
             penalty: 0,
             funding: Default::default(),
-            intentions: full_endowed.into_iter().map(|(who, value, name, url)| (who.into(), value, name, url)).collect(),
+            intentions: full_endowed.clone().into_iter().map(|(who, value, name, url, _, _)| (who.into(), value, name, url)).collect(),
             validator_stake_threshold: 1,
+            trustee_intentions: full_endowed.into_iter().map(|(who, _, _, _, hot_entity, cold_entity)| (who.into(), hot_entity, cold_entity)).collect(),
+            team_address: Public::from_ss58check("5CSff76SK7qcWYq5MpvoHDVRrjWFwpxurwUu6Bqw25hKPQiy").unwrap().0.into(),
         }),
         xtokens: Some(XTokensConfig {
             token_discount: Permill::from_percent(30),

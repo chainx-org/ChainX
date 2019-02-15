@@ -85,6 +85,8 @@ pub struct IntentionInfo {
     pub self_vote: Balance,
     /// jackpot
     pub jackpot: Balance,
+    /// jackpot address
+    pub jackpot_address: H256,
     /// total nomination from all nominators
     pub total_nomination: Balance,
     /// vote weight at last update
@@ -130,6 +132,8 @@ pub struct PseduIntentionInfo {
     pub price: Balance,
     /// jackpot
     pub jackpot: Balance,
+    /// jackpot address
+    pub jackpot_address: H256,
     /// vote weight at last update
     pub last_total_deposit_weight: u64,
     /// last update time of vote weight

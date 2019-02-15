@@ -31,6 +31,7 @@ xrml-xsystem = { path = "../../xsystem", default_features = false }
 xrml-xsupport = { path = "../../xsupport",  default_features = false }
 xrml-xaccounts = { path = "../../xaccounts",  default_features = false }
 xrml-xassets-assets = { path = "../../xassets/assets",  default_features = false }
+xrml-xassets-records = { path = "../../xassets/records",  default_features = false }
 xrml-session = { path = "../../xsession", default_features = false }
 xrml-bridge-bitcoin = { path = "../../xbridge/bitcoin",  default_features = false }
 
@@ -60,5 +61,6 @@ std = [
     "xrml-xsupport/std",
     "xrml-xaccounts/std",
     "xrml-xassets-assets/std",
+    "xrml-xassets-records/std",
     "xrml-bridge-bitcoin/std",
 ]

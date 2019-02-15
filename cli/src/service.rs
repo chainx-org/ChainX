@@ -36,8 +36,6 @@ use substrate_service::{
 };
 use transaction_pool::{self, txpool::Pool as TransactionPool};
 
-use network::ManageNetwork;
-
 use self::xrml_xsystem::InherentDataProvider;
 
 type XSystemInherentDataProvider = InherentDataProvider<AccountId>;

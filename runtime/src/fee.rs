@@ -8,6 +8,7 @@ use xdot::Call as XdotCall;
 use xprocess::Call as XAssetsProcessCall;
 use xspot::Call as XSpotCall;
 use xstaking::Call as XStakingCall;
+use xtokens::Call as XTokensCall;
 
 use Acceleration;
 use Call;
@@ -52,6 +53,10 @@ impl CheckFee for Call {
                 XStakingCall::unnominate(_, _, _) => Some(3),
                 XStakingCall::unfreeze(_, _) => Some(2),
                 XStakingCall::claim(_) => Some(3),
+                _ => None,
+            },
+            Call::XTokens(call) => match call {
+                XTokensCall::claim(_) => Some(3),
                 _ => None,
             },
             Call::XSpot(call) => match call {

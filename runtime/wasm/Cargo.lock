@@ -2295,6 +2295,7 @@ dependencies = [
  "xrml-session 0.1.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-records 0.4.0",
  "xrml-xsupport 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
