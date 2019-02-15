@@ -2,7 +2,9 @@
 
 use self::types::Revocation;
 use super::*;
+use keys::DisplayLayout;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
+use srml_support::storage::generator::{StorageMap, StorageValue};
 use std::iter::FromIterator;
 use xassets::ChainT;
 
@@ -18,7 +20,7 @@ where
     <Client<B, E, Block, RA> as ProvideRuntimeApi>::Api:
         Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block> + XSpotApi<Block>,
 {
-    fn block_info(&self, number: Trailing<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
+    fn block_info(&self, number: Option<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         let hash = match number.into() {
             None => Some(self.client.info()?.chain.best_hash),
             Some(number) => self
@@ -137,51 +139,121 @@ where
             .map_err(|e| e.into())
     }
 
-    fn deposit_list(
-        &self,
-        chain: String,
-        page_index: u32,
-        page_size: u32,
-    ) -> Result<Option<PageData<DepositLog>>> {
-        let c = serde_json::from_str::<Chain>(chain.as_str()).map_err(|_| ChainErr)?;
-
-        let best_number = self.best_number()?;
-        let state = self.best_state()?;
-        match c {
-            Chain::Bitcoin => {
-                let list = vec![];
-                //                let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
-                //                    .client
-                //                    .runtime_api()
-                //                    .withdrawal_list(&best_number, *c)
-                //                    .map_err(|e| e.into());
-                into_pagedata(list, page_index, page_size)
-            }
-            _ => return Ok(None),
-        }
-    }
-
     fn withdrawal_list(
         &self,
-        chain: String,
+        chain: Chain,
         page_index: u32,
         page_size: u32,
-    ) -> Result<Option<PageData<WithdrawalLog>>> {
-        let c = serde_json::from_str::<Chain>(chain.as_str()).map_err(|_| ChainErr)?;
-
+    ) -> Result<Option<PageData<WithdrawInfo>>> {
         let best_number = self.best_number()?;
         let state = self.best_state()?;
-        match c {
-            Chain::Bitcoin => {
-                let list = vec![];
-                //                let list: Result<Vec<xrecords::Application<AccountId, Balance, Timestamp>>> = self
-                //                    .client
-                //                    .runtime_api()
-                //                    .withdrawal_list(&best_number, *c)
-                //                    .map_err(|e| e.into());
-                into_pagedata(list, page_index, page_size)
+        let mut records = Vec::new();
+        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(&chain);
+        let trustee = match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
+            Some(a) => {
+                let hot_address = Address::from_layout(&a.hot_address.as_slice())
+                    .map_err(|_| "Invalid Address")?;
+                hot_address
             }
-            _ => return Ok(None),
+            None => return into_pagedata(records, page_index, page_size),
+        };
+        let list: Vec<xrecords::Application<AccountId, Balance, Timestamp>> = self
+            .client
+            .runtime_api()
+            .withdrawal_list_of(&best_number, chain)
+            .unwrap_or_default();
+
+        match chain {
+            Chain::Bitcoin => {
+                let key = <TxProposal<Runtime>>::key();
+                let candidate =
+                    if let Some(data) = Self::pickout::<CandidateTx<AccountId>>(&state, &key)? {
+                        data
+                    } else {
+                        for appl in list {
+                            let info = WithdrawInfo::new(
+                                appl.time(),
+                                appl.id(),
+                                String::new(),
+                                appl.balance(),
+                                String::from_utf8(appl.token()).unwrap_or_default(),
+                                appl.applicant(),
+                                String::from_utf8(appl.addr()).unwrap_or_default(),
+                                WithdrawStatus::Applying,
+                                String::from_utf8(appl.ext()).unwrap_or_default(),
+                            );
+                            records.push(info)
+                        }
+                        return into_pagedata(records, page_index, page_size);
+                    };
+
+                let key = <IrrBlock<Runtime>>::key();
+                let irr_count = if let Some(irr) = Self::pickout::<u32>(&state, &key)? {
+                    irr
+                } else {
+                    for appl in list {
+                        let info = WithdrawInfo::new(
+                            appl.time(),
+                            appl.id(),
+                            String::new(),
+                            appl.balance(),
+                            String::from_utf8(appl.token()).unwrap_or_default(),
+                            appl.applicant(),
+                            String::from_utf8(appl.addr()).unwrap_or_default(),
+                            WithdrawStatus::Applying,
+                            String::from_utf8(appl.ext()).unwrap_or_default(),
+                        );
+                        records.push(info)
+                    }
+                    return into_pagedata(records, page_index, page_size);
+                };
+
+                let key = <BestIndex<Runtime>>::key();
+                let mut tx_hash = String::new();
+                if let Some(best_hash) = Self::pickout::<btc_chain::hash::H256>(&state, &key)? {
+                    let mut block_hash = best_hash;
+                    for _i in 0..irr_count {
+                        let key = <BlockHeaderFor<Runtime>>::key_for(&block_hash);
+                        if let Some(header_info) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
+                            for txid in header_info.txid {
+                                let key = <TxFor<Runtime>>::key_for(&txid);
+                                if let Some(info) = Self::pickout::<TxInfo>(&state, &key)? {
+                                    if info.input_address.hash != trustee.hash {
+                                        continue;
+                                    }
+                                    tx_hash = info.raw_tx.hash().to_string();
+                                }
+                            }
+                            block_hash = header_info.header.previous_header_hash;
+                        }
+                    }
+                }
+
+                for appl in list {
+                    let mut status = WithdrawStatus::Applying;
+                    if candidate.withdraw_id.iter().any(|id| *id == appl.id()) {
+                        match candidate.sig_status {
+                            VoteResult::Unfinish => status = WithdrawStatus::Signing,
+                            VoteResult::FinishWithFavor => status = WithdrawStatus::Processing,
+                            _ => status = WithdrawStatus::Applying,
+                        }
+                    }
+                    let info = WithdrawInfo::new(
+                        appl.time(),
+                        appl.id(),
+                        tx_hash.clone(),
+                        appl.balance(),
+                        String::from_utf8(appl.token()).unwrap_or_default(),
+                        appl.applicant(),
+                        String::from_utf8(appl.addr()).unwrap_or_default(),
+                        status,
+                        String::from_utf8(appl.ext()).unwrap_or_default(),
+                    );
+                    records.push(info)
+                }
+                into_pagedata(records, page_index, page_size)
+            }
+            _ => Ok(None),
         }
     }
 
@@ -587,27 +659,15 @@ where
         Ok(Some(d))
     }
 
-    fn deposit_records(
+    fn deposit_list(
         &self,
-        who: AccountId,
+        chain: Chain,
         page_index: u32,
         page_size: u32,
     ) -> Result<Option<PageData<DepositInfo>>> {
         let state = self.best_state()?;
         let mut records = Vec::new();
-        let key = <IrrBlock<Runtime>>::key();
-        let irr_count = if let Some(irr) = Self::pickout::<u32>(&state, &key)? {
-            irr
-        } else {
-            return into_pagedata(records, page_index, page_size);
-        };
-        let key = <xaccounts::CrossChainBindOf<Runtime>>::key_for((Chain::Bitcoin, who));
-        let bind_list = if let Some(list) = Self::pickout::<Vec<Vec<u8>>>(&state, &key)? {
-            list
-        } else {
-            return into_pagedata(records, page_index, page_size);
-        };
-        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(xassets::Chain::Bitcoin);
+        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(&chain);
         let trustee = match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
             Some(a) => {
                 let hot_address = Address::from_layout(&a.hot_address.as_slice())
@@ -617,48 +677,60 @@ where
             None => return into_pagedata(records, page_index, page_size),
         };
 
-        let token = xbitcoin::Module::<Runtime>::TOKEN;
-        let stoken = String::from_utf8_lossy(&token).into_owned();
-        let key = <BestIndex<Runtime>>::key();
-        if let Some(best_hash) = Self::pickout::<btc_chain::hash::H256>(&state, &key)? {
-            let mut block_hash = best_hash;
-            for i in 0..irr_count {
-                let key = <BlockHeaderFor<Runtime>>::key_for(&block_hash);
-                if let Some(header_info) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
-                    for txid in header_info.txid {
-                        let key = <TxFor<Runtime>>::key_for(&txid);
-                        if let Some(info) = Self::pickout::<TxInfo>(&state, &key)? {
-                            match get_deposit_info(&info.raw_tx, who, &info, &trustee, &bind_list) {
-                                Some(dep) => {
-                                    let tx_hash = txid.to_string();
-                                    let btc_address = info.input_address.to_string();
-                                    let info = DepositInfo {
-                                        time: header_info.header.time,
-                                        txid: tx_hash,
-                                        confirm: i,
-                                        total_confirm: irr_count,
-                                        address: btc_address,
-                                        balance: dep.0,
-                                        token: stoken.clone(),
-                                        remarks: dep.1,
-                                    };
-                                    records.push(info);
+        match chain {
+            Chain::Bitcoin => {
+                let key = <IrrBlock<Runtime>>::key();
+                let irr_count = if let Some(irr) = Self::pickout::<u32>(&state, &key)? {
+                    irr
+                } else {
+                    return Ok(None);
+                };
+                let token = xbitcoin::Module::<Runtime>::TOKEN;
+                let stoken = String::from_utf8_lossy(&token).into_owned();
+                let key = <BestIndex<Runtime>>::key();
+                if let Some(best_hash) = Self::pickout::<btc_chain::hash::H256>(&state, &key)? {
+                    let mut block_hash = best_hash;
+                    for i in 0..irr_count {
+                        let key = <BlockHeaderFor<Runtime>>::key_for(&block_hash);
+                        if let Some(header_info) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
+                            for txid in header_info.txid {
+                                let key = <TxFor<Runtime>>::key_for(&txid);
+                                if let Some(info) = Self::pickout::<TxInfo>(&state, &key)? {
+                                    match get_btc_deposit_info(&info.raw_tx, &trustee) {
+                                        Some(dep) => {
+                                            let tx_hash = txid.to_string();
+                                            let btc_address = info.input_address.to_string();
+                                            let info = DepositInfo {
+                                                time: header_info.header.time,
+                                                txid: tx_hash,
+                                                confirm: i,
+                                                total_confirm: irr_count,
+                                                address: btc_address,
+                                                balance: dep.0,
+                                                token: stoken.clone(),
+                                                accountid: dep.1,
+                                                memo: dep.2,
+                                            };
+                                            records.push(info);
+                                        }
+                                        None => continue,
+                                    }
                                 }
-                                None => continue,
                             }
+                            block_hash = header_info.header.previous_header_hash;
                         }
                     }
-                    block_hash = header_info.header.previous_header_hash;
                 }
+                into_pagedata(records, page_index, page_size)
             }
+            _ => return Ok(None),
         }
-        into_pagedata(records, page_index, page_size)
     }
 
     fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>> {
         let state = self.best_state()?;
         let mut v = vec![];
-        let key = <xaccounts::CrossChainBindOf<Runtime>>::key_for((chain, who));
+        let key = <xaccounts::CrossChainBindOf<Runtime>>::key_for(&(chain, who));
         match Self::pickout::<Vec<Vec<u8>>>(&state, &key)? {
             Some(addrs) => {
                 for addr in addrs {
@@ -672,55 +744,57 @@ where
     }
 }
 
-fn get_deposit_info(
+fn get_btc_deposit_info(
     raw_tx: &BTCTransaction,
-    who: AccountId,
-    info: &TxInfo,
     trustee: &Address,
-    bind_list: &Vec<Vec<u8>>,
-) -> Option<(Balance, String)> {
-    let mut ops = String::new();
+) -> Option<(Balance, Option<AccountId>, String)> {
+    let mut ops = String::default();
+    let mut accountid = AccountId::default();
     let mut balance = 0;
-    let mut flag = bind_list.iter().any(|a| {
-        let addr = Address::from_layout(&a.as_slice()).unwrap_or_default();
-        addr.hash == info.input_address.hash
-    });
+    let mut bind_flag = true;
+    let mut deposit_flag = false;
     for output in raw_tx.outputs.iter() {
         let script = &output.script_pubkey;
         let into_script: Script = script.clone().into();
         let s: Script = script.clone().into();
         if into_script.is_null_data_script() {
             let data = s.extract_pre('@');
-            match b58::from(data.to_vec()) {
-                Ok(mut slice) => {
-                    let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice())
-                        .unwrap_or_else(|| [0; 32].into());
-                    if account_id == who || flag {
-                        flag = true;
-                        ops = String::from_utf8(s[2..].to_vec()).unwrap_or_default();
-                    }
-                }
+            let mut account: Vec<u8> = match b58::from(data[2..].to_vec()) {
+                Ok(a) => a,
                 Err(_) => {
-                    if flag {
-                        ops = String::from_utf8(s[2..].to_vec()).unwrap_or_default();
-                    }
+                    bind_flag = false;
+                    Vec::new()
                 }
+            };
+
+            if account.len() != 35 {
+                bind_flag = false
             }
 
+            if bind_flag {
+                accountid =
+                    Decode::decode(&mut account[1..33].to_vec().as_slice()).unwrap_or_default();
+                ops = String::from_utf8(s[2..].to_vec()).unwrap_or_default();
+            }
             continue;
         }
 
         // get deposit money
         let script_addresses = into_script.extract_destinations().unwrap_or_default();
-        if script_addresses.len() == 1 {
-            if (trustee.hash == script_addresses[0].hash) && (output.value > 0) && flag {
+        if script_addresses.len() == 1 && trustee.hash == script_addresses[0].hash {
+            deposit_flag = true;
+            if output.value > 0 {
                 balance += output.value;
             }
         }
     }
 
-    if flag {
-        Some((balance, ops))
+    if deposit_flag {
+        if bind_flag {
+            Some((balance, Some(accountid), ops))
+        } else {
+            Some((balance, None, ops))
+        }
     } else {
         None
     }

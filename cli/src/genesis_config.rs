@@ -232,12 +232,12 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: (BlockHeader {
                 version: 536870912,
-                previous_header_hash: H256::from_reversed_str("00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01"),
-                merkle_root_hash: H256::from_reversed_str("815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707"),
-                time: 1546999089,
-                bits: Compact::new(436290411),
-                nonce: 562223693,
-            }, 1451572),
+                previous_header_hash: H256::from_reversed_str("000000000009a5e5b8b7154bcac5f28f43e22bc3b61883ce65c8caf09f9fa03b"),
+                merkle_root_hash: H256::from_reversed_str("89323c349e2ec768dcb5b0740eb221103a4490a00e1d137e5c9a4082521bff5e"),
+                time: 1549942457,
+                bits: Compact::new(436283074),
+                nonce: 2885019376,
+            }, 1456835),
             params_info: Params::new(520159231, // max_bits
                                      2 * 60 * 60,  // block_max_future
                                      3,  // max_fork_route_preset

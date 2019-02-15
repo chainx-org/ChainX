@@ -197,6 +197,14 @@ pub struct PseduNominationRecord {
 //        }
 //    }
 //}
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WithdrawStatus {
+    Applying,
+    Signing,
+    Broadcasting,
+    Processing,
+}
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -214,6 +222,56 @@ pub struct DepositInfo {
     pub balance: Balance,
     /// token id
     pub token: String,
+    /// accountid
+    pub accountid: Option<AccountId>,
     /// OP_RETURN
-    pub remarks: String,
+    pub memo: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WithdrawInfo {
+    pub time: u64,
+    ///id
+    pub id: u32,
+    /// txid
+    pub txid: String,
+    /// withdraw-balance
+    pub balance: Balance,
+    /// token id
+    pub token: String,
+    /// accountid
+    pub accountid: AccountId,
+    /// btc-address
+    pub address: String,
+    /// withdraw status
+    pub status: WithdrawStatus,
+    /// OP_RETURN
+    pub memo: String,
+}
+
+impl WithdrawInfo {
+    pub fn new(
+        time: u64,
+        id: u32,
+        txid: String,
+        balance: Balance,
+        token: String,
+        accountid: AccountId,
+        address: String,
+        status: WithdrawStatus,
+        memo: String,
+    ) -> Self {
+        WithdrawInfo {
+            time,
+            id,
+            txid,
+            balance,
+            token,
+            accountid,
+            address,
+            status,
+            memo,
+        }
+    }
 }

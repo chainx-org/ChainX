@@ -1,9 +1,9 @@
 use super::*;
 
-use super::keys::{DisplayLayout, Public};
+use super::keys::Public;
 use super::{
     Bytes, Result, Script, SignatureChecker, SignatureVersion, StorageMap, Trait, Transaction,
-    TransactionInputSigner, TransactionSignatureChecker,
+    TransactionInputSigner, TransactionSignatureChecker, TrusteeRedeemScript,
 };
 
 pub fn validate_transaction<T: Trait>(
@@ -74,9 +74,9 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &B
         input_amount: 0,
         signer: tx_signer,
     };
-    let sighashtype = 0x41; // Sighsh all
+    let sighashtype = 1; // Sighsh all
     let signature = sign.clone().take().into();
-    let public = if let Ok(public) = Public::from_slice(&pubkey) {
+    let public = if let Ok(public) = Public::from_slice(pubkey.as_slice()) {
         public
     } else {
         return false;
@@ -94,40 +94,33 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &B
 }
 
 pub fn handle_condidate<T: Trait>(tx: Transaction) -> Result {
-    let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
-        .ok_or("Should set RECEIVE_address first.")?;
-    let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
-        .map_err(|_| "Invalid Address")?;
-    let pk = hot_address.hash.clone().to_vec();
-    let mut script_pubkey = Bytes::new();
-    script_pubkey.push(Opcode::OP_HASH160 as u8);
-    script_pubkey.push(Opcode::OP_PUSHBYTES_20 as u8);
-    for p in pk {
-        script_pubkey.push(p)
-    }
-    script_pubkey.push(Opcode::OP_EQUAL as u8);
+    let trustee_info =
+        <TrusteeRedeemScript<T>>::get().ok_or("Should set trustee address info first.")?;
 
+    let redeem_script = Script::from(trustee_info.hot_redeem_script);
     let script: Script = tx.inputs[0].script_sig.clone().into();
-    let (sigs, _dem) = if let Ok((sigs, dem)) = script.extract_multi_scriptsig() {
-        (sigs, dem)
+    let (sigs, _) = if let Ok((sigs, s)) = script.extract_multi_scriptsig() {
+        (sigs, s)
     } else {
-        return Err("InvalidSignature");
+        return Err("Invalid signature");
     };
-    let (keys, _siglen, _keylen) = match script.parse_redeem_script() {
+
+    let (pubkeys, _, _) = match redeem_script.parse_redeem_script() {
         Some((k, s, l)) => (k, s, l),
-        None => return Err("InvalidSignature"),
+        None => return Err("Parse redeem script failed"),
     };
     for sig in sigs.clone() {
         let mut verify = false;
-        for key in keys.clone() {
-            if verify_sign(&sig, &key, &tx, &script_pubkey) {
+        for pubkey in pubkeys.clone() {
+            if verify_sign(&sig, &pubkey, &tx, &redeem_script.to_bytes()) {
                 verify = true;
                 break;
             }
         }
         if !verify {
-            return Err("Verify sign error");
+            return Err("Verify sign failed");
         }
     }
+
     Ok(())
 }

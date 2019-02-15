@@ -33,13 +33,21 @@ where
             Err(_) => return None,
         };
 
+        if account.len() != 35 {
+            return None;
+        }
+
         let account_id: Self::AccountId =
             match Decode::decode(&mut account[1..33].to_vec().as_slice()) {
                 Some(a) => a,
                 None => return None,
             };
-        let node_name = &v[1];
-        Some((node_name.to_vec(), account_id))
+        let mut node_name = Vec::new();
+        if v.len() > 1 {
+            node_name = v[1].to_vec();
+        }
+
+        Some((node_name, account_id))
     }
 
     fn split(&self) -> Vec<Vec<u8>> {

@@ -7,11 +7,10 @@ use std::sync::Arc;
 
 use btc_chain::Transaction as BTCTransaction;
 use codec::Decode;
-use jsonrpc_macros::Trailing;
-use serde::Serialize;
+use jsonrpc_derive::rpc;
 
 use client::{self, runtime_api::Metadata, Client};
-use keys::{Address, DisplayLayout};
+use keys::Address;
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
@@ -19,20 +18,17 @@ use runtime_primitives::traits::{As, Block as BlockT, NumberFor, Zero};
 use script::Script;
 use state_machine::Backend;
 
-use srml_support::storage::{StorageMap, StorageValue};
-
 use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
 use xr_primitives::generic::b58;
 
 use xaccounts::{self, IntentionProps};
 use xassets::{self, Asset, AssetType, Chain, Token};
-use xbitcoin::{self, BestIndex, BlockHeaderFor, BlockHeaderInfo, IrrBlock, TxFor, TxInfo};
-use xrecords::{
-    self,
-    types::{DepositLog as DL, WithdrawalLog as WL},
-    Application,
+use xbitcoin::{
+    self, BestIndex, BlockHeaderFor, BlockHeaderInfo, CandidateTx, IrrBlock, TxFor, TxInfo,
+    TxProposal, VoteResult,
 };
+
 use xspot::def::{OrderPair, OrderPairID, ID};
 use xspot::{HandicapT, OrderT};
 use xstaking::{self, IntentionProfs};
@@ -48,68 +44,60 @@ pub mod types;
 use self::error::Result;
 use self::types::{
     AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData, PairInfo,
-    PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo,
+    PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, WithdrawInfo,
+    WithdrawStatus,
 };
 use chainx::error::ErrorKind::*;
-
 const MAX_PAGE_SIZE: u32 = 100;
 
-type WithdrawalLog = WL<AccountId, Balance, Timestamp>;
-type DepositLog = DL<AccountId, Balance, Timestamp>;
+#[rpc]
+/// ChainX API
+pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
+    /// Returns the block of a storage entry at a block's Number.
+    #[rpc(name = "chainx_getBlockByNumber")]
+    fn block_info(&self, Option<Number>) -> Result<Option<SignedBlock>>;
 
-build_rpc_trait! {
-    /// ChainX API
-    pub trait ChainXApi<Number, AccountId, Balance, BlockNumber> where SignedBlock: Serialize, {
+    #[rpc(name = "chainx_getAssetsByAccount")]
+    fn assets_of(&self, AccountId, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
 
-        /// Returns the block of a storage entry at a block's Number.
-        #[rpc(name = "chainx_getBlockByNumber")]
-        fn block_info(&self, Trailing<Number>) -> Result<Option<SignedBlock>>;
+    #[rpc(name = "chainx_getAssets")]
+    fn assets(&self, u32, u32) -> Result<Option<PageData<TotalAssetInfo>>>;
 
-        #[rpc(name = "chainx_getAssetsByAccount")]
-        fn assets_of(&self, AccountId, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
+    #[rpc(name = "chainx_verifyAddressValidity")]
+    fn verify_addr(&self, String, String, String) -> Result<Option<String>>;
 
-        #[rpc(name = "chainx_getAssets")]
-        fn assets(&self, u32, u32) -> Result<Option<PageData<TotalAssetInfo>>>;
+    #[rpc(name = "chainx_getMinimalWithdrawalValueByToken")]
+    fn minimal_withdrawal_value(&self, String) -> Result<Option<Balance>>;
 
-        #[rpc(name = "chainx_verifyAddressValidity")]
-        fn verify_addr(&self, String, String, String) -> Result<Option<String>>;
+    #[rpc(name = "chainx_getDepositList")]
+    fn deposit_list(&self, Chain, u32, u32) -> Result<Option<PageData<DepositInfo>>>;
 
-        #[rpc(name = "chainx_getMinimalWithdrawalValueByToken")]
-        fn minimal_withdrawal_value(&self, String) -> Result<Option<Balance>>;
+    #[rpc(name = "chainx_getWithdrawalList")]
+    fn withdrawal_list(&self, Chain, u32, u32) -> Result<Option<PageData<WithdrawInfo>>>;
 
-        #[rpc(name = "chainx_getDepositList")]
-        fn deposit_list(&self, String, u32, u32) -> Result<Option<PageData<DepositLog>>>;
+    #[rpc(name = "chainx_getNominationRecords")]
+    fn nomination_records(&self, AccountId) -> Result<Option<Vec<(AccountId, NominationRecord)>>>;
 
-        #[rpc(name = "chainx_getWithdrawalList")]
-        fn withdrawal_list(&self, String, u32, u32) -> Result<Option<PageData<WithdrawalLog>>>;
+    #[rpc(name = "chainx_getIntentions")]
+    fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>>;
 
-        #[rpc(name = "chainx_getNominationRecords")]
-        fn nomination_records(&self, AccountId) -> Result<Option<Vec<(AccountId, NominationRecord)>>>;
+    #[rpc(name = "chainx_getPseduIntentions")]
+    fn psedu_intentions(&self) -> Result<Option<Vec<PseduIntentionInfo>>>;
 
-        #[rpc(name = "chainx_getIntentions")]
-        fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>>;
+    #[rpc(name = "chainx_getPseduNominationRecords")]
+    fn psedu_nomination_records(&self, AccountId) -> Result<Option<Vec<PseduNominationRecord>>>;
 
-        #[rpc(name = "chainx_getPseduIntentions")]
-        fn psedu_intentions(&self) -> Result<Option<Vec<PseduIntentionInfo>>>;
+    #[rpc(name = "chainx_getOrderPairs")]
+    fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>;
 
-        #[rpc(name = "chainx_getPseduNominationRecords")]
-        fn psedu_nomination_records(&self, AccountId) -> Result<Option<Vec<PseduNominationRecord>>>;
+    #[rpc(name = "chainx_getQuotations")]
+    fn quotationss(&self, OrderPairID, u32) -> Result<Option<QuotationsList>>;
 
-        #[rpc(name = "chainx_getOrderPairs")]
-        fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>;
+    #[rpc(name = "chainx_getOrders")]
+    fn orders(&self, AccountId, u32, u32) -> Result<Option<PageData<OrderT<Runtime>>>>;
 
-        #[rpc(name = "chainx_getQuotations")]
-        fn quotationss(&self, OrderPairID, u32) -> Result<Option<QuotationsList>>;
-
-        #[rpc(name = "chainx_getOrders")]
-        fn orders(&self, AccountId, u32, u32) -> Result<Option<PageData<OrderT<Runtime>>>>;
-
-        #[rpc(name = "chainx_getDepositRecords")]
-        fn deposit_records(&self, AccountId, u32, u32) -> Result<Option<PageData<DepositInfo>>>;
-
-        #[rpc(name = "chainx_getAddressByAccount")]
-        fn address(&self, AccountId, Chain) -> Result<Option<Vec<String>>>;
-    }
+    #[rpc(name = "chainx_getAddressByAccount")]
+    fn address(&self, AccountId, Chain) -> Result<Option<Vec<String>>>;
 }
 
 /// ChainX API

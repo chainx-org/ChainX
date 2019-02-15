@@ -26,7 +26,7 @@ impl<'a> TxHandler<'a> {
                 Ok(()) => {
                     flag = true;
                     let txid = candidate.tx.hash();
-                    for number in candidate.outs.iter() {
+                    for number in candidate.withdraw_id.iter() {
                         runtime_io::print(u64::from(*number));
                         runtime_io::print(&txid[..]);
 
@@ -67,10 +67,11 @@ impl<'a> TxHandler<'a> {
 
             // get deposit money
             let script_addresses = into_script.extract_destinations().unwrap_or_default();
-            if script_addresses.len() == 1 {
-                if (trustee_address.hash == script_addresses[0].hash) && (output.value > 0) {
-                    deposit_balance += output.value;
-                }
+            if script_addresses.len() == 1
+                && trustee_address.hash == script_addresses[0].hash
+                && output.value > 0
+            {
+                deposit_balance += output.value;
             }
         }
 
@@ -156,19 +157,19 @@ fn update_binding<T: Trait>(node_name: &[u8], who: T::AccountId, info: &TxInfo) 
                 return false;
             }
             //delete old bind
-            if let Some(a) = <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, p.0)) {
+            if let Some(a) = <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, p.0.clone())) {
                 let mut vaddr = a.clone();
                 for (index, it) in a.iter().enumerate() {
                     let addr = match Address::from_layout(&it.as_slice()) {
                         Ok(a) => a,
-                        Err(_) => return false,
+                        Err(_) => {
+                            runtime_io::print("[bridge-btc] convert address failed!");
+                            return false;
+                        }
                     };
                     if addr.hash == info.input_address.hash {
                         vaddr.remove(index);
-                        <xaccounts::CrossChainBindOf<T>>::insert(
-                            (Chain::Bitcoin, who.clone()),
-                            vaddr,
-                        );
+                        <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, p.0), vaddr);
                         break;
                     }
                 }
