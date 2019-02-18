@@ -2,6 +2,7 @@
 
 //use balances::Call as BalancesCall;
 use bitcoin::Call as BitcoinCall;
+use fee_manager::SwitchStore;
 use sdot::Call as SdotCall;
 use sudo::Call as SudoCall;
 use xassets::Call as XAssetsCall;
@@ -13,7 +14,7 @@ use xtokens::Call as XTokensCall;
 use Call;
 
 pub trait CheckFee {
-    fn check_fee(&self) -> Option<u64>;
+    fn check_fee(&self, switch: SwitchStore) -> Option<u64>;
 }
 
 impl CheckFee for Call {
@@ -21,7 +22,10 @@ impl CheckFee for Call {
     /// total_fee = base_fee * fee_power + byte_fee * bytes
     ///
     /// fee_power = power_per_call
-    fn check_fee(&self) -> Option<u64> {
+    fn check_fee(&self, switch: SwitchStore) -> Option<u64> {
+        if switch.global {
+            return None;
+        };
         let base_power = match self {
             // xassets
             Call::XAssets(call) => match call {
@@ -37,13 +41,20 @@ impl CheckFee for Call {
                 _ => None,
             },
             // xbridge
-            Call::XBridgeOfBTC(call) => match call {
-                BitcoinCall::push_header(_) => Some(20),
-                BitcoinCall::push_transaction(_) => Some(10),
-                BitcoinCall::create_withdraw_tx(_, _) => Some(50),
-                BitcoinCall::sign_withdraw_tx(_, _) => Some(50),
-                _ => None,
-            },
+            Call::XBridgeOfBTC(call) => {
+                let power = if switch.xbtc {
+                    None
+                } else {
+                    match call {
+                        BitcoinCall::push_header(_) => Some(20),
+                        BitcoinCall::push_transaction(_) => Some(10),
+                        BitcoinCall::create_withdraw_tx(_, _) => Some(50),
+                        BitcoinCall::sign_withdraw_tx(_, _) => Some(50),
+                        _ => None,
+                    }
+                };
+                power
+            }
             // xmining
             Call::XStaking(call) => match call {
                 XStakingCall::register(_) => Some(100),
@@ -59,20 +70,34 @@ impl CheckFee for Call {
                 XTokensCall::claim(_) => Some(3),
                 _ => None,
             },
-            Call::XSpot(call) => match call {
-                XSpotCall::put_order(_, _, _, _, _) => Some(8),
-                XSpotCall::cancel_order(_, _) => Some(2),
-                _ => None,
-            },
+            Call::XSpot(call) => {
+                let power = if switch.spot {
+                    None
+                } else {
+                    match call {
+                        XSpotCall::put_order(_, _, _, _, _) => Some(8),
+                        XSpotCall::cancel_order(_, _) => Some(2),
+                        _ => None,
+                    }
+                };
+                power
+            }
             Call::Sudo(call) => match call {
                 SudoCall::sudo(_) => Some(1),
                 SudoCall::set_key(_) => Some(1),
                 _ => None,
             },
-            Call::XBridgeOfSDOT(call) => match call {
-                SdotCall::claim(_, _, _) => Some(1),
-                _ => None,
-            },
+            Call::XBridgeOfSDOT(call) => {
+                let power = if switch.sdot {
+                    None
+                } else {
+                    match call {
+                        SdotCall::claim(_, _, _) => Some(10),
+                        _ => None,
+                    }
+                };
+                power
+            }
             _ => None,
         };
         base_power

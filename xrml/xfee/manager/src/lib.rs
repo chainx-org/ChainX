@@ -4,6 +4,8 @@
 
 extern crate sr_std as rstd;
 
+#[macro_use]
+extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 extern crate sr_primitives;
 
@@ -51,9 +53,17 @@ decl_module! {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+pub struct SwitchStore {
+    pub global: bool,
+    pub spot: bool,
+    pub xbtc: bool,
+    pub sdot: bool,
+}
+
 decl_storage! {
     trait Store for Module<T: Trait> as XFeeManager {
-        pub Switch get(switch) config(): bool; // Emergency control
+        pub Switch get(switch): SwitchStore; // Emergency control
         pub ProducerFeeProportion get(producer_fee_proportion) config(): (u32, u32);
     }
     add_extra_genesis {
@@ -88,6 +98,10 @@ impl<T: Trait> MakePayment<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    pub fn set_switch(store: SwitchStore) {
+        Switch::<T>::put(store);
+    }
+
     pub fn transaction_fee(power: u64, encoded_len: u64) -> T::Balance {
         <balances::Module<T>>::transaction_base_fee() * <T::Balance as As<u64>>::sa(power)
             + <balances::Module<T>>::transaction_byte_fee()
