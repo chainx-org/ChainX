@@ -22,7 +22,7 @@ use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
 use xr_primitives::generic::b58;
 
-use xaccounts::{self, IntentionProps};
+use xaccounts::{self, IntentionProps, TrusteeEntity, TrusteeIntentionProps};
 use xassets::{self, Asset, AssetType, Chain, Token};
 use xbitcoin::{
     self, BestIndex, BlockHeaderFor, BlockHeaderInfo, CandidateTx, IrrBlock, TxFor, TxInfo,
@@ -44,8 +44,8 @@ pub mod types;
 use self::error::Result;
 use self::types::{
     AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData, PairInfo,
-    PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, WithdrawInfo,
-    WithdrawStatus,
+    PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, TrusteeInfo,
+    WithdrawInfo, WithdrawStatus,
 };
 use chainx::error::ErrorKind::*;
 const MAX_PAGE_SIZE: u32 = 100;
@@ -98,6 +98,9 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
 
     #[rpc(name = "chainx_getAddressByAccount")]
     fn address(&self, AccountId, Chain) -> Result<Option<Vec<String>>>;
+
+    #[rpc(name = "chainx_getTrusteeInfoByAccount")]
+    fn trustee_info(&self, AccountId) -> Result<Vec<TrusteeInfo>>;
 }
 
 /// ChainX API

@@ -3732,6 +3732,7 @@ dependencies = [
  "chainx-primitives 0.3.0",
  "chainx-runtime 0.4.0",
  "error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 10.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-derive 10.0.2 (registry+https://github.com/rust-lang/crates.io-index)",

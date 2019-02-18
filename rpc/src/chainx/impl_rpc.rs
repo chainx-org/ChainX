@@ -426,6 +426,28 @@ where
         Ok(Some(psedu_intentions))
     }
 
+    fn trustee_info(&self, who: AccountId) -> Result<Vec<TrusteeInfo>> {
+        let state = self.best_state()?;
+        let mut trustee_info = Vec::new();
+
+        for chain in Chain::iterator() {
+            let key = <xaccounts::TrusteeIntentionPropertiesOf<Runtime>>::key_for(&(who, *chain));
+
+            if let Some(props) = Self::pickout::<TrusteeIntentionProps>(&state, &key)? {
+                let hot_entity = match props.hot_entity {
+                    TrusteeEntity::Bitcoin(pubkey) => hex::encode(&pubkey),
+                };
+                let cold_entity = match props.cold_entity {
+                    TrusteeEntity::Bitcoin(pubkey) => hex::encode(&pubkey),
+                };
+
+                trustee_info.push(TrusteeInfo::new(chain.clone(), hot_entity, cold_entity))
+            }
+        }
+
+        Ok(trustee_info)
+    }
+
     fn psedu_nomination_records(
         &self,
         who: AccountId,

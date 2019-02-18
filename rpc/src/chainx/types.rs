@@ -95,6 +95,24 @@ pub struct IntentionInfo {
     pub last_total_vote_weight_update: BlockNumber,
 }
 
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrusteeInfo {
+    chain: Chain,
+    hot_entity: String,
+    cold_entity: String,
+}
+
+impl TrusteeInfo {
+    pub fn new(chain: Chain, hot_entity: String, cold_entity: String) -> Self {
+        TrusteeInfo {
+            chain,
+            hot_entity,
+            cold_entity,
+        }
+    }
+}
+
 /// OrderPair info
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
