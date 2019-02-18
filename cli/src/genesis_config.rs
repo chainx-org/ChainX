@@ -18,7 +18,7 @@ use chainx_runtime::{
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, Params, SessionConfig,
     SudoConfig, TimestampConfig, XAssetsConfig, XAssetsProcessConfig, XBridgeOfBTCConfig,
-    XBridgeOfXDOTConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    XBridgeOfSDOTConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
     XTokensConfig,
 };
 
@@ -89,12 +89,12 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // )
     // .unwrap();
 
-    let xdot_asset = Asset::new(
-        b"XDOT".to_vec(), // token
-        b"XDOT".to_vec(),
+    let sdot_asset = Asset::new(
+        b"SDOT".to_vec(), // token
+        b"SDOT".to_vec(),
         Chain::Ethereum,
         3, //  precision
-        b"XDOT ChainX".to_vec(),
+        b"SDOT ChainX".to_vec(),
     )
     .unwrap();
 
@@ -203,11 +203,11 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             asset_list: vec![
                 (btc_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 100_000),(Keyring::Bob.to_raw_public().into(), 100_000)]),
                 // (dot_asset.clone(), false, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)]),
-                (xdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
+                (sdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
             ],
         }),
         xprocess: Some(XAssetsProcessConfig {
-            token_black_list: vec![xdot_asset.token()],
+            token_black_list: vec![sdot_asset.token()],
             _genesis_phantom_data: Default::default(),
         }),
         xstaking: Some(XStakingConfig {
@@ -230,18 +230,18 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             token_discount: Permill::from_percent(30),
             endowed_users: vec![
                 (btc_asset.token(), vec![(Keyring::Alice.to_raw_public().into(), 100_000),(Keyring::Bob.to_raw_public().into(), 100_000)]),
-                (xdot_asset.token(), vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
+                (sdot_asset.token(), vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
             ],
         }),
         xspot: Some(XSpotConfig {
             pair_list: vec![
                     (xassets::Module::<Runtime>::TOKEN.to_vec(), bitcoin::Module::<Runtime>::TOKEN.to_vec(), 9, 2, 100000, true),
                  // (<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),dot_asset.token().to_vec(),7,2,100000,false),
-                    (xdot_asset.token(), xassets::Module::<Runtime>::TOKEN.to_vec(), 4, 2, 100000, true)
+                    (sdot_asset.token(), xassets::Module::<Runtime>::TOKEN.to_vec(), 4, 2, 100000, true)
                 ],
             price_volatility: 10,
         }),
-        xdot: Some(XBridgeOfXDOTConfig {
+        sdot: Some(XBridgeOfSDOTConfig {
             claims: vec![(eth_address, 1_000_000),],
         }),
         bitcoin: Some(XBridgeOfBTCConfig {

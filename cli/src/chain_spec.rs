@@ -53,7 +53,7 @@ fn local_testnet_genesis() -> GenesisConfig {
 /// Local testnet config (multivalidator Alice + Bob)
 pub fn local_testnet_config() -> ChainSpec {
     ChainSpec::from_genesis(
-        "ChainX Testnet",
+        "ChainX V0.9.0",
         "chainx_testnet",
         local_testnet_genesis,
         vec![],

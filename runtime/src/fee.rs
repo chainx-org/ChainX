@@ -2,9 +2,9 @@
 
 //use balances::Call as BalancesCall;
 use bitcoin::Call as BitcoinCall;
+use sdot::Call as SdotCall;
 use sudo::Call as SudoCall;
 use xassets::Call as XAssetsCall;
-use xdot::Call as XdotCall;
 use xprocess::Call as XAssetsProcessCall;
 use xspot::Call as XSpotCall;
 use xstaking::Call as XStakingCall;
@@ -69,8 +69,8 @@ impl CheckFee for Call {
                 SudoCall::set_key(_) => Some(1),
                 _ => None,
             },
-            Call::XBridgeOfXDOT(call) => match call {
-                XdotCall::claim(_, _, _) => Some(1),
+            Call::XBridgeOfSDOT(call) => match call {
+                SdotCall::claim(_, _, _) => Some(1),
                 _ => None,
             },
             _ => None,

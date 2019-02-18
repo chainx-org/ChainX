@@ -65,7 +65,7 @@ pub extern crate xrml_xassets_process as xprocess;
 pub extern crate xrml_xassets_records as xrecords;
 // bridge
 pub extern crate xrml_bridge_bitcoin as bitcoin;
-pub extern crate xrml_bridge_xdot as xdot;
+pub extern crate xrml_bridge_sdot as sdot;
 // staking
 pub extern crate xrml_mining_staking as xstaking;
 pub extern crate xrml_mining_tokens as xtokens;
@@ -201,7 +201,7 @@ impl bitcoin::Trait for Runtime {
     type Event = Event;
 }
 
-impl xdot::Trait for Runtime {
+impl sdot::Trait for Runtime {
     type Event = Event;
 }
 
@@ -321,7 +321,7 @@ construct_runtime!(
         XSpot: xspot,
         // bridge
         XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>,  Event<T>},
-        XBridgeOfXDOT: xdot::{Module, Call, Storage, Config<T>,  Event<T>},
+        XBridgeOfSDOT: sdot::{Module, Call, Storage, Config<T>,  Event<T>},
     }
 );
 

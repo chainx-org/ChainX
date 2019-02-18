@@ -22,6 +22,7 @@ extern crate xr_primitives;
 
 use codec::Encode;
 use rstd::prelude::*;
+use sr_primitives::traits::As;
 #[cfg(feature = "std")]
 use sr_primitives::traits::Zero;
 use srml_support::dispatch::Result;
@@ -33,7 +34,7 @@ use xr_primitives::generic::Extracter;
 use xr_primitives::traits::Extractable;
 
 impl<T: Trait> ChainT for Module<T> {
-    const TOKEN: &'static [u8] = b"XDOT";
+    const TOKEN: &'static [u8] = b"SDOT";
 
     fn chain() -> ChainDef {
         ChainDef::Ethereum
@@ -69,7 +70,7 @@ decl_event!(
 );
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XBridgeOfXDOT {
+    trait Store for Module<T: Trait> as XBridgeOfSDOT {
         pub Claims get(claims) build(|config: &GenesisConfig<T>| {
             config.claims.iter().map(|(a, b)| (a.clone(), b.clone())).collect::<Vec<_>>()
         }): map EthereumAddress => Option<T::Balance>;
@@ -133,14 +134,16 @@ decl_module! {
 
             let signer = eth_recover(&ethereum_signature, &sign_data).ok_or("Invalid Ethereum signature")?;
 
-            let balance_due = <Claims<T>>::take(&signer)
+            /*let balance_due = <Claims<T>>::take(&signer)
                 .ok_or("Ethereum address has no claim")?;
 
             <Total<T>>::mutate(|t| if *t < balance_due {
                 panic!("Logic error: Pot less than the total of claims!")
             } else {
                 *t -= balance_due
-            });
+            });*/
+            // only for test.
+            let balance_due = <T as balances::Trait>::Balance::sa(5_000);
             deposit_token::<T>(&who, balance_due);
 
             xaccounts::apply_update_binding::<T>(who, signer.to_vec(), node_name, ChainDef::Ethereum);

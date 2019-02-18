@@ -379,7 +379,7 @@ dependencies = [
 
 [[package]]
 name = "chainx"
-version = "0.3.0"
+version = "0.9.0"
 dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chainx-cli 0.1.0",
@@ -479,8 +479,8 @@ dependencies = [
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
  "xrml-aura 0.1.0",
- "xrml-bridge-bitcoin 0.4.0",
- "xrml-bridge-xdot 0.6.0",
+ "xrml-bridge-bitcoin 0.9.0",
+ "xrml-bridge-sdot 0.9.0",
  "xrml-fee-manager 0.4.0",
  "xrml-grandpa 0.1.0",
  "xrml-mining-staking 0.4.0",
@@ -3761,7 +3761,7 @@ dependencies = [
  "substrate-transaction-pool 0.1.0 (git+https://github.com/chainpool/substrate)",
  "tokio 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "xr-primitives 0.4.0",
- "xrml-bridge-bitcoin 0.4.0",
+ "xrml-bridge-bitcoin 0.9.0",
  "xrml-mining-staking 0.4.0",
  "xrml-mining-tokens 0.4.0",
  "xrml-session 0.1.0",
@@ -4680,7 +4680,7 @@ dependencies = [
 
 [[package]]
 name = "xrml-bridge-bitcoin"
-version = "0.4.0"
+version = "0.9.0"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bit-vec 0.5.0 (git+https://github.com/chainx-org/bit-vec.git)",
@@ -4716,8 +4716,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "xrml-bridge-xdot"
-version = "0.6.0"
+name = "xrml-bridge-sdot"
+version = "0.9.0"
 dependencies = [
  "hex-literal 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libsecp256k1 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4801,7 +4801,7 @@ dependencies = [
  "substrate-keyring 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
- "xrml-bridge-bitcoin 0.4.0",
+ "xrml-bridge-bitcoin 0.9.0",
  "xrml-session 0.1.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
@@ -4830,7 +4830,7 @@ dependencies = [
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-keyring 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-bridge-bitcoin 0.4.0",
+ "xrml-bridge-bitcoin 0.9.0",
  "xrml-mining-staking 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
@@ -4923,7 +4923,7 @@ dependencies = [
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-bridge-bitcoin 0.4.0",
+ "xrml-bridge-bitcoin 0.9.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
@@ -4972,7 +4972,7 @@ dependencies = [
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-bridge-bitcoin 0.4.0",
+ "xrml-bridge-bitcoin 0.9.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",

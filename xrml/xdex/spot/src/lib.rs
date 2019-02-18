@@ -288,7 +288,7 @@ impl<T: Trait> Module<T> {
         */
         let pcx = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
         let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
-        
+
         let pair_len = <OrderPairLen<T>>::get();
         for i in 0..pair_len {
             if let Some(pair) = <OrderPairOf<T>>::get(i) {
@@ -298,10 +298,13 @@ impl<T: Trait> Module<T> {
                         .eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec())
                 {
                     if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
-                        let pow_pcx_precision=10_u64.pow(pcx_asset.precision() as u32);
-                        let pow_pair_precision=10_u64.pow(pair.precision.as_());
+                        let pow_pcx_precision = 10_u64.pow(pcx_asset.precision() as u32);
+                        let pow_pair_precision = 10_u64.pow(pair.precision.as_());
 
-                        let price=T::Balance::sa( ( ( pow_pcx_precision as f64 / pow_pair_precision as f64) *  (aver.as_() as f64 ) ) as u64 );
+                        let price = T::Balance::sa(
+                            ((pow_pcx_precision as f64 / pow_pair_precision as f64)
+                                * (aver.as_() as f64)) as u64,
+                        );
 
                         return Some(price);
                     }
@@ -311,11 +314,12 @@ impl<T: Trait> Module<T> {
                     && pair.second.eq(token)
                 {
                     if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
-                        
-                        let pow_pcx_precision=10_u64.pow(pcx_asset.precision() as u32);
-                        let pow_pair_precision=10_u64.pow(pair.precision.as_());
-                        let price=T::Balance::sa( ( ( pow_pcx_precision as f64 / aver.as_() as f64) *  (pow_pair_precision as f64 ) ) as u64 );
-
+                        let pow_pcx_precision = 10_u64.pow(pcx_asset.precision() as u32);
+                        let pow_pair_precision = 10_u64.pow(pair.precision.as_());
+                        let price = T::Balance::sa(
+                            ((pow_pcx_precision as f64 / aver.as_() as f64)
+                                * (pow_pair_precision as f64)) as u64,
+                        );
 
                         return Some(price);
                     }
@@ -328,19 +332,21 @@ impl<T: Trait> Module<T> {
     //资产总发行折合成PCX，已含PCX精度
     //aver_asset_price(token)*token的总发行量[含token的精度]/(10^token的精度)
     pub fn trans_pcx_stake(token: &Token) -> Option<T::Balance> {
-        if let Some(price) = Self::aver_asset_price(token){
+        if let Some(price) = Self::aver_asset_price(token) {
             match <xassets::Module<T>>::get_asset(token) {
-                Ok(asset)=>{
+                Ok(asset) => {
                     let pow_precision = 10_u64.pow(asset.precision() as u32);
                     let total_balance = <xassets::Module<T>>::all_type_balance(&token).as_();
 
-                    let total=T::Balance::sa( ( ( total_balance as f64 / pow_precision as f64) *  ( price.as_() as f64 ) ) as u64 );
+                    let total = T::Balance::sa(
+                        ((total_balance as f64 / pow_precision as f64) * (price.as_() as f64))
+                            as u64,
+                    );
 
                     return Some(total);
-                },
-                _=>{}
+                }
+                _ => {}
             }
-            
         }
 
         None
@@ -1107,9 +1113,13 @@ impl<T: Trait> Module<T> {
         match <xassets::Module<T>>::asset_info(&pair.first) {
             Some((first, _, _)) => match <xassets::Module<T>>::asset_info(&pair.second) {
                 Some((second, _, _)) => {
-
-                    let trans_amount=T::Balance::sa( (((price.as_() * (10_u64.pow(second.precision().as_()))) as f64 / (10_u64.pow(first.precision().as_())
-                                * 10_u64.pow(pair.precision.as_())) as f64) * amount.as_() as f64) as u64);
+                    let trans_amount = T::Balance::sa(
+                        (((price.as_() * (10_u64.pow(second.precision().as_()))) as f64
+                            / (10_u64.pow(first.precision().as_())
+                                * 10_u64.pow(pair.precision.as_()))
+                                as f64)
+                            * amount.as_() as f64) as u64,
+                    );
 
                     if trans_amount == Zero::zero() {
                         None
