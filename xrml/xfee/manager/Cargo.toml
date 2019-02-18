@@ -14,6 +14,8 @@ srml-system = { git = "https://github.com/chainpool/substrate", default-features
 srml-balances = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
 
+chainx-primitives = { path = "../../../primitives", default-features = false }
+
 # xrml
 xrml-xsystem = { path = "../../xsystem", default-features = false }
 xrml-xaccounts = { path = "../../xaccounts", default-features = false }
@@ -31,7 +33,8 @@ std = [
     "srml-system/std",
     "srml-balances/std",
     "srml-support/std",
-
+    # chainx
+    "chainx-primitives/std",
     # xrml
     "xrml-xsystem/std",
     "xrml-xaccounts/std",

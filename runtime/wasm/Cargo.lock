@@ -2235,6 +2235,7 @@ dependencies = [
 name = "xrml-fee-manager"
 version = "0.4.0"
 dependencies = [
+ "chainx-primitives 0.3.0",
  "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.87 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",

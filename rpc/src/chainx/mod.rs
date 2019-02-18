@@ -19,7 +19,7 @@ use script::Script;
 use state_machine::Backend;
 
 use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
-use chainx_runtime::Runtime;
+use chainx_runtime::{Call, Runtime};
 use xr_primitives::generic::b58;
 
 use xaccounts::{self, IntentionProps, TrusteeEntity, TrusteeIntentionProps};
@@ -35,7 +35,9 @@ use xstaking::{self, IntentionProfs};
 use xsupport::storage::btree_map::CodecBTreeMap;
 use xtokens::{self, DepositVoteWeight, PseduIntentionVoteWeight};
 
-use self::runtime_api::{xassets_api::XAssetsApi, xmining_api::XMiningApi, xspot_api::XSpotApi};
+use self::runtime_api::{
+    xassets_api::XAssetsApi, xfee_api::XFeeApi, xmining_api::XMiningApi, xspot_api::XSpotApi,
+};
 
 mod error;
 mod impl_rpc;
@@ -101,6 +103,9 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
 
     #[rpc(name = "chainx_getTrusteeInfoByAccount")]
     fn trustee_info(&self, AccountId) -> Result<Vec<TrusteeInfo>>;
+
+    #[rpc(name = "chainx_getFeeByCallAndLength")]
+    fn fee(&self, String, u64) -> Result<Option<u64>>;
 }
 
 /// ChainX API

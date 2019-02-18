@@ -10,19 +10,18 @@ use xspot::Call as XSpotCall;
 use xstaking::Call as XStakingCall;
 use xtokens::Call as XTokensCall;
 
-use Acceleration;
 use Call;
 
 pub trait CheckFee {
-    fn check_fee(&self, acc: Acceleration) -> Option<u64>;
+    fn check_fee(&self) -> Option<u64>;
 }
 
 impl CheckFee for Call {
     /// Return fee_power, which is part of the total_fee.
     /// total_fee = base_fee * fee_power + byte_fee * bytes
     ///
-    /// fee_power = power_per_call * acceleration
-    fn check_fee(&self, acc: Acceleration) -> Option<u64> {
+    /// fee_power = power_per_call
+    fn check_fee(&self) -> Option<u64> {
         let base_power = match self {
             // xassets
             Call::XAssets(call) => match call {
@@ -75,10 +74,6 @@ impl CheckFee for Call {
             },
             _ => None,
         };
-
-        match base_power {
-            Some(p) => Some(p * acc as u64),
-            None => None,
-        }
+        base_power
     }
 }

@@ -63,7 +63,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let pcx_precision = 8_u16;
     let balances_config = BalancesConfig {
         transaction_base_fee: 1,
-        transaction_byte_fee: 0,
+        transaction_byte_fee: 1,
         existential_deposit: 0,
         transfer_fee: 0,
         creation_fee: 0,

@@ -167,8 +167,8 @@ impl<
         if signed_extrinsic {
             // Acceleration definitely exists for a signed extrinsic.
             let acc = acc.unwrap();
-            if let Some(fee_power) = f.check_fee(acc.as_() as u32) {
-                Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power).map_err(|_| internal::ApplyError::CantPay)?;
+            if let Some(fee_power) = f.check_fee() {
+                Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).map_err(|_| internal::ApplyError::CantPay)?;
 
                 // AUDIT: Under no circumstances may this function panic from here onwards.
 
@@ -275,8 +275,8 @@ impl<
 
         let acc = xt.acceleration().unwrap();
         let (f, s) = xt.deconstruct();
-        if let Some(fee_power) = f.check_fee(acc.as_() as u32) {
-            if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power).is_err() {
+        if let Some(fee_power) = f.check_fee() {
+            if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).is_err() {
                 return TransactionValidity::Invalid(ApplyError::CantPay as i8);
             } else {
                 return valid;
@@ -352,9 +352,9 @@ mod tests {
     }
 
     impl CheckFee for Call<Runtime> {
-        fn check_fee(&self, acc: Acceleration) -> Option<u64> {
+        fn check_fee(&self) -> Option<u64> {
             // ret fee_power,     total_fee = base_fee * fee_power + byte_fee * bytes
-            Some(1 * acc as u64)
+            Some(1 as u64)
         }
     }
 

@@ -16,6 +16,8 @@ extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xsystem as xsystem;
 
+extern crate chainx_primitives;
+
 //use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 
@@ -25,13 +27,15 @@ use support::StorageValue;
 
 use xaccounts::IntentionJackpotAccountIdFor;
 
+use chainx_primitives::Acceleration;
+
 /// Simple payment making trait, operating on a single generic `AccountId` type.
 pub trait MakePayment<AccountId> {
     /// Make some sort of payment concerning `who` for an extrinsic (transaction) of encoded length
     /// `encoded_len` bytes. Return true iff the payment was successful.
-    fn make_payment(who: &AccountId, encoded_len: usize, pay: u64) -> Result;
+    fn make_payment(who: &AccountId, encoded_len: usize, pay: u64, acc: Acceleration) -> Result;
 
-    fn check_payment(who: &AccountId, encoded_len: usize, pay: u64) -> Result;
+    fn check_payment(who: &AccountId, encoded_len: usize, pay: u64, acc: Acceleration) -> Result;
 }
 
 pub trait Trait: xassets::Trait + xaccounts::Trait + xsystem::Trait {}
@@ -61,30 +65,44 @@ decl_storage! {
 }
 
 impl<T: Trait> MakePayment<T::AccountId> for Module<T> {
-    fn make_payment(transactor: &T::AccountId, encoded_len: usize, power: u64) -> Result {
-        let b = Self::calc_fee_and_check(transactor, encoded_len, power)?;
+    fn make_payment(
+        transactor: &T::AccountId,
+        encoded_len: usize,
+        power: u64,
+        acc: Acceleration,
+    ) -> Result {
+        let b = Self::calc_fee_and_check(transactor, encoded_len, power, acc)?;
 
         Self::calc_fee(transactor, b)?;
         Ok(())
     }
 
-    fn check_payment(transactor: &T::AccountId, encoded_len: usize, power: u64) -> Result {
-        Self::calc_fee_and_check(transactor, encoded_len, power).map(|_| ())
+    fn check_payment(
+        transactor: &T::AccountId,
+        encoded_len: usize,
+        power: u64,
+        acc: Acceleration,
+    ) -> Result {
+        Self::calc_fee_and_check(transactor, encoded_len, power, acc).map(|_| ())
     }
 }
 
 impl<T: Trait> Module<T> {
+    pub fn transaction_fee(power: u64, encoded_len: u64) -> T::Balance {
+        <balances::Module<T>>::transaction_base_fee() * <T::Balance as As<u64>>::sa(power)
+            + <balances::Module<T>>::transaction_byte_fee()
+                * <T::Balance as As<u64>>::sa(encoded_len)
+    }
+
     fn calc_fee_and_check(
         transactor: &T::AccountId,
         encoded_len: usize,
         power: u64,
+        acc: Acceleration,
     ) -> StdResult<T::Balance, &'static str> {
         let b = xassets::Module::<T>::pcx_free_balance(transactor);
 
-        let transaction_fee = <balances::Module<T>>::transaction_base_fee()
-            * <T::Balance as As<u64>>::sa(power)
-            + <balances::Module<T>>::transaction_byte_fee()
-                * <T::Balance as As<u64>>::sa(encoded_len as u64);
+        let transaction_fee = Self::transaction_fee(power, encoded_len as u64) * As::sa(acc as u64);
 
         if b < transaction_fee + <balances::Module<T>>::existential_deposit() {
             return Err("not enough funds for transaction fee");

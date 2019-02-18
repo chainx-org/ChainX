@@ -52,6 +52,18 @@ error_chain! {
             description("Page Index Error"),
             display("Page Index Error"),
         }
+        DecodeErr {
+            description("Decode Data Error"),
+            display("Decode Data Error"),
+        }
+        BinanryStartErr {
+            description("Start With 0x"),
+            display("Start With 0x"),
+        }
+        HexDecodeErr {
+            description("Decode Hex Err"),
+            display("Decode Hex Err"),
+        }
         /// Execution error.
         Execution(e: Box<state_machine::Error>) {
             description("state execution error"),

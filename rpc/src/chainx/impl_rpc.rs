@@ -1,5 +1,7 @@
 // Copyright 2019 Chainpool.
 
+extern crate hex;
+
 use self::types::Revocation;
 use super::*;
 use keys::DisplayLayout;
@@ -18,7 +20,7 @@ where
     RA: std::marker::Send + std::marker::Sync + 'static,
     Client<B, E, Block, RA>: ProvideRuntimeApi,
     <Client<B, E, Block, RA> as ProvideRuntimeApi>::Api:
-        Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block> + XSpotApi<Block>,
+        Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block> + XSpotApi<Block> + XFeeApi<Block>,
 {
     fn block_info(&self, number: Option<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         let hash = match number.into() {
@@ -763,6 +765,33 @@ where
             }
             None => Ok(Some(v)),
         }
+    }
+
+    fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>> {
+        use codec::Encode;
+
+        if !call_params.starts_with("0x") {
+            return Err(BinanryStartErr.into());
+        }
+        let call_params = if let Ok(hex_call) = hex::decode(&call_params[2..]) {
+            hex_call
+        } else {
+            return Err(HexDecodeErr.into())
+        };
+        let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
+            call
+        } else {
+            return Err(DecodeErr.into());
+        };
+        let b = self.best_number()?;
+
+        let transaction_fee: Result<Option<u64>> = self
+            .client
+            .runtime_api()
+            .transaction_fee(&b, call.encode(), tx_length)
+            .map_err(|e| e.into());
+        let transaction_fee = transaction_fee?;
+        Ok(transaction_fee)
     }
 }
 

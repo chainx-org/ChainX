@@ -473,4 +473,21 @@ impl_runtime_apis! {
             XSpot::aver_asset_price(&token)
         }
     }
+
+    impl runtime_api::xfee_api::XFeeApi<Block> for Runtime {
+        fn transaction_fee(call_params: Vec<u8>, encoded_len: u64) -> Option<u64> {
+            use fee::CheckFee;
+            use codec::Decode;
+
+            let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
+                call
+            } else {
+                return None;
+            };
+
+            call.check_fee().map(|power|
+                XFeeManager::transaction_fee(power, encoded_len)
+            )
+        }
+    }
 }
