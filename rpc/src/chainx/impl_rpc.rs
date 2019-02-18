@@ -776,7 +776,7 @@ where
         let call_params = if let Ok(hex_call) = hex::decode(&call_params[2..]) {
             hex_call
         } else {
-            return Err(HexDecodeErr.into())
+            return Err(HexDecodeErr.into());
         };
         let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
             call

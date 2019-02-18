@@ -55,7 +55,7 @@ pub struct Executive<System, Block, Context, Payment, Finalisation>(
 
 impl<
     Context: Default,
-    System: system::Trait,
+    System: system::Trait + fee_manager::Trait,
     Block: traits::Block<Header=System::Header, Hash=System::Hash>,
     Payment: MakePayment<System::AccountId>,
     Finalisation: OnFinalise<System::BlockNumber>,
@@ -167,7 +167,8 @@ impl<
         if signed_extrinsic {
             // Acceleration definitely exists for a signed extrinsic.
             let acc = acc.unwrap();
-            if let Some(fee_power) = f.check_fee() {
+            let switch = <fee_manager::Module<System>>::switch();
+            if let Some(fee_power) = f.check_fee(switch) {
                 Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).map_err(|_| internal::ApplyError::CantPay)?;
 
                 // AUDIT: Under no circumstances may this function panic from here onwards.
@@ -275,7 +276,8 @@ impl<
 
         let acc = xt.acceleration().unwrap();
         let (f, s) = xt.deconstruct();
-        if let Some(fee_power) = f.check_fee() {
+        let switch = <fee_manager::Module<System>>::switch();
+        if let Some(fee_power) = f.check_fee(switch) {
             if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).is_err() {
                 return TransactionValidity::Invalid(ApplyError::CantPay as i8);
             } else {

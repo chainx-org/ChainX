@@ -485,7 +485,8 @@ impl_runtime_apis! {
                 return None;
             };
 
-            call.check_fee().map(|power|
+            let switch = fee_manager::SwitchStore::default();
+            call.check_fee(switch).map(|power|
                 XFeeManager::transaction_fee(power, encoded_len)
             )
         }
