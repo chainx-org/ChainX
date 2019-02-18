@@ -35,6 +35,8 @@ extern crate xr_primitives;
 extern crate xrml_bridge_bitcoin as xbitcoin;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
+#[cfg(test)]
+extern crate xrml_xassets_records as xrecords;
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
 
@@ -63,9 +65,6 @@ pub use vote_weight::VoteWeight;
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const MIMIMUM_TRSUTEE_INTENSION_COUNT: u32 = 4;
 const MAXIMUM_TRSUTEE_INTENSION_COUNT: u32 = 16;
-
-// FIXME lazy static
-const INITIAL_REWARD: u64 = 5_000_000_000;
 
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
@@ -255,7 +254,7 @@ decl_module! {
             Self::apply_register(&who, name)?;
         }
 
-        fn setup_trusee(origin, chain: Chain, about: XString, hot_entity: TrusteeEntity, cold_entity: TrusteeEntity) {
+        fn setup_trustee(origin, chain: Chain, about: XString, hot_entity: TrusteeEntity, cold_entity: TrusteeEntity) {
             let who = ensure_signed(origin)?;
 
             ensure!(Self::is_intention(&who), "Transactor is not an intention.");
@@ -264,7 +263,8 @@ decl_module! {
             xaccounts::is_valid_about::<T>(&about)?;
 
             // TODO validate addr
-            Self::validate_trustee_entity(&chain, &hot_entity, &cold_entity)?;
+            Self::validate_trustee_entity(&chain, &hot_entity)?;
+            Self::validate_trustee_entity(&chain, &cold_entity)?;
 
             <xaccounts::TrusteeIntentionPropertiesOf<T>>::insert(
                 &(who, chain),
@@ -331,6 +331,7 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as XStaking {
+        InitialReward get(initial_reward) config(): T::Balance;
         /// The ideal number of staking participants.
         pub ValidatorCount get(validator_count) config(): u32;
         /// Minimum number of staking participants before emergency conditions are imposed.
@@ -339,6 +340,11 @@ decl_storage! {
         pub SessionsPerEra get(sessions_per_era) config(): T::BlockNumber = T::BlockNumber::sa(1000);
         /// The length of the bonding duration in blocks.
         pub BondingDuration get(bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(1000);
+        /// The length of the bonding duration in blocks for intention.
+        pub IntentionBondingDuration get(intention_bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
+
+        pub SessionsPerEpoch get(sessions_per_epoch) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
+        pub TeamAddress get(team_address) config(): T::AccountId;
 
         pub ValidatorStakeThreshold get(validator_stake_threshold) config(): T::Balance = T::Balance::sa(1);
 
@@ -368,6 +374,7 @@ decl_storage! {
 
     add_extra_genesis {
         config(intentions): Vec<(T::AccountId, T::Balance, Name, URL)>;
+        config(trustee_intentions): Vec<(T::AccountId, Vec<u8>, Vec<u8>)>;
         build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
             use codec::Encode;
             use runtime_io::with_externalities;
@@ -405,7 +412,22 @@ decl_storage! {
 
                     storage.insert(hash(&<StakeWeight<T>>::key_for(&intention)), value.encode());
                 }
-                // FIXME set up trustee intentions
+
+                let mut trustees = Vec::new();
+                for (i, hot_entity, cold_entity) in config.trustee_intentions.clone().into_iter() {
+                    trustees.push(i.clone());
+                    <xaccounts::TrusteeIntentionPropertiesOf<T>>::insert(
+                        &(i, xassets::Chain::Bitcoin),
+                        TrusteeIntentionProps {
+                            about: b"".to_vec(),
+                            hot_entity: TrusteeEntity::Bitcoin(hot_entity),
+                            cold_entity: TrusteeEntity::Bitcoin(cold_entity),
+                        }
+                    );
+                }
+                <xaccounts::TrusteeIntentions<T>>::put(trustees);
+
+                let _ = xbitcoin::Module::<T>::update_trustee_addr();
             });
 
             let init: StorageMap = init.into();
@@ -438,22 +460,14 @@ impl<T: Trait> Module<T> {
         <xaccounts::Module<T>>::intention_name_of(who).is_some()
     }
 
-    pub fn validate_trustee_entity(
-        chain: &Chain,
-        hot_entity: &TrusteeEntity,
-        cold_entity: &TrusteeEntity,
-    ) -> Result {
+    pub fn validate_trustee_entity(chain: &Chain, entity: &TrusteeEntity) -> Result {
         match chain {
-            Chain::Bitcoin => {
-                // FIXME check bitcoin pubkey
-                match hot_entity {
-                    TrusteeEntity::Bitcoin(_pubkey) => (),
+            Chain::Bitcoin => match entity {
+                TrusteeEntity::Bitcoin(pubkey) if pubkey.len() != 33 && pubkey.len() != 65 => {
+                    return Err("Valid pubkeys are either 33 or 65 bytes.");
                 }
-
-                match cold_entity {
-                    TrusteeEntity::Bitcoin(_pubkey) => (),
-                }
-            }
+                _ => (),
+            },
             _ => return Err("Unsupported chain."),
         }
 
@@ -522,7 +536,11 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_unnominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
-        let freeze_until = <system::Module<T>>::block_number() + Self::bonding_duration();
+        let freeze_until = if Self::is_intention(source) && *source == *target {
+            <system::Module<T>>::block_number() + Self::intention_bonding_duration()
+        } else {
+            <system::Module<T>>::block_number() + Self::bonding_duration()
+        };
 
         let mut revocations = Self::nomination_record_of(source, target).revocations;
 

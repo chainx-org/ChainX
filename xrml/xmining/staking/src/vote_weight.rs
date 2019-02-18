@@ -131,7 +131,11 @@ impl<T: Trait> Module<T> {
         let target_vote_weight = target.latest_acum_weight(current_block);
 
         let total_jackpot: u64 = xassets::Module::<T>::pcx_free_balance(target_jackpot_addr).as_();
-        let dividend = T::Balance::sa(source_vote_weight * total_jackpot / target_vote_weight);
+        // source_vote_weight * total_jackpot could overflow.
+        let dividend = match (source_vote_weight as u128).checked_mul(total_jackpot as u128) {
+            Some(x) => T::Balance::sa((x / target_vote_weight as u128) as u64),
+            None => panic!("source_vote_weight * total_jackpot overflow"),
+        };
 
         xassets::Module::<T>::pcx_move_free_balance(target_jackpot_addr, who, dividend)
             .map_err(|e| e.info())?;

@@ -75,12 +75,13 @@ use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
+use script::script::Script;
 use ser::deserialize;
 use system::ensure_signed;
 pub use tx::RelayTx;
 use tx::{
     check_withdraw_tx, create_multi_address, handle_condidate, handle_tx, inspect_address,
-    update_vote, validate_transaction,
+    sign_num, validate_transaction,
 };
 use xaccounts::{TrusteeAddressPair, TrusteeEntity};
 use xassets::{Chain as ChainDef, ChainT};
@@ -102,14 +103,26 @@ impl Default for TxType {
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]
-pub struct CandidateTx {
+pub struct CandidateTx<AccountId> {
+    pub withdraw_id: Vec<u32>,
     pub tx: BTCTransaction,
-    pub outs: Vec<u32>,
+    pub sig_status: VoteResult,
+    pub sig_node: Vec<(AccountId, bool)>,
 }
 
-impl CandidateTx {
-    pub fn new(tx: BTCTransaction, outs: Vec<u32>) -> Self {
-        CandidateTx { tx, outs }
+impl<AccountId> CandidateTx<AccountId> {
+    pub fn new(
+        withdraw_id: Vec<u32>,
+        tx: BTCTransaction,
+        sig_status: VoteResult,
+        sig_node: Vec<(AccountId, bool)>,
+    ) -> Self {
+        CandidateTx {
+            withdraw_id,
+            tx,
+            sig_status,
+            sig_node,
+        }
     }
 }
 
@@ -118,13 +131,6 @@ impl CandidateTx {
 pub enum BindStatus {
     Init,
     Update,
-}
-
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct VoteStatus<AccountId> {
-    pub account: AccountId,
-    pub vote: bool,
 }
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
@@ -154,6 +160,14 @@ pub struct TxInfo {
 pub struct DepositCache {
     pub txid: H256,
     pub balance: u64,
+}
+
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct TrusteeScriptInfo {
+    pub hot_redeem_script: Vec<u8>,
+    pub cold_redeem_script: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default)]
@@ -265,25 +279,22 @@ decl_storage! {
         pub MaxWithdrawAmount get(max_withdraw_amount) config(): u32;
 
         /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
-        pub TxProposal get(tx_proposal): Option<CandidateTx>;
+        pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
 
         /// tx_hash, btc value, blockhash
         pub PendingDepositMap get(pending_deposit): map Address => Option<Vec<DepositCache>>;
 
-        /// vote node
-        pub VoteNode get(reject_node): Option<Vec<VoteStatus<T::AccountId>>>;
-
+        pub TrusteeRedeemScript get(trustee_info): Option<TrusteeScriptInfo>;
     }
     add_extra_genesis {
         build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
             use codec::Encode;
+
             let (header, number): (BlockHeader, u32) = config.genesis.clone();
             let h = header.hash();
 
-            if config.network_id == 0 {
-                if number % config.params_info.retargeting_interval != 0 {
-                    panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
-                }
+            if config.network_id == 0 && number % config.params_info.retargeting_interval != 0 {
+                panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
             }
             let genesis = BlockHeaderInfo {
                 header: header,
@@ -306,12 +317,9 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         pub fn push_header(origin, header: Vec<u8>) -> Result {
-            runtime_io::print("[bridge_btc] push btc header");
-
+            runtime_io::print("[bridge_btc] Push btc header");
             let from = ensure_signed(origin)?;
-
             let header: BlockHeader = deserialize(header.as_slice()).map_err(|_| "Cannot deserialize the header vec")?;
-
             ensure!(
                 Self::block_header_for(&header.hash()).is_none(),
                 "Cannot push if the header already exists."
@@ -327,34 +335,34 @@ decl_module! {
         }
 
         pub fn push_transaction(origin, tx: Vec<u8>) -> Result {
-            runtime_io::print("[bridge_btc] push btc tx");
-
+            runtime_io::print("[bridge_btc] Push btc tx");
             ensure_signed(origin)?;
-
-            let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("parse RelayTx err")?;
-            let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin).ok_or("Should set RECEIVE_address first.")?;
-            let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice()).map_err(|_|"Invalid Address")?;
+            let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("Parse RelayTx err")?;
+            let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin).ok_or("Should set trustee address first.")?;
+            let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice()).map_err(|_|"Invalid address")?;
             Self::apply_push_transaction(tx, hot_address)?;
 
             Ok(())
         }
 
         pub fn create_withdraw_tx(origin, withdraw_id: Vec<u32>, tx: Vec<u8>) -> Result {
-            runtime_io::print("[bridge_btc] push create_withdraw_tx");
-
+            runtime_io::print("[bridge_btc] Push Create withdraw tx");
             let from = ensure_signed(origin)?;
             // commiter must in trustee node list
             Self::ensure_trustee_node(&from)?;
-            let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("parse Transaction err")?;
+            let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("Parse transaction err")?;
             Self::apply_create_withdraw(tx, withdraw_id)?;
+
             Ok(())
         }
 
         pub fn sign_withdraw_tx(origin, tx: Vec<u8>, vote_state: bool) -> Result {
-            runtime_io::print("[bridge_btc] push create_withdraw_tx");
+            runtime_io::print("[bridge_btc] Push Sign withdraw tx");
             let from = ensure_signed(origin)?;
             Self::ensure_trustee_node(&from)?;
+            let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("Parse transaction err")?;
             Self::apply_sign_withdraw(from, tx, vote_state)?;
+
             Ok(())
         }
     }
@@ -368,7 +376,7 @@ impl<T: Trait> ChainT for Module<T> {
     }
 
     fn check_addr(addr: &[u8], _: &[u8]) -> Result {
-        Self::verify_btc_address(addr).map_err(|_| "verify btc addr err")?;
+        Self::verify_btc_address(addr).map_err(|_| "Verify btc addr err")?;
         Ok(())
     }
 }
@@ -380,40 +388,53 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn update_trustee_addr() -> StdResult<(), AddressError> {
-        let node_list = <xaccounts::TrusteeIntentions<T>>::get();
-        if node_list.len() < 3 {
+        let trustees = <xaccounts::TrusteeIntentions<T>>::get();
+        if trustees.len() < 3 {
             return Err(AddressError::FailedKeyGeneration);
         }
+
         let mut hot_keys = Vec::new();
         let mut cold_keys = Vec::new();
-        for node in node_list {
-            match <xaccounts::TrusteeIntentionPropertiesOf<T>>::get((node, xassets::Chain::Bitcoin))
-            {
-                Some(intention) => {
-                    match intention.hot_entity {
-                        TrusteeEntity::Bitcoin(pubkey) => hot_keys.push(pubkey),
-                    }
-                    match intention.cold_entity {
-                        TrusteeEntity::Bitcoin(pubkey) => cold_keys.push(pubkey),
-                    }
+        for trustee in trustees {
+            if let Some(props) = <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(
+                trustee,
+                xassets::Chain::Bitcoin,
+            )) {
+                match props.hot_entity {
+                    TrusteeEntity::Bitcoin(pubkey) => hot_keys.push(pubkey),
                 }
-                None => continue,
+                match props.cold_entity {
+                    TrusteeEntity::Bitcoin(pubkey) => cold_keys.push(pubkey),
+                }
             }
         }
-        let hot_addr = create_multi_address::<T>(hot_keys);
-        let cold_addr = create_multi_address::<T>(cold_keys);
-        let pair = TrusteeAddressPair {
-            hot_address: hot_addr.layout().to_vec(),
-            cold_address: cold_addr.layout().to_vec(),
+        let (hot_addr, hot_redeem) = match create_multi_address::<T>(hot_keys) {
+            Some((addr, redeem)) => (addr, redeem),
+            None => return Err(AddressError::InvalidAddress),
         };
-        <xaccounts::TrusteeAddress<T>>::remove(xassets::Chain::Bitcoin);
-        <xaccounts::TrusteeAddress<T>>::insert(&xassets::Chain::Bitcoin, pair);
+        let (cold_addr, cold_redeem) = match create_multi_address::<T>(cold_keys) {
+            Some((addr, redeem)) => (addr, redeem),
+            None => return Err(AddressError::InvalidAddress),
+        };
+
+        let info = TrusteeScriptInfo {
+            hot_redeem_script: hot_redeem.to_bytes().to_vec(),
+            cold_redeem_script: cold_redeem.to_bytes().to_vec(),
+        };
+        <xaccounts::TrusteeAddress<T>>::insert(
+            &xassets::Chain::Bitcoin,
+            TrusteeAddressPair {
+                hot_address: hot_addr.layout().to_vec(),
+                cold_address: cold_addr.layout().to_vec(),
+            },
+        );
+        <TrusteeRedeemScript<T>>::put(info);
         Ok(())
     }
 
     fn ensure_trustee_node(who: &T::AccountId) -> Result {
-        let node_list = <xaccounts::TrusteeIntentions<T>>::get();
-        if node_list.iter().any(|n| n == who) {
+        let trustees = <xaccounts::TrusteeIntentions<T>>::get();
+        if trustees.iter().any(|n| n == who) {
             return Ok(());
         }
         Err("Commiter no in the trustee node list")
@@ -543,36 +564,53 @@ impl<T: Trait> Module<T> {
 
     fn apply_create_withdraw(tx: BTCTransaction, withdraw_id: Vec<u32>) -> Result {
         let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
-            .ok_or("Should set RECEIVE_address first.")?;
+            .ok_or("Should set trustee address first.")?;
         let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
             .map_err(|_| "Invalid Address")?;
         check_withdraw_tx::<T>(tx, withdraw_id, hot_address)?;
         Ok(())
     }
 
-    fn apply_sign_withdraw(who: T::AccountId, tx: Vec<u8>, vote_state: bool) -> Result {
-        if !tx.is_empty() && vote_state {
-            let tx: BTCTransaction =
-                Decode::decode(&mut tx.as_slice()).ok_or("parse Transaction err")?;
-            handle_condidate::<T>(tx.clone())?;
-            match <TxProposal<T>>::take() {
-                Some(data) => {
-                    let candidate = CandidateTx::new(tx, data.outs);
-                    <TxProposal<T>>::put(candidate);
+    fn apply_sign_withdraw(who: T::AccountId, tx: BTCTransaction, vote_state: bool) -> Result {
+        handle_condidate::<T>(tx.clone())?;
+        let (sign_num, _) = sign_num::<T>();
+        match <TxProposal<T>>::get() {
+            Some(mut data) => {
+                if data.sig_node.iter().any(|(n, _)| *n == who) {
+                    return Err("Already signature transaction or reject to signature");
                 }
-                None => return Err("No pending signature transaction"),
+                if !vote_state {
+                    let sig_node = data.sig_node.clone();
+                    let reject_count: Vec<&(T::AccountId, bool)> =
+                        sig_node.iter().filter(|(_, vote)| *vote == false).collect();
+                    data.sig_node.push((who, vote_state));
+                    runtime_io::print("Veto signature");
+                    if reject_count.len() + 1 >= sign_num {
+                        runtime_io::print("Clear TxProposal");
+                        <TxProposal<T>>::kill();
+                        return Ok(());
+                    }
+                } else {
+                    let script: Script = tx.inputs[0].script_sig.clone().into();
+                    let (sigs, _dem) = if let Ok((sigs, dem)) = script.extract_multi_scriptsig() {
+                        (sigs, dem)
+                    } else {
+                        return Err("No signature");
+                    };
+                    runtime_io::print("Signature pass");
+                    data.sig_node.push((who, vote_state));
+                    if sigs.len() >= sign_num {
+                        data.sig_status = VoteResult::FinishWithFavor;
+                    }
+                }
+
+                let candidate =
+                    CandidateTx::new(data.withdraw_id, tx, data.sig_status, data.sig_node);
+                <TxProposal<T>>::put(candidate);
             }
+            None => return Err("No pending signature transaction"),
         }
 
-        match update_vote::<T>(who, vote_state) {
-            VoteResult::FinishWithReject => {
-                <VoteNode<T>>::kill();
-                <TxProposal<T>>::kill();
-                Ok(())
-            }
-            VoteResult::FinishWithFavor => Ok(()),
-            VoteResult::Unfinish => Ok(()),
-            VoteResult::Invalid => Err("Invalid veto"),
-        }
+        Ok(())
     }
 }

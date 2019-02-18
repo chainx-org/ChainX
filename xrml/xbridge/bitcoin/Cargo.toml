@@ -1,6 +1,6 @@
 [package]
 name = "xrml-bridge-bitcoin"
-version = "0.4.0"
+version = "0.9.0"
 authors = ["Chainpool <http://chainx.org>"]
 
 [dependencies]

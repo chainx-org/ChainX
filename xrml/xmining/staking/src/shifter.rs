@@ -43,8 +43,8 @@ impl<T: Trait> Module<T> {
     /// Get the reward for the session, assuming it ends with this block.
     fn this_session_reward() -> T::Balance {
         let current_index = <session::Module<T>>::current_index().as_();
-        // FIXME Precision?
-        let reward = INITIAL_REWARD / (u32::pow(2, ((current_index + 1) / 210_000) as u32)) as u64;
+        let reward =
+            Self::initial_reward().as_() / (u32::pow(2, (current_index / 210_000) as u32)) as u64;
         T::Balance::sa(reward as u64)
     }
 
@@ -63,8 +63,19 @@ impl<T: Trait> Module<T> {
     /// Reward a given (potential) validator by a specific amount.
     /// Add the reward to their balance, and their jackpot, pro-rata.
     fn reward(who: &T::AccountId, reward: T::Balance) {
+        // In the first round, 20% reward goes to the team.
+        let current_index = <session::Module<T>>::current_index().as_();
+        let reward = if current_index <= 210_000 {
+            let to_team = T::Balance::sa(reward.as_() * 2 / 10);
+            let _ = <xassets::Module<T>>::pcx_issue(&Self::team_address(), to_team);
+            reward - to_team
+        } else {
+            reward
+        };
+
         let off_the_table = T::Balance::sa(reward.as_() * 1 / 10);
         let _ = <xassets::Module<T>>::pcx_issue(who, off_the_table);
+
         let to_jackpot = reward - off_the_table;
         // issue to jackpot
         let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
@@ -107,14 +118,15 @@ impl<T: Trait> Module<T> {
                 .iter()
                 .fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + *x);
 
-            if !total_active_stake.is_zero() {
-                for (holder, stake) in active_intentions.iter() {
-                    // FIXME overflow
-                    // let reward = *stake * session_reward / total_active_stake;
-                    let s_reward = session_reward.as_();
-                    let reward = match s_reward.checked_mul(stake.as_()) {
-                        Some(x) => T::Balance::sa(x / total_active_stake.as_()),
-                        None => T::Balance::sa(u64::max_value() / total_active_stake.as_()),
+            for (holder, stake) in active_intentions.iter() {
+                // May become zero after meeting the last one.
+                if !total_active_stake.is_zero() {
+                    // stake * session_reward could overflow.
+                    let reward = match (stake.as_() as u128)
+                        .checked_mul(session_reward.as_() as u128)
+                    {
+                        Some(x) => T::Balance::sa((x / total_active_stake.as_() as u128) as u64),
+                        None => panic!("stake * session_reward overflow!"),
                     };
                     match holder {
                         RewardHolder::Intention(ref intention) => Self::reward(intention, reward),
@@ -143,9 +155,8 @@ impl<T: Trait> Module<T> {
         }
 
         if <xaccounts::Module<T>>::trustee_intentions().is_empty()
-            || ((session_index - Self::last_era_length_change())
-                % (Self::sessions_per_era() * T::BlockNumber::sa(10)))
-            .is_zero()
+            || ((session_index - Self::last_era_length_change()) % (Self::sessions_per_epoch()))
+                .is_zero()
         {
             Self::new_trustees();
         }
@@ -225,7 +236,7 @@ impl<T: Trait> Module<T> {
 
             <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());
 
-            // FIXME Generate multisig address
+            let _ = xbitcoin::Module::<T>::update_trustee_addr();
 
             Self::deposit_event(RawEvent::NewTrustees(trustees));
         }

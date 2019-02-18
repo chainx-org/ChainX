@@ -157,7 +157,6 @@ pub fn work_required_retarget<T: Trait>(
             params,
         ));
     retarget = retarget / U256::from(params.target_timespan_seconds);
-    //    retarget = retarget / U256::from(TARGET_TIMESPAN_SECONDS);
     if retarget > maximum {
         params.max_bits()
     } else {

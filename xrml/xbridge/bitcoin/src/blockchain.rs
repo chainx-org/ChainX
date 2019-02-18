@@ -40,19 +40,19 @@ impl<T: Trait> Chain<T> {
     fn canonize(hash: &H256) -> Result<(), ChainErr> {
         let confirmed_header: BlockHeaderInfo = match <BlockHeaderFor<T>>::get(hash) {
             Some(header) => header,
-            None => return Err(ChainErr::OtherErr("not found blockheader for this hash")),
+            None => return Err(ChainErr::OtherErr("Not found block header for this hash")),
         };
 
-        runtime_io::print("[bridge-btc] confirmed header height:");
+        runtime_io::print("[bridge-btc] Confirmed header height:");
         runtime_io::print(confirmed_header.height as u64);
 
         let tx_list = confirmed_header.txid;
         for txid in tx_list {
-            runtime_io::print("[bridge-btc] handle confirmed_header's tx list");
-            // deposit & bind & withdraw & cert
+            runtime_io::print("[bridge-btc] Handle confirmed_header's tx list");
+            // deposit & withdraw
             match handle_tx::<T>(&txid) {
                 Err(_) => {
-                    runtime_io::print("[bridge-btc] handle_tx error, tx hash:");
+                    runtime_io::print("[bridge-btc] Handle_tx error, tx hash:");
                     runtime_io::print(&txid[..]);
                 }
                 Ok(()) => (),

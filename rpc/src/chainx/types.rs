@@ -85,12 +85,32 @@ pub struct IntentionInfo {
     pub self_vote: Balance,
     /// jackpot
     pub jackpot: Balance,
+    /// jackpot address
+    pub jackpot_address: H256,
     /// total nomination from all nominators
     pub total_nomination: Balance,
     /// vote weight at last update
     pub last_total_vote_weight: u64,
     /// last update time of vote weight
     pub last_total_vote_weight_update: BlockNumber,
+}
+
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrusteeInfo {
+    chain: Chain,
+    hot_entity: String,
+    cold_entity: String,
+}
+
+impl TrusteeInfo {
+    pub fn new(chain: Chain, hot_entity: String, cold_entity: String) -> Self {
+        TrusteeInfo {
+            chain,
+            hot_entity,
+            cold_entity,
+        }
+    }
 }
 
 /// OrderPair info
@@ -130,6 +150,8 @@ pub struct PseduIntentionInfo {
     pub price: Balance,
     /// jackpot
     pub jackpot: Balance,
+    /// jackpot address
+    pub jackpot_address: H256,
     /// vote weight at last update
     pub last_total_deposit_weight: u64,
     /// last update time of vote weight
@@ -193,6 +215,14 @@ pub struct PseduNominationRecord {
 //        }
 //    }
 //}
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WithdrawStatus {
+    Applying,
+    Signing,
+    Broadcasting,
+    Processing,
+}
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -210,6 +240,56 @@ pub struct DepositInfo {
     pub balance: Balance,
     /// token id
     pub token: String,
+    /// accountid
+    pub accountid: Option<AccountId>,
     /// OP_RETURN
-    pub remarks: String,
+    pub memo: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WithdrawInfo {
+    pub time: u64,
+    ///id
+    pub id: u32,
+    /// txid
+    pub txid: String,
+    /// withdraw-balance
+    pub balance: Balance,
+    /// token id
+    pub token: String,
+    /// accountid
+    pub accountid: AccountId,
+    /// btc-address
+    pub address: String,
+    /// withdraw status
+    pub status: WithdrawStatus,
+    /// OP_RETURN
+    pub memo: String,
+}
+
+impl WithdrawInfo {
+    pub fn new(
+        time: u64,
+        id: u32,
+        txid: String,
+        balance: Balance,
+        token: String,
+        accountid: AccountId,
+        address: String,
+        status: WithdrawStatus,
+        memo: String,
+    ) -> Self {
+        WithdrawInfo {
+            time,
+            id,
+            txid,
+            balance,
+            token,
+            accountid,
+            address,
+            status,
+            memo,
+        }
+    }
 }

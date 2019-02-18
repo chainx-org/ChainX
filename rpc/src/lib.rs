@@ -13,12 +13,13 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
-
+#![recursion_limit = "128"]
 //! Substrate RPC interfaces.
 extern crate chain as btc_chain;
 extern crate chainx_primitives;
 extern crate chainx_runtime;
 extern crate jsonrpc_core as rpc;
+extern crate jsonrpc_derive;
 extern crate jsonrpc_pubsub;
 extern crate keys;
 extern crate parity_codec as codec;
@@ -50,8 +51,6 @@ extern crate xrml_xsupport as xsupport;
 
 #[macro_use]
 extern crate error_chain;
-#[macro_use]
-extern crate jsonrpc_macros;
 #[macro_use]
 extern crate log;
 #[macro_use]

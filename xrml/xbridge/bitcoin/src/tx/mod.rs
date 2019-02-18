@@ -5,25 +5,24 @@ use rstd::result::Result as StdResult;
 
 use super::{
     BindStatus, BlockHeaderFor, BtcFee, CandidateTx, DepositCache, Module, NetworkId,
-    PendingDepositMap, RawEvent, Trait, TxFor, TxInfo, TxProposal, TxType, VoteNode, VoteResult,
-    VoteStatus,
+    PendingDepositMap, RawEvent, Trait, TrusteeRedeemScript, TxFor, TxInfo, TxProposal, TxType,
+    VoteResult,
 };
 use chain::{OutPoint, Transaction};
+use crypto::dhash160;
 use keys;
 use keys::{Address, DisplayLayout};
 use merkle::{parse_partial_merkle_tree, PartialMerkleTree};
-use script::{
-    builder, script::Script, Opcode, SignatureChecker, SignatureVersion, TransactionInputSigner,
-    TransactionSignatureChecker,
-};
-use xrecords::ApplicationMap;
-
-use crypto::dhash160;
 use primitives::{bytes::Bytes, hash::H256};
 use runtime_io;
 use runtime_primitives::traits::As;
 use runtime_support::{dispatch::Result, StorageMap, StorageValue};
+use script::{
+    builder, script::Script, Opcode, SignatureChecker, SignatureVersion, TransactionInputSigner,
+    TransactionSignatureChecker,
+};
 use xrecords;
+use xrecords::ApplicationMap;
 
 pub use self::validator::{handle_condidate, validate_transaction};
 
@@ -84,9 +83,9 @@ pub fn inspect_address<T: Trait>(tx: &Transaction, outpoint: OutPoint) -> Option
 
 pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
     let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
-        .ok_or("Should set RECEIVE_address first.")?;
+        .ok_or("Should set trustee address first.")?;
     let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
-        .map_err(|_| "Invalid Address")?;
+        .map_err(|_| "Invalid address")?;
     let tx_info = <TxFor<T>>::get(txid);
     let input_address = tx_info.input_address;
 
@@ -116,21 +115,31 @@ pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
     Ok(())
 }
 
-pub fn create_multi_address<T: Trait>(pubkeys: Vec<Vec<u8>>) -> Address {
-    let mut build = builder::Builder::default().push_opcode(Opcode::OP_2);
-    for (_i, pubkey) in pubkeys.iter().enumerate() {
+pub fn create_multi_address<T: Trait>(pubkeys: Vec<Vec<u8>>) -> Option<(Address, Script)> {
+    let (sign_num, node_num) = sign_num::<T>();
+    let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + sign_num as u8 - 1) {
+        Some(o) => o,
+        None => return None,
+    };
+    let mut build = builder::Builder::default().push_opcode(opcode);
+    for (_, pubkey) in pubkeys.iter().enumerate() {
         build = build.push_bytes(pubkey);
     }
+
+    let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + node_num as u8 - 1) {
+        Some(o) => o,
+        None => return None,
+    };
     let script = build
-        .push_opcode(Opcode::OP_3)
+        .push_opcode(opcode)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
-
-    Address {
+    let addr = Address {
         kind: keys::Type::P2SH,
         network: keys::Network::Testnet,
         hash: dhash160(&script),
-    }
+    };
+    Some((addr, script))
 }
 
 pub fn check_withdraw_tx<T: Trait>(
@@ -138,11 +147,8 @@ pub fn check_withdraw_tx<T: Trait>(
     withdraw_id: Vec<u32>,
     trustee_address: Address,
 ) -> Result {
-    match <TxProposal<T>>::take() {
-        Some(data) => {
-            <TxProposal<T>>::put(data);
-            Err("Unfinished withdrawal transaction")
-        }
+    match <TxProposal<T>>::get() {
+        Some(_) => Err("Unfinished withdrawal transaction"),
         None => {
             let mut addr_flag = false;
             let mut multi_flag = false;
@@ -153,9 +159,9 @@ pub fn check_withdraw_tx<T: Trait>(
                 match ApplicationMap::<T>::get(&withdraw_index) {
                     Some(r) => {
                         let addr: Address = Module::<T>::verify_btc_address(&r.data.addr())
-                            .map_err(|_| "parse addr error")?;
+                            .map_err(|_| "Parse addr error")?;
 
-                        for (_output_index, output) in tx.outputs.iter().enumerate() {
+                        for (_, output) in tx.outputs.iter().enumerate() {
                             let script = &output.script_pubkey;
                             let into_script: Script = script.clone().into();
 
@@ -185,7 +191,7 @@ pub fn check_withdraw_tx<T: Trait>(
             if output_len == withdraw_len + 1 && !multi_flag {
                 return Err("The change address not match the trustee address");
             }
-            let candidate = CandidateTx::new(tx, withdraw_id);
+            let candidate = CandidateTx::new(withdraw_id, tx, VoteResult::Unfinish, Vec::new());
             <TxProposal<T>>::put(candidate);
             runtime_io::print("[bridge-btc] Through the legality check of withdrawal transaction ");
             Ok(())
@@ -193,58 +199,18 @@ pub fn check_withdraw_tx<T: Trait>(
     }
 }
 
-pub fn update_vote<T: Trait>(who: T::AccountId, vote_state: bool) -> VoteResult {
-    let v = VoteStatus {
-        account: who.clone(),
-        vote: vote_state,
-    };
-    match <VoteNode<T>>::take() {
-        Some(mut vote) => {
-            if vote.iter().any(|a| a.account == who) {
-                runtime_io::print("This account already in 'Reject list' ");
-                return VoteResult::Invalid;
-            }
-            vote.push(v);
-            <VoteNode<T>>::put(vote.clone());
-            vote_result::<T>(vote)
-        }
-        None => {
-            let mut vote = Vec::new();
-            vote.push(v);
-            <VoteNode<T>>::put(vote);
-            VoteResult::Unfinish
-        }
-    }
-}
-
-fn vote_result<T: Trait>(vote: Vec<VoteStatus<T::AccountId>>) -> VoteResult {
-    let sign = sign_num::<T>();
-    if vote.len() < sign {
-        return VoteResult::Unfinish;
-    }
-    let mut rej = 0;
-    let mut fav = 0;
-    for v in vote {
-        if !v.vote {
-            rej += 1;
-        } else {
-            fav += 1;
-        }
-    }
-    if sign == rej {
-        VoteResult::FinishWithReject
-    } else if sign == fav {
-        VoteResult::FinishWithFavor
-    } else {
-        VoteResult::Unfinish
-    }
-}
-
-fn sign_num<T: Trait>() -> usize {
+pub fn sign_num<T: Trait>() -> (usize, usize) {
     let node_list = <xaccounts::TrusteeIntentions<T>>::get();
     let node_num = node_list.len();
-    match 2_usize.checked_mul(node_num) {
-        Some(m) => m / 3 + 1,
+    let sign_num = match 2_usize.checked_mul(node_num) {
+        Some(m) => {
+            if m % 3 == 0 {
+                m / 3
+            } else {
+                m / 3 + 1
+            }
+        }
         None => 0,
-    }
+    };
+    (sign_num, node_num)
 }

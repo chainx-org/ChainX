@@ -1,6 +1,6 @@
 [package]
 name = "chainx"
-version = "0.3.0"
+version = "0.9.0"
 build = "build.rs"
 authors = ["Chainpool <https://www.chainx.org>"]
 
@@ -62,7 +62,7 @@ members = [
     "xrml/xmining/staking",
     "xrml/xmining/tokens",
     "xrml/xbridge/bitcoin",
-    "xrml/xbridge/xdot",
+    "xrml/xbridge/sdot",
 ]
 
 [build-dependencies]

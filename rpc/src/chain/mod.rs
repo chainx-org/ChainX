@@ -19,69 +19,84 @@
 use std::sync::Arc;
 
 use client::{self, BlockchainEvents, Client};
-use jsonrpc_macros::{pubsub, Trailing};
-use jsonrpc_pubsub::SubscriptionId;
+use jsonrpc_derive::rpc;
+use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId};
 use primitives::{Blake2Hasher, H256};
 use rpc::futures::{stream, Future, Sink, Stream};
 use rpc::Result as RpcResult;
 use runtime_primitives::generic::{BlockId, SignedBlock};
 use runtime_primitives::traits::{Block as BlockT, Header, NumberFor};
-use serde::Serialize;
 
 use subscriptions::Subscriptions;
 
 mod error;
+mod number;
 #[cfg(test)]
 mod tests;
 
 use self::error::Result;
 
-build_rpc_trait! {
-    /// Substrate blockchain API
-    pub trait ChainApi<Number, Hash> where
-        Header: Serialize,
-        SignedBlock: Serialize,
-    {
-        type Metadata;
+/// Substrate blockchain API
+#[rpc]
+pub trait ChainApi<Number, Hash, Header, SignedBlock> {
+    /// RPC metadata
+    type Metadata;
 
-        /// Get header of a relay chain block.
-        #[rpc(name = "chain_getHeader")]
-        fn header(&self, Trailing<Hash>) -> Result<Option<Header>>;
+    /// Get header of a relay chain block.
+    #[rpc(name = "chain_getHeader")]
+    fn header(&self, Option<Hash>) -> Result<Option<Header>>;
 
-        /// Get header and body of a relay chain block.
-        #[rpc(name = "chain_getBlock")]
-        fn block(&self, Trailing<Hash>) -> Result<Option<SignedBlock>>;
+    /// Get header and body of a relay chain block.
+    #[rpc(name = "chain_getBlock")]
+    fn block(&self, Option<Hash>) -> Result<Option<SignedBlock>>;
 
-        /// Get hash of the n-th block in the canon chain.
-        ///
-        /// By default returns latest block hash.
-        #[rpc(name = "chain_getBlockHash", alias = ["chain_getHead", ])]
-        fn block_hash(&self, Trailing<Number>) -> Result<Option<Hash>>;
+    /// Get hash of the n-th block in the canon chain.
+    ///
+    /// By default returns latest block hash.
+    #[rpc(name = "chain_getBlockHash", alias("chain_getHead"))]
+    fn block_hash(&self, Option<number::NumberOrHex<Number>>) -> Result<Option<Hash>>;
 
-        /// Get hash of the last finalised block in the canon chain.
-        #[rpc(name = "chain_getFinalisedHead")]
-        fn finalised_head(&self) -> Result<Hash>;
+    /// Get hash of the last finalised block in the canon chain.
+    #[rpc(name = "chain_getFinalisedHead")]
+    fn finalised_head(&self) -> Result<Hash>;
 
-        #[pubsub(name = "chain_newHead")] {
-            /// New head subscription
-            #[rpc(name = "chain_subscribeNewHead", alias = ["subscribe_newHead", ])]
-            fn subscribe_new_head(&self, Self::Metadata, pubsub::Subscriber<Header>);
+    /// New head subscription
+    #[pubsub(
+        subscription = "chain_newHead",
+        subscribe,
+        name = "chain_subscribeNewHead",
+        alias("subscribe_newHead")
+    )]
+    fn subscribe_new_head(&self, Self::Metadata, Subscriber<Header>);
 
-            /// Unsubscribe from new head subscription.
-            #[rpc(name = "chain_unsubscribeNewHead", alias = ["unsubscribe_newHead", ])]
-            fn unsubscribe_new_head(&self, Option<Self::Metadata>, SubscriptionId) -> RpcResult<bool>;
-        }
+    /// Unsubscribe from new head subscription.
+    #[pubsub(
+        subscription = "chain_newHead",
+        unsubscribe,
+        name = "chain_unsubscribeNewHead",
+        alias("unsubscribe_newHead")
+    )]
+    fn unsubscribe_new_head(&self, Option<Self::Metadata>, SubscriptionId) -> RpcResult<bool>;
 
-        #[pubsub(name = "chain_finalisedHead")] {
-            /// New head subscription
-            #[rpc(name = "chain_subscribeFinalisedHeads")]
-            fn subscribe_finalised_heads(&self, Self::Metadata, pubsub::Subscriber<Header>);
+    /// New head subscription
+    #[pubsub(
+        subscription = "chain_finalisedHead",
+        subscribe,
+        name = "chain_subscribeFinalisedHeads"
+    )]
+    fn subscribe_finalised_heads(&self, Self::Metadata, Subscriber<Header>);
 
-            /// Unsubscribe from new head subscription.
-            #[rpc(name = "chain_unsubscribeFinalisedHeads")]
-            fn unsubscribe_finalised_heads(&self, Option<Self::Metadata>, SubscriptionId) -> RpcResult<bool>;
-        }
-    }
+    /// Unsubscribe from new head subscription.
+    #[pubsub(
+        subscription = "chain_finalisedHead",
+        unsubscribe,
+        name = "chain_unsubscribeFinalisedHeads"
+    )]
+    fn unsubscribe_finalised_heads(
+        &self,
+        Option<Self::Metadata>,
+        SubscriptionId,
+    ) -> RpcResult<bool>;
 }
 
 /// Chain API with subscriptions support.
@@ -109,7 +124,7 @@ where
     E: client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static,
     RA: Send + Sync + 'static,
 {
-    fn unwrap_or_best(&self, hash: Trailing<Block::Hash>) -> Result<Block::Hash> {
+    fn unwrap_or_best(&self, hash: Option<Block::Hash>) -> Result<Block::Hash> {
         Ok(match hash.into() {
             None => self.client.info()?.chain.best_hash,
             Some(hash) => hash,
@@ -118,7 +133,7 @@ where
 
     fn subscribe_headers<F, G, S, ERR>(
         &self,
-        subscriber: pubsub::Subscriber<Block::Header>,
+        subscriber: Subscriber<Block::Header>,
         best_block_hash: G,
         stream: F,
     ) where
@@ -159,22 +174,26 @@ where
 {
     type Metadata = ::metadata::Metadata;
 
-    fn header(&self, hash: Trailing<Block::Hash>) -> Result<Option<Block::Header>> {
+    fn header(&self, hash: Option<Block::Hash>) -> Result<Option<Block::Header>> {
         let hash = self.unwrap_or_best(hash)?;
         Ok(self.client.header(&BlockId::Hash(hash))?)
     }
 
-    fn block(&self, hash: Trailing<Block::Hash>) -> Result<Option<SignedBlock<Block>>> {
+    fn block(&self, hash: Option<Block::Hash>) -> Result<Option<SignedBlock<Block>>> {
         let hash = self.unwrap_or_best(hash)?;
         Ok(self.client.block(&BlockId::Hash(hash))?)
     }
 
-    fn block_hash(&self, number: Trailing<NumberFor<Block>>) -> Result<Option<Block::Hash>> {
-        Ok(match number.into() {
+    fn block_hash(
+        &self,
+        number: Option<number::NumberOrHex<NumberFor<Block>>>,
+    ) -> Result<Option<Block::Hash>> {
+        let number: Option<number::NumberOrHex<NumberFor<Block>>> = number.into();
+        Ok(match number {
             None => Some(self.client.info()?.chain.best_hash),
-            Some(number) => self
+            Some(num_or_hex) => self
                 .client
-                .header(&BlockId::number(number))?
+                .header(&BlockId::number(num_or_hex.to_number()?))?
                 .map(|h| h.hash()),
         })
     }
@@ -183,11 +202,7 @@ where
         Ok(self.client.info()?.chain.finalized_hash)
     }
 
-    fn subscribe_new_head(
-        &self,
-        _metadata: Self::Metadata,
-        subscriber: pubsub::Subscriber<Block::Header>,
-    ) {
+    fn subscribe_new_head(&self, _metadata: Self::Metadata, subscriber: Subscriber<Block::Header>) {
         self.subscribe_headers(
             subscriber,
             || self.block_hash(None.into()),
@@ -211,7 +226,7 @@ where
     fn subscribe_finalised_heads(
         &self,
         _meta: Self::Metadata,
-        subscriber: pubsub::Subscriber<Block::Header>,
+        subscriber: Subscriber<Block::Header>,
     ) {
         self.subscribe_headers(
             subscriber,

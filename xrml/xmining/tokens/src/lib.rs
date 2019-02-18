@@ -40,7 +40,7 @@ use codec::Encode;
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 use runtime_primitives::{
-    traits::{As, Hash, Zero},
+    traits::{As, Hash},
     Permill,
 };
 use runtime_support::dispatch::Result;
@@ -186,9 +186,10 @@ decl_module! {
         fn claim(origin, token: Token) {
             let who = system::ensure_signed(origin)?;
 
-            if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == token {
-                return Err("Cannot claim from native asset via tokens module.");
-            }
+            ensure!(
+                <xassets::Module<T> as ChainT>::TOKEN.to_vec() != token,
+                "Cannot claim from native asset via tokens module."
+            );
 
             ensure!(
                 Self::psedu_intentions().into_iter().find(|i| i.clone() == token).is_some(),
@@ -260,7 +261,7 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
         // Initialize vote weight of depositor
         let mut vote_weight = DepositVoteWeight::default();
         vote_weight.last_deposit_weight_update = <system::Module<T>>::block_number();
-        <DepositRecords<T>>::insert((source.clone(), target.clone()), vote_weight);
+        <DepositRecords<T>>::insert(&(source.clone(), target.clone()), vote_weight);
 
         Self::issue_reward(source, target, value)
     }
@@ -302,7 +303,7 @@ impl<T: Trait> Module<T> {
         }
 
         <PseduIntentionProfiles<T>>::insert(token, p_vote_weight);
-        <DepositRecords<T>>::insert(key, d_vote_weight);
+        <DepositRecords<T>>::insert(&key, d_vote_weight);
 
         Ok(())
     }
@@ -336,8 +337,6 @@ impl<T: Trait> Module<T> {
         );
 
         xassets::Module::<T>::pcx_move_free_balance(&addr, source, reward).map_err(|e| e.info())?;
-        //        Self::cut_jackpot(token, &reward);
-        //        <xassets::Module<T>>::pcx_issue(source, reward)?;
 
         Self::deposit_event(RawEvent::Issue(source.clone(), token.clone(), value));
 
@@ -370,51 +369,13 @@ impl<T: Trait> Module<T> {
         }
 
         <PseduIntentionProfiles<T>>::insert(target, p_vote_weight);
-        <DepositRecords<T>>::insert(key, d_vote_weight);
-    }
-
-    fn price_for(token: &Token) -> T::Balance {
-        <xspot::Module<T>>::aver_asset_price(&token).unwrap_or(Zero::zero())
-    }
-
-    // Convert total deposited crosschain asset to PCX based on its price and apply a discount.
-    fn convert_to_stake(token: &Token) -> T::Balance {
-        let price = Self::price_for(token);
-
-        let asset = <xassets::Module<T>>::get_asset(token).expect("Asset definitely exist.");
-
-        // FIXME refine later
-        // Need to take care of precision!
-        let amount = <xassets::Module<T>>::all_type_balance(&token).as_();
-
-        let precision = 10_u64.pow(asset.precision() as u32);
-
-        let pcx = xassets::Module::<T>::TOKEN.to_vec();
-        let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
-        let pcx_precision = 10_u64.pow(pcx_asset.precision() as u32);
-
-        // FIXME validate price and amount
-
-        let stake = match price.as_().checked_mul(amount) {
-            Some(x) => x,
-            None => panic!("Overflow when apply price multiplies amount."),
-        };
-
-        // Apply precision at last
-        let times = pcx_precision / precision;
-
-        let stake = match stake.checked_mul(times) {
-            Some(s) => s,
-            None => panic!("Overflow when apply stake times"),
-        };
-
-        T::Balance::sa(stake)
+        <DepositRecords<T>>::insert(&key, d_vote_weight);
     }
 }
 
 impl<T: Trait> OnAssetRegisterOrRevoke for Module<T> {
     fn on_register(token: &Token, is_psedu_intention: bool) -> Result {
-        if is_psedu_intention == false {
+        if !is_psedu_intention {
             return Ok(());
         }
 
@@ -453,9 +414,11 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
             .into_iter()
             .filter(|token| <xspot::Module<T>>::aver_asset_price(token).is_some())
             .map(|token| {
-                let stake = Self::convert_to_stake(&token);
+                let stake = <xspot::Module<T>>::trans_pcx_stake(&token);
                 (RewardHolder::PseduIntention(token), stake)
             })
+            .filter(|(_, stake)| stake.is_some())
+            .map(|(holder, stake)| (holder, stake.unwrap()))
             .collect()
     }
 }

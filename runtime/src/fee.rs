@@ -2,26 +2,26 @@
 
 //use balances::Call as BalancesCall;
 use bitcoin::Call as BitcoinCall;
+use sdot::Call as SdotCall;
 use sudo::Call as SudoCall;
 use xassets::Call as XAssetsCall;
-use xdot::Call as XdotCall;
 use xprocess::Call as XAssetsProcessCall;
 use xspot::Call as XSpotCall;
 use xstaking::Call as XStakingCall;
+use xtokens::Call as XTokensCall;
 
-use Acceleration;
 use Call;
 
 pub trait CheckFee {
-    fn check_fee(&self, acc: Acceleration) -> Option<u64>;
+    fn check_fee(&self) -> Option<u64>;
 }
 
 impl CheckFee for Call {
     /// Return fee_power, which is part of the total_fee.
     /// total_fee = base_fee * fee_power + byte_fee * bytes
     ///
-    /// fee_power = power_per_call * acceleration
-    fn check_fee(&self, acc: Acceleration) -> Option<u64> {
+    /// fee_power = power_per_call
+    fn check_fee(&self) -> Option<u64> {
         let base_power = match self {
             // xassets
             Call::XAssets(call) => match call {
@@ -54,6 +54,10 @@ impl CheckFee for Call {
                 XStakingCall::claim(_) => Some(3),
                 _ => None,
             },
+            Call::XTokens(call) => match call {
+                XTokensCall::claim(_) => Some(3),
+                _ => None,
+            },
             Call::XSpot(call) => match call {
                 XSpotCall::put_order(_, _, _, _, _) => Some(8),
                 XSpotCall::cancel_order(_, _) => Some(2),
@@ -64,16 +68,12 @@ impl CheckFee for Call {
                 SudoCall::set_key(_) => Some(1),
                 _ => None,
             },
-            Call::XBridgeOfXDOT(call) => match call {
-                XdotCall::claim(_, _, _) => Some(1),
+            Call::XBridgeOfSDOT(call) => match call {
+                SdotCall::claim(_, _, _) => Some(1),
                 _ => None,
             },
             _ => None,
         };
-
-        match base_power {
-            Some(p) => Some(p * acc as u64),
-            None => None,
-        }
+        base_power
     }
 }

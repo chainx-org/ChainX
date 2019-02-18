@@ -65,3 +65,13 @@ pub mod xspot_api {
         }
     }
 }
+
+pub mod xfee_api {
+    use client::decl_runtime_apis;
+    use rstd::prelude::Vec;
+    decl_runtime_apis! {
+        pub trait XFeeApi {
+            fn transaction_fee(call: Vec<u8>, encoded_len: u64) -> Option<u64>;
+        }
+    }
+}

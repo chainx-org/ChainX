@@ -65,7 +65,7 @@ pub extern crate xrml_xassets_process as xprocess;
 pub extern crate xrml_xassets_records as xrecords;
 // bridge
 pub extern crate xrml_bridge_bitcoin as bitcoin;
-pub extern crate xrml_bridge_xdot as xdot;
+pub extern crate xrml_bridge_sdot as sdot;
 // staking
 pub extern crate xrml_mining_staking as xstaking;
 pub extern crate xrml_mining_tokens as xtokens;
@@ -201,7 +201,7 @@ impl bitcoin::Trait for Runtime {
     type Event = Event;
 }
 
-impl xdot::Trait for Runtime {
+impl sdot::Trait for Runtime {
     type Event = Event;
 }
 
@@ -321,7 +321,7 @@ construct_runtime!(
         XSpot: xspot,
         // bridge
         XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>,  Event<T>},
-        XBridgeOfXDOT: xdot::{Module, Call, Storage, Config<T>,  Event<T>},
+        XBridgeOfSDOT: sdot::{Module, Call, Storage, Config<T>,  Event<T>},
     }
 );
 
@@ -471,6 +471,23 @@ impl_runtime_apis! {
     impl runtime_api::xspot_api::XSpotApi<Block> for Runtime {
         fn aver_asset_price(token: xassets::Token) -> Option<Balance> {
             XSpot::aver_asset_price(&token)
+        }
+    }
+
+    impl runtime_api::xfee_api::XFeeApi<Block> for Runtime {
+        fn transaction_fee(call_params: Vec<u8>, encoded_len: u64) -> Option<u64> {
+            use fee::CheckFee;
+            use codec::Decode;
+
+            let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
+                call
+            } else {
+                return None;
+            };
+
+            call.check_fee().map(|power|
+                XFeeManager::transaction_fee(power, encoded_len)
+            )
         }
     }
 }

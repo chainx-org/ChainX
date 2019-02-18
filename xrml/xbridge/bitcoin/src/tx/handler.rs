@@ -26,7 +26,7 @@ impl<'a> TxHandler<'a> {
                 Ok(()) => {
                     flag = true;
                     let txid = candidate.tx.hash();
-                    for number in candidate.outs.iter() {
+                    for number in candidate.withdraw_id.iter() {
                         runtime_io::print(u64::from(*number));
                         runtime_io::print(&txid[..]);
 
@@ -54,7 +54,7 @@ impl<'a> TxHandler<'a> {
         let txid = self.0;
         let tx_info = <TxFor<T>>::get(txid);
 
-        for (_index, output) in tx_info.raw_tx.outputs.iter().enumerate() {
+        for (_, output) in tx_info.raw_tx.outputs.iter().enumerate() {
             let script = &output.script_pubkey;
             let into_script: Script = script.clone().into();
 
@@ -67,10 +67,11 @@ impl<'a> TxHandler<'a> {
 
             // get deposit money
             let script_addresses = into_script.extract_destinations().unwrap_or_default();
-            if script_addresses.len() == 1 {
-                if (trustee_address.hash == script_addresses[0].hash) && (output.value > 0) {
-                    deposit_balance += output.value;
-                }
+            if script_addresses.len() == 1
+                && trustee_address.hash == script_addresses[0].hash
+                && output.value > 0
+            {
+                deposit_balance += output.value;
             }
         }
 
@@ -156,19 +157,19 @@ fn update_binding<T: Trait>(node_name: &[u8], who: T::AccountId, info: &TxInfo) 
                 return false;
             }
             //delete old bind
-            if let Some(a) = <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, p.0)) {
+            if let Some(a) = <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, p.0.clone())) {
                 let mut vaddr = a.clone();
                 for (index, it) in a.iter().enumerate() {
                     let addr = match Address::from_layout(&it.as_slice()) {
                         Ok(a) => a,
-                        Err(_) => return false,
+                        Err(_) => {
+                            runtime_io::print("[bridge-btc] convert address failed!");
+                            return false;
+                        }
                     };
                     if addr.hash == info.input_address.hash {
                         vaddr.remove(index);
-                        <xaccounts::CrossChainBindOf<T>>::insert(
-                            (Chain::Bitcoin, who.clone()),
-                            vaddr,
-                        );
+                        <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, p.0), vaddr);
                         break;
                     }
                 }
@@ -195,7 +196,7 @@ fn remove_pending_deposit<T: Trait>(input_address: &keys::Address, who: &T::Acco
     if let Some(record) = <PendingDepositMap<T>>::get(input_address) {
         for r in record {
             deposit_token::<T>(who, r.balance);
-            runtime_io::print("[bridge-btc] handle_output PendingDepositMap ");
+            runtime_io::print("[bridge-btc] Handle pending deposit");
             runtime_io::print(r.balance);
         }
         <PendingDepositMap<T>>::remove(input_address);
@@ -214,14 +215,14 @@ fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: H256, b
             key.push(k);
             <PendingDepositMap<T>>::insert(input_address, key);
 
-            runtime_io::print("[bridge-btc]（Some）handle_output PendingDeposit token: ");
+            runtime_io::print("[bridge-btc] Add pending peposit");
         }
         None => {
             let mut cache: Vec<DepositCache> = Vec::new();
             cache.push(k);
             <PendingDepositMap<T>>::insert(input_address, cache);
 
-            runtime_io::print("[bridge-btc]（None）handle_output PendingDeposit token: ");
+            runtime_io::print("[bridge-btc] New pending peposit");
         }
     };
 }

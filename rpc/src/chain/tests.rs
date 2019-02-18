@@ -16,7 +16,6 @@
 
 use super::*;
 use consensus::BlockOrigin;
-use jsonrpc_macros::pubsub;
 use test_client::runtime::{Block, Header};
 use test_client::{self, TestClient};
 
@@ -189,7 +188,7 @@ fn should_return_finalised_hash() {
 fn should_notify_about_latest_block() {
     let mut core = ::tokio::runtime::Runtime::new().unwrap();
     let remote = core.executor();
-    let (subscriber, id, transport) = pubsub::Subscriber::new_test("test");
+    let (subscriber, id, transport) = Subscriber::new_test("test");
 
     {
         let api = Chain {
@@ -222,7 +221,7 @@ fn should_notify_about_latest_block() {
 fn should_notify_about_finalised_block() {
     let mut core = ::tokio::runtime::Runtime::new().unwrap();
     let remote = core.executor();
-    let (subscriber, id, transport) = pubsub::Subscriber::new_test("test");
+    let (subscriber, id, transport) = Subscriber::new_test("test");
 
     {
         let api = Chain {

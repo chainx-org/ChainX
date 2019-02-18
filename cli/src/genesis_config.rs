@@ -18,11 +18,11 @@ use chainx_runtime::{
 use chainx_runtime::{
     BalancesConfig, ConsensusConfig, GenesisConfig, IndicesConfig, Params, SessionConfig,
     SudoConfig, TimestampConfig, XAssetsConfig, XAssetsProcessConfig, XBridgeOfBTCConfig,
-    XBridgeOfXDOTConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    XBridgeOfSDOTConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
     XTokensConfig,
 };
 
-use ed25519;
+use ed25519::{self, Public};
 use sr_primitives::Permill;
 
 use self::btc_chain::BlockHeader;
@@ -54,7 +54,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let auth4 = satoshi.into();
     let initial_authorities = match genesis_spec {
         GenesisSpec::Dev => vec![auth1],
-        GenesisSpec::Local => vec![auth1, auth2, auth3],
+        GenesisSpec::Local => vec![auth1, auth2, auth3, auth4],
         GenesisSpec::Multi => vec![auth1, auth2, auth3, auth4, gavin.into(), dave.into()],
     };
 
@@ -63,7 +63,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let pcx_precision = 8_u16;
     let balances_config = BalancesConfig {
         transaction_base_fee: 1,
-        transaction_byte_fee: 0,
+        transaction_byte_fee: 1,
         existential_deposit: 0,
         transfer_fee: 0,
         creation_fee: 0,
@@ -89,37 +89,76 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // )
     // .unwrap();
 
-    let xdot_asset = Asset::new(
-        b"XDOT".to_vec(), // token
-        b"XDOT".to_vec(),
+    let sdot_asset = Asset::new(
+        b"SDOT".to_vec(), // token
+        b"SDOT".to_vec(),
         Chain::Ethereum,
         3, //  precision
-        b"XDOT ChainX".to_vec(),
+        b"SDOT ChainX".to_vec(),
     )
     .unwrap();
 
-    let apply_prec = |x| x * 10_u64.pow(pcx_precision as u32);
+    let apply_prec = |x| (x * 10_u64.pow(pcx_precision as u32) as f64) as u64;
+
     let mut full_endowed = vec![
         (
-            auth1,
-            apply_prec(30),
-            b"Alice".to_vec(),
-            b"Alice.com".to_vec(),
+            auth1,                 // auth
+            apply_prec(12.5),      // balance
+            b"Alice".to_vec(),     // name
+            b"Alice.com".to_vec(), // url
+            "03f72c448a0e59f48d4adef86cba7b278214cece8e56ef32ba1d179e0a8129bdba"
+                .from_hex()
+                .unwrap(), // hot_entity
+            "02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee"
+                .from_hex()
+                .unwrap(), // cold_entity
         ),
-        (auth2, apply_prec(10), b"Bob".to_vec(), b"Bob.com".to_vec()),
+        (
+            auth2,
+            apply_prec(12.5),
+            b"Bob".to_vec(),
+            b"Bob.com".to_vec(),
+            "0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd"
+                .from_hex()
+                .unwrap(),
+            "03ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d70780"
+                .from_hex()
+                .unwrap(),
+        ),
         (
             auth3,
-            apply_prec(10),
+            apply_prec(12.5),
             b"Charlie".to_vec(),
-            b"Charlie".to_vec(),
+            b"Charlie.com".to_vec(),
+            "0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40"
+                .from_hex()
+                .unwrap(),
+            "02e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2"
+                .from_hex()
+                .unwrap(),
+        ),
+        (
+            auth4,
+            apply_prec(12.5),
+            b"Satoshi".to_vec(),
+            b"Satoshi.com".to_vec(),
+            "0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3"
+                .from_hex()
+                .unwrap(),
+            "020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f"
+                .from_hex()
+                .unwrap(),
         ),
     ];
+
     full_endowed.truncate(initial_authorities.len());
+
     let endowed = full_endowed
         .clone()
         .into_iter()
-        .map(|(auth, balance, _, _)| (auth, balance))
+        .map(|(auth, balance, _, _, _, _)| (auth, balance))
         .collect::<Vec<_>>();
+
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
@@ -137,7 +176,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         session: Some(SessionConfig {
             validators: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
-            session_length: 10, // 30 blocks per session
+            session_length: 150, // 150 blocks per session
         }),
         sudo: Some(SudoConfig {
             key: auth1.into(),
@@ -164,52 +203,57 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             asset_list: vec![
                 (btc_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 100_000),(Keyring::Bob.to_raw_public().into(), 100_000)]),
                 // (dot_asset.clone(), false, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)]),
-                (xdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
+                (sdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
             ],
         }),
         xprocess: Some(XAssetsProcessConfig {
-            token_black_list: vec![xdot_asset.token()],
+            token_black_list: vec![sdot_asset.token()],
             _genesis_phantom_data: Default::default(),
         }),
         xstaking: Some(XStakingConfig {
-            validator_count: 7,
-            minimum_validator_count: 1,
-            sessions_per_era: 1,
-            bonding_duration: 30,
+            initial_reward: apply_prec(50.0),
+            validator_count: 100,
+            minimum_validator_count: 4,
+            sessions_per_era: 12,  // update validators set per 12 sessions
+            sessions_per_epoch: 12 * 10, // update trustees set per 120 sessions
+            bonding_duration: 150 * 12, // 150 blocks per bonding
+            intention_bonding_duration: 150 * 12 * 10,
             current_era: 0,
             penalty: 0,
             funding: Default::default(),
-            intentions: full_endowed.into_iter().map(|(who, value, name, url)| (who.into(), value, name, url)).collect(),
+            intentions: full_endowed.clone().into_iter().map(|(who, value, name, url, _, _)| (who.into(), value, name, url)).collect(),
             validator_stake_threshold: 1,
+            trustee_intentions: full_endowed.into_iter().map(|(who, _, _, _, hot_entity, cold_entity)| (who.into(), hot_entity, cold_entity)).collect(),
+            team_address: Public::from_ss58check("5CSff76SK7qcWYq5MpvoHDVRrjWFwpxurwUu6Bqw25hKPQiy").unwrap().0.into(),
         }),
         xtokens: Some(XTokensConfig {
             token_discount: Permill::from_percent(30),
             endowed_users: vec![
                 (btc_asset.token(), vec![(Keyring::Alice.to_raw_public().into(), 100_000),(Keyring::Bob.to_raw_public().into(), 100_000)]),
-                (xdot_asset.token(), vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
+                (sdot_asset.token(), vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
             ],
         }),
         xspot: Some(XSpotConfig {
             pair_list: vec![
                     (xassets::Module::<Runtime>::TOKEN.to_vec(), bitcoin::Module::<Runtime>::TOKEN.to_vec(), 9, 2, 100000, true),
                  // (<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),dot_asset.token().to_vec(),7,2,100000,false),
-                    (xdot_asset.token(), xassets::Module::<Runtime>::TOKEN.to_vec(), 4, 2, 100000, true)
+                    (sdot_asset.token(), xassets::Module::<Runtime>::TOKEN.to_vec(), 4, 2, 100000, true)
                 ],
             price_volatility: 10,
         }),
-        xdot: Some(XBridgeOfXDOTConfig {
+        sdot: Some(XBridgeOfSDOTConfig {
             claims: vec![(eth_address, 1_000_000),],
         }),
         bitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: (BlockHeader {
-                version: 536870912,
-                previous_header_hash: H256::from_reversed_str("00000000f1c80c38f9bd6ebf9ca796d92122e5b2a1539ac06e09252a1a7e3d01"),
-                merkle_root_hash: H256::from_reversed_str("815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707"),
-                time: 1546999089,
-                bits: Compact::new(436290411),
-                nonce: 562223693,
-            }, 1451572),
+                version: 980090880,
+                previous_header_hash: H256::from_reversed_str("00000000000000ab706b663326210d03780fea6ecfe0cc59c78f0c7dddba9cc2"),
+                merkle_root_hash: H256::from_reversed_str("91ee572484dabc6edf5a8da44a4fb55b5040facf66624b2a37c4f633070c60c8"),
+                time: 1550454022,
+                bits: Compact::new(436283074),
+                nonce: 47463732,
+            }, 1457525),
             params_info: Params::new(520159231, // max_bits
                                      2 * 60 * 60,  // block_max_future
                                      3,  // max_fork_route_preset
