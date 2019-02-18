@@ -15,15 +15,15 @@ pub fn validate_transaction<T: Trait>(
         Some(header) => {
             let mut itervc = header.txid.iter();
             if itervc.any(|h| *h == verify_txid) {
-                return Err("this tx already store");
+                return Err("This tx already store");
             }
         }
-        None => return Err("can't find this tx's block header"),
+        None => return Err("Can't find this tx's block header"),
     }
 
     let header_info = match <BlockHeaderFor<T>>::get(&tx.block_hash) {
         Some(header) => header,
-        None => return Err("not has this block header yet"),
+        None => return Err("This block header not exists"),
     };
 
     let merkle_root = header_info.header.merkle_root_hash;
@@ -32,26 +32,26 @@ pub fn validate_transaction<T: Trait>(
     match parse_partial_merkle_tree(tx.merkle_proof.clone()) {
         Ok(parsed) => {
             if merkle_root != parsed.root {
-                return Err("check failed for merkle tree proof");
+                return Err("Check failed for merkle tree proof");
             }
             if !parsed.hashes.iter().any(|h| *h == verify_txid) {
-                return Err("txid should in ParsedPartialMerkleTree");
+                return Err("Tx hash should in ParsedPartialMerkleTree");
             }
         }
-        Err(_) => return Err("parse partial merkle tree failed"),
+        Err(_) => return Err("Parse partial merkle tree failed"),
     }
 
     // To do: All inputs relay
     let previous_txid = tx.previous_raw.hash();
     if previous_txid != tx.raw.inputs[0].previous_output.hash {
-        return Err("previous tx id not right");
+        return Err("Previous tx id not right");
     }
 
     // detect withdraw: To do: All inputs relay
     let outpoint = tx.raw.inputs[0].previous_output.clone();
     let send_address = match inspect_address::<T>(&tx.previous_raw, outpoint) {
         Some(a) => a,
-        None => return Err("inspect address failed at detect withdraw-tx "),
+        None => return Err("Inspect address failed at detect withdraw-tx "),
     };
     if send_address.hash == address.hash {
         return Ok(TxType::Withdraw);
@@ -64,7 +64,7 @@ pub fn validate_transaction<T: Trait>(
         }
     }
 
-    Err("not found our pubkey, may be an unrelated tx")
+    Err("Irrelevant tx")
 }
 
 fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Bytes) -> bool {

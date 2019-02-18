@@ -203,7 +203,13 @@ pub fn sign_num<T: Trait>() -> (usize, usize) {
     let node_list = <xaccounts::TrusteeIntentions<T>>::get();
     let node_num = node_list.len();
     let sign_num = match 2_usize.checked_mul(node_num) {
-        Some(m) => m / 3 + 1,
+        Some(m) => {
+            if m % 3 == 0 {
+                m / 3
+            } else {
+                m / 3 + 1
+            }
+        }
         None => 0,
     };
     (sign_num, node_num)

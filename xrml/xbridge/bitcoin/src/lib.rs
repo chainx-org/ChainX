@@ -580,12 +580,11 @@ impl<T: Trait> Module<T> {
                     return Err("Already signature transaction or reject to signature");
                 }
                 if !vote_state {
-                    let reject_count: Vec<&(T::AccountId, bool)> = data
-                        .sig_node
-                        .iter()
-                        .filter(|(_, vote)| *vote == false)
-                        .collect();
-                    data.sig_node.clone().push((who, vote_state));
+                    let sig_node = data.sig_node.clone();
+                    let reject_count: Vec<&(T::AccountId, bool)> =
+                        sig_node.iter().filter(|(_, vote)| *vote == false).collect();
+                    data.sig_node.push((who, vote_state));
+                    runtime_io::print("Veto signature");
                     if reject_count.len() + 1 >= sign_num {
                         runtime_io::print("Clear TxProposal");
                         <TxProposal<T>>::kill();
@@ -598,6 +597,7 @@ impl<T: Trait> Module<T> {
                     } else {
                         return Err("No signature");
                     };
+                    runtime_io::print("Signature pass");
                     data.sig_node.push((who, vote_state));
                     if sigs.len() >= sign_num {
                         data.sig_status = VoteResult::FinishWithFavor;

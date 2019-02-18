@@ -54,7 +54,7 @@ impl<'a> TxHandler<'a> {
         let txid = self.0;
         let tx_info = <TxFor<T>>::get(txid);
 
-        for (_index, output) in tx_info.raw_tx.outputs.iter().enumerate() {
+        for (_, output) in tx_info.raw_tx.outputs.iter().enumerate() {
             let script = &output.script_pubkey;
             let into_script: Script = script.clone().into();
 
@@ -196,7 +196,7 @@ fn remove_pending_deposit<T: Trait>(input_address: &keys::Address, who: &T::Acco
     if let Some(record) = <PendingDepositMap<T>>::get(input_address) {
         for r in record {
             deposit_token::<T>(who, r.balance);
-            runtime_io::print("[bridge-btc] handle_output PendingDepositMap ");
+            runtime_io::print("[bridge-btc] Handle pending deposit");
             runtime_io::print(r.balance);
         }
         <PendingDepositMap<T>>::remove(input_address);
@@ -215,14 +215,14 @@ fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: H256, b
             key.push(k);
             <PendingDepositMap<T>>::insert(input_address, key);
 
-            runtime_io::print("[bridge-btc]（Some）handle_output PendingDeposit token: ");
+            runtime_io::print("[bridge-btc] Add pending peposit");
         }
         None => {
             let mut cache: Vec<DepositCache> = Vec::new();
             cache.push(k);
             <PendingDepositMap<T>>::insert(input_address, cache);
 
-            runtime_io::print("[bridge-btc]（None）handle_output PendingDeposit token: ");
+            runtime_io::print("[bridge-btc] New pending peposit");
         }
     };
 }

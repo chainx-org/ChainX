@@ -254,7 +254,7 @@ decl_module! {
             Self::apply_register(&who, name)?;
         }
 
-        fn setup_trusee(origin, chain: Chain, about: XString, hot_entity: TrusteeEntity, cold_entity: TrusteeEntity) {
+        fn setup_trustee(origin, chain: Chain, about: XString, hot_entity: TrusteeEntity, cold_entity: TrusteeEntity) {
             let who = ensure_signed(origin)?;
 
             ensure!(Self::is_intention(&who), "Transactor is not an intention.");
