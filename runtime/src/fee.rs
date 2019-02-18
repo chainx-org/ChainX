@@ -47,11 +47,12 @@ impl CheckFee for Call {
             // xmining
             Call::XStaking(call) => match call {
                 XStakingCall::register(_) => Some(100),
-                XStakingCall::refresh(_, _, _, _) => Some(100),
+                XStakingCall::refresh(_, _, _, _) => Some(5),
                 XStakingCall::nominate(_, _, _) => Some(5),
                 XStakingCall::unnominate(_, _, _) => Some(3),
                 XStakingCall::unfreeze(_, _) => Some(2),
                 XStakingCall::claim(_) => Some(3),
+                XStakingCall::setup_trustee(_, _, _, _) => Some(5),
                 _ => None,
             },
             Call::XTokens(call) => match call {
