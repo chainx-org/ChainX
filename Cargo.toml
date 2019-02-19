@@ -51,6 +51,7 @@ members = [
     "xrml/xsession",
     "xrml/xgrandpa",
     "xrml/xaura",
+    "xrml/xmultisig",
     # xrml/xfee
     "xrml/xfee/manager",
     # xrml/assets
