@@ -162,7 +162,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
-            "../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime_wasm.compact.wasm"
+            "./chainx_runtime_wasm.compact.wasm"
             ).to_vec(),
             authorities: initial_authorities.clone(),
         }),
@@ -218,7 +218,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             bonding_duration: 150 * 12, // 150 blocks per bonding
             intention_bonding_duration: 150 * 12 * 10,
             current_era: 0,
-            penalty: 0,
+            penalty: 50 * 100_000_000 / 150, // 1 per block reward
             funding: Default::default(),
             intentions: full_endowed.clone().into_iter().map(|(who, value, name, url, _, _)| (who.into(), value, name, url)).collect(),
             validator_stake_threshold: 1,

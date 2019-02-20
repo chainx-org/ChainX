@@ -555,7 +555,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
     fn do_match(order: &mut OrderT<T>, pair: &OrderPair, handicap: &HandicapT<T>) {
-        let  (mut opponent_direction,mut opponent_price) = match order.direction {
+        let  (opponent_direction,mut opponent_price) = match order.direction {
             OrderDirection::Buy => (OrderDirection::Sell,handicap.sell),
             OrderDirection::Sell => (OrderDirection::Buy,handicap.buy),
         };
@@ -1120,7 +1120,7 @@ impl<T: Trait> Module<T> {
             Some((first, _, _)) => match <xassets::Module<T>>::asset_info(&pair.second) {
                 Some((second, _, _)) => {
                     let trans_amount = match ((amount.as_() as u128) * (price.as_() as u128))
-                        .checked_mul((10_u128.pow(second.precision().as_())))
+                        .checked_mul(10_u128.pow(second.precision().as_()))
                     {
                         Some(x) => T::Balance::sa(
                             (x / (10_u128.pow(first.precision().as_())
