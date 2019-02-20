@@ -80,15 +80,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     )
     .unwrap();
 
-    // let dot_asset = Asset::new(
-    //     b"DOT".to_vec(), // token
-    //     b"Polkadot".to_vec(),
-    //     Chain::Polkadot,
-    //     8, //  precision
-    //     b"DOT ChainX".to_vec(),
-    // )
-    // .unwrap();
-
     let sdot_asset = Asset::new(
         b"SDOT".to_vec(), // token
         b"SDOT".to_vec(),
@@ -207,7 +198,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
             asset_list: vec![
                 (btc_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 100_000),(Keyring::Bob.to_raw_public().into(), 100_000)]),
-                // (dot_asset.clone(), false, vec![(Keyring::Alice.to_raw_public().into(), 1_000_000_000),(Keyring::Bob.to_raw_public().into(), 1_000_000_000)]),
                 (sdot_asset.clone(), true, vec![(Keyring::Alice.to_raw_public().into(), 10_000),(Keyring::Bob.to_raw_public().into(), 10_000)])
             ],
         }),
@@ -243,7 +233,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         xspot: Some(XSpotConfig {
             pair_list: vec![
                     (xassets::Module::<Runtime>::TOKEN.to_vec(), bitcoin::Module::<Runtime>::TOKEN.to_vec(), 9, 2, 100000, true),
-                 // (<xassets::Module<Runtime> as ChainT>::TOKEN.to_vec(),dot_asset.token().to_vec(),7,2,100000,false),
                     (sdot_asset.token(), xassets::Module::<Runtime>::TOKEN.to_vec(), 4, 2, 100000, true)
                 ],
             price_volatility: 10,

@@ -28,7 +28,6 @@ pub enum Chain {
     ChainX,
     Bitcoin,
     Ethereum,
-    Polkadot,
 }
 
 impl Default for Chain {
@@ -39,11 +38,10 @@ impl Default for Chain {
 
 impl Chain {
     pub fn iterator() -> Iter<'static, Chain> {
-        static CHAINS: [Chain; 4] = [
+        static CHAINS: [Chain; 3] = [
             Chain::ChainX,
             Chain::Bitcoin,
             Chain::Ethereum,
-            Chain::Polkadot,
         ];
         CHAINS.iter()
     }
