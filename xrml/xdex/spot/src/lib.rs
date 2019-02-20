@@ -555,10 +555,11 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
     fn do_match(order: &mut OrderT<T>, pair: &OrderPair, handicap: &HandicapT<T>) {
-        let mut opponent_price: T::Price = match order.direction {
-            OrderDirection::Buy => handicap.sell,
-            OrderDirection::Sell => handicap.buy,
+        let  (mut opponent_direction,mut opponent_price) = match order.direction {
+            OrderDirection::Buy => (OrderDirection::Sell,handicap.sell),
+            OrderDirection::Sell => (OrderDirection::Buy,handicap.buy),
         };
+
         let min_unit = 10_u64.pow(pair.unit_precision);
 
         loop {
@@ -599,6 +600,10 @@ impl<T: Trait> Module<T> {
                             }
                             // 找到匹配的单
                             if let Some(mut maker_order) = <AccountOrder<T>>::get(&list[i]) {
+                                if opponent_direction != maker_order.direction {
+                                    panic!("opponent direction error");
+                                }
+
                                 let mut amount: T::Balance;
 
                                 let v1: T::Balance =

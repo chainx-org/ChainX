@@ -669,6 +669,9 @@ impl<T: Trait> Module<T> {
             // same account, same type, return directly
             return Ok(());
         }
+        if value == Zero::zero()  {
+            return Ok(());
+        }
 
         if check {
             Self::is_valid_asset(token).map_err(|_| AssetErr::InvalidToken)?;
