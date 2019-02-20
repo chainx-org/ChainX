@@ -63,8 +63,6 @@ pub use shifter::{OnReward, OnRewardCalculation, RewardHolder};
 pub use vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
-const MIMIMUM_TRSUTEE_INTENSION_COUNT: u32 = 4;
-const MAXIMUM_TRSUTEE_INTENSION_COUNT: u32 = 16;
 
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
@@ -319,6 +317,7 @@ decl_event!(
         /// One validator (and their nominators) has been slashed by the given amount.
         OfflineSlash(AccountId, Balance),
         OfflineValidator(AccountId),
+        EnforceValidatorsInactive(Vec<AccountId>),
         Rotation(Vec<(AccountId, u64)>),
         NewTrustees(Vec<AccountId>),
         Unnominate(BlockNumber),
@@ -331,7 +330,11 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as XStaking {
-        InitialReward get(initial_reward) config(): T::Balance;
+        pub InitialReward get(initial_reward) config(): T::Balance;
+
+        pub TrusteeCount get(trustee_count) config(): u32;
+        pub MinimumTrusteeCount get(minimum_trustee_count) config(): u32;
+
         /// The ideal number of staking participants.
         pub ValidatorCount get(validator_count) config(): u32;
         /// Minimum number of staking participants before emergency conditions are imposed.

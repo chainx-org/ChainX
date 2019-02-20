@@ -82,20 +82,44 @@ impl<T: Trait> Module<T> {
         let _ = <xassets::Module<T>>::pcx_issue(&jackpot_addr, to_jackpot);
     }
 
-    /// Punish  a given (potential) validator by a specific amount.
-    fn punish(who: &T::AccountId, punish: T::Balance) -> bool {
+    /// Slash a given (potential) validator by a specific amount.
+    fn slash_validator(who: &T::AccountId, slash: T::Balance) {
         let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
         let fund_id = Self::funding();
-        if punish <= <xassets::Module<T>>::pcx_free_balance(&jackpot_addr) {
-            let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &fund_id, punish);
-            return true;
+
+        if slash <= <xassets::Module<T>>::pcx_free_balance(&jackpot_addr) {
+            let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &fund_id, slash);
+        } else {
+            // Put the slashed validator into the punished list when its jackpot is not enough to be slashed.
+            // These on the punish list will be enforced inactive on new session when possible.
+            if !<PunishList<T>>::get().into_iter().any(|x| x == *who) {
+                <PunishList<T>>::mutate(|i| i.push(who.clone()));
+            }
         }
-        return false;
+    }
+
+    /// Enforce these punished to be inactive, so that they won't become validators and be rewarded.
+    fn enforce_inactive() {
+        if Self::gather_candidates().len() <= Self::minimum_validator_count() as usize {
+            return;
+        }
+
+        let punished = <PunishList<T>>::take();
+        for v in punished.iter() {
+            // Force those punished to be inactive
+            <xaccounts::IntentionPropertiesOf<T>>::mutate(v, |props| {
+                props.is_active = false;
+            });
+        }
+
+        Self::deposit_event(RawEvent::EnforceValidatorsInactive(punished));
     }
 
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or
     /// move to a new era.
     fn new_session(_actual_elapsed: T::Moment, should_reward: bool) {
+        Self::enforce_inactive();
+
         if should_reward {
             // apply good session reward
             let mut session_reward = Self::this_session_reward();
@@ -178,15 +202,6 @@ impl<T: Trait> Module<T> {
             }
         }
 
-        let punish_list = <PunishList<T>>::take();
-        for punished in punish_list {
-            // Force those punished to be inactive
-            <xaccounts::IntentionPropertiesOf<T>>::mutate(&punished, |props| {
-                props.is_active = false;
-            });
-            Self::deposit_event(RawEvent::OfflineValidator(punished));
-        }
-
         // evaluate desired staking amounts and nominations and optimise to find the best
         // combination of validators, then use session::internal::set_validators().
         // for now, this just orders would-be stakers by their balances and chooses the top-most
@@ -206,32 +221,46 @@ impl<T: Trait> Module<T> {
 
         let desired_validator_count = <ValidatorCount<T>>::get() as usize;
 
-        let vals = candidates
+        let old_validators = <session::Module<T>>::validators();
+
+        let new_validators = candidates
             .into_iter()
             .take(desired_validator_count)
             .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
             .collect::<Vec<(_, _)>>();
 
-        <session::Module<T>>::set_validators(&vals);
+        // Skip set validators when the validator set stays the same.
+        if old_validators.len() == new_validators.len()
+            && old_validators
+                .iter()
+                .map(|(val, _)| val)
+                .zip(new_validators.iter().map(|(val, _)| val))
+                .all(|(a, b)| a == b)
+        {
+            return;
+        }
 
-        Self::deposit_event(RawEvent::Rotation(vals.clone()));
+        <session::Module<T>>::set_validators(&new_validators);
+        Self::deposit_event(RawEvent::Rotation(new_validators.clone()));
     }
 
     pub fn on_offline_validator(v: &T::AccountId) {
-        let penalty = Self::penalty();
-        if Self::punish(v, penalty) == false {
-            <PunishList<T>>::mutate(|i| i.push(v.clone()));
-        }
-        Self::deposit_event(RawEvent::OfflineSlash(v.clone(), penalty));
+        let slash = Self::penalty();
+        Self::slash_validator(v, slash);
+        Self::deposit_event(RawEvent::OfflineSlash(v.clone(), slash));
     }
 
     fn new_trustees() {
         let intentions = Self::gather_candidates();
-        if intentions.len() as u32 >= MIMIMUM_TRSUTEE_INTENSION_COUNT {
+        if intentions.len() as u32 >= Self::minimum_trustee_count() {
             let trustees = intentions
                 .into_iter()
-                .take(MAXIMUM_TRSUTEE_INTENSION_COUNT as usize)
+                .take(Self::trustee_count() as usize)
                 .map(|(_, v)| v)
+                .filter(|v| {
+                    <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(v.clone(), Chain::Bitcoin))
+                        .is_some()
+                })
                 .collect::<Vec<_>>();
 
             <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());

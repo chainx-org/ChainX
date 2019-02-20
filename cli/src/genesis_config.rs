@@ -159,6 +159,12 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         .map(|(auth, balance, _, _, _, _)| (auth, balance))
         .collect::<Vec<_>>();
 
+    let blocks_per_session = 150; // 150 blocks per session
+    let sessions_per_era = 12; // update validators set per 12 sessions
+    let sessions_per_epoch = sessions_per_era * 10; // update trustees set per 12*10 sessions
+    let bonding_duration = blocks_per_session * sessions_per_era; // freeze 150*12 blocks for non-intention
+    let intention_bonding_duration = bonding_duration * 10; // freeze 150*12*10 blocks for intention
+
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!(
@@ -176,7 +182,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         session: Some(SessionConfig {
             validators: endowed.iter().cloned().map(|(account, balance)| (account.into(), balance)).collect(),
-            session_length: 150, // 150 blocks per session
+            session_length: blocks_per_session,
         }),
         sudo: Some(SudoConfig {
             key: auth1.into(),
@@ -211,12 +217,14 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         xstaking: Some(XStakingConfig {
             initial_reward: apply_prec(50.0),
-            validator_count: 100,
+            validator_count: 30,
             minimum_validator_count: 4,
-            sessions_per_era: 12,  // update validators set per 12 sessions
-            sessions_per_epoch: 12 * 10, // update trustees set per 120 sessions
-            bonding_duration: 150 * 12, // 150 blocks per bonding
-            intention_bonding_duration: 150 * 12 * 10,
+            trustee_count: 4,
+            minimum_trustee_count: 4,
+            sessions_per_era: sessions_per_era,
+            sessions_per_epoch: sessions_per_epoch,
+            bonding_duration: bonding_duration,
+            intention_bonding_duration: intention_bonding_duration,
             current_era: 0,
             penalty: 50 * 100_000_000 / 150, // 1 per block reward
             funding: Default::default(),
