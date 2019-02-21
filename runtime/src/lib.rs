@@ -187,7 +187,6 @@ impl session::Trait for Runtime {
 }
 
 impl grandpa::Trait for Runtime {
-    type SessionKey = SessionKey;
     type Log = Log;
     type Event = Event;
 }

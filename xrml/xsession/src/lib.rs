@@ -126,6 +126,7 @@ decl_storage! {
         pub ForcingNewSession get(forcing_new_session): Option<bool>;
         /// Block at which the session length last changed.
         LastLengthChange: Option<T::BlockNumber>;
+        pub SessionKeys get(session_key): map T::AccountId => Option<T::SessionKey>;
         /// The next key for a given validator.
         pub NextKeyFor: map T::AccountId => Option<T::SessionKey>;
         /// The next session length.
@@ -156,11 +157,15 @@ impl<T: Trait> Module<T> {
     /// Called by `staking::new_era()` only. `next_session` should be called after this in order to
     /// update the session keys to the next validator set.
     pub fn set_validators(new: &[(T::AccountId, u64)]) {
-        <Validators<T>>::put(&new.to_vec()); // TODO: optimise.
+        <Validators<T>>::put(&new.to_vec());
         <consensus::Module<T>>::set_authorities(
             &new.iter()
                 .cloned()
-                .map(|(account_id, _)| T::ConvertAccountIdToSessionKey::convert(account_id))
+                .map(|(account_id, _)| {
+                    if let Some(session_key) = <SessionKeys<T>>::get(account_id.clone()) {
+                        session_key
+                    } else {
+                        T::ConvertAccountIdToSessionKey::convert(account_id) }})
                 .collect::<Vec<_>>(),
         );
     }
@@ -210,6 +215,7 @@ impl<T: Trait> Module<T> {
         // Update any changes in session keys.
         Self::validators().iter().enumerate().for_each(|(i, v)| {
             if let Some(n) = <NextKeyFor<T>>::take(v.0.clone()) {
+                <SessionKeys<T>>::insert(v.0.clone(), n.clone());
                 <consensus::Module<T>>::set_authority(i as u32, &n);
             }
         });
