@@ -294,3 +294,14 @@ impl WithdrawInfo {
         }
     }
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WithdrawTxInfo {
+    /// tx
+    pub tx: String,
+    /// redeem_script
+    pub redeem_script: String,
+    /// sign_status
+    pub sign_status: bool,
+}

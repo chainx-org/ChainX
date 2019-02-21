@@ -101,6 +101,9 @@ pub fn handle_condidate<T: Trait>(tx: Vec<u8>) -> Result {
         <TrusteeRedeemScript<T>>::get().ok_or("Should set trustee address info first.")?;
     let redeem_script = Script::from(trustee_info.hot_redeem_script);
     let script: Script = tx.inputs[0].script_sig.clone().into();
+    if script.len() < 2 {
+        return Err("Invalid signature, script_sig is too short");
+    }
     let (sigs, _) = if let Ok((sigs, s)) = script.extract_multi_scriptsig() {
         (sigs, s)
     } else {

@@ -76,7 +76,7 @@ use rstd::result::Result as StdResult;
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 use script::script::Script;
-use ser::deserialize;
+use ser::{deserialize, Reader};
 use system::ensure_signed;
 pub use tx::RelayTx;
 use tx::{
@@ -175,7 +175,6 @@ pub struct Params {
     max_bits: u32,
     //Compact
     block_max_future: u32,
-    max_fork_route_preset: u32,
 
     target_timespan_seconds: u32,
     target_spacing_seconds: u32,
@@ -192,7 +191,6 @@ impl Params {
     pub fn new(
         max_bits: u32,
         block_max_future: u32,
-        max_fork_route_preset: u32,
         target_timespan_seconds: u32,
         target_spacing_seconds: u32,
         retargeting_factor: u32,
@@ -200,7 +198,6 @@ impl Params {
         Params {
             max_bits,
             block_max_future,
-            max_fork_route_preset,
 
             target_timespan_seconds,
             target_spacing_seconds,
@@ -315,7 +312,6 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         pub fn push_header(origin, header: Vec<u8>) -> Result {
-            runtime_io::print("[bridge_btc] Push btc header");
             let from = ensure_signed(origin)?;
             let header: BlockHeader = deserialize(header.as_slice()).map_err(|_| "Cannot deserialize the header vec")?;
             ensure!(
@@ -326,14 +322,12 @@ decl_module! {
                 <BlockHeaderFor<T>>::exists(&header.previous_header_hash),
                 "Cannot push if can't find its previous header in ChainX, which may be header of some orphan block."
             );
-
             Self::apply_push_header(header, &from)?;
 
             Ok(())
         }
 
         pub fn push_transaction(origin, tx: Vec<u8>) -> Result {
-            runtime_io::print("[bridge_btc] Push btc tx");
             ensure_signed(origin)?;
             let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("Parse RelayTx err")?;
             let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin).ok_or("Should set trustee address first.")?;
@@ -348,7 +342,7 @@ decl_module! {
             let from = ensure_signed(origin)?;
             // commiter must in trustee node list
             Self::ensure_trustee_node(&from)?;
-            let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("Parse transaction err")?;
+            let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice())).map_err(|_|"Parse transaction err")?;
             Self::apply_create_withdraw(tx, withdraw_id)?;
 
             Ok(())
@@ -475,9 +469,9 @@ impl<T: Trait> Module<T> {
             <BlockHeightFor<T>>::remove(&del);
 
             // update confirmd status
-            let params: Params = <ParamsInfo<T>>::get();
+            let irr_block = <IrrBlock<T>>::get();
             let mut confirm_header = header_info.clone();
-            for _index in 0..params.max_fork_route_preset {
+            for _index in 0..irr_block {
                 if let Some(info) =
                     <BlockHeaderFor<T>>::get(&confirm_header.header.previous_header_hash)
                 {
@@ -526,7 +520,7 @@ impl<T: Trait> Module<T> {
                 let outpoint = tx.raw.inputs[0].previous_output.clone();
                 match inspect_address::<T>(&tx.previous_raw, outpoint) {
                     Some(a) => a,
-                    None => return Err("inspect address failed"),
+                    None => return Err("Inspect address failed"),
                 }
             }
         };
@@ -549,7 +543,7 @@ impl<T: Trait> Module<T> {
 
         if confirmed {
             handle_tx::<T>(&tx.raw.hash()).map_err(|e| {
-                runtime_io::print("handle_tx error :");
+                runtime_io::print("[bridge_btc] Handle tx error:");
                 runtime_io::print(tx.raw.hash().to_vec().as_slice());
                 e
             })?;
@@ -567,7 +561,10 @@ impl<T: Trait> Module<T> {
             .ok_or("Should set trustee address first.")?;
         let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
             .map_err(|_| "Invalid Address")?;
-        check_withdraw_tx::<T>(tx, withdraw_id, hot_address)?;
+        check_withdraw_tx::<T>(tx.clone(), withdraw_id.clone(), hot_address.clone())?;
+        let candidate = CandidateTx::new(withdraw_id, tx, VoteResult::Unfinish, Vec::new());
+        <TxProposal<T>>::put(candidate);
+        runtime_io::print("[bridge-btc] Through the legality check of withdrawal transaction ");
         Ok(())
     }
 
@@ -586,9 +583,9 @@ impl<T: Trait> Module<T> {
                     let reject_count: Vec<&(T::AccountId, bool)> =
                         sig_node.iter().filter(|(_, vote)| *vote == false).collect();
                     data.sig_node.push((who, vote_state));
-                    runtime_io::print("Veto signature");
+                    runtime_io::print("[bridge_btc] Veto signature");
                     if reject_count.len() + 1 >= sign_num {
-                        runtime_io::print("Clear TxProposal");
+                        runtime_io::print("[bridge_btc] Clear TxProposal");
                         <TxProposal<T>>::kill();
                         return Ok(());
                     }
@@ -596,18 +593,20 @@ impl<T: Trait> Module<T> {
                         CandidateTx::new(data.withdraw_id, data.tx, data.sig_status, data.sig_node);
                     <TxProposal<T>>::put(candidate);
                 } else {
-                    let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("Parse transaction err")?;
+                    let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice())).map_err(|_|"Parse transaction err")?;
                     let script: Script = tx.inputs[0].script_sig.clone().into();
                     let (sigs, _dem) = if let Ok((sigs, dem)) = script.extract_multi_scriptsig() {
                         (sigs, dem)
                     } else {
                         return Err("No signature");
                     };
-                    runtime_io::print("Signature pass");
+                    runtime_io::print("[bridge_btc] Signature pass");
                     data.sig_node.push((who, vote_state));
                     if sigs.len() >= sign_num {
-                        runtime_io::print("Signature finsh 2n/3");
+                        runtime_io::print("[bridge_btc] Signature finish");
                         data.sig_status = VoteResult::Finish;
+                    } else {
+                        data.sig_status = VoteResult::Unfinish;
                     }
 
                     let candidate =

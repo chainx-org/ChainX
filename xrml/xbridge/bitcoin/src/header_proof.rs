@@ -9,7 +9,8 @@ use primitives::hash::H256;
 use primitives::U256;
 
 use super::{
-    BestIndex, BlockHeaderFor, BlockHeightFor, GenesisInfo, NetworkId, Params, ParamsInfo, Trait,
+    BestIndex, BlockHeaderFor, BlockHeightFor, GenesisInfo, IrrBlock, NetworkId, Params,
+    ParamsInfo, Trait,
 };
 use blockchain::ChainErr;
 use runtime_primitives::traits::As;
@@ -44,8 +45,9 @@ impl<'a> HeaderVerifier<'a> {
             return Err(ChainErr::NotFound);
         }
 
+        let irr_block = <IrrBlock<T>>::get();
         let this_height = prev_height + 1;
-        if this_height < best_height - params.max_fork_route_preset {
+        if this_height < best_height - irr_block {
             return Err(ChainErr::AncientFork);
         }
 

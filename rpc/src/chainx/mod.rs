@@ -47,7 +47,7 @@ use self::error::Result;
 use self::types::{
     AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData, PairInfo,
     PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, TrusteeInfo,
-    WithdrawInfo, WithdrawStatus,
+    WithdrawInfo, WithdrawStatus, WithdrawTxInfo,
 };
 use chainx::error::ErrorKind::*;
 const MAX_PAGE_SIZE: u32 = 100;
@@ -109,6 +109,9 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
 
     #[rpc(name = "chainx_getFeeByCallAndLength")]
     fn fee(&self, String, u64) -> Result<Option<u64>>;
+
+    #[rpc(name = "chainx_getWithdrawTx")]
+    fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>>;
 }
 
 /// ChainX API

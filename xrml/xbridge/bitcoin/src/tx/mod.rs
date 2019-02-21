@@ -4,9 +4,8 @@ use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 
 use super::{
-    BindStatus, BlockHeaderFor, BtcFee, CandidateTx, DepositCache, Module, NetworkId,
-    PendingDepositMap, RawEvent, Trait, TrusteeRedeemScript, TxFor, TxInfo, TxProposal, TxType,
-    VoteResult,
+    BindStatus, BlockHeaderFor, BtcFee, DepositCache, Module, NetworkId, PendingDepositMap,
+    RawEvent, Trait, TrusteeRedeemScript, TxFor, TxInfo, TxProposal, TxType,
 };
 use chain::{OutPoint, Transaction};
 use crypto::dhash160;
@@ -172,7 +171,6 @@ pub fn check_withdraw_tx<T: Trait>(
                                     && output.value + btc_fee == r.data.balance().as_() as u64
                                 {
                                     addr_flag = true;
-                                    break;
                                 } else if trustee_address.hash == script_addresses[0].hash {
                                     multi_flag = true;
                                 }
@@ -191,9 +189,6 @@ pub fn check_withdraw_tx<T: Trait>(
             if output_len == withdraw_len + 1 && !multi_flag {
                 return Err("The change address not match the trustee address");
             }
-            let candidate = CandidateTx::new(withdraw_id, tx, VoteResult::Unfinish, Vec::new());
-            <TxProposal<T>>::put(candidate);
-            runtime_io::print("[bridge-btc] Through the legality check of withdrawal transaction ");
             Ok(())
         }
     }

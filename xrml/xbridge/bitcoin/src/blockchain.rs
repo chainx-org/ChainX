@@ -43,7 +43,7 @@ impl<T: Trait> Chain<T> {
             None => return Err(ChainErr::OtherErr("Not found block header for this hash")),
         };
 
-        runtime_io::print("[bridge-btc] Confirmed header height:");
+        runtime_io::print("[bridge-btc] Confirmed header:");
         runtime_io::print(confirmed_header.height as u64);
 
         let tx_list = confirmed_header.txid;
@@ -52,7 +52,7 @@ impl<T: Trait> Chain<T> {
             // deposit & withdraw
             match handle_tx::<T>(&txid) {
                 Err(_) => {
-                    runtime_io::print("[bridge-btc] Handle_tx error, tx hash:");
+                    runtime_io::print("[bridge-btc] Handle tx error, tx hash:");
                     runtime_io::print(&txid[..]);
                 }
                 Ok(()) => (),

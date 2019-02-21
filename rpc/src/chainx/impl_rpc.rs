@@ -4,6 +4,7 @@ extern crate hex;
 
 use self::types::Revocation;
 use super::*;
+use codec::Encode;
 use keys::DisplayLayout;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use srml_support::storage::generator::{StorageMap, StorageValue};
@@ -810,8 +811,6 @@ where
     }
 
     fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>> {
-        use codec::Encode;
-
         if !call_params.starts_with("0x") {
             return Err(BinanryStartErr.into());
         }
@@ -834,6 +833,42 @@ where
             .map_err(|e| e.into());
         let transaction_fee = transaction_fee?;
         Ok(transaction_fee)
+    }
+
+    fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>> {
+        let state = self.best_state()?;
+        match chain {
+            Chain::Bitcoin => {
+                let key = <xbitcoin::TrusteeRedeemScript<Runtime>>::key();
+                match Self::pickout::<xbitcoin::TrusteeScriptInfo>(&state, &key)? {
+                    Some(script) => {
+                        let key = <TxProposal<Runtime>>::key();
+                        if let Some(candidate) =
+                            Self::pickout::<CandidateTx<AccountId>>(&state, &key)?
+                        {
+                            let mut sign_status = false;
+                            if candidate.sig_status == VoteResult::Finish {
+                                sign_status = true;
+                            }
+                            let raw_tx = candidate.tx.encode();
+                            if raw_tx.len() < 2 {
+                                return Ok(None);
+                            }
+                            let tx_info = WithdrawTxInfo {
+                                tx: hex::encode(raw_tx[2..].to_vec()),
+                                redeem_script: hex::encode(script.hot_redeem_script),
+                                sign_status: sign_status,
+                            };
+                            Ok(Some(tx_info))
+                        } else {
+                            return Ok(None);
+                        }
+                    }
+                    None => return Ok(None),
+                }
+            }
+            _ => return Ok(None),
+        }
     }
 }
 

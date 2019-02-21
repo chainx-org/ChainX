@@ -14,8 +14,7 @@ impl<'a> TxHandler<'a> {
     }
 
     pub fn withdraw<T: Trait>(&self) -> Result {
-        runtime_io::print("[bridge-btc] handle_withdraw start");
-
+        runtime_io::print("[bridge-btc] Withdraw tx");
         //delete used
         let txid = self.0;
         let tx_info = <TxFor<T>>::get(txid);
@@ -31,12 +30,12 @@ impl<'a> TxHandler<'a> {
                         runtime_io::print(&txid[..]);
 
                         <xrecords::Module<T>>::withdrawal_finish(*number, true)?;
-                        runtime_io::print("[bridge-btc] withdrawal finish");
+                        runtime_io::print("[bridge-btc] Withdrawal finish");
                     }
                 }
                 Err(_) => {
                     <TxProposal<T>>::put(data);
-                    runtime_io::print("[bridge-btc] withdrawal failed");
+                    runtime_io::print("[bridge-btc] Withdrawal failed");
                 }
             };
         }
@@ -49,7 +48,6 @@ impl<'a> TxHandler<'a> {
     }
 
     pub fn deposit<T: Trait>(&self, trustee_address: &keys::Address) {
-        runtime_io::print("[bridge-btc] handle_output start");
         let mut deposit_balance = 0;
         let txid = self.0;
         let tx_info = <TxFor<T>>::get(txid);
@@ -86,7 +84,7 @@ impl<'a> TxHandler<'a> {
                 || insert_pending_deposit::<T>(&input_address, txid.clone(), deposit_balance),
                 |a| {
                     deposit_token::<T>(&a.0, deposit_balance);
-                    runtime_io::print("[bridge-btc] handle_output deposit_token: ");
+                    runtime_io::print("[bridge-btc] Deposit token: ");
                     deposit_status = true;
                 },
             );
@@ -107,7 +105,7 @@ impl<'a> TxHandler<'a> {
 fn handle_opreturn<T: Trait>(script: &[u8], info: &TxInfo) {
     if let Some(a) = Extracter::<T::AccountId>::new(script.to_vec()).account_info() {
         if update_binding::<T>(a.0.as_slice(), a.1.clone(), info) {
-            runtime_io::print("[bridge-btc] handle_output register ");
+            runtime_io::print("[bridge-btc] Update binding ");
             remove_pending_deposit::<T>(&info.input_address, &a.1);
         }
     }
@@ -163,7 +161,7 @@ fn update_binding<T: Trait>(node_name: &[u8], who: T::AccountId, info: &TxInfo) 
                     let addr = match Address::from_layout(&it.as_slice()) {
                         Ok(a) => a,
                         Err(_) => {
-                            runtime_io::print("[bridge-btc] convert address failed!");
+                            runtime_io::print("[bridge-btc] Convert address failed!");
                             return false;
                         }
                     };
@@ -215,14 +213,14 @@ fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: H256, b
             key.push(k);
             <PendingDepositMap<T>>::insert(input_address, key);
 
-            runtime_io::print("[bridge-btc] Add pending peposit");
+            runtime_io::print("[bridge-btc] Add pending deposit");
         }
         None => {
             let mut cache: Vec<DepositCache> = Vec::new();
             cache.push(k);
             <PendingDepositMap<T>>::insert(input_address, cache);
 
-            runtime_io::print("[bridge-btc] New pending peposit");
+            runtime_io::print("[bridge-btc] New pending deposit");
         }
     };
 }
