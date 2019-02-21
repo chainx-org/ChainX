@@ -221,27 +221,14 @@ impl<T: Trait> Module<T> {
 
         let desired_validator_count = <ValidatorCount<T>>::get() as usize;
 
-        let old_validators = <session::Module<T>>::validators();
-
-        let new_validators = candidates
+        let validators = candidates
             .into_iter()
             .take(desired_validator_count)
             .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
             .collect::<Vec<(_, _)>>();
 
-        // Skip set validators when the validator set stays the same.
-        if old_validators.len() == new_validators.len()
-            && old_validators
-                .iter()
-                .map(|(val, _)| val)
-                .zip(new_validators.iter().map(|(val, _)| val))
-                .all(|(a, b)| a == b)
-        {
-            return;
-        }
-
-        <session::Module<T>>::set_validators(&new_validators);
-        Self::deposit_event(RawEvent::Rotation(new_validators.clone()));
+        <session::Module<T>>::set_validators(&validators);
+        Self::deposit_event(RawEvent::Rotation(validators));
     }
 
     pub fn on_offline_validator(v: &T::AccountId) {
