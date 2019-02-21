@@ -466,6 +466,10 @@ impl_runtime_apis! {
         fn multi_token_jackpot_accountid_for(tokens: Vec<xassets::Token>) -> Vec<AccountId> {
             XTokens::multi_token_jackpot_accountid_for(&tokens)
         }
+        fn asset_power(token: xassets::Token) -> Option<Balance> {
+            XTokens::asset_power(&token)
+        }
+
     }
 
     impl runtime_api::xspot_api::XSpotApi<Block> for Runtime {

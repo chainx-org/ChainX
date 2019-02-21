@@ -39,16 +39,14 @@ use codec::Encode;
 
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
-use runtime_primitives::{
-    traits::{As, Hash},
-    Permill,
-};
+use runtime_primitives::traits::{As, Hash};
+
 use runtime_support::dispatch::Result;
 use runtime_support::{StorageMap, StorageValue};
 
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
-use xstaking::{OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
+use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
 
 /// This module only tracks the vote weight related changes.
 /// All the amount related has been taken care by assets module.
@@ -203,7 +201,7 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XTokens {
-        pub TokenDiscount get(token_discount) config(): Permill = Permill::from_percent(30);
+        pub TokenDiscount get(token_discount) config(): u32 = 50;
 
         pub PseduIntentions get(psedu_intentions) : Vec<Token>;
 
@@ -292,7 +290,13 @@ impl<T: Trait> Module<T> {
             };
 
             let (source_vote_weight, target_vote_weight, dividend) =
-                <xstaking::Module<T>>::generic_claim(&mut record, who, &mut prof, &addr)?;
+                <xstaking::Module<T>>::generic_claim(
+                    &mut record,
+                    who,
+                    &mut prof,
+                    &addr,
+                    ClaimType::PseduIntention(token.clone()),
+                )?;
             Self::deposit_event(RawEvent::Claim(
                 who.clone(),
                 token.clone(),
@@ -412,9 +416,9 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
     fn psedu_intentions_info() -> Vec<(RewardHolder<T::AccountId>, T::Balance)> {
         Self::psedu_intentions()
             .into_iter()
-            .filter(|token| <xspot::Module<T>>::aver_asset_price(token).is_some())
+            .filter(|token| Self::asset_power(token).is_some())
             .map(|token| {
-                let stake = <xspot::Module<T>>::trans_pcx_stake(&token);
+                let stake = Self::trans_pcx_stake(&token);
                 (RewardHolder::PseduIntention(token), stake)
             })
             .filter(|(_, stake)| stake.is_some())
@@ -440,5 +444,56 @@ impl<T: Trait> Module<T> {
             .into_iter()
             .map(|t| T::DetermineTokenJackpotAccountId::accountid_for(t))
             .collect()
+    }
+
+    fn pcx_precision() -> u32 {
+        let pcx = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
+        let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
+
+        return pcx_asset.precision().as_();
+    }
+    pub fn asset_power(token: &Token) -> Option<T::Balance> {
+        if token.eq(&b"SDOT".to_vec()){
+            return Some(As::sa(10_u64.pow(Self::pcx_precision()-1)));//0.1 PCX
+        }
+        else if token.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec() ) {
+            return Some(As::sa(10_u64.pow(Self::pcx_precision())));
+        }
+        else {
+            if let Some(price) = <xspot::Module<T>>::aver_asset_price(token)  {
+               let discount=<TokenDiscount<T>>::get();
+
+               let power = match (price.as_() as u128).checked_mul(discount as u128) {
+                    Some(x)=>T::Balance::sa((x / 100) as u64),
+                    None => panic!("price * discount overflow"),
+               };
+
+               return Some(power);
+            }
+        }
+
+        None
+    }
+    //资产总发行折合成PCX，已含PCX精度
+    //aver_asset_price(token)*token的总发行量[含token的精度]/(10^token的精度)
+    pub fn trans_pcx_stake(token: &Token) -> Option<T::Balance> {
+        if let Some(power) = Self::asset_power(token) {
+            match <xassets::Module<T>>::get_asset(token) {
+                Ok(asset) => {
+                    let pow_precision = 10_u128.pow(asset.precision() as u32);
+                    let total_balance = <xassets::Module<T>>::all_type_balance(&token).as_();
+
+                    let total = match (total_balance as u128).checked_mul(power.as_() as u128) {
+                        Some(x) => T::Balance::sa((x / pow_precision) as u64),
+                        None => panic!("total_balance * price overflow"),
+                    };
+
+                    return Some(total);
+                }
+                _ => {}
+            }
+        }
+
+        None
     }
 }

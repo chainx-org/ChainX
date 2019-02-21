@@ -330,28 +330,7 @@ impl<T: Trait> Module<T> {
 
         None
     }
-    //资产总发行折合成PCX，已含PCX精度
-    //aver_asset_price(token)*token的总发行量[含token的精度]/(10^token的精度)
-    pub fn trans_pcx_stake(token: &Token) -> Option<T::Balance> {
-        if let Some(price) = Self::aver_asset_price(token) {
-            match <xassets::Module<T>>::get_asset(token) {
-                Ok(asset) => {
-                    let pow_precision = 10_u128.pow(asset.precision() as u32);
-                    let total_balance = <xassets::Module<T>>::all_type_balance(&token).as_();
-
-                    let total = match (total_balance as u128).checked_mul(price.as_() as u128) {
-                        Some(x) => T::Balance::sa((x / pow_precision) as u64),
-                        None => panic!("total_balance * price overflow"),
-                    };
-
-                    return Some(total);
-                }
-                _ => {}
-            }
-        }
-
-        None
-    }
+    
 
     fn do_cancel_order(origin: T::Origin, pairid: OrderPairID, index: ID) -> Result {
         let pair = match <OrderPairOf<T>>::get(pairid) {
@@ -470,7 +449,6 @@ impl<T: Trait> Module<T> {
             None => Default::default(),
         };
 
-        let mut reserve_last: T::Balance = Default::default();
         //检查价格范围
         match direction {
             OrderDirection::Buy => {
@@ -493,6 +471,8 @@ impl<T: Trait> Module<T> {
             }
         }
         /***********************锁定资产**********************/
+
+        let reserve_last: T::Balance;
         if let Some(sum) = Self::trans_amount(amount, price, &pair) {
             match direction {
                 OrderDirection::Buy => {
@@ -537,7 +517,7 @@ impl<T: Trait> Module<T> {
             create_time: As::sa(<timestamp::Module<T>>::now().as_()),
             lastupdate_time: As::sa(<timestamp::Module<T>>::now().as_()),
             status: OrderStatus::FillNo,
-            reserve_last: reserve_last,
+            reserve_last,
             fill_index: Default::default(),
         };
         // 更新用户挂单
@@ -572,7 +552,7 @@ impl<T: Trait> Module<T> {
                 break;
             }
 
-            let mut find = false;
+            let find: bool;
             match order.direction {
                 OrderDirection::Buy => {
                     if order.price >= opponent_price {

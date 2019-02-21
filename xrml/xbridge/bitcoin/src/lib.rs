@@ -137,9 +137,7 @@ pub enum BindStatus {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum VoteResult {
     Unfinish,
-    FinishWithReject,
-    FinishWithFavor,
-    Invalid,
+    Finish,
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]
@@ -360,9 +358,7 @@ decl_module! {
             runtime_io::print("[bridge_btc] Push Sign withdraw tx");
             let from = ensure_signed(origin)?;
             Self::ensure_trustee_node(&from)?;
-            let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("Parse transaction err")?;
             Self::apply_sign_withdraw(from, tx, vote_state)?;
-
             Ok(())
         }
     }
@@ -563,6 +559,10 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_create_withdraw(tx: BTCTransaction, withdraw_id: Vec<u32>) -> Result {
+        let withdraw_amount = <MaxWithdrawAmount<T>>::get();
+        if withdraw_id.len() > withdraw_amount as usize {
+            return Err("Exceeding the maximum withdrawal amount")
+        }
         let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
             .ok_or("Should set trustee address first.")?;
         let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
@@ -571,8 +571,10 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn apply_sign_withdraw(who: T::AccountId, tx: BTCTransaction, vote_state: bool) -> Result {
-        handle_condidate::<T>(tx.clone())?;
+    fn apply_sign_withdraw(who: T::AccountId, tx: Vec<u8>, vote_state: bool) -> Result {
+        if vote_state {
+            handle_condidate::<T>(tx.clone())?;
+        }
         let (sign_num, _) = sign_num::<T>();
         match <TxProposal<T>>::get() {
             Some(mut data) => {
@@ -590,7 +592,11 @@ impl<T: Trait> Module<T> {
                         <TxProposal<T>>::kill();
                         return Ok(());
                     }
+                    let candidate =
+                        CandidateTx::new(data.withdraw_id, data.tx, data.sig_status, data.sig_node);
+                    <TxProposal<T>>::put(candidate);
                 } else {
+                    let tx: BTCTransaction = Decode::decode(&mut tx.as_slice()).ok_or("Parse transaction err")?;
                     let script: Script = tx.inputs[0].script_sig.clone().into();
                     let (sigs, _dem) = if let Ok((sigs, dem)) = script.extract_multi_scriptsig() {
                         (sigs, dem)
@@ -600,17 +606,17 @@ impl<T: Trait> Module<T> {
                     runtime_io::print("Signature pass");
                     data.sig_node.push((who, vote_state));
                     if sigs.len() >= sign_num {
-                        data.sig_status = VoteResult::FinishWithFavor;
+                        runtime_io::print("Signature finsh 2n/3");
+                        data.sig_status = VoteResult::Finish;
                     }
-                }
 
-                let candidate =
-                    CandidateTx::new(data.withdraw_id, tx, data.sig_status, data.sig_node);
-                <TxProposal<T>>::put(candidate);
+                    let candidate =
+                        CandidateTx::new(data.withdraw_id, tx, data.sig_status, data.sig_node);
+                    <TxProposal<T>>::put(candidate);
+                }
             }
             None => return Err("No pending signature transaction"),
         }
-
         Ok(())
     }
 }

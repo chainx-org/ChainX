@@ -238,7 +238,7 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         /// register_asset to module, should allow by root
-        fn register_asset(asset: Asset, is_psedu_intention: bool, free: T::Balance) -> Result {
+        fn register_asset(asset: Asset, is_online: bool, is_psedu_intention: bool, free: T::Balance) -> Result {
             asset.is_valid()?;
 
             let token = asset.token();
@@ -246,7 +246,11 @@ decl_module! {
             Self::add_asset(asset, free)?;
 
             T::OnAssetRegisterOrRevoke::on_register(&token, is_psedu_intention)?;
-            Self::deposit_event(RawEvent::Register(token, is_psedu_intention));
+            Self::deposit_event(RawEvent::Register(token.clone(), is_psedu_intention));
+
+            if !is_online {
+                let _ = Self::revoke_asset(token);
+            }
             Ok(())
         }
 
@@ -300,7 +304,7 @@ decl_storage! {
     }
 
     add_extra_genesis {
-        config(asset_list): Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
+        config(asset_list): Vec<(Asset, bool, bool, Vec<(T::AccountId, u64)>)>;
         config(pcx): (Token, Precision, Desc);
 
         build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
@@ -314,12 +318,12 @@ decl_storage! {
                     let chainx: Token = <Module<T> as ChainT>::TOKEN.to_vec();
 
                     let pcx = Asset::new(chainx, config.pcx.0.clone(), Chain::ChainX, config.pcx.1, config.pcx.2.clone()).unwrap();
-                    Module::<T>::register_asset(pcx, false, Zero::zero()).unwrap();
+                    Module::<T>::register_asset(pcx, true, false, Zero::zero()).unwrap();
 
                     // init for asset_list
-                    for (asset, is_psedu_intention, init_list) in config.asset_list.iter() {
+                    for (asset, is_online, is_psedu_intention, init_list) in config.asset_list.iter() {
                         let token = asset.token();
-                        Module::<T>::register_asset(asset.clone(), *is_psedu_intention, Zero::zero()).unwrap();
+                        Module::<T>::register_asset(asset.clone(), *is_online, *is_psedu_intention, Zero::zero()).unwrap();
 
                         for (accountid, value) in init_list {
                             let value = As::sa(*value);

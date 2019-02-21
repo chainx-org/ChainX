@@ -102,29 +102,41 @@ where
         into_pagedata(all_assets, page_index, page_size)
     }
 
-    fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<String>> {
+    fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<bool>> {
         let token: xassets::Token = token.as_bytes().to_vec();
         let addr: xrecords::AddrStr = addr.as_bytes().to_vec();
         let memo: xassets::Memo = memo.as_bytes().to_vec();
 
         // test valid before call runtime api
-        if let Err(e) = xassets::is_valid_token(&token) {
-            return Ok(Some(String::from_utf8_lossy(e.as_ref()).into_owned()));
+        if let Err(_e) = xassets::is_valid_token(&token) {
+//            return Ok(Some(String::from_utf8_lossy(e.as_ref()).into_owned()));
+            return Ok(Some(false));
         }
 
         if addr.len() > 256 || memo.len() > 256 {
-            return Ok(Some("the addr or memo may be too long".to_string()));
+//            return Ok(Some("the addr or memo may be too long".to_string()));
+            return Ok(Some(false));
         }
 
         let b = self.best_number()?;
-        self.client
+        let ret = self.client
             .runtime_api()
             .verify_address(&b, token, addr, memo)
             .and_then(|r| match r {
                 Ok(()) => Ok(None),
                 Err(s) => Ok(Some(String::from_utf8_lossy(s.as_ref()).into_owned())),
-            })
-            .map_err(|e| e.into())
+            });
+//            .map_err(|e| e.into());
+        // Err() => substrate inner err
+        // Ok(None) => runtime_api return true
+        // Ok(Some(err_info)) => runtime_api return false, Some() contains err info
+        match ret {
+            Err(_) => Ok(Some(false)),
+            Ok(ret) => match ret {
+                None => Ok(Some(true)),
+                Some(_) => Ok(Some(false)),
+            },
+        }
     }
 
     fn minimal_withdrawal_value(&self, token: String) -> Result<Option<Balance>> {
@@ -236,8 +248,7 @@ where
                     if candidate.withdraw_id.iter().any(|id| *id == appl.id()) {
                         match candidate.sig_status {
                             VoteResult::Unfinish => status = WithdrawStatus::Signing,
-                            VoteResult::FinishWithFavor => status = WithdrawStatus::Processing,
-                            _ => status = WithdrawStatus::Applying,
+                            VoteResult::Finish => status = WithdrawStatus::Processing,
                         }
                     }
                     let info = WithdrawInfo::new(
@@ -395,6 +406,12 @@ where
                         vote_weight.last_total_deposit_weight_update;
                 }
 
+                //注意
+                //这里返回的是以PCX计价的"单位"token的价格，已含pcx精度
+                //譬如1BTC=10000PCX，则返回的是10000*（10.pow(pcx精度))
+                //因此，如果前端要换算折合投票数的时候
+                //应该=(资产数量[含精度的数字]*price)/(10^资产精度)=PCX[含PCX精度]
+
                 let b = self.best_number()?;
                 if let Some(Some(price)) = self
                     .client
@@ -403,11 +420,16 @@ where
                     .ok()
                 {
                     info.price = price;
-                    //注意
-                    //这里返回的是以PCX计价的"单位"token的价格，已含pcx精度
-                    //譬如1BTC=10000PCX，则返回的是10000*（10.pow(pcx精度))
-                    //因此，如果前端要换算折合投票数的时候
-                    //应该=(资产数量[含精度的数字]*price)/(10^资产精度)=PCX[含PCX精度]
+                };
+
+                let b = self.best_number()?;
+                if let Some(Some(power)) = self
+                    .client
+                    .runtime_api()
+                    .asset_power(&b, token.clone())
+                    .ok()
+                {
+                    info.power = power;
                 };
 
                 let key = <xassets::TotalAssetBalance<Runtime>>::key_for(&token);
@@ -448,6 +470,26 @@ where
         }
 
         Ok(trustee_info)
+    }
+
+    fn trustee_address(&self, chain: Chain) -> Result<Option<(String, String)>> {
+        let state = self.best_state()?;
+        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(&chain);
+        match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
+            Some(a) => match chain {
+                Chain::Bitcoin => {
+                    let hot_addr = Address::from_layout(&mut a.hot_address.as_slice())
+                        .unwrap_or(Default::default());
+                    let hot_str = hot_addr.to_string();
+                    let cold_address = Address::from_layout(&mut a.cold_address.as_slice())
+                        .unwrap_or(Default::default());
+                    let cold_str = cold_address.to_string();
+                    return Ok(Some((hot_str, cold_str)));
+                }
+                _ => return Ok(None),
+            },
+            None => return Ok(None),
+        }
     }
 
     fn psedu_nomination_records(

@@ -78,7 +78,7 @@ impl Asset {
     }
     pub fn is_valid(&self) -> Result {
         is_valid_token(&self.token)?;
-        is_valid_token(&self.token_name)?;
+        is_valid_token_name(&self.token_name)?;
         is_valid_desc(&self.desc)
     }
 
@@ -124,6 +124,19 @@ pub fn is_valid_token(v: &[u8]) -> Result {
             return Err(
                 "Token can only use numbers, capital/lowercase letters or '-', '.', '|', '~'.",
             );
+        }
+    }
+    Ok(())
+}
+
+pub fn is_valid_token_name(v: &[u8]) -> Result {
+    if v.len() > MAX_TOKEN_LEN || v.is_empty() {
+        return Err("Token name is zero or too long.");
+    }
+    for c in v.iter() {
+        // Visible ASCII char [0x20, 0x7E]
+        if *c < 0x20 || *c > 0x7E {
+            return Err("Token name can not use an invisiable ASCII char.");
         }
     }
     Ok(())

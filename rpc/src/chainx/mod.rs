@@ -66,7 +66,7 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     fn assets(&self, u32, u32) -> Result<Option<PageData<TotalAssetInfo>>>;
 
     #[rpc(name = "chainx_verifyAddressValidity")]
-    fn verify_addr(&self, String, String, String) -> Result<Option<String>>;
+    fn verify_addr(&self, String, String, String) -> Result<Option<bool>>;
 
     #[rpc(name = "chainx_getMinimalWithdrawalValueByToken")]
     fn minimal_withdrawal_value(&self, String) -> Result<Option<Balance>>;
@@ -100,6 +100,9 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
 
     #[rpc(name = "chainx_getAddressByAccount")]
     fn address(&self, AccountId, Chain) -> Result<Option<Vec<String>>>;
+
+    #[rpc(name = "chainx_getTrusteeAddress")]
+    fn trustee_address(&self, Chain) -> Result<Option<(String, String)>>;
 
     #[rpc(name = "chainx_getTrusteeInfoByAccount")]
     fn trustee_info(&self, AccountId) -> Result<Vec<TrusteeInfo>>;

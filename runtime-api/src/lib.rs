@@ -42,6 +42,7 @@ pub mod xassets_api {
 
 pub mod xmining_api {
     use chainx_primitives::AccountId;
+    use chainx_primitives::Balance;
     use client::decl_runtime_apis;
     use rstd::prelude::Vec;
     use xassets::Token;
@@ -51,6 +52,7 @@ pub mod xmining_api {
             fn multi_jackpot_accountid_for(who: Vec<AccountId>) -> Vec<AccountId>;
             fn token_jackpot_accountid_for(token: Token) -> AccountId;
             fn multi_token_jackpot_accountid_for(token: Vec<Token>) -> Vec<AccountId>;
+            fn asset_power(token: Token) -> Option<Balance>;
         }
     }
 }

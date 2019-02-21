@@ -64,6 +64,11 @@ pub use vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 
+pub enum ClaimType {
+    Intention,
+    PseduIntention(Token),
+}
+
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
@@ -220,25 +225,17 @@ decl_module! {
             }
 
             if let Some(desire_to_run) = desire_to_run.as_ref() {
-                match desire_to_run {
-                    true => {
-                        if who == <xsystem::Module<T>>::banned_account() {
-                            return Err("This account has been banned.");
-                        }
-                    },
-                    false => {
-                        let active = Self::intentions().into_iter()
-                            .filter(|n| <xaccounts::Module<T>>::intention_props_of(n).is_active)
-                            .collect::<Vec<_>>();
-                        if active.len() <= Self::minimum_validator_count() as usize {
-                            return Err("Cannot pull out when there are too few active intentions.");
-                        }
+                if !desire_to_run {
+                    let active = Self::intentions().into_iter()
+                        .filter(|n| <xaccounts::Module<T>>::intention_props_of(n).is_active)
+                        .collect::<Vec<_>>();
+                    if active.len() <= Self::minimum_validator_count() as usize {
+                        return Err("Cannot pull out when there are too few active intentions.");
                     }
                 }
             }
 
             Self::apply_refresh(&who, url, desire_to_run, next_key, about);
-
         }
 
         /// Register intention
@@ -347,7 +344,6 @@ decl_storage! {
         pub IntentionBondingDuration get(intention_bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
 
         pub SessionsPerEpoch get(sessions_per_epoch) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
-        pub TeamAddress get(team_address) config(): T::AccountId;
 
         pub ValidatorStakeThreshold get(validator_stake_threshold) config(): T::Balance = T::Balance::sa(1);
 
@@ -370,7 +366,8 @@ decl_storage! {
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
 
-        pub Funding get(funding) config(): T::AccountId;
+        pub TeamAddress get(team_address) config(): T::AccountId;
+        pub CouncilAddress get(council_address) config(): T::AccountId;
         pub Penalty get(penalty) config(): T::Balance;
         pub PunishList get(punish_list): Vec<T::AccountId>;
     }
@@ -573,8 +570,13 @@ impl<T: Trait> Module<T> {
         let mut record = Self::nomination_record_of(who, target);
 
         let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(target);
-        let (source_vote_weight, target_vote_weight, dividend) =
-            Self::generic_claim(&mut record, who, &mut iprof, &jackpot_addr)?;
+        let (source_vote_weight, target_vote_weight, dividend) = Self::generic_claim(
+            &mut record,
+            who,
+            &mut iprof,
+            &jackpot_addr,
+            ClaimType::Intention,
+        )?;
         Self::deposit_event(RawEvent::Claim(
             source_vote_weight,
             target_vote_weight,

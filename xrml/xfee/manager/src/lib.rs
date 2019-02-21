@@ -247,7 +247,6 @@ mod tests {
             xsystem::GenesisConfig::<Test> {
                 death_account: 0,
                 burn_account: 100,
-                banned_account: 1000,
             }
             .build_storage()
             .unwrap()

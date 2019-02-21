@@ -85,7 +85,7 @@ impl<T: Trait> Module<T> {
     /// Slash a given (potential) validator by a specific amount.
     fn slash_validator(who: &T::AccountId, slash: T::Balance) {
         let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
-        let fund_id = Self::funding();
+        let fund_id = Self::council_address();
 
         if slash <= <xassets::Module<T>>::pcx_free_balance(&jackpot_addr) {
             let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &fund_id, slash);

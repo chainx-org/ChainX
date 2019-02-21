@@ -194,8 +194,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             bonding_duration: 1,
             intention_bonding_duration: 10,
             sessions_per_era: 1,
+            council_address: 10,
             sessions_per_epoch: 10,
-            funding: 10,
             penalty: 10,
             validator_stake_threshold: 1,
             trustee_intentions: full_endowed

@@ -21,10 +21,8 @@ substrate-transaction-pool = { git = "https://github.com/chainpool/substrate" }
 substrate-network = { git = "https://github.com/chainpool/substrate" }
 substrate-consensus-aura = { git = "https://github.com/chainpool/substrate" }
 substrate-finality-grandpa = { git = "https://github.com/chainpool/substrate" }
-substrate-keyring = { git = "https://github.com/chainpool/substrate" }
 substrate-inherents = { git = "https://github.com/chainpool/substrate" }
 sr-io = { git = "https://github.com/chainpool/substrate" }
-sr-primitives = { git = "https://github.com/chainpool/substrate" }
 
 chainx-runtime = { path = "../runtime" }
 chainx-primitives = { path = "../primitives" }
