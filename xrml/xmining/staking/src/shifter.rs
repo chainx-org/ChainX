@@ -112,6 +112,10 @@ impl<T: Trait> Module<T> {
             });
         }
 
+        let mut validators = <session::Module<T>>::validators();
+        validators.retain(|(v, _)| !punished.contains(&v));
+        <session::Module<T>>::set_validators(&validators);
+
         Self::deposit_event(RawEvent::EnforceValidatorsInactive(punished));
     }
 
