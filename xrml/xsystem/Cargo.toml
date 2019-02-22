@@ -18,6 +18,8 @@ sr-primitives = { git = "https://github.com/chainpool/substrate", default_featur
 srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
 
+# chainx runtime module
+xrml-xsupport = { path = "../xsupport", default_features = false }
 
 [features]
 default = ["std"]
@@ -33,4 +35,6 @@ std=[
     "sr-primitives/std",
     "srml-support/std",
     "srml-system/std",
+    # xrml
+    "xrml-xsupport/std",
 ]

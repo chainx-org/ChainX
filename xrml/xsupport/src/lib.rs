@@ -18,3 +18,5 @@ extern crate srml_support as support;
 
 pub mod storage;
 pub use self::storage::double_map::StorageDoubleMap;
+
+pub mod logger;

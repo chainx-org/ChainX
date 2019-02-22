@@ -22,6 +22,9 @@ extern crate substrate_primitives;
 extern crate srml_support as runtime_support;
 extern crate srml_system as system;
 
+#[macro_use]
+extern crate xrml_xsupport;
+
 #[cfg(test)]
 mod tests;
 
@@ -42,7 +45,7 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn set_block_producer(origin, producer: T::AccountId) -> Result {
             ensure_inherent(origin)?;
-
+            info!("blockproducer: {:}", producer);
             BlockProducer::<T>::put(producer);
             Ok(())
         }
