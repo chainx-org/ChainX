@@ -42,14 +42,14 @@ extern crate substrate_rpc_servers as rpc;
 
 #[macro_use]
 extern crate log;
-#[macro_use]
+
 extern crate structopt;
 
 mod chain_spec;
 mod genesis_config;
 mod native_rpc;
-mod service;
 mod params;
+mod service;
 
 pub use cli::{error, IntoExit, NoCustom, VersionInfo};
 use primitives::ed25519;

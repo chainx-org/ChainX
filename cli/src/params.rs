@@ -1,7 +1,5 @@
-
-
-use cli::{AugmentClap, GetLogFilter};
-use structopt::{StructOpt, clap::{arg_enum, _clap_count_exprs, App, AppSettings, SubCommand}};
+use cli::AugmentClap;
+use structopt::{clap::App, StructOpt};
 
 #[derive(Clone, StructOpt, Debug)]
 pub struct ChainXParams {
