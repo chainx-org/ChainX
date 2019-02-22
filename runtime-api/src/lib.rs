@@ -77,3 +77,14 @@ pub mod xfee_api {
         }
     }
 }
+
+pub mod xsession_api {
+    use chainx_primitives::{AccountId, SessionKey};
+    use client::decl_runtime_apis;
+    use rstd::prelude::Vec;
+    decl_runtime_apis! {
+        pub trait XSessionApi {
+            fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<SessionKey>)>;
+        }
+    }
+}

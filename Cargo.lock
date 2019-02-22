@@ -404,9 +404,11 @@ dependencies = [
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
+ "runtime-api 0.4.0",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "structopt 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-basic-authorship 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-cli 0.3.0 (git+https://github.com/chainpool/substrate)",
@@ -4845,6 +4847,7 @@ dependencies = [
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-xaccounts 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
 

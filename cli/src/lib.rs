@@ -58,6 +58,7 @@ use substrate_service::{Roles as ServiceRoles, ServiceFactory};
 use tokio::runtime::Runtime;
 
 use params::ChainXParams;
+use service::set_validator_name;
 
 /// The chain specification option.
 #[derive(Clone, Debug)]
@@ -121,8 +122,9 @@ where
             let executor = runtime.executor();
 
             if config.roles == ServiceRoles::AUTHORITY {
-                let name = custom_args.validator_name;
-                println!("validator name{:?}", name);
+                let name = custom_args.validator_name.expect("if in AUTHORITY mode, must point the validator name!");
+                info!("Validator name: {:?}", name);
+                set_validator_name(name);
             }
 
             match config.roles {

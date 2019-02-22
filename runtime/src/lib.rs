@@ -496,4 +496,10 @@ impl_runtime_apis! {
             )
         }
     }
+
+    impl runtime_api::xsession_api::XSessionApi<Block> for Runtime {
+        fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<SessionKey>)> {
+            Session::pubkeys_for_validator_name(name)
+        }
+    }
 }

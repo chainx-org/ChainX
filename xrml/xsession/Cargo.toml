@@ -20,6 +20,7 @@ srml-timestamp = { git = "https://github.com/chainpool/substrate", default-featu
 
 # chainx runtime module
 xrml-xsystem = { path = "../xsystem", default-features = false }
+xrml-xaccounts = { path = "../xaccounts", default-features = false }
 
 [features]
 default = ["std"]
@@ -38,4 +39,5 @@ std = [
 	"srml-timestamp/std",
 	# xrml
 	"xrml-xsystem/std",
+	"xrml-xaccounts/std",
 ]
