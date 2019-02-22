@@ -1,5 +1,5 @@
 #[cfg(feature = "std")]
-pub use log::{error as error_m, warn as warn_m, info as info_m, debug as debug_m};
+pub use log::{debug as debug_m, error as error_m, info as info_m, warn as warn_m};
 
 #[macro_export]
 macro_rules! error {

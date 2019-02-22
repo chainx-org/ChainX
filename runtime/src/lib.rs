@@ -237,7 +237,9 @@ impl sdot::Trait for Runtime {
 //}
 
 // cxrml trait
-impl xsystem::Trait for Runtime {}
+impl xsystem::Trait for Runtime {
+    type ValidatorList = Session;
+}
 
 impl xaccounts::Trait for Runtime {
     type Event = Event;
@@ -492,6 +494,12 @@ impl_runtime_apis! {
             call.check_fee(switch).map(|power|
                 XFeeManager::transaction_fee(power, encoded_len)
             )
+        }
+    }
+
+    impl runtime_api::xsession_api::XSessionApi<Block> for Runtime {
+        fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<SessionKey>)> {
+            Session::pubkeys_for_validator_name(name)
         }
     }
 }

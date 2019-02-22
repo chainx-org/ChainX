@@ -38,11 +38,7 @@ impl Default for Chain {
 
 impl Chain {
     pub fn iterator() -> Iter<'static, Chain> {
-        static CHAINS: [Chain; 3] = [
-            Chain::ChainX,
-            Chain::Bitcoin,
-            Chain::Ethereum,
-        ];
+        static CHAINS: [Chain; 3] = [Chain::ChainX, Chain::Bitcoin, Chain::Ethereum];
         CHAINS.iter()
     }
 }

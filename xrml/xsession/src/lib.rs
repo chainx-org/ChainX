@@ -34,6 +34,9 @@ extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate substrate_primitives;
 
+extern crate xrml_xsystem;
+extern crate xrml_xaccounts;
+
 use primitives::traits::{As, Convert, One, Zero};
 use rstd::ops::Mul;
 use rstd::prelude::*;
@@ -41,6 +44,9 @@ use runtime_support::dispatch::Result;
 use runtime_support::for_each_tuple;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
+
+use xrml_xsystem::ValidatorList;
+use xrml_xaccounts::Name;
 
 /// A session has changed.
 pub trait OnSessionChange<T> {
@@ -66,7 +72,7 @@ macro_rules! impl_session_change {
 
 for_each_tuple!(impl_session_change);
 
-pub trait Trait: timestamp::Trait {
+pub trait Trait: timestamp::Trait + xrml_xaccounts::Trait {
     type ConvertAccountIdToSessionKey: Convert<Self::AccountId, Self::SessionKey>;
     type OnSessionChange: OnSessionChange<Self::Moment>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -134,6 +140,21 @@ decl_storage! {
     }
 }
 
+impl<T: Trait> ValidatorList<T::AccountId> for Module<T> {
+    fn validator_list() -> Vec<T::AccountId> {
+        Self::validators().into_iter().map(|(a, _)| a).collect()
+    }
+}
+
+impl<T: Trait> Module<T> {
+    pub fn pubkeys_for_validator_name(name: Name) -> Option<(T::AccountId, Option<T::SessionKey>)> {
+        xrml_xaccounts::Module::<T>::intention_of(&name).map(|a| {
+            let r = Self::session_key(&a);
+            (a, r)
+        })
+    }
+}
+
 impl<T: Trait> Module<T> {
     /// The number of validators currently.
     pub fn validator_count() -> u32 {
@@ -165,7 +186,9 @@ impl<T: Trait> Module<T> {
                     if let Some(session_key) = <SessionKeys<T>>::get(account_id.clone()) {
                         session_key
                     } else {
-                        T::ConvertAccountIdToSessionKey::convert(account_id) }})
+                        T::ConvertAccountIdToSessionKey::convert(account_id)
+                    }
+                })
                 .collect::<Vec<_>>(),
         );
     }

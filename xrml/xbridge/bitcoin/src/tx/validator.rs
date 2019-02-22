@@ -5,8 +5,8 @@ use super::{
     Bytes, Result, Script, SignatureChecker, SignatureVersion, StorageMap, Trait, Transaction,
     TransactionInputSigner, TransactionSignatureChecker, TrusteeRedeemScript,
 };
-use codec::Decode;
 use chain::Transaction as BTCTransaction;
+use codec::Decode;
 
 pub fn validate_transaction<T: Trait>(
     tx: &RelayTx,

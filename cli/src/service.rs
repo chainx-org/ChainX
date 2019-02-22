@@ -19,6 +19,8 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 extern crate xrml_xsystem;
+extern crate sr_primitives;
+extern crate runtime_api;
 
 use chainx_executor;
 use chainx_primitives::{AccountId, Block};
@@ -37,8 +39,25 @@ use substrate_service::{
 use transaction_pool::{self, txpool::Pool as TransactionPool};
 
 use self::xrml_xsystem::InherentDataProvider;
+use self::sr_primitives::generic::BlockId;
+use self::sr_primitives::traits::ProvideRuntimeApi;
+use self::runtime_api::xsession_api::XSessionApi;
 
 type XSystemInherentDataProvider = InherentDataProvider<AccountId>;
+
+static mut VALIDATOR_NAME: Option<String> = None;
+
+pub fn set_validator_name(name: String) {
+    unsafe {
+        VALIDATOR_NAME = Some(name);
+    }
+}
+
+fn get_validator_name() -> Option<String> {
+    unsafe {
+        VALIDATOR_NAME.clone()
+    }
+}
 
 construct_simple_protocol! {
     /// Demo protocol attachment for substrate.
@@ -97,8 +116,31 @@ construct_service_factory! {
                         });
 
                         let client = service.client();
+                        let accountid_from_localkey: AccountId = key.public().as_array_ref().clone().into();
 
-                        let accountid: AccountId = key.public().as_array_ref().clone().into();
+                        // use validator name to get accountid and sessionkey from runtime storage
+                        let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
+                        let best_hash = client.info()?.chain.best_hash;
+                        let (accountid, sessionkey_option) = client
+                            .runtime_api()
+                            .pubkeys_for_validator_name(&BlockId::Hash(best_hash), name.as_bytes().to_vec())
+                            .expect(&format!("can't get accountid for this name:[{:}]", name))
+                            .expect(&format!("can't get accountid for this name:[{:}]", name));
+                        if accountid != accountid_from_localkey {
+                            if let Some(sessionkey) = sessionkey_option {
+                                let sessionkey: AccountId = sessionkey.into();
+                                if sessionkey != accountid_from_localkey {
+                                    error!("the sessionkey is not equal to local_key, sessionkey:[{:}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
+                                    panic!("he sessionkey is not equal to local_key");
+                                }
+                            } else {
+                                error!("the accountid is not equal to local_key, accountid:[{:}], local_key:[{:?}]", accountid, accountid_from_localkey);
+                                panic!("the accountid is not equal to local_key");
+                            }
+                        }
+
+                        // set blockproducer for accountid
+
                         service.config.custom.inherent_data_providers
                             .register_provider(XSystemInherentDataProvider::new(&accountid)).expect("blockproducer set err; qed");
 

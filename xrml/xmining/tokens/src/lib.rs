@@ -453,22 +453,20 @@ impl<T: Trait> Module<T> {
         return pcx_asset.precision().as_();
     }
     pub fn asset_power(token: &Token) -> Option<T::Balance> {
-        if token.eq(&b"SDOT".to_vec()){
-            return Some(As::sa(10_u64.pow(Self::pcx_precision()-1)));//0.1 PCX
-        }
-        else if token.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec() ) {
+        if token.eq(&b"SDOT".to_vec()) {
+            return Some(As::sa(10_u64.pow(Self::pcx_precision() - 1))); //0.1 PCX
+        } else if token.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) {
             return Some(As::sa(10_u64.pow(Self::pcx_precision())));
-        }
-        else {
-            if let Some(price) = <xspot::Module<T>>::aver_asset_price(token)  {
-               let discount=<TokenDiscount<T>>::get();
+        } else {
+            if let Some(price) = <xspot::Module<T>>::aver_asset_price(token) {
+                let discount = <TokenDiscount<T>>::get();
 
-               let power = match (price.as_() as u128).checked_mul(discount as u128) {
-                    Some(x)=>T::Balance::sa((x / 100) as u64),
+                let power = match (price.as_() as u128).checked_mul(discount as u128) {
+                    Some(x) => T::Balance::sa((x / 100) as u64),
                     None => panic!("price * discount overflow"),
-               };
+                };
 
-               return Some(power);
+                return Some(power);
             }
         }
 

@@ -272,19 +272,28 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         bitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
-            genesis: (BlockHeader {
-                version: 536870912,
-                previous_header_hash: H256::from_reversed_str("0000000000005a693961608af8c00d25fa71bde2d9e3eae4494c10baaeed4070"),
-                merkle_root_hash: H256::from_reversed_str("9e7add48fd35513b37309fed6c0b9e116621de9385548aee5c4bb313476ff30a"),
-                time: 1550490136,
-                bits: Compact::new(453049348),
-                nonce: 3012999283,
-            }, 1474333),
-            params_info: Params::new(520159231, // max_bits
-                                     2 * 60 * 60,  // block_max_future
-                                     2 * 7 * 24 * 60 * 60,  // target_timespan_seconds
-                                     10 * 60,  // target_spacing_seconds
-                                     4), // retargeting_factor
+            genesis: (
+                BlockHeader {
+                    version: 536870912,
+                    previous_header_hash: H256::from_reversed_str(
+                        "0000000000005a693961608af8c00d25fa71bde2d9e3eae4494c10baaeed4070",
+                    ),
+                    merkle_root_hash: H256::from_reversed_str(
+                        "9e7add48fd35513b37309fed6c0b9e116621de9385548aee5c4bb313476ff30a",
+                    ),
+                    time: 1550490136,
+                    bits: Compact::new(453049348),
+                    nonce: 3012999283,
+                },
+                1474333,
+            ),
+            params_info: Params::new(
+                520159231,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,
+            ), // retargeting_factor
             network_id: 1,
             irr_block: 6,
             reserved: 2100,

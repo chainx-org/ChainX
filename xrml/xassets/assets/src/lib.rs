@@ -673,7 +673,7 @@ impl<T: Trait> Module<T> {
             // same account, same type, return directly
             return Ok(());
         }
-        if value == Zero::zero()  {
+        if value == Zero::zero() {
             return Ok(());
         }
 

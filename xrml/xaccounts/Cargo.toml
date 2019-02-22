@@ -25,7 +25,8 @@ keys = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = 
 # chainx runtime
 xr-primitives = { path = "../../xr-primitives", default_features = false }
 
-xrml-xassets-assets = { path = "../../xrml/xassets/assets",  default_features = false }
+# chainx runtime module
+xrml-xassets-assets = { path = "../../xrml/xassets/assets", default_features = false }
 
 [features]
 default = ["std"]
@@ -44,6 +45,7 @@ std=[
     "srml-session/std",
     "srml-balances/std",
     "srml-timestamp/std",
+    # chainx
     "xr-primitives/std",
     "xrml-xassets-assets/std",
 ]
