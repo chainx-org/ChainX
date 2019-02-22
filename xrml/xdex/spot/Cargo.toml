@@ -20,6 +20,7 @@ srml-consensus = { git = "https://github.com/chainpool/substrate", default_featu
 srml-indices = { git = "https://github.com/chainpool/substrate", default_features = false }
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
 
+chrono = "0.4"
 log = "0.4"
 
 # cxrml module
@@ -48,4 +49,5 @@ std=[
     "xrml-xaccounts/std",
     "xrml-xsupport/std",
     "xrml-xassets-assets/std",
+
 ]
