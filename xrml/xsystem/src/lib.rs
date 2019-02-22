@@ -107,26 +107,11 @@ impl<T: Trait> ProvideInherent for Module<T> {
         Some(Call::set_block_producer(producer))
     }
 
-    fn check_inherent(call: &Self::Call, data: &InherentData) -> StdResult<(), Self::Error> {
+    fn check_inherent(call: &Self::Call, _data: &InherentData) -> StdResult<(), Self::Error> {
         let producer = match call {
             Call::set_block_producer(ref p) => p.clone(),
             _ => return Err(RuntimeString::from("not found producer in call").into()),
         };
-
-        let r = data
-            .get_data::<T::AccountId>(&INHERENT_IDENTIFIER)
-            .and_then(|r| r.ok_or_else(|| "gets and decodes producer inherent data".into()))?;
-
-        if producer != r {
-            error!(
-                "[check_inherent] producer not equal, in call:{:}, in inherentdata:{:}",
-                producer, r
-            );
-            return Err(RuntimeString::from(
-                "[check_inherent] producer in call not equal producer in inherentdata",
-            )
-            .into());
-        }
 
         if !Self::is_validator(&producer) {
             error!(
