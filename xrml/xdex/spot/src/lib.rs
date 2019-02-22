@@ -330,7 +330,6 @@ impl<T: Trait> Module<T> {
 
         None
     }
-    
 
     fn do_cancel_order(origin: T::Origin, pairid: OrderPairID, index: ID) -> Result {
         let pair = match <OrderPairOf<T>>::get(pairid) {
@@ -535,9 +534,9 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
     fn do_match(order: &mut OrderT<T>, pair: &OrderPair, handicap: &HandicapT<T>) {
-        let  (opponent_direction,mut opponent_price) = match order.direction {
-            OrderDirection::Buy => (OrderDirection::Sell,handicap.sell),
-            OrderDirection::Sell => (OrderDirection::Buy,handicap.buy),
+        let (opponent_direction, mut opponent_price) = match order.direction {
+            OrderDirection::Buy => (OrderDirection::Sell, handicap.sell),
+            OrderDirection::Sell => (OrderDirection::Buy, handicap.buy),
         };
 
         let min_unit = 10_u64.pow(pair.unit_precision);

@@ -110,24 +110,25 @@ where
 
         // test valid before call runtime api
         if let Err(_e) = xassets::is_valid_token(&token) {
-//            return Ok(Some(String::from_utf8_lossy(e.as_ref()).into_owned()));
+            //            return Ok(Some(String::from_utf8_lossy(e.as_ref()).into_owned()));
             return Ok(Some(false));
         }
 
         if addr.len() > 256 || memo.len() > 256 {
-//            return Ok(Some("the addr or memo may be too long".to_string()));
+            //            return Ok(Some("the addr or memo may be too long".to_string()));
             return Ok(Some(false));
         }
 
         let b = self.best_number()?;
-        let ret = self.client
+        let ret = self
+            .client
             .runtime_api()
             .verify_address(&b, token, addr, memo)
             .and_then(|r| match r {
                 Ok(()) => Ok(None),
                 Err(s) => Ok(Some(String::from_utf8_lossy(s.as_ref()).into_owned())),
             });
-//            .map_err(|e| e.into());
+        //            .map_err(|e| e.into());
         // Err() => substrate inner err
         // Ok(None) => runtime_api return true
         // Ok(Some(err_info)) => runtime_api return false, Some() contains err info

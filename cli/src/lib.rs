@@ -17,6 +17,7 @@
 //! Substrate CLI library.
 
 #![warn(unused_extern_crates)]
+#![feature(custom_attribute)]
 
 extern crate tokio;
 
@@ -41,17 +42,22 @@ extern crate substrate_rpc_servers as rpc;
 
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate structopt;
 
 mod chain_spec;
 mod genesis_config;
 mod native_rpc;
 mod service;
+mod params;
 
 pub use cli::{error, IntoExit, NoCustom, VersionInfo};
 use primitives::ed25519;
 use std::ops::Deref;
 use substrate_service::{Roles as ServiceRoles, ServiceFactory};
 use tokio::runtime::Runtime;
+
+use params::ChainXParams;
 
 /// The chain specification option.
 #[derive(Clone, Debug)]
@@ -98,13 +104,13 @@ where
     T: Into<std::ffi::OsString> + Clone,
     E: IntoExit,
 {
-    cli::parse_and_execute::<service::Factory, NoCustom, NoCustom, _, _, _, _, _>(
+    cli::parse_and_execute::<service::Factory, NoCustom, ChainXParams, _, _, _, _, _>(
         load_spec,
         &version,
         "ChainX",
         args,
         exit,
-        |exit, _custom_args, config| {
+        |exit, custom_args, config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
             info!("  by Chainpool, 2018-2019");
@@ -113,6 +119,12 @@ where
             info!("Roles: {:?}", config.roles);
             let runtime = Runtime::new().map_err(|e| format!("{:?}", e))?;
             let executor = runtime.executor();
+
+            if config.roles == ServiceRoles::AUTHORITY {
+                let name = custom_args.validator_name;
+                println!("validator name{:?}", name);
+            }
+
             match config.roles {
                 ServiceRoles::LIGHT => run_until_exit(
                     runtime,

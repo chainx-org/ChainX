@@ -555,7 +555,7 @@ impl<T: Trait> Module<T> {
     fn apply_create_withdraw(tx: BTCTransaction, withdraw_id: Vec<u32>) -> Result {
         let withdraw_amount = <MaxWithdrawAmount<T>>::get();
         if withdraw_id.len() > withdraw_amount as usize {
-            return Err("Exceeding the maximum withdrawal amount")
+            return Err("Exceeding the maximum withdrawal amount");
         }
         let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
             .ok_or("Should set trustee address first.")?;
@@ -593,7 +593,8 @@ impl<T: Trait> Module<T> {
                         CandidateTx::new(data.withdraw_id, data.tx, data.sig_status, data.sig_node);
                     <TxProposal<T>>::put(candidate);
                 } else {
-                    let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice())).map_err(|_|"Parse transaction err")?;
+                    let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice()))
+                        .map_err(|_| "Parse transaction err")?;
                     let script: Script = tx.inputs[0].script_sig.clone().into();
                     let (sigs, _dem) = if let Ok((sigs, dem)) = script.extract_multi_scriptsig() {
                         (sigs, dem)

@@ -11,6 +11,9 @@ hex-literal = "0.1"
 parity-codec = { version = "2.1" }
 rustc-hex = "2.0.1"
 slog = "^2"
+
+structopt = "0.2.13"
+
 # substrate
 substrate-cli = { git = "https://github.com/chainpool/substrate" }
 substrate-client = { git = "https://github.com/chainpool/substrate" }
@@ -35,7 +38,6 @@ xrml-xsystem = { path = "../xrml/xsystem" }
 primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
 chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
 substrate-rpc-servers = { path = "../rpc-servers" }
-structopt = "0.2.13"
 
 [dev-dependencies]
 substrate-service-test = { git = "https://github.com/chainpool/substrate" }

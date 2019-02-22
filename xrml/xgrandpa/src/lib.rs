@@ -44,8 +44,8 @@ extern crate parity_codec_derive;
 
 extern crate parity_codec as codec;
 extern crate sr_primitives as primitives;
-extern crate srml_system as system;
 extern crate srml_consensus as consensus;
+extern crate srml_system as system;
 extern crate substrate_primitives;
 extern crate xrml_session as session;
 
@@ -69,8 +69,8 @@ mod tests;
 
 struct AuthorityStorageVec<S: codec::Codec + Default>(rstd::marker::PhantomData<S>);
 impl<S: codec::Codec + Default> StorageVec for AuthorityStorageVec<S> {
-type Item = (S, u64);
-const PREFIX: &'static [u8] = ::fg_primitives::well_known_keys::AUTHORITY_PREFIX;
+    type Item = (S, u64);
+    const PREFIX: &'static [u8] = ::fg_primitives::well_known_keys::AUTHORITY_PREFIX;
 }
 
 /// The log type of this crate, projected from module trait type.
@@ -269,7 +269,6 @@ where
     T: session::Trait,
     <T as session::Trait>::ConvertAccountIdToSessionKey:
         Convert<<T as system::Trait>::AccountId, <T as consensus::Trait>::SessionKey>,
-
 {
     fn on_session_change(_: X, _: bool) {
         use primitives::traits::Zero;
@@ -277,11 +276,11 @@ where
         let next_authorities = <session::Module<T>>::validators()
             .into_iter()
             .map(|(account_id, weight)| {
-                    if let Some(session_key) = <session::Module<T>>::session_key(account_id.clone()) {
-                        (session_key, weight)
-                    } else {
-                        (T::ConvertAccountIdToSessionKey::convert(account_id), weight)
-                    }
+                if let Some(session_key) = <session::Module<T>>::session_key(account_id.clone()) {
+                    (session_key, weight)
+                } else {
+                    (T::ConvertAccountIdToSessionKey::convert(account_id), weight)
+                }
             })
             .collect::<Vec<(<T as consensus::Trait>::SessionKey, u64)>>();
 

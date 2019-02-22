@@ -175,7 +175,9 @@ impl<T: Trait> Module<T> {
                     if let Some(session_key) = <SessionKeys<T>>::get(account_id.clone()) {
                         session_key
                     } else {
-                        T::ConvertAccountIdToSessionKey::convert(account_id) }})
+                        T::ConvertAccountIdToSessionKey::convert(account_id)
+                    }
+                })
                 .collect::<Vec<_>>(),
         );
     }

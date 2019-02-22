@@ -33,9 +33,11 @@ use runtime_support::StorageValue;
 
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
-use inherents::{InherentData, InherentIdentifier, IsFatalError, ProvideInherent, RuntimeString, MakeFatalError};
-use rstd::result::Result as StdResult;
+use inherents::{
+    InherentData, InherentIdentifier, IsFatalError, MakeFatalError, ProvideInherent, RuntimeString,
+};
 use rstd::prelude::Vec;
+use rstd::result::Result as StdResult;
 
 use system::ensure_inherent;
 
@@ -94,7 +96,11 @@ impl<T: Trait> ProvideInherent for Module<T> {
         let producer = r.expect("producer must set before");
 
         if !Self::is_validator(&producer) {
-            error!("[create_inherent] producer:{:} not in current validators!, validators is:{:?}", producer, T::ValidatorList::validator_list());
+            error!(
+                "[create_inherent] producer:{:} not in current validators!, validators is:{:?}",
+                producer,
+                T::ValidatorList::validator_list()
+            );
             panic!("[create_inherent] producer not in current validators!");
         }
 
@@ -112,13 +118,25 @@ impl<T: Trait> ProvideInherent for Module<T> {
             .and_then(|r| r.ok_or_else(|| "gets and decodes producer inherent data".into()))?;
 
         if producer != r {
-            error!("[check_inherent] producer not equal, in call:{:}, in inherentdata:{:}", producer, r);
-            return Err(RuntimeString::from("[check_inherent] producer in call not equal producer in inherentdata").into())
+            error!(
+                "[check_inherent] producer not equal, in call:{:}, in inherentdata:{:}",
+                producer, r
+            );
+            return Err(RuntimeString::from(
+                "[check_inherent] producer in call not equal producer in inherentdata",
+            )
+            .into());
         }
 
         if !Self::is_validator(&producer) {
-            error!("[check_inherent] producer:{:} not in current validators!, validators is:{:?}", producer, T::ValidatorList::validator_list());
-            return Err(RuntimeString::from("[check_inherent] producer not in current validators").into())
+            error!(
+                "[check_inherent] producer:{:} not in current validators!, validators is:{:?}",
+                producer,
+                T::ValidatorList::validator_list()
+            );
+            return Err(
+                RuntimeString::from("[check_inherent] producer not in current validators").into(),
+            );
         }
         Ok(())
     }
