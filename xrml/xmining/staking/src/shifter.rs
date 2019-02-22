@@ -114,7 +114,12 @@ impl<T: Trait> Module<T> {
 
         let mut validators = <session::Module<T>>::validators();
         validators.retain(|(v, _)| !punished.contains(&v));
-        <session::Module<T>>::set_validators(&validators);
+        let validators = validators
+            .into_iter()
+            .map(|(v, _)| (Self::intention_profiles(&v).total_nomination.as_(), v))
+            .map(|(a, b)| (b, a))
+            .collect::<Vec<_>>();
+        <session::Module<T>>::set_validators(validators.as_slice());
 
         Self::deposit_event(RawEvent::EnforceValidatorsInactive(punished));
     }
