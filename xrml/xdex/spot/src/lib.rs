@@ -10,6 +10,9 @@
 #[cfg(feature = "std")]
 extern crate serde_derive;
 
+#[cfg(feature = "std")]
+extern crate chrono;
+
 extern crate log;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
@@ -42,8 +45,10 @@ extern crate xrml_xassets_records as xrecords;
 
 // for chainx runtime module lib
 extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
+
+#[macro_use]
+extern crate xrml_xsupport as xsupport;
 
 #[cfg(test)]
 mod mock;
@@ -51,6 +56,9 @@ mod mock;
 mod tests;
 
 pub mod def;
+
+#[cfg(feature = "std")]
+use chrono::prelude::*;
 
 use codec::Codec;
 use def::{
@@ -106,26 +114,44 @@ decl_module! {
 
          //委托
         pub fn put_order(origin,pairid: OrderPairID,ordertype: OrderType,direction:OrderDirection,amount: T::Balance,price:T::Price) -> Result{
-            runtime_io::print("[xdex spot] put_order");
+            let transactor = ensure_signed(origin)?;
+
+            info!("transactor:{:?},pairid:{:},ordertype:{:?},direction:{:?},amount:{:?},price:{:?}",transactor,pairid,ordertype,direction,amount,price);
 
             if price == Zero::zero() {
+                error!("price is zero");
                 return Err("price is zero");
             }
-            let transactor = ensure_signed(origin)?;
+            
             //从channel模块获得channel_name对应的account
 
-            Self::do_put_order(&transactor, pairid, ordertype, direction,amount, price)
+            match Self::do_put_order(&transactor, pairid, ordertype, direction,amount, price){
+                Ok(r)=>Ok(r),
+                Err(msg)=>{
+                    error!("msg:{:}",msg);
+                    Err(msg)
+                }
+            }
         }
         //取消委托
         pub fn cancel_order(origin,pairid:OrderPairID,index:ID) -> Result{
-            runtime_io::print("[exchange xspot] cancel_order");
-            return Self::do_cancel_order(origin,pairid,index);
+            let transactor = ensure_signed(origin)?;
+            info!("transactor:{:?},pairid:{:},index:{:}",transactor,pairid,index);
+
+            match Self::do_cancel_order(&transactor,pairid,index){
+                Ok(r)=>Ok(r),
+                Err(msg)=>{
+                    error!("msg:{:}",msg);
+                    Err(msg)
+                }
+            }
         }
 
 
         //增加交易对
         pub fn add_pair(first:Token,second:Token,precision:u32,unit:u32, price:T::Price,online:bool)->Result{
-             runtime_io::print("[xdex spot] add_pair");
+             info!("first:{:?},second:{:?},precision:{:},unit:{:},price:{:?},online:{:}",first,second,precision,unit,price,online);
+
              match Self::get_pair_by(&first, &second) {
                 Some(_pair) => Err("have a existed pair in  list"),
                 None => {
@@ -151,7 +177,8 @@ decl_module! {
         }
         //更新交易对
         pub fn update_pair(id:OrderPairID,min:u32,online:bool)->Result{
-            runtime_io::print("[xdex spot] update_pair");
+            info!("pairid:{:},min:{:},online:{:}",id,min,online);
+
             match <OrderPairOf<T>>::get(id) {
                 None=> Err("not a existed pair in  list"),
                 Some(mut pair) => {
@@ -169,7 +196,8 @@ decl_module! {
             }
         }
         pub fn update_price_volatility(price_volatility:u32)->Result{
-            runtime_io::print("[xdex spot] update_price_volatility");
+            info!("price_volatility:{:}",price_volatility);
+
             if price_volatility >= 100 {
                 return Err("price_volatility must be less 100!");
             }
@@ -331,7 +359,7 @@ impl<T: Trait> Module<T> {
         None
     }
 
-    fn do_cancel_order(origin: T::Origin, pairid: OrderPairID, index: ID) -> Result {
+    fn do_cancel_order(who: &T::AccountId, pairid: OrderPairID, index: ID) -> Result {
         let pair = match <OrderPairOf<T>>::get(pairid) {
             None => return Err("not a existed pair in  list"),
             Some(pair) => pair,
@@ -340,9 +368,7 @@ impl<T: Trait> Module<T> {
             return Err("pair is offline ");
         }
 
-        let transactor = ensure_signed(origin)?;
-
-        if let Some(mut order) = Self::account_order((transactor.clone(), index)) {
+        if let Some(mut order) = Self::account_order((who.clone(), index)) {
             match order.status {
                 OrderStatus::FillNo | OrderStatus::FillPart => {
                     //更新状态
@@ -365,12 +391,12 @@ impl<T: Trait> Module<T> {
                                 Some(v) => v,
                                 None => Default::default(),
                             }
-                        } //As::sa(order.amount.as_() - order.hasfill_amount.as_()),
+                        }
                         OrderDirection::Buy => As::sa(order.reserve_last.as_()), //剩余的都退回
                     };
 
                     //回退资产
-                    Self::unreserve_token(&transactor, &back_token, back_amount)?;
+                    Self::unreserve_token(&who, &back_token, back_amount)?;
 
                     order.reserve_last = match order.reserve_last.checked_sub(&back_amount) {
                         Some(v) => v,
@@ -405,7 +431,6 @@ impl<T: Trait> Module<T> {
         amount: T::Balance,
         price: T::Price,
     ) -> Result {
-        /***********************常规检查**********************/
         //检查交易对
         let pair = match <OrderPairOf<T>>::get(pairid) {
             None => return Err("not a existed pair in  list"),
@@ -523,13 +548,18 @@ impl<T: Trait> Module<T> {
         Self::event_order(&order);
         <AccountOrder<T>>::insert((order.user.clone(), order.index), &order);
 
+        #[cfg(feature = "std")]
+        let dt1 = Local::now();
         //撮合
         Self::do_match(&mut order, &pair, &handicap);
 
+        #[cfg(feature = "std")]
+        let dt2 = Local::now();
+
+        info!("do_match cost time:{:}",dt2.timestamp_millis()-dt1.timestamp_millis());
+
         /*********************** 更新报价 盘口**********************/
         Self::new_order(&pair, &mut order);
-
-        //Event 记录状态变更
 
         Ok(())
     }
@@ -542,7 +572,6 @@ impl<T: Trait> Module<T> {
         let min_unit = 10_u64.pow(pair.unit_precision);
 
         loop {
-            runtime_io::print("[xdex spot] do_match loop");
             if opponent_price == Zero::zero() {
                 break;
             }
@@ -605,14 +634,14 @@ impl<T: Trait> Module<T> {
                                 }
 
                                 //填充成交
-                                if let Err(_msg) = Self::fill_order(
+                                if let Err(msg) = Self::fill_order(
                                     pair.id,
                                     &mut maker_order,
                                     order,
                                     opponent_price,
                                     amount,
                                 ) {
-                                    // 记失败 event
+                                    error!("fill_order error. msg:{:?}", msg);
                                 }
                                 //更新最新价、平均价
                                 Self::update_last_average_price(pair.id, opponent_price);
@@ -660,6 +689,7 @@ impl<T: Trait> Module<T> {
                 order.status = OrderStatus::FillPart;
             }
             <AccountOrder<T>>::insert((order.user.clone(), order.index), &order.clone());
+            Self::event_order(&order);
 
             //更新报价
             match <Quotations<T>>::get((order.pair, order.price)) {
@@ -737,8 +767,6 @@ impl<T: Trait> Module<T> {
             Self::event_order(&order);
             <AccountOrder<T>>::remove((order.user.clone(), order.index));
         }
-
-        //Event 记录order状态通知链外
     }
 
     fn fill_order(
