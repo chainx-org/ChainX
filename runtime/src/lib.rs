@@ -237,7 +237,9 @@ impl sdot::Trait for Runtime {
 //}
 
 // cxrml trait
-impl xsystem::Trait for Runtime {}
+impl xsystem::Trait for Runtime {
+    type ValidatorList = Session;
+}
 
 impl xaccounts::Trait for Runtime {
     type Event = Event;

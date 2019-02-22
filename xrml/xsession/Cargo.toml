@@ -18,6 +18,9 @@ srml-consensus = { git = "https://github.com/chainpool/substrate", default-featu
 srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default-features = false }
 
+# chainx runtime module
+xrml-xsystem = { path = "../xsystem", default-features = false }
+
 [features]
 default = ["std"]
 std = [
@@ -32,5 +35,7 @@ std = [
 	"sr-primitives/std",
 	"srml-consensus/std",
 	"srml-system/std",
-	"srml-timestamp/std"
+	"srml-timestamp/std",
+	# xrml
+	"xrml-xsystem/std",
 ]

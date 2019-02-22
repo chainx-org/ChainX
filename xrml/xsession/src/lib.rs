@@ -34,6 +34,8 @@ extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate substrate_primitives;
 
+extern crate xrml_xsystem;
+
 use primitives::traits::{As, Convert, One, Zero};
 use rstd::ops::Mul;
 use rstd::prelude::*;
@@ -41,6 +43,8 @@ use runtime_support::dispatch::Result;
 use runtime_support::for_each_tuple;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
+
+use xrml_xsystem::ValidatorList;
 
 /// A session has changed.
 pub trait OnSessionChange<T> {
@@ -131,6 +135,12 @@ decl_storage! {
         pub NextKeyFor: map T::AccountId => Option<T::SessionKey>;
         /// The next session length.
         NextSessionLength: Option<T::BlockNumber>;
+    }
+}
+
+impl<T: Trait> ValidatorList<T::AccountId> for Module<T> {
+    fn validator_list() -> Vec<T::AccountId> {
+        Self::validators().into_iter().map(|(a, _)| a).collect()
     }
 }
 
