@@ -10,7 +10,6 @@
 #[cfg(feature = "std")]
 extern crate serde_derive;
 
-// Needed for deriving `Encode` and `Decode` for `RawEvent`.
 #[macro_use]
 extern crate parity_codec_derive;
 extern crate parity_codec as codec;
@@ -20,14 +19,8 @@ extern crate rustc_hex;
 #[cfg(feature = "std")]
 extern crate substrate_primitives;
 
-// for substrate runtime
-// map!, vec! marco.
 extern crate sr_std as rstd;
-
-extern crate sr_io as runtime_io;
 extern crate sr_primitives as runtime_primitives;
-// for substrate runtime module lib
-// Needed for type-safe access to storage DB.
 
 #[macro_use]
 extern crate srml_support as runtime_support;
@@ -39,7 +32,8 @@ extern crate bitcrypto as crypto;
 extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 extern crate xrml_xassets_records as xrecords;
-extern crate xrml_xsupport as xsupport;
+#[macro_use]
+extern crate xrml_xsupport;
 
 #[cfg(test)]
 extern crate xrml_xsystem as xsystem;
@@ -58,7 +52,6 @@ extern crate xr_primitives;
 #[cfg(test)]
 mod tests;
 
-//mod b58;
 mod blockchain;
 mod header_proof;
 mod tx;
@@ -107,6 +100,7 @@ pub struct CandidateTx<AccountId> {
     pub withdraw_id: Vec<u32>,
     pub tx: BTCTransaction,
     pub sig_status: VoteResult,
+    pub sig_num: u32,
     pub sig_node: Vec<(AccountId, bool)>,
 }
 
@@ -115,12 +109,14 @@ impl<AccountId> CandidateTx<AccountId> {
         withdraw_id: Vec<u32>,
         tx: BTCTransaction,
         sig_status: VoteResult,
+        sig_num: u32,
         sig_node: Vec<(AccountId, bool)>,
     ) -> Self {
         CandidateTx {
             withdraw_id,
             tx,
             sig_status,
+            sig_num,
             sig_node,
         }
     }
@@ -338,8 +334,8 @@ decl_module! {
         }
 
         pub fn create_withdraw_tx(origin, withdraw_id: Vec<u32>, tx: Vec<u8>) -> Result {
-            runtime_io::print("[bridge_btc] Push Create withdraw tx");
             let from = ensure_signed(origin)?;
+            info!("Account {:?} push create withdraw tx", from);
             // commiter must in trustee node list
             Self::ensure_trustee_node(&from)?;
             let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice())).map_err(|_|"Parse transaction err")?;
@@ -349,8 +345,8 @@ decl_module! {
         }
 
         pub fn sign_withdraw_tx(origin, tx: Vec<u8>, vote_state: bool) -> Result {
-            runtime_io::print("[bridge_btc] Push Sign withdraw tx");
             let from = ensure_signed(origin)?;
+            info!("Account {:?} push sign withdraw tx", from);
             Self::ensure_trustee_node(&from)?;
             Self::apply_sign_withdraw(from, tx, vote_state)?;
             Ok(())
@@ -510,7 +506,6 @@ impl<T: Trait> Module<T> {
         <BlockHeaderFor<T>>::mutate(&tx.block_hash.clone(), |info| {
             if let Some(i) = info {
                 i.txid.push(tx.raw.hash());
-
                 confirmed = i.confirmed;
             }
         });
@@ -543,8 +538,7 @@ impl<T: Trait> Module<T> {
 
         if confirmed {
             handle_tx::<T>(&tx.raw.hash()).map_err(|e| {
-                runtime_io::print("[bridge_btc] Handle tx error:");
-                runtime_io::print(tx.raw.hash().to_vec().as_slice());
+                info!("Handle tx error: {:}", tx.raw.hash());
                 e
             })?;
         }
@@ -562,9 +556,9 @@ impl<T: Trait> Module<T> {
         let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
             .map_err(|_| "Invalid Address")?;
         check_withdraw_tx::<T>(tx.clone(), withdraw_id.clone(), hot_address.clone())?;
-        let candidate = CandidateTx::new(withdraw_id, tx, VoteResult::Unfinish, Vec::new());
+        let candidate = CandidateTx::new(withdraw_id, tx, VoteResult::Unfinish, 0, Vec::new());
         <TxProposal<T>>::put(candidate);
-        runtime_io::print("[bridge-btc] Through the legality check of withdrawal transaction ");
+        info!("Through the legality check of withdrawal transaction ");
         Ok(())
     }
 
@@ -578,19 +572,19 @@ impl<T: Trait> Module<T> {
                 if data.sig_node.iter().any(|(n, _)| *n == who) {
                     return Err("Already signature transaction or reject to signature");
                 }
+                info!("Signature: {:}", vote_state);
                 if !vote_state {
                     let sig_node = data.sig_node.clone();
                     let reject_count: Vec<&(T::AccountId, bool)> =
                         sig_node.iter().filter(|(_, vote)| *vote == false).collect();
                     data.sig_node.push((who, vote_state));
-                    runtime_io::print("[bridge_btc] Veto signature");
                     if reject_count.len() + 1 >= sign_num {
-                        runtime_io::print("[bridge_btc] Clear TxProposal");
+                        info!("{:} Opposition, Clear candidate", reject_count.len() + 1);
                         <TxProposal<T>>::kill();
                         return Ok(());
                     }
                     let candidate =
-                        CandidateTx::new(data.withdraw_id, data.tx, data.sig_status, data.sig_node);
+                        CandidateTx::new(data.withdraw_id, data.tx, data.sig_status, data.sig_num, data.sig_node);
                     <TxProposal<T>>::put(candidate);
                 } else {
                     let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice()))
@@ -601,17 +595,21 @@ impl<T: Trait> Module<T> {
                     } else {
                         return Err("No signature");
                     };
-                    runtime_io::print("[bridge_btc] Signature pass");
+
+                    if sigs.len() as u32 <= data.sig_num {
+                        return Err("Need to sign on the latest signature results");
+                    }
+                    info!("Through signature checking");
                     data.sig_node.push((who, vote_state));
                     if sigs.len() >= sign_num {
-                        runtime_io::print("[bridge_btc] Signature finish");
+                        info!("Signature completed: {:}", sigs.len());
                         data.sig_status = VoteResult::Finish;
                     } else {
                         data.sig_status = VoteResult::Unfinish;
                     }
 
                     let candidate =
-                        CandidateTx::new(data.withdraw_id, tx, data.sig_status, data.sig_node);
+                        CandidateTx::new(data.withdraw_id, tx, data.sig_status, sigs.len() as u32, data.sig_node);
                     <TxProposal<T>>::put(candidate);
                 }
             }

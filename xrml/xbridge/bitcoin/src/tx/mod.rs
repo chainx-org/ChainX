@@ -4,8 +4,9 @@ use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 
 use super::{
-    BindStatus, BlockHeaderFor, BtcFee, DepositCache, Module, NetworkId, PendingDepositMap,
-    RawEvent, Trait, TrusteeRedeemScript, TxFor, TxInfo, TxProposal, TxType,
+    deserialize, BindStatus, BlockHeaderFor, BtcFee, DepositCache, Module, NetworkId,
+    PendingDepositMap, RawEvent, Reader, Trait, TrusteeRedeemScript, TxFor, TxInfo, TxProposal,
+    TxType,
 };
 use chain::{OutPoint, Transaction};
 use crypto::dhash160;
@@ -13,7 +14,6 @@ use keys;
 use keys::{Address, DisplayLayout};
 use merkle::{parse_partial_merkle_tree, PartialMerkleTree};
 use primitives::{bytes::Bytes, hash::H256};
-use runtime_io;
 use runtime_primitives::traits::As;
 use runtime_support::{dispatch::Result, StorageMap, StorageValue};
 use script::{

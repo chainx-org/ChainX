@@ -3,7 +3,6 @@
 use primitives::hash::H256;
 use rstd::marker::PhantomData;
 use rstd::result::Result;
-use runtime_io;
 use runtime_support::StorageMap;
 use tx::handle_tx;
 use {BlockHeaderFor, BlockHeaderInfo, Trait};
@@ -43,17 +42,13 @@ impl<T: Trait> Chain<T> {
             None => return Err(ChainErr::OtherErr("Not found block header for this hash")),
         };
 
-        runtime_io::print("[bridge-btc] Confirmed header:");
-        runtime_io::print(confirmed_header.height as u64);
-
+        info!("Confirmed header: {:}  {:}", confirmed_header.height as u64, hash);
         let tx_list = confirmed_header.txid;
         for txid in tx_list {
-            runtime_io::print("[bridge-btc] Handle confirmed_header's tx list");
             // deposit & withdraw
             match handle_tx::<T>(&txid) {
                 Err(_) => {
-                    runtime_io::print("[bridge-btc] Handle tx error, tx hash:");
-                    runtime_io::print(&txid[..]);
+                    info!("Handle tx failed: {:}", txid);
                 }
                 Ok(()) => (),
             }

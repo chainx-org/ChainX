@@ -22,6 +22,7 @@
 extern crate tokio;
 
 extern crate chainx_runtime;
+extern crate hex_literal;
 extern crate exit_future;
 extern crate substrate_cli as cli;
 extern crate substrate_primitives as primitives;

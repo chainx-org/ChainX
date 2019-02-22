@@ -25,6 +25,7 @@ use ed25519::{self, Public};
 
 use self::btc_chain::BlockHeader;
 use self::btc_primitives::{compact::Compact, hash::H256};
+use hex_literal::{hex, hex_impl};
 
 pub enum GenesisSpec {
     Dev,
@@ -46,6 +47,8 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let dave = ed25519::Pair::from_seed(b"Dave                            ").public();
     let gavin = ed25519::Pair::from_seed(b"Gavin                           ").public();
     let satoshi = ed25519::Pair::from_seed(b"Satoshi                         ").public();
+    let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
+    let sudo_address = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
 
     let auth1 = alice.into();
     let auth2 = bob.into();
@@ -179,7 +182,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .collect(),
             session_length: blocks_per_session,
         }),
-        sudo: Some(SudoConfig { key: auth1.into() }),
+        sudo: Some(SudoConfig { key: sudo_address }),
         grandpa: Some(GrandpaConfig {
             authorities: endowed.clone(),
         }),
@@ -234,7 +237,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                     (who.into(), hot_entity, cold_entity)
                 })
                 .collect(),
-            council_address: Default::default(),
+            council_address: funding,
             team_address: Public::from_ss58check(
                 "5CSff76SK7qcWYq5MpvoHDVRrjWFwpxurwUu6Bqw25hKPQiy",
             )
