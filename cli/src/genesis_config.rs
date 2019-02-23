@@ -48,7 +48,8 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let gavin = ed25519::Pair::from_seed(b"Gavin                           ").public();
     let satoshi = ed25519::Pair::from_seed(b"Satoshi                         ").public();
     let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
-    let sudo_address = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
+    let sudo_address =
+        hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
 
     let auth1 = alice.into();
     let auth2 = bob.into();
@@ -144,7 +145,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         .collect::<Vec<_>>();
 
     let blocks_per_session = 150; // 150 blocks per session
-    let sessions_per_era = 12; // update validators set per 12 sessions
+    let sessions_per_era = 2; // update validators set per 12 sessions
     let sessions_per_epoch = sessions_per_era * 10; // update trustees set per 12*10 sessions
     let bonding_duration = blocks_per_session * sessions_per_era; // freeze 150*12 blocks for non-intention
     let intention_bonding_duration = bonding_duration * 10; // freeze 150*12*10 blocks for intention

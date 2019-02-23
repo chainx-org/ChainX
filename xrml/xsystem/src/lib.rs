@@ -53,7 +53,7 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn set_block_producer(origin, producer: T::AccountId) -> Result {
             ensure_inherent(origin)?;
-            info!("blockproducer: {:}", producer);
+            info!("height:{:}, blockproducer: {:}", system::Module::<T>::block_number(), producer);
 
             if Self::is_validator(&producer) == false {
                 error!("producer:{:} not in current validators!, validators is:{:?}", producer, T::ValidatorList::validator_list());

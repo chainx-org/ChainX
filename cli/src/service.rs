@@ -121,28 +121,34 @@ construct_service_factory! {
                         // use validator name to get accountid and sessionkey from runtime storage
                         let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
                         let best_hash = client.info()?.chain.best_hash;
-                        let (accountid, sessionkey_option) = client
+                        let ret = client
                             .runtime_api()
                             .pubkeys_for_validator_name(&BlockId::Hash(best_hash), name.as_bytes().to_vec())
-                            .expect(&format!("can't get accountid for this name:[{:}]", name))
-                            .expect(&format!("can't get accountid for this name:[{:}]", name));
-                        if accountid != accountid_from_localkey {
-                            if let Some(sessionkey) = sessionkey_option {
-                                let sessionkey: AccountId = sessionkey.into();
-                                if sessionkey != accountid_from_localkey {
-                                    error!("the sessionkey is not equal to local_key, sessionkey:[{:}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
-                                    panic!("he sessionkey is not equal to local_key");
+                            .expect("access runtime data error");
+
+                        let producer = if let Some((accountid, sessionkey_option)) = ret {
+                                // check, only print warning log
+                                if accountid != accountid_from_localkey {
+                                    if let Some(sessionkey) = sessionkey_option {
+                                        let sessionkey: AccountId = sessionkey.into();
+                                        if sessionkey != accountid_from_localkey {
+                                            warn!("the sessionkey is not equal to local_key, sessionkey:[{:}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
+                                        }
+                                    } else {
+                                        warn!("the accountid is not equal to local_key, accountid:[{:}], local_key:[{:?}]", accountid, accountid_from_localkey);
+                                    }
                                 }
+                                // anyway, return accountid as producer
+                                accountid
                             } else {
-                                error!("the accountid is not equal to local_key, accountid:[{:}], local_key:[{:?}]", accountid, accountid_from_localkey);
-                                panic!("the accountid is not equal to local_key");
-                            }
-                        }
+                                // do not get accountid from local state database, use localkey as producer
+                                warn!("validator name[{:}] is not in current state, use --key|keystore's pri to pub as producer", name);
+                                accountid_from_localkey
+                            };
 
                         // set blockproducer for accountid
-
                         service.config.custom.inherent_data_providers
-                            .register_provider(XSystemInherentDataProvider::new(&accountid)).expect("blockproducer set err; qed");
+                            .register_provider(XSystemInherentDataProvider::new(&producer)).expect("blockproducer set err; qed");
 
                         executor.spawn(start_aura(
                             SlotDuration::get_or_compute(&*client)?,

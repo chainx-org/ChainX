@@ -247,24 +247,29 @@ impl<T: Trait> Module<T> {
     }
 
     fn new_trustees() {
-        let intentions = Self::gather_candidates();
-        if intentions.len() as u32 >= Self::minimum_trustee_count() {
-            let trustees = intentions
-                .into_iter()
-                .take(Self::trustee_count() as usize)
-                .map(|(_, v)| v)
-                .filter(|v| {
-                    <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(v.clone(), Chain::Bitcoin))
-                        .is_some()
-                })
-                .collect::<Vec<_>>();
+        let candidates = Self::gather_candidates()
+            .into_iter()
+            .filter(|(_, v)| {
+                <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(v.clone(), Chain::Bitcoin))
+                    .is_some()
+            })
+            .map(|(_, v)| v)
+            .collect::<Vec<_>>();
 
-            <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());
-
-            let _ = xbitcoin::Module::<T>::update_trustee_addr();
-
-            Self::deposit_event(RawEvent::NewTrustees(trustees));
+        if (candidates.len() as u32) < Self::minimum_trustee_count() {
+            return;
         }
+
+        let trustees = candidates
+            .into_iter()
+            .take(Self::trustee_count() as usize)
+            .collect::<Vec<_>>();
+
+        <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());
+
+        let _ = xbitcoin::Module::<T>::update_trustee_addr();
+
+        Self::deposit_event(RawEvent::NewTrustees(trustees));
     }
 }
 

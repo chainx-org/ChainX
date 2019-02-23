@@ -124,7 +124,7 @@ where
 
             if config.roles == ServiceRoles::AUTHORITY {
                 let name = custom_args.validator_name.expect("if in AUTHORITY mode, must point the validator name!");
-                info!("Validator name: {:?}", name);
+                info!("Validator name: {:}", name);
                 set_validator_name(name);
             }
 
