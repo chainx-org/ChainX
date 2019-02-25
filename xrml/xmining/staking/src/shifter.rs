@@ -100,21 +100,25 @@ impl<T: Trait> Module<T> {
 
     /// Enforce these punished to be inactive, so that they won't become validators and be rewarded.
     fn enforce_inactive(is_new_era: bool) {
+        let punished = <PunishList<T>>::take();
+
+        if punished.is_empty() {
+            return;
+        }
+
         if Self::gather_candidates().len() <= Self::minimum_validator_count() as usize {
             return;
         }
 
-        let punished = <PunishList<T>>::take();
-        if punished.len() == 0 {
-            return;
-        }
         for v in punished.iter() {
             // Force those punished to be inactive
             <xaccounts::IntentionPropertiesOf<T>>::mutate(v, |props| {
                 props.is_active = false;
+                info!("validator enforced to be inactive: {:?}", v);
             });
         }
 
+        // The validator set will be set on new era, so we don't have to update here.
         if !is_new_era {
             let mut validators = <session::Module<T>>::validators();
             validators.retain(|(v, _)| !punished.contains(&v));

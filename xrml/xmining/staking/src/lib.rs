@@ -37,6 +37,7 @@ extern crate xrml_xaccounts as xaccounts;
 extern crate xrml_xassets_assets as xassets;
 #[cfg(test)]
 extern crate xrml_xassets_records as xrecords;
+#[macro_use]
 extern crate xrml_xsupport as xsupport;
 extern crate xrml_xsystem as xsystem;
 
