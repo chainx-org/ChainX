@@ -647,6 +647,7 @@ impl<T: Trait> Module<T> {
                                     amount,
                                 ) {
                                     error!("fill_order error. msg:{:?}", _msg);
+                                    panic!("fill_order error");
                                 }
                                 //更新最新价、平均价
                                 Self::update_last_average_price(pair.id, opponent_price);
