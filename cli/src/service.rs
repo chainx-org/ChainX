@@ -18,9 +18,9 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-extern crate xrml_xsystem;
-extern crate sr_primitives;
 extern crate runtime_api;
+extern crate sr_primitives;
+extern crate xrml_xsystem;
 
 use chainx_executor;
 use chainx_primitives::{AccountId, Block};
@@ -38,10 +38,10 @@ use substrate_service::{
 };
 use transaction_pool::{self, txpool::Pool as TransactionPool};
 
-use self::xrml_xsystem::InherentDataProvider;
+use self::runtime_api::xsession_api::XSessionApi;
 use self::sr_primitives::generic::BlockId;
 use self::sr_primitives::traits::ProvideRuntimeApi;
-use self::runtime_api::xsession_api::XSessionApi;
+use self::xrml_xsystem::InherentDataProvider;
 
 type XSystemInherentDataProvider = InherentDataProvider<AccountId>;
 
@@ -54,9 +54,7 @@ pub fn set_validator_name(name: String) {
 }
 
 fn get_validator_name() -> Option<String> {
-    unsafe {
-        VALIDATOR_NAME.clone()
-    }
+    unsafe { VALIDATOR_NAME.clone() }
 }
 
 construct_simple_protocol! {

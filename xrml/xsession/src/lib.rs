@@ -34,8 +34,8 @@ extern crate srml_timestamp as timestamp;
 #[cfg(test)]
 extern crate substrate_primitives;
 
-extern crate xrml_xsystem;
 extern crate xrml_xaccounts;
+extern crate xrml_xsystem;
 
 use primitives::traits::{As, Convert, One, Zero};
 use rstd::ops::Mul;
@@ -45,8 +45,8 @@ use runtime_support::for_each_tuple;
 use runtime_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 
-use xrml_xsystem::ValidatorList;
 use xrml_xaccounts::Name;
+use xrml_xsystem::ValidatorList;
 
 /// A session has changed.
 pub trait OnSessionChange<T> {
@@ -183,6 +183,11 @@ impl<T: Trait> Module<T> {
             &new.iter()
                 .cloned()
                 .map(|(account_id, _)| {
+                    // Update any changes in session keys.
+                    if let Some(n) = <NextKeyFor<T>>::take(account_id.clone()) {
+                        <SessionKeys<T>>::insert(account_id.clone(), n.clone());
+                    }
+
                     if let Some(session_key) = <SessionKeys<T>>::get(account_id.clone()) {
                         session_key
                     } else {
@@ -234,14 +239,6 @@ impl<T: Trait> Module<T> {
         }
 
         T::OnSessionChange::on_session_change(time_elapsed, apply_rewards);
-
-        // Update any changes in session keys.
-        Self::validators().iter().enumerate().for_each(|(i, v)| {
-            if let Some(n) = <NextKeyFor<T>>::take(v.0.clone()) {
-                <SessionKeys<T>>::insert(v.0.clone(), n.clone());
-                <consensus::Module<T>>::set_authority(i as u32, &n);
-            }
-        });
     }
 
     /// Get the time that should have elapsed over a session if everything was working perfectly.

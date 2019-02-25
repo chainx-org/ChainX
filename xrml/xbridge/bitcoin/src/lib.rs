@@ -19,8 +19,8 @@ extern crate rustc_hex;
 #[cfg(feature = "std")]
 extern crate substrate_primitives;
 
-extern crate sr_std as rstd;
 extern crate sr_primitives as runtime_primitives;
+extern crate sr_std as rstd;
 
 #[macro_use]
 extern crate srml_support as runtime_support;
@@ -583,8 +583,13 @@ impl<T: Trait> Module<T> {
                         <TxProposal<T>>::kill();
                         return Ok(());
                     }
-                    let candidate =
-                        CandidateTx::new(data.withdraw_id, data.tx, data.sig_status, data.sig_num, data.sig_node);
+                    let candidate = CandidateTx::new(
+                        data.withdraw_id,
+                        data.tx,
+                        data.sig_status,
+                        data.sig_num,
+                        data.sig_node,
+                    );
                     <TxProposal<T>>::put(candidate);
                 } else {
                     let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice()))
@@ -608,8 +613,13 @@ impl<T: Trait> Module<T> {
                         data.sig_status = VoteResult::Unfinish;
                     }
 
-                    let candidate =
-                        CandidateTx::new(data.withdraw_id, tx, data.sig_status, sigs.len() as u32, data.sig_node);
+                    let candidate = CandidateTx::new(
+                        data.withdraw_id,
+                        tx,
+                        data.sig_status,
+                        sigs.len() as u32,
+                        data.sig_node,
+                    );
                     <TxProposal<T>>::put(candidate);
                 }
             }

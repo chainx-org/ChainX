@@ -42,7 +42,10 @@ impl<T: Trait> Chain<T> {
             None => return Err(ChainErr::OtherErr("Not found block header for this hash")),
         };
 
-        info!("Confirmed header: {:}  {:}", confirmed_header.height as u64, hash);
+        info!(
+            "Confirmed header: {:}  {:}",
+            confirmed_header.height as u64, hash
+        );
         let tx_list = confirmed_header.txid;
         for txid in tx_list {
             // deposit & withdraw

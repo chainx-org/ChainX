@@ -122,7 +122,7 @@ decl_module! {
                 error!("price is zero");
                 return Err("price is zero");
             }
-            
+
             //从channel模块获得channel_name对应的account
 
             match Self::do_put_order(&transactor, pairid, ordertype, direction,amount, price){
@@ -556,7 +556,10 @@ impl<T: Trait> Module<T> {
         #[cfg(feature = "std")]
         let dt2 = Local::now();
 
-        info!("do_match cost time:{:}",dt2.timestamp_millis()-dt1.timestamp_millis());
+        info!(
+            "do_match cost time:{:}",
+            dt2.timestamp_millis() - dt1.timestamp_millis()
+        );
 
         /*********************** 更新报价 盘口**********************/
         Self::new_order(&pair, &mut order);

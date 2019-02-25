@@ -22,8 +22,8 @@
 extern crate tokio;
 
 extern crate chainx_runtime;
-extern crate hex_literal;
 extern crate exit_future;
+extern crate hex_literal;
 extern crate substrate_cli as cli;
 extern crate substrate_primitives as primitives;
 #[cfg(test)]
@@ -123,7 +123,9 @@ where
             let executor = runtime.executor();
 
             if config.roles == ServiceRoles::AUTHORITY {
-                let name = custom_args.validator_name.expect("if in AUTHORITY mode, must point the validator name!");
+                let name = custom_args
+                    .validator_name
+                    .expect("if in AUTHORITY mode, must point the validator name!");
                 info!("Validator name: {:}", name);
                 set_validator_name(name);
             }
