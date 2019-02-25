@@ -43,15 +43,16 @@ impl<T: Trait> Chain<T> {
         };
 
         info!(
-            "Confirmed header: {:}  {:}",
-            confirmed_header.height as u64, hash
+            "Confirmed: {:}  {:}...",
+            confirmed_header.height as u64,
+            &format!("0x{:?}", hash)[0..8]
         );
         let tx_list = confirmed_header.txid;
         for txid in tx_list {
             // deposit & withdraw
             match handle_tx::<T>(&txid) {
                 Err(_) => {
-                    info!("Handle tx failed: {:}", txid);
+                    info!("Handle tx failed: {:}...", &format!("0x{:?}", txid)[0..8]);
                 }
                 Ok(()) => (),
             }

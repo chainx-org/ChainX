@@ -225,16 +225,12 @@ decl_event!(
         UpdateHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
         /// tx hash, block hash, input addr, tx type
         RecvTx(H256, H256, AddrStr, TxType),
-        /// tx hash, input addr
-        CertTx(H256, AddrStr),
         /// tx hash, input addr, is waiting signed original text
         WithdrawTx(H256, AddrStr, bool),
         /// tx hash, input addr, value, statue
         Deposit(H256, AddrStr, u64, bool),
         /// tx hash, input addr, account addr, bind state (init|update)
         Bind(H256, AddrStr, AccountId, BindStatus),
-        /// withdrawal value, all value, cash value
-        CreatProposl(u64, u64, u64),
     }
 );
 
@@ -394,6 +390,9 @@ impl<T: Trait> Module<T> {
                 }
             }
         }
+        hot_keys.sort();
+        cold_keys.sort();
+
         let (hot_addr, hot_redeem) = match create_multi_address::<T>(hot_keys) {
             Some((addr, redeem)) => (addr, redeem),
             None => return Err(AddressError::InvalidAddress),
@@ -538,7 +537,10 @@ impl<T: Trait> Module<T> {
 
         if confirmed {
             handle_tx::<T>(&tx.raw.hash()).map_err(|e| {
-                info!("Handle tx error: {:}", tx.raw.hash());
+                info!(
+                    "Handle tx error: {:}...",
+                    &format!("0x{:?}", tx.raw.hash())[0..8]
+                );
                 e
             })?;
         }
@@ -579,7 +581,7 @@ impl<T: Trait> Module<T> {
                         sig_node.iter().filter(|(_, vote)| *vote == false).collect();
                     data.sig_node.push((who, vote_state));
                     if reject_count.len() + 1 >= sign_num {
-                        info!("{:} Opposition, Clear candidate", reject_count.len() + 1);
+                        info!("{:} opposition, Clear candidate", reject_count.len() + 1);
                         <TxProposal<T>>::kill();
                         return Ok(());
                     }

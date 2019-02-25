@@ -99,12 +99,15 @@ impl<T: Trait> Module<T> {
     }
 
     /// Enforce these punished to be inactive, so that they won't become validators and be rewarded.
-    fn enforce_inactive() {
+    fn enforce_inactive(is_new_era: bool) {
         if Self::gather_candidates().len() <= Self::minimum_validator_count() as usize {
             return;
         }
 
         let punished = <PunishList<T>>::take();
+        if punished.len() == 0 {
+            return;
+        }
         for v in punished.iter() {
             // Force those punished to be inactive
             <xaccounts::IntentionPropertiesOf<T>>::mutate(v, |props| {
@@ -112,14 +115,16 @@ impl<T: Trait> Module<T> {
             });
         }
 
-        let mut validators = <session::Module<T>>::validators();
-        validators.retain(|(v, _)| !punished.contains(&v));
-        let validators = validators
-            .into_iter()
-            .map(|(v, _)| (Self::intention_profiles(&v).total_nomination.as_(), v))
-            .map(|(a, b)| (b, a))
-            .collect::<Vec<_>>();
-        <session::Module<T>>::set_validators(validators.as_slice());
+        if !is_new_era {
+            let mut validators = <session::Module<T>>::validators();
+            validators.retain(|(v, _)| !punished.contains(&v));
+            let validators = validators
+                .into_iter()
+                .map(|(v, _)| (Self::intention_profiles(&v).total_nomination.as_(), v))
+                .map(|(a, b)| (b, a))
+                .collect::<Vec<_>>();
+            <session::Module<T>>::set_validators(validators.as_slice());
+        }
 
         Self::deposit_event(RawEvent::EnforceValidatorsInactive(punished));
     }
@@ -127,7 +132,11 @@ impl<T: Trait> Module<T> {
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or
     /// move to a new era.
     fn new_session(_actual_elapsed: T::Moment, should_reward: bool) {
-        Self::enforce_inactive();
+        let session_index = <session::Module<T>>::current_index();
+        let is_new_era = <ForcingNewEra<T>>::take().is_some()
+            || ((session_index - Self::last_era_length_change()) % Self::sessions_per_era())
+                .is_zero();
+        Self::enforce_inactive(is_new_era);
 
         if should_reward {
             // apply good session reward
@@ -179,11 +188,7 @@ impl<T: Trait> Module<T> {
             // T::OnRewardMinted::on_dilution(total_minted, total_minted);
         }
 
-        let session_index = <session::Module<T>>::current_index();
-        if <ForcingNewEra<T>>::take().is_some()
-            || ((session_index - Self::last_era_length_change()) % Self::sessions_per_era())
-                .is_zero()
-        {
+        if is_new_era {
             Self::new_era();
         }
 

@@ -205,13 +205,21 @@ fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: H256, b
         Some(mut key) => {
             key.push(k.clone());
             <PendingDepositMap<T>>::insert(input_address, key);
-            info!("Add pending deposit: {:}  {:}", k.txid, balance);
+            info!(
+                "Add pending deposit: {:}...  {:}",
+                &format!("0x{:?}", k.txid)[0..8],
+                balance
+            );
         }
         None => {
             let mut cache: Vec<DepositCache> = Vec::new();
             cache.push(k.clone());
             <PendingDepositMap<T>>::insert(input_address, cache);
-            info!("New pending deposit: {:}  {:}", k.txid, balance);
+            info!(
+                "New pending deposit: {:}...  {:}",
+                &format!("0x{:?}", k.txid)[0..8],
+                balance
+            );
         }
     };
 }
