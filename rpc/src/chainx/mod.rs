@@ -18,7 +18,7 @@ use runtime_primitives::traits::{As, Block as BlockT, NumberFor, Zero};
 use script::Script;
 use state_machine::Backend;
 
-use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
+use chainx_primitives::{AccountId, Balance, BlockNumber, SessionKey, Timestamp};
 use chainx_runtime::{Call, Runtime};
 use xr_primitives::generic::b58;
 

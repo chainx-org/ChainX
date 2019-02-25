@@ -81,6 +81,8 @@ pub struct IntentionInfo {
     pub is_validator: bool,
     /// is trustee
     pub is_trustee: bool,
+    /// session key for block authoring
+    pub session_key: AccountId,
     /// how much has intention voted for itself
     pub self_vote: Balance,
     /// jackpot
