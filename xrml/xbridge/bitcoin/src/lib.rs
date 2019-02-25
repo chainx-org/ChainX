@@ -274,7 +274,7 @@ decl_storage! {
         pub TrusteeRedeemScript get(trustee_info): Option<TrusteeScriptInfo>;
     }
     add_extra_genesis {
-        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+        build(|storage: &mut runtime_primitives::StorageOverlay, _: &mut runtime_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use codec::Encode;
 
             let (header, number): (BlockHeader, u32) = config.genesis.clone();

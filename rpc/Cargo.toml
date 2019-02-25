@@ -2,54 +2,62 @@
 name = "substrate-rpc"
 version = "0.1.0"
 authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
 
 [dependencies]
+hex = "0.3.2"
 error-chain = "0.12"
 jsonrpc-core = "10.0.1"
 jsonrpc-pubsub = "10.0.1"
-jsonrpc-derive = "10.0.1"
+jsonrpc-derive = "10.0.2"
 log = "0.4"
-hex = "0.3.2"
-parking_lot = "0.4"
+parking_lot = "0.7.1"
 parity-codec = "3.0"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
+
+# substrate
+client = { package = "substrate-client", git = "https://github.com/chainpool/substrate" }
+substrate-executor = { git = "https://github.com/chainpool/substrate" }
+network = { package = "substrate-network", git = "https://github.com/chainpool/substrate" }
+primitives = { package = "substrate-primitives", git = "https://github.com/chainpool/substrate" }
+state_machine = { package = "substrate-state-machine", git = "https://github.com/chainpool/substrate" }
+transaction_pool = { package = "substrate-transaction-pool",  git = "https://github.com/chainpool/substrate" }
+runtime_primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate" }
+runtime_version = { package = "sr-version", git = "https://github.com/chainpool/substrate" }
+tokio = "0.1.7"
+# substrate 
+xr-primitives = { path = "../xr-primitives" }
+# substrate runtime module
+srml-support = { git = "https://github.com/chainpool/substrate" }
+balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate" }
+srml-timestamp = { git = "https://github.com/chainpool/substrate" }
+
+# chainx
+chainx-primitives = { path = "../primitives" }
+chainx-runtime = {path = "../runtime"}
+# chainx runtime api
+runtime-api = {path = "../runtime-api"}
+# chainx runtime module
+xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets" }
+xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records" }
+xaccounts = { package = "xrml-xaccounts", path = "../xrml/xaccounts" }
+xsession = { package = "xrml-session", path = "../xrml/xsession" }
+xstaking = { package ="xrml-mining-staking", path = "../xrml/xmining/staking" }
+xtokens = { package = "xrml-mining-tokens", path = "../xrml/xmining/tokens" }
+xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport"  }
+xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot"  }
+xbitcoin = { package = "xrml-bridge-bitcoin", path = "../xrml/xbridge/bitcoin" }
+
+# bitcoin
 keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
 chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
 script = { git = "https://github.com/chainx-org/bitcoin-rust" }
 
-substrate-client = { git = "https://github.com/chainpool/substrate" }
-substrate-executor = { git = "https://github.com/chainpool/substrate" }
-substrate-network = { git = "https://github.com/chainpool/substrate" }
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
-substrate-transaction-pool = { git = "https://github.com/chainpool/substrate" }
-substrate-state-machine = { git = "https://github.com/chainpool/substrate" }
-sr-primitives = { git = "https://github.com/chainpool/substrate" }
-sr-version = { git = "https://github.com/chainpool/substrate" }
-srml-support = { git = "https://github.com/chainpool/substrate" }
-srml-balances = { git = "https://github.com/chainpool/substrate" }
-srml-timestamp = { git = "https://github.com/chainpool/substrate" }
-xr-primitives = { path = "../xr-primitives", default_features = false }
-
-tokio = "0.1.7"
-chainx-primitives = { path = "../primitives" }
-xrml-xassets-assets = { path = "../xrml/xassets/assets" }
-xrml-xassets-records = { path = "../xrml/xassets/records" }
-xrml-xaccounts = { path = "../xrml/xaccounts" }
-xrml-session = { path = "../xrml/xsession" }
-xrml-mining-staking = { path = "../xrml/xmining/staking" }
-xrml-mining-tokens = { path = "../xrml/xmining/tokens" }
-xrml-xsupport = { path = "../xrml/xsupport"  }
-xrml-xdex-spot = { path = "../xrml/xdex/spot"  }
-xrml-bridge-bitcoin = { path = "../xrml/xbridge/bitcoin"  }
-chainx-runtime = {path = "../runtime"}
-
-runtime-api = {path = "../runtime-api"}
-
 [dev-dependencies]
 assert_matches = "1.1"
-substrate-test-client = { git = "https://github.com/chainpool/substrate" }
-substrate-consensus-common = { git = "https://github.com/chainpool/substrate" }
+test_client = { package = "substrate-test-client", git = "https://github.com/chainpool/substrate" }
+consensus = { package = "substrate-consensus-common", git = "https://github.com/chainpool/substrate" }
 rustc-hex = "2.0"
 hex-literal = "0.1"

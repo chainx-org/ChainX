@@ -213,10 +213,9 @@ decl_storage! {
     add_extra_genesis {
         config(endowed_users): Vec<(Token, Vec<(T::AccountId, T::Balance)>)>;
 
-        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+        build(|storage: &mut runtime_primitives::StorageOverlay, _: &mut runtime_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
-            use runtime_primitives::StorageMap;
 
             let s = storage.clone().build_storage().unwrap().0;
             let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
@@ -228,7 +227,7 @@ decl_storage! {
                 }
             });
 
-            let init: StorageMap = init.into();
+            let init: runtime_primitives::StorageOverlay = init.into();
             storage.extend(init);
         });
     }

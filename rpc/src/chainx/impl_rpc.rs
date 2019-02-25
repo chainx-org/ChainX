@@ -4,7 +4,7 @@ extern crate hex;
 
 use self::types::Revocation;
 use super::*;
-use codec::Encode;
+use parity_codec::Encode;
 use keys::DisplayLayout;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use srml_support::storage::generator::{StorageMap, StorageValue};
@@ -315,7 +315,7 @@ where
         let state = self.best_state()?;
         let mut intention_info = Vec::new();
 
-        let key = <session::Validators<Runtime>>::key();
+        let key = <xsession::Validators<Runtime>>::key();
         let validators = Self::pickout::<Vec<(AccountId, u64)>>(&state, &key)?
             .expect("Validators can't be empty");
         let validators: Vec<AccountId> = validators.into_iter().map(|(who, _)| who).collect();
@@ -338,8 +338,8 @@ where
             for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
                 let mut info = IntentionInfo::default();
 
-                let key = <session::SessionKeys<Runtime>>::key_for(&intention);
-                let cache_key = <session::NextKeyFor<Runtime>>::key_for(&intention);
+                let key = <xsession::SessionKeys<Runtime>>::key_for(&intention);
+                let cache_key = <xsession::NextKeyFor<Runtime>>::key_for(&intention);
                 info.session_key = match Self::pickout::<SessionKey>(&state, &cache_key)? {
                     Some(s) => s.into(),
                     None => match Self::pickout::<SessionKey>(&state, &key)? {

@@ -65,9 +65,13 @@ decl_storage! {
     trait Store for Module<T: Trait> as XFeeManager {
         pub Switch get(switch): SwitchStore; // Emergency control
         pub ProducerFeeProportion get(producer_fee_proportion) config(): (u32, u32);
+        /// The fee to be paid for making a transaction; the base.
+        pub TransactionBaseFee get(transaction_base_fee) config(): T::Balance;
+        /// The fee to be paid for making a transaction; the per-byte portion.
+        pub TransactionByteFee get(transaction_byte_fee) config(): T::Balance;
     }
     add_extra_genesis {
-        build(|_: &mut sr_primitives::StorageMap, _: &mut sr_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+        build(|_: &mut sr_primitives::StorageOverlay, _: &mut sr_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             assert!(config.producer_fee_proportion.1 != 0, "the proportion denominator can't be Zero");
             assert!(config.producer_fee_proportion.0 < config.producer_fee_proportion.1, "the proportion numerator should less than denominator");
         })
@@ -103,9 +107,8 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn transaction_fee(power: u64, encoded_len: u64) -> T::Balance {
-        <balances::Module<T>>::transaction_base_fee() * <T::Balance as As<u64>>::sa(power)
-            + <balances::Module<T>>::transaction_byte_fee()
-                * <T::Balance as As<u64>>::sa(encoded_len)
+        Self::transaction_base_fee() * <T::Balance as As<u64>>::sa(power)
+            + Self::transaction_byte_fee() * <T::Balance as As<u64>>::sa(encoded_len)
     }
 
     fn calc_fee_and_check(
@@ -206,7 +209,9 @@ mod tests {
         type OnAssetRegisterOrRevoke = ();
     }
 
-    impl xsystem::Trait for Test {}
+    impl xsystem::Trait for Test {
+        type ValidatorList = ();
+    }
 
     pub struct MockDeterminator;
 

@@ -307,37 +307,37 @@ decl_storage! {
         config(asset_list): Vec<(Asset, bool, bool, Vec<(T::AccountId, u64)>)>;
         config(pcx): (Token, Precision, Desc);
 
-        build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
-                use runtime_io::with_externalities;
-                use substrate_primitives::Blake2Hasher;
-                use primitives::traits::{Zero, As};
+        build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
+            use runtime_io::with_externalities;
+            use substrate_primitives::Blake2Hasher;
+            use primitives::traits::{Zero, As};
 
-                let src_r = storage.clone().build_storage().unwrap().0;
-                let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
-                with_externalities(&mut tmp_storage, || {
-                    let chainx: Token = <Module<T> as ChainT>::TOKEN.to_vec();
+            let src_r = storage.clone().build_storage().unwrap().0;
+            let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
+            with_externalities(&mut tmp_storage, || {
+                let chainx: Token = <Module<T> as ChainT>::TOKEN.to_vec();
 
-                    let pcx = Asset::new(chainx, config.pcx.0.clone(), Chain::ChainX, config.pcx.1, config.pcx.2.clone()).unwrap();
-                    Module::<T>::register_asset(pcx, true, false, Zero::zero()).unwrap();
+                let pcx = Asset::new(chainx, config.pcx.0.clone(), Chain::ChainX, config.pcx.1, config.pcx.2.clone()).unwrap();
+                Module::<T>::register_asset(pcx, true, false, Zero::zero()).unwrap();
 
-                    // init for asset_list
-                    for (asset, is_online, is_psedu_intention, init_list) in config.asset_list.iter() {
-                        let token = asset.token();
-                        Module::<T>::register_asset(asset.clone(), *is_online, *is_psedu_intention, Zero::zero()).unwrap();
+                // init for asset_list
+                for (asset, is_online, is_psedu_intention, init_list) in config.asset_list.iter() {
+                    let token = asset.token();
+                    Module::<T>::register_asset(asset.clone(), *is_online, *is_psedu_intention, Zero::zero()).unwrap();
 
-                        for (accountid, value) in init_list {
-                            let value = As::sa(*value);
-                            let total_free_token = Module::<T>::total_asset_balance(&token, AssetType::Free);
-                            let free_token = Module::<T>::free_balance(&accountid, &token);
-                            Module::<T>::set_total_asset_balance(&token, AssetType::Free, total_free_token + value);
-                            // not create account
-                            Module::<T>::set_asset_balance(&accountid, &token, AssetType::Free, free_token + value);
-                        }
+                    for (accountid, value) in init_list {
+                        let value = As::sa(*value);
+                        let total_free_token = Module::<T>::total_asset_balance(&token, AssetType::Free);
+                        let free_token = Module::<T>::free_balance(&accountid, &token);
+                        Module::<T>::set_total_asset_balance(&token, AssetType::Free, total_free_token + value);
+                        // not create account
+                        Module::<T>::set_asset_balance(&accountid, &token, AssetType::Free, free_token + value);
                     }
+                }
 
-                });
-                let map: primitives::StorageMap = tmp_storage.into();
-                storage.extend(map);
+            });
+            let map: primitives::StorageOverlay = tmp_storage.into();
+            storage.extend(map);
         });
     }
 }

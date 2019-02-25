@@ -252,21 +252,21 @@ decl_storage! {
     }
     add_extra_genesis {
         config(pair_list): Vec<(Token, Token, u32, u32, T::Price,bool)>;
-        build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
-                use runtime_io::with_externalities;
-                use substrate_primitives::Blake2Hasher;
-                let src_r = storage.clone().build_storage().unwrap().0;
-                let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
-                with_externalities(&mut tmp_storage, || {
+        build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
+            use runtime_io::with_externalities;
+            use substrate_primitives::Blake2Hasher;
+            let src_r = storage.clone().build_storage().unwrap().0;
+            let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
+            with_externalities(&mut tmp_storage, || {
 
-                    for (first, second, precision, unit, price,status) in config.pair_list.iter() {
+                for (first, second, precision, unit, price,status) in config.pair_list.iter() {
 
-                        Module::<T>::add_pair(first.clone(),second.clone(),*precision,*unit,*price,*status).unwrap();
-                    }
+                    Module::<T>::add_pair(first.clone(),second.clone(),*precision,*unit,*price,*status).unwrap();
+                }
 
-                });
-                let map: primitives::StorageMap = tmp_storage.into();
-                storage.extend(map);
+            });
+            let map: primitives::StorageOverlay = tmp_storage.into();
+            storage.extend(map);
         });
     }
 
@@ -510,7 +510,9 @@ impl<T: Trait> Module<T> {
                 OrderDirection::Sell => {
                     if <xassets::Module<T>>::free_balance(&who, &pair.first) < As::sa(amount.as_())
                     {
-                        return Err("transactor's free token balance too low, can't put sell order");
+                        return Err(
+                            "transactor's free token balance too low, can't put sell order",
+                        );
                     }
                     //  锁定用户资产
                     reserve_last = amount;
@@ -637,14 +639,14 @@ impl<T: Trait> Module<T> {
                                 }
 
                                 //填充成交
-                                if let Err(msg) = Self::fill_order(
+                                if let Err(_msg) = Self::fill_order(
                                     pair.id,
                                     &mut maker_order,
                                     order,
                                     opponent_price,
                                     amount,
                                 ) {
-                                    error!("fill_order error. msg:{:?}", msg);
+                                    error!("fill_order error. msg:{:?}", _msg);
                                 }
                                 //更新最新价、平均价
                                 Self::update_last_average_price(pair.id, opponent_price);

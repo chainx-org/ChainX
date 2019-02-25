@@ -16,11 +16,12 @@
 
 //! Authoring RPC module errors.
 
+use crate::rpc;
 use client;
-use rpc;
+use error_chain::*;
 use transaction_pool::txpool;
 
-use errors;
+use crate::errors;
 
 error_chain! {
     links {

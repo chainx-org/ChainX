@@ -375,11 +375,10 @@ decl_storage! {
     add_extra_genesis {
         config(intentions): Vec<(T::AccountId, T::Balance, Name, URL)>;
         config(trustee_intentions): Vec<(T::AccountId, Vec<u8>, Vec<u8>)>;
-        build(|storage: &mut runtime_primitives::StorageMap, _: &mut runtime_primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
+        build(|storage: &mut runtime_primitives::StorageOverlay, _: &mut runtime_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use codec::Encode;
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
-            use runtime_primitives::StorageMap;
             use xassets::ChainT;
 
             let hash = |key: &[u8]| -> Vec<u8>{
@@ -430,7 +429,7 @@ decl_storage! {
                 let _ = xbitcoin::Module::<T>::update_trustee_addr();
             });
 
-            let init: StorageMap = init.into();
+            let init :runtime_primitives::StorageOverlay = init.into();
             storage.extend(init);
         });
     }

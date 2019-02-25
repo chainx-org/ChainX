@@ -164,8 +164,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .collect(),
         }),
         balances: Some(BalancesConfig {
-            transaction_base_fee: 10000,
-            transaction_byte_fee: 100,
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
@@ -194,7 +192,8 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         fee_manager: Some(XFeeManagerConfig {
             producer_fee_proportion: (1, 10),
-            _genesis_phantom_data: Default::default(),
+            transaction_base_fee: 10000,
+            transaction_byte_fee: 100,
         }),
         xassets: Some(XAssetsConfig {
             pcx: (
