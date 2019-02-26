@@ -4,42 +4,14 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[macro_use]
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
-
+use parity_codec_derive::{Decode, Encode};
 #[cfg(feature = "std")]
-extern crate serde_derive;
+use serde_derive::{Deserialize, Serialize};
 
-// for substrate
-#[cfg(feature = "std")]
-extern crate substrate_primitives;
-
-// for substrate runtime
-// map!, vec! marco.
-extern crate sr_std as rstd;
-
-#[cfg(feature = "std")]
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
-// for substrate runtime module lib
-// Needed for type-safe access to storage DB.
-#[macro_use]
-extern crate srml_support as runtime_support;
-#[cfg(test)]
-extern crate srml_balances as balances;
-#[cfg(test)]
-extern crate srml_consensus as consensus;
-#[cfg(test)]
-extern crate srml_session as session;
-extern crate srml_system as system;
-
-extern crate xr_primitives;
-extern crate xrml_xassets_assets as xassets;
-
+use primitives::traits::Hash;
 use rstd::prelude::*;
-use runtime_primitives::traits::Hash;
-use runtime_support::{dispatch::Result, StorageMap};
+use support::dispatch::Result;
+use support::{decl_event, decl_module, decl_storage, StorageMap};
 use xassets::Chain;
 use xr_primitives::XString;
 
@@ -151,6 +123,12 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {}
+
+impl<T: Trait> xsystem::Validator<T::AccountId> for Module<T> {
+    fn get_validator_by_name(name: &[u8]) -> Option<T::AccountId> {
+        Self::intention_of(name.to_vec())
+    }
+}
 
 pub fn is_valid_name<T: Trait>(name: &[u8]) -> Result {
     if name.len() > 12 || name.len() < 2 {

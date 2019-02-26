@@ -241,6 +241,7 @@ impl xbootstrap::Trait for Runtime {}
 // cxrml trait
 impl xsystem::Trait for Runtime {
     type ValidatorList = Session;
+    type Validator = XAccounts;
 }
 
 impl xaccounts::Trait for Runtime {

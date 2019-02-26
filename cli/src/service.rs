@@ -43,7 +43,7 @@ use self::sr_primitives::generic::BlockId;
 use self::sr_primitives::traits::ProvideRuntimeApi;
 use self::xrml_xsystem::InherentDataProvider;
 
-type XSystemInherentDataProvider = InherentDataProvider<AccountId>;
+type XSystemInherentDataProvider = InherentDataProvider;
 
 static mut VALIDATOR_NAME: Option<String> = None;
 
@@ -107,7 +107,6 @@ construct_service_factory! {
                     .expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
                 if let Some(ref key) = local_key {
-                        info!("Using authority key {}", key.public());
                         let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
                             client: service.client(),
                             transaction_pool: service.transaction_pool(),
@@ -115,7 +114,7 @@ construct_service_factory! {
 
                         let client = service.client();
                         let accountid_from_localkey: AccountId = key.public().as_array_ref().clone().into();
-
+                        info!("Using authority key: {}, accountid is: {}", key.public(), accountid_from_localkey);
                         // use validator name to get accountid and sessionkey from runtime storage
                         let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
                         let best_hash = client.info()?.chain.best_hash;
@@ -146,7 +145,7 @@ construct_service_factory! {
 
                         // set blockproducer for accountid
                         service.config.custom.inherent_data_providers
-                            .register_provider(XSystemInherentDataProvider::new(&producer)).expect("blockproducer set err; qed");
+                            .register_provider(XSystemInherentDataProvider::new(name.as_bytes().to_vec())).expect("blockproducer set err; qed");
 
                         executor.spawn(start_aura(
                             SlotDuration::get_or_compute(&*client)?,

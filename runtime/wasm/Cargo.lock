@@ -1544,24 +1544,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "srml-session"
-version = "0.1.0"
-source = "git+https://github.com/chainpool/substrate#dd1604c6b28d066ae8002aa2b14a7a76f9225b22"
-dependencies = [
- "hex-literal 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
-]
-
-[[package]]
 name = "srml-sudo"
 version = "0.1.0"
 source = "git+https://github.com/chainpool/substrate#dd1604c6b28d066ae8002aa2b14a7a76f9225b22"
@@ -2493,24 +2475,17 @@ name = "xrml-xaccounts"
 version = "0.4.0"
 dependencies = [
  "hex-literal 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "keys 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-session 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "xr-primitives 0.4.0",
  "xrml-xassets-assets 0.4.0",
+ "xrml-xsystem 0.4.0",
 ]
 
 [[package]]
@@ -2655,18 +2630,15 @@ dependencies = [
 name = "xrml-xsystem"
 version = "0.4.0"
 dependencies = [
- "hex-literal 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-inherents 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xrml-xsupport 0.4.0",
 ]
 
@@ -2840,7 +2812,6 @@ dependencies = [
 "checksum srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum srml-indices 0.1.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum srml-metadata 0.1.0 (git+https://github.com/chainpool/substrate)" = "<none>"
-"checksum srml-session 0.1.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum srml-sudo 0.1.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum srml-support 0.1.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum srml-support-procedural 0.1.0 (git+https://github.com/chainpool/substrate)" = "<none>"
