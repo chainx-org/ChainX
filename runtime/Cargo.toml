@@ -61,6 +61,8 @@ xrml-bridge-bitcoin = {path = "../xrml/xbridge/bitcoin", default-features = fals
 xrml-bridge-sdot = {path = "../xrml/xbridge/sdot", default-features = false }
 # dex
 xrml-xdex-spot = { path = "../xrml/xdex/spot", default-features = false }
+# multisig
+xrml-xmultisig = { path = "../xrml/xmultisig", default-features = false }
 
 [features]
 default = ["std"]
@@ -121,4 +123,6 @@ std = [
     "xrml-bridge-sdot/std",
     # dex
     "xrml-xdex-spot/std",
+    # multisig
+    "xrml-xmultisig/std",
 ]

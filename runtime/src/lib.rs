@@ -72,6 +72,7 @@ pub extern crate xrml_mining_tokens as xtokens;
 
 // dex
 pub extern crate xrml_xdex_spot as xspot;
+extern crate xrml_xmultisig as xmultisig;
 
 mod fee;
 mod xexecutive;
@@ -293,6 +294,13 @@ impl sudo::Trait for Runtime {
     type Proposal = Call;
 }
 
+impl xmultisig::Trait for Runtime {
+    type MultiSig = xmultisig::SimpleMultiSigIdFor<Runtime>;
+    type GenesisMultiSig = xmultisig::ChainXGenesisMultisig<Runtime>;
+    type Proposal = Call;
+    type Event = Event;
+}
+
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
         Block = Block,
@@ -324,8 +332,10 @@ construct_runtime!(
         // dex
         XSpot: xspot,
         // bridge
-        XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>,  Event<T>},
-        XBridgeOfSDOT: sdot::{Module, Call, Storage, Config<T>,  Event<T>},
+        XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>, Event<T>},
+        XBridgeOfSDOT: sdot::{Module, Call, Storage, Config<T>, Event<T>},
+        // multisig
+        XMultiSig: xmultisig::{Module, Call, Storage, Event<T>},
 
         XBootstrap: xbootstrap::{Config<T>},
     }

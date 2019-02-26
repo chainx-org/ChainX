@@ -209,6 +209,7 @@ dependencies = [
  "xrml-xassets-records 0.4.0",
  "xrml-xbootstrap 0.4.0",
  "xrml-xdex-spot 0.4.0",
+ "xrml-xmultisig 0.4.0",
  "xrml-xsupport 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
@@ -2562,14 +2563,12 @@ name = "xrml-xbootstrap"
 version = "0.4.0"
 dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
- "hex-literal 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
@@ -2580,6 +2579,7 @@ dependencies = [
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xdex-spot 0.4.0",
+ "xrml-xmultisig 0.4.0",
 ]
 
 [[package]]
@@ -2609,6 +2609,24 @@ dependencies = [
  "xrml-xassets-records 0.4.0",
  "xrml-xsupport 0.4.0",
  "xrml-xsystem 0.4.0",
+]
+
+[[package]]
+name = "xrml-xmultisig"
+version = "0.4.0"
+dependencies = [
+ "hex-literal 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-xsupport 0.4.0",
 ]
 
 [[package]]

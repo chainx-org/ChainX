@@ -19,7 +19,8 @@ use chainx_runtime::{
     XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
 };
 
-use ed25519::{self, Public};
+use ed25519;
+//use ed25519::{self, Public};
 
 use self::btc_chain::BlockHeader;
 use self::btc_primitives::{compact::Compact, hash::H256};
@@ -45,7 +46,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let dave = ed25519::Pair::from_seed(b"Dave                            ").public();
     let gavin = ed25519::Pair::from_seed(b"Gavin                           ").public();
     let satoshi = ed25519::Pair::from_seed(b"Satoshi                         ").public();
-    let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
+//    let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
     let sudo_address =
         hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
 
@@ -223,13 +224,13 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             current_era: 0,
             penalty: 50 * 100_000_000 / 150, // 1 per block reward
             validator_stake_threshold: 1,
-            council_address: funding,
-            team_address: Public::from_ss58check(
-                "5CSff76SK7qcWYq5MpvoHDVRrjWFwpxurwUu6Bqw25hKPQiy",
-            )
-            .unwrap()
-            .0
-            .into(),
+            //            council_address: funding,
+            //            team_address: Public::from_ss58check(
+            //                "5CSff76SK7qcWYq5MpvoHDVRrjWFwpxurwUu6Bqw25hKPQiy",
+            //            )
+            //            .unwrap()
+            //            .0
+            //            .into(),
         }),
         xtokens: Some(XTokensConfig {
             token_discount: 50,
@@ -304,6 +305,14 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             genesis: btc_genesis,
             params_info: params_info,
             network_id: 1,
+            multisig_init_info: (
+                endowed
+                    .iter()
+                    .cloned()
+                    .map(|(account, _)| (account.into(), true))
+                    .collect(),
+                3,
+            ),
         }),
     }
 }

@@ -4,33 +4,33 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate parity_codec as codec;
-extern crate parity_codec_derive;
+#[cfg(feature = "std")]
+use sr_io as runtime_io;
+#[cfg(feature = "std")]
+use sr_primitives as runtime_primitives;
 
 #[cfg(feature = "std")]
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
-extern crate sr_std as rstd;
-
+use chain as btc_chain;
+use runtime_support::{decl_module, decl_storage};
+use srml_support as runtime_support;
+//#[cfg(feature = "std")]
+//use srml_system as system;
 #[cfg(feature = "std")]
-extern crate substrate_primitives;
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_system as system;
+use substrate_finality_grandpa_primitives as fg_primitives;
+#[cfg(feature = "std")]
+use xrml_bridge_bitcoin as xbitcoin;
+#[cfg(feature = "std")]
+use xrml_mining_staking as xstaking;
+use xrml_mining_tokens as xtokens;
+#[cfg(feature = "std")]
+use xrml_xaccounts as xaccounts;
+#[cfg(feature = "std")]
+use xrml_xassets_assets as xassets;
+#[cfg(feature = "std")]
+use xrml_xdex_spot as xspot;
+use xrml_xmultisig as xmultisig;
 
-extern crate chain;
-
-extern crate xrml_bridge_bitcoin as xbitcoin;
-extern crate xrml_mining_staking as xstaking;
-extern crate xrml_mining_tokens as xtokens;
-extern crate xrml_xaccounts as xaccounts;
-extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xdex_spot as xspot;
-
-// re-export since this is necessary for `impl_apis` in runtime.
-pub extern crate substrate_finality_grandpa_primitives as fg_primitives;
-
-pub trait Trait: xtokens::Trait {}
+pub trait Trait: xtokens::Trait + xmultisig::Trait {}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -61,31 +61,34 @@ decl_storage! {
 
         // xbitcoin
         config(network_id): u32;
-        config(genesis): (chain::BlockHeader, u32);
+        config(genesis): (btc_chain::BlockHeader, u32);
         config(params_info): xbitcoin::Params;
 
+        // multisig
+        config(multisig_init_info): (Vec<(T::AccountId, bool)>, u32);
+
         build(|storage: &mut runtime_primitives::StorageOverlay, _: &mut runtime_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use codec::{Encode, KeyedVec};
+            use parity_codec::{Encode, KeyedVec};
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
             use runtime_support::{StorageMap, StorageValue};
             use runtime_primitives::{StorageOverlay, traits::{Zero, As}};
             use xaccounts::{TrusteeEntity, TrusteeIntentionProps};
             use xassets::{ChainT, AssetType, Token, Chain, Asset};
-            use chain::BlockHeader;
+            use btc_chain::BlockHeader;
             use xbitcoin::BlockHeaderInfo;
 
             // grandpa
             let auth_count = config.authorities.len() as u32;
             config.authorities.iter().enumerate().for_each(|(i, v)| {
                 storage.insert((i as u32).to_keyed_vec(
-                    ::fg_primitives::well_known_keys::AUTHORITY_PREFIX),
+                    fg_primitives::well_known_keys::AUTHORITY_PREFIX),
                     v.encode()
                 );
             });
 
             storage.insert(
-                ::fg_primitives::well_known_keys::AUTHORITY_COUNT.to_vec(),
+                fg_primitives::well_known_keys::AUTHORITY_COUNT.to_vec(),
                 auth_count.encode(),
             );
 
@@ -201,6 +204,13 @@ decl_storage! {
                     );
                 }
 
+                // xmultisig
+                let required_num = config.multisig_init_info.1;
+                let init_accounts = config.multisig_init_info.0.clone();
+                let (team_addr, council_addr)= xmultisig::Module::<T>::deploy_in_genesis(init_accounts, required_num);
+                // set to related place
+                xstaking::TeamAddress::<T>::put(team_addr);
+                xstaking::CouncilAddress::<T>::put(council_addr);
             });
 
             let init: StorageOverlay = init.into();
