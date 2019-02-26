@@ -602,14 +602,14 @@ impl<T: Trait> Module<T> {
                             let amount = if v1 >= v2 { v2 } else { v1 };
 
                             //填充成交
-                            if let Err(msg) = Self::fill_order(
+                            if let Err(_msg) = Self::fill_order(
                                 pair.id,
                                 &mut maker_order,
                                 order,
                                 opponent_price,
                                 amount,
                             ) {
-                                error!("fill_order error. msg:{:?}", msg);
+                                error!("fill_order error. msg:{:?}", _msg);
                             }
 
                             //更新最新价、平均价

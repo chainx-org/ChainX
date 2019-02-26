@@ -3,33 +3,21 @@
 //! this module is for chainx system
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
-#[macro_use]
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
+#[cfg(feature = "std")]
+use parity_codec_derive::Decode;
+use parity_codec_derive::Encode;
 
 // for substrate
-#[cfg(feature = "std")]
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
-extern crate sr_std as rstd;
-extern crate substrate_inherents as inherents;
-#[cfg(feature = "std")]
-extern crate substrate_primitives;
-// for substrate runtime module lib
-// Needed for type-safe access to storage DB.
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_system as system;
+use sr_std as rstd;
+use substrate_inherents as inherents;
 
-#[macro_use]
-extern crate xrml_xsupport;
+use srml_support::{decl_module, decl_storage, dispatch::Result, StorageValue};
+use srml_system as system;
+
+use xrml_xsupport::{error, info};
 
 #[cfg(test)]
 mod tests;
-
-use runtime_support::dispatch::Result;
-use runtime_support::StorageValue;
 
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
@@ -43,10 +31,15 @@ use system::ensure_inherent;
 
 pub trait Trait: system::Trait {
     type ValidatorList: ValidatorList<Self::AccountId>;
+    type Validator: Validator<Self::AccountId>;
 }
 
 pub trait ValidatorList<AccountId> {
     fn validator_list() -> Vec<AccountId>;
+}
+
+pub trait Validator<AccountId> {
+    fn get_validator_by_name(name: &[u8]) -> Option<AccountId>;
 }
 
 decl_module! {
@@ -91,13 +84,23 @@ impl<T: Trait> ProvideInherent for Module<T> {
     const INHERENT_IDENTIFIER: InherentIdentifier = INHERENT_IDENTIFIER;
     fn create_inherent(data: &InherentData) -> Option<Self::Call> {
         let r = data
-            .get_data::<T::AccountId>(&INHERENT_IDENTIFIER)
+            .get_data::<Vec<u8>>(&INHERENT_IDENTIFIER)
             .expect("gets and decodes producer inherent data");
-        let producer = r.expect("producer must set before");
+        let producer_name = r.expect("producer must set before");
+
+        let producer: T::AccountId = if let Some(a) =
+            T::Validator::get_validator_by_name(&producer_name)
+        {
+            a
+        } else {
+            error!("[create_inherent] producer_name:{:} do not have accountid on chain, may not be registerd or do not have current storage", std::str::from_utf8(&producer_name).unwrap_or(&format!("{:?}", producer_name)));
+            panic!("[create_inherent] do not have accountid on chain, may not be registerd or do not have current storage");
+        };
 
         if !Self::is_validator(&producer) {
             error!(
-                "[create_inherent] producer:{:} not in current validators!, validators is:{:?}",
+                "[create_inherent] producer_name:{:?}, producer:{:} not in current validators!, validators is:{:?}",
+                std::str::from_utf8(&producer_name).unwrap_or(&format!("{:?}", producer_name)),
                 producer,
                 T::ValidatorList::validator_list()
             );
@@ -147,21 +150,21 @@ impl IsFatalError for InherentError {
 }
 
 #[cfg(feature = "std")]
-pub struct InherentDataProvider<AccountId> {
-    block_producer: AccountId,
+pub struct InherentDataProvider {
+    block_producer_name: Vec<u8>,
 }
 
 #[cfg(feature = "std")]
-impl<AccountId: codec::Codec + Clone> InherentDataProvider<AccountId> {
-    pub fn new(who: &AccountId) -> Self {
-        InherentDataProvider::<AccountId> {
-            block_producer: who.clone(),
+impl InherentDataProvider {
+    pub fn new(producer_name: Vec<u8>) -> Self {
+        InherentDataProvider {
+            block_producer_name: producer_name,
         }
     }
 }
 
 #[cfg(feature = "std")]
-impl<AccountId: codec::Codec> ProvideInherentData for InherentDataProvider<AccountId> {
+impl ProvideInherentData for InherentDataProvider {
     fn inherent_identifier(&self) -> &'static InherentIdentifier {
         &INHERENT_IDENTIFIER
     }
@@ -170,7 +173,7 @@ impl<AccountId: codec::Codec> ProvideInherentData for InherentDataProvider<Accou
         &self,
         inherent_data: &mut InherentData,
     ) -> StdResult<(), RuntimeString> {
-        inherent_data.put_data(INHERENT_IDENTIFIER, &self.block_producer)
+        inherent_data.put_data(INHERENT_IDENTIFIER, &self.block_producer_name)
     }
 
     fn error_to_string(&self, _error: &[u8]) -> Option<String> {
