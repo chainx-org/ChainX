@@ -17,11 +17,13 @@
 //! Substrate CLI library.
 
 #![warn(unused_extern_crates)]
+#![feature(custom_attribute)]
 
 extern crate tokio;
 
 extern crate chainx_runtime;
 extern crate exit_future;
+extern crate hex_literal;
 extern crate substrate_cli as cli;
 extern crate substrate_primitives as primitives;
 #[cfg(test)]
@@ -36,16 +38,18 @@ extern crate substrate_finality_grandpa as grandpa;
 #[macro_use]
 extern crate substrate_service;
 extern crate chainx_executor;
-extern crate sr_primitives;
 extern crate substrate_inherents as inherents;
 extern crate substrate_rpc_servers as rpc;
 
 #[macro_use]
 extern crate log;
 
+extern crate structopt;
+
 mod chain_spec;
 mod genesis_config;
 mod native_rpc;
+mod params;
 mod service;
 
 pub use cli::{error, IntoExit, NoCustom, VersionInfo};
@@ -53,6 +57,9 @@ use primitives::ed25519;
 use std::ops::Deref;
 use substrate_service::{Roles as ServiceRoles, ServiceFactory};
 use tokio::runtime::Runtime;
+
+use params::ChainXParams;
+use service::set_validator_name;
 
 /// The chain specification option.
 #[derive(Clone, Debug)]
@@ -99,13 +106,13 @@ where
     T: Into<std::ffi::OsString> + Clone,
     E: IntoExit,
 {
-    cli::parse_and_execute::<service::Factory, NoCustom, NoCustom, _, _, _, _, _>(
+    cli::parse_and_execute::<service::Factory, NoCustom, ChainXParams, _, _, _, _, _>(
         load_spec,
         &version,
         "ChainX",
         args,
         exit,
-        |exit, _custom_args, config| {
+        |exit, custom_args, config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
             info!("  by Chainpool, 2018-2019");
@@ -114,6 +121,15 @@ where
             info!("Roles: {:?}", config.roles);
             let runtime = Runtime::new().map_err(|e| format!("{:?}", e))?;
             let executor = runtime.executor();
+
+            if config.roles == ServiceRoles::AUTHORITY {
+                let name = custom_args
+                    .validator_name
+                    .expect("if in AUTHORITY mode, must point the validator name!");
+                info!("Validator name: {:}", name);
+                set_validator_name(name);
+            }
+
             match config.roles {
                 ServiceRoles::LIGHT => run_until_exit(
                     runtime,

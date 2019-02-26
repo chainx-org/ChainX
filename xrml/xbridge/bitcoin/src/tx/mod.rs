@@ -4,9 +4,9 @@ use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 
 use super::{
-    BindStatus, BlockHeaderFor, BtcFee, CandidateTx, DepositCache, Module, NetworkId,
-    PendingDepositMap, RawEvent, Trait, TrusteeRedeemScript, TxFor, TxInfo, TxProposal, TxType,
-    VoteResult,
+    deserialize, BindStatus, BlockHeaderFor, BtcFee, DepositCache, Module, NetworkId,
+    PendingDepositMap, RawEvent, Reader, Trait, TrusteeRedeemScript, TxFor, TxInfo, TxProposal,
+    TxType,
 };
 use chain::{OutPoint, Transaction};
 use crypto::dhash160;
@@ -14,7 +14,6 @@ use keys;
 use keys::{Address, DisplayLayout};
 use merkle::{parse_partial_merkle_tree, PartialMerkleTree};
 use primitives::{bytes::Bytes, hash::H256};
-use runtime_io;
 use runtime_primitives::traits::As;
 use runtime_support::{dispatch::Result, StorageMap, StorageValue};
 use script::{
@@ -82,10 +81,21 @@ pub fn inspect_address<T: Trait>(tx: &Transaction, outpoint: OutPoint) -> Option
 }
 
 pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
-    let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
-        .ok_or("Should set trustee address first.")?;
-    let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
-        .map_err(|_| "Invalid address")?;
+    let trustee_address = match <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin) {
+        Some(t) => t,
+        None => {
+            <TxFor<T>>::remove(txid);
+            return Err("Can't get trustee address");
+        }
+    };
+    //.ok_or("Should set trustee address first.")?;
+    let hot_address = match Address::from_layout(&trustee_address.hot_address.as_slice()) {
+        Ok(a) => a,
+        Err(_) => {
+            <TxFor<T>>::remove(txid);
+            return Err("Invalid address");
+        }
+    };
     let tx_info = <TxFor<T>>::get(txid);
     let input_address = tx_info.input_address;
 
@@ -134,9 +144,15 @@ pub fn create_multi_address<T: Trait>(pubkeys: Vec<Vec<u8>>) -> Option<(Address,
         .push_opcode(opcode)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
+    let network_id = <NetworkId<T>>::get();
+    let net = if network_id == 1 {
+        keys::Network::Testnet
+    } else {
+        keys::Network::Mainnet
+    };
     let addr = Address {
         kind: keys::Type::P2SH,
-        network: keys::Network::Testnet,
+        network: net,
         hash: dhash160(&script),
     };
     Some((addr, script))
@@ -172,7 +188,6 @@ pub fn check_withdraw_tx<T: Trait>(
                                     && output.value + btc_fee == r.data.balance().as_() as u64
                                 {
                                     addr_flag = true;
-                                    break;
                                 } else if trustee_address.hash == script_addresses[0].hash {
                                     multi_flag = true;
                                 }
@@ -191,9 +206,6 @@ pub fn check_withdraw_tx<T: Trait>(
             if output_len == withdraw_len + 1 && !multi_flag {
                 return Err("The change address not match the trustee address");
             }
-            let candidate = CandidateTx::new(withdraw_id, tx, VoteResult::Unfinish, Vec::new());
-            <TxProposal<T>>::put(candidate);
-            runtime_io::print("[bridge-btc] Through the legality check of withdrawal transaction ");
             Ok(())
         }
     }

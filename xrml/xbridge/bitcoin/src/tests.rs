@@ -4,28 +4,21 @@ extern crate base58;
 extern crate hex;
 extern crate rustc_hex;
 extern crate serialization;
+extern crate sr_io as runtime_io;
 extern crate sr_primitives;
 extern crate srml_consensus as consensus;
-use self::base58::FromBase58;
-use self::hex::FromHex;
-//use self::rustc_hex::FromHex;
 use self::keys::DisplayLayout;
-use self::rustc_hex::ToHex;
+use self::runtime_io::with_externalities;
 use self::serialization::Reader;
 use super::*;
 use chain::Transaction;
 use crypto::dhash160;
-use runtime_io;
-use runtime_io::with_externalities;
 use runtime_primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use runtime_primitives::traits::{BlakeTwo256, IdentityLookup};
 use runtime_primitives::BuildStorage;
 use runtime_support::StorageValue;
 use script::builder::Builder;
-use script::{
-    builder, script::Script, Opcode, SignatureChecker, SignatureVersion, TransactionInputSigner,
-    TransactionSignatureChecker,
-};
+use script::{script::Script, Opcode};
 use substrate_primitives::{Blake2Hasher, H256 as S_H256};
 
 impl_outer_origin! {
@@ -69,8 +62,6 @@ impl timestamp::Trait for Test {
     type Moment = u64;
     type OnTimestampSet = ();
 }
-
-impl xsystem::Trait for Test {}
 
 pub struct MockDeterminator;
 
@@ -127,7 +118,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             params_info: Params::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
-                3,                    // max_fork_route_preset
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                 10 * 60,              // target_spacing_seconds
                 4,
@@ -174,7 +164,6 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
             params_info: Params::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
-                3,                    // max_fork_route_preset
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                 10 * 60,              // target_spacing_seconds
                 4,
@@ -525,7 +514,6 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
             params_info: Params::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
-                3,                    // max_fork_route_preset
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                 10 * 60,              // target_spacing_seconds
                 4,
@@ -597,7 +585,6 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
             params_info: Params::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
-                3,                    // max_fork_route_preset
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                 10 * 60,              // target_spacing_seconds
                 4,
@@ -694,15 +681,14 @@ pub fn test_multi_address() {
 
 fn create_multi_address(pubkeys: Vec<Vec<u8>>) -> Address {
     let mut build = Builder::default().push_opcode(Opcode::OP_3);
-    for (i, pubkey) in pubkeys.iter().enumerate() {
+    for (_, pubkey) in pubkeys.iter().enumerate() {
         build = build.push_bytes(pubkey);
     }
     let script = build
         .push_opcode(Opcode::OP_4)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
-    println!("script:{:?}", script.to_bytes().to_vec());
-    println!("script:{:?}", Script::from(script.to_bytes().to_vec()));
+    //println!("script:{:?}", script.to_bytes().to_vec());
     let multisig_address = Address {
         kind: keys::Type::P2SH,
         network: keys::Network::Testnet,
@@ -733,7 +719,9 @@ fn test_create_multi_address() {
         hex::decode("02e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2").unwrap();
     let pubkey8_bytes =
         hex::decode("020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f").unwrap();
-
+    if pubkey4_bytes.len() != 33 && pubkey4_bytes.len() != 65 {
+        panic!("pubkey_bytes error 2")
+    }
     let mut hot_keys = Vec::new();
     let mut cold_keys = Vec::new();
     hot_keys.push(pubkey1_bytes);
@@ -745,11 +733,9 @@ fn test_create_multi_address() {
     cold_keys.push(pubkey6_bytes);
     cold_keys.push(pubkey7_bytes);
     cold_keys.push(pubkey8_bytes);
-
-    let hot_addr = create_multi_address(hot_keys);
+    hot_keys.sort();
+    let _hot_addr = create_multi_address(hot_keys);
     let cold_addr = create_multi_address(cold_keys);
-    println!("hot_addr:{:?}", hot_addr.to_string());
-    println!("cold_addr:{:?}", cold_addr.to_string());
 
     let layout_addr = cold_addr.layout().to_vec();
     let layout = [
@@ -804,9 +790,9 @@ fn test_accountid() {
 #[test]
 fn test_sign_withdraw() {
     with_externalities(&mut new_test_ext3(), || {
-        let tx1 = hex::decode("01000000019d15247f7f75ffd6e9377ea928f476bcaf9ab542563429b97ee2ef89f2c9d4a101000000b5004830450221008c9147795b2ddf923d5dad3c9fcfde6394aa2629b9a10ca8f93a5c6d4293a7490220687aeb3318b35450fda4d45cc54177f3d6f898d15ea1f8705a77c7116cb44fe8014c695221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d2102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae4053aeffffffff01e8030000000000001976a914023dbd259dd15fc43da1a758ea7b2bfaec97893488ac00000000").unwrap();
-        let tx2 = hex::decode("01000000019d15247f7f75ffd6e9377ea928f476bcaf9ab542563429b97ee2ef89f2c9d4a101000000fdfd00004830450221008c9147795b2ddf923d5dad3c9fcfde6394aa2629b9a10ca8f93a5c6d4293a7490220687aeb3318b35450fda4d45cc54177f3d6f898d15ea1f8705a77c7116cb44fe80147304402204b999fbf18b944a3f6446ca56d094d70699a1e44c8636b06fc2267434e9200ae022073327aca6cdad35075c9c8bb2759a24753906ef030ccb513d8a515648ab46d0e014c695221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d2102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae4053aeffffffff01e8030000000000001976a914023dbd259dd15fc43da1a758ea7b2bfaec97893488ac00000000").unwrap();
-        let tx: Transaction = deserialize(Reader::new(&tx2)).unwrap();
-        XBridgeOfBTC::apply_sign_withdraw(0, tx, true).unwrap();
+        let _tx1 = hex::decode("01000000019d15247f7f75ffd6e9377ea928f476bcaf9ab542563429b97ee2ef89f2c9d4a101000000b5004830450221008c9147795b2ddf923d5dad3c9fcfde6394aa2629b9a10ca8f93a5c6d4293a7490220687aeb3318b35450fda4d45cc54177f3d6f898d15ea1f8705a77c7116cb44fe8014c695221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d2102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae4053aeffffffff01e8030000000000001976a914023dbd259dd15fc43da1a758ea7b2bfaec97893488ac00000000").unwrap();
+        let tx = hex::decode("01000000019d15247f7f75ffd6e9377ea928f476bcaf9ab542563429b97ee2ef89f2c9d4a101000000fdfd00004830450221008c9147795b2ddf923d5dad3c9fcfde6394aa2629b9a10ca8f93a5c6d4293a7490220687aeb3318b35450fda4d45cc54177f3d6f898d15ea1f8705a77c7116cb44fe80147304402204b999fbf18b944a3f6446ca56d094d70699a1e44c8636b06fc2267434e9200ae022073327aca6cdad35075c9c8bb2759a24753906ef030ccb513d8a515648ab46d0e014c695221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d2102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae4053aeffffffff01e8030000000000001976a914023dbd259dd15fc43da1a758ea7b2bfaec97893488ac00000000").unwrap();
+        let _redeem_script: Script = Script::from("532103f72c448a0e59f48d4adef86cba7b278214cece8e56ef32ba1d179e0a8129bdba210306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40210227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c354ae");
+        handle_condidate::<Test>(tx).unwrap();
     })
 }

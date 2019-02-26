@@ -15,8 +15,9 @@
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use assert_matches::assert_matches;
 use consensus::BlockOrigin;
-use test_client::runtime::{Block, Header};
+use test_client::runtime::{Block, Header, H256};
 use test_client::{self, TestClient};
 
 #[test]
@@ -32,7 +33,7 @@ fn should_return_header() {
     assert_matches!(
         client.header(Some(client.client.genesis_hash()).into()),
         Ok(Some(ref x)) if x == &Header {
-            parent_hash: 0.into(),
+            parent_hash: H256::from_low_u64_be(0),
             number: 0,
             state_root: x.state_root.clone(),
             extrinsics_root: "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314".parse().unwrap(),
@@ -43,7 +44,7 @@ fn should_return_header() {
     assert_matches!(
         client.header(None.into()),
         Ok(Some(ref x)) if x == &Header {
-            parent_hash: 0.into(),
+            parent_hash: H256::from_low_u64_be(0),
             number: 0,
             state_root: x.state_root.clone(),
             extrinsics_root: "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314".parse().unwrap(),
@@ -51,7 +52,10 @@ fn should_return_header() {
         }
     );
 
-    assert_matches!(client.header(Some(5.into()).into()), Ok(None));
+    assert_matches!(
+        client.header(Some(H256::from_low_u64_be(5)).into()),
+        Ok(None)
+    );
 }
 
 #[test]
@@ -105,7 +109,7 @@ fn should_return_a_block() {
         }
     );
 
-    assert_matches!(api.block(Some(5.into()).into()), Ok(None));
+    assert_matches!(api.block(Some(H256::from_low_u64_be(5)).into()), Ok(None));
 }
 
 #[test]
@@ -124,11 +128,11 @@ fn should_return_block_hash() {
     );
 
     assert_matches!(
-        client.block_hash(Some(0u64).into()),
+        client.block_hash(Some(0u64.into()).into()),
         Ok(Some(ref x)) if x == &client.client.genesis_hash()
     );
 
-    assert_matches!(client.block_hash(Some(1u64).into()), Ok(None));
+    assert_matches!(client.block_hash(Some(1u64.into()).into()), Ok(None));
 
     let block = client.client.new_block().unwrap().bake().unwrap();
     client
@@ -137,11 +141,15 @@ fn should_return_block_hash() {
         .unwrap();
 
     assert_matches!(
-        client.block_hash(Some(0u64).into()),
+        client.block_hash(Some(0u64.into()).into()),
         Ok(Some(ref x)) if x == &client.client.genesis_hash()
     );
     assert_matches!(
-        client.block_hash(Some(1u64).into()),
+        client.block_hash(Some(1u64.into()).into()),
+        Ok(Some(ref x)) if x == &block.hash()
+    );
+    assert_matches!(
+        client.block_hash(Some(::primitives::U256::from(1u64).into()).into()),
         Ok(Some(ref x)) if x == &block.hash()
     );
 }

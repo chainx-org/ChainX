@@ -29,11 +29,7 @@ impl CheckFee for Call {
         let base_power = match self {
             // xassets
             Call::XAssets(call) => match call {
-                XAssetsCall::transfer(_, _, _, _) => Some(10),
-                // root
-                XAssetsCall::set_balance(_, _, _) => Some(0),
-                XAssetsCall::register_asset(_, _, _) => Some(0),
-                XAssetsCall::revoke_asset(_) => Some(0),
+                XAssetsCall::transfer(_, _, _, _) => Some(1),
                 _ => None,
             },
             Call::XAssetsProcess(call) => match call {
@@ -46,10 +42,10 @@ impl CheckFee for Call {
                     None
                 } else {
                     match call {
-                        BitcoinCall::push_header(_) => Some(20),
-                        BitcoinCall::push_transaction(_) => Some(10),
-                        BitcoinCall::create_withdraw_tx(_, _) => Some(50),
-                        BitcoinCall::sign_withdraw_tx(_, _) => Some(50),
+                        BitcoinCall::push_header(_) => Some(10),
+                        BitcoinCall::push_transaction(_) => Some(8),
+                        BitcoinCall::create_withdraw_tx(_, _) => Some(5),
+                        BitcoinCall::sign_withdraw_tx(_, _) => Some(5),
                         _ => None,
                     }
                 };
@@ -58,7 +54,7 @@ impl CheckFee for Call {
             // xmining
             Call::XStaking(call) => match call {
                 XStakingCall::register(_) => Some(100),
-                XStakingCall::refresh(_, _, _, _) => Some(5),
+                XStakingCall::refresh(_, _, _, _) => Some(100),
                 XStakingCall::nominate(_, _, _) => Some(5),
                 XStakingCall::unnominate(_, _, _) => Some(3),
                 XStakingCall::unfreeze(_, _) => Some(2),
@@ -92,7 +88,7 @@ impl CheckFee for Call {
                     None
                 } else {
                     match call {
-                        SdotCall::claim(_, _, _) => Some(10),
+                        SdotCall::claim(_, _, _) => Some(2),
                         _ => None,
                     }
                 };

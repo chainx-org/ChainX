@@ -18,6 +18,8 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
+extern crate runtime_api;
+extern crate sr_primitives;
 extern crate xrml_xsystem;
 
 use chainx_executor;
@@ -36,9 +38,24 @@ use substrate_service::{
 };
 use transaction_pool::{self, txpool::Pool as TransactionPool};
 
+use self::runtime_api::xsession_api::XSessionApi;
+use self::sr_primitives::generic::BlockId;
+use self::sr_primitives::traits::ProvideRuntimeApi;
 use self::xrml_xsystem::InherentDataProvider;
 
-type XSystemInherentDataProvider = InherentDataProvider<AccountId>;
+type XSystemInherentDataProvider = InherentDataProvider;
+
+static mut VALIDATOR_NAME: Option<String> = None;
+
+pub fn set_validator_name(name: String) {
+    unsafe {
+        VALIDATOR_NAME = Some(name);
+    }
+}
+
+fn get_validator_name() -> Option<String> {
+    unsafe { VALIDATOR_NAME.clone() }
+}
 
 construct_simple_protocol! {
     /// Demo protocol attachment for substrate.
@@ -90,17 +107,45 @@ construct_service_factory! {
                     .expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
                 if let Some(ref key) = local_key {
-                        info!("Using authority key {}", key.public());
                         let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
                             client: service.client(),
                             transaction_pool: service.transaction_pool(),
                         });
 
                         let client = service.client();
+                        let accountid_from_localkey: AccountId = key.public().as_array_ref().clone().into();
+                        info!("Using authority key: {}, accountid is: {}", key.public(), accountid_from_localkey);
+                        // use validator name to get accountid and sessionkey from runtime storage
+                        let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
+                        let best_hash = client.info()?.chain.best_hash;
+                        let ret = client
+                            .runtime_api()
+                            .pubkeys_for_validator_name(&BlockId::Hash(best_hash), name.as_bytes().to_vec())
+                            .expect("access runtime data error");
 
-                        let accountid: AccountId = key.public().as_array_ref().clone().into();
+                        let producer = if let Some((accountid, sessionkey_option)) = ret {
+                                // check, only print warning log
+                                if accountid != accountid_from_localkey {
+                                    if let Some(sessionkey) = sessionkey_option {
+                                        let sessionkey: AccountId = sessionkey.into();
+                                        if sessionkey != accountid_from_localkey {
+                                            warn!("the sessionkey is not equal to local_key, sessionkey:[{:}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
+                                        }
+                                    } else {
+                                        warn!("the accountid is not equal to local_key, accountid:[{:}], local_key:[{:?}]", accountid, accountid_from_localkey);
+                                    }
+                                }
+                                // anyway, return accountid as producer
+                                accountid
+                            } else {
+                                // do not get accountid from local state database, use localkey as producer
+                                warn!("validator name[{:}] is not in current state, use --key|keystore's pri to pub as producer", name);
+                                accountid_from_localkey
+                            };
+
+                        // set blockproducer for accountid
                         service.config.custom.inherent_data_providers
-                            .register_provider(XSystemInherentDataProvider::new(&accountid)).expect("blockproducer set err; qed");
+                            .register_provider(XSystemInherentDataProvider::new(name.as_bytes().to_vec())).expect("blockproducer set err; qed");
 
                         executor.spawn(start_aura(
                             SlotDuration::get_or_compute(&*client)?,
@@ -115,7 +160,7 @@ construct_service_factory! {
 
                         info!("Running Grandpa session as Authority {}", key.public());
                     }
-                #[cfg(not(feature = "msgbus-redis"))] {
+//                #[cfg(not(feature = "msgbus-redis"))] {
                 // remove grandpa in msgbus mod for revert block
                 executor.spawn(grandpa::run_grandpa(
                     grandpa::Config {
@@ -128,18 +173,14 @@ construct_service_factory! {
                     grandpa::NetworkBridge::new(service.network()),
                     service.on_exit(),
                 )?);
-                }
+//                }
 
                 Ok(service)
             }
         },
         LightService = LightComponents<Self>
             { |config, executor| <LightComponents<Factory>>::new(config, executor) },
-        FullImportQueue = AuraImportQueue<
-            Self::Block,
-            FullClient<Self>,
-            NothingExtra,
-        >
+        FullImportQueue = AuraImportQueue<Self::Block>
             { |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>| {
                 let slot_duration = SlotDuration::get_or_compute(&*client)?;
                 let (block_import, link_half) = grandpa::block_import::<_, _, _, RuntimeApi, FullClient<Self>>(client.clone(), client.clone())?;
@@ -157,11 +198,7 @@ construct_service_factory! {
                     config.custom.inherent_data_providers.clone(),
                 ).map_err(Into::into)
             }},
-        LightImportQueue = AuraImportQueue<
-            Self::Block,
-            LightClient<Self>,
-            NothingExtra,
-        >
+        LightImportQueue = AuraImportQueue<Self::Block>
         { |config: &FactoryFullConfiguration<Self>, client: Arc<LightClient<Self>>| {
             import_queue(
                             SlotDuration::get_or_compute(&*client)?,

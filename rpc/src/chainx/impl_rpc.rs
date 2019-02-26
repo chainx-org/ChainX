@@ -5,6 +5,7 @@ extern crate hex;
 use self::types::Revocation;
 use super::*;
 use keys::DisplayLayout;
+use parity_codec::Encode;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use srml_support::storage::generator::{StorageMap, StorageValue};
 use std::iter::FromIterator;
@@ -102,29 +103,42 @@ where
         into_pagedata(all_assets, page_index, page_size)
     }
 
-    fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<String>> {
+    fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<bool>> {
         let token: xassets::Token = token.as_bytes().to_vec();
         let addr: xrecords::AddrStr = addr.as_bytes().to_vec();
         let memo: xassets::Memo = memo.as_bytes().to_vec();
 
         // test valid before call runtime api
-        if let Err(e) = xassets::is_valid_token(&token) {
-            return Ok(Some(String::from_utf8_lossy(e.as_ref()).into_owned()));
+        if let Err(_e) = xassets::is_valid_token(&token) {
+            //            return Ok(Some(String::from_utf8_lossy(e.as_ref()).into_owned()));
+            return Ok(Some(false));
         }
 
         if addr.len() > 256 || memo.len() > 256 {
-            return Ok(Some("the addr or memo may be too long".to_string()));
+            //            return Ok(Some("the addr or memo may be too long".to_string()));
+            return Ok(Some(false));
         }
 
         let b = self.best_number()?;
-        self.client
+        let ret = self
+            .client
             .runtime_api()
             .verify_address(&b, token, addr, memo)
             .and_then(|r| match r {
                 Ok(()) => Ok(None),
                 Err(s) => Ok(Some(String::from_utf8_lossy(s.as_ref()).into_owned())),
-            })
-            .map_err(|e| e.into())
+            });
+        //            .map_err(|e| e.into());
+        // Err() => substrate inner err
+        // Ok(None) => runtime_api return true
+        // Ok(Some(err_info)) => runtime_api return false, Some() contains err info
+        match ret {
+            Err(_) => Ok(Some(false)),
+            Ok(ret) => match ret {
+                None => Ok(Some(true)),
+                Some(_) => Ok(Some(false)),
+            },
+        }
     }
 
     fn minimal_withdrawal_value(&self, token: String) -> Result<Option<Balance>> {
@@ -236,8 +250,7 @@ where
                     if candidate.withdraw_id.iter().any(|id| *id == appl.id()) {
                         match candidate.sig_status {
                             VoteResult::Unfinish => status = WithdrawStatus::Signing,
-                            VoteResult::FinishWithFavor => status = WithdrawStatus::Processing,
-                            _ => status = WithdrawStatus::Applying,
+                            VoteResult::Finish => status = WithdrawStatus::Processing,
                         }
                     }
                     let info = WithdrawInfo::new(
@@ -302,7 +315,7 @@ where
         let state = self.best_state()?;
         let mut intention_info = Vec::new();
 
-        let key = <session::Validators<Runtime>>::key();
+        let key = <xsession::Validators<Runtime>>::key();
         let validators = Self::pickout::<Vec<(AccountId, u64)>>(&state, &key)?
             .expect("Validators can't be empty");
         let validators: Vec<AccountId> = validators.into_iter().map(|(who, _)| who).collect();
@@ -324,6 +337,16 @@ where
 
             for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
                 let mut info = IntentionInfo::default();
+
+                let key = <xsession::SessionKeys<Runtime>>::key_for(&intention);
+                let cache_key = <xsession::NextKeyFor<Runtime>>::key_for(&intention);
+                info.session_key = match Self::pickout::<SessionKey>(&state, &cache_key)? {
+                    Some(s) => s.into(),
+                    None => match Self::pickout::<SessionKey>(&state, &key)? {
+                        Some(s) => s.into(),
+                        None => intention,
+                    },
+                };
 
                 let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
                 if let Some(name) = Self::pickout::<xaccounts::Name>(&state, &key)? {
@@ -395,6 +418,12 @@ where
                         vote_weight.last_total_deposit_weight_update;
                 }
 
+                //注意
+                //这里返回的是以PCX计价的"单位"token的价格，已含pcx精度
+                //譬如1BTC=10000PCX，则返回的是10000*（10.pow(pcx精度))
+                //因此，如果前端要换算折合投票数的时候
+                //应该=(资产数量[含精度的数字]*price)/(10^资产精度)=PCX[含PCX精度]
+
                 let b = self.best_number()?;
                 if let Some(Some(price)) = self
                     .client
@@ -403,11 +432,16 @@ where
                     .ok()
                 {
                     info.price = price;
-                    //注意
-                    //这里返回的是以PCX计价的"单位"token的价格，已含pcx精度
-                    //譬如1BTC=10000PCX，则返回的是10000*（10.pow(pcx精度))
-                    //因此，如果前端要换算折合投票数的时候
-                    //应该=(资产数量[含精度的数字]*price)/(10^资产精度)=PCX[含PCX精度]
+                };
+
+                let b = self.best_number()?;
+                if let Some(Some(power)) = self
+                    .client
+                    .runtime_api()
+                    .asset_power(&b, token.clone())
+                    .ok()
+                {
+                    info.power = power;
                 };
 
                 let key = <xassets::TotalAssetBalance<Runtime>>::key_for(&token);
@@ -448,6 +482,26 @@ where
         }
 
         Ok(trustee_info)
+    }
+
+    fn trustee_address(&self, chain: Chain) -> Result<Option<(String, String)>> {
+        let state = self.best_state()?;
+        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(&chain);
+        match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
+            Some(a) => match chain {
+                Chain::Bitcoin => {
+                    let hot_addr = Address::from_layout(&mut a.hot_address.as_slice())
+                        .unwrap_or(Default::default());
+                    let hot_str = hot_addr.to_string();
+                    let cold_address = Address::from_layout(&mut a.cold_address.as_slice())
+                        .unwrap_or(Default::default());
+                    let cold_str = cold_address.to_string();
+                    return Ok(Some((hot_str, cold_str)));
+                }
+                _ => return Ok(None),
+            },
+            None => return Ok(None),
+        }
     }
 
     fn psedu_nomination_records(
@@ -768,8 +822,6 @@ where
     }
 
     fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>> {
-        use codec::Encode;
-
         if !call_params.starts_with("0x") {
             return Err(BinanryStartErr.into());
         }
@@ -792,6 +844,42 @@ where
             .map_err(|e| e.into());
         let transaction_fee = transaction_fee?;
         Ok(transaction_fee)
+    }
+
+    fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>> {
+        let state = self.best_state()?;
+        match chain {
+            Chain::Bitcoin => {
+                let key = <xbitcoin::TrusteeRedeemScript<Runtime>>::key();
+                match Self::pickout::<xbitcoin::TrusteeScriptInfo>(&state, &key)? {
+                    Some(script) => {
+                        let key = <TxProposal<Runtime>>::key();
+                        if let Some(candidate) =
+                            Self::pickout::<CandidateTx<AccountId>>(&state, &key)?
+                        {
+                            let mut sign_status = false;
+                            if candidate.sig_status == VoteResult::Finish {
+                                sign_status = true;
+                            }
+                            let raw_tx = candidate.tx.encode();
+                            if raw_tx.len() < 2 {
+                                return Ok(None);
+                            }
+                            let tx_info = WithdrawTxInfo {
+                                tx: hex::encode(raw_tx[2..].to_vec()),
+                                redeem_script: hex::encode(script.hot_redeem_script),
+                                sign_status: sign_status,
+                            };
+                            Ok(Some(tx_info))
+                        } else {
+                            return Ok(None);
+                        }
+                    }
+                    None => return Ok(None),
+                }
+            }
+            _ => return Ok(None),
+        }
     }
 }
 

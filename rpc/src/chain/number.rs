@@ -16,6 +16,7 @@
 
 use primitives::U256;
 use runtime_primitives::traits;
+use serde_derive::Deserialize;
 
 /// RPC Block number type
 ///

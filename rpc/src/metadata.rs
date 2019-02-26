@@ -17,8 +17,8 @@
 //! RPC Metadata
 use std::sync::Arc;
 
+use crate::rpc::futures::sync::mpsc;
 use jsonrpc_pubsub::{PubSubMetadata, Session};
-use rpc::futures::sync::mpsc;
 
 /// RPC Metadata.
 ///
@@ -30,7 +30,7 @@ pub struct Metadata {
     session: Option<Arc<Session>>,
 }
 
-impl ::rpc::Metadata for Metadata {}
+impl crate::rpc::Metadata for Metadata {}
 impl PubSubMetadata for Metadata {
     fn session(&self) -> Option<Arc<Session>> {
         self.session.clone()

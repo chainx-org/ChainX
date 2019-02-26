@@ -2,9 +2,10 @@ use super::*;
 
 use super::keys::Public;
 use super::{
-    Bytes, Result, Script, SignatureChecker, SignatureVersion, StorageMap, Trait, Transaction,
-    TransactionInputSigner, TransactionSignatureChecker, TrusteeRedeemScript,
+    deserialize, Bytes, Reader, Result, Script, SignatureChecker, SignatureVersion, StorageMap,
+    Trait, Transaction, TransactionInputSigner, TransactionSignatureChecker, TrusteeRedeemScript,
 };
+use chain::Transaction as BTCTransaction;
 
 pub fn validate_transaction<T: Trait>(
     tx: &RelayTx,
@@ -93,12 +94,16 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &B
     );
 }
 
-pub fn handle_condidate<T: Trait>(tx: Transaction) -> Result {
+pub fn handle_condidate<T: Trait>(tx: Vec<u8>) -> Result {
+    let tx: BTCTransaction =
+        deserialize(Reader::new(tx.as_slice())).map_err(|_| "Parse transaction err")?;
     let trustee_info =
         <TrusteeRedeemScript<T>>::get().ok_or("Should set trustee address info first.")?;
-
     let redeem_script = Script::from(trustee_info.hot_redeem_script);
     let script: Script = tx.inputs[0].script_sig.clone().into();
+    if script.len() < 2 {
+        return Err("Invalid signature, script_sig is too short");
+    }
     let (sigs, _) = if let Ok((sigs, s)) = script.extract_multi_scriptsig() {
         (sigs, s)
     } else {

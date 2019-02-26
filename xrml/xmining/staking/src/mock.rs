@@ -188,11 +188,14 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                 .collect(),
             current_era: 0,
             validator_count: 2,
+            minimum_validator_count: 0,
+            trustee_count: 8,
+            minimum_trustee_count: 4,
             bonding_duration: 1,
             intention_bonding_duration: 10,
-            minimum_validator_count: 0,
             sessions_per_era: 1,
-            funding: 10,
+            council_address: 10,
+            sessions_per_epoch: 10,
             penalty: 10,
             validator_stake_threshold: 1,
             trustee_intentions: full_endowed
@@ -201,7 +204,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                     (who.into(), hot_entity, cold_entity)
                 })
                 .collect(),
-            team: 100,
+            team_address: 100,
         }
         .build_storage()
         .unwrap()

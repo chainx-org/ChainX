@@ -1,6 +1,6 @@
 [package]
 name = "chainx"
-version = "0.9.0"
+version = "0.9.3"
 build = "build.rs"
 authors = ["Chainpool <https://www.chainx.org>"]
 
@@ -45,6 +45,7 @@ members = [
     "xr-primitives",
 
     # xrml
+    "xrml/xbootstrap",
     "xrml/xsystem",
     "xrml/xsupport",
     "xrml/xaccounts",

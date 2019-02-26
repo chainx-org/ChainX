@@ -18,14 +18,15 @@
 
 use std::sync::Arc;
 
+use crate::rpc::futures::{Future, Sink, Stream};
+use crate::subscriptions::Subscriptions;
 use client::{self, Client};
-use codec::{Decode, Encode};
 use jsonrpc_derive::rpc;
 use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId};
+use log::warn;
+use parity_codec::{Decode, Encode};
 use primitives::{Blake2Hasher, Bytes, H256};
-use rpc::futures::{Future, Sink, Stream};
 use runtime_primitives::{generic, traits};
-use subscriptions::Subscriptions;
 use transaction_pool::txpool::{
     watcher::Status, BlockHash, ChainApi as PoolChainApi, ExHash, IntoPoolError, Pool,
 };
@@ -40,11 +41,12 @@ use self::error::Result;
 /// Substrate authoring RPC API
 #[rpc]
 pub trait AuthorApi<Hash, BlockHash> {
+    /// RPC metadata
     type Metadata;
 
     /// Submit hex-encoded extrinsic for inclusion in block.
     #[rpc(name = "author_submitExtrinsic")]
-    fn submit_extrinsic(&self, Bytes) -> Result<Hash>;
+    fn submit_extrinsic(&self, extrinsic: Bytes) -> Result<Hash>;
 
     /// Returns all pending extrinsics, potentially grouped by sender.
     #[rpc(name = "author_pendingExtrinsics")]
@@ -56,7 +58,12 @@ pub trait AuthorApi<Hash, BlockHash> {
         subscribe,
         name = "author_submitAndWatchExtrinsic"
     )]
-    fn watch_extrinsic(&self, Self::Metadata, Subscriber<Status<Hash, BlockHash>>, Bytes);
+    fn watch_extrinsic(
+        &self,
+        metadata: Self::Metadata,
+        subscriber: Subscriber<Status<Hash, BlockHash>>,
+        bytes: Bytes,
+    );
 
     /// Unsubscribe from extrinsic watching.
     #[pubsub(
@@ -64,7 +71,11 @@ pub trait AuthorApi<Hash, BlockHash> {
         unsubscribe,
         name = "author_unwatchExtrinsic"
     )]
-    fn unwatch_extrinsic(&self, Option<Self::Metadata>, SubscriptionId) -> Result<bool>;
+    fn unwatch_extrinsic(
+        &self,
+        metadata: Option<Self::Metadata>,
+        id: SubscriptionId,
+    ) -> Result<bool>;
 }
 
 /// Authoring API
@@ -107,7 +118,7 @@ where
     P::Error: 'static,
     RA: Send + Sync + 'static,
 {
-    type Metadata = ::metadata::Metadata;
+    type Metadata = crate::metadata::Metadata;
 
     fn submit_extrinsic(&self, ext: Bytes) -> Result<ExHash<P>> {
         let xt =

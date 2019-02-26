@@ -1,16 +1,16 @@
 // Copyright 2019 Chainpool.
 
-extern crate runtime_api;
+use chain as btc_chain;
+use runtime_api;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use btc_chain::Transaction as BTCTransaction;
-use codec::Decode;
 use jsonrpc_derive::rpc;
+use parity_codec::Decode;
 
 use client::{self, runtime_api::Metadata, Client};
-use keys::Address;
+
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
@@ -18,12 +18,12 @@ use runtime_primitives::traits::{As, Block as BlockT, NumberFor, Zero};
 use script::Script;
 use state_machine::Backend;
 
-use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
+use chainx_primitives::{AccountId, Balance, BlockNumber, SessionKey, Timestamp};
 use chainx_runtime::{Call, Runtime};
 use xr_primitives::generic::b58;
 
-use xaccounts::{self, IntentionProps, TrusteeEntity, TrusteeIntentionProps};
-use xassets::{self, Asset, AssetType, Chain, Token};
+use xaccounts::{IntentionProps, TrusteeEntity, TrusteeIntentionProps};
+use xassets::{Asset, AssetType, Chain, Token};
 use xbitcoin::{
     self, BestIndex, BlockHeaderFor, BlockHeaderInfo, CandidateTx, IrrBlock, TxFor, TxInfo,
     TxProposal, VoteResult,
@@ -31,25 +31,28 @@ use xbitcoin::{
 
 use xspot::def::{OrderPair, OrderPairID, ID};
 use xspot::{HandicapT, OrderT};
-use xstaking::{self, IntentionProfs};
+use xstaking::IntentionProfs;
 use xsupport::storage::btree_map::CodecBTreeMap;
-use xtokens::{self, DepositVoteWeight, PseduIntentionVoteWeight};
+use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
 
 use self::runtime_api::{
     xassets_api::XAssetsApi, xfee_api::XFeeApi, xmining_api::XMiningApi, xspot_api::XSpotApi,
 };
+// btc
+use btc_chain::Transaction as BTCTransaction;
+use keys::Address;
 
 mod error;
 mod impl_rpc;
 pub mod types;
 
+use self::error::ErrorKind::*;
 use self::error::Result;
 use self::types::{
     AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData, PairInfo,
     PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, TrusteeInfo,
-    WithdrawInfo, WithdrawStatus,
+    WithdrawInfo, WithdrawStatus, WithdrawTxInfo,
 };
-use chainx::error::ErrorKind::*;
 const MAX_PAGE_SIZE: u32 = 100;
 
 #[rpc]
@@ -57,28 +60,46 @@ const MAX_PAGE_SIZE: u32 = 100;
 pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     /// Returns the block of a storage entry at a block's Number.
     #[rpc(name = "chainx_getBlockByNumber")]
-    fn block_info(&self, Option<Number>) -> Result<Option<SignedBlock>>;
+    fn block_info(&self, number: Option<Number>) -> Result<Option<SignedBlock>>;
 
     #[rpc(name = "chainx_getAssetsByAccount")]
-    fn assets_of(&self, AccountId, u32, u32) -> Result<Option<PageData<AssetInfo>>>;
+    fn assets_of(
+        &self,
+        who: AccountId,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<AssetInfo>>>;
 
     #[rpc(name = "chainx_getAssets")]
-    fn assets(&self, u32, u32) -> Result<Option<PageData<TotalAssetInfo>>>;
+    fn assets(&self, page_index: u32, page_size: u32) -> Result<Option<PageData<TotalAssetInfo>>>;
 
     #[rpc(name = "chainx_verifyAddressValidity")]
-    fn verify_addr(&self, String, String, String) -> Result<Option<String>>;
+    fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<bool>>;
 
     #[rpc(name = "chainx_getMinimalWithdrawalValueByToken")]
-    fn minimal_withdrawal_value(&self, String) -> Result<Option<Balance>>;
+    fn minimal_withdrawal_value(&self, token: String) -> Result<Option<Balance>>;
 
     #[rpc(name = "chainx_getDepositList")]
-    fn deposit_list(&self, Chain, u32, u32) -> Result<Option<PageData<DepositInfo>>>;
+    fn deposit_list(
+        &self,
+        chain: Chain,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<DepositInfo>>>;
 
     #[rpc(name = "chainx_getWithdrawalList")]
-    fn withdrawal_list(&self, Chain, u32, u32) -> Result<Option<PageData<WithdrawInfo>>>;
+    fn withdrawal_list(
+        &self,
+        chain: Chain,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<WithdrawInfo>>>;
 
     #[rpc(name = "chainx_getNominationRecords")]
-    fn nomination_records(&self, AccountId) -> Result<Option<Vec<(AccountId, NominationRecord)>>>;
+    fn nomination_records(
+        &self,
+        who: AccountId,
+    ) -> Result<Option<Vec<(AccountId, NominationRecord)>>>;
 
     #[rpc(name = "chainx_getIntentions")]
     fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>>;
@@ -87,25 +108,39 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     fn psedu_intentions(&self) -> Result<Option<Vec<PseduIntentionInfo>>>;
 
     #[rpc(name = "chainx_getPseduNominationRecords")]
-    fn psedu_nomination_records(&self, AccountId) -> Result<Option<Vec<PseduNominationRecord>>>;
+    fn psedu_nomination_records(
+        &self,
+        who: AccountId,
+    ) -> Result<Option<Vec<PseduNominationRecord>>>;
 
     #[rpc(name = "chainx_getOrderPairs")]
     fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>;
 
     #[rpc(name = "chainx_getQuotations")]
-    fn quotationss(&self, OrderPairID, u32) -> Result<Option<QuotationsList>>;
+    fn quotationss(&self, id: OrderPairID, piece: u32) -> Result<Option<QuotationsList>>;
 
     #[rpc(name = "chainx_getOrders")]
-    fn orders(&self, AccountId, u32, u32) -> Result<Option<PageData<OrderT<Runtime>>>>;
+    fn orders(
+        &self,
+        who: AccountId,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<OrderT<Runtime>>>>;
 
     #[rpc(name = "chainx_getAddressByAccount")]
-    fn address(&self, AccountId, Chain) -> Result<Option<Vec<String>>>;
+    fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>>;
+
+    #[rpc(name = "chainx_getTrusteeAddress")]
+    fn trustee_address(&self, chain: Chain) -> Result<Option<(String, String)>>;
 
     #[rpc(name = "chainx_getTrusteeInfoByAccount")]
-    fn trustee_info(&self, AccountId) -> Result<Vec<TrusteeInfo>>;
+    fn trustee_info(&self, who: AccountId) -> Result<Vec<TrusteeInfo>>;
 
     #[rpc(name = "chainx_getFeeByCallAndLength")]
-    fn fee(&self, String, u64) -> Result<Option<u64>>;
+    fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>>;
+
+    #[rpc(name = "chainx_getWithdrawTx")]
+    fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>>;
 }
 
 /// ChainX API
@@ -150,18 +185,6 @@ where
         Ok(state)
     }
 
-    /*
-    fn timestamp(&self, number: BlockNumber) -> std::result::Result<Timestamp, error::Error> {
-        let number = number.encode();
-        let number: NumberFor<Block> = Decode::decode(&mut number.as_slice()).unwrap();
-
-        let state = self.client.state_at(&BlockId::Number(number))?;
-
-        let key = <timestamp::Now<Runtime>>::key();
-
-        Ok(Self::pickout::<Timestamp>(&state, &key)?.unwrap())
-    }*/
-
     /// Pick out specified data from storage given the state and key.
     fn pickout<ReturnValue: Decode>(
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
@@ -174,53 +197,4 @@ where
             .map(|s| Decode::decode(&mut s.0.as_slice()))
             .unwrap_or(None))
     }
-
-    //    fn get_asset(
-    //        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-    //        token: &Token,
-    //    ) -> Result<Option<Asset>> {
-    //        let key = <xassets::AssetInfo<Runtime>>::key_for(token);
-    //        match Self::pickout::<(Asset, bool, BlockNumber)>(&state, &key)? {
-    //            Some((info, _, _)) => Ok(Some(info)),
-    //            None => Ok(None),
-    //        }
-    //    }
-
-    //    fn get_applications_with_state(
-    //        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-    //        v: Vec<Application<AccountId, Balance, Timestamp>>,
-    //    ) -> Result<Vec<ApplicationWrapper>> {
-    //        // todo change to runtime?
-    //        let mut handle = BTreeMap::<Chain, Vec<u32>>::new();
-    //        // btc
-    //        let key = xbitcoin::TxProposal::<Runtime>::key();
-    //        let ids = match Self::pickout::<xbitcoin::CandidateTx>(&state, &key)? {
-    //            Some(candidate_tx) => candidate_tx.outs,
-    //            None => vec![],
-    //        };
-    //        handle.insert(Chain::Bitcoin, ids);
-    //
-    //        let mut applications = vec![];
-    //        for appl in v {
-    //            let index = appl.id();
-    //            let token = appl.token();
-    //
-    //            let state = if let Some(info) = Self::get_asset(state, &token)? {
-    //                match handle.get(&info.chain()) {
-    //                    Some(list) => {
-    //                        if list.contains(&index) {
-    //                            WithdrawalState::Signing
-    //                        } else {
-    //                            WithdrawalState::Applying
-    //                        }
-    //                    }
-    //                    None => WithdrawalState::Unknown,
-    //                }
-    //            } else {
-    //                unreachable!("should not reach this branch, the token info must be exists");
-    //            };
-    //            applications.push(ApplicationWrapper::new(appl, state));
-    //        }
-    //        Ok(applications)
-    //    }
 }

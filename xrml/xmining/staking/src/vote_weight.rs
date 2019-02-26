@@ -1,11 +1,12 @@
 // Copyright 2018 Chainpool.
 //! Vote weight calculation.
 
-use super::{Module, Trait};
+use super::{ClaimType, Module, Trait};
 use rstd::result;
 use runtime_primitives::traits::As;
+use runtime_support::StorageMap;
 use system;
-use xassets;
+use xassets::{self, Token};
 use IntentionProfs;
 use NominationRecord;
 
@@ -110,11 +111,33 @@ impl<T: Trait> Module<T> {
         who.set_amount(value, to_add);
     }
 
+    fn channel_or_council_of(who: &T::AccountId, token: &Token) -> T::AccountId {
+        let council_address = Self::council_address();
+
+        if let Some(asset_info) = <xassets::AssetInfo<T>>::get(token) {
+            let asset = asset_info.0;
+            let chain = asset.chain();
+
+            if let Some(bind) = <xaccounts::CrossChainBindOf<T>>::get(&(chain, who.clone())) {
+                if let Some(first_bind) = bind.get(0) {
+                    if let Some(addr_map) =
+                        <xaccounts::CrossChainAddressMapOf<T>>::get(&(chain, first_bind.clone()))
+                    {
+                        return addr_map.1;
+                    }
+                }
+            }
+        }
+
+        return council_address;
+    }
+
     pub fn generic_claim<U, V>(
         source: &mut U,
         who: &T::AccountId,
         target: &mut V,
         target_jackpot_addr: &T::AccountId,
+        claim_type: ClaimType,
     ) -> result::Result<(u64, u64, T::Balance), &'static str>
     where
         U: VoteWeight<T::BlockNumber>,
@@ -131,14 +154,38 @@ impl<T: Trait> Module<T> {
         let target_vote_weight = target.latest_acum_weight(current_block);
 
         let total_jackpot: u64 = xassets::Module::<T>::pcx_free_balance(target_jackpot_addr).as_();
+
         // source_vote_weight * total_jackpot could overflow.
         let dividend = match (source_vote_weight as u128).checked_mul(total_jackpot as u128) {
             Some(x) => T::Balance::sa((x / target_vote_weight as u128) as u64),
             None => panic!("source_vote_weight * total_jackpot overflow"),
         };
 
-        xassets::Module::<T>::pcx_move_free_balance(target_jackpot_addr, who, dividend)
-            .map_err(|e| e.info())?;
+        match claim_type {
+            ClaimType::Intention => {
+                xassets::Module::<T>::pcx_move_free_balance(target_jackpot_addr, who, dividend)
+                    .map_err(|e| e.info())?;
+            }
+            ClaimType::PseduIntention(token) => {
+                let channel_or_council = Self::channel_or_council_of(who, &token);
+                // FIXME be configurable
+                let to_channel_or_council = T::Balance::sa(dividend.as_() * 1 / 10);
+
+                xassets::Module::<T>::pcx_move_free_balance(
+                    target_jackpot_addr,
+                    &channel_or_council,
+                    to_channel_or_council,
+                )
+                .map_err(|e| e.info())?;
+
+                xassets::Module::<T>::pcx_move_free_balance(
+                    target_jackpot_addr,
+                    who,
+                    dividend - to_channel_or_council,
+                )
+                .map_err(|e| e.info())?;
+            }
+        }
 
         source.set_last_acum_weight(0);
         source.set_last_acum_weight_update(current_block);

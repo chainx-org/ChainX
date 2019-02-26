@@ -26,7 +26,7 @@ use sr_primitives::traits::As;
 #[cfg(feature = "std")]
 use sr_primitives::traits::Zero;
 use srml_support::dispatch::Result;
-use srml_support::{StorageMap, StorageValue};
+//use srml_support::{StorageMap, StorageValue};
 use system::ensure_signed;
 use tiny_keccak::keccak256;
 use xassets::{Chain as ChainDef, ChainT};

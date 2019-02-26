@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::errors;
+use crate::rpc;
 use client;
-use rpc;
-
-use errors;
+use error_chain::*;
 
 error_chain! {
     links {

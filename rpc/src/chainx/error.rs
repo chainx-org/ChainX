@@ -1,6 +1,7 @@
+use crate::errors;
+use crate::rpc;
 use client;
-use errors;
-use rpc;
+use error_chain::*;
 
 error_chain! {
     links {

@@ -16,12 +16,12 @@
 
 use super::*;
 
+use assert_matches::assert_matches;
 use network::config::Roles;
 use network::{
     self, NodeIndex, PeerId, PeerInfo as NetworkPeerInfo, ProtocolStatus, PublicKey, SyncState,
     SyncStatus,
 };
-use primitives::H256;
 use test_client::runtime::Block;
 
 #[derive(Default)]
@@ -41,6 +41,7 @@ impl network::SyncProvider<Block> for Status {
                     SyncState::Idle
                 },
                 best_seen_block: None,
+                num_peers: self.peers as u32,
             },
             num_peers: self.peers,
             num_active_peers: 0,

@@ -1,4 +1,5 @@
 use super::*;
+use serde_derive::{Deserialize, Serialize};
 
 // utils
 #[derive(Serialize, Deserialize, Debug)]
@@ -81,6 +82,8 @@ pub struct IntentionInfo {
     pub is_validator: bool,
     /// is trustee
     pub is_trustee: bool,
+    /// session key for block authoring
+    pub session_key: AccountId,
     /// how much has intention voted for itself
     pub self_vote: Balance,
     /// jackpot
@@ -148,6 +151,7 @@ pub struct PseduIntentionInfo {
     /// circulation of id
     pub circulation: Balance,
     pub price: Balance,
+    pub power: Balance,
     /// jackpot
     pub jackpot: Balance,
     /// jackpot address
@@ -292,4 +296,15 @@ impl WithdrawInfo {
             memo,
         }
     }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WithdrawTxInfo {
+    /// tx
+    pub tx: String,
+    /// redeem_script
+    pub redeem_script: String,
+    /// sign_status
+    pub sign_status: bool,
 }

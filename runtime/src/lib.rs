@@ -25,7 +25,6 @@ extern crate sr_primitives as runtime_primitives;
 #[macro_use]
 extern crate sr_version as version;
 extern crate sr_io as runtime_io;
-#[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
 
 // substrate runtime module
@@ -56,6 +55,7 @@ extern crate runtime_api;
 extern crate xrml_xsupport as xsupport;
 
 pub extern crate xrml_xaccounts as xaccounts;
+pub extern crate xrml_xbootstrap as xbootstrap;
 pub extern crate xrml_xsystem as xsystem;
 // fee;
 pub extern crate xrml_fee_manager as fee_manager;
@@ -187,7 +187,6 @@ impl session::Trait for Runtime {
 }
 
 impl grandpa::Trait for Runtime {
-    type SessionKey = SessionKey;
     type Log = Log;
     type Event = Event;
 }
@@ -237,8 +236,13 @@ impl sdot::Trait for Runtime {
 //    type Event = Event;
 //}
 
+impl xbootstrap::Trait for Runtime {}
+
 // cxrml trait
-impl xsystem::Trait for Runtime {}
+impl xsystem::Trait for Runtime {
+    type ValidatorList = Session;
+    type Validator = XAccounts;
+}
 
 impl xaccounts::Trait for Runtime {
     type Event = Event;
@@ -301,7 +305,7 @@ construct_runtime!(
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
         Session: session,
-        Grandpa: grandpa::{Module, Call, Storage, Config<T>, Log(), Event<T>},
+        Grandpa: grandpa::{Module, Call, Storage, Log(), Event<T>},
         Aura: aura::{Module, Inherent(Timestamp)},
         Sudo: sudo,
 
@@ -322,6 +326,8 @@ construct_runtime!(
         // bridge
         XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>,  Event<T>},
         XBridgeOfSDOT: sdot::{Module, Call, Storage, Config<T>,  Event<T>},
+
+        XBootstrap: xbootstrap::{Config<T>},
     }
 );
 
@@ -466,6 +472,10 @@ impl_runtime_apis! {
         fn multi_token_jackpot_accountid_for(tokens: Vec<xassets::Token>) -> Vec<AccountId> {
             XTokens::multi_token_jackpot_accountid_for(&tokens)
         }
+        fn asset_power(token: xassets::Token) -> Option<Balance> {
+            XTokens::asset_power(&token)
+        }
+
     }
 
     impl runtime_api::xspot_api::XSpotApi<Block> for Runtime {
@@ -489,6 +499,12 @@ impl_runtime_apis! {
             call.check_fee(switch).map(|power|
                 XFeeManager::transaction_fee(power, encoded_len)
             )
+        }
+    }
+
+    impl runtime_api::xsession_api::XSessionApi<Block> for Runtime {
+        fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<SessionKey>)> {
+            Session::pubkeys_for_validator_name(name)
         }
     }
 }

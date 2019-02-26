@@ -44,6 +44,7 @@ extern crate parity_codec_derive;
 
 extern crate parity_codec as codec;
 extern crate sr_primitives as primitives;
+extern crate srml_consensus as consensus;
 extern crate srml_system as system;
 extern crate substrate_primitives;
 extern crate xrml_session as session;
@@ -55,13 +56,11 @@ extern crate sr_io as runtime_io;
 pub extern crate substrate_finality_grandpa_primitives as fg_primitives;
 
 use fg_primitives::ScheduledChange;
-use primitives::traits::MaybeSerializeDebug;
 use primitives::traits::{Convert, CurrentHeight};
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 use runtime_support::storage::unhashed::StorageVec;
 use runtime_support::storage::StorageValue;
-use runtime_support::Parameter;
 use substrate_primitives::Ed25519AuthorityId;
 use system::ensure_signed;
 
@@ -75,7 +74,7 @@ impl<S: codec::Codec + Default> StorageVec for AuthorityStorageVec<S> {
 }
 
 /// The log type of this crate, projected from module trait type.
-pub type Log<T> = RawLog<<T as system::Trait>::BlockNumber, <T as Trait>::SessionKey>;
+pub type Log<T> = RawLog<<T as system::Trait>::BlockNumber, <T as consensus::Trait>::SessionKey>;
 
 /// Logs which can be scanned by GRANDPA for authorities change events.
 pub trait GrandpaChangeSignal<N> {
@@ -118,12 +117,9 @@ where
     }
 }
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + consensus::Trait {
     /// Type for all log entries of this module.
     type Log: From<Log<Self>> + Into<system::DigestItemOf<Self>>;
-
-    /// The session key type used by authorities.
-    type SessionKey: Parameter + Default + MaybeSerializeDebug;
 
     /// The event type of this module.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -142,7 +138,7 @@ pub struct StoredPendingChange<N, SessionKey> {
 
 /// GRANDPA events.
 decl_event!(
-	pub enum Event<T> where <T as Trait>::SessionKey {
+	pub enum Event<T> where <T as consensus::Trait>::SessionKey {
 		/// New authority set has been applied.
 		NewAuthorities(Vec<(SessionKey, u64)>),
 	}
@@ -152,25 +148,6 @@ decl_storage! {
     trait Store for Module<T: Trait> as GrandpaFinality {
         // Pending change: (signalled at, scheduled change).
         PendingChange get(pending_change): Option<StoredPendingChange<T::BlockNumber, T::SessionKey>>;
-    }
-    add_extra_genesis {
-        config(authorities): Vec<(T::SessionKey, u64)>;
-
-        build(|storage: &mut primitives::StorageMap, _: &mut primitives::ChildrenStorageMap, config: &GenesisConfig<T>| {
-            use codec::{Encode, KeyedVec};
-
-            let auth_count = config.authorities.len() as u32;
-            config.authorities.iter().enumerate().for_each(|(i, v)| {
-                storage.insert((i as u32).to_keyed_vec(
-                    ::fg_primitives::well_known_keys::AUTHORITY_PREFIX),
-                    v.encode()
-                );
-            });
-            storage.insert(
-                ::fg_primitives::well_known_keys::AUTHORITY_COUNT.to_vec(),
-                auth_count.encode(),
-            );
-        });
     }
 }
 
@@ -245,7 +222,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T>
 where
-    Ed25519AuthorityId: core::convert::From<<T as Trait>::SessionKey>,
+    Ed25519AuthorityId: core::convert::From<<T as consensus::Trait>::SessionKey>,
 {
     /// See if the digest contains any scheduled change.
     pub fn scrape_digest_change(log: &Log<T>) -> Option<ScheduledChange<T::BlockNumber>> {
@@ -272,7 +249,7 @@ where
     T: Trait,
     T: session::Trait,
     <T as session::Trait>::ConvertAccountIdToSessionKey:
-        Convert<<T as system::Trait>::AccountId, <T as Trait>::SessionKey>,
+        Convert<<T as system::Trait>::AccountId, <T as consensus::Trait>::SessionKey>,
 {
     fn on_session_change(_: X, _: bool) {
         use primitives::traits::Zero;
@@ -280,9 +257,13 @@ where
         let next_authorities = <session::Module<T>>::validators()
             .into_iter()
             .map(|(account_id, weight)| {
-                (T::ConvertAccountIdToSessionKey::convert(account_id), weight)
+                if let Some(session_key) = <session::Module<T>>::session_key(account_id.clone()) {
+                    (session_key, weight)
+                } else {
+                    (T::ConvertAccountIdToSessionKey::convert(account_id), weight)
+                }
             })
-            .collect::<Vec<(<T as Trait>::SessionKey, u64)>>();
+            .collect::<Vec<(<T as consensus::Trait>::SessionKey, u64)>>();
 
         // instant changes
         let last_authorities = <Module<T>>::grandpa_authorities();

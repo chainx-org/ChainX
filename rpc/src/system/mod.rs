@@ -22,12 +22,13 @@ mod helpers;
 #[cfg(test)]
 mod tests;
 
-use self::error::Result;
-pub use self::helpers::{Health, PeerInfo, Properties, SystemInfo};
 use jsonrpc_derive::rpc;
 use network;
 use runtime_primitives::traits::{self, Header as HeaderT};
 use std::sync::Arc;
+
+use self::error::Result;
+pub use self::helpers::{Health, PeerInfo, Properties, SystemInfo};
 
 /// Substrate system RPC API
 #[rpc]

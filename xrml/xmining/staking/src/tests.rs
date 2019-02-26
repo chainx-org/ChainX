@@ -134,6 +134,61 @@ fn unnominate_should_work() {
     });
 }
 
+#[test]
+fn new_trustees_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        System::set_block_number(1);
+        Session::check_rotate_session(System::block_number());
+
+        assert_ok!(Staking::register(Origin::signed(1), b"name".to_vec()));
+        assert_ok!(Staking::nominate(Origin::signed(1), 1.into(), 5, vec![]));
+        assert_ok!(Staking::refresh(
+            Origin::signed(1),
+            Some(b"new.name".to_vec()),
+            Some(true),
+            Some(UintAuthorityId(123).into()),
+            None
+        ));
+        assert_ok!(Staking::setup_trustee(
+            Origin::signed(1),
+            Chain::Bitcoin,
+            b"about".to_vec(),
+            TrusteeEntity::Bitcoin(vec![0; 33]),
+            TrusteeEntity::Bitcoin(vec![0; 33]),
+        ));
+
+        System::set_block_number(10);
+        Session::check_rotate_session(System::block_number());
+
+        System::set_block_number(11);
+        Session::check_rotate_session(System::block_number());
+
+        System::set_block_number(12);
+        Session::check_rotate_session(System::block_number());
+
+        System::set_block_number(13);
+        Session::check_rotate_session(System::block_number());
+
+        System::set_block_number(14);
+        Session::check_rotate_session(System::block_number());
+
+        System::set_block_number(15);
+        Session::check_rotate_session(System::block_number());
+
+        System::set_block_number(16);
+        Session::check_rotate_session(System::block_number());
+
+        System::set_block_number(17);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(XAccounts::trustee_intentions(), [10, 20, 30, 40]);
+
+        System::set_block_number(18);
+        Session::check_rotate_session(System::block_number());
+        assert_eq!(Session::current_index(), 10);
+        assert_eq!(XAccounts::trustee_intentions(), [30, 40, 20, 10, 1]);
+    });
+}
+
 /*
 #[test]
 fn unfreeze_should_work() {
