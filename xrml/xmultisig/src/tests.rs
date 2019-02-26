@@ -1,12 +1,15 @@
 // Copyright 2018 Chainpool.
 
-use substrate_primitives::{H256, Blake2Hasher};
-
-use runtime_primitives::BuildStorage;
-use runtime_primitives::traits::{BlakeTwo256, IdentityLookup};
-use runtime_primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
-use runtime_io;
 use runtime_io::with_externalities;
+use runtime_primitives::testing::{Digest, DigestItem, Header};
+use runtime_primitives::traits::{BlakeTwo256, IdentityLookup};
+use runtime_primitives::BuildStorage;
+use sr_io as runtime_io;
+use sr_primitives as runtime_primitives;
+use srml_support::{assert_err, assert_ok, impl_outer_origin};
+use substrate_primitives::{Blake2Hasher, H256};
+
+use system::{ensure_root, ensure_signed};
 
 use super::*;
 
@@ -21,20 +24,21 @@ pub struct Test;
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, Debug)]
 pub struct Call(bool);
-impl runtime_support::Dispatchable for Call {
+impl srml_support::Dispatchable for Call {
     type Origin = Origin;
     type Trait = ();
 
     fn dispatch(self, origin: Self::Origin) -> Result {
-        if self.0 == false {
-            return Err("bad origin: expected to be a root origin")
+        if self.0 == true {
+            ensure_root(origin)?;
+        } else {
+            ensure_signed(origin)?;
         }
 
         println!("call success");
         Err("call success")
     }
 }
-
 
 impl system::Trait for Test {
     type Origin = Origin;
@@ -64,7 +68,7 @@ impl Trait for Test {
     type Event = ();
 }
 
-type Balances = balances::Module<Test>;
+//type Balances = balances::Module<Test>;
 type MultiSig = Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
@@ -75,16 +79,14 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     t.extend(
         balances::GenesisConfig::<Test> {
             balances: vec![],
-            transaction_base_fee: 0,
-            transaction_byte_fee: 0,
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
             vesting: vec![],
         }
-            .build_storage()
-            .unwrap()
-            .0,
+        .build_storage()
+        .unwrap()
+        .0,
     );
 
     runtime_io::TestExternalities::new(t)
@@ -104,8 +106,10 @@ fn test_genesis() {
         buf.extend_from_slice(h.as_ref());
         let h: <Test as system::Trait>::Hash = c.clone().into();
         buf.extend_from_slice(h.as_ref());
-        let target_addr: <Test as system::Trait>::AccountId = <Test as system::Trait>::Hashing::hash(&buf[..]).into();
-        let target_addr2: <Test as system::Trait>::AccountId = <Test as system::Trait>::Hashing::hash(&b"Council"[..]).into();
+        let target_addr: <Test as system::Trait>::AccountId =
+            <Test as system::Trait>::Hashing::hash(&buf[..]).into();
+        let target_addr2: <Test as system::Trait>::AccountId =
+            <Test as system::Trait>::Hashing::hash(&b"Council"[..]).into();
 
         let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false)];
 
@@ -140,7 +144,13 @@ fn test_multisig() {
         let d: H256 = H256::repeat_byte(0x4);
         let e: H256 = H256::repeat_byte(0x5);
 
-        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), true), (d.clone(), false), (e.clone(), false)];
+        let owners = vec![
+            (a.clone(), true),
+            (b.clone(), true),
+            (c.clone(), true),
+            (d.clone(), false),
+            (e.clone(), false),
+        ];
         // deploy
         MultiSig::deploy_in_genesis(owners, 3);
 
@@ -152,26 +162,44 @@ fn test_multisig() {
 
         assert_eq!(MultiSig::pending_list_for(addr).len(), 1);
         let multi_sig_id = MultiSig::pending_list_for(&addr).get(0).unwrap().clone();
-        assert_eq!(MultiSig::pending_state_for(&(addr, multi_sig_id)),
-                   Some(PendingState::<<Test as Trait>::Proposal> { yet_needed: 2, owners_done: 1, proposal }));
+        assert_eq!(
+            MultiSig::pending_state_for(&(addr, multi_sig_id)),
+            Some(PendingState::<<Test as Trait>::Proposal> {
+                yet_needed: 2,
+                owners_done: 1,
+                proposal
+            })
+        );
 
         //b
         let origin = system::RawOrigin::Signed(b.clone()).into();
         assert_ok!(MultiSig::confirm(origin, addr.clone(), multi_sig_id));
         //a
         let origin = system::RawOrigin::Signed(a.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr.clone(), multi_sig_id), "this account has confirmed for this multi sig addr and id");
+        assert_err!(
+            MultiSig::confirm(origin, addr.clone(), multi_sig_id),
+            "this account has confirmed for this multi sig addr and id"
+        );
         //e
         let origin = system::RawOrigin::Signed(e.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr.clone(), multi_sig_id), "call success");
+        assert_err!(
+            MultiSig::confirm(origin, addr.clone(), multi_sig_id),
+            "call success"
+        );
 
         // has delete
-        assert_eq!(MultiSig::pending_state_for(&(addr.clone(), multi_sig_id)), None);
+        assert_eq!(
+            MultiSig::pending_state_for(&(addr.clone(), multi_sig_id)),
+            None
+        );
         assert_eq!(MultiSig::pending_list_for(&addr), vec![]);
 
         //d
         let origin = system::RawOrigin::Signed(d.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr.clone(), multi_sig_id), "pending state not exist");
+        assert_err!(
+            MultiSig::confirm(origin, addr.clone(), multi_sig_id),
+            "pending state not exist"
+        );
     })
 }
 
@@ -190,14 +218,23 @@ fn test_not_required_owner() {
         let addr = MultiSig::multi_sig_list_item_for(&(a.clone(), 0));
         let origin = system::RawOrigin::Signed(c.clone()).into();
         assert_ok!(MultiSig::is_owner_for(origin, addr.clone()));
-        assert_err!(MultiSig::is_owner(&c, &addr, true), "it's the owner but not required owner");
+        assert_err!(
+            MultiSig::is_owner(&c, &addr, true),
+            "it's the owner but not required owner"
+        );
 
         let origin = system::RawOrigin::Signed(c.clone()).into();
         let proposal = Box::new(Call(true));
-        assert_err!(MultiSig::execute(origin, addr, proposal.clone()), "it's the owner but not required owner");
+        assert_err!(
+            MultiSig::execute(origin, addr, proposal.clone()),
+            "it's the owner but not required owner"
+        );
 
         let origin = system::RawOrigin::Signed(d.clone()).into();
-        assert_err!(MultiSig::execute(origin, addr, proposal.clone()), "it's not the owner");
+        assert_err!(
+            MultiSig::execute(origin, addr, proposal.clone()),
+            "it's not the owner"
+        );
 
         // exec success
         let origin = system::RawOrigin::Signed(a.clone()).into();
@@ -206,7 +243,10 @@ fn test_not_required_owner() {
         let multi_sig_id = MultiSig::pending_list_for(&addr).get(0).unwrap().clone();
 
         let origin = system::RawOrigin::Signed(c.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr, multi_sig_id), "call success");
+        assert_err!(
+            MultiSig::confirm(origin, addr, multi_sig_id),
+            "call success"
+        );
     })
 }
 
@@ -224,10 +264,16 @@ fn test_not_exist() {
 
         let origin = system::RawOrigin::Signed(a.clone()).into();
         let proposal = Box::new(Call(true));
-        assert_err!(MultiSig::execute(origin, fake, proposal), "the multi sig addr not exist");
+        assert_err!(
+            MultiSig::execute(origin, fake, proposal),
+            "the multi sig addr not exist"
+        );
 
         let origin = system::RawOrigin::Signed(a.clone()).into();
-        assert_err!(MultiSig::confirm(origin, fake, fake), "the multi sig addr not exist");
+        assert_err!(
+            MultiSig::confirm(origin, fake, fake),
+            "the multi sig addr not exist"
+        );
 
         let addr = MultiSig::multi_sig_list_item_for(&(a, 0));
         let origin = system::RawOrigin::Signed(a.clone()).into();
@@ -235,7 +281,10 @@ fn test_not_exist() {
         let proposal = Box::new(Call(true));
         assert_ok!(MultiSig::execute(origin, addr, proposal));
         let origin = system::RawOrigin::Signed(a.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr, fake), "pending state not exist");
+        assert_err!(
+            MultiSig::confirm(origin, addr, fake),
+            "pending state not exist"
+        );
     })
 }
 
@@ -247,7 +296,12 @@ fn test_remove() {
         let c: H256 = H256::repeat_byte(0x3);
         let d: H256 = H256::repeat_byte(0x4);
 
-        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false), (d.clone(), false)];
+        let owners = vec![
+            (a.clone(), true),
+            (b.clone(), true),
+            (c.clone(), false),
+            (d.clone(), false),
+        ];
         // deploy
         MultiSig::deploy_in_genesis(owners, 3);
 
@@ -264,14 +318,29 @@ fn test_remove() {
         assert_ok!(MultiSig::confirm(origin, addr, multi_sig_id));
 
         // yet need 1
-        assert_eq!(MultiSig::pending_state_for(&(addr, multi_sig_id)),
-                   Some(PendingState::<<Test as Trait>::Proposal> { yet_needed: 1, owners_done: 3, proposal: proposal.clone() }));
+        assert_eq!(
+            MultiSig::pending_state_for(&(addr, multi_sig_id)),
+            Some(PendingState::<<Test as Trait>::Proposal> {
+                yet_needed: 1,
+                owners_done: 3,
+                proposal: proposal.clone()
+            })
+        );
         // remove the pending
         // d can't remove
         let origin = system::RawOrigin::Signed(d.clone()).into();
-        assert_err!(MultiSig::remove_multi_sig_for(origin, addr, multi_sig_id), "it's the owner but not required owner");
-        assert_eq!(MultiSig::pending_state_for(&(addr, multi_sig_id)),
-                   Some(PendingState::<<Test as Trait>::Proposal> { yet_needed: 1, owners_done: 3, proposal: proposal.clone() }));
+        assert_err!(
+            MultiSig::remove_multi_sig_for(origin, addr, multi_sig_id),
+            "it's the owner but not required owner"
+        );
+        assert_eq!(
+            MultiSig::pending_state_for(&(addr, multi_sig_id)),
+            Some(PendingState::<<Test as Trait>::Proposal> {
+                yet_needed: 1,
+                owners_done: 3,
+                proposal: proposal.clone()
+            })
+        );
 
         // b remove
         let origin = system::RawOrigin::Signed(b.clone()).into();
@@ -281,7 +350,10 @@ fn test_remove() {
         assert_eq!(MultiSig::pending_state_for(&(addr, multi_sig_id)), None);
 
         let origin = system::RawOrigin::Signed(b.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr, multi_sig_id), "pending state not exist");
+        assert_err!(
+            MultiSig::confirm(origin, addr, multi_sig_id),
+            "pending state not exist"
+        );
     })
 }
 
@@ -294,7 +366,12 @@ fn test_single() {
         let d: H256 = H256::repeat_byte(0x4);
         let e: H256 = H256::repeat_byte(0x5);
 
-        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false), (d.clone(), false)];
+        let owners = vec![
+            (a.clone(), true),
+            (b.clone(), true),
+            (c.clone(), false),
+            (d.clone(), false),
+        ];
         let origin = system::RawOrigin::Signed(a.clone()).into();
         // user deploy, not root
         assert_ok!(MultiSig::deploy(origin, owners, 1));
@@ -303,15 +380,24 @@ fn test_single() {
 
         let proposal = Box::new(Call(false));
         let origin = system::RawOrigin::Signed(a.clone()).into();
-        assert_err!(MultiSig::execute(origin, addr, proposal.clone()), "bad origin: expected to be a root origin");
+        assert_err!(
+            MultiSig::execute(origin, addr, proposal.clone()),
+            "call success"
+        );
 
         // c, not required owner
         let origin = system::RawOrigin::Signed(c.clone()).into();
-        assert_err!(MultiSig::execute(origin, addr, proposal.clone()), "it\'s the owner but not required owner");
+        assert_err!(
+            MultiSig::execute(origin, addr, proposal.clone()),
+            "it\'s the owner but not required owner"
+        );
 
         // e, not owner
         let origin = system::RawOrigin::Signed(e.clone()).into();
-        assert_err!(MultiSig::execute(origin, addr, proposal.clone()), "it\'s not the owner");
+        assert_err!(
+            MultiSig::execute(origin, addr, proposal.clone()),
+            "it\'s not the owner"
+        );
     })
 }
 
@@ -322,9 +408,14 @@ fn test_proposal_too_many() {
         let b: H256 = H256::repeat_byte(0x2);
         let c: H256 = H256::repeat_byte(0x3);
         let d: H256 = H256::repeat_byte(0x4);
-        let e: H256 = H256::repeat_byte(0x5);
+        //        let e: H256 = H256::repeat_byte(0x5);
 
-        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false), (d.clone(), false)];
+        let owners = vec![
+            (a.clone(), true),
+            (b.clone(), true),
+            (c.clone(), false),
+            (d.clone(), false),
+        ];
         let origin = system::RawOrigin::Signed(a.clone()).into();
         assert_ok!(MultiSig::deploy(origin, owners, 3));
 
@@ -354,7 +445,10 @@ fn test_proposal_too_many() {
         assert_eq!(MultiSig::pending_list_for(&addr).len(), 5);
         // already 5 proposal
         let origin = system::RawOrigin::Signed(b.clone()).into();
-        assert_err!(MultiSig::execute(origin, addr, proposal.clone()), "pending list can't be larger than MAX_PENDING");
+        assert_err!(
+            MultiSig::execute(origin, addr, proposal.clone()),
+            "pending list can't be larger than MAX_PENDING"
+        );
         <system::Module<Test>>::inc_account_nonce(&b);
 
         // confirm 1
@@ -364,7 +458,10 @@ fn test_proposal_too_many() {
         <system::Module<Test>>::inc_account_nonce(&b);
 
         let origin = system::RawOrigin::Signed(c.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr, multi_sig_id), "bad origin: expected to be a root origin");
+        assert_err!(
+            MultiSig::confirm(origin, addr, multi_sig_id),
+            "call success"
+        );
         <system::Module<Test>>::inc_account_nonce(&c);
 
         assert_eq!(MultiSig::pending_list_for(&addr).len(), 4);
@@ -375,7 +472,10 @@ fn test_proposal_too_many() {
 
         assert_eq!(MultiSig::pending_list_for(&addr).len(), 5);
         let origin = system::RawOrigin::Signed(a.clone()).into();
-        assert_err!(MultiSig::execute(origin, addr, proposal.clone()), "pending list can't be larger than MAX_PENDING");
+        assert_err!(
+            MultiSig::execute(origin, addr, proposal.clone()),
+            "pending list can't be larger than MAX_PENDING"
+        );
         <system::Module<Test>>::inc_account_nonce(&a);
 
         // remove 2
@@ -415,12 +515,12 @@ fn test_try_to_call_root() {
         assert_ok!(MultiSig::deploy(origin, owners, 2));
 
         let addr_genesis1 = MultiSig::multi_sig_list_item_for(&(a, 0));
-//        let addr_genesis2 = MultiSig::multi_sig_list_item_for(&(a, 1));
+        //        let addr_genesis2 = MultiSig::multi_sig_list_item_for(&(a, 1));
         let addr_a1 = MultiSig::multi_sig_list_item_for(&(a, 2));
         let addr_c1 = MultiSig::multi_sig_list_item_for(&(a, 0));
 
         assert_eq!(MultiSig::multisig_addr_info(&addr_genesis1).is_some(), true);
-//        assert_eq!(MultiSig::multisig_addr_info(&addr_genesis2).is_some(), true);
+        //        assert_eq!(MultiSig::multisig_addr_info(&addr_genesis2).is_some(), true);
         assert_eq!(MultiSig::multisig_addr_info(&addr_a1).is_some(), true);
         assert_eq!(MultiSig::multisig_addr_info(&addr_c1).is_some(), true);
         // =================
@@ -432,57 +532,73 @@ fn test_try_to_call_root() {
         let origin = system::RawOrigin::Signed(b.clone()).into();
         assert_ok!(MultiSig::execute(origin, addr_genesis1, proposal2.clone()));
         <system::Module<Test>>::inc_account_nonce(&b);
-        let addr_genesis1_id = MultiSig::pending_list_for(&addr_genesis1).get(0).unwrap().clone();
-        let addr_genesis1_id2 = MultiSig::pending_list_for(&addr_genesis1).get(1).unwrap().clone();
+        let addr_genesis1_id = MultiSig::pending_list_for(&addr_genesis1)
+            .get(0)
+            .unwrap()
+            .clone();
+        let addr_genesis1_id2 = MultiSig::pending_list_for(&addr_genesis1)
+            .get(1)
+            .unwrap()
+            .clone();
 
         let origin = system::RawOrigin::Signed(d.clone()).into();
-        assert_err!(MultiSig::execute(origin, addr_genesis1, proposal.clone()), "it\'s not the owner");
+        assert_err!(
+            MultiSig::execute(origin, addr_genesis1, proposal.clone()),
+            "it\'s not the owner"
+        );
         let origin = system::RawOrigin::Signed(d.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr_genesis1, addr_genesis1_id), "it\'s not the owner");
+        assert_err!(
+            MultiSig::confirm(origin, addr_genesis1, addr_genesis1_id),
+            "it\'s not the owner"
+        );
 
         let origin = system::RawOrigin::Signed(b.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr_genesis1, addr_genesis1_id), "call success");
+        assert_err!(
+            MultiSig::confirm(origin, addr_genesis1, addr_genesis1_id),
+            "call success"
+        );
         let origin = system::RawOrigin::Signed(c.clone()).into();
-        assert_err!(MultiSig::confirm(origin, addr_genesis1, addr_genesis1_id2), "call success");
+        assert_err!(
+            MultiSig::confirm(origin, addr_genesis1, addr_genesis1_id2),
+            "call success"
+        );
         // ========= genesis addr test finish
 
-
-//        let origin = system::RawOrigin::Signed(a.clone()).into();
-//        assert_ok!(MultiSig::execute(origin, addr_a1, proposal.clone()));
-//        <system::Module<Test>>::inc_account_nonce(&a);
-//        let origin = system::RawOrigin::Signed(b.clone()).into();
-//        assert_ok!(MultiSig::execute(origin, addr_a1, proposal2.clone()));
-//        <system::Module<Test>>::inc_account_nonce(&b);
-//        let addr_a1_id = MultiSig::pending_list_for(&addr_a1).get(0).unwrap().clone();
-//        let addr_a1_id2 = MultiSig::pending_list_for(&addr_a1).get(1).unwrap().clone();
-//
-//        let origin = system::RawOrigin::Signed(d.clone()).into();
-//        assert_err!(MultiSig::execute(origin, addr_a1, proposal.clone()), "it\'s not the owner");
-//        let origin = system::RawOrigin::Signed(d.clone()).into();
-//        assert_err!(MultiSig::confirm(origin, addr_a1, addr_a1_id), "it\'s not the owner");
-//
-//        let origin = system::RawOrigin::Signed(b.clone()).into();
-//        assert_err!(MultiSig::confirm(origin, addr_a1, addr_a1_id), "bad origin: expected to be a root origin");
-//        let origin = system::RawOrigin::Signed(c.clone()).into();
-//        assert_err!(MultiSig::confirm(origin, addr_a1, addr_a1_id2), "call success");
+        //        let origin = system::RawOrigin::Signed(a.clone()).into();
+        //        assert_ok!(MultiSig::execute(origin, addr_a1, proposal.clone()));
+        //        <system::Module<Test>>::inc_account_nonce(&a);
+        //        let origin = system::RawOrigin::Signed(b.clone()).into();
+        //        assert_ok!(MultiSig::execute(origin, addr_a1, proposal2.clone()));
+        //        <system::Module<Test>>::inc_account_nonce(&b);
+        //        let addr_a1_id = MultiSig::pending_list_for(&addr_a1).get(0).unwrap().clone();
+        //        let addr_a1_id2 = MultiSig::pending_list_for(&addr_a1).get(1).unwrap().clone();
+        //
+        //        let origin = system::RawOrigin::Signed(d.clone()).into();
+        //        assert_err!(MultiSig::execute(origin, addr_a1, proposal.clone()), "it\'s not the owner");
+        //        let origin = system::RawOrigin::Signed(d.clone()).into();
+        //        assert_err!(MultiSig::confirm(origin, addr_a1, addr_a1_id), "it\'s not the owner");
+        //
+        //        let origin = system::RawOrigin::Signed(b.clone()).into();
+        //        assert_err!(MultiSig::confirm(origin, addr_a1, addr_a1_id), "bad origin: expected to be a root origin");
+        //        let origin = system::RawOrigin::Signed(c.clone()).into();
+        //        assert_err!(MultiSig::confirm(origin, addr_a1, addr_a1_id2), "call success");
     })
 }
 
 #[test]
 fn test_deploy() {
     with_externalities(&mut new_test_ext(), || {
-//        let a: H256 = H256::repeat_byte(0x1);
-//        let b: H256 = H256::repeat_byte(0x2);
-//        let c: H256 = H256::repeat_byte(0x3);
-//        let d: H256 = H256::repeat_byte(0x4);
-//        let e: H256 = H256::repeat_byte(0x5);
-//        // root multisig addr
-//        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false)];
-//        MultiSig::deploy_in_genesis(owners.clone(), 2);
-//        // no multisig addr
-//        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false)];
-//        let origin = system::RawOrigin::Signed(a.clone()).into();
+        //        let a: H256 = H256::repeat_byte(0x1);
+        //        let b: H256 = H256::repeat_byte(0x2);
+        //        let c: H256 = H256::repeat_byte(0x3);
+        //        let d: H256 = H256::repeat_byte(0x4);
+        //        let e: H256 = H256::repeat_byte(0x5);
+        //        // root multisig addr
+        //        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false)];
+        //        MultiSig::deploy_in_genesis(owners.clone(), 2);
+        //        // no multisig addr
+        //        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false)];
+        //        let origin = system::RawOrigin::Signed(a.clone()).into();
 
     })
 }
-

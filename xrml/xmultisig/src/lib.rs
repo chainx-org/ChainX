@@ -3,50 +3,29 @@
 //! this module is for multisig, but now this is just for genesis multisig addr, not open for public.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// for encode/decode
-// Needed for deriving `Encode` and `Decode` for `RawEvent`.
-#[macro_use]
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
 
 #[cfg(feature = "std")]
-extern crate serde_derive;
+use serde_derive::{Deserialize, Serialize};
 
-// for substrate
-// Needed for the set of mock primitives used in our tests.
-#[cfg(feature = "std")]
-extern crate substrate_primitives;
+use parity_codec::Encode;
+use parity_codec_derive::{Decode, Encode};
 
-// for substrate runtime
-// map!, vec! marco.
-#[cfg_attr(feature = "std", macro_use)]
-extern crate sr_std as rstd;
+use sr_std::marker::PhantomData;
+use sr_std::prelude::*;
+use sr_std::result::Result as StdResult;
 
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
+use sr_primitives::traits::Hash;
+use srml_support::dispatch::Result;
+use srml_support::{decl_event, decl_module, decl_storage, Dispatchable, Parameter, StorageMap};
 
-// for substrate runtime module lib
-// Needed for type-safe access to storage DB.
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_system as system;
-extern crate srml_balances as balances;
-
-//mod transaction;
-#[cfg(test)]
-mod tests;
-
-use codec::{Codec, Decode, Encode};
-use rstd::prelude::*;
-use rstd::marker::PhantomData;
-use rstd::result::Result as StdResult;
-use runtime_support::dispatch::Result;
-use runtime_support::{StorageMap, StorageValue, Parameter, Dispatchable};
-use runtime_primitives::traits::{ Hash};
-
+use srml_balances as balances;
+use srml_system as system;
 use system::ensure_signed;
 
-//use transaction::{TransactionType, Transaction, TransferT};
+use xrml_xsupport::error;
+
+#[cfg(test)]
+mod tests;
 
 pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
     /// generate multisig addr for a accountid
@@ -55,9 +34,14 @@ pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
     fn multi_sig_id_for(who: &AccountId, addr: &AccountId, data: &[u8]) -> Hash;
 }
 
+pub trait GenesisMultiSig<AccountId> {
+    fn gen_genesis_multisig(accounts: Vec<AccountId>) -> (AccountId, AccountId);
+}
+
 pub trait Trait: balances::Trait {
     type MultiSig: MultiSigFor<Self::AccountId, Self::Hash>;
-    type Proposal: Parameter + Dispatchable<Origin=Self::Origin>;
+    type GenesisMultiSig: GenesisMultiSig<Self::AccountId>;
+    type Proposal: Parameter + Dispatchable<Origin = Self::Origin>;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -73,8 +57,6 @@ decl_event!(
         DeployMultiSig(AccountId, AccountId, u32, u32),
         /// exec. who, addr, multisigid, type
         ExecMultiSig(AccountId, AccountId, Hash, Box<Proposal>),
-//        /// confirm. who, addr, multisigid, yet_needed, ret
-//        Confirm(AccountId, AccountId, Hash, u32, bool),
         /// confirm. addr, multisigid, yet_needed, owners_done
         Confirm(AccountId, Hash, u32, u32),
 
@@ -131,7 +113,7 @@ const MAX_PENDING: u32 = 5;
 pub struct AddrInfo<AccountId> {
     is_root: bool,
     required_num: u32,
-    owner_list: Vec<(AccountId, bool)>
+    owner_list: Vec<(AccountId, bool)>,
 }
 
 // struct for the status of a pending operation.
@@ -143,9 +125,10 @@ pub struct PendingState<Proposal> {
     proposal: Box<Proposal>,
 }
 
-
 decl_storage! {
     trait Store for Module<T: Trait> as XMultiSig {
+        pub RootAddrList get(root_addr_list): Vec<T::AccountId>;
+
         pub MultiSigAddrInfo get(multisig_addr_info): map T::AccountId => Option<AddrInfo<T::AccountId>>;
 
         pub PendingListFor get(pending_list_for): map T::AccountId => Vec<T::Hash>;
@@ -162,13 +145,14 @@ decl_storage! {
 pub struct SimpleMultiSigIdFor<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> MultiSigFor<T::AccountId, T::Hash> for SimpleMultiSigIdFor<T>
-    where T::AccountId: From<T::Hash>
+where
+    T::AccountId: From<T::Hash>,
 {
     fn multi_sig_addr_for(who: &T::AccountId) -> T::AccountId {
         let mut buf = Vec::<u8>::new();
         buf.extend_from_slice(&who.encode());
         buf.extend_from_slice(&<system::Module<T>>::account_nonce(who).encode());
-        buf.extend_from_slice(&<Module<T>>::multi_sig_list_len_for(who).encode());  // in case same nonce in genesis
+        buf.extend_from_slice(&<Module<T>>::multi_sig_list_len_for(who).encode()); // in case same nonce in genesis
         T::Hashing::hash(&buf[..]).into()
     }
 
@@ -182,10 +166,25 @@ impl<T: Trait> MultiSigFor<T::AccountId, T::Hash> for SimpleMultiSigIdFor<T>
     }
 }
 
+pub struct ChainXGenesisMultisig<T: Trait>(PhantomData<T>);
+impl<T: Trait> GenesisMultiSig<T::AccountId> for ChainXGenesisMultisig<T>
+where
+    T::AccountId: From<T::Hash> + AsRef<[u8]>,
+{
+    fn gen_genesis_multisig(accounts: Vec<T::AccountId>) -> (T::AccountId, T::AccountId) {
+        let mut buf = Vec::<u8>::new();
+        for a in accounts.iter() {
+            buf.extend_from_slice(a.as_ref());
+        }
+        let team_multisig_addr: T::AccountId = T::Hashing::hash(&buf[..]).into();
+        let council_multisig_addr: T::AccountId = T::Hashing::hash(&b"Council"[..]).into();
+        (team_multisig_addr, council_multisig_addr)
+    }
+}
 
 impl<T: Trait> Module<T> {
-//    fn remove_multi_sig_addr(multi_sig_addr: &T::AccountId) {
-//    }
+    //    fn remove_multi_sig_addr(multi_sig_addr: &T::AccountId) {
+    //    }
 
     fn remove_multi_sig_id(multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) {
         Self::remove_pending_for(multi_sig_addr, multi_sig_id);
@@ -193,14 +192,21 @@ impl<T: Trait> Module<T> {
             v.retain(|x| x != &multi_sig_id);
         });
         // event
-        Self::deposit_event(RawEvent::RemoveMultiSigIdFor(multi_sig_addr.clone(), multi_sig_id));
+        Self::deposit_event(RawEvent::RemoveMultiSigIdFor(
+            multi_sig_addr.clone(),
+            multi_sig_id,
+        ));
     }
 
     fn remove_pending_for(multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) {
         PendingStateFor::<T>::remove((multi_sig_addr.clone(), multi_sig_id))
     }
 
-    fn is_owner(who: &T::AccountId, addr: &T::AccountId, required: bool) -> StdResult<u32, &'static str> {
+    fn is_owner(
+        who: &T::AccountId,
+        addr: &T::AccountId,
+        required: bool,
+    ) -> StdResult<u32, &'static str> {
         if let Some(addr_info) = Self::multisig_addr_info(addr) {
             for (index, (id, req)) in addr_info.owner_list.iter().enumerate() {
                 if id == who {
@@ -217,13 +223,19 @@ impl<T: Trait> Module<T> {
         Err("it's not the owner")
     }
 
-    fn confirm_and_check(who: &T::AccountId, multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) -> StdResult<bool, &'static str> {
+    fn confirm_and_check(
+        who: &T::AccountId,
+        multi_sig_addr: &T::AccountId,
+        multi_sig_id: T::Hash,
+    ) -> StdResult<bool, &'static str> {
         let index = Self::is_owner(who, multi_sig_addr, false)?;
 
-        let mut pending = if let Some(pending) = Self::pending_state_for(&(multi_sig_addr.clone(), multi_sig_id)) {
+        let mut pending = if let Some(pending) =
+            Self::pending_state_for(&(multi_sig_addr.clone(), multi_sig_id))
+        {
             pending
         } else {
-            return Err("pending state not exist")
+            return Err("pending state not exist");
         };
 
         let ret: bool;
@@ -247,27 +259,39 @@ impl<T: Trait> Module<T> {
     }
 
     // func alias
-    fn only_owner(who: &T::AccountId, addr: &T::AccountId, required: bool) -> StdResult<u32, &'static str> {
+    fn only_owner(
+        who: &T::AccountId,
+        addr: &T::AccountId,
+        required: bool,
+    ) -> StdResult<u32, &'static str> {
         Self::is_owner(who, addr, required)
     }
-    fn only_many_owner(who: &T::AccountId, multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) -> StdResult<bool, &'static str> {
+    fn only_many_owner(
+        who: &T::AccountId,
+        multi_sig_addr: &T::AccountId,
+        multi_sig_id: T::Hash,
+    ) -> StdResult<bool, &'static str> {
         Self::confirm_and_check(who, multi_sig_addr, multi_sig_id)
     }
 }
-//
+
 impl<T: Trait> Module<T> {
-    fn deploy_impl(root: bool, multi_addr: &T::AccountId, deployer: &T::AccountId, owners: Vec<(T::AccountId, bool)>, required_num: u32) -> Result {
+    fn deploy_impl(
+        root: bool,
+        multi_addr: &T::AccountId,
+        deployer: &T::AccountId,
+        owners: Vec<(T::AccountId, bool)>,
+        required_num: u32,
+    ) -> Result {
         let mut owner_list = Vec::new();
         owner_list.push((deployer.clone(), true));
-        owner_list.extend(owners.into_iter().filter(
-            |info| {
-                if info.0 == *deployer {
-                    false
-                } else {
-                    true
-                }
+        owner_list.extend(owners.into_iter().filter(|info| {
+            if info.0 == *deployer {
+                false
+            } else {
+                true
             }
-        ));
+        }));
 
         let owners_len = owner_list.len() as u32;
         if owners_len > MAX_OWNERS {
@@ -281,7 +305,7 @@ impl<T: Trait> Module<T> {
         // 1
         let len = Self::multi_sig_list_len_for(deployer);
         <MultiSigListItemFor<T>>::insert(&(deployer.clone(), len), multi_addr.clone());
-        <MultiSigListLenFor<T>>::insert(deployer.clone(), len + 1);  // length inc
+        <MultiSigListLenFor<T>>::insert(deployer.clone(), len + 1); // length inc
 
         let addr_info = AddrInfo::<T::AccountId> {
             is_root: root,
@@ -291,36 +315,62 @@ impl<T: Trait> Module<T> {
         // 2
         MultiSigAddrInfo::<T>::insert(multi_addr, addr_info);
         // event
-        Self::deposit_event(RawEvent::DeployMultiSig(deployer.clone(), multi_addr.clone(), owners_len, required_num));
+        Self::deposit_event(RawEvent::DeployMultiSig(
+            deployer.clone(),
+            multi_addr.clone(),
+            owners_len,
+            required_num,
+        ));
         Ok(())
     }
 
-    pub fn deploy_in_genesis(owners: Vec<(T::AccountId, bool)>, required_num: u32)
-        where T::AccountId: Into<T::Hash> + From<T::Hash>
-    {
+    #[cfg(feature = "std")]
+    pub fn deploy_in_genesis(
+        owners: Vec<(T::AccountId, bool)>,
+        required_num: u32,
+    ) -> (T::AccountId, T::AccountId) {
+        use srml_support::StorageValue;
         if owners.len() < 1 {
             panic!("the owners count can't be zero");
         }
         let deployer = owners.get(0).unwrap().clone().0;
 
-        let mut buf = Vec::<u8>::new();
-        for (a, _) in owners.iter() {
-            let h:T::Hash = a.clone().into();
-            buf.extend_from_slice(h.as_ref());
-        }
-        let team_multisig_addr: T::AccountId = T::Hashing::hash(&buf[..]).into();
-        let concil_multisig_addr: T::AccountId = T::Hashing::hash(&b"Council"[..]).into();
+        let (team_multisig_addr, council_multisig_addr) = T::GenesisMultiSig::gen_genesis_multisig(
+            owners.iter().map(|(a, _)| a.clone()).collect(),
+        );
 
-        let _ = Self::deploy_impl(true, &team_multisig_addr, &deployer, owners.clone(), required_num);
-        let _ = Self::deploy_impl(true, &concil_multisig_addr, &deployer, owners.clone(), required_num);
+        let _ = Self::deploy_impl(
+            true,
+            &team_multisig_addr,
+            &deployer,
+            owners.clone(),
+            required_num,
+        );
+        let _ = Self::deploy_impl(
+            true,
+            &council_multisig_addr,
+            &deployer,
+            owners.clone(),
+            required_num,
+        );
+
+        RootAddrList::<T>::put(vec![
+            team_multisig_addr.clone(),
+            council_multisig_addr.clone(),
+        ]);
+        return (team_multisig_addr, council_multisig_addr);
     }
 
-    fn execute_impl(from: &T::AccountId, multi_sig_addr: &T::AccountId, proposal: Box<T::Proposal>) -> Result {
+    fn execute_impl(
+        from: &T::AccountId,
+        multi_sig_addr: &T::AccountId,
+        proposal: Box<T::Proposal>,
+    ) -> Result {
         Self::only_owner(&from, &multi_sig_addr, true)?;
 
         let mut pending_list = Self::pending_list_for(multi_sig_addr);
         if pending_list.len() as u32 >= MAX_PENDING {
-            return Err("pending list can't be larger than MAX_PENDING")
+            return Err("pending list can't be larger than MAX_PENDING");
         }
 
         if let Some(info) = Self::multisig_addr_info(multi_sig_addr) {
@@ -332,7 +382,8 @@ impl<T: Trait> Module<T> {
                 multi_sig_id = Default::default();
             } else {
                 // determine multi sig id
-                multi_sig_id = T::MultiSig::multi_sig_id_for(&from, &multi_sig_addr, &proposal.encode());
+                multi_sig_id =
+                    T::MultiSig::multi_sig_id_for(&from, &multi_sig_addr, &proposal.encode());
                 let pending = PendingState::<T::Proposal> {
                     yet_needed: info.required_num,
                     owners_done: 0,
@@ -347,7 +398,12 @@ impl<T: Trait> Module<T> {
                 let origin = system::RawOrigin::Signed(from.clone()).into();
                 Self::confirm(origin, multi_sig_addr.clone(), multi_sig_id)?;
             }
-            Self::deposit_event(RawEvent::ExecMultiSig(from.clone(), multi_sig_addr.clone(), multi_sig_id, proposal_event));
+            Self::deposit_event(RawEvent::ExecMultiSig(
+                from.clone(),
+                multi_sig_addr.clone(),
+                multi_sig_id,
+                proposal_event,
+            ));
         } else {
             return Err("the multi sig addr not exist");
         }
@@ -355,24 +411,35 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn confirm_impl(from: &T::AccountId, multi_sig_addr: &T::AccountId, multi_sig_id: T::Hash) -> Result {
+    fn confirm_impl(
+        from: &T::AccountId,
+        multi_sig_addr: &T::AccountId,
+        multi_sig_id: T::Hash,
+    ) -> Result {
         // TODO renew
         let ret = Self::only_many_owner(&from, &multi_sig_addr, multi_sig_id)?;
 
-        let pending_state = if let Some(pending_state) = Self::pending_state_for(&(multi_sig_addr.clone(), multi_sig_id)) {
+        let pending_state = if let Some(pending_state) =
+            Self::pending_state_for(&(multi_sig_addr.clone(), multi_sig_id))
+        {
             pending_state
         } else {
-            return Err("no pending state for this addr and id or it has finished")
+            return Err("no pending state for this addr and id or it has finished");
         };
 
         if ret == true {
             // remove log
             Self::remove_multi_sig_id(&multi_sig_addr, multi_sig_id);
-                // real exec
+            // real exec
             Self::exec(&multi_sig_addr, pending_state.proposal)?;
         } else {
             // log event
-            Self::deposit_event(RawEvent::Confirm(multi_sig_addr.clone(), multi_sig_id, pending_state.yet_needed, pending_state.owners_done));
+            Self::deposit_event(RawEvent::Confirm(
+                multi_sig_addr.clone(),
+                multi_sig_id,
+                pending_state.yet_needed,
+                pending_state.owners_done,
+            ));
         }
 
         Ok(())
@@ -398,14 +465,21 @@ impl<T: Trait> Module<T> {
     }
 
     fn exec_tx_byroot(addr: &T::AccountId, proposal: Box<T::Proposal>) -> Result {
-        // use root to exec first, if failed, use signed
-        let origin = system::RawOrigin::Root.into();
-        if let Err(e) = proposal.clone().dispatch(origin) {
+        // use signed to exec first, if failed, use root
+        if let Err(e) = Self::exec_tx(addr, proposal.clone()) {
             if e == "bad origin: expected to be a root origin" {
-                return Self::exec_tx(addr, proposal)
+                let white_list = Self::root_addr_list();
+                if white_list.contains(addr) {
+                    let origin = system::RawOrigin::Root.into();
+                    return proposal.dispatch(origin);
+                } else {
+                    error!("this addr[{:}] not in white_list! can't exec root tx", addr);
+                    return Err("this addr not in white_list! can't exec root tx");
+                }
             }
-            return Err(e)
+            return Err(e);
         }
+
         Ok(())
     }
 }

@@ -367,8 +367,8 @@ decl_storage! {
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
 
-        pub TeamAddress get(team_address) config(): T::AccountId;
-        pub CouncilAddress get(council_address) config(): T::AccountId;
+        pub TeamAddress get(team_address): T::AccountId;
+        pub CouncilAddress get(council_address): T::AccountId;
         pub Penalty get(penalty) config(): T::Balance;
         pub PunishList get(punish_list): Vec<T::AccountId>;
     }
