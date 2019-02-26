@@ -1,0 +1,48 @@
+[package]
+name = "xrml-xbootstrap"
+version = "0.4.0"
+authors = ["Chainpool <http://chainx.org>"]
+
+[dependencies]
+hex-literal = "0.1.0"
+serde = { version = "1.0", default_features = false }
+serde_derive = { version = "1.0", optional = true }
+parity-codec = { version = "3.0", default-features = false }
+parity-codec-derive = { version = "3.0", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
+substrate-finality-grandpa-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+sr-std = { git = "https://github.com/chainpool/substrate", default_features = false }
+sr-io = { git = "https://github.com/chainpool/substrate", default_features = false }
+sr-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
+srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
+srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
+
+chain = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+
+xrml-mining-staking = { path = "../xmining/staking", default_features = false }
+xrml-mining-tokens = { path = "../xmining/tokens", default_features = false }
+xrml-xassets-assets = { path = "../xassets/assets",  default_features = false }
+xrml-xaccounts = { path = "../xaccounts",  default_features = false }
+xrml-bridge-bitcoin = { path = "../xbridge/bitcoin",  default_features = false }
+xrml-xdex-spot = { path = "../xdex/spot", default_features = false }
+
+[features]
+default = ["std"]
+std=[
+    "serde/std",
+    "serde_derive",
+    "parity-codec/std",
+    "parity-codec-derive/std",
+    "substrate-primitives/std",
+    "sr-std/std",
+    "sr-io/std",
+    "sr-primitives/std",
+    "srml-support/std",
+    "srml-system/std",
+    "xrml-mining-staking/std",
+    "xrml-mining-tokens/std",
+    "xrml-xassets-assets/std",
+    "xrml-xaccounts/std",
+    "xrml-bridge-bitcoin/std",
+    "xrml-xdex-spot/std",
+]

@@ -4,8 +4,8 @@ extern crate hex;
 
 use self::types::Revocation;
 use super::*;
-use parity_codec::Encode;
 use keys::DisplayLayout;
+use parity_codec::Encode;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use srml_support::storage::generator::{StorageMap, StorageValue};
 use std::iter::FromIterator;

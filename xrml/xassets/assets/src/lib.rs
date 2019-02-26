@@ -303,43 +303,6 @@ decl_storage! {
         pub MemoLen get(memo_len) config(): u32;
     }
 
-    add_extra_genesis {
-        config(asset_list): Vec<(Asset, bool, bool, Vec<(T::AccountId, u64)>)>;
-        config(pcx): (Token, Precision, Desc);
-
-        build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use runtime_io::with_externalities;
-            use substrate_primitives::Blake2Hasher;
-            use primitives::traits::{Zero, As};
-
-            let src_r = storage.clone().build_storage().unwrap().0;
-            let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
-            with_externalities(&mut tmp_storage, || {
-                let chainx: Token = <Module<T> as ChainT>::TOKEN.to_vec();
-
-                let pcx = Asset::new(chainx, config.pcx.0.clone(), Chain::ChainX, config.pcx.1, config.pcx.2.clone()).unwrap();
-                Module::<T>::register_asset(pcx, true, false, Zero::zero()).unwrap();
-
-                // init for asset_list
-                for (asset, is_online, is_psedu_intention, init_list) in config.asset_list.iter() {
-                    let token = asset.token();
-                    Module::<T>::register_asset(asset.clone(), *is_online, *is_psedu_intention, Zero::zero()).unwrap();
-
-                    for (accountid, value) in init_list {
-                        let value = As::sa(*value);
-                        let total_free_token = Module::<T>::total_asset_balance(&token, AssetType::Free);
-                        let free_token = Module::<T>::free_balance(&accountid, &token);
-                        Module::<T>::set_total_asset_balance(&token, AssetType::Free, total_free_token + value);
-                        // not create account
-                        Module::<T>::set_asset_balance(&accountid, &token, AssetType::Free, free_token + value);
-                    }
-                }
-
-            });
-            let map: primitives::StorageOverlay = tmp_storage.into();
-            storage.extend(map);
-        });
-    }
 }
 
 impl<T: Trait> ChainT for Module<T> {
@@ -350,6 +313,28 @@ impl<T: Trait> ChainT for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    pub fn bootstrap_register_asset(
+        asset: Asset,
+        is_online: bool,
+        is_psedu_intention: bool,
+        free: T::Balance,
+    ) -> Result {
+        Self::register_asset(asset, is_online, is_psedu_intention, free)
+    }
+
+    pub fn bootstrap_set_asset_balance(
+        who: &T::AccountId,
+        token: &Token,
+        type_: AssetType,
+        val: T::Balance,
+    ) {
+        Self::set_asset_balance(who, token, type_, val)
+    }
+
+    pub fn bootstrap_set_total_asset_balance(token: &Token, type_: AssetType, value: T::Balance) {
+        Self::set_total_asset_balance(token, type_, value)
+    }
+
     // token storage
     pub fn asset_balance(who: &T::AccountId, token: &Token, type_: AssetType) -> T::Balance {
         if token.as_slice() == <Self as ChainT>::TOKEN && type_ == AssetType::Free {
@@ -657,29 +642,16 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: T::Balance,
     ) -> StdResult<(), AssetErr> {
-        Self::move_balance_with_checkflag(token, from, from_type, to, to_type, value, true)
-    }
-
-    pub fn move_balance_with_checkflag(
-        token: &Token,
-        from: &T::AccountId,
-        from_type: AssetType,
-        to: &T::AccountId,
-        to_type: AssetType,
-        value: T::Balance,
-        check: bool,
-    ) -> StdResult<(), AssetErr> {
         if from == to && from_type == to_type {
             // same account, same type, return directly
             return Ok(());
         }
         if value == Zero::zero() {
+            // value is zero, do not read storage, no event
             return Ok(());
         }
-
-        if check {
-            Self::is_valid_asset(token).map_err(|_| AssetErr::InvalidToken)?;
-        }
+        // check
+        Self::is_valid_asset(token).map_err(|_| AssetErr::InvalidToken)?;
 
         let from_balance = Self::asset_balance(from, token, from_type);
         let to_balance = Self::asset_balance(to, token, to_type);

@@ -25,7 +25,6 @@ extern crate sr_primitives as runtime_primitives;
 #[macro_use]
 extern crate sr_version as version;
 extern crate sr_io as runtime_io;
-#[cfg_attr(not(feature = "std"), macro_use)]
 extern crate sr_std as rstd;
 
 // substrate runtime module
@@ -56,6 +55,7 @@ extern crate runtime_api;
 extern crate xrml_xsupport as xsupport;
 
 pub extern crate xrml_xaccounts as xaccounts;
+pub extern crate xrml_xbootstrap as xbootstrap;
 pub extern crate xrml_xsystem as xsystem;
 // fee;
 pub extern crate xrml_fee_manager as fee_manager;
@@ -236,6 +236,8 @@ impl sdot::Trait for Runtime {
 //    type Event = Event;
 //}
 
+impl xbootstrap::Trait for Runtime {}
+
 // cxrml trait
 impl xsystem::Trait for Runtime {
     type ValidatorList = Session;
@@ -302,7 +304,7 @@ construct_runtime!(
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
         Session: session,
-        Grandpa: grandpa::{Module, Call, Storage, Config<T>, Log(), Event<T>},
+        Grandpa: grandpa::{Module, Call, Storage, Log(), Event<T>},
         Aura: aura::{Module, Inherent(Timestamp)},
         Sudo: sudo,
 
@@ -323,6 +325,8 @@ construct_runtime!(
         // bridge
         XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>,  Event<T>},
         XBridgeOfSDOT: sdot::{Module, Call, Storage, Config<T>,  Event<T>},
+
+        XBootstrap: xbootstrap::{Config<T>},
     }
 );
 

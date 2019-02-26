@@ -133,6 +133,7 @@ decl_module! {
                 }
             }
         }
+
         //取消委托
         pub fn cancel_order(origin,pairid:OrderPairID,index:ID) -> Result{
             let transactor = ensure_signed(origin)?;
@@ -146,7 +147,6 @@ decl_module! {
                 }
             }
         }
-
 
         //增加交易对
         pub fn add_pair(first:Token,second:Token,precision:u32,unit:u32, price:T::Price,online:bool)->Result{
@@ -175,6 +175,7 @@ decl_module! {
                 },
             }
         }
+
         //更新交易对
         pub fn update_pair(id:OrderPairID,min:u32,online:bool)->Result{
             info!("pairid:{:},min:{:},online:{:}",id,min,online);
@@ -195,6 +196,7 @@ decl_module! {
                 },
             }
         }
+
         pub fn update_price_volatility(price_volatility:u32)->Result{
             info!("price_volatility:{:}",price_volatility);
 
@@ -250,26 +252,6 @@ decl_storage! {
 
         pub PriceVolatility get(price_volatility) config(): u32;//价格波动率%
     }
-    add_extra_genesis {
-        config(pair_list): Vec<(Token, Token, u32, u32, T::Price,bool)>;
-        build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use runtime_io::with_externalities;
-            use substrate_primitives::Blake2Hasher;
-            let src_r = storage.clone().build_storage().unwrap().0;
-            let mut tmp_storage: runtime_io::TestExternalities<Blake2Hasher> = src_r.into();
-            with_externalities(&mut tmp_storage, || {
-
-                for (first, second, precision, unit, price,status) in config.pair_list.iter() {
-
-                    Module::<T>::add_pair(first.clone(),second.clone(),*precision,*unit,*price,*status).unwrap();
-                }
-
-            });
-            let map: primitives::StorageOverlay = tmp_storage.into();
-            storage.extend(map);
-        });
-    }
-
 }
 
 impl<T: Trait> OnAssetRegisterOrRevoke for Module<T> {

@@ -1,13 +1,13 @@
 // Copyright 2019 Chainpool.
 
-use runtime_api;
 use chain as btc_chain;
+use runtime_api;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use parity_codec::Decode;
 use jsonrpc_derive::rpc;
+use parity_codec::Decode;
 
 use client::{self, runtime_api::Metadata, Client};
 
@@ -31,7 +31,7 @@ use xbitcoin::{
 
 use xspot::def::{OrderPair, OrderPairID, ID};
 use xspot::{HandicapT, OrderT};
-use xstaking::{IntentionProfs};
+use xstaking::IntentionProfs;
 use xsupport::storage::btree_map::CodecBTreeMap;
 use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
 
@@ -46,13 +46,13 @@ mod error;
 mod impl_rpc;
 pub mod types;
 
+use self::error::ErrorKind::*;
 use self::error::Result;
 use self::types::{
     AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData, PairInfo,
     PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, TrusteeInfo,
     WithdrawInfo, WithdrawStatus, WithdrawTxInfo,
 };
-use self::error::ErrorKind::*;
 const MAX_PAGE_SIZE: u32 = 100;
 
 #[rpc]

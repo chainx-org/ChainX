@@ -372,68 +372,6 @@ decl_storage! {
         pub Penalty get(penalty) config(): T::Balance;
         pub PunishList get(punish_list): Vec<T::AccountId>;
     }
-
-    add_extra_genesis {
-        config(intentions): Vec<(T::AccountId, T::Balance, Name, URL)>;
-        config(trustee_intentions): Vec<(T::AccountId, Vec<u8>, Vec<u8>)>;
-        build(|storage: &mut runtime_primitives::StorageOverlay, _: &mut runtime_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use codec::Encode;
-            use runtime_io::with_externalities;
-            use substrate_primitives::Blake2Hasher;
-            use xassets::ChainT;
-
-            let hash = |key: &[u8]| -> Vec<u8>{
-                GenesisConfig::<T>::hash(key).to_vec()
-            };
-
-            let pcx = xassets::Module::<T>::TOKEN.to_vec();
-
-            // FIXME transfer to Alice, then transfer to others by Alice
-            let s = storage.clone().build_storage().unwrap().0;
-            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
-            with_externalities(&mut init, || {
-                for (intention, value, name, url) in config.intentions.clone().into_iter() {
-                    let _ = Module::<T>::apply_register(&intention, name);
-
-                    let _ = <xassets::Module<T>>::pcx_issue(&intention, value);
-
-                    let _ = <xassets::Module<T>>::move_balance_with_checkflag(
-                        &pcx,
-                        &intention,
-                        xassets::AssetType::Free,
-                        &intention,
-                        xassets::AssetType::ReservedStaking,
-                        value,
-                        false
-                    );
-
-                    let _ = Module::<T>::apply_refresh(&intention, Some(url), Some(true), None, None);
-                    let _ = Module::<T>::apply_update_vote_weight(&intention, &intention, value, true);
-
-                    storage.insert(hash(&<StakeWeight<T>>::key_for(&intention)), value.encode());
-                }
-
-                let mut trustees = Vec::new();
-                for (i, hot_entity, cold_entity) in config.trustee_intentions.clone().into_iter() {
-                    trustees.push(i.clone());
-                    <xaccounts::TrusteeIntentionPropertiesOf<T>>::insert(
-                        &(i, xassets::Chain::Bitcoin),
-                        TrusteeIntentionProps {
-                            about: b"".to_vec(),
-                            hot_entity: TrusteeEntity::Bitcoin(hot_entity),
-                            cold_entity: TrusteeEntity::Bitcoin(cold_entity),
-                        }
-                    );
-                }
-                <xaccounts::TrusteeIntentions<T>>::put(trustees);
-
-                let _ = xbitcoin::Module::<T>::update_trustee_addr();
-            });
-
-            let init :runtime_primitives::StorageOverlay = init.into();
-            storage.extend(init);
-        });
-    }
 }
 
 impl<T: Trait> Module<T> {
@@ -589,6 +527,16 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    pub fn bootstrap_refresh(
+        who: &T::AccountId,
+        url: Option<URL>,
+        desire_to_run: Option<bool>,
+        next_key: Option<T::SessionKey>,
+        about: Option<XString>,
+    ) {
+        Self::apply_refresh(who, url, desire_to_run, next_key, about)
+    }
+
     fn apply_refresh(
         who: &T::AccountId,
         url: Option<URL>,
@@ -621,6 +569,10 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::Refresh());
     }
 
+    pub fn bootstrap_register(intention: &T::AccountId, name: Name) -> Result {
+        Self::apply_register(intention, name)
+    }
+
     /// Actually register an intention.
     fn apply_register(intention: &T::AccountId, name: Name) -> Result {
         <xaccounts::IntentionOf<T>>::insert(&name, intention.clone());
@@ -641,6 +593,15 @@ impl<T: Trait> Module<T> {
         );
 
         Ok(())
+    }
+
+    pub fn bootstrap_update_vote_weight(
+        source: &T::AccountId,
+        target: &T::AccountId,
+        value: T::Balance,
+        to_add: bool,
+    ) {
+        Self::apply_update_vote_weight(source, target, value, to_add)
     }
 
     /// Actually update the vote weight and nomination balance of source and target.

@@ -127,15 +127,7 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
     }
 }
 
-pub trait Trait:
-    system::Trait
-    + xassets::Trait
-    + xaccounts::Trait
-    + xsystem::Trait
-    + xstaking::Trait
-    + bitcoin::Trait
-    + xspot::Trait
-{
+pub trait Trait: xsystem::Trait + xstaking::Trait + xspot::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     type DetermineTokenJackpotAccountId: TokenJackpotAccountIdFor<
@@ -208,28 +200,6 @@ decl_storage! {
         pub PseduIntentionProfiles get(psedu_intention_profiles): map Token => PseduIntentionVoteWeight<T::BlockNumber>;
 
         pub DepositRecords get(deposit_records): map (T::AccountId, Token) => DepositVoteWeight<T::BlockNumber>;
-    }
-
-    add_extra_genesis {
-        config(endowed_users): Vec<(Token, Vec<(T::AccountId, T::Balance)>)>;
-
-        build(|storage: &mut runtime_primitives::StorageOverlay, _: &mut runtime_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use runtime_io::with_externalities;
-            use substrate_primitives::Blake2Hasher;
-
-            let s = storage.clone().build_storage().unwrap().0;
-            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
-            with_externalities(&mut init, || {
-                for (token, value_of) in config.endowed_users.iter() {
-                    for (who, value) in value_of {
-                        Module::<T>::update_vote_weight(who, token, *value, true);
-                    }
-                }
-            });
-
-            let init: runtime_primitives::StorageOverlay = init.into();
-            storage.extend(init);
-        });
     }
 }
 
@@ -373,6 +343,15 @@ impl<T: Trait> Module<T> {
 
         <PseduIntentionProfiles<T>>::insert(target, p_vote_weight);
         <DepositRecords<T>>::insert(&key, d_vote_weight);
+    }
+
+    pub fn bootstrap_update_vote_weight(
+        source: &T::AccountId,
+        target: &Token,
+        value: T::Balance,
+        to_add: bool,
+    ) {
+        Self::update_vote_weight(source, target, value, to_add)
     }
 }
 

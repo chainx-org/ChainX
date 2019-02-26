@@ -149,25 +149,6 @@ decl_storage! {
         // Pending change: (signalled at, scheduled change).
         PendingChange get(pending_change): Option<StoredPendingChange<T::BlockNumber, T::SessionKey>>;
     }
-    add_extra_genesis {
-        config(authorities): Vec<(T::SessionKey, u64)>;
-
-        build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use codec::{Encode, KeyedVec};
-
-            let auth_count = config.authorities.len() as u32;
-            config.authorities.iter().enumerate().for_each(|(i, v)| {
-                storage.insert((i as u32).to_keyed_vec(
-                    ::fg_primitives::well_known_keys::AUTHORITY_PREFIX),
-                    v.encode()
-                );
-            });
-            storage.insert(
-                ::fg_primitives::well_known_keys::AUTHORITY_COUNT.to_vec(),
-                auth_count.encode(),
-            );
-        });
-    }
 }
 
 decl_module! {

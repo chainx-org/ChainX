@@ -41,6 +41,7 @@ xr-primitives = { path = "../xr-primitives", default-features = false }
 runtime-api = { path = "../runtime-api", default-features = false }
 # chainx runtime module
 xrml-xsupport = { path = "../xrml/xsupport", default-features = false }
+xrml-xbootstrap = { path = "../xrml/xbootstrap", default-features = false }
 xrml-xsystem = { path = "../xrml/xsystem", default-features = false }
 xrml-xaccounts = { path = "../xrml/xaccounts", default-features = false }
 xrml-session = { path = "../xrml/xsession", default-features = false }
@@ -102,6 +103,7 @@ std = [
     "xr-primitives/std",
     "runtime-api/std",
     # chainx runtime
+    "xrml-xbootstrap/std",
     "xrml-xsupport/std",
     "xrml-xsystem/std",
     "xrml-xaccounts/std",

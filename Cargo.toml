@@ -45,6 +45,7 @@ members = [
     "xr-primitives",
 
     # xrml
+    "xrml/xbootstrap",
     "xrml/xsystem",
     "xrml/xsupport",
     "xrml/xaccounts",

@@ -1,5 +1,5 @@
 use super::*;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 // utils
 #[derive(Serialize, Deserialize, Debug)]

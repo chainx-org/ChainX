@@ -210,6 +210,10 @@ impl Params {
     pub fn max_bits(&self) -> Compact {
         Compact::new(self.max_bits)
     }
+
+    pub fn retargeting_interval(&self) -> u32 {
+        self.retargeting_interval
+    }
 }
 
 pub trait Trait:
@@ -252,7 +256,7 @@ decl_storage! {
         pub ParamsInfo get(params_info) config(): Params;
 
         ///  get NetworkId from genesis_config
-        pub NetworkId get(network_id) config(): u32;
+        pub NetworkId get(network_id): u32;
 
         /// get IrrBlock from genesis_config
         pub ReservedBlock get(reserved) config(): u32;
@@ -272,30 +276,6 @@ decl_storage! {
         pub PendingDepositMap get(pending_deposit): map Address => Option<Vec<DepositCache>>;
 
         pub TrusteeRedeemScript get(trustee_info): Option<TrusteeScriptInfo>;
-    }
-    add_extra_genesis {
-        build(|storage: &mut runtime_primitives::StorageOverlay, _: &mut runtime_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use codec::Encode;
-
-            let (header, number): (BlockHeader, u32) = config.genesis.clone();
-            let h = header.hash();
-
-            if config.network_id == 0 && number % config.params_info.retargeting_interval != 0 {
-                panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
-            }
-            let genesis = BlockHeaderInfo {
-                header: header,
-                height: number,
-                confirmed: true,
-                txid: [].to_vec(),
-            };
-            // insert genesis
-            storage.insert(GenesisConfig::<T>::hash(&<BlockHeaderFor<T>>::key_for(&h)).to_vec(),
-                genesis.encode());
-            storage.insert(GenesisConfig::<T>::hash(&<BlockHeightFor<T>>::key_for(genesis.height)).to_vec(),
-                [h.clone()].to_vec().encode());
-            storage.insert(GenesisConfig::<T>::hash(&<BestIndex<T>>::key()).to_vec(), h.encode());
-        });
     }
 }
 
