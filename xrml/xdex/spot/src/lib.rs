@@ -484,9 +484,7 @@ impl<T: Trait> Module<T> {
                 OrderDirection::Sell => {
                     if <xassets::Module<T>>::free_balance(&who, &pair.first) < As::sa(amount.as_())
                     {
-                        return Err(
-                            "transactor's free token balance too low, can't put sell order",
-                        );
+                        return Err("transactor's free token balance too low, can't put sell order");
                     }
                     //  锁定用户资产
                     reserve_last = amount;

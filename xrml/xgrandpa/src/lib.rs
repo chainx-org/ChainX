@@ -41,13 +41,14 @@ extern crate serde_derive;
 extern crate parity_codec;
 #[macro_use]
 extern crate parity_codec_derive;
-
 extern crate parity_codec as codec;
 extern crate sr_primitives as primitives;
 extern crate srml_consensus as consensus;
 extern crate srml_system as system;
 extern crate substrate_primitives;
 extern crate xrml_session as session;
+extern crate xrml_xsupport;
+use xrml_xsupport::info;
 
 #[cfg(test)]
 extern crate sr_io as runtime_io;
@@ -185,7 +186,9 @@ decl_module! {
 impl<T: Trait> Module<T> {
     /// Get the current set of authorities, along with their respective weights.
     pub fn grandpa_authorities() -> Vec<(T::SessionKey, u64)> {
-        <AuthorityStorageVec<T::SessionKey>>::items()
+        let tmp = <AuthorityStorageVec<T::SessionKey>>::items();
+        info!("--------------authority:{:?}", tmp.clone());
+        tmp
     }
 
     /// Schedule a change in the authorities.

@@ -18,6 +18,7 @@ srml-support = { git = "https://github.com/chainpool/substrate", default-feature
 srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-consensus = { git = "https://github.com/chainpool/substrate", default-features = false }
 xrml-session = { path = "../xsession", default-features = false }
+xrml-xsupport = { path = "../xsupport", default_features = false }
 
 [features]
 default = ["std"]
@@ -32,6 +33,7 @@ std = [
 	"srml-support/std",
 	"sr-primitives/std",
 	"srml-system/std",
-    "srml-consensus/std",
+	"srml-consensus/std",
 	"xrml-session/std",
+	"xrml-xsupport/std",
 ]

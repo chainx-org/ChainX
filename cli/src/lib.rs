@@ -112,7 +112,7 @@ where
         "ChainX",
         args,
         exit,
-        |exit, custom_args, config| {
+        |exit, custom_args, mut config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
             info!("  by Chainpool, 2018-2019");
@@ -122,6 +122,7 @@ where
             let runtime = Runtime::new().map_err(|e| format!("{:?}", e))?;
             let executor = runtime.executor();
 
+            config.custom.only_grandpa = custom_args.only_grandpa;
             if config.roles == ServiceRoles::AUTHORITY {
                 let name = custom_args
                     .validator_name

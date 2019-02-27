@@ -72,6 +72,7 @@ pub struct NodeConfig<F: substrate_service::ServiceFactory> {
         grandpa::LinkHalfForService<F>,
     )>,
     inherent_data_providers: InherentDataProviders,
+    pub only_grandpa: bool,
 }
 
 impl<F> Default for NodeConfig<F>
@@ -82,6 +83,7 @@ where
         NodeConfig {
             grandpa_import_setup: None,
             inherent_data_providers: InherentDataProviders::new(),
+            only_grandpa: false,
         }
     }
 }
@@ -106,6 +108,7 @@ construct_service_factory! {
                 let (block_import, link_half) = service.config.custom.grandpa_import_setup.take()
                     .expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
+              if !service.config.custom.only_grandpa {
                 if let Some(ref key) = local_key {
                         let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
                             client: service.client(),
@@ -158,8 +161,9 @@ construct_service_factory! {
                             service.config.custom.inherent_data_providers.clone(),
                         )?);
 
-                        info!("Running Grandpa session as Authority {}", key.public());
+                        info!("Running aura session as Authority {}", key.public());
                     }
+                }
 //                #[cfg(not(feature = "msgbus-redis"))] {
                 // remove grandpa in msgbus mod for revert block
                 executor.spawn(grandpa::run_grandpa(

@@ -46,7 +46,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let dave = ed25519::Pair::from_seed(b"Dave                            ").public();
     let gavin = ed25519::Pair::from_seed(b"Gavin                           ").public();
     let satoshi = ed25519::Pair::from_seed(b"Satoshi                         ").public();
-//    let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
+    //    let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
     let sudo_address =
         hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
 
