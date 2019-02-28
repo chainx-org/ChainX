@@ -1,6 +1,4 @@
 // Copyright 2019 Chainpool.
-
-use primitives::hash::H256;
 use rstd::marker::PhantomData;
 use rstd::result::Result;
 use runtime_support::StorageMap;
@@ -31,13 +29,9 @@ impl ChainErr {
 pub struct Chain<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> Chain<T> {
-    pub fn update_header(confirmed_header: BlockHeaderInfo) -> Result<(), ChainErr> {
-        Self::canonize(&confirmed_header.header.hash())?;
-        Ok(())
-    }
-
-    fn canonize(hash: &H256) -> Result<(), ChainErr> {
-        let confirmed_header: BlockHeaderInfo = match <BlockHeaderFor<T>>::get(hash) {
+    pub fn handle_confirm_block(confirmed_header: BlockHeaderInfo) -> Result<(), ChainErr> {
+        let hash = confirmed_header.header.hash();
+        let confirmed_header: BlockHeaderInfo = match <BlockHeaderFor<T>>::get(&hash) {
             Some(header) => header,
             None => return Err(ChainErr::OtherErr("Not found block header for this hash")),
         };

@@ -73,8 +73,8 @@ use ser::{deserialize, Reader};
 use system::ensure_signed;
 pub use tx::RelayTx;
 use tx::{
-    check_withdraw_tx, create_multi_address, handle_condidate, handle_tx, inspect_address,
-    sign_num, validate_transaction,
+    check_signed_tx, check_withdraw_tx, create_multi_address, get_sig_num, handle_tx,
+    inspect_address, update_sig_node, validate_transaction,
 };
 use xaccounts::{TrusteeAddressPair, TrusteeEntity};
 use xassets::{Chain as ChainDef, ChainT};
@@ -288,11 +288,11 @@ decl_module! {
             let header: BlockHeader = deserialize(header.as_slice()).map_err(|_| "Cannot deserialize the header vec")?;
             ensure!(
                 Self::block_header_for(&header.hash()).is_none(),
-                "Cannot push if the header already exists."
+                "Header already exists."
             );
             ensure!(
                 <BlockHeaderFor<T>>::exists(&header.previous_header_hash),
-                "Cannot push if can't find its previous header in ChainX, which may be header of some orphan block."
+                "Can't find previous header"
             );
             Self::apply_push_header(header, &from)?;
 
@@ -311,7 +311,7 @@ decl_module! {
 
         pub fn create_withdraw_tx(origin, withdraw_id: Vec<u32>, tx: Vec<u8>) -> Result {
             let from = ensure_signed(origin)?;
-            info!("Account {:?} push create withdraw tx", from);
+            info!("Account {:?} create withdraw tx", from);
             // commiter must in trustee node list
             Self::ensure_trustee_node(&from)?;
             let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice())).map_err(|_|"Parse transaction err")?;
@@ -322,9 +322,9 @@ decl_module! {
 
         pub fn sign_withdraw_tx(origin, tx: Vec<u8>, vote_state: bool) -> Result {
             let from = ensure_signed(origin)?;
-            info!("Account {:?} push sign withdraw tx", from);
+            info!("Account {:?} sign withdraw tx", from);
             Self::ensure_trustee_node(&from)?;
-            Self::apply_sign_withdraw(from, tx, vote_state)?;
+            Self::apply_sig_withdraw(from, tx, vote_state)?;
             Ok(())
         }
     }
@@ -402,7 +402,7 @@ impl<T: Trait> Module<T> {
         if trustees.iter().any(|n| n == who) {
             return Ok(());
         }
-        Err("Commiter no in the trustee node list")
+        Err("Commiter not in the trustee node list")
     }
 
     fn apply_push_header(header: BlockHeader, _who: &T::AccountId) -> Result {
@@ -472,7 +472,7 @@ impl<T: Trait> Module<T> {
             ));
 
             <BestIndex<T>>::put(header.hash());
-            <Chain<T>>::update_header(confirm_header.clone()).map_err(|e| e.info())?;
+            <Chain<T>>::handle_confirm_block(confirm_header.clone()).map_err(|e| e.info())?;
         }
         Ok(())
     }
@@ -540,28 +540,25 @@ impl<T: Trait> Module<T> {
         check_withdraw_tx::<T>(tx.clone(), withdraw_id.clone(), hot_address.clone())?;
         let candidate = CandidateTx::new(withdraw_id, tx, VoteResult::Unfinish, 0, Vec::new());
         <TxProposal<T>>::put(candidate);
-        info!("Through the legality check of withdrawal transaction ");
+        info!("Through the legality check of withdrawal");
         Ok(())
     }
 
-    fn apply_sign_withdraw(who: T::AccountId, tx: Vec<u8>, vote_state: bool) -> Result {
+    fn apply_sig_withdraw(who: T::AccountId, tx: Vec<u8>, vote_state: bool) -> Result {
         if vote_state {
-            handle_condidate::<T>(tx.clone())?;
+            check_signed_tx::<T>(tx.clone())?;
         }
-        let (sign_num, _) = sign_num::<T>();
+        let (sig_num, _) = get_sig_num::<T>();
         match <TxProposal<T>>::get() {
             Some(mut data) => {
-                if data.sig_node.iter().any(|(n, _)| *n == who) {
-                    return Err("Already signature transaction or reject to signature");
-                }
                 info!("Signature: {:}", vote_state);
                 if !vote_state {
-                    let sig_node = data.sig_node.clone();
-                    let reject_count: Vec<&(T::AccountId, bool)> =
-                        sig_node.iter().filter(|(_, vote)| *vote == false).collect();
-                    data.sig_node.push((who, vote_state));
-                    if reject_count.len() + 1 >= sign_num {
-                        info!("{:} opposition, Clear candidate", reject_count.len() + 1);
+                    let sig_node = update_sig_node::<T>(vote_state, who.clone(), data.sig_node);
+                    let node = sig_node.clone();
+                    let reject: Vec<&(T::AccountId, bool)> =
+                        node.iter().filter(|(_, vote)| *vote == false).collect();
+                    if reject.len() >= sig_num {
+                        info!("{:} opposition, Clear candidate", reject.len());
                         <TxProposal<T>>::kill();
                         return Ok(());
                     }
@@ -570,7 +567,7 @@ impl<T: Trait> Module<T> {
                         data.tx,
                         data.sig_status,
                         data.sig_num,
-                        data.sig_node,
+                        sig_node,
                     );
                     <TxProposal<T>>::put(candidate);
                 } else {
@@ -587,8 +584,8 @@ impl<T: Trait> Module<T> {
                         return Err("Need to sign on the latest signature results");
                     }
                     info!("Through signature checking");
-                    data.sig_node.push((who, vote_state));
-                    if sigs.len() >= sign_num {
+                    let sig_node = update_sig_node::<T>(vote_state, who.clone(), data.sig_node);
+                    if sigs.len() >= sig_num {
                         info!("Signature completed: {:}", sigs.len());
                         data.sig_status = VoteResult::Finish;
                     } else {
@@ -600,12 +597,12 @@ impl<T: Trait> Module<T> {
                         tx,
                         data.sig_status,
                         sigs.len() as u32,
-                        data.sig_node,
+                        sig_node,
                     );
                     <TxProposal<T>>::put(candidate);
                 }
             }
-            None => return Err("No pending signature transaction"),
+            None => return Err("No transactions waiting for signature"),
         }
         Ok(())
     }

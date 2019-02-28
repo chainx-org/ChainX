@@ -68,7 +68,7 @@ pub fn validate_transaction<T: Trait>(
     Err("Irrelevant tx")
 }
 
-fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Bytes) -> bool {
+fn verify_sig(sig: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Bytes) -> bool {
     let tx_signer: TransactionInputSigner = tx.clone().into();
     let checker = TransactionSignatureChecker {
         input_index: 0,
@@ -76,7 +76,7 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &B
         signer: tx_signer,
     };
     let sighashtype = 1; // Sighsh all
-    let signature = sign.clone().take().into();
+    let signature = sig.clone().take().into();
     let public = if let Ok(public) = Public::from_slice(pubkey.as_slice()) {
         public
     } else {
@@ -94,7 +94,8 @@ fn verify_sign(sign: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &B
     );
 }
 
-pub fn handle_condidate<T: Trait>(tx: Vec<u8>) -> Result {
+/// Check signed transactions
+pub fn check_signed_tx<T: Trait>(tx: Vec<u8>) -> Result {
     let tx: BTCTransaction =
         deserialize(Reader::new(tx.as_slice())).map_err(|_| "Parse transaction err")?;
     let trustee_info =
@@ -117,7 +118,7 @@ pub fn handle_condidate<T: Trait>(tx: Vec<u8>) -> Result {
     for sig in sigs.clone() {
         let mut verify = false;
         for pubkey in pubkeys.clone() {
-            if verify_sign(&sig, &pubkey, &tx, &redeem_script.to_bytes()) {
+            if verify_sig(&sig, &pubkey, &tx, &redeem_script.to_bytes()) {
                 verify = true;
                 break;
             }

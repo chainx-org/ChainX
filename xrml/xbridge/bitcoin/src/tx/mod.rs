@@ -23,7 +23,7 @@ use script::{
 use xrecords;
 use xrecords::ApplicationMap;
 
-pub use self::validator::{handle_condidate, validate_transaction};
+pub use self::validator::{check_signed_tx, validate_transaction};
 
 mod handler;
 mod validator;
@@ -48,6 +48,7 @@ fn is_key(script_pubkey: &[u8], trustee_address: &Address) -> bool {
     false
 }
 
+/// Get the transaction type : Withdraw | Deposit
 fn get_tx_type(input_address: &Address, trustee_address: &Address) -> TxType {
     if input_address.hash == trustee_address.hash {
         TxType::Withdraw
@@ -88,7 +89,6 @@ pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
             return Err("Can't get trustee address");
         }
     };
-    //.ok_or("Should set trustee address first.")?;
     let hot_address = match Address::from_layout(&trustee_address.hot_address.as_slice()) {
         Ok(a) => a,
         Err(_) => {
@@ -126,8 +126,8 @@ pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
 }
 
 pub fn create_multi_address<T: Trait>(pubkeys: Vec<Vec<u8>>) -> Option<(Address, Script)> {
-    let (sign_num, node_num) = sign_num::<T>();
-    let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + sign_num as u8 - 1) {
+    let (sig_num, node_num) = get_sig_num::<T>();
+    let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + sig_num as u8 - 1) {
         Some(o) => o,
         None => return None,
     };
@@ -140,7 +140,7 @@ pub fn create_multi_address<T: Trait>(pubkeys: Vec<Vec<u8>>) -> Option<(Address,
         Some(o) => o,
         None => return None,
     };
-    let script = build
+    let redeem_script = build
         .push_opcode(opcode)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
@@ -153,11 +153,12 @@ pub fn create_multi_address<T: Trait>(pubkeys: Vec<Vec<u8>>) -> Option<(Address,
     let addr = Address {
         kind: keys::Type::P2SH,
         network: net,
-        hash: dhash160(&script),
+        hash: dhash160(&redeem_script),
     };
-    Some((addr, script))
+    Some((addr, redeem_script))
 }
 
+/// Check that the cash withdrawal transaction is correct
 pub fn check_withdraw_tx<T: Trait>(
     tx: Transaction,
     withdraw_id: Vec<u32>,
@@ -211,10 +212,14 @@ pub fn check_withdraw_tx<T: Trait>(
     }
 }
 
-pub fn sign_num<T: Trait>() -> (usize, usize) {
+/// Get the required number of signatures
+/// sig_num: Number of signatures required
+/// node_num: Total number of multiple signatures
+/// NOTE: Signature ratio greater than 2/3
+pub fn get_sig_num<T: Trait>() -> (usize, usize) {
     let node_list = <xaccounts::TrusteeIntentions<T>>::get();
     let node_num = node_list.len();
-    let sign_num = match 2_usize.checked_mul(node_num) {
+    let sig_num = match 2_usize.checked_mul(node_num) {
         Some(m) => {
             if m % 3 == 0 {
                 m / 3
@@ -224,5 +229,31 @@ pub fn sign_num<T: Trait>() -> (usize, usize) {
         }
         None => 0,
     };
-    (sign_num, node_num)
+    (sig_num, node_num)
+}
+
+/// Update the signature status of trust nodes
+/// state: false -> Veto signature, true -> Consent signature
+pub fn update_sig_node<T: Trait>(
+    state: bool,
+    who: T::AccountId,
+    mut sig_node: Vec<(T::AccountId, bool)>,
+) -> Vec<(T::AccountId, bool)> {
+    let node = sig_node.clone();
+    match node.iter().position(|(n, _)| *n == who) {
+        Some(i) => {
+            if let Some((_, s)) = node.get(i) {
+                if *s != state {
+                    sig_node.remove(i);
+                    sig_node.push((who.clone(), state));
+                }
+            } else {
+                sig_node.push((who.clone(), state));
+            }
+        }
+        None => {
+            sig_node.push((who.clone(), state));
+        }
+    };
+    sig_node
 }

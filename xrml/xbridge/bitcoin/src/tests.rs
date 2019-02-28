@@ -122,7 +122,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                 10 * 60,              // target_spacing_seconds
                 4,
             ), // retargeting_factor
-            network_id: 1,
             irr_block: 3,
             reserved: 2100,
             btc_fee: 1000,
@@ -168,7 +167,6 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
                 10 * 60,              // target_spacing_seconds
                 4,
             ), // retargeting_factor
-            network_id: 1,
             irr_block: 3,
             reserved: 2100,
             btc_fee: 1000,
@@ -518,7 +516,6 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
                 10 * 60,              // target_spacing_seconds
                 4,
             ), // retargeting_factor
-            network_id: 1,
             irr_block: 3,
             reserved: 2100,
             btc_fee: 1000,
@@ -589,7 +586,6 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
                 10 * 60,              // target_spacing_seconds
                 4,
             ), // retargeting_factor
-            network_id: 1,
             irr_block: 3,
             reserved: 2100,
             btc_fee: 1000,
@@ -688,7 +684,6 @@ fn create_multi_address(pubkeys: Vec<Vec<u8>>) -> Address {
         .push_opcode(Opcode::OP_4)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
-    //println!("script:{:?}", script.to_bytes().to_vec());
     let multisig_address = Address {
         kind: keys::Type::P2SH,
         network: keys::Network::Testnet,
@@ -733,19 +728,20 @@ fn test_create_multi_address() {
     cold_keys.push(pubkey6_bytes);
     cold_keys.push(pubkey7_bytes);
     cold_keys.push(pubkey8_bytes);
-    hot_keys.sort();
+    //hot_keys.sort();
+
     let _hot_addr = create_multi_address(hot_keys);
     let cold_addr = create_multi_address(cold_keys);
 
-    let layout_addr = cold_addr.layout().to_vec();
+    let cold_layout_addr = cold_addr.layout().to_vec();
     let layout = [
         196, 96, 201, 52, 180, 27, 175, 109, 29, 168, 76, 211, 20, 252, 208, 243, 210, 16, 105, 83,
         0, 42, 109, 109, 135,
     ];
 
-    assert_eq!(layout_addr, layout);
+    assert_eq!(cold_layout_addr, layout);
 
-    let addr = Address::from_layout(&mut layout_addr.as_slice()).unwrap();
+    let addr = Address::from_layout(&mut cold_layout_addr.as_slice()).unwrap();
 
     assert_eq!(cold_addr, addr);
 
@@ -753,8 +749,7 @@ fn test_create_multi_address() {
         169, 20, 96, 201, 52, 180, 27, 175, 109, 29, 168, 76, 211, 20, 252, 208, 243, 210, 16, 105,
         83, 0, 135,
     ];
-
-    let pk = addr.hash.clone().to_vec();
+    let pk = _hot_addr.hash.clone().to_vec();
     let mut pubkeys = Vec::new();
     pubkeys.push(Opcode::OP_HASH160 as u8);
     pubkeys.push(Opcode::OP_PUSHBYTES_20 as u8);
@@ -795,4 +790,20 @@ fn test_sign_withdraw() {
         let _redeem_script: Script = Script::from("532103f72c448a0e59f48d4adef86cba7b278214cece8e56ef32ba1d179e0a8129bdba210306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40210227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c354ae");
         handle_condidate::<Test>(tx).unwrap();
     })
+}
+
+#[test]
+fn test_sign_state() {
+    let mut data = Vec::new();
+    data.push((1, true));
+    data.push((2, true));
+    data.push((3, true));
+    data.push((4, true));
+    let vote_state = false;
+    let data = update_sign_node::<Test>(vote_state, 1, data);
+    let data = update_sign_node::<Test>(vote_state, 3, data);
+    let data = update_sign_node::<Test>(vote_state, 2, data);
+    let data = update_sign_node::<Test>(vote_state, 4, data);
+    let d = vec![(1, false), (3, false), (2, false), (4, false)];
+    assert_eq!(data, d);
 }
