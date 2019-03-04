@@ -6,8 +6,8 @@ authors = ["Chainpool <http://chainx.org>"]
 [dependencies]
 rustc-hex = "1.0"
 serde = { version = "1.0", default-features = false }
-parity-codec = { version = "3.0", default-features = false }
-parity-codec-derive = { version = "3.0" }
+parity-codec = { version = "3.1", default-features = false }
+parity-codec-derive = { version = "3.1" }
 
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }

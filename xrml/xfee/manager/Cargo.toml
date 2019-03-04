@@ -5,8 +5,8 @@ authors = ["Chainpol <http://www.chainx.org>"]
 
 [dependencies]
 serde = { version = "1.0", default-features = false }
-parity-codec = { version = "3.0", default-features = false }
-parity-codec-derive = { version = "3.0", default-features = false }
+parity-codec = { version = "3.1", default-features = false }
+parity-codec-derive = { version = "3.1", default-features = false }
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
 sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
 sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }

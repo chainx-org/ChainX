@@ -3,6 +3,7 @@
 use chainx_runtime::GenesisConfig;
 use genesis_config::{testnet_genesis, GenesisSpec};
 use substrate_service;
+use substrate_telemetry::TelemetryEndpoints;
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
@@ -17,7 +18,7 @@ pub fn staging_testnet_config() -> ChainSpec {
         "chainx_staging_testnet",
         staging_testnet_config_genesis,
         boot_nodes,
-        Some(STAGING_TELEMETRY_URL.into()),
+        Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])),
         None,
         None,
         None,
@@ -57,7 +58,7 @@ pub fn local_testnet_config() -> ChainSpec {
         "chainx_testnet",
         local_testnet_genesis,
         vec![],
-        Some(STAGING_TELEMETRY_URL.into()),
+        Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])),
         None,
         None,
         None,
