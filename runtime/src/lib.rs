@@ -256,7 +256,7 @@ impl fee_manager::Trait for Runtime {
 // assets
 impl xassets::Trait for Runtime {
     type Event = Event;
-    type OnAssetChanged = ();
+    type OnAssetChanged = (XTokens);
     type OnAssetRegisterOrRevoke = (XTokens, XSpot);
 }
 

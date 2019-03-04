@@ -222,15 +222,8 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             bonding_duration: bonding_duration,
             intention_bonding_duration: intention_bonding_duration,
             current_era: 0,
-            penalty: 50 * 100_000_000 / 150, // 1 per block reward
+            minimum_penalty: 10_000_000, // 0.1 PCX by default
             validator_stake_threshold: 1,
-            //            council_address: funding,
-            //            team_address: Public::from_ss58check(
-            //                "5CSff76SK7qcWYq5MpvoHDVRrjWFwpxurwUu6Bqw25hKPQiy",
-            //            )
-            //            .unwrap()
-            //            .0
-            //            .into(),
         }),
         xtokens: Some(XTokensConfig {
             token_discount: 50,

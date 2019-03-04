@@ -2,6 +2,7 @@
 //! Coordidate session and era rotation.
 
 use super::*;
+use rstd::cmp;
 use runtime_primitives::traits::{As, One, Zero};
 use session::OnSessionChange;
 use xaccounts::IntentionJackpotAccountIdFor;
@@ -82,55 +83,87 @@ impl<T: Trait> Module<T> {
         let _ = <xassets::Module<T>>::pcx_issue(&jackpot_addr, to_jackpot);
     }
 
-    /// Slash a given (potential) validator by a specific amount.
-    fn slash_validator(who: &T::AccountId, slash: T::Balance) {
+    /// Actually slash a given (potential) validator by a specific amount.
+    /// If the jackpot of the validator can't afford the penalty, then he
+    /// should be enforced to be inactive.
+    fn slash_validator(who: &T::AccountId) -> bool {
         let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
-        let fund_id = Self::council_address();
+        let council = Self::council_address();
 
-        if slash <= <xassets::Module<T>>::pcx_free_balance(&jackpot_addr) {
-            let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &fund_id, slash);
+        let total_slash = <TotalSlashOfPerSession<T>>::take(who);
+        let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
+
+        let (slashed, should_be_enforced) = if total_slash <= jackpot_balance {
+            (total_slash, false)
         } else {
-            // Put the slashed validator into the punished list when its jackpot is not enough to be slashed.
-            // These on the punish list will be enforced inactive on new session when possible.
-            if !<PunishList<T>>::get().into_iter().any(|x| x == *who) {
-                <PunishList<T>>::mutate(|i| i.push(who.clone()));
-            }
+            (jackpot_balance, true)
+        };
+
+        let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &council, slashed);
+        Self::deposit_event(RawEvent::OfflineSlash(who.clone(), slashed));
+
+        should_be_enforced
+    }
+
+    fn note_offline_slashed(who: &T::AccountId, slash: T::Balance) {
+        if !<SlashedPerSession<T>>::get().into_iter().any(|x| x == *who) {
+            <SlashedPerSession<T>>::mutate(|i| i.push(who.clone()));
         }
+        let total_slash = Self::total_slash_of_per_session(who);
+        <TotalSlashOfPerSession<T>>::insert(who, total_slash + slash);
     }
 
     /// Enforce these punished to be inactive, so that they won't become validators and be rewarded.
     fn enforce_inactive(is_new_era: bool) {
-        let punished = <PunishList<T>>::take();
+        let slashed = <SlashedPerSession<T>>::take();
 
-        if punished.is_empty() {
+        if slashed.is_empty() {
             return;
         }
 
         if Self::gather_candidates().len() <= Self::minimum_validator_count() as usize {
+            for s in slashed {
+                <TotalSlashOfPerSession<T>>::remove(s);
+            }
             return;
         }
 
-        for v in punished.iter() {
-            // Force those punished to be inactive
-            <xaccounts::IntentionPropertiesOf<T>>::mutate(v, |props| {
-                props.is_active = false;
-                info!("validator enforced to be inactive: {:?}", v);
-            });
+        let mut validators = <session::Module<T>>::validators()
+            .into_iter()
+            .map(|(v, _)| v)
+            .collect::<Vec<_>>();
+
+        for v in slashed.iter() {
+            let should_be_enforced = Self::slash_validator(v);
+
+            if should_be_enforced {
+                // Force those slashed yet can't afford the penalty to be inactive
+                <xaccounts::IntentionPropertiesOf<T>>::mutate(v, |props| {
+                    props.is_active = false;
+                    info!("validator enforced to be inactive: {:?}", v);
+                });
+
+                if validators.len() > Self::minimum_validator_count() as usize {
+                    validators.retain(|x| *x != *v);
+                }
+            }
         }
 
-        // The validator set will be set on new era, so we don't have to update here.
-        if !is_new_era {
-            let mut validators = <session::Module<T>>::validators();
-            validators.retain(|(v, _)| !punished.contains(&v));
-            let validators = validators
-                .into_iter()
-                .map(|(v, _)| (Self::intention_profiles(&v).total_nomination.as_(), v))
-                .map(|(a, b)| (b, a))
-                .collect::<Vec<_>>();
-            <session::Module<T>>::set_validators(validators.as_slice());
+        Self::deposit_event(RawEvent::EnforceValidatorsInactive(slashed.clone()));
+
+        // The validator set will be updated on new era, so we don't have to update here.
+        if is_new_era {
+            return;
         }
 
-        Self::deposit_event(RawEvent::EnforceValidatorsInactive(punished));
+        // Update to the latest total nomination
+        let validators = validators
+            .into_iter()
+            .map(|v| (Self::intention_profiles(&v).total_nomination.as_(), v))
+            .map(|(a, b)| (b, a))
+            .collect::<Vec<_>>();
+        info!("new validators due to enforce inactive: {:?}", validators);
+        <session::Module<T>>::set_validators(validators.as_slice());
     }
 
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or
@@ -140,6 +173,7 @@ impl<T: Trait> Module<T> {
         let is_new_era = <ForcingNewEra<T>>::take().is_some()
             || ((session_index - Self::last_era_length_change()) % Self::sessions_per_era())
                 .is_zero();
+
         Self::enforce_inactive(is_new_era);
 
         if should_reward {
@@ -249,12 +283,6 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::Rotation(validators));
     }
 
-    pub fn on_offline_validator(v: &T::AccountId) {
-        let slash = Self::penalty();
-        Self::slash_validator(v, slash);
-        Self::deposit_event(RawEvent::OfflineSlash(v.clone(), slash));
-    }
-
     fn new_trustees() {
         let candidates = Self::gather_candidates()
             .into_iter()
@@ -279,6 +307,18 @@ impl<T: Trait> Module<T> {
         let _ = xbitcoin::Module::<T>::update_trustee_addr();
 
         Self::deposit_event(RawEvent::NewTrustees(trustees));
+    }
+
+    fn jackpot_balance_of(who: &T::AccountId) -> T::Balance {
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
+        <xassets::Module<T>>::pcx_free_balance(&jackpot_addr)
+    }
+
+    pub fn on_offline_validator(v: &T::AccountId) {
+        let jackpot_balance = Self::jackpot_balance_of(v);
+        let penalty = cmp::max(jackpot_balance.as_() / 100, Self::minimum_penalty().as_());
+
+        Self::note_offline_slashed(v, T::Balance::sa(penalty));
     }
 }
 

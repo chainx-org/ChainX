@@ -295,8 +295,8 @@ decl_module! {
         }
 
         /// Set the offline slash grace period.
-        fn set_penalty(new: T::Balance) {
-            <Penalty<T>>::put(new);
+        fn set_minimum_penalty(new: T::Balance) {
+            <MinimumPenalty<T>>::put(new);
         }
 
     }
@@ -369,8 +369,12 @@ decl_storage! {
 
         pub TeamAddress get(team_address): T::AccountId;
         pub CouncilAddress get(council_address): T::AccountId;
-        pub Penalty get(penalty) config(): T::Balance;
-        pub PunishList get(punish_list): Vec<T::AccountId>;
+        /// Minimum penalty for each slash.
+        pub MinimumPenalty get(minimum_penalty) config(): T::Balance;
+        /// The validators should be slashed per session.
+        pub SlashedPerSession get(slashed): Vec<T::AccountId>;
+        /// The accumulative fine that each slashed validator should pay per session.
+        pub TotalSlashOfPerSession get(total_slash_of_per_session): map T::AccountId => T::Balance;
     }
 }
 

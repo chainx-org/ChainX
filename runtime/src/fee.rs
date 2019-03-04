@@ -59,7 +59,7 @@ impl CheckFee for Call {
                 XStakingCall::unnominate(_, _, _) => Some(3),
                 XStakingCall::unfreeze(_, _) => Some(2),
                 XStakingCall::claim(_) => Some(3),
-                XStakingCall::setup_trustee(_, _, _, _) => Some(5),
+                XStakingCall::setup_trustee(_, _, _, _) => Some(1000),
                 _ => None,
             },
             Call::XTokens(call) => match call {
