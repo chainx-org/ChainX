@@ -484,9 +484,7 @@ impl<T: Trait> Module<T> {
                 OrderDirection::Sell => {
                     if <xassets::Module<T>>::free_balance(&who, &pair.first) < As::sa(amount.as_())
                     {
-                        return Err(
-                            "transactor's free token balance too low, can't put sell order",
-                        );
+                        return Err("transactor's free token balance too low, can't put sell order");
                     }
                     //  锁定用户资产
                     reserve_last = amount;
@@ -973,21 +971,22 @@ impl<T: Trait> Module<T> {
             };
         };
     }
-    fn blocks_per_day() -> u64 {
+    fn blocks_per_hour() -> u64 {
         let period = <timestamp::Module<T>>::block_period();
-        let seconds = (24 * 60 * 60) as u64;
-        seconds / period.as_()
+        let seconds_for_hour = (60 * 60) as u64;
+        seconds_for_hour / period.as_()
     }
     fn update_last_average_price(pairid: OrderPairID, price: T::Price) {
-        let blocks_per_day: u64 = Self::blocks_per_day();
+        let blocks_per_hour: u64 = Self::blocks_per_hour();
         let number = <system::Module<T>>::block_number();
 
         match <OrderPairPriceOf<T>>::get(pairid) {
             Some((_last, mut aver, time)) => {
-                if number - time < As::sa(blocks_per_day) {
+                if number - time < As::sa(blocks_per_hour) {
                     let new_weight: u64 = price.as_() * (number - time).as_();
-                    let old_weight: u64 = aver.as_() * (blocks_per_day + time.as_() - number.as_());
-                    aver = As::sa((new_weight + old_weight) / blocks_per_day);
+                    let old_weight: u64 =
+                        aver.as_() * (blocks_per_hour + time.as_() - number.as_());
+                    aver = As::sa((new_weight + old_weight) / blocks_per_hour);
                 } else {
                     aver = price;
                 }
