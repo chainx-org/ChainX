@@ -1,30 +1,25 @@
 // Copyright 2018 chainpool
-extern crate chain as btc_chain;
-//extern crate cxrml_tokenbalances;
-extern crate primitives as btc_primitives;
-extern crate rustc_hex;
-extern crate substrate_primitives;
 
-use self::rustc_hex::FromHex;
-use chainx_runtime::xassets;
+use std::error::Error;
+
+use hex_literal::{hex, hex_impl};
+use rustc_hex::FromHex;
+
+use primitives::ed25519;
 
 use chainx_runtime::{
-    bitcoin,
-    xassets::{Asset, Chain, ChainT},
+    bitcoin::{self, Params},
+    xassets::{self, Asset, Chain, ChainT},
     Runtime,
 };
 use chainx_runtime::{
-    ConsensusConfig, GenesisConfig, Params, SessionConfig, SudoConfig, TimestampConfig,
-    XAssetsConfig, XAssetsProcessConfig, XBootstrapConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
+    ConsensusConfig, GenesisConfig, SessionConfig, SudoConfig, TimestampConfig, XAssetsConfig,
+    XAssetsProcessConfig, XBootstrapConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
     XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
 };
 
-use ed25519;
-//use ed25519::{self, Public};
-
-use self::btc_chain::BlockHeader;
-use self::btc_primitives::{compact::Compact, hash::H256};
-use hex_literal::{hex, hex_impl};
+use btc_chain::BlockHeader;
+use btc_primitives::{compact::Compact, hash::H256};
 
 pub enum GenesisSpec {
     Dev,
@@ -33,11 +28,8 @@ pub enum GenesisSpec {
 }
 
 pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
-    let tmp_eth_address = "004927472a848c6015f5eb02defc13272937d2d5"
-        .from_hex::<Vec<_>>()
-        .unwrap();
-    let mut eth_address: [u8; 20] = [0u8; 20];
-    eth_address.copy_from_slice(&tmp_eth_address);
+    // Load all sdot address and quantity.
+    let sdot_claims = load_sdot_info("dot_tx.csv").unwrap();
 
     // account pub and pri key
     let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
@@ -234,7 +226,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             _genesis_phantom_data: Default::default(),
         }),
         sdot: Some(XBridgeOfSDOTConfig {
-            claims: vec![(eth_address, 1_000_000)],
+            claims: sdot_claims,
         }),
         bitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
@@ -308,4 +300,35 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             ),
         }),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RecordOfSDOT {
+    tx_hash: String,
+    block_number: u64,
+    unix_timestamp: u64,
+    date_time: String,
+    from: String,
+    to: String,
+    quantity: f64,
+}
+
+fn load_sdot_info(filename: &str) -> Result<Vec<([u8; 20], u64)>, Box<dyn Error>> {
+    let f = ::std::fs::File::open(filename)?;
+    let mut reader = csv::Reader::from_reader(f);
+    let mut res = Vec::with_capacity(3053);
+    for result in reader.deserialize() {
+        let record: RecordOfSDOT = result?;
+        let mut sdot_addr = [0u8; 20];
+        sdot_addr.copy_from_slice(&record.to[2..].from_hex::<Vec<u8>>()?);
+        res.push((sdot_addr, (record.quantity * 1000.0).round() as u64));
+    }
+    Ok(res)
+}
+
+#[test]
+fn test_quantity_sum() {
+    let res = load_sdot_info("dot_tx.csv").unwrap();
+    let sum: u64 = res.iter().map(|(_, quantity)| *quantity).sum();
+    assert_eq!(sum, 4999466375u64 + 5 * 20 * 1000);
 }

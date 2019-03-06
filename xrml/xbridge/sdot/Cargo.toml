@@ -2,52 +2,54 @@
 name = "xrml-bridge-sdot"
 version = "0.9.0"
 authors = ["Chainpool <http://chainx.org>"]
+edition = "2018"
 
 [dependencies]
-rustc-hex = "1.0"
+rustc-hex = { version = "2.0", default-features = false }
 serde = { version = "1.0", default-features = false }
 parity-codec = { version = "3.1", default-features = false }
 parity-codec-derive = { version = "3.1" }
-
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-# substrate runtime
-srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-balances = { git = "https://github.com/chainpool/substrate", default-features = false }
-# chainx runtime
-xrml-xsupport = { path = "../../xsupport", default-features = false }
-xrml-xsystem = { path = "../../xsystem", default-features = false }
-xrml-xassets-assets = { path = "../../xassets/assets", default-features = false }
-xrml-xassets-records = { path = "../../xassets/records", default-features = false }
-xrml-xaccounts = { path = "../../xaccounts", default-features = false }
-xr-primitives = { path = "../../../xr-primitives", default_features = false }
-libsecp256k1 = "0.2.1"
+libsecp256k1 = "0.2.2"
 tiny-keccak = "1.4.2"
 
+# substrate core
+rstd = { git = "https://github.com/chainpool/substrate", package = "sr-std", default-features = false }
+sr-primitives = { git = "https://github.com/chainpool/substrate", package = "sr-primitives", default-features = false }
+# substrate runtime
+support = { git = "https://github.com/chainpool/substrate", package = "srml-support", default-features = false }
+system = { git = "https://github.com/chainpool/substrate", package = "srml-system", default-features = false }
+balances = { git = "https://github.com/chainpool/substrate", package = "srml-balances", default-features = false }
+# chainx core
+xr-primitives = { path = "../../../xr-primitives", package = "xr-primitives", default_features = false }
+# chainx runtime
+xsupport = { path = "../../xsupport", package = "xrml-xsupport", default-features = false }
+xsystem = { path = "../../xsystem", package = "xrml-xsystem", default-features = false }
+xaccounts = { path = "../../xaccounts", package = "xrml-xaccounts", default-features = false }
+xassets = { path = "../../xassets/assets", package = "xrml-xassets-assets", default-features = false }
+xrecords = { path = "../../xassets/records", package = "xrml-xassets-records", default-features = false }
+
 [dev-dependencies]
-hex-literal = "0.1.0"
+hex-literal = "0.1"
 
 [features]
 default = ["std"]
-std=[
+std = [
+    "rustc-hex/std",
     "serde/std",
     "parity-codec/std",
-    "substrate-primitives/std",
-    "sr-std/std",
-    "sr-io/std",
+    # substrate core
+    "rstd/std",
     "sr-primitives/std",
     # substrate runtime
-    "srml-support/std",
-    "srml-system/std",
-    "srml-balances/std",
-    # chainx runtime
-    "xrml-xsystem/std",
-    "xrml-xsupport/std",
-    "xrml-xassets-assets/std",
-    "xrml-xassets-records/std",
-    "xrml-xaccounts/std",
+    "support/std",
+    "system/std",
+    "balances/std",
+    # chainx core
     "xr-primitives/std",
+    # chainx runtime
+    "xsupport/std",
+    "xsystem/std",
+    "xaccounts/std",
+    "xassets/std",
+    "xrecords/std",
 ]

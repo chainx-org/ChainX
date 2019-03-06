@@ -39,13 +39,19 @@ extern crate substrate_finality_grandpa as grandpa;
 extern crate substrate_service;
 extern crate chainx_executor;
 extern crate substrate_inherents as inherents;
-extern crate substrate_telemetry;
 extern crate substrate_rpc_servers as rpc;
+extern crate substrate_telemetry;
 
 #[macro_use]
 extern crate log;
-
+extern crate csv;
+extern crate rustc_hex;
 extern crate structopt;
+#[macro_use]
+extern crate serde_derive;
+
+extern crate chain as btc_chain;
+extern crate primitives as btc_primitives;
 
 mod chain_spec;
 mod genesis_config;
@@ -54,7 +60,7 @@ mod params;
 mod service;
 
 pub use cli::{error, IntoExit, NoCustom, VersionInfo};
-use primitives::ed25519;
+//use primitives::ed25519;
 use std::ops::Deref;
 use substrate_service::{Roles as ServiceRoles, ServiceFactory};
 use tokio::runtime::Runtime;

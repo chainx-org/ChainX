@@ -109,13 +109,6 @@ use chainx_primitives::{
     Acceleration, AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey,
     Signature, Timestamp as TimestampU64,
 };
-// chainx runtime
-// xassets
-//pub use xassets;
-// xbitcoin
-//pub use xbitcoin;
-#[cfg(feature = "std")]
-pub use bitcoin::Params;
 
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
