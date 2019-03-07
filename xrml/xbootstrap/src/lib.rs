@@ -77,6 +77,7 @@ decl_storage! {
             use xassets::{ChainT, AssetType, Token, Chain, Asset};
             use btc_chain::BlockHeader;
             use xbitcoin::BlockHeaderInfo;
+            use xspot::CurrencyPair;
 
             // grandpa
             let auth_count = config.authorities.len() as u32;
@@ -194,9 +195,8 @@ decl_storage! {
 
                 // xspot
                 for (first, second, precision, unit, price, status) in config.pair_list.iter() {
-                    let _ = xspot::Module::<T>::add_pair(
-                        first.clone(),
-                        second.clone(),
+                    let _ = xspot::Module::<T>::add_trading_pair(
+                        CurrencyPair(first.clone(), second.clone()),
                         *precision,
                         *unit,
                         *price,

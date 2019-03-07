@@ -3,107 +3,66 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// for encode/decode
-// Needed for deriving `Serialize` and `Deserialize` for various types.
-// We only implement the serde traits for std builds - they're unneeded
-// in the wasm runtime.
-#[cfg(feature = "std")]
-extern crate serde_derive;
+use parity_codec as codec;
 
-#[cfg(feature = "std")]
-extern crate chrono;
-
-extern crate log;
-
-// Needed for deriving `Encode` and `Decode` for `RawEvent`.
-#[macro_use]
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
-
-// for substrate
-// Needed for the set of mock primitives used in our tests.
-
-// for substrate runtime
-// map!, vec! marco.
-//#[cfg_attr(feature = "std", macro_use)]
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as primitives;
-extern crate sr_std as rstd;
-extern crate substrate_primitives;
-
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_balances as balances;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
-
-#[cfg(test)]
-extern crate srml_consensus as consensus;
-extern crate xrml_bridge_bitcoin as xbitcoin;
-extern crate xrml_xaccounts as xaccounts;
-extern crate xrml_xassets_records as xrecords;
-
-// for chainx runtime module lib
-extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xsystem as xsystem;
-
-#[macro_use]
-extern crate xrml_xsupport as xsupport;
-
+mod manager;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+mod types;
 
-pub mod def;
+pub use types::*;
 
 #[cfg(feature = "std")]
 use chrono::prelude::*;
-
 use codec::Codec;
-use def::{
-    Fill, Handicap, Order, OrderDirection, OrderPair, OrderPairID, OrderStatus, OrderType, ID,
+use primitives::traits::{As, CheckedSub, MaybeSerializeDebug, Member, SimpleArithmetic, Zero};
+use rstd::{cmp, prelude::*, result};
+use runtime_support::{
+    decl_event, decl_module, decl_storage, dispatch::Result, ensure, Parameter, StorageMap,
+    StorageValue,
 };
-use primitives::traits::{As, MaybeSerializeDebug, Member, SimpleArithmetic, Zero};
-use primitives::traits::{CheckedAdd, CheckedSub};
-use rstd::prelude::*;
-use runtime_support::dispatch::Result;
-use runtime_support::{Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
-
-use xassets::assetdef::{ChainT, Token};
-use xassets::OnAssetRegisterOrRevoke;
+use xassets::{
+    assetdef::{ChainT, Token},
+    OnAssetRegisterOrRevoke,
+};
+use xsupport::info;
 
 const PRICE_MAX_ORDER: usize = 1000;
 
-pub type OrderT<T> = Order<
-    OrderPairID,
+pub type OrderDetails<T> = Order<
+    TradingPairIndex,
     <T as system::Trait>::AccountId,
     <T as balances::Trait>::Balance,
     <T as Trait>::Price,
     <T as system::Trait>::BlockNumber,
 >;
+
 pub type FillT<T> = Fill<
-    OrderPairID,
+    TradingPairIndex,
     <T as system::Trait>::AccountId,
     <T as balances::Trait>::Balance,
     <T as Trait>::Price,
+    <T as system::Trait>::BlockNumber,
 >;
+
 pub type HandicapT<T> = Handicap<<T as Trait>::Price>;
 
 pub trait Trait: xassets::Trait + timestamp::Trait {
     type Price: Parameter
         + Member
-        + Codec
         + SimpleArithmetic
+        + Codec
+        + Default
+        + Copy
         + As<u8>
         + As<u16>
         + As<u32>
         + As<u64>
         + MaybeSerializeDebug
-        + Copy
-        + Zero
-        + Default;
+        + Zero;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -112,57 +71,58 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
 
-        //委托
         pub fn put_order(
             origin,
-            pairid: OrderPairID,
+            pair_index: TradingPairIndex,
             ordertype: OrderType,
-            direction:OrderDirection,
-            amount: T::Balance,price:T::Price
+            direction: OrderDirection,
+            amount: T::Balance,
+            price: T::Price
         ) -> Result {
-            let transactor = ensure_signed(origin)?;
+            let who = ensure_signed(origin)?;
 
-            info!("transactor:{:?},pairid:{:},ordertype:{:?},direction:{:?},amount:{:?},price:{:?}",transactor,pairid,ordertype,direction,amount,price);
-
-            ensure!(!price.is_zero(), "price can't be zero");
-            ensure!(!amount.is_zero(), "amount can't be zero");
-
-            //检查交易对
-            let pair = match <OrderPairOf<T>>::get(pairid) {
-                None => return Err("not a existed pair in  list"),
-                Some(pair) => pair,
-            };
-
-            ensure!(pair.online, "pair must be online");
+            ensure!(!price.is_zero(), "Price can't be zero");
+            ensure!(!amount.is_zero(), "Amount can't be zero");
             ensure!(ordertype == OrderType::Limit, "Only support Limit order for now");
 
+            let pair = Self::trading_pair(&pair_index)?;
+
+            ensure!(pair.online, "Pair must be online");
+
             let min_unit = 10_u64.pow(pair.unit_precision);
-            ensure!(price >= As::sa(min_unit.as_()), "price can't be less min_unit");
-            ensure!(price % As::sa(min_unit) == Zero::zero(), "price % min_unit must be 0");
+            ensure!(price.as_() >= min_unit, "Price must greater than min_unit");
+            ensure!((price.as_() % min_unit).is_zero(), "Price must be an integer multiple of the minimum precision");
 
-            //从channel模块获得channel_name对应的account
-            Self::apply_put_order(&transactor, pairid, ordertype, direction, amount, price)
-        }
+            let handicap = Self::is_valid_price(price, &direction, pair_index)?;
 
-        //取消委托
-        pub fn cancel_order(origin, pairid: OrderPairID, index: ID) -> Result {
-            let transactor = ensure_signed(origin)?;
-
-            info!("transactor:{:?},pairid:{:},index:{:}",transactor,pairid,index);
-
-            Self::apply_cancel_order(&transactor,pairid,index)
-        }
-
-        pub fn update_price_volatility(price_volatility:u32)->Result{
-            info!("price_volatility:{:}",price_volatility);
-
-            if price_volatility >= 100 {
-                return Err("price_volatility must be less 100!");
+            let quotations = <QuotationsOf<T>>::get(&(pair.id, price));
+            if quotations.len() >= PRICE_MAX_ORDER {
+                if let Some(order) = <OrderInfoOf<T>>::get(&quotations[0]) {
+                    if order.direction() == direction {
+                        return Err("Too much orders at this price and direction in the trading pair.");
+                    }
+                }
             }
-            <PriceVolatility<T>>::put(price_volatility);
 
-            Self::deposit_event(RawEvent::PriceVolatility(price_volatility));
-            Ok(())
+            Self::apply_put_order(who, pair_index, ordertype, direction, amount, price, handicap)
+        }
+
+        pub fn cancel_order(origin, pairid: TradingPairIndex, index: ID) -> Result {
+            let who = ensure_signed(origin)?;
+
+            let pair = Self::trading_pair(&pairid)?;
+            ensure!(pair.online, "Can't cancel order if the trading pair is already offline");
+
+            let order_status = match Self::order_info_of(&(who.clone(), index)) {
+                Some(x) => x.status,
+                None => return Err( "The order doesn't exist"),
+            };
+            ensure!(
+                order_status == OrderStatus::ZeroExecuted || order_status == OrderStatus::ParitialExecuted,
+                "Only ZeroExecuted and ParitialExecuted order can be canceled"
+            );
+
+            Self::apply_cancel_order(&who, pairid, index)
         }
 
     }
@@ -175,38 +135,308 @@ decl_event!(
         <T as balances::Trait>::Balance,
         <T as Trait>::Price
     {
-        UpdateOrder(AccountId,ID,OrderPairID,Price,OrderType,OrderDirection,Balance,Balance,BlockNumber,BlockNumber,OrderStatus,Balance,Vec<ID>),
-        FillOrder(ID,OrderPairID,Price,AccountId,AccountId,ID,ID, Balance,u64),
-        UpdateOrderPair(OrderPairID,Token,Token,u32,u32,bool),
+        UpdateOrder(AccountId,ID,TradingPairIndex,Price,OrderType,OrderDirection,Balance,Balance,BlockNumber,BlockNumber,OrderStatus,Balance,Vec<ID>),
+        FillOrder(ID,TradingPairIndex,Price,AccountId,AccountId,ID,ID, Balance,u64),
+        UpdateOrderPair(TradingPairIndex,CurrencyPair,u32,u32,bool),
         PriceVolatility(u32),
-        Handicap(OrderPairID,Price,OrderDirection),
+        Handicap(TradingPairIndex,Price,OrderDirection),
         RemoveUserQuotations(AccountId,ID),
-        RemoveQuotationsSlot(OrderPairID,Price),
-        FillOrderErr(OrderPairID,AccountId,ID),
+        RemoveQuotationsSlot(TradingPairIndex,Price),
+        FillOrderErr(TradingPairIndex,AccountId,ID),
     }
 );
 
 decl_storage! {
     trait Store for Module<T: Trait> as XSpot {
 
-        //交易对列表
-        pub OrderPairLen get(pair_len):  OrderPairID ;
-        pub OrderPairOf get(pair_of):map ( OrderPairID ) => Option<OrderPair>;
-        pub OrderPairPriceOf get(pair_price_of):map ( OrderPairID ) => Option<(T::Price,T::Price,T::BlockNumber)>;//最新价、成交平均价、更新高度
-        //交易对的成交历史的最新编号 递增
-        pub FillLen get(fill_len):  map (OrderPairID) => ID;
+        /// How many trading pairs so far.
+        pub TradingPairCount get(trading_pair_count): TradingPairIndex ;
+        /// Essential info of the trading pair.
+        pub TradingPairOf get(trading_pair_of): map TradingPairIndex => Option<TradingPair>;
+        /// (last price, average transaction price, last update height) of trading pair
+        pub TradingPairInfoOf get(trading_pair_info_of): map TradingPairIndex => Option<(T::Price, T::Price, T::BlockNumber)>;
+        /// Total transactions has been made for a trading pair.
+        pub TradeHisotryIndexOf get(trade_history_index_of): map TradingPairIndex => ID;
 
-        //用户维度委托单的最新编号 递增
-        pub AccountOrdersLen get(account_orders_len):map (T::AccountId) => Option<ID>;
-        //用户+ID=>委托详情
-        pub AccountOrder get(account_order): map(T::AccountId, ID) => Option<OrderT<T>>;
+        /// Total orders has made by an account.
+        pub OrderCountOf get(order_count_of): map T::AccountId => ID;
+        /// Details of the order given account and his order ID
+        pub OrderInfoOf get(order_info_of): map(T::AccountId, ID) => Option<OrderDetails<T>>;
 
-        //报价；交易对+价格=> ( 用户，委托ID)
-        pub Quotations get(quotations) : map (OrderPairID, T::Price) => Option<Vec<(T::AccountId,ID)>>;
-        //盘口：交易对=>(买一价、卖一价)
-        pub HandicapMap get(handicap_map) :map(OrderPairID) => Option<HandicapT<T>>;
+        /// All the account and his order number given a certain trading pair and price.
+        pub QuotationsOf get(quotations_of) : map (TradingPairIndex, T::Price) => Vec<(T::AccountId, ID)>;
 
-        pub PriceVolatility get(price_volatility) config(): u32;//价格波动率%
+        /// TradingPairIndex => (Buy, Sell)
+        pub HandicapOf get(handicap_of): map TradingPairIndex => Option<HandicapT<T>>;
+
+        /// Price volatility
+        pub PriceVolatility get(price_volatility) config(): u32;
+    }
+}
+
+impl<T: Trait> Module<T> {
+    /// Public mutables
+    pub fn add_trading_pair(
+        currency_pair: CurrencyPair,
+        precision: u32,
+        unit_precision: u32,
+        price: T::Price,
+        online: bool,
+    ) -> Result {
+        info!(
+            "currency_pair:{:?}, precision:{:}, unit:{:}, price:{:?}, online:{:}",
+            currency_pair, precision, unit_precision, price, online
+        );
+
+        ensure!(
+            Self::get_trading_pair_by_currency_pair(&currency_pair).is_none(),
+            "The trading pair already exists."
+        );
+
+        let id = <TradingPairCount<T>>::get();
+
+        let pair = TradingPair {
+            id,
+            currency_pair,
+            precision,
+            unit_precision,
+            online,
+        };
+
+        <TradingPairOf<T>>::insert(id, &pair);
+        <TradingPairInfoOf<T>>::insert(id, (price, price, <system::Module<T>>::block_number()));
+        <TradingPairCount<T>>::put(id + 1);
+
+        Self::event_pair(&pair);
+
+        Ok(())
+    }
+
+    pub fn update_trading_pair(id: TradingPairIndex, unit_precision: u32, online: bool) -> Result {
+        info!(
+            "update_trading_pair -- pairid: {:}, unit_precision: {:}, online:{:}",
+            id, unit_precision, online
+        );
+
+        let mut pair = Self::trading_pair(&id)?;
+
+        if unit_precision < pair.unit_precision {
+            return Err("unit_precision error!");
+        }
+        pair.unit_precision = unit_precision;
+        pair.online = online;
+
+        <TradingPairOf<T>>::insert(id, &pair);
+        Self::event_pair(&pair);
+
+        Ok(())
+    }
+
+    /// base currency/counter currency
+    pub fn get_trading_pair_by_currency_pair(currency_pair: &CurrencyPair) -> Option<TradingPair> {
+        let pair_count = <TradingPairCount<T>>::get();
+        for i in 0..pair_count {
+            if let Some(pair) = <TradingPairOf<T>>::get(i) {
+                let base = pair.currency_pair.base();
+                let counter = pair.currency_pair.counter();
+                if base == currency_pair.base() && counter == currency_pair.counter() {
+                    return Some(pair.clone());
+                }
+            }
+        }
+        None
+    }
+
+    pub fn set_price_volatility(price_volatility: u32) -> Result {
+        info!("set_price_volatility: {:}", price_volatility);
+        ensure!(price_volatility < 100, "Price volatility must be less 100!");
+        <PriceVolatility<T>>::put(price_volatility);
+        Self::deposit_event(RawEvent::PriceVolatility(price_volatility));
+        Ok(())
+    }
+
+    /// 返回以PCX计价的"单位"token的价格，已含pcx精度
+    /// 譬如1BTC=10000PCX，返回的是10000*（10.pow(pcx精度))
+    ///
+    /// 如果交易对ID是XXX/PCX，则：
+    /// 返回：(交易对Map[交易对ID].平均价*（10^PCX精度)) / 10^报价精度
+    ///
+    /// 如果交易对ID是PCX/XXX，则：
+    /// 返回：(10^交易对Map[交易对ID].报价精度*（10^PCX精度)) / 平均价
+    pub fn aver_asset_price(token: &Token) -> Option<T::Balance> {
+        let pcx = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
+        let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
+        let pcx_precision = 10_u128.pow(pcx_asset.precision() as u32);
+
+        let pair_len = <TradingPairCount<T>>::get();
+        for i in 0..pair_len {
+            if let Some(pair) = <TradingPairOf<T>>::get(i) {
+                let pair_precision = 10_u128.pow(pair.precision.as_());
+                let currency_pair = pair.currency_pair.clone();
+
+                if currency_pair.base().eq(token) && currency_pair.counter().eq(&pcx) {
+                    if let Some((_, aver, _)) = <TradingPairInfoOf<T>>::get(i) {
+                        let price = match (aver.as_() as u128).checked_mul(pcx_precision) {
+                            Some(x) => x / pair_precision,
+                            None => panic!("aver * pow_pcx_precision overflow"),
+                        };
+
+                        return Some(T::Balance::sa(price as u64));
+                    }
+                } else if currency_pair.base().eq(&pcx) && currency_pair.counter().eq(token) {
+                    if let Some((_, aver, _)) = <TradingPairInfoOf<T>>::get(i) {
+                        let price = match pcx_precision.checked_mul(pair_precision) {
+                            Some(x) => x / (aver.as_() as u128),
+                            None => panic!("pow_pcx_precision * pow_pair_precision overflow"),
+                        };
+
+                        return Some(T::Balance::sa(price as u64));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Internal mutables
+    fn apply_put_order(
+        who: T::AccountId,
+        pair_index: TradingPairIndex,
+        ordertype: OrderType,
+        direction: OrderDirection,
+        amount: T::Balance,
+        price: T::Price,
+        handicap: HandicapT<T>,
+    ) -> Result {
+        info!(
+            "transactor:{:?},pairid:{:},ordertype:{:?},direction:{:?},amount:{:?},price:{:?}",
+            who, pair_index, ordertype, direction, amount, price
+        );
+
+        let pair = Self::trading_pair(&pair_index)?;
+        let remaining = Self::try_put_order_reserve(&who, &pair, &direction, amount, price)?;
+
+        let order_index = Self::order_count_of(&who);
+        <OrderCountOf<T>>::insert(&who, order_index + 1);
+
+        let mut order = Self::new_fresh_order(
+            pair_index,
+            price,
+            order_index,
+            who,
+            ordertype,
+            direction,
+            amount,
+            remaining,
+        );
+        <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), &order);
+        Self::event_order(&order);
+
+        Self::match_order(&pair, &mut order, &handicap);
+
+        Ok(())
+    }
+
+    fn match_order(pair: &TradingPair, order: &mut OrderDetails<T>, handicap: &HandicapT<T>) {
+        #[cfg(feature = "std")]
+        let begin = Local::now().timestamp_millis();
+
+        Self::try_match_order(order, pair, handicap);
+
+        #[cfg(feature = "std")]
+        let end = Local::now().timestamp_millis();
+        info!("do_match cost time:{:}", end - begin);
+
+        Self::update_quotations_and_handicap(pair, order);
+    }
+
+    fn apply_cancel_order(who: &T::AccountId, pairid: TradingPairIndex, index: ID) -> Result {
+        info!(
+            "transactor: {:?}, pairid:{:}, index:{:}",
+            who, pairid, index
+        );
+
+        let pair = Self::trading_pair(&pairid)?;
+        let mut order =
+            Self::order_info_of(&(who.clone(), index)).expect("We have ensured the order exists.");
+
+        //更新状态
+        order.status = if order.already_filled > Zero::zero() {
+            OrderStatus::ParitialExecutedAndCanceled
+        } else {
+            OrderStatus::Canceled
+        };
+        order.last_update_at = <system::Module<T>>::block_number();
+
+        //回退用户资产, 剩余的都退回
+        let (back_token, back_amount) = match order.direction() {
+            OrderDirection::Sell => (
+                pair.currency_pair.base(),
+                order
+                    .amount()
+                    .checked_sub(&order.already_filled)
+                    .unwrap_or_default(),
+            ),
+            OrderDirection::Buy => (pair.currency_pair.counter(), As::sa(order.remaining.as_())),
+        };
+
+        //回退资产
+        Self::cancel_order_unreserve(&who, &back_token, back_amount)?;
+
+        order.remaining = order
+            .remaining
+            .checked_sub(&back_amount)
+            .unwrap_or_default();
+
+        //先更新 更新挂单中会删除
+        <OrderInfoOf<T>>::insert((order.submitter(), order.index()), &order);
+
+        //更新挂单
+        Self::check_and_delete_quotations(order.pair(), order.price());
+
+        //更新盘口
+        Self::update_handicap(&pair, order.price(), order.direction());
+
+        Ok(())
+    }
+
+    /// In order to get trading pair easier.
+    fn trading_pair(pair_id: &TradingPairIndex) -> result::Result<TradingPair, &'static str> {
+        match <TradingPairOf<T>>::get(pair_id) {
+            Some(pair) => Ok(pair),
+            None => Err("The order pair doesn't exist."),
+        }
+    }
+
+    /// See if the price is valid. Return handicap if it's valid.
+    fn is_valid_price(
+        price: T::Price,
+        direction: &OrderDirection,
+        pairid: TradingPairIndex,
+    ) -> result::Result<HandicapT<T>, &'static str> {
+        let handicap = <HandicapOf<T>>::get(pairid).unwrap_or_default();
+        let volatility = <PriceVolatility<T>>::get();
+
+        match *direction {
+            OrderDirection::Buy => {
+                let sell = handicap.sell;
+                let threshold = sell * As::sa(100_u32 + volatility) / As::sa(100_u32);
+                // FIXME sell could be zero?
+                if sell > Zero::zero() && price > threshold {
+                    return Err("Price can't greater than PriceVolatility");
+                }
+            }
+            OrderDirection::Sell => {
+                let buy = handicap.buy;
+                let threshold = buy * As::sa(100_u32 - volatility) / As::sa(100_u32);
+                if buy > Zero::zero() && price < threshold {
+                    return Err("price can't greater than PriceVolatility");
+                }
+            }
+        }
+
+        Ok(handicap)
     }
 }
 
@@ -216,880 +446,16 @@ impl<T: Trait> OnAssetRegisterOrRevoke for Module<T> {
     }
 
     fn on_revoke(token: &Token) -> Result {
-        let pair_len = <OrderPairLen<T>>::get();
+        let pair_len = <TradingPairCount<T>>::get();
         for i in 0..pair_len {
-            if let Some(mut pair) = <OrderPairOf<T>>::get(i) {
-                if pair.first.eq(token) || pair.second.eq(token) {
+            if let Some(mut pair) = <TradingPairOf<T>>::get(i) {
+                if pair.currency_pair.0.eq(token) || pair.currency_pair.1.eq(token) {
                     pair.online = false;
-                    <OrderPairOf<T>>::insert(i, &pair);
+                    <TradingPairOf<T>>::insert(i, &pair);
                     Self::event_pair(&pair);
                 }
             }
         }
         Ok(())
-    }
-}
-
-impl<T: Trait> Module<T> {
-    //增加交易对
-    pub fn add_pair(
-        first: Token,
-        second: Token,
-        precision: u32,
-        unit: u32,
-        price: T::Price,
-        online: bool,
-    ) -> Result {
-        info!(
-            "first:{:?},second:{:?},precision:{:},unit:{:},price:{:?},online:{:}",
-            first, second, precision, unit, price, online
-        );
-
-        ensure!(
-            Self::get_pair_by(&first, &second).is_none(),
-            "This pair already exists."
-        );
-
-        let pair_len = <OrderPairLen<T>>::get();
-
-        let pair = OrderPair {
-            id: pair_len,
-            first: first,
-            second: second,
-            precision: precision,
-            unit_precision: unit,
-            online: online,
-        };
-
-        <OrderPairOf<T>>::insert(pair.id, &pair);
-        <OrderPairPriceOf<T>>::insert(pair.id, (price, price, <system::Module<T>>::block_number()));
-
-        <OrderPairLen<T>>::put(pair_len + 1);
-
-        Self::event_pair(&pair);
-
-        Ok(())
-    }
-
-    //更新交易对
-    pub fn update_pair(id: OrderPairID, min: u32, online: bool) -> Result {
-        info!("pairid:{:},min:{:},online:{:}", id, min, online);
-
-        match <OrderPairOf<T>>::get(id) {
-            None => Err("not a existed pair in  list"),
-            Some(mut pair) => {
-                if min < pair.unit_precision {
-                    return Err("unit_precision error!");
-                }
-                pair.unit_precision = min;
-                pair.online = online;
-
-                <OrderPairOf<T>>::insert(id, &pair);
-                Self::event_pair(&pair);
-
-                Ok(())
-            }
-        }
-    }
-
-    pub fn get_pair_by(first: &Token, second: &Token) -> Option<OrderPair> {
-        let pair_len = <OrderPairLen<T>>::get();
-        for i in 0..pair_len {
-            if let Some(pair) = <OrderPairOf<T>>::get(i) {
-                if pair.first.eq(first) && pair.second.eq(second) {
-                    return Some(pair.clone());
-                }
-            }
-        }
-        None
-    }
-
-    //返回以PCX计价的"单位"token的价格，已含pcx精度
-    //譬如1BTC=10000PCX，返回的是10000*（10.pow(pcx精度))
-    pub fn aver_asset_price(token: &Token) -> Option<T::Balance> {
-        /*
-        如果交易对ID是XXX/PCX，则：
-        返回：(交易对Map[交易对ID].平均价*（10^PCX精度)) / 10^报价精度
-        如果交易对ID是PCX/XXX，则：
-        返回：(10^交易对Map[交易对ID].报价精度*（10^PCX精度)) / 平均价
-        */
-        let pcx = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
-        let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
-
-        let pair_len = <OrderPairLen<T>>::get();
-        for i in 0..pair_len {
-            if let Some(pair) = <OrderPairOf<T>>::get(i) {
-                if pair.first.eq(token)
-                    && pair
-                        .second
-                        .eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec())
-                {
-                    if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
-                        let pow_pcx_precision = 10_u128.pow(pcx_asset.precision() as u32);
-                        let pow_pair_precision = 10_u128.pow(pair.precision.as_());
-
-                        let price = match (aver.as_() as u128).checked_mul(pow_pcx_precision) {
-                            Some(x) => T::Balance::sa((x / pow_pair_precision) as u64),
-                            None => panic!("aver * pow_pcx_precision overflow"),
-                        };
-
-                        return Some(price);
-                    }
-                } else if pair
-                    .first
-                    .eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec())
-                    && pair.second.eq(token)
-                {
-                    if let Some((_, aver, _)) = <OrderPairPriceOf<T>>::get(i) {
-                        let pow_pcx_precision = 10_u128.pow(pcx_asset.precision() as u32);
-                        let pow_pair_precision = 10_u128.pow(pair.precision.as_());
-
-                        let price = match pow_pcx_precision.checked_mul(pow_pair_precision) {
-                            Some(x) => T::Balance::sa((x / (aver.as_() as u128)) as u64),
-                            None => panic!("pow_pcx_precision * pow_pair_precision overflow"),
-                        };
-
-                        return Some(price);
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
-    fn apply_cancel_order(who: &T::AccountId, pairid: OrderPairID, index: ID) -> Result {
-        let pair = match <OrderPairOf<T>>::get(pairid) {
-            None => return Err("not a existed pair in  list"),
-            Some(pair) => pair,
-        };
-        if pair.online == false {
-            return Err("pair is offline ");
-        }
-
-        if let Some(mut order) = Self::account_order((who.clone(), index)) {
-            match order.status {
-                OrderStatus::FillNo | OrderStatus::FillPart => {
-                    //更新状态
-                    order.status = if order.hasfill_amount > Zero::zero() {
-                        OrderStatus::FillPartAndCancel
-                    } else {
-                        OrderStatus::Cancel
-                    };
-                    order.lastupdate_time = As::sa(<timestamp::Module<T>>::now().as_());
-
-                    //回退用户资产
-                    let back_token: &Token = match order.direction {
-                        OrderDirection::Sell => &pair.first,
-                        OrderDirection::Buy => &pair.second,
-                    };
-
-                    let back_amount: T::Balance = match order.direction {
-                        OrderDirection::Sell => order
-                            .amount
-                            .checked_sub(&order.hasfill_amount)
-                            .unwrap_or_default(),
-                        OrderDirection::Buy => As::sa(order.reserve_last.as_()), //剩余的都退回
-                    };
-
-                    //回退资产
-                    Self::unreserve_token(&who, &back_token, back_amount)?;
-
-                    order.reserve_last = order
-                        .reserve_last
-                        .checked_sub(&back_amount)
-                        .unwrap_or_default();
-
-                    //先更新 更新挂单中会删除
-                    <AccountOrder<T>>::insert((order.user.clone(), order.index), &order);
-
-                    //更新挂单
-                    Self::check_and_delete_quotations(order.pair, order.price);
-                    //更新盘口
-                    Self::update_handicap(&pair, order.price, order.direction);
-                }
-                _ => {
-                    return Err(
-                        "order status error( FiillAll|FillPartAndCancel|Cancel) cann't be cancel",
-                    );
-                }
-            }
-            Ok(())
-        } else {
-            Err("cann't find this index of order")
-        }
-    }
-
-    fn apply_put_order(
-        who: &T::AccountId,
-        pairid: OrderPairID,
-        ordertype: OrderType,
-        direction: OrderDirection,
-        amount: T::Balance,
-        price: T::Price,
-    ) -> Result {
-        let pair = match <OrderPairOf<T>>::get(pairid) {
-            None => return Err("not a existed pair in  list"),
-            Some(pair) => pair,
-        };
-
-        //检查不能超过最大 且方向相同
-        if let Some(list) = <Quotations<T>>::get((pair.id, price)) {
-            if list.len() >= PRICE_MAX_ORDER {
-                if let Some(order) = <AccountOrder<T>>::get(&list[0]) {
-                    if order.direction == direction {
-                        return Err("some price&direction too much order");
-                    }
-                }
-            }
-        }
-
-        //盘口
-        let handicap = <HandicapMap<T>>::get(pairid).unwrap_or_default();
-
-        //检查价格范围
-        match direction {
-            OrderDirection::Buy => {
-                if handicap.sell > Zero::zero()
-                    && price
-                        > ((handicap.sell * As::sa(100_u32 + <PriceVolatility<T>>::get()))
-                            / As::sa(100_u32))
-                {
-                    return Err("price cann't > PriceVolatility");
-                }
-            }
-            OrderDirection::Sell => {
-                if handicap.buy > Zero::zero()
-                    && price
-                        < (handicap.buy * As::sa(100_u32 - <PriceVolatility<T>>::get())
-                            / As::sa(100_u32))
-                {
-                    return Err("price cann't > PriceVolatility");
-                }
-            }
-        }
-        /***********************锁定资产**********************/
-
-        let reserve_last: T::Balance;
-        if let Some(sum) = Self::trans_amount(amount, price, &pair) {
-            match direction {
-                OrderDirection::Buy => {
-                    if <xassets::Module<T>>::free_balance(&who, &pair.second) < sum {
-                        return Err("transactor's free token balance too low, can't put buy order");
-                    }
-                    reserve_last = As::sa(sum.as_());
-                    //  锁定用户资产
-                    Self::reserve_token(who, &pair.second, sum)?;
-                }
-                OrderDirection::Sell => {
-                    if <xassets::Module<T>>::free_balance(&who, &pair.first) < As::sa(amount.as_())
-                    {
-                        return Err("transactor's free token balance too low, can't put sell order");
-                    }
-                    //  锁定用户资产
-                    reserve_last = amount;
-                    Self::reserve_token(who, &pair.first, As::sa(amount.as_()))?;
-                }
-            }
-        } else {
-            return Err("amount*price too small");
-        }
-
-        // 更新用户的交易对的挂单index
-        let id: ID = <AccountOrdersLen<T>>::get(who).unwrap_or(0);
-
-        <AccountOrdersLen<T>>::insert(who, id + 1);
-
-        //新增挂单记录
-        let mut order = Order {
-            pair: pairid,
-            price,
-            index: id,
-            user: who.clone(),
-            class: ordertype,
-            direction,
-            amount,
-            hasfill_amount: Zero::zero(),
-            create_time: As::sa(<timestamp::Module<T>>::now().as_()),
-            lastupdate_time: As::sa(<timestamp::Module<T>>::now().as_()),
-            status: OrderStatus::FillNo,
-            reserve_last,
-            fill_index: Default::default(),
-        };
-
-        // 更新用户挂单
-        Self::event_order(&order);
-        <AccountOrder<T>>::insert((order.user.clone(), order.index), &order);
-
-        //撮合
-        Self::do_match(&mut order, &pair, &handicap);
-
-        /*********************** 更新报价 盘口**********************/
-        Self::new_order(&pair, &mut order);
-
-        #[cfg(feature = "std")]
-        let dt1 = Local::now();
-        #[cfg(feature = "std")]
-        let dt2 = Local::now();
-
-        info!(
-            "do_match cost time:{:}",
-            dt2.timestamp_millis() - dt1.timestamp_millis()
-        );
-
-        Ok(())
-    }
-
-    fn do_match(order: &mut OrderT<T>, pair: &OrderPair, handicap: &HandicapT<T>) {
-        let (opponent_direction, mut opponent_price) = match order.direction {
-            OrderDirection::Buy => (OrderDirection::Sell, handicap.sell),
-            OrderDirection::Sell => (OrderDirection::Buy, handicap.buy),
-        };
-
-        let min_unit = 10_u64.pow(pair.unit_precision);
-
-        loop {
-            if opponent_price.is_zero() {
-                break;
-            }
-
-            if order.hasfill_amount >= order.amount {
-                order.status = OrderStatus::FillAll;
-                break;
-            }
-
-            let find: bool;
-            match order.direction {
-                OrderDirection::Buy => {
-                    if order.price >= opponent_price {
-                        find = true;
-                    } else {
-                        break;
-                    }
-                }
-                OrderDirection::Sell => {
-                    if order.price <= opponent_price {
-                        find = true;
-                    } else {
-                        break;
-                    }
-                }
-            };
-
-            if find {
-                if let Some(list) = <Quotations<T>>::get((pair.id, opponent_price)) {
-                    for i in 0..list.len() {
-                        if order.hasfill_amount >= order.amount {
-                            order.status = OrderStatus::FillAll;
-                            break;
-                        }
-                        // 找到匹配的单
-                        if let Some(mut maker_order) = <AccountOrder<T>>::get(&list[i]) {
-                            if opponent_direction != maker_order.direction {
-                                panic!("opponent direction error");
-                            }
-
-                            let v1: T::Balance = order
-                                .amount
-                                .checked_sub(&order.hasfill_amount)
-                                .unwrap_or_default();
-
-                            let v2: T::Balance = maker_order
-                                .amount
-                                .checked_sub(&maker_order.hasfill_amount)
-                                .unwrap_or_default();
-
-                            let amount = if v1 >= v2 { v2 } else { v1 };
-
-                            //填充成交
-                            if let Err(_msg) = Self::fill_order(
-                                pair.id,
-                                &mut maker_order,
-                                order,
-                                opponent_price,
-                                amount,
-                            ) {
-                                error!("fill_order error. msg:{:?}", _msg);
-                            }
-
-                            //更新最新价、平均价
-                            Self::update_last_average_price(pair.id, opponent_price);
-                        }
-                    }
-
-                    //删除更新被完全撮合的单
-                    Self::check_and_delete_quotations(pair.id, opponent_price);
-
-                    //更新盘口
-                    Self::update_handicap(
-                        &pair,
-                        opponent_price,
-                        match order.direction {
-                            OrderDirection::Sell => OrderDirection::Buy,
-                            OrderDirection::Buy => OrderDirection::Sell,
-                        },
-                    );
-                };
-            }
-
-            //移动对手价
-            match order.direction {
-                OrderDirection::Buy => {
-                    opponent_price = opponent_price
-                        .checked_add(&As::sa(min_unit))
-                        .unwrap_or_default();
-                }
-                OrderDirection::Sell => {
-                    opponent_price = opponent_price
-                        .checked_sub(&As::sa(min_unit))
-                        .unwrap_or_default();
-                }
-            }
-        }
-    }
-
-    fn new_order(pair: &OrderPair, order: &mut OrderT<T>) {
-        if order.amount > order.hasfill_amount {
-            if order.hasfill_amount > Zero::zero() {
-                order.status = OrderStatus::FillPart;
-            }
-            <AccountOrder<T>>::insert((order.user.clone(), order.index), &order.clone());
-            Self::event_order(&order);
-
-            //更新报价
-            let mut list = <Quotations<T>>::get((order.pair, order.price)).unwrap_or_default();
-            list.push((order.user.clone(), order.index));
-            <Quotations<T>>::insert((order.pair, order.price), list);
-
-            //更新盘口
-            match order.direction {
-                OrderDirection::Buy => {
-                    if let Some(mut handicap) = <HandicapMap<T>>::get(order.pair) {
-                        if order.price > handicap.buy || handicap.buy == Default::default() {
-                            handicap.buy = order.price;
-                            Self::event_handicap(order.pair, handicap.buy, OrderDirection::Buy);
-
-                            if handicap.buy >= handicap.sell {
-                                handicap.sell = handicap
-                                    .buy
-                                    .checked_add(&As::sa(10_u64.pow(pair.unit_precision)))
-                                    .unwrap_or_default();
-                                Self::event_handicap(
-                                    order.pair,
-                                    handicap.sell,
-                                    OrderDirection::Sell,
-                                );
-                            }
-                            <HandicapMap<T>>::insert(order.pair, handicap);
-                        }
-                    } else {
-                        let mut handicap: HandicapT<T> = Default::default();
-                        handicap.buy = order.price;
-                        Self::event_handicap(order.pair, handicap.buy, OrderDirection::Buy);
-                        <HandicapMap<T>>::insert(order.pair, handicap);
-                    }
-                }
-                OrderDirection::Sell => {
-                    if let Some(mut handicap) = <HandicapMap<T>>::get(order.pair) {
-                        if order.price < handicap.sell || handicap.sell == Default::default() {
-                            handicap.sell = order.price;
-                            Self::event_handicap(order.pair, handicap.sell, OrderDirection::Sell);
-
-                            if handicap.sell <= handicap.buy {
-                                handicap.buy = handicap
-                                    .sell
-                                    .checked_sub(&As::sa(10_u64.pow(pair.unit_precision)))
-                                    .unwrap_or_default();
-                                Self::event_handicap(order.pair, handicap.buy, OrderDirection::Buy);
-                            }
-                            <HandicapMap<T>>::insert(order.pair, handicap);
-                        }
-                    } else {
-                        let mut handicap: HandicapT<T> = Default::default();
-                        handicap.sell = order.price;
-                        Self::event_handicap(order.pair, handicap.sell, OrderDirection::Sell);
-                        <HandicapMap<T>>::insert(order.pair, handicap);
-                    }
-                }
-            }
-        } else {
-            //更新状态 删除
-            order.status = OrderStatus::FillAll;
-            Self::event_order(&order);
-            <AccountOrder<T>>::remove((order.user.clone(), order.index));
-        }
-    }
-
-    fn fill_order(
-        pairid: OrderPairID,
-        maker_order: &mut OrderT<T>,
-        taker_order: &mut OrderT<T>,
-        price: T::Price,
-        amount: T::Balance,
-    ) -> Result {
-        let pair = match <OrderPairOf<T>>::get(pairid) {
-            None => return Err("not a existed pair in  list"),
-            Some(pair) => pair,
-        };
-
-        //更新挂单、成交历史、资产转移
-        let new_fill_index = Self::fill_len(pairid) + 1;
-
-        //更新maker对应的订单
-        {
-            maker_order.fill_index.push(new_fill_index);
-            maker_order.hasfill_amount = maker_order
-                .hasfill_amount
-                .checked_add(&amount)
-                .unwrap_or_default();
-
-            if maker_order.hasfill_amount == maker_order.amount {
-                maker_order.status = OrderStatus::FillAll;
-            } else if maker_order.hasfill_amount < maker_order.amount {
-                maker_order.status = OrderStatus::FillPart;
-            } else {
-                Self::deposit_event(RawEvent::FillOrderErr(
-                    pairid,
-                    maker_order.user.clone(),
-                    maker_order.index,
-                ));
-                return Err(" maker order has not enough amount");
-            }
-
-            maker_order.lastupdate_time = As::sa(<timestamp::Module<T>>::now().as_());
-        }
-
-        //更新taker对应的订单
-        {
-            taker_order.fill_index.push(new_fill_index);
-            taker_order.hasfill_amount = taker_order
-                .hasfill_amount
-                .checked_add(&amount)
-                .unwrap_or_default();
-            if taker_order.hasfill_amount == taker_order.amount {
-                taker_order.status = OrderStatus::FillAll;
-            } else if taker_order.hasfill_amount < taker_order.amount {
-                taker_order.status = OrderStatus::FillPart;
-            } else {
-                Self::deposit_event(RawEvent::FillOrderErr(
-                    pairid,
-                    taker_order.user.clone(),
-                    taker_order.index,
-                ));
-                return Err(" taker order has not enough amount");
-            }
-
-            taker_order.lastupdate_time = As::sa(<timestamp::Module<T>>::now().as_());
-        }
-        let maker_user = &maker_order.user;
-        let taker_user = &taker_order.user;
-
-        //转移 maker和taker中的资产
-        match maker_order.direction {
-            OrderDirection::Sell => {
-                //卖家先解锁first token 并move给买家，
-                let maker_back_token: &Token = &pair.first;
-                let maker_back_amount: T::Balance = amount;
-                maker_order.reserve_last = maker_order
-                    .reserve_last
-                    .checked_sub(&maker_back_amount)
-                    .unwrap_or_default();
-
-                Self::move_token(
-                    &maker_back_token,
-                    maker_back_amount,
-                    &maker_user.clone(),
-                    &taker_user.clone(),
-                )?;
-
-                //计算买家的数量，解锁second,并move 给卖家
-                let taker_back_token: &Token = &pair.second;
-                let taker_back_amount: T::Balance =
-                    Self::trans_amount(amount, price, &pair).unwrap_or(Zero::zero());
-                taker_order.reserve_last = taker_order
-                    .reserve_last
-                    .checked_sub(&taker_back_amount)
-                    .unwrap_or_default();
-
-                Self::move_token(
-                    &taker_back_token,
-                    taker_back_amount,
-                    &taker_user.clone(),
-                    &maker_user.clone(),
-                )?
-            }
-            OrderDirection::Buy => {
-                //买先解锁second token 并move给卖家，和手续费账户
-                let maker_back_token: &Token = &pair.second;
-                let maker_back_amount: T::Balance =
-                    Self::trans_amount(amount, price, &pair).unwrap_or(Zero::zero());
-                maker_order.reserve_last = maker_order
-                    .reserve_last
-                    .checked_sub(&maker_back_amount)
-                    .unwrap_or_default();
-
-                Self::move_token(
-                    &maker_back_token,
-                    maker_back_amount,
-                    &maker_user.clone(),
-                    &taker_user.clone(),
-                )?;
-                //计算卖家的数量，解锁second,并move 给买家,和手续费账户
-                let taker_back_token: &Token = &pair.first;
-                let taker_back_amount: T::Balance = As::sa(amount.as_());
-                taker_order.reserve_last = taker_order
-                    .reserve_last
-                    .checked_sub(&taker_back_amount)
-                    .unwrap_or_default();
-
-                Self::move_token(
-                    &taker_back_token,
-                    taker_back_amount,
-                    &taker_user.clone(),
-                    &maker_user.clone(),
-                )?
-            }
-        }
-
-        //插入新的成交记录
-        let fill = Fill {
-            pair: pairid,
-            price,
-            index: new_fill_index,
-            maker_user: maker_user.clone(),
-            taker_user: taker_user.clone(),
-            maker_user_order_index: maker_order.index,
-            taker_user_order_index: taker_order.index,
-            amount,
-            time: (<timestamp::Module<T>>::now().as_()),
-        };
-
-        <FillLen<T>>::insert(pairid, new_fill_index);
-
-        //插入更新后的订单
-        Self::event_order(&maker_order.clone());
-        <AccountOrder<T>>::insert(
-            (maker_order.user.clone(), maker_order.index),
-            &maker_order.clone(),
-        );
-
-        Self::event_order(&taker_order.clone());
-        <AccountOrder<T>>::insert(
-            (taker_order.user.clone(), taker_order.index),
-            &taker_order.clone(),
-        );
-
-        // 记录日志
-        Self::deposit_event(RawEvent::FillOrder(
-            fill.index,
-            fill.pair,
-            fill.price,
-            fill.maker_user,
-            fill.taker_user,
-            fill.maker_user_order_index,
-            fill.taker_user_order_index,
-            fill.amount,
-            As::sa(<timestamp::Module<T>>::now().as_()),
-        ));
-
-        Ok(())
-    }
-
-    fn unreserve_token(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
-        <xassets::Module<T>>::move_balance(
-            token,
-            who,
-            xassets::AssetType::ReservedDexSpot,
-            who,
-            xassets::AssetType::Free,
-            value,
-        )
-        .map_err(|e| e.info())
-    }
-
-    fn reserve_token(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
-        <xassets::Module<T>>::move_balance(
-            token,
-            who,
-            xassets::AssetType::Free,
-            who,
-            xassets::AssetType::ReservedDexSpot,
-            value,
-        )
-        .map_err(|e| e.info())
-    }
-
-    fn move_token(
-        token: &Token,
-        value: T::Balance,
-        from: &T::AccountId,
-        to: &T::AccountId,
-    ) -> Result {
-        <xassets::Module<T>>::move_balance(
-            token,
-            from,
-            xassets::AssetType::ReservedDexSpot,
-            to,
-            xassets::AssetType::Free,
-            value,
-        )
-        .map_err(|e| e.info())
-    }
-
-    //更新盘口
-    fn update_handicap(pair: &OrderPair, price: T::Price, direction: OrderDirection) {
-        let min_unit = 10_u64.pow(pair.unit_precision);
-
-        if <Quotations<T>>::get((pair.id, price)).is_none() {
-            match direction {
-                OrderDirection::Sell => {
-                    //更新卖一
-                    if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
-                        if <Quotations<T>>::get((pair.id, handicap.sell)).is_none() {
-                            handicap.sell = handicap
-                                .sell
-                                .checked_add(&As::sa(min_unit))
-                                .unwrap_or_default();
-                            Self::event_handicap(pair.id, handicap.sell, OrderDirection::Sell);
-                            <HandicapMap<T>>::insert(pair.id, handicap);
-                        }
-                    }
-                }
-                OrderDirection::Buy => {
-                    //更新买一
-                    if let Some(mut handicap) = <HandicapMap<T>>::get(pair.id) {
-                        if <Quotations<T>>::get((pair.id, handicap.buy)).is_none() {
-                            handicap.buy = handicap
-                                .buy
-                                .checked_sub(&As::sa(min_unit))
-                                .unwrap_or_default();
-                            Self::event_handicap(pair.id, handicap.buy, OrderDirection::Buy);
-                            <HandicapMap<T>>::insert(pair.id, handicap);
-                        }
-                    }
-                }
-            };
-        };
-    }
-    fn blocks_per_hour() -> u64 {
-        let period = <timestamp::Module<T>>::block_period();
-        let seconds_for_hour = (60 * 60) as u64;
-        seconds_for_hour / period.as_()
-    }
-    fn update_last_average_price(pairid: OrderPairID, price: T::Price) {
-        let blocks_per_hour: u64 = Self::blocks_per_hour();
-        let number = <system::Module<T>>::block_number();
-
-        match <OrderPairPriceOf<T>>::get(pairid) {
-            Some((_last, mut aver, time)) => {
-                if number - time < As::sa(blocks_per_hour) {
-                    let new_weight: u64 = price.as_() * (number - time).as_();
-                    let old_weight: u64 =
-                        aver.as_() * (blocks_per_hour + time.as_() - number.as_());
-                    aver = As::sa((new_weight + old_weight) / blocks_per_hour);
-                } else {
-                    aver = price;
-                }
-                <OrderPairPriceOf<T>>::insert(pairid, (price, aver, number));
-            }
-            None => {
-                <OrderPairPriceOf<T>>::insert(pairid, (price, price, number));
-            }
-        }
-    }
-
-    //检查和更新报价
-    fn check_and_delete_quotations(id: OrderPairID, price: T::Price) {
-        if let Some(list) = <Quotations<T>>::get((id, price)) {
-            let mut new_list: Vec<(T::AccountId, ID)> = Vec::new();
-            for i in 0..list.len() {
-                if let Some(order) = <AccountOrder<T>>::get(&list[i]) {
-                    if order.hasfill_amount >= order.amount
-                        || OrderStatus::FillPartAndCancel == order.status
-                        || OrderStatus::Cancel == order.status
-                    {
-                        //Event 记录挂单详情状态变更
-                        Self::event_order(&order);
-
-                        //删除挂单详情
-                        <AccountOrder<T>>::remove(&list[i]);
-                        Self::deposit_event(RawEvent::RemoveUserQuotations(
-                            order.user,
-                            order.index,
-                        ));
-                    } else {
-                        new_list.push(list[i].clone());
-                    }
-                }
-            }
-            //空了就删除
-            if new_list.is_empty() {
-                <Quotations<T>>::remove((id, price));
-                Self::deposit_event(RawEvent::RemoveQuotationsSlot(id, price));
-            } else {
-                <Quotations<T>>::insert((id, price), new_list)
-            }
-        };
-    }
-
-    fn event_order(order: &OrderT<T>) {
-        Self::deposit_event(RawEvent::UpdateOrder(
-            order.user.clone(),
-            order.index,
-            order.pair,
-            order.price,
-            order.class,
-            order.direction,
-            order.amount,
-            order.hasfill_amount,
-            order.create_time,
-            order.lastupdate_time,
-            order.status,
-            order.reserve_last,
-            order.fill_index.clone(),
-        ));
-    }
-
-    fn event_pair(pair: &OrderPair) {
-        Self::deposit_event(RawEvent::UpdateOrderPair(
-            pair.id,
-            pair.first.clone(),
-            pair.second.clone(),
-            pair.precision,
-            pair.unit_precision,
-            pair.online,
-        ));
-    }
-
-    fn event_handicap(id: OrderPairID, price: T::Price, direction: OrderDirection) {
-        Self::deposit_event(RawEvent::Handicap(id, price, direction));
-    }
-
-    fn trans_amount(
-        amount: T::Balance, /*first的数量单位*/
-        price: T::Price,    /*以second计价的价格*/
-        pair: &OrderPair,
-    ) -> Option<T::Balance> {
-        // 公式=（amount*price*10^second精度 ）/（first精度*price精度）
-        if let Some((first, _, _)) = <xassets::Module<T>>::asset_info(&pair.first) {
-            if let Some((second, _, _)) = <xassets::Module<T>>::asset_info(&pair.second) {
-                let trans_amount = match ((amount.as_() as u128) * (price.as_() as u128))
-                    .checked_mul(10_u128.pow(second.precision().as_()))
-                {
-                    Some(x) => T::Balance::sa(
-                        (x / (10_u128.pow(first.precision().as_())
-                            * 10_u128.pow(pair.precision.as_()))
-                            as u128) as u64,
-                    ),
-                    None => panic!("amount * price * pow.second.precision overflow"),
-                };
-
-                if !trans_amount.is_zero() {
-                    return Some(trans_amount);
-                }
-            }
-        }
-
-        None
     }
 }

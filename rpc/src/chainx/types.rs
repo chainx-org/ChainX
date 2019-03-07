@@ -120,7 +120,7 @@ impl TrusteeInfo {
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PairInfo {
-    pub id: OrderPairID,
+    pub id: TradingPairIndex,
     pub assets: String,
     pub currency: String,
     pub precision: u32,      //价格精度
@@ -136,7 +136,7 @@ pub struct PairInfo {
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuotationsList {
-    pub id: OrderPairID,
+    pub id: TradingPairIndex,
     pub piece: u32,
     pub sell: Vec<(Balance, Balance)>,
     pub buy: Vec<(Balance, Balance)>,

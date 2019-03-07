@@ -29,8 +29,7 @@ use xbitcoin::{
     TxProposal, VoteResult,
 };
 
-use xspot::def::{OrderPair, OrderPairID, ID};
-use xspot::{HandicapT, OrderT};
+use xspot::{HandicapT, OrderDetails, TradingPair, TradingPairIndex, ID};
 use xstaking::IntentionProfs;
 use xsupport::storage::btree_map::CodecBTreeMap;
 use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
@@ -117,7 +116,7 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>;
 
     #[rpc(name = "chainx_getQuotations")]
-    fn quotationss(&self, id: OrderPairID, piece: u32) -> Result<Option<QuotationsList>>;
+    fn quotationss(&self, id: TradingPairIndex, piece: u32) -> Result<Option<QuotationsList>>;
 
     #[rpc(name = "chainx_getOrders")]
     fn orders(
@@ -125,7 +124,7 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
         who: AccountId,
         page_index: u32,
         page_size: u32,
-    ) -> Result<Option<PageData<OrderT<Runtime>>>>;
+    ) -> Result<Option<PageData<OrderDetails<Runtime>>>>;
 
     #[rpc(name = "chainx_getAddressByAccount")]
     fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>>;

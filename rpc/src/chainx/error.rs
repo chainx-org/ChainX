@@ -37,9 +37,9 @@ error_chain! {
             description("Get cert Remaining Shares failed"),
             display("Get cert Remaining Shares failed"),
         }
-        OrderPairIDErr{
-            description("OrderPair ID Error"),
-            display("OrderPair ID Error"),
+        TradingPairIndexErr{
+            description("TradingPair Index Error"),
+            display("TradingPair Index Error"),
         }
         QuotationssPieceErr{
             description("Quotationss Piece Err"),
@@ -111,9 +111,9 @@ impl From<Error> for rpc::Error {
                 message: "Quotationss Piece Err.".into(),
                 data: None,
             },
-            Error(ErrorKind::OrderPairIDErr, _) => rpc::Error {
+            Error(ErrorKind::TradingPairIndexErr, _) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 6),
-                message: "OrderPair ID Error.".into(),
+                message: "TradingPair Index Error.".into(),
                 data: None,
             },
             Error(ErrorKind::PageSizeErr, _) => rpc::Error {
