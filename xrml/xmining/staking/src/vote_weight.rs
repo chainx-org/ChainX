@@ -2,13 +2,12 @@
 //! Vote weight calculation.
 
 use super::{ClaimType, Module, Trait};
+use crate::{IntentionProfs, NominationRecord};
+use primitives::traits::As;
 use rstd::result;
-use runtime_primitives::traits::As;
 use runtime_support::StorageMap;
 use system;
 use xassets::{self, Token};
-use IntentionProfs;
-use NominationRecord;
 
 pub trait VoteWeight<BlockNumber: As<u64>> {
     fn amount(&self) -> u64;

@@ -4,53 +4,23 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]
-extern crate serde;
+use serde_derive::{Deserialize, Serialize};
 
-#[cfg(feature = "std")]
-extern crate serde_derive;
-
-#[cfg(feature = "std")]
-extern crate substrate_primitives;
-
-#[macro_use]
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
-
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
-extern crate sr_std as rstd;
-
-extern crate keys;
-
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_balances as balances;
-extern crate srml_consensus as consensus;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
-extern crate xrml_session as session;
-
-extern crate xr_primitives;
-
-extern crate xrml_bridge_bitcoin as xbitcoin;
-extern crate xrml_xaccounts as xaccounts;
-extern crate xrml_xassets_assets as xassets;
-#[cfg(test)]
-extern crate xrml_xassets_records as xrecords;
-#[macro_use]
-extern crate xrml_xsupport as xsupport;
-extern crate xrml_xsystem as xsystem;
+use parity_codec as codec;
 
 use codec::Compact;
+use parity_codec_derive::{Decode, Encode};
+use primitives::traits::{As, Lookup, StaticLookup, Zero};
 use rstd::prelude::*;
-use runtime_primitives::traits::{As, Lookup, StaticLookup, Zero};
-use runtime_support::dispatch::Result;
-use runtime_support::{StorageMap, StorageValue};
+use runtime_support::{
+    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
+};
 use system::ensure_signed;
 
 use xaccounts::{IntentionJackpotAccountIdFor, Name, TrusteeEntity, TrusteeIntentionProps, URL};
 use xassets::{Chain, Memo, Token};
 use xr_primitives::XString;
+use xsupport::info;
 
 pub mod vote_weight;
 
@@ -175,8 +145,10 @@ decl_module! {
             let who = ensure_signed(origin)?;
             let target = system::ChainContext::<T>::default().lookup(target)?;
 
+            let nominate_pair = (who.clone(), target.clone());
+
             ensure!(
-                <NominationRecords<T>>::get((who.clone(), target.clone())).is_some(),
+                <NominationRecords<T>>::get(&nominate_pair).is_some(),
                 "Cannot unfreeze if target is not your nominee."
             );
 
@@ -191,18 +163,18 @@ decl_module! {
 
             let (block, value) = revocations[revocation_index as usize];
             let current_block = <system::Module<T>>::block_number();
-
             if current_block < block {
                 return Err("The requested revocation is not due yet.");
             }
 
             Self::staking_unreserve(&who, value)?;
+
             revocations.swap_remove(revocation_index as usize);
-            if let Some(mut record) = <NominationRecords<T>>::get((who.clone(), target.clone())) {
+            if let Some(mut record) = <NominationRecords<T>>::get(&nominate_pair) {
                 record.revocations = revocations;
-                <NominationRecords<T>>::insert((who, target), record);
+                <NominationRecords<T>>::insert(&nominate_pair, record);
             }
-            Self::deposit_event(RawEvent::Unfreeze());
+            Self::deposit_event(RawEvent::Unfreeze(who, target));
         }
 
         /// Update the url, desire to join in elections of intention and session key.
@@ -307,6 +279,7 @@ decl_event!(
     pub enum Event<T>
     where
         <T as balances::Trait>::Balance,
+        <T as consensus::Trait>::SessionKey,
         <T as system::Trait>::AccountId,
         <T as system::Trait>::BlockNumber
     {
@@ -321,8 +294,8 @@ decl_event!(
         Unnominate(BlockNumber),
         Nominate(AccountId, AccountId, Balance),
         Claim(u64, u64, Balance),
-        Refresh(),
-        Unfreeze(),
+        Refresh(Option<URL>, Option<bool>, Option<SessionKey>, Option<XString>),
+        Unfreeze(AccountId, AccountId),
     }
 );
 
@@ -548,7 +521,7 @@ impl<T: Trait> Module<T> {
         next_key: Option<T::SessionKey>,
         about: Option<XString>,
     ) {
-        if let Some(url) = url {
+        if let Some(url) = url.clone() {
             <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
                 props.url = url;
             });
@@ -560,17 +533,17 @@ impl<T: Trait> Module<T> {
             });
         }
 
-        if let Some(next_key) = next_key {
+        if let Some(next_key) = next_key.clone() {
             <session::NextKeyFor<T>>::insert(who, next_key);
         }
 
-        if let Some(about) = about {
+        if let Some(about) = about.clone() {
             <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
                 props.about = about;
             });
         }
 
-        Self::deposit_event(RawEvent::Refresh());
+        Self::deposit_event(RawEvent::Refresh(url, desire_to_run, next_key, about));
     }
 
     pub fn bootstrap_register(intention: &T::AccountId, name: Name) -> Result {

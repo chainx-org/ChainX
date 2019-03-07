@@ -3,16 +3,16 @@
 
 #![cfg(test)]
 
-extern crate srml_indices as indices;
-
+use super::*;
+use crate::{GenesisConfig, Module, Trait};
+use primitives::testing::{ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId};
+use primitives::{traits::BlakeTwo256, BuildStorage};
 use runtime_io;
-use runtime_primitives::testing::{
-    ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId,
-};
-use runtime_primitives::{traits::BlakeTwo256, BuildStorage};
 use substrate_primitives::{Blake2Hasher, H256};
 use xaccounts::IntentionJackpotAccountIdFor;
-use {balances, consensus, session, system, timestamp, xassets, GenesisConfig, Module, Trait};
+use {balances, consensus, indices, session, system, timestamp, xassets};
+
+use runtime_supprt::impl_outer_origin;
 
 impl_outer_origin! {
     pub enum Origin for Test {}

@@ -2,8 +2,8 @@
 //! Coordidate session and era rotation.
 
 use super::*;
+use primitives::traits::{As, One, Zero};
 use rstd::cmp;
-use runtime_primitives::traits::{As, One, Zero};
 use session::OnSessionChange;
 use xaccounts::IntentionJackpotAccountIdFor;
 use xassets;

@@ -5,8 +5,9 @@
 
 use super::*;
 use mock::{new_test_ext, Origin, Session, Staking, System, XAccounts, XAssets};
+use primitives::testing::UintAuthorityId;
 use runtime_io::with_externalities;
-use runtime_primitives::testing::UintAuthorityId;
+use runtime_support::{assert_noop, assert_ok};
 
 #[test]
 fn register_should_work() {

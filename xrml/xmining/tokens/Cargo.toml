@@ -2,6 +2,7 @@
 name = "xrml-mining-tokens"
 version = "0.4.0"
 authors = ["Chainpool <http://chainx.org>"]
+edition = "2018"
 
 [dependencies]
 hex-literal = "0.1.0"
@@ -12,22 +13,22 @@ parity-codec = { version = "3.1", default-features = false }
 parity-codec-derive = { version = "3.1", default-features = false }
 substrate-keyring = { git = "https://github.com/chainpool/substrate", optional = true }
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-std = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-io = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-consensus = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-timestamp = { git = "https://github.com/chainpool/substrate", default_features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default_features = false }
+runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default_features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default_features = false }
+runtime_support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default_features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default_features = false }
+balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate", default_features = false }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default_features = false }
+timestamp = { package ="srml-timestamp", git = "https://github.com/chainpool/substrate", default_features = false }
 
-xrml-xsystem = { path = "../../xsystem", default_features = false }
-xrml-xsupport = { path = "../../xsupport",  default_features = false }
-xrml-xaccounts = { path = "../../xaccounts",  default_features = false }
-xrml-mining-staking = { path = "../staking", default_features = false }
-xrml-xassets-assets = { path = "../../xassets/assets",  default_features = false }
-xrml-bridge-bitcoin = { path = "../../xbridge/bitcoin",  default_features = false }
-xrml-xdex-spot= { path = "../../xdex/spot",  default_features = false }
+xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
+xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../../xsupport", default_features = false }
+xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default_features = false }
+xbitcoin = { package = "xrml-bridge-bitcoin", path = "../../xbridge/bitcoin", default-features = false }
+xspot = { package = "xrml-xdex-spot", path = "../../xdex/spot", default_features = false }
+xstaking = { package = "xrml-mining-staking", path = "../../xmining/staking", default_features = false }
 
 [features]
 default = ["std"]
@@ -39,17 +40,16 @@ std = [
     "parity-codec/std",
     "parity-codec-derive/std",
     "substrate-primitives/std",
-    "sr-std/std",
-    "sr-io/std",
-    "srml-support/std",
-    "sr-primitives/std",
-    "srml-balances/std",
-    "srml-system/std",
-    "srml-timestamp/std",
+    "rstd/std",
+    "runtime_io/std",
+    "runtime_support/std",
+    "primitives/std",
+    "balances/std",
+    "system/std",
     # xrml
-    "xrml-xsystem/std",
-    "xrml-xsupport/std",
-    "xrml-xaccounts/std",
-    "xrml-mining-staking/std",
-    "xrml-xassets-assets/std",
+    "xsystem/std",
+    "xsupport/std",
+    "xaccounts/std",
+    "xstaking/std",
+    "xassets/std",
 ]

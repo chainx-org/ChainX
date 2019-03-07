@@ -4,6 +4,7 @@
 
 // substrate core
 use rstd::prelude::*;
+#[cfg(feature = "std")]
 use sr_primitives::traits::Zero;
 // substrate runtime
 use support::{

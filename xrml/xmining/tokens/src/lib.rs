@@ -4,45 +4,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]
-extern crate serde;
+use serde_derive::{Deserialize, Serialize};
 
-#[cfg(feature = "std")]
-extern crate serde_derive;
+use parity_codec as codec;
 
-#[macro_use]
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
-
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
-extern crate sr_std as rstd;
-
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_balances as balances;
-#[cfg(test)]
-extern crate srml_consensus as consensus;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
-
-extern crate xrml_bridge_bitcoin as bitcoin;
-extern crate xrml_mining_staking as xstaking;
-extern crate xrml_xaccounts as xaccounts;
-extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xdex_spot as xspot;
-extern crate xrml_xsupport as xsupport;
-extern crate xrml_xsystem as xsystem;
-
-extern crate substrate_primitives;
-
-use codec::Encode;
-
+use codec::{Decode, Encode};
+use primitives::traits::{As, Hash};
 use rstd::prelude::*;
 use rstd::result::Result as StdResult;
-use runtime_primitives::traits::{As, Hash};
-
-use runtime_support::dispatch::Result;
-use runtime_support::{StorageMap, StorageValue};
+use runtime_support::{
+    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
+};
 
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
@@ -286,8 +258,8 @@ impl<T: Trait> Module<T> {
         let seconds_per_block: T::Moment = timestamp::Module::<T>::block_period();
         match token.as_slice() {
             // btc
-            <bitcoin::Module<T> as ChainT>::TOKEN => {
-                let irr_block: u32 = <bitcoin::Module<T>>::irr_block();
+            <xbitcoin::Module<T> as ChainT>::TOKEN => {
+                let irr_block: u32 = <xbitcoin::Module<T>>::irr_block();
                 let seconds = (irr_block * 10 * 60) as u64;
                 Ok(seconds / seconds_per_block.as_())
             }
