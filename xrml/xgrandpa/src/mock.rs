@@ -18,7 +18,8 @@
 
 #![cfg(test)]
 
-use parity_codec::Encode;
+use crate::{GenesisConfig, Module, RawLog, Trait};
+use parity_codec::{Decode, Encode};
 use primitives::generic::DigestItem as GenDigestItem;
 use primitives::{
     testing::{Digest, DigestItem, Header},
@@ -26,8 +27,8 @@ use primitives::{
     BuildStorage,
 };
 use runtime_io;
+use srml_support::{impl_outer_event, impl_outer_origin};
 use substrate_primitives::{Blake2Hasher, H256};
-use {system, GenesisConfig, Module, RawLog, Trait};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -62,7 +63,7 @@ impl system::Trait for Test {
 }
 
 mod grandpa {
-    pub use Event;
+    pub use crate::Event;
 }
 
 impl_outer_event! {

@@ -169,12 +169,13 @@ construct_service_factory! {
                 executor.spawn(grandpa::run_grandpa(
                     grandpa::Config {
                         local_key,
-                        gossip_duration: Duration::new(2, 0), // FIXME: make this available through chainspec?
+                        gossip_duration: Duration::new(4, 0), // FIXME: make this available through chainspec?
                         justification_period: 4096,
                         name: Some(service.config.name.clone())
                     },
                     link_half,
                     grandpa::NetworkBridge::new(service.network()),
+                    service.config.custom.inherent_data_providers.clone(),
                     service.on_exit(),
                 )?);
 //                }

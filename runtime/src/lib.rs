@@ -13,14 +13,13 @@ extern crate hex_literal;
 #[cfg(test)]
 extern crate serde;
 
-extern crate parity_codec as codec;
+extern crate parity_codec;
 
 #[macro_use]
 extern crate substrate_client as client;
 extern crate substrate_consensus_aura_primitives as consensus_aura;
 extern crate substrate_primitives as primitives;
 
-#[macro_use]
 extern crate sr_primitives as runtime_primitives;
 #[macro_use]
 extern crate sr_version as version;
@@ -73,6 +72,7 @@ pub extern crate xrml_mining_tokens as xtokens;
 // dex
 pub extern crate xrml_xdex_spot as xspot;
 extern crate xrml_xmultisig as xmultisig;
+use parity_codec::{Decode, Encode};
 
 mod fee;
 mod xexecutive;
@@ -294,6 +294,10 @@ impl xmultisig::Trait for Runtime {
     type Event = Event;
 }
 
+impl finality_tracker::Trait for Runtime {
+    type OnFinalizationStalled = grandpa::SyncedAuthorities<Runtime>;
+}
+
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
         Block = Block,
@@ -306,6 +310,7 @@ construct_runtime!(
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
         Session: session,
+        FinalityTracker: finality_tracker::{Module, Call, Inherent},
         Grandpa: grandpa::{Module, Call, Storage, Log(), Event<T>},
         Aura: aura::{Module, Inherent(Timestamp)},
         Sudo: sudo,
@@ -425,6 +430,20 @@ impl_runtime_apis! {
             None
         }
 
+        fn grandpa_forced_change(digest: &DigestFor<Block>)
+            -> Option<(NumberFor<Block>, ScheduledChange<NumberFor<Block>>)>
+        {
+            for log in digest.logs.iter().filter_map(|l| match l {
+                Log(InternalLog::grandpa(grandpa_signal)) => Some(grandpa_signal),
+                _ => None
+            }) {
+                if let Some(change) = Grandpa::scrape_digest_forced_change(log) {
+                    return Some(change);
+                }
+            }
+            None
+        }
+
         fn grandpa_authorities() -> Vec<(SessionKey, u64)> {
             Grandpa::grandpa_authorities()
         }
@@ -490,7 +509,6 @@ impl_runtime_apis! {
     impl runtime_api::xfee_api::XFeeApi<Block> for Runtime {
         fn transaction_fee(call_params: Vec<u8>, encoded_len: u64) -> Option<u64> {
             use fee::CheckFee;
-            use codec::Decode;
 
             let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
                 call

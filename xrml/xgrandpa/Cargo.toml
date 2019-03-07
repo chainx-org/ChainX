@@ -1,24 +1,26 @@
 [package]
 name = "xrml-grandpa"
 version = "0.1.0"
-authors = ["Parity Technologies <admin@parity.io> & Chainpool<chainx.org>"]
+authors = ["Parity Technologies <admin@parity.io>& Chainpool<chainx.org>"]
+edition = "2018"
 
 [dependencies]
-hex-literal = "0.1.0"
+#hex-literal = "0.1.0"
 serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
-parity-codec = { version = "3.1", default-features = false }
-parity-codec-derive = { version = "3.1", default-features = false }
+parity-codec = { version = "3.1", default-features = false, features = ["derive"] }
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 substrate-finality-grandpa-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-consensus = { git = "https://github.com/chainpool/substrate", default-features = false }
-xrml-session = { path = "../xsession", default-features = false }
-xrml-xsupport = { path = "../xsupport", default_features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+session = { package = "xrml-session", path = "../xsession", default-features = false }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default-features = false }
+finality-tracker = { package = "srml-finality-tracker", git = "https://github.com/chainpool/substrate", default-features = false }
+
+[dev-dependencies]
+runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
 
 [features]
 default = ["std"]
@@ -28,12 +30,10 @@ std = [
 	"parity-codec/std",
 	"substrate-primitives/std",
 	"substrate-finality-grandpa-primitives/std",
-	"sr-std/std",
-	"sr-io/std",
+	"rstd/std",
 	"srml-support/std",
-	"sr-primitives/std",
-	"srml-system/std",
-	"srml-consensus/std",
-	"xrml-session/std",
-	"xrml-xsupport/std",
+	"primitives/std",
+	"system/std",
+	"session/std",
+	"finality-tracker/std",
 ]

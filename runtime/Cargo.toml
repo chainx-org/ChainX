@@ -8,7 +8,6 @@ rustc-hex = { version = "1.0", optional = true }
 hex-literal = { version = "0.1.0", optional = true }
 safe-mix = { version = "1.0", default_features = false }
 serde = { version = "1.0", optional = true }
-parity-codec-derive = { version = "3.1" }
 parity-codec = { version = "3.1", default_features = false }
 
 substrate-client = { git = "https://github.com/chainpool/substrate", default-features = false }
@@ -28,6 +27,7 @@ srml-timestamp = { git = "https://github.com/chainpool/substrate", default-featu
 srml-consensus = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-sudo = { git = "https://github.com/chainpool/substrate", default-features = false }
 srml-indices = { git = "https://github.com/chainpool/substrate", default-features = false }
+finality-tracker = { package = "srml-finality-tracker", git = "https://github.com/chainpool/substrate", default-features = false }
 
 #srml-contract = { git = "https://github.com/chainpool/substrate", default-features = false }
 #srml-council = { git = "https://github.com/chainpool/substrate", default-features = false }

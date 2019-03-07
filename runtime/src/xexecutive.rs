@@ -17,9 +17,9 @@
 
 //! Executive: Handles all of the top-level stuff; essentially just executing blocks/extrinsics.
 
-use codec::{Codec, Encode};
 use fee::CheckFee;
 use fee_manager::MakePayment;
+use parity_codec::{Codec, Encode};
 use rstd::marker::PhantomData;
 use rstd::prelude::*;
 use rstd::result;

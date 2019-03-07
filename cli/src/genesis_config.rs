@@ -29,7 +29,7 @@ pub enum GenesisSpec {
 
 pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
-    let sdot_claims = load_sdot_info("dot_tx.csv").unwrap();
+    let sdot_claims = load_sdot_info().unwrap();
 
     // account pub and pri key
     let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
@@ -313,9 +313,8 @@ pub struct RecordOfSDOT {
     quantity: f64,
 }
 
-fn load_sdot_info(filename: &str) -> Result<Vec<([u8; 20], u64)>, Box<dyn Error>> {
-    let f = ::std::fs::File::open(filename)?;
-    let mut reader = csv::Reader::from_reader(f);
+fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn Error>> {
+    let mut reader = csv::Reader::from_reader(&include_bytes!("dot_tx.csv")[..]);
     let mut res = Vec::with_capacity(3053);
     for result in reader.deserialize() {
         let record: RecordOfSDOT = result?;
@@ -328,7 +327,7 @@ fn load_sdot_info(filename: &str) -> Result<Vec<([u8; 20], u64)>, Box<dyn Error>
 
 #[test]
 fn test_quantity_sum() {
-    let res = load_sdot_info("dot_tx.csv").unwrap();
+    let res = load_sdot_info().unwrap();
     let sum: u64 = res.iter().map(|(_, quantity)| *quantity).sum();
     assert_eq!(sum, 4999466375u64 + 5 * 20 * 1000);
 }

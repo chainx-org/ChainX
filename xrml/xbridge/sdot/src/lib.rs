@@ -17,8 +17,7 @@ use xr_primitives::traits::Extractable;
 // chainx runtime
 use xassets::{Chain, ChainT};
 
-use parity_codec::Encode;
-use parity_codec_derive::{Decode, Encode};
+use parity_codec::{Decode, Encode};
 use tiny_keccak::keccak256;
 
 pub type EthereumAddress = [u8; 20];

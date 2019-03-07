@@ -7,8 +7,7 @@
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
 
-use parity_codec::Encode;
-use parity_codec_derive::{Decode, Encode};
+use parity_codec::{Decode, Encode};
 
 use sr_std::marker::PhantomData;
 use sr_std::prelude::*;

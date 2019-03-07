@@ -16,7 +16,6 @@
 
 //! Substrate CLI library.
 
-#![warn(unused_extern_crates)]
 #![feature(custom_attribute)]
 
 extern crate tokio;
@@ -44,7 +43,6 @@ extern crate substrate_telemetry;
 
 #[macro_use]
 extern crate log;
-extern crate csv;
 extern crate rustc_hex;
 extern crate structopt;
 #[macro_use]
