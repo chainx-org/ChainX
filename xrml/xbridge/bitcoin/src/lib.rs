@@ -525,15 +525,7 @@ impl<T: Trait> Module<T> {
         // remove duplicate
         let mut withdrawal_id_list = withdrawal_id_list;
         withdrawal_id_list.sort();
-        let mut list = vec![];
-        let mut last_see = 0_u32;
-        for i in withdrawal_id_list {
-            if i != last_see {
-                last_see = i;
-                list.push(last_see);
-            }
-        }
-        let withdrawal_id_list = list;
+        withdrawal_id_list.dedup();
 
         check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
 
