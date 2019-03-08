@@ -294,7 +294,7 @@ decl_event!(
         Unnominate(BlockNumber),
         Nominate(AccountId, AccountId, Balance),
         Claim(u64, u64, Balance),
-        Refresh(Option<URL>, Option<bool>, Option<SessionKey>, Option<XString>),
+        Refresh(AccountId, Option<URL>, Option<bool>, Option<SessionKey>, Option<XString>),
         Unfreeze(AccountId, AccountId),
     }
 );
@@ -544,7 +544,7 @@ impl<T: Trait> Module<T> {
             });
         }
 
-        Self::deposit_event(RawEvent::Refresh(url, desire_to_run, next_key, about));
+        Self::deposit_event(RawEvent::Refresh(who.clone(), url, desire_to_run, next_key, about));
     }
 
     #[cfg(feature = "std")]
