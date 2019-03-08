@@ -182,6 +182,7 @@ decl_storage! {
                         }
                     );
                 }
+                trustees.sort();
                 <xaccounts::TrusteeIntentions<T>>::put(trustees);
 
                 let _ = xbitcoin::Module::<T>::update_trustee_addr();

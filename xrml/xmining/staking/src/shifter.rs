@@ -229,13 +229,6 @@ impl<T: Trait> Module<T> {
         if is_new_era {
             Self::new_era();
         }
-
-        if <xaccounts::Module<T>>::trustee_intentions().is_empty()
-            || ((session_index - Self::last_era_length_change()) % (Self::sessions_per_epoch()))
-                .is_zero()
-        {
-            Self::new_trustees();
-        }
     }
 
     /// The era has changed - enact new staking set.
@@ -274,35 +267,50 @@ impl<T: Trait> Module<T> {
         let desired_validator_count = <ValidatorCount<T>>::get() as usize;
 
         let validators = candidates
+            .clone()
             .into_iter()
             .take(desired_validator_count)
             .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
             .collect::<Vec<(_, _)>>();
 
+        info!("new validators: {:?}", validators);
         <session::Module<T>>::set_validators(&validators);
         Self::deposit_event(RawEvent::Rotation(validators));
+
+        let session_index = <session::Module<T>>::current_index();
+        if <xaccounts::Module<T>>::trustee_intentions().is_empty()
+            || ((session_index - Self::last_era_length_change()) % (Self::sessions_per_epoch()))
+                .is_zero()
+        {
+            Self::new_trustees(candidates.into_iter().map(|(_, v)| v).collect::<Vec<_>>());
+        }
     }
 
-    fn new_trustees() {
-        let candidates = Self::gather_candidates()
+    fn new_trustees(validator_candidates: Vec<T::AccountId>) {
+        let candidates = validator_candidates
             .into_iter()
-            .filter(|(_, v)| {
+            .filter(|v| {
                 <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(v.clone(), Chain::Bitcoin))
                     .is_some()
             })
-            .map(|(_, v)| v)
             .collect::<Vec<_>>();
 
         if (candidates.len() as u32) < Self::minimum_trustee_count() {
             return;
         }
 
-        let trustees = candidates
+        let mut trustees = candidates
             .into_iter()
             .take(Self::trustee_count() as usize)
             .collect::<Vec<_>>();
 
-        <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());
+        trustees.sort();
+
+        let last_trustees = <xaccounts::TrusteeIntentions<T>>::get();
+        if last_trustees != trustees {
+            info!("new trustees: {:?}", trustees);
+            <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());
+        }
 
         let _ = xbitcoin::Module::<T>::update_trustee_addr();
 

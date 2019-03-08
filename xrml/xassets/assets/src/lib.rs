@@ -313,6 +313,7 @@ impl<T: Trait> ChainT for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    #[cfg(feature = "std")]
     pub fn bootstrap_register_asset(
         asset: Asset,
         is_online: bool,
@@ -322,6 +323,7 @@ impl<T: Trait> Module<T> {
         Self::register_asset(asset, is_online, is_psedu_intention, free)
     }
 
+    #[cfg(feature = "std")]
     pub fn bootstrap_set_asset_balance(
         who: &T::AccountId,
         token: &Token,
@@ -331,6 +333,7 @@ impl<T: Trait> Module<T> {
         Self::set_asset_balance(who, token, type_, val)
     }
 
+    #[cfg(feature = "std")]
     pub fn bootstrap_set_total_asset_balance(token: &Token, type_: AssetType, value: T::Balance) {
         Self::set_total_asset_balance(token, type_, value)
     }

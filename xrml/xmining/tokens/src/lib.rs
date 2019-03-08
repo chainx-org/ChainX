@@ -317,6 +317,7 @@ impl<T: Trait> Module<T> {
         <DepositRecords<T>>::insert(&key, d_vote_weight);
     }
 
+    #[cfg(feature = "std")]
     pub fn bootstrap_update_vote_weight(
         source: &T::AccountId,
         target: &Token,

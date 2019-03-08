@@ -5,7 +5,7 @@ use std::error::Error;
 use hex_literal::{hex, hex_impl};
 use rustc_hex::FromHex;
 
-use primitives::ed25519;
+use primitives::{ed25519, Ed25519AuthorityId};
 
 use chainx_runtime::{
     bitcoin::{self, Params},
@@ -133,7 +133,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         .clone()
         .into_iter()
         .map(|(auth, balance, _, _, _, _)| (auth, balance))
-        .collect::<Vec<_>>();
+        .collect::<Vec<(Ed25519AuthorityId, _)>>();
 
     let blocks_per_session = 150; // 150 blocks per session
     let sessions_per_era = 2; // update validators set per 12 sessions
@@ -143,18 +143,18 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     let btc_genesis = (
         BlockHeader {
-            version: 536870912,
+            version: 536928256,
             previous_header_hash: H256::from_reversed_str(
-                "0000000000005a693961608af8c00d25fa71bde2d9e3eae4494c10baaeed4070",
+                "000000000000003bc2c544ee8f4dfcee43233067d29a41e9d51c28e548d0f62c",
             ),
             merkle_root_hash: H256::from_reversed_str(
-                "9e7add48fd35513b37309fed6c0b9e116621de9385548aee5c4bb313476ff30a",
+                "56d245cb928a6449695cde700ed8280cc43a440165a7299bbee916f383028588",
             ),
-            time: 1550490136,
-            bits: Compact::new(453049348),
-            nonce: 3012999283,
+            time: 1551161167,
+            bits: Compact::new(436307481),
+            nonce: 1881670301,
         },
-        1474333,
+        1481770,
     );
 
     let params_info = Params::new(
@@ -168,7 +168,11 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!("./chainx_runtime_wasm.compact.wasm").to_vec(),
-            authorities: initial_authorities.clone(),
+            authorities: endowed
+                .iter()
+                .cloned()
+                .map(|(account, _)| account.into())
+                .collect(),
         }),
         system: None,
         indices: None,
@@ -209,10 +213,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             minimum_validator_count: 4,
             trustee_count: 4,
             minimum_trustee_count: 4,
-            sessions_per_era: sessions_per_era,
-            sessions_per_epoch: sessions_per_epoch,
-            bonding_duration: bonding_duration,
-            intention_bonding_duration: intention_bonding_duration,
+            sessions_per_era,
+            sessions_per_epoch,
+            bonding_duration,
+            intention_bonding_duration,
             current_era: 0,
             minimum_penalty: 10_000_000, // 0.1 PCX by default
             validator_stake_threshold: 1,
@@ -288,7 +292,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             authorities: endowed.clone(),
             // xbitcoin
             genesis: btc_genesis,
-            params_info: params_info,
+            params_info,
             network_id: 1,
             multisig_init_info: (
                 endowed

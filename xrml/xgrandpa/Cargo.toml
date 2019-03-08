@@ -14,6 +14,7 @@ substrate-finality-grandpa-primitives = { git = "https://github.com/chainpool/su
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../xsupport", default_features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
 session = { package = "xrml-session", path = "../xsession", default-features = false }
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default-features = false }
@@ -32,6 +33,7 @@ std = [
 	"substrate-finality-grandpa-primitives/std",
 	"rstd/std",
 	"srml-support/std",
+	"xsupport/std",
 	"primitives/std",
 	"system/std",
 	"session/std",

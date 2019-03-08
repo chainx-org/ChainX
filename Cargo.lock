@@ -368,7 +368,7 @@ dependencies = [
 
 [[package]]
 name = "chainx"
-version = "0.9.3"
+version = "0.9.5"
 dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/bitcoin-rust)",
  "chainx-cli 0.1.0",
@@ -4817,6 +4817,7 @@ dependencies = [
  "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xrml-session 0.1.0",
+ "xrml-xsupport 0.4.0",
 ]
 
 [[package]]

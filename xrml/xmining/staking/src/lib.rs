@@ -504,6 +504,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    #[cfg(feature = "std")]
     pub fn bootstrap_refresh(
         who: &T::AccountId,
         url: Option<URL>,
@@ -546,6 +547,7 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::Refresh(url, desire_to_run, next_key, about));
     }
 
+    #[cfg(feature = "std")]
     pub fn bootstrap_register(intention: &T::AccountId, name: Name) -> Result {
         Self::apply_register(intention, name)
     }
@@ -572,6 +574,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    #[cfg(feature = "std")]
     pub fn bootstrap_update_vote_weight(
         source: &T::AccountId,
         target: &T::AccountId,

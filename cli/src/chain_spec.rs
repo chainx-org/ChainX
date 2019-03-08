@@ -56,11 +56,16 @@ fn local_testnet_genesis() -> GenesisConfig {
 
 /// Local testnet config (multivalidator Alice + Bob)
 pub fn local_testnet_config() -> ChainSpec {
+    let boot_nodes = vec![
+        "/ip4/47.96.134.203/tcp/31126/p2p/QmRZ2URFsxZ2uCjr4cdrP9QvHr8qQg5gXMBhLsVchgNi4S".into(),
+        "/ip4/47.96.97.52/tcp/31127/p2p/QmeCNS75ZRHAUsAUtH6DjcaxVFWwkBaT5KQtx91WvAh9i5".into(),
+        "/ip4/47.110.232.108/tcp/31129/p2p/QmQ7vca7aum3q1toVPUf8T6SiUPdhFuMPpyJgYAxeoUXtf".into(),
+    ];
     ChainSpec::from_genesis(
-        "ChainX V0.9.3",
+        "ChainX V0.9.5",
         "chainx_testnet",
         local_testnet_genesis,
-        vec![],
+        boot_nodes,
         Some(TelemetryEndpoints::new(vec![(
             STAGING_TELEMETRY_URL.to_string(),
             0,

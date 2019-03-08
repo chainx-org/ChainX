@@ -382,6 +382,17 @@ impl<T: Trait> Module<T> {
             None => return Err(AddressError::InvalidAddress),
         };
 
+        if let Some(old_trustee) = <xaccounts::TrusteeAddress<T>>::get(&xassets::Chain::Bitcoin) {
+            let old_hot_addr = Address::from_layout(&mut old_trustee.hot_address.as_slice())
+                .unwrap_or(Default::default());
+            let old_cold_addr = Address::from_layout(&mut old_trustee.cold_address.as_slice())
+                .unwrap_or(Default::default());
+            if old_hot_addr.hash == hot_addr.hash && old_cold_addr.hash == cold_addr.hash {
+                info!("the new address is the same as the old one");
+                return Ok(());
+            }
+        }
+
         let info = TrusteeScriptInfo {
             hot_redeem_script: hot_redeem.to_bytes().to_vec(),
             cold_redeem_script: cold_redeem.to_bytes().to_vec(),

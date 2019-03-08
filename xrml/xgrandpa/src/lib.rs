@@ -26,7 +26,6 @@
 //! The necessary items are re-exported via the `fg_primitives` crate.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
 // re-export since this is necessary for `impl_apis` in runtime.
 pub use substrate_finality_grandpa_primitives as fg_primitives;
 
@@ -44,6 +43,7 @@ use srml_support::storage::StorageValue;
 use srml_support::{decl_event, decl_module, decl_storage};
 use substrate_primitives::Ed25519AuthorityId;
 use system::ensure_signed;
+use xsupport::info;
 
 mod mock;
 mod tests;
@@ -257,8 +257,10 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     /// Get the current set of authorities, along with their respective weights.
-    pub fn grandpa_authorities() -> Vec<(<T as consensus::Trait>::SessionKey, u64)> {
-        <AuthorityStorageVec<<T as consensus::Trait>::SessionKey>>::items()
+    pub fn grandpa_authorities() -> Vec<(T::SessionKey, u64)> {
+        let tmp = <AuthorityStorageVec<T::SessionKey>>::items();
+        info!("--------------authority:{:?}", tmp.clone());
+        tmp
     }
 
     /// Schedule a change in the authorities.
