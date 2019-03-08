@@ -527,24 +527,32 @@ impl<T: Trait> Module<T> {
                 props.url = url;
             });
         }
-
         if let Some(desire_to_run) = desire_to_run {
             <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
                 props.is_active = desire_to_run;
             });
         }
-
-        if let Some(next_key) = next_key.clone() {
-            <session::NextKeyFor<T>>::insert(who, next_key);
-        }
-
         if let Some(about) = about.clone() {
             <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
                 props.about = about;
             });
         }
+        if let Some(next_key) = next_key.clone() {
+            let session_key=next_key.clone();
+            <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
+                props.session_key = Some(session_key);
+            });
 
-        Self::deposit_event(RawEvent::Refresh(who.clone(), url, desire_to_run, next_key, about));
+            <session::NextKeyFor<T>>::insert(who, next_key);
+        }
+
+        Self::deposit_event(RawEvent::Refresh(
+            who.clone(),
+            url,
+            desire_to_run,
+            next_key,
+            about,
+        ));
     }
 
     #[cfg(feature = "std")]

@@ -338,26 +338,20 @@ where
             for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
                 let mut info = IntentionInfo::default();
 
-                let key = <xsession::SessionKeys<Runtime>>::key_for(&intention);
-                let cache_key = <xsession::NextKeyFor<Runtime>>::key_for(&intention);
-                info.session_key = match Self::pickout::<SessionKey>(&state, &cache_key)? {
-                    Some(s) => s.into(),
-                    None => match Self::pickout::<SessionKey>(&state, &key)? {
-                        Some(s) => s.into(),
-                        None => intention,
-                    },
-                };
-
                 let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
                 if let Some(name) = Self::pickout::<xaccounts::Name>(&state, &key)? {
                     info.name = String::from_utf8_lossy(&name).into_owned();
                 }
 
                 let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
-                if let Some(props) = Self::pickout::<IntentionProps>(&state, &key)? {
+                if let Some(props) = Self::pickout::<IntentionProps<SessionKey>>(&state, &key)? {
                     info.url = String::from_utf8_lossy(&props.url).into_owned();
                     info.is_active = props.is_active;
                     info.about = String::from_utf8_lossy(&props.about).into_owned();
+                    info.session_key = match props.session_key {
+                        Some(s) => s.into(),
+                        None => intention,
+                    };
                 }
 
                 let key = <xstaking::IntentionProfiles<Runtime>>::key_for(&intention);

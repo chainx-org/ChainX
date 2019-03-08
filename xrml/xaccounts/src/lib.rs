@@ -20,7 +20,7 @@ mod tests;
 pub type Name = XString;
 pub type URL = XString;
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + consensus::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -50,10 +50,11 @@ where
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct IntentionProps {
+pub struct IntentionProps<SessionKey> {
     pub url: URL,
     pub is_active: bool,
     pub about: XString,
+    pub session_key: Option<SessionKey>,
 }
 
 // TrusteeEntity could be a pubkey or an address depending on the different chain.
@@ -108,7 +109,7 @@ decl_storage! {
         /// intention => intention name
         pub IntentionNameOf get(intention_name_of): map T::AccountId => Option<Name>;
 
-        pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps;
+        pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps<T::SessionKey>;
 
         pub TrusteeIntentions get(trustee_intentions): Vec<T::AccountId>;
 
