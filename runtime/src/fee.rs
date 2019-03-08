@@ -10,6 +10,7 @@ use xprocess::Call as XAssetsProcessCall;
 use xspot::Call as XSpotCall;
 use xstaking::Call as XStakingCall;
 use xtokens::Call as XTokensCall;
+use xmultisig::Call as XMultiSigCall;
 
 use Call;
 
@@ -93,6 +94,16 @@ impl CheckFee for Call {
                     }
                 };
                 power
+            }
+            Call::XMultiSig(call) => {
+                match call {
+                    XMultiSigCall::deploy(_, _) => Some(100),
+                    XMultiSigCall::execute(_, _) => Some(10),
+                    XMultiSigCall::confirm(_, _) => Some(5),
+                    XMultiSigCall::is_owner_for(_) => Some(1),
+                    XMultiSigCall::remove_multi_sig_for(_, _) => Some(5),
+                    _ => None,
+                }
             }
             _ => None,
         };
