@@ -1,9 +1,12 @@
 // Copyright 2018 Chainpool.
 
 use parity_codec::Codec;
+use parity_codec_derive::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde_derive::{Deserialize, Serialize};
 
-use runtime_primitives::traits::MaybeSerializeDebug;
-use support::{dispatch::Result, StorageMap, StorageValue};
+use crate::runtime_primitives::traits::MaybeSerializeDebug;
+use crate::support::{dispatch::Result, StorageMap, StorageValue};
 
 pub trait NodeT {
     type Index: Codec + Clone + Eq + PartialEq + Default + MaybeSerializeDebug;

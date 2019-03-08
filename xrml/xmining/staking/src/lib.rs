@@ -538,7 +538,7 @@ impl<T: Trait> Module<T> {
             });
         }
         if let Some(next_key) = next_key.clone() {
-            let session_key=next_key.clone();
+            let session_key = next_key.clone();
             <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
                 props.session_key = Some(session_key);
             });

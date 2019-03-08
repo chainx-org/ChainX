@@ -21,7 +21,7 @@ pub trait Accelerable: Sized + Send + Sync {
 pub trait Extractable {
     type AccountId: Parameter + Member + MaybeSerializeDebug + MaybeDisplay + Ord + Default;
 
-    fn new(Vec<u8>) -> Self;
-    fn account_info(&self) -> Option<(Vec<u8>, Self::AccountId)>;
+    fn new(script: Vec<u8>) -> Self;
+    fn account_info(&self) -> Option<(Self::AccountId, Vec<u8>)>;
     fn split(&self) -> Vec<Vec<u8>>;
 }

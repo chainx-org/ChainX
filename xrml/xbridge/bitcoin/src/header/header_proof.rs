@@ -1,22 +1,24 @@
 // Copyright 2019 Chainpool.
 
-use rstd::cmp;
-use rstd::result::Result as StdResult;
+use crate::rstd::cmp;
+use crate::rstd::result::Result as StdResult;
+// btc
+use crate::btc_chain::BlockHeader;
+use crate::btc_primitives::compact::Compact;
+use crate::btc_primitives::hash::H256;
+use crate::btc_primitives::U256;
 
-use chain::BlockHeader;
-use primitives::compact::Compact;
-use primitives::hash::H256;
-use primitives::U256;
+use crate::{Module, Trait};
+// substrate runtime module
+use crate::runtime_primitives::traits::As;
+use crate::support::dispatch::Result;
+use crate::timestamp;
 
-use super::{
-    BestIndex, BlockHeaderFor, BlockHeightFor, GenesisInfo, IrrBlock, NetworkId, Params,
-    ParamsInfo, Trait,
-};
-use blockchain::ChainErr;
-use runtime_primitives::traits::As;
-use runtime_support::dispatch::Result;
-use runtime_support::{StorageMap, StorageValue};
-use timestamp;
+use crate::types::Params;
+
+use super::ChainErr;
+
+use crate::xsupport::{debug, ensure_with_errorlog, error, info};
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,
@@ -25,55 +27,26 @@ pub struct HeaderVerifier<'a> {
 }
 
 impl<'a> HeaderVerifier<'a> {
-    pub fn new<T: Trait>(header: &'a BlockHeader) -> StdResult<Self, ChainErr> {
-        let params: Params = <ParamsInfo<T>>::get();
-
-        let prev_height;
-        let prev_hash = header.previous_header_hash.clone();
-
-        if let Some(header_info) = <BlockHeaderFor<T>>::get(&prev_hash) {
-            prev_height = header_info.height;
-        } else {
-            return Err(ChainErr::UnknownParent);
-        }
-
-        let best_header_hash = <BestIndex<T>>::get();
-        let best_height;
-        if let Some(header_info) = <BlockHeaderFor<T>>::get(&best_header_hash) {
-            best_height = header_info.height;
-        } else {
-            return Err(ChainErr::NotFound);
-        }
-
-        let irr_block = <IrrBlock<T>>::get();
-        let this_height = prev_height + 1;
-        if this_height < best_height - irr_block {
-            return Err(ChainErr::AncientFork);
-        }
-
-        let now: T::Moment = <timestamp::Now<T>>::get();
+    pub fn new<T: Trait>(header: &'a BlockHeader, height: u32) -> StdResult<Self, ChainErr> {
+        let now: T::Moment = timestamp::Module::<T>::now();
         let current_time: u32 = now.as_() as u32;
 
         Ok(HeaderVerifier {
-            work: HeaderWork::new(header, this_height),
+            work: HeaderWork::new(header, height),
             proof_of_work: HeaderProofOfWork::new(header),
-            timestamp: HeaderTimestamp::new(header, current_time, params.block_max_future),
+            timestamp: HeaderTimestamp::new(header, current_time),
         })
     }
 
     pub fn check<T: Trait>(&self) -> Result {
-        let params: Params = ParamsInfo::<T>::get();
-        let network_id: u32 = NetworkId::<T>::get();
+        let params: Params = Module::<T>::params_info();
+        let network_id: u32 = Module::<T>::network_id();
         if network_id == 0 {
             self.work.check::<T>(&params)?;
         }
         self.proof_of_work.check(&params)?;
-        self.timestamp.check()?;
+        self.timestamp.check(&params)?;
         Ok(())
-    }
-
-    pub fn get_height<T: Trait>(&self) -> u32 {
-        self.work.height
     }
 }
 
@@ -90,11 +63,15 @@ impl<'a> HeaderWork<'a> {
     fn check<T: Trait>(&self, p: &Params) -> Result {
         let previous_header_hash = self.header.previous_header_hash.clone();
         let work = work_required::<T>(previous_header_hash, self.height, p);
-        if work == self.header.bits {
-            Ok(())
-        } else {
-            Err("nBits do not match difficulty rules")
-        }
+        ensure_with_errorlog!(
+            work == self.header.bits,
+            "nBits do not match difficulty rules",
+            "work{:?}|header bits:{:?}|height:{:}",
+            work,
+            self.header.bits,
+            self.height
+        );
+        Ok(())
     }
 }
 
@@ -104,17 +81,22 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &Params) 
         return max_bits;
     }
 
-    let parent_header: BlockHeader = <BlockHeaderFor<T>>::get(&parent_hash).unwrap().header;
+    let parent_header: BlockHeader = Module::<T>::block_header_for(&parent_hash).unwrap().header;
 
     if is_retarget_height(height, params) {
-        return work_required_retarget::<T>(parent_header, height, params);
+        let new_work = work_required_retarget::<T>(parent_header, height, params);
+        info!("[work_required]|retaget new work required|height:{:}|retargeting_interval:{:}|new_work:{:?}", height, params.retargeting_interval(), new_work);
+        return new_work;
     }
-
+    debug!(
+        "[work_required]|use old work requrie|old bits:{:?}",
+        parent_header.bits
+    );
     parent_header.bits
 }
 
 pub fn is_retarget_height(height: u32, p: &Params) -> bool {
-    height % p.retargeting_interval == 0
+    height % p.retargeting_interval() == 0
 }
 
 /// Algorithm used for retargeting work every 2 weeks
@@ -123,17 +105,17 @@ pub fn work_required_retarget<T: Trait>(
     height: u32,
     params: &Params,
 ) -> Compact {
-    let retarget_num = height - params.retargeting_interval;
+    let retarget_num = height - params.retargeting_interval();
 
-    let (genesis_header, genesis_num) = <GenesisInfo<T>>::get();
+    let (genesis_header, genesis_num) = Module::<T>::genesis_info();
     let mut retarget_header = parent_header.clone();
     if retarget_num < genesis_num {
         retarget_header = genesis_header;
     } else {
-        let hash_list = <BlockHeightFor<T>>::get(&retarget_num).unwrap();
+        let hash_list = Module::<T>::block_hash_for(&retarget_num);
         for h in hash_list {
             // look up in main chain
-            if let Some(info) = <BlockHeaderFor<T>>::get(h) {
+            if let Some(info) = Module::<T>::block_header_for(h) {
                 if info.confirmed == true {
                     retarget_header = info.header;
                     break;
@@ -158,7 +140,13 @@ pub fn work_required_retarget<T: Trait>(
             last_timestamp,
             params,
         ));
-    retarget = retarget / U256::from(params.target_timespan_seconds);
+    retarget = retarget / U256::from(params.target_timespan_seconds());
+
+    debug!(
+        "[work_required_retarget]|retarget:{:}|maximum:{:?}",
+        retarget, maximum
+    );
+
     if retarget > maximum {
         params.max_bits()
     } else {
@@ -168,13 +156,14 @@ pub fn work_required_retarget<T: Trait>(
 
 /// Returns constrained number of seconds since last retarget
 pub fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, p: &Params) -> u32 {
+    // TODO i64??
     // subtract unsigned 32 bit numbers in signed 64 bit space in
     // order to prevent underflow before applying the range constraint.
     let timespan = last_timestamp as i64 - i64::from(retarget_timestamp);
     range_constrain(
         timespan,
-        i64::from(p.min_timespan),
-        i64::from(p.max_timespan),
+        i64::from(p.min_timespan()),
+        i64::from(p.max_timespan()),
     ) as u32
 }
 
@@ -218,20 +207,19 @@ pub fn is_valid_proof_of_work(max_work_bits: Compact, bits: Compact, hash: &H256
 pub struct HeaderTimestamp<'a> {
     header: &'a BlockHeader,
     current_time: u32,
-    max_future: u32,
 }
 
 impl<'a> HeaderTimestamp<'a> {
-    fn new(header: &'a BlockHeader, current_time: u32, max_future: u32) -> Self {
+    fn new(header: &'a BlockHeader, current_time: u32) -> Self {
         HeaderTimestamp {
             header,
             current_time,
-            max_future,
         }
     }
 
-    fn check(&self) -> Result {
-        if self.header.time > self.current_time + self.max_future {
+    fn check(&self, p: &Params) -> Result {
+        if self.header.time > self.current_time + p.block_max_future() {
+            error!("[HeaderTimestamp check]|Futuristic timestamp|header time{:}|current time:{:}|max_future{:?}", self.header.time, self.current_time, p.block_max_future());
             Err("Futuristic timestamp")
         } else {
             Ok(())

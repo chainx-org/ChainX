@@ -116,7 +116,7 @@ impl<T: Trait> Module<T> {
     pub fn minimal_withdrawal_value(token: &Token) -> Option<T::Balance> {
         match token.as_slice() {
             <xbitcoin::Module<T> as ChainT>::TOKEN => {
-                Some(As::sa(xbitcoin::Module::<T>::btc_fee()))
+                Some(As::sa(xbitcoin::Module::<T>::btc_withdrawal_fee()))
             }
             _ => None,
         }

@@ -23,8 +23,6 @@ consensus = { package = "srml-consensus", git = "https://github.com/chainpool/su
 indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate", default_features = false }
 timestamp = { package ="srml-timestamp", git = "https://github.com/chainpool/substrate", default_features = false }
 
-keys = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-
 # chainx runtime
 xr-primitives = { path = "../../../xr-primitives", default_features = false }
 # xrml

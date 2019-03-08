@@ -19,6 +19,7 @@ use runtime_support::{
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
+use xsupport::info;
 
 /// This module only tracks the vote weight related changes.
 /// All the amount related has been taken care by assets module.
@@ -259,7 +260,7 @@ impl<T: Trait> Module<T> {
         match token.as_slice() {
             // btc
             <xbitcoin::Module<T> as ChainT>::TOKEN => {
-                let irr_block: u32 = <xbitcoin::Module<T>>::irr_block();
+                let irr_block: u32 = <xbitcoin::Module<T>>::confirmation_number();
                 let seconds = (irr_block * 10 * 60) as u64;
                 Ok(seconds / seconds_per_block.as_())
             }
@@ -270,11 +271,11 @@ impl<T: Trait> Module<T> {
     fn issue_reward(source: &T::AccountId, token: &Token, value: T::Balance) -> Result {
         let psedu_intention = Self::psedu_intention_profiles(token);
         if psedu_intention.last_total_deposit_weight == 0 {
-            return Err("token's last_total_deposit_weight is zero.");
+            info!("should issue reward to {:?}, but the last_total_deposit_weight of Token: {:?} is zero.", source, token);
+            return Ok(());
         }
         let blocks = Self::wait_blocks(token)?;
 
-        // TODO
         let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
         let jackpot = xassets::Module::<T>::pcx_free_balance(&addr).as_();
         let reward = T::Balance::sa(

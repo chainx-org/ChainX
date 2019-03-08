@@ -54,6 +54,8 @@ use xr_primitives::XString;
 use xassets::{AssetType, Chain, ChainT, Memo, Token};
 use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
 
+pub use types::{RecordInfo, TxState};
+
 pub type AddrStr = XString;
 
 pub trait Trait: system::Trait + balances::Trait + xassets::Trait + timestamp::Trait {
@@ -70,11 +72,9 @@ decl_module! {
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
-        <T as balances::Trait>::Balance,
-        <T as timestamp::Trait>::Moment
-    {
+        <T as balances::Trait>::Balance {
         Deposit(AccountId, Token, Balance),
-        WithdrawalApply(u32, AccountId, Token, Balance, AddrStr, Memo, Moment),
+        WithdrawalApply(u32, AccountId, Chain, Token, Balance, Memo, AddrStr, TxState),
         WithdrawalFinish(u32, bool),
     }
 );
@@ -244,11 +244,12 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::WithdrawalApply(
             appl.id,
             appl.applicant,
+            asset.chain(),
             appl.token,
             appl.balance,
-            appl.addr,
             appl.ext,
-            appl.time,
+            appl.addr, // if btc, the addr is base58 addr
+            TxState::Applying,
         ));
         Ok(())
     }

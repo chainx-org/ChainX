@@ -5,7 +5,6 @@ authors = ["Chainpool <http://chainx.org>"]
 edition = "2018"
 
 [dependencies]
-rustc-hex = { version = "2.0", default-features = false }
 serde = { version = "1.0", default-features = false }
 parity-codec = { version = "3.1", default-features = false }
 libsecp256k1 = "0.2.2"
@@ -28,12 +27,12 @@ xassets = { path = "../../xassets/assets", package = "xrml-xassets-assets", defa
 xrecords = { path = "../../xassets/records", package = "xrml-xassets-records", default-features = false }
 
 [dev-dependencies]
-hex-literal = "0.1"
+hex-literal = "0.1.0"
+rustc-hex = "2.0.1"
 
 [features]
 default = ["std"]
 std = [
-    "rustc-hex/std",
     "serde/std",
     "parity-codec/std",
     # substrate core

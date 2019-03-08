@@ -1,8 +1,6 @@
 // Copyright 2019 Chainpool.
 
 extern crate base58;
-extern crate hex;
-extern crate rustc_hex;
 extern crate serialization;
 extern crate sr_io as runtime_io;
 extern crate sr_primitives;
@@ -124,8 +122,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             ), // retargeting_factor
             irr_block: 3,
             reserved: 2100,
-            btc_fee: 1000,
-            max_withdraw_amount: 100,
+            btc_withdrawal_fee: 1000,
+            max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }
         .build_storage()
@@ -169,8 +167,8 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
             ), // retargeting_factor
             irr_block: 3,
             reserved: 2100,
-            btc_fee: 1000,
-            max_withdraw_amount: 100,
+            btc_withdrawal_fee: 1000,
+            max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }
         .build_storage()
@@ -518,8 +516,8 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
             ), // retargeting_factor
             irr_block: 3,
             reserved: 2100,
-            btc_fee: 1000,
-            max_withdraw_amount: 100,
+            btc_withdrawal_fee: 1000,
+            max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }
         .build_storage()
@@ -588,8 +586,8 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
             ), // retargeting_factor
             irr_block: 3,
             reserved: 2100,
-            btc_fee: 1000,
-            max_withdraw_amount: 100,
+            btc_withdrawal_fee: 1000,
+            max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }
         .build_storage()
@@ -800,10 +798,10 @@ fn test_sign_state() {
     data.push((3, true));
     data.push((4, true));
     let vote_state = false;
-    let data = update_sign_node::<Test>(vote_state, 1, data);
-    let data = update_sign_node::<Test>(vote_state, 3, data);
-    let data = update_sign_node::<Test>(vote_state, 2, data);
-    let data = update_sign_node::<Test>(vote_state, 4, data);
+    let data = update_trustee_vote_state::<Test>(vote_state, 1, data);
+    let data = update_trustee_vote_state::<Test>(vote_state, 3, data);
+    let data = update_trustee_vote_state::<Test>(vote_state, 2, data);
+    let data = update_trustee_vote_state::<Test>(vote_state, 4, data);
     let d = vec![(1, false), (3, false), (2, false), (4, false)];
     assert_eq!(data, d);
 }

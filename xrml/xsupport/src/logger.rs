@@ -30,3 +30,16 @@ macro_rules! debug {
         $crate::logger::debug_m!(target: "runtime", "[runtime|{}] {}", module_path!(), format!($($arg)*));
     )
 }
+
+#[cfg(feature = "std")]
+#[inline]
+pub fn u8array_to_string(s: &[u8]) -> String {
+    String::from_utf8_lossy(s).into_owned()
+}
+
+#[cfg(feature = "std")]
+#[inline]
+pub fn u8array_to_hex(s: &[u8]) -> String {
+    use rustc_hex::ToHex;
+    s.to_hex()
+}

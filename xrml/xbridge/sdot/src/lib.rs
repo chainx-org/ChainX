@@ -70,7 +70,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             let input = contains(sign_data.clone(), input_data).ok_or("sign_data not contains input_data")?;
-            let (node_name, who) = Extracter::<T::AccountId>::new(input).account_info().ok_or("extracter account_id error")?;
+            let (who, node_name) = Extracter::<T::AccountId>::new(input).account_info().ok_or("extracter account_id error")?;
 
             let signer = eth_recover(&ethereum_signature, &sign_data).ok_or("Invalid Ethereum signature")?;
 
@@ -82,7 +82,7 @@ decl_module! {
 
             deposit_token::<T>(&who, balance_due);
 
-            xaccounts::apply_update_binding::<T>(who, signer.to_vec(), node_name, Chain::Ethereum);
+            xaccounts::apply_update_binding::<T>(who, (Chain::Ethereum, signer.to_vec()), node_name);
 
             // Let's deposit an event to let the outside world know this happened.
             Self::deposit_event(RawEvent::Claimed(sender, signer, balance_due));

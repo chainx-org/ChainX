@@ -1,5 +1,6 @@
 use super::*;
 use serde_derive::{Deserialize, Serialize};
+use std::convert::From;
 
 // utils
 #[derive(Serialize, Deserialize, Debug)]
@@ -175,50 +176,6 @@ pub struct PseduNominationRecord {
     pub last_total_deposit_weight_update: BlockNumber,
 }
 
-//#[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
-////#[serde(rename_all = "camelCase")]
-//pub enum WithdrawalState {
-//    Applying,
-//    Signing,
-//    Unknown,
-//}
-
-//impl Default for WithdrawalState {
-//    fn default() -> Self {
-//        WithdrawalState::Applying
-//    }
-//}
-//
-//#[derive(PartialEq, Eq, Clone, Serialize, Deserialize, Debug)]
-//#[serde(rename_all = "camelCase")]
-//pub struct ApplicationWrapper {
-//    id: u32,
-//    applicant: AccountId,
-//    token: String,
-//    balance: Balance,
-//    addr: String,
-//    ext: String,
-//    time: Timestamp,
-//    state: WithdrawalState,
-//}
-//
-//impl ApplicationWrapper {
-//    pub fn new(
-//        appl: Application<AccountId, Balance, Timestamp>,
-//        state: WithdrawalState,
-//    ) -> ApplicationWrapper {
-//        ApplicationWrapper {
-//            id: appl.id(),
-//            applicant: appl.applicant(),
-//            token: String::from_utf8_lossy(&appl.token()).into_owned(),
-//            balance: appl.balance(),
-//            addr: String::from_utf8_lossy(&appl.addr()).into_owned(),
-//            ext: String::from_utf8_lossy(&appl.ext()).into_owned(),
-//            time: appl.time(),
-//            state,
-//        }
-//    }
-//}
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WithdrawStatus {
@@ -231,23 +188,50 @@ pub enum WithdrawStatus {
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DepositInfo {
-    pub time: u32,
+    pub time: u64,
     /// txid
     pub txid: String,
-    /// Confirmed height
-    pub confirm: u32,
-    /// Total confirmation height
-    pub total_confirm: u32,
-    /// btc-address
-    pub address: String,
     /// deposit-balance
     pub balance: Balance,
     /// token id
     pub token: String,
     /// accountid
     pub accountid: Option<AccountId>,
+    /// btc-address
+    pub address: String,
     /// OP_RETURN
     pub memo: String,
+    /// Confirmed height
+    pub confirm: u32,
+    /// Total confirmation height
+    pub total_confirm: u32,
+}
+
+impl From<RecordInfo<AccountId, Balance, Timestamp>> for DepositInfo {
+    fn from(record: RecordInfo<AccountId, Balance, Timestamp>) -> Self {
+        let (confirm, total_confirm) =
+            if let TxState::Confirming(confirm, total_confirm) = record.state {
+                (confirm, total_confirm)
+            } else {
+                panic!("deposit record only has comfirm state")
+            };
+
+        DepositInfo {
+            time: record.time,
+            txid: String::from_utf8_lossy(&record.txid).into_owned(),
+            balance: record.balance,
+            token: String::from_utf8_lossy(&record.token).into_owned(),
+            accountid: if record.who == Default::default() {
+                None
+            } else {
+                Some(record.who)
+            },
+            address: String::from_utf8_lossy(&record.addr).into_owned(),
+            memo: String::from_utf8_lossy(&record.ext).into_owned(),
+            confirm,
+            total_confirm,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -267,33 +251,23 @@ pub struct WithdrawInfo {
     /// btc-address
     pub address: String,
     /// withdraw status
-    pub status: WithdrawStatus,
+    pub status: TxState,
     /// OP_RETURN
     pub memo: String,
 }
 
-impl WithdrawInfo {
-    pub fn new(
-        time: u64,
-        id: u32,
-        txid: String,
-        balance: Balance,
-        token: String,
-        accountid: AccountId,
-        address: String,
-        status: WithdrawStatus,
-        memo: String,
-    ) -> Self {
+impl From<RecordInfo<AccountId, Balance, Timestamp>> for WithdrawInfo {
+    fn from(record: RecordInfo<AccountId, Balance, Timestamp>) -> Self {
         WithdrawInfo {
-            time,
-            id,
-            txid,
-            balance,
-            token,
-            accountid,
-            address,
-            status,
-            memo,
+            time: record.time,
+            id: record.withdrawal_id,
+            txid: String::from_utf8_lossy(&record.txid).into_owned(),
+            balance: record.balance,
+            token: String::from_utf8_lossy(&record.token).into_owned(),
+            accountid: record.who,
+            address: String::from_utf8_lossy(&record.addr).into_owned(),
+            status: record.state,
+            memo: String::from_utf8_lossy(&record.ext).into_owned(),
         }
     }
 }

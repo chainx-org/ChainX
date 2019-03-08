@@ -137,13 +137,13 @@ decl_storage! {
                     header: header,
                     height: number,
                     confirmed: true,
-                    txid: [].to_vec(),
+                    txid_list: [].to_vec(),
                 };
                 let genesis_header = genesis.header.hash();
 
                 let mut hashes = Vec::new();
                 hashes.push(genesis_header.clone());
-                <xbitcoin::BlockHeightFor<T>>::insert(&genesis.height, hashes);
+                <xbitcoin::BlockHashFor<T>>::insert(&genesis.height, hashes);
                 <xbitcoin::BlockHeaderFor<T>>::insert(&genesis_header, genesis);
                 <xbitcoin::BestIndex<T>>::put(genesis_header);
                 <xbitcoin::NetworkId<T>>::put(config.network_id);

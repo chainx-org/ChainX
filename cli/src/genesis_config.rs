@@ -236,10 +236,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: btc_genesis.clone(),
             params_info: params_info.clone(), // retargeting_factor
-            irr_block: 6,
-            reserved: 2100,
-            btc_fee: 40000,
-            max_withdraw_amount: 10,
+            confirmation_number: 6,
+            reserved_block: 2100,
+            btc_withdrawal_fee: 40000,
+            max_withdrawal_count: 10,
             _genesis_phantom_data: Default::default(),
         }),
         xbootstrap: Some(XBootstrapConfig {

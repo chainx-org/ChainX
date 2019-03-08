@@ -8,6 +8,7 @@ use keys::DisplayLayout;
 use parity_codec::Encode;
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use srml_support::storage::generator::{StorageMap, StorageValue};
+use std::convert::Into;
 use std::iter::FromIterator;
 use xassets::ChainT;
 
@@ -155,6 +156,24 @@ where
             .map_err(|e| e.into())
     }
 
+    fn deposit_list(
+        &self,
+        chain: Chain,
+        page_index: u32,
+        page_size: u32,
+    ) -> Result<Option<PageData<DepositInfo>>> {
+        let best_number = self.best_number()?;
+        let list: Vec<xrecords::RecordInfo<AccountId, Balance, Timestamp>> = self
+            .client
+            .runtime_api()
+            .withdrawal_list_of(&best_number, chain)
+            .unwrap_or_default();
+
+        // convert recordinfo to deposit
+        let records: Vec<DepositInfo> = list.into_iter().map(|item| item.into()).collect();
+        into_pagedata(records, page_index, page_size)
+    }
+
     fn withdrawal_list(
         &self,
         chain: Chain,
@@ -162,114 +181,14 @@ where
         page_size: u32,
     ) -> Result<Option<PageData<WithdrawInfo>>> {
         let best_number = self.best_number()?;
-        let state = self.best_state()?;
-        let mut records = Vec::new();
-        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(&chain);
-        let trustee = match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
-            Some(a) => {
-                let hot_address = Address::from_layout(&a.hot_address.as_slice())
-                    .map_err(|_| "Invalid Address")?;
-                hot_address
-            }
-            None => return into_pagedata(records, page_index, page_size),
-        };
-        let list: Vec<xrecords::Application<AccountId, Balance, Timestamp>> = self
+        let list: Vec<xrecords::RecordInfo<AccountId, Balance, Timestamp>> = self
             .client
             .runtime_api()
             .withdrawal_list_of(&best_number, chain)
             .unwrap_or_default();
 
-        match chain {
-            Chain::Bitcoin => {
-                let key = <TxProposal<Runtime>>::key();
-                let candidate =
-                    if let Some(data) = Self::pickout::<CandidateTx<AccountId>>(&state, &key)? {
-                        data
-                    } else {
-                        for appl in list {
-                            let info = WithdrawInfo::new(
-                                appl.time(),
-                                appl.id(),
-                                String::new(),
-                                appl.balance(),
-                                String::from_utf8(appl.token()).unwrap_or_default(),
-                                appl.applicant(),
-                                String::from_utf8(appl.addr()).unwrap_or_default(),
-                                WithdrawStatus::Applying,
-                                String::from_utf8(appl.ext()).unwrap_or_default(),
-                            );
-                            records.push(info)
-                        }
-                        return into_pagedata(records, page_index, page_size);
-                    };
-
-                let key = <IrrBlock<Runtime>>::key();
-                let irr_count = if let Some(irr) = Self::pickout::<u32>(&state, &key)? {
-                    irr
-                } else {
-                    for appl in list {
-                        let info = WithdrawInfo::new(
-                            appl.time(),
-                            appl.id(),
-                            String::new(),
-                            appl.balance(),
-                            String::from_utf8(appl.token()).unwrap_or_default(),
-                            appl.applicant(),
-                            String::from_utf8(appl.addr()).unwrap_or_default(),
-                            WithdrawStatus::Applying,
-                            String::from_utf8(appl.ext()).unwrap_or_default(),
-                        );
-                        records.push(info)
-                    }
-                    return into_pagedata(records, page_index, page_size);
-                };
-
-                let key = <BestIndex<Runtime>>::key();
-                let mut tx_hash = String::new();
-                if let Some(best_hash) = Self::pickout::<btc_chain::hash::H256>(&state, &key)? {
-                    let mut block_hash = best_hash;
-                    for _i in 0..irr_count {
-                        let key = <BlockHeaderFor<Runtime>>::key_for(&block_hash);
-                        if let Some(header_info) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
-                            for txid in header_info.txid {
-                                let key = <TxFor<Runtime>>::key_for(&txid);
-                                if let Some(info) = Self::pickout::<TxInfo>(&state, &key)? {
-                                    if info.input_address.hash != trustee.hash {
-                                        continue;
-                                    }
-                                    tx_hash = info.raw_tx.hash().to_string();
-                                }
-                            }
-                            block_hash = header_info.header.previous_header_hash;
-                        }
-                    }
-                }
-
-                for appl in list {
-                    let mut status = WithdrawStatus::Applying;
-                    if candidate.withdraw_id.iter().any(|id| *id == appl.id()) {
-                        match candidate.sig_status {
-                            VoteResult::Unfinish => status = WithdrawStatus::Signing,
-                            VoteResult::Finish => status = WithdrawStatus::Processing,
-                        }
-                    }
-                    let info = WithdrawInfo::new(
-                        appl.time(),
-                        appl.id(),
-                        tx_hash.clone(),
-                        appl.balance(),
-                        String::from_utf8(appl.token()).unwrap_or_default(),
-                        appl.applicant(),
-                        String::from_utf8(appl.addr()).unwrap_or_default(),
-                        status,
-                        String::from_utf8(appl.ext()).unwrap_or_default(),
-                    );
-                    records.push(info)
-                }
-                into_pagedata(records, page_index, page_size)
-            }
-            _ => Ok(None),
-        }
+        let records: Vec<WithdrawInfo> = list.into_iter().map(|item| item.into()).collect();
+        into_pagedata(records, page_index, page_size)
     }
 
     fn nomination_records(
@@ -731,74 +650,6 @@ where
         Ok(Some(d))
     }
 
-    fn deposit_list(
-        &self,
-        chain: Chain,
-        page_index: u32,
-        page_size: u32,
-    ) -> Result<Option<PageData<DepositInfo>>> {
-        let state = self.best_state()?;
-        let mut records = Vec::new();
-        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(&chain);
-        let trustee = match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
-            Some(a) => {
-                let hot_address = Address::from_layout(&a.hot_address.as_slice())
-                    .map_err(|_| "Invalid Address")?;
-                hot_address
-            }
-            None => return into_pagedata(records, page_index, page_size),
-        };
-
-        match chain {
-            Chain::Bitcoin => {
-                let key = <IrrBlock<Runtime>>::key();
-                let irr_count = if let Some(irr) = Self::pickout::<u32>(&state, &key)? {
-                    irr
-                } else {
-                    return Ok(None);
-                };
-                let token = xbitcoin::Module::<Runtime>::TOKEN;
-                let stoken = String::from_utf8_lossy(&token).into_owned();
-                let key = <BestIndex<Runtime>>::key();
-                if let Some(best_hash) = Self::pickout::<btc_chain::hash::H256>(&state, &key)? {
-                    let mut block_hash = best_hash;
-                    for i in 0..irr_count {
-                        let key = <BlockHeaderFor<Runtime>>::key_for(&block_hash);
-                        if let Some(header_info) = Self::pickout::<BlockHeaderInfo>(&state, &key)? {
-                            for txid in header_info.txid {
-                                let key = <TxFor<Runtime>>::key_for(&txid);
-                                if let Some(info) = Self::pickout::<TxInfo>(&state, &key)? {
-                                    match get_btc_deposit_info(&info.raw_tx, &trustee) {
-                                        Some(dep) => {
-                                            let tx_hash = txid.to_string();
-                                            let btc_address = info.input_address.to_string();
-                                            let info = DepositInfo {
-                                                time: header_info.header.time,
-                                                txid: tx_hash,
-                                                confirm: i,
-                                                total_confirm: irr_count,
-                                                address: btc_address,
-                                                balance: dep.0,
-                                                token: stoken.clone(),
-                                                accountid: dep.1,
-                                                memo: dep.2,
-                                            };
-                                            records.push(info);
-                                        }
-                                        None => continue,
-                                    }
-                                }
-                            }
-                            block_hash = header_info.header.previous_header_hash;
-                        }
-                    }
-                }
-                into_pagedata(records, page_index, page_size)
-            }
-            _ => return Ok(None),
-        }
-    }
-
     fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>> {
         let state = self.best_state()?;
         let mut v = vec![];
@@ -847,12 +698,12 @@ where
                 let key = <xbitcoin::TrusteeRedeemScript<Runtime>>::key();
                 match Self::pickout::<xbitcoin::TrusteeScriptInfo>(&state, &key)? {
                     Some(script) => {
-                        let key = <TxProposal<Runtime>>::key();
+                        let key = <WithdrawalProposal<Runtime>>::key();
                         if let Some(candidate) =
                             Self::pickout::<CandidateTx<AccountId>>(&state, &key)?
                         {
                             let mut sign_status = false;
-                            if candidate.sig_status == VoteResult::Finish {
+                            if candidate.sig_state == VoteResult::Finish {
                                 sign_status = true;
                             }
                             let raw_tx = candidate.tx.encode();
@@ -874,62 +725,6 @@ where
             }
             _ => return Ok(None),
         }
-    }
-}
-
-fn get_btc_deposit_info(
-    raw_tx: &BTCTransaction,
-    trustee: &Address,
-) -> Option<(Balance, Option<AccountId>, String)> {
-    let mut ops = String::default();
-    let mut accountid = AccountId::default();
-    let mut balance = 0;
-    let mut bind_flag = true;
-    let mut deposit_flag = false;
-    for output in raw_tx.outputs.iter() {
-        let script = &output.script_pubkey;
-        let into_script: Script = script.clone().into();
-        let s: Script = script.clone().into();
-        if into_script.is_null_data_script() {
-            let data = s.extract_pre('@');
-            let mut account: Vec<u8> = match b58::from(data[2..].to_vec()) {
-                Ok(a) => a,
-                Err(_) => {
-                    bind_flag = false;
-                    Vec::new()
-                }
-            };
-
-            if account.len() != 35 {
-                bind_flag = false
-            }
-
-            if bind_flag {
-                accountid =
-                    Decode::decode(&mut account[1..33].to_vec().as_slice()).unwrap_or_default();
-                ops = String::from_utf8(s[2..].to_vec()).unwrap_or_default();
-            }
-            continue;
-        }
-
-        // get deposit money
-        let script_addresses = into_script.extract_destinations().unwrap_or_default();
-        if script_addresses.len() == 1 && trustee.hash == script_addresses[0].hash {
-            deposit_flag = true;
-            if output.value > 0 {
-                balance += output.value;
-            }
-        }
-    }
-
-    if deposit_flag {
-        if bind_flag {
-            Some((balance, Some(accountid), ops))
-        } else {
-            Some((balance, None, ops))
-        }
-    } else {
-        None
     }
 }
 

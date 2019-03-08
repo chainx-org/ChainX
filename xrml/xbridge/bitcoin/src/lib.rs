@@ -3,218 +3,76 @@
 //! this module is for btc-bridge
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// for encode/decode
-// Needed for deriving `Serialize` and `Deserialize` for various types.
-// We only implement the serde traits for std builds - they're unneeded
-// in the wasm runtime.
-#[cfg(feature = "std")]
-extern crate serde_derive;
 
-#[macro_use]
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
-
-#[cfg(feature = "std")]
-extern crate rustc_hex;
-#[cfg(feature = "std")]
-extern crate substrate_primitives;
-
-extern crate sr_primitives as runtime_primitives;
-extern crate sr_std as rstd;
-
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_balances as balances;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
-
-extern crate bitcrypto as crypto;
-extern crate xrml_xaccounts as xaccounts;
-extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xassets_records as xrecords;
-#[macro_use]
-extern crate xrml_xsupport;
-
-#[cfg(test)]
-extern crate xrml_xsystem as xsystem;
-
-// bitcoin-rust
-extern crate bit_vec;
-extern crate bitcrypto;
-extern crate chain;
-extern crate keys;
-extern crate merkle;
-extern crate primitives;
-extern crate script;
-extern crate serialization as ser;
-extern crate xr_primitives;
+mod assets_records;
+mod header;
+mod tx;
+mod types;
 
 #[cfg(test)]
 mod tests;
 
-mod blockchain;
-mod header_proof;
-mod tx;
+use parity_codec as codec;
 
-use xr_primitives::generic::b58;
-pub type AddrStr = XString;
-use blockchain::Chain;
-use chain::{BlockHeader, Transaction as BTCTransaction};
-use codec::Decode;
-use keys::{Address, DisplayLayout, Error as AddressError};
-use primitives::compact::Compact;
-use primitives::hash::H256;
-use rstd::prelude::*;
-use rstd::result::Result as StdResult;
-use runtime_support::dispatch::Result;
-use runtime_support::{StorageMap, StorageValue};
-use script::script::Script;
-use ser::{deserialize, Reader};
-use system::ensure_signed;
-pub use tx::RelayTx;
-use tx::{
-    check_signed_tx, check_withdraw_tx, create_multi_address, get_sig_num, handle_tx,
-    inspect_address, update_sig_node, validate_transaction,
+use sr_primitives as runtime_primitives;
+use sr_std as rstd;
+
+use srml_balances as balances;
+use srml_support as support;
+use srml_system as system;
+use srml_timestamp as timestamp;
+
+use xr_primitives::{generic::b58, XString};
+use xrml_xaccounts as xaccounts;
+use xrml_xassets_assets as xassets;
+use xrml_xassets_records as xrecords;
+use xrml_xsupport as xsupport;
+
+// bitcoin-rust
+use bitcrypto;
+use bitcrypto as crypto;
+use chain as btc_chain;
+use keys as btc_keys;
+use merkle;
+use primitives as btc_primitives;
+use script as btc_script;
+use serialization as btc_ser;
+
+//use blockchain::Chain;
+use crate::btc_chain::{BlockHeader, Transaction};
+use crate::btc_keys::{Address, DisplayLayout, Error as AddressError};
+use crate::btc_primitives::hash::H256;
+use crate::btc_ser::{deserialize, Reader};
+use crate::codec::Decode;
+
+use crate::rstd::prelude::*;
+use crate::rstd::result::Result as StdResult;
+use crate::runtime_primitives::traits::As;
+use crate::support::{
+    decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue,
 };
-use xaccounts::{TrusteeAddressPair, TrusteeEntity};
-use xassets::{Chain as ChainDef, ChainT};
-use xr_primitives::XString;
+use crate::system::ensure_signed;
+use crate::xaccounts::{TrusteeAddressPair, TrusteeEntity};
+use crate::xassets::{Chain as ChainDef, ChainT, Memo, Token};
+use crate::xrecords::TxState;
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum TxType {
-    Withdraw,
-    Deposit,
-    Bind,
-    BindDeposit,
-}
+#[cfg(feature = "std")]
+pub use tx::utils::hash_strip;
+use tx::utils::inspect_address_from_transaction;
+use tx::{
+    check_withdraw_tx, create_multi_address, get_sig_num, handle_tx, parse_and_check_signed_tx,
+    remove_unused_tx, update_trustee_vote_state, validate_transaction,
+};
+use types::{BindStatus, DepositCache, TxType};
+pub use types::{
+    BlockHeaderInfo, CandidateTx, Params, RelayTx, TrusteeScriptInfo, TxInfo, VoteResult,
+};
 
-impl Default for TxType {
-    fn default() -> Self {
-        TxType::Deposit
-    }
-}
+use crate::xsupport::{debug, ensure_with_errorlog, error, info};
+#[cfg(feature = "std")]
+use crate::xsupport::{u8array_to_hex, u8array_to_string};
 
-#[derive(PartialEq, Clone, Encode, Decode)]
-pub struct CandidateTx<AccountId> {
-    pub withdraw_id: Vec<u32>,
-    pub tx: BTCTransaction,
-    pub sig_status: VoteResult,
-    pub sig_num: u32,
-    pub sig_node: Vec<(AccountId, bool)>,
-}
-
-impl<AccountId> CandidateTx<AccountId> {
-    pub fn new(
-        withdraw_id: Vec<u32>,
-        tx: BTCTransaction,
-        sig_status: VoteResult,
-        sig_num: u32,
-        sig_node: Vec<(AccountId, bool)>,
-    ) -> Self {
-        CandidateTx {
-            withdraw_id,
-            tx,
-            sig_status,
-            sig_num,
-            sig_node,
-        }
-    }
-}
-
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum BindStatus {
-    Init,
-    Update,
-}
-
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum VoteResult {
-    Unfinish,
-    Finish,
-}
-
-#[derive(PartialEq, Clone, Encode, Decode)]
-pub struct BlockHeaderInfo {
-    pub header: BlockHeader,
-    pub height: u32,
-    pub confirmed: bool,
-    pub txid: Vec<H256>,
-}
-
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
-pub struct TxInfo {
-    pub input_address: Address,
-    pub raw_tx: BTCTransaction,
-}
-
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
-pub struct DepositCache {
-    pub txid: H256,
-    pub balance: u64,
-}
-
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeScriptInfo {
-    pub hot_redeem_script: Vec<u8>,
-    pub cold_redeem_script: Vec<u8>,
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Params {
-    max_bits: u32,
-    //Compact
-    block_max_future: u32,
-
-    target_timespan_seconds: u32,
-    target_spacing_seconds: u32,
-    retargeting_factor: u32,
-
-    double_spacing_seconds: u32,
-
-    retargeting_interval: u32,
-    min_timespan: u32,
-    max_timespan: u32,
-}
-
-impl Params {
-    pub fn new(
-        max_bits: u32,
-        block_max_future: u32,
-        target_timespan_seconds: u32,
-        target_spacing_seconds: u32,
-        retargeting_factor: u32,
-    ) -> Params {
-        Params {
-            max_bits,
-            block_max_future,
-
-            target_timespan_seconds,
-            target_spacing_seconds,
-            retargeting_factor,
-
-            double_spacing_seconds: target_spacing_seconds / 10,
-
-            retargeting_interval: target_timespan_seconds / target_spacing_seconds,
-            min_timespan: target_timespan_seconds / retargeting_factor,
-            max_timespan: target_timespan_seconds * retargeting_factor,
-        }
-    }
-
-    pub fn max_bits(&self) -> Compact {
-        Compact::new(self.max_bits)
-    }
-
-    pub fn retargeting_interval(&self) -> u32 {
-        self.retargeting_interval
-    }
-}
+pub type AddrStr = XString;
 
 pub trait Trait:
     system::Trait + balances::Trait + timestamp::Trait + xrecords::Trait + xaccounts::Trait
@@ -224,15 +82,26 @@ pub trait Trait:
 
 decl_event!(
     pub enum Event<T> where
-        <T as system::Trait>::AccountId {
+        <T as system::Trait>::AccountId,
+        <T as balances::Trait>::Balance {
         /// version, block hash, block height, prev block hash, merkle root, timestamp, nonce, wait confirm block height, wait confirm block hash
-        UpdateHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
-        /// tx hash, block hash, input addr, tx type
-        RecvTx(H256, H256, AddrStr, TxType),
-        /// tx hash, input addr, is waiting signed original text
-        WithdrawTx(H256, AddrStr, bool),
-        /// tx hash, input addr, value, statue
-        Deposit(H256, AddrStr, u64, bool),
+        InsertHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
+        /// tx hash, block hash, tx type
+        InsertTx(H256, H256, TxType),
+        /// who, Chain, Token, apply blockheader, balance, memo, Chain Addr, chain txid, apply height, TxState
+        Deposit(AccountId, ChainDef, Token, Balance, Memo, AddrStr, Vec<u8>, TxState),
+        /// who, Chain, Token, balance,  Chain Addr
+        DepositPending(AccountId, ChainDef, Token, Balance, AddrStr),
+        /// who, withdrawal id, txid, TxState
+        Withdrawal(u32, Vec<u8>, TxState),
+        /// create withdraw tx, who proposal, withdrawal list id
+        CreateWithdrawTx(AccountId, Vec<u32>),
+        /// Sign withdraw tx
+        UpdateSignWithdrawTx(AccountId, bool),
+        /// NeedDropWithdrawTx, Proposal hash, tx hash
+        NeedDropWithdrawTx(Vec<u8>, Vec<u8>),
+        /// reject_count, sum_count, withdrawal id list
+        DropWithdrawTx(u32, u32, Vec<u32>),
         /// tx hash, input addr, account addr, bind state (init|update)
         Bind(H256, AddrStr, AccountId, BindStatus),
     }
@@ -242,40 +111,37 @@ decl_storage! {
     trait Store for Module<T: Trait> as XBridgeOfBTC {
         /// get bestheader
         pub BestIndex get(best_index): H256;
-
+        /// block hash list for a height
+        pub BlockHashFor get(block_hash_for): map u32 => Vec<H256>;
         /// all valid blockheader (include orphan blockheader)
         pub BlockHeaderFor get(block_header_for): map H256 => Option<BlockHeaderInfo>;
-        pub BlockHeightFor get(block_height_for): map u32 => Option<Vec<H256>>;
+        /// tx info for txhash
+        pub TxFor get(tx_for): map H256 => Option<TxInfo>;
+        /// tx first input addr for this tx
+        pub InputAddrFor get(input_addr_for): map H256 => Option<Address>;
 
-        /// map for tx
-        pub TxFor get(tx_for): map H256 => TxInfo;
-        /// get GenesisInfo from genesis_config
+        /// unclaim deposit info, addr => tx_hash, btc value, blockhash
+        pub PendingDepositMap get(pending_deposit): map Address => Option<Vec<DepositCache>>;
+        /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
+        pub WithdrawalProposal get(withdrawal_proposal): Option<CandidateTx<T::AccountId>>;
+        pub WithdrawalFatalErr get(withdrawal_fatal_err): bool = false;
+
+        /// get GenesisInfo (header, height)
         pub GenesisInfo get(genesis_info) config(genesis): (BlockHeader, u32);
-
         /// get ParamsInfo from genesis_config
         pub ParamsInfo get(params_info) config(): Params;
-
-        ///  get NetworkId from genesis_config
+        ///  NetworkId for testnet or mainnet
         pub NetworkId get(network_id): u32;
-
-        /// get IrrBlock from genesis_config
-        pub ReservedBlock get(reserved) config(): u32;
-
-        /// get IrrBlock from genesis_config
-        pub IrrBlock get(irr_block) config(): u32;
-
-        /// get BtcFee from genesis_config
-        pub BtcFee get(btc_fee) config(): u64;
-
-        pub MaxWithdrawAmount get(max_withdraw_amount) config(): u32;
-
-        /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
-        pub TxProposal get(tx_proposal): Option<CandidateTx<T::AccountId>>;
-
-        /// tx_hash, btc value, blockhash
-        pub PendingDepositMap get(pending_deposit): map Address => Option<Vec<DepositCache>>;
-
+        /// reserved count for block
+        pub ReservedBlock get(reserved_block) config(): u32;
+        /// get ConfirmationNumber from genesis_config
+        pub ConfirmationNumber get(confirmation_number) config(): u32;
+        /// trustee script
         pub TrusteeRedeemScript get(trustee_info): Option<TrusteeScriptInfo>;
+        /// get BtcWithdrawalFee from genesis_config
+        pub BtcWithdrawalFee get(btc_withdrawal_fee) config(): u64;
+        /// max withdraw account count in bitcoin withdrawal transaction
+        pub MaxWithdrawalCount get(max_withdrawal_count) config(): u32;
     }
 }
 
@@ -284,47 +150,101 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         pub fn push_header(origin, header: Vec<u8>) -> Result {
-            let from = ensure_signed(origin)?;
+            let _from = ensure_signed(origin)?;
             let header: BlockHeader = deserialize(header.as_slice()).map_err(|_| "Cannot deserialize the header vec")?;
-            ensure!(
-                Self::block_header_for(&header.hash()).is_none(),
-                "Header already exists."
-            );
-            ensure!(
-                <BlockHeaderFor<T>>::exists(&header.previous_header_hash),
-                "Can't find previous header"
-            );
-            Self::apply_push_header(header, &from)?;
+            debug!("[push_header]|from:{:}|header:{:?}", _from, header);
 
+            Self::apply_push_header(header)?;
             Ok(())
         }
 
         pub fn push_transaction(origin, tx: Vec<u8>) -> Result {
-            ensure_signed(origin)?;
+            let _from = ensure_signed(origin)?;
             let tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("Parse RelayTx err")?;
-            let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin).ok_or("Should set trustee address first.")?;
-            let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice()).map_err(|_|"Invalid address")?;
-            Self::apply_push_transaction(tx, hot_address)?;
+            debug!("[push_transaction]|from:{:?}|relay_tx:{:?}", _from, tx);
 
+            Self::apply_push_transaction(tx)?;
             Ok(())
         }
 
-        pub fn create_withdraw_tx(origin, withdraw_id: Vec<u32>, tx: Vec<u8>) -> Result {
+        pub fn create_withdraw_tx(origin, withdrawal_id_list: Vec<u32>, tx: Vec<u8>) -> Result {
             let from = ensure_signed(origin)?;
-            info!("Account {:?} create withdraw tx", from);
-            // commiter must in trustee node list
-            Self::ensure_trustee_node(&from)?;
-            let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice())).map_err(|_|"Parse transaction err")?;
-            Self::apply_create_withdraw(tx, withdraw_id)?;
+            // commiter must in trustee list
+            Self::ensure_trustee(&from)?;
 
+            ensure_with_errorlog!(
+                Self::withdrawal_fatal_err() == false,
+                "there is a fatal error for current proposal, please use root to call [fix_withdrawal_err] to fix it",
+                "proposal:{:?}",
+                Self::withdrawal_proposal(),
+            );
+
+            let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| "Parse transaction err")?;
+            debug!("[create_withdraw_tx]|from:{:}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
+
+            Self::apply_create_withdraw(tx, withdrawal_id_list.clone())?;
+
+            Self::deposit_event(RawEvent::CreateWithdrawTx(from, withdrawal_id_list));
             Ok(())
         }
 
-        pub fn sign_withdraw_tx(origin, tx: Vec<u8>, vote_state: bool) -> Result {
+        pub fn sign_withdraw_tx(origin, tx: Option<Vec<u8>>) -> Result {
             let from = ensure_signed(origin)?;
-            info!("Account {:?} sign withdraw tx", from);
-            Self::ensure_trustee_node(&from)?;
-            Self::apply_sig_withdraw(from, tx, vote_state)?;
+            Self::ensure_trustee(&from)?;
+
+            ensure_with_errorlog!(
+                Self::withdrawal_fatal_err() == false,
+                "there is a fatal error for current proposal, please use root to call [fix_withdrawal_err] to fix it",
+                "proposal:{:?}",
+                Self::withdrawal_proposal(),
+            );
+
+            let tx = if let Some(raw_tx) = tx {
+                let tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| "Parse transaction err")?;
+                Some(tx)
+            } else {
+                None
+            };
+            debug!("[sign_withdraw_tx]|from:{:}|vote_tx:{:?}", from, tx);
+
+            Self::apply_sig_withdraw(from, tx)?;
+            Ok(())
+        }
+
+        /// real btc has been withdrawed, but not equal to proposal, so the proposal and tx not remove
+        /// from storage, and the withdrawal lock not release
+        pub fn fix_withdrawal_err(txid: H256, withdrawal_idlist: Vec<(u32, bool)>, drop_proposal: bool) -> Result {
+            for (withdrawal_id, success) in withdrawal_idlist {
+                match xrecords::Module::<T>::withdrawal_finish(withdrawal_id, success) {
+                    Ok(_) => {
+                        info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
+                    }
+                    Err(_e) => {
+                        error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:}, please use root to fix it", withdrawal_id, _e);
+                    }
+                }
+            }
+            if drop_proposal {
+                WithdrawalProposal::<T>::kill();
+            }
+            remove_unused_tx::<T>(&txid);
+            WithdrawalFatalErr::<T>::put(false);
+            Ok(())
+        }
+
+        pub fn fix_deposit_err(txid: H256) -> Result {
+            let tx_info = Self::tx_for(&txid).ok_or("not find tx for this txid")?;
+            ensure_with_errorlog!(
+                tx_info.tx_type == TxType::Deposit,
+                "must be a deposit tx, not allow withdrawal",
+                "tx:{:?}", tx_info
+            );
+
+            handle_tx::<T>(&txid)
+        }
+
+        pub fn set_btc_withdrawal_fee(fee: T::Balance) -> Result {
+            BtcWithdrawalFee::<T>::put(fee.as_() as u64);
             Ok(())
         }
     }
@@ -338,7 +258,16 @@ impl<T: Trait> ChainT for Module<T> {
     }
 
     fn check_addr(addr: &[u8], _: &[u8]) -> Result {
-        Self::verify_btc_address(addr).map_err(|_| "Verify btc addr err")?;
+        // this addr is base58 addr
+        let _ = Self::verify_btc_address(addr)
+            .map_err(|_| "Verify btc addr err")
+            .map_err(|e| {
+                error!(
+                    "[verify_btc_address]|failed, source addr is:{:?}",
+                    u8array_to_string(addr)
+                );
+                e
+            })?;
         Ok(())
     }
 }
@@ -352,16 +281,16 @@ impl<T: Trait> Module<T> {
     pub fn update_trustee_addr() -> StdResult<(), AddressError> {
         let trustees = <xaccounts::TrusteeIntentions<T>>::get();
         if trustees.len() < 3 {
+            error!("[update_trustee_addr]|trustees is less than 3 people, can't generate trustee addr. trustees:{:?}", trustees);
             return Err(AddressError::FailedKeyGeneration);
         }
 
         let mut hot_keys = Vec::new();
         let mut cold_keys = Vec::new();
         for trustee in trustees {
-            if let Some(props) = <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(
-                trustee,
-                xassets::Chain::Bitcoin,
-            )) {
+            if let Some(props) =
+                <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(trustee, ChainDef::Bitcoin))
+            {
                 match props.hot_entity {
                     TrusteeEntity::Bitcoin(pubkey) => hot_keys.push(pubkey),
                 }
@@ -373,104 +302,118 @@ impl<T: Trait> Module<T> {
         hot_keys.sort();
         cold_keys.sort();
 
+        info!(
+            "[update_trustee_addr]|hot_keys:{:?}|cold_keys:{:?}",
+            hot_keys
+                .iter()
+                .map(|s| u8array_to_hex(s))
+                .collect::<Vec<_>>(),
+            cold_keys
+                .iter()
+                .map(|s| u8array_to_hex(s))
+                .collect::<Vec<_>>(),
+        );
+
         let (hot_addr, hot_redeem) = match create_multi_address::<T>(hot_keys) {
             Some((addr, redeem)) => (addr, redeem),
-            None => return Err(AddressError::InvalidAddress),
+            None => {
+                error!("[update_trustee_addr]|create hot_addr err!");
+                return Err(AddressError::InvalidAddress);
+            }
         };
         let (cold_addr, cold_redeem) = match create_multi_address::<T>(cold_keys) {
             Some((addr, redeem)) => (addr, redeem),
-            None => return Err(AddressError::InvalidAddress),
+            None => {
+                error!("[update_trustee_addr]|create cold_addr err!");
+                return Err(AddressError::InvalidAddress);
+            }
         };
 
-        if let Some(old_trustee) = <xaccounts::TrusteeAddress<T>>::get(&xassets::Chain::Bitcoin) {
-            let old_hot_addr = Address::from_layout(&mut old_trustee.hot_address.as_slice())
-                .unwrap_or(Default::default());
-            let old_cold_addr = Address::from_layout(&mut old_trustee.cold_address.as_slice())
-                .unwrap_or(Default::default());
-            if old_hot_addr.hash == hot_addr.hash && old_cold_addr.hash == cold_addr.hash {
-                info!("the new address is the same as the old one");
-                return Ok(());
-            }
-        }
+        info!(
+            "[update_trustee_addr]|hot_addr:{:?}|hot_redeem:{:?}|cold_addr:{:?}|cold_redeem:{:?}",
+            hot_addr, hot_redeem, cold_addr, cold_redeem
+        );
 
         let info = TrusteeScriptInfo {
             hot_redeem_script: hot_redeem.to_bytes().to_vec(),
             cold_redeem_script: cold_redeem.to_bytes().to_vec(),
         };
+        // TODO delay put
         <xaccounts::TrusteeAddress<T>>::insert(
-            &xassets::Chain::Bitcoin,
+            &ChainDef::Bitcoin,
             TrusteeAddressPair {
                 hot_address: hot_addr.layout().to_vec(),
                 cold_address: cold_addr.layout().to_vec(),
             },
         );
+
         <TrusteeRedeemScript<T>>::put(info);
         Ok(())
     }
 
-    fn ensure_trustee_node(who: &T::AccountId) -> Result {
+    fn ensure_trustee(who: &T::AccountId) -> Result {
         let trustees = <xaccounts::TrusteeIntentions<T>>::get();
         if trustees.iter().any(|n| n == who) {
             return Ok(());
         }
-        Err("Commiter not in the trustee node list")
+        error!(
+            "[ensure_trustee]|Committer not in the trustee list!|who:{:}|trustees:{:?}",
+            who, trustees
+        );
+        Err("Committer not in the trustee list")
     }
 
-    fn apply_push_header(header: BlockHeader, _who: &T::AccountId) -> Result {
+    fn apply_push_header(header: BlockHeader) -> Result {
+        // current should not exist
+        ensure_with_errorlog!(
+            Self::block_header_for(&header.hash()).is_none(),
+            "Header already exists.",
+            "hash:{:}...",
+            hash_strip(&header.hash()),
+        );
+        // current should exist yet
+        ensure_with_errorlog!(
+            Self::block_header_for(&header.previous_header_hash).is_some(),
+            "Can't find previous header",
+            "prev hash:{:}...|current hash:{:}",
+            hash_strip(&header.previous_header_hash),
+            hash_strip(&header.hash()),
+        );
+
+        // convert btc header to self header info
+        let header_info: BlockHeaderInfo =
+            header::check_prev_and_convert::<T>(header).map_err(|e| e.info())?;
         // check
-        let c = header_proof::HeaderVerifier::new::<T>(&header).map_err(|e| e.info())?;
+        let c = header::HeaderVerifier::new::<T>(&header_info.header, header_info.height)
+            .map_err(|e| e.info())?;
         c.check::<T>()?;
 
-        let header_info = BlockHeaderInfo {
-            header: header.clone(),
-            height: c.get_height::<T>(),
-            confirmed: false,
-            txid: [].to_vec(),
-        };
-
+        // insert into storage
+        let hash = header_info.header.hash();
         // insert valid header into storage
-        <BlockHeaderFor<T>>::insert(&header.hash(), header_info.clone());
+        BlockHeaderFor::<T>::insert(&hash, header_info.clone());
+        BlockHashFor::<T>::mutate(header_info.height, |v| {
+            if !v.contains(&hash) {
+                v.push(hash.clone());
+            }
+        });
 
-        let mut height_hash: Vec<H256> =
-            <BlockHeightFor<T>>::get(&header_info.height).unwrap_or_default();
+        debug!("[apply_push_header]|verify pass, insert to storage|height:{:}|hash:{:}...|block hashs for this height:{:?}",
+            header_info.height,
+            hash_strip(&hash),
+            Self::block_hash_for(header_info.height).into_iter().map(|hash| hash_strip(&hash)).collect::<Vec<_>>()
+        );
 
-        height_hash.push(header.hash());
-        <BlockHeightFor<T>>::insert(&header_info.height, height_hash);
-
-        let best_header_hash = <BestIndex<T>>::get();
-        let best_header = match <BlockHeaderFor<T>>::get(&best_header_hash) {
+        let best_header = match Self::block_header_for(Self::best_index()) {
             Some(info) => info,
             None => return Err("can't find the best header in ChainX"),
         };
 
         if header_info.height > best_header.height {
-            //delete old header info
-            let reserved = <ReservedBlock<T>>::get();
-            let del = header_info.height - reserved;
-            if let Some(v) = <BlockHeightFor<T>>::get(&del) {
-                for h in v {
-                    <BlockHeaderFor<T>>::remove(&h);
-                }
-            }
-            <BlockHeightFor<T>>::remove(&del);
+            header::remove_unused_headers::<T>(&header_info);
 
-            // update confirmd status
-            let irr_block = <IrrBlock<T>>::get();
-            let mut confirm_header = header_info.clone();
-            for _index in 0..irr_block {
-                if let Some(info) =
-                    <BlockHeaderFor<T>>::get(&confirm_header.header.previous_header_hash)
-                {
-                    confirm_header = info;
-                }
-            }
-            <BlockHeaderFor<T>>::mutate(&confirm_header.header.hash(), |info| {
-                if let Some(i) = info {
-                    i.confirmed = true
-                }
-            });
-
-            Self::deposit_event(RawEvent::UpdateHeader(
+            let (confirm_hash, confirm_height) = header::update_confirmed_header::<T>(&header_info);
+            Self::deposit_event(RawEvent::InsertHeader(
                 header_info.header.version,
                 header_info.header.hash(),
                 header_info.height,
@@ -478,60 +421,95 @@ impl<T: Trait> Module<T> {
                 header_info.header.merkle_root_hash,
                 header_info.header.time,
                 header_info.header.nonce,
-                confirm_header.height,
-                confirm_header.header.hash(),
+                confirm_height,
+                confirm_hash,
             ));
 
-            <BestIndex<T>>::put(header.hash());
-            <Chain<T>>::handle_confirm_block(confirm_header.clone()).map_err(|e| e.info())?;
+            info!(
+                "[apply_push_header]|update to new height|height:{:}|hash:{:}...",
+                header_info.height,
+                hash_strip(&hash),
+            );
+            // change new best index
+            BestIndex::<T>::put(hash);
+        } else {
+            info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}",
+                best_header.height,
+                header_info.height
+            );
         }
         Ok(())
     }
 
-    fn apply_push_transaction(tx: RelayTx, hot_addres: Address) -> Result {
-        let tx_type = validate_transaction::<T>(&tx, &hot_addres)?;
+    fn apply_push_transaction(tx: RelayTx) -> Result {
+        let tx_hash = tx.raw.hash();
+        ensure_with_errorlog!(
+            Self::tx_for(&tx_hash).is_none(),
+            "tx already exists.",
+            "hash:{:}...",
+            hash_strip(&tx_hash)
+        );
 
-        //update header info
+        // verify
+        validate_transaction::<T>(&tx)?;
+        // judge tx type
+        let tx_type = tx::detect_transaction_type::<T>(&tx)?;
+        // set to storage
         let mut confirmed = false;
-        <BlockHeaderFor<T>>::mutate(&tx.block_hash.clone(), |info| {
-            if let Some(i) = info {
-                i.txid.push(tx.raw.hash());
-                confirmed = i.confirmed;
+        BlockHeaderFor::<T>::mutate(&tx.block_hash, |info| {
+            if let Some(header_info) = info {
+                if !header_info.txid_list.contains(&tx_hash) {
+                    header_info.txid_list.push(tx_hash.clone());
+                }
+                confirmed = header_info.confirmed;
             }
         });
-        let address = match tx_type {
-            TxType::Withdraw => hot_addres,
-            _ => {
-                let outpoint = tx.raw.inputs[0].previous_output.clone();
-                match inspect_address::<T>(&tx.previous_raw, outpoint) {
-                    Some(a) => a,
-                    None => return Err("Inspect address failed"),
-                }
+
+        // parse first input addr, may delete when only use opreturn to get accountid
+        // only deposit tx store prev input tx's addr, for deposit to lookup related accountid
+        if tx_type == TxType::Deposit {
+            let outpoint = &tx.raw.inputs[0].previous_output;
+            if let Some(input_addr) =
+                inspect_address_from_transaction::<T>(&tx.previous_raw, outpoint)
+            {
+                debug!(
+                    "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
+                    hash_strip(&tx_hash),
+                    u8array_to_string(&b58::to_base58(input_addr.layout().to_vec())),
+                );
+                InputAddrFor::<T>::insert(&tx_hash, input_addr)
+            } else {
+                assert!(
+                    false,
+                    "when deposit, the first input must could parse an addr"
+                );
             }
-        };
-        if !<TxFor<T>>::exists(&tx.raw.hash()) {
-            <TxFor<T>>::insert(
-                &tx.raw.hash(),
-                TxInfo {
-                    input_address: address.clone(),
-                    raw_tx: tx.raw.clone(),
-                },
-            )
         }
-        let addr = address.layout().to_vec();
-        Self::deposit_event(RawEvent::RecvTx(
-            tx.clone().raw.hash(),
-            tx.clone().block_hash,
-            b58::to_base58(addr),
+        TxFor::<T>::insert(
+            &tx_hash,
+            TxInfo {
+                raw_tx: tx.raw.clone(),
+                tx_type,
+            },
+        );
+
+        debug!(
+            "[apply_push_transaction]|verify pass|txhash:{:}|tx type:{:?}|confirmed:{:}",
+            hash_strip(&tx_hash),
+            tx_type,
+            confirmed
+        );
+
+        // log event
+        Self::deposit_event(RawEvent::InsertTx(
+            tx_hash.clone(),
+            tx.block_hash.clone(),
             tx_type,
         ));
-
+        // if confirm, handle this tx for deposit or withdrawal
         if confirmed {
-            handle_tx::<T>(&tx.raw.hash()).map_err(|e| {
-                info!(
-                    "Handle tx error: {:}...",
-                    &format!("0x{:?}", tx.raw.hash())[0..8]
-                );
+            handle_tx::<T>(&tx_hash).map_err(|e| {
+                error!("Handle tx error: {:}...", hash_strip(&tx_hash));
                 e
             })?;
         }
@@ -539,82 +517,123 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn apply_create_withdraw(tx: BTCTransaction, withdraw_id: Vec<u32>) -> Result {
-        let withdraw_amount = <MaxWithdrawAmount<T>>::get();
-        if withdraw_id.len() > withdraw_amount as usize {
+    fn apply_create_withdraw(tx: Transaction, withdrawal_id_list: Vec<u32>) -> Result {
+        let withdraw_amount = Self::max_withdrawal_count();
+        if withdrawal_id_list.len() > withdraw_amount as usize {
             return Err("Exceeding the maximum withdrawal amount");
         }
-        let trustee_address = <xaccounts::TrusteeAddress<T>>::get(xassets::Chain::Bitcoin)
-            .ok_or("Should set trustee address first.")?;
-        let hot_address = Address::from_layout(&trustee_address.hot_address.as_slice())
-            .map_err(|_| "Invalid Address")?;
-        check_withdraw_tx::<T>(tx.clone(), withdraw_id.clone(), hot_address.clone())?;
-        let candidate = CandidateTx::new(withdraw_id, tx, VoteResult::Unfinish, 0, Vec::new());
-        <TxProposal<T>>::put(candidate);
+        // remove duplicate
+        let mut withdrawal_id_list = withdrawal_id_list;
+        withdrawal_id_list.sort();
+        let mut list = vec![];
+        let mut last_see = 0_u32;
+        for i in withdrawal_id_list {
+            if i != last_see {
+                last_see = i;
+                list.push(last_see);
+            }
+        }
+        let withdrawal_id_list = list;
+
+        check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
+
+        info!(
+            "[apply_create_withdraw]|create new withdraw|withdrawal idlist:{:?}",
+            withdrawal_id_list
+        );
+
+        // log event
+        for id in withdrawal_id_list.iter() {
+            Self::deposit_event(RawEvent::Withdrawal(*id, Vec::new(), TxState::Signing));
+        }
+
+        let candidate = CandidateTx::new(VoteResult::Unfinish, withdrawal_id_list, tx, Vec::new());
+        WithdrawalProposal::<T>::put(candidate);
         info!("Through the legality check of withdrawal");
         Ok(())
     }
 
-    fn apply_sig_withdraw(who: T::AccountId, tx: Vec<u8>, vote_state: bool) -> Result {
-        if vote_state {
-            check_signed_tx::<T>(tx.clone())?;
-        }
+    fn apply_sig_withdraw(who: T::AccountId, tx: Option<Transaction>) -> Result {
+        let mut proposal: CandidateTx<T::AccountId> =
+            Self::withdrawal_proposal().ok_or("No transactions waiting for signature")?;
+
         let (sig_num, _) = get_sig_num::<T>();
-        match <TxProposal<T>>::get() {
-            Some(mut data) => {
-                info!("Signature: {:}", vote_state);
-                if !vote_state {
-                    let sig_node = update_sig_node::<T>(vote_state, who.clone(), data.sig_node);
-                    let node = sig_node.clone();
-                    let reject: Vec<&(T::AccountId, bool)> =
-                        node.iter().filter(|(_, vote)| *vote == false).collect();
-                    if reject.len() >= sig_num {
-                        info!("{:} opposition, Clear candidate", reject.len());
-                        <TxProposal<T>>::kill();
-                        return Ok(());
-                    }
-                    let candidate = CandidateTx::new(
-                        data.withdraw_id,
-                        data.tx,
-                        data.sig_status,
-                        data.sig_num,
-                        sig_node,
+        match tx {
+            Some(tx) => {
+                // sign
+                // check first and get signatures from commit transaction
+                let sigs = parse_and_check_signed_tx::<T>(&tx)?;
+
+                if sigs.len() <= proposal.trustee_list.len() {
+                    error!(
+                        "[apply_sig_withdraw]|tx sigs len:{:}|proposal trustee len:{:}",
+                        sigs.len(),
+                        proposal.trustee_list.len()
                     );
-                    <TxProposal<T>>::put(candidate);
+                    return Err("Need to sign on the latest signature results");
+                }
+
+                update_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list);
+
+                if sigs.len() >= sig_num {
+                    info!("Signature completed: {:}", sigs.len());
+                    proposal.sig_state = VoteResult::Finish;
+
+                    // log event
+                    for id in proposal.withdrawal_id_list.iter() {
+                        Self::deposit_event(RawEvent::Withdrawal(
+                            *id,
+                            Vec::new(),
+                            TxState::Broadcasting,
+                        ));
+                    }
                 } else {
-                    let tx: BTCTransaction = deserialize(Reader::new(tx.as_slice()))
-                        .map_err(|_| "Parse transaction err")?;
-                    let script: Script = tx.inputs[0].script_sig.clone().into();
-                    let (sigs, _dem) = if let Ok((sigs, dem)) = script.extract_multi_scriptsig() {
-                        (sigs, dem)
-                    } else {
-                        return Err("No signature");
-                    };
+                    proposal.sig_state = VoteResult::Unfinish;
+                }
+                // update tx
+                proposal.tx = tx;
+            }
+            None => {
+                // reject
+                update_trustee_vote_state::<T>(false, &who, &mut proposal.trustee_list);
 
-                    if sigs.len() as u32 <= data.sig_num {
-                        return Err("Need to sign on the latest signature results");
-                    }
-                    info!("Through signature checking");
-                    let sig_node = update_sig_node::<T>(vote_state, who.clone(), data.sig_node);
-                    if sigs.len() >= sig_num {
-                        info!("Signature completed: {:}", sigs.len());
-                        data.sig_status = VoteResult::Finish;
-                    } else {
-                        data.sig_status = VoteResult::Unfinish;
-                    }
-
-                    let candidate = CandidateTx::new(
-                        data.withdraw_id,
-                        tx,
-                        data.sig_status,
-                        sigs.len() as u32,
-                        sig_node,
+                let reject_count = proposal
+                    .trustee_list
+                    .iter()
+                    .filter(|(_, vote)| *vote == false)
+                    .count();
+                if reject_count >= sig_num {
+                    info!(
+                        "[apply_sig_withdraw]|{:}/{:} opposition, clear withdrawal propoal",
+                        reject_count, sig_num
                     );
-                    <TxProposal<T>>::put(candidate);
+                    WithdrawalProposal::<T>::kill();
+
+                    // log event
+                    for id in proposal.withdrawal_id_list.iter() {
+                        Self::deposit_event(RawEvent::Withdrawal(
+                            *id,
+                            Vec::new(),
+                            TxState::Applying,
+                        ));
+                    }
+
+                    Self::deposit_event(RawEvent::DropWithdrawTx(
+                        reject_count as u32,
+                        sig_num as u32,
+                        proposal.withdrawal_id_list.clone(),
+                    ));
+                    return Ok(());
                 }
             }
-            None => return Err("No transactions waiting for signature"),
         }
+
+        info!(
+            "[apply_sig_withdraw]|current sig|state:{:?}|trustee vote:{:?}",
+            proposal.sig_state, proposal.trustee_list
+        );
+
+        WithdrawalProposal::<T>::put(proposal);
         Ok(())
     }
 }

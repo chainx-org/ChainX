@@ -117,13 +117,13 @@ impl<T: Trait> Module<T> {
             let asset = asset_info.0;
             let chain = asset.chain();
 
-            if let Some(bind) = <xaccounts::CrossChainBindOf<T>>::get(&(chain, who.clone())) {
-                if let Some(first_bind) = bind.get(0) {
-                    if let Some(addr_map) =
-                        <xaccounts::CrossChainAddressMapOf<T>>::get(&(chain, first_bind.clone()))
-                    {
-                        return addr_map.1;
-                    }
+            let bind = <xaccounts::CrossChainBindOf<T>>::get(&(chain, who.clone()));
+            if let Some(first_bind) = bind.get(0) {
+                if let Some((_accountid, channel_accountid)) =
+                    <xaccounts::CrossChainAddressMapOf<T>>::get(&(chain, first_bind.clone()))
+                {
+                    // if the channel not set for this addr, return council_addr instead
+                    return channel_accountid.unwrap_or(council_address);
                 }
             }
         }

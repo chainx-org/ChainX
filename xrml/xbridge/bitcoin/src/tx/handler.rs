@@ -1,108 +1,228 @@
 // Copyright 2019 Chainpool
 
-use super::*;
-use keys::DisplayLayout;
-use xaccounts;
-use xassets::Chain;
-use xr_primitives::generic::Extracter;
+use xr_primitives::generic::{b58, Extracter};
 use xr_primitives::traits::Extractable;
-pub struct TxHandler<'a>(&'a H256);
 
-impl<'a> TxHandler<'a> {
-    pub fn new(txid: &H256) -> TxHandler {
-        TxHandler(txid)
+use crate::btc_chain::Transaction;
+use crate::btc_keys::{Address, DisplayLayout};
+use crate::btc_primitives::hash::H256;
+use crate::btc_script::script::Script;
+use crate::rstd::prelude::Vec;
+use crate::rstd::result::Result as StdResult;
+use crate::xaccounts;
+use crate::xassets::Chain;
+
+use crate::runtime_primitives::traits::As;
+use crate::support::{dispatch::Result, StorageMap, StorageValue};
+use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
+use crate::xassets::ChainT;
+use crate::{xassets, xrecords};
+use crate::{Module, PendingDepositMap, RawEvent, Trait, WithdrawalFatalErr, WithdrawalProposal};
+
+#[cfg(feature = "std")]
+use crate::hash_strip;
+#[cfg(feature = "std")]
+use crate::xsupport::u8array_to_string;
+use crate::xsupport::{debug, error, info};
+
+use super::utils::{get_trustee_address, is_key};
+
+pub struct TxHandler {
+    pub tx_hash: H256,
+    pub tx_info: TxInfo,
+}
+
+impl TxHandler {
+    pub fn new<T: Trait>(txid: &H256) -> StdResult<TxHandler, &'static str> {
+        let tx_info = Module::<T>::tx_for(txid).ok_or("not find this txinfo for this txid")?;
+        Ok(TxHandler {
+            tx_hash: txid.clone(),
+            tx_info,
+        })
     }
 
-    pub fn withdraw<T: Trait>(&self) -> Result {
-        //delete used
-        let txid = self.0;
-        info!("Withdraw tx: {:}", txid);
-        let tx_info = <TxFor<T>>::get(txid);
-        let mut flag = false;
-        if let Some(data) = <TxProposal<T>>::take() {
-            let candidate = data.clone();
-            match ensure_identical(&tx_info.raw_tx, &data.tx) {
-                Ok(()) => {
-                    flag = true;
-                    for number in candidate.withdraw_id.iter() {
-                        <xrecords::Module<T>>::withdrawal_finish(*number, true)?;
-                        info!("ID of withdrawal completion: {:}", *number);
-                    }
-                }
-                Err(_) => {
-                    <TxProposal<T>>::put(data);
-                    info!("Withdrawal failed");
-                }
-            };
-        }
-        Module::<T>::deposit_event(RawEvent::WithdrawTx(
-            tx_info.raw_tx.hash(),
-            tx_info.input_address.layout().to_vec(),
-            flag,
-        ));
+    pub fn handle<T: Trait>(&self) -> Result {
+        match self.tx_info.tx_type {
+            TxType::Withdraw => {
+                // TODO refactor
+                self.withdraw::<T>()?;
+            }
+            TxType::Deposit => {
+                self.deposit::<T>()?;
+            }
+        };
         Ok(())
     }
 
-    pub fn deposit<T: Trait>(&self, trustee_address: &keys::Address) {
-        let mut deposit_balance = 0;
-        let txid = self.0;
-        let tx_info = <TxFor<T>>::get(txid);
-
-        for (_, output) in tx_info.raw_tx.outputs.iter().enumerate() {
-            let script = &output.script_pubkey;
-            let into_script: Script = script.clone().into();
-
-            // bind address [btc address --> chainx AccountId]
-            if into_script.is_null_data_script() {
-                let s = script.clone();
-                handle_opreturn::<T>(&s[2..], &tx_info);
-                continue;
-            }
-
-            // get deposit money
-            let script_addresses = into_script.extract_destinations().unwrap_or_default();
-            if script_addresses.len() == 1
-                && trustee_address.hash == script_addresses[0].hash
-                && output.value > 0
-            {
-                deposit_balance += output.value;
-            }
-        }
-
-        if deposit_balance > 0 {
-            let mut deposit_status = false;
-            let input_address = tx_info.input_address.clone();
-            <xaccounts::CrossChainAddressMapOf<T>>::get((
-                Chain::Bitcoin,
-                input_address.layout().to_vec(),
-            ))
-            .map_or_else(
-                || insert_pending_deposit::<T>(&input_address, txid.clone(), deposit_balance),
-                |a| {
-                    deposit_token::<T>(&a.0, deposit_balance);
-                    info!("Deposit token: {:} {:}", txid, deposit_balance);
-                    deposit_status = true;
-                },
+    fn withdraw<T: Trait>(&self) -> Result {
+        if let Some(proposal) = WithdrawalProposal::<T>::take() {
+            debug!(
+                "[withdraw]|withdraw handle|proposal:{:?}|tx:{:?}",
+                proposal, self.tx_info.raw_tx
             );
+            match ensure_identical(&self.tx_info.raw_tx, &proposal.tx) {
+                Ok(()) => {
+                    for number in proposal.withdrawal_id_list.iter() {
+                        match xrecords::Module::<T>::withdrawal_finish(*number, true) {
+                            Ok(_) => {
+                                info!("[withdraw]|ID of withdrawal completion: {:}", *number);
+                            }
+                            Err(_e) => {
+                                error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:}, please use root to fix it", *number, _e);
+                            }
+                        }
+                        Module::<T>::deposit_event(RawEvent::Withdrawal(
+                            *number,
+                            self.tx_hash.to_vec(),
+                            xrecords::TxState::Confirmed,
+                        ));
+                    }
+                }
+                Err(e) => {
+                    let tx_hash = proposal.tx.hash();
+                    error!("[withdraw]|Withdrawal failed, reason:{:}, please use root to fix it|withdrawal idlist:{:?}|proposal:{:?}|tx:{:?}|tx hash:{:}",
+                           e, proposal.withdrawal_id_list, proposal.tx, self.tx_info.raw_tx, self.tx_hash);
+                    WithdrawalProposal::<T>::put(proposal);
 
-            let addr = tx_info.input_address.layout().to_vec();
+                    WithdrawalFatalErr::<T>::put(true);
+
+                    Module::<T>::deposit_event(RawEvent::NeedDropWithdrawTx(
+                        tx_hash.to_vec(),
+                        self.tx_hash.to_vec(),
+                    ));
+                    return Err(e);
+                }
+            };
+        }
+        Ok(())
+    }
+
+    fn deposit<T: Trait>(&self) -> Result {
+        let (account_info, deposit_balance, original_opretion) =
+            parse_deposit_outputs::<T>(&self.tx_info.raw_tx)?;
+
+        debug!(
+            "[deposit]|parse outputs|account_info:{:?}|balance:{:}|opreturn:{:}|",
+            account_info,
+            deposit_balance,
+            if original_opretion.len() > 2 {
+                format!(
+                    "{:?}|{:}",
+                    original_opretion[..2].to_vec(),
+                    u8array_to_string(&original_opretion[2..])
+                )
+            } else {
+                u8array_to_string(&original_opretion)
+            }
+        );
+
+        let input_addr: Address = if let Some(addr) = Module::<T>::input_addr_for(&self.tx_hash) {
+            addr
+        } else {
+            error!(
+                "[deposit]|deposit tx must have input addr|tx:{:?}",
+                self.tx_info
+            );
+            panic!("must set input addr before");
+        };
+
+        // get accounid from related info
+        let deposit_account_info: DepositAccountInfo<T::AccountId> =
+            if let Some((accountid, channel_name)) = account_info {
+                // remove old unbinding deposit info
+                remove_pending_deposit::<T>(&input_addr, &accountid);
+                // update or override binding info
+                update_binding::<T>(accountid.clone(), channel_name, input_addr.clone());
+                DepositAccountInfo::AccountId(accountid)
+            } else {
+                // no opreturn, use addr to get accountid
+                let key = (Chain::Bitcoin, input_addr.layout().to_vec());
+                match xaccounts::Module::<T>::address_map(&key) {
+                    Some((accountid, _)) => DepositAccountInfo::AccountId(accountid),
+                    None => DepositAccountInfo::Address(input_addr.clone()),
+                }
+            };
+        // deposit
+        if deposit_balance > 0 {
+            // deposit for this account or store this deposit cache
+            let deposit_account = match deposit_account_info {
+                DepositAccountInfo::AccountId(accountid) => {
+                    deposit_token::<T>(&accountid, deposit_balance);
+                    info!(
+                        "[deposit]|deposit success|who:{:}|balance:{:}|tx_hash:{:}...",
+                        accountid,
+                        deposit_balance,
+                        hash_strip(&self.tx_hash)
+                    );
+                    accountid
+                }
+                DepositAccountInfo::Address(addr) => {
+                    insert_pending_deposit::<T>(&addr, &self.tx_hash, deposit_balance);
+                    info!(
+                        "[deposit]|deposit into pending|addr:{:?}|balance:{:}|tx_hash:{:}...",
+                        addr,
+                        deposit_balance,
+                        hash_strip(&self.tx_hash)
+                    );
+                    Default::default()
+                }
+            };
+
             Module::<T>::deposit_event(RawEvent::Deposit(
-                tx_info.raw_tx.hash(),
-                b58::to_base58(addr),
-                deposit_balance,
-                deposit_status,
+                deposit_account,
+                xassets::Chain::Bitcoin,
+                Module::<T>::TOKEN.to_vec(),
+                As::sa(deposit_balance),
+                self.tx_hash.to_vec(),
+                original_opretion,
+                b58::to_base58(input_addr.layout().to_vec()),
+                xrecords::TxState::Confirmed,
             ));
         }
+        Ok(())
     }
 }
 
 /// Try updating the binding address, remove pending deposit if the updating goes well.
-fn handle_opreturn<T: Trait>(script: &[u8], info: &TxInfo) {
-    if let Some(a) = Extracter::<T::AccountId>::new(script.to_vec()).account_info() {
-        if update_binding::<T>(a.0.as_slice(), a.1.clone(), info) {
-            remove_pending_deposit::<T>(&info.input_address, &a.1);
+/// return validator name and this accountid
+fn handle_opreturn<T: Trait>(script: &[u8]) -> Option<(T::AccountId, Vec<u8>)> {
+    Extracter::<T::AccountId>::new(script.to_vec()).account_info()
+}
+
+pub fn parse_deposit_outputs<T: Trait>(
+    tx: &Transaction,
+) -> StdResult<(Option<(T::AccountId, Vec<u8>)>, u64, Vec<u8>), &'static str> {
+    let trustee_address = get_trustee_address::<T>()?;
+    let mut deposit_balance = 0;
+    let mut account_info = None;
+    let mut has_opreturn = false;
+    let mut original = Vec::new();
+    // parse
+    for output in tx.outputs.iter() {
+        // out script
+        let script: Script = output.script_pubkey.to_vec().into();
+        // bind address [btc address --> chainx AccountId]
+        // is_null_data_script is not null
+        if script.is_null_data_script() {
+            // TODO check is_null_data_script
+            if has_opreturn == false {
+                // only handle first opreturn output
+                // OP_CODE PUSH ... (2 BYTES)
+                account_info = handle_opreturn::<T>(&script[2..]);
+                if account_info.is_some() {
+                    original.extend(script.to_vec());
+                }
+                has_opreturn = true;
+            }
+            continue;
+        }
+
+        // get deposit money
+        if is_key::<T>(&script, &trustee_address) && output.value > 0 {
+            deposit_balance += output.value;
         }
     }
+    Ok((account_info, deposit_balance, original))
 }
 
 fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result {
@@ -115,6 +235,10 @@ fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result {
             if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
                 || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
+                error!(
+                    "[ensure_identical]|tx1 not equal to tx2|tx1:{:?}|tx2:{:?}",
+                    tx1, tx2
+                );
                 return Err("The inputs of these two transactions mismatch.");
             }
         }
@@ -124,102 +248,74 @@ fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result {
 }
 
 /// bind account
-fn update_binding<T: Trait>(node_name: &[u8], who: T::AccountId, info: &TxInfo) -> bool {
-    let input_addr = info.input_address.layout().to_vec();
-    let channle_id = <xaccounts::IntentionOf<T>>::get(node_name.to_vec()).unwrap_or_default();
-    <xaccounts::CrossChainAddressMapOf<T>>::get((Chain::Bitcoin, input_addr.clone())).map_or_else(
-        || {
-            xaccounts::apply_update_binding::<T>(
-                who.clone(),
-                input_addr.clone(),
-                node_name.to_vec(),
-                Chain::Bitcoin,
-            );
-            let addr = info.input_address.layout().to_vec();
-            Module::<T>::deposit_event(RawEvent::Bind(
-                info.raw_tx.hash(),
-                b58::to_base58(addr),
-                who.clone(),
-                BindStatus::Init,
-            ));
-            true
-        },
-        |p| {
-            if p.0 == who.clone() && p.1 == channle_id.clone() {
-                return false;
-            }
-            //delete old bind
-            if let Some(a) = <xaccounts::CrossChainBindOf<T>>::get((Chain::Bitcoin, p.0.clone())) {
-                let mut vaddr = a.clone();
-                for (index, it) in a.iter().enumerate() {
-                    let addr = match Address::from_layout(&it.as_slice()) {
-                        Ok(a) => a,
-                        Err(_) => {
-                            info!("Convert address failed");
-                            return false;
-                        }
-                    };
-                    if addr.hash == info.input_address.hash {
-                        vaddr.remove(index);
-                        <xaccounts::CrossChainBindOf<T>>::insert((Chain::Bitcoin, p.0), vaddr);
-                        break;
-                    }
-                }
-            };
-            xaccounts::apply_update_binding::<T>(
-                who.clone(),
-                input_addr.clone(),
-                node_name.to_vec(),
-                Chain::Bitcoin,
-            );
-            let addr = info.input_address.layout().to_vec();
-            Module::<T>::deposit_event(RawEvent::Bind(
-                info.raw_tx.hash(),
-                b58::to_base58(addr),
-                who.clone(),
-                BindStatus::Update,
-            ));
-            true
-        },
-    )
+fn update_binding<T: Trait>(who: T::AccountId, channel_name: Vec<u8>, input_addr: Address) {
+    // override old binding
+    xaccounts::apply_update_binding::<T>(
+        who,
+        (Chain::Bitcoin, input_addr.layout().to_vec()),
+        channel_name,
+    );
 }
 
-fn remove_pending_deposit<T: Trait>(input_address: &keys::Address, who: &T::AccountId) {
-    if let Some(record) = <PendingDepositMap<T>>::get(input_address) {
-        for r in record {
-            deposit_token::<T>(who, r.balance);
-            info!("Pending deposit: {:},", r.balance);
-        }
-        <PendingDepositMap<T>>::remove(input_address);
-    }
-}
-
-fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
+pub fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
     let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
-    let _ = <xrecords::Module<T>>::deposit(&who, &token, As::sa(balance));
+    let _ = <xrecords::Module<T>>::deposit(&who, &token, As::sa(balance)).map_err(|e| {
+        error!(
+            "call xrecores to deposit error!, must use root to fix this error. reason:{:?}",
+            e
+        );
+        e
+    });
 }
 
-fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: H256, balance: u64) {
-    let k = DepositCache { txid, balance };
-    match <PendingDepositMap<T>>::get(input_address) {
-        Some(mut key) => {
-            key.push(k.clone());
-            <PendingDepositMap<T>>::insert(input_address, key);
+fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: &H256, balance: u64) {
+    let cache = DepositCache {
+        txid: txid.clone(),
+        balance,
+    };
+
+    match Module::<T>::pending_deposit(input_address) {
+        Some(mut list) => {
+            if !list.contains(&cache) {
+                list.push(cache);
+            }
+            PendingDepositMap::<T>::insert(input_address, list);
             info!(
                 "Add pending deposit: {:}...  {:}",
-                &format!("0x{:?}", k.txid)[0..8],
+                hash_strip(txid),
                 balance
             );
         }
         None => {
-            let mut cache: Vec<DepositCache> = Vec::new();
-            cache.push(k.clone());
-            <PendingDepositMap<T>>::insert(input_address, cache);
+            let mut list: Vec<DepositCache> = Vec::new();
+            list.push(cache);
+            PendingDepositMap::<T>::insert(input_address, list);
             info!(
                 "New pending deposit: {:}...  {:}",
-                &format!("0x{:?}", k.txid)[0..8],
+                hash_strip(txid),
                 balance
             );
         }
     };
+}
+
+fn remove_pending_deposit<T: Trait>(input_address: &keys::Address, who: &T::AccountId) {
+    if let Some(record) = Module::<T>::pending_deposit(input_address) {
+        for r in record {
+            deposit_token::<T>(who, r.balance);
+            info!(
+                "[remove_pending_deposit]|use pending info to re-deposit|who:{:}|balance:{:}",
+                who, r.balance
+            );
+
+            Module::<T>::deposit_event(RawEvent::DepositPending(
+                who.clone(),
+                xassets::Chain::Bitcoin,
+                Module::<T>::TOKEN.to_vec(),
+                As::sa(r.balance),
+                b58::to_base58(input_address.layout().to_vec()),
+            ));
+        }
+        PendingDepositMap::<T>::remove(input_address);
+    }
 }

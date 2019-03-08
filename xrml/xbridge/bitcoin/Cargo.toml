@@ -2,15 +2,14 @@
 name = "xrml-bridge-bitcoin"
 version = "0.9.0"
 authors = ["Chainpool <http://chainx.org>"]
+edition = "2018"
 
 [dependencies]
-hex-literal = { version = "0.1", optional = true }
 serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.1", default-features = false }
-parity-codec-derive = { version = "3.1" }
+parity-codec-derive = { version = "3.1", default-features = false }
 
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
 sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
@@ -22,7 +21,6 @@ srml-consensus = { git = "https://github.com/chainpool/substrate", default-featu
 srml-timestamp = { git = "https://github.com/chainpool/substrate", default-features = false }
 # chainx runtime
 xrml-xsupport = { path = "../../xsupport", default-features = false }
-xrml-xsystem = { path = "../../xsystem", default-features = false }
 xrml-xassets-assets = { path = "../../xassets/assets", default-features = false }
 xrml-xassets-records = { path = "../../xassets/records", default-features = false }
 xrml-xaccounts = { path = "../../xaccounts", default-features = false }
@@ -36,20 +34,20 @@ bitcrypto = { git = "https://github.com/chainx-org/bitcoin-rust", default-featur
 script = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
 keys = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
 merkle = { git = "https://github.com/chainx-org/merkle.git", default-features = false }
-bit-vec =  { git = "https://github.com/chainx-org/bit-vec.git", default-features = false }
-rustc-hex = { version = "2", optional = true }
-base58 = { version = "0.1", optional = true }
 
-hex = "*"
+[dev-dependencies]
+substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+xrml-xsystem = { path = "../../xsystem" }
+rustc-hex = { version = "2.0.1" }
+
 [features]
 default = ["std"]
 std=[
-    "hex-literal",
     "serde/std",
     "serde_derive",
     "parity-codec/std",
+    "parity-codec-derive/std",
 
-    "substrate-primitives/std",
     "sr-std/std",
     "sr-io/std",
     "sr-primitives/std",
@@ -62,21 +60,18 @@ std=[
     "srml-timestamp/std",
 
     # chainx runtime
-    "xrml-xsystem/std",
     "xrml-xsupport/std",
     "xrml-xassets-assets/std",
     "xrml-xassets-records/std",
     "xrml-xaccounts/std",
+    "xr-primitives/std",
 
     # bitcoin
     "chain/std",
-    "keys/std",
     "primitives/std",
     "serialization/std",
     "bitcrypto/std",
     "script/std",
+    "keys/std",
     "merkle/std",
-    "bit-vec/std",
-    "rustc-hex",
-    "base58",
 ]

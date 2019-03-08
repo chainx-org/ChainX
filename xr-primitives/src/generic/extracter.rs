@@ -25,7 +25,7 @@ where
         Extracter(script, ::rstd::marker::PhantomData)
     }
 
-    fn account_info(&self) -> Option<(Vec<u8>, Self::AccountId)> {
+    fn account_info(&self) -> Option<(Self::AccountId, Vec<u8>)> {
         let v = self.split();
         let op = &v[0];
         let mut account: Vec<u8> = match from(op.to_vec()) {
@@ -42,12 +42,12 @@ where
                 Some(a) => a,
                 None => return None,
             };
-        let mut node_name = Vec::new();
+        let mut channel_name = Vec::new(); // channel is a validator
         if v.len() > 1 {
-            node_name = v[1].to_vec();
+            channel_name = v[1].to_vec();
         }
 
-        Some((node_name, account_id))
+        Some((account_id, channel_name))
     }
 
     fn split(&self) -> Vec<Vec<u8>> {

@@ -45,7 +45,7 @@ impl CheckFee for Call {
                         BitcoinCall::push_header(_) => Some(10),
                         BitcoinCall::push_transaction(_) => Some(8),
                         BitcoinCall::create_withdraw_tx(_, _) => Some(5),
-                        BitcoinCall::sign_withdraw_tx(_, _) => Some(5),
+                        BitcoinCall::sign_withdraw_tx(_) => Some(5),
                         _ => None,
                     }
                 };

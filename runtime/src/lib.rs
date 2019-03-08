@@ -468,8 +468,20 @@ impl_runtime_apis! {
             XAssets::valid_assets_of(&who)
         }
 
-        fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::Application<AccountId, Balance, TimestampU64>> {
-            XAssetsRecords::withdrawal_applications(chain)
+        fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, TimestampU64>> {
+            match chain {
+                xassets::Chain::Bitcoin => XBridgeOfBTC::withdrawal_list(),
+                xassets::Chain::Ethereum => Vec::new(),
+                _ => Vec::new(),
+            }
+        }
+
+        fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, TimestampU64>> {
+            match chain {
+                xassets::Chain::Bitcoin => XBridgeOfBTC::deposit_list(),
+                xassets::Chain::Ethereum => Vec::new(),
+                _ => Vec::new(),
+            }
         }
 
         fn verify_address(token: xassets::Token, addr: xrecords::AddrStr, ext: xassets::Memo) -> Result<(), Vec<u8>> {

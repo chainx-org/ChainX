@@ -31,7 +31,9 @@ pub mod xassets_api {
 
             fn valid_assets_of(who: AccountId) -> Vec<(Token, CodecBTreeMap<AssetType, Balance>)>;
 
-            fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::Application<AccountId, Balance, Timestamp>>;
+            fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, Timestamp>>;
+
+            fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, Timestamp>>;
 
             fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result<(), Vec<u8>>;
 

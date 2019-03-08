@@ -4,7 +4,7 @@ version = "0.4.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 
 [dependencies]
-rustc-hex = { version = "1.0", optional = true }
+rustc-hex = { version = "2.0.1", optional = true }
 hex-literal = { version = "0.1.0", optional = true }
 safe-mix = { version = "1.0", default_features = false }
 serde = { version = "1.0", optional = true }

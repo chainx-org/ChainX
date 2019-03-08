@@ -1,71 +1,58 @@
-use super::*;
-
-use super::keys::Public;
-use super::{
-    deserialize, Bytes, Reader, Result, Script, SignatureChecker, SignatureVersion, StorageMap,
-    Trait, Transaction, TransactionInputSigner, TransactionSignatureChecker, TrusteeRedeemScript,
+use crate::btc_chain::Transaction;
+use crate::btc_keys::Public;
+use crate::btc_primitives::bytes::Bytes;
+use crate::btc_script::{
+    script::Script, SignatureChecker, SignatureVersion, TransactionInputSigner,
+    TransactionSignatureChecker,
 };
-use chain::Transaction as BTCTransaction;
+use crate::rstd::prelude::Vec;
+use crate::rstd::result::Result as StdResult;
+use crate::support::dispatch::Result;
+use crate::types::RelayTx;
+use crate::{Module, Trait};
 
-pub fn validate_transaction<T: Trait>(
-    tx: &RelayTx,
-    address: &keys::Address,
-) -> StdResult<TxType, &'static str> {
-    let verify_txid = tx.raw.hash();
-    match <BlockHeaderFor<T>>::get(&tx.block_hash) {
-        Some(header) => {
-            let mut itervc = header.txid.iter();
-            if itervc.any(|h| *h == verify_txid) {
-                return Err("This tx already store");
-            }
-        }
-        None => return Err("Can't find this tx's block header"),
-    }
+use merkle::parse_partial_merkle_tree;
 
-    let header_info = match <BlockHeaderFor<T>>::get(&tx.block_hash) {
-        Some(header) => header,
-        None => return Err("This block header not exists"),
-    };
+use crate::xsupport::{debug, error};
+
+pub fn validate_transaction<T: Trait>(tx: &RelayTx) -> Result {
+    let tx_hash = tx.raw.hash();
+
+    let header_info = Module::<T>::block_header_for(&tx.block_hash).ok_or_else(|| {
+        error!(
+            "[validate_transaction]|tx's block header must exist before|block_hash:{:}",
+            tx.block_hash
+        );
+        "tx's block header must exist before"
+    })?;
+
+    debug!(
+        "[validate_transaction]|relay tx:{:?}|header:{:?}",
+        tx, header_info.header
+    );
 
     let merkle_root = header_info.header.merkle_root_hash;
-
-    // Verify proof
+    // verify merkle proof
     match parse_partial_merkle_tree(tx.merkle_proof.clone()) {
         Ok(parsed) => {
             if merkle_root != parsed.root {
                 return Err("Check failed for merkle tree proof");
             }
-            if !parsed.hashes.iter().any(|h| *h == verify_txid) {
+            if !parsed.hashes.iter().any(|h| *h == tx_hash) {
                 return Err("Tx hash should in ParsedPartialMerkleTree");
             }
         }
         Err(_) => return Err("Parse partial merkle tree failed"),
     }
 
-    // To do: All inputs relay
+    // verify prev tx for input
+    // only check the first(0) input in transaction
     let previous_txid = tx.previous_raw.hash();
     if previous_txid != tx.raw.inputs[0].previous_output.hash {
-        return Err("Previous tx id not right");
+        error!("[validate_transaction]|relay previou tx's hash not equail to relay tx first input|relaytx:{:?}", tx);
+        return Err("Previous tx id not equal input point hash");
     }
-
-    // detect withdraw: To do: All inputs relay
-    let outpoint = tx.raw.inputs[0].previous_output.clone();
-    let send_address = match inspect_address::<T>(&tx.previous_raw, outpoint) {
-        Some(a) => a,
-        None => return Err("Inspect address failed at detect withdraw-tx "),
-    };
-    if send_address.hash == address.hash {
-        return Ok(TxType::Withdraw);
-    }
-
-    // detect deposit
-    for output in tx.raw.outputs.iter() {
-        if is_key(&output.script_pubkey, &address) {
-            return Ok(TxType::BindDeposit);
-        }
-    }
-
-    Err("Irrelevant tx")
+    Ok(())
 }
 
 fn verify_sig(sig: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Bytes) -> bool {
@@ -95,38 +82,39 @@ fn verify_sig(sig: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Byt
 }
 
 /// Check signed transactions
-pub fn check_signed_tx<T: Trait>(tx: Vec<u8>) -> Result {
-    let tx: BTCTransaction =
-        deserialize(Reader::new(tx.as_slice())).map_err(|_| "Parse transaction err")?;
-    let trustee_info =
-        <TrusteeRedeemScript<T>>::get().ok_or("Should set trustee address info first.")?;
-    let redeem_script = Script::from(trustee_info.hot_redeem_script);
+pub fn parse_and_check_signed_tx<T: Trait>(
+    tx: &Transaction,
+) -> StdResult<Vec<Bytes>, &'static str> {
+    // parse sigs from transaction first input
     let script: Script = tx.inputs[0].script_sig.clone().into();
     if script.len() < 2 {
         return Err("Invalid signature, script_sig is too short");
     }
-    let (sigs, _) = if let Ok((sigs, s)) = script.extract_multi_scriptsig() {
-        (sigs, s)
-    } else {
-        return Err("Invalid signature");
-    };
+    let (sigs, _) = script
+        .extract_multi_scriptsig()
+        .map_err(|_| "Invalid signature")?;
+    // parse pubkeys from trustee hot_redeem_script
+    let trustee_info =
+        Module::<T>::trustee_info().ok_or("Should set trustee address info first.")?;
+    let redeem_script = Script::from(trustee_info.hot_redeem_script);
+    let (pubkeys, _, _) = redeem_script
+        .parse_redeem_script()
+        .ok_or("Parse redeem script failed")?;
 
-    let (pubkeys, _, _) = match redeem_script.parse_redeem_script() {
-        Some((k, s, l)) => (k, s, l),
-        None => return Err("Parse redeem script failed"),
-    };
-    for sig in sigs.clone() {
+    let bytes_sedeem_script = redeem_script.to_bytes();
+    for sig in sigs.iter() {
         let mut verify = false;
-        for pubkey in pubkeys.clone() {
-            if verify_sig(&sig, &pubkey, &tx, &redeem_script.to_bytes()) {
+        for pubkey in pubkeys.iter() {
+            if verify_sig(sig, pubkey, tx, &bytes_sedeem_script) {
                 verify = true;
                 break;
             }
         }
         if !verify {
+            error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}", tx);
             return Err("Verify sign failed");
         }
     }
 
-    Ok(())
+    Ok(sigs)
 }

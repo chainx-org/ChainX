@@ -114,10 +114,10 @@ decl_storage! {
         pub TrusteeIntentions get(trustee_intentions): Vec<T::AccountId>;
 
         pub TrusteeIntentionPropertiesOf get(trustee_intention_props_of): map (T::AccountId, Chain) => Option<TrusteeIntentionProps>;
-
-        pub CrossChainAddressMapOf get(address_map): map (Chain, Vec<u8>) => Option<(T::AccountId, T::AccountId)>;
-
-        pub CrossChainBindOf get(account_map): map (Chain, T::AccountId) => Option<Vec<Vec<u8>>>;
+        /// account deposit addr(chain, addr bytes) => (accountid, option(channel accountid))  (channel is a validator)
+        pub CrossChainAddressMapOf get(address_map): map (Chain, Vec<u8>) => Option<(T::AccountId, Option<T::AccountId>)>;
+        /// account deposit accountid, chain => multi deposit addr
+        pub CrossChainBindOf get(account_map): map (Chain, T::AccountId) => Vec<Vec<u8>>;
 
         pub TrusteeAddress get(trustee_address): map Chain => Option<TrusteeAddressPair>;
     }
@@ -168,21 +168,25 @@ pub fn is_valid_url<T: Trait>(url: &[u8]) -> Result {
 /// Actually update the binding address of original transactor.
 pub fn apply_update_binding<T: Trait>(
     who: T::AccountId,
-    address: Vec<u8>,
-    node_name: Vec<u8>,
-    chain: Chain,
+    address_info: (Chain, Vec<u8>),
+    channel_name: Vec<u8>,
 ) {
-    let channle_id = <IntentionOf<T>>::get(node_name).unwrap_or_default();
-    match <CrossChainBindOf<T>>::get((chain, who.clone())) {
-        Some(mut a) => {
-            a.push(address.clone());
-            <CrossChainBindOf<T>>::insert((chain, who.clone()), a);
-        }
-        None => {
-            let mut a = Vec::new();
-            a.push(address.clone());
-            <CrossChainBindOf<T>>::insert((chain, who.clone()), a);
+    let chain = address_info.0;
+    if let Some((accountid, _)) = Module::<T>::address_map(&address_info) {
+        if accountid != who {
+            // old accountid is not equal to new accountid, means should change this addr bind to new account
+            // remove this addr for old accounid's CrossChainBindOf
+            CrossChainBindOf::<T>::mutate(&(chain, accountid), |addr_list| {
+                addr_list.retain(|addr| addr != &address_info.1); // remove addr for this accountid bind
+            });
         }
     }
-    <CrossChainAddressMapOf<T>>::insert((chain, address), (who.clone(), channle_id));
+    // insert or override binding relationship
+    CrossChainBindOf::<T>::mutate(&(chain, who.clone()), |addr_list| {
+        if !addr_list.contains(&address_info.1) {
+            addr_list.push(address_info.1.clone());
+        }
+    });
+    let channel_accountid = <IntentionOf<T>>::get(channel_name);
+    CrossChainAddressMapOf::<T>::insert(&address_info, (who.clone(), channel_accountid));
 }

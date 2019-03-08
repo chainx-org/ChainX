@@ -1,6 +1,5 @@
 // Copyright 2019 Chainpool.
 
-use chain as btc_chain;
 use runtime_api;
 
 use std::collections::BTreeMap;
@@ -15,20 +14,15 @@ use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
 use runtime_primitives::traits::{As, Block as BlockT, NumberFor, Zero};
-use script::Script;
 use state_machine::Backend;
 
 use chainx_primitives::{AccountId, Balance, BlockNumber, SessionKey, Timestamp};
 use chainx_runtime::{Call, Runtime};
-use xr_primitives::generic::b58;
 
 use xaccounts::{IntentionProps, TrusteeEntity, TrusteeIntentionProps};
 use xassets::{Asset, AssetType, Chain, Token};
-use xbitcoin::{
-    self, BestIndex, BlockHeaderFor, BlockHeaderInfo, CandidateTx, IrrBlock, TxFor, TxInfo,
-    TxProposal, VoteResult,
-};
-
+use xbitcoin::{self, CandidateTx, VoteResult, WithdrawalProposal};
+use xrecords::{RecordInfo, TxState};
 use xspot::{HandicapT, OrderDetails, TradingPair, TradingPairIndex, ID};
 use xstaking::IntentionProfs;
 use xsupport::storage::btree_map::CodecBTreeMap;
@@ -38,7 +32,6 @@ use self::runtime_api::{
     xassets_api::XAssetsApi, xfee_api::XFeeApi, xmining_api::XMiningApi, xspot_api::XSpotApi,
 };
 // btc
-use btc_chain::Transaction as BTCTransaction;
 use keys::Address;
 
 mod error;
@@ -50,7 +43,7 @@ use self::error::Result;
 use self::types::{
     AssetInfo, DepositInfo, IntentionInfo, NominationRecord, PageData, PairInfo,
     PseduIntentionInfo, PseduNominationRecord, QuotationsList, TotalAssetInfo, TrusteeInfo,
-    WithdrawInfo, WithdrawStatus, WithdrawTxInfo,
+    WithdrawInfo, WithdrawTxInfo,
 };
 const MAX_PAGE_SIZE: u32 = 100;
 
