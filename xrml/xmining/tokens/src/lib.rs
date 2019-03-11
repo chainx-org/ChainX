@@ -198,12 +198,11 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
     }
 
     fn on_issue(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
-        // Initialize vote weight of depositor
-        let mut vote_weight = DepositVoteWeight::default();
-        vote_weight.last_deposit_weight_update = <system::Module<T>>::block_number();
-        <DepositRecords<T>>::insert(&(source.clone(), target.clone()), vote_weight);
+        Self::issue_reward(source, target, value)?;
 
-        Self::issue_reward(source, target, value)
+        Self::update_vote_weight(source, target, value, true);
+
+        Ok(())
     }
 
     fn on_destroy(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
