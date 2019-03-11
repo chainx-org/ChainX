@@ -6,6 +6,7 @@ use substrate_service;
 use substrate_telemetry::TelemetryEndpoints;
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const CHAINX_TELEMETRY_URL: &str = "wss://stats.chainx.org/submit/";
 
 /// Specialised `ChainSpec`.
 pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
@@ -18,10 +19,10 @@ pub fn staging_testnet_config() -> ChainSpec {
         "chainx_staging_testnet",
         staging_testnet_config_genesis,
         boot_nodes,
-        Some(TelemetryEndpoints::new(vec![(
-            STAGING_TELEMETRY_URL.to_string(),
-            0,
-        )])),
+        Some(TelemetryEndpoints::new(vec![
+            (STAGING_TELEMETRY_URL.to_string(), 0),
+            (CHAINX_TELEMETRY_URL.to_string(), 0),
+        ])),
         None,
         None,
         None,
@@ -43,7 +44,10 @@ pub fn development_config() -> ChainSpec {
         "dev",
         development_config_genesis,
         vec![],
-        None,
+        Some(TelemetryEndpoints::new(vec![(
+            CHAINX_TELEMETRY_URL.to_string(),
+            0,
+        )])),
         None,
         None,
         None,
@@ -62,14 +66,14 @@ pub fn local_testnet_config() -> ChainSpec {
         "/ip4/47.110.232.108/tcp/31129/p2p/QmQ7vca7aum3q1toVPUf8T6SiUPdhFuMPpyJgYAxeoUXtf".into(),
     ];
     ChainSpec::from_genesis(
-        "ChainX V0.9.5",
+        "ChainX V0.9.6",
         "chainx_testnet",
         local_testnet_genesis,
         boot_nodes,
-        Some(TelemetryEndpoints::new(vec![(
-            STAGING_TELEMETRY_URL.to_string(),
-            0,
-        )])),
+        Some(TelemetryEndpoints::new(vec![
+            (STAGING_TELEMETRY_URL.to_string(), 0),
+            (CHAINX_TELEMETRY_URL.to_string(), 0),
+        ])),
         None,
         None,
         None,

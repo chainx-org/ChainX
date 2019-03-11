@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 hex = "0.3.2"
+rustc-hex = "2.0.1"
 error-chain = "0.12"
 jsonrpc-core = "10.0.1"
 jsonrpc-pubsub = "10.0.1"
@@ -58,5 +59,4 @@ assert_matches = "1.1"
 futures = "0.1.17"
 test_client = { package = "substrate-test-client", git = "https://github.com/chainpool/substrate" }
 consensus = { package = "substrate-consensus-common", git = "https://github.com/chainpool/substrate" }
-rustc-hex = "2.0.1"
 hex-literal = "0.1"

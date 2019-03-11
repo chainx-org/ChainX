@@ -19,7 +19,9 @@ use runtime_support::{
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
-use xsupport::info;
+#[cfg(feature = "std")]
+use xsupport::u8array_to_string;
+use xsupport::{debug, info};
 
 /// This module only tracks the vote weight related changes.
 /// All the amount related has been taken care by assets module.
@@ -198,8 +200,18 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
     }
 
     fn on_issue(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
-        Self::issue_reward(source, target, value)?;
+        // Exclude PCX
+        if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == target.clone() {
+            return Ok(());
+        }
 
+        debug!(
+            "on_issue token: {:?}, who: {:?}, vlaue: {:?}",
+            u8array_to_string(target),
+            source,
+            value
+        );
+        Self::issue_reward(source, target, value)?;
         Self::update_vote_weight(source, target, value, true);
 
         Ok(())
@@ -270,7 +282,7 @@ impl<T: Trait> Module<T> {
     fn issue_reward(source: &T::AccountId, token: &Token, value: T::Balance) -> Result {
         let psedu_intention = Self::psedu_intention_profiles(token);
         if psedu_intention.last_total_deposit_weight == 0 {
-            info!("should issue reward to {:?}, but the last_total_deposit_weight of Token: {:?} is zero.", source, token);
+            info!("should issue reward to {:?}, but the last_total_deposit_weight of Token: {:?} is zero.", source, u8array_to_string(token));
             return Ok(());
         }
         let blocks = Self::wait_blocks(token)?;

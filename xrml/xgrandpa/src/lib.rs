@@ -227,7 +227,7 @@ decl_module! {
         }
 
         fn on_finalise(block_number: T::BlockNumber) {
-            if let Some(pending_change) = <PendingChange<T>>::get() {
+            /*if let Some(pending_change) = <PendingChange<T>>::get() {
                 if block_number == pending_change.scheduled_at {
                     if let Some(median) = pending_change.forced {
                         Self::deposit_log(RawLog::ForcedAuthoritiesChangeSignal(
@@ -250,7 +250,7 @@ decl_module! {
                     <AuthorityStorageVec<<T as consensus::Trait>::SessionKey>>::set_items(pending_change.next_authorities);
                     <PendingChange<T>>::kill();
                 }
-            }
+            }*/
         }
     }
 }
@@ -370,6 +370,10 @@ where
 
         // instant changes
         let last_authorities = <Module<T>>::grandpa_authorities();
+        info!(
+            "--on_session_change, last_authorities:{:?}",
+            last_authorities
+        );
         if next_authorities != last_authorities {
             let _ = <Module<T>>::schedule_change(next_authorities, Zero::zero(), None);
         }
@@ -401,6 +405,7 @@ where
             .collect::<Vec<(<T as consensus::Trait>::SessionKey, u64)>>();
 
         let median = <finality_tracker::Module<T>>::median();
+        info!("----on_stalled, next_authorities:{:?}", next_authorities);
 
         // schedule a change for `further_wait` blocks.
         let _ = <Module<T>>::schedule_change(next_authorities, further_wait, Some(median));

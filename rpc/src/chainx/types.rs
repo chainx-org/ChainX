@@ -1,4 +1,5 @@
 use super::*;
+use rustc_hex::ToHex;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::From;
 
@@ -218,7 +219,7 @@ impl From<RecordInfo<AccountId, Balance, Timestamp>> for DepositInfo {
 
         DepositInfo {
             time: record.time,
-            txid: String::from_utf8_lossy(&record.txid).into_owned(),
+            txid: format!("0x{:}", record.txid.to_hex::<String>()),
             balance: record.balance,
             token: String::from_utf8_lossy(&record.token).into_owned(),
             accountid: if record.who == Default::default() {
@@ -227,7 +228,13 @@ impl From<RecordInfo<AccountId, Balance, Timestamp>> for DepositInfo {
                 Some(record.who)
             },
             address: String::from_utf8_lossy(&record.addr).into_owned(),
-            memo: String::from_utf8_lossy(&record.ext).into_owned(),
+            memo: if record.ext.len() > 2
+                && String::from_utf8_lossy(&record.token).into_owned() == "BTC"
+            {
+                String::from_utf8_lossy(&record.ext[2..]).into_owned()
+            } else {
+                String::from_utf8_lossy(&record.ext).into_owned()
+            },
             confirm,
             total_confirm,
         }
@@ -261,7 +268,7 @@ impl From<RecordInfo<AccountId, Balance, Timestamp>> for WithdrawInfo {
         WithdrawInfo {
             time: record.time,
             id: record.withdrawal_id,
-            txid: String::from_utf8_lossy(&record.txid).into_owned(),
+            txid: format!("0x{:}", record.txid.to_hex::<String>()),
             balance: record.balance,
             token: String::from_utf8_lossy(&record.token).into_owned(),
             accountid: record.who,

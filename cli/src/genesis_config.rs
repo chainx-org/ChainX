@@ -32,12 +32,12 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let sdot_claims = load_sdot_info().unwrap();
 
     // account pub and pri key
-    let alice = ed25519::Pair::from_seed(b"Alice                           ").public();
-    let bob = ed25519::Pair::from_seed(b"Bob                             ").public();
-    let charlie = ed25519::Pair::from_seed(b"Charlie                         ").public();
+    let alice = hex!["471af9e69d41ee06426940fd302454662742405cb9dcc5bc68ceb7bec979e5e4"];
+    let bob = hex!["806a491666670aa087e04770c025d64b2ecebfd91a74efdc4f4329642de32365"];
+    let charlie = hex!["1cf70f57bf2a2036661819501164458bd6d94642d81b5e8f1d9bdad93bad49bb"];
     let dave = ed25519::Pair::from_seed(b"Dave                            ").public();
     let gavin = ed25519::Pair::from_seed(b"Gavin                           ").public();
-    let satoshi = ed25519::Pair::from_seed(b"Satoshi                         ").public();
+    let satoshi = hex!["09a6acd8a6f4394c6ba8b5ea93ae0d473880823f357dd3fdfd5ff4ccf1fcad99"];
     //    let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
     let sudo_address =
         hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
@@ -143,18 +143,18 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     let btc_genesis = (
         BlockHeader {
-            version: 536928256,
+            version: 536870912,
             previous_header_hash: H256::from_reversed_str(
-                "000000000000003bc2c544ee8f4dfcee43233067d29a41e9d51c28e548d0f62c",
+                "000000000000001632e4110fd57a66e3495549cc7c37350cfaf092edf20b3370",
             ),
             merkle_root_hash: H256::from_reversed_str(
-                "56d245cb928a6449695cde700ed8280cc43a440165a7299bbee916f383028588",
+                "c8bf8333e880f7439af6ca14a6f0a18806ad0d6dfa3a58df35a1c05968d3981d",
             ),
-            time: 1551161167,
-            bits: Compact::new(436307481),
-            nonce: 1881670301,
+            time: 1552136928,
+            bits: Compact::new(436271905),
+            nonce: 3823450240,
         },
-        1481770,
+        1484053,
     );
 
     let params_info = Params::new(

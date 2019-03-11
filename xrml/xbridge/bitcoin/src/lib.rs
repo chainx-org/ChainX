@@ -53,7 +53,7 @@ use crate::support::{
 };
 use crate::system::ensure_signed;
 use crate::xaccounts::{TrusteeAddressPair, TrusteeEntity};
-use crate::xassets::{Chain as ChainDef, ChainT, Memo, Token};
+use crate::xassets::{Chain, ChainT, Memo, Token};
 use crate::xrecords::TxState;
 
 #[cfg(feature = "std")]
@@ -89,9 +89,9 @@ decl_event!(
         /// tx hash, block hash, tx type
         InsertTx(H256, H256, TxType),
         /// who, Chain, Token, apply blockheader, balance, memo, Chain Addr, chain txid, apply height, TxState
-        Deposit(AccountId, ChainDef, Token, Balance, Memo, AddrStr, Vec<u8>, TxState),
+        Deposit(AccountId, Chain, Token, Balance, Memo, AddrStr, Vec<u8>, TxState),
         /// who, Chain, Token, balance,  Chain Addr
-        DepositPending(AccountId, ChainDef, Token, Balance, AddrStr),
+        DepositPending(AccountId, Chain, Token, Balance, AddrStr),
         /// who, withdrawal id, txid, TxState
         Withdrawal(u32, Vec<u8>, TxState),
         /// create withdraw tx, who proposal, withdrawal list id
@@ -253,8 +253,8 @@ decl_module! {
 impl<T: Trait> ChainT for Module<T> {
     const TOKEN: &'static [u8] = b"BTC";
 
-    fn chain() -> ChainDef {
-        ChainDef::Bitcoin
+    fn chain() -> Chain {
+        Chain::Bitcoin
     }
 
     fn check_addr(addr: &[u8], _: &[u8]) -> Result {
@@ -289,7 +289,7 @@ impl<T: Trait> Module<T> {
         let mut cold_keys = Vec::new();
         for trustee in trustees {
             if let Some(props) =
-                <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(trustee, ChainDef::Bitcoin))
+                <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(trustee, Chain::Bitcoin))
             {
                 match props.hot_entity {
                     TrusteeEntity::Bitcoin(pubkey) => hot_keys.push(pubkey),
@@ -340,7 +340,7 @@ impl<T: Trait> Module<T> {
         };
         // TODO delay put
         <xaccounts::TrusteeAddress<T>>::insert(
-            &ChainDef::Bitcoin,
+            &Chain::Bitcoin,
             TrusteeAddressPair {
                 hot_address: hot_addr.layout().to_vec(),
                 cold_address: cold_addr.layout().to_vec(),

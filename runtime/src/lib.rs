@@ -150,7 +150,6 @@ impl balances::Trait for Runtime {
     type Balance = Balance;
     type OnNewAccount = Indices;
     type OnFreeBalanceZero = ();
-    type EnsureAccountLiquid = ();
     type Event = Event;
 }
 

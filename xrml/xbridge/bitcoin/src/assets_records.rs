@@ -10,13 +10,13 @@ use crate::xrecords::{self, RecordInfo, TxState};
 use crate::xsupport::error;
 use crate::{Module, Trait};
 
+use xr_primitives::generic::b58;
+
 impl<T: Trait> Module<T> {
     pub fn withdrawal_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::Moment>> {
-        let mut records = Vec::new();
-
-        let applications = xrecords::Module::<T>::withdrawal_applications(Chain::Bitcoin);
-        for appl in applications {
-            let info = RecordInfo {
+        let mut records = xrecords::Module::<T>::withdrawal_applications(Chain::Bitcoin)
+            .into_iter()
+            .map(|appl| RecordInfo {
                 who: appl.applicant(),
                 token: appl.token(),
                 balance: appl.balance(),
@@ -25,16 +25,13 @@ impl<T: Trait> Module<T> {
                 ext: appl.ext(),
                 time: appl.time(),
                 withdrawal_id: appl.id(), // only for withdrawal
-                state: Default::default(),
-            };
-            records.push(info)
-        }
+                state: TxState::Applying,
+            })
+            .collect::<Vec<_>>();
 
         match Self::withdrawal_proposal() {
             None => {
-                for appl in records.iter_mut() {
-                    appl.state = TxState::Applying;
-                }
+                // no proposal, all records is under applying
             }
             Some(proposal) => {
                 let best = Self::best_index();
@@ -56,6 +53,7 @@ impl<T: Trait> Module<T> {
                     if let Some(info) = Module::<T>::block_header_for(prev_hash) {
                         for txid in info.txid_list {
                             if let Some(tx_info) = Self::tx_for(&txid) {
+                                // TODO judge tx equal to current proposal
                                 if tx_info.tx_type == TxType::Withdraw {
                                     tx_hash = tx_info.raw_tx.hash().as_ref().to_vec();
                                 }
@@ -77,12 +75,12 @@ impl<T: Trait> Module<T> {
                         .iter()
                         .any(|id| *id == record.withdrawal_id)
                     {
+                        // in proposal, change state , not in proposal, state is Applying
                         record.state = match proposal.sig_state {
                             VoteResult::Unfinish => TxState::Signing,
                             VoteResult::Finish => TxState::Processing,
                         };
                     }
-                    // else the record.state is Default value, it's NotApplying
                 }
             }
         }
@@ -113,7 +111,7 @@ impl<T: Trait> Module<T> {
                     if let Some(tx_info) = Self::tx_for(&txid) {
                         if tx_info.tx_type == TxType::Deposit {
                             let timestamp = info.header.time;
-                            let state = TxState::Confirming(i - 1, confirmations);
+                            let state = TxState::Confirming(i, confirmations);
 
                             let r = match parse_deposit_outputs::<T>(&tx_info.raw_tx) {
                                 Ok(r) => r,
@@ -131,10 +129,12 @@ impl<T: Trait> Module<T> {
                                 token: Self::TOKEN.to_vec(),
                                 balance: As::sa(balance),
                                 txid: tx_hash.as_ref().to_vec(),
-                                addr: Self::input_addr_for(tx_hash)
-                                    .unwrap_or_default()
-                                    .layout()
-                                    .to_vec(),
+                                addr: b58::to_base58(
+                                    Self::input_addr_for(tx_hash)
+                                        .unwrap_or_default()
+                                        .layout()
+                                        .to_vec(),
+                                ),
                                 ext: ext,
                                 time: As::sa(timestamp as u64),
                                 withdrawal_id: 0, // only for withdrawal
