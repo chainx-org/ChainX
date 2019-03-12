@@ -177,7 +177,6 @@ name = "chainx-runtime"
 version = "0.4.0"
 dependencies = [
  "chainx-primitives 0.3.0",
- "hex-literal 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "runtime-api 0.4.0",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -197,7 +196,6 @@ dependencies = [
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-client 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-consensus-aura-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
  "xrml-aura 0.1.0",

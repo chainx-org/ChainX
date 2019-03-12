@@ -5,104 +5,41 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
 #![recursion_limit = "512"]
-
-#[cfg(test)]
-#[macro_use]
-extern crate hex_literal;
-
-#[cfg(test)]
-extern crate serde;
-
-extern crate parity_codec;
-
-#[macro_use]
-extern crate substrate_client as client;
-extern crate substrate_consensus_aura_primitives as consensus_aura;
-extern crate substrate_primitives as primitives;
-
-extern crate sr_primitives as runtime_primitives;
-#[macro_use]
-extern crate sr_version as version;
-extern crate sr_io as runtime_io;
-extern crate sr_std as rstd;
-
-// substrate runtime module
-#[macro_use]
-extern crate srml_support;
-extern crate srml_balances as balances;
-extern crate srml_consensus as consensus;
-extern crate srml_indices as indices;
-extern crate srml_sudo as sudo;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
-extern crate xrml_aura as aura;
-extern crate xrml_grandpa as grandpa;
-extern crate xrml_session as session;
-// unused
-//extern crate srml_contract as contract;
-//extern crate srml_council as council;
-//extern crate srml_democracy as democracy;
-//extern crate srml_treasury as treasury;
-
-// chainx
-extern crate chainx_primitives;
-extern crate xr_primitives;
-
-extern crate runtime_api;
-
-// chainx runtime module
-extern crate xrml_xsupport as xsupport;
-
-pub extern crate xrml_xaccounts as xaccounts;
-pub extern crate xrml_xbootstrap as xbootstrap;
-pub extern crate xrml_xsystem as xsystem;
-// fee;
-pub extern crate xrml_fee_manager as fee_manager;
-// assets;
-pub extern crate xrml_xassets_assets as xassets;
-pub extern crate xrml_xassets_process as xprocess;
-pub extern crate xrml_xassets_records as xrecords;
-// bridge
-pub extern crate xrml_bridge_bitcoin as bitcoin;
-pub extern crate xrml_bridge_sdot as sdot;
-// staking
-pub extern crate xrml_mining_staking as xstaking;
-pub extern crate xrml_mining_tokens as xtokens;
-
-// dex
-pub extern crate xrml_xdex_spot as xspot;
-extern crate xrml_xmultisig as xmultisig;
-use parity_codec::{Decode, Encode};
-
 mod fee;
 mod xexecutive;
 
+use parity_codec::{Decode, Encode};
 use rstd::prelude::*;
+
 // substrate
-use primitives::OpaqueMetadata;
+use client::{
+    block_builder::api::{self as block_builder_api, CheckInherentsResult, InherentData},
+    impl_runtime_apis, runtime_api as client_api,
+};
 use runtime_primitives::generic;
 use runtime_primitives::traits::{
     BlakeTwo256, Block as BlockT, Convert, DigestFor, NumberFor, StaticLookup,
 };
-//#[cfg(feature = "std")]
-//use council::{motions as council_motions, voting as council_voting};
-use client::{
-    block_builder::api::{self as block_builder_api, CheckInherentsResult, InherentData},
-    runtime_api as client_api,
-};
 use runtime_primitives::transaction_validity::TransactionValidity;
 use runtime_primitives::ApplyResult;
+pub use runtime_primitives::{create_runtime_str, Perbill, Permill};
+use substrate_primitives::OpaqueMetadata;
+pub use support::{construct_runtime, StorageValue};
+#[cfg(feature = "std")]
+use support::{Deserialize, Serialize};
+
+pub use timestamp::BlockPeriod;
+pub use timestamp::Call as TimestampCall;
+
 #[cfg(any(feature = "std", test))]
 use version::NativeVersion;
 use version::RuntimeVersion;
 
-use grandpa::fg_primitives::{self, ScheduledChange};
-pub use runtime_primitives::{Perbill, Permill};
-
-// for set consensus period
-pub use srml_support::StorageValue;
-pub use timestamp::BlockPeriod;
-pub use timestamp::Call as TimestampCall;
+// chainx
+use chainx_primitives;
+use runtime_api;
+use xgrandpa::fg_primitives::{self, ScheduledChange};
+use xr_primitives;
 
 // chainx
 use chainx_primitives::{
@@ -148,8 +85,8 @@ impl system::Trait for Runtime {
 
 impl balances::Trait for Runtime {
     type Balance = Balance;
-    type OnNewAccount = Indices;
     type OnFreeBalanceZero = ();
+    type OnNewAccount = Indices;
     type Event = Event;
 }
 
@@ -173,27 +110,27 @@ impl Convert<AccountId, SessionKey> for SessionKeyConversion {
     }
 }
 
-impl session::Trait for Runtime {
+impl xsession::Trait for Runtime {
     type ConvertAccountIdToSessionKey = SessionKeyConversion;
-    type OnSessionChange = (XStaking, grandpa::SyncedAuthorities<Runtime>);
+    type OnSessionChange = (XStaking, xgrandpa::SyncedAuthorities<Runtime>);
     type Event = Event;
 }
 
-impl grandpa::Trait for Runtime {
+impl xgrandpa::Trait for Runtime {
     type Log = Log;
     type Event = Event;
 }
 
-impl aura::Trait for Runtime {
-    type HandleReport = aura::StakingSlasher<Runtime>;
+impl xaura::Trait for Runtime {
+    type HandleReport = xaura::StakingSlasher<Runtime>;
 }
 
 // bridge
-impl bitcoin::Trait for Runtime {
+impl xbitcoin::Trait for Runtime {
     type Event = Event;
 }
 
-impl sdot::Trait for Runtime {
+impl xsdot::Trait for Runtime {
     type Event = Event;
 }
 
@@ -218,7 +155,6 @@ impl sdot::Trait for Runtime {
 //    type Event = Event;
 //}
 //
-//// TODO add voting and motions at here
 //impl council::voting::Trait for Runtime {
 //    type Event = Event;
 //}
@@ -242,7 +178,7 @@ impl xaccounts::Trait for Runtime {
     type DetermineIntentionJackpotAccountId = xaccounts::SimpleAccountIdDeterminator<Runtime>;
 }
 // fees
-impl fee_manager::Trait for Runtime {
+impl xfee_manager::Trait for Runtime {
     //    type Event = Event;
 }
 // assets
@@ -259,9 +195,9 @@ impl xrecords::Trait for Runtime {
 impl xprocess::Trait for Runtime {}
 
 impl xstaking::Trait for Runtime {
+    type Event = Event;
     type OnRewardCalculation = XTokens;
     type OnReward = XTokens;
-    type Event = Event;
 }
 
 impl xtokens::Trait for Runtime {
@@ -270,8 +206,8 @@ impl xtokens::Trait for Runtime {
 }
 
 impl xspot::Trait for Runtime {
-    type Event = Event;
     type Price = Balance;
+    type Event = Event;
 }
 
 impl indices::Trait for Runtime {
@@ -294,7 +230,7 @@ impl xmultisig::Trait for Runtime {
 }
 
 impl finality_tracker::Trait for Runtime {
-    type OnFinalizationStalled = grandpa::SyncedAuthorities<Runtime>;
+    type OnFinalizationStalled = xgrandpa::SyncedAuthorities<Runtime>;
 }
 
 construct_runtime!(
@@ -308,17 +244,17 @@ construct_runtime!(
         Balances: balances::{Module, Storage, Config<T>, Event<T>},
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
-        Session: session,
         FinalityTracker: finality_tracker::{Module, Call, Inherent},
-        Grandpa: grandpa::{Module, Call, Storage, Log(), Event<T>},
-        Aura: aura::{Module, Inherent(Timestamp)},
         Sudo: sudo,
+        Session: xsession,
+        Grandpa: xgrandpa::{Module, Call, Storage, Log(), Event<T>},
+        Aura: xaura::{Module, Inherent(Timestamp)},
 
         // chainx runtime module
         XSystem: xsystem::{Module, Call, Storage, Config<T>, Inherent}, //, Inherent},
         XAccounts: xaccounts::{Module, Storage, Event<T>}, //, Inherent},
         // fee
-        XFeeManager: fee_manager::{Module, Call, Storage, Config<T>},
+        XFeeManager: xfee_manager::{Module, Call, Storage, Config<T>},
         // assets
         XAssets: xassets,
         XAssetsRecords: xrecords::{Module, Storage, Event<T>},
@@ -329,8 +265,8 @@ construct_runtime!(
         // dex
         XSpot: xspot,
         // bridge
-        XBridgeOfBTC: bitcoin::{Module, Call, Storage, Config<T>, Event<T>},
-        XBridgeOfSDOT: sdot::{Module, Call, Storage, Config<T>, Event<T>},
+        XBridgeOfBTC: xbitcoin::{Module, Call, Storage, Config<T>, Event<T>},
+        XBridgeOfSDOT: xsdot::{Module, Call, Storage, Config<T>, Event<T>},
         // multisig
         XMultiSig: xmultisig::{Module, Call, Storage, Event<T>},
 
@@ -419,7 +355,7 @@ impl_runtime_apis! {
             -> Option<ScheduledChange<NumberFor<Block>>>
         {
             for log in digest.logs.iter().filter_map(|l| match l {
-                Log(InternalLog::grandpa(grandpa_signal)) => Some(grandpa_signal),
+                Log(InternalLog::xgrandpa(grandpa_signal)) => Some(grandpa_signal),
                 _=> None
             }) {
                 if let Some(change) = Grandpa::scrape_digest_change(log) {
@@ -433,7 +369,7 @@ impl_runtime_apis! {
             -> Option<(NumberFor<Block>, ScheduledChange<NumberFor<Block>>)>
         {
             for log in digest.logs.iter().filter_map(|l| match l {
-                Log(InternalLog::grandpa(grandpa_signal)) => Some(grandpa_signal),
+                Log(InternalLog::xgrandpa(grandpa_signal)) => Some(grandpa_signal),
                 _ => None
             }) {
                 if let Some(change) = Grandpa::scrape_digest_forced_change(log) {
@@ -527,7 +463,7 @@ impl_runtime_apis! {
                 return None;
             };
 
-            let switch = fee_manager::SwitchStore::default();
+            let switch = xfee_manager::SwitchStore::default();
             call.check_fee(switch).map(|power|
                 XFeeManager::transaction_fee(power, encoded_len)
             )

@@ -2,8 +2,10 @@
 name = "chainx-runtime-wasm"
 version = "0.4.0"
 authors = ["Chainpool <http://www.chainx.org>"]
+edition = "2018"
 
 [lib]
+name = "chainx_runtime"
 crate-type = ["cdylib"]
 
 [dependencies]

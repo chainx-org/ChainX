@@ -1,18 +1,18 @@
 // Copyright 2018 Chainpool
 
-//use balances::Call as BalancesCall;
-use bitcoin::Call as BitcoinCall;
-use fee_manager::SwitchStore;
-use sdot::Call as SdotCall;
+use xfee_manager::SwitchStore;
+
 use sudo::Call as SudoCall;
 use xassets::Call as XAssetsCall;
+use xbitcoin::Call as XBitcoinCall;
 use xmultisig::Call as XMultiSigCall;
 use xprocess::Call as XAssetsProcessCall;
+use xsdot::Call as SdotCall;
 use xspot::Call as XSpotCall;
 use xstaking::Call as XStakingCall;
 use xtokens::Call as XTokensCall;
 
-use Call;
+use crate::Call;
 
 pub trait CheckFee {
     fn check_fee(&self, switch: SwitchStore) -> Option<u64>;
@@ -43,10 +43,10 @@ impl CheckFee for Call {
                     None
                 } else {
                     match call {
-                        BitcoinCall::push_header(_) => Some(10),
-                        BitcoinCall::push_transaction(_) => Some(8),
-                        BitcoinCall::create_withdraw_tx(_, _) => Some(5),
-                        BitcoinCall::sign_withdraw_tx(_) => Some(5),
+                        XBitcoinCall::push_header(_) => Some(10),
+                        XBitcoinCall::push_transaction(_) => Some(8),
+                        XBitcoinCall::create_withdraw_tx(_, _) => Some(5),
+                        XBitcoinCall::sign_withdraw_tx(_) => Some(5),
                         _ => None,
                     }
                 };

@@ -17,8 +17,7 @@
 
 //! Executive: Handles all of the top-level stuff; essentially just executing blocks/extrinsics.
 
-use fee::CheckFee;
-use fee_manager::MakePayment;
+use crate::fee::CheckFee;
 use parity_codec::{Codec, Encode};
 use rstd::marker::PhantomData;
 use rstd::prelude::*;
@@ -31,8 +30,9 @@ use runtime_primitives::transaction_validity::{
     TransactionLongevity, TransactionPriority, TransactionValidity,
 };
 use runtime_primitives::{ApplyError, ApplyOutcome};
-use srml_support::Dispatchable;
+use support::Dispatchable;
 use system::extrinsics_root;
+use xfee_manager::MakePayment;
 use xr_primitives::traits::Accelerable;
 
 mod internal {
@@ -55,7 +55,7 @@ pub struct Executive<System, Block, Context, Payment, Finalisation>(
 
 impl<
     Context: Default,
-    System: system::Trait + fee_manager::Trait,
+    System: system::Trait + xfee_manager::Trait,
     Block: traits::Block<Header=System::Header, Hash=System::Hash>,
     Payment: MakePayment<System::AccountId>,
     Finalisation: OnFinalise<System::BlockNumber>,
@@ -167,7 +167,7 @@ impl<
         if signed_extrinsic {
             // Acceleration definitely exists for a signed extrinsic.
             let acc = acc.unwrap();
-            let switch = <fee_manager::Module<System>>::switch();
+            let switch = <xfee_manager::Module<System>>::switch();
             if let Some(fee_power) = f.check_fee(switch) {
                 Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).map_err(|_| internal::ApplyError::CantPay)?;
 
@@ -276,7 +276,7 @@ impl<
 
         let acc = xt.acceleration().unwrap();
         let (f, s) = xt.deconstruct();
-        let switch = <fee_manager::Module<System>>::switch();
+        let switch = <xfee_manager::Module<System>>::switch();
         if let Some(fee_power) = f.check_fee(switch) {
             if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).is_err() {
                 return TransactionValidity::Invalid(ApplyError::CantPay as i8);
@@ -291,8 +291,8 @@ impl<
 
 #[cfg(test)]
 mod tests {
+    use crate::fee::CheckFee;
     use balances::Call;
-    use fee::CheckFee;
     use primitives::{Blake2Hasher, H256};
     use runtime_io::with_externalities;
     use runtime_primitives::testing::{Block, Digest, DigestItem, Header};
@@ -343,7 +343,7 @@ mod tests {
         type Event = MetaEvent;
     }
 
-    impl fee_manager::Trait for Runtime {}
+    impl xfee_manager::Trait for Runtime {}
 
     impl xsystem::Trait for Runtime {
         const XSYSTEM_SET_POSITION: u32 = 3;
