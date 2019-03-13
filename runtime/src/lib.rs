@@ -47,6 +47,9 @@ use chainx_primitives::{
     Signature, Timestamp as TimestampU64,
 };
 
+pub use xassets;
+pub use xbitcoin;
+
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
 

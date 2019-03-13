@@ -8,8 +8,8 @@ use rustc_hex::FromHex;
 use primitives::{ed25519, Ed25519AuthorityId};
 
 use chainx_runtime::{
-    bitcoin::{self, Params},
     xassets::{self, Asset, Chain, ChainT},
+    xbitcoin::{self, Params},
     Runtime,
 };
 use chainx_runtime::{
@@ -57,7 +57,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let pcx_precision = 8_u16;
 
     let btc_asset = Asset::new(
-        <bitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(), // token
+        <xbitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(), // token
         b"X-BTC".to_vec(),
         Chain::Bitcoin,
         8, // bitcoin precision
@@ -180,7 +180,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         timestamp: Some(TimestampConfig {
             period: CONSENSUS_TIME, // 2 second block time.
         }),
-        session: Some(SessionConfig {
+        xsession: Some(SessionConfig {
             validators: endowed
                 .iter()
                 .cloned()
@@ -194,7 +194,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             death_account: substrate_primitives::H256::zero(),
             burn_account: substrate_primitives::H256::repeat_byte(0x1),
         }),
-        fee_manager: Some(XFeeManagerConfig {
+        xfee_manager: Some(XFeeManagerConfig {
             producer_fee_proportion: (1, 10),
             transaction_base_fee: 10000,
             transaction_byte_fee: 100,
@@ -229,10 +229,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             price_volatility: 10,
             _genesis_phantom_data: Default::default(),
         }),
-        sdot: Some(XBridgeOfSDOTConfig {
+        xsdot: Some(XBridgeOfSDOTConfig {
             claims: sdot_claims,
         }),
-        bitcoin: Some(XBridgeOfBTCConfig {
+        xbitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: btc_genesis.clone(),
             params_info: params_info.clone(), // retargeting_factor
@@ -273,7 +273,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             pair_list: vec![
                 (
                     xassets::Module::<Runtime>::TOKEN.to_vec(),
-                    bitcoin::Module::<Runtime>::TOKEN.to_vec(),
+                    xbitcoin::Module::<Runtime>::TOKEN.to_vec(),
                     9,
                     2,
                     100000,
