@@ -51,20 +51,20 @@ use xrml_xsystem::ValidatorList;
 /// A session has changed.
 pub trait OnSessionChange<T> {
     /// Session has changed.
-    fn on_session_change(time_elapsed: T, should_reward: bool);
+    fn on_session_change();
 }
 
 macro_rules! impl_session_change {
 	() => (
 		impl<T> OnSessionChange<T> for () {
-			fn on_session_change(_: T, _: bool) {}
+			fn on_session_change() {}
 		}
 	);
 
 	( $($t:ident)* ) => {
 		impl<T: Clone, $($t: OnSessionChange<T>),*> OnSessionChange<T> for ($($t,)*) {
-			fn on_session_change(time_elapsed: T, should_reward: bool) {
-				$($t::on_session_change(time_elapsed.clone(), should_reward);)*
+			fn on_session_change() {
+				$($t::on_session_change();)*
 			}
 		}
 	}
@@ -215,9 +215,8 @@ impl<T: Trait> Module<T> {
     }
 
     /// Move onto next session: register the new authority set.
-    pub fn rotate_session(is_final_block: bool, apply_rewards: bool) {
+    pub fn rotate_session(is_final_block: bool, _apply_rewards: bool) {
         let now = <timestamp::Module<T>>::get();
-        let time_elapsed = now.clone() - Self::current_start();
         let session_index = <CurrentIndex<T>>::get() + One::one();
 
         Self::deposit_event(RawEvent::NewSession(session_index));
@@ -238,7 +237,7 @@ impl<T: Trait> Module<T> {
             <LastLengthChange<T>>::put(block_number);
         }
 
-        T::OnSessionChange::on_session_change(time_elapsed, apply_rewards);
+        T::OnSessionChange::on_session_change();
     }
 
     /// Get the time that should have elapsed over a session if everything was working perfectly.

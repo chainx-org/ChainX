@@ -34,6 +34,7 @@ pub use shifter::{OnReward, OnRewardCalculation, RewardHolder};
 pub use vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
+const SESSIONS_PER_ROUND: u64 = 210_000;
 
 pub enum ClaimType {
     Intention,
@@ -200,7 +201,7 @@ decl_module! {
             if let Some(desire_to_run) = desire_to_run.as_ref() {
                 if !desire_to_run {
                     let active = Self::intentions().into_iter()
-                        .filter(|n| <xaccounts::Module<T>>::intention_props_of(n).is_active)
+                        .filter(|n| Self::is_active(n))
                         .collect::<Vec<_>>();
                     if active.len() <= Self::minimum_validator_count() as usize {
                         return Err("Cannot pull out when there are too few active intentions.");
@@ -226,7 +227,7 @@ decl_module! {
             let who = ensure_signed(origin)?;
 
             ensure!(Self::is_intention(&who), "Transactor is not an intention.");
-            ensure!(<xaccounts::Module<T>>::intention_props_of(&who).is_active, "Intention must be active.");
+            ensure!(Self::is_active(&who), "Intention must be active.");
 
             xaccounts::is_valid_about::<T>(&about)?;
 
@@ -344,10 +345,10 @@ decl_storage! {
         pub CouncilAddress get(council_address): T::AccountId;
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(minimum_penalty) config(): T::Balance;
-        /// The validators should be slashed per session.
-        pub SlashedPerSession get(slashed): Vec<T::AccountId>;
-        /// The accumulative fine that each slashed validator should pay per session.
-        pub TotalSlashOfPerSession get(total_slash_of_per_session): map T::AccountId => T::Balance;
+        /// The active validators that have ever been offline per session.
+        pub OfflineValidatorsPerSession get(offline_validators_per_session): Vec<T::AccountId>;
+        /// Total blocks that each active validator missed in the current session.
+        pub MissedOfPerSession get(missed_of_per_session): map T::AccountId => u32;
     }
 }
 
@@ -373,6 +374,10 @@ impl<T: Trait> Module<T> {
 
     pub fn is_intention(who: &T::AccountId) -> bool {
         <xaccounts::Module<T>>::intention_name_of(who).is_some()
+    }
+
+    pub fn is_active(who: &T::AccountId) -> bool {
+        <xaccounts::Module<T>>::intention_props_of(who).is_active
     }
 
     pub fn validate_trustee_entity(chain: &Chain, entity: &TrusteeEntity) -> Result {

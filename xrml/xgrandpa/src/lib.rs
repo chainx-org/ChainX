@@ -354,7 +354,7 @@ where
     <T as session::Trait>::ConvertAccountIdToSessionKey:
         Convert<<T as system::Trait>::AccountId, <T as consensus::Trait>::SessionKey>,
 {
-    fn on_session_change(_: X, _: bool) {
+    fn on_session_change() {
         use primitives::traits::Zero;
 
         let next_authorities = <session::Module<T>>::validators()

@@ -7,6 +7,48 @@ use rstd::cmp;
 use session::OnSessionChange;
 use xaccounts::IntentionJackpotAccountIdFor;
 use xassets;
+use xsupport::debug;
+#[cfg(feature = "std")]
+use xsupport::u8array_to_string;
+
+// Util for displaying validator's name instead of AccountId.
+#[cfg(feature = "std")]
+macro_rules! trustees {
+    ( $( $x:expr )+ ) => {
+        $($x)+.into_iter()
+            .map(|v|
+                 <xaccounts::IntentionNameOf<T>>::get(v)
+                 .map(|v| u8array_to_string(&v))
+                 .unwrap()
+            )
+            .collect::<Vec<_>>()
+    };
+}
+
+#[cfg(feature = "std")]
+macro_rules! validators {
+    ( $( $x:expr )+ ) => {
+        $($x)+.into_iter()
+            .map(|(v, w)| {
+                (
+                    <xaccounts::IntentionNameOf<T>>::get(v)
+                        .map(|v| u8array_to_string(&v))
+                        .unwrap(),
+                    w,
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+}
+
+#[cfg(feature = "std")]
+macro_rules! who {
+    ( $( $x:ident )+ ) => {
+        <xaccounts::IntentionNameOf<T>>::get($($x)+)
+            .map(|v| u8array_to_string(&v))
+            .unwrap()
+    };
+}
 
 /// RewardHolder includes intention as well as tokens.
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
@@ -44,8 +86,8 @@ impl<T: Trait> Module<T> {
     /// Get the reward for the session, assuming it ends with this block.
     fn this_session_reward() -> T::Balance {
         let current_index = <session::Module<T>>::current_index().as_();
-        let reward =
-            Self::initial_reward().as_() / (u32::pow(2, (current_index / 210_000) as u32)) as u64;
+        let reward = Self::initial_reward().as_()
+            / (u32::pow(2, (current_index / SESSIONS_PER_ROUND) as u32)) as u64;
         T::Balance::sa(reward as u64)
     }
 
@@ -53,7 +95,7 @@ impl<T: Trait> Module<T> {
     fn gather_candidates() -> Vec<(T::Balance, T::AccountId)> {
         let mut intentions = Self::intentions()
             .into_iter()
-            .filter(|v| <xaccounts::Module<T>>::intention_props_of(v).is_active)
+            .filter(|v| Self::is_active(v))
             .filter(|v| !Self::total_nomination_of(&v).is_zero())
             .map(|v| (Self::total_nomination_of(&v), v))
             .collect::<Vec<_>>();
@@ -61,36 +103,54 @@ impl<T: Trait> Module<T> {
         intentions
     }
 
-    /// Reward a given (potential) validator by a specific amount.
+    /// Reward a given (potential) validator by a specific amount, along with possible slash.
     /// Add the reward to their balance, and their jackpot, pro-rata.
-    fn reward(who: &T::AccountId, reward: T::Balance) {
-        // In the first round, 20% reward goes to the team.
-        let current_index = <session::Module<T>>::current_index().as_();
-        let reward = if current_index <= 210_000 {
-            let to_team = T::Balance::sa(reward.as_() * 2 / 10);
-            let _ = <xassets::Module<T>>::pcx_issue(&Self::team_address(), to_team);
-            reward - to_team
-        } else {
-            reward
-        };
-
-        let off_the_table = T::Balance::sa(reward.as_() * 1 / 10);
+    fn reward_with_possible_slash(
+        who: &T::AccountId,
+        reward: T::Balance,
+        validators: &mut Vec<T::AccountId>,
+    ) {
+        // Validator only gains 10%, the rest goes to the jackpot.
+        let off_the_table = T::Balance::sa(reward.as_() / 10);
         let _ = <xassets::Module<T>>::pcx_issue(who, off_the_table);
 
         let to_jackpot = reward - off_the_table;
         // issue to jackpot
         let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
         let _ = <xassets::Module<T>>::pcx_issue(&jackpot_addr, to_jackpot);
+        debug!(
+            "[reward] issue to {:?}'s jackpot: {:?}",
+            who!(who),
+            to_jackpot
+        );
+
+        // It the intention was an offline validator, we should enforce a slash.
+        if <MissedOfPerSession<T>>::exists(who) {
+            Self::slash_active_offline_validator(who, reward, validators);
+        }
     }
 
-    /// Actually slash a given (potential) validator by a specific amount.
-    /// If the jackpot of the validator can't afford the penalty, then he
-    /// should be enforced to be inactive.
-    fn slash_validator(who: &T::AccountId) -> bool {
-        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
+    fn reward_of_per_block(session_reward: T::Balance) -> T::Balance {
+        let session_length = <session::SessionLength<T>>::get().as_();
+        let validators_count = <session::Validators<T>>::get().len() as u64;
+        T::Balance::sa(session_reward.as_() * validators_count / session_length)
+    }
+
+    /// Actually slash a given active validator by a specific amount.
+    /// If the jackpot of the validator can't afford the penalty and there are more than minimum validators,
+    /// then he should be enforced to be inactive and removed from the validator set.
+    fn slash_active_offline_validator(
+        who: &T::AccountId,
+        session_reward: T::Balance,
+        validators: &mut Vec<T::AccountId>,
+    ) {
         let council = Self::council_address();
 
-        let total_slash = <TotalSlashOfPerSession<T>>::take(who);
+        let missed = <MissedOfPerSession<T>>::take(who) as u64;
+        let block_reward = Self::reward_of_per_block(session_reward);
+        let total_slash = T::Balance::sa(block_reward.as_() * missed * 10);
+
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
         let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
 
         let (slashed, should_be_enforced) = if total_slash <= jackpot_balance {
@@ -100,135 +160,159 @@ impl<T: Trait> Module<T> {
         };
 
         let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &council, slashed);
-        Self::deposit_event(RawEvent::OfflineSlash(who.clone(), slashed));
 
-        should_be_enforced
+        debug!(
+            "[slash_active_offline_validator] {:?} is actually slashed: {:?}, should be slashed: {:?}",
+            who!(who),
+            slashed,
+            total_slash
+        );
+
+        // Force those slashed yet can't afford the penalty to be inactive when the validators is not too few.
+        // Then these inactive validators will not be rewarded.
+        if should_be_enforced && validators.len() > Self::minimum_validator_count() as usize {
+            <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
+                props.is_active = false;
+                info!(
+                    "[slash_active_offline_validator] validator enforced to be inactive: {:?}",
+                    who!(who)
+                );
+            });
+
+            // remove from the current validator set
+            validators.retain(|x| *x != *who);
+        }
     }
 
-    fn note_offline_slashed(who: &T::AccountId, slash: T::Balance) {
-        if !<SlashedPerSession<T>>::get().into_iter().any(|x| x == *who) {
-            <SlashedPerSession<T>>::mutate(|i| i.push(who.clone()));
+    /// These offline validators choose to be inactive by themselves.
+    /// Since they are already inactive at present, they won't share the reward,
+    /// so we only need to slash them for the missed blocks when they were active.
+    fn slash_inactive_offline_validators() {
+        let slashed = <OfflineValidatorsPerSession<T>>::get();
+        let inactive_slashed = slashed
+            .iter()
+            .filter(|v| !Self::is_active(v))
+            .collect::<Vec<_>>();
+
+        for who in inactive_slashed.into_iter() {
+            let missed = T::Balance::sa(<MissedOfPerSession<T>>::take(who) as u64);
+            let should_slash = missed * Self::minimum_penalty();
+            let council = Self::council_address();
+
+            let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
+            let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
+
+            let slash = cmp::min(should_slash, jackpot_balance);
+
+            let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &council, slash);
         }
-        let total_slash = Self::total_slash_of_per_session(who);
-        <TotalSlashOfPerSession<T>>::insert(who, total_slash + slash);
     }
 
-    /// Enforce these punished to be inactive, so that they won't become validators and be rewarded.
-    fn enforce_inactive(is_new_era: bool) {
-        let slashed = <SlashedPerSession<T>>::take();
-
-        if slashed.is_empty() {
-            return;
-        }
-
-        if Self::gather_candidates().len() <= Self::minimum_validator_count() as usize {
-            for s in slashed {
-                <TotalSlashOfPerSession<T>>::remove(s);
-            }
-            return;
-        }
+    /// Session has just changed. We need to determine whether we pay a reward, slash and/or
+    /// move to a new era.
+    fn new_session() {
+        // No reward but only slash for these offline validators that are inactive atm.
+        Self::slash_inactive_offline_validators();
 
         let mut validators = <session::Module<T>>::validators()
             .into_iter()
             .map(|(v, _)| v)
             .collect::<Vec<_>>();
 
-        for v in slashed.iter() {
-            let should_be_enforced = Self::slash_validator(v);
+        let current_validator_count = validators.len();
 
-            if should_be_enforced {
-                // Force those slashed yet can't afford the penalty to be inactive
-                <xaccounts::IntentionPropertiesOf<T>>::mutate(v, |props| {
-                    props.is_active = false;
-                    info!("validator enforced to be inactive: {:?}", v);
-                });
+        // apply good session reward
+        let mut session_reward = Self::this_session_reward();
 
-                if validators.len() > Self::minimum_validator_count() as usize {
-                    validators.retain(|x| *x != *v);
+        // In the first round, 20% reward goes to the team.
+        let current_index = <session::Module<T>>::current_index().as_();
+        session_reward = if current_index <= SESSIONS_PER_ROUND {
+            let to_team = T::Balance::sa(session_reward.as_() * 2 / 10);
+            debug!("[reward] issue to the team: {:?}", to_team);
+            let _ = <xassets::Module<T>>::pcx_issue(&Self::team_address(), to_team);
+            session_reward - to_team
+        } else {
+            session_reward
+        };
+
+        let mut active_intentions = Self::intentions()
+            .into_iter()
+            .filter(|i| Self::is_active(i))
+            .map(|id| {
+                let total_nomination = Self::total_nomination_of(&id);
+                (RewardHolder::Intention(id), total_nomination)
+            })
+            .collect::<Vec<_>>();
+
+        // Extend non-intention reward holders, i.e., Tokens currently.
+        let psedu_intentions = T::OnRewardCalculation::psedu_intentions_info();
+        active_intentions.extend(psedu_intentions);
+
+        let mut total_active_stake = active_intentions
+            .iter()
+            .fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + *x);
+
+        for (holder, stake) in active_intentions.iter() {
+            // May become zero after meeting the last one.
+            if !total_active_stake.is_zero() {
+                // stake * session_reward could overflow.
+                let reward = match (stake.as_() as u128).checked_mul(session_reward.as_() as u128) {
+                    Some(x) => {
+                        let r = x / total_active_stake.as_() as u128;
+                        if r < u64::max_value() as u128 {
+                            T::Balance::sa(r as u64)
+                        } else {
+                            panic!("reward of per intention definitely less than u64::max_value()")
+                        }
+                    }
+                    None => panic!("stake * session_reward overflow!"),
+                };
+                match holder {
+                    RewardHolder::Intention(ref intention) => {
+                        Self::reward_with_possible_slash(intention, reward, &mut validators);
+                    }
+                    RewardHolder::PseduIntention(ref token) => {
+                        // Reward to token entity.
+                        T::OnReward::reward(token, reward)
+                    }
                 }
+                total_active_stake -= *stake;
+                session_reward -= reward;
             }
         }
 
-        Self::deposit_event(RawEvent::EnforceValidatorsInactive(slashed.clone()));
+        Self::deposit_event(RawEvent::Reward(total_active_stake, session_reward));
 
-        // The validator set will be updated on new era, so we don't have to update here.
+        // Reset slashed validator set
+        <OfflineValidatorsPerSession<T>>::kill();
+
+        let session_index = <session::Module<T>>::current_index();
+        let is_new_era =
+            ((session_index - Self::last_era_length_change()) % Self::sessions_per_era()).is_zero();
+
         if is_new_era {
-            return;
+            Self::new_era();
+        } else {
+            if validators.len() < current_validator_count {
+                Self::set_validators_on_new_session(validators);
+            }
         }
+    }
 
+    /// We only reduce the offline validators on non-era session.
+    /// This happens when there are offline validators that are enforced to be inactive.
+    fn set_validators_on_new_session(validators: Vec<T::AccountId>) {
         // Update to the latest total nomination
         let validators = validators
             .into_iter()
             .map(|v| (Self::intention_profiles(&v).total_nomination.as_(), v))
             .map(|(a, b)| (b, a))
             .collect::<Vec<_>>();
-        info!("new validators due to enforce inactive: {:?}", validators);
         <session::Module<T>>::set_validators(validators.as_slice());
-    }
-
-    /// Session has just changed. We need to determine whether we pay a reward, slash and/or
-    /// move to a new era.
-    fn new_session(_actual_elapsed: T::Moment, should_reward: bool) {
-        let session_index = <session::Module<T>>::current_index();
-        let is_new_era = <ForcingNewEra<T>>::take().is_some()
-            || ((session_index - Self::last_era_length_change()) % Self::sessions_per_era())
-                .is_zero();
-
-        Self::enforce_inactive(is_new_era);
-
-        if should_reward {
-            // apply good session reward
-            let mut session_reward = Self::this_session_reward();
-
-            let mut active_intentions: Vec<(RewardHolder<T::AccountId>, T::Balance)> =
-                Self::intentions()
-                    .into_iter()
-                    .filter(|i| <xaccounts::Module<T>>::intention_props_of(i).is_active)
-                    .map(|id| {
-                        let total_nomination = Self::total_nomination_of(&id);
-                        (RewardHolder::Intention(id), total_nomination)
-                    })
-                    .collect::<Vec<_>>();
-
-            // Extend non-intention reward holders, i.e., Tokens currently.
-            let psedu_intentions = T::OnRewardCalculation::psedu_intentions_info();
-            active_intentions.extend(psedu_intentions);
-
-            let mut total_active_stake = active_intentions
-                .iter()
-                .fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + *x);
-
-            for (holder, stake) in active_intentions.iter() {
-                // May become zero after meeting the last one.
-                if !total_active_stake.is_zero() {
-                    // stake * session_reward could overflow.
-                    let reward = match (stake.as_() as u128)
-                        .checked_mul(session_reward.as_() as u128)
-                    {
-                        Some(x) => T::Balance::sa((x / total_active_stake.as_() as u128) as u64),
-                        None => panic!("stake * session_reward overflow!"),
-                    };
-                    match holder {
-                        RewardHolder::Intention(ref intention) => Self::reward(intention, reward),
-                        RewardHolder::PseduIntention(ref token) => {
-                            // Reward to token entity.
-                            T::OnReward::reward(token, reward)
-                        }
-                    }
-                    total_active_stake -= *stake;
-                    session_reward -= reward;
-                }
-            }
-
-            Self::deposit_event(RawEvent::Reward(total_active_stake, session_reward));
-
-            // FIXME
-            // T::OnRewardMinted::on_dilution(total_minted, total_minted);
-        }
-
-        if is_new_era {
-            Self::new_era();
-        }
+        info!(
+            "[set_validators_on_new_session] new validator set due to enforcing inactive: {:?}",
+            validators!(validators)
+        );
     }
 
     /// The era has changed - enact new staking set.
@@ -273,7 +357,10 @@ impl<T: Trait> Module<T> {
             .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
             .collect::<Vec<(_, _)>>();
 
-        info!("new validators: {:?}", validators);
+        info!(
+            "[new_era] new validator set: {:?}",
+            validators!(validators.clone())
+        );
         <session::Module<T>>::set_validators(&validators);
         Self::deposit_event(RawEvent::Rotation(validators));
 
@@ -308,7 +395,10 @@ impl<T: Trait> Module<T> {
 
         let last_trustees = <xaccounts::TrusteeIntentions<T>>::get();
         if last_trustees != trustees {
-            info!("new trustees: {:?}", trustees);
+            info!(
+                "[new_trustees] new trustee set: {:?}",
+                trustees!(trustees.clone())
+            );
             <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());
         }
 
@@ -317,22 +407,31 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::NewTrustees(trustees));
     }
 
-    fn jackpot_balance_of(who: &T::AccountId) -> T::Balance {
-        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
-        <xassets::Module<T>>::pcx_free_balance(&jackpot_addr)
-    }
-
+    /// We only note these offline validators that are still active at the moment.
     pub fn on_offline_validator(v: &T::AccountId) {
-        let jackpot_balance = Self::jackpot_balance_of(v);
-        let penalty = cmp::max(jackpot_balance.as_() / 100, Self::minimum_penalty().as_());
+        if !Self::is_active(v) {
+            return;
+        }
 
-        Self::note_offline_slashed(v, T::Balance::sa(penalty));
+        debug!(
+            "[note_offline_validator]: active offline validator noted: {:?}",
+            who!(v)
+        );
+
+        <OfflineValidatorsPerSession<T>>::mutate(|offline| {
+            if !offline.contains(v) {
+                offline.push(v.clone())
+            }
+        });
+
+        let missed = Self::missed_of_per_session(v);
+        <MissedOfPerSession<T>>::insert(v, missed + 1);
     }
 }
 
 impl<T: Trait> OnSessionChange<T::Moment> for Module<T> {
-    fn on_session_change(elapsed: T::Moment, should_reward: bool) {
-        Self::new_session(elapsed, should_reward);
+    fn on_session_change() {
+        Self::new_session();
     }
 }
 
