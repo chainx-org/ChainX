@@ -16,23 +16,17 @@
 
 //! Substrate RPC servers.
 
-pub extern crate substrate_rpc as apis;
+#[warn(missing_docs)]
 
-extern crate chainx_primitives;
-extern crate jsonrpc_http_server as http;
-extern crate jsonrpc_pubsub as pubsub;
-extern crate jsonrpc_ws_server as ws;
-extern crate serde;
-extern crate sr_primitives;
+pub use substrate_rpc as apis;
 
-#[macro_use]
-extern crate log;
+use std::io;
 
+use log::error;
 use sr_primitives::{
     generic::SignedBlock,
     traits::{Block as BlockT, NumberFor},
 };
-use std::io;
 
 use chainx_primitives::{AccountId, Balance, BlockNumber};
 
