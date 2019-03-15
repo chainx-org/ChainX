@@ -247,11 +247,11 @@ construct_runtime!(
         Balances: balances::{Module, Storage, Config<T>, Event<T>},
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
-        FinalityTracker: finality_tracker::{Module, Call, Inherent},
-        Sudo: sudo,
         Session: xsession,
+        FinalityTracker: finality_tracker::{Module, Call, Inherent},
         Grandpa: xgrandpa::{Module, Call, Storage, Log(), Event<T>},
         Aura: xaura::{Module, Inherent(Timestamp)},
+        Sudo: sudo,
 
         // chainx runtime module
         XSystem: xsystem::{Module, Call, Storage, Config<T>, Inherent}, //, Inherent},
