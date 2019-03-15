@@ -7,6 +7,7 @@ use runtime_primitives::traits::{MaybeDisplay, MaybeSerializeDebug, Member};
 use support::Parameter;
 
 use super::b58::from;
+use crate::traits::Extractable;
 
 /// Definition of something that the external world might want to say; its
 /// existence implies that it has been checked and is good, particularly with
@@ -15,7 +16,7 @@ use super::b58::from;
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Extracter<AccountId>(Vec<u8>, ::rstd::marker::PhantomData<AccountId>);
 
-impl<AccountId> ::traits::Extractable for Extracter<AccountId>
+impl<AccountId> Extractable for Extracter<AccountId>
 where
     AccountId: Parameter + Member + MaybeSerializeDebug + MaybeDisplay + Ord + Default,
 {
@@ -42,10 +43,12 @@ where
                 Some(a) => a,
                 None => return None,
             };
-        let mut channel_name = Vec::new(); // channel is a validator
-        if v.len() > 1 {
-            channel_name = v[1].to_vec();
-        }
+        // channel is a validator
+        let channel_name = if v.len() > 1 {
+            v[1].to_vec()
+        } else {
+            Vec::new()
+        };
 
         Some((account_id, channel_name))
     }

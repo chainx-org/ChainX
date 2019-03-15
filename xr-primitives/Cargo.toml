@@ -2,17 +2,18 @@
 name = "xr-primitives"
 version = "0.4.0"
 authors = ["Chainpool <http://www.chainx.org>"]
+edition = "2018"
 
 [dependencies]
-serde = { version = "1.0", optional = true }
 integer-sqrt = "0.1.2"
 num-traits = { version = "0.2", default-features = false }
+serde = { version = "1.0", optional = true }
 parity-codec = { version = "3.1", default-features = false }
 
-sr-io = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-std = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default_features = false }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default_features = false }
+runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default_features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default_features = false }
 
 [dev-dependencies]
 serde_derive = "1.0"
@@ -21,12 +22,12 @@ parity-codec-derive = "3.1"
 [features]
 default = ["std"]
 std = [
-    "serde",
     "num-traits/std",
+    "serde",
     "parity-codec/std",
-    "sr-io/std",
-    "sr-std/std",
-    "sr-primitives/std",
-    "srml-support/std"
+    "rstd/std",
+    "runtime-io/std",
+    "runtime-primitives/std",
+    "support/std"
 ]
 api-for-runtime = []

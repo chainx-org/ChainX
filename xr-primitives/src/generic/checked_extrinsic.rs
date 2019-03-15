@@ -3,7 +3,9 @@
 //! Generic implementation of an extrinsic that has passed the verification
 //! stage.
 
-use runtime_primitives::traits::{self, MaybeDisplay, Member, SimpleArithmetic};
+use runtime_primitives::traits::{Applyable, MaybeDisplay, Member, SimpleArithmetic};
+
+use crate::traits::Accelerable;
 
 /// Definition of something that the external world might want to say; its
 /// existence implies that it has been checked and is good, particularly with
@@ -18,7 +20,7 @@ pub struct CheckedExtrinsic<AccountId, Index, Call, Acceleration> {
     pub function: Call,
 }
 
-impl<AccountId, Index, Call, Acceleration> traits::Applyable
+impl<AccountId, Index, Call, Acceleration> Applyable
     for CheckedExtrinsic<AccountId, Index, Call, Acceleration>
 where
     AccountId: Member + MaybeDisplay,
@@ -43,7 +45,7 @@ where
     }
 }
 
-impl<AccountId, Index, Call, Acceleration> ::traits::Accelerable
+impl<AccountId, Index, Call, Acceleration> Accelerable
     for CheckedExtrinsic<AccountId, Index, Call, Acceleration>
 where
     AccountId: Member + MaybeDisplay,

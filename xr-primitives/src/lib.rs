@@ -4,24 +4,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate integer_sqrt;
-extern crate num_traits;
-extern crate parity_codec;
-#[cfg(feature = "std")]
-extern crate serde;
-
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
-extern crate sr_std as rstd;
-extern crate srml_support as support;
-
-#[cfg(test)]
-#[macro_use]
-extern crate serde_derive;
-#[cfg(test)]
-#[macro_use]
-extern crate parity_codec_derive;
-
 pub mod generic;
 pub mod traits;
 

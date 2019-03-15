@@ -242,9 +242,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runtime_io::blake2_256;
+    use parity_codec_derive::{Decode, Encode};
+    use serde_derive::{Deserialize, Serialize};
 
     struct TestContext;
+
     impl Lookup for TestContext {
         type Source = u64;
         type Target = u64;
@@ -252,12 +254,14 @@ mod tests {
             Ok(s)
         }
     }
+
     impl CurrentHeight for TestContext {
         type BlockNumber = u64;
         fn current_height(&self) -> u64 {
             42
         }
     }
+
     impl BlockNumberToHash for TestContext {
         type BlockNumber = u64;
         type Hash = u64;
@@ -268,6 +272,7 @@ mod tests {
 
     #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Encode, Decode)]
     struct TestSig(u64, Vec<u8>);
+
     impl traits::Verify for TestSig {
         type Signer = u64;
         fn verify<L: traits::Lazy<[u8]>>(&self, mut msg: L, signer: &Self::Signer) -> bool {

@@ -103,6 +103,7 @@ pub fn to_base58(data: Vec<u8>) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::{from, to_base58};
+
     #[test]
     fn test_from() {
         let s = String::from("mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b");
@@ -112,6 +113,7 @@ mod tests {
         ];
         assert_eq!(from(s.as_bytes().to_vec()).unwrap(), v);
     }
+
     #[test]
     fn test_to_base58() {
         let s = String::from("mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b");
