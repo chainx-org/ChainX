@@ -289,9 +289,18 @@ impl<T: Trait> Module<T> {
 
         let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
         let jackpot = xassets::Module::<T>::pcx_free_balance(&addr).as_();
-        let reward = T::Balance::sa(
-            jackpot * blocks * value.as_() / psedu_intention.last_total_deposit_weight,
-        );
+
+        let reward = match (blocks as u128 * value.as_() as u128).checked_mul(jackpot as u128) {
+            Some(x) => {
+                let reward = x / psedu_intention.last_total_deposit_weight as u128;
+                if reward < u64::max_value() as u128 {
+                    T::Balance::sa(reward as u64)
+                } else {
+                    panic!("reward on issue definitely less than u64::max_value()")
+                }
+            }
+            None => panic!("blocks * jackpot * value overflow on issue"),
+        };
 
         xassets::Module::<T>::pcx_move_free_balance(&addr, source, reward).map_err(|e| e.info())?;
 
