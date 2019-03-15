@@ -35,7 +35,6 @@ finality-tracker = { package = "srml-finality-tracker", git = "https://github.co
 
 # chainx
 chainx-primitives = { path = "../primitives", default-features = false }
-
 xr-primitives = { path = "../xr-primitives", default-features = false }
 runtime-api = { path = "../runtime-api", default-features = false }
 # chainx runtime module
@@ -62,8 +61,6 @@ xsdot = { package = "xrml-bridge-sdot", path = "../xrml/xbridge/sdot", default-f
 xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-features = false }
 # multisig
 xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig", default-features = false }
-
-[dev-dependencies]
 
 [features]
 default = ["std"]

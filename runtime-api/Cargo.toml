@@ -2,37 +2,32 @@
 name = "runtime-api"
 version = "0.4.0"
 authors = ["Chainpool <http://www.chainx.org>"]
+edition = "2018"
 
 [dependencies]
-substrate-client = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
-# substrate runtime module
-srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
-
+# substrate
+client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", default-features = false }
+rstd = {  package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 # chainx
 chainx-primitives = { path = "../primitives", default_features = false }
 xr-primitives = { path = "../xr-primitives", default_features = false }
 # chainx runtime module
-xrml-xsupport = { path = "../xrml/xsupport", default_features = false }
-xrml-xassets-assets = { path = "../xrml/xassets/assets", default_features = false }
-xrml-xassets-process = { path = "../xrml/xassets/process", default_features = false }
-xrml-xassets-records = { path = "../xrml/xassets/records", default_features = false }
-xrml-xdex-spot= { path = "../xrml/xdex/spot",  default_features = false }
-
+xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport", default_features = false }
+xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets", default_features = false }
+xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records", default_features = false }
+xspot= { package = "xrml-xdex-spot", path = "../xrml/xdex/spot",  default_features = false }
 
 [features]
 default = ["std"]
 std = [
-	"substrate-client/std",
-	"sr-std/std",
-	"srml-support/std",
-
-	# chainx
-	"chainx-primitives/std",
-	"xr-primitives/std",
+    # substrate
+    "client/std",
+    "rstd/std",
+    # chainx
+    "chainx-primitives/std",
+    "xr-primitives/std",
     # chainx runtime
-    "xrml-xsupport/std",
-    "xrml-xassets-assets/std",
-    "xrml-xassets-process/std",
-    "xrml-xassets-records/std",
+    "xsupport/std",
+    "xassets/std",
+    "xrecords/std",
 ]

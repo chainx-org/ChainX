@@ -2684,11 +2684,9 @@ version = "0.4.0"
 dependencies = [
  "chainx-primitives 0.3.0",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-client 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
  "xrml-xassets-assets 0.4.0",
- "xrml-xassets-process 0.4.0",
  "xrml-xassets-records 0.4.0",
  "xrml-xdex-spot 0.4.0",
  "xrml-xsupport 0.4.0",
