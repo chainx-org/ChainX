@@ -4,21 +4,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-extern crate parity_codec as codec;
-extern crate sr_primitives as runtime_primitives;
-extern crate sr_std as rstd;
-extern crate substrate_primitives as primitives;
-
-#[cfg(test)]
-extern crate substrate_serializer;
-
 #[cfg(feature = "std")]
-extern crate serde;
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate parity_codec_derive;
+use serde_derive::{Deserialize, Serialize};
+use parity_codec_derive::{Decode, Encode};
 
 #[cfg(feature = "std")]
 use primitives::bytes;
@@ -28,7 +16,7 @@ use runtime_primitives::generic;
 use runtime_primitives::traits::{self, BlakeTwo256};
 
 /// Signature on candidate's block data by a collator.
-pub type CandidateSignature = ::runtime_primitives::Ed25519Signature;
+pub type CandidateSignature = runtime_primitives::Ed25519Signature;
 
 /// The Ed25519 pub key of an session that belongs to an authority of the relay chain. This is
 /// exactly equivalent to what the substrate calls an "authority".
