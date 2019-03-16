@@ -2,8 +2,8 @@
 name = "chainx-executor"
 version = "0.3.0"
 authors = ["Chainpool <http://www.chainx.org>"]
+edition = "2018"
 
 [dependencies]
 substrate-executor = { git = "https://github.com/chainpool/substrate" }
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
 chainx-runtime = { path = "../runtime" }

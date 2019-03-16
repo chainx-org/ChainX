@@ -425,7 +425,6 @@ version = "0.3.0"
 dependencies = [
  "chainx-runtime 0.4.0",
  "substrate-executor 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
 ]
 
 [[package]]
