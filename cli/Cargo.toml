@@ -2,60 +2,56 @@
 name = "chainx-cli"
 version = "0.1.0"
 description = "ChainX node implementation in Rust."
+edition = "2018"
 
 [dependencies]
 log = "0.4"
+structopt = "0.2.13"
 tokio = "0.1.7"
 exit-future = "0.1"
 hex-literal = "0.1"
-parity-codec = { version = "3.1" }
 rustc-hex = "2.0.1"
-slog = "^2"
-csv = "1"
-structopt = "0.2.13"
 serde = "1.0"
 serde_derive = "1.0"
+csv = "1.0"
 
 # substrate
-substrate-cli = { git = "https://github.com/chainpool/substrate" }
-substrate-client = { git = "https://github.com/chainpool/substrate" }
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
-substrate-basic-authorship = { git = "https://github.com/chainpool/substrate" }
+cli = { package = "substrate-cli", git = "https://github.com/chainpool/substrate" }
+client = { package = "substrate-client", git = "https://github.com/chainpool/substrate" }
+basic-authorship = { package = "substrate-basic-authorship", git = "https://github.com/chainpool/substrate" }
+transaction-pool = { package = "substrate-transaction-pool", git = "https://github.com/chainpool/substrate" }
+network = { package = "substrate-network", git = "https://github.com/chainpool/substrate" }
+consensus = { package = "substrate-consensus-aura", git = "https://github.com/chainpool/substrate" }
+grandpa = { package = "substrate-finality-grandpa", git = "https://github.com/chainpool/substrate" }
+inherents = { package = "substrate-inherents", git = "https://github.com/chainpool/substrate" }
+telemetry = { package = "substrate-telemetry", git = "https://github.com/chainpool/substrate" }
 substrate-service = { git = "https://github.com/chainpool/substrate" }
-substrate-transaction-pool = { git = "https://github.com/chainpool/substrate" }
-substrate-network = { git = "https://github.com/chainpool/substrate" }
-substrate-consensus-aura = { git = "https://github.com/chainpool/substrate" }
-substrate-finality-grandpa = { git = "https://github.com/chainpool/substrate" }
-substrate-inherents = { git = "https://github.com/chainpool/substrate" }
-substrate-telemetry = { git = "https://github.com/chainpool/substrate" }
-sr-io = { git = "https://github.com/chainpool/substrate" }
-sr-primitives = { git = "https://github.com/chainpool/substrate" }
+substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+sr-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate" }
 
-chainx-runtime = { path = "../runtime" }
+# chainx
+rpc-servers = { package = "substrate-rpc-servers", path = "../rpc-servers" }
 chainx-primitives = { path = "../primitives" }
-
 chainx-executor = { path = "../executor" }
-
-xrml-xsystem = { path = "../xrml/xsystem" }
-
+chainx-runtime = { path = "../runtime" }
 runtime-api = { path = "../runtime-api" }
+xsystem = { package = "xrml-xsystem", path = "../xrml/xsystem" }
 
 # bitcoin
-primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
-chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
-substrate-rpc-servers = { path = "../rpc-servers" }
+btc-primitives = { package = "primitives", git = "https://github.com/chainx-org/bitcoin-rust" }
+btc-chain = { package = "chain", git = "https://github.com/chainx-org/bitcoin-rust" }
 
 [dev-dependencies]
-substrate-service-test = { git = "https://github.com/chainpool/substrate" }
+service-test = { package = "substrate-service-test", git = "https://github.com/chainpool/substrate" }
 
 [features]
 msgbus-redis = [
-    "substrate-cli/msgbus-redis"
+    "cli/msgbus-redis"
 ]
 msgbus-redis-keyhash = [
     "msgbus-redis",
-    "substrate-cli/msgbus-redis-keyhash",
+    "cli/msgbus-redis-keyhash",
 ]
 cache-lru = [
-    "substrate-cli/cache-lru"
+    "cli/cache-lru"
 ]

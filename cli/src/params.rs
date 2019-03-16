@@ -1,4 +1,3 @@
-use cli::AugmentClap;
 use structopt::{clap::App, StructOpt};
 
 #[derive(Clone, StructOpt, Debug)]
@@ -11,7 +10,7 @@ pub struct ChainXParams {
     pub only_grandpa: bool,
 }
 
-impl AugmentClap for ChainXParams {
+impl cli::AugmentClap for ChainXParams {
     fn augment_clap<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         ChainXParams::augment_clap(app)
     }

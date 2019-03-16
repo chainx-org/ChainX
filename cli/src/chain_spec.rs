@@ -1,9 +1,10 @@
 // Copyright 2019 Chainpool
 
+use telemetry::TelemetryEndpoints;
+
 use chainx_runtime::GenesisConfig;
-use genesis_config::{testnet_genesis, GenesisSpec};
-use substrate_service;
-use substrate_telemetry::TelemetryEndpoints;
+
+use super::genesis_config::{testnet_genesis, GenesisSpec};
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const CHAINX_TELEMETRY_URL: &str = "wss://stats.chainx.org/submit/";

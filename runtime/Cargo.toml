@@ -12,10 +12,10 @@ parity-codec = { version = "3.1", default_features = false }
 
 client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", default-features = false }
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-consensus_aura = { package = "substrate-consensus-aura-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+consensus-aura = { package = "substrate-consensus-aura-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
+runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
 version = { package = "sr-version", git = "https://github.com/chainpool/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 
@@ -46,7 +46,7 @@ xsession = { package = "xrml-session", path = "../xrml/xsession", default-featur
 xaura = { package = "xrml-aura", path = "../xrml/xaura", default-features = false }
 xgrandpa = { package = "xrml-grandpa", path = "../xrml/xgrandpa", default-features = false }
 # fee
-xfee_manager = { package = "xrml-fee-manager", path = "../xrml/xfee/manager", default-features = false }
+xfee-manager = { package = "xrml-fee-manager", path = "../xrml/xfee/manager", default-features = false }
 # assets
 xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records", default-features = false }
@@ -72,11 +72,11 @@ std = [
 
     "client/std",
     "substrate-primitives/std",
-    "runtime_io/std",
-    "consensus_aura/std",
+    "runtime-io/std",
+    "consensus-aura/std",
 
     # substrate runtime module
-    "runtime_primitives/std",
+    "runtime-primitives/std",
     "version/std",
     "rstd/std",
 
@@ -106,7 +106,7 @@ std = [
     "xsystem/std",
     "xaccounts/std",
     # fee
-    "xfee_manager/std",
+    "xfee-manager/std",
     # asset
     "xassets/std",
     "xrecords/std",

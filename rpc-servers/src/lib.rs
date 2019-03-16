@@ -16,7 +16,7 @@
 
 //! Substrate RPC servers.
 
-#[warn(missing_docs)]
+#![warn(missing_docs)]
 
 pub use substrate_rpc as apis;
 
@@ -35,7 +35,9 @@ const MAX_PAYLOAD: usize = 15 * 1024 * 1024;
 
 type Metadata = apis::metadata::Metadata;
 type RpcHandler = pubsub::PubSubHandler<Metadata>;
+/// HTTP RPC Server.
 pub type HttpServer = http::Server;
+/// WebSocket RPC Server.
 pub type WsServer = ws::Server;
 
 /// Construct rpc `IoHandler`

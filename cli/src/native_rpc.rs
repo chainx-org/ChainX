@@ -1,10 +1,14 @@
 // Copyright 2018 Chainpool
 
-use rpc;
-use service;
 use std::io;
 use std::net::SocketAddr;
+
+use log::warn;
+
+use rpc_servers as rpc;
 use substrate_service::{ComponentBlock, ComponentExHash, TaskExecutor};
+
+use super::service;
 
 fn maybe_start_server<T, F>(address: Option<SocketAddr>, start: F) -> Result<Option<T>, io::Error>
 where

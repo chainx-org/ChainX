@@ -1,11 +1,10 @@
 // Copyright 2018 chainpool
 
-use std::error::Error;
-
 use hex_literal::{hex, hex_impl};
 use rustc_hex::FromHex;
+use serde_derive::Deserialize;
 
-use primitives::{ed25519, Ed25519AuthorityId};
+use substrate_primitives::{ed25519, Ed25519AuthorityId};
 
 use chainx_runtime::{
     xassets::{self, Asset, Chain, ChainT},
@@ -317,7 +316,7 @@ pub struct RecordOfSDOT {
     quantity: f64,
 }
 
-fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn Error>> {
+fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> {
     let mut reader = csv::Reader::from_reader(&include_bytes!("dot_tx.csv")[..]);
     let mut res = Vec::with_capacity(3053);
     for result in reader.deserialize() {

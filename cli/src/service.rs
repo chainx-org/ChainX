@@ -18,32 +18,28 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-extern crate runtime_api;
-extern crate sr_primitives;
-extern crate xrml_xsystem;
-
-use chainx_executor;
-use chainx_primitives::{AccountId, Block};
-use chainx_runtime::{GenesisConfig, RuntimeApi};
-use client;
-use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
-use grandpa;
-use inherents::InherentDataProviders;
-use primitives::ed25519::Pair;
 use std::sync::Arc;
 use std::time::Duration;
+
+use log::{info, warn};
+
+use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
+use inherents::InherentDataProviders;
+use network::construct_simple_protocol;
+use sr_primitives::generic::BlockId;
+use sr_primitives::traits::ProvideRuntimeApi;
+use substrate_primitives::ed25519::Pair;
 use substrate_service::{
-    FactoryFullConfiguration, FullBackend, FullClient, FullComponents, FullExecutor, LightBackend,
-    LightClient, LightComponents, LightExecutor, TaskExecutor,
+    construct_service_factory, FactoryFullConfiguration, FullBackend, FullClient, FullComponents,
+    FullExecutor, LightBackend, LightClient, LightComponents, LightExecutor, TaskExecutor,
 };
-use transaction_pool::{self, txpool::Pool as TransactionPool};
+use transaction_pool::txpool::Pool as TransactionPool;
 
-use self::runtime_api::xsession_api::XSessionApi;
-use self::sr_primitives::generic::BlockId;
-use self::sr_primitives::traits::ProvideRuntimeApi;
-use self::xrml_xsystem::InherentDataProvider;
+use chainx_primitives::{AccountId, Block};
+use chainx_runtime::{GenesisConfig, RuntimeApi};
+use runtime_api::xsession_api::XSessionApi;
 
-type XSystemInherentDataProvider = InherentDataProvider;
+type XSystemInherentDataProvider = xsystem::InherentDataProvider;
 
 static mut VALIDATOR_NAME: Option<String> = None;
 
@@ -110,7 +106,7 @@ construct_service_factory! {
 
               if !service.config.custom.only_grandpa {
                 if let Some(ref key) = local_key {
-                        let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
+                        let proposer = Arc::new(basic_authorship::ProposerFactory {
                             client: service.client(),
                             transaction_pool: service.transaction_pool(),
                         });

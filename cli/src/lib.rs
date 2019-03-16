@@ -18,53 +18,22 @@
 
 #![feature(custom_attribute)]
 
-extern crate tokio;
-
-extern crate chainx_runtime;
-extern crate exit_future;
-extern crate hex_literal;
-extern crate substrate_cli as cli;
-extern crate substrate_primitives as primitives;
-#[cfg(test)]
-extern crate substrate_service_test as service_test;
-extern crate substrate_transaction_pool as transaction_pool;
-#[macro_use]
-extern crate substrate_network as network;
-extern crate chainx_primitives;
-extern crate substrate_client as client;
-extern crate substrate_consensus_aura as consensus;
-extern crate substrate_finality_grandpa as grandpa;
-#[macro_use]
-extern crate substrate_service;
-extern crate chainx_executor;
-extern crate substrate_inherents as inherents;
-extern crate substrate_rpc_servers as rpc;
-extern crate substrate_telemetry;
-
-#[macro_use]
-extern crate log;
-extern crate rustc_hex;
-extern crate structopt;
-#[macro_use]
-extern crate serde_derive;
-
-extern crate chain as btc_chain;
-extern crate primitives as btc_primitives;
-
 mod chain_spec;
 mod genesis_config;
 mod native_rpc;
 mod params;
 mod service;
 
-pub use cli::{error, IntoExit, NoCustom, VersionInfo};
-//use primitives::ed25519;
 use std::ops::Deref;
-use substrate_service::{Roles as ServiceRoles, ServiceFactory};
+
+use log::info;
 use tokio::runtime::Runtime;
 
-use params::ChainXParams;
-use service::set_validator_name;
+pub use cli::{error, IntoExit, NoCustom, VersionInfo};
+use substrate_service::{Roles as ServiceRoles, ServiceFactory};
+
+use self::params::ChainXParams;
+use self::service::set_validator_name;
 
 /// The chain specification option.
 #[derive(Clone, Debug)]
