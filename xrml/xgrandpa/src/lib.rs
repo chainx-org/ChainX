@@ -31,6 +31,7 @@ pub use substrate_finality_grandpa_primitives as fg_primitives;
 
 use codec::{Decode, Encode};
 use consensus;
+use ed25519::Public as AuthorityId;
 use fg_primitives::ScheduledChange;
 use parity_codec as codec;
 use primitives::traits::{Convert, CurrentHeight};
@@ -41,7 +42,7 @@ use srml_support::dispatch::Result;
 use srml_support::storage::unhashed::StorageVec;
 use srml_support::storage::StorageValue;
 use srml_support::{decl_event, decl_module, decl_storage};
-use substrate_primitives::Ed25519AuthorityId;
+use substrate_primitives::ed25519;
 use system::ensure_signed;
 use xsupport::info;
 
@@ -101,7 +102,7 @@ impl<N: Clone, SessionKey> RawLog<N, SessionKey> {
 impl<N, SessionKey> GrandpaChangeSignal<N> for RawLog<N, SessionKey>
 where
     N: Clone,
-    SessionKey: Clone + Into<Ed25519AuthorityId>,
+    SessionKey: Clone + Into<AuthorityId>,
 {
     fn as_signal(&self) -> Option<ScheduledChange<N>> {
         RawLog::as_signal(self).map(|(delay, next_authorities)| ScheduledChange {
@@ -227,7 +228,7 @@ decl_module! {
         }
 
         fn on_finalise(block_number: T::BlockNumber) {
-            /*if let Some(pending_change) = <PendingChange<T>>::get() {
+            if let Some(pending_change) = <PendingChange<T>>::get() {
                 if block_number == pending_change.scheduled_at {
                     if let Some(median) = pending_change.forced {
                         Self::deposit_log(RawLog::ForcedAuthoritiesChangeSignal(
@@ -250,7 +251,7 @@ decl_module! {
                     <AuthorityStorageVec<<T as consensus::Trait>::SessionKey>>::set_items(pending_change.next_authorities);
                     <PendingChange<T>>::kill();
                 }
-            }*/
+            }
         }
     }
 }
@@ -318,7 +319,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T>
 where
-    Ed25519AuthorityId: core::convert::From<<T as consensus::Trait>::SessionKey>,
+    AuthorityId: core::convert::From<<T as consensus::Trait>::SessionKey>,
 {
     /// See if the digest contains any standard scheduled change.
     pub fn scrape_digest_change(log: &Log<T>) -> Option<ScheduledChange<T::BlockNumber>> {
@@ -360,7 +361,7 @@ where
         let next_authorities = <session::Module<T>>::validators()
             .into_iter()
             .map(|(account_id, weight)| {
-                if let Some(session_key) = <session::Module<T>>::session_key(account_id.clone()) {
+                if let Some(session_key) = <session::Module<T>>::next_key_for(account_id.clone()) {
                     (session_key, weight)
                 } else {
                     (T::ConvertAccountIdToSessionKey::convert(account_id), weight)
@@ -392,11 +393,12 @@ where
         // when we record old authority sets, we can use `finality_tracker::median`
         // to figure out _who_ failed. until then, we can't meaningfully guard
         // against `next == last` the way that normal session changes do.
+        info!("-----------on_stalled");
 
         let next_authorities = <session::Module<T>>::validators()
             .into_iter()
             .map(|(account_id, weight)| {
-                if let Some(session_key) = <session::Module<T>>::session_key(account_id.clone()) {
+                if let Some(session_key) = <session::Module<T>>::next_key_for(account_id.clone()) {
                     (session_key, weight)
                 } else {
                     (T::ConvertAccountIdToSessionKey::convert(account_id), weight)

@@ -4,34 +4,34 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-#[cfg(feature = "std")]
-use serde_derive::{Deserialize, Serialize};
-use parity_codec_derive::{Decode, Encode};
+use runtime_primitives::{
+    generic,
+    traits::{BlakeTwo256, Verify},
+    OpaqueExtrinsic,
+};
 
-#[cfg(feature = "std")]
-use primitives::bytes;
+/// Alias to 512-bit hash when used in the context of a session signature on the chain.
+pub type AuthoritySignature = primitives::ed25519::Signature;
 
-use rstd::prelude::*;
-use runtime_primitives::generic;
-use runtime_primitives::traits::{self, BlakeTwo256};
-
-/// Signature on candidate's block data by a collator.
-pub type CandidateSignature = runtime_primitives::Ed25519Signature;
-
-/// The Ed25519 pub key of an session that belongs to an authority of the relay chain. This is
+/// The Ed25519 pub key of an session that belongs to an authority of the chain. This is
 /// exactly equivalent to what the substrate calls an "authority".
-pub type SessionKey = primitives::Ed25519AuthorityId;
+pub type AuthorityId = <AuthoritySignature as Verify>::Signer;
+
+pub type Signature = primitives::ed25519::Signature;
+/// Alias to Ed25519 pubkey that identifies an account on the relay chain.
+pub type AccountId = <Signature as Verify>::Signer;
+/// the accountid impl must much to Signature
+pub type AccountIdImpl = primitives::ed25519::Public;
 
 /// A hash of some data used by the relay chain.
 pub type Hash = primitives::H256;
 
 /// Header type.
-pub type Header = generic::Header<BlockNumber, BlakeTwo256, generic::DigestItem<Hash, SessionKey>>;
-
-/// Opaque, encoded, unchecked extrinsic.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub struct UncheckedExtrinsic(#[cfg_attr(feature = "std", serde(with = "bytes"))] pub Vec<u8>);
+pub type Header = generic::Header<
+    BlockNumber,
+    BlakeTwo256,
+    generic::DigestItem<Hash, AuthorityId, AuthoritySignature>,
+>;
 
 /// A "future-proof" block type for Polkadot. This will be resilient to upgrades in transaction
 /// format, because it doesn't attempt to decode extrinsics.
@@ -44,9 +44,6 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// 32-bits will allow for 136 years of blocks assuming 1 block per second.
 /// TODO: switch to u32
 pub type BlockNumber = u64;
-
-/// Alias to Ed25519 pubkey that identifies an account on the relay chain.
-pub type AccountId = primitives::H256;
 
 /// The type for looking up accounts. We don't expect more than 4 billion of them, but you
 /// never know...
@@ -61,8 +58,6 @@ pub type Index = u64;
 /// Bigger Acceleration means more chances be to included in a block for a transaction.
 pub type Acceleration = u32;
 
-pub type Signature = runtime_primitives::Ed25519Signature;
-
 /// A timestamp: seconds since the unix epoch.
 pub type Timestamp = u64;
 
@@ -73,8 +68,5 @@ pub type Balance = u64;
 /// "generic" block ID for the future-proof block type.
 pub type BlockId = generic::BlockId<Block>;
 
-impl traits::Extrinsic for UncheckedExtrinsic {
-    fn is_signed(&self) -> Option<bool> {
-        None
-    }
-}
+/// Opaque, encoded, unchecked extrinsic.
+pub type UncheckedExtrinsic = OpaqueExtrinsic;

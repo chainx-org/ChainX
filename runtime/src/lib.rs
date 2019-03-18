@@ -8,7 +8,7 @@
 mod fee;
 mod xexecutive;
 
-use parity_codec::{Decode, Encode};
+use parity_codec::Decode;
 use rstd::prelude::*;
 
 // substrate
@@ -18,15 +18,13 @@ use client::{
 };
 use runtime_primitives::generic;
 use runtime_primitives::traits::{
-    BlakeTwo256, Block as BlockT, Convert, DigestFor, NumberFor, StaticLookup,
+    BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup,
 };
 use runtime_primitives::transaction_validity::TransactionValidity;
 use runtime_primitives::ApplyResult;
 pub use runtime_primitives::{create_runtime_str, Perbill, Permill};
 use substrate_primitives::OpaqueMetadata;
 pub use support::{construct_runtime, StorageValue};
-#[cfg(feature = "std")]
-use support::{Deserialize, Serialize};
 
 pub use timestamp::BlockPeriod;
 pub use timestamp::Call as TimestampCall;
@@ -43,8 +41,8 @@ use xr_primitives;
 
 // chainx
 use chainx_primitives::{
-    Acceleration, AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, SessionKey,
-    Signature, Timestamp as TimestampU64,
+    Acceleration, AccountId, AccountIndex, AuthorityId, AuthoritySignature, Balance, BlockNumber,
+    Hash, Index, Signature, Timestamp as TimestampU64,
 };
 
 pub use xassets;
@@ -100,21 +98,12 @@ impl timestamp::Trait for Runtime {
 
 impl consensus::Trait for Runtime {
     type Log = Log;
-    type SessionKey = SessionKey;
+    type SessionKey = AuthorityId;
     type InherentOfflineReport = ();
 }
 
-/// Session key conversion.
-pub struct SessionKeyConversion;
-
-impl Convert<AccountId, SessionKey> for SessionKeyConversion {
-    fn convert(a: AccountId) -> SessionKey {
-        a.to_fixed_bytes().into()
-    }
-}
-
 impl xsession::Trait for Runtime {
-    type ConvertAccountIdToSessionKey = SessionKeyConversion;
+    type ConvertAccountIdToSessionKey = ();
     type OnSessionChange = (XStaking, xgrandpa::SyncedAuthorities<Runtime>);
     type Event = Event;
 }
@@ -136,37 +125,6 @@ impl xbitcoin::Trait for Runtime {
 impl xsdot::Trait for Runtime {
     type Event = Event;
 }
-
-//impl treasury::Trait for Runtime {
-//    type ApproveOrigin = council_motions::EnsureMembers<_4>;
-//    type RejectOrigin = council_motions::EnsureMembers<_2>;
-//    type Event = Event;
-//}
-//
-//impl democracy::Trait for Runtime {
-//    type Proposal = Call;
-//    type Event = Event;
-//}
-//
-//impl council::Trait for Runtime {
-//    type Event = Event;
-//}
-//
-//impl contract::Trait for Runtime {
-//    type DetermineContractAddress = contract::SimpleAddressDeterminator<Runtime>;
-//    type Gas = u64;
-//    type Event = Event;
-//}
-//
-//impl council::voting::Trait for Runtime {
-//    type Event = Event;
-//}
-//
-//impl council::motions::Trait for Runtime {
-//    type Origin = Origin;
-//    type Proposal = Call;
-//    type Event = Event;
-//}
 
 impl xbootstrap::Trait for Runtime {}
 
@@ -237,7 +195,7 @@ impl finality_tracker::Trait for Runtime {
 }
 
 construct_runtime!(
-    pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
+    pub enum Runtime with Log(InternalLog: DigestItem<Hash, AuthorityId, AuthoritySignature>) where
         Block = Block,
         NodeBlock = chainx_primitives::Block,
         UncheckedExtrinsic = UncheckedExtrinsic
@@ -293,12 +251,13 @@ pub type UncheckedExtrinsic = xr_primitives::generic::UncheckedMortalCompactExtr
     Signature,
     Acceleration,
 >;
+/// A Block signed with a Justification
+pub type SignedBlock = generic::SignedBlock<Block>;
+/// Extrinsic type that has already been checked.
+pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive =
     xexecutive::Executive<Runtime, Block, system::ChainContext<Runtime>, XFeeManager, AllModules>;
-
-// define tokenbalances module type
-//pub type TokenBalance = u128;
 
 impl_runtime_apis! {
     impl client_api::Core<Block> for Runtime {
@@ -306,7 +265,7 @@ impl_runtime_apis! {
             VERSION
         }
 
-        fn authorities() -> Vec<SessionKey> {
+        fn authorities() -> Vec<AuthorityId> {
             Consensus::authorities()
         }
 
@@ -382,7 +341,7 @@ impl_runtime_apis! {
             None
         }
 
-        fn grandpa_authorities() -> Vec<(SessionKey, u64)> {
+        fn grandpa_authorities() -> Vec<(AuthorityId, u64)> {
             Grandpa::grandpa_authorities()
         }
     }
@@ -447,7 +406,6 @@ impl_runtime_apis! {
         fn asset_power(token: xassets::Token) -> Option<Balance> {
             XTokens::asset_power(&token)
         }
-
     }
 
     impl runtime_api::xspot_api::XSpotApi<Block> for Runtime {
@@ -474,7 +432,7 @@ impl_runtime_apis! {
     }
 
     impl runtime_api::xsession_api::XSessionApi<Block> for Runtime {
-        fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<SessionKey>)> {
+        fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<AuthorityId>)> {
             Session::pubkeys_for_validator_name(name)
         }
     }

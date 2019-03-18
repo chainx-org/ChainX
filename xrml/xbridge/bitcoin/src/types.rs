@@ -1,4 +1,6 @@
-use parity_codec_derive::{Decode, Encode};
+// Copyright 2019 Chainpool.
+
+use parity_codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
 

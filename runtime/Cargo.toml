@@ -8,7 +8,7 @@ edition = "2018"
 rustc-hex = { version = "2.0.1", optional = true }
 safe-mix = { version = "1.0", default_features = false }
 serde = { version = "1.0", optional = true }
-parity-codec = { version = "3.1", default_features = false }
+parity-codec = { version = "3.2", default_features = false }
 
 client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", default-features = false }
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
@@ -27,11 +27,6 @@ consensus = { package = "srml-consensus", git = "https://github.com/chainpool/su
 sudo = { package = "srml-sudo", git = "https://github.com/chainpool/substrate", default-features = false }
 indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate", default-features = false }
 finality-tracker = { package = "srml-finality-tracker", git = "https://github.com/chainpool/substrate", default-features = false }
-
-# contract = { package = "srml-contract", git = "https://github.com/chainpool/substrate", default-features = false }
-# council = { package = "srml-council", git = "https://github.com/chainpool/substrate", default-features = false }
-# democracy = { package = "srml-democracy", git = "https://github.com/chainpool/substrate", default-features = false }
-# treasury = { package = "srml-treasury", git = "https://github.com/chainpool/substrate", default-features = false }
 
 # chainx
 chainx-primitives = { path = "../primitives", default-features = false }
@@ -62,6 +57,9 @@ xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-featur
 # multisig
 xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig", default-features = false }
 
+[dev-dependencies]
+hex-literal = "0.1.0"
+
 [features]
 default = ["std"]
 std = [
@@ -87,10 +85,6 @@ std = [
     "consensus/std",
     "sudo/std",
     "indices/std",
-    # "contract/std",
-    # "council/std",
-    # "democracy/std",
-    # "treasury/std",
 
     # chainx
     "chainx-primitives/std",

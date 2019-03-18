@@ -21,8 +21,6 @@
 
 extern crate sr_std as rstd;
 
-#[macro_use]
-extern crate parity_codec_derive;
 extern crate parity_codec;
 
 #[macro_use]
@@ -51,8 +49,7 @@ extern crate parking_lot;
 use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInherent, RuntimeString};
 #[cfg(feature = "std")]
 use inherents::{InherentDataProviders, ProvideInherentData};
-#[cfg(feature = "std")]
-use parity_codec::Decode;
+use parity_codec::{Decode, Encode};
 use primitives::traits::{As, Zero};
 use rstd::{prelude::*, result};
 use runtime_support::storage::StorageValue;

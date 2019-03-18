@@ -4,8 +4,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[macro_use]
-extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 
 // for substrate
@@ -35,6 +33,7 @@ mod tests;
 pub mod assetdef;
 pub mod memo;
 
+use codec::{Decode, Encode};
 use primitives::traits::{CheckedAdd, CheckedSub, StaticLookup, Zero};
 use rstd::collections::btree_map::BTreeMap;
 use rstd::iter::FromIterator;

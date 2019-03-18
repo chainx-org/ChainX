@@ -8,6 +8,7 @@
 use serde_derive::{Deserialize, Serialize};
 
 use parity_codec::{Decode, Encode};
+use substrate_primitives::crypto::UncheckedFrom;
 
 use sr_std::marker::PhantomData;
 use sr_std::prelude::*;
@@ -145,14 +146,14 @@ pub struct SimpleMultiSigIdFor<T: Trait>(PhantomData<T>);
 
 impl<T: Trait> MultiSigFor<T::AccountId, T::Hash> for SimpleMultiSigIdFor<T>
 where
-    T::AccountId: From<T::Hash>,
+    T::AccountId: UncheckedFrom<T::Hash>,
 {
     fn multi_sig_addr_for(who: &T::AccountId) -> T::AccountId {
         let mut buf = Vec::<u8>::new();
         buf.extend_from_slice(&who.encode());
         buf.extend_from_slice(&<system::Module<T>>::account_nonce(who).encode());
         buf.extend_from_slice(&<Module<T>>::multi_sig_list_len_for(who).encode()); // in case same nonce in genesis
-        T::Hashing::hash(&buf[..]).into()
+        UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }
 
     fn multi_sig_id_for(who: &T::AccountId, addr: &T::AccountId, data: &[u8]) -> T::Hash {
@@ -168,15 +169,17 @@ where
 pub struct ChainXGenesisMultisig<T: Trait>(PhantomData<T>);
 impl<T: Trait> GenesisMultiSig<T::AccountId> for ChainXGenesisMultisig<T>
 where
-    T::AccountId: From<T::Hash> + AsRef<[u8]>,
+    T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
 {
     fn gen_genesis_multisig(accounts: Vec<T::AccountId>) -> (T::AccountId, T::AccountId) {
         let mut buf = Vec::<u8>::new();
         for a in accounts.iter() {
             buf.extend_from_slice(a.as_ref());
         }
-        let team_multisig_addr: T::AccountId = T::Hashing::hash(&buf[..]).into();
-        let council_multisig_addr: T::AccountId = T::Hashing::hash(&b"Council"[..]).into();
+        let team_multisig_addr: T::AccountId =
+            UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]));
+        let council_multisig_addr: T::AccountId =
+            UncheckedFrom::unchecked_from(T::Hashing::hash(&b"Council"[..]));
         (team_multisig_addr, council_multisig_addr)
     }
 }

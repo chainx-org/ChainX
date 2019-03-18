@@ -203,7 +203,10 @@ where
         let key = <xstaking::Intentions<Runtime>>::key();
         if let Some(intentions) = Self::pickout::<Vec<AccountId>>(&state, &key)? {
             for intention in intentions {
-                let key = <xstaking::NominationRecords<Runtime>>::key_for(&(who, intention));
+                let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
+                    who.clone(),
+                    intention.clone(),
+                ));
                 if let Some(record) =
                     Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(&state, &key)?
                 {
@@ -248,12 +251,12 @@ where
         let key = <xstaking::Intentions<Runtime>>::key();
 
         if let Some(intentions) = Self::pickout::<Vec<AccountId>>(&state, &key)? {
-            let jackpot_addr_list: Result<Vec<H256>> = self
+            let jackpot_addr_list: Result<Vec<AccountId>> = self
                 .client
                 .runtime_api()
                 .multi_jackpot_accountid_for(&self.best_number()?, intentions.clone())
                 .map_err(|e| e.into());
-            let jackpot_addr_list: Vec<H256> = jackpot_addr_list?;
+            let jackpot_addr_list: Vec<AccountId> = jackpot_addr_list?;
 
             for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
                 let mut info = IntentionInfo::default();
@@ -264,13 +267,13 @@ where
                 }
 
                 let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
-                if let Some(props) = Self::pickout::<IntentionProps<SessionKey>>(&state, &key)? {
+                if let Some(props) = Self::pickout::<IntentionProps<AuthorityId>>(&state, &key)? {
                     info.url = String::from_utf8_lossy(&props.url).into_owned();
                     info.is_active = props.is_active;
                     info.about = String::from_utf8_lossy(&props.about).into_owned();
                     info.session_key = match props.session_key {
                         Some(s) => s.into(),
-                        None => intention,
+                        None => intention.clone(),
                     };
                 }
 
@@ -286,15 +289,18 @@ where
                     info.last_total_vote_weight_update = profs.last_total_vote_weight_update;
                 }
 
-                let key = <xstaking::NominationRecords<Runtime>>::key_for(&(intention, intention));
+                let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
+                    intention.clone(),
+                    intention.clone(),
+                ));
                 if let Some(record) =
                     Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(&state, &key)?
                 {
                     info.self_vote = record.nomination;
                 }
 
-                info.is_validator = validators.iter().any(|&i| i == intention);
-                info.is_trustee = trustees.iter().any(|&i| i == intention);
+                info.is_validator = validators.iter().any(|i| i == &intention);
+                info.is_trustee = trustees.iter().any(|i| i == &intention);
                 info.account = intention;
 
                 intention_info.push(info);
@@ -310,12 +316,12 @@ where
 
         let key = <xtokens::PseduIntentions<Runtime>>::key();
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key)? {
-            let jackpot_addr_list: Result<Vec<H256>> = self
+            let jackpot_addr_list: Result<Vec<AccountId>> = self
                 .client
                 .runtime_api()
                 .multi_token_jackpot_accountid_for(&self.best_number()?, tokens.clone())
                 .map_err(|e| e.into());
-            let jackpot_addr_list: Vec<H256> = jackpot_addr_list?;
+            let jackpot_addr_list: Vec<AccountId> = jackpot_addr_list?;
 
             for (token, jackpot_addr) in tokens.into_iter().zip(jackpot_addr_list) {
                 let mut info = PseduIntentionInfo::default();
@@ -381,7 +387,8 @@ where
         let mut trustee_info = Vec::new();
 
         for chain in Chain::iterator() {
-            let key = <xaccounts::TrusteeIntentionPropertiesOf<Runtime>>::key_for(&(who, *chain));
+            let key =
+                <xaccounts::TrusteeIntentionPropertiesOf<Runtime>>::key_for(&(who.clone(), *chain));
 
             if let Some(props) = Self::pickout::<TrusteeIntentionProps>(&state, &key)? {
                 let hot_entity = match props.hot_entity {
@@ -430,7 +437,8 @@ where
             for token in tokens {
                 let mut record = PseduNominationRecord::default();
 
-                let key = <xtokens::DepositRecords<Runtime>>::key_for(&(who, token.clone()));
+                let key =
+                    <xtokens::DepositRecords<Runtime>>::key_for(&(who.clone(), token.clone()));
                 if let Some(vote_weight) =
                     Self::pickout::<DepositVoteWeight<BlockNumber>>(&state, &key)?
                 {
@@ -439,7 +447,7 @@ where
                         vote_weight.last_deposit_weight_update;
                 }
 
-                let key = <xassets::AssetBalance<Runtime>>::key_for(&(who, token.clone()));
+                let key = <xassets::AssetBalance<Runtime>>::key_for(&(who.clone(), token.clone()));
 
                 if let Some(balances) =
                     Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)?
@@ -624,7 +632,7 @@ where
         if let Some(len) = Self::pickout::<ID>(&state, &order_len_key)? {
             let mut total: u32 = 0;
             for i in (0..len).rev() {
-                let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(&(who, i));
+                let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(&(who.clone(), i));
                 if let Some(order) = Self::pickout::<OrderDetails<Runtime>>(&state, &order_key)? {
                     if total >= page_index * page_size && total < ((page_index + 1) * page_size) {
                         orders.push(order.clone());

@@ -55,7 +55,6 @@ use runtime_primitives::traits::As;
 use runtime_support::dispatch::Result;
 
 use system::ensure_signed;
-
 use xassets::{Chain, ChainT, Memo, Token};
 use xrecords::AddrStr;
 

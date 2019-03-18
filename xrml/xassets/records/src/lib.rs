@@ -8,8 +8,6 @@
 extern crate serde_derive;
 
 // Needed for deriving `Encode` and `Decode` for `RawEvent`.
-#[macro_use]
-extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 
 // for substrate
@@ -43,7 +41,7 @@ mod tests;
 
 pub mod types;
 
-use codec::Codec;
+use codec::{Codec, Decode, Encode};
 use rstd::prelude::*;
 use runtime_support::dispatch::Result;
 

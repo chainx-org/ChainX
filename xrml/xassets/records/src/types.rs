@@ -1,6 +1,8 @@
 use rstd::prelude::Vec;
 use {AddrStr, Memo, Token};
 
+use codec::{Decode, Encode};
+
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]

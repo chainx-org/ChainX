@@ -73,7 +73,7 @@ macro_rules! impl_session_change {
 for_each_tuple!(impl_session_change);
 
 pub trait Trait: timestamp::Trait + xrml_xaccounts::Trait {
-    type ConvertAccountIdToSessionKey: Convert<Self::AccountId, Self::SessionKey>;
+    type ConvertAccountIdToSessionKey: Convert<Self::AccountId, Option<Self::SessionKey>>;
     type OnSessionChange: OnSessionChange<Self::Moment>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -132,11 +132,15 @@ decl_storage! {
         pub ForcingNewSession get(forcing_new_session): Option<bool>;
         /// Block at which the session length last changed.
         LastLengthChange: Option<T::BlockNumber>;
-        pub SessionKeys get(session_key): map T::AccountId => Option<T::SessionKey>;
         /// The next key for a given validator.
-        pub NextKeyFor: map T::AccountId => Option<T::SessionKey>;
+        pub NextKeyFor get(next_key_for) build(|config: &GenesisConfig<T>| {
+            config.keys.clone()
+        }): map T::AccountId => Option<T::SessionKey>;
         /// The next session length.
         NextSessionLength: Option<T::BlockNumber>;
+    }
+    add_extra_genesis {
+        config(keys): Vec<(T::AccountId, T::SessionKey)>;
     }
 }
 
@@ -149,7 +153,7 @@ impl<T: Trait> ValidatorList<T::AccountId> for Module<T> {
 impl<T: Trait> Module<T> {
     pub fn pubkeys_for_validator_name(name: Name) -> Option<(T::AccountId, Option<T::SessionKey>)> {
         xrml_xaccounts::Module::<T>::intention_of(&name).map(|a| {
-            let r = Self::session_key(&a);
+            let r = Self::next_key_for(&a);
             (a, r)
         })
     }
@@ -183,16 +187,9 @@ impl<T: Trait> Module<T> {
             &new.iter()
                 .cloned()
                 .map(|(account_id, _)| {
-                    // Update any changes in session keys.
-                    if let Some(n) = <NextKeyFor<T>>::take(account_id.clone()) {
-                        <SessionKeys<T>>::insert(account_id.clone(), n.clone());
-                    }
-
-                    if let Some(session_key) = <SessionKeys<T>>::get(account_id.clone()) {
-                        session_key
-                    } else {
-                        T::ConvertAccountIdToSessionKey::convert(account_id)
-                    }
+                    <NextKeyFor<T>>::get(account_id.clone())
+                        .or_else(|| T::ConvertAccountIdToSessionKey::convert(account_id))
+                        .unwrap_or_default()
                 })
                 .collect::<Vec<_>>(),
         );

@@ -6,6 +6,7 @@ use rstd::slice::Iter;
 
 use runtime_support::dispatch::Result;
 
+use codec::{Decode, Encode};
 use xr_primitives::XString;
 
 pub type TokenString = &'static [u8];

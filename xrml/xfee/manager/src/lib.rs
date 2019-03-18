@@ -4,8 +4,6 @@
 
 extern crate sr_std as rstd;
 
-#[macro_use]
-extern crate parity_codec_derive;
 extern crate parity_codec as codec;
 extern crate sr_primitives;
 
@@ -30,6 +28,7 @@ use support::StorageValue;
 use xaccounts::IntentionJackpotAccountIdFor;
 
 use chainx_primitives::Acceleration;
+use codec::{Decode, Encode};
 
 /// Simple payment making trait, operating on a single generic `AccountId` type.
 pub trait MakePayment<AccountId> {

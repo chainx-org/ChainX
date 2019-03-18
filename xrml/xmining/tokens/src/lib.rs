@@ -7,6 +7,7 @@
 use serde_derive::{Deserialize, Serialize};
 
 use parity_codec as codec;
+use substrate_primitives::crypto::UncheckedFrom;
 
 use codec::{Decode, Encode};
 use primitives::traits::{As, Hash};
@@ -120,7 +121,7 @@ pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>)
 impl<T: Trait> TokenJackpotAccountIdFor<T::AccountId, T::BlockNumber>
     for SimpleAccountIdDeterminator<T>
 where
-    T::AccountId: From<T::Hash>,
+    T::AccountId: UncheckedFrom<T::Hash>,
     T::BlockNumber: codec::Codec,
 {
     fn accountid_for(token: &Token) -> T::AccountId {
@@ -132,7 +133,7 @@ where
         let mut buf = Vec::new();
         buf.extend_from_slice(token_hash.as_ref());
         buf.extend_from_slice(block_num_hash.as_ref());
-        T::Hashing::hash(&buf[..]).into()
+        UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }
 }
 

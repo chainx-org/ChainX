@@ -28,6 +28,7 @@ use inherents::InherentDataProviders;
 use network::construct_simple_protocol;
 use sr_primitives::generic::BlockId;
 use sr_primitives::traits::ProvideRuntimeApi;
+use substrate_primitives::crypto::Pair as _pair;
 use substrate_primitives::ed25519::Pair;
 use substrate_service::{
     construct_service_factory, FactoryFullConfiguration, FullBackend, FullClient, FullComponents,
@@ -112,7 +113,7 @@ construct_service_factory! {
                         });
 
                         let client = service.client();
-                        let accountid_from_localkey: AccountId = key.public().as_array_ref().clone().into();
+                        let accountid_from_localkey: AccountId = key.public();
                         info!("Using authority key: {}, accountid is: {}", key.public(), accountid_from_localkey);
                         // use validator name to get accountid and sessionkey from runtime storage
                         let name = get_validator_name().expect("must get validator name is AUTHORITY mode");

@@ -4,9 +4,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_codec_derive::{Decode, Encode};
+use parity_codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
+use substrate_primitives::crypto::UncheckedFrom;
 
 use primitives::traits::Hash;
 use rstd::prelude::*;
@@ -36,13 +37,13 @@ pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>)
 
 impl<T: Trait> IntentionJackpotAccountIdFor<T::AccountId> for SimpleAccountIdDeterminator<T>
 where
-    T::AccountId: From<T::Hash> + AsRef<[u8]>,
+    T::AccountId: UncheckedFrom<T::Hash>,
 {
     fn accountid_for(origin: &T::AccountId) -> T::AccountId {
         let name = Module::<T>::intention_name_of(origin)
             .expect("The original account must be an existing intention.");
         // name
-        T::Hashing::hash(&name).into()
+        UncheckedFrom::unchecked_from(T::Hashing::hash(&name))
     }
 }
 

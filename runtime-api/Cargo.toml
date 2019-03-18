@@ -7,7 +7,8 @@ edition = "2018"
 [dependencies]
 # substrate
 client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", default-features = false }
-rstd = {  package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 # chainx
 chainx-primitives = { path = "../primitives", default_features = false }
 xr-primitives = { path = "../xr-primitives", default_features = false }
@@ -23,6 +24,7 @@ std = [
     # substrate
     "client/std",
     "rstd/std",
+    "sr-primitives/std",
     # chainx
     "chainx-primitives/std",
     "xr-primitives/std",

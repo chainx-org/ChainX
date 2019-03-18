@@ -9,7 +9,7 @@ use serde_derive::{Deserialize, Serialize};
 use parity_codec as codec;
 
 use codec::Compact;
-use parity_codec_derive::{Decode, Encode};
+use codec::{Decode, Encode};
 use primitives::traits::{As, Lookup, StaticLookup, Zero};
 use rstd::prelude::*;
 use runtime_support::{

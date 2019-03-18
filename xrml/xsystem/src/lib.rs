@@ -4,8 +4,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #[cfg(feature = "std")]
-use parity_codec_derive::Decode;
-use parity_codec_derive::Encode;
+use parity_codec::Decode;
+use parity_codec::Encode;
 
 // for substrate
 use sr_std as rstd;

@@ -16,7 +16,7 @@ use runtime_primitives::generic::{BlockId, SignedBlock};
 use runtime_primitives::traits::{As, Block as BlockT, NumberFor, Zero};
 use state_machine::Backend;
 
-use chainx_primitives::{AccountId, Balance, BlockNumber, SessionKey, Timestamp};
+use chainx_primitives::{AccountId, AuthorityId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::{Call, Runtime};
 
 use xaccounts::{IntentionProps, TrusteeEntity, TrusteeIntentionProps};

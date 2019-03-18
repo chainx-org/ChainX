@@ -1,11 +1,10 @@
 // Copyright 2018 chainpool
-
 use hex_literal::{hex, hex_impl};
 use rustc_hex::FromHex;
 use serde_derive::Deserialize;
+use substrate_primitives::{crypto::UncheckedInto, ed25519::Public as AuthorityId};
 
-use substrate_primitives::{ed25519, Ed25519AuthorityId};
-
+use chainx_primitives::AccountId;
 use chainx_runtime::{
     xassets::{self, Asset, Chain, ChainT},
     xbitcoin::{self, Params},
@@ -30,25 +29,26 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
     let sdot_claims = load_sdot_info().unwrap();
 
+    let zero_accountid: AccountId = substrate_primitives::H256::zero().unchecked_into();
+    let one_accountid: AccountId = substrate_primitives::H256::repeat_byte(0x1).unchecked_into();
+
     // account pub and pri key
     let alice = hex!["471af9e69d41ee06426940fd302454662742405cb9dcc5bc68ceb7bec979e5e4"];
     let bob = hex!["806a491666670aa087e04770c025d64b2ecebfd91a74efdc4f4329642de32365"];
     let charlie = hex!["1cf70f57bf2a2036661819501164458bd6d94642d81b5e8f1d9bdad93bad49bb"];
-    let dave = ed25519::Pair::from_seed(b"Dave                            ").public();
-    let gavin = ed25519::Pair::from_seed(b"Gavin                           ").public();
     let satoshi = hex!["09a6acd8a6f4394c6ba8b5ea93ae0d473880823f357dd3fdfd5ff4ccf1fcad99"];
     //    let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
-    let sudo_address =
-        hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
+    let sudo_address: AccountId =
+        hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].unchecked_into();
 
-    let auth1 = alice.into();
-    let auth2 = bob.into();
-    let auth3 = charlie.into();
-    let auth4 = satoshi.into();
-    let initial_authorities = match genesis_spec {
-        GenesisSpec::Dev => vec![auth1],
-        GenesisSpec::Local => vec![auth1, auth2, auth3, auth4],
-        GenesisSpec::Multi => vec![auth1, auth2, auth3, auth4, gavin.into(), dave.into()],
+    let auth1: AccountId = alice.unchecked_into();
+    let auth2: AccountId = bob.unchecked_into();
+    let auth3: AccountId = charlie.unchecked_into();
+    let auth4: AccountId = satoshi.unchecked_into();
+    let initial_authorities_len = match genesis_spec {
+        GenesisSpec::Dev => 1,
+        GenesisSpec::Local => 4,
+        GenesisSpec::Multi => 4,
     };
 
     const CONSENSUS_TIME: u64 = 1;
@@ -126,13 +126,13 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         ),
     ];
 
-    full_endowed.truncate(initial_authorities.len());
+    full_endowed.truncate(initial_authorities_len);
 
     let endowed = full_endowed
         .clone()
         .into_iter()
         .map(|(auth, balance, _, _, _, _)| (auth, balance))
-        .collect::<Vec<(Ed25519AuthorityId, _)>>();
+        .collect::<Vec<(AuthorityId, _)>>();
 
     let blocks_per_session = 150; // 150 blocks per session
     let sessions_per_era = 2; // update validators set per 12 sessions
@@ -186,12 +186,17 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .map(|(account, balance)| (account.into(), balance))
                 .collect(),
             session_length: blocks_per_session,
+            keys: endowed
+                .iter()
+                .cloned()
+                .map(|(account, _)| (account.clone().into(), account.into()))
+                .collect(),
         }),
         sudo: Some(SudoConfig { key: sudo_address }),
         // chainx runtime module
         xsystem: Some(XSystemConfig {
-            death_account: substrate_primitives::H256::zero(),
-            burn_account: substrate_primitives::H256::repeat_byte(0x1),
+            death_account: zero_accountid,
+            burn_account: one_accountid,
         }),
         xfee_manager: Some(XFeeManagerConfig {
             producer_fee_proportion: (1, 10),

@@ -24,7 +24,8 @@ use rstd::prelude::*;
 use rstd::result;
 use runtime_io;
 use runtime_primitives::traits::{
-    self, Applyable, As, CheckEqual, Checkable, Digest, Hash, Header, OnFinalise, One, Zero,
+    self, Applyable, As, Block as BlockT, CheckEqual, Checkable, Digest, Hash, Header, NumberFor,
+    OnFinalise, OnInitialise, One, Zero,
 };
 use runtime_primitives::transaction_validity::{
     TransactionLongevity, TransactionPriority, TransactionValidity,
@@ -36,11 +37,15 @@ use xfee_manager::MakePayment;
 use xr_primitives::traits::Accelerable;
 
 mod internal {
+    pub const MAX_TRANSACTIONS_SIZE: u32 = 4 * 1024 * 1024;
+
     pub enum ApplyError {
         BadSignature(&'static str),
         Stale,
         Future,
         CantPay,
+        FullBlock,
+        NotAllow,
     }
 
     pub enum ApplyOutcome {
@@ -49,17 +54,49 @@ mod internal {
     }
 }
 
-pub struct Executive<System, Block, Context, Payment, Finalisation>(
-    PhantomData<(System, Block, Context, Payment, Finalisation)>,
+/// Something that can be used to execute a block.
+pub trait ExecuteBlock<Block: BlockT> {
+    /// Actually execute all transitioning for `block`.
+    fn execute_block(block: Block);
+    /// Execute all extrinsics like when executing a `block`, but with dropping intial and final checks.
+    fn execute_extrinsics_without_checks(
+        block_number: NumberFor<Block>,
+        extrinsics: Vec<Block::Extrinsic>,
+    );
+}
+
+pub struct Executive<System, Block, Context, Payment, AllModules>(
+    PhantomData<(System, Block, Context, Payment, AllModules)>,
 );
 
 impl<
-    Context: Default,
     System: system::Trait + xfee_manager::Trait,
     Block: traits::Block<Header=System::Header, Hash=System::Hash>,
+    Context: Default,
     Payment: MakePayment<System::AccountId>,
-    Finalisation: OnFinalise<System::BlockNumber>,
-> Executive<System, Block, Context, Payment, Finalisation> where
+    AllModules: OnInitialise<System::BlockNumber> + OnFinalise<System::BlockNumber>,
+> ExecuteBlock<Block> for Executive<System, Block, Context, Payment, AllModules> where
+    Block::Extrinsic: Checkable<Context> + Codec,
+    <Block::Extrinsic as Checkable<Context>>::Checked: Applyable<Index=System::Index, AccountId=System::AccountId> + Accelerable<Index=System::Index, AccountId=System::AccountId>,
+    <<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call: Dispatchable + CheckFee,
+    <<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call as Dispatchable>::Origin: From<Option<System::AccountId>>
+{
+    fn execute_block(block: Block) {
+        Self::execute_block(block);
+    }
+
+    fn execute_extrinsics_without_checks(block_number: NumberFor<Block>, extrinsics: Vec<Block::Extrinsic>) {
+        Self::execute_extrinsics_without_checks(block_number, extrinsics);
+    }
+}
+
+impl<
+    System: system::Trait + xfee_manager::Trait,
+    Block: traits::Block<Header=System::Header, Hash=System::Hash>,
+    Context: Default,
+    Payment: MakePayment<System::AccountId>,
+    AllModules: OnInitialise<System::BlockNumber> + OnFinalise<System::BlockNumber>,
+> Executive<System, Block, Context, Payment, AllModules> where
     Block::Extrinsic: Checkable<Context> + Codec,
     <Block::Extrinsic as Checkable<Context>>::Checked: Applyable<Index=System::Index, AccountId=System::AccountId> + Accelerable<Index=System::Index, AccountId=System::AccountId>,
     <<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call: Dispatchable + CheckFee,
@@ -67,7 +104,12 @@ impl<
 {
     /// Start the execution of a particular block.
     pub fn initialise_block(header: &System::Header) {
-        <system::Module<System>>::initialise(header.number(), header.parent_hash(), header.extrinsics_root());
+        Self::initialise_block_impl(header.number(), header.parent_hash(), header.extrinsics_root());
+    }
+
+    fn initialise_block_impl(block_number: &System::BlockNumber, parent_hash: &System::Hash, extrinsics_root: &System::Hash) {
+        <system::Module<System>>::initialise(block_number, parent_hash, extrinsics_root);
+        <AllModules as OnInitialise<System::BlockNumber>>::on_initialise(*block_number);
     }
 
     fn initial_checks(block: &Block) {
@@ -93,23 +135,40 @@ impl<
         // any initial checks
         Self::initial_checks(&block);
 
-        // execute transactions
+        // execute extrinsics
         let (header, extrinsics) = block.deconstruct();
-        extrinsics.into_iter().for_each(Self::apply_extrinsic_no_note);
-
-        // post-transactional book-keeping.
-        <system::Module<System>>::note_finished_extrinsics();
-        Finalisation::on_finalise(*header.number());
+        Self::execute_extrinsics_with_book_keeping(extrinsics, *header.number());
 
         // any final checks
         Self::final_checks(&header);
+    }
+
+    /// Execute all extrinsics like when executing a `block`, but with dropping intial and final checks.
+    pub fn execute_extrinsics_without_checks(block_number: NumberFor<Block>, extrinsics: Vec<Block::Extrinsic>) {
+        // Make the api happy, but maybe we should not set them at all.
+        let parent_hash = <Block::Header as Header>::Hashing::hash(b"parent_hash");
+        let extrinsics_root = <Block::Header as Header>::Hashing::hash(b"extrinsics_root");
+
+        Self::initialise_block_impl(&block_number, &parent_hash, &extrinsics_root);
+
+        // execute extrinsics
+        Self::execute_extrinsics_with_book_keeping(extrinsics, block_number);
+    }
+
+    /// Execute given extrinsics and take care of post-extrinsics book-keeping
+    fn execute_extrinsics_with_book_keeping(extrinsics: Vec<Block::Extrinsic>, block_number: NumberFor<Block>) {
+        extrinsics.into_iter().for_each(Self::apply_extrinsic_no_note);
+
+        // post-extrinsics book-keeping.
+        <system::Module<System>>::note_finished_extrinsics();
+        <AllModules as OnFinalise<System::BlockNumber>>::on_finalise(block_number);
     }
 
     /// Finalise the block - it is up the caller to ensure that all header fields are valid
     /// except state-root.
     pub fn finalise_block() -> System::Header {
         <system::Module<System>>::note_finished_extrinsics();
-        Finalisation::on_finalise(<system::Module<System>>::block_number());
+        <AllModules as OnFinalise<System::BlockNumber>>::on_finalise(<system::Module<System>>::block_number());
 
         // setup extrinsics
         <system::Module<System>>::derive_extrinsics();
@@ -122,33 +181,42 @@ impl<
     pub fn apply_extrinsic(uxt: Block::Extrinsic) -> result::Result<ApplyOutcome, ApplyError> {
         let encoded = uxt.encode();
         let encoded_len = encoded.len();
-        <system::Module<System>>::note_extrinsic(encoded);
-        match Self::apply_extrinsic_no_note_with_len(uxt, encoded_len) {
+        match Self::apply_extrinsic_with_len(uxt, encoded_len, Some(encoded)) {
             Ok(internal::ApplyOutcome::Success) => Ok(ApplyOutcome::Success),
             Ok(internal::ApplyOutcome::Fail(_)) => Ok(ApplyOutcome::Fail),
             Err(internal::ApplyError::CantPay) => Err(ApplyError::CantPay),
             Err(internal::ApplyError::BadSignature(_)) => Err(ApplyError::BadSignature),
             Err(internal::ApplyError::Stale) => Err(ApplyError::Stale),
             Err(internal::ApplyError::Future) => Err(ApplyError::Future),
+            Err(internal::ApplyError::FullBlock) => Err(ApplyError::FullBlock),
+            Err(internal::ApplyError::NotAllow) => Err(ApplyError::CantPay), // no other ApplyError for fee check failed
         }
     }
 
     /// Apply an extrinsic inside the block execution function.
     fn apply_extrinsic_no_note(uxt: Block::Extrinsic) {
         let l = uxt.encode().len();
-        match Self::apply_extrinsic_no_note_with_len(uxt, l) {
+        match Self::apply_extrinsic_with_len(uxt, l, None) {
             Ok(internal::ApplyOutcome::Success) => (),
             Ok(internal::ApplyOutcome::Fail(e)) => runtime_io::print(e),
             Err(internal::ApplyError::CantPay) => panic!("All extrinsics should have sender able to pay their fees"),
             Err(internal::ApplyError::BadSignature(_)) => panic!("All extrinsics should be properly signed"),
             Err(internal::ApplyError::Stale) | Err(internal::ApplyError::Future) => panic!("All extrinsics should have the correct nonce"),
+            Err(internal::ApplyError::FullBlock) => panic!("Extrinsics should not exceed block limit"),
+            Err(internal::ApplyError::NotAllow) => panic!("Extrinsics should not allow for this call"),
         }
     }
 
     /// Actually apply an extrinsic given its `encoded_len`; this doesn't note its hash.
-    fn apply_extrinsic_no_note_with_len(uxt: Block::Extrinsic, encoded_len: usize) -> result::Result<internal::ApplyOutcome, internal::ApplyError> {
+    fn apply_extrinsic_with_len(uxt: Block::Extrinsic, encoded_len: usize, to_note: Option<Vec<u8>>) -> result::Result<internal::ApplyOutcome, internal::ApplyError> {
         // Verify the signature is good.
         let xt = uxt.check(&Default::default()).map_err(internal::ApplyError::BadSignature)?;
+
+        // Check the size of the block if that extrinsic is applied.
+        if <system::Module<System>>::all_extrinsics_len() + encoded_len as u32 > internal::MAX_TRANSACTIONS_SIZE {
+            return Err(internal::ApplyError::FullBlock);
+        }
+
         let mut signed_extrinsic = false;
         if let (Some(sender), Some(index)) = (xt.sender(), xt.index()) {
             // check index
@@ -156,19 +224,20 @@ impl<
             if index != &expected_index {
                 return Err(
                     if index < &expected_index { internal::ApplyError::Stale } else { internal::ApplyError::Future }
-                );
-            }
+                ); }
+
             signed_extrinsic = true;
         }
 
         let acc = xt.acceleration();
-
+        // decode parameters
         let (f, s) = xt.deconstruct();
+
         if signed_extrinsic {
-            // Acceleration definitely exists for a signed extrinsic.
             let acc = acc.unwrap();
             let switch = <xfee_manager::Module<System>>::switch();
             if let Some(fee_power) = f.check_fee(switch) {
+                // pay any fees.
                 Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).map_err(|_| internal::ApplyError::CantPay)?;
 
                 // AUDIT: Under no circumstances may this function panic from here onwards.
@@ -176,16 +245,23 @@ impl<
                 // increment nonce in storage
                 <system::Module<System>>::inc_account_nonce(&s.clone().unwrap());
             } else {
-                return Err(internal::ApplyError::CantPay);
+                return Err(internal::ApplyError::NotAllow);
             }
         }
+        // make sure to `note_extrinsic` only after we know it's going to be executed
+        // to prevent it from leaking in storage.
+        if let Some(encoded) = to_note {
+            <system::Module<System>>::note_extrinsic(encoded);
+        }
 
-        // To do: Find pay from map according f.
-        // decode parameters and dispatch
+        // and dispatch
         let r = f.dispatch(s.into());
         <system::Module<System>>::note_applied_extrinsic(&r, encoded_len as u32);
 
-        r.map(|_| internal::ApplyOutcome::Success).or_else(|e| Ok(internal::ApplyOutcome::Fail(e)))
+        r.map(|_| internal::ApplyOutcome::Success).or_else(|e| match e {
+            runtime_primitives::BLOCK_FULL => Err(internal::ApplyError::FullBlock),
+            e => Ok(internal::ApplyOutcome::Fail(e))
+        })
     }
 
     fn final_checks(header: &System::Header) {
@@ -220,6 +296,7 @@ impl<
         const MISSING_SENDER: i8 = -20;
         const INVALID_INDEX: i8 = -10;
         const ACC_ERROR: i8 = -30;
+        const NOT_ALLOW: i8 = -1;
 
         let encoded_len = uxt.encode().len();
 
@@ -228,9 +305,9 @@ impl<
             Ok(xt) => xt,
             // An unknown account index implies that the transaction may yet become valid.
             Err("invalid account index") => return TransactionValidity::Unknown(INVALID_INDEX),
-            Err(runtime_primitives::BAD_SIGNATURE) => return TransactionValidity::Invalid(ApplyError::BadSignature as i8),
             // Technically a bad signature could also imply an out-of-date account index, but
             // that's more of an edge case.
+            Err(runtime_primitives::BAD_SIGNATURE) => return TransactionValidity::Invalid(ApplyError::BadSignature as i8),
             Err(_) => return TransactionValidity::Invalid(UNKNOWN_ERROR),
         };
 
@@ -240,7 +317,7 @@ impl<
                 if acc.is_zero() {
                     return TransactionValidity::Invalid(ACC_ERROR);
                 }
-            },
+            }
             None => return TransactionValidity::Invalid(ACC_ERROR),
         }
 
@@ -284,30 +361,34 @@ impl<
                 return valid;
             }
         } else {
-            return TransactionValidity::Invalid(ApplyError::CantPay as i8);
+            return TransactionValidity::Invalid(NOT_ALLOW as i8);
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::fee::CheckFee;
     use balances::Call;
-    use primitives::{Blake2Hasher, H256};
+    use hex_literal::{hex, hex_impl};
     use runtime_io::with_externalities;
     use runtime_primitives::testing::{Block, Digest, DigestItem, Header};
     use runtime_primitives::traits::{
-        self, Applyable, BlakeTwo256, Checkable, Header as HeaderT, Member,
+        self, Applyable, BlakeTwo256, Checkable, Header as HeaderT, IdentityLookup, Member,
     };
     use runtime_primitives::BuildStorage;
+    use substrate_primitives::{Blake2Hasher, H256};
+    use support::{impl_outer_event, impl_outer_origin, traits::Currency};
     use system;
-    use Acceleration;
+    //use Acceleration;
 
-    use codec::{Codec, Encode};
+    use crate::Runtime;
+    use parity_codec::Decode;
     use serde::{Serialize, Serializer};
     use std::{fmt, fmt::Debug};
 
-    impl_outer_origin! {
+    /*impl_outer_origin! {
         pub enum Origin for Runtime {
         }
     }
@@ -330,6 +411,7 @@ mod tests {
         type Hashing = BlakeTwo256;
         type Digest = Digest;
         type AccountId = u64;
+        type Lookup = IdentityLookup<u64>;
         type Header = Header;
         type Event = MetaEvent;
         type Log = DigestItem;
@@ -337,17 +419,15 @@ mod tests {
 
     impl balances::Trait for Runtime {
         type Balance = u64;
-        type AccountIndex = u64;
         type OnFreeBalanceZero = ();
-        type EnsureAccountLiquid = ();
+        type OnNewAccount = ();
         type Event = MetaEvent;
     }
 
     impl xfee_manager::Trait for Runtime {}
 
-    impl xsystem::Trait for Runtime {
-        const XSYSTEM_SET_POSITION: u32 = 3;
-    }
+    /*impl xsystem::Trait for Runtime {
+    }*/
 
     impl xaccounts::Trait for Runtime {
         type Event = MetaEvent;
@@ -358,7 +438,7 @@ mod tests {
             // ret fee_power,     total_fee = base_fee * fee_power + byte_fee * bytes
             Some(1 as u64)
         }
-    }
+    }*/
 
     // Snippets from sr_primitives::testing, fitting acceleration in.
     #[derive(PartialEq, Eq, Clone, Encode, Decode)]
@@ -388,11 +468,13 @@ mod tests {
             Ok(self)
         }
     }
+
     impl<Call: Codec + Sync + Send> traits::Extrinsic for XTestXt<Call> {
         fn is_signed(&self) -> Option<bool> {
             None
         }
     }
+
     impl<Call> Applyable for XTestXt<Call>
     where
         Call: 'static + Sized + Send + Sync + Clone + Eq + Codec + Debug,
@@ -410,6 +492,7 @@ mod tests {
             (self.2, self.0)
         }
     }
+
     impl<Call> xr_primitives::traits::Accelerable for XTestXt<Call>
     where
         Call: Member,
@@ -423,15 +506,17 @@ mod tests {
             Some(self.3)
         }
     }
+
     type TestXt = XTestXt<Call<Runtime>>;
 
-    type Executive = super::Executive<
+    /*type Executive = super::Executive<
         Runtime,
         Block<TestXt>,
         balances::ChainContext<Runtime>,
         fee_manager::Module<Runtime>,
         (),
-    >;
+    >;*/
+    use crate::Executive;
 
     #[test]
     fn balance_transfer_dispatch_works() {

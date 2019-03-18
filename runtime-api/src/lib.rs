@@ -2,10 +2,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use rstd::prelude::Vec;
+use sr_primitives::traits::AuthorityIdFor;
 
 use client::decl_runtime_apis;
 
-use chainx_primitives::{AccountId, Balance, SessionKey, Timestamp};
+use chainx_primitives::{AccountIdImpl, Balance, Timestamp};
 
 pub mod xassets_api {
     use super::*;
@@ -17,9 +18,9 @@ pub mod xassets_api {
         pub trait XAssetsApi {
             fn valid_assets() -> Vec<Token>;
             fn all_assets() -> Vec<(Asset, bool)>;
-            fn valid_assets_of(who: AccountId) -> Vec<(Token, CodecBTreeMap<AssetType, Balance>)>;
-            fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, Timestamp>>;
-            fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, Timestamp>>;
+            fn valid_assets_of(who: AccountIdImpl) -> Vec<(Token, CodecBTreeMap<AssetType, Balance>)>;
+            fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdImpl, Balance, Timestamp>>;
+            fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdImpl, Balance, Timestamp>>;
             fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result<(), Vec<u8>>;
             fn minimal_withdrawal_value(token: Token) -> Option<Balance>;
         }
@@ -32,10 +33,10 @@ pub mod xmining_api {
 
     decl_runtime_apis! {
         pub trait XMiningApi {
-            fn jackpot_accountid_for(who: AccountId) -> AccountId;
-            fn multi_jackpot_accountid_for(who: Vec<AccountId>) -> Vec<AccountId>;
-            fn token_jackpot_accountid_for(token: Token) -> AccountId;
-            fn multi_token_jackpot_accountid_for(token: Vec<Token>) -> Vec<AccountId>;
+            fn jackpot_accountid_for(who: AccountIdImpl) -> AccountIdImpl;
+            fn multi_jackpot_accountid_for(who: Vec<AccountIdImpl>) -> Vec<AccountIdImpl>;
+            fn token_jackpot_accountid_for(token: Token) -> AccountIdImpl;
+            fn multi_token_jackpot_accountid_for(token: Vec<Token>) -> Vec<AccountIdImpl>;
             fn asset_power(token: Token) -> Option<Balance>;
         }
     }
@@ -67,7 +68,7 @@ pub mod xsession_api {
 
     decl_runtime_apis! {
         pub trait XSessionApi {
-            fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<SessionKey>)>;
+            fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountIdImpl, Option<AuthorityIdFor<Block>>)>;
         }
     }
 }

@@ -1,4 +1,4 @@
-use parity_codec_derive::{Decode, Encode};
+use parity_codec::{Decode, Encode};
 use rstd::prelude::*;
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
