@@ -166,7 +166,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     GenesisConfig {
         consensus: Some(ConsensusConfig {
-            code: include_bytes!("./chainx_runtime_wasm.compact.wasm").to_vec(),
+            code: include_bytes!("./chainx_runtime.compact.wasm").to_vec(),
             authorities: endowed
                 .iter()
                 .cloned()

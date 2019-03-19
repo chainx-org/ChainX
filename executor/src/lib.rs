@@ -8,4 +8,4 @@ pub use substrate_executor::NativeExecutor;
 use substrate_executor::native_executor_instance;
 
 native_executor_instance!(pub Executor, chainx_runtime::api::dispatch, chainx_runtime::native_version,
-  include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime_wasm.compact.wasm"));
+  include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm"));
