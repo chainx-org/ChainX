@@ -1,10 +1,12 @@
-use super::*;
-use rustc_hex::ToHex;
-use serde_derive::{Deserialize, Serialize};
 use std::convert::From;
 
+use rustc_hex::ToHex;
+use serde_derive::{Deserialize, Serialize};
+
+use super::*;
+
 // utils
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PageData<T> {
     pub page_total: u32,
@@ -32,22 +34,6 @@ pub struct TotalAssetInfo {
     details: CodecBTreeMap<AssetType, Balance>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Revocation {
-    pub block_numer: BlockNumber,
-    pub value: Balance,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NominationRecord {
-    pub nomination: Balance,
-    pub last_vote_weight: u64,
-    pub last_vote_weight_update: BlockNumber,
-    pub revocations: Vec<Revocation>,
-}
-
 impl TotalAssetInfo {
     pub fn new(
         asset: Asset,
@@ -66,12 +52,28 @@ impl TotalAssetInfo {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Revocation {
+    pub block_number: BlockNumber,
+    pub value: Balance,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NominationRecord {
+    pub nomination: Balance,
+    pub last_vote_weight: u64,
+    pub last_vote_weight_update: BlockNumber,
+    pub revocations: Vec<Revocation>,
+}
+
 /// Intention info
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionInfo {
     /// account id of intention
-    pub account: AccountId,
+    pub account: AccountIdForRpc,
     /// name of intention
     pub name: String,
     /// url
@@ -85,13 +87,13 @@ pub struct IntentionInfo {
     /// is trustee
     pub is_trustee: bool,
     /// session key for block authoring
-    pub session_key: AccountId,
+    pub session_key: AccountIdForRpc,
     /// how much has intention voted for itself
     pub self_vote: Balance,
     /// jackpot
     pub jackpot: Balance,
     /// jackpot address
-    pub jackpot_address: AccountId,
+    pub jackpot_address: AccountIdForRpc,
     /// total nomination from all nominators
     pub total_nomination: Balance,
     /// vote weight at last update
@@ -157,7 +159,7 @@ pub struct PseduIntentionInfo {
     /// jackpot
     pub jackpot: Balance,
     /// jackpot address
-    pub jackpot_address: AccountId,
+    pub jackpot_address: AccountIdForRpc,
     /// vote weight at last update
     pub last_total_deposit_weight: u64,
     /// last update time of vote weight
@@ -197,7 +199,7 @@ pub struct DepositInfo {
     /// token id
     pub token: String,
     /// accountid
-    pub accountid: Option<AccountId>,
+    pub accountid: Option<AccountIdForRpc>,
     /// btc-address
     pub address: String,
     /// OP_RETURN
@@ -225,7 +227,7 @@ impl From<RecordInfo<AccountId, Balance, Timestamp>> for DepositInfo {
             accountid: if record.who == Default::default() {
                 None
             } else {
-                Some(record.who)
+                Some(record.who.into())
             },
             address: String::from_utf8_lossy(&record.addr).into_owned(),
             memo: if record.ext.len() > 2
@@ -254,7 +256,7 @@ pub struct WithdrawInfo {
     /// token id
     pub token: String,
     /// accountid
-    pub accountid: AccountId,
+    pub accountid: AccountIdForRpc,
     /// btc-address
     pub address: String,
     /// withdraw status
@@ -271,7 +273,7 @@ impl From<RecordInfo<AccountId, Balance, Timestamp>> for WithdrawInfo {
             txid: format!("0x{:}", record.txid.to_hex::<String>()),
             balance: record.balance,
             token: String::from_utf8_lossy(&record.token).into_owned(),
-            accountid: record.who,
+            accountid: record.who.into(),
             address: String::from_utf8_lossy(&record.addr).into_owned(),
             status: record.state,
             memo: String::from_utf8_lossy(&record.ext).into_owned(),
@@ -288,4 +290,60 @@ pub struct WithdrawTxInfo {
     pub redeem_script: String,
     /// sign_status
     pub sign_status: bool,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderPropInfo<Pair, AccountId, Amount, Price, BlockNumber>(
+    AccountId,
+    Pair,
+    OrderDirection,
+    Amount,
+    Price,
+    ID,
+    OrderType,
+    BlockNumber,
+);
+
+impl From<OrderProperty<TradingPairIndex, AccountId, Balance, Balance, BlockNumber>>
+    for OrderPropInfo<TradingPairIndex, AccountIdForRpc, Balance, Balance, BlockNumber>
+{
+    fn from(
+        prop: OrderProperty<TradingPairIndex, AccountId, Balance, Balance, BlockNumber>,
+    ) -> Self {
+        OrderPropInfo(
+            prop.submitter().into(),
+            prop.pair(),
+            prop.direction(),
+            prop.amount(),
+            prop.price(),
+            prop.index(),
+            prop.order_type(),
+            prop.created_at(),
+        )
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderInfo {
+    pub props: OrderPropInfo<TradingPairIndex, AccountIdForRpc, Balance, Balance, BlockNumber>,
+    pub status: OrderStatus,
+    pub remaining: Balance,
+    pub fill_index: Vec<ID>,
+    pub already_filled: Balance,
+    pub last_update_at: BlockNumber,
+}
+
+impl From<OrderDetails<Runtime>> for OrderInfo {
+    fn from(order: OrderDetails<Runtime>) -> Self {
+        OrderInfo {
+            props: order.props.into(),
+            status: order.status,
+            remaining: order.remaining,
+            fill_index: order.fill_index,
+            already_filled: order.already_filled,
+            last_update_at: order.last_update_at,
+        }
+    }
 }

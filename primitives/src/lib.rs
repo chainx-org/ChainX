@@ -12,16 +12,18 @@ use runtime_primitives::{
 
 /// Alias to 512-bit hash when used in the context of a session signature on the chain.
 pub type AuthoritySignature = primitives::ed25519::Signature;
-
 /// The Ed25519 pub key of an session that belongs to an authority of the chain. This is
 /// exactly equivalent to what the substrate calls an "authority".
 pub type AuthorityId = <AuthoritySignature as Verify>::Signer;
 
 pub type Signature = primitives::ed25519::Signature;
-/// Alias to Ed25519 pubkey that identifies an account on the relay chain.
+/// Alias to Ed25519 pub key that identifies an account on the relay chain.
 pub type AccountId = <Signature as Verify>::Signer;
-/// the accountid impl must much to Signature
-pub type AccountIdImpl = primitives::ed25519::Public;
+
+/// The account id impl for runtime api, is same as AccountId.
+pub type AccountIdForApi = primitives::ed25519::Public;
+/// The account id impl for rpc.
+pub type AccountIdForRpc = primitives::H256;
 
 /// A hash of some data used by the relay chain.
 pub type Hash = primitives::H256;

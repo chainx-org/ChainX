@@ -28,7 +28,7 @@ use sr_primitives::{
     traits::{Block as BlockT, NumberFor},
 };
 
-use chainx_primitives::{AccountId, Balance, BlockNumber};
+use chainx_primitives::{AccountIdForRpc, Balance, BlockNumber};
 
 /// Maximal payload accepted by RPC servers
 const MAX_PAYLOAD: usize = 15 * 1024 * 1024;
@@ -63,7 +63,7 @@ where
     Y: apis::system::SystemApi<Block::Hash, NumberFor<Block>>,
     X: apis::chainx::ChainXApi<
         NumberFor<Block>,
-        AccountId,
+        AccountIdForRpc,
         Balance,
         BlockNumber,
         SignedBlock<Block>,

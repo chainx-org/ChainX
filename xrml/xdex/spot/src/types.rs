@@ -263,7 +263,7 @@ impl<Pair: Clone, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber: Clon
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Order<Pair, AccountId, Amount, Price, BlockNumber> {
-    props: OrderProperty<Pair, AccountId, Amount, Price, BlockNumber>,
+    pub props: OrderProperty<Pair, AccountId, Amount, Price, BlockNumber>,
 
     pub status: OrderStatus,
     pub remaining: Amount,   // remaining amount, measured by counter currency

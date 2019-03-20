@@ -13,9 +13,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
-#![recursion_limit = "128"]
+
 //! Substrate RPC interfaces.
-#![feature(custom_attribute)]
+#![recursion_limit = "128"]
 //#![warn(missing_docs)]
 
 mod errors;
