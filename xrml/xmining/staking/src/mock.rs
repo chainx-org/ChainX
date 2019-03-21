@@ -1,18 +1,20 @@
 // Copyright 2018 Chainpool.
 //! Test utilities
-
 #![cfg(test)]
 
 use super::*;
 use crate::{GenesisConfig, Module, Trait};
 use primitives::testing::{ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId};
+use primitives::StorageOverlay;
 use primitives::{traits::BlakeTwo256, BuildStorage};
 use runtime_io;
+use runtime_io::with_externalities;
+use runtime_support::impl_outer_origin;
 use substrate_primitives::{Blake2Hasher, H256};
 use xaccounts::IntentionJackpotAccountIdFor;
+use xassets::assetdef::{Asset, Chain, ChainT, Token};
+use xsystem::{Validator, ValidatorList};
 use {balances, consensus, indices, session, system, timestamp, xassets};
-
-use runtime_supprt::impl_outer_origin;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -49,7 +51,6 @@ impl balances::Trait for Test {
     type Balance = u64;
     type OnNewAccount = Indices;
     type OnFreeBalanceZero = ();
-    type EnsureAccountLiquid = ();
     type Event = ();
 }
 impl xaccounts::Trait for Test {
@@ -67,7 +68,23 @@ impl xassets::Trait for Test {
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
 }
-impl xsystem::Trait for Test {}
+pub struct DummyDetermineValidatorList;
+impl ValidatorList<u64> for DummyDetermineValidatorList {
+    fn validator_list() -> Vec<u64> {
+        vec![]
+    }
+}
+pub struct DummyDetermineValidator;
+impl Validator<u64> for DummyDetermineValidator {
+    fn get_validator_by_name(_name: &[u8]) -> Option<u64> {
+        Some(0)
+    }
+}
+
+impl xsystem::Trait for Test {
+    type ValidatorList = DummyDetermineValidatorList;
+    type Validator = DummyDetermineValidator;
+}
 impl timestamp::Trait for Test {
     type Moment = u64;
     type OnTimestampSet = ();
@@ -121,8 +138,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     t.extend(
         balances::GenesisConfig::<Test> {
             balances: vec![(1, 10), (2, 20), (3, 30), (4, 40)],
-            transaction_base_fee: 0,
-            transaction_byte_fee: 0,
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
@@ -134,14 +149,14 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     );
     t.extend(
         xassets::GenesisConfig::<Test> {
-            pcx: (b"PolkadotChainX".to_vec(), 3, b"PCX".to_vec()),
             memo_len: 128,
-            asset_list: vec![],
+            _genesis_phantom_data: Default::default(),
         }
         .build_storage()
         .unwrap()
         .0,
     );
+
     let pcx_precision = 8;
     let apply_prec = |x| x * 10_u64.pow(pcx_precision as u32);
     let full_endowed = vec![
@@ -181,36 +196,42 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     t.extend(
         GenesisConfig::<Test> {
             initial_reward: apply_prec(50),
-            intentions: full_endowed
-                .clone()
-                .into_iter()
-                .map(|(who, value, name, url, _, _)| (who.into(), value, name, url))
-                .collect(),
             current_era: 0,
-            validator_count: 2,
-            minimum_validator_count: 0,
+            validator_count: 8,
+            minimum_validator_count: 4,
             trustee_count: 8,
             minimum_trustee_count: 4,
             bonding_duration: 1,
             intention_bonding_duration: 10,
             sessions_per_era: 1,
-            council_address: 10,
             sessions_per_epoch: 10,
-            penalty: 10,
+            minimum_penalty: 10_000_000, // 0.1 PCX by default
             validator_stake_threshold: 1,
-            trustee_intentions: full_endowed
-                .into_iter()
-                .map(|(who, _, _, _, hot_entity, cold_entity)| {
-                    (who.into(), hot_entity, cold_entity)
-                })
-                .collect(),
-            team_address: 100,
         }
         .build_storage()
         .unwrap()
         .0,
     );
-    runtime_io::TestExternalities::new(t)
+    let mut init: runtime_io::TestExternalities<Blake2Hasher> = t.into();
+    let pcx_token_name = b"PolkadotChainX".to_vec();
+    let pcx_desc = b"PCX onchain token".to_vec();
+    with_externalities(&mut init, || {
+        // xassets
+        let chainx: Token = <XAssets as ChainT>::TOKEN.to_vec();
+
+        let pcx = Asset::new(
+            chainx.clone(),
+            pcx_token_name,
+            Chain::ChainX,
+            pcx_precision,
+            pcx_desc,
+        )
+        .unwrap();
+        XAssets::bootstrap_register_asset(pcx, true, false, Zero::zero()).unwrap();
+        XAssets::bootstrap_set_asset_balance(&6, &chainx, xassets::AssetType::Free, 30);
+    });
+    let init: StorageOverlay = init.into();
+    runtime_io::TestExternalities::new(init)
 }
 
 pub type Indices = indices::Module<Test>;

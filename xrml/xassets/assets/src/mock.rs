@@ -35,7 +35,6 @@ impl balances::Trait for Test {
     type Balance = u64;
     type OnFreeBalanceZero = ();
     type OnNewAccount = Indices;
-    type EnsureAccountLiquid = ();
     type Event = ();
 }
 
@@ -69,11 +68,10 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     r.extend(
         balances::GenesisConfig::<Test> {
             balances: vec![(1, 1000), (2, 510), (3, 1000)],
-            transaction_base_fee: 0,
-            transaction_byte_fee: 0,
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
+            vesting: vec![],
         }
         .build_storage()
         .unwrap()
@@ -98,11 +96,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(
         GenesisConfig::<Test> {
-            pcx: (b"PlokadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
             memo_len: 128,
-            // asset, is_psedu_intention, init for account
-            // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
-            asset_list: vec![(btc_asset, true, vec![(3, 100)])],
+            _genesis_phantom_data: Default::default(),
         }
         .build_storage()
         .unwrap()
@@ -121,11 +116,10 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     r.extend(
         balances::GenesisConfig::<Test> {
             balances: vec![(1, 1000), (2, 510), (3, 1000)],
-            transaction_base_fee: 0,
-            transaction_byte_fee: 0,
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
+            vesting: vec![],
         }
         .build_storage()
         .unwrap()
@@ -143,11 +137,8 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     r.extend(
         GenesisConfig::<Test> {
-            pcx: (b"PolkadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
             memo_len: 128,
-            // asset, is_psedu_intention, init for account
-            // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
-            asset_list: vec![(btc_asset, true, vec![(3, 100)])],
+            _genesis_phantom_data: Default::default(),
         }
         .build_storage()
         .unwrap()

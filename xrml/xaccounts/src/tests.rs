@@ -12,7 +12,7 @@ use runtime_io::with_externalities;
 use substrate_primitives::{Blake2Hasher, H256};
 use support::impl_outer_origin;
 use support::{assert_noop, assert_ok};
-use {balances, consensus, session, system, timestamp, Module, Trait};
+use {balances, consensus, indices, session, system, timestamp, Module, Trait};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -40,11 +40,16 @@ impl system::Trait for Test {
     type Event = ();
     type Log = DigestItem;
 }
+impl indices::Trait for Test {
+    type AccountIndex = u32;
+    type IsDeadAccount = Balances;
+    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
+    type Event = ();
+}
 impl balances::Trait for Test {
     type Balance = u64;
+    type OnNewAccount = Indices;
     type OnFreeBalanceZero = ();
-    type OnNewAccount = ();
-    type EnsureAccountLiquid = ();
     type Event = ();
 }
 impl timestamp::Trait for Test {
@@ -87,11 +92,13 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         session::GenesisConfig::<Test> {
             session_length: 1,
             validators: vec![10, 20],
+            keys: vec![],
         }
         .build_storage()
         .unwrap()
         .0,
     );
+
     t.extend(
         balances::GenesisConfig::<Test> {
             balances: vec![(1, 10), (2, 20), (3, 30), (4, 40), (10, 100), (20, 100)],
@@ -130,3 +137,6 @@ fn issue_should_work() {
         //        );
     });
 }
+
+pub type Indices = indices::Module<Test>;
+pub type Balances = balances::Module<Test>;

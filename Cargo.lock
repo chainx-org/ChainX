@@ -4918,6 +4918,7 @@ dependencies = [
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-indices 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-session 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",

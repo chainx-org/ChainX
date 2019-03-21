@@ -75,7 +75,10 @@ fn test_register() {
             desc,
         )
         .unwrap();
-        assert_eq!(XAssets::register_asset(asset.clone(), false, 0), Ok(()));
+        assert_eq!(
+            XAssets::register_asset(asset.clone(), true, false, Zero::zero()),
+            Ok(())
+        );
 
         let btc_token = b"BTC".to_vec(); //b"BTC".to_vec();
 
@@ -87,7 +90,7 @@ fn test_register() {
         assert_eq!(XAssets::total_asset_balance(&token, AssetType::Free), 0);
         assert_eq!(XAssets::asset_info(&token).unwrap().0.precision(), 4);
         assert_noop!(
-            XAssets::register_asset(asset, false, 0),
+            XAssets::register_asset(asset, true, false, Zero::zero()),
             "already has this token"
         );
     })
@@ -109,7 +112,10 @@ fn test_remove() {
             desc,
         )
         .unwrap();
-        assert_eq!(XAssets::register_asset(asset.clone(), false, 0), Ok(()));
+        assert_eq!(
+            XAssets::register_asset(asset.clone(), true, false, Zero::zero()),
+            Ok(())
+        );
 
         // remove it
         assert_eq!(XAssets::revoke_asset(token.clone()), Ok(()));
@@ -117,7 +123,7 @@ fn test_remove() {
 
         // re-register, but must be failed
         assert_noop!(
-            XAssets::register_asset(asset, false, 0),
+            XAssets::register_asset(asset, true, false, Zero::zero()),
             "already has this token"
         );
     })
