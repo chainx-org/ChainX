@@ -3,54 +3,107 @@ pub mod handler;
 pub mod utils;
 mod validator;
 
-use crate::rstd::prelude::*;
-use crate::rstd::result::Result as StdResult;
+use rstd::prelude::*;
+use rstd::result::Result as StdResult;
 
-use crate::btc_chain::Transaction;
-use crate::btc_keys::Address;
-use crate::btc_primitives::hash::H256;
-use crate::btc_script::{builder, script::Script, Opcode};
-use crate::crypto::dhash160;
+use runtime_primitives::traits::As;
+use support::{dispatch::Result, StorageMap};
 
-use crate::runtime_primitives::traits::As;
-use crate::support::{dispatch::Result, StorageMap};
+use btc_chain::Transaction;
+use btc_crypto::dhash160;
+use btc_keys::{Address, Type};
+use btc_primitives::bytes::Bytes;
+use btc_primitives::hash::H256;
+use btc_script::{builder, script::Script, Opcode};
 
-use crate::types::{RelayTx, TxType};
-use crate::{xaccounts, xrecords, InputAddrFor, Module, RawEvent, Trait, TxFor};
+use xaccounts;
+use xassets::Chain;
+use xrecords;
+
+use crate::types::{RelayTx, TrusteeAddrInfo, TxType};
+use crate::{InputAddrFor, Module, RawEvent, Trait, TxFor};
 
 use self::handler::TxHandler;
 use self::utils::{
-    get_trustee_address, inspect_address_from_transaction, is_key, parse_addr_from_script,
+    equal_addr, get_hot_trustee_address, get_networkid, get_trustee_address_pair,
+    inspect_address_from_transaction, parse_addr_from_script,
 };
 pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
 
 #[cfg(feature = "std")]
 use crate::hash_strip;
-use crate::xsupport::{debug, error};
+use xsupport::{debug, error};
 
-pub fn detect_transaction_type<T: Trait>(tx: &RelayTx) -> StdResult<TxType, &'static str> {
-    // detect withdraw
-    // only use first input
-    let outpoint = &tx.raw.inputs[0].previous_output;
-    let send_address = match inspect_address_from_transaction::<T>(&tx.previous_raw, outpoint) {
+/// parse tx's inputs/outputs into Option<Address>
+/// e.g
+/// notice the relay tx only has first input
+///        _________
+///  addr |        | Some(addr)
+///       |   tx   | Some(addr)
+///       |________| None
+/// then judge type
+pub fn detect_transaction_type<T: Trait>(relay_tx: &RelayTx) -> StdResult<TxType, &'static str> {
+    let current_session_number = xaccounts::Module::<T>::current_session_number(Chain::Bitcoin);
+    let (hot_addr, cold_addr) = get_trustee_address_pair::<T>(current_session_number)?;
+    // parse input addr
+    let outpoint = &relay_tx.raw.inputs[0].previous_output;
+    let input_addr = match inspect_address_from_transaction::<T>(&relay_tx.previous_raw, outpoint) {
         Some(a) => a,
         None => return Err("Inspect address failed in this transaction"),
     };
-
-    let trustee_addr = get_trustee_address::<T>()?;
-
-    if send_address.hash == trustee_addr.hash {
-        return Ok(TxType::Withdraw);
-    }
-
-    // detect deposit
-    for output in tx.raw.outputs.iter() {
-        if is_key::<T>(&output.script_pubkey.to_vec().into(), &trustee_addr) {
+    // parse output addr
+    let outputs: Vec<Option<Address>> = relay_tx
+        .raw
+        .outputs
+        .iter()
+        .map(|out| parse_addr_from_script::<T>(&out.script_pubkey.to_vec().into()))
+        .collect();
+    // ---------- parse finish
+    // judge input has trustee addr
+    let input_is_trustee =
+        equal_addr(&input_addr, &hot_addr) || equal_addr(&input_addr, &cold_addr);
+    // judge if all outputs contains hot/cold trustee
+    let all_outputs_trustee = outputs.iter().all(|item| {
+        if let Some(addr) = item {
+            if equal_addr(addr, &hot_addr) || equal_addr(addr, &cold_addr) {
+                return true;
+            }
+        }
+        false
+    });
+    // judge tx type
+    if !input_is_trustee {
+        if all_outputs_trustee {
+            return Ok(TxType::HotAndCold);
+        }
+        // outputs contains other addr, it's user addr, thus it's a withdrawal
+        return Ok(TxType::Withdrawal);
+    } else {
+        let last_number = Module::<T>::last_trustee_session_number();
+        if let Ok((old_hot_addr, old_cold_addr)) = get_trustee_address_pair::<T>(last_number) {
+            let input_is_old_trustee =
+                equal_addr(&input_addr, &old_hot_addr) || equal_addr(&input_addr, &old_cold_addr);
+            if input_is_old_trustee && all_outputs_trustee {
+                // input should from old trustee addr, outputs should all be current trustee addrs
+                return Ok(TxType::TrusteeTransition);
+            }
+        }
+        // any output contains hot trustee addr
+        let check_outputs = outputs.iter().any(|item| {
+            if let Some(addr) = item {
+                // only hot addr for deposit
+                if equal_addr(addr, &hot_addr) {
+                    return true;
+                }
+            }
+            false
+        });
+        if check_outputs {
             return Ok(TxType::Deposit);
         }
     }
-    error!("[detect_transaction_type]|not find trustee_addr in tx outputs|outputs:{:?}|trustee_addr:{:?}", tx.raw.outputs, trustee_addr);
-    Err("Irrelevant tx")
+
+    Ok(TxType::Irrelevance)
 }
 
 pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
@@ -70,8 +123,11 @@ pub fn remove_unused_tx<T: Trait>(txid: &H256) {
     InputAddrFor::<T>::remove(txid);
 }
 
-pub fn create_multi_address<T: Trait>(pubkeys: Vec<Vec<u8>>) -> Option<(Address, Script)> {
-    let (sig_num, trustee_num) = get_sig_num::<T>();
+pub fn create_multi_address<T: Trait>(
+    pubkeys: &Vec<Vec<u8>>,
+    sig_num: u32,
+    trustee_num: u32,
+) -> Option<TrusteeAddrInfo> {
     let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + sig_num as u8 - 1) {
         Some(o) => o,
         None => return None,
@@ -89,18 +145,17 @@ pub fn create_multi_address<T: Trait>(pubkeys: Vec<Vec<u8>>) -> Option<(Address,
         .push_opcode(opcode)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
-    let network_id = Module::<T>::network_id(); // <NetworkId<T>>::get();
-    let net = if network_id == 1 {
-        keys::Network::Testnet
-    } else {
-        keys::Network::Mainnet
-    };
+
     let addr = Address {
-        kind: keys::Type::P2SH,
-        network: net,
+        kind: Type::P2SH,
+        network: get_networkid::<T>(),
         hash: dhash160(&redeem_script),
     };
-    Some((addr, redeem_script))
+    let script_bytes: Bytes = redeem_script.into();
+    Some(TrusteeAddrInfo {
+        addr,
+        redeem_script: script_bytes.into(),
+    })
 }
 
 /// Check that the cash withdrawal transaction is correct
@@ -108,20 +163,19 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
     match Module::<T>::withdrawal_proposal() {
         Some(_) => Err("Unfinished withdrawal transaction"),
         None => {
-            let trustee_address: Address = get_trustee_address::<T>()?;
             // withdrawal addr list for account withdrawal application
             let mut appl_withdrawal_list = Vec::new();
             for withdraw_index in withdrawal_id_list.iter() {
-                if let Some(record) = xrecords::Module::<T>::application_map(withdraw_index) {
-                    // record.data.addr() is base58
-                    // verify btc address would convert a base58 addr to Address
-                    let addr: Address = Module::<T>::verify_btc_address(&record.data.addr())
-                        .map_err(|_| "Parse addr error")?;
-                    appl_withdrawal_list.push((addr, record.data.balance().as_() as u64));
-                } else {
-                    return Err("Withdraw id not in withdrawal ApplicationMap record");
-                }
+                let record = xrecords::Module::<T>::application_map(withdraw_index)
+                    .ok_or("Withdraw id not in withdrawal ApplicationMap record")?;
+                // record.data.addr() is base58
+                // verify btc address would convert a base58 addr to Address
+                let addr: Address = Module::<T>::verify_btc_address(&record.data.addr())
+                    .map_err(|_| "Parse addr error")?;
+                appl_withdrawal_list.push((addr, record.data.balance().as_() as u64));
             }
+            // TODO allow cold address in future, means withdrawal direct from cold address
+            let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
             // withdrawal addr list for tx outputs
             let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
             let mut tx_withdraw_list = Vec::new();
@@ -129,8 +183,7 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
                 let script: Script = output.script_pubkey.clone().into();
                 let addr =
                     parse_addr_from_script::<T>(&script).ok_or("not found addr in this out")?;
-
-                if addr.hash != trustee_address.hash {
+                if addr.hash != hot_trustee_address.hash {
                     // expect change to trustee_addr output
                     tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));
                 }
@@ -159,26 +212,6 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
             Ok(())
         }
     }
-}
-
-/// Get the required number of signatures
-/// sig_num: Number of signatures required
-/// trustee_num: Total number of multiple signatures
-/// NOTE: Signature ratio greater than 2/3
-pub fn get_sig_num<T: Trait>() -> (usize, usize) {
-    let trustee_list = xaccounts::Module::<T>::trustee_intentions();
-    let trustee_num = trustee_list.len();
-    let sig_num = match 2_usize.checked_mul(trustee_num) {
-        Some(m) => {
-            if m % 3 == 0 {
-                m / 3
-            } else {
-                m / 3 + 1
-            }
-        }
-        None => 0,
-    };
-    (sig_num, trustee_num)
 }
 
 /// Update the signature status of trustee

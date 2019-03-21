@@ -6,13 +6,14 @@ use substrate_primitives::{crypto::UncheckedInto, ed25519::Public as AuthorityId
 
 use chainx_primitives::AccountId;
 use chainx_runtime::{
+    xaccounts::TrusteeInfoConfig,
     xassets::{self, Asset, Chain, ChainT},
     xbitcoin::{self, Params},
     Runtime,
 };
 use chainx_runtime::{
-    ConsensusConfig, GenesisConfig, SessionConfig, SudoConfig, TimestampConfig, XAssetsConfig,
-    XAssetsProcessConfig, XBootstrapConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
+    ConsensusConfig, GenesisConfig, SessionConfig, SudoConfig, TimestampConfig, XAccountsConfig,
+    XAssetsConfig, XAssetsProcessConfig, XBootstrapConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
     XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
 };
 
@@ -203,6 +204,16 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             transaction_base_fee: 10000,
             transaction_byte_fee: 100,
         }),
+        xaccounts: Some(XAccountsConfig {
+            trustee_info_config: vec![(
+                Chain::Bitcoin,
+                TrusteeInfoConfig {
+                    min_trustee_count: 4,
+                    max_trustee_count: 15,
+                },
+            )],
+            _genesis_phantom_data: Default::default(),
+        }),
         xassets: Some(XAssetsConfig {
             memo_len: 128,
             _genesis_phantom_data: Default::default(),
@@ -215,8 +226,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             initial_reward: apply_prec(50.0),
             validator_count: 30,
             minimum_validator_count: 4,
-            trustee_count: 4,
-            minimum_trustee_count: 4,
             sessions_per_era,
             sessions_per_epoch,
             bonding_duration,

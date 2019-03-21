@@ -13,6 +13,8 @@ use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use support::storage::generator::{StorageMap, StorageValue};
 use xassets::ChainT;
 
+use btc_ser::serialize as btc_serialize;
+
 use runtime_api::{
     xassets_api::XAssetsApi, xfee_api::XFeeApi, xmining_api::XMiningApi, xspot_api::XSpotApi,
 };
@@ -248,10 +250,21 @@ where
             .expect("Validators can't be empty");
         let validators: Vec<AccountId> = validators.into_iter().map(|(who, _)| who).collect();
 
-        let key = <xaccounts::TrusteeIntentions<Runtime>>::key();
-
-        // FIXME trustees should not empty
-        let trustees = Self::pickout::<Vec<AccountId>>(&state, &key)?.unwrap_or_default();
+        // get all bridge trustee list
+        let mut all_trustees: BTreeMap<Chain, Vec<AccountId>> = BTreeMap::new();
+        for chain in Chain::iterator() {
+            let (info, _) = Self::current_trustee_session_info(&state, *chain)?.unwrap_or_default();
+            all_trustees.insert(*chain, info.trustee_list);
+        }
+        let is_trustee = |who: &AccountId| -> Vec<Chain> {
+            let mut ret = vec![];
+            for (chain, trustees) in all_trustees.iter() {
+                if trustees.contains(who) {
+                    ret.push(*chain);
+                }
+            }
+            ret
+        };
 
         let key = <xstaking::Intentions<Runtime>>::key();
 
@@ -305,7 +318,7 @@ where
                 }
 
                 info.is_validator = validators.iter().any(|i| i == &intention);
-                info.is_trustee = trustees.iter().any(|i| i == &intention);
+                info.is_trustee = is_trustee(&intention);
                 info.account = intention.into();
 
                 intention_info.push(info);
@@ -637,42 +650,51 @@ where
         }
     }
 
-    fn trustee_address(&self, chain: Chain) -> Result<Option<(String, String)>> {
+    fn trustee_session_info(&self, chain: Chain) -> Result<Option<CurrentTrusteeSessionInfo>> {
         let state = self.best_state()?;
-        let key = <xaccounts::TrusteeAddress<Runtime>>::key_for(&chain);
-        match Self::pickout::<xaccounts::TrusteeAddressPair>(&state, &key)? {
-            Some(a) => match chain {
+        let info_option = Self::current_trustee_session_info(&state, chain)?;
+        Ok(info_option
+            .map(|(info, session_number)| match chain {
                 Chain::Bitcoin => {
-                    let hot_addr =
-                        Address::from_layout(a.hot_address.as_slice()).unwrap_or_default();
+                    let hot_addr_info: BtcTrusteeAddrInfo =
+                        Decode::decode(&mut info.hot_address.as_slice()).unwrap_or_default();
+                    let cold_addr_info: BtcTrusteeAddrInfo =
+                        Decode::decode(&mut info.cold_address.as_slice()).unwrap_or_default();
+                    let hot_addr = hot_addr_info.addr;
                     let hot_str = hot_addr.to_string();
-                    let cold_address =
-                        Address::from_layout(a.cold_address.as_slice()).unwrap_or_default();
+                    let cold_address = cold_addr_info.addr;
                     let cold_str = cold_address.to_string();
-                    Ok(Some((hot_str, cold_str)))
+                    Some(CurrentTrusteeSessionInfo {
+                        session_number,
+                        trustee_list: info
+                            .trustee_list
+                            .into_iter()
+                            .map(|accountid| accountid.into())
+                            .collect(),
+                        hot_entity: hot_str,
+                        cold_entity: cold_str,
+                    })
                 }
-                _ => Ok(None),
-            },
-            None => Ok(None),
-        }
+                _ => None,
+            })
+            .and_then(|result| result))
     }
 
-    fn trustee_info(&self, who: AccountIdForRpc) -> Result<Vec<TrusteeInfo>> {
+    fn trustee_info_for_accountid(&self, who: AccountIdForRpc) -> Result<Vec<TrusteeInfo>> {
+        let who: AccountId = who.unchecked_into();
         let state = self.best_state()?;
         let mut trustee_info = Vec::new();
 
         for chain in Chain::iterator() {
-            let key = <xaccounts::TrusteeIntentionPropertiesOf<Runtime>>::key_for(&(
-                who.clone().unchecked_into(),
-                *chain,
-            ));
+            let key =
+                <xaccounts::TrusteeIntentionPropertiesOf<Runtime>>::key_for(&(who.clone(), *chain));
 
             if let Some(props) = Self::pickout::<TrusteeIntentionProps>(&state, &key)? {
                 let hot_entity = match props.hot_entity {
-                    TrusteeEntity::Bitcoin(pubkey) => pubkey.to_hex::<String>(),
+                    TrusteeEntity::Bitcoin(pubkey) => pubkey.to_hex(),
                 };
                 let cold_entity = match props.cold_entity {
-                    TrusteeEntity::Bitcoin(pubkey) => pubkey.to_hex::<String>(),
+                    TrusteeEntity::Bitcoin(pubkey) => pubkey.to_hex(),
                 };
 
                 trustee_info.push(TrusteeInfo::new(*chain, hot_entity, cold_entity))
@@ -709,31 +731,31 @@ where
 
     fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>> {
         let state = self.best_state()?;
+        let (trustee_session_info, _) =
+            Self::current_trustee_session_info(&state, chain)?.unwrap_or_default();
         match chain {
             Chain::Bitcoin => {
-                let key = <xbitcoin::TrusteeRedeemScript<Runtime>>::key();
-                match Self::pickout::<xbitcoin::TrusteeScriptInfo>(&state, &key)? {
-                    Some(script) => {
-                        let key = <WithdrawalProposal<Runtime>>::key();
-                        if let Some(candidate) =
-                            Self::pickout::<CandidateTx<AccountId>>(&state, &key)?
-                        {
-                            let sign_status = candidate.sig_state == VoteResult::Finish;
-                            let raw_tx = candidate.tx.encode();
-                            if raw_tx.len() < 2 {
-                                return Ok(None);
-                            }
-                            let tx_info = WithdrawTxInfo {
-                                tx: raw_tx[2..].to_vec().to_hex::<String>(),
-                                redeem_script: script.hot_redeem_script.to_hex::<String>(),
-                                sign_status,
-                            };
-                            Ok(Some(tx_info))
+                let hot_addr_info: BtcTrusteeAddrInfo =
+                    Decode::decode(&mut trustee_session_info.hot_address.as_slice())
+                        .unwrap_or_default();
+                let key = <xbitcoin::CurrentWithdrawalProposal<Runtime>>::key();
+                if let Some(proposal) =
+                    Self::pickout::<xbitcoin::WithdrawalProposal<AccountId>>(&state, &key)?
+                {
+                    let bytes = btc_serialize(&proposal.tx);
+                    let tx_info = WithdrawTxInfo {
+                        tx: bytes.to_hex(),
+                        redeem_script: hot_addr_info.redeem_script.to_hex(),
+                        sign_status: if proposal.sig_state == VoteResult::Finish {
+                            true
                         } else {
-                            return Ok(None);
-                        }
-                    }
-                    None => Ok(None),
+                            false
+                        },
+                        trustee_list: proposal.trustee_list,
+                    };
+                    Ok(Some(tx_info))
+                } else {
+                    Ok(None)
                 }
             }
             _ => Ok(None),

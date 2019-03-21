@@ -1,17 +1,19 @@
 mod header_proof;
 
-use crate::btc_chain::BlockHeader;
-use crate::btc_primitives::hash::H256;
-use crate::rstd::result::Result as StdResult;
-use crate::support::StorageMap;
+use rstd::result::Result as StdResult;
+use support::StorageMap;
+
+use btc_chain::BlockHeader;
+use btc_primitives::hash::H256;
+
+pub use self::header_proof::HeaderVerifier;
 use crate::tx::handle_tx;
 use crate::types::BlockHeaderInfo;
 use crate::{BlockHashFor, BlockHeaderFor, Module, Trait};
 
-pub use self::header_proof::HeaderVerifier;
 #[cfg(feature = "std")]
 use crate::hash_strip;
-use crate::xsupport::{debug, error};
+use xsupport::{debug, error};
 
 pub enum ChainErr {
     /// Unknown parent
@@ -103,12 +105,17 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256
             return (header.hash(), height);
         }
     }
-    // prev_hash is confirmed header
-    // TODO check mutate for some
+    // prev_hash is confirmed header, prev block must be existed!
     BlockHeaderFor::<T>::mutate(&prev_hash, |info| {
         if let Some(header) = info {
             handle_confirm_block::<T>(header);
             header.confirmed = true
+        } else {
+            error!(
+                "[update_confirmed_header]|prev block not exist!|prev:{:?}",
+                prev_hash
+            );
+            assert!(false, "prev block not exist at this point!");
         }
     });
     (prev_hash, header_info.height - confirmations)

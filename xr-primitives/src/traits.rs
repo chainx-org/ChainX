@@ -5,8 +5,9 @@ pub use num_traits::{
 };
 
 use rstd::prelude::Vec;
+use rstd::result::Result as StdResult;
 use runtime_primitives::traits::{As, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic};
-use support::Parameter;
+use support::{dispatch::Result, Parameter};
 
 /// Work together with sr_primitives::traits::Applyable
 pub trait Accelerable: Sized + Send + Sync {
@@ -24,4 +25,12 @@ pub trait Extractable {
     fn new(script: Vec<u8>) -> Self;
     fn account_info(&self) -> Option<(Self::AccountId, Vec<u8>)>;
     fn split(&self) -> Vec<Vec<u8>>;
+}
+
+pub trait TrusteeForChain<AccountId, Address> {
+    fn check_address(raw_addr: &[u8]) -> Result;
+    fn to_address(raw_addr: &[u8]) -> Address;
+    fn generate_new_trustees(
+        candidates: &Vec<AccountId>,
+    ) -> StdResult<Vec<AccountId>, &'static str>;
 }

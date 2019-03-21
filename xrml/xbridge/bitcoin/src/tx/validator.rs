@@ -1,19 +1,21 @@
-use crate::btc_chain::Transaction;
-use crate::btc_keys::Public;
-use crate::btc_primitives::bytes::Bytes;
-use crate::btc_script::{
+use rstd::prelude::Vec;
+use rstd::result::Result as StdResult;
+use support::dispatch::Result;
+
+use btc_chain::Transaction;
+use btc_keys::Public;
+use btc_primitives::bytes::Bytes;
+use btc_script::{
     script::Script, SignatureChecker, SignatureVersion, TransactionInputSigner,
     TransactionSignatureChecker,
 };
-use crate::rstd::prelude::Vec;
-use crate::rstd::result::Result as StdResult;
-use crate::support::dispatch::Result;
+use merkle::parse_partial_merkle_tree;
+
+use crate::tx::utils::get_hot_trustee_redeem_script;
 use crate::types::RelayTx;
 use crate::{Module, Trait};
 
-use merkle::parse_partial_merkle_tree;
-
-use crate::xsupport::{debug, error};
+use xsupport::{debug, error};
 
 pub fn validate_transaction<T: Trait>(tx: &RelayTx) -> Result {
     let tx_hash = tx.raw.hash();
@@ -93,10 +95,9 @@ pub fn parse_and_check_signed_tx<T: Trait>(
     let (sigs, _) = script
         .extract_multi_scriptsig()
         .map_err(|_| "Invalid signature")?;
-    // parse pubkeys from trustee hot_redeem_script
-    let trustee_info =
-        Module::<T>::trustee_info().ok_or("Should set trustee address info first.")?;
-    let redeem_script = Script::from(trustee_info.hot_redeem_script);
+
+    let redeem_script = get_hot_trustee_redeem_script::<T>()?;
+
     let (pubkeys, _, _) = redeem_script
         .parse_redeem_script()
         .ok_or("Parse redeem script failed")?;

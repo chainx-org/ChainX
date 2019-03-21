@@ -49,10 +49,16 @@ decl_module! {
             ProducerFeeProportion::<T>::put(proportion);
             Ok(())
         }
+
+        /// first version, when add more SWITCH, should use new switch
+        fn set_switch_store(switch: SwitchStore) {
+            Switch::<T>::put(switch)
+        }
     }
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct SwitchStore {
     pub global: bool,
     pub spot: bool,

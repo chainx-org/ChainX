@@ -12,70 +12,50 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-use parity_codec as codec;
+use parity_codec::{Decode, Encode};
+use rstd::prelude::*;
+use rstd::result::Result as StdResult;
+use runtime_primitives::traits::As;
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue};
+use system::ensure_signed;
+use timestamp;
 
-use sr_primitives as runtime_primitives;
-use sr_std as rstd;
+use xaccounts::TrusteeEntity;
+use xassets::{Chain, ChainT, Memo, Token};
+use xfee_manager;
+use xr_primitives::{generic::b58, traits::TrusteeForChain, XString};
+use xrecords::TxState;
 
-use srml_balances as balances;
-use srml_support as support;
-use srml_system as system;
-use srml_timestamp as timestamp;
-
-use xr_primitives::{generic::b58, XString};
-use xrml_xaccounts as xaccounts;
-use xrml_xassets_assets as xassets;
-use xrml_xassets_records as xrecords;
-use xrml_xsupport as xsupport;
-
-// bitcoin-rust
-use bitcrypto;
-use bitcrypto as crypto;
-use chain as btc_chain;
-use keys as btc_keys;
-use merkle;
-use primitives as btc_primitives;
-use script as btc_script;
-use serialization as btc_ser;
-
-//use blockchain::Chain;
-use crate::btc_chain::{BlockHeader, Transaction};
-use crate::btc_keys::{Address, DisplayLayout, Error as AddressError};
-use crate::btc_primitives::hash::H256;
-use crate::btc_ser::{deserialize, Reader};
-use crate::codec::Decode;
-
-use crate::rstd::prelude::*;
-use crate::rstd::result::Result as StdResult;
-use crate::runtime_primitives::traits::As;
-use crate::support::{
-    decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue,
-};
-use crate::system::ensure_signed;
-use crate::xaccounts::{TrusteeAddressPair, TrusteeEntity};
-use crate::xassets::{Chain, ChainT, Memo, Token};
-use crate::xrecords::TxState;
+use btc_chain::{BlockHeader, Transaction};
+use btc_keys::{Address, DisplayLayout, Error as AddressError};
+use btc_primitives::hash::H256;
+use btc_ser::{deserialize, Reader};
 
 #[cfg(feature = "std")]
 pub use tx::utils::hash_strip;
-use tx::utils::inspect_address_from_transaction;
+use tx::utils::{get_sig_num, get_sig_num_from_trustees, inspect_address_from_transaction};
 use tx::{
-    check_withdraw_tx, create_multi_address, get_sig_num, handle_tx, parse_and_check_signed_tx,
-    remove_unused_tx, update_trustee_vote_state, validate_transaction,
+    check_withdraw_tx, create_multi_address, detect_transaction_type, handle_tx,
+    parse_and_check_signed_tx, update_trustee_vote_state, validate_transaction,
 };
 use types::{BindStatus, DepositCache, TxType};
 pub use types::{
-    BlockHeaderInfo, CandidateTx, Params, RelayTx, TrusteeScriptInfo, TxInfo, VoteResult,
+    BlockHeaderInfo, Params, RelayTx, TrusteeAddrInfo, TxInfo, VoteResult, WithdrawalProposal,
 };
 
-use crate::xsupport::{debug, ensure_with_errorlog, error, info};
+use xsupport::{debug, ensure_with_errorlog, error, info, warn};
 #[cfg(feature = "std")]
-use crate::xsupport::{u8array_to_hex, u8array_to_string};
+use xsupport::{u8array_to_hex, u8array_to_string, trustees};
 
 pub type AddrStr = XString;
 
 pub trait Trait:
-    system::Trait + balances::Trait + timestamp::Trait + xrecords::Trait + xaccounts::Trait
+    system::Trait
+    + balances::Trait
+    + timestamp::Trait
+    + xrecords::Trait
+    + xaccounts::Trait
+    + xfee_manager::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -95,11 +75,11 @@ decl_event!(
         /// who, withdrawal id, txid, TxState
         Withdrawal(u32, Vec<u8>, TxState),
         /// create withdraw tx, who proposal, withdrawal list id
-        CreateWithdrawTx(AccountId, Vec<u32>),
+        CreateWithdrawalProposal(AccountId, Vec<u32>),
         /// Sign withdraw tx
         UpdateSignWithdrawTx(AccountId, bool),
-        /// NeedDropWithdrawTx, Proposal hash, tx hash
-        NeedDropWithdrawTx(Vec<u8>, Vec<u8>),
+        /// WithdrawalFatalErr, tx hash, Proposal hash,
+        WithdrawalFatalErr(Vec<u8>, Vec<u8>),
         /// reject_count, sum_count, withdrawal id list
         DropWithdrawTx(u32, u32, Vec<u32>),
         /// tx hash, input addr, account addr, bind state (init|update)
@@ -123,8 +103,7 @@ decl_storage! {
         /// unclaim deposit info, addr => tx_hash, btc value, blockhash
         pub PendingDepositMap get(pending_deposit): map Address => Option<Vec<DepositCache>>;
         /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
-        pub WithdrawalProposal get(withdrawal_proposal): Option<CandidateTx<T::AccountId>>;
-        pub WithdrawalFatalErr get(withdrawal_fatal_err): bool = false;
+        pub CurrentWithdrawalProposal get(withdrawal_proposal): Option<WithdrawalProposal<T::AccountId>>;
 
         /// get GenesisInfo (header, height)
         pub GenesisInfo get(genesis_info) config(genesis): (BlockHeader, u32);
@@ -136,12 +115,13 @@ decl_storage! {
         pub ReservedBlock get(reserved_block) config(): u32;
         /// get ConfirmationNumber from genesis_config
         pub ConfirmationNumber get(confirmation_number) config(): u32;
-        /// trustee script
-        pub TrusteeRedeemScript get(trustee_info): Option<TrusteeScriptInfo>;
         /// get BtcWithdrawalFee from genesis_config
         pub BtcWithdrawalFee get(btc_withdrawal_fee) config(): u64;
         /// max withdraw account count in bitcoin withdrawal transaction
         pub MaxWithdrawalCount get(max_withdrawal_count) config(): u32;
+
+        // ext
+        pub LastTrusteeSessionNumber get(last_trustee_session_number): u32 = 0;
     }
 }
 
@@ -172,32 +152,18 @@ decl_module! {
             // commiter must in trustee list
             Self::ensure_trustee(&from)?;
 
-            ensure_with_errorlog!(
-                Self::withdrawal_fatal_err() == false,
-                "there is a fatal error for current proposal, please use root to call [fix_withdrawal_err] to fix it",
-                "proposal:{:?}",
-                Self::withdrawal_proposal(),
-            );
-
             let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| "Parse transaction err")?;
             debug!("[create_withdraw_tx]|from:{:}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
 
             Self::apply_create_withdraw(tx, withdrawal_id_list.clone())?;
 
-            Self::deposit_event(RawEvent::CreateWithdrawTx(from, withdrawal_id_list));
+            Self::deposit_event(RawEvent::CreateWithdrawalProposal(from, withdrawal_id_list));
             Ok(())
         }
 
         pub fn sign_withdraw_tx(origin, tx: Option<Vec<u8>>) -> Result {
             let from = ensure_signed(origin)?;
             Self::ensure_trustee(&from)?;
-
-            ensure_with_errorlog!(
-                Self::withdrawal_fatal_err() == false,
-                "there is a fatal error for current proposal, please use root to call [fix_withdrawal_err] to fix it",
-                "proposal:{:?}",
-                Self::withdrawal_proposal(),
-            );
 
             let tx = if let Some(raw_tx) = tx {
                 let tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| "Parse transaction err")?;
@@ -211,36 +177,35 @@ decl_module! {
             Ok(())
         }
 
-        /// real btc has been withdrawed, but not equal to proposal, so the proposal and tx not remove
-        /// from storage, and the withdrawal lock not release
-        pub fn fix_withdrawal_err(txid: H256, withdrawal_idlist: Vec<(u32, bool)>, drop_proposal: bool) -> Result {
-            for (withdrawal_id, success) in withdrawal_idlist {
-                match xrecords::Module::<T>::withdrawal_finish(withdrawal_id, success) {
-                    Ok(_) => {
-                        info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
-                    }
-                    Err(_e) => {
-                        error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:}, please use root to fix it", withdrawal_id, _e);
-                    }
+        pub fn fix_withdrawal_state(withdrawal_id: u32, success: bool) -> Result {
+            match xrecords::Module::<T>::withdrawal_finish(withdrawal_id, success) {
+                Ok(_) => {
+                    info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
+                    Ok(())
+                }
+                Err(_e) => {
+                    error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:}, please use root to fix it", withdrawal_id, _e);
+                    Err(_e)
                 }
             }
-            if drop_proposal {
-                WithdrawalProposal::<T>::kill();
+        }
+
+        pub fn fix_withdrawal_state_list(item: Vec<(u32, bool)>) -> Result {
+            for (withdrawal_id, success) in item {
+                let _ = Self::fix_withdrawal_state(withdrawal_id, success);
             }
-            remove_unused_tx::<T>(&txid);
-            WithdrawalFatalErr::<T>::put(false);
             Ok(())
         }
 
-        pub fn fix_deposit_err(txid: H256) -> Result {
-            let tx_info = Self::tx_for(&txid).ok_or("not find tx for this txid")?;
-            ensure_with_errorlog!(
-                tx_info.tx_type == TxType::Deposit,
-                "must be a deposit tx, not allow withdrawal",
-                "tx:{:?}", tx_info
-            );
-
-            handle_tx::<T>(&txid)
+        pub fn remove_tx_and_proposal(txhash: Option<H256>, drop_proposal: bool) -> Result {
+            if let Some(hash) = txhash {
+                TxFor::<T>::remove(&hash);
+                InputAddrFor::<T>::remove(&hash);
+            }
+            if drop_proposal {
+                CurrentWithdrawalProposal::<T>::kill();
+            }
+            Ok(())
         }
 
         pub fn set_btc_withdrawal_fee(fee: T::Balance) -> Result {
@@ -272,35 +237,79 @@ impl<T: Trait> ChainT for Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
-    pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
-        let r = b58::from(data.to_vec()).map_err(|_| AddressError::InvalidAddress)?;
-        Address::from_layout(&r)
+impl<T: Trait> TrusteeForChain<T::AccountId, ()> for Module<T> {
+    /// for bitcoin, it's public key, not address
+    fn check_address(pubkey: &[u8]) -> Result {
+        if pubkey.len() != 33 && pubkey.len() != 65 {
+            return Err("Valid pubkeys are either 33 or 65 bytes.");
+        }
+        Ok(())
+    }
+    /// no support for bitcoin
+    fn to_address(_: &[u8]) -> () {
+        unreachable!("no support for bitcoin")
     }
 
-    pub fn update_trustee_addr() -> StdResult<(), AddressError> {
-        let trustees = <xaccounts::TrusteeIntentions<T>>::get();
-        if trustees.len() < 3 {
-            error!("[update_trustee_addr]|trustees is less than 3 people, can't generate trustee addr. trustees:{:?}", trustees);
-            return Err(AddressError::FailedKeyGeneration);
-        }
+    fn generate_new_trustees(
+        candidates: &Vec<T::AccountId>,
+    ) -> StdResult<Vec<T::AccountId>, &'static str> {
+        let config = xaccounts::Module::<T>::trustee_info_config(Chain::Bitcoin);
 
-        let mut hot_keys = Vec::new();
-        let mut cold_keys = Vec::new();
-        for trustee in trustees {
-            if let Some(props) =
-                <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(trustee, Chain::Bitcoin))
-            {
-                match props.hot_entity {
-                    TrusteeEntity::Bitcoin(pubkey) => hot_keys.push(pubkey),
-                }
-                match props.cold_entity {
-                    TrusteeEntity::Bitcoin(pubkey) => cold_keys.push(pubkey),
-                }
+        let mut trustee_info_list = Vec::new();
+        for trustee in candidates {
+            let key = (trustee.clone(), Chain::Bitcoin);
+            if let Some(props) = xaccounts::Module::<T>::trustee_intention_props_of(&key) {
+                #[allow(unreachable_patterns)]
+                let hot_key = match props.hot_entity {
+                    TrusteeEntity::Bitcoin(pubkey) => {
+                        if Self::check_address(&pubkey).is_err() {
+                            error!("[generate_new_trustees]|[btc] this hot pubkey not valid!|hot pubkey:{:}", u8array_to_hex(&pubkey));
+                            continue;
+                        }
+                        pubkey
+                    }
+                    _ => {
+                        warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN hot entity|who:{:}", trustee);
+                        continue;
+                    }
+                };
+                #[allow(unreachable_patterns)]
+                let cold_key = match props.cold_entity {
+                    TrusteeEntity::Bitcoin(pubkey) => {
+                        if Self::check_address(&pubkey).is_err() {
+                            error!("[generate_new_trustees]|[btc] this hot pubkey not valid!|cold pubkey:{:}", u8array_to_hex(&pubkey));
+                            continue;
+                        }
+                        pubkey
+                    }
+                    _ => {
+                        warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN cold entity|who:{:}", trustee);
+                        continue;
+                    }
+                };
+                trustee_info_list.push((trustee.clone(), (hot_key, cold_key)));
+            } else {
+                error!(
+                    "[generate_new_trustees]|[btc] the candidate must be a trustee|who:{:}",
+                    trustee
+                );
+                assert!(false, "[btc] the candidate must be a trustee");
+            }
+            // just get max trustee count
+            if trustee_info_list.len() as u32 > config.max_trustee_count {
+                break;
             }
         }
-        hot_keys.sort();
-        cold_keys.sort();
+        if (trustee_info_list.len() as u32) < config.min_trustee_count {
+            error!("[update_trustee_addr]|trustees is less than [{:}] people, can't generate trustee addr|trustees:{:?}", config.min_trustee_count, candidates);
+            return Err("trustees is less than required people, can't generate trustee addr");
+        }
+        // sort by AccountId
+        trustee_info_list.sort_by(|a, b| a.0.cmp(&b.0));
+
+        let (trustees, key_pairs): (Vec<T::AccountId>, Vec<(Vec<_>, Vec<_>)>) =
+            trustee_info_list.into_iter().unzip();
+        let (hot_keys, cold_keys): (Vec<_>, Vec<_>) = key_pairs.into_iter().unzip();
 
         info!(
             "[update_trustee_addr]|hot_keys:{:?}|cold_keys:{:?}",
@@ -314,51 +323,74 @@ impl<T: Trait> Module<T> {
                 .collect::<Vec<_>>(),
         );
 
-        let (hot_addr, hot_redeem) = match create_multi_address::<T>(hot_keys) {
-            Some((addr, redeem)) => (addr, redeem),
-            None => {
-                error!("[update_trustee_addr]|create hot_addr err!");
-                return Err(AddressError::InvalidAddress);
-            }
-        };
-        let (cold_addr, cold_redeem) = match create_multi_address::<T>(cold_keys) {
-            Some((addr, redeem)) => (addr, redeem),
-            None => {
-                error!("[update_trustee_addr]|create cold_addr err!");
-                return Err(AddressError::InvalidAddress);
-            }
-        };
+        let has_duplicate = (1..hot_keys.len()).any(|i| hot_keys[i..].contains(&hot_keys[i - 1]));
+        if has_duplicate {
+            error!("[generate_new_trustees]|hot keys contains duplicate pubkey");
+            return Err("hot keys contains duplicate pubkey");
+        }
+        let has_duplicate =
+            (1..cold_keys.len()).any(|i| cold_keys[i..].contains(&cold_keys[i - 1]));
+        if has_duplicate {
+            error!("[generate_new_trustees]|cold keys contains duplicate pubkey");
+            return Err("cold keys contains duplicate pubkey");
+        }
+
+        let (sig_num, trustee_num) = get_sig_num_from_trustees(trustees.len() as u32);
+
+        let hot_trustee_addr_info: TrusteeAddrInfo =
+            create_multi_address::<T>(&hot_keys, sig_num, trustee_num).ok_or_else(|| {
+                error!(
+                    "[update_trustee_addr]|create hot_addr err!|hot_keys:{:?}",
+                    hot_keys
+                );
+                "create hot_addr err!"
+            })?;
+
+        let cold_trustee_addr_info: TrusteeAddrInfo =
+            create_multi_address::<T>(&cold_keys, sig_num, trustee_num).ok_or_else(|| {
+                error!(
+                    "[update_trustee_addr]|create cold_addr err!|cold_keys:{:?}",
+                    cold_keys
+                );
+                "create cold_addr err!"
+            })?;
 
         info!(
-            "[update_trustee_addr]|hot_addr:{:?}|hot_redeem:{:?}|cold_addr:{:?}|cold_redeem:{:?}",
-            hot_addr, hot_redeem, cold_addr, cold_redeem
+            "[update_trustee_addr]|hot_addr:{:?}|cold_addr:{:?}|trustee_list:{:?}",
+            hot_trustee_addr_info,
+            cold_trustee_addr_info,
+            trustees!(trustees)
         );
 
-        let info = TrusteeScriptInfo {
-            hot_redeem_script: hot_redeem.to_bytes().to_vec(),
-            cold_redeem_script: cold_redeem.to_bytes().to_vec(),
-        };
-        // TODO delay put
-        <xaccounts::TrusteeAddress<T>>::insert(
-            &Chain::Bitcoin,
-            TrusteeAddressPair {
-                hot_address: hot_addr.layout().to_vec(),
-                cold_address: cold_addr.layout().to_vec(),
-            },
-        );
+        LastTrusteeSessionNumber::<T>::put(xaccounts::Module::<T>::current_session_number(
+            Chain::Bitcoin,
+        ));
 
-        <TrusteeRedeemScript<T>>::put(info);
-        Ok(())
+        xaccounts::Module::<T>::new_trustee_session(
+            Chain::Bitcoin,
+            trustees.clone(),
+            hot_trustee_addr_info.encode(),
+            cold_trustee_addr_info.encode(),
+        );
+        Ok(trustees)
+    }
+}
+
+impl<T: Trait> Module<T> {
+    pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
+        let r = b58::from(data.to_vec()).map_err(|_| AddressError::InvalidAddress)?;
+        Address::from_layout(&r)
     }
 
     fn ensure_trustee(who: &T::AccountId) -> Result {
-        let trustees = <xaccounts::TrusteeIntentions<T>>::get();
-        if trustees.iter().any(|n| n == who) {
+        let trustee_session_info = xaccounts::Module::<T>::trustee_session_info(Chain::Bitcoin)
+            .ok_or("not find current trustee session info for this chain")?;
+        if trustee_session_info.trustee_list.iter().any(|n| n == who) {
             return Ok(());
         }
         error!(
             "[ensure_trustee]|Committer not in the trustee list!|who:{:}|trustees:{:?}",
-            who, trustees
+            who, trustee_session_info.trustee_list
         );
         Err("Committer not in the trustee list")
     }
@@ -409,22 +441,10 @@ impl<T: Trait> Module<T> {
             None => return Err("can't find the best header in ChainX"),
         };
 
-        if header_info.height > best_header.height {
+        let (confirm_hash, confirm_height) = if header_info.height > best_header.height {
             header::remove_unused_headers::<T>(&header_info);
 
             let (confirm_hash, confirm_height) = header::update_confirmed_header::<T>(&header_info);
-            Self::deposit_event(RawEvent::InsertHeader(
-                header_info.header.version,
-                header_info.header.hash(),
-                header_info.height,
-                header_info.header.previous_header_hash,
-                header_info.header.merkle_root_hash,
-                header_info.header.time,
-                header_info.header.nonce,
-                confirm_height,
-                confirm_hash,
-            ));
-
             info!(
                 "[apply_push_header]|update to new height|height:{:}|hash:{:}...",
                 header_info.height,
@@ -432,12 +452,26 @@ impl<T: Trait> Module<T> {
             );
             // change new best index
             BestIndex::<T>::put(hash);
+            (confirm_hash, confirm_height)
         } else {
             info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}",
                 best_header.height,
                 header_info.height
             );
-        }
+            (Default::default(), Default::default())
+        };
+        Self::deposit_event(RawEvent::InsertHeader(
+            header_info.header.version,
+            header_info.header.hash(),
+            header_info.height,
+            header_info.header.previous_header_hash,
+            header_info.header.merkle_root_hash,
+            header_info.header.time,
+            header_info.header.nonce,
+            confirm_height,
+            confirm_hash,
+        ));
+
         Ok(())
     }
 
@@ -453,43 +487,44 @@ impl<T: Trait> Module<T> {
         // verify
         validate_transaction::<T>(&tx)?;
         // judge tx type
-        let tx_type = tx::detect_transaction_type::<T>(&tx)?;
+        let tx_type = detect_transaction_type::<T>(&tx)?;
+        if tx_type == TxType::Irrelevance {
+            warn!("");
+            return Err("");
+        }
+
         // set to storage
-        let mut confirmed = false;
-        BlockHeaderFor::<T>::mutate(&tx.block_hash, |info| {
-            if let Some(header_info) = info {
-                if !header_info.txid_list.contains(&tx_hash) {
-                    header_info.txid_list.push(tx_hash.clone());
-                }
-                confirmed = header_info.confirmed;
-            }
-        });
+        // modify header
+        let mut header_info = Self::block_header_for(&tx.block_hash)
+            .expect("header info must be existed for this hash; qed");
+        if !header_info.txid_list.contains(&tx_hash) {
+            header_info.txid_list.push(tx_hash.clone());
+        }
+        let height = header_info.height;
+        let confirmed = header_info.confirmed;
+        BlockHeaderFor::<T>::insert(&tx.block_hash, header_info);
 
         // parse first input addr, may delete when only use opreturn to get accountid
         // only deposit tx store prev input tx's addr, for deposit to lookup related accountid
         if tx_type == TxType::Deposit {
             let outpoint = &tx.raw.inputs[0].previous_output;
-            if let Some(input_addr) =
-                inspect_address_from_transaction::<T>(&tx.previous_raw, outpoint)
-            {
-                debug!(
-                    "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
-                    hash_strip(&tx_hash),
-                    u8array_to_string(&b58::to_base58(input_addr.layout().to_vec())),
-                );
-                InputAddrFor::<T>::insert(&tx_hash, input_addr)
-            } else {
-                assert!(
-                    false,
-                    "when deposit, the first input must could parse an addr"
-                );
-            }
+            let input_addr = inspect_address_from_transaction::<T>(&tx.previous_raw, outpoint)
+                .expect("when deposit, the first input must could parse an addr; qed");
+
+            debug!(
+                "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
+                hash_strip(&tx_hash),
+                u8array_to_string(&b58::to_base58(input_addr.layout().to_vec())),
+            );
+            InputAddrFor::<T>::insert(&tx_hash, input_addr)
         }
+        // set tx
         TxFor::<T>::insert(
             &tx_hash,
             TxInfo {
                 raw_tx: tx.raw.clone(),
                 tx_type,
+                height,
             },
         );
 
@@ -539,15 +574,21 @@ impl<T: Trait> Module<T> {
             Self::deposit_event(RawEvent::Withdrawal(*id, Vec::new(), TxState::Signing));
         }
 
-        let candidate = CandidateTx::new(VoteResult::Unfinish, withdrawal_id_list, tx, Vec::new());
-        WithdrawalProposal::<T>::put(candidate);
+        let candidate =
+            WithdrawalProposal::new(VoteResult::Unfinish, withdrawal_id_list, tx, Vec::new());
+        CurrentWithdrawalProposal::<T>::put(candidate);
         info!("Through the legality check of withdrawal");
         Ok(())
     }
 
     fn apply_sig_withdraw(who: T::AccountId, tx: Option<Transaction>) -> Result {
-        let mut proposal: CandidateTx<T::AccountId> =
+        let mut proposal: WithdrawalProposal<T::AccountId> =
             Self::withdrawal_proposal().ok_or("No transactions waiting for signature")?;
+
+        if proposal.sig_state == VoteResult::Finish {
+            error!("[apply_sig_withdraw]|proposal is on FINISH state, can't sign for this proposal|proposal：{:?}", proposal);
+            return Err("proposal is on FINISH state, can't sign for this proposal");
+        }
 
         let (sig_num, _) = get_sig_num::<T>();
         match tx {
@@ -567,7 +608,7 @@ impl<T: Trait> Module<T> {
 
                 update_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list);
 
-                if sigs.len() >= sig_num {
+                if sigs.len() as u32 >= sig_num {
                     info!("Signature completed: {:}", sigs.len());
                     proposal.sig_state = VoteResult::Finish;
 
@@ -593,13 +634,13 @@ impl<T: Trait> Module<T> {
                     .trustee_list
                     .iter()
                     .filter(|(_, vote)| *vote == false)
-                    .count();
+                    .count() as u32;
                 if reject_count >= sig_num {
                     info!(
                         "[apply_sig_withdraw]|{:}/{:} opposition, clear withdrawal propoal",
                         reject_count, sig_num
                     );
-                    WithdrawalProposal::<T>::kill();
+                    CurrentWithdrawalProposal::<T>::kill();
 
                     // log event
                     for id in proposal.withdrawal_id_list.iter() {
@@ -625,7 +666,7 @@ impl<T: Trait> Module<T> {
             proposal.sig_state, proposal.trustee_list
         );
 
-        WithdrawalProposal::<T>::put(proposal);
+        CurrentWithdrawalProposal::<T>::put(proposal);
         Ok(())
     }
 }

@@ -3,7 +3,7 @@
 *.swp
 .wasm-binaries
 chainx/runtime/wasm/target/
-!runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime_wasm.compact.wasm
+!runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm
 **/._*
 .vscode/
 .DS_Store

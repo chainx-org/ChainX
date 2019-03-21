@@ -9,46 +9,7 @@ use xaccounts::IntentionJackpotAccountIdFor;
 use xassets;
 use xsupport::debug;
 #[cfg(feature = "std")]
-use xsupport::u8array_to_string;
-
-// Util for displaying validator's name instead of AccountId.
-#[cfg(feature = "std")]
-macro_rules! trustees {
-    ( $( $x:expr )+ ) => {
-        $($x)+.into_iter()
-            .map(|v|
-                 <xaccounts::IntentionNameOf<T>>::get(v)
-                 .map(|v| u8array_to_string(&v))
-                 .unwrap()
-            )
-            .collect::<Vec<_>>()
-    };
-}
-
-#[cfg(feature = "std")]
-macro_rules! validators {
-    ( $( $x:expr )+ ) => {
-        $($x)+.into_iter()
-            .map(|(v, w)| {
-                (
-                    <xaccounts::IntentionNameOf<T>>::get(v)
-                        .map(|v| u8array_to_string(&v))
-                        .unwrap(),
-                    w,
-                )
-            })
-            .collect::<Vec<_>>()
-    };
-}
-
-#[cfg(feature = "std")]
-macro_rules! who {
-    ( $( $x:ident )+ ) => {
-        <xaccounts::IntentionNameOf<T>>::get($($x)+)
-            .map(|v| u8array_to_string(&v))
-            .unwrap()
-    };
-}
+use xsupport::{validators, who};
 
 /// RewardHolder includes intention as well as tokens.
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
@@ -357,54 +318,9 @@ impl<T: Trait> Module<T> {
             .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
             .collect::<Vec<(_, _)>>();
 
-        info!(
-            "[new_era] new validator set: {:?}",
-            validators!(validators.clone())
-        );
+        info!("[new_era] new validator set: {:?}", validators!(validators));
         <session::Module<T>>::set_validators(&validators);
         Self::deposit_event(RawEvent::Rotation(validators));
-
-        let session_index = <session::Module<T>>::current_index();
-        if <xaccounts::Module<T>>::trustee_intentions().is_empty()
-            || ((session_index - Self::last_era_length_change()) % (Self::sessions_per_epoch()))
-                .is_zero()
-        {
-            Self::new_trustees(candidates.into_iter().map(|(_, v)| v).collect::<Vec<_>>());
-        }
-    }
-
-    fn new_trustees(validator_candidates: Vec<T::AccountId>) {
-        let candidates = validator_candidates
-            .into_iter()
-            .filter(|v| {
-                <xaccounts::TrusteeIntentionPropertiesOf<T>>::get(&(v.clone(), Chain::Bitcoin))
-                    .is_some()
-            })
-            .collect::<Vec<_>>();
-
-        if (candidates.len() as u32) < Self::minimum_trustee_count() {
-            return;
-        }
-
-        let mut trustees = candidates
-            .into_iter()
-            .take(Self::trustee_count() as usize)
-            .collect::<Vec<_>>();
-
-        trustees.sort();
-
-        let last_trustees = <xaccounts::TrusteeIntentions<T>>::get();
-        if last_trustees != trustees {
-            info!(
-                "[new_trustees] new trustee set: {:?}",
-                trustees!(trustees.clone())
-            );
-            <xaccounts::TrusteeIntentions<T>>::put(trustees.clone());
-        }
-
-        let _ = xbitcoin::Module::<T>::update_trustee_addr();
-
-        Self::deposit_event(RawEvent::NewTrustees(trustees));
     }
 
     /// We only note these offline validators that are still active at the moment.

@@ -1,24 +1,21 @@
 // Copyright 2019 Chainpool.
-
-use crate::rstd::cmp;
-use crate::rstd::result::Result as StdResult;
-// btc
-use crate::btc_chain::BlockHeader;
-use crate::btc_primitives::compact::Compact;
-use crate::btc_primitives::hash::H256;
-use crate::btc_primitives::U256;
-
-use crate::{Module, Trait};
+use rstd::cmp;
+use rstd::result::Result as StdResult;
 // substrate runtime module
-use crate::runtime_primitives::traits::As;
-use crate::support::dispatch::Result;
-use crate::timestamp;
-
-use crate::types::Params;
+use runtime_primitives::traits::As;
+use support::dispatch::Result;
+use timestamp;
+// btc
+use btc_chain::BlockHeader;
+use btc_primitives::compact::Compact;
+use btc_primitives::hash::H256;
+use btc_primitives::U256;
 
 use super::ChainErr;
+use crate::types::Params;
+use crate::{Module, Trait};
 
-use crate::xsupport::{debug, ensure_with_errorlog, error, info};
+use xsupport::{debug, ensure_with_errorlog, error, info};
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,

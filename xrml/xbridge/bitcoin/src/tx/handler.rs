@@ -1,31 +1,32 @@
 // Copyright 2019 Chainpool
+use rstd::prelude::Vec;
+use rstd::result::Result as StdResult;
+use runtime_primitives::traits::As;
+use support::{dispatch::Result, StorageMap, StorageValue};
 
 use xr_primitives::generic::{b58, Extracter};
 use xr_primitives::traits::Extractable;
 
-use crate::btc_chain::Transaction;
-use crate::btc_keys::{Address, DisplayLayout};
-use crate::btc_primitives::hash::H256;
-use crate::btc_script::script::Script;
-use crate::rstd::prelude::Vec;
-use crate::rstd::result::Result as StdResult;
-use crate::xaccounts;
-use crate::xassets::Chain;
+use xaccounts;
+use xassets::{self, Chain, ChainT};
+use xfee_manager;
+use xrecords;
 
-use crate::runtime_primitives::traits::As;
-use crate::support::{dispatch::Result, StorageMap, StorageValue};
+use btc_chain::Transaction;
+use btc_keys::{Address, DisplayLayout};
+use btc_primitives::hash::H256;
+use btc_script::script::Script;
+
 use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
-use crate::xassets::ChainT;
-use crate::{xassets, xrecords};
-use crate::{Module, PendingDepositMap, RawEvent, Trait, WithdrawalFatalErr, WithdrawalProposal};
+use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait};
 
 #[cfg(feature = "std")]
 use crate::hash_strip;
 #[cfg(feature = "std")]
-use crate::xsupport::u8array_to_string;
-use crate::xsupport::{debug, error, info};
+use xsupport::u8array_to_string;
+use xsupport::{debug, error, info};
 
-use super::utils::{get_trustee_address, is_key};
+use super::utils::{ensure_identical, get_hot_trustee_address, is_key};
 
 pub struct TxHandler {
     pub tx_hash: H256,
@@ -43,19 +44,25 @@ impl TxHandler {
 
     pub fn handle<T: Trait>(&self) -> Result {
         match self.tx_info.tx_type {
-            TxType::Withdraw => {
+            TxType::Withdrawal => {
                 // TODO refactor
                 self.withdraw::<T>()?;
             }
             TxType::Deposit => {
                 self.deposit::<T>()?;
             }
+            _ => {
+                info!(
+                    "[handle tx]|other type tx|type:{:?}|hash:{:?}|tx:{:?}",
+                    self.tx_info.tx_type, self.tx_hash, self.tx_info.raw_tx
+                );
+            }
         };
         Ok(())
     }
 
     fn withdraw<T: Trait>(&self) -> Result {
-        if let Some(proposal) = WithdrawalProposal::<T>::take() {
+        if let Some(proposal) = CurrentWithdrawalProposal::<T>::take() {
             debug!(
                 "[withdraw]|withdraw handle|proposal:{:?}|tx:{:?}",
                 proposal, self.tx_info.raw_tx
@@ -82,22 +89,48 @@ impl TxHandler {
                     let tx_hash = proposal.tx.hash();
                     error!("[withdraw]|Withdrawal failed, reason:{:}, please use root to fix it|withdrawal idlist:{:?}|proposal:{:?}|tx:{:?}|tx hash:{:}",
                            e, proposal.withdrawal_id_list, proposal.tx, self.tx_info.raw_tx, self.tx_hash);
-                    WithdrawalProposal::<T>::put(proposal);
+                    CurrentWithdrawalProposal::<T>::put(proposal);
 
-                    WithdrawalFatalErr::<T>::put(true);
-
-                    Module::<T>::deposit_event(RawEvent::NeedDropWithdrawTx(
-                        tx_hash.to_vec(),
+                    Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(
                         self.tx_hash.to_vec(),
+                        tx_hash.to_vec(),
                     ));
+
+                    xfee_manager::Switch::<T>::mutate(|switch| {
+                        switch.xbtc = true;
+                    });
+
                     return Err(e);
                 }
             };
+        } else {
+            error!("[withdraw]|Withdrawal failed, the proposal is EMPTY, but receive a withdrawal tx, please use root to fix it|tx:{:?}|tx hash:{:}", self.tx_info.raw_tx, self.tx_hash);
+
+            // no proposal, but find a withdraw tx, it's a fatal error in withdrawal
+            Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(
+                self.tx_hash.to_vec(),
+                Default::default(),
+            ));
+
+            xfee_manager::Switch::<T>::mutate(|switch| {
+                switch.xbtc = true;
+            });
         }
         Ok(())
     }
 
     fn deposit<T: Trait>(&self) -> Result {
+        // check first input
+        let input_addr: Address = Module::<T>::input_addr_for(&self.tx_hash)
+            .ok_or_else(|| {
+                error!(
+                    "[deposit]|deposit tx must have input addr|tx:{:?}",
+                    self.tx_info
+                );
+                ""
+            })
+            .expect("must set input addr before; qed");
+
         let (account_info, deposit_balance, original_opretion) =
             parse_deposit_outputs::<T>(&self.tx_info.raw_tx)?;
 
@@ -116,16 +149,6 @@ impl TxHandler {
             }
         );
 
-        let input_addr: Address = if let Some(addr) = Module::<T>::input_addr_for(&self.tx_hash) {
-            addr
-        } else {
-            error!(
-                "[deposit]|deposit tx must have input addr|tx:{:?}",
-                self.tx_info
-            );
-            panic!("must set input addr before");
-        };
-
         // get accounid from related info
         let deposit_account_info: DepositAccountInfo<T::AccountId> =
             if let Some((accountid, channel_name)) = account_info {
@@ -143,10 +166,11 @@ impl TxHandler {
                 }
             };
         // deposit
-        if deposit_balance > 0 {
-            // deposit for this account or store this deposit cache
-            let deposit_account = match deposit_account_info {
-                DepositAccountInfo::AccountId(accountid) => {
+
+        // deposit for this account or store this deposit cache
+        let deposit_account = match deposit_account_info {
+            DepositAccountInfo::AccountId(accountid) => {
+                if deposit_balance > 0 {
                     deposit_token::<T>(&accountid, deposit_balance);
                     info!(
                         "[deposit]|deposit success|who:{:}|balance:{:}|tx_hash:{:}...",
@@ -154,9 +178,16 @@ impl TxHandler {
                         deposit_balance,
                         hash_strip(&self.tx_hash)
                     );
-                    accountid
+                } else {
+                    info!(
+                        "[deposit]|deposit balance is 0, may be a binding|who:{:}",
+                        accountid
+                    );
                 }
-                DepositAccountInfo::Address(addr) => {
+                accountid
+            }
+            DepositAccountInfo::Address(addr) => {
+                if deposit_balance > 0 {
                     insert_pending_deposit::<T>(&addr, &self.tx_hash, deposit_balance);
                     info!(
                         "[deposit]|deposit into pending|addr:{:?}|balance:{:}|tx_hash:{:}...",
@@ -164,21 +195,23 @@ impl TxHandler {
                         deposit_balance,
                         hash_strip(&self.tx_hash)
                     );
-                    Default::default()
+                } else {
+                    error!("[deposit]|the deposit balance is 0, but not get binding info from opreturn, maybe it's not a related tx|tx:{:?}|txinfo:{:?}", self.tx_hash, self.tx_info);
                 }
-            };
+                Default::default()
+            }
+        };
 
-            Module::<T>::deposit_event(RawEvent::Deposit(
-                deposit_account,
-                xassets::Chain::Bitcoin,
-                Module::<T>::TOKEN.to_vec(),
-                As::sa(deposit_balance),
-                self.tx_hash.to_vec(),
-                original_opretion,
-                b58::to_base58(input_addr.layout().to_vec()),
-                xrecords::TxState::Confirmed,
-            ));
-        }
+        Module::<T>::deposit_event(RawEvent::Deposit(
+            deposit_account,
+            xassets::Chain::Bitcoin,
+            Module::<T>::TOKEN.to_vec(),
+            As::sa(deposit_balance),
+            original_opretion,
+            b58::to_base58(input_addr.layout().to_vec()),
+            self.tx_hash.to_vec(),
+            xrecords::TxState::Confirmed,
+        ));
         Ok(())
     }
 }
@@ -192,7 +225,7 @@ fn handle_opreturn<T: Trait>(script: &[u8]) -> Option<(T::AccountId, Vec<u8>)> {
 pub fn parse_deposit_outputs<T: Trait>(
     tx: &Transaction,
 ) -> StdResult<(Option<(T::AccountId, Vec<u8>)>, u64, Vec<u8>), &'static str> {
-    let trustee_address = get_trustee_address::<T>()?;
+    let trustee_address = get_hot_trustee_address::<T>()?;
     let mut deposit_balance = 0;
     let mut account_info = None;
     let mut has_opreturn = false;
@@ -204,7 +237,6 @@ pub fn parse_deposit_outputs<T: Trait>(
         // bind address [btc address --> chainx AccountId]
         // is_null_data_script is not null
         if script.is_null_data_script() {
-            // TODO check is_null_data_script
             if has_opreturn == false {
                 // only handle first opreturn output
                 // OP_CODE PUSH ... (2 BYTES)
@@ -223,28 +255,6 @@ pub fn parse_deposit_outputs<T: Trait>(
         }
     }
     Ok((account_info, deposit_balance, original))
-}
-
-fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result {
-    if tx1.version == tx2.version
-        && tx1.outputs == tx2.outputs
-        && tx1.lock_time == tx2.lock_time
-        && tx1.inputs.len() == tx2.inputs.len()
-    {
-        for i in 0..tx1.inputs.len() {
-            if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
-                || tx1.inputs[i].sequence != tx2.inputs[i].sequence
-            {
-                error!(
-                    "[ensure_identical]|tx1 not equal to tx2|tx1:{:?}|tx2:{:?}",
-                    tx1, tx2
-                );
-                return Err("The inputs of these two transactions mismatch.");
-            }
-        }
-        return Ok(());
-    }
-    Err("The transaction text does not match the original text to be signed.")
 }
 
 /// bind account
@@ -268,7 +278,7 @@ pub fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
     });
 }
 
-fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: &H256, balance: u64) {
+fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balance: u64) {
     let cache = DepositCache {
         txid: txid.clone(),
         balance,
@@ -299,7 +309,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &keys::Address, txid: &H256, 
     };
 }
 
-fn remove_pending_deposit<T: Trait>(input_address: &keys::Address, who: &T::AccountId) {
+fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::AccountId) {
     if let Some(record) = Module::<T>::pending_deposit(input_address) {
         for r in record {
             deposit_token::<T>(who, r.balance);

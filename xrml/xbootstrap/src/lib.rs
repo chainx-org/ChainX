@@ -182,10 +182,12 @@ decl_storage! {
                         }
                     );
                 }
-                trustees.sort();
-                <xaccounts::TrusteeIntentions<T>>::put(trustees);
 
-                let _ = xbitcoin::Module::<T>::update_trustee_addr();
+                // xmultisig
+                let required_num = config.multisig_init_info.1;
+                let init_accounts = config.multisig_init_info.0.clone();
+                // deploy multisig and build first trustee info
+                xmultisig::Module::<T>::deploy_in_genesis(init_accounts, required_num, vec![(Chain::Bitcoin, trustees)]);
 
                 // xtokens
                 for (token, value_of) in config.endowed_users.iter() {
@@ -204,14 +206,6 @@ decl_storage! {
                         *status
                     );
                 }
-
-                // xmultisig
-                let required_num = config.multisig_init_info.1;
-                let init_accounts = config.multisig_init_info.0.clone();
-                let (team_addr, council_addr)= xmultisig::Module::<T>::deploy_in_genesis(init_accounts, required_num);
-                // set to related place
-                xstaking::TeamAddress::<T>::put(team_addr);
-                xstaking::CouncilAddress::<T>::put(council_addr);
             });
 
             let init: StorageOverlay = init.into();

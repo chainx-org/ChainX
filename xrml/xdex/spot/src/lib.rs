@@ -156,7 +156,7 @@ decl_storage! {
         /// (last price, average transaction price, last update height) of trading pair
         pub TradingPairInfoOf get(trading_pair_info_of): map TradingPairIndex => Option<(T::Price, T::Price, T::BlockNumber)>;
         /// Total transactions has been made for a trading pair.
-        pub TradeHisotryIndexOf get(trade_history_index_of): map TradingPairIndex => ID;
+        pub TradeHistoryIndexOf get(trade_history_index_of): map TradingPairIndex => ID;
 
         /// Total orders has made by an account.
         pub OrderCountOf get(order_count_of): map T::AccountId => ID;

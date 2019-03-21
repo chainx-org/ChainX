@@ -4,9 +4,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_codec::{Decode, Encode};
-#[cfg(feature = "std")]
-use serde_derive::{Deserialize, Serialize};
+mod tests;
+mod types;
 use substrate_primitives::crypto::UncheckedFrom;
 
 use primitives::traits::Hash;
@@ -16,7 +15,9 @@ use support::{decl_event, decl_module, decl_storage, StorageMap};
 use xassets::Chain;
 use xr_primitives::XString;
 
-mod tests;
+pub use self::types::{
+    IntentionProps, TrusteeEntity, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo,
+};
 
 pub type Name = XString;
 pub type URL = XString;
@@ -47,47 +48,6 @@ where
     }
 }
 
-/// Intention mutable properties
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct IntentionProps<SessionKey> {
-    pub url: URL,
-    pub is_active: bool,
-    pub about: XString,
-    pub session_key: Option<SessionKey>,
-}
-
-// TrusteeEntity could be a pubkey or an address depending on the different chain.
-#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum TrusteeEntity {
-    Bitcoin(Vec<u8>),
-}
-
-impl Default for TrusteeEntity {
-    fn default() -> Self {
-        TrusteeEntity::Bitcoin(Vec::default())
-    }
-}
-
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeIntentionProps {
-    pub about: XString,
-    pub hot_entity: TrusteeEntity,
-    pub cold_entity: TrusteeEntity,
-}
-
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeAddressPair {
-    pub hot_address: Vec<u8>,
-    pub cold_address: Vec<u8>,
-}
-
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
@@ -112,19 +72,72 @@ decl_storage! {
 
         pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps<T::SessionKey>;
 
-        pub TrusteeIntentions get(trustee_intentions): Vec<T::AccountId>;
-
-        pub TrusteeIntentionPropertiesOf get(trustee_intention_props_of): map (T::AccountId, Chain) => Option<TrusteeIntentionProps>;
         /// account deposit addr(chain, addr bytes) => (accountid, option(channel accountid))  (channel is a validator)
         pub CrossChainAddressMapOf get(address_map): map (Chain, Vec<u8>) => Option<(T::AccountId, Option<T::AccountId>)>;
         /// account deposit accountid, chain => multi deposit addr
         pub CrossChainBindOf get(account_map): map (Chain, T::AccountId) => Vec<Vec<u8>>;
 
-        pub TrusteeAddress get(trustee_address): map Chain => Option<TrusteeAddressPair>;
+        /// when generate trustee, auto generate a new session number, increase the newest trustee addr, can't modify by user
+        pub TrusteeSessionInfoLen get(trustee_session_info_len): map Chain => u32;
+        /// all session trustee addr
+        pub TrusteeSessionInfoOf get(trustee_session_info_of): map (Chain, u32) => Option<TrusteeSessionInfo<T::AccountId>>;
+        /// trustee basal info config
+        pub TrusteeInfoConfigOf get(trustee_info_config) config(): map Chain => TrusteeInfoConfig;
+        /// trustee property of a accountid and chain
+        pub TrusteeIntentionPropertiesOf get(trustee_intention_props_of): map (T::AccountId, Chain) => Option<TrusteeIntentionProps>;
     }
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+    #[inline]
+    pub fn current_session_number(chain: Chain) -> u32 {
+        match Self::trustee_session_info_len(chain).checked_sub(1) {
+            Some(r) => r,
+            None => u32::max_value(),
+        }
+    }
+
+    pub fn trustee_session_info(chain: Chain) -> Option<TrusteeSessionInfo<T::AccountId>> {
+        let current_session = Self::current_session_number(chain);
+        Self::trustee_session_info_of((chain, current_session))
+    }
+
+    pub fn trustee_address(chain: Chain) -> Option<(Vec<u8>, Vec<u8>)> {
+        Self::trustee_session_info(chain).map(|info| (info.hot_address, info.cold_address))
+    }
+
+    pub fn trustee_list(chain: Chain) -> Option<Vec<T::AccountId>> {
+        Self::trustee_session_info(chain).map(|info| info.trustee_list)
+    }
+
+    pub fn trustee_address_of(chain: Chain, session_number: u32) -> Option<(Vec<u8>, Vec<u8>)> {
+        Self::trustee_session_info_of((chain, session_number))
+            .map(|info| (info.hot_address, info.cold_address))
+    }
+
+    pub fn new_trustee_session(
+        chain: Chain,
+        trustee_list: Vec<T::AccountId>,
+        hot_address: Vec<u8>,
+        cold_address: Vec<u8>,
+    ) {
+        let session_number = TrusteeSessionInfoLen::<T>::get(chain);
+        TrusteeSessionInfoOf::<T>::insert(
+            (chain, session_number),
+            TrusteeSessionInfo::<T::AccountId> {
+                trustee_list,
+                hot_address,
+                cold_address,
+            },
+        );
+
+        let number = match session_number.checked_add(1) {
+            Some(n) => n,
+            None => 0_u32,
+        };
+        TrusteeSessionInfoLen::<T>::insert(chain, number);
+    }
+}
 
 impl<T: Trait> xsystem::Validator<T::AccountId> for Module<T> {
     fn get_validator_by_name(name: &[u8]) -> Option<T::AccountId> {

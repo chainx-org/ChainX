@@ -85,7 +85,7 @@ pub struct IntentionInfo {
     /// is validator
     pub is_validator: bool,
     /// is trustee
-    pub is_trustee: bool,
+    pub is_trustee: Vec<Chain>,
     /// session key for block authoring
     pub session_key: AccountIdForRpc,
     /// how much has intention voted for itself
@@ -118,6 +118,15 @@ impl TrusteeInfo {
             cold_entity,
         }
     }
+}
+
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentTrusteeSessionInfo {
+    pub session_number: u32,
+    pub trustee_list: Vec<AccountIdForRpc>,
+    pub hot_entity: String,
+    pub cold_entity: String,
 }
 
 /// OrderPair info
@@ -290,6 +299,8 @@ pub struct WithdrawTxInfo {
     pub redeem_script: String,
     /// sign_status
     pub sign_status: bool,
+
+    pub trustee_list: Vec<(AccountId, bool)>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

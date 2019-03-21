@@ -4,18 +4,21 @@ use parity_codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::btc_chain::{BlockHeader, Transaction};
-use crate::btc_keys::Address;
-use crate::btc_primitives::compact::Compact;
-use crate::btc_primitives::hash::H256;
-use crate::merkle::PartialMerkleTree;
-use crate::rstd::prelude::Vec;
+use btc_chain::{BlockHeader, Transaction};
+use btc_keys::Address;
+use btc_primitives::compact::Compact;
+use btc_primitives::hash::H256;
+use merkle::PartialMerkleTree;
+use rstd::prelude::Vec;
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum TxType {
-    Withdraw,
+    Withdrawal,
     Deposit,
+    HotAndCold,
+    TrusteeTransition,
+    Irrelevance,
 }
 
 impl Default for TxType {
@@ -35,21 +38,21 @@ pub struct RelayTx {
 
 #[derive(PartialEq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct CandidateTx<AccountId> {
+pub struct WithdrawalProposal<AccountId> {
     pub sig_state: VoteResult,
     pub withdrawal_id_list: Vec<u32>,
     pub tx: Transaction,
     pub trustee_list: Vec<(AccountId, bool)>,
 }
 
-impl<AccountId> CandidateTx<AccountId> {
+impl<AccountId> WithdrawalProposal<AccountId> {
     pub fn new(
         sig_state: VoteResult,
         withdrawal_id_list: Vec<u32>,
         tx: Transaction,
         trustee_list: Vec<(AccountId, bool)>,
     ) -> Self {
-        CandidateTx {
+        WithdrawalProposal {
             sig_state,
             withdrawal_id_list,
             tx,
@@ -86,6 +89,7 @@ pub struct BlockHeaderInfo {
 pub struct TxInfo {
     pub raw_tx: Transaction,
     pub tx_type: TxType,
+    pub height: u32,
 }
 
 pub enum DepositAccountInfo<AccountId> {
@@ -98,13 +102,29 @@ pub struct DepositCache {
     pub txid: H256,
     pub balance: u64,
 }
-
+//
+//#[derive(PartialEq, Clone, Encode, Decode, Default)]
+//#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+//#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+//pub struct TrusteeScriptInfo {
+//    pub hot_redeem_script: Vec<u8>,
+//    pub cold_redeem_script: Vec<u8>,
+//}
 #[derive(PartialEq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeScriptInfo {
-    pub hot_redeem_script: Vec<u8>,
-    pub cold_redeem_script: Vec<u8>,
+pub struct TrusteeAddrInfo {
+    pub addr: Address,
+    pub redeem_script: Vec<u8>,
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Debug for TrusteeAddrInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use rustc_hex::ToHex;
+        let hex: String = self.redeem_script.to_hex();
+        write!(f, "TrusteeAddrInfo {{ addr: {:?}, redeem_script: {:?} }}", self.addr, hex)
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default)]

@@ -89,7 +89,7 @@ impl<T: Trait> Module<T> {
             time: <system::Module<T>>::block_number(),
         };
 
-        <TradeHisotryIndexOf<T>>::insert(pairid, new_fill_index);
+        <TradeHistoryIndexOf<T>>::insert(pairid, new_fill_index);
 
         //插入更新后的订单
         Self::event_order(&maker_order.clone());

@@ -1,16 +1,19 @@
-use crate::btc_keys::DisplayLayout;
+use rstd::prelude::Vec;
+use runtime_primitives::traits::As;
+
+use xassets::assetdef::{Chain, ChainT};
+use xr_primitives::generic::b58;
+use xrecords::{self, RecordInfo, TxState};
+
+use btc_keys::DisplayLayout;
+
 #[cfg(feature = "std")]
 use crate::hash_strip;
-use crate::rstd::prelude::Vec;
-use crate::runtime_primitives::traits::As;
 use crate::tx::handler::parse_deposit_outputs;
+use crate::tx::utils::ensure_identical;
 use crate::types::{TxType, VoteResult};
-use crate::xassets::assetdef::{Chain, ChainT};
-use crate::xrecords::{self, RecordInfo, TxState};
-use crate::xsupport::error;
 use crate::{Module, Trait};
-
-use xr_primitives::generic::b58;
+use xsupport::error;
 
 impl<T: Trait> Module<T> {
     pub fn withdrawal_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::Moment>> {
@@ -53,9 +56,15 @@ impl<T: Trait> Module<T> {
                     if let Some(info) = Module::<T>::block_header_for(prev_hash) {
                         for txid in info.txid_list {
                             if let Some(tx_info) = Self::tx_for(&txid) {
-                                // TODO judge tx equal to current proposal
-                                if tx_info.tx_type == TxType::Withdraw {
-                                    tx_hash = tx_info.raw_tx.hash().as_ref().to_vec();
+                                if tx_info.tx_type == TxType::Withdrawal {
+                                    if let Some(proposal) = Self::withdrawal_proposal() {
+                                        // only this tx total equal to proposal, choose this txhash
+                                        if let Ok(()) =
+                                            ensure_identical(&tx_info.raw_tx, &proposal.tx)
+                                        {
+                                            tx_hash = tx_info.raw_tx.hash().as_ref().to_vec();
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -19,7 +19,7 @@ use system::ensure_signed;
 
 use xaccounts::{IntentionJackpotAccountIdFor, Name, TrusteeEntity, TrusteeIntentionProps, URL};
 use xassets::{Chain, Memo, Token};
-use xr_primitives::XString;
+use xr_primitives::{traits::TrusteeForChain, XString};
 use xsupport::info;
 
 pub mod vote_weight;
@@ -291,7 +291,6 @@ decl_event!(
         OfflineValidator(AccountId),
         EnforceValidatorsInactive(Vec<AccountId>),
         Rotation(Vec<(AccountId, u64)>),
-        NewTrustees(Vec<AccountId>),
         Unnominate(BlockNumber),
         Nominate(AccountId, AccountId, Balance),
         Claim(u64, u64, Balance),
@@ -303,9 +302,6 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as XStaking {
         pub InitialReward get(initial_reward) config(): T::Balance;
-
-        pub TrusteeCount get(trustee_count) config(): u32;
-        pub MinimumTrusteeCount get(minimum_trustee_count) config(): u32;
 
         /// The ideal number of staking participants.
         pub ValidatorCount get(validator_count) config(): u32;
@@ -381,12 +377,13 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn validate_trustee_entity(chain: &Chain, entity: &TrusteeEntity) -> Result {
+        #[allow(unreachable_patterns)]
         match chain {
             Chain::Bitcoin => match entity {
-                TrusteeEntity::Bitcoin(pubkey) if pubkey.len() != 33 && pubkey.len() != 65 => {
-                    return Err("Valid pubkeys are either 33 or 65 bytes.");
+                TrusteeEntity::Bitcoin(pubkey) => {
+                    xbitcoin::Module::<T>::check_address(pubkey)?;
                 }
-                _ => (),
+                _ => return Err("when chain is Bitcoin, the TrusteeEntity must be TrusteeEntity::Bitcoin either"),
             },
             _ => return Err("Unsupported chain."),
         }

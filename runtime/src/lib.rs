@@ -6,6 +6,7 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
 #![recursion_limit = "512"]
 mod fee;
+mod trustee;
 mod xexecutive;
 
 use parity_codec::Decode;
@@ -45,6 +46,7 @@ use chainx_primitives::{
     Hash, Index, Signature, Timestamp as TimestampU64,
 };
 
+pub use xaccounts;
 pub use xassets;
 pub use xbitcoin;
 
@@ -212,8 +214,8 @@ construct_runtime!(
         Sudo: sudo,
 
         // chainx runtime module
-        XSystem: xsystem::{Module, Call, Storage, Config<T>, Inherent}, //, Inherent},
-        XAccounts: xaccounts::{Module, Storage, Event<T>}, //, Inherent},
+        XSystem: xsystem::{Module, Call, Storage, Config<T>, Inherent},
+        XAccounts: xaccounts,
         // fee
         XFeeManager: xfee_manager::{Module, Call, Storage, Config<T>},
         // assets

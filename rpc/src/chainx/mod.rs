@@ -16,9 +16,9 @@ use state_machine::Backend;
 use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::{Call, Runtime};
 
-use xaccounts::{IntentionProps, TrusteeEntity, TrusteeIntentionProps};
+use xaccounts::{IntentionProps, TrusteeEntity, TrusteeIntentionProps, TrusteeSessionInfo};
 use xassets::{Asset, AssetType, Chain, Token};
-use xbitcoin::{self, CandidateTx, VoteResult, WithdrawalProposal};
+use xbitcoin::{TrusteeAddrInfo as BtcTrusteeAddrInfo, VoteResult};
 use xrecords::{RecordInfo, TxState};
 use xspot::{
     HandicapT, OrderDetails, OrderDirection, OrderProperty, OrderStatus, OrderType, TradingPair,
@@ -112,11 +112,11 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     #[rpc(name = "chainx_getAddressByAccount")]
     fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>>;
 
-    #[rpc(name = "chainx_getTrusteeAddress")]
-    fn trustee_address(&self, chain: Chain) -> Result<Option<(String, String)>>;
+    #[rpc(name = "chainx_getTrusteeSessionInfo")]
+    fn trustee_session_info(&self, chain: Chain) -> Result<Option<CurrentTrusteeSessionInfo>>;
 
     #[rpc(name = "chainx_getTrusteeInfoByAccount")]
-    fn trustee_info(&self, who: AccountId) -> Result<Vec<TrusteeInfo>>;
+    fn trustee_info_for_accountid(&self, who: AccountId) -> Result<Vec<TrusteeInfo>>;
 
     #[rpc(name = "chainx_getFeeByCallAndLength")]
     fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>>;
@@ -178,5 +178,23 @@ where
             .map(StorageData)
             .map(|s| Decode::decode(&mut s.0.as_slice()))
             .unwrap_or(None))
+    }
+
+    fn current_trustee_session_info(
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        chain: Chain,
+    ) -> Result<Option<(TrusteeSessionInfo<AccountId>, u32)>> {
+        use support::storage::generator::StorageMap;
+        let key = <xaccounts::TrusteeSessionInfoLen<Runtime>>::key_for(&chain);
+        let session_length = Self::pickout::<u32>(state, &key)?.unwrap_or_default();
+        let session_number = if session_length == 0 {
+            u32::max_value()
+        } else {
+            session_length - 1
+        };
+        let key = <xaccounts::TrusteeSessionInfoOf<Runtime>>::key_for(&(chain, session_number));
+
+        Self::pickout::<TrusteeSessionInfo<AccountId>>(state, &key)
+            .map(|item_option| item_option.map(|item| (item, session_number)))
     }
 }

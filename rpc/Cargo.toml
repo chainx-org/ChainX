@@ -49,10 +49,10 @@ xbitcoin = { package = "xrml-bridge-bitcoin", path = "../xrml/xbridge/bitcoin" }
 
 # bitcoin
 keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
+btc_ser = { package = "serialization", git = "https://github.com/chainx-org/bitcoin-rust" }
 
 [dev-dependencies]
 assert_matches = "1.1"
 futures = "0.1.17"
 test_client = { package = "substrate-test-client", git = "https://github.com/chainpool/substrate" }
 consensus = { package = "substrate-consensus-common", git = "https://github.com/chainpool/substrate" }
-hex-literal = "0.1"
