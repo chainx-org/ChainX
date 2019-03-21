@@ -194,12 +194,12 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XMultiSig {
-        pub RootAddrList get(root_addr_list): Vec < T::AccountId >;
+        pub RootAddrList get(root_addr_list): Vec <T::AccountId>;
 
-        pub MultiSigAddrInfo get(multisig_addr_info): map T::AccountId => Option < AddrInfo < T::AccountId > >;
+        pub MultiSigAddrInfo get(multisig_addr_info): map T::AccountId => Option<AddrInfo<T::AccountId>>;
 
-        pub PendingListFor get(pending_list_for): map T::AccountId => Vec < T::Hash >;
-        pub PendingStateFor get(pending_state_for): map (T::AccountId, T::Hash) => Option < PendingState < T::Proposal > >;
+        pub PendingListFor get(pending_list_for): map T::AccountId => Vec<T::Hash>;
+        pub PendingStateFor get(pending_state_for): map (T::AccountId, T::Hash) => Option<PendingState<T::Proposal>>;
 
         // for deployer
         pub MultiSigListItemFor get(multi_sig_list_item_for): map (T::AccountId, u32) => T::AccountId;
