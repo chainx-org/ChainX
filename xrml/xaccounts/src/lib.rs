@@ -57,8 +57,8 @@ decl_module! {
 /// An event in this module.
 decl_event!(
     pub enum Event<T> where <T as system::Trait>::AccountId {
-        /// A cert has been issued.
-        Issue(Name, u32, AccountId),
+        /// New Trustees for chain, chain, session number, accountid, hot_addr, cold_addr
+        NewTrustees(Chain, u32, Vec<AccountId>, Vec<u8>, Vec<u8>),
     }
 );
 
@@ -125,9 +125,9 @@ impl<T: Trait> Module<T> {
         TrusteeSessionInfoOf::<T>::insert(
             (chain, session_number),
             TrusteeSessionInfo::<T::AccountId> {
-                trustee_list,
-                hot_address,
-                cold_address,
+                trustee_list: trustee_list.clone(),
+                hot_address: hot_address.clone(),
+                cold_address: cold_address.clone(),
             },
         );
 
@@ -136,6 +136,8 @@ impl<T: Trait> Module<T> {
             None => 0_u32,
         };
         TrusteeSessionInfoLen::<T>::insert(chain, number);
+
+        Self::deposit_event(RawEvent::NewTrustees(chain, session_number, trustee_list, hot_address, cold_address));
     }
 }
 
