@@ -45,7 +45,7 @@ pub use types::{
 
 use xsupport::{debug, ensure_with_errorlog, error, info, warn};
 #[cfg(feature = "std")]
-use xsupport::{u8array_to_hex, u8array_to_string, trustees};
+use xsupport::{trustees, u8array_to_hex, u8array_to_string};
 
 pub type AddrStr = XString;
 
@@ -258,48 +258,51 @@ impl<T: Trait> TrusteeForChain<T::AccountId, ()> for Module<T> {
         let mut trustee_info_list = Vec::new();
         for trustee in candidates {
             let key = (trustee.clone(), Chain::Bitcoin);
-            if let Some(props) = xaccounts::Module::<T>::trustee_intention_props_of(&key) {
-                #[allow(unreachable_patterns)]
-                let hot_key = match props.hot_entity {
-                    TrusteeEntity::Bitcoin(pubkey) => {
-                        if Self::check_address(&pubkey).is_err() {
-                            error!("[generate_new_trustees]|[btc] this hot pubkey not valid!|hot pubkey:{:}", u8array_to_hex(&pubkey));
-                            continue;
-                        }
-                        pubkey
-                    }
-                    _ => {
-                        warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN hot entity|who:{:}", trustee);
+            let props = xaccounts::Module::<T>::trustee_intention_props_of(&key)
+                .ok_or_else(|| {
+                    error!(
+                        "[generate_new_trustees]|[btc] the candidate must be a trustee|who:{:}",
+                        trustee
+                    );
+                    ""
+                })
+                .expect("[btc] the candidate must be a trustee; qed");
+
+            #[allow(unreachable_patterns)]
+            let hot_key = match props.hot_entity {
+                TrusteeEntity::Bitcoin(pubkey) => {
+                    if Self::check_address(&pubkey).is_err() {
+                        error!("[generate_new_trustees]|[btc] this hot pubkey not valid!|hot pubkey:{:}", u8array_to_hex(&pubkey));
                         continue;
                     }
-                };
-                #[allow(unreachable_patterns)]
-                let cold_key = match props.cold_entity {
-                    TrusteeEntity::Bitcoin(pubkey) => {
-                        if Self::check_address(&pubkey).is_err() {
-                            error!("[generate_new_trustees]|[btc] this hot pubkey not valid!|cold pubkey:{:}", u8array_to_hex(&pubkey));
-                            continue;
-                        }
-                        pubkey
-                    }
-                    _ => {
-                        warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN cold entity|who:{:}", trustee);
+                    pubkey
+                }
+                _ => {
+                    warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN hot entity|who:{:}", trustee);
+                    continue;
+                }
+            };
+            #[allow(unreachable_patterns)]
+            let cold_key = match props.cold_entity {
+                TrusteeEntity::Bitcoin(pubkey) => {
+                    if Self::check_address(&pubkey).is_err() {
+                        error!("[generate_new_trustees]|[btc] this hot pubkey not valid!|cold pubkey:{:}", u8array_to_hex(&pubkey));
                         continue;
                     }
-                };
-                trustee_info_list.push((trustee.clone(), (hot_key, cold_key)));
-            } else {
-                error!(
-                    "[generate_new_trustees]|[btc] the candidate must be a trustee|who:{:}",
-                    trustee
-                );
-                assert!(false, "[btc] the candidate must be a trustee");
-            }
+                    pubkey
+                }
+                _ => {
+                    warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN cold entity|who:{:}", trustee);
+                    continue;
+                }
+            };
+            trustee_info_list.push((trustee.clone(), (hot_key, cold_key)));
             // just get max trustee count
             if trustee_info_list.len() as u32 > config.max_trustee_count {
                 break;
             }
         }
+
         if (trustee_info_list.len() as u32) < config.min_trustee_count {
             error!("[update_trustee_addr]|trustees is less than [{:}] people, can't generate trustee addr|trustees:{:?}", config.min_trustee_count, candidates);
             return Err("trustees is less than required people, can't generate trustee addr");

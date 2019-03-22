@@ -123,7 +123,11 @@ impl std::fmt::Debug for TrusteeAddrInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         use rustc_hex::ToHex;
         let hex: String = self.redeem_script.to_hex();
-        write!(f, "TrusteeAddrInfo {{ addr: {:?}, redeem_script: {:?} }}", self.addr, hex)
+        write!(
+            f,
+            "TrusteeAddrInfo {{ addr: {:?}, redeem_script: {:?} }}",
+            self.addr, hex
+        )
     }
 }
 

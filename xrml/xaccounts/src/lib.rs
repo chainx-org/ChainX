@@ -137,7 +137,13 @@ impl<T: Trait> Module<T> {
         };
         TrusteeSessionInfoLen::<T>::insert(chain, number);
 
-        Self::deposit_event(RawEvent::NewTrustees(chain, session_number, trustee_list, hot_address, cold_address));
+        Self::deposit_event(RawEvent::NewTrustees(
+            chain,
+            session_number,
+            trustee_list,
+            hot_address,
+            cold_address,
+        ));
     }
 }
 

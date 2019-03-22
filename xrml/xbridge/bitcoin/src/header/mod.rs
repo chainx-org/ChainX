@@ -13,7 +13,7 @@ use crate::{BlockHashFor, BlockHeaderFor, Module, Trait};
 
 #[cfg(feature = "std")]
 use crate::hash_strip;
-use xsupport::{debug, error};
+use xsupport::{debug, error, info};
 
 pub enum ChainErr {
     /// Unknown parent
@@ -97,27 +97,32 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256
     let confirmations = Module::<T>::confirmation_number();
     let mut prev_hash = header_info.header.previous_header_hash.clone();
     for _ in 1..confirmations {
-        if let Some(info) = Module::<T>::block_header_for(prev_hash) {
+        if let Some(info) = Module::<T>::block_header_for(&prev_hash) {
             prev_hash = info.header.previous_header_hash
         } else {
-            // no not have prev hash in storage, return genesis header info
-            let (header, height) = Module::<T>::genesis_info();
-            return (header.hash(), height);
+            // if not find current header info, jump out of loop
+            info!(
+                "[update_confirmed_header]|not find for hash:{:?}, current reverse count:{:}",
+                prev_hash, confirmations
+            );
+            break;
         }
     }
-    // prev_hash is confirmed header, prev block must be existed!
-    BlockHeaderFor::<T>::mutate(&prev_hash, |info| {
-        if let Some(header) = info {
-            handle_confirm_block::<T>(header);
-            header.confirmed = true
-        } else {
-            error!(
-                "[update_confirmed_header]|prev block not exist!|prev:{:?}",
-                prev_hash
-            );
-            assert!(false, "prev block not exist at this point!");
-        }
-    });
+
+    if let Some(mut header) = Module::<T>::block_header_for(&prev_hash) {
+        handle_confirm_block::<T>(&header);
+        header.confirmed = true;
+        BlockHeaderFor::<T>::insert(&prev_hash, header);
+    } else {
+        // no not have prev hash in storage, return genesis header info
+        info!(
+            "[update_confirmed_header]|not find prev header, use genesis instead|prev:{:?}",
+            prev_hash
+        );
+        let (header, height) = Module::<T>::genesis_info();
+        return (header.hash(), height);
+    }
+
     (prev_hash, header_info.height - confirmations)
 }
 
