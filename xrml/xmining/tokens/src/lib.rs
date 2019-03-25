@@ -290,9 +290,15 @@ impl<T: Trait> Module<T> {
         let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
         let jackpot = xassets::Module::<T>::pcx_free_balance(&addr).as_();
 
-        let reward = match (blocks as u128 * value.as_() as u128).checked_mul(jackpot as u128) {
+        let depositor_vote_weight = blocks as u128 * value.as_() as u128;
+
+        let reward = match depositor_vote_weight.checked_mul(jackpot as u128) {
             Some(x) => {
-                let reward = x / psedu_intention.last_total_deposit_weight as u128;
+                let reward =
+                    x / (depositor_vote_weight + psedu_intention.last_total_deposit_weight as u128);
+                if reward > jackpot as u128 {
+                    panic!("The issue reward is no more than the jackpot balance");
+                }
                 if reward < u64::max_value() as u128 {
                     T::Balance::sa(reward as u64)
                 } else {
