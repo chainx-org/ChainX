@@ -305,54 +305,36 @@ pub struct WithdrawTxInfo {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OrderPropInfo<Pair, AccountId, Amount, Price, BlockNumber>(
-    AccountId,
-    Pair,
-    OrderDirection,
-    Amount,
-    Price,
-    ID,
-    OrderType,
-    BlockNumber,
-);
-
-impl From<OrderProperty<TradingPairIndex, AccountId, Balance, Balance, BlockNumber>>
-    for OrderPropInfo<TradingPairIndex, AccountIdForRpc, Balance, Balance, BlockNumber>
-{
-    fn from(
-        prop: OrderProperty<TradingPairIndex, AccountId, Balance, Balance, BlockNumber>,
-    ) -> Self {
-        OrderPropInfo(
-            prop.submitter().into(),
-            prop.pair(),
-            prop.direction(),
-            prop.amount(),
-            prop.price(),
-            prop.index(),
-            prop.order_type(),
-            prop.created_at(),
-        )
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OrderInfo {
-    pub props: OrderPropInfo<TradingPairIndex, AccountIdForRpc, Balance, Balance, BlockNumber>,
+pub struct OrderDetails {
+    pub submitter: AccountIdForRpc,
+    pub pair_index: TradingPairIndex,
+    pub direction: OrderDirection,
+    pub amount: Balance,
+    pub price: Balance,
+    pub index: Index,
+    pub order_type: OrderType,
+    pub created_at: BlockNumber,
     pub status: OrderStatus,
     pub remaining: Balance,
-    pub fill_index: Vec<ID>,
+    pub executed_indices: Vec<Index>,
     pub already_filled: Balance,
     pub last_update_at: BlockNumber,
 }
 
-impl From<OrderDetails<Runtime>> for OrderInfo {
-    fn from(order: OrderDetails<Runtime>) -> Self {
-        OrderInfo {
-            props: order.props.into(),
+impl From<OrderInfo<Runtime>> for OrderDetails {
+    fn from(order: OrderInfo<Runtime>) -> Self {
+        OrderDetails {
+            submitter: order.submitter().into(),
+            pair_index: order.pair_index(),
+            direction: order.direction(),
+            amount: order.amount(),
+            price: order.price(),
+            index: order.index(),
+            order_type: order.order_type(),
+            created_at: order.created_at(),
             status: order.status,
             remaining: order.remaining,
-            fill_index: order.fill_index,
+            executed_indices: order.executed_indices,
             already_filled: order.already_filled,
             last_update_at: order.last_update_at,
         }

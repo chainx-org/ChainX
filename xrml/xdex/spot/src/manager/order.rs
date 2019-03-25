@@ -5,11 +5,97 @@ use super::*;
 use primitives::traits::CheckedAdd;
 
 impl<T: Trait> Module<T> {
-    /// Create a brand new order with some defaults.
-    pub(crate) fn new_fresh_order(
-        pair: TradingPairIndex,
+    /// When the price is far from the current handicap, i.e.,
+    /// - buy: less than the lowest_offer
+    /// - sell: larger than the highest_bid
+    /// what we only need to do is to check if the handicap should be updated.
+    /// Or else we should match the order.
+    pub(crate) fn try_match_order(
+        pair: &TradingPair,
+        order: &mut OrderInfo<T>,
+        pair_index: TradingPairIndex,
+        direction: OrderDirection,
         price: T::Price,
-        order_index: ID,
+    ) {
+        let handicap = <HandicapOf<T>>::get(pair_index);
+        let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
+
+        // If the price is too low or too high, we only need to check if the handicap should be updated,
+        // otherwise we should match this order.
+        let skip_match_order = match direction {
+            Buy => lowest_offer.is_zero() || price < lowest_offer,
+            Sell => highest_bid.is_zero() || price > highest_bid,
+        };
+
+        // If there is no chance to match order, we only have to insert this quote and update handicap.
+        if skip_match_order {
+            <QuotationsOf<T>>::mutate(&(order.pair_index(), order.price()), |quotations| {
+                quotations.push((order.submitter(), order.index()))
+            });
+
+            match direction {
+                Buy if price > highest_bid => {
+                    <HandicapOf<T>>::mutate(pair_index, |handicap| handicap.highest_bid = price);
+                }
+                Sell if lowest_offer.is_zero() || price < lowest_offer => {
+                    <HandicapOf<T>>::mutate(pair_index, |handicap| handicap.lowest_offer = price);
+                }
+                _ => (),
+            }
+        } else {
+            Self::match_order(&pair, order, &handicap);
+        }
+
+        Self::update_order_event(&order);
+    }
+
+    /// Insert a fresh order and return the inserted result.
+    pub(crate) fn inject_order(
+        who: T::AccountId,
+        pair_index: TradingPairIndex,
+        price: T::Price,
+        order_type: OrderType,
+        direction: OrderDirection,
+        amount: T::Balance,
+        remaining: T::Balance,
+    ) -> Order<TradingPairIndex, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
+        // The order count of user should be increased as well.
+        let order_index = Self::order_count_of(&who);
+        <OrderCountOf<T>>::insert(&who, order_index + 1);
+
+        let order = Self::new_fresh_order(
+            pair_index,
+            price,
+            order_index,
+            who,
+            order_type,
+            direction,
+            amount,
+            remaining,
+        );
+
+        debug!("[inject_order] {:?}", order);
+        <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), &order);
+
+        Self::deposit_event(RawEvent::PutOrder(
+            order.submitter(),
+            order.index(),
+            order.pair_index(),
+            order.order_type(),
+            order.price(),
+            order.direction(),
+            order.amount(),
+            order.created_at(),
+        ));
+
+        order
+    }
+
+    /// Create a brand new order with some defaults.
+    fn new_fresh_order(
+        pair_index: TradingPairIndex,
+        price: T::Price,
+        order_index: OrderIndex,
         submitter: T::AccountId,
         class: OrderType,
         direction: OrderDirection,
@@ -18,7 +104,7 @@ impl<T: Trait> Module<T> {
     ) -> Order<TradingPairIndex, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
         let current_block = <system::Module<T>>::block_number();
         let props = OrderProperty::new(
-            pair,
+            pair_index,
             order_index,
             class,
             direction,
@@ -38,254 +124,256 @@ impl<T: Trait> Module<T> {
         )
     }
 
-    fn update_order(order: &mut OrderDetails<T>, amount: &T::Balance, new_fill_index: ID) {
-        order.fill_index.push(new_fill_index);
-        order.already_filled = order.already_filled.checked_add(amount).unwrap_or_default();
+    /// Match the new putted order. When the matching is complete, we should check
+    /// if the order has been fulfilled and update the handicap.
+    fn match_order(pair: &TradingPair, order: &mut OrderInfo<T>, handicap: &HandicapInfo<T>) {
+        #[cfg(feature = "std")]
+        let begin = Local::now().timestamp_millis();
+
+        Self::apply_match_order(order, pair, handicap);
+
+        #[cfg(feature = "std")]
+        let end = Local::now().timestamp_millis();
+        debug!("[match order] elasped time: {:}", end - begin);
+
+        // Remove the full filled order, otherwise the quotations, order status and handicap
+        // should be updated.
+        if order.is_fulfilled() {
+            order.status = OrderStatus::AllExecuted;
+            <OrderInfoOf<T>>::remove(&(order.submitter(), order.index()));
+        } else {
+            <QuotationsOf<T>>::mutate(&(order.pair_index(), order.price()), |quotations| {
+                quotations.push((order.submitter(), order.index()))
+            });
+
+            // Since the handicap is not always related to a real order, this guard statement is neccessary!
+            if order.already_filled > Zero::zero() {
+                order.status = OrderStatus::ParitialExecuted;
+            }
+
+            <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), order.clone());
+
+            Self::update_handicap_after_matching_order(pair, order);
+        }
+    }
+
+    fn apply_match_order_given_opponent_price(
+        taker_order: &mut OrderInfo<T>,
+        pair: &TradingPair,
+        opponent_price: T::Price,
+        opponent_direction: OrderDirection,
+    ) {
+        let quotations = <QuotationsOf<T>>::get(&(pair.index, opponent_price));
+        for quotation in quotations.iter() {
+            if taker_order.is_fulfilled() {
+                return;
+            }
+            // Find the matched order.
+            if let Some(mut maker_order) = <OrderInfoOf<T>>::get(quotation) {
+                if opponent_direction != maker_order.direction() {
+                    panic!("opponent direction error");
+                }
+
+                let turnover = cmp::min(
+                    taker_order.remaining_in_base(),
+                    maker_order.remaining_in_base(),
+                );
+
+                // Execute the order at the opponent price when they match.
+                let _ = Self::execute_order(
+                    pair.index,
+                    &mut maker_order,
+                    taker_order,
+                    opponent_price,
+                    turnover,
+                );
+
+                // Remove maker_order if it has been full filled.
+                if maker_order.is_fulfilled() {
+                    <OrderInfoOf<T>>::remove(&(maker_order.submitter(), maker_order.index()));
+
+                    Self::remove_quotation(
+                        pair.index,
+                        opponent_price,
+                        maker_order.submitter(),
+                        maker_order.index(),
+                    );
+
+                    Self::update_handicap(&pair, opponent_price, maker_order.direction());
+                }
+
+                Self::update_latest_and_average_price(pair.index, opponent_price);
+            }
+        }
+    }
+
+    fn apply_match_order(
+        taker_order: &mut OrderInfo<T>,
+        pair: &TradingPair,
+        handicap: &HandicapInfo<T>,
+    ) {
+        let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
+        let tick = 10_u64.pow(pair.tick_precision);
+
+        let my_quote = taker_order.price();
+
+        //  Buy: [ lowest_offer  , my_quote ]
+        // Sell: [ my_quote , highest_bid   ]
+        // FIXME refine later
+        match taker_order.direction() {
+            Buy => {
+                let (opponent_direction, floor, ceiling) = (Sell, lowest_offer, my_quote);
+
+                let mut opponent_price = floor;
+
+                while !opponent_price.is_zero() && opponent_price <= ceiling {
+                    if taker_order.is_fulfilled() {
+                        return;
+                    }
+                    Self::apply_match_order_given_opponent_price(
+                        taker_order,
+                        pair,
+                        opponent_price,
+                        opponent_direction,
+                    );
+                    opponent_price = Self::tick_up(opponent_price, tick);
+                }
+            }
+            Sell => {
+                let (opponent_direction, floor, ceiling) = (Buy, my_quote, highest_bid);
+
+                let mut opponent_price = ceiling;
+
+                while !opponent_price.is_zero() && opponent_price >= floor {
+                    if taker_order.is_fulfilled() {
+                        return;
+                    }
+                    Self::apply_match_order_given_opponent_price(
+                        taker_order,
+                        pair,
+                        opponent_price,
+                        opponent_direction,
+                    );
+                    opponent_price = Self::tick_down(opponent_price, tick);
+                }
+            }
+        }
+    }
+
+    /// Remove the order from quotations and clear the order info when it's canceled.
+    pub(crate) fn kill_order(
+        pair_index: TradingPairIndex,
+        price: T::Price,
+        who: T::AccountId,
+        order_index: OrderIndex,
+        pair: TradingPair,
+        order_direction: OrderDirection,
+    ) {
+        <OrderInfoOf<T>>::remove(&(who.clone(), order_index));
+
+        Self::remove_quotation(pair_index, price, who, order_index);
+
+        Self::update_handicap(&pair, price, order_direction);
+    }
+
+    fn update_order_on_execute(
+        order: &mut OrderInfo<T>,
+        amount: &T::Balance,
+        trade_history_index: TradeHistoryIndex,
+    ) {
+        order.executed_indices.push(trade_history_index);
+
+        // Unwrap or default?
+        order.already_filled = match order.already_filled.checked_add(amount) {
+            Some(x) => x,
+            None => panic!("add order.already_filled overflow"),
+        };
 
         order.status = if order.already_filled == order.amount() {
             OrderStatus::AllExecuted
         } else if order.already_filled < order.amount() {
             OrderStatus::ParitialExecuted
         } else {
-            panic!("maker order has not enough amount");
+            panic!("Already filled of an order can't greater than the order's amount.");
         };
 
         order.last_update_at = <system::Module<T>>::block_number();
     }
 
-    pub(crate) fn fill_order(
-        pairid: TradingPairIndex,
-        maker_order: &mut OrderDetails<T>,
-        taker_order: &mut OrderDetails<T>,
+    fn insert_refreshed_order(order: &OrderInfo<T>) {
+        <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), order);
+    }
+
+    /// 1. update the taker and maker order based on the turnover
+    /// 2. delivery asset to each other
+    /// 3. update the remaining of orders
+    fn execute_order(
+        pair_index: TradingPairIndex,
+        maker_order: &mut OrderInfo<T>,
+        taker_order: &mut OrderInfo<T>,
         price: T::Price,
-        amount: T::Balance,
+        turnover: T::Balance,
     ) -> Result {
-        let pair = Self::trading_pair(&pairid)?;
+        let pair = Self::trading_pair(&pair_index)?;
 
-        // 更新挂单、成交历史、资产转移
-        let new_fill_index = Self::trade_history_index_of(pairid) + 1;
+        let trade_history_index = Self::trade_history_index_of(pair_index);
+        <TradeHistoryIndexOf<T>>::insert(pair_index, trade_history_index + 1);
 
-        // 更新 maker, taker 对应的订单
-        Self::update_order(maker_order, &amount, new_fill_index);
-        Self::update_order(maker_order, &amount, new_fill_index);
+        Self::update_order_on_execute(maker_order, &turnover, trade_history_index);
+        Self::update_order_on_execute(taker_order, &turnover, trade_history_index);
 
-        Self::delivery_asset_to_each_other(
+        let (maker_turnover_amount, taker_turnover_amount) = Self::delivery_asset_to_each_other(
             maker_order.direction(),
             &pair,
-            amount,
+            turnover,
             price,
             maker_order,
             taker_order,
         )?;
 
-        //插入新的成交记录
-        let fill = Fill {
-            pair: pairid,
-            price,
-            index: new_fill_index,
-            maker: Maker(maker_order.submitter(), maker_order.index()),
-            taker: Taker(taker_order.submitter(), taker_order.index()),
-            amount,
-            time: <system::Module<T>>::block_number(),
-        };
+        maker_order.decrease_remaining_on_execute(maker_turnover_amount);
+        taker_order.decrease_remaining_on_execute(taker_turnover_amount);
 
-        <TradeHistoryIndexOf<T>>::insert(pairid, new_fill_index);
+        Self::insert_refreshed_order(maker_order);
+        Self::insert_refreshed_order(taker_order);
 
-        //插入更新后的订单
-        Self::event_order(&maker_order.clone());
-        <OrderInfoOf<T>>::insert(
-            (maker_order.submitter(), maker_order.index()),
-            &maker_order.clone(),
-        );
-
-        Self::event_order(&taker_order.clone());
-        <OrderInfoOf<T>>::insert(
-            (taker_order.submitter(), taker_order.index()),
-            &taker_order.clone(),
-        );
-
-        // 记录日志
+        Self::update_order_event(&maker_order.clone());
+        Self::update_order_event(&taker_order.clone());
         Self::deposit_event(RawEvent::FillOrder(
-            fill.index,
-            fill.pair,
-            fill.price,
-            fill.maker.0,
-            fill.taker.0,
-            fill.maker.1,
-            fill.taker.1,
-            fill.amount,
-            fill.time.as_(),
+            trade_history_index,
+            pair_index,
+            price,
+            maker_order.submitter(),
+            taker_order.submitter(),
+            maker_order.index(),
+            taker_order.index(),
+            turnover,
+            <system::Module<T>>::block_number().as_(),
         ));
 
         Ok(())
     }
 
-    pub(crate) fn update_quotations_and_handicap(pair: &TradingPair, order: &mut OrderDetails<T>) {
-        if order.amount() > order.already_filled {
-            if order.already_filled > Zero::zero() {
-                order.status = OrderStatus::ParitialExecuted;
-            }
-
-            <OrderInfoOf<T>>::insert((order.submitter(), order.index()), &order.clone());
-            Self::event_order(&order);
-
-            // 更新报价
-            let quotation_key = (order.pair(), order.price());
-            let mut quotations = <QuotationsOf<T>>::get(&quotation_key);
-            quotations.push((order.submitter(), order.index()));
-            <QuotationsOf<T>>::insert(&quotation_key, quotations);
-
-            // 更新盘口
-            match order.direction() {
-                OrderDirection::Buy => {
-                    if let Some(mut handicap) = <HandicapOf<T>>::get(order.pair()) {
-                        if order.price() > handicap.buy || handicap.buy == Default::default() {
-                            handicap.buy = order.price();
-                            Self::event_handicap(order.pair(), handicap.buy, OrderDirection::Buy);
-
-                            if handicap.buy >= handicap.sell {
-                                handicap.sell = handicap
-                                    .buy
-                                    .checked_add(&As::sa(10_u64.pow(pair.unit_precision)))
-                                    .unwrap_or_default();
-                                Self::event_handicap(
-                                    order.pair(),
-                                    handicap.sell,
-                                    OrderDirection::Sell,
-                                );
-                            }
-                            <HandicapOf<T>>::insert(order.pair(), handicap);
-                        }
-                    } else {
-                        let mut handicap: HandicapT<T> = Default::default();
-                        handicap.buy = order.price();
-                        Self::event_handicap(order.pair(), handicap.buy, OrderDirection::Buy);
-                        <HandicapOf<T>>::insert(order.pair(), handicap);
-                    }
-                }
-                OrderDirection::Sell => {
-                    if let Some(mut handicap) = <HandicapOf<T>>::get(order.pair()) {
-                        if order.price() < handicap.sell || handicap.sell == Default::default() {
-                            handicap.sell = order.price();
-                            Self::event_handicap(order.pair(), handicap.sell, OrderDirection::Sell);
-
-                            if handicap.sell <= handicap.buy {
-                                handicap.buy = handicap
-                                    .sell
-                                    .checked_sub(&As::sa(10_u64.pow(pair.unit_precision)))
-                                    .unwrap_or_default();
-                                Self::event_handicap(
-                                    order.pair(),
-                                    handicap.buy,
-                                    OrderDirection::Buy,
-                                );
-                            }
-                            <HandicapOf<T>>::insert(order.pair(), handicap);
-                        }
-                    } else {
-                        let mut handicap: HandicapT<T> = Default::default();
-                        handicap.sell = order.price();
-                        Self::event_handicap(order.pair(), handicap.sell, OrderDirection::Sell);
-                        <HandicapOf<T>>::insert(order.pair(), handicap);
-                    }
-                }
-            }
-        } else {
-            // 更新状态 删除
-            order.status = OrderStatus::AllExecuted;
-            Self::event_order(&order);
-            <OrderInfoOf<T>>::remove((order.submitter(), order.index()));
-        }
-    }
-
-    pub(crate) fn try_match_order(
-        order: &mut OrderDetails<T>,
+    pub(crate) fn update_order_and_unreserve_on_cancel(
+        order: &mut OrderInfo<T>,
         pair: &TradingPair,
-        handicap: &HandicapT<T>,
-    ) {
-        let (opponent_direction, mut opponent_price) = match order.direction() {
-            OrderDirection::Buy => (OrderDirection::Sell, handicap.sell),
-            OrderDirection::Sell => (OrderDirection::Buy, handicap.buy),
+        who: &T::AccountId,
+    ) -> Result {
+        // Unreserve the remaining asset.
+        let (refund_token, refund_amount) = match order.direction() {
+            Sell => (pair.base(), order.remaining_in_base()),
+            Buy => (pair.quote(), order.remaining),
         };
-        let min_unit = 10_u64.pow(pair.unit_precision);
-        let safe_checked_sub = |x: T::Balance, y: T::Balance| x.checked_sub(&y).unwrap_or_default();
 
-        loop {
-            if opponent_price.is_zero() {
-                return;
-            }
+        Self::cancel_order_unreserve(who, &refund_token, refund_amount)?;
 
-            if order.already_filled >= order.amount() {
-                order.status = OrderStatus::AllExecuted;
-                return;
-            }
+        order.update_status_on_cancel();
+        order.decrease_remaining_on_cancel(refund_amount);
+        order.last_update_at = <system::Module<T>>::block_number();
 
-            let found = match order.direction() {
-                OrderDirection::Buy => {
-                    if order.price() >= opponent_price {
-                        true
-                    } else {
-                        return;
-                    }
-                }
-                OrderDirection::Sell => {
-                    if order.price() <= opponent_price {
-                        true
-                    } else {
-                        return;
-                    }
-                }
-            };
+        Self::update_order_event(&order);
+        <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), order);
 
-            if found {
-                let quotations = <QuotationsOf<T>>::get(&(pair.id, opponent_price));
-                for quotation in quotations.iter() {
-                    if order.already_filled >= order.amount() {
-                        order.status = OrderStatus::AllExecuted;
-                        break;
-                    }
-                    // 找到匹配的单
-                    if let Some(mut maker_order) = <OrderInfoOf<T>>::get(quotation) {
-                        if opponent_direction != maker_order.direction() {
-                            panic!("opponent direction error");
-                        }
-                        let v1 = safe_checked_sub(order.amount(), order.already_filled);
-                        let v2 = safe_checked_sub(maker_order.amount(), maker_order.already_filled);
-                        let amount = cmp::min(v1, v2);
-
-                        //填充成交
-                        let _ = Self::fill_order(
-                            pair.id,
-                            &mut maker_order,
-                            order,
-                            opponent_price,
-                            amount,
-                        );
-
-                        //更新最新价、平均价
-                        Self::update_last_average_price(pair.id, opponent_price);
-                    }
-                }
-            }
-
-            //移动对手价
-            opponent_price =
-                Self::alter_opponent_price(order.direction(), opponent_price, min_unit);
-        }
-    }
-
-    fn alter_opponent_price(
-        direction: OrderDirection,
-        opponent_price: T::Price,
-        min_unit: u64,
-    ) -> T::Price {
-        match direction {
-            OrderDirection::Buy => opponent_price
-                .checked_add(&As::sa(min_unit))
-                .unwrap_or_default(),
-            OrderDirection::Sell => opponent_price
-                .checked_sub(&As::sa(min_unit))
-                .unwrap_or_default(),
-        }
+        Ok(())
     }
 }

@@ -5,6 +5,8 @@ authors = ["Chainpool <https://www.chainx.org>"]
 edition = "2018"
 
 [dependencies]
+log = "0.4"
+chrono = "0.4"
 hex-literal = "0.1.0"
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
@@ -17,11 +19,8 @@ runtime_support = { package = "srml-support", git = "https://github.com/chainpoo
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default_features = false }
 balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate", default_features = false }
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default_features = false }
-srml-indices = { git = "https://github.com/chainpool/substrate", default_features = false }
+indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate", default_features = false }
 timestamp = { package ="srml-timestamp", git = "https://github.com/chainpool/substrate", default_features = false }
-
-chrono = "0.4"
-log = "0.4"
 
 # cxrml module
 xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
@@ -30,6 +29,9 @@ xsupport = { package = "xrml-xsupport", path = "../../xsupport", default_feature
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default_features = false }
 xbitcoin = { package = "xrml-bridge-bitcoin", path = "../../xbridge/bitcoin", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records", default-features = false }
+
+[dev-dependencies]
+fee_manager = { package = "xrml-fee-manager", path = "../../xfee/manager", default-features = false }
 
 [features]
 default = ["std"]

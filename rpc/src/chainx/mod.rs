@@ -21,8 +21,8 @@ use xassets::{Asset, AssetType, Chain, Token};
 use xbitcoin::{TrusteeAddrInfo as BtcTrusteeAddrInfo, VoteResult};
 use xrecords::{RecordInfo, TxState};
 use xspot::{
-    HandicapT, OrderDetails, OrderDirection, OrderProperty, OrderStatus, OrderType, TradingPair,
-    TradingPairIndex, ID,
+    HandicapInfo, Index, OrderDirection, OrderInfo, OrderStatus, OrderType, TradingPair,
+    TradingPairIndex,
 };
 use xstaking::IntentionProfs;
 use xsupport::storage::btree_map::CodecBTreeMap;
@@ -107,7 +107,7 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
         who: AccountId,
         page_index: u32,
         page_size: u32,
-    ) -> Result<Option<PageData<OrderInfo>>>;
+    ) -> Result<Option<PageData<OrderDetails>>>;
 
     #[rpc(name = "chainx_getAddressByAccount")]
     fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>>;

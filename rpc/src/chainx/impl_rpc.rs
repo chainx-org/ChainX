@@ -448,12 +448,12 @@ where
                 let key = <xspot::TradingPairOf<Runtime>>::key_for(&i);
                 if let Some(pair) = Self::pickout::<TradingPair>(&state, &key)? {
                     let mut info = PairInfo::default();
-                    info.id = pair.id;
-                    info.assets = String::from_utf8_lossy(&pair.currency_pair.0).into_owned();
-                    info.currency = String::from_utf8_lossy(&pair.currency_pair.1).into_owned();
-                    info.precision = pair.precision;
+                    info.id = pair.index;
+                    info.assets = String::from_utf8_lossy(pair.base_as_ref()).into_owned();
+                    info.currency = String::from_utf8_lossy(pair.quote_as_ref()).into_owned();
+                    info.precision = pair.pip_precision;
                     info.online = pair.online;
-                    info.unit_precision = pair.unit_precision;
+                    info.unit_precision = pair.tick_precision;
 
                     let price_key = <xspot::TradingPairInfoOf<Runtime>>::key_for(&i);
                     if let Some(price) =
@@ -466,10 +466,10 @@ where
 
                     let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&i);
                     if let Some(handicap) =
-                        Self::pickout::<HandicapT<Runtime>>(&state, &handicap_key)?
+                        Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key)?
                     {
-                        info.buy_one = handicap.buy;
-                        info.sell_one = handicap.sell;
+                        info.buy_one = handicap.highest_bid;
+                        info.sell_one = handicap.lowest_offer;
                     }
 
                     pairs.push(info);
@@ -493,14 +493,14 @@ where
         let state = self.best_state()?;
         let pair_key = <xspot::TradingPairOf<Runtime>>::key_for(&id);
         if let Some(pair) = Self::pickout::<TradingPair>(&state, &pair_key)? {
-            let min_unit = 10_u64.pow(pair.unit_precision);
+            let min_unit = 10_u64.pow(pair.tick_precision);
 
             //盘口
             let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&id);
 
-            if let Some(handicap) = Self::pickout::<HandicapT<Runtime>>(&state, &handicap_key)? {
+            if let Some(handicap) = Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key)? {
                 //先买档
-                let mut opponent_price: Balance = handicap.buy;
+                let mut opponent_price: Balance = handicap.highest_bid;
                 let mut price_volatility: Balance = 10;
 
                 let price_volatility_key = <xspot::PriceVolatility<Runtime>>::key();
@@ -509,9 +509,9 @@ where
                 }
 
                 let max_price: Balance =
-                    (handicap.sell * (100_u64 + price_volatility as Balance)) / 100_u64;
+                    (handicap.lowest_offer * (100_u64 + price_volatility as Balance)) / 100_u64;
                 let min_price: Balance =
-                    (handicap.sell * (100_u64 - price_volatility as Balance)) / 100_u64;
+                    (handicap.lowest_offer * (100_u64 - price_volatility as Balance)) / 100_u64;
                 let mut n = 0;
 
                 loop {
@@ -522,13 +522,13 @@ where
                     let quotations_key =
                         <xspot::QuotationsOf<Runtime>>::key_for(&(id, opponent_price));
                     if let Some(list) =
-                        Self::pickout::<Vec<(AccountId, ID)>>(&state, &quotations_key)?
+                        Self::pickout::<Vec<(AccountId, Index)>>(&state, &quotations_key)?
                     {
                         let mut sum: Balance = 0;
                         for item in &list {
                             let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(item);
                             if let Some(order) =
-                                Self::pickout::<OrderDetails<Runtime>>(&state, &order_key)?
+                                Self::pickout::<OrderInfo<Runtime>>(&state, &order_key)?
                             {
                                 sum += match order.amount().checked_sub(order.already_filled) {
                                     Some(v) => v,
@@ -546,7 +546,7 @@ where
                     };
                 }
                 //再卖档
-                opponent_price = handicap.sell;
+                opponent_price = handicap.lowest_offer;
                 n = 0;
                 loop {
                     if n > piece || opponent_price == 0 || opponent_price > max_price {
@@ -556,13 +556,13 @@ where
                     let quotations_key =
                         <xspot::QuotationsOf<Runtime>>::key_for(&(id, opponent_price));
                     if let Some(list) =
-                        Self::pickout::<Vec<(AccountId, ID)>>(&state, &quotations_key)?
+                        Self::pickout::<Vec<(AccountId, Index)>>(&state, &quotations_key)?
                     {
                         let mut sum: Balance = 0;
                         for item in &list {
                             let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(item);
                             if let Some(order) =
-                                Self::pickout::<OrderDetails<Runtime>>(&state, &order_key)?
+                                Self::pickout::<OrderInfo<Runtime>>(&state, &order_key)?
                             {
                                 sum += match order.amount().checked_sub(order.already_filled) {
                                     Some(v) => v,
@@ -592,7 +592,7 @@ where
         who: AccountIdForRpc,
         page_index: u32,
         page_size: u32,
-    ) -> Result<Option<PageData<OrderInfo>>> {
+    ) -> Result<Option<PageData<OrderDetails>>> {
         if page_size > MAX_PAGE_SIZE || page_size < 1 {
             return Err(ErrorKind::PageSizeErr.into());
         }
@@ -604,12 +604,12 @@ where
         let state = self.best_state()?;
 
         let order_len_key = <xspot::OrderCountOf<Runtime>>::key_for(&who.unchecked_into());
-        if let Some(len) = Self::pickout::<ID>(&state, &order_len_key)? {
+        if let Some(len) = Self::pickout::<Index>(&state, &order_len_key)? {
             let mut total: u32 = 0;
             for i in (0..len).rev() {
                 let order_key =
                     <xspot::OrderInfoOf<Runtime>>::key_for(&(who.clone().unchecked_into(), i));
-                if let Some(order) = Self::pickout::<OrderDetails<Runtime>>(&state, &order_key)? {
+                if let Some(order) = Self::pickout::<OrderInfo<Runtime>>(&state, &order_key)? {
                     if total >= page_index * page_size && total < ((page_index + 1) * page_size) {
                         orders.push(order.clone().into());
                     }
