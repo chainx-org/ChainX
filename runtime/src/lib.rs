@@ -91,6 +91,9 @@ impl balances::Trait for Runtime {
     type OnFreeBalanceZero = ();
     type OnNewAccount = Indices;
     type Event = Event;
+    type TransactionPayment = ();
+    type DustRemoval = ();
+    type TransferPayment = ();
 }
 
 impl timestamp::Trait for Runtime {

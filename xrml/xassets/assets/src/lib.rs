@@ -41,6 +41,7 @@ use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 use rstd::slice::Iter;
 use runtime_support::dispatch::Result;
+use runtime_support::traits::Currency;
 use runtime_support::{StorageMap, StorageValue};
 
 // substrate mod
@@ -351,7 +352,7 @@ impl<T: Trait> Module<T> {
 
     fn set_asset_balance(who: &T::AccountId, token: &Token, type_: AssetType, val: T::Balance) {
         if token.as_slice() == <Self as ChainT>::TOKEN && type_ == AssetType::Free {
-            balances::Module::<T>::set_free_balance(who, val);
+            let _ = balances::Module::<T>::make_free_balance_be(who, val);
         } else {
             AssetBalance::<T>::mutate(&(who.clone(), token.clone()), |m| {
                 let _ = m.0.insert(type_, val); // update the value
@@ -368,14 +369,14 @@ impl<T: Trait> Module<T> {
         let is_existing = balances::FreeBalance::<T>::exists(who);
         if token.as_slice() == <Self as ChainT>::TOKEN {
             if is_existing {
-                balances::Module::<T>::set_free_balance(who, value);
+                balances::Module::<T>::make_free_balance_be(who, value);
             } else {
                 // set_free_balance_creating would access `existential_deposit` storage
-                balances::Module::<T>::set_free_balance_creating(who, value);
+                let _ = balances::Module::<T>::deposit_creating(who, value);
             }
         } else {
             if is_existing == false {
-                balances::Module::<T>::set_free_balance_creating(who, Zero::zero());
+                let _ = balances::Module::<T>::deposit_creating(who, Zero::zero());
             }
             Self::set_asset_balance(who, token, AssetType::Free, value)
         }
@@ -481,7 +482,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn remove_asset(token: &Token) -> Result {
-        if let Some(mut info) = AssetInfo::<T>::get(token) {
+        if let Some(mut info) = Self::asset_info(token) {
             // let chain = info.0.chain();
             info.1 = false;
             AssetInfo::<T>::insert(token.clone(), info);
@@ -581,7 +582,6 @@ impl<T: Trait> Module<T> {
                 Some(b) => Self::pcx_set_free_balance_creating(who, b),
                 None => return Err("free balance too high to issue"),
             };
-            Self::increase_total_stake_by(value);
 
             AssetTriggerEventAfter::<T>::on_issue(token, who, value)?;
             return Ok(());
@@ -754,8 +754,8 @@ impl<T: Trait> Module<T> {
 pub enum AssetErr {
     NotEnough,
     OverFlow,
-    TotalAssetOverFlow,
     TotalAssetNotEnough,
+    TotalAssetOverFlow,
     InvalidToken,
     InvalidAccount,
 }
@@ -765,8 +765,8 @@ impl AssetErr {
         match self {
             AssetErr::NotEnough => "balance too low for this account",
             AssetErr::OverFlow => "balance too high for this account",
-            AssetErr::TotalAssetOverFlow => "balance too low for this asset",
-            AssetErr::TotalAssetNotEnough => "balance too high for this asset",
+            AssetErr::TotalAssetNotEnough => "total balance too low for this asset",
+            AssetErr::TotalAssetOverFlow => "total balance too high for this asset",
             AssetErr::InvalidToken => "not a valid token for this account",
             AssetErr::InvalidAccount => "account Locked",
         }
@@ -821,9 +821,5 @@ impl<T: Trait> Module<T> {
             AssetType::Free,
             value,
         )
-    }
-
-    pub fn increase_total_stake_by(value: T::Balance) {
-        balances::Module::<T>::increase_total_stake_by(value);
     }
 }
