@@ -10,7 +10,7 @@ use sr_io as runtime_io;
 use sr_primitives as runtime_primitives;
 
 #[cfg(feature = "std")]
-use chain as btc_chain;
+use btc_chain;
 use runtime_support::{decl_module, decl_storage};
 use srml_support as runtime_support;
 //#[cfg(feature = "std")]

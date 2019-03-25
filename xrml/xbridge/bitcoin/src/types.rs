@@ -1,15 +1,15 @@
 // Copyright 2019 Chainpool.
 
+use rstd::prelude::Vec;
+
 use parity_codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
 
 use btc_chain::{BlockHeader, Transaction};
 use btc_keys::Address;
-use btc_primitives::compact::Compact;
-use btc_primitives::hash::H256;
+use btc_primitives::{Compact, H256};
 use merkle::PartialMerkleTree;
-use rstd::prelude::Vec;
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]

@@ -14,8 +14,8 @@ use xrecords;
 
 use btc_chain::Transaction;
 use btc_keys::{Address, DisplayLayout};
-use btc_primitives::hash::H256;
-use btc_script::script::Script;
+use btc_primitives::H256;
+use btc_script::Script;
 
 use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
 use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait};
@@ -80,7 +80,7 @@ impl TxHandler {
                         }
                         Module::<T>::deposit_event(RawEvent::Withdrawal(
                             *number,
-                            self.tx_hash.to_vec(),
+                            self.tx_hash.as_bytes().to_vec(),
                             xrecords::TxState::Confirmed,
                         ));
                     }
@@ -92,8 +92,8 @@ impl TxHandler {
                     CurrentWithdrawalProposal::<T>::put(proposal);
 
                     Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(
-                        self.tx_hash.to_vec(),
-                        tx_hash.to_vec(),
+                        self.tx_hash.as_bytes().to_vec(),
+                        tx_hash.as_bytes().to_vec(),
                     ));
 
                     xfee_manager::Switch::<T>::mutate(|switch| {
@@ -108,7 +108,7 @@ impl TxHandler {
 
             // no proposal, but find a withdraw tx, it's a fatal error in withdrawal
             Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(
-                self.tx_hash.to_vec(),
+                self.tx_hash.as_bytes().to_vec(),
                 Default::default(),
             ));
 
@@ -209,7 +209,7 @@ impl TxHandler {
             As::sa(deposit_balance),
             original_opretion,
             b58::to_base58(input_addr.layout().to_vec()),
-            self.tx_hash.to_vec(),
+            self.tx_hash.as_bytes().to_vec(),
             xrecords::TxState::Confirmed,
         ));
         Ok(())

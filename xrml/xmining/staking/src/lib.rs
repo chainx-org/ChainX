@@ -275,7 +275,6 @@ decl_module! {
     }
 }
 
-/// An event in this module.
 decl_event!(
     pub enum Event<T>
     where

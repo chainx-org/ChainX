@@ -54,7 +54,6 @@ decl_module! {
     }
 }
 
-/// An event in this module.
 decl_event!(
     pub enum Event<T> where <T as system::Trait>::AccountId {
         /// New Trustees for chain, chain, session number, accountid, hot_addr, cold_addr

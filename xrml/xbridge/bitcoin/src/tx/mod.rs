@@ -12,9 +12,8 @@ use support::{dispatch::Result, StorageMap};
 use btc_chain::Transaction;
 use btc_crypto::dhash160;
 use btc_keys::{Address, Type};
-use btc_primitives::bytes::Bytes;
-use btc_primitives::hash::H256;
-use btc_script::{builder, script::Script, Opcode};
+use btc_primitives::{Bytes, H256};
+use btc_script::{Builder, Opcode, Script};
 
 use xaccounts;
 use xassets::Chain;
@@ -132,7 +131,7 @@ pub fn create_multi_address<T: Trait>(
         Some(o) => o,
         None => return None,
     };
-    let mut build = builder::Builder::default().push_opcode(opcode);
+    let mut build = Builder::default().push_opcode(opcode);
     for (_, pubkey) in pubkeys.iter().enumerate() {
         build = build.push_bytes(pubkey);
     }

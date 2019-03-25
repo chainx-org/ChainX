@@ -7,8 +7,8 @@ use xassets;
 use btc_chain::{OutPoint, Transaction};
 use btc_keys::{Address, Network};
 #[cfg(feature = "std")]
-use btc_primitives::hash::H256;
-use btc_script::{script::Script, ScriptAddress};
+use btc_primitives::H256;
+use btc_script::{Script, ScriptAddress};
 
 use crate::types::TrusteeAddrInfo;
 use crate::{Module, Trait};

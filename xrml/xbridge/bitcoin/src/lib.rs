@@ -28,7 +28,7 @@ use xrecords::TxState;
 
 use btc_chain::{BlockHeader, Transaction};
 use btc_keys::{Address, DisplayLayout, Error as AddressError};
-use btc_primitives::hash::H256;
+use btc_primitives::H256;
 use btc_ser::{deserialize, Reader};
 
 #[cfg(feature = "std")]

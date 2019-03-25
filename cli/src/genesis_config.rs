@@ -18,7 +18,7 @@ use chainx_runtime::{
 };
 
 use btc_chain::BlockHeader;
-use btc_primitives::{compact::Compact, hash::H256};
+use btc_primitives::{h256_from_rev_str, Compact};
 
 pub enum GenesisSpec {
     Dev,
@@ -144,10 +144,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let btc_genesis = (
         BlockHeader {
             version: 536870912,
-            previous_header_hash: H256::from_reversed_str(
+            previous_header_hash: h256_from_rev_str(
                 "000000000000001632e4110fd57a66e3495549cc7c37350cfaf092edf20b3370",
             ),
-            merkle_root_hash: H256::from_reversed_str(
+            merkle_root_hash: h256_from_rev_str(
                 "c8bf8333e880f7439af6ca14a6f0a18806ad0d6dfa3a58df35a1c05968d3981d",
             ),
             time: 1552136928,

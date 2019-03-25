@@ -33,7 +33,6 @@ pub trait Trait: xaccounts::Trait + xassets::Trait + xrecords::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-/// An event in this module.
 decl_event!(
     pub enum Event<T>
     where

@@ -14,11 +14,6 @@ ctrlc = { version = "3.0", features = ["termination"] }
 error-chain = "0.12"
 futures = "0.1.17"
 
-# bitcoin-rust
-primitives = { git = "https://github.com/chainx-org/bitcoin-rust" }
-chain = { git = "https://github.com/chainx-org/bitcoin-rust" }
-keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
-
 [features]
 msgbus-redis = [
 	"chainx-cli/msgbus-redis"

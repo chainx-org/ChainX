@@ -26,14 +26,14 @@ xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-feat
 xfee_manager = { package = "xrml-fee-manager", path = "../../xfee/manager", default-features = false }
 xr-primitives = { path = "../../../xr-primitives", default_features = false }
 
-# bitcoin-rust
-btc_chain = { package = "chain", git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-btc_primitives = { package = "primitives", git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-btc_ser = { package = "serialization", git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-btc_crypto = { package = "bitcrypto", git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-btc_script = { package = "script", git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-btc_keys = { package = "keys", git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
-merkle = { git = "https://github.com/chainx-org/merkle.git", default-features = false }
+# bitcoin
+btc-primitives = { package = "primitives", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
+btc-ser = { package = "serialization", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
+merkle = { git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
+btc-crypto = { package = "crypto", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
+btc-chain = { package = "chain", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
+btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
+btc-script = { package = "script", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
 
 [dev-dependencies]
 runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
@@ -69,11 +69,11 @@ std=[
     "xr-primitives/std",
 
     # bitcoin
-    "btc_chain/std",
-    "btc_primitives/std",
-    "btc_ser/std",
-    "btc_crypto/std",
-    "btc_script/std",
-    "btc_keys/std",
+    "btc-primitives/std",
+    "btc-ser/std",
     "merkle/std",
+    "btc-crypto/std",
+    "btc-chain/std",
+    "btc-keys/std",
+    "btc-script/std",
 ]

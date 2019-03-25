@@ -4,7 +4,7 @@ use rstd::result::Result as StdResult;
 use support::StorageMap;
 
 use btc_chain::BlockHeader;
-use btc_primitives::hash::H256;
+use btc_primitives::H256;
 
 pub use self::header_proof::HeaderVerifier;
 use crate::tx::handle_tx;

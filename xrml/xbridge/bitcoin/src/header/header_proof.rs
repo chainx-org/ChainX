@@ -7,9 +7,7 @@ use support::dispatch::Result;
 use timestamp;
 // btc
 use btc_chain::BlockHeader;
-use btc_primitives::compact::Compact;
-use btc_primitives::hash::H256;
-use btc_primitives::U256;
+use btc_primitives::{Compact, H256, U256};
 
 use super::ChainErr;
 use crate::types::Params;
@@ -186,6 +184,13 @@ impl<'a> HeaderProofOfWork<'a> {
     }
 }
 
+fn reverse_hash256(hash: &H256) -> H256 {
+    let mut res: H256 = H256::from_slice(hash.as_bytes());
+    let bytes = res.as_bytes_mut();
+    bytes.reverse();
+    res
+}
+
 pub fn is_valid_proof_of_work(max_work_bits: Compact, bits: Compact, hash: &H256) -> bool {
     let maximum = match max_work_bits.to_u256() {
         Ok(max) => max,
@@ -197,7 +202,7 @@ pub fn is_valid_proof_of_work(max_work_bits: Compact, bits: Compact, hash: &H256
         _err => return false,
     };
 
-    let value = U256::from(&*hash.reversed() as &[u8]);
+    let value = U256::from(reverse_hash256(hash).as_bytes());
     target <= maximum && value <= target
 }
 

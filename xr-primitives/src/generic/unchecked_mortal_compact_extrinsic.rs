@@ -270,7 +270,7 @@ mod tests {
         }
     }
 
-    #[derive(Eq, PartialEq, Clone, Debug, c, Deserialize, Encode, Decode)]
+    #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Encode, Decode)]
     struct TestSig(u64, Vec<u8>);
 
     impl traits::Verify for TestSig {

@@ -4,12 +4,10 @@ use support::dispatch::Result;
 
 use btc_chain::Transaction;
 use btc_keys::Public;
-use btc_primitives::bytes::Bytes;
+use btc_primitives::Bytes;
 use btc_script::{
-    script::Script, SignatureChecker, SignatureVersion, TransactionInputSigner,
-    TransactionSignatureChecker,
+    Script, SignatureChecker, SignatureVersion, TransactionInputSigner, TransactionSignatureChecker,
 };
-use merkle::parse_partial_merkle_tree;
 
 use crate::tx::utils::get_hot_trustee_redeem_script;
 use crate::types::RelayTx;
@@ -35,7 +33,7 @@ pub fn validate_transaction<T: Trait>(tx: &RelayTx) -> Result {
 
     let merkle_root = header_info.header.merkle_root_hash;
     // verify merkle proof
-    match parse_partial_merkle_tree(tx.merkle_proof.clone()) {
+    match tx.merkle_proof.clone().parse() {
         Ok(parsed) => {
             if merkle_root != parsed.root {
                 return Err("Check failed for merkle tree proof");

@@ -137,7 +137,6 @@ where
     }
 }
 
-/// An event in this module.
 decl_event!(
     pub enum Event<T> where <T as balances::Trait>::Balance, <T as system::Trait>::AccountId {
         Issue(AccountId, Token, Balance),

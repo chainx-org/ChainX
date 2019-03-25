@@ -3,7 +3,6 @@
 use std::convert::Into;
 use std::iter::FromIterator;
 
-use keys::{Address, DisplayLayout};
 use parity_codec::{Decode, Encode};
 use rustc_hex::{FromHex, ToHex};
 
@@ -13,6 +12,7 @@ use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use support::storage::generator::{StorageMap, StorageValue};
 use xassets::ChainT;
 
+use btc_keys::{Address, DisplayLayout};
 use btc_ser::serialize as btc_serialize;
 
 use runtime_api::{

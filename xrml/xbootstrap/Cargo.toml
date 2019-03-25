@@ -25,8 +25,9 @@ xrml-xaccounts = { path = "../xaccounts",  default_features = false }
 xrml-bridge-bitcoin = { path = "../xbridge/bitcoin",  default_features = false }
 xrml-xdex-spot = { path = "../xdex/spot", default_features = false }
 xrml-xmultisig = { path = "../xmultisig", default_features = false }
+
 # bitcoin
-chain = { git = "https://github.com/chainx-org/bitcoin-rust", default-features = false }
+btc-chain = { package = "chain", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
 
 [features]
 default = ["std"]
@@ -47,5 +48,5 @@ std=[
     "xrml-xdex-spot/std",
     "xrml-xmultisig/std",
     # bitcoin
-    "chain/std"
+    "btc-chain/std"
 ]

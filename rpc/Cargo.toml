@@ -48,8 +48,8 @@ xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot"  }
 xbitcoin = { package = "xrml-bridge-bitcoin", path = "../xrml/xbridge/bitcoin" }
 
 # bitcoin
-keys = { git = "https://github.com/chainx-org/bitcoin-rust" }
-btc_ser = { package = "serialization", git = "https://github.com/chainx-org/bitcoin-rust" }
+btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin" }
+btc-ser = { package = "serialization", git = "https://github.com/chainx-org/light-bitcoin" }
 
 [dev-dependencies]
 assert_matches = "1.1"

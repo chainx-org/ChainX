@@ -38,8 +38,8 @@ runtime-api = { path = "../runtime-api" }
 xsystem = { package = "xrml-xsystem", path = "../xrml/xsystem" }
 
 # bitcoin
-btc-primitives = { package = "primitives", git = "https://github.com/chainx-org/bitcoin-rust" }
-btc-chain = { package = "chain", git = "https://github.com/chainx-org/bitcoin-rust" }
+btc-primitives = { package = "primitives", git = "https://github.com/chainx-org/light-bitcoin" }
+btc-chain = { package = "chain", git = "https://github.com/chainx-org/light-bitcoin" }
 
 [dev-dependencies]
 service-test = { package = "substrate-service-test", git = "https://github.com/chainpool/substrate" }
