@@ -286,9 +286,8 @@ decl_event!(
     {
         /// All validators have been rewarded by the given balance.
         Reward(Balance, Balance),
-        /// One validator (and their nominators) has been slashed by the given amount.
-        OfflineSlash(AccountId, Balance),
-        OfflineValidator(AccountId),
+        /// Missed blocks by each offline validator per session.
+        MissedBlocksOfOfflineValidatorPerSession(Vec<(AccountId, u32)>),
         EnforceValidatorsInactive(Vec<AccountId>),
         Rotation(Vec<(AccountId, u64)>),
         Unnominate(BlockNumber),

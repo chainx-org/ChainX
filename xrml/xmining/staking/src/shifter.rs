@@ -150,12 +150,26 @@ impl<T: Trait> Module<T> {
     /// so we only need to slash them for the missed blocks when they were active.
     fn slash_inactive_offline_validators() {
         let slashed = <OfflineValidatorsPerSession<T>>::get();
-        let inactive_slashed = slashed
-            .iter()
-            .filter(|v| !Self::is_active(v))
-            .collect::<Vec<_>>();
+        if slashed.is_empty() {
+            return;
+        }
 
-        for who in inactive_slashed.into_iter() {
+        let mut missed_info = Vec::new();
+        let mut inactive_slashed = Vec::new();
+
+        for s in slashed {
+            let missed_num = <MissedOfPerSession<T>>::get(&s);
+            missed_info.push((s.clone(), missed_num));
+            if !Self::is_active(&s) {
+                inactive_slashed.push(s);
+            }
+        }
+
+        Self::deposit_event(RawEvent::MissedBlocksOfOfflineValidatorPerSession(
+            missed_info,
+        ));
+
+        for who in inactive_slashed.iter() {
             let missed = T::Balance::sa(<MissedOfPerSession<T>>::take(who) as u64);
             let should_slash = missed * Self::minimum_penalty();
             let council = Self::council_address();

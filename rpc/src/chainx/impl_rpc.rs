@@ -522,7 +522,7 @@ where
                     let quotations_key =
                         <xspot::QuotationsOf<Runtime>>::key_for(&(id, opponent_price));
                     if let Some(list) =
-                        Self::pickout::<Vec<(AccountId, Index)>>(&state, &quotations_key)?
+                        Self::pickout::<Vec<(AccountId, OrderIndex)>>(&state, &quotations_key)?
                     {
                         let mut sum: Balance = 0;
                         for item in &list {
@@ -556,7 +556,7 @@ where
                     let quotations_key =
                         <xspot::QuotationsOf<Runtime>>::key_for(&(id, opponent_price));
                     if let Some(list) =
-                        Self::pickout::<Vec<(AccountId, Index)>>(&state, &quotations_key)?
+                        Self::pickout::<Vec<(AccountId, OrderIndex)>>(&state, &quotations_key)?
                     {
                         let mut sum: Balance = 0;
                         for item in &list {
@@ -604,7 +604,7 @@ where
         let state = self.best_state()?;
 
         let order_len_key = <xspot::OrderCountOf<Runtime>>::key_for(&who.unchecked_into());
-        if let Some(len) = Self::pickout::<Index>(&state, &order_len_key)? {
+        if let Some(len) = Self::pickout::<OrderIndex>(&state, &order_len_key)? {
             let mut total: u32 = 0;
             for i in (0..len).rev() {
                 let order_key =

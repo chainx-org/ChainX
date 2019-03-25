@@ -21,8 +21,8 @@ use xassets::{Asset, AssetType, Chain, Token};
 use xbitcoin::{TrusteeAddrInfo as BtcTrusteeAddrInfo, VoteResult};
 use xrecords::{RecordInfo, TxState};
 use xspot::{
-    HandicapInfo, Index, OrderDirection, OrderInfo, OrderStatus, OrderType, TradingPair,
-    TradingPairIndex,
+    HandicapInfo, OrderDirection, OrderIndex, OrderInfo, OrderStatus, OrderType, TradeHistoryIndex,
+    TradingPair, TradingPairIndex,
 };
 use xstaking::IntentionProfs;
 use xsupport::storage::btree_map::CodecBTreeMap;
