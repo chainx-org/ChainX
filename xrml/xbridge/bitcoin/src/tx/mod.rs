@@ -72,7 +72,7 @@ pub fn detect_transaction_type<T: Trait>(relay_tx: &RelayTx) -> StdResult<TxType
         false
     });
     // judge tx type
-    if !input_is_trustee {
+    if input_is_trustee {
         if all_outputs_trustee {
             return Ok(TxType::HotAndCold);
         }
