@@ -118,7 +118,7 @@ where
                     ))
                     .ok_or("transaction birth block ancient")?;
                 let raw_payload = (index, self.function, era, h, acceleration);
-                let signed = context.lookup(signed)?;
+                let signed = context.lookup(signed)?;  // if error, would return "invalid account index"
                 if !raw_payload.using_encoded(|payload| {
                     if payload.len() > 256 {
                         signature.verify(&blake2_256(payload)[..], &signed)

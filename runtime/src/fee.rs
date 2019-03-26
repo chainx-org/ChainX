@@ -24,9 +24,34 @@ impl CheckFee for Call {
     ///
     /// fee_power = power_per_call
     fn check_fee(&self, switch: SwitchStore) -> Option<u64> {
+        // must allow
+        let first_check = match self {
+            // TODO remove at mainnet chain
+            Call::Sudo(call) => match call {
+                SudoCall::sudo(_) => Some(1),
+                SudoCall::set_key(_) => Some(1),
+                _ => None,
+            },
+            Call::XMultiSig(call) => match call {
+                XMultiSigCall::deploy(_, _) => Some(1000),
+                XMultiSigCall::execute(_, _) => Some(50),
+                XMultiSigCall::confirm(_, _) => Some(25),
+                XMultiSigCall::is_owner_for(_) => Some(100),
+                XMultiSigCall::remove_multi_sig_for(_, _) => Some(1000),
+                _ => None,
+            },
+            _ => None
+        };
+
+        // hit
+        if first_check.is_some() {
+            return first_check;
+        }
+
         if switch.global {
             return None;
         };
+
         let base_power = match self {
             // xassets
             Call::XAssets(call) => match call {
@@ -79,11 +104,6 @@ impl CheckFee for Call {
                 };
                 power
             }
-            Call::Sudo(call) => match call {
-                SudoCall::sudo(_) => Some(1),
-                SudoCall::set_key(_) => Some(1),
-                _ => None,
-            },
             Call::XBridgeOfSDOT(call) => {
                 let power = if switch.sdot {
                     None
@@ -95,14 +115,6 @@ impl CheckFee for Call {
                 };
                 power
             }
-            Call::XMultiSig(call) => match call {
-                XMultiSigCall::deploy(_, _) => Some(100),
-                XMultiSigCall::execute(_, _) => Some(10),
-                XMultiSigCall::confirm(_, _) => Some(5),
-                XMultiSigCall::is_owner_for(_) => Some(1),
-                XMultiSigCall::remove_multi_sig_for(_, _) => Some(5),
-                _ => None,
-            },
             _ => None,
         };
         base_power
