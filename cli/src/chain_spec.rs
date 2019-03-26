@@ -67,7 +67,7 @@ pub fn local_testnet_config() -> ChainSpec {
         "/ip4/47.110.232.108/tcp/31129/p2p/QmQ7vca7aum3q1toVPUf8T6SiUPdhFuMPpyJgYAxeoUXtf".into(),
     ];
     ChainSpec::from_genesis(
-        "ChainX V0.9.6",
+        "ChainX V0.9.7",
         "chainx_testnet",
         local_testnet_genesis,
         boot_nodes,

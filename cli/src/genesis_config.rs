@@ -145,16 +145,16 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         BlockHeader {
             version: 536870912,
             previous_header_hash: h256_from_rev_str(
-                "000000000000001632e4110fd57a66e3495549cc7c37350cfaf092edf20b3370",
+                "00000000000000f51b45a318afa95726b947aeb5154e65fd1bde2e2a798e2cc6",
             ),
             merkle_root_hash: h256_from_rev_str(
-                "c8bf8333e880f7439af6ca14a6f0a18806ad0d6dfa3a58df35a1c05968d3981d",
+                "c9212ace69e32dcfe2d09383c7b8fea8da1151cd70af58ea2b7155afa5e92f47",
             ),
-            time: 1552136928,
+            time: 1553231960,
             bits: Compact::new(436271905),
-            nonce: 3823450240,
+            nonce: 4083801566,
         },
-        1484053,
+        1485555,
     );
 
     let params_info = Params::new(
@@ -235,7 +235,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             validator_stake_threshold: 1,
         }),
         xtokens: Some(XTokensConfig {
-            token_discount: 50,
+            token_discount: 10,
             _genesis_phantom_data: Default::default(),
         }),
         xspot: Some(XSpotConfig {
