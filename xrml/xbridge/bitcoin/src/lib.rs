@@ -253,20 +253,63 @@ impl<T: Trait> TrusteeForChain<T::AccountId, ()> for Module<T> {
     fn generate_new_trustees(
         candidates: &Vec<T::AccountId>,
     ) -> StdResult<Vec<T::AccountId>, &'static str> {
+        let (trustees, _, hot_trustee_addr_info, cold_trustee_addr_info) =
+            Self::generate_new_trustees(candidates)?;
+        let trustees = trustees
+            .into_iter()
+            .map(|(accountid, _)| accountid)
+            .collect::<Vec<_>>();
+        info!(
+            "[update_trustee_addr]|hot_addr:{:?}|cold_addr:{:?}|trustee_list:{:?}",
+            hot_trustee_addr_info,
+            cold_trustee_addr_info,
+            trustees!(trustees)
+        );
+
+        LastTrusteeSessionNumber::<T>::put(xaccounts::Module::<T>::current_session_number(
+            Chain::Bitcoin,
+        ));
+
+        xaccounts::Module::<T>::new_trustee_session(
+            Chain::Bitcoin,
+            trustees.clone(),
+            hot_trustee_addr_info.encode(),
+            cold_trustee_addr_info.encode(),
+        );
+        Ok(trustees)
+    }
+}
+
+impl<T: Trait> Module<T> {
+    /// generate trustee info, result is
+    /// (trustee_list: Vec<(accountid, (hot pubkey, cold pubkey)),
+    /// multisig count: (required count, total count),
+    /// hot: hot_trustee_addr,
+    /// cold: cold_trustee_addr)>)
+    pub fn generate_new_trustees(
+        candidates: &Vec<T::AccountId>,
+    ) -> StdResult<
+        (
+            Vec<(T::AccountId, (Vec<u8>, Vec<u8>))>,
+            (u32, u32),
+            TrusteeAddrInfo,
+            TrusteeAddrInfo,
+        ),
+        &'static str,
+    > {
         let config = xaccounts::Module::<T>::trustee_info_config(Chain::Bitcoin);
 
         let mut trustee_info_list = Vec::new();
         for trustee in candidates {
             let key = (trustee.clone(), Chain::Bitcoin);
-            let props = xaccounts::Module::<T>::trustee_intention_props_of(&key)
-                .ok_or_else(|| {
+            let props =
+                xaccounts::Module::<T>::trustee_intention_props_of(&key).ok_or_else(|| {
                     error!(
                         "[generate_new_trustees]|[btc] the candidate must be a trustee|who:{:}",
                         trustee
                     );
-                    ""
-                })
-                .expect("[btc] the candidate must be a trustee; qed");
+                    "[generate_new_trustees]|[btc] the candidate must be a trustee"
+                })?;
 
             #[allow(unreachable_patterns)]
             let hot_key = match props.hot_entity {
@@ -307,8 +350,8 @@ impl<T: Trait> TrusteeForChain<T::AccountId, ()> for Module<T> {
             error!("[update_trustee_addr]|trustees is less than [{:}] people, can't generate trustee addr|trustees:{:?}", config.min_trustee_count, candidates);
             return Err("trustees is less than required people, can't generate trustee addr");
         }
-        // sort by AccountId
-        trustee_info_list.sort_by(|a, b| a.0.cmp(&b.0));
+        // // sort by AccountId
+        // trustee_info_list.sort_by(|a, b| a.0.cmp(&b.0));
 
         let (trustees, key_pairs): (Vec<T::AccountId>, Vec<(Vec<_>, Vec<_>)>) =
             trustee_info_list.into_iter().unzip();
@@ -358,28 +401,18 @@ impl<T: Trait> TrusteeForChain<T::AccountId, ()> for Module<T> {
                 "create cold_addr err!"
             })?;
 
-        info!(
-            "[update_trustee_addr]|hot_addr:{:?}|cold_addr:{:?}|trustee_list:{:?}",
+        let trustees_info = trustees
+            .into_iter()
+            .zip(hot_keys.into_iter().zip(cold_keys))
+            .collect::<Vec<_>>();
+        Ok((
+            trustees_info,
+            (sig_num, trustee_num),
             hot_trustee_addr_info,
             cold_trustee_addr_info,
-            trustees!(trustees)
-        );
-
-        LastTrusteeSessionNumber::<T>::put(xaccounts::Module::<T>::current_session_number(
-            Chain::Bitcoin,
-        ));
-
-        xaccounts::Module::<T>::new_trustee_session(
-            Chain::Bitcoin,
-            trustees.clone(),
-            hot_trustee_addr_info.encode(),
-            cold_trustee_addr_info.encode(),
-        );
-        Ok(trustees)
+        ))
     }
-}
 
-impl<T: Trait> Module<T> {
     pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
         let r = b58::from(data.to_vec()).map_err(|_| AddressError::InvalidAddress)?;
         Address::from_layout(&r)

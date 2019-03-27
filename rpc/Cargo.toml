@@ -36,6 +36,8 @@ chainx-primitives = { path = "../primitives" }
 chainx-runtime = {path = "../runtime"}
 # chainx runtime api
 runtime-api = {path = "../runtime-api"}
+# chainx runtime
+xr-primitives = { path = "../xr-primitives" }
 # chainx runtime module
 xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets" }
 xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records" }

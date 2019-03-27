@@ -17,6 +17,7 @@ xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport", default_featu
 xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets", default_features = false }
 xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records", default_features = false }
 xspot= { package = "xrml-xdex-spot", path = "../xrml/xdex/spot",  default_features = false }
+xbitcoin = { package = "xrml-bridge-bitcoin", path = "../xrml/xbridge/bitcoin",  default_features = false }
 
 [features]
 default = ["std"]
@@ -32,4 +33,6 @@ std = [
     "xsupport/std",
     "xassets/std",
     "xrecords/std",
+    "xspot/std",
+    "xbitcoin/std",
 ]

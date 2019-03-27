@@ -40,7 +40,7 @@ impl CheckFee for Call {
                 XMultiSigCall::remove_multi_sig_for(_, _) => Some(1000),
                 _ => None,
             },
-            _ => None
+            _ => None,
         };
 
         // hit

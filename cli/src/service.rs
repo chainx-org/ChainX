@@ -28,7 +28,7 @@ use inherents::InherentDataProviders;
 use network::construct_simple_protocol;
 use sr_primitives::generic::BlockId;
 use sr_primitives::traits::ProvideRuntimeApi;
-use substrate_primitives::{Pair as PairT, ed25519};
+use substrate_primitives::{ed25519, Pair as PairT};
 use substrate_service::{
     construct_service_factory, FactoryFullConfiguration, FullBackend, FullClient, FullComponents,
     FullExecutor, LightBackend, LightClient, LightComponents, LightExecutor, TaskExecutor,

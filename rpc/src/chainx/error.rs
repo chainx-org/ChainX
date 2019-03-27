@@ -1,5 +1,7 @@
 use error_chain::*;
 
+use std::str;
+
 use crate::errors;
 use crate::rpc;
 
@@ -70,7 +72,10 @@ error_chain! {
             description("state execution error"),
             display("Execution: {}", e),
         }
-
+        RuntimeErr(e: Vec<u8>) {
+            description("runtime error"),
+            display("error: {:}", str::from_utf8(&e).unwrap_or_default()),
+        }
     }
 }
 
@@ -124,6 +129,34 @@ impl From<Error> for rpc::Error {
             Error(ErrorKind::PageIndexErr, _) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 8),
                 message: "Page Index Error.".into(),
+                data: None,
+            },
+            Error(ErrorKind::DecodeErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 9),
+                message: "Decode data error.".into(),
+                data: None,
+            },
+            Error(ErrorKind::BinanryStartErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 10),
+                message: "Start With 0x.".into(),
+                data: None,
+            },
+            Error(ErrorKind::HexDecodeErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 11),
+                message: "Decode Hex Err.".into(),
+                data: None,
+            },
+            Error(ErrorKind::Execution(e), _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 12),
+                message: format!("Execution: {}", e),
+                data: None,
+            },
+            Error(ErrorKind::RuntimeErr(e), _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 13),
+                message: format!(
+                    "Runtime execute error: {:}",
+                    str::from_utf8(&e).unwrap_or_default()
+                ),
                 data: None,
             },
             e => errors::internal(e),

@@ -3,6 +3,9 @@ use std::convert::From;
 use rustc_hex::ToHex;
 use serde_derive::{Deserialize, Serialize};
 
+use btc_keys::DisplayLayout;
+use xr_primitives::generic::b58;
+
 use super::*;
 
 // utils
@@ -337,6 +340,90 @@ impl From<OrderInfo<Runtime>> for OrderDetails {
             executed_indices: order.executed_indices,
             already_filled: order.already_filled,
             last_update_at: order.last_update_at,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BitcoinAddrEntity {
+    pub address: String,
+    pub redeem_script: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BitcoinTrusteeInfo {
+    account_id: AccountIdForRpc,
+    hot_pubkey: String,
+    cold_pubkey: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BitcoinMultiSigCount {
+    required: u32,
+    total: u32,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MockBitcoinTrustee {
+    /// accountid, hot pubkey, cold pubkey
+    pub trustee_info: Vec<BitcoinTrusteeInfo>,
+    pub counts: BitcoinMultiSigCount,
+    pub hot_entity: BitcoinAddrEntity,
+    pub cold_entity: BitcoinAddrEntity,
+}
+
+impl
+    From<(
+        Vec<(AccountId, (Vec<u8>, Vec<u8>))>,
+        (u32, u32),
+        BtcTrusteeAddrInfo,
+        BtcTrusteeAddrInfo,
+    )> for MockBitcoinTrustee
+{
+    fn from(
+        info: (
+            Vec<(AccountId, (Vec<u8>, Vec<u8>))>,
+            (u32, u32),
+            BtcTrusteeAddrInfo,
+            BtcTrusteeAddrInfo,
+        ),
+    ) -> Self {
+        let trustee_info: Vec<BitcoinTrusteeInfo> = info
+            .0
+            .into_iter()
+            .map(|info| {
+                let hot: String = (info.1).0.to_hex();
+                let cold: String = (info.1).1.to_hex();
+                BitcoinTrusteeInfo {
+                    account_id: info.0.into(),
+                    hot_pubkey: "0x".to_string() + &hot,
+                    cold_pubkey: "0x".to_string() + &cold,
+                }
+            })
+            .collect();
+
+        let hot_script: String = info.2.redeem_script.to_hex();
+        let cold_script: String = info.3.redeem_script.to_hex();
+        MockBitcoinTrustee {
+            trustee_info,
+            counts: BitcoinMultiSigCount {
+                required: (info.1).0,
+                total: (info.1).1,
+            },
+            hot_entity: BitcoinAddrEntity {
+                address: String::from_utf8_lossy(&b58::to_base58(info.2.addr.layout().to_vec()))
+                    .into_owned(),
+                redeem_script: "0x".to_string() + &hot_script,
+            },
+            cold_entity: BitcoinAddrEntity {
+                address: String::from_utf8_lossy(&b58::to_base58(info.3.addr.layout().to_vec()))
+                    .into_owned(),
+                redeem_script: "0x".to_string() + &cold_script,
+            },
         }
     }
 }

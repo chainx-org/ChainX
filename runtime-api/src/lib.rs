@@ -72,3 +72,14 @@ pub mod xsession_api {
         }
     }
 }
+
+pub mod xbridge_api {
+    use super::*;
+    use xbitcoin::TrusteeAddrInfo;
+    decl_runtime_apis! {
+        pub trait XBridgeApi {
+            /// generate a mock trustee info, result is (Vec<(accountid, (hot pubkey, cold pubkey)), (required count, total count), hot_trustee_addr, cold_trustee_addr)>)
+            fn mock_bitcoin_new_trustees(candidates: Vec<AccountIdForApi>) -> Result<(Vec<(AccountIdForApi, (Vec<u8>, Vec<u8>))>, (u32, u32), TrusteeAddrInfo, TrusteeAddrInfo), Vec<u8>>;
+        }
+    }
+}

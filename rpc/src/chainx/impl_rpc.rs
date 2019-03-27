@@ -16,7 +16,8 @@ use btc_keys::{Address, DisplayLayout};
 use btc_ser::serialize as btc_serialize;
 
 use runtime_api::{
-    xassets_api::XAssetsApi, xfee_api::XFeeApi, xmining_api::XMiningApi, xspot_api::XSpotApi,
+    xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xfee_api::XFeeApi, xmining_api::XMiningApi,
+    xspot_api::XSpotApi,
 };
 
 use super::*;
@@ -30,8 +31,12 @@ where
     Block: BlockT<Hash = H256> + 'static,
     RA: Send + Sync + 'static,
     client::Client<B, E, Block, RA>: ProvideRuntimeApi,
-    <client::Client<B, E, Block, RA> as ProvideRuntimeApi>::Api:
-        Metadata<Block> + XAssetsApi<Block> + XMiningApi<Block> + XSpotApi<Block> + XFeeApi<Block>,
+    <client::Client<B, E, Block, RA> as ProvideRuntimeApi>::Api: Metadata<Block>
+        + XAssetsApi<Block>
+        + XMiningApi<Block>
+        + XSpotApi<Block>
+        + XFeeApi<Block>
+        + XBridgeApi<Block>,
 {
     fn block_info(&self, number: Option<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         let hash = match number {
@@ -760,6 +765,32 @@ where
             }
             _ => Ok(None),
         }
+    }
+
+    fn mock_bitcoin_new_trustees(
+        &self,
+        candidates: Vec<AccountIdForRpc>,
+    ) -> Result<Option<MockBitcoinTrustee>> {
+        let b = self.best_number()?;
+
+        let candidates: Vec<AccountId> = candidates
+            .into_iter()
+            .map(|a| a.unchecked_into())
+            .collect::<Vec<_>>();
+
+        // result is (Vec<(accountid, (hot pubkey, cold pubkey)), (required count, total count), hot_trustee_addr, cold_trustee_addr)>)
+        // StdResult<(Vec<(AccountId, (Vec<u8>, Vec<u8>))>, (u32, u32), BtcTrusteeAddrInfo, BtcTrusteeAddrInfo), Vec<u8>>
+        let runtime_result = self
+            .client
+            .runtime_api()
+            .mock_bitcoin_new_trustees(&b, candidates)?;
+
+        let mock = match runtime_result {
+            Err(e) => return Err(ErrorKind::RuntimeErr(e).into()),
+            Ok(item) => item.into(),
+        };
+
+        Ok(Some(mock))
     }
 }
 

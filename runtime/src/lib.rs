@@ -50,6 +50,8 @@ pub use xaccounts;
 pub use xassets;
 pub use xbitcoin;
 
+use xbitcoin::TrusteeAddrInfo;
+
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
 
@@ -439,6 +441,13 @@ impl_runtime_apis! {
     impl runtime_api::xsession_api::XSessionApi<Block> for Runtime {
         fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<AuthorityId>)> {
             Session::pubkeys_for_validator_name(name)
+        }
+    }
+
+    impl runtime_api::xbridge_api::XBridgeApi<Block> for Runtime {
+        // result is (Vec<(accountid, (hot pubkey, cold pubkey)), (required count, total count), hot_trustee_addr, cold_trustee_addr)>)
+        fn mock_bitcoin_new_trustees(candidates: Vec<AccountId>) -> Result<(Vec<(AccountId, (Vec<u8>, Vec<u8>))>, (u32, u32), TrusteeAddrInfo, TrusteeAddrInfo), Vec<u8>> {
+            XBridgeOfBTC::generate_new_trustees(&candidates).map_err(|e_str| e_str.as_bytes().to_vec())
         }
     }
 }

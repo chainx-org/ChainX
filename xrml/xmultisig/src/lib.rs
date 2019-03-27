@@ -305,7 +305,6 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
     fn transition_trustee_session_impl(chain: Chain, new_trustees: Vec<T::AccountId>) -> Result {
-        use xr_primitives::traits::TrusteeForChain;
         // check trustees
         for candidate in new_trustees.iter() {
             let key = (candidate.clone(), chain);

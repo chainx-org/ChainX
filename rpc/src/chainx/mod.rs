@@ -123,6 +123,12 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
 
     #[rpc(name = "chainx_getWithdrawTx")]
     fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>>;
+
+    #[rpc(name = "chainx_getMockBitcoinNewTrustees")]
+    fn mock_bitcoin_new_trustees(
+        &self,
+        candidates: Vec<AccountId>,
+    ) -> Result<Option<MockBitcoinTrustee>>;
 }
 
 /// ChainX API
