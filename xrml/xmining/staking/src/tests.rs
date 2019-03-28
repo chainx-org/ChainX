@@ -83,6 +83,89 @@ fn nominate_should_work() {
 }
 
 #[test]
+fn renominate_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        System::set_block_number(1);
+        Session::check_rotate_session(System::block_number());
+
+        assert_ok!(Staking::register(Origin::signed(1), b"name".to_vec(),));
+        assert_ok!(Staking::register(Origin::signed(3), b"name".to_vec(),));
+
+        System::set_block_number(2);
+        Session::check_rotate_session(System::block_number());
+        assert_ok!(Staking::nominate(Origin::signed(2), 1.into(), 15, vec![]));
+
+        assert_eq!(XAssets::pcx_free_balance(&2), 20 - 15);
+        assert_eq!(
+            Staking::nomination_record_of(&2, &1),
+            NominationRecord {
+                nomination: 15,
+                last_vote_weight: 0,
+                last_vote_weight_update: 2,
+                revocations: vec![],
+            }
+        );
+
+        System::set_block_number(3);
+        Session::check_rotate_session(System::block_number());
+        assert_ok!(Staking::renominate(
+            Origin::signed(2),
+            1.into(),
+            3.into(),
+            10,
+            b"memo".to_vec()
+        ));
+        assert_eq!(
+            Staking::nomination_record_of(&2, &1),
+            NominationRecord {
+                nomination: 5,
+                last_vote_weight: 15,
+                last_vote_weight_update: 3,
+                revocations: vec![],
+            }
+        );
+        assert_eq!(
+            Staking::nomination_record_of(&2, &3),
+            NominationRecord {
+                nomination: 10,
+                last_vote_weight: 0,
+                last_vote_weight_update: 3,
+                revocations: vec![],
+            }
+        );
+
+        System::set_block_number(4);
+        Session::check_rotate_session(System::block_number());
+
+        assert_ok!(Staking::renominate(
+            Origin::signed(2),
+            1.into(),
+            3.into(),
+            5,
+            b"memo".to_vec()
+        ));
+        assert_eq!(
+            Staking::nomination_record_of(&2, &1),
+            NominationRecord {
+                nomination: 0,
+                last_vote_weight: 20,
+                last_vote_weight_update: 4,
+                revocations: vec![],
+            }
+        );
+        assert_eq!(
+            Staking::nomination_record_of(&2, &3),
+            NominationRecord {
+                nomination: 15,
+                last_vote_weight: 10,
+                last_vote_weight_update: 4,
+                revocations: vec![],
+            }
+        );
+    });
+}
+
+#[test]
 fn unnominate_should_work() {
     with_externalities(&mut new_test_ext(), || {
         System::set_block_number(1);

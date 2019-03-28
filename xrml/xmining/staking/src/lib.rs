@@ -103,6 +103,33 @@ decl_module! {
             Self::apply_nominate(&who, &target, value)?;
         }
 
+        /// Renominate from one to another intention.
+        fn renominate(
+            origin,
+            from: <T::Lookup as StaticLookup>::Source,
+            to: <T::Lookup as StaticLookup>::Source,
+            value: T::Balance,
+            memo: Memo
+        ) {
+            let who = ensure_signed(origin)?;
+            let context = system::ChainContext::<T>::default();
+            let from = context.lookup(from)?;
+            let to = context.lookup(to)?;
+
+            xassets::is_valid_memo::<T>(&memo)?;
+            ensure!(!value.is_zero(), "Cannot renominate zero.");
+            ensure!(
+                <NominationRecords<T>>::get((who.clone(), from.clone())).is_some(),
+                "Cannot renominate if the from party is not your nominee."
+            );
+            ensure!(
+                value <= Self::revokable_of(&who, &from),
+                "Cannot renominate if greater than your current nomination."
+            );
+
+            Self::apply_renominate(&who, &from, &to, value)?;
+        }
+
         fn unnominate(
             origin,
             target: <T::Lookup as StaticLookup>::Source,
@@ -126,6 +153,7 @@ decl_module! {
             Self::apply_unnominate(&who, &target, value)?;
         }
 
+        /// Claim the reward for your nomination.
         fn claim(origin, target: <T::Lookup as StaticLookup>::Source) {
             let who = ensure_signed(origin)?;
             let target = system::ChainContext::<T>::default().lookup(target)?;
@@ -212,7 +240,7 @@ decl_module! {
             Self::apply_refresh(&who, url, desire_to_run, next_key, about);
         }
 
-        /// Register intention
+        /// Register to be an intention.
         fn register(origin, name: Name) {
             let who = ensure_signed(origin)?;
 
@@ -231,7 +259,6 @@ decl_module! {
 
             xaccounts::is_valid_about::<T>(&about)?;
 
-            // TODO validate addr
             Self::validate_trustee_entity(&chain, &hot_entity)?;
             Self::validate_trustee_entity(&chain, &cold_entity)?;
 
@@ -447,6 +474,17 @@ impl<T: Trait> Module<T> {
             value.clone(),
         ));
 
+        Ok(())
+    }
+
+    fn apply_renominate(
+        who: &T::AccountId,
+        from: &T::AccountId,
+        to: &T::AccountId,
+        value: T::Balance,
+    ) -> Result {
+        Self::apply_update_vote_weight(who, from, value, false);
+        Self::apply_update_vote_weight(who, to, value, true);
         Ok(())
     }
 

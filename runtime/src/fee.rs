@@ -83,6 +83,7 @@ impl CheckFee for Call {
                 XStakingCall::refresh(_, _, _, _) => Some(1000),
                 XStakingCall::nominate(_, _, _) => Some(5),
                 XStakingCall::unnominate(_, _, _) => Some(3),
+                XStakingCall::renominate(_, _, _, _) => Some(8),
                 XStakingCall::unfreeze(_, _) => Some(2),
                 XStakingCall::claim(_) => Some(3),
                 XStakingCall::setup_trustee(_, _, _, _) => Some(1000),

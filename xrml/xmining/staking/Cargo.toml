@@ -33,6 +33,9 @@ xbitcoin = { package = "xrml-bridge-bitcoin", path = "../../xbridge/bitcoin", de
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records", default-features = false }
 session = { package = "xrml-session", path = "../../xsession", default_features = false }
 
+[dev-dependencies]
+fee_manager = { package = "xrml-fee-manager", path = "../../xfee/manager", default-features = false }
+
 [features]
 default = ["std"]
 std = [
