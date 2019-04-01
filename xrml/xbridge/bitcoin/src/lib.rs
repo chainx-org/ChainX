@@ -435,14 +435,14 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::block_header_for(&header.hash()).is_none(),
             "Header already exists.",
-            "hash:{:}...",
+            "hash:{:}",
             hash_strip(&header.hash()),
         );
         // current should exist yet
         ensure_with_errorlog!(
             Self::block_header_for(&header.previous_header_hash).is_some(),
             "Can't find previous header",
-            "prev hash:{:}...|current hash:{:}",
+            "prev hash:{:}|current hash:{:}",
             hash_strip(&header.previous_header_hash),
             hash_strip(&header.hash()),
         );
@@ -465,7 +465,7 @@ impl<T: Trait> Module<T> {
             }
         });
 
-        debug!("[apply_push_header]|verify pass, insert to storage|height:{:}|hash:{:}...|block hashs for this height:{:?}",
+        debug!("[apply_push_header]|verify pass, insert to storage|height:{:}|hash:{:}block hashs for this height:{:?}",
             header_info.height,
             hash_strip(&hash),
             Self::block_hash_for(header_info.height).into_iter().map(|hash| hash_strip(&hash)).collect::<Vec<_>>()
@@ -481,7 +481,7 @@ impl<T: Trait> Module<T> {
 
             let (confirm_hash, confirm_height) = header::update_confirmed_header::<T>(&header_info);
             info!(
-                "[apply_push_header]|update to new height|height:{:}|hash:{:}...",
+                "[apply_push_header]|update to new height|height:{:}|hash:{:}",
                 header_info.height,
                 hash_strip(&hash),
             );
@@ -511,19 +511,35 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_push_transaction(tx: RelayTx) -> Result {
-        // verify, notice it's check relay tx's block hash(same tx may belong to different forked block), and check merkle proof
-        validate_transaction::<T>(&tx)?;
-        // get storage block info, after `validate_transaction`, the header_info must exist!
-        let mut header_info = Self::block_header_for(&tx.block_hash)
-            .expect("header info must be existed for this hash; qed");
+        let tx_hash = tx.raw.hash();
+        let mut header_info = Module::<T>::block_header_for(&tx.block_hash).ok_or_else(|| {
+            error!(
+                "[apply_push_transaction]|tx's block header must exist before|block_hash:{:}",
+                tx.block_hash
+            );
+            "tx's block header must exist before"
+        })?;
+        let merkle_root = header_info.header.merkle_root_hash;
+        // verify, check merkle proof
+        validate_transaction::<T>(&tx, merkle_root)?;
+
         let height = header_info.height;
         let confirmed = header_info.confirmed;
+        // notice same tx may belong to different forked block, after check merkle proof, it's all valid
+        if !header_info.txid_list.contains(&tx_hash) {
+            header_info.txid_list.push(tx_hash.clone());
+            // modify block info storage
+            BlockHeaderFor::<T>::insert(&tx.block_hash, header_info);
+        } else {
+            // not pass check! this tx has already been inserted to this block
+            error!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash, hash_strip(&tx_hash), header_info.txid_list);
+            return Err("this block already has this tx");
+        }
 
         // same tx may in different forked block, thus, just modify different forked block txlist, and the tx only insert once
         // so when the tx is existed, return tx_type, else set `TxFor` and `InputAddrFor` storage, return tx_type
         // get tx_type
-        let tx_hash = tx.raw.hash();
-        let tx_type = match Self::tx_for(&tx_hash) {
+        let (tx_type, _existed) = match Self::tx_for(&tx_hash) {
             None => {
                 let tx_type = detect_transaction_type::<T>(&tx)?;
                 if tx_type == TxType::Irrelevance {
@@ -552,23 +568,18 @@ impl<T: Trait> Module<T> {
                         raw_tx: tx.raw.clone(),
                         tx_type,
                         height,
+                        done: false,
                     },
                 );
-                tx_type
+                (tx_type, false)
             }
-            Some(tx_info) => tx_info.tx_type,
+            Some(tx_info) => (tx_info.tx_type, true),
         };
 
-        // modify block info storage
-        if !header_info.txid_list.contains(&tx_hash) {
-            header_info.txid_list.push(tx_hash.clone());
-
-            BlockHeaderFor::<T>::insert(&tx.block_hash, header_info);
-        }
-
         debug!(
-            "[apply_push_transaction]|verify pass|txhash:{:}|tx type:{:?}|block_hash:{:}|height:{:}|confirmed:{:}",
+            "[apply_push_transaction]|verify pass|txhash:{:}|is existed:{:}|tx type:{:?}|block_hash:{:}|height:{:}|confirmed:{:}",
             hash_strip(&tx_hash),
+            _existed,
             tx_type,
             hash_strip(&tx.block_hash),
             height,
@@ -584,7 +595,7 @@ impl<T: Trait> Module<T> {
         // if confirm, handle this tx for deposit or withdrawal
         if confirmed {
             handle_tx::<T>(&tx_hash).map_err(|e| {
-                error!("Handle tx error: {:}...", hash_strip(&tx_hash));
+                error!("Handle tx error: {:}", hash_strip(&tx_hash));
                 e
             })?;
         }
@@ -595,6 +606,7 @@ impl<T: Trait> Module<T> {
     fn apply_create_withdraw(tx: Transaction, withdrawal_id_list: Vec<u32>) -> Result {
         let withdraw_amount = Self::max_withdrawal_count();
         if withdrawal_id_list.len() > withdraw_amount as usize {
+            error!("[apply_create_withdraw]|Exceeding the maximum withdrawal amount|current list len:{:}|max:{:}", withdrawal_id_list.len(), withdraw_amount);
             return Err("Exceeding the maximum withdrawal amount");
         }
         // remove duplicate
@@ -617,7 +629,7 @@ impl<T: Trait> Module<T> {
         let candidate =
             WithdrawalProposal::new(VoteResult::Unfinish, withdrawal_id_list, tx, Vec::new());
         CurrentWithdrawalProposal::<T>::put(candidate);
-        info!("Through the legality check of withdrawal");
+        info!("[apply_create_withdraw]|Through the legality check of withdrawal");
         Ok(())
     }
 

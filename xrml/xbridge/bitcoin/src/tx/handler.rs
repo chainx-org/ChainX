@@ -25,7 +25,7 @@ use btc_script::Script;
 #[cfg(feature = "std")]
 use crate::hash_strip;
 use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
-use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait};
+use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait, TxFor};
 
 use super::utils::{ensure_identical, get_hot_trustee_address, is_key};
 
@@ -37,6 +37,14 @@ pub struct TxHandler {
 impl TxHandler {
     pub fn new<T: Trait>(txid: &H256) -> StdResult<TxHandler, &'static str> {
         let tx_info = Module::<T>::tx_for(txid).ok_or("not find this txinfo for this txid")?;
+        if tx_info.done {
+            error!(
+                "[TxHandler]|this tx has already been handled|tx_hash:{:}",
+                txid
+            );
+            return Err("this tx has already been handled");
+        }
+
         Ok(TxHandler {
             tx_hash: txid.clone(),
             tx_info,
@@ -59,6 +67,12 @@ impl TxHandler {
                 );
             }
         };
+
+        // handle finish, mark this tx has done
+        let mut tx_info = self.tx_info.clone();
+        tx_info.done = true;
+        TxFor::<T>::insert(&self.tx_hash, tx_info);
+
         Ok(())
     }
 
@@ -174,7 +188,7 @@ impl TxHandler {
                 if deposit_balance > 0 {
                     deposit_token::<T>(&accountid, deposit_balance);
                     info!(
-                        "[deposit]|deposit success|who:{:?}|balance:{:}|tx_hash:{:}...",
+                        "[deposit]|deposit success|who:{:?}|balance:{:}|tx_hash:{:}",
                         accountid,
                         deposit_balance,
                         hash_strip(&self.tx_hash)
@@ -191,7 +205,7 @@ impl TxHandler {
                 if deposit_balance > 0 {
                     insert_pending_deposit::<T>(&addr, &self.tx_hash, deposit_balance);
                     info!(
-                        "[deposit]|deposit into pending|addr:{:?}|balance:{:}|tx_hash:{:}...",
+                        "[deposit]|deposit into pending|addr:{:?}|balance:{:}|tx_hash:{:}",
                         addr,
                         deposit_balance,
                         hash_strip(&self.tx_hash)
@@ -292,7 +306,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
             }
             PendingDepositMap::<T>::insert(input_address, list);
             info!(
-                "[insert_pending_deposit]|Add pending deposit: {:}|balance:{:}",
+                "[insert_pending_deposit]|Add pending deposit|txhash:{:}|balance:{:}",
                 hash_strip(txid),
                 balance
             );
@@ -302,7 +316,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
             list.push(cache);
             PendingDepositMap::<T>::insert(input_address, list);
             info!(
-                "New pending deposit: {:}...  {:}",
+                "[insert_pending_deposit]|New pending deposit|txhash:{:}|balance:{:}",
                 hash_strip(txid),
                 balance
             );

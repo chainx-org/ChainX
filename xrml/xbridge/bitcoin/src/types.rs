@@ -92,6 +92,7 @@ pub struct TxInfo {
     pub raw_tx: Transaction,
     pub tx_type: TxType,
     pub height: u32,
+    pub done: bool,
 }
 
 pub enum DepositAccountInfo<AccountId> {

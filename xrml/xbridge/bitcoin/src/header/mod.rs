@@ -15,7 +15,7 @@ use btc_primitives::H256;
 
 #[cfg(feature = "std")]
 use super::hash_strip;
-use super::tx::handle_tx;
+use super::tx::{handle_tx, remove_unused_tx};
 use super::types::BlockHeaderInfo;
 use super::{BlockHashFor, BlockHeaderFor, Module, Trait};
 
@@ -87,13 +87,22 @@ pub fn remove_unused_headers<T: Trait>(header_info: &BlockHeaderInfo) {
     if header_info.height > reserved {
         let del = header_info.height - reserved;
         let v = Module::<T>::block_hash_for(&del);
+        // remove all block for this height
         for h in v.iter() {
+            if let Some(header_info) = Module::<T>::block_header_for(h) {
+                // remove related tx for this block
+                for txid in header_info.txid_list.iter() {
+                    remove_unused_tx::<T>(txid);
+                }
+            }
+
             BlockHeaderFor::<T>::remove(h);
+            debug!(
+                "[remove_unused_headers]|remove old header|height:{:}|hash:{:}",
+                del,
+                hash_strip(&h)
+            );
         }
-        debug!(
-            "[remove_unused_headers]|remove old headers:{:?}",
-            v.iter().map(|hash| hash_strip(&hash)).collect::<Vec<_>>()
-        );
         BlockHashFor::<T>::remove(&del);
     }
 }
@@ -134,7 +143,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256
 
 fn handle_confirm_block<T: Trait>(confirmed_header: &BlockHeaderInfo) {
     debug!(
-        "[handle_confirm_block]|Confirmed: {:} {:}...",
+        "[handle_confirm_block]|Confirmed: height:{:}|hash:{:}",
         confirmed_header.height as u64,
         hash_strip(&confirmed_header.header.hash()),
     );

@@ -107,14 +107,12 @@ pub fn detect_transaction_type<T: Trait>(relay_tx: &RelayTx) -> StdResult<TxType
 pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
     let tx_handler = TxHandler::new::<T>(txid)?;
     tx_handler.handle::<T>()?;
-    // if success, remove handled tx
-    remove_unused_tx::<T>(txid);
     Ok(())
 }
 
 pub fn remove_unused_tx<T: Trait>(txid: &H256) {
     debug!(
-        "[remove_unused_tx]|remove old tx|tx_hash:{:}...",
+        "[remove_unused_tx]|remove old tx|tx_hash:{:}",
         hash_strip(txid)
     );
     TxFor::<T>::remove(txid);

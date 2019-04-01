@@ -4,38 +4,31 @@
 use rstd::{prelude::Vec, result::Result as StdResult};
 use support::dispatch::Result;
 
-// ChainX
-use xsupport::{debug, error};
-
 // light-bitcoin
 use btc_chain::Transaction;
 use btc_keys::Public;
-use btc_primitives::Bytes;
+use btc_primitives::{Bytes, H256};
 use btc_script::{
     Script, SignatureChecker, SignatureVersion, TransactionInputSigner, TransactionSignatureChecker,
 };
 
 use crate::tx::utils::get_hot_trustee_redeem_script;
 use crate::types::RelayTx;
-use crate::{Module, Trait};
+use crate::Trait;
 
-pub fn validate_transaction<T: Trait>(tx: &RelayTx) -> Result {
+// ChainX
+#[cfg(feature = "std")]
+use crate::hash_strip;
+use xsupport::{debug, error};
+
+pub fn validate_transaction<T: Trait>(tx: &RelayTx, merkle_root: H256) -> Result {
     let tx_hash = tx.raw.hash();
-
-    let header_info = Module::<T>::block_header_for(&tx.block_hash).ok_or_else(|| {
-        error!(
-            "[validate_transaction]|tx's block header must exist before|block_hash:{:}",
-            tx.block_hash
-        );
-        "tx's block header must exist before"
-    })?;
-
     debug!(
-        "[validate_transaction]|relay tx:{:?}|header_info:{:?}",
-        tx, header_info
+        "[validate_transaction]|txhash:{:}|relay tx:{:?}",
+        hash_strip(&tx_hash),
+        tx
     );
 
-    let merkle_root = header_info.header.merkle_root_hash;
     // verify merkle proof
     match tx.merkle_proof.clone().parse() {
         Ok(parsed) => {
