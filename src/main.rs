@@ -1,21 +1,14 @@
 // Copyright 2018-2019 Chainpool.
 
-extern crate chainx_cli as cli;
-extern crate ctrlc;
-extern crate futures;
-
-#[macro_use]
-extern crate error_chain;
-
-use cli::VersionInfo;
-use futures::sync::oneshot;
-use futures::{future, Future};
-
 use std::cell::RefCell;
+
+use chainx_cli::VersionInfo;
+use error_chain::quick_main;
+use futures::{future, sync::oneshot, Future};
 
 // handles ctrl-c
 struct Exit;
-impl cli::IntoExit for Exit {
+impl chainx_cli::IntoExit for Exit {
     type Exit = future::MapErr<oneshot::Receiver<()>, fn(oneshot::Canceled) -> ()>;
     fn into_exit(self) -> Self::Exit {
         // can't use signal directly here because CtrlC takes only `Fn`.
@@ -37,9 +30,7 @@ impl cli::IntoExit for Exit {
     }
 }
 
-quick_main!(run);
-
-fn run() -> cli::error::Result<()> {
+fn run() -> chainx_cli::error::Result<()> {
     let version = VersionInfo {
         name: "ChainX",
         commit: env!("VERGEN_SHA_SHORT"),
@@ -49,5 +40,7 @@ fn run() -> cli::error::Result<()> {
         description: "Fully Decentralized Interchain Crypto Asset Management on Polkadot",
         support_url: "https://github.com/chainx-org/ChainX",
     };
-    cli::run(::std::env::args(), Exit, version)
+    chainx_cli::run(::std::env::args(), Exit, version)
 }
+
+quick_main!(run);

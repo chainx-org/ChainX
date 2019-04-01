@@ -3,6 +3,7 @@ name = "chainx"
 version = "0.9.7"
 build = "build.rs"
 authors = ["Chainpool <https://www.chainx.org>"]
+edition = "2018"
 
 [[bin]]
 name = "chainx"
@@ -14,19 +15,13 @@ ctrlc = { version = "3.0", features = ["termination"] }
 error-chain = "0.12"
 futures = "0.1.17"
 
+[build-dependencies]
+vergen = "3"
+
 [features]
-msgbus-redis = [
-	"chainx-cli/msgbus-redis"
-]
-
-msgbus-redis-keyhash = [
-	"msgbus-redis",
-	"chainx-cli/msgbus-redis-keyhash",
-]
-
-cache-lru = [
-	"chainx-cli/cache-lru"
-]
+msgbus-redis = ["chainx-cli/msgbus-redis"]
+msgbus-redis-keyhash = ["msgbus-redis", "chainx-cli/msgbus-redis-keyhash"]
+cache-lru = ["chainx-cli/cache-lru"]
 
 [workspace]
 members = [
@@ -38,8 +33,7 @@ members = [
     "rpc-servers",
     "runtime-api",
     "xr-primitives",
-
-    # xrml
+    # ChainX runtime module libraries
     "xrml/xbootstrap",
     "xrml/xsystem",
     "xrml/xsupport",
@@ -48,20 +42,13 @@ members = [
     "xrml/xgrandpa",
     "xrml/xaura",
     "xrml/xmultisig",
-    # xrml/xfee
     "xrml/xfee/manager",
-    # xrml/assets
     "xrml/xassets/assets",
-    "xrml/xdex/spot",
     "xrml/xassets/records",
     "xrml/xassets/process",
-    # xrml/mining
+    "xrml/xdex/spot",
     "xrml/xmining/staking",
     "xrml/xmining/tokens",
     "xrml/xbridge/bitcoin",
     "xrml/xbridge/sdot",
 ]
-
-[build-dependencies]
-vergen = "3"
-
