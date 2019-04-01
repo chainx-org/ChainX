@@ -132,7 +132,7 @@ decl_module! {
         pub fn push_header(origin, header: Vec<u8>) -> Result {
             let _from = ensure_signed(origin)?;
             let header: BlockHeader = deserialize(header.as_slice()).map_err(|_| "Cannot deserialize the header vec")?;
-            debug!("[push_header]|from:{:}|header:{:?}", _from, header);
+            debug!("[push_header]|from:{:?}|header:{:?}", _from, header);
 
             Self::apply_push_header(header)?;
             Ok(())
@@ -153,7 +153,7 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| "Parse transaction err")?;
-            debug!("[create_withdraw_tx]|from:{:}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
+            debug!("[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
 
             Self::apply_create_withdraw(tx, withdrawal_id_list.clone())?;
 
@@ -171,7 +171,7 @@ decl_module! {
             } else {
                 None
             };
-            debug!("[sign_withdraw_tx]|from:{:}|vote_tx:{:?}", from, tx);
+            debug!("[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
 
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
@@ -305,7 +305,7 @@ impl<T: Trait> Module<T> {
             let props =
                 xaccounts::Module::<T>::trustee_intention_props_of(&key).ok_or_else(|| {
                     error!(
-                        "[generate_new_trustees]|[btc] the candidate must be a trustee|who:{:}",
+                        "[generate_new_trustees]|[btc] the candidate must be a trustee|who:{:?}",
                         trustee
                     );
                     "[generate_new_trustees]|[btc] the candidate must be a trustee"
@@ -425,7 +425,7 @@ impl<T: Trait> Module<T> {
             return Ok(());
         }
         error!(
-            "[ensure_trustee]|Committer not in the trustee list!|who:{:}|trustees:{:?}",
+            "[ensure_trustee]|Committer not in the trustee list!|who:{:?}|trustees:{:?}",
             who, trustee_session_info.trustee_list
         );
         Err("Committer not in the trustee list")
@@ -512,62 +512,67 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_push_transaction(tx: RelayTx) -> Result {
-        let tx_hash = tx.raw.hash();
-        ensure_with_errorlog!(
-            Self::tx_for(&tx_hash).is_none(),
-            "tx already exists.",
-            "hash:{:}...",
-            hash_strip(&tx_hash)
-        );
-
-        // verify
+        // verify, notice it's check relay tx's block hash(same tx may belong to different forked block), and check merkle proof
         validate_transaction::<T>(&tx)?;
-        // judge tx type
-        let tx_type = detect_transaction_type::<T>(&tx)?;
-        if tx_type == TxType::Irrelevance {
-            warn!("");
-            return Err("");
-        }
-
-        // set to storage
-        // modify header
+        // get storage block info, after `validate_transaction`, the header_info must exist!
         let mut header_info = Self::block_header_for(&tx.block_hash)
             .expect("header info must be existed for this hash; qed");
-        if !header_info.txid_list.contains(&tx_hash) {
-            header_info.txid_list.push(tx_hash.clone());
-        }
         let height = header_info.height;
         let confirmed = header_info.confirmed;
-        BlockHeaderFor::<T>::insert(&tx.block_hash, header_info);
 
-        // parse first input addr, may delete when only use opreturn to get accountid
-        // only deposit tx store prev input tx's addr, for deposit to lookup related accountid
-        if tx_type == TxType::Deposit {
-            let outpoint = &tx.raw.inputs[0].previous_output;
-            let input_addr = inspect_address_from_transaction::<T>(&tx.previous_raw, outpoint)
-                .expect("when deposit, the first input must could parse an addr; qed");
+        // same tx may in different forked block, thus, just modify different forked block txlist, and the tx only insert once
+        // so when the tx is existed, return tx_type, else set `TxFor` and `InputAddrFor` storage, return tx_type
+        // get tx_type
+        let tx_hash = tx.raw.hash();
+        let tx_type = match Self::tx_for(&tx_hash) {
+            None => {
+                let tx_type = detect_transaction_type::<T>(&tx)?;
+                if tx_type == TxType::Irrelevance {
+                    warn!("[apply_push_transaction]|this tx is not related to any important addr, maybe an irrelevance tx, drop it|relay_tx:{:?}|block_height:{:}", tx, height);
+                    return Err("this tx is not related to any important addr, maybe an irrelevance tx, drop it");
+                }
+                // parse first input addr, may delete when only use opreturn to get accountid
+                // only deposit tx store prev input tx's addr, for deposit to lookup related accountid
+                if tx_type == TxType::Deposit {
+                    let outpoint = &tx.raw.inputs[0].previous_output;
+                    let input_addr =
+                        inspect_address_from_transaction::<T>(&tx.previous_raw, outpoint)
+                            .expect("when deposit, the first input must could parse an addr; qed");
 
-            debug!(
-                "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
-                hash_strip(&tx_hash),
-                u8array_to_string(&b58::to_base58(input_addr.layout().to_vec())),
-            );
-            InputAddrFor::<T>::insert(&tx_hash, input_addr)
+                    debug!(
+                        "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
+                        hash_strip(&tx_hash),
+                        u8array_to_string(&b58::to_base58(input_addr.layout().to_vec())),
+                    );
+                    InputAddrFor::<T>::insert(&tx_hash, input_addr)
+                }
+                // set tx into storage
+                TxFor::<T>::insert(
+                    &tx_hash,
+                    TxInfo {
+                        raw_tx: tx.raw.clone(),
+                        tx_type,
+                        height,
+                    },
+                );
+                tx_type
+            }
+            Some(tx_info) => tx_info.tx_type,
+        };
+
+        // modify block info storage
+        if !header_info.txid_list.contains(&tx_hash) {
+            header_info.txid_list.push(tx_hash.clone());
+
+            BlockHeaderFor::<T>::insert(&tx.block_hash, header_info);
         }
-        // set tx
-        TxFor::<T>::insert(
-            &tx_hash,
-            TxInfo {
-                raw_tx: tx.raw.clone(),
-                tx_type,
-                height,
-            },
-        );
 
         debug!(
-            "[apply_push_transaction]|verify pass|txhash:{:}|tx type:{:?}|confirmed:{:}",
+            "[apply_push_transaction]|verify pass|txhash:{:}|tx type:{:?}|block_hash:{:}|height:{:}|confirmed:{:}",
             hash_strip(&tx_hash),
             tx_type,
+            hash_strip(&tx.block_hash),
+            height,
             confirmed
         );
 
@@ -645,7 +650,7 @@ impl<T: Trait> Module<T> {
                 update_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list);
 
                 if sigs.len() as u32 >= sig_num {
-                    info!("Signature completed: {:}", sigs.len());
+                    info!("[apply_sig_withdraw]Signature completed: {:}", sigs.len());
                     proposal.sig_state = VoteResult::Finish;
 
                     // log event

@@ -27,8 +27,8 @@ pub fn validate_transaction<T: Trait>(tx: &RelayTx) -> Result {
     })?;
 
     debug!(
-        "[validate_transaction]|relay tx:{:?}|header:{:?}",
-        tx, header_info.header
+        "[validate_transaction]|relay tx:{:?}|header_info:{:?}",
+        tx, header_info
     );
 
     let merkle_root = header_info.header.merkle_root_hash;

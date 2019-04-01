@@ -165,7 +165,7 @@ pub fn get_sig_num_from_trustees(trustee_num: u32) -> (u32, u32) {
 
 #[cfg(feature = "std")]
 pub fn hash_strip(hash: &H256) -> String {
-    format!("0x{:?}", hash)[..8].to_owned()
+    format!("{:?}", hash)[..8].to_owned()
 }
 
 pub fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result<(), &'static str> {

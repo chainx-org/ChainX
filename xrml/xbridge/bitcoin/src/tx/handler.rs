@@ -173,14 +173,14 @@ impl TxHandler {
                 if deposit_balance > 0 {
                     deposit_token::<T>(&accountid, deposit_balance);
                     info!(
-                        "[deposit]|deposit success|who:{:}|balance:{:}|tx_hash:{:}...",
+                        "[deposit]|deposit success|who:{:?}|balance:{:}|tx_hash:{:}...",
                         accountid,
                         deposit_balance,
                         hash_strip(&self.tx_hash)
                     );
                 } else {
                     info!(
-                        "[deposit]|deposit balance is 0, may be a binding|who:{:}",
+                        "[deposit]|deposit balance is 0, may be a binding|who:{:?}",
                         accountid
                     );
                 }
@@ -291,7 +291,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
             }
             PendingDepositMap::<T>::insert(input_address, list);
             info!(
-                "Add pending deposit: {:}...  {:}",
+                "[insert_pending_deposit]|Add pending deposit: {:}|balance:{:}",
                 hash_strip(txid),
                 balance
             );
@@ -314,7 +314,7 @@ fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::AccountId)
         for r in record {
             deposit_token::<T>(who, r.balance);
             info!(
-                "[remove_pending_deposit]|use pending info to re-deposit|who:{:}|balance:{:}",
+                "[remove_pending_deposit]|use pending info to re-deposit|who:{:?}|balance:{:}",
                 who, r.balance
             );
 
