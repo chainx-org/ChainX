@@ -23,9 +23,10 @@ use primitives::{
     traits::IdentityLookup,
     BuildStorage,
 };
-use runtime_io;
 use substrate_primitives::{Blake2Hasher, H256};
-use {consensus, system, timestamp, Module, Trait};
+use support::impl_outer_origin;
+
+use super::{Module, Trait};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -34,12 +35,6 @@ impl_outer_origin! {
 // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Test;
-
-impl consensus::Trait for Test {
-    type Log = DigestItem;
-    type SessionKey = UintAuthorityId;
-    type InherentOfflineReport = ();
-}
 
 impl system::Trait for Test {
     type Origin = Origin;
@@ -55,14 +50,23 @@ impl system::Trait for Test {
     type Log = DigestItem;
 }
 
+impl consensus::Trait for Test {
+    type Log = DigestItem;
+    type SessionKey = UintAuthorityId;
+    type InherentOfflineReport = ();
+}
+
 impl timestamp::Trait for Test {
     type Moment = u64;
-    type OnTimestampSet = Aura;
+    type OnTimestampSet = XAura;
 }
 
 impl Trait for Test {
     type HandleReport = ();
 }
+
+pub type System = system::Module<Test>;
+pub type XAura = Module<Test>;
 
 pub fn new_test_ext(authorities: Vec<u64>) -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut t = system::GenesisConfig::<Test>::default()
@@ -89,6 +93,3 @@ pub fn new_test_ext(authorities: Vec<u64>) -> runtime_io::TestExternalities<Blak
     );
     t.into()
 }
-
-pub type System = system::Module<Test>;
-pub type Aura = Module<Test>;

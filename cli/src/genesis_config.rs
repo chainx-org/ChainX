@@ -1,4 +1,5 @@
-// Copyright 2018 chainpool
+// Copyright 2018-2019 Chainpool.
+
 use hex_literal::{hex, hex_impl};
 use rustc_hex::FromHex;
 use serde_derive::Deserialize;

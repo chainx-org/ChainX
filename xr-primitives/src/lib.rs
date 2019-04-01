@@ -1,4 +1,4 @@
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 //! System manager: Handles all of the top-level stuff; executing block/transaction, setting code
 //! and depositing logs.
 

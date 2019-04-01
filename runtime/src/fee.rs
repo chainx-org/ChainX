@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool
+// Copyright 2018-2019 Chainpool.
 
 use xfee_manager::SwitchStore;
 

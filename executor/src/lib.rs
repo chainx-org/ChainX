@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! A `CodeExecutor` specialisation which uses natively compiled runtime when the wasm to be
 //! executed is equivalent to the natively compiled code.

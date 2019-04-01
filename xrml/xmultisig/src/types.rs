@@ -1,7 +1,11 @@
+// Copyright 2018-2019 Chainpool.
+
 use parity_codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
-use sr_std::prelude::*;
+
+// Substrate
+use rstd::prelude::*;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]

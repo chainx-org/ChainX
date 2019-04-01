@@ -1,24 +1,27 @@
-// Copyright 2019 Chainpool
+// Copyright 2018-2019 Chainpool.
+
 pub mod handler;
 pub mod utils;
 mod validator;
 
-use rstd::prelude::*;
-use rstd::result::Result as StdResult;
-
-use runtime_primitives::traits::As;
+// Substrate
+use primitives::traits::As;
+use rstd::{prelude::*, result::Result as StdResult};
 use support::{dispatch::Result, StorageMap};
 
+// ChainX
+use xassets::Chain;
+use xsupport::{debug, error};
+
+// light-bitcoin
 use btc_chain::Transaction;
 use btc_crypto::dhash160;
 use btc_keys::{Address, Type};
 use btc_primitives::{Bytes, H256};
 use btc_script::{Builder, Opcode, Script};
 
-use xaccounts;
-use xassets::Chain;
-use xrecords;
-
+#[cfg(feature = "std")]
+use crate::hash_strip;
 use crate::types::{RelayTx, TrusteeAddrInfo, TxType};
 use crate::{InputAddrFor, Module, RawEvent, Trait, TxFor};
 
@@ -28,10 +31,6 @@ use self::utils::{
     inspect_address_from_transaction, parse_addr_from_script,
 };
 pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
-
-#[cfg(feature = "std")]
-use crate::hash_strip;
-use xsupport::{debug, error};
 
 /// parse tx's inputs/outputs into Option<Address>
 /// e.g

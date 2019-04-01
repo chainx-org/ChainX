@@ -2,30 +2,28 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// substrate core
-use rstd::prelude::*;
+mod mock;
+mod tests;
+pub mod types;
+
+use parity_codec::Encode;
+use tiny_keccak::keccak256;
+
+// Substrate
 #[cfg(feature = "std")]
-use sr_primitives::traits::Zero;
-// substrate runtime
+use primitives::traits::Zero;
+use rstd::prelude::*;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
 };
 use system::ensure_signed;
 
-// chainx core
+// ChainX
+use xassets::{Chain, ChainT};
 use xr_primitives::generic::Extracter;
 use xr_primitives::traits::Extractable;
-// chainx runtime
-use xassets::{Chain, ChainT};
 
-use parity_codec::{Decode, Encode};
-use tiny_keccak::keccak256;
-
-pub type EthereumAddress = [u8; 20];
-
-#[derive(Encode, Decode, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct EcdsaSignature(pub [u8; 32], pub [u8; 32], pub i8);
+pub use self::types::{EcdsaSignature, EthereumAddress};
 
 /// Configuration trait.
 pub trait Trait: xaccounts::Trait + xassets::Trait + xrecords::Trait {
@@ -136,6 +134,3 @@ fn deposit_token<T: Trait>(who: &T::AccountId, balance: T::Balance) {
     let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
     let _ = <xrecords::Module<T>>::deposit(&who, &token, balance);
 }
-
-#[cfg(test)]
-mod tests {}

@@ -1,4 +1,4 @@
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 extern crate chainx_cli as cli;
 extern crate ctrlc;

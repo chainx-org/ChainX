@@ -3,32 +3,29 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_codec as codec;
-
 mod manager;
-#[cfg(test)]
 mod mock;
-#[cfg(test)]
 mod tests;
-
-pub use manager::types::*;
 
 #[cfg(feature = "std")]
 use chrono::prelude::*;
-use codec::Codec;
+use parity_codec::Codec;
+
+// Substrate
 use primitives::traits::{As, MaybeSerializeDebug, Member, SimpleArithmetic, Zero};
 use rstd::{cmp, prelude::*, result};
-use runtime_support::{
+use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, Parameter, StorageMap,
     StorageValue,
 };
 use system::ensure_signed;
-use xassets::{
-    assetdef::{ChainT, Token},
-    OnAssetRegisterOrRevoke,
-};
+
+// ChainX
+use xassets::{ChainT, OnAssetRegisterOrRevoke, Token};
 use xsupport::info;
 use OrderDirection::{Buy, Sell};
+
+pub use self::manager::types::*;
 
 const MAX_BACKLOG_ORDER: usize = 1000;
 

@@ -1,10 +1,14 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
+#![cfg(test)]
+
+use super::mock::*;
 use super::*;
-use mock::*;
+
 use rstd::collections::btree_map::BTreeMap;
 use rstd::iter::FromIterator;
 use runtime_io::with_externalities;
+use support::{assert_err, assert_noop, assert_ok};
 
 #[test]
 fn test_genesis() {
@@ -25,7 +29,6 @@ fn test_genesis() {
             XAssets::assets(),
             vec![XAssets::TOKEN.to_vec(), btc_token.clone(),]
         );
-
         assert_eq!(XAssets::asset_info(&btc_token).unwrap().0.precision(), 8);
     });
 }

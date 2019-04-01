@@ -1,4 +1,5 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use rstd::prelude::Vec;

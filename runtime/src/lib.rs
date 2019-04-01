@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! The ChainX runtime. This can be compiled with ``#[no_std]`, ready for Wasm.
 

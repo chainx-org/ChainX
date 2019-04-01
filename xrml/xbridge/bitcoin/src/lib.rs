@@ -1,4 +1,4 @@
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! this module is for btc-bridge
 
@@ -6,46 +6,45 @@
 
 mod assets_records;
 mod header;
+mod mock;
+mod tests;
 mod tx;
 mod types;
 
-#[cfg(test)]
-mod tests;
-
 use parity_codec::{Decode, Encode};
-use rstd::prelude::*;
-use rstd::result::Result as StdResult;
-use runtime_primitives::traits::As;
+
+// Substrate
+use primitives::traits::As;
+use rstd::{prelude::*, result::Result as StdResult};
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue};
 use system::ensure_signed;
-use timestamp;
 
+// ChainX
 use xaccounts::TrusteeEntity;
 use xassets::{Chain, ChainT, Memo, Token};
-use xfee_manager;
 use xr_primitives::{generic::b58, traits::TrusteeForChain, XString};
 use xrecords::TxState;
+use xsupport::{debug, ensure_with_errorlog, error, info, warn};
+#[cfg(feature = "std")]
+use xsupport::{trustees, u8array_to_hex, u8array_to_string};
 
+// light-bitcoin
 use btc_chain::{BlockHeader, Transaction};
 use btc_keys::{Address, DisplayLayout, Error as AddressError};
 use btc_primitives::H256;
 use btc_ser::{deserialize, Reader};
 
 #[cfg(feature = "std")]
-pub use tx::utils::hash_strip;
-use tx::utils::{get_sig_num, get_sig_num_from_trustees, inspect_address_from_transaction};
-use tx::{
+pub use self::tx::utils::hash_strip;
+use self::tx::utils::{get_sig_num, get_sig_num_from_trustees, inspect_address_from_transaction};
+use self::tx::{
     check_withdraw_tx, create_multi_address, detect_transaction_type, handle_tx,
     parse_and_check_signed_tx, update_trustee_vote_state, validate_transaction,
 };
-use types::{BindStatus, DepositCache, TxType};
-pub use types::{
+use self::types::{BindStatus, DepositCache, TxType};
+pub use self::types::{
     BlockHeaderInfo, Params, RelayTx, TrusteeAddrInfo, TxInfo, VoteResult, WithdrawalProposal,
 };
-
-use xsupport::{debug, ensure_with_errorlog, error, info, warn};
-#[cfg(feature = "std")]
-use xsupport::{trustees, u8array_to_hex, u8array_to_string};
 
 pub type AddrStr = XString;
 

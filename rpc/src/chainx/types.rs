@@ -1,3 +1,5 @@
+// Copyright 2018-2019 Chainpool.
+
 use std::convert::From;
 
 use rustc_hex::ToHex;

@@ -1,29 +1,15 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 //! Coordidate session and era rotation.
 
 use super::*;
+
 use primitives::traits::{As, One, Zero};
 use rstd::cmp;
-use session::OnSessionChange;
 use xaccounts::IntentionJackpotAccountIdFor;
-use xassets;
+use xsession::OnSessionChange;
 use xsupport::debug;
 #[cfg(feature = "std")]
 use xsupport::{validators, who};
-
-/// RewardHolder includes intention as well as tokens.
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum RewardHolder<AccountId: Default> {
-    Intention(AccountId),
-    PseduIntention(Token),
-}
-
-impl<AccountId: Default> Default for RewardHolder<AccountId> {
-    fn default() -> Self {
-        RewardHolder::Intention(Default::default())
-    }
-}
 
 pub trait OnRewardCalculation<AccountId: Default, Balance> {
     fn psedu_intentions_info() -> Vec<(RewardHolder<AccountId>, Balance)>;
@@ -46,7 +32,7 @@ impl<AccountId: Default, Balance> OnReward<AccountId, Balance> for () {
 impl<T: Trait> Module<T> {
     /// Get the reward for the session, assuming it ends with this block.
     fn this_session_reward() -> T::Balance {
-        let current_index = <session::Module<T>>::current_index().as_();
+        let current_index = <xsession::Module<T>>::current_index().as_();
         let reward = Self::initial_reward().as_()
             / (u32::pow(2, (current_index / SESSIONS_PER_ROUND) as u32)) as u64;
         T::Balance::sa(reward as u64)
@@ -92,8 +78,8 @@ impl<T: Trait> Module<T> {
     }
 
     fn reward_of_per_block(session_reward: T::Balance) -> T::Balance {
-        let session_length = <session::SessionLength<T>>::get().as_();
-        let validators_count = <session::Validators<T>>::get().len() as u64;
+        let session_length = <xsession::SessionLength<T>>::get().as_();
+        let validators_count = <xsession::Validators<T>>::get().len() as u64;
         T::Balance::sa(session_reward.as_() * validators_count / session_length)
     }
 
@@ -189,7 +175,7 @@ impl<T: Trait> Module<T> {
         // No reward but only slash for these offline validators that are inactive atm.
         Self::slash_inactive_offline_validators();
 
-        let mut validators = <session::Module<T>>::validators()
+        let mut validators = <xsession::Module<T>>::validators()
             .into_iter()
             .map(|(v, _)| v)
             .collect::<Vec<_>>();
@@ -200,7 +186,7 @@ impl<T: Trait> Module<T> {
         let mut session_reward = Self::this_session_reward();
 
         // In the first round, 20% reward goes to the team.
-        let current_index = <session::Module<T>>::current_index().as_();
+        let current_index = <xsession::Module<T>>::current_index().as_();
         session_reward = if current_index <= SESSIONS_PER_ROUND {
             let to_team = T::Balance::sa(session_reward.as_() * 2 / 10);
             debug!("[reward] issue to the team: {:?}", to_team);
@@ -261,7 +247,7 @@ impl<T: Trait> Module<T> {
         // Reset slashed validator set
         <OfflineValidatorsPerSession<T>>::kill();
 
-        let session_index = <session::Module<T>>::current_index();
+        let session_index = <xsession::Module<T>>::current_index();
         let is_new_era =
             ((session_index - Self::last_era_length_change()) % Self::sessions_per_era()).is_zero();
 
@@ -283,7 +269,7 @@ impl<T: Trait> Module<T> {
             .map(|v| (Self::intention_profiles(&v).total_nomination.as_(), v))
             .map(|(a, b)| (b, a))
             .collect::<Vec<_>>();
-        <session::Module<T>>::set_validators(validators.as_slice());
+        <xsession::Module<T>>::set_validators(validators.as_slice());
         info!(
             "[set_validators_on_new_session] new validator set due to enforcing inactive: {:?}",
             validators!(validators)
@@ -302,12 +288,12 @@ impl<T: Trait> Module<T> {
         if let Some(next_spe) = Self::next_sessions_per_era() {
             if next_spe != Self::sessions_per_era() {
                 <SessionsPerEra<T>>::put(&next_spe);
-                <LastEraLengthChange<T>>::put(&<session::Module<T>>::current_index());
+                <LastEraLengthChange<T>>::put(&<xsession::Module<T>>::current_index());
             }
         }
 
         // evaluate desired staking amounts and nominations and optimise to find the best
-        // combination of validators, then use session::internal::set_validators().
+        // combination of validators, then use xsession::internal::set_validators().
         // for now, this just orders would-be stakers by their balances and chooses the top-most
         // <ValidatorCount<T>>::get() of them.
         // TODO: this is not sound. this should be moved to an off-chain solution mechanism.
@@ -333,7 +319,7 @@ impl<T: Trait> Module<T> {
             .collect::<Vec<(_, _)>>();
 
         info!("[new_era] new validator set: {:?}", validators!(validators));
-        <session::Module<T>>::set_validators(&validators);
+        <xsession::Module<T>>::set_validators(&validators);
         Self::deposit_event(RawEvent::Rotation(validators));
     }
 
@@ -368,7 +354,7 @@ impl<T: Trait> OnSessionChange<T::Moment> for Module<T> {
 impl<T: Trait> consensus::OnOfflineReport<Vec<u32>> for Module<T> {
     fn handle_report(reported_indices: Vec<u32>) {
         for validator_index in reported_indices {
-            let v = <session::Module<T>>::validators()[validator_index as usize].clone();
+            let v = <xsession::Module<T>>::validators()[validator_index as usize].clone();
             Self::on_offline_validator(&v.0);
         }
     }

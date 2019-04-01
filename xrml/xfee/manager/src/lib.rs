@@ -1,34 +1,21 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate sr_std as rstd;
+mod mock;
+mod tests;
+pub mod types;
 
-extern crate parity_codec as codec;
-extern crate sr_primitives;
-
-extern crate srml_balances as balances;
-extern crate srml_system as system;
-#[macro_use]
-extern crate srml_support as support;
-
-extern crate xrml_xaccounts as xaccounts;
-extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xsystem as xsystem;
-
-extern crate chainx_primitives;
-
-//use rstd::prelude::*;
+// Substrate
+use primitives::traits::{As, CheckedDiv, CheckedMul, CheckedSub};
 use rstd::result::Result as StdResult;
+use support::{decl_module, decl_storage, dispatch::Result, StorageValue};
 
-use sr_primitives::traits::{As, CheckedDiv, CheckedMul, CheckedSub};
-use support::dispatch::Result;
-use support::StorageValue;
-
+// ChainX
+use chainx_primitives::Acceleration;
 use xaccounts::IntentionJackpotAccountIdFor;
 
-use chainx_primitives::Acceleration;
-use codec::{Decode, Encode};
+pub use self::types::SwitchStore;
 
 /// Simple payment making trait, operating on a single generic `AccountId` type.
 pub trait MakePayment<AccountId> {
@@ -57,15 +44,6 @@ decl_module! {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct SwitchStore {
-    pub global: bool,
-    pub spot: bool,
-    pub xbtc: bool,
-    pub sdot: bool,
-}
-
 decl_storage! {
     trait Store for Module<T: Trait> as XFeeManager {
         pub Switch get(switch): SwitchStore; // Emergency control
@@ -76,7 +54,7 @@ decl_storage! {
         pub TransactionByteFee get(transaction_byte_fee) config(): T::Balance;
     }
     add_extra_genesis {
-        build(|_: &mut sr_primitives::StorageOverlay, _: &mut sr_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
+        build(|_: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             assert!(config.producer_fee_proportion.1 != 0, "the proportion denominator can't be Zero");
             assert!(config.producer_fee_proportion.0 < config.producer_fee_proportion.1, "the proportion numerator should less than denominator");
         })
@@ -163,177 +141,5 @@ impl<T: Trait> Module<T> {
         }
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    extern crate sr_io as runtime_io;
-    extern crate substrate_primitives;
-
-    use self::runtime_io::with_externalities;
-    use self::substrate_primitives::{Blake2Hasher, H256};
-    use super::*;
-    use sr_primitives::testing::{Digest, DigestItem, Header};
-    use sr_primitives::traits::{BlakeTwo256, IdentityLookup};
-    use sr_primitives::BuildStorage;
-
-    impl_outer_origin! {
-        pub enum Origin for Test {}
-    }
-
-    #[derive(Clone, Eq, PartialEq)]
-    pub struct Test;
-
-    impl system::Trait for Test {
-        type Origin = Origin;
-        type Index = u64;
-        type BlockNumber = u64;
-        type Hash = H256;
-        type Hashing = BlakeTwo256;
-        type Digest = Digest;
-        type AccountId = u64;
-        type Lookup = IdentityLookup<u64>;
-        type Header = Header;
-        type Event = ();
-        type Log = DigestItem;
-    }
-
-    impl balances::Trait for Test {
-        type Balance = u64;
-        type OnFreeBalanceZero = ();
-        type OnNewAccount = ();
-        type EnsureAccountLiquid = ();
-        type Event = ();
-    }
-
-    impl xassets::Trait for Test {
-        /// Event
-        type Event = ();
-        type OnAssetChanged = ();
-        type OnAssetRegisterOrRevoke = ();
-    }
-
-    impl xsystem::Trait for Test {
-        type ValidatorList = ();
-    }
-
-    pub struct MockDeterminator;
-
-    impl xaccounts::IntentionJackpotAccountIdFor<u64> for MockDeterminator {
-        fn accountid_for(_: &u64) -> u64 {
-            1000
-        }
-    }
-
-    impl xaccounts::Trait for Test {
-        type Event = ();
-        type DetermineIntentionJackpotAccountId = MockDeterminator;
-    }
-
-    impl Trait for Test {}
-
-    pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-        let mut r = system::GenesisConfig::<Test>::default()
-            .build_storage()
-            .unwrap()
-            .0;
-        // balance
-        r.extend(
-            balances::GenesisConfig::<Test> {
-                balances: vec![(1, 1000), (2, 510), (3, 1000)],
-                transaction_base_fee: 10,
-                transaction_byte_fee: 1,
-                existential_deposit: 0,
-                transfer_fee: 0,
-                creation_fee: 0,
-            }
-            .build_storage()
-            .unwrap()
-            .0,
-        );
-        // xsystem
-        r.extend(
-            xsystem::GenesisConfig::<Test> {
-                death_account: 0,
-                burn_account: 100,
-            }
-            .build_storage()
-            .unwrap()
-            .0,
-        );
-        // xassets
-        r.extend(
-            xassets::GenesisConfig::<Test> {
-                pcx: (b"PolkadotChainX".to_vec(), 3, b"PCX onchain token".to_vec()),
-                memo_len: 128,
-                // asset, is_psedu_intention, init for account
-                // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
-                asset_list: vec![],
-            }
-            .build_storage()
-            .unwrap()
-            .0,
-        );
-
-        r.extend(
-            GenesisConfig::<Test> {
-                switch: true,
-                producer_fee_proportion: (1, 10),
-                _genesis_phantom_data: Default::default(),
-            }
-            .build_storage()
-            .unwrap()
-            .0,
-        );
-        r.into()
-    }
-
-    type XAssets = xassets::Module<Test>;
-
-    #[test]
-    fn test_fee() {
-        with_externalities(&mut new_test_ext(), || {
-            xsystem::BlockProducer::<Test>::put(99);
-
-            assert_ok!(Module::<Test>::make_payment(&1, 10, 10));
-            // base fee = 10, bytes fee = 1
-            let fee = 10 * 10 + 1 * 10;
-            assert_eq!(XAssets::pcx_free_balance(&1), 1000 - fee);
-            // block producer
-            assert_eq!(XAssets::pcx_free_balance(&99), fee / 10);
-            // jackpot account
-            assert_eq!(XAssets::pcx_free_balance(&1000), fee * 9 / 10);
-            // death account
-            assert_eq!(XAssets::pcx_free_balance(&0), 0);
-        });
-    }
-
-    #[test]
-    fn test_fee_no_blockproducer() {
-        with_externalities(&mut new_test_ext(), || {
-            assert_ok!(Module::<Test>::make_payment(&1, 10, 10));
-            // base fee = 10, bytes fee = 1
-            let fee = 10 * 10 + 1 * 10;
-            assert_eq!(XAssets::pcx_free_balance(&1), 1000 - fee);
-            // block producer
-            // death account
-            assert_eq!(XAssets::pcx_free_balance(&0), fee);
-        });
-    }
-
-    #[test]
-    fn test_fee_not_divisible() {
-        with_externalities(&mut new_test_ext(), || {
-            xsystem::BlockProducer::<Test>::put(99);
-            assert_ok!(Module::<Test>::make_payment(&1, 11, 10));
-            // base fee = 10, bytes fee = 1
-            let fee = 10 * 10 + 1 * 11; // 111
-            assert_eq!(XAssets::pcx_free_balance(&1), 1000 - fee);
-            // block producer
-            assert_eq!(XAssets::pcx_free_balance(&99), fee / 10); // 11
-                                                                  // jackpot account
-            assert_eq!(XAssets::pcx_free_balance(&1000), fee * 9 / 10 + 1); // 111 * 9 / 10 = 99 + 1 = 100
-        });
     }
 }

@@ -2,42 +2,42 @@
 name = "xrml-xassets-assets"
 version = "0.4.0"
 authors = ["Chainpool <https://www.chainx.org>"]
+edition = "2018"
 
 [dependencies]
-hex-literal = "0.1.0"
-serde = { version = "1.0", default_features = false }
+serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.2", default-features = false, features = ["derive"] }
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-std = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-io = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-indices = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
+# Substrate
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate", default-features = false }
+# ChainX
+xr-primitives = { path = "../../../xr-primitives", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 
-# chainx runtime
-xr-primitives = { path = "../../../xr-primitives", default_features = false }
-# chainx runtime module
-xrml-xsupport = { path = "../../xsupport", default_features = false }
+[dev-dependencies]
+# Substrate
+substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate" }
 
 [features]
 default = ["std"]
-std=[
+std = [
     "serde/std",
     "serde_derive",
     "parity-codec/std",
-    "substrate-primitives/std",
-    "sr-std/std",
-    "sr-io/std",
-    "sr-primitives/std",
-    "srml-support/std",
-    "srml-system/std",
-    "srml-indices/std",
-    "srml-balances/std",
-    # chainx runtime
+    # Substrate
+    "rstd/std",
+    "runtime-io/std",
+    "primitives/std",
+    "support/std",
+    "system/std",
+    "balances/std",
+    # ChainX
     "xr-primitives/std",
-    # chainx runtime module
-    "xrml-xsupport/std",
+    "xsupport/std",
 ]

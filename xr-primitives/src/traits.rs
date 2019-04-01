@@ -1,3 +1,5 @@
+// Copyright 2018-2019 Chainpool.
+
 pub use integer_sqrt::IntegerSquareRoot;
 pub use num_traits::{
     ops::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedShl, CheckedShr, CheckedSub},

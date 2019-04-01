@@ -2,11 +2,15 @@
 //! This module defines all the enum and structs.
 
 use parity_codec::{Decode, Encode};
-use primitives::traits::{As, SimpleArithmetic, Zero};
-use rstd::prelude::*;
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
-use xassets::assetdef::Token;
+
+// Substrate
+use primitives::traits::{As, SimpleArithmetic, Zero};
+use rstd::prelude::*;
+
+// ChainX
+use xassets::Token;
 
 /// Index for the trading pair or users' order.
 pub type OrderIndex = u64;

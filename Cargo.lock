@@ -456,21 +456,21 @@ dependencies = [
  "substrate-consensus-aura-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
- "xrml-aura 0.1.0",
- "xrml-bridge-bitcoin 0.9.0",
- "xrml-bridge-sdot 0.9.0",
- "xrml-fee-manager 0.4.0",
  "xrml-grandpa 0.1.0",
- "xrml-mining-staking 0.4.0",
- "xrml-mining-tokens 0.4.0",
- "xrml-session 0.1.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-process 0.4.0",
  "xrml-xassets-records 0.4.0",
+ "xrml-xaura 0.1.0",
  "xrml-xbootstrap 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xbridge-sdot 0.9.0",
  "xrml-xdex-spot 0.4.0",
+ "xrml-xfee-manager 0.4.0",
+ "xrml-xmining-staking 0.4.0",
+ "xrml-xmining-tokens 0.4.0",
  "xrml-xmultisig 0.4.0",
+ "xrml-xsession 0.1.0",
  "xrml-xsupport 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
@@ -2688,9 +2688,9 @@ dependencies = [
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-client 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
- "xrml-bridge-bitcoin 0.9.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
  "xrml-xdex-spot 0.4.0",
  "xrml-xsupport 0.4.0",
 ]
@@ -3882,14 +3882,14 @@ dependencies = [
  "substrate-transaction-pool 0.1.0 (git+https://github.com/chainpool/substrate)",
  "tokio 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "xr-primitives 0.4.0",
- "xrml-bridge-bitcoin 0.9.0",
- "xrml-mining-staking 0.4.0",
- "xrml-mining-tokens 0.4.0",
- "xrml-session 0.1.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
  "xrml-xdex-spot 0.4.0",
+ "xrml-xmining-staking 0.4.0",
+ "xrml-xmining-tokens 0.4.0",
+ "xrml-xsession 0.1.0",
  "xrml-xsupport 0.4.0",
 ]
 
@@ -4803,102 +4803,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xrml-aura"
-version = "0.1.0"
-dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-inherents 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-mining-staking 0.4.0",
-]
-
-[[package]]
-name = "xrml-bridge-bitcoin"
-version = "0.9.0"
-dependencies = [
- "chain 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "crypto 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "keys 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "merkle 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "primitives 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "script 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "serialization 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xr-primitives 0.4.0",
- "xrml-fee-manager 0.4.0",
- "xrml-xaccounts 0.4.0",
- "xrml-xassets-assets 0.4.0",
- "xrml-xassets-records 0.4.0",
- "xrml-xsupport 0.4.0",
- "xrml-xsystem 0.4.0",
-]
-
-[[package]]
-name = "xrml-bridge-sdot"
-version = "0.9.0"
-dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "libsecp256k1 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "tiny-keccak 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "xr-primitives 0.4.0",
- "xrml-xaccounts 0.4.0",
- "xrml-xassets-assets 0.4.0",
- "xrml-xassets-records 0.4.0",
- "xrml-xsupport 0.4.0",
- "xrml-xsystem 0.4.0",
-]
-
-[[package]]
-name = "xrml-fee-manager"
-version = "0.4.0"
-dependencies = [
- "chainx-primitives 0.3.0",
- "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-xaccounts 0.4.0",
- "xrml-xassets-assets 0.4.0",
- "xrml-xsystem 0.4.0",
-]
-
-[[package]]
 name = "xrml-grandpa"
 version = "0.1.0"
 dependencies = [
@@ -4914,94 +4818,14 @@ dependencies = [
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-session 0.1.0",
+ "xrml-xsession 0.1.0",
  "xrml-xsupport 0.4.0",
-]
-
-[[package]]
-name = "xrml-mining-staking"
-version = "0.4.0"
-dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-indices 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-keyring 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xr-primitives 0.4.0",
- "xrml-bridge-bitcoin 0.9.0",
- "xrml-fee-manager 0.4.0",
- "xrml-session 0.1.0",
- "xrml-xaccounts 0.4.0",
- "xrml-xassets-assets 0.4.0",
- "xrml-xassets-records 0.4.0",
- "xrml-xsupport 0.4.0",
- "xrml-xsystem 0.4.0",
-]
-
-[[package]]
-name = "xrml-mining-tokens"
-version = "0.4.0"
-dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-keyring 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-bridge-bitcoin 0.9.0",
- "xrml-mining-staking 0.4.0",
- "xrml-xaccounts 0.4.0",
- "xrml-xassets-assets 0.4.0",
- "xrml-xdex-spot 0.4.0",
- "xrml-xsupport 0.4.0",
- "xrml-xsystem 0.4.0",
-]
-
-[[package]]
-name = "xrml-session"
-version = "0.1.0"
-dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-xaccounts 0.4.0",
- "xrml-xsystem 0.4.0",
 ]
 
 [[package]]
 name = "xrml-xaccounts"
 version = "0.4.0"
 dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5025,7 +4849,6 @@ dependencies = [
 name = "xrml-xassets-assets"
 version = "0.4.0"
 dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5045,8 +4868,6 @@ dependencies = [
 name = "xrml-xassets-process"
 version = "0.4.0"
 dependencies = [
- "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5059,17 +4880,18 @@ dependencies = [
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-bridge-bitcoin 0.9.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xfee-manager 0.4.0",
+ "xrml-xsystem 0.4.0",
 ]
 
 [[package]]
 name = "xrml-xassets-records"
 version = "0.4.0"
 dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5088,6 +4910,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "xrml-xaura"
+version = "0.1.0"
+dependencies = [
+ "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-inherents 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-xmining-staking 0.4.0",
+]
+
+[[package]]
 name = "xrml-xbootstrap"
 version = "0.4.0"
 dependencies = [
@@ -5098,16 +4941,70 @@ dependencies = [
  "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-bridge-bitcoin 0.9.0",
- "xrml-mining-staking 0.4.0",
- "xrml-mining-tokens 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
  "xrml-xdex-spot 0.4.0",
+ "xrml-xmining-staking 0.4.0",
+ "xrml-xmining-tokens 0.4.0",
  "xrml-xmultisig 0.4.0",
+]
+
+[[package]]
+name = "xrml-xbridge-bitcoin"
+version = "0.9.0"
+dependencies = [
+ "chain 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "crypto 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "keys 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "merkle 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "primitives 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "script 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serialization 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
+ "xrml-xaccounts 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-records 0.4.0",
+ "xrml-xfee-manager 0.4.0",
+ "xrml-xsupport 0.4.0",
+ "xrml-xsystem 0.4.0",
+]
+
+[[package]]
+name = "xrml-xbridge-sdot"
+version = "0.9.0"
+dependencies = [
+ "libsecp256k1 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "tiny-keccak 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xr-primitives 0.4.0",
+ "xrml-xaccounts 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-records 0.4.0",
+ "xrml-xsystem 0.4.0",
 ]
 
 [[package]]
@@ -5115,7 +5012,6 @@ name = "xrml-xdex-spot"
 version = "0.4.0"
 dependencies = [
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5130,11 +5026,81 @@ dependencies = [
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
- "xrml-bridge-bitcoin 0.9.0",
- "xrml-fee-manager 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xfee-manager 0.4.0",
+ "xrml-xsupport 0.4.0",
+ "xrml-xsystem 0.4.0",
+]
+
+[[package]]
+name = "xrml-xfee-manager"
+version = "0.4.0"
+dependencies = [
+ "chainx-primitives 0.3.0",
+ "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-xaccounts 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xsystem 0.4.0",
+]
+
+[[package]]
+name = "xrml-xmining-staking"
+version = "0.4.0"
+dependencies = [
+ "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-indices 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
+ "xrml-xaccounts 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-records 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xfee-manager 0.4.0",
+ "xrml-xsession 0.1.0",
+ "xrml-xsupport 0.4.0",
+ "xrml-xsystem 0.4.0",
+]
+
+[[package]]
+name = "xrml-xmining-tokens"
+version = "0.4.0"
+dependencies = [
+ "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xdex-spot 0.4.0",
+ "xrml-xmining-staking 0.4.0",
  "xrml-xsupport 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
@@ -5143,7 +5109,6 @@ dependencies = [
 name = "xrml-xmultisig"
 version = "0.4.0"
 dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5151,15 +5116,39 @@ dependencies = [
  "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-balances 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
- "xrml-bridge-bitcoin 0.9.0",
- "xrml-mining-staking 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
+ "xrml-xassets-records 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xfee-manager 0.4.0",
+ "xrml-xmining-staking 0.4.0",
+ "xrml-xsession 0.1.0",
  "xrml-xsupport 0.4.0",
+ "xrml-xsystem 0.4.0",
+]
+
+[[package]]
+name = "xrml-xsession"
+version = "0.1.0"
+dependencies = [
+ "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-consensus 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "srml-timestamp 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-xaccounts 0.4.0",
+ "xrml-xsystem 0.4.0",
 ]
 
 [[package]]
@@ -5183,7 +5172,6 @@ dependencies = [
  "parity-codec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-primitives 0.1.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 0.1.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 0.1.0 (git+https://github.com/chainpool/substrate)",

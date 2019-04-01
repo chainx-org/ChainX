@@ -1,5 +1,5 @@
 // Copyright 2017-2018 Parity Technologies (UK) Ltd.
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -19,40 +19,15 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate sr_std as rstd;
-
-extern crate parity_codec;
-
-#[macro_use]
-extern crate srml_support as runtime_support;
-
-extern crate sr_primitives as primitives;
-extern crate srml_system as system;
-pub extern crate srml_timestamp as timestamp;
-extern crate substrate_inherents as inherents;
-extern crate substrate_primitives;
-extern crate xrml_mining_staking as staking;
-
-#[cfg(test)]
-extern crate srml_consensus as consensus;
-
-#[cfg(test)]
-extern crate sr_io as runtime_io;
-
-#[cfg(test)]
-#[macro_use]
-extern crate lazy_static;
-
-#[cfg(test)]
-extern crate parking_lot;
+use parity_codec::{Decode, Encode};
 
 use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInherent, RuntimeString};
 #[cfg(feature = "std")]
 use inherents::{InherentDataProviders, ProvideInherentData};
-use parity_codec::{Decode, Encode};
 use primitives::traits::{As, Zero};
 use rstd::{prelude::*, result};
-use runtime_support::storage::StorageValue;
+use support::{decl_module, decl_storage, StorageValue};
+pub use timestamp;
 use timestamp::OnTimestampSet;
 #[cfg(feature = "std")]
 use timestamp::TimestampInherentData;
@@ -255,13 +230,13 @@ impl<T: Trait> OnTimestampSet<T::Moment> for Module<T> {
 /// A type for performing slashing based on aura reports.
 pub struct StakingSlasher<T>(::rstd::marker::PhantomData<T>);
 
-impl<T: staking::Trait + Trait> HandleReport for StakingSlasher<T> {
+impl<T: xstaking::Trait + Trait> HandleReport for StakingSlasher<T> {
     fn handle_report(report: AuraReport) {
-        let validators = staking::Module::<T>::validators();
+        let validators = xstaking::Module::<T>::validators();
 
         report.punish(validators.len(), |idx, _| {
             let v = validators[idx].clone();
-            staking::Module::<T>::on_offline_validator(&v.0);
+            xstaking::Module::<T>::on_offline_validator(&v.0);
         });
     }
 }

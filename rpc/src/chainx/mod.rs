@@ -1,4 +1,4 @@
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 use std::collections::BTreeMap;
 use std::result::Result as StdResult;

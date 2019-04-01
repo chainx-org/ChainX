@@ -1,19 +1,24 @@
-use rstd::prelude::Vec;
-use runtime_primitives::traits::As;
+// Copyright 2018-2019 Chainpool.
 
-use xassets::assetdef::{Chain, ChainT};
+// Substrate
+use primitives::traits::As;
+use rstd::prelude::Vec;
+
+// CHainX
+use xassets::{Chain, ChainT};
 use xr_primitives::generic::b58;
 use xrecords::{self, RecordInfo, TxState};
+use xsupport::error;
 
+// light-bitcoin
 use btc_keys::DisplayLayout;
 
 #[cfg(feature = "std")]
-use crate::hash_strip;
-use crate::tx::handler::parse_deposit_outputs;
-use crate::tx::utils::ensure_identical;
-use crate::types::{TxType, VoteResult};
-use crate::{Module, Trait};
-use xsupport::error;
+use super::hash_strip;
+use super::tx::handler::parse_deposit_outputs;
+use super::tx::utils::ensure_identical;
+use super::types::{TxType, VoteResult};
+use super::{Module, Trait};
 
 impl<T: Trait> Module<T> {
     pub fn withdrawal_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::Moment>> {
@@ -144,10 +149,10 @@ impl<T: Trait> Module<T> {
                                         .layout()
                                         .to_vec(),
                                 ),
-                                ext: ext,
+                                ext,
                                 time: As::sa(timestamp as u64),
                                 withdrawal_id: 0, // only for withdrawal
-                                state: state,
+                                state,
                             };
                             records.push(info);
                         }

@@ -42,12 +42,12 @@ xr-primitives = { path = "../xr-primitives" }
 xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets" }
 xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records" }
 xaccounts = { package = "xrml-xaccounts", path = "../xrml/xaccounts" }
-xsession = { package = "xrml-session", path = "../xrml/xsession" }
-xstaking = { package ="xrml-mining-staking", path = "../xrml/xmining/staking" }
-xtokens = { package = "xrml-mining-tokens", path = "../xrml/xmining/tokens" }
+xsession = { package = "xrml-xsession", path = "../xrml/xsession" }
+xstaking = { package ="xrml-xmining-staking", path = "../xrml/xmining/staking" }
+xtokens = { package = "xrml-xmining-tokens", path = "../xrml/xmining/tokens" }
 xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport"  }
 xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot"  }
-xbitcoin = { package = "xrml-bridge-bitcoin", path = "../xrml/xbridge/bitcoin" }
+xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin" }
 
 # bitcoin
 btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin" }

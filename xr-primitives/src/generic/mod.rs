@@ -1,4 +1,4 @@
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 pub mod b58;
 mod checked_extrinsic;

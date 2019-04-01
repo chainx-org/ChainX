@@ -1,4 +1,5 @@
 // Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2018-2019 Chainpool.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -26,37 +27,32 @@
 //! The necessary items are re-exported via the `fg_primitives` crate.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// re-export since this is necessary for `impl_apis` in runtime.
-pub use substrate_finality_grandpa_primitives as fg_primitives;
 
-use codec::{Decode, Encode};
-use consensus;
-use ed25519::Public as AuthorityId;
+// Substrate
+// re-export since this is necessary for `impl_apis` in runtime.
+pub use fg_primitives;
 use fg_primitives::ScheduledChange;
-use parity_codec as codec;
 use primitives::traits::{Convert, CurrentHeight};
 use rstd::prelude::*;
-#[cfg(feature = "std")]
-use serde_derive::Serialize;
-use srml_support::dispatch::Result;
-use srml_support::storage::unhashed::StorageVec;
-use srml_support::storage::StorageValue;
-use srml_support::{decl_event, decl_module, decl_storage};
-use substrate_primitives::ed25519;
+use substrate_primitives::ed25519::Public as AuthorityId;
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue, StorageVec};
 use system::ensure_signed;
+
+// ChainX
 use xsupport::info;
 
 mod mock;
 mod tests;
+pub mod types;
 
-struct AuthorityStorageVec<S: codec::Codec + Default>(rstd::marker::PhantomData<S>);
-impl<S: codec::Codec + Default> StorageVec for AuthorityStorageVec<S> {
+pub use self::types::{Log, OldStoredPendingChange, RawLog, StoredPendingChange};
+
+struct AuthorityStorageVec<S: parity_codec::Codec + Default>(rstd::marker::PhantomData<S>);
+
+impl<S: parity_codec::Codec + Default> StorageVec for AuthorityStorageVec<S> {
     type Item = (S, u64);
     const PREFIX: &'static [u8] = crate::fg_primitives::well_known_keys::AUTHORITY_PREFIX;
 }
-
-/// The log type of this crate, projected from module trait type.
-pub type Log<T> = RawLog<<T as system::Trait>::BlockNumber, <T as consensus::Trait>::SessionKey>;
 
 /// Logs which can be scanned by GRANDPA for authorities change events.
 pub trait GrandpaChangeSignal<N> {
@@ -64,39 +60,6 @@ pub trait GrandpaChangeSignal<N> {
     fn as_signal(&self) -> Option<ScheduledChange<N>>;
     /// Try to cast the log entry as a contained forced signal.
     fn as_forced_signal(&self) -> Option<(N, ScheduledChange<N>)>;
-}
-
-/// A logs in this module.
-#[cfg_attr(feature = "std", derive(Serialize, Debug))]
-#[derive(Encode, Decode, PartialEq, Eq, Clone)]
-pub enum RawLog<N, SessionKey> {
-    /// Authorities set change has been signalled. Contains the new set of authorities
-    /// and the delay in blocks _to finalize_ before applying.
-    AuthoritiesChangeSignal(N, Vec<(SessionKey, u64)>),
-    /// A forced authorities set change. Contains in this order: the median last
-    /// finalized block when the change was signaled, the delay in blocks _to import_
-    /// before applying and the new set of authorities.
-    ForcedAuthoritiesChangeSignal(N, N, Vec<(SessionKey, u64)>),
-}
-
-impl<N: Clone, SessionKey> RawLog<N, SessionKey> {
-    /// Try to cast the log entry as a contained signal.
-    pub fn as_signal(&self) -> Option<(N, &[(SessionKey, u64)])> {
-        match *self {
-            RawLog::AuthoritiesChangeSignal(ref delay, ref signal) => Some((delay.clone(), signal)),
-            RawLog::ForcedAuthoritiesChangeSignal(_, _, _) => None,
-        }
-    }
-
-    /// Try to cast the log entry as a contained forced signal.
-    pub fn as_forced_signal(&self) -> Option<(N, N, &[(SessionKey, u64)])> {
-        match *self {
-            RawLog::ForcedAuthoritiesChangeSignal(ref median, ref delay, ref signal) => {
-                Some((median.clone(), delay.clone(), signal))
-            }
-            RawLog::AuthoritiesChangeSignal(_, _) => None,
-        }
-    }
 }
 
 impl<N, SessionKey> GrandpaChangeSignal<N> for RawLog<N, SessionKey>
@@ -140,47 +103,6 @@ pub trait Trait: system::Trait + consensus::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-/// A stored pending change, old format.
-// TODO: remove shim
-// https://github.com/paritytech/substrate/issues/1614
-#[derive(Encode, Decode)]
-pub struct OldStoredPendingChange<N, SessionKey> {
-    /// The block number this was scheduled at.
-    pub scheduled_at: N,
-    /// The delay in blocks until it will be applied.
-    pub delay: N,
-    /// The next authority set.
-    pub next_authorities: Vec<(SessionKey, u64)>,
-}
-
-/// A stored pending change.
-#[derive(Encode)]
-pub struct StoredPendingChange<N, SessionKey> {
-    /// The block number this was scheduled at.
-    pub scheduled_at: N,
-    /// The delay in blocks until it will be applied.
-    pub delay: N,
-    /// The next authority set.
-    pub next_authorities: Vec<(SessionKey, u64)>,
-    /// If defined it means the change was forced and the given block number
-    /// indicates the median last finalized block when the change was signaled.
-    pub forced: Option<N>,
-}
-
-impl<N: Decode, SessionKey: Decode> Decode for StoredPendingChange<N, SessionKey> {
-    fn decode<I: codec::Input>(value: &mut I) -> Option<Self> {
-        let old = OldStoredPendingChange::decode(value)?;
-        let forced = <Option<N>>::decode(value).unwrap_or(None);
-
-        Some(StoredPendingChange {
-            scheduled_at: old.scheduled_at,
-            delay: old.delay,
-            next_authorities: old.next_authorities,
-            forced,
-        })
-    }
-}
-
 decl_event!(
 	pub enum Event<T> where <T as consensus::Trait>::SessionKey {
 		/// New authority set has been applied.
@@ -199,7 +121,7 @@ decl_storage! {
         config(authorities): Vec<(T::SessionKey, u64)>;
 
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use codec::{Encode, KeyedVec};
+            use parity_codec::{Encode, KeyedVec};
 
             let auth_count = config.authorities.len() as u32;
             config.authorities.iter().enumerate().for_each(|(i, v)| {
@@ -347,20 +269,20 @@ impl<T> Default for SyncedAuthorities<T> {
     }
 }
 
-impl<X, T> session::OnSessionChange<X> for SyncedAuthorities<T>
+impl<X, T> xsession::OnSessionChange<X> for SyncedAuthorities<T>
 where
     T: Trait,
-    T: session::Trait,
-    <T as session::Trait>::ConvertAccountIdToSessionKey:
+    T: xsession::Trait,
+    <T as xsession::Trait>::ConvertAccountIdToSessionKey:
         Convert<<T as system::Trait>::AccountId, <T as consensus::Trait>::SessionKey>,
 {
     fn on_session_change() {
         use primitives::traits::Zero;
 
-        let next_authorities = <session::Module<T>>::validators()
+        let next_authorities = <xsession::Module<T>>::validators()
             .into_iter()
             .map(|(account_id, weight)| {
-                if let Some(session_key) = <session::Module<T>>::next_key_for(account_id.clone()) {
+                if let Some(session_key) = <xsession::Module<T>>::next_key_for(account_id.clone()) {
                     (session_key, weight)
                 } else {
                     (T::ConvertAccountIdToSessionKey::convert(account_id), weight)
@@ -383,9 +305,9 @@ where
 impl<T> finality_tracker::OnFinalizationStalled<T::BlockNumber> for SyncedAuthorities<T>
 where
     T: Trait,
-    T: session::Trait,
+    T: xsession::Trait,
     T: finality_tracker::Trait,
-    <T as session::Trait>::ConvertAccountIdToSessionKey:
+    <T as xsession::Trait>::ConvertAccountIdToSessionKey:
         Convert<<T as system::Trait>::AccountId, <T as consensus::Trait>::SessionKey>,
 {
     fn on_stalled(further_wait: T::BlockNumber) {
@@ -394,10 +316,10 @@ where
         // against `next == last` the way that normal session changes do.
         info!("-----------on_stalled");
 
-        let next_authorities = <session::Module<T>>::validators()
+        let next_authorities = <xsession::Module<T>>::validators()
             .into_iter()
             .map(|(account_id, weight)| {
-                if let Some(session_key) = <session::Module<T>>::next_key_for(account_id.clone()) {
+                if let Some(session_key) = <xsession::Module<T>>::next_key_for(account_id.clone()) {
                     (session_key, weight)
                 } else {
                     (T::ConvertAccountIdToSessionKey::convert(account_id), weight)

@@ -1,12 +1,12 @@
 // Copyright 2019 Chainpool.
 
-use super::*;
-use xsupport::debug;
-
 mod asset;
 mod order;
 mod state;
 pub mod types;
+
+use super::*;
+use xsupport::debug;
 
 impl<T: Trait> Module<T> {
     /// Given the price volatility is 10%, a valid quote range should be:

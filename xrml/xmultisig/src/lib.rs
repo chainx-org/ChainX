@@ -1,33 +1,26 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! this module is for multisig, but now this is just for genesis multisig addr, not open for public.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
+mod mock;
 mod tests;
-mod types;
+pub mod types;
 
 use parity_codec::Encode;
+
+// Substrate
+use primitives::traits::Hash;
+use rstd::{marker::PhantomData, prelude::*, result::Result as StdResult};
 use substrate_primitives::crypto::UncheckedFrom;
-
-use sr_std::marker::PhantomData;
-use sr_std::prelude::*;
-use sr_std::result::Result as StdResult;
-
-use sr_primitives::traits::Hash;
-use srml_support::dispatch::Result;
-use srml_support::{decl_event, decl_module, decl_storage, Dispatchable, Parameter, StorageMap};
-
-use srml_balances as balances;
-use srml_system as system;
+use support::{
+    decl_event, decl_module, decl_storage, dispatch::Result, Dispatchable, Parameter, StorageMap,
+};
 use system::ensure_signed;
 
-use xaccounts;
+// ChainX
 use xassets::Chain;
-use xbitcoin;
-use xstaking;
-
 use xsupport::{debug, error, info};
 
 pub use self::types::{AddrInfo, AddrType, PendingState};
@@ -360,7 +353,7 @@ impl<T: Trait> Module<T> {
         let addr_info = AddrInfo::<T::AccountId> {
             addr_type,
             required_num,
-            owner_list: owner_list,
+            owner_list,
         };
         // 2
         MultiSigAddrInfo::<T>::insert(multi_addr, addr_info);
@@ -407,8 +400,7 @@ impl<T: Trait> Module<T> {
         required_num: u32,
         trustees: Vec<(Chain, Vec<T::AccountId>)>,
     ) {
-        use srml_support::StorageValue;
-        use xstaking;
+        use support::StorageValue;
 
         if owners.len() < 1 {
             panic!("the owners count can't be zero");

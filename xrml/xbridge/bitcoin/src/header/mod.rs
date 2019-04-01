@@ -1,19 +1,25 @@
+// Copyright 2018-2019 Chainpool.
+
 mod header_proof;
 
+// Substrate
 use rstd::result::Result as StdResult;
 use support::StorageMap;
 
+// ChainX
+use xsupport::{debug, error, info};
+
+// light-bitcoin
 use btc_chain::BlockHeader;
 use btc_primitives::H256;
 
-pub use self::header_proof::HeaderVerifier;
-use crate::tx::handle_tx;
-use crate::types::BlockHeaderInfo;
-use crate::{BlockHashFor, BlockHeaderFor, Module, Trait};
-
 #[cfg(feature = "std")]
-use crate::hash_strip;
-use xsupport::{debug, error, info};
+use super::hash_strip;
+use super::tx::handle_tx;
+use super::types::BlockHeaderInfo;
+use super::{BlockHashFor, BlockHeaderFor, Module, Trait};
+
+pub use self::header_proof::HeaderVerifier;
 
 pub enum ChainErr {
     /// Unknown parent

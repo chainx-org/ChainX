@@ -1,33 +1,27 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! this module is for chainx system
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#[cfg(feature = "std")]
-use parity_codec::Decode;
-use parity_codec::Encode;
 
-// for substrate
-use sr_std as rstd;
-use substrate_inherents as inherents;
-
-use srml_support::{decl_module, decl_storage, dispatch::Result, StorageValue};
-use srml_system as system;
-
-use xrml_xsupport::{error, info};
-
-#[cfg(test)]
+mod mock;
 mod tests;
+pub mod types;
+
+// Substrate
+use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInherent, RuntimeString};
+use rstd::{prelude::Vec, result::Result as StdResult};
+use support::{decl_module, decl_storage, dispatch::Result, StorageValue};
+use system::ensure_inherent;
+
+// ChainX
+use xsupport::{error, info};
 
 #[cfg(feature = "std")]
-use inherents::ProvideInherentData;
-use inherents::{
-    InherentData, InherentIdentifier, IsFatalError, MakeFatalError, ProvideInherent, RuntimeString,
-};
-use rstd::prelude::Vec;
-use rstd::result::Result as StdResult;
+pub use self::types::InherentDataProvider;
+pub use self::types::InherentError;
 
-use system::ensure_inherent;
+pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"producer";
 
 pub trait Trait: system::Trait {
     type ValidatorList: ValidatorList<Self::AccountId>;
@@ -127,57 +121,5 @@ impl<T: Trait> ProvideInherent for Module<T> {
             );
         }
         Ok(())
-    }
-}
-
-pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"producer";
-
-#[derive(Encode)]
-#[cfg_attr(feature = "std", derive(Debug, Decode))]
-pub enum InherentError {
-    /// no producer set
-    NoBlockProducer,
-    /// Some other error.
-    Other(RuntimeString),
-}
-
-impl IsFatalError for InherentError {
-    fn is_fatal_error(&self) -> bool {
-        match self {
-            _ => true,
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-pub struct InherentDataProvider {
-    block_producer_name: Vec<u8>,
-}
-
-#[cfg(feature = "std")]
-impl InherentDataProvider {
-    pub fn new(producer_name: Vec<u8>) -> Self {
-        InherentDataProvider {
-            block_producer_name: producer_name,
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl ProvideInherentData for InherentDataProvider {
-    fn inherent_identifier(&self) -> &'static InherentIdentifier {
-        &INHERENT_IDENTIFIER
-    }
-
-    fn provide_inherent_data(
-        &self,
-        inherent_data: &mut InherentData,
-    ) -> StdResult<(), RuntimeString> {
-        inherent_data.put_data(INHERENT_IDENTIFIER, &self.block_producer_name)
-    }
-
-    fn error_to_string(&self, _error: &[u8]) -> Option<String> {
-        // do not handle due no check for this inherent
-        None
     }
 }

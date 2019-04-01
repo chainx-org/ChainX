@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! Shareable ChainX types.
 #![cfg_attr(not(feature = "std"), no_std)]

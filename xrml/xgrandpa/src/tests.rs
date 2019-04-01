@@ -1,4 +1,5 @@
 // Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2018-2019 Chainpool.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -18,10 +19,9 @@
 
 #![cfg(test)]
 
+use super::mock::*;
 use super::*;
-use crate::mock::{new_test_ext, Grandpa, System};
-use crate::{RawEvent, RawLog};
-use codec::{Decode, Encode};
+
 use primitives::traits::Header;
 use primitives::{testing, traits::OnFinalise};
 use runtime_io::with_externalities;

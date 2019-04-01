@@ -1,22 +1,23 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 //! Virtual mining for holding tokens.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "std")]
-use serde_derive::{Deserialize, Serialize};
+mod mock;
+mod tests;
+pub mod types;
 
-use parity_codec as codec;
-use substrate_primitives::crypto::UncheckedFrom;
+use parity_codec::Encode;
 
-use codec::{Decode, Encode};
+// Substrate
 use primitives::traits::{As, Hash};
-use rstd::prelude::*;
-use rstd::result::Result as StdResult;
-use runtime_support::{
+use rstd::{prelude::*, result::Result as StdResult};
+use substrate_primitives::crypto::UncheckedFrom;
+use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
 };
 
+// ChainX
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
@@ -24,36 +25,9 @@ use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder, VoteWeigh
 use xsupport::u8array_to_string;
 use xsupport::{debug, info};
 
-/// This module only tracks the vote weight related changes.
-/// All the amount related has been taken care by assets module.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct PseduIntentionVoteWeight<BlockNumber: Default> {
-    pub last_total_deposit_weight: u64,
-    pub last_total_deposit_weight_update: BlockNumber,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct DepositVoteWeight<BlockNumber: Default> {
-    pub last_deposit_weight: u64,
-    pub last_deposit_weight_update: BlockNumber,
-}
-
-/// `PseduIntentionProfs` and `DepositRecord` is to wrap the vote weight of token,
-/// sharing the vote weight calculation logic originated from staking module.
-pub struct PseduIntentionProfs<'a, T: Trait> {
-    pub token: &'a Token,
-    pub staking: &'a mut PseduIntentionVoteWeight<T::BlockNumber>,
-}
-
-pub struct DepositRecord<'a, T: Trait> {
-    pub depositor: &'a T::AccountId,
-    pub token: &'a Token,
-    pub staking: &'a mut DepositVoteWeight<T::BlockNumber>,
-}
+pub use self::types::{
+    DepositRecord, DepositVoteWeight, PseduIntentionProfs, PseduIntentionVoteWeight,
+};
 
 impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
     fn amount(&self) -> u64 {
@@ -122,7 +96,7 @@ impl<T: Trait> TokenJackpotAccountIdFor<T::AccountId, T::BlockNumber>
     for SimpleAccountIdDeterminator<T>
 where
     T::AccountId: UncheckedFrom<T::Hash>,
-    T::BlockNumber: codec::Codec,
+    T::BlockNumber: parity_codec::Codec,
 {
     fn accountid_for(token: &Token) -> T::AccountId {
         let (_, _, init_number) =

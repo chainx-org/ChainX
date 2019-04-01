@@ -1,4 +1,4 @@
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 use std::convert::Into;
 use std::iter::FromIterator;

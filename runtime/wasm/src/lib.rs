@@ -1,4 +1,4 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! The Chainx runtime reexported for WebAssembly compile.
 

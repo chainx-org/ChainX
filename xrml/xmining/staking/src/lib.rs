@@ -1,69 +1,39 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 //! Staking manager: Periodically determines the best set of validators.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "std")]
-use serde_derive::{Deserialize, Serialize};
+mod mock;
+mod shifter;
+mod tests;
+pub mod types;
+pub mod vote_weight;
 
-use parity_codec as codec;
+use parity_codec::Compact;
 
-use codec::Compact;
-use codec::{Decode, Encode};
+// Substrate
 use primitives::traits::{As, Lookup, StaticLookup, Zero};
 use rstd::prelude::*;
-use runtime_support::{
+use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
 };
 use system::ensure_signed;
 
+// ChainX
 use xaccounts::{IntentionJackpotAccountIdFor, Name, TrusteeEntity, TrusteeIntentionProps, URL};
 use xassets::{Chain, Memo, Token};
 use xr_primitives::{traits::TrusteeForChain, XString};
 use xsupport::info;
 
-pub mod vote_weight;
-
-mod shifter;
-
-mod mock;
-
-mod tests;
-
-pub use shifter::{OnReward, OnRewardCalculation, RewardHolder};
-pub use vote_weight::VoteWeight;
+pub use self::shifter::{OnReward, OnRewardCalculation};
+pub use self::types::{ClaimType, IntentionProfs, NominationRecord, RewardHolder};
+pub use self::vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const SESSIONS_PER_ROUND: u64 = 210_000;
 
-pub enum ClaimType {
-    Intention,
-    PseduIntention(Token),
-}
-
-/// Intention mutable properties
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct IntentionProfs<Balance: Default, BlockNumber: Default> {
-    pub total_nomination: Balance,
-    pub last_total_vote_weight: u64,
-    pub last_total_vote_weight_update: BlockNumber,
-}
-
-/// Nomination record of one of the nominator's nominations.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct NominationRecord<Balance, BlockNumber> {
-    pub nomination: Balance,
-    pub last_vote_weight: u64,
-    pub last_vote_weight_update: BlockNumber,
-    pub revocations: Vec<(BlockNumber, Balance)>,
-}
-
 pub trait Trait:
-    xassets::Trait + xaccounts::Trait + xsystem::Trait + session::Trait + xbitcoin::Trait
+    xassets::Trait + xaccounts::Trait + xsystem::Trait + xsession::Trait + xbitcoin::Trait
 {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -462,7 +432,7 @@ impl<T: Trait> Module<T> {
     // Just force_new_era without origin check.
     fn apply_force_new_era(apply_rewards: bool) -> Result {
         <ForcingNewEra<T>>::put(());
-        <session::Module<T>>::apply_force_new_session(apply_rewards)
+        <xsession::Module<T>>::apply_force_new_session(apply_rewards)
     }
 
     fn apply_nominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
@@ -581,7 +551,7 @@ impl<T: Trait> Module<T> {
                 props.session_key = Some(session_key);
             });
 
-            <session::NextKeyFor<T>>::insert(who, next_key);
+            <xsession::NextKeyFor<T>>::insert(who, next_key);
         }
 
         Self::deposit_event(RawEvent::Refresh(
@@ -649,7 +619,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
     pub fn validators() -> Vec<(T::AccountId, u64)> {
-        session::Module::<T>::validators()
+        xsession::Module::<T>::validators()
     }
 
     pub fn jackpot_accountid_for(who: &T::AccountId) -> T::AccountId {

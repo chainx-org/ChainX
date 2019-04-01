@@ -1,10 +1,16 @@
+// Copyright 2018-2019 Chainpool.
+
 use parity_codec::{Decode, Encode};
-use rstd::prelude::Vec;
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::URL;
+// Substrate
+use rstd::prelude::Vec;
+
+// ChainX
 use xr_primitives::XString;
+
+use super::URL;
 
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]

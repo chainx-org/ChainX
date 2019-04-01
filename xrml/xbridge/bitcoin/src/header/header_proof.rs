@@ -1,19 +1,20 @@
-// Copyright 2019 Chainpool.
-use rstd::cmp;
-use rstd::result::Result as StdResult;
-// substrate runtime module
-use runtime_primitives::traits::As;
+// Copyright 2018-2019 Chainpool.
+
+// Substrate
+use primitives::traits::As;
+use rstd::{cmp, result::Result as StdResult};
 use support::dispatch::Result;
-use timestamp;
-// btc
+
+// ChainX
+use xsupport::{debug, ensure_with_errorlog, error, info};
+
+// light-bitcoin
 use btc_chain::BlockHeader;
 use btc_primitives::{Compact, H256, U256};
 
 use super::ChainErr;
 use crate::types::Params;
 use crate::{Module, Trait};
-
-use xsupport::{debug, ensure_with_errorlog, error, info};
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,

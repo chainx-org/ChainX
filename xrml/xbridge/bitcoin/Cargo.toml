@@ -1,5 +1,5 @@
 [package]
-name = "xrml-bridge-bitcoin"
+name = "xrml-xbridge-bitcoin"
 version = "0.9.0"
 authors = ["Chainpool <http://chainx.org>"]
 edition = "2018"
@@ -9,24 +9,21 @@ rustc-hex = { version = "2.0.1", optional = true }
 serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.2", default-features = false, features = ["derive"] }
-
+# Substrate
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-# substrate runtime
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
 balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate", default-features = false }
 timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", default-features = false }
-
-# chainx runtime
+# ChainX
+xr-primitives = { path = "../../../xr-primitives", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records", default-features = false }
 xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
-xfee_manager = { package = "xrml-fee-manager", path = "../../xfee/manager", default-features = false }
-xr-primitives = { path = "../../../xr-primitives", default_features = false }
-
-# bitcoin
+xfee-manager = { package = "xrml-xfee-manager", path = "../../xfee/manager", default-features = false }
+# light-bitcoin
 btc-primitives = { package = "primitives", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
 btc-ser = { package = "serialization", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
 merkle = { git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
@@ -36,39 +33,36 @@ btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoi
 btc-script = { package = "script", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
 
 [dev-dependencies]
-runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
+hex = "0.3"
+# Substrate
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
 substrate-primitives = { git = "https://github.com/chainpool/substrate" }
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
-
-xrml-xsystem = { path = "../../xsystem" }
-
+# ChainX
+xsystem = { package = "xrml-xsystem", path = "../../xsystem" }
 
 [features]
 default = ["std"]
-std=[
+std = [
     "rustc-hex",
     "serde/std",
     "serde_derive",
     "parity-codec/std",
-
+    # Substrate
     "rstd/std",
-    "runtime_primitives/std",
-
-    # substrate runtime
+    "primitives/std",
     "support/std",
     "system/std",
     "balances/std",
     "timestamp/std",
-
-    # chainx runtime
+    # ChainX
+    "xr-primitives/std",
     "xsupport/std",
     "xassets/std",
     "xrecords/std",
     "xaccounts/std",
-    "xfee_manager/std",
-    "xr-primitives/std",
-
-    # bitcoin
+    "xfee-manager/std",
+    # light-bitcoin
     "btc-primitives/std",
     "btc-ser/std",
     "merkle/std",

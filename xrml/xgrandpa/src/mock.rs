@@ -1,4 +1,5 @@
 // Copyright 2018 Parity Technologies (UK) Ltd.
+// Copyright 2018-2019 Chainpool.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -18,17 +19,18 @@
 
 #![cfg(test)]
 
-use crate::{GenesisConfig, Module, RawLog, Trait};
+use super::*;
+
 use parity_codec::{Decode, Encode};
-use primitives::generic::DigestItem as GenDigestItem;
+use primitives::traits::BlakeTwo256;
 use primitives::{
+    generic::DigestItem as GenDigestItem,
     testing::{Digest, DigestItem, Header},
     traits::IdentityLookup,
     BuildStorage,
 };
-use runtime_io;
-use srml_support::{impl_outer_event, impl_outer_origin};
 use substrate_primitives::{Blake2Hasher, H256};
+use support::{impl_outer_event, impl_outer_origin};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -43,23 +45,30 @@ impl From<RawLog<u64, u64>> for DigestItem {
 // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
 #[derive(Clone, PartialEq, Eq, Debug, Decode, Encode)]
 pub struct Test;
+
 impl Trait for Test {
     type Log = DigestItem;
-    type SessionKey = u64;
     type Event = TestEvent;
 }
+
 impl system::Trait for Test {
     type Origin = Origin;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
-    type Hashing = ::primitives::traits::BlakeTwo256;
+    type Hashing = BlakeTwo256;
     type Digest = Digest;
     type AccountId = u64;
     type Lookup = IdentityLookup<u64>;
     type Header = Header;
     type Event = TestEvent;
     type Log = DigestItem;
+}
+
+impl consensus::Trait for Test {
+    type Log = DigestItem;
+    type SessionKey = AuthorityId;
+    type InherentOfflineReport = ();
 }
 
 mod grandpa {

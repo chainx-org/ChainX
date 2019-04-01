@@ -1,11 +1,13 @@
-// Copyright 2019 Chainpool.
-
-use rstd::prelude::Vec;
+// Copyright 2018-2019 Chainpool.
 
 use parity_codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
 
+// Substrate
+use rstd::prelude::Vec;
+
+// light-bitcoin
 use btc_chain::{BlockHeader, Transaction};
 use btc_keys::Address;
 use btc_primitives::{Compact, H256};

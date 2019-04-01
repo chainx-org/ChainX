@@ -6,9 +6,9 @@ edition = "2018"
 
 [dependencies]
 rustc-hex = { version = "2.0.1", optional = true }
-safe-mix = { version = "1.0", default_features = false }
+safe-mix = { version = "1.0", default-features = false }
 serde = { version = "1.0", optional = true }
-parity-codec = { version = "3.2", default_features = false }
+parity-codec = { version = "3.2", default-features = false }
 
 client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", default-features = false }
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
@@ -37,21 +37,21 @@ xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport", default-featu
 xbootstrap = { package = "xrml-xbootstrap", path = "../xrml/xbootstrap", default-features = false }
 xsystem = { package = "xrml-xsystem", path = "../xrml/xsystem", default-features = false }
 xaccounts = { package = "xrml-xaccounts", path = "../xrml/xaccounts", default-features = false }
-xsession = { package = "xrml-session", path = "../xrml/xsession", default-features = false }
-xaura = { package = "xrml-aura", path = "../xrml/xaura", default-features = false }
+xsession = { package = "xrml-xsession", path = "../xrml/xsession", default-features = false }
+xaura = { package = "xrml-xaura", path = "../xrml/xaura", default-features = false }
 xgrandpa = { package = "xrml-grandpa", path = "../xrml/xgrandpa", default-features = false }
 # fee
-xfee-manager = { package = "xrml-fee-manager", path = "../xrml/xfee/manager", default-features = false }
+xfee-manager = { package = "xrml-xfee-manager", path = "../xrml/xfee/manager", default-features = false }
 # assets
 xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records", default-features = false }
 xprocess = { package = "xrml-xassets-process", path = "../xrml/xassets/process", default-features = false }
 # mining
-xstaking = { package = "xrml-mining-staking", path = "../xrml/xmining/staking", default-features = false }
-xtokens = { package = "xrml-mining-tokens", path = "../xrml/xmining/tokens", default-features = false }
+xstaking = { package = "xrml-xmining-staking", path = "../xrml/xmining/staking", default-features = false }
+xtokens = { package = "xrml-xmining-tokens", path = "../xrml/xmining/tokens", default-features = false }
 # bridge
-xbitcoin = { package = "xrml-bridge-bitcoin", path = "../xrml/xbridge/bitcoin", default-features = false }
-xsdot = { package = "xrml-bridge-sdot", path = "../xrml/xbridge/sdot", default-features = false }
+xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin", default-features = false }
+xsdot = { package = "xrml-xbridge-sdot", path = "../xrml/xbridge/sdot", default-features = false }
 # dex
 xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-features = false }
 # multisig

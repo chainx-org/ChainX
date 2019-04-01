@@ -1,19 +1,27 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
-use rstd::prelude::*;
-use rstd::result::Result as StdResult;
-use rstd::slice::Iter;
+use parity_codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde_derive::{Deserialize, Serialize};
 
-use runtime_support::dispatch::Result;
+// Substrate
+use rstd::{prelude::*, result::Result as StdResult, slice::Iter};
+use support::dispatch::Result;
 
-use codec::{Decode, Encode};
+// ChainX
 use xr_primitives::XString;
+
+use super::{Module, Trait};
+
+const MAX_TOKEN_LEN: usize = 32;
+const MAX_DESC_LEN: usize = 128;
 
 pub type TokenString = &'static [u8];
 pub type DescString = TokenString;
 pub type Token = XString;
 pub type Desc = XString;
 pub type Precision = u16;
+pub type Memo = XString;
 
 pub trait ChainT {
     const TOKEN: &'static [u8];
@@ -99,8 +107,61 @@ impl Asset {
     }
 }
 
-const MAX_TOKEN_LEN: usize = 32;
-const MAX_DESC_LEN: usize = 128;
+#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum AssetType {
+    Free,
+    ReservedStaking,
+    ReservedStakingRevocation,
+    ReservedWithdrawal,
+    ReservedDexSpot,
+    ReservedDexFuture,
+}
+
+// TODO use marco to improve it
+impl AssetType {
+    pub fn iterator() -> Iter<'static, AssetType> {
+        static TYPES: [AssetType; 6] = [
+            AssetType::Free,
+            AssetType::ReservedStaking,
+            AssetType::ReservedStakingRevocation,
+            AssetType::ReservedWithdrawal,
+            AssetType::ReservedDexSpot,
+            AssetType::ReservedDexFuture,
+        ];
+        TYPES.iter()
+    }
+}
+
+impl Default for AssetType {
+    fn default() -> Self {
+        AssetType::Free
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum AssetErr {
+    NotEnough,
+    OverFlow,
+    TotalAssetNotEnough,
+    TotalAssetOverFlow,
+    InvalidToken,
+    InvalidAccount,
+}
+
+impl AssetErr {
+    pub fn info(self) -> &'static str {
+        match self {
+            AssetErr::NotEnough => "balance too low for this account",
+            AssetErr::OverFlow => "balance too high for this account",
+            AssetErr::TotalAssetNotEnough => "total balance too low for this asset",
+            AssetErr::TotalAssetOverFlow => "total balance too high for this asset",
+            AssetErr::InvalidToken => "not a valid token for this account",
+            AssetErr::InvalidAccount => "account Locked",
+        }
+    }
+}
 
 /// Token can only use numbers (0x30~0x39), capital letters (0x41~0x5A), lowercase letters (0x61~0x7A), -(0x2D), .(0x2E), |(0x7C),  ~(0x7E).
 pub fn is_valid_token(v: &[u8]) -> Result {
@@ -109,12 +170,12 @@ pub fn is_valid_token(v: &[u8]) -> Result {
     }
     let is_valid = |c: &u8| -> bool {
         (*c >= 0x30 && *c <= 0x39) // number
-                || (*c >= 0x41 && *c <= 0x5A) // capital
-                || (*c >= 0x61 && *c <= 0x7A) // small
-                || (*c == 0x2D) // -
-                || (*c == 0x2E) // .
-                || (*c == 0x7C) // |
-                || (*c == 0x7E) // ~
+            || (*c >= 0x41 && *c <= 0x5A) // capital
+            || (*c >= 0x61 && *c <= 0x7A) // small
+            || (*c == 0x2D) // -
+            || (*c == 0x2E) // .
+            || (*c == 0x7C) // |
+            || (*c == 0x7E) // ~
     };
     for c in v.iter() {
         if !is_valid(c) {
@@ -149,6 +210,15 @@ pub fn is_valid_desc(v: &[u8]) -> Result {
         if *c < 0x20 || *c > 0x7E {
             return Err("Desc can not use an invisiable ASCII char.");
         }
+    }
+    Ok(())
+}
+
+pub fn is_valid_memo<T: Trait>(msg: &Memo) -> Result {
+    // filter char
+    // judge len
+    if msg.len() as u32 > Module::<T>::memo_len() {
+        return Err("memo is too long");
     }
     Ok(())
 }

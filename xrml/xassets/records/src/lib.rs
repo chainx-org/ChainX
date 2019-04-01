@@ -1,60 +1,21 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// for encode/decode
-#[cfg(feature = "std")]
-extern crate serde_derive;
-
-// Needed for deriving `Encode` and `Decode` for `RawEvent`.
-extern crate parity_codec as codec;
-
-// for substrate
-// Needed for the set of mock primitives used in our tests.
-#[cfg(test)]
-extern crate substrate_primitives;
-
-// for substrate runtime
-// map!, vec! marco.
-extern crate sr_std as rstd;
-
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
-
-// for substrate runtime module lib
-// Needed for type-safe access to storage DB.
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_balances as balances;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
-
-extern crate xr_primitives;
-
-// for chainx runtime module lib
-extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xsupport as xsupport;
-
-#[cfg(test)]
+mod mock;
 mod tests;
-
 pub mod types;
 
-use codec::{Codec, Decode, Encode};
+// Substrate
 use rstd::prelude::*;
-use runtime_support::dispatch::Result;
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
 
-use runtime_support::StorageValue;
-
-use xr_primitives::XString;
-
+// ChainX
 use xassets::{AssetType, Chain, ChainT, Memo, Token};
-use xsupport::storage::linked_node::{LinkedNodeCollection, MultiNodeIndex, Node, NodeT};
+use xsupport::storage::linked_node::{MultiNodeIndex, Node};
 
-pub use types::{RecordInfo, TxState};
-
-pub type AddrStr = XString;
+pub use self::types::{AddrStr, Application, LinkedMultiKey, RecordInfo, TxState};
 
 pub trait Trait: system::Trait + balances::Trait + xassets::Trait + timestamp::Trait {
     /// The overarching event type.
@@ -76,83 +37,6 @@ decl_event!(
         WithdrawalFinish(u32, bool),
     }
 );
-
-/// application for withdrawal
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Application<AccountId, Balance, Moment> {
-    id: u32,
-    applicant: AccountId,
-    token: Token,
-    balance: Balance,
-    addr: AddrStr,
-    ext: Memo,
-    time: Moment,
-}
-
-impl<AccountId, Balance, Moment> Application<AccountId, Balance, Moment>
-where
-    AccountId: Codec + Clone,
-    Balance: Codec + Copy + Clone,
-    Moment: Codec + Clone,
-{
-    fn new(
-        id: u32,
-        applicant: AccountId,
-        token: Token,
-        balance: Balance,
-        addr: AddrStr,
-        ext: Memo,
-        time: Moment,
-    ) -> Self {
-        Application::<AccountId, Balance, Moment> {
-            id,
-            applicant,
-            token,
-            balance,
-            addr,
-            ext,
-            time,
-        }
-    }
-    pub fn id(&self) -> u32 {
-        self.id
-    }
-    pub fn applicant(&self) -> AccountId {
-        self.applicant.clone()
-    }
-    pub fn token(&self) -> Token {
-        self.token.clone()
-    }
-    pub fn balance(&self) -> Balance {
-        self.balance
-    }
-    pub fn addr(&self) -> AddrStr {
-        self.addr.clone()
-    }
-    pub fn ext(&self) -> Memo {
-        self.ext.clone()
-    }
-    pub fn time(&self) -> Moment {
-        self.time.clone()
-    }
-}
-
-impl<AccountId, Balance, Moment> NodeT for Application<AccountId, Balance, Moment> {
-    type Index = u32;
-    fn index(&self) -> Self::Index {
-        self.id
-    }
-}
-
-pub struct LinkedMultiKey<T: Trait>(runtime_support::storage::generator::PhantomData<T>);
-
-impl<T: Trait> LinkedNodeCollection for LinkedMultiKey<T> {
-    type Header = ApplicationMHeader<T>;
-    type NodeMap = ApplicationMap<T>;
-    type Tail = ApplicationMTail<T>;
-}
 
 decl_storage! {
     trait Store for Module<T: Trait> as XAssetsRecords {

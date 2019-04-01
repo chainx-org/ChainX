@@ -1,9 +1,16 @@
+// Copyright 2018-2019 Chainpool.
+
 use parity_codec::Decode;
+
+// Substrate
 use rstd::result::Result;
 
-use xaccounts;
-use xassets;
+// ChainX
+use xsupport::error;
+#[cfg(feature = "std")]
+use xsupport::u8array_to_hex;
 
+// light-bitcoin
 use btc_chain::{OutPoint, Transaction};
 use btc_keys::{Address, Network};
 #[cfg(feature = "std")]
@@ -12,10 +19,6 @@ use btc_script::{Script, ScriptAddress};
 
 use crate::types::TrusteeAddrInfo;
 use crate::{Module, Trait};
-
-use xsupport::error;
-#[cfg(feature = "std")]
-use xsupport::u8array_to_hex;
 
 pub fn get_networkid<T: Trait>() -> Network {
     if Module::<T>::network_id() == 0 {

@@ -10,14 +10,14 @@ client = { package = "substrate-client", git = "https://github.com/chainpool/sub
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 # chainx
-chainx-primitives = { path = "../primitives", default_features = false }
-xr-primitives = { path = "../xr-primitives", default_features = false }
+chainx-primitives = { path = "../primitives", default-features = false }
+xr-primitives = { path = "../xr-primitives", default-features = false }
 # chainx runtime module
-xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport", default_features = false }
-xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets", default_features = false }
-xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records", default_features = false }
-xspot= { package = "xrml-xdex-spot", path = "../xrml/xdex/spot",  default_features = false }
-xbitcoin = { package = "xrml-bridge-bitcoin", path = "../xrml/xbridge/bitcoin",  default_features = false }
+xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport", default-features = false }
+xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets", default-features = false }
+xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records", default-features = false }
+xspot= { package = "xrml-xdex-spot", path = "../xrml/xdex/spot",  default-features = false }
+xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin",  default-features = false }
 
 [features]
 default = ["std"]

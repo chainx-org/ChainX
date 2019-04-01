@@ -1,41 +1,41 @@
 [package]
-name = "xrml-session"
+name = "xrml-xsession"
 version = "0.1.0"
 authors = ["Parity Technologies <admin@parity.io> & Chainpool <chainx.org>"]
+edition = "2018"
 
 [dependencies]
-hex-literal = "0.1.0"
 serde = { version = "1.0", default-features = false }
-safe-mix = { version = "1.0", default-features = false}
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 parity-codec = { version = "3.2", default-features = false, features = ["derive"] }
-sr-std = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-io = { git = "https://github.com/chainpool/substrate", default-features = false }
-sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-consensus = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-system = { git = "https://github.com/chainpool/substrate", default-features = false }
-srml-timestamp = { git = "https://github.com/chainpool/substrate", default-features = false }
+# Substrate
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", default-features = false }
+# ChainX
+xsystem = { package = "xrml-xsystem", path = "../xsystem", default-features = false }
+xaccounts = { package = "xrml-xaccounts", path = "../xaccounts", default-features = false }
 
-# chainx runtime module
-xrml-xsystem = { path = "../xsystem", default-features = false }
-xrml-xaccounts = { path = "../xaccounts", default-features = false }
+[dev-dependencies]
+# Substrate
+substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
 
 [features]
 default = ["std"]
 std = [
 	"serde/std",
-	"safe-mix/std",
 	"parity-codec/std",
-	"substrate-primitives/std",
-	"sr-std/std",
-	"sr-io/std",
-	"srml-support/std",
-	"sr-primitives/std",
-	"srml-consensus/std",
-	"srml-system/std",
-	"srml-timestamp/std",
-	# xrml
-	"xrml-xsystem/std",
-	"xrml-xaccounts/std",
+	# Substrate
+	"rstd/std",
+	"support/std",
+	"primitives/std",
+	"consensus/std",
+	"system/std",
+	"timestamp/std",
+	# ChainX
+	"xsystem/std",
+	"xaccounts/std",
 ]

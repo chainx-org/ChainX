@@ -1,30 +1,31 @@
-// Copyright 2019 Chainpool
-use rstd::prelude::Vec;
-use rstd::result::Result as StdResult;
-use runtime_primitives::traits::As;
+// Copyright 2018-2019 Chainpool.
+
+// Substrate
+use primitives::traits::As;
+use rstd::{prelude::Vec, result::Result as StdResult};
 use support::{dispatch::Result, StorageMap, StorageValue};
 
-use xr_primitives::generic::{b58, Extracter};
-use xr_primitives::traits::Extractable;
-
+// ChainX
 use xaccounts;
 use xassets::{self, Chain, ChainT};
 use xfee_manager;
+use xr_primitives::generic::{b58, Extracter};
+use xr_primitives::traits::Extractable;
 use xrecords;
+#[cfg(feature = "std")]
+use xsupport::u8array_to_string;
+use xsupport::{debug, error, info};
 
+// light-bitcoin
 use btc_chain::Transaction;
 use btc_keys::{Address, DisplayLayout};
 use btc_primitives::H256;
 use btc_script::Script;
 
-use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
-use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait};
-
 #[cfg(feature = "std")]
 use crate::hash_strip;
-#[cfg(feature = "std")]
-use xsupport::u8array_to_string;
-use xsupport::{debug, error, info};
+use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
+use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait};
 
 use super::utils::{ensure_identical, get_hot_trustee_address, is_key};
 

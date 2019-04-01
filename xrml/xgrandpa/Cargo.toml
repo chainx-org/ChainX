@@ -5,23 +5,25 @@ authors = ["Parity Technologies <admin@parity.io>& Chainpool<chainx.org>"]
 edition = "2018"
 
 [dependencies]
-#hex-literal = "0.1.0"
 serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.2", default-features = false, features = ["derive"] }
+# Substrate
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-substrate-finality-grandpa-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+fg-primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-srml-support = { git = "https://github.com/chainpool/substrate", default-features = false }
-xsupport = { package = "xrml-xsupport", path = "../xsupport", default_features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
-session = { package = "xrml-session", path = "../xsession", default-features = false }
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default-features = false }
 finality-tracker = { package = "srml-finality-tracker", git = "https://github.com/chainpool/substrate", default-features = false }
+# ChainX
+xsupport = { package = "xrml-xsupport", path = "../xsupport", default-features = false }
+xsession = { package = "xrml-xsession", path = "../xsession", default-features = false }
 
 [dev-dependencies]
-runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
+# Substrate
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
 
 [features]
 default = ["std"]
@@ -29,14 +31,16 @@ std = [
 	"serde/std",
 	"serde_derive",
 	"parity-codec/std",
+	# Substrate
 	"substrate-primitives/std",
-	"substrate-finality-grandpa-primitives/std",
+	"fg-primitives/std",
 	"rstd/std",
-	"srml-support/std",
-	"xsupport/std",
 	"primitives/std",
+	"support/std",
 	"system/std",
     "consensus/std",
-	"session/std",
 	"finality-tracker/std",
+	# ChainX
+	"xsupport/std",
+	"xsession/std",
 ]

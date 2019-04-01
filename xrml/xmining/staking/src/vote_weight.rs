@@ -1,13 +1,9 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 //! Vote weight calculation.
 
-use super::{ClaimType, Module, Trait};
-use crate::{IntentionProfs, NominationRecord};
-use primitives::traits::As;
-use rstd::result;
-use runtime_support::StorageMap;
-use system;
-use xassets::{self, Token};
+use super::*;
+
+use rstd::result::Result as StdResult;
 
 pub trait VoteWeight<BlockNumber: As<u64>> {
     fn amount(&self) -> u64;
@@ -137,7 +133,7 @@ impl<T: Trait> Module<T> {
         target: &mut V,
         target_jackpot_addr: &T::AccountId,
         claim_type: ClaimType,
-    ) -> result::Result<(u64, u64, T::Balance), &'static str>
+    ) -> StdResult<(u64, u64, T::Balance), &'static str>
     where
         U: VoteWeight<T::BlockNumber>,
         V: VoteWeight<T::BlockNumber>, // + Jackpot<T::Balance>,

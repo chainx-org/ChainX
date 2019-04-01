@@ -1,60 +1,31 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 //! Assets: Handles token asset balances.
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate parity_codec as codec;
-
-// for substrate
-extern crate substrate_primitives;
-
-// for substrate runtime
-extern crate sr_std as rstd;
-
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as primitives;
-
-// for substrate runtime module lib
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_balances as balances;
-extern crate srml_system as system;
-
-extern crate xr_primitives;
-
-extern crate xrml_xsupport as xsupport;
-
-#[cfg(test)]
 mod mock;
-#[cfg(test)]
 mod tests;
+pub mod types;
 
-pub mod assetdef;
-pub mod memo;
-
-use codec::{Decode, Encode};
+// Substrate
 use primitives::traits::{CheckedAdd, CheckedSub, StaticLookup, Zero};
 use rstd::collections::btree_map::BTreeMap;
 use rstd::iter::FromIterator;
-use rstd::prelude::*;
-use rstd::result::Result as StdResult;
-use rstd::slice::Iter;
-use runtime_support::dispatch::Result;
-use runtime_support::traits::Currency;
-use runtime_support::{StorageMap, StorageValue};
-
-// substrate mod
+use rstd::{prelude::*, result::Result as StdResult};
+use support::{
+    decl_event, decl_module, decl_storage, dispatch::Result, traits::Currency, StorageMap,
+    StorageValue,
+};
 use system::ensure_signed;
 
+// ChainX
 use xsupport::storage::btree_map::CodecBTreeMap;
 
-pub use assetdef::{
-    is_valid_desc, is_valid_token, Asset, Chain, ChainT, Desc, DescString, Precision, Token,
-    TokenString,
+pub use self::types::{
+    is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetType, Chain, ChainT, Desc,
+    DescString, Memo, Precision, Token, TokenString,
 };
-
-pub use memo::{is_valid_memo, Memo};
 
 pub trait Trait: balances::Trait {
     /// Event
@@ -184,38 +155,6 @@ impl<T: Trait> AssetTriggerEventAfter<T> {
         T::OnAssetChanged::on_set_balance(token, who, type_, value)?;
         Module::<T>::deposit_event(RawEvent::Set(token.clone(), who.clone(), type_, value));
         Ok(())
-    }
-}
-
-#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum AssetType {
-    Free,
-    ReservedStaking,
-    ReservedStakingRevocation,
-    ReservedWithdrawal,
-    ReservedDexSpot,
-    ReservedDexFuture,
-}
-
-// TODO use marco to improve it
-impl AssetType {
-    pub fn iterator() -> Iter<'static, AssetType> {
-        static TYPES: [AssetType; 6] = [
-            AssetType::Free,
-            AssetType::ReservedStaking,
-            AssetType::ReservedStakingRevocation,
-            AssetType::ReservedWithdrawal,
-            AssetType::ReservedDexSpot,
-            AssetType::ReservedDexFuture,
-        ];
-        TYPES.iter()
-    }
-}
-
-impl Default for AssetType {
-    fn default() -> Self {
-        AssetType::Free
     }
 }
 
@@ -746,30 +685,6 @@ impl<T: Trait> Module<T> {
             AssetTriggerEventAfter::<T>::on_set_balance(token, who, type_, val)?;
         }
         Ok(())
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum AssetErr {
-    NotEnough,
-    OverFlow,
-    TotalAssetNotEnough,
-    TotalAssetOverFlow,
-    InvalidToken,
-    InvalidAccount,
-}
-
-impl AssetErr {
-    pub fn info(self) -> &'static str {
-        match self {
-            AssetErr::NotEnough => "balance too low for this account",
-            AssetErr::OverFlow => "balance too high for this account",
-            AssetErr::TotalAssetNotEnough => "total balance too low for this asset",
-            AssetErr::TotalAssetOverFlow => "total balance too high for this asset",
-            AssetErr::InvalidToken => "not a valid token for this account",
-            AssetErr::InvalidAccount => "account Locked",
-        }
     }
 }
 

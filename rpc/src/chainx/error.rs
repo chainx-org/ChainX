@@ -1,3 +1,5 @@
+// Copyright 2018-2019 Chainpool.
+
 use error_chain::*;
 
 use std::str;

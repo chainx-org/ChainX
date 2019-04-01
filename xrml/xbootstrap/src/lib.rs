@@ -1,34 +1,10 @@
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! this module is for bootstrap only.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "std")]
-use sr_io as runtime_io;
-#[cfg(feature = "std")]
-use sr_primitives as runtime_primitives;
-
-#[cfg(feature = "std")]
-use btc_chain;
-use runtime_support::{decl_module, decl_storage};
-use srml_support as runtime_support;
-//#[cfg(feature = "std")]
-//use srml_system as system;
-#[cfg(feature = "std")]
-use substrate_finality_grandpa_primitives as fg_primitives;
-#[cfg(feature = "std")]
-use xrml_bridge_bitcoin as xbitcoin;
-#[cfg(feature = "std")]
-use xrml_mining_staking as xstaking;
-use xrml_mining_tokens as xtokens;
-#[cfg(feature = "std")]
-use xrml_xaccounts as xaccounts;
-#[cfg(feature = "std")]
-use xrml_xassets_assets as xassets;
-#[cfg(feature = "std")]
-use xrml_xdex_spot as xspot;
-use xrml_xmultisig as xmultisig;
+use support::{decl_module, decl_storage};
 
 pub trait Trait: xtokens::Trait + xmultisig::Trait {}
 
@@ -67,12 +43,12 @@ decl_storage! {
         // multisig
         config(multisig_init_info): (Vec<(T::AccountId, bool)>, u32);
 
-        build(|storage: &mut runtime_primitives::StorageOverlay, _: &mut runtime_primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
+        build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use parity_codec::{Encode, KeyedVec};
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
-            use runtime_support::{StorageMap, StorageValue};
-            use runtime_primitives::{StorageOverlay, traits::{Zero, As}};
+            use support::{StorageMap, StorageValue};
+            use primitives::{StorageOverlay, traits::{Zero, As}};
             use xaccounts::{TrusteeEntity, TrusteeIntentionProps};
             use xassets::{ChainT, AssetType, Token, Chain, Asset};
             use btc_chain::BlockHeader;

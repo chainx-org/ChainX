@@ -1,9 +1,11 @@
 // Copyright 2018 Chainpool.
 
-use crate::rstd::collections::btree_map::BTreeMap;
 use parity_codec::{Decode, Encode, Input, Output};
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
+
+// Substrate
+use rstd::collections::btree_map::BTreeMap;
 
 #[derive(Default, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]

@@ -1,20 +1,21 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 //! Test utilities
 #![cfg(test)]
 
 use super::*;
-use crate::{GenesisConfig, Module, Trait};
-use primitives::testing::{ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId};
-use primitives::StorageOverlay;
-use primitives::{traits::BlakeTwo256, BuildStorage};
-use runtime_io;
+
+// Substrate
+use primitives::{
+    testing::{ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId},
+    traits::BlakeTwo256,
+    BuildStorage, StorageOverlay,
+};
 use runtime_io::with_externalities;
-use runtime_support::impl_outer_origin;
 use substrate_primitives::{Blake2Hasher, H256};
-use xaccounts::IntentionJackpotAccountIdFor;
-use xassets::assetdef::{Asset, Chain, ChainT, Token};
-use xsystem::{Validator, ValidatorList};
-use {balances, consensus, indices, session, system, timestamp, xassets};
+use support::impl_outer_origin;
+
+// ChainX
+use xassets::{Asset, Chain, ChainT, Token};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -23,11 +24,13 @@ impl_outer_origin! {
 // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Test;
+
 impl consensus::Trait for Test {
     type Log = DigestItem;
     type SessionKey = UintAuthorityId;
     type InherentOfflineReport = ();
 }
+
 impl system::Trait for Test {
     type Origin = Origin;
     type Index = u64;
@@ -41,74 +44,85 @@ impl system::Trait for Test {
     type Event = ();
     type Log = DigestItem;
 }
+
 impl indices::Trait for Test {
     type AccountIndex = u32;
     type IsDeadAccount = Balances;
     type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
     type Event = ();
 }
+
 impl balances::Trait for Test {
     type Balance = u64;
-    type OnNewAccount = Indices;
     type OnFreeBalanceZero = ();
-    type Event = ();
+    type OnNewAccount = Indices;
     type TransactionPayment = ();
-    type DustRemoval = ();
     type TransferPayment = ();
+    type DustRemoval = ();
+    type Event = ();
 }
+
+impl timestamp::Trait for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+}
+
 impl xaccounts::Trait for Test {
     type Event = ();
     type DetermineIntentionJackpotAccountId = DummyDetermineIntentionJackpotAccountId;
 }
+
 pub struct DummyDetermineIntentionJackpotAccountId;
-impl IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJackpotAccountId {
+impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJackpotAccountId {
     fn accountid_for(origin: &u64) -> u64 {
         origin + 100
     }
 }
+
 impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
 }
-impl fee_manager::Trait for Test {}
 
-pub struct DummyDetermineValidatorList;
-impl ValidatorList<u64> for DummyDetermineValidatorList {
-    fn validator_list() -> Vec<u64> {
-        vec![]
-    }
-}
-pub struct DummyDetermineValidator;
-impl Validator<u64> for DummyDetermineValidator {
-    fn get_validator_by_name(_name: &[u8]) -> Option<u64> {
-        Some(0)
-    }
-}
+impl xfee_manager::Trait for Test {}
 
 impl xsystem::Trait for Test {
     type ValidatorList = DummyDetermineValidatorList;
     type Validator = DummyDetermineValidator;
 }
-impl timestamp::Trait for Test {
-    type Moment = u64;
-    type OnTimestampSet = ();
+
+pub struct DummyDetermineValidatorList;
+impl xsystem::ValidatorList<u64> for DummyDetermineValidatorList {
+    fn validator_list() -> Vec<u64> {
+        vec![]
+    }
 }
-impl session::Trait for Test {
+pub struct DummyDetermineValidator;
+impl xsystem::Validator<u64> for DummyDetermineValidator {
+    fn get_validator_by_name(_name: &[u8]) -> Option<u64> {
+        Some(0)
+    }
+}
+
+impl xsession::Trait for Test {
     type ConvertAccountIdToSessionKey = ConvertUintAuthorityId;
-    type OnSessionChange = Staking;
+    type OnSessionChange = XStaking;
     type Event = ();
 }
+
 impl xbitcoin::Trait for Test {
     type Event = ();
 }
+
 impl xrecords::Trait for Test {
     type Event = ();
 }
+
 impl Trait for Test {
+    type Event = ();
     type OnRewardCalculation = ();
     type OnReward = ();
-    type Event = ();
 }
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
@@ -134,7 +148,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             .0,
     );
     t.extend(
-        session::GenesisConfig::<Test> {
+        xsession::GenesisConfig::<Test> {
             session_length: 1,
             validators: vec![(10, 10), (20, 20), (30, 30), (40, 40)],
             keys: vec![
@@ -213,8 +227,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
 pub type Indices = indices::Module<Test>;
 pub type System = system::Module<Test>;
-pub type Session = session::Module<Test>;
+pub type Balances = balances::Module<Test>;
+pub type XSession = xsession::Module<Test>;
 pub type XAssets = xassets::Module<Test>;
 pub type XAccounts = xaccounts::Module<Test>;
-pub type Balances = balances::Module<Test>;
-pub type Staking = Module<Test>;
+pub type XStaking = Module<Test>;

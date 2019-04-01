@@ -1,17 +1,20 @@
-// Copyright 2019 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! this module is for chainx accounts
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod mock;
 mod tests;
-mod types;
-use substrate_primitives::crypto::UncheckedFrom;
+pub mod types;
 
+// Substrate
 use primitives::traits::Hash;
 use rstd::prelude::*;
-use support::dispatch::Result;
-use support::{decl_event, decl_module, decl_storage, StorageMap};
+use substrate_primitives::crypto::UncheckedFrom;
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap};
+
+// ChainX
 use xassets::Chain;
 use xr_primitives::XString;
 

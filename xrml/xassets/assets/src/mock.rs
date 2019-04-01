@@ -1,14 +1,14 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
-extern crate srml_indices as indices;
-use substrate_primitives::{Blake2Hasher, H256};
+#![cfg(test)]
+
+use super::*;
 
 use primitives::testing::{Digest, DigestItem, Header};
 use primitives::traits::BlakeTwo256;
 use primitives::BuildStorage;
-use runtime_io;
-
-use super::*;
+use substrate_primitives::{Blake2Hasher, H256};
+use support::impl_outer_origin;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -35,6 +35,9 @@ impl balances::Trait for Test {
     type Balance = u64;
     type OnFreeBalanceZero = ();
     type OnNewAccount = Indices;
+    type TransactionPayment = ();
+    type TransferPayment = ();
+    type DustRemoval = ();
     type Event = ();
 }
 
@@ -52,10 +55,10 @@ impl Trait for Test {
     type OnAssetRegisterOrRevoke = ();
 }
 
-pub type XAssets = Module<Test>;
+pub type Balance = u64;
 pub type Balances = balances::Module<Test>;
 pub type Indices = indices::Module<Test>;
-pub type Balance = u64;
+pub type XAssets = Module<Test>;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
@@ -71,6 +74,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
+            transaction_base_fee: 0,
+            transaction_byte_fee: 0,
             vesting: vec![],
         }
         .build_storage()
@@ -85,7 +90,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             .0,
     );
 
-    let btc_asset = Asset::new(
+    let _btc_asset = Asset::new(
         b"BTC".to_vec(), // token
         b"Bitcoin".to_vec(),
         Chain::Bitcoin,
@@ -119,6 +124,8 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             existential_deposit: 0,
             transfer_fee: 0,
             creation_fee: 0,
+            transaction_base_fee: 0,
+            transaction_byte_fee: 0,
             vesting: vec![],
         }
         .build_storage()
@@ -126,7 +133,7 @@ pub fn err_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .0,
     );
 
-    let btc_asset = Asset::new(
+    let _btc_asset = Asset::new(
         b"BTC******".to_vec(), // token
         b"Bitcoin".to_vec(),   // token
         Chain::Bitcoin,

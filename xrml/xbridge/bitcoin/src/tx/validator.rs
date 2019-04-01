@@ -1,7 +1,13 @@
-use rstd::prelude::Vec;
-use rstd::result::Result as StdResult;
+// Copyright 2018-2019 Chainpool.
+
+// Substrate
+use rstd::{prelude::Vec, result::Result as StdResult};
 use support::dispatch::Result;
 
+// ChainX
+use xsupport::{debug, error};
+
+// light-bitcoin
 use btc_chain::Transaction;
 use btc_keys::Public;
 use btc_primitives::Bytes;
@@ -12,8 +18,6 @@ use btc_script::{
 use crate::tx::utils::get_hot_trustee_redeem_script;
 use crate::types::RelayTx;
 use crate::{Module, Trait};
-
-use xsupport::{debug, error};
 
 pub fn validate_transaction<T: Trait>(tx: &RelayTx) -> Result {
     let tx_hash = tx.raw.hash();

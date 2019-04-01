@@ -1,60 +1,19 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
 //! this module is for funds-withdrawal
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// for encode/decode
-// Needed for deriving `Serialize` and `Deserialize` for various types.
-// We only implement the serde traits for std builds - they're unneeded
-// in the wasm runtime.
-#[cfg(feature = "std")]
-extern crate serde_derive;
 
-// Needed for deriving `Encode` and `Decode` for `RawEvent`.
-//#[macro_use]
-//extern crate parity_codec_derive;
-extern crate parity_codec as codec;
-
-// for substrate
-// Needed for the set of mock primitives used in our tests.
-#[cfg(feature = "std")]
-extern crate substrate_primitives;
-
-// for substrate runtime
-// map!, vec! marco.
-extern crate sr_std as rstd;
-
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as runtime_primitives;
-// for substrate runtime module lib
-// Needed for type-safe access to storage DB.
-#[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_balances as balances;
-#[cfg(test)]
-extern crate srml_consensus as consensus;
-extern crate srml_system as system;
-#[cfg(test)]
-extern crate srml_timestamp as timestamp;
-
-// chainx runtime module
-extern crate xrml_xassets_assets as xassets;
-extern crate xrml_xassets_records as xrecords;
-// bridge
-extern crate xrml_bridge_bitcoin as xbitcoin;
-
-#[cfg(test)]
-extern crate base58;
-
-#[cfg(test)]
+mod mock;
 mod tests;
 
+// Substrate
+use primitives::traits::As;
 use rstd::prelude::Vec;
-
-use runtime_primitives::traits::As;
-use runtime_support::dispatch::Result;
-
+use support::{decl_module, decl_storage, dispatch::Result};
 use system::ensure_signed;
+
+// ChainX
 use xassets::{Chain, ChainT, Memo, Token};
 use xrecords::AddrStr;
 

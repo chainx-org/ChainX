@@ -1,3 +1,5 @@
+// Copyright 2018-2019 Chainpool.
+
 use support::dispatch::{Dispatchable, Result};
 use system;
 

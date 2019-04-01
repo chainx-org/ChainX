@@ -1,4 +1,5 @@
 // Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2018-2019 Chainpool.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -19,34 +20,20 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate sr_std as rstd;
+mod mock;
+mod tests;
 
-#[macro_use]
-extern crate srml_support as runtime_support;
-
-extern crate parity_codec as codec;
-#[cfg(test)]
-extern crate sr_io as runtime_io;
-extern crate sr_primitives as primitives;
-extern crate srml_consensus as consensus;
-extern crate srml_system as system;
-extern crate srml_timestamp as timestamp;
-#[cfg(test)]
-extern crate substrate_primitives;
-
-extern crate xrml_xaccounts;
-extern crate xrml_xsystem;
-
+// Substrate
 use primitives::traits::{As, Convert, One, Zero};
-use rstd::ops::Mul;
-use rstd::prelude::*;
-use runtime_support::dispatch::Result;
-use runtime_support::for_each_tuple;
-use runtime_support::{StorageMap, StorageValue};
+use rstd::{ops::Mul, prelude::*};
+use support::{
+    decl_event, decl_module, decl_storage, dispatch::Result, for_each_tuple, StorageMap,
+    StorageValue,
+};
 use system::ensure_signed;
 
-use xrml_xaccounts::Name;
-use xrml_xsystem::ValidatorList;
+// ChainX
+use xaccounts::Name;
 
 /// A session has changed.
 pub trait OnSessionChange<T> {
@@ -72,7 +59,7 @@ macro_rules! impl_session_change {
 
 for_each_tuple!(impl_session_change);
 
-pub trait Trait: timestamp::Trait + xrml_xaccounts::Trait {
+pub trait Trait: timestamp::Trait + xaccounts::Trait {
     type ConvertAccountIdToSessionKey: Convert<Self::AccountId, Option<Self::SessionKey>>;
     type OnSessionChange: OnSessionChange<Self::Moment>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -143,7 +130,7 @@ decl_storage! {
     }
 }
 
-impl<T: Trait> ValidatorList<T::AccountId> for Module<T> {
+impl<T: Trait> xsystem::ValidatorList<T::AccountId> for Module<T> {
     fn validator_list() -> Vec<T::AccountId> {
         Self::validators().into_iter().map(|(a, _)| a).collect()
     }
@@ -151,7 +138,7 @@ impl<T: Trait> ValidatorList<T::AccountId> for Module<T> {
 
 impl<T: Trait> Module<T> {
     pub fn pubkeys_for_validator_name(name: Name) -> Option<(T::AccountId, Option<T::SessionKey>)> {
-        xrml_xaccounts::Module::<T>::intention_of(&name).map(|a| {
+        xaccounts::Module::<T>::intention_of(&name).map(|a| {
             let r = Self::next_key_for(&a);
             (a, r)
         })
@@ -251,232 +238,5 @@ impl<T: Trait> Module<T> {
         let length_minus_1 = length - One::one();
         let block_number = <system::Module<T>>::block_number();
         length_minus_1 - (block_number - Self::last_length_change() + length_minus_1) % length
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use primitives::testing::{
-        ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId,
-    };
-    use primitives::traits::{BlakeTwo256, IdentityLookup};
-    use primitives::BuildStorage;
-    use runtime_io::with_externalities;
-    use substrate_primitives::{Blake2Hasher, H256};
-
-    impl_outer_origin! {
-        pub enum Origin for Test {}
-    }
-
-    #[derive(Clone, Eq, PartialEq)]
-    pub struct Test;
-    impl consensus::Trait for Test {
-        const NOTE_OFFLINE_POSITION: u32 = 1;
-        type Log = DigestItem;
-        type SessionKey = UintAuthorityId;
-        type InherentOfflineReport = ();
-    }
-    impl system::Trait for Test {
-        type Origin = Origin;
-        type Index = u64;
-        type BlockNumber = u64;
-        type Hash = H256;
-        type Hashing = BlakeTwo256;
-        type Digest = Digest;
-        type AccountId = u64;
-        type Lookup = IdentityLookup<u64>;
-        type Header = Header;
-        type Event = ();
-        type Log = DigestItem;
-    }
-    impl timestamp::Trait for Test {
-        const TIMESTAMP_SET_POSITION: u32 = 0;
-        type Moment = u64;
-        type OnTimestampSet = ();
-    }
-    impl Trait for Test {
-        type ConvertAccountIdToSessionKey = ConvertUintAuthorityId;
-        type OnSessionChange = ();
-        type Event = ();
-    }
-
-    type System = system::Module<Test>;
-    type Consensus = consensus::Module<Test>;
-    type Session = Module<Test>;
-
-    fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-        let mut t = system::GenesisConfig::<Test>::default()
-            .build_storage()
-            .unwrap()
-            .0;
-        t.extend(
-            consensus::GenesisConfig::<Test> {
-                code: vec![],
-                authorities: vec![UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)],
-            }
-            .build_storage()
-            .unwrap()
-            .0,
-        );
-        t.extend(
-            timestamp::GenesisConfig::<Test> { period: 5 }
-                .build_storage()
-                .unwrap()
-                .0,
-        );
-        t.extend(
-            GenesisConfig::<Test> {
-                session_length: 2,
-                validators: vec![(1, 0), (2, 0), (3, 0)],
-            }
-            .build_storage()
-            .unwrap()
-            .0,
-        );
-        runtime_io::TestExternalities::new(t)
-    }
-
-    #[test]
-    fn simple_setup_should_work() {
-        with_externalities(&mut new_test_ext(), || {
-            assert_eq!(
-                Consensus::authorities(),
-                vec![
-                    UintAuthorityId(1).into(),
-                    UintAuthorityId(2).into(),
-                    UintAuthorityId(3).into()
-                ]
-            );
-            assert_eq!(Session::length(), 2);
-            assert_eq!(Session::validators(), vec![(1, 0), (2, 0), (3, 0)]);
-        });
-    }
-
-    #[test]
-    fn should_work_with_early_exit() {
-        with_externalities(&mut new_test_ext(), || {
-            System::set_block_number(1);
-            assert_ok!(Session::set_length(10.into()));
-            assert_eq!(Session::blocks_remaining(), 1);
-            Session::check_rotate_session(1);
-
-            System::set_block_number(2);
-            assert_eq!(Session::blocks_remaining(), 0);
-            Session::check_rotate_session(2);
-            assert_eq!(Session::length(), 10);
-
-            System::set_block_number(7);
-            assert_eq!(Session::current_index(), 1);
-            assert_eq!(Session::blocks_remaining(), 5);
-            assert_ok!(Session::force_new_session(false));
-            Session::check_rotate_session(7);
-
-            System::set_block_number(8);
-            assert_eq!(Session::current_index(), 2);
-            assert_eq!(Session::blocks_remaining(), 9);
-            Session::check_rotate_session(8);
-
-            System::set_block_number(17);
-            assert_eq!(Session::current_index(), 2);
-            assert_eq!(Session::blocks_remaining(), 0);
-            Session::check_rotate_session(17);
-
-            System::set_block_number(18);
-            assert_eq!(Session::current_index(), 3);
-        });
-    }
-
-    #[test]
-    fn session_length_change_should_work() {
-        with_externalities(&mut new_test_ext(), || {
-            // Block 1: Change to length 3; no visible change.
-            System::set_block_number(1);
-            assert_ok!(Session::set_length(3.into()));
-            Session::check_rotate_session(1);
-            assert_eq!(Session::length(), 2);
-            assert_eq!(Session::current_index(), 0);
-
-            // Block 2: Length now changed to 3. Index incremented.
-            System::set_block_number(2);
-            assert_ok!(Session::set_length(3.into()));
-            Session::check_rotate_session(2);
-            assert_eq!(Session::length(), 3);
-            assert_eq!(Session::current_index(), 1);
-
-            // Block 3: Length now changed to 3. Index incremented.
-            System::set_block_number(3);
-            Session::check_rotate_session(3);
-            assert_eq!(Session::length(), 3);
-            assert_eq!(Session::current_index(), 1);
-
-            // Block 4: Change to length 2; no visible change.
-            System::set_block_number(4);
-            assert_ok!(Session::set_length(2.into()));
-            Session::check_rotate_session(4);
-            assert_eq!(Session::length(), 3);
-            assert_eq!(Session::current_index(), 1);
-
-            // Block 5: Length now changed to 2. Index incremented.
-            System::set_block_number(5);
-            Session::check_rotate_session(5);
-            assert_eq!(Session::length(), 2);
-            assert_eq!(Session::current_index(), 2);
-
-            // Block 6: No change.
-            System::set_block_number(6);
-            Session::check_rotate_session(6);
-            assert_eq!(Session::length(), 2);
-            assert_eq!(Session::current_index(), 2);
-
-            // Block 7: Next index.
-            System::set_block_number(7);
-            Session::check_rotate_session(7);
-            assert_eq!(Session::length(), 2);
-            assert_eq!(Session::current_index(), 3);
-        });
-    }
-
-    #[test]
-    fn session_change_should_work() {
-        with_externalities(&mut new_test_ext(), || {
-            // Block 1: No change
-            System::set_block_number(1);
-            Session::check_rotate_session(1);
-            assert_eq!(
-                Consensus::authorities(),
-                vec![UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)]
-            );
-
-            // Block 2: Session rollover, but no change.
-            System::set_block_number(2);
-            Session::check_rotate_session(2);
-            assert_eq!(
-                Consensus::authorities(),
-                vec![UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)]
-            );
-
-            // Block 3: Set new key for validator 2; no visible change.
-            System::set_block_number(3);
-            assert_ok!(Session::set_key(Origin::signed(2), UintAuthorityId(5)));
-            assert_eq!(
-                Consensus::authorities(),
-                vec![UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)]
-            );
-
-            Session::check_rotate_session(3);
-            assert_eq!(
-                Consensus::authorities(),
-                vec![UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)]
-            );
-
-            // Block 4: Session rollover, authority 2 changes.
-            System::set_block_number(4);
-            Session::check_rotate_session(4);
-            assert_eq!(
-                Consensus::authorities(),
-                vec![UintAuthorityId(1), UintAuthorityId(5), UintAuthorityId(3)]
-            );
-        });
     }
 }

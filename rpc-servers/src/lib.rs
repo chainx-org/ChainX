@@ -1,4 +1,5 @@
 // Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2018-2019 Chainpool.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify

@@ -5,27 +5,32 @@ authors = ["Chainpool <http://chainx.org>"]
 edition = "2018"
 
 [dependencies]
-hex-literal = "0.1.0"
-serde = { version = "1.0", default_features = false }
+serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.2", default-features = false, features = ["derive"] }
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-std = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-io = { git = "https://github.com/chainpool/substrate", default_features = false }
-sr-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-support = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-system = { git = "https://github.com/chainpool/substrate", default_features = false }
-srml-balances = { git = "https://github.com/chainpool/substrate", default_features = false }
-
-xr-primitives = { path = "../../xr-primitives", default_features = false }
-xsupport = { package = "xrml-xsupport", path = "../xsupport", default_features = false }
-xassets = { package = "xrml-xassets-assets", path = "../xassets/assets", default_features = false }
-xaccounts = { package = "xrml-xaccounts", path = "../xaccounts", default_features = false }
-xbitcoin = { package = "xrml-bridge-bitcoin", path = "../xbridge/bitcoin", default_features = false }
-xstaking = { package = "xrml-mining-staking", path = "../xmining/staking", default-features = false }
+# Substrate
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate", default-features = false }
+# ChainX
+xr-primitives = { path = "../../xr-primitives", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../xsupport", default-features = false }
+xassets = { package = "xrml-xassets-assets", path = "../xassets/assets", default-features = false }
+xaccounts = { package = "xrml-xaccounts", path = "../xaccounts", default-features = false }
+xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xbridge/bitcoin", default-features = false }
+xstaking = { package = "xrml-xmining-staking", path = "../xmining/staking", default-features = false }
 
 [dev-dependencies]
-sr-io = { git = "https://github.com/chainpool/substrate" }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
+timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate" }
+xsystem = { package = "xrml-xsystem", path = "../xsystem" }
+xsession = { package = "xrml-xsession", path = "../xsession" }
+xrecords = { package = "xrml-xassets-records", path = "../xassets/records" }
+xfee-manager = { package = "xrml-xfee-manager", path = "../xfee/manager" }
 
 [features]
 default = ["std"]
@@ -33,12 +38,13 @@ std=[
     "serde/std",
     "serde_derive",
     "parity-codec/std",
-    "sr-std/std",
-    "sr-primitives/std",
-    "srml-support/std",
-    "srml-system/std",
-    "srml-balances/std",
-    # xrml
+    # Substrate
+    "rstd/std",
+    "primitives/std",
+    "support/std",
+    "system/std",
+    "balances/std",
+    # ChainX
     "xr-primitives/std",
     "xsupport/std",
     "xassets/std",

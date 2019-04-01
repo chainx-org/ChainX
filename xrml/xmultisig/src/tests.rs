@@ -1,96 +1,13 @@
-// Copyright 2018 Chainpool.
+// Copyright 2018-2019 Chainpool.
 
-use runtime_io::with_externalities;
-use runtime_primitives::testing::{Digest, DigestItem, Header};
-use runtime_primitives::traits::{BlakeTwo256, IdentityLookup};
-use runtime_primitives::BuildStorage;
-use sr_io as runtime_io;
-use sr_primitives as runtime_primitives;
-use srml_support::{assert_err, assert_ok, impl_outer_origin};
-use substrate_primitives::{Blake2Hasher, H256};
+#![cfg(test)]
 
-use system::{ensure_root, ensure_signed};
-
+use super::mock::*;
 use super::*;
 
-impl_outer_origin! {
-    pub enum Origin for Test {}
-}
-
-pub type AccountId = H256;
-
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
-
-#[derive(Clone, Eq, PartialEq, Encode, Decode, Debug)]
-pub struct Call(bool);
-impl srml_support::Dispatchable for Call {
-    type Origin = Origin;
-    type Trait = ();
-
-    fn dispatch(self, origin: Self::Origin) -> Result {
-        if self.0 == true {
-            ensure_root(origin)?;
-        } else {
-            ensure_signed(origin)?;
-        }
-
-        println!("call success");
-        Err("call success")
-    }
-}
-
-impl system::Trait for Test {
-    type Origin = Origin;
-    type Index = u64;
-    type BlockNumber = u64;
-    type Hash = H256;
-    type Hashing = BlakeTwo256;
-    type Digest = Digest;
-    type AccountId = AccountId;
-    type Lookup = IdentityLookup<H256>;
-    type Header = Header;
-    type Event = ();
-    type Log = DigestItem;
-}
-
-impl balances::Trait for Test {
-    type Balance = u64;
-    type OnFreeBalanceZero = ();
-    type OnNewAccount = ();
-    type EnsureAccountLiquid = ();
-    type Event = ();
-}
-
-impl Trait for Test {
-    type MultiSig = SimpleMultiSigIdFor<Test>;
-    type Proposal = Call;
-    type Event = ();
-}
-
-//type Balances = balances::Module<Test>;
-type MultiSig = Module<Test>;
-
-pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut t = system::GenesisConfig::<Test>::default()
-        .build_storage()
-        .unwrap()
-        .0;
-    t.extend(
-        balances::GenesisConfig::<Test> {
-            balances: vec![],
-            existential_deposit: 0,
-            transfer_fee: 0,
-            creation_fee: 0,
-            vesting: vec![],
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-
-    runtime_io::TestExternalities::new(t)
-}
+use runtime_io::with_externalities;
+use substrate_primitives::H256;
+use support::{assert_err, assert_ok};
 
 #[test]
 fn test_genesis() {
@@ -157,7 +74,7 @@ fn test_multisig() {
         let addr = MultiSig::multi_sig_list_item_for(&(a.clone(), 0));
         let origin = system::RawOrigin::Signed(a.clone()).into();
         // transfer
-        let proposal = Box::new(Call(true));
+        let proposal = Box::new(TestCall(true));
         assert_ok!(MultiSig::execute(origin, addr, proposal.clone()));
 
         assert_eq!(MultiSig::pending_list_for(addr).len(), 1);
@@ -224,7 +141,7 @@ fn test_not_required_owner() {
         );
 
         let origin = system::RawOrigin::Signed(c.clone()).into();
-        let proposal = Box::new(Call(true));
+        let proposal = Box::new(TestCall(true));
         assert_err!(
             MultiSig::execute(origin, addr, proposal.clone()),
             "it's the owner but not required owner"
@@ -263,7 +180,7 @@ fn test_not_exist() {
         MultiSig::deploy_in_genesis(owners, 2);
 
         let origin = system::RawOrigin::Signed(a.clone()).into();
-        let proposal = Box::new(Call(true));
+        let proposal = Box::new(TestCall(true));
         assert_err!(
             MultiSig::execute(origin, fake, proposal),
             "the multi sig addr not exist"
@@ -278,7 +195,7 @@ fn test_not_exist() {
         let addr = MultiSig::multi_sig_list_item_for(&(a, 0));
         let origin = system::RawOrigin::Signed(a.clone()).into();
         // transfer
-        let proposal = Box::new(Call(true));
+        let proposal = Box::new(TestCall(true));
         assert_ok!(MultiSig::execute(origin, addr, proposal));
         let origin = system::RawOrigin::Signed(a.clone()).into();
         assert_err!(
@@ -309,7 +226,7 @@ fn test_remove() {
         let origin = system::RawOrigin::Signed(a.clone()).into();
         // transfer
         // a
-        let proposal = Box::new(Call(true));
+        let proposal = Box::new(TestCall(true));
         assert_ok!(MultiSig::execute(origin, addr, proposal.clone()));
 
         let multi_sig_id = MultiSig::pending_list_for(&addr).get(0).unwrap().clone();
@@ -378,7 +295,7 @@ fn test_single() {
         // a
         let addr = MultiSig::multi_sig_list_item_for(&(a, 0));
 
-        let proposal = Box::new(Call(false));
+        let proposal = Box::new(TestCall(false));
         let origin = system::RawOrigin::Signed(a.clone()).into();
         assert_err!(
             MultiSig::execute(origin, addr, proposal.clone()),
@@ -421,7 +338,7 @@ fn test_proposal_too_many() {
 
         let addr = MultiSig::multi_sig_list_item_for(&(a, 0));
 
-        let proposal = Box::new(Call(false));
+        let proposal = Box::new(TestCall(false));
         let origin = system::RawOrigin::Signed(a.clone()).into();
         assert_ok!(MultiSig::execute(origin, addr, proposal.clone()));
         <system::Module<Test>>::inc_account_nonce(&a);
@@ -524,8 +441,8 @@ fn test_try_to_call_root() {
         assert_eq!(MultiSig::multisig_addr_info(&addr_a1).is_some(), true);
         assert_eq!(MultiSig::multisig_addr_info(&addr_c1).is_some(), true);
         // =================
-        let proposal = Box::new(Call(true));
-        let proposal2 = Box::new(Call(false));
+        let proposal = Box::new(TestCall(true));
+        let proposal2 = Box::new(TestCall(false));
         let origin = system::RawOrigin::Signed(a.clone()).into();
         assert_ok!(MultiSig::execute(origin, addr_genesis1, proposal.clone()));
         <system::Module<Test>>::inc_account_nonce(&a);
