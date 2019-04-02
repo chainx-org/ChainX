@@ -21,6 +21,7 @@ xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features =
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
 xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../../xbridge/bitcoin", default-features = false }
+xsdot = { package = "xrml-xbridge-sdot", path = "../../xbridge/sdot", default-features = false }
 xspot = { package = "xrml-xdex-spot", path = "../../xdex/spot", default-features = false }
 xstaking = { package = "xrml-xmining-staking", path = "../../xmining/staking", default-features = false }
 

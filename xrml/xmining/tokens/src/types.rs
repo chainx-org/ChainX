@@ -5,6 +5,8 @@ use parity_codec::{Decode, Encode};
 use serde_derive::{Deserialize, Serialize};
 
 use super::{Token, Trait};
+use primitives::traits::As;
+use xstaking::VoteWeight;
 
 /// This module only tracks the vote weight related changes.
 /// All the amount related has been taken care by assets module.
@@ -35,4 +37,52 @@ pub struct DepositRecord<'a, T: Trait> {
     pub depositor: &'a T::AccountId,
     pub token: &'a Token,
     pub staking: &'a mut DepositVoteWeight<T::BlockNumber>,
+}
+
+impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
+    fn amount(&self) -> u64 {
+        xassets::Module::<T>::all_type_balance(&self.token).as_()
+    }
+
+    fn last_acum_weight(&self) -> u64 {
+        self.staking.last_total_deposit_weight
+    }
+
+    fn last_acum_weight_update(&self) -> u64 {
+        self.staking.last_total_deposit_weight_update.as_()
+    }
+
+    fn set_amount(&mut self, _: u64, _: bool) {}
+
+    fn set_last_acum_weight(&mut self, latest_deposit_weight: u64) {
+        self.staking.last_total_deposit_weight = latest_deposit_weight;
+    }
+
+    fn set_last_acum_weight_update(&mut self, current_block: T::BlockNumber) {
+        self.staking.last_total_deposit_weight_update = current_block;
+    }
+}
+
+impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
+    fn amount(&self) -> u64 {
+        xassets::Module::<T>::all_type_balance_of(&self.depositor, &self.token).as_()
+    }
+
+    fn last_acum_weight(&self) -> u64 {
+        self.staking.last_deposit_weight
+    }
+
+    fn last_acum_weight_update(&self) -> u64 {
+        self.staking.last_deposit_weight_update.as_()
+    }
+
+    fn set_amount(&mut self, _: u64, _: bool) {}
+
+    fn set_last_acum_weight(&mut self, latest_deposit_weight: u64) {
+        self.staking.last_deposit_weight = latest_deposit_weight;
+    }
+
+    fn set_last_acum_weight_update(&mut self, current_block: T::BlockNumber) {
+        self.staking.last_deposit_weight_update = current_block;
+    }
 }

@@ -11,8 +11,8 @@ pub trait VoteWeight<BlockNumber: As<u64>> {
     fn last_acum_weight_update(&self) -> u64;
 
     fn latest_acum_weight(&self, current_block: BlockNumber) -> u64 {
-        Self::last_acum_weight(&self)
-            + Self::amount(&self) * (current_block.as_() - Self::last_acum_weight_update(&self))
+        self.last_acum_weight()
+            + self.amount() * (current_block.as_() - self.last_acum_weight_update())
     }
 
     fn set_amount(&mut self, value: u64, to_add: bool);

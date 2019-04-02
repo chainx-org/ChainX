@@ -127,18 +127,18 @@ decl_storage! {
                 // xstaking
                 let pcx = xassets::Module::<T>::TOKEN.to_vec();
                 for (intention, value, name, url) in config.intentions.clone().into_iter() {
-                    let _ = xstaking::Module::<T>::bootstrap_register(&intention, name);
+                    xstaking::Module::<T>::bootstrap_register(&intention, name).unwrap();
 
-                    let _ = <xassets::Module<T>>::pcx_issue(&intention, value);
+                    <xassets::Module<T>>::pcx_issue(&intention, value).unwrap();
 
-                    let _ = <xassets::Module<T>>::move_balance(
+                    <xassets::Module<T>>::move_balance(
                         &pcx,
                         &intention,
                         xassets::AssetType::Free,
                         &intention,
                         xassets::AssetType::ReservedStaking,
                         value,
-                    );
+                    ).unwrap();
 
                     xstaking::Module::<T>::bootstrap_refresh(&intention, Some(url), Some(true), None, None);
                     xstaking::Module::<T>::bootstrap_update_vote_weight(&intention, &intention, value, true);
@@ -174,13 +174,13 @@ decl_storage! {
 
                 // xspot
                 for (first, second, precision, unit, price, status) in config.pair_list.iter() {
-                    let _ = xspot::Module::<T>::add_trading_pair(
+                    xspot::Module::<T>::add_trading_pair(
                         CurrencyPair::new(first.clone(), second.clone()),
                         *precision,
                         *unit,
                         *price,
                         *status
-                    );
+                    ).unwrap();
                 }
             });
 

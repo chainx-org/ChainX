@@ -20,64 +20,16 @@ use support::{
 // ChainX
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
-use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder, VoteWeight};
+use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder};
 #[cfg(feature = "std")]
 use xsupport::u8array_to_string;
-use xsupport::{debug, info};
+use xsupport::{debug, error, info};
 
 pub use self::types::{
     DepositRecord, DepositVoteWeight, PseduIntentionProfs, PseduIntentionVoteWeight,
 };
 
-impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
-    fn amount(&self) -> u64 {
-        xassets::Module::<T>::all_type_balance(&self.token).as_()
-    }
-
-    fn last_acum_weight(&self) -> u64 {
-        self.staking.last_total_deposit_weight
-    }
-
-    fn last_acum_weight_update(&self) -> u64 {
-        self.staking.last_total_deposit_weight_update.as_()
-    }
-
-    fn set_amount(&mut self, _: u64, _: bool) {}
-
-    fn set_last_acum_weight(&mut self, latest_deposit_weight: u64) {
-        self.staking.last_total_deposit_weight = latest_deposit_weight;
-    }
-
-    fn set_last_acum_weight_update(&mut self, current_block: T::BlockNumber) {
-        self.staking.last_total_deposit_weight_update = current_block;
-    }
-}
-
-impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
-    fn amount(&self) -> u64 {
-        xassets::Module::<T>::all_type_balance_of(&self.depositor, &self.token).as_()
-    }
-
-    fn last_acum_weight(&self) -> u64 {
-        self.staking.last_deposit_weight
-    }
-
-    fn last_acum_weight_update(&self) -> u64 {
-        self.staking.last_deposit_weight_update.as_()
-    }
-
-    fn set_amount(&mut self, _: u64, _: bool) {}
-
-    fn set_last_acum_weight(&mut self, latest_deposit_weight: u64) {
-        self.staking.last_deposit_weight = latest_deposit_weight;
-    }
-
-    fn set_last_acum_weight_update(&mut self, current_block: T::BlockNumber) {
-        self.staking.last_deposit_weight_update = current_block;
-    }
-}
-
-pub trait Trait: xsystem::Trait + xstaking::Trait + xspot::Trait {
+pub trait Trait: xsystem::Trait + xstaking::Trait + xspot::Trait + xsdot::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     type DetermineTokenJackpotAccountId: TokenJackpotAccountIdFor<
@@ -113,8 +65,8 @@ where
 
 decl_event!(
     pub enum Event<T> where <T as balances::Trait>::Balance, <T as system::Trait>::AccountId {
-        Issue(AccountId, Token, Balance),
-        Claim(AccountId, Token, u64, u64, Balance),
+        DepositorReward(AccountId, Token, Balance),
+        DepositorClaim(AccountId, Token, u64, u64, Balance),
     }
 );
 
@@ -131,7 +83,7 @@ decl_module! {
             );
 
             ensure!(
-                Self::psedu_intentions().into_iter().find(|i| i.clone() == token).is_some(),
+                Self::psedu_intentions().contains(&token),
                 "Cannot claim from unsupport token."
             );
 
@@ -186,6 +138,13 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
             value
         );
         Self::issue_reward(source, target, value)?;
+        <DepositRecords<T>>::insert(
+            (source.clone(), target.clone()),
+            DepositVoteWeight {
+                last_deposit_weight: 0,
+                last_deposit_weight_update: <system::Module<T>>::block_number(),
+            },
+        );
         Self::update_vote_weight(source, target, value, true);
 
         Ok(())
@@ -224,7 +183,7 @@ impl<T: Trait> Module<T> {
                     &addr,
                     ClaimType::PseduIntention(token.clone()),
                 )?;
-            Self::deposit_event(RawEvent::Claim(
+            Self::deposit_event(RawEvent::DepositorClaim(
                 who.clone(),
                 token.clone(),
                 source_vote_weight,
@@ -249,7 +208,14 @@ impl<T: Trait> Module<T> {
                 let seconds = (irr_block * 10 * 60) as u64;
                 Ok(seconds / seconds_per_block.as_())
             }
-            _ => Err("This token is not supported."),
+            <xsdot::Module<T> as ChainT>::TOKEN => Ok(0u64),
+            _ => {
+                error!(
+                    "[wait_blocks] token {:?} is unsupported",
+                    u8array_to_string(token)
+                );
+                Err("This token is not supported.")
+            }
         }
     }
 
@@ -284,7 +250,11 @@ impl<T: Trait> Module<T> {
 
         xassets::Module::<T>::pcx_move_free_balance(&addr, source, reward).map_err(|e| e.info())?;
 
-        Self::deposit_event(RawEvent::Issue(source.clone(), token.clone(), value));
+        Self::deposit_event(RawEvent::DepositorReward(
+            source.clone(),
+            token.clone(),
+            value,
+        ));
 
         Ok(())
     }
@@ -336,10 +306,7 @@ impl<T: Trait> OnAssetRegisterOrRevoke for Module<T> {
         }
 
         ensure!(
-            Self::psedu_intentions()
-                .into_iter()
-                .find(|i| i == token)
-                .is_none(),
+            !Self::psedu_intentions().contains(token),
             "Cannot register psedu intention repeatedly."
         );
 
@@ -404,8 +371,9 @@ impl<T: Trait> Module<T> {
 
         return pcx_asset.precision().as_();
     }
+
     pub fn asset_power(token: &Token) -> Option<T::Balance> {
-        if token.eq(&b"SDOT".to_vec()) {
+        if token.eq(&<xsdot::Module<T> as ChainT>::TOKEN.to_vec()) {
             return Some(As::sa(10_u64.pow(Self::pcx_precision() - 1))); //0.1 PCX
         } else if token.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) {
             return Some(As::sa(10_u64.pow(Self::pcx_precision())));
@@ -424,8 +392,9 @@ impl<T: Trait> Module<T> {
 
         None
     }
-    //资产总发行折合成PCX，已含PCX精度
-    //aver_asset_price(token)*token的总发行量[含token的精度]/(10^token的精度)
+
+    // Convert the total issuance of some token to equivalent PCX, including the PCX precision.
+    // aver_asset_price(token) * total_issuance(token) / 10^token.precision
     pub fn trans_pcx_stake(token: &Token) -> Option<T::Balance> {
         if let Some(power) = Self::asset_power(token) {
             match <xassets::Module<T>>::get_asset(token) {
