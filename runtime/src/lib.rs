@@ -447,7 +447,7 @@ impl_runtime_apis! {
     impl runtime_api::xbridge_api::XBridgeApi<Block> for Runtime {
         // result is (Vec<(accountid, (hot pubkey, cold pubkey)), (required count, total count), hot_trustee_addr, cold_trustee_addr)>)
         fn mock_bitcoin_new_trustees(candidates: Vec<AccountId>) -> Result<(Vec<(AccountId, (Vec<u8>, Vec<u8>))>, (u32, u32), TrusteeAddrInfo, TrusteeAddrInfo), Vec<u8>> {
-            XBridgeOfBTC::generate_new_trustees(&candidates).map_err(|e_str| e_str.as_bytes().to_vec())
+            XBridgeOfBTC::try_to_generate_new_trustees(&candidates).map_err(|e_str| e_str.as_bytes().to_vec())
         }
     }
 }

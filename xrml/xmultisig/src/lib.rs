@@ -20,6 +20,8 @@ use support::{
 use system::ensure_signed;
 
 // ChainX
+use xr_primitives::traits::TrusteeForChain;
+
 use xassets::Chain;
 use xsupport::{debug, error, info};
 
@@ -307,14 +309,12 @@ impl<T: Trait> Module<T> {
             }
         }
 
-        match chain {
-            Chain::Bitcoin => {
-                xbitcoin::Module::<T>::generate_new_trustees(&new_trustees)?;
-            }
+        let trustees = match chain {
+            Chain::Bitcoin => xbitcoin::Module::<T>::generate_new_trustees(&new_trustees)?,
             _ => return Err("no transition trustee support for this chain"),
-        }
+        };
 
-        Self::deploy_trustee_addr(chain, new_trustees)
+        Self::deploy_trustee_addr(chain, trustees)
     }
 }
 

@@ -253,7 +253,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, ()> for Module<T> {
         candidates: &Vec<T::AccountId>,
     ) -> StdResult<Vec<T::AccountId>, &'static str> {
         let (trustees, _, hot_trustee_addr_info, cold_trustee_addr_info) =
-            Self::generate_new_trustees(candidates)?;
+            Self::try_to_generate_new_trustees(candidates)?;
         let trustees = trustees
             .into_iter()
             .map(|(accountid, _)| accountid)
@@ -285,7 +285,7 @@ impl<T: Trait> Module<T> {
     /// multisig count: (required count, total count),
     /// hot: hot_trustee_addr,
     /// cold: cold_trustee_addr)>)
-    pub fn generate_new_trustees(
+    pub fn try_to_generate_new_trustees(
         candidates: &Vec<T::AccountId>,
     ) -> StdResult<
         (
