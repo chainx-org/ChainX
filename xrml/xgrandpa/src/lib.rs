@@ -35,7 +35,8 @@ use fg_primitives::ScheduledChange;
 use primitives::traits::{Convert, CurrentHeight};
 use rstd::prelude::*;
 use substrate_primitives::ed25519::Public as AuthorityId;
-use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue, StorageVec};
+use support::storage::unhashed::StorageVec;
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
 use system::ensure_signed;
 
 // ChainX

@@ -28,19 +28,19 @@ runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate"
 [features]
 default = ["std"]
 std = [
-	"serde/std",
-	"serde_derive",
-	"parity-codec/std",
-	# Substrate
-	"substrate-primitives/std",
-	"fg-primitives/std",
-	"rstd/std",
-	"primitives/std",
-	"support/std",
-	"system/std",
+    "serde/std",
+    "serde_derive",
+    "parity-codec/std",
+    # Substrate
+    "substrate-primitives/std",
+    "fg-primitives/std",
+    "rstd/std",
+    "primitives/std",
+    "support/std",
+    "system/std",
     "consensus/std",
-	"finality-tracker/std",
-	# ChainX
-	"xsupport/std",
-	"xsession/std",
+    "finality-tracker/std",
+    # ChainX
+    "xsupport/std",
+    "xsession/std",
 ]
