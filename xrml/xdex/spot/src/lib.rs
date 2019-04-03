@@ -99,18 +99,12 @@ decl_module! {
         pub fn cancel_order(origin, pair_index: TradingPairIndex, order_index: OrderIndex) -> Result {
             let who = ensure_signed(origin)?;
 
-            let pair = Self::trading_pair(&pair_index)?;
-            ensure!(pair.online, "Can't cancel order if the trading pair is already offline");
+            Self::check_cancel_order(&who, pair_index, order_index)?;
+            Self::apply_cancel_order(&who, pair_index, order_index)
+        }
 
-            let order_status = match Self::order_info_of(&(who.clone(), order_index)) {
-                Some(x) => x.status,
-                None => return Err("The order doesn't exist"),
-            };
-            ensure!(
-                order_status == OrderStatus::ZeroExecuted || order_status == OrderStatus::ParitialExecuted,
-                "Only ZeroExecuted and ParitialExecuted order can be canceled"
-            );
-
+        fn set_cancel_order(who: T::AccountId, pair_index: TradingPairIndex, order_index: OrderIndex) -> Result {
+            Self::check_cancel_order(&who, pair_index, order_index)?;
             Self::apply_cancel_order(&who, pair_index, order_index)
         }
 
@@ -339,6 +333,22 @@ impl<T: Trait> Module<T> {
         );
 
         Self::try_match_order(&pair, &mut order, pair_index, direction, price);
+
+        Ok(())
+    }
+
+    fn check_cancel_order(who: &T::AccountId, pair_index: TradingPairIndex, order_index: OrderIndex) -> Result {
+        let pair = Self::trading_pair(&pair_index)?;
+        ensure!(pair.online, "Can't cancel order if the trading pair is already offline");
+
+        let order_status = match Self::order_info_of(&(who.clone(), order_index)) {
+            Some(x) => x.status,
+            None => return Err("The order doesn't exist"),
+        };
+        ensure!(
+            order_status == OrderStatus::ZeroExecuted || order_status == OrderStatus::ParitialExecuted,
+            "Only ZeroExecuted and ParitialExecuted order can be canceled"
+        );
 
         Ok(())
     }
