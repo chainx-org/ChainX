@@ -87,6 +87,9 @@ decl_storage! {
         pub TrusteeInfoConfigOf get(trustee_info_config) config(): map Chain => TrusteeInfoConfig;
         /// trustee property of a accountid and chain
         pub TrusteeIntentionPropertiesOf get(trustee_intention_props_of): map (T::AccountId, Chain) => Option<TrusteeIntentionProps>;
+
+        pub TeamAddress get(team_address): T::AccountId;
+        pub CouncilAddress get(council_address): T::AccountId;
     }
 }
 

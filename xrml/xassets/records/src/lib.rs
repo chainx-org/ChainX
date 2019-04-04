@@ -15,9 +15,11 @@ use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageVa
 use xassets::{AssetType, Chain, ChainT, Memo, Token};
 use xsupport::storage::linked_node::{MultiNodeIndex, Node};
 
+use xsupport::{error, info};
+
 pub use self::types::{AddrStr, Application, LinkedMultiKey, RecordInfo, TxState};
 
-pub trait Trait: system::Trait + balances::Trait + xassets::Trait + timestamp::Trait {
+pub trait Trait: system::Trait + xassets::Trait + timestamp::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -25,13 +27,41 @@ pub trait Trait: system::Trait + balances::Trait + xassets::Trait + timestamp::T
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
+        // only for root
+        fn deposit_from_root(who: T::AccountId, token: Token, balance: T::Balance) -> Result {
+            Self::deposit(&who, &token, balance)
+        }
+
+        fn withdrawal_from_root(who: T::AccountId, token: Token, balance: T::Balance) -> Result {
+            Self::withdrawal(&who, &token, balance, Default::default(), Default::default())
+        }
+
+        fn withdrawal_finish_from_root(withdrawal_id: u32, success: bool) -> Result {
+            match Self::withdrawal_finish(withdrawal_id, success) {
+                Ok(_) => {
+                    info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
+                    Ok(())
+                }
+                Err(_e) => {
+                    error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:}, please use root to fix it", withdrawal_id, _e);
+                    Err(_e)
+                }
+            }
+        }
+
+        pub fn fix_withdrawal_state_list(item: Vec<(u32, bool)>) -> Result {
+            for (withdrawal_id, success) in item {
+                let _ = Self::withdrawal_finish_from_root(withdrawal_id, success);
+            }
+            Ok(())
+        }
     }
 }
 
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
-        <T as balances::Trait>::Balance {
+        <T as xassets::Trait>::Balance {
         Deposit(AccountId, Token, Balance),
         WithdrawalApply(u32, AccountId, Chain, Token, Balance, Memo, AddrStr, TxState),
         WithdrawalFinish(u32, bool),
@@ -64,7 +94,7 @@ impl<T: Trait> Module<T> {
     fn withdraw_check_before(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
         Self::before(who, token)?;
 
-        let free = xassets::Module::<T>::free_balance(who, token);
+        let free = xassets::Module::<T>::free_balance_of(who, token);
         if free < value {
             return Err("free balance not enough for this account");
         }
@@ -77,7 +107,7 @@ impl<T: Trait> Module<T> {
     /// deposit, notice this func has include deposit_init and deposit_finish (not wait for block confirm process)
     pub fn deposit(who: &T::AccountId, token: &Token, balance: T::Balance) -> Result {
         Self::before(who, token)?;
-        xassets::Module::<T>::issue(token, who, balance)?;
+        let _ = xassets::Module::<T>::issue(token, who, balance)?;
         Self::deposit_event(RawEvent::Deposit(who.clone(), token.clone(), balance));
         Ok(())
     }
@@ -164,7 +194,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn lock(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
-        xassets::Module::<T>::move_balance(
+        let _ = xassets::Module::<T>::move_balance(
             token,
             who,
             AssetType::Free,
@@ -172,11 +202,12 @@ impl<T: Trait> Module<T> {
             AssetType::ReservedWithdrawal,
             value,
         )
-        .map_err(|e| e.info())
+        .map_err(|e| e.info())?;
+        Ok(())
     }
 
     fn unlock(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
-        xassets::Module::<T>::move_balance(
+        let _ = xassets::Module::<T>::move_balance(
             token,
             who,
             AssetType::ReservedWithdrawal,
@@ -184,11 +215,13 @@ impl<T: Trait> Module<T> {
             AssetType::Free,
             value,
         )
-        .map_err(|e| e.info())
+        .map_err(|e| e.info())?;
+        Ok(())
     }
 
     fn destroy(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
-        xassets::Module::<T>::destroy(&token, &who, value)
+        let _ = xassets::Module::<T>::destroy(&token, &who, value)?;
+        Ok(())
     }
 
     pub fn withdrawal_application_numbers(chain: Chain, max_count: u32) -> Option<Vec<u32>> {

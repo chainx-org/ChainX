@@ -35,7 +35,7 @@ decl_event!(
     pub enum Event<T>
     where
         <T as system::Trait>::AccountId,
-        <T as balances::Trait>::Balance
+        <T as xassets::Trait>::Balance
     {
         /// Someone claimed some DOTs.
         Claimed(AccountId, EthereumAddress, Balance),

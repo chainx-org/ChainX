@@ -51,14 +51,16 @@ impl<T: Trait> Module<T> {
     }
 
     /// Actually move someone's ReservedDexSpot token to another one's Free
+    #[inline]
     fn apply_delivery(
         token: &Token,
         value: T::Balance,
         from: &T::AccountId,
         to: &T::AccountId,
     ) -> Result {
-        <xassets::Module<T>>::move_balance(token, from, ReservedDexSpot, to, Free, value)
-            .map_err(|e| e.info())
+        let _ = <xassets::Module<T>>::move_balance(token, from, ReservedDexSpot, to, Free, value)
+            .map_err(|e| e.info())?;
+        Ok(())
     }
 
     /// Actually reserve tokens required by putting order.
@@ -67,20 +69,23 @@ impl<T: Trait> Module<T> {
         token: &Token,
         value: T::Balance,
     ) -> Result {
-        if <xassets::Module<T>>::free_balance(who, token) < value {
+        if <xassets::Module<T>>::free_balance_of(who, token) < value {
             return Err("Can not put order if transactor's free token too low");
         }
 
-        <xassets::Module<T>>::move_balance(token, who, Free, who, ReservedDexSpot, value)
-            .map_err(|e| e.info())
+        let _ = <xassets::Module<T>>::move_balance(token, who, Free, who, ReservedDexSpot, value)
+            .map_err(|e| e.info())?;
+        Ok(())
     }
 
+    #[inline]
     pub(crate) fn cancel_order_unreserve(
         who: &T::AccountId,
         token: &Token,
         value: T::Balance,
     ) -> Result {
-        <xassets::Module<T>>::move_balance(token, who, ReservedDexSpot, who, Free, value)
-            .map_err(|e| e.info())
+        let _ = <xassets::Module<T>>::move_balance(token, who, ReservedDexSpot, who, Free, value)
+            .map_err(|e| e.info())?;
+        Ok(())
     }
 }

@@ -91,7 +91,7 @@ impl<T: Trait> Module<T> {
         session_reward: T::Balance,
         validators: &mut Vec<T::AccountId>,
     ) {
-        let council = Self::council_address();
+        let council = xaccounts::Module::<T>::council_address();
 
         let missed = <MissedOfPerSession<T>>::take(who) as u64;
         let block_reward = Self::reward_of_per_block(session_reward);
@@ -158,7 +158,7 @@ impl<T: Trait> Module<T> {
         for who in inactive_slashed.iter() {
             let missed = T::Balance::sa(<MissedOfPerSession<T>>::take(who) as u64);
             let should_slash = missed * Self::minimum_penalty();
-            let council = Self::council_address();
+            let council = xaccounts::Module::<T>::council_address();
 
             let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
             let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
@@ -190,7 +190,8 @@ impl<T: Trait> Module<T> {
         session_reward = if current_index <= SESSIONS_PER_ROUND {
             let to_team = T::Balance::sa(session_reward.as_() * 2 / 10);
             debug!("[reward] issue to the team: {:?}", to_team);
-            let _ = <xassets::Module<T>>::pcx_issue(&Self::team_address(), to_team);
+            let _ =
+                <xassets::Module<T>>::pcx_issue(&xaccounts::Module::<T>::team_address(), to_team);
             session_reward - to_team
         } else {
             session_reward

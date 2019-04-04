@@ -24,7 +24,7 @@ pub struct PageData<T> {
 #[serde(rename_all = "camelCase")]
 pub struct AssetInfo {
     pub name: String,
-    pub details: CodecBTreeMap<AssetType, Balance>,
+    pub details: BTreeMap<AssetType, Balance>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -36,14 +36,14 @@ pub struct TotalAssetInfo {
     precision: u16,
     desc: String,
     online: bool,
-    details: CodecBTreeMap<AssetType, Balance>,
+    details: BTreeMap<AssetType, Balance>,
 }
 
 impl TotalAssetInfo {
     pub fn new(
         asset: Asset,
         online: bool,
-        details: CodecBTreeMap<AssetType, Balance>,
+        details: BTreeMap<AssetType, Balance>,
     ) -> TotalAssetInfo {
         TotalAssetInfo {
             name: String::from_utf8_lossy(&asset.token()).into_owned(),

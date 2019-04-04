@@ -25,7 +25,6 @@ use xspot::{
     TradingPair, TradingPairIndex,
 };
 use xstaking::IntentionProfs;
-use xsupport::storage::btree_map::CodecBTreeMap;
 use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
 
 mod error;

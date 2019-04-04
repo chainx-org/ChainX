@@ -22,7 +22,6 @@ xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../../xbridge/bitcoin", d
 [dev-dependencies]
 # Substrate
 substrate-primitives = { git = "https://github.com/chainpool/substrate" }
-balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate" }
 timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate" }
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
 # ChainX

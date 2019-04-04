@@ -88,16 +88,6 @@ impl system::Trait for Runtime {
     type Log = Log;
 }
 
-impl balances::Trait for Runtime {
-    type Balance = Balance;
-    type OnFreeBalanceZero = ();
-    type OnNewAccount = Indices;
-    type Event = Event;
-    type TransactionPayment = ();
-    type DustRemoval = ();
-    type TransferPayment = ();
-}
-
 impl timestamp::Trait for Runtime {
     type Moment = TimestampU64;
     type OnTimestampSet = Aura;
@@ -147,10 +137,12 @@ impl xaccounts::Trait for Runtime {
 }
 // fees
 impl xfee_manager::Trait for Runtime {
-    //    type Event = Event;
+    type Event = Event;
 }
 // assets
 impl xassets::Trait for Runtime {
+    type Balance = Balance;
+    type OnNewAccount = Indices;
     type Event = Event;
     type OnAssetChanged = (XTokens);
     type OnAssetRegisterOrRevoke = (XTokens, XSpot);
@@ -180,7 +172,7 @@ impl xspot::Trait for Runtime {
 
 impl indices::Trait for Runtime {
     type AccountIndex = AccountIndex;
-    type IsDeadAccount = Balances;
+    type IsDeadAccount = XAssets;
     type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
     type Event = Event;
 }
@@ -208,8 +200,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic
     {
         System: system::{default, Log(ChangesTrieRoot)},
-        Indices: indices,
-        Balances: balances::{Module, Storage, Config<T>, Event<T>},
+        Indices: indices::{Module, Call, Storage, Event<T>},
         Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
         Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
         Session: xsession,
@@ -219,13 +210,13 @@ construct_runtime!(
         Sudo: sudo,
 
         // chainx runtime module
-        XSystem: xsystem::{Module, Call, Storage, Config<T>, Inherent},
+        XSystem: xsystem::{Module, Call, Storage, Inherent},
         XAccounts: xaccounts,
         // fee
-        XFeeManager: xfee_manager::{Module, Call, Storage, Config<T>},
+        XFeeManager: xfee_manager::{Module, Call, Storage, Config<T>, Event<T>},
         // assets
         XAssets: xassets,
-        XAssetsRecords: xrecords::{Module, Storage, Event<T>},
+        XAssetsRecords: xrecords::{Module, Call, Storage, Event<T>},
         XAssetsProcess: xprocess::{Module, Call, Storage, Config<T>},
         // mining
         XStaking: xstaking,
@@ -380,7 +371,7 @@ impl_runtime_apis! {
             XAssets::all_assets()
         }
 
-        fn valid_assets_of(who: AccountId) -> Vec<(xassets::Token, xsupport::storage::btree_map::CodecBTreeMap<xassets::AssetType, Balance>)> {
+        fn valid_assets_of(who: AccountId) -> Vec<(xassets::Token, rstd::collections::btree_map::BTreeMap<xassets::AssetType, Balance>)> {
             XAssets::valid_assets_of(&who)
         }
 

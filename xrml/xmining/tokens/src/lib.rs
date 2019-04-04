@@ -64,7 +64,7 @@ where
 }
 
 decl_event!(
-    pub enum Event<T> where <T as balances::Trait>::Balance, <T as system::Trait>::AccountId {
+    pub enum Event<T> where <T as xassets::Trait>::Balance, <T as system::Trait>::AccountId {
         DepositorReward(AccountId, Token, Balance),
         DepositorClaim(AccountId, Token, u64, u64, Balance),
     }
@@ -400,7 +400,8 @@ impl<T: Trait> Module<T> {
             match <xassets::Module<T>>::get_asset(token) {
                 Ok(asset) => {
                     let pow_precision = 10_u128.pow(asset.precision() as u32);
-                    let total_balance = <xassets::Module<T>>::all_type_balance(&token).as_();
+                    let total_balance =
+                        <xassets::Module<T>>::all_type_total_asset_balance(&token).as_();
 
                     let total = match (total_balance as u128).checked_mul(power.as_() as u128) {
                         Some(x) => T::Balance::sa((x / pow_precision) as u64),

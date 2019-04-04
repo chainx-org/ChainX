@@ -48,9 +48,9 @@ decl_storage! {
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
             use support::{StorageMap, StorageValue};
-            use primitives::{StorageOverlay, traits::{Zero, As}};
+            use primitives::{StorageOverlay, traits::As};
             use xaccounts::{TrusteeEntity, TrusteeIntentionProps};
-            use xassets::{ChainT, AssetType, Token, Chain, Asset};
+            use xassets::{ChainT, Token, Chain, Asset};
             use btc_chain::BlockHeader;
             use xbitcoin::BlockHeaderInfo;
             use xspot::CurrencyPair;
@@ -86,20 +86,16 @@ decl_storage! {
                 )
                 .unwrap();
 
-                xassets::Module::<T>::bootstrap_register_asset(pcx, true, false, Zero::zero()).unwrap();
+                xassets::Module::<T>::bootstrap_register_asset(pcx, true, false).unwrap();
 
                 // init for asset_list
                 for (asset, is_online, is_psedu_intention, init_list) in config.asset_list.iter() {
                     let token = asset.token();
-                    xassets::Module::<T>::bootstrap_register_asset(asset.clone(), *is_online, *is_psedu_intention, Zero::zero()).unwrap();
+                    xassets::Module::<T>::bootstrap_register_asset(asset.clone(), *is_online, *is_psedu_intention).unwrap();
 
                     for (accountid, value) in init_list {
                         let value: T::Balance = As::sa(*value);
-                        let total_free_token = xassets::Module::<T>::total_asset_balance(&token, AssetType::Free);
-                        let free_token = xassets::Module::<T>::free_balance(&accountid, &token);
-                        xassets::Module::<T>::bootstrap_set_total_asset_balance(&token, AssetType::Free, total_free_token + value);
-                        // not create account
-                        xassets::Module::<T>::bootstrap_set_asset_balance(&accountid, &token, AssetType::Free, free_token + value);
+                        xassets::Module::<T>::issue(&token, &accountid, value).unwrap();
                     }
                 }
 

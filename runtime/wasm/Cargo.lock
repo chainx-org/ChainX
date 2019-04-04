@@ -292,7 +292,6 @@ dependencies = [
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-version 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-consensus 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-finality-tracker 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-indices 1.0.0 (git+https://github.com/chainpool/substrate)",
@@ -2305,22 +2304,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "srml-balances"
-version = "1.0.0"
-source = "git+https://github.com/chainpool/substrate#ab823cfaeede1b0c66fc224da4e6cf0701f97294"
-dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
- "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
- "substrate-keyring 1.0.0 (git+https://github.com/chainpool/substrate)",
-]
-
-[[package]]
 name = "srml-consensus"
 version = "1.0.0"
 source = "git+https://github.com/chainpool/substrate#ab823cfaeede1b0c66fc224da4e6cf0701f97294"
@@ -3368,7 +3351,6 @@ dependencies = [
  "sr-io 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
@@ -3400,7 +3382,6 @@ dependencies = [
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 1.0.0 (git+https://github.com/chainpool/substrate)",
@@ -3463,7 +3444,6 @@ dependencies = [
  "serialization 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 1.0.0 (git+https://github.com/chainpool/substrate)",
@@ -3484,7 +3464,6 @@ dependencies = [
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "tiny-keccak 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3506,7 +3485,6 @@ dependencies = [
  "sr-io 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 1.0.0 (git+https://github.com/chainpool/substrate)",
@@ -3524,7 +3502,6 @@ dependencies = [
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "xrml-xaccounts 0.4.0",
@@ -3541,7 +3518,6 @@ dependencies = [
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-consensus 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
@@ -3563,7 +3539,6 @@ dependencies = [
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 1.0.0 (git+https://github.com/chainpool/substrate)",
@@ -3586,7 +3561,6 @@ dependencies = [
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
- "srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
@@ -3594,7 +3568,6 @@ dependencies = [
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xbridge-bitcoin 0.9.0",
- "xrml-xmining-staking 0.4.0",
  "xrml-xsupport 0.4.0",
 ]
 
@@ -3901,7 +3874,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum sr-std 1.0.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum sr-version 1.0.0 (git+https://github.com/chainpool/substrate)" = "<none>"
-"checksum srml-balances 1.0.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum srml-consensus 1.0.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum srml-finality-tracker 1.0.0 (git+https://github.com/chainpool/substrate)" = "<none>"
 "checksum srml-indices 1.0.0 (git+https://github.com/chainpool/substrate)" = "<none>"

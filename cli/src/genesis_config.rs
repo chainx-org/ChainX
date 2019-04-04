@@ -15,7 +15,7 @@ use chainx_runtime::{
 use chainx_runtime::{
     ConsensusConfig, GenesisConfig, SessionConfig, SudoConfig, TimestampConfig, XAccountsConfig,
     XAssetsConfig, XAssetsProcessConfig, XBootstrapConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
-    XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
+    XFeeManagerConfig, XSpotConfig, XStakingConfig, XTokensConfig,
 };
 
 use btc_chain::BlockHeader;
@@ -30,9 +30,6 @@ pub enum GenesisSpec {
 pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
     let sdot_claims = load_sdot_info().unwrap();
-
-    let zero_accountid: AccountId = substrate_primitives::H256::zero().unchecked_into();
-    let one_accountid: AccountId = substrate_primitives::H256::repeat_byte(0x1).unchecked_into();
 
     // account pub and pri key
     let alice = hex!["471af9e69d41ee06426940fd302454662742405cb9dcc5bc68ceb7bec979e5e4"];
@@ -176,8 +173,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .collect(),
         }),
         system: None,
-        indices: None,
-        balances: None,
         timestamp: Some(TimestampConfig {
             minimum_period: CONSENSUS_TIME, // 2 second block time.
         }),
@@ -196,10 +191,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         sudo: Some(SudoConfig { key: sudo_address }),
         // chainx runtime module
-        xsystem: Some(XSystemConfig {
-            death_account: zero_accountid,
-            burn_account: one_accountid,
-        }),
         xfee_manager: Some(XFeeManagerConfig {
             producer_fee_proportion: (1, 10),
             transaction_base_fee: 10000,

@@ -23,7 +23,6 @@ rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", def
 
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
-balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate", default-features = false }
 timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", default-features = false }
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default-features = false }
 sudo = { package = "srml-sudo", git = "https://github.com/chainpool/substrate", default-features = false }
@@ -84,7 +83,6 @@ std = [
 
     "support/std",
     "system/std",
-    "balances/std",
     "timestamp/std",
     "consensus/std",
     "sudo/std",

@@ -25,7 +25,6 @@ xassets = { package = "xrml-xassets-assets", path = "../../xrml/xassets/assets",
 runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
 session = { package = "srml-session", git = "https://github.com/chainpool/substrate" }
 timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate" }
-balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate" }
 indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate" }
 
 [features]

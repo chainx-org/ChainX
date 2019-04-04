@@ -49,12 +49,7 @@ pub use self::types::{
 pub type AddrStr = XString;
 
 pub trait Trait:
-    system::Trait
-    + balances::Trait
-    + timestamp::Trait
-    + xrecords::Trait
-    + xaccounts::Trait
-    + xfee_manager::Trait
+    system::Trait + timestamp::Trait + xrecords::Trait + xaccounts::Trait + xfee_manager::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -62,7 +57,7 @@ pub trait Trait:
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
-        <T as balances::Trait>::Balance {
+        <T as xassets::Trait>::Balance {
         /// version, block hash, block height, prev block hash, merkle root, timestamp, nonce, wait confirm block height, wait confirm block hash
         InsertHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
         /// tx hash, block hash, tx type
@@ -173,26 +168,6 @@ decl_module! {
             debug!("[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
 
             Self::apply_sig_withdraw(from, tx)?;
-            Ok(())
-        }
-
-        pub fn fix_withdrawal_state(withdrawal_id: u32, success: bool) -> Result {
-            match xrecords::Module::<T>::withdrawal_finish(withdrawal_id, success) {
-                Ok(_) => {
-                    info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
-                    Ok(())
-                }
-                Err(_e) => {
-                    error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:}, please use root to fix it", withdrawal_id, _e);
-                    Err(_e)
-                }
-            }
-        }
-
-        pub fn fix_withdrawal_state_list(item: Vec<(u32, bool)>) -> Result {
-            for (withdrawal_id, success) in item {
-                let _ = Self::fix_withdrawal_state(withdrawal_id, success);
-            }
             Ok(())
         }
 

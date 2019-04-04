@@ -48,7 +48,7 @@ pub trait TrusteeCall<AccountId> {
     fn exec(&self, exerciser: &AccountId) -> Result;
 }
 
-pub trait Trait: balances::Trait + xaccounts::Trait + xbitcoin::Trait + xstaking::Trait {
+pub trait Trait: xassets::Trait + xaccounts::Trait + xbitcoin::Trait {
     type MultiSig: MultiSigFor<Self::AccountId, Self::Hash>;
     type GenesisMultiSig: GenesisMultiSig<Self::AccountId>;
     type Proposal: Parameter + Dispatchable<Origin = Self::Origin> + TrusteeCall<Self::AccountId>;
@@ -111,7 +111,7 @@ decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
         <T as system::Trait>::Hash,
-        <T as balances::Trait>::Balance,
+        <T as xassets::Trait>::Balance,
         <T as Trait>::Proposal
     {
         /// deploy a multisig and get address, who deploy, deploy addr, owners num, required num
@@ -434,8 +434,8 @@ impl<T: Trait> Module<T> {
         }
 
         // set to related place
-        xstaking::TeamAddress::<T>::put(team_multisig_addr);
-        xstaking::CouncilAddress::<T>::put(council_multisig_addr);
+        xaccounts::TeamAddress::<T>::put(team_multisig_addr);
+        xaccounts::CouncilAddress::<T>::put(council_multisig_addr);
     }
 
     fn check_proposal(addr_info: &AddrInfo<T::AccountId>, proposal: &Box<T::Proposal>) -> Result {

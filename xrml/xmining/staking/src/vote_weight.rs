@@ -107,7 +107,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn channel_or_council_of(who: &T::AccountId, token: &Token) -> T::AccountId {
-        let council_address = Self::council_address();
+        let council_address = xaccounts::Module::<T>::council_address();
 
         if let Some(asset_info) = <xassets::AssetInfo<T>>::get(token) {
             let asset = asset_info.0;

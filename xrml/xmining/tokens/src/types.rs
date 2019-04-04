@@ -41,7 +41,7 @@ pub struct DepositRecord<'a, T: Trait> {
 
 impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
     fn amount(&self) -> u64 {
-        xassets::Module::<T>::all_type_balance(&self.token).as_()
+        xassets::Module::<T>::all_type_total_asset_balance(&self.token).as_()
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -65,7 +65,7 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
 
 impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
     fn amount(&self) -> u64 {
-        xassets::Module::<T>::all_type_balance_of(&self.depositor, &self.token).as_()
+        xassets::Module::<T>::all_type_asset_balance(&self.depositor, &self.token).as_()
     }
 
     fn last_acum_weight(&self) -> u64 {

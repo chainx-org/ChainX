@@ -32,7 +32,7 @@ const MAX_BACKLOG_ORDER: usize = 1000;
 pub type OrderInfo<T> = Order<
     TradingPairIndex,
     <T as system::Trait>::AccountId,
-    <T as balances::Trait>::Balance,
+    <T as xassets::Trait>::Balance,
     <T as Trait>::Price,
     <T as system::Trait>::BlockNumber,
 >;
@@ -125,7 +125,7 @@ decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
         <T as system::Trait>::BlockNumber,
-        <T as balances::Trait>::Balance,
+        <T as xassets::Trait>::Balance,
         <T as Trait>::Price
     {
         UpdateOrder(AccountId, OrderIndex, Balance, BlockNumber, OrderStatus, Balance, Vec<TradeHistoryIndex>),

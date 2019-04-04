@@ -12,7 +12,6 @@ parity-codec = { version = "3.2", default-features = false, features = ["derive"
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
-balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate", default-features = false }
 timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", default-features = false }
 # ChainX
 xr-primitives = { path = "../../../xr-primitives", default-features = false }
@@ -36,7 +35,6 @@ std = [
     "rstd/std",
     "support/std",
     "system/std",
-    "balances/std",
     "timestamp/std",
     # ChainX
     "xr-primitives/std",

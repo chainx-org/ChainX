@@ -21,6 +21,7 @@ use runtime_api::{
 };
 
 use super::*;
+use parity_codec::alloc::collections::btree_map::BTreeMap;
 
 impl<B, E, Block, RA>
     ChainXApi<NumberFor<Block>, AccountIdForRpc, Balance, BlockNumber, SignedBlock<Block>>
@@ -61,7 +62,7 @@ where
         page_size: u32,
     ) -> Result<Option<PageData<AssetInfo>>> {
         let b = self.best_number()?;
-        let assets: Result<Vec<(Token, CodecBTreeMap<AssetType, Balance>)>> = self
+        let assets: Result<Vec<(Token, BTreeMap<AssetType, Balance>)>> = self
             .client
             .runtime_api()
             .valid_assets_of(&b, who.unchecked_into())
@@ -94,23 +95,11 @@ where
             );
 
             let key = <xassets::TotalAssetBalance<Runtime>>::key_for(asset.token().as_ref());
-            if let Some(info) = Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)? {
-                bmap.extend(info.0.iter());
-            }
-            // PCX free balance
-            if asset.token().as_slice() == xassets::Module::<Runtime>::TOKEN {
-                let key = <balances::TotalIssuance<Runtime>>::key();
-                let total_issue =
-                    Self::pickout::<Balance>(&state, &key)?.unwrap_or_else(Zero::zero);
-                let other_total: Balance = bmap
-                    .iter()
-                    .filter(|(&k, _)| k != AssetType::Free)
-                    .fold(Zero::zero(), |acc, (_, v)| acc + *v);
-                let free_issue = total_issue - other_total;
-                bmap.insert(xassets::AssetType::Free, free_issue);
+            if let Some(info) = Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key)? {
+                bmap.extend(info.iter());
             }
 
-            all_assets.push(TotalAssetInfo::new(asset, valid, CodecBTreeMap(bmap)));
+            all_assets.push(TotalAssetInfo::new(asset, valid, bmap));
         }
 
         into_pagedata(all_assets, page_index, page_size)
@@ -304,8 +293,18 @@ where
                 if let Some(profs) =
                     Self::pickout::<IntentionProfs<Balance, BlockNumber>>(&state, &key)?
                 {
-                    let free = <balances::FreeBalance<Runtime>>::key_for(&jackpot_addr);
-                    info.jackpot = Self::pickout::<Balance>(&state, &free)?.unwrap_or_default();
+                    let key = (
+                        jackpot_addr.clone(),
+                        xassets::Module::<Runtime>::TOKEN.to_vec(),
+                    );
+                    let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
+                    let map = Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &balances_key)?
+                        .unwrap_or_default();
+                    let free = map
+                        .get(&AssetType::Free)
+                        .map(|free| *free)
+                        .unwrap_or_default();
+                    info.jackpot = free;
                     info.jackpot_address = jackpot_addr.into();
                     info.total_nomination = profs.total_nomination;
                     info.last_total_vote_weight = profs.last_total_vote_weight;
@@ -353,8 +352,18 @@ where
                 if let Some(vote_weight) =
                     Self::pickout::<PseduIntentionVoteWeight<Balance>>(&state, &key)?
                 {
-                    let free = <balances::FreeBalance<Runtime>>::key_for(&jackpot_addr);
-                    info.jackpot = Self::pickout::<Balance>(&state, &free)?.unwrap_or_default();
+                    let key = (
+                        jackpot_addr.clone(),
+                        xassets::Module::<Runtime>::TOKEN.to_vec(),
+                    );
+                    let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
+                    let map = Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &balances_key)?
+                        .unwrap_or_default();
+                    let free = map
+                        .get(&AssetType::Free)
+                        .map(|free| *free)
+                        .unwrap_or_default();
+                    info.jackpot = free;
                     info.jackpot_address = jackpot_addr.into();
                     info.last_total_deposit_weight = vote_weight.last_total_deposit_weight;
                     info.last_total_deposit_weight_update =
@@ -383,10 +392,9 @@ where
 
                 let key = <xassets::TotalAssetBalance<Runtime>>::key_for(&token);
                 if let Some(total_asset_balance) =
-                    Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)?
+                    Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key)?
                 {
                     info.circulation = total_asset_balance
-                        .0
                         .iter()
                         .fold(Zero::zero(), |acc, (_, v)| acc + *v);
                 }
@@ -428,10 +436,9 @@ where
                     token.clone(),
                 ));
 
-                if let Some(balances) =
-                    Self::pickout::<CodecBTreeMap<AssetType, Balance>>(&state, &key)?
+                if let Some(balances) = Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key)?
                 {
-                    record.balance = balances.0.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v);
+                    record.balance = balances.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v);
                 }
 
                 record.id = String::from_utf8_lossy(&token).into_owned();

@@ -12,7 +12,6 @@ rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", def
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
-balances = { package = "srml-balances", git = "https://github.com/chainpool/substrate", default-features = false }
 # ChainX
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
@@ -35,7 +34,6 @@ std = [
     "primitives/std",
     "support/std",
     "system/std",
-    "balances/std",
     # ChainX
     "chainx-primitives/std",
     "xsystem/std",

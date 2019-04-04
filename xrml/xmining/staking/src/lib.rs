@@ -275,7 +275,7 @@ decl_module! {
 decl_event!(
     pub enum Event<T>
     where
-        <T as balances::Trait>::Balance,
+        <T as xassets::Trait>::Balance,
         <T as consensus::Trait>::SessionKey,
         <T as system::Trait>::AccountId,
         <T as system::Trait>::BlockNumber
@@ -332,8 +332,6 @@ decl_storage! {
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
 
-        pub TeamAddress get(team_address): T::AccountId;
-        pub CouncilAddress get(council_address): T::AccountId;
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(minimum_penalty) config(): T::Balance;
         /// The active validators that have ever been offline per session.

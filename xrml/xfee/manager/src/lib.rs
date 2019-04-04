@@ -9,7 +9,7 @@ pub mod types;
 // Substrate
 use primitives::traits::{As, CheckedDiv, CheckedMul, CheckedSub};
 use rstd::result::Result as StdResult;
-use support::{decl_module, decl_storage, dispatch::Result, StorageValue};
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
 
 // ChainX
 use chainx_primitives::Acceleration;
@@ -26,10 +26,25 @@ pub trait MakePayment<AccountId> {
     fn check_payment(who: &AccountId, encoded_len: usize, pay: u64, acc: Acceleration) -> Result;
 }
 
-pub trait Trait: xassets::Trait + xaccounts::Trait + xsystem::Trait {}
+pub trait Trait: xassets::Trait + xaccounts::Trait + xsystem::Trait {
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+}
+
+decl_event!(
+    pub enum Event<T> where
+        <T as system::Trait>::AccountId,
+        <T as xassets::Trait>::Balance
+    {
+        FeeForJackpot(AccountId, Balance),
+        FeeForProducer(AccountId, Balance),
+        FeeForCouncil(AccountId, Balance),
+    }
+);
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        fn deposit_event<T>() = default;
+
         fn set_producer_producer_fee_proportion(proportion: (u32, u32)) -> Result {
             assert!(proportion.1 != 0, "the proportion denominator can't be Zero");
             assert!(proportion.0 < proportion.1, "the proportion numerator should less than denominator");
@@ -104,7 +119,7 @@ impl<T: Trait> Module<T> {
 
         let transaction_fee = Self::transaction_fee(power, encoded_len as u64) * As::sa(acc as u64);
 
-        if b < transaction_fee + <balances::Module<T>>::existential_deposit() {
+        if b < transaction_fee {
             return Err("not enough funds for transaction fee");
         }
         Ok(transaction_fee)
@@ -117,27 +132,34 @@ impl<T: Trait> Module<T> {
         let for_producer = match fee.checked_mul(&As::sa(proportion.0 as u64)) {
             Some(r) => match r.checked_div(&As::sa(proportion.1 as u64)) {
                 Some(r) => r,
-                None => panic!("dev overflow!"),
+                None => return Err("[fee]calc fee proportion dev overflow!"),
             },
-            None => panic!("mul overflow!"),
+            None => return Err("[fee]calc fee proportion mul overflow!"),
         };
 
         // for_jackpot = fee - for_producer;
         let for_jackpot = match fee.checked_sub(&for_producer) {
             Some(r) => r,
-            None => panic!("sub overflow!"),
+            None => return Err("[fee]sub overflow!"),
         };
 
         if let Some(p) = xsystem::Module::<T>::block_producer() {
             let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(&p);
-            xassets::Module::<T>::pcx_move_free_balance(from, &p, for_producer)
+            let _ = xassets::Module::<T>::pcx_move_free_balance(from, &p, for_producer)
                 .map_err(|e| e.info())?;
-            xassets::Module::<T>::pcx_move_free_balance(from, &jackpot_addr, for_jackpot)
+
+            Self::deposit_event(RawEvent::FeeForProducer(p, for_producer));
+
+            let _ = xassets::Module::<T>::pcx_move_free_balance(from, &jackpot_addr, for_jackpot)
                 .map_err(|e| e.info())?;
+
+            Self::deposit_event(RawEvent::FeeForJackpot(jackpot_addr, for_jackpot));
         } else {
-            let death_account = xsystem::Module::<T>::death_account();
-            xassets::Module::<T>::pcx_move_free_balance(from, &death_account, fee)
+            let council = xaccounts::Module::<T>::council_address();
+            xassets::Module::<T>::pcx_move_free_balance(from, &council, fee)
                 .map_err(|e| e.info())?;
+
+            Self::deposit_event(RawEvent::FeeForJackpot(council, fee));
         }
 
         Ok(())

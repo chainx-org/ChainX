@@ -11,15 +11,15 @@ use chainx_primitives::{AccountIdForApi, Balance, Timestamp};
 
 pub mod xassets_api {
     use super::*;
+    use rstd::collections::btree_map::BTreeMap;
     use xassets::{Asset, AssetType, Memo, Token};
     use xrecords::AddrStr;
-    use xsupport::storage::btree_map::CodecBTreeMap;
 
     decl_runtime_apis! {
         pub trait XAssetsApi {
             fn valid_assets() -> Vec<Token>;
             fn all_assets() -> Vec<(Asset, bool)>;
-            fn valid_assets_of(who: AccountIdForApi) -> Vec<(Token, CodecBTreeMap<AssetType, Balance>)>;
+            fn valid_assets_of(who: AccountIdForApi) -> Vec<(Token, BTreeMap<AssetType, Balance>)>;
             fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdForApi, Balance, Timestamp>>;
             fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdForApi, Balance, Timestamp>>;
             fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result<(), Vec<u8>>;
