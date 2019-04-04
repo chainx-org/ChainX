@@ -25,7 +25,7 @@ use rstd::result;
 use runtime_io;
 use runtime_primitives::traits::{
     self, Applyable, As, Block as BlockT, CheckEqual, Checkable, Digest, Hash, Header, NumberFor,
-    OnFinalise, OnInitialise, One, Zero,
+    OffchainWorker, OnFinalize, OnInitialize, One, Zero,
 };
 use runtime_primitives::transaction_validity::{
     TransactionLongevity, TransactionPriority, TransactionValidity,
@@ -58,11 +58,6 @@ mod internal {
 pub trait ExecuteBlock<Block: BlockT> {
     /// Actually execute all transitioning for `block`.
     fn execute_block(block: Block);
-    /// Execute all extrinsics like when executing a `block`, but with dropping intial and final checks.
-    fn execute_extrinsics_without_checks(
-        block_number: NumberFor<Block>,
-        extrinsics: Vec<Block::Extrinsic>,
-    );
 }
 
 pub struct Executive<System, Block, Context, Payment, AllModules>(
@@ -74,7 +69,7 @@ impl<
     Block: traits::Block<Header=System::Header, Hash=System::Hash>,
     Context: Default,
     Payment: MakePayment<System::AccountId>,
-    AllModules: OnInitialise<System::BlockNumber> + OnFinalise<System::BlockNumber>,
+    AllModules: OnInitialize<System::BlockNumber> + OnFinalize<System::BlockNumber> + OffchainWorker<System::BlockNumber>,
 > ExecuteBlock<Block> for Executive<System, Block, Context, Payment, AllModules> where
     Block::Extrinsic: Checkable<Context> + Codec,
     <Block::Extrinsic as Checkable<Context>>::Checked: Applyable<Index=System::Index, AccountId=System::AccountId> + Accelerable<Index=System::Index, AccountId=System::AccountId>,
@@ -82,11 +77,7 @@ impl<
     <<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call as Dispatchable>::Origin: From<Option<System::AccountId>>
 {
     fn execute_block(block: Block) {
-        Self::execute_block(block);
-    }
-
-    fn execute_extrinsics_without_checks(block_number: NumberFor<Block>, extrinsics: Vec<Block::Extrinsic>) {
-        Self::execute_extrinsics_without_checks(block_number, extrinsics);
+        Executive::<System, Block, Context, Payment, AllModules>::execute_block(block);
     }
 }
 
@@ -95,7 +86,7 @@ impl<
     Block: traits::Block<Header=System::Header, Hash=System::Hash>,
     Context: Default,
     Payment: MakePayment<System::AccountId>,
-    AllModules: OnInitialise<System::BlockNumber> + OnFinalise<System::BlockNumber>,
+    AllModules: OnInitialize<System::BlockNumber> + OnFinalize<System::BlockNumber> + OffchainWorker<System::BlockNumber>,
 > Executive<System, Block, Context, Payment, AllModules> where
     Block::Extrinsic: Checkable<Context> + Codec,
     <Block::Extrinsic as Checkable<Context>>::Checked: Applyable<Index=System::Index, AccountId=System::AccountId> + Accelerable<Index=System::Index, AccountId=System::AccountId>,
@@ -103,13 +94,13 @@ impl<
     <<<Block::Extrinsic as Checkable<Context>>::Checked as Applyable>::Call as Dispatchable>::Origin: From<Option<System::AccountId>>
 {
     /// Start the execution of a particular block.
-    pub fn initialise_block(header: &System::Header) {
-        Self::initialise_block_impl(header.number(), header.parent_hash(), header.extrinsics_root());
+    pub fn initialize_block(header: &System::Header) {
+        Self::initialize_block_impl(header.number(), header.parent_hash(), header.extrinsics_root());
     }
 
-    fn initialise_block_impl(block_number: &System::BlockNumber, parent_hash: &System::Hash, extrinsics_root: &System::Hash) {
-        <system::Module<System>>::initialise(block_number, parent_hash, extrinsics_root);
-        <AllModules as OnInitialise<System::BlockNumber>>::on_initialise(*block_number);
+    fn initialize_block_impl(block_number: &System::BlockNumber, parent_hash: &System::Hash, extrinsics_root: &System::Hash) {
+        <system::Module<System>>::initialize(block_number, parent_hash, extrinsics_root);
+        <AllModules as OnInitialize<System::BlockNumber>>::on_initialize(*block_number);
     }
 
     fn initial_checks(block: &Block) {
@@ -130,7 +121,7 @@ impl<
 
     /// Actually execute all transitioning for `block`.
     pub fn execute_block(block: Block) {
-        Self::initialise_block(block.header());
+        Self::initialize_block(block.header());
 
         // any initial checks
         Self::initial_checks(&block);
@@ -143,36 +134,24 @@ impl<
         Self::final_checks(&header);
     }
 
-    /// Execute all extrinsics like when executing a `block`, but with dropping intial and final checks.
-    pub fn execute_extrinsics_without_checks(block_number: NumberFor<Block>, extrinsics: Vec<Block::Extrinsic>) {
-        // Make the api happy, but maybe we should not set them at all.
-        let parent_hash = <Block::Header as Header>::Hashing::hash(b"parent_hash");
-        let extrinsics_root = <Block::Header as Header>::Hashing::hash(b"extrinsics_root");
-
-        Self::initialise_block_impl(&block_number, &parent_hash, &extrinsics_root);
-
-        // execute extrinsics
-        Self::execute_extrinsics_with_book_keeping(extrinsics, block_number);
-    }
-
     /// Execute given extrinsics and take care of post-extrinsics book-keeping
     fn execute_extrinsics_with_book_keeping(extrinsics: Vec<Block::Extrinsic>, block_number: NumberFor<Block>) {
         extrinsics.into_iter().for_each(Self::apply_extrinsic_no_note);
 
         // post-extrinsics book-keeping.
         <system::Module<System>>::note_finished_extrinsics();
-        <AllModules as OnFinalise<System::BlockNumber>>::on_finalise(block_number);
+        <AllModules as OnFinalize<System::BlockNumber>>::on_finalize(block_number);
     }
 
-    /// Finalise the block - it is up the caller to ensure that all header fields are valid
+    /// Finalize the block - it is up the caller to ensure that all header fields are valid
     /// except state-root.
-    pub fn finalise_block() -> System::Header {
+    pub fn finalize_block() -> System::Header {
         <system::Module<System>>::note_finished_extrinsics();
-        <AllModules as OnFinalise<System::BlockNumber>>::on_finalise(<system::Module<System>>::block_number());
+        <AllModules as OnFinalize<System::BlockNumber>>::on_finalize(<system::Module<System>>::block_number());
 
         // setup extrinsics
         <system::Module<System>>::derive_extrinsics();
-        <system::Module<System>>::finalise()
+        <system::Module<System>>::finalize()
     }
 
     /// Apply extrinsic outside of the block execution function.
@@ -266,7 +245,7 @@ impl<
 
     fn final_checks(header: &System::Header) {
         // remove temporaries.
-        let new_header = <system::Module<System>>::finalise();
+        let new_header = <system::Module<System>>::finalize();
 
         // check digest.
         assert_eq!(
@@ -364,6 +343,11 @@ impl<
             return TransactionValidity::Invalid(NOT_ALLOW as i8);
         }
     }
+
+    /// Start an offchain worker and generate extrinsics.
+    pub fn offchain_worker(n: System::BlockNumber) {
+        <AllModules as OffchainWorker<System::BlockNumber>>::generate_extrinsics(n)
+    }
 }
 
 #[cfg(test)]
@@ -388,7 +372,7 @@ mod tests {
     use serde::{Serialize, Serializer};
     use std::{fmt, fmt::Debug};
 
-    /*impl_outer_origin! {
+    impl_outer_origin! {
         pub enum Origin for Runtime {
         }
     }
@@ -402,7 +386,6 @@ mod tests {
     // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
     #[derive(Clone, Eq, PartialEq)]
     pub struct Runtime;
-
     impl system::Trait for Runtime {
         type Origin = Origin;
         type Index = u64;
@@ -416,107 +399,24 @@ mod tests {
         type Event = MetaEvent;
         type Log = DigestItem;
     }
-
     impl balances::Trait for Runtime {
         type Balance = u64;
         type OnFreeBalanceZero = ();
         type OnNewAccount = ();
         type Event = MetaEvent;
+        type TransactionPayment = ();
+        type DustRemoval = ();
+        type TransferPayment = ();
     }
 
-    impl xfee_manager::Trait for Runtime {}
-
-    /*impl xsystem::Trait for Runtime {
-    }*/
-
-    impl xaccounts::Trait for Runtime {
-        type Event = MetaEvent;
-    }
-
-    impl CheckFee for Call<Runtime> {
-        fn check_fee(&self) -> Option<u64> {
-            // ret fee_power,     total_fee = base_fee * fee_power + byte_fee * bytes
-            Some(1 as u64)
-        }
-    }*/
-
-    // Snippets from sr_primitives::testing, fitting acceleration in.
-    #[derive(PartialEq, Eq, Clone, Encode, Decode)]
-    struct XTestXt<Call>(pub Option<u64>, pub u64, pub Call, pub u32);
-
-    impl<Call> Serialize for XTestXt<Call>
-    where
-        XTestXt<Call>: Encode,
-    {
-        fn serialize<S>(&self, seq: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            self.using_encoded(|bytes| seq.serialize_bytes(bytes))
-        }
-    }
-
-    impl<Call> Debug for XTestXt<Call> {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "XTestXt({:?}, {:?}, {:?})", self.0, self.1, self.3)
-        }
-    }
-
-    impl<Call: Codec + Sync + Send, Context> Checkable<Context> for XTestXt<Call> {
-        type Checked = Self;
-        fn check(self, _: &Context) -> Result<Self::Checked, &'static str> {
-            Ok(self)
-        }
-    }
-
-    impl<Call: Codec + Sync + Send> traits::Extrinsic for XTestXt<Call> {
-        fn is_signed(&self) -> Option<bool> {
-            None
-        }
-    }
-
-    impl<Call> Applyable for XTestXt<Call>
-    where
-        Call: 'static + Sized + Send + Sync + Clone + Eq + Codec + Debug,
-    {
-        type AccountId = u64;
-        type Index = u64;
-        type Call = Call;
-        fn sender(&self) -> Option<&u64> {
-            self.0.as_ref()
-        }
-        fn index(&self) -> Option<&u64> {
-            self.0.as_ref().map(|_| &self.1)
-        }
-        fn deconstruct(self) -> (Self::Call, Option<Self::AccountId>) {
-            (self.2, self.0)
-        }
-    }
-
-    impl<Call> xr_primitives::traits::Accelerable for XTestXt<Call>
-    where
-        Call: Member,
-    {
-        type Index = u64;
-        type AccountId = u64;
-        type Call = Call;
-        type Acceleration = u32;
-
-        fn acceleration(&self) -> Option<Self::Acceleration> {
-            Some(self.3)
-        }
-    }
-
-    type TestXt = XTestXt<Call<Runtime>>;
-
-    /*type Executive = super::Executive<
+    type TestXt = primitives::testing::TestXt<Call<Runtime>>;
+    type Executive = super::Executive<
         Runtime,
         Block<TestXt>,
-        balances::ChainContext<Runtime>,
-        fee_manager::Module<Runtime>,
+        system::ChainContext<Runtime>,
+        balances::Module<Runtime>,
         (),
-    >;*/
-    use crate::Executive;
+    >;
 
     #[test]
     fn balance_transfer_dispatch_works() {
@@ -526,22 +426,22 @@ mod tests {
             .0;
         t.extend(
             balances::GenesisConfig::<Runtime> {
-                balances: vec![(1, 111)],
                 transaction_base_fee: 10,
                 transaction_byte_fee: 0,
+                balances: vec![(1, 111)],
                 existential_deposit: 0,
                 transfer_fee: 0,
                 creation_fee: 0,
-                reclaim_rebate: 0,
+                vesting: vec![],
             }
             .build_storage()
             .unwrap()
             .0,
         );
-        let xt = XTestXt(Some(1), 0, Call::transfer(2.into(), 69.into()), 1);
+        let xt = primitives::testing::TestXt(Some(1), 0, Call::transfer(2, 69));
         let mut t = runtime_io::TestExternalities::<Blake2Hasher>::new(t);
         with_externalities(&mut t, || {
-            Executive::initialise_block(&Header::new(
+            Executive::initialize_block(&Header::new(
                 1,
                 H256::default(),
                 H256::default(),
@@ -550,42 +450,6 @@ mod tests {
             ));
             Executive::apply_extrinsic(xt).unwrap();
             assert_eq!(<balances::Module<Runtime>>::total_balance(&1), 32);
-            assert_eq!(<balances::Module<Runtime>>::total_balance(&2), 69);
-        });
-    }
-
-    #[test]
-    fn accelerate_balance_transfer_dispatch_works() {
-        let mut t = system::GenesisConfig::<Runtime>::default()
-            .build_storage()
-            .unwrap()
-            .0;
-        t.extend(
-            balances::GenesisConfig::<Runtime> {
-                balances: vec![(1, 111)],
-                transaction_base_fee: 10,
-                transaction_byte_fee: 0,
-                existential_deposit: 0,
-                transfer_fee: 0,
-                creation_fee: 0,
-                reclaim_rebate: 0,
-            }
-            .build_storage()
-            .unwrap()
-            .0,
-        );
-        let xt = XTestXt(Some(1), 0, Call::transfer(2.into(), 69.into()), 2);
-        let mut t = runtime_io::TestExternalities::<Blake2Hasher>::new(t);
-        with_externalities(&mut t, || {
-            Executive::initialise_block(&Header::new(
-                1,
-                H256::default(),
-                H256::default(),
-                [69u8; 32].into(),
-                Digest::default(),
-            ));
-            Executive::apply_extrinsic(xt).unwrap();
-            assert_eq!(<balances::Module<Runtime>>::total_balance(&1), 22);
             assert_eq!(<balances::Module<Runtime>>::total_balance(&2), 69);
         });
     }
@@ -612,7 +476,7 @@ mod tests {
                     parent_hash: [69u8; 32].into(),
                     number: 1,
                     state_root: hex!(
-                        "d9e26179ed13b3df01e71ad0bf622d56f2066a63e04762a83c0ae9deeb4da1d0"
+                        "49cd58a254ccf6abc4a023d9a22dcfc421e385527a250faec69f8ad0d8ed3e48"
                     )
                     .into(),
                     extrinsics_root: hex!(
@@ -655,7 +519,7 @@ mod tests {
                     parent_hash: [69u8; 32].into(),
                     number: 1,
                     state_root: hex!(
-                        "d9e26179ed13b3df01e71ad0bf622d56f2066a63e04762a83c0ae9deeb4da1d0"
+                        "49cd58a254ccf6abc4a023d9a22dcfc421e385527a250faec69f8ad0d8ed3e48"
                     )
                     .into(),
                     extrinsics_root: [0u8; 32].into(),
@@ -669,9 +533,9 @@ mod tests {
     #[test]
     fn bad_extrinsic_not_inserted() {
         let mut t = new_test_ext();
-        let xt = XTestXt(Some(1), 42, Call::transfer(33.into(), 69.into()), 1);
+        let xt = primitives::testing::TestXt(Some(1), 42, Call::transfer(33, 69));
         with_externalities(&mut t, || {
-            Executive::initialise_block(&Header::new(
+            Executive::initialize_block(&Header::new(
                 1,
                 H256::default(),
                 H256::default(),
@@ -681,5 +545,46 @@ mod tests {
             assert!(Executive::apply_extrinsic(xt).is_err());
             assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(0));
         });
+    }
+
+    #[test]
+    fn block_size_limit_enforced() {
+        let run_test = |should_fail: bool| {
+            let mut t = new_test_ext();
+            let xt = primitives::testing::TestXt(Some(1), 0, Call::transfer(33, 69));
+            let xt2 = primitives::testing::TestXt(Some(1), 1, Call::transfer(33, 69));
+            let encoded = xt2.encode();
+            let len = if should_fail {
+                (internal::MAX_TRANSACTIONS_SIZE - 1) as usize
+            } else {
+                encoded.len()
+            };
+            with_externalities(&mut t, || {
+                Executive::initialize_block(&Header::new(
+                    1,
+                    H256::default(),
+                    H256::default(),
+                    [69u8; 32].into(),
+                    Digest::default(),
+                ));
+                assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 0);
+
+                Executive::apply_extrinsic(xt).unwrap();
+                let res = Executive::apply_extrinsic_with_len(xt2, len, Some(encoded));
+
+                if should_fail {
+                    assert!(res.is_err());
+                    assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 28);
+                    assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(1));
+                } else {
+                    assert!(res.is_ok());
+                    assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 56);
+                    assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(2));
+                }
+            });
+        };
+
+        run_test(false);
+        run_test(true);
     }
 }

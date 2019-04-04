@@ -50,7 +50,7 @@ decl_module! {
             BlockProducer::<T>::put(producer);
             Ok(())
         }
-        fn on_finalise(_n: T::BlockNumber) {
+        fn on_finalize(_n: T::BlockNumber) {
             BlockProducer::<T>::kill();
         }
     }

@@ -28,7 +28,7 @@ mod service;
 use std::ops::Deref;
 
 use log::info;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
 pub use cli::{error, IntoExit, NoCustom, VersionInfo};
 use substrate_service::{Roles as ServiceRoles, ServiceFactory};
@@ -87,17 +87,19 @@ where
         "ChainX",
         args,
         exit,
-        |exit, custom_args, mut config| {
+        |exit, custom_args, config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
             info!("  by ChainX, 2018-2019");
             info!("Chain specification: {}", config.chain_spec.name());
             info!("Node name: {}", config.name);
             info!("Roles: {:?}", config.roles);
-            let runtime = Runtime::new().map_err(|e| format!("{:?}", e))?;
+            let runtime = RuntimeBuilder::new()
+                .name_prefix("main-tokio-")
+                .build()
+                .map_err(|e| format!("{:?}", e))?;
             let executor = runtime.executor();
 
-            config.custom.only_grandpa = custom_args.only_grandpa;
             if config.roles == ServiceRoles::AUTHORITY {
                 let name = custom_args
                     .validator_name

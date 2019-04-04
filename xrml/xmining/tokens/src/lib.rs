@@ -200,7 +200,7 @@ impl<T: Trait> Module<T> {
 
     /// Transform outside irreversible blocks to native blocks.
     fn wait_blocks(token: &Token) -> StdResult<u64, &'static str> {
-        let seconds_per_block: T::Moment = timestamp::Module::<T>::block_period();
+        let seconds_per_block: T::Moment = timestamp::Module::<T>::minimum_period();
         match token.as_slice() {
             // btc
             <xbitcoin::Module<T> as ChainT>::TOKEN => {

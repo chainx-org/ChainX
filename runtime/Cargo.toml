@@ -12,7 +12,9 @@ parity-codec = { version = "3.2", default-features = false }
 
 client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", default-features = false }
 substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-consensus-aura = { package = "substrate-consensus-aura-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+consensus_aura = { package = "substrate-consensus-aura-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+consensus_authorities = { package = "substrate-consensus-authorities", git = "https://github.com/chainpool/substrate", default-features = false }
+offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 
 runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
@@ -70,11 +72,13 @@ std = [
 
     "client/std",
     "substrate-primitives/std",
-    "runtime-io/std",
-    "consensus-aura/std",
+    "consensus_aura/std",
+    "consensus_authorities/std",
+    "offchain-primitives/std",
 
     # substrate runtime module
     "runtime-primitives/std",
+    "runtime-io/std",
     "version/std",
     "rstd/std",
 

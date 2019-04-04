@@ -179,7 +179,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         indices: None,
         balances: None,
         timestamp: Some(TimestampConfig {
-            period: CONSENSUS_TIME, // 2 second block time.
+            minimum_period: CONSENSUS_TIME, // 2 second block time.
         }),
         xsession: Some(SessionConfig {
             validators: endowed

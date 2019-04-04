@@ -337,16 +337,24 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn check_cancel_order(who: &T::AccountId, pair_index: TradingPairIndex, order_index: OrderIndex) -> Result {
+    fn check_cancel_order(
+        who: &T::AccountId,
+        pair_index: TradingPairIndex,
+        order_index: OrderIndex,
+    ) -> Result {
         let pair = Self::trading_pair(&pair_index)?;
-        ensure!(pair.online, "Can't cancel order if the trading pair is already offline");
+        ensure!(
+            pair.online,
+            "Can't cancel order if the trading pair is already offline"
+        );
 
         let order_status = match Self::order_info_of(&(who.clone(), order_index)) {
             Some(x) => x.status,
             None => return Err("The order doesn't exist"),
         };
         ensure!(
-            order_status == OrderStatus::ZeroExecuted || order_status == OrderStatus::ParitialExecuted,
+            order_status == OrderStatus::ZeroExecuted
+                || order_status == OrderStatus::ParitialExecuted,
             "Only ZeroExecuted and ParitialExecuted order can be canceled"
         );
 

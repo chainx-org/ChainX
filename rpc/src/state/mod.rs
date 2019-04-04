@@ -353,6 +353,7 @@ where
             &method,
             &data.0,
             ExecutionStrategy::NativeElseWasm,
+            state_machine::NeverOffchainExt::new(),
         )?;
         Ok(Bytes(return_data))
     }
@@ -461,7 +462,8 @@ where
                     })
                 });
 
-            sink.sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
+            sink
+                .sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
                 .send_all(initial.chain(stream))
                 // we ignore the resulting Stream (if the first stream is over we are unsubscribed)
                 .map(|_| ())
@@ -522,8 +524,12 @@ where
                     }
                 });
 
-            sink.sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
-                .send_all(stream::iter_result(vec![Ok(version)]).chain(stream))
+            sink
+                .sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
+                .send_all(
+                    stream::iter_result(vec![Ok(version)])
+                    .chain(stream)
+                )
                 // we ignore the resulting Stream (if the first stream is over we are unsubscribed)
                 .map(|_| ())
         });

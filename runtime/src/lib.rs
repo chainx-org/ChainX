@@ -19,7 +19,7 @@ use client::{
 };
 use runtime_primitives::generic;
 use runtime_primitives::traits::{
-    BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup,
+    AuthorityIdFor, BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup,
 };
 use runtime_primitives::transaction_validity::TransactionValidity;
 use runtime_primitives::ApplyResult;
@@ -272,16 +272,16 @@ impl_runtime_apis! {
             VERSION
         }
 
-        fn authorities() -> Vec<AuthorityId> {
-            Consensus::authorities()
-        }
-
         fn execute_block(block: Block) {
             Executive::execute_block(block)
         }
 
-        fn initialise_block(header: &<Block as BlockT>::Header) {
-            Executive::initialise_block(header)
+        fn initialize_block(header: &<Block as BlockT>::Header) {
+            Executive::initialize_block(header)
+        }
+
+        fn authorities() -> Vec<AuthorityId> {
+            panic!("Deprecated, please use `AuthoritiesApi`.")
         }
     }
 
@@ -296,8 +296,8 @@ impl_runtime_apis! {
             Executive::apply_extrinsic(extrinsic)
         }
 
-        fn finalise_block() -> <Block as BlockT>::Header {
-            Executive::finalise_block()
+        fn finalize_block() -> <Block as BlockT>::Header {
+            Executive::finalize_block()
         }
 
         fn inherent_extrinsics(data: InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
@@ -316,6 +316,12 @@ impl_runtime_apis! {
     impl client_api::TaggedTransactionQueue<Block> for Runtime {
         fn validate_transaction(tx: <Block as BlockT>::Extrinsic) -> TransactionValidity {
             Executive::validate_transaction(tx)
+        }
+    }
+
+    impl offchain_primitives::OffchainWorkerApi<Block> for Runtime {
+        fn offchain_worker(number: NumberFor<Block>) {
+            Executive::offchain_worker(number)
         }
     }
 
@@ -356,6 +362,12 @@ impl_runtime_apis! {
     impl consensus_aura::AuraApi<Block> for Runtime {
         fn slot_duration() -> u64 {
             Aura::slot_duration()
+        }
+    }
+
+    impl consensus_authorities::AuthoritiesApi<Block> for Runtime {
+        fn authorities() -> Vec<AuthorityIdFor<Block>> {
+            Consensus::authorities()
         }
     }
 

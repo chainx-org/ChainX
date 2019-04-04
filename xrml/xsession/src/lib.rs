@@ -87,7 +87,7 @@ decl_module! {
             Self::apply_force_new_session(apply_rewards)
         }
 
-        fn on_finalise(n: T::BlockNumber) {
+        fn on_finalize(n: T::BlockNumber) {
             Self::check_rotate_session(n);
         }
     }
@@ -225,7 +225,7 @@ impl<T: Trait> Module<T> {
 
     /// Get the time that should have elapsed over a session if everything was working perfectly.
     pub fn ideal_session_duration() -> T::Moment {
-        let block_period: T::Moment = <timestamp::Module<T>>::block_period();
+        let block_period: T::Moment = <timestamp::Module<T>>::minimum_period();
         let session_length: T::BlockNumber = Self::length();
         Mul::<T::BlockNumber>::mul(block_period, session_length)
     }

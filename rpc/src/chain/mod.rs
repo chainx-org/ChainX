@@ -57,9 +57,9 @@ pub trait ChainApi<Number, Hash, Header, SignedBlock> {
     #[rpc(name = "chain_getBlockHash", alias("chain_getHead"))]
     fn block_hash(&self, hash: Option<number::NumberOrHex<Number>>) -> Result<Option<Hash>>;
 
-    /// Get hash of the last finalised block in the canon chain.
-    #[rpc(name = "chain_getFinalisedHead")]
-    fn finalised_head(&self) -> Result<Hash>;
+    /// Get hash of the last finalized block in the canon chain.
+    #[rpc(name = "chain_getFinalizedHead", alias("chain_getFinalisedHead"))]
+    fn finalized_head(&self) -> Result<Hash>;
 
     /// New head subscription
     #[pubsub(
@@ -85,19 +85,21 @@ pub trait ChainApi<Number, Hash, Header, SignedBlock> {
 
     /// New head subscription
     #[pubsub(
-        subscription = "chain_finalisedHead",
+        subscription = "chain_finalizedHead",
         subscribe,
-        name = "chain_subscribeFinalisedHeads"
+        name = "chain_subscribeFinalizedHeads",
+        alias("chain_subscribeFinalisedHeads")
     )]
-    fn subscribe_finalised_heads(&self, metadata: Self::Metadata, subscriber: Subscriber<Header>);
+    fn subscribe_finalized_heads(&self, metadata: Self::Metadata, subscriber: Subscriber<Header>);
 
     /// Unsubscribe from new head subscription.
     #[pubsub(
-        subscription = "chain_finalisedHead",
+        subscription = "chain_finalizedHead",
         unsubscribe,
-        name = "chain_unsubscribeFinalisedHeads"
+        name = "chain_unsubscribeFinalizedHeads",
+        alias("chain_unsubscribeFinalisedHeads")
     )]
-    fn unsubscribe_finalised_heads(
+    fn unsubscribe_finalized_heads(
         &self,
         metadata: Option<Self::Metadata>,
         id: SubscriptionId,
@@ -161,8 +163,12 @@ where
                 .map(|res| Ok(res))
                 .map_err(|e| warn!("Block notification stream error: {:?}", e));
 
-            sink.sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
-                .send_all(stream::iter_result(vec![Ok(header)]).chain(stream))
+            sink
+                .sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
+                .send_all(
+                    stream::iter_result(vec![Ok(header)])
+                        .chain(stream)
+                )
                 // we ignore the resulting Stream (if the first stream is over we are unsubscribed)
                 .map(|_| ())
         });
@@ -203,7 +209,7 @@ where
         })
     }
 
-    fn finalised_head(&self) -> Result<Block::Hash> {
+    fn finalized_head(&self) -> Result<Block::Hash> {
         Ok(self.client.info()?.chain.finalized_hash)
     }
 
@@ -228,7 +234,7 @@ where
         Ok(self.subscriptions.cancel(id))
     }
 
-    fn subscribe_finalised_heads(
+    fn subscribe_finalized_heads(
         &self,
         _meta: Self::Metadata,
         subscriber: Subscriber<Block::Header>,
@@ -244,7 +250,7 @@ where
         )
     }
 
-    fn unsubscribe_finalised_heads(
+    fn unsubscribe_finalized_heads(
         &self,
         _metadata: Option<Self::Metadata>,
         id: SubscriptionId,

@@ -62,14 +62,12 @@ construct_simple_protocol! {
 /// Node specific configuration
 pub struct NodeConfig<F: substrate_service::ServiceFactory> {
     /// grandpa connection to import block
-    // FIXME: rather than putting this on the config, let's have an actual intermediate setup state
-    // https://github.com/paritytech/substrate/issues/1134
+    // FIXME #1134 rather than putting this on the config, let's have an actual intermediate setup state
     pub grandpa_import_setup: Option<(
         Arc<grandpa::BlockImportForService<F>>,
         grandpa::LinkHalfForService<F>,
     )>,
     inherent_data_providers: InherentDataProviders,
-    pub only_grandpa: bool,
 }
 
 impl<F> Default for NodeConfig<F>
@@ -80,7 +78,6 @@ where
         NodeConfig {
             grandpa_import_setup: None,
             inherent_data_providers: InherentDataProviders::new(),
-            only_grandpa: false,
         }
     }
 }
@@ -105,77 +102,84 @@ construct_service_factory! {
                 let (block_import, link_half) = service.config.custom.grandpa_import_setup.take()
                     .expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
-              if !service.config.custom.only_grandpa {
                 if let Some(ref key) = local_key {
-                        let proposer = Arc::new(basic_authorship::ProposerFactory {
-                            client: service.client(),
-                            transaction_pool: service.transaction_pool(),
-                        });
+                    info!("Using authority key {}", key.public());
+                    let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
+                        client: service.client(),
+                        transaction_pool: service.transaction_pool(),
+                        inherents_pool: service.inherents_pool(),
+                    });
 
-                        let client = service.client();
-                        let accountid_from_localkey: AccountId = key.public();
-                        info!("Using authority key: {}, accountid is: {}", key.public(), accountid_from_localkey);
-                        // use validator name to get accountid and sessionkey from runtime storage
-                        let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
-                        let best_hash = client.info()?.chain.best_hash;
-                        let ret = client
-                            .runtime_api()
-                            .pubkeys_for_validator_name(&BlockId::Hash(best_hash), name.as_bytes().to_vec())
-                            .expect("access runtime data error");
+                    let client = service.client();
+                    let accountid_from_localkey: AccountId = key.public();
+                    info!("Using authority key: {}, accountid is: {}", key.public(), accountid_from_localkey);
+                    // use validator name to get accountid and sessionkey from runtime storage
+                    let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
+                    let best_hash = client.info()?.chain.best_hash;
+                    let ret = client
+                        .runtime_api()
+                        .pubkeys_for_validator_name(&BlockId::Hash(best_hash), name.as_bytes().to_vec())
+                        .expect("access runtime data error");
 
-                        let producer = if let Some((accountid, sessionkey_option)) = ret {
-                                // check, only print warning log
-                                if accountid != accountid_from_localkey {
-                                    if let Some(sessionkey) = sessionkey_option {
-                                        let sessionkey: AccountId = sessionkey.into();
-                                        if sessionkey != accountid_from_localkey {
-                                            warn!("the sessionkey is not equal to local_key, sessionkey:[{:}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
-                                        }
-                                    } else {
-                                        warn!("the accountid is not equal to local_key, accountid:[{:}], local_key:[{:?}]", accountid, accountid_from_localkey);
+                    let producer = if let Some((accountid, sessionkey_option)) = ret {
+                            // check, only print warning log
+                            if accountid != accountid_from_localkey {
+                                if let Some(sessionkey) = sessionkey_option {
+                                    let sessionkey: AccountId = sessionkey.into();
+                                    if sessionkey != accountid_from_localkey {
+                                        warn!("the sessionkey is not equal to local_key, sessionkey:[{:}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
                                     }
+                                } else {
+                                    warn!("the accountid is not equal to local_key, accountid:[{:}], local_key:[{:?}]", accountid, accountid_from_localkey);
                                 }
-                                // anyway, return accountid as producer
-                                accountid
-                            } else {
-                                // do not get accountid from local state database, use localkey as producer
-                                warn!("validator name[{:}] is not in current state, use --key|keystore's pri to pub as producer", name);
-                                accountid_from_localkey
-                            };
+                            }
+                            // anyway, return accountid as producer
+                            accountid
+                        } else {
+                            // do not get accountid from local state database, use localkey as producer
+                            warn!("validator name[{:}] is not in current state, use --key|keystore's pri to pub as producer", name);
+                            accountid_from_localkey
+                        };
 
-                        // set blockproducer for accountid
-                        service.config.custom.inherent_data_providers
-                            .register_provider(XSystemInherentDataProvider::new(name.as_bytes().to_vec())).expect("blockproducer set err; qed");
+                    // set blockproducer for accountid
+                    service.config.custom.inherent_data_providers
+                        .register_provider(XSystemInherentDataProvider::new(name.as_bytes().to_vec())).expect("blockproducer set err; qed");
 
-                        executor.spawn(start_aura(
-                            SlotDuration::get_or_compute(&*client)?,
-                            key.clone(),
-                            client,
-                            block_import.clone(),
-                            proposer,
-                            service.network(),
-                            service.on_exit(),
-                            service.config.custom.inherent_data_providers.clone(),
-                        )?);
+                    let client = service.client();
+                    executor.spawn(start_aura(
+                        SlotDuration::get_or_compute(&*client)?,
+                        key.clone(),
+                        client,
+                        block_import.clone(),
+                        proposer,
+                        service.network(),
+                        service.on_exit(),
+                        service.config.custom.inherent_data_providers.clone(),
+                        service.config.force_authoring,
+                    )?);
 
-                        info!("Running aura session as Authority {}", key.public());
-                    }
+                    info!("Running Grandpa session as Authority {}", key.public());
                 }
-//                #[cfg(not(feature = "msgbus-redis"))] {
-                // remove grandpa in msgbus mod for revert block
+
+                let local_key = if service.config.disable_grandpa {
+                    None
+                } else {
+                    local_key
+                };
+
                 executor.spawn(grandpa::run_grandpa(
                     grandpa::Config {
                         local_key,
-                        gossip_duration: Duration::new(4, 0), // FIXME: make this available through chainspec?
+                        // FIXME #1578 make this available through chainspec
+                        gossip_duration: Duration::from_millis(333),
                         justification_period: 4096,
                         name: Some(service.config.name.clone())
                     },
                     link_half,
-                    grandpa::NetworkBridge::new(service.network()),
+                    service.network(),
                     service.config.custom.inherent_data_providers.clone(),
                     service.on_exit(),
                 )?);
-//                }
 
                 Ok(service)
             }
@@ -185,7 +189,10 @@ construct_service_factory! {
         FullImportQueue = AuraImportQueue<Self::Block>
             { |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>| {
                 let slot_duration = SlotDuration::get_or_compute(&*client)?;
-                let (block_import, link_half) = grandpa::block_import::<_, _, _, RuntimeApi, FullClient<Self>>(client.clone(), client.clone())?;
+                let (block_import, link_half) =
+                    grandpa::block_import::<_, _, _, RuntimeApi, FullClient<Self>>(
+                        client.clone(), client.clone()
+                    )?;
                 let block_import = Arc::new(block_import);
                 let justification_import = block_import.clone();
 

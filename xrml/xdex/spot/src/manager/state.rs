@@ -130,7 +130,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn blocks_per_hour() -> u64 {
-        let period = <timestamp::Module<T>>::block_period();
+        let period = <timestamp::Module<T>>::minimum_period();
         let seconds_per_hour = (60 * 60) as u64;
         seconds_per_hour / period.as_()
     }
