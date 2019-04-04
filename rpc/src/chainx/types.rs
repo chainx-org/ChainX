@@ -6,6 +6,8 @@ use rustc_hex::ToHex;
 use serde_derive::{Deserialize, Serialize};
 
 use btc_keys::DisplayLayout;
+use btc_ser::serialize as btc_serialize;
+
 use xr_primitives::generic::b58;
 
 use super::*;
@@ -119,8 +121,8 @@ impl TrusteeInfo {
     pub fn new(chain: Chain, hot_entity: String, cold_entity: String) -> Self {
         TrusteeInfo {
             chain,
-            hot_entity,
-            cold_entity,
+            hot_entity: "0x".to_string() + &hot_entity,
+            cold_entity: "0x".to_string() + &cold_entity,
         }
     }
 }
@@ -306,6 +308,22 @@ pub struct WithdrawTxInfo {
     pub sign_status: bool,
 
     pub trustee_list: Vec<(AccountId, bool)>,
+}
+impl WithdrawTxInfo {
+    pub fn new(proposal: xbitcoin::WithdrawalProposal<AccountId>, script: String) -> Self {
+        let bytes = btc_serialize(&proposal.tx);
+        let tx: String = bytes.to_hex();
+        WithdrawTxInfo {
+            tx: "0x".to_string() + &tx,
+            redeem_script: "0x".to_string() + &script,
+            sign_status: if proposal.sig_state == VoteResult::Finish {
+                true
+            } else {
+                false
+            },
+            trustee_list: proposal.trustee_list,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

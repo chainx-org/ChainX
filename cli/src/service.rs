@@ -103,7 +103,7 @@ construct_service_factory! {
                     .expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
                 if let Some(ref key) = local_key {
-                    info!("Using authority key {}", key.public());
+                    info!("Using authority key {:?}", key.public());
                     let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
                         client: service.client(),
                         transaction_pool: service.transaction_pool(),
@@ -112,7 +112,7 @@ construct_service_factory! {
 
                     let client = service.client();
                     let accountid_from_localkey: AccountId = key.public();
-                    info!("Using authority key: {}, accountid is: {}", key.public(), accountid_from_localkey);
+                    info!("Using authority key: {:?}, accountid is: {:?}", key.public(), accountid_from_localkey);
                     // use validator name to get accountid and sessionkey from runtime storage
                     let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
                     let best_hash = client.info()?.chain.best_hash;
@@ -127,10 +127,10 @@ construct_service_factory! {
                                 if let Some(sessionkey) = sessionkey_option {
                                     let sessionkey: AccountId = sessionkey.into();
                                     if sessionkey != accountid_from_localkey {
-                                        warn!("the sessionkey is not equal to local_key, sessionkey:[{:}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
+                                        warn!("the sessionkey is not equal to local_key, sessionkey:[{:?}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
                                     }
                                 } else {
-                                    warn!("the accountid is not equal to local_key, accountid:[{:}], local_key:[{:?}]", accountid, accountid_from_localkey);
+                                    warn!("the accountid is not equal to local_key, accountid:[{:?}], local_key:[{:?}]", accountid, accountid_from_localkey);
                                 }
                             }
                             // anyway, return accountid as producer

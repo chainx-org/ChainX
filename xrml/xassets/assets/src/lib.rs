@@ -16,7 +16,8 @@ use parity_codec::Codec;
 
 // Substrate
 use primitives::traits::{
-    As, CheckedAdd, CheckedSub, MaybeSerializeDebug, Member, SimpleArithmetic, StaticLookup, Zero,
+    As, CheckedAdd, CheckedSub, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
+    StaticLookup, Zero,
 };
 use rstd::collections::btree_map::BTreeMap;
 use rstd::{prelude::*, result};
@@ -27,6 +28,8 @@ use system::{ensure_signed, IsDeadAccount, OnNewAccount};
 
 // ChainX
 use xsupport::{debug, info};
+#[cfg(feature = "std")]
+use xsupport::{token, u8array_to_string};
 
 pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke};
 use self::trigger::AssetTriggerEventAfter;
@@ -46,6 +49,7 @@ pub trait Trait: system::Trait {
         + Copy
         + As<usize>
         + As<u64>
+        + MaybeDisplay
         + MaybeSerializeDebug;
     /// Handler for when a new account is created.
     type OnNewAccount: OnNewAccount<Self::AccountId>;
@@ -79,6 +83,7 @@ decl_module! {
         /// register_asset to module, should allow by root
         fn register_asset(asset: Asset, is_online: bool, is_psedu_intention: bool) -> Result {
             asset.is_valid()?;
+            info!("[register_asset]|register a new asset|asset:{:?}|is_online:{:}|is_psedu_intention:{:}", asset, is_online, is_psedu_intention);
 
             let token = asset.token();
 
@@ -105,18 +110,17 @@ decl_module! {
 
         /// set free token for an account
         fn set_balance(who: <T::Lookup as StaticLookup>::Source, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> Result {
-            info!("");
             let who = <T as system::Trait>::Lookup::lookup(who)?;
+            info!("[set_balance]|set balances by root|who:{:?}|token:{:}|balances_map:{:?}", who, token!(token), balances);
             Self::set_balance_by_root(&who, &token, balances)?;
             Ok(())
         }
 
         /// transfer between account
         fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
-            debug!("");
             let transactor = ensure_signed(origin)?;
             let dest = <T as system::Trait>::Lookup::lookup(dest)?;
-
+            debug!("[transfer]|transfer asset|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));
             is_valid_memo::<T>(&memo)?;
             if transactor == dest {
                 return Ok(())
@@ -191,7 +195,9 @@ impl<T: Trait> Module<T> {
         AssetInfo::<T>::insert(&token, (asset, true, system::Module::<T>::block_number()));
 
         AssetList::<T>::mutate(chain, |v| {
-            v.push(token.clone());
+            if !v.contains(&token) {
+                v.push(token.clone());
+            }
         });
         Ok(())
     }
@@ -333,6 +339,7 @@ impl<T: Trait> Module<T> {
             !AssetBalance::<T>::exists(&key),
             "when new account, the pcx must not exist for this account!"
         );
+        info!("[new_account]|create new account|who:{:?}", who);
         AssetBalance::<T>::insert(&key, BTreeMap::new());
         Self::deposit_event(RawEvent::NewAccount(who.clone()));
     }
@@ -390,6 +397,13 @@ impl<T: Trait> Module<T> {
         // may set storage inner
         Self::try_new_account(&key);
 
+        debug!(
+            "[issue]|issue to account|token:{:}|who:{:}|balance:{:}",
+            token!(token),
+            who,
+            value
+        );
+
         let free = Self::asset_type_balance(&key, type_);
         // check
         let new_free = match free.checked_add(&value) {
@@ -421,6 +435,8 @@ impl<T: Trait> Module<T> {
         let type_ = AssetType::ReservedWithdrawal;
 
         let reserved = Self::asset_type_balance(&key, type_);
+
+        debug!("[destroy]|destroy withdrawwed token for account|token:{:}|who:{:}|current reserved:{:}|balance:{:}", token!(token), who, reserved, value);
         // check
         let new_reserved_token = match reserved.checked_sub(&value) {
             Some(b) => b,
@@ -469,6 +485,9 @@ impl<T: Trait> Module<T> {
 
         let from_balance = Self::asset_type_balance(&from_key, from_type);
         let to_balance = Self::asset_type_balance(&to_key, to_type);
+
+        debug!("[move_balance]|token:{:}|from:{:?}|f_type:{:?}|f_balance:{:}|to:{:?}|t_type:{:?}|t_balance:{:}|value:{:}",
+               token!(token), from, from_type, from_balance, to, to_type, to_balance, value);
 
         // test overflow
         let new_from_balance = match from_balance.checked_sub(&value) {
@@ -575,6 +594,6 @@ where
     T::Balance: MaybeSerializeDebug,
 {
     fn is_dead_account(_who: &T::AccountId) -> bool {
-        true
+        false
     }
 }

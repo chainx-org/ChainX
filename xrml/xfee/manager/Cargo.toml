@@ -15,6 +15,7 @@ system = { package = "srml-system", git = "https://github.com/chainpool/substrat
 # ChainX
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
 
@@ -37,6 +38,7 @@ std = [
     # ChainX
     "chainx-primitives/std",
     "xsystem/std",
+    "xsupport/std",
     "xaccounts/std",
     "xassets/std",
 ]

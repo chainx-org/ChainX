@@ -156,6 +156,9 @@ impl<T: Trait> xsystem::Validator<T::AccountId> for Module<T> {
     fn get_validator_by_name(name: &[u8]) -> Option<T::AccountId> {
         Self::intention_of(name.to_vec())
     }
+    fn get_validator_name(accountid: &T::AccountId) -> Option<Vec<u8>> {
+        Self::intention_name_of(accountid)
+    }
 }
 
 pub fn is_valid_name<T: Trait>(name: &[u8]) -> Result {

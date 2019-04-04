@@ -14,6 +14,7 @@ use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageVa
 // ChainX
 use chainx_primitives::Acceleration;
 use xaccounts::IntentionJackpotAccountIdFor;
+use xsupport::{trace, warn};
 
 pub use self::types::SwitchStore;
 
@@ -145,6 +146,17 @@ impl<T: Trait> Module<T> {
 
         if let Some(p) = xsystem::Module::<T>::block_producer() {
             let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(&p);
+
+            trace!(
+                "[calc_fee]|move fee|from:{:},{:?}|to jackpot:{:},{:?}|to_producer:{:},{:}",
+                from,
+                fee,
+                for_jackpot,
+                jackpot_addr,
+                for_producer,
+                p
+            );
+
             let _ = xassets::Module::<T>::pcx_move_free_balance(from, &p, for_producer)
                 .map_err(|e| e.info())?;
 
@@ -156,6 +168,12 @@ impl<T: Trait> Module<T> {
             Self::deposit_event(RawEvent::FeeForJackpot(jackpot_addr, for_jackpot));
         } else {
             let council = xaccounts::Module::<T>::council_address();
+
+            warn!(
+                "[calc_fee]|current block not set producer!|council:{:},{:?}",
+                council, fee
+            );
+
             xassets::Module::<T>::pcx_move_free_balance(from, &council, fee)
                 .map_err(|e| e.info())?;
 

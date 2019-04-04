@@ -15,6 +15,8 @@ use support::{decl_module, decl_storage, dispatch::Result, StorageValue};
 use system::ensure_inherent;
 
 // ChainX
+#[cfg(feature = "std")]
+use xsupport::u8array_to_string;
 use xsupport::{error, info};
 
 #[cfg(feature = "std")]
@@ -34,16 +36,17 @@ pub trait ValidatorList<AccountId> {
 
 pub trait Validator<AccountId> {
     fn get_validator_by_name(name: &[u8]) -> Option<AccountId>;
+    fn get_validator_name(accountid: &AccountId) -> Option<Vec<u8>>;
 }
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn set_block_producer(origin, producer: T::AccountId) -> Result {
             ensure_inherent(origin)?;
-            info!("height:{:}, blockproducer: {:}", system::Module::<T>::block_number(), producer);
+            info!("height:{:}, blockproducer: {:?}|name:{:}", system::Module::<T>::block_number(), producer, u8array_to_string(&T::Validator::get_validator_name(&producer).unwrap_or_default()));
 
             if Self::is_validator(&producer) == false {
-                error!("producer:{:} not in current validators!, validators is:{:?}", producer, T::ValidatorList::validator_list());
+                error!("producer:{:?} not in current validators!, validators is:{:?}", producer, T::ValidatorList::validator_list());
                 panic!("producer not in current validators!");
             }
 

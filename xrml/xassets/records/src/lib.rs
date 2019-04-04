@@ -16,6 +16,8 @@ use xassets::{AssetType, Chain, ChainT, Memo, Token};
 use xsupport::storage::linked_node::{MultiNodeIndex, Node};
 
 use xsupport::{error, info};
+#[cfg(feature = "std")]
+use xsupport::{token, u8array_to_addr, u8array_to_string};
 
 pub use self::types::{AddrStr, Application, LinkedMultiKey, RecordInfo, TxState};
 
@@ -107,6 +109,14 @@ impl<T: Trait> Module<T> {
     /// deposit, notice this func has include deposit_init and deposit_finish (not wait for block confirm process)
     pub fn deposit(who: &T::AccountId, token: &Token, balance: T::Balance) -> Result {
         Self::before(who, token)?;
+
+        info!(
+            "[deposit]|who:{:?}|token:{:}|balance:{:}",
+            who,
+            token!(token),
+            balance
+        );
+
         let _ = xassets::Module::<T>::issue(token, who, balance)?;
         Self::deposit_event(RawEvent::Deposit(who.clone(), token.clone(), balance));
         Ok(())
@@ -125,6 +135,17 @@ impl<T: Trait> Module<T> {
         let asset = xassets::Module::<T>::get_asset(token)?;
 
         let id = Self::number();
+
+        info!(
+            "[withdrawal]|id:{:}|who:{:?}|token:{:}|balance:{:}|addr:{:}|memo:{:}",
+            id,
+            who,
+            token!(token),
+            balance,
+            u8array_to_addr(&addr),
+            u8array_to_string(&ext)
+        );
+
         let appl = Application::<T::AccountId, T::Balance, T::Moment>::new(
             id,
             who.clone(),
@@ -171,6 +192,7 @@ impl<T: Trait> Module<T> {
         let mut node = if let Some(node) = Self::application_map(serial_number) {
             node
         } else {
+            error!("[withdrawal_finish]|withdrawal application record not exist|withdrawal id:{:}|success:{:}", serial_number, success);
             return Err("withdrawal application record not exist");
         };
 
@@ -182,6 +204,14 @@ impl<T: Trait> Module<T> {
         let who = application.applicant();
         let token = application.token();
         let balance = application.balance();
+
+        info!(
+            "[withdrawal_finish]|wirhdrawal id:{:}|who:{:?}|token:{:}|balance:{:}",
+            serial_number,
+            who,
+            token!(token),
+            balance
+        );
         // destroy reserved token
         if success {
             Self::destroy(&who, &token, balance)?;

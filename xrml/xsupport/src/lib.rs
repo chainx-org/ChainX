@@ -8,7 +8,7 @@ pub mod storage;
 pub use support::fail;
 
 #[cfg(feature = "std")]
-pub use self::logger::{u8array_to_hex, u8array_to_string};
+pub use self::logger::{u8array_to_addr, u8array_to_hex, u8array_to_string};
 
 #[macro_export]
 macro_rules! ensure_with_errorlog {
@@ -69,4 +69,13 @@ macro_rules! who {
             })
             .unwrap()
     };
+}
+
+#[cfg(feature = "std")]
+#[macro_export]
+macro_rules! token {
+    ( $x:ident ) => {{
+        use xsupport::u8array_to_string;
+        u8array_to_string(&$x)
+    }};
 }

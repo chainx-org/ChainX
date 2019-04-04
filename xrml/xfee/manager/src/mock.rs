@@ -66,6 +66,9 @@ impl xsystem::Validator<u64> for MockValidator {
     fn get_validator_by_name(_name: &[u8]) -> Option<u64> {
         Some(0)
     }
+    fn get_validator_name(accountid: &u64) -> Option<Vec<u8>> {
+        None
+    }
 }
 
 impl xaccounts::Trait for Test {

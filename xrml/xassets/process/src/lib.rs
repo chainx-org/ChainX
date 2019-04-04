@@ -16,6 +16,9 @@ use system::ensure_signed;
 // ChainX
 use xassets::{Chain, ChainT, Memo, Token};
 use xrecords::AddrStr;
+#[cfg(feature = "std")]
+use xsupport::token;
+use xsupport::warn;
 
 pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}
 
@@ -55,6 +58,13 @@ impl<T: Trait> Module<T> {
     fn check_black_list(token: &Token) -> Result {
         let list = Self::token_black_list();
         if list.contains(token) {
+            warn!(
+                "[check_black_list]|try asset:{:?}|current block list:{:?}",
+                token!(token),
+                list.into_iter()
+                    .map(|item| token!(item))
+                    .collect::<Vec<_>>()
+            );
             return Err("this token is in blacklist");
         }
         Ok(())

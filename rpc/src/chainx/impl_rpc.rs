@@ -13,7 +13,6 @@ use support::storage::generator::{StorageMap, StorageValue};
 use xassets::ChainT;
 
 use btc_keys::{Address, DisplayLayout};
-use btc_ser::serialize as btc_serialize;
 
 use runtime_api::{
     xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xfee_api::XFeeApi, xmining_api::XMiningApi,
@@ -754,18 +753,8 @@ where
                 if let Some(proposal) =
                     Self::pickout::<xbitcoin::WithdrawalProposal<AccountId>>(&state, &key)?
                 {
-                    let bytes = btc_serialize(&proposal.tx);
-                    let tx_info = WithdrawTxInfo {
-                        tx: bytes.to_hex(),
-                        redeem_script: hot_addr_info.redeem_script.to_hex(),
-                        sign_status: if proposal.sig_state == VoteResult::Finish {
-                            true
-                        } else {
-                            false
-                        },
-                        trustee_list: proposal.trustee_list,
-                    };
-                    Ok(Some(tx_info))
+                    let script: String = hot_addr_info.redeem_script.to_hex();
+                    Ok(Some(WithdrawTxInfo::new(proposal, script)))
                 } else {
                     Ok(None)
                 }

@@ -8,7 +8,7 @@ use rstd::result::Result;
 // ChainX
 use xsupport::error;
 #[cfg(feature = "std")]
-use xsupport::u8array_to_hex;
+use xsupport::u8array_to_addr;
 
 // light-bitcoin
 use btc_chain::{OutPoint, Transaction};
@@ -82,7 +82,7 @@ fn trustee_addr_info<T: Trait>(is_hot: bool) -> Result<TrusteeAddrInfo, &'static
         Decode::decode(&mut hot_address.as_slice()).ok_or_else(|| {
             error!(
                 "[trustee_addr_info]|parse hot trustee addr info error|src:{:}",
-                u8array_to_hex(&hot_address)
+                u8array_to_addr(&hot_address)
             );
             "parse hot trustee addr info error"
         })?
@@ -90,7 +90,7 @@ fn trustee_addr_info<T: Trait>(is_hot: bool) -> Result<TrusteeAddrInfo, &'static
         Decode::decode(&mut cold_address.as_slice()).ok_or_else(|| {
             error!(
                 "[trustee_addr_info]|parse cold trustee addr info error|src:{:}",
-                u8array_to_hex(&hot_address)
+                u8array_to_addr(&hot_address)
             );
             "parse cold trustee addr info error"
         })?
@@ -125,7 +125,7 @@ pub fn get_trustee_address_pair<T: Trait>(
         Decode::decode(&mut hot_address.as_slice()).ok_or_else(|| {
             error!(
                 "[get_trustee_address_pair]|parse hot trustee addr info error|src:{:}",
-                u8array_to_hex(&hot_address)
+                u8array_to_addr(&hot_address)
             );
             "parse hot trustee addr info error"
         })?;
@@ -133,7 +133,7 @@ pub fn get_trustee_address_pair<T: Trait>(
         Decode::decode(&mut cold_address.as_slice()).ok_or_else(|| {
             error!(
                 "[get_trustee_address_pair]|parse cold trustee addr info error|src:{:}",
-                u8array_to_hex(&hot_address)
+                u8array_to_addr(&hot_address)
             );
             "parse cold trustee addr info error"
         })?;
