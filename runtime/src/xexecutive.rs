@@ -24,7 +24,7 @@ use rstd::prelude::*;
 use rstd::result;
 use runtime_io;
 use runtime_primitives::traits::{
-    self, Applyable, As, Block as BlockT, CheckEqual, Checkable, Digest, Hash, Header, NumberFor,
+    self, Applyable, As, Block as BlockT, CheckEqual, Checkable, Digest, Header, NumberFor,
     OffchainWorker, OnFinalize, OnInitialize, One, Zero,
 };
 use runtime_primitives::transaction_validity::{
@@ -260,9 +260,9 @@ impl<
         }
 
         // check storage root.
-        let storage_root = System::Hashing::storage_root();
+        let storage_root = new_header.state_root();
         header.state_root().check_equal(&storage_root);
-        assert!(header.state_root() == &storage_root, "Storage root must match that calculated.");
+        assert!(header.state_root() == storage_root, "Storage root must match that calculated.");
     }
 
     /// Check a given transaction for validity. This doesn't execute any
