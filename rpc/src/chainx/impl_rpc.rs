@@ -369,6 +369,11 @@ where
                         vote_weight.last_total_deposit_weight_update;
                 }
 
+                let key = <xtokens::TokenDiscount<Runtime>>::key_for(&token);
+                if let Some(discount) = Self::pickout::<u32>(&state, &key)? {
+                    info.discount = discount;
+                }
+
                 //注意
                 //这里返回的是以PCX计价的"单位"token的价格，已含pcx精度
                 //譬如1BTC=10000PCX，则返回的是10000*（10.pow(pcx精度))

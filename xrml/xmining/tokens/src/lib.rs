@@ -89,18 +89,29 @@ decl_module! {
 
             Self::apply_claim(&who, &token)?;
         }
+
+        fn set_token_discount(token: Token, value: u32) {
+            ensure!(value <= 100, "TokenDiscount cannot exceed 100.");
+            <TokenDiscount<T>>::insert(token, value);
+        }
     }
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as XTokens {
-        pub TokenDiscount get(token_discount) config(): u32 = 50;
+        pub TokenDiscount get(token_discount) build(|config: &GenesisConfig<T>| {
+            config.token_discount.clone()
+        }): map Token => u32;
 
         pub PseduIntentions get(psedu_intentions) : Vec<Token>;
 
         pub PseduIntentionProfiles get(psedu_intention_profiles): map Token => PseduIntentionVoteWeight<T::BlockNumber>;
 
         pub DepositRecords get(deposit_records): map (T::AccountId, Token) => DepositVoteWeight<T::BlockNumber>;
+    }
+
+    add_extra_genesis {
+        config(token_discount): Vec<(Token, u32)>;
     }
 }
 
@@ -373,14 +384,18 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn asset_power(token: &Token) -> Option<T::Balance> {
+        let one_pcx = 10_u64.pow(Self::pcx_precision());
+
+        if token.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) {
+            return Some(As::sa(one_pcx));
+        }
+
+        let discount = <TokenDiscount<T>>::get(token) as u64;
+
         if token.eq(&<xsdot::Module<T> as ChainT>::TOKEN.to_vec()) {
-            return Some(As::sa(10_u64.pow(Self::pcx_precision() - 1))); //0.1 PCX
-        } else if token.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) {
-            return Some(As::sa(10_u64.pow(Self::pcx_precision())));
+            return Some(As::sa(one_pcx * discount / 100));
         } else {
             if let Some(price) = <xspot::Module<T>>::aver_asset_price(token) {
-                let discount = <TokenDiscount<T>>::get();
-
                 let power = match (price.as_() as u128).checked_mul(discount as u128) {
                     Some(x) => T::Balance::sa((x / 100) as u64),
                     None => panic!("price * discount overflow"),

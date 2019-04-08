@@ -171,6 +171,7 @@ pub struct PseduIntentionInfo {
     /// circulation of id
     pub circulation: Balance,
     pub price: Balance,
+    pub discount: u32,
     pub power: Balance,
     /// jackpot
     pub jackpot: Balance,

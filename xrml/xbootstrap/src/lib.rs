@@ -169,11 +169,11 @@ decl_storage! {
                 }
 
                 // xspot
-                for (first, second, precision, unit, price, status) in config.pair_list.iter() {
+                for (base, quote, pip_precision, tick_precision, price, status) in config.pair_list.iter() {
                     xspot::Module::<T>::add_trading_pair(
-                        CurrencyPair::new(first.clone(), second.clone()),
-                        *precision,
-                        *unit,
+                        CurrencyPair::new(base.clone(), quote.clone()),
+                        *pip_precision,
+                        *tick_precision,
                         *price,
                         *status
                     ).unwrap();

@@ -227,7 +227,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             validator_stake_threshold: 1,
         }),
         xtokens: Some(XTokensConfig {
-            token_discount: 10,
+            token_discount: vec![
+                (xbitcoin::Module::<Runtime>::TOKEN.to_vec(), 50),
+                (sdot_asset.token(), 100),
+            ],
             _genesis_phantom_data: Default::default(),
         }),
         xspot: Some(XSpotConfig {
