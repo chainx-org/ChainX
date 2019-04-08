@@ -398,7 +398,7 @@ impl<T: Trait> Module<T> {
         Self::try_new_account(&key);
 
         debug!(
-            "[issue]|issue to account|token:{:}|who:{:}|balance:{:}",
+            "[issue]|issue to account|token:{:}|who:{:?}|value:{:}",
             token!(token),
             who,
             value
@@ -436,7 +436,7 @@ impl<T: Trait> Module<T> {
 
         let reserved = Self::asset_type_balance(&key, type_);
 
-        debug!("[destroy]|destroy withdrawwed token for account|token:{:}|who:{:}|current reserved:{:}|balance:{:}", token!(token), who, reserved, value);
+        debug!("[destroy]|destroy withdrawwed token for account|token:{:}|who:{:?}|current reserved:{:}|balance:{:}", token!(token), who, reserved, value);
         // check
         let new_reserved_token = match reserved.checked_sub(&value) {
             Some(b) => b,

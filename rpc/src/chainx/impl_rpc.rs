@@ -70,9 +70,15 @@ where
         let assets = assets?;
         let final_result = assets
             .into_iter()
-            .map(|(token, map)| AssetInfo {
-                name: String::from_utf8_lossy(&token).into_owned(),
-                details: map,
+            .map(|(token, map)| {
+                let mut bmap = BTreeMap::<AssetType, Balance>::from_iter(
+                    xassets::AssetType::iterator().map(|t| (*t, Zero::zero())),
+                );
+                bmap.extend(map.iter());
+                AssetInfo {
+                    name: String::from_utf8_lossy(&token).into_owned(),
+                    details: bmap,
+                }
             })
             .collect();
         into_pagedata(final_result, page_index, page_size)

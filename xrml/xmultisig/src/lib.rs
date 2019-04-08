@@ -304,7 +304,7 @@ impl<T: Trait> Module<T> {
         for candidate in new_trustees.iter() {
             let key = (candidate.clone(), chain);
             if xaccounts::Module::<T>::trustee_intention_props_of(&key).is_none() {
-                error!("[transition_trustee_session]|not all candidate has registered as a trustee yet|chain:{:?}|who:{:}", chain, candidate);
+                error!("[transition_trustee_session]|not all candidate has registered as a trustee yet|chain:{:?}|who:{:?}", chain, candidate);
                 return Err("not all candidate has registered as a trustee yet");
             }
         }

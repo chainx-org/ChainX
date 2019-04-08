@@ -295,7 +295,7 @@ impl<T: Trait> Module<T> {
                     pubkey
                 }
                 _ => {
-                    warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN hot entity|who:{:}", trustee);
+                    warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN hot entity|who:{:?}", trustee);
                     continue;
                 }
             };
@@ -309,7 +309,7 @@ impl<T: Trait> Module<T> {
                     pubkey
                 }
                 _ => {
-                    warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN cold entity|who:{:}", trustee);
+                    warn!("[generate_new_trustees]|[btc] this trustee do not have BITCOIN cold entity|who:{:?}", trustee);
                     continue;
                 }
             };
