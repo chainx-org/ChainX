@@ -47,18 +47,8 @@ impl system::Trait for Test {
 
 impl indices::Trait for Test {
     type AccountIndex = u32;
-    type IsDeadAccount = Balances;
+    type IsDeadAccount = XAssets;
     type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
-    type Event = ();
-}
-
-impl balances::Trait for Test {
-    type Balance = u64;
-    type OnFreeBalanceZero = ();
-    type OnNewAccount = Indices;
-    type TransactionPayment = ();
-    type TransferPayment = ();
-    type DustRemoval = ();
     type Event = ();
 }
 
@@ -80,12 +70,16 @@ impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJac
 }
 
 impl xassets::Trait for Test {
+    type Balance = u64;
+    type OnNewAccount = Indices;
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
 }
 
-impl xfee_manager::Trait for Test {}
+impl xfee_manager::Trait for Test {
+    type Event = ();
+}
 
 impl xsystem::Trait for Test {
     type ValidatorList = DummyDetermineValidatorList;
@@ -103,7 +97,7 @@ impl xsystem::Validator<u64> for DummyDetermineValidator {
     fn get_validator_by_name(_name: &[u8]) -> Option<u64> {
         Some(0)
     }
-    fn get_validator_name(accountid: &u64) -> Option<Vec<u8>> {
+    fn get_validator_name(_accountid: &u64) -> Option<Vec<u8>> {
         None
     }
 }
@@ -145,7 +139,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .0,
     );
     t.extend(
-        timestamp::GenesisConfig::<Test> { period: 3 }
+        timestamp::GenesisConfig::<Test> { minimum_period: 3 }
             .build_storage()
             .unwrap()
             .0,
@@ -160,20 +154,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                 (30, UintAuthorityId(30)),
                 (40, UintAuthorityId(40)),
             ],
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-    t.extend(
-        balances::GenesisConfig::<Test> {
-            balances: vec![(1, 10), (2, 20), (3, 30), (4, 40)],
-            existential_deposit: 0,
-            transaction_base_fee: 0,
-            transaction_byte_fee: 0,
-            transfer_fee: 0,
-            creation_fee: 0,
-            vesting: vec![],
         }
         .build_storage()
         .unwrap()
@@ -221,8 +201,12 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             pcx_desc,
         )
         .unwrap();
-        XAssets::bootstrap_register_asset(pcx, true, false, Zero::zero()).unwrap();
-        XAssets::bootstrap_set_asset_balance(&6, &chainx, xassets::AssetType::Free, 30);
+        XAssets::bootstrap_register_asset(pcx, true, false).unwrap();
+        XAssets::pcx_issue(&1, 10).unwrap();
+        XAssets::pcx_issue(&2, 20).unwrap();
+        XAssets::pcx_issue(&3, 30).unwrap();
+        XAssets::pcx_issue(&4, 40).unwrap();
+        XAssets::pcx_issue(&6, 30).unwrap();
     });
     let init: StorageOverlay = init.into();
     runtime_io::TestExternalities::new(init)
@@ -230,7 +214,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
 pub type Indices = indices::Module<Test>;
 pub type System = system::Module<Test>;
-pub type Balances = balances::Module<Test>;
 pub type XSession = xsession::Module<Test>;
 pub type XAssets = xassets::Module<Test>;
 pub type XAccounts = xaccounts::Module<Test>;

@@ -14,7 +14,7 @@ use substrate_primitives::{Blake2Hasher, H256};
 use support::impl_outer_origin;
 
 // ChainX
-use xassets::{Asset, AssetType, Chain, ChainT, Token};
+use xassets::{Asset, Chain, ChainT, Token};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -45,18 +45,8 @@ impl system::Trait for Test {
 
 impl indices::Trait for Test {
     type AccountIndex = u32;
-    type IsDeadAccount = Balances;
+    type IsDeadAccount = XAssets;
     type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
-    type Event = ();
-}
-
-impl balances::Trait for Test {
-    type Balance = u64;
-    type OnFreeBalanceZero = ();
-    type OnNewAccount = Indices;
-    type TransactionPayment = ();
-    type TransferPayment = ();
-    type DustRemoval = ();
     type Event = ();
 }
 
@@ -83,6 +73,8 @@ impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJac
 
 impl xassets::Trait for Test {
     type Event = ();
+    type Balance = u64;
+    type OnNewAccount = Indices;
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
 }
@@ -107,12 +99,14 @@ impl xsystem::Validator<u64> for DummyDetermineValidator {
     fn get_validator_by_name(_name: &[u8]) -> Option<u64> {
         Some(0)
     }
-    fn get_validator_name(accountid: &u64) -> Option<Vec<u8>> {
+    fn get_validator_name(_accountid: &u64) -> Option<Vec<u8>> {
         None
     }
 }
 
-impl xfee_manager::Trait for Test {}
+impl xfee_manager::Trait for Test {
+    type Event = ();
+}
 
 impl Trait for Test {
     type Price = u64;
@@ -120,7 +114,6 @@ impl Trait for Test {
 }
 
 pub type Indices = indices::Module<Test>;
-pub type Balances = balances::Module<Test>;
 pub type XAssets = xassets::Module<Test>;
 pub type XBitcoin = xbitcoin::Module<Test>;
 pub type XSpot = Module<Test>;
@@ -209,35 +202,17 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
         let pcx = Asset::new(chainx, pcx.0.clone(), Chain::ChainX, pcx.1, pcx.2.clone()).unwrap();
 
-        XAssets::bootstrap_register_asset(pcx, true, false, Zero::zero()).unwrap();
+        XAssets::bootstrap_register_asset(pcx, true, false).unwrap();
 
         // init for asset_list
         for (asset, is_online, is_psedu_intention, init_list) in asset_list.iter() {
             let token = asset.token();
-            XAssets::bootstrap_register_asset(
-                asset.clone(),
-                *is_online,
-                *is_psedu_intention,
-                Zero::zero(),
-            )
-            .unwrap();
+            XAssets::bootstrap_register_asset(asset.clone(), *is_online, *is_psedu_intention)
+                .unwrap();
 
             for (accountid, value) in init_list {
                 let value: u64 = *value;
-                let total_free_token = XAssets::total_asset_balance(&token, AssetType::Free);
-                let free_token = XAssets::free_balance(&accountid, &token);
-                XAssets::bootstrap_set_total_asset_balance(
-                    &token,
-                    AssetType::Free,
-                    total_free_token + value,
-                );
-                // not create account
-                XAssets::bootstrap_set_asset_balance(
-                    &accountid,
-                    &token,
-                    AssetType::Free,
-                    free_token + value,
-                );
+                XAssets::issue(&token, &accountid, value).unwrap();
             }
         }
 

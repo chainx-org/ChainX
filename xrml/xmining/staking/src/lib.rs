@@ -311,8 +311,6 @@ decl_storage! {
 
         pub SessionsPerEpoch get(sessions_per_epoch) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
 
-        pub ValidatorStakeThreshold get(validator_stake_threshold) config(): T::Balance = T::Balance::sa(1);
-
         /// The current era index.
         pub CurrentEra get(current_era) config(): T::BlockNumber;
         /// All the accounts with a desire to stake.

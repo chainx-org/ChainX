@@ -216,7 +216,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         xstaking: Some(XStakingConfig {
             initial_reward: apply_prec(50.0),
-            validator_count: 30,
+            validator_count: 100,
             minimum_validator_count: 4,
             sessions_per_era,
             sessions_per_epoch,
@@ -224,7 +224,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             intention_bonding_duration,
             current_era: 0,
             minimum_penalty: 10_000_000, // 0.1 PCX by default
-            validator_stake_threshold: 1,
         }),
         xtokens: Some(XTokensConfig {
             token_discount: vec![

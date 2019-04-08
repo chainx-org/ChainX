@@ -58,7 +58,7 @@ fn put_order_reserve_should_work() {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
         assert_ok!(XSpot::set_handicap(0, 1_000_000, 1_100_000));
         assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
-        assert_eq!(XAssets::free_balance(&1, &trading_pair.quote()), 10);
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 10);
         assert_ok!(XSpot::put_order(
             Origin::signed(1),
             0,
@@ -67,7 +67,7 @@ fn put_order_reserve_should_work() {
             1000,
             1_210_000,
         ));
-        assert_eq!(XAssets::free_balance(&1, &trading_pair.quote()), 9);
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 9);
     })
 }
 
@@ -346,7 +346,7 @@ fn reap_orders_should_work() {
         assert_ok!(XAssets::pcx_issue(&3, 20000));
         assert_ok!(XAssets::pcx_issue(&4, 20000));
 
-        assert_eq!(XAssets::free_balance(&1, &trading_pair.base()), 0);
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
 
         assert_ok!(XSpot::put_order(
             Origin::signed(1),
@@ -402,10 +402,10 @@ fn reap_orders_should_work() {
             900_000
         ));
 
-        assert_eq!(XAssets::free_balance(&1, &trading_pair.quote()), 3);
-        assert_eq!(XAssets::free_balance(&1, &trading_pair.base()), 6000);
-        assert_eq!(XAssets::free_balance(&2, &trading_pair.quote()), 6);
-        assert_eq!(XAssets::free_balance(&3, &trading_pair.quote()), 6);
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 3);
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 6000);
+        assert_eq!(XAssets::free_balance_of(&2, &trading_pair.quote()), 6);
+        assert_eq!(XAssets::free_balance_of(&3, &trading_pair.quote()), 6);
         assert_eq!(XSpot::order_info_of((4, 0)).unwrap().already_filled, 12_000);
     })
 }

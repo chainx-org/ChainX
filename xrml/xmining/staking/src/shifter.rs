@@ -50,14 +50,10 @@ impl<T: Trait> Module<T> {
         intentions
     }
 
-    /// Reward a given (potential) validator by a specific amount, along with possible slash.
+    /// Reward a given (potential) validator by a specific amount.
     /// Add the reward to their balance, and their jackpot, pro-rata.
-    fn reward_with_possible_slash(
-        who: &T::AccountId,
-        reward: T::Balance,
-        validators: &mut Vec<T::AccountId>,
-    ) {
-        // Validator only gains 10%, the rest goes to the jackpot.
+    fn reward(who: &T::AccountId, reward: T::Balance) {
+        // Validator only gains 10%, the rest 90% goes to the jackpot.
         let off_the_table = T::Balance::sa(reward.as_() / 10);
         let _ = <xassets::Module<T>>::pcx_issue(who, off_the_table);
 
@@ -70,11 +66,6 @@ impl<T: Trait> Module<T> {
             who!(who),
             to_jackpot
         );
-
-        // It the intention was an offline validator, we should enforce a slash.
-        if <MissedOfPerSession<T>>::exists(who) {
-            Self::slash_active_offline_validator(who, reward, validators);
-        }
     }
 
     fn reward_of_per_block(session_reward: T::Balance) -> T::Balance {
@@ -88,14 +79,18 @@ impl<T: Trait> Module<T> {
     /// then he should be enforced to be inactive and removed from the validator set.
     fn slash_active_offline_validator(
         who: &T::AccountId,
-        session_reward: T::Balance,
+        my_reward: T::Balance,
         validators: &mut Vec<T::AccountId>,
     ) {
         let council = xaccounts::Module::<T>::council_address();
 
+        // Slash 10 times per block reward for each missed block.
         let missed = <MissedOfPerSession<T>>::take(who) as u64;
-        let block_reward = Self::reward_of_per_block(session_reward);
-        let total_slash = T::Balance::sa(block_reward.as_() * missed * 10);
+        let reward_per_block = Self::reward_of_per_block(my_reward);
+        let total_slash = cmp::max(
+            T::Balance::sa(reward_per_block.as_() * 10 * missed),
+            T::Balance::sa(Self::minimum_penalty().as_() * missed),
+        );
 
         let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
         let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
@@ -231,7 +226,16 @@ impl<T: Trait> Module<T> {
                 };
                 match holder {
                     RewardHolder::Intention(ref intention) => {
-                        Self::reward_with_possible_slash(intention, reward, &mut validators);
+                        Self::reward(intention, reward);
+
+                        // It the intention was an offline validator, we should enforce a slash.
+                        if <MissedOfPerSession<T>>::exists(intention) {
+                            Self::slash_active_offline_validator(
+                                intention,
+                                reward,
+                                &mut validators,
+                            );
+                        }
                     }
                     RewardHolder::PseduIntention(ref token) => {
                         // Reward to token entity.
