@@ -32,13 +32,12 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let sdot_claims = load_sdot_info().unwrap();
 
     // account pub and pri key
-    let alice = hex!["471af9e69d41ee06426940fd302454662742405cb9dcc5bc68ceb7bec979e5e4"];
-    let bob = hex!["806a491666670aa087e04770c025d64b2ecebfd91a74efdc4f4329642de32365"];
-    let charlie = hex!["1cf70f57bf2a2036661819501164458bd6d94642d81b5e8f1d9bdad93bad49bb"];
-    let satoshi = hex!["09a6acd8a6f4394c6ba8b5ea93ae0d473880823f357dd3fdfd5ff4ccf1fcad99"];
-    //    let funding = hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].into();
+    let alice = hex!["a2308187439ac204df9e299e1e54afefafea4bf348e03dad679737c91871dc53"];
+    let bob = hex!["6488ceea630000b48fed318d13248ea7c566c0f4d2b8b90d12a136ad6eb02323"];
+    let charlie = hex!["56758d236714a2fa7981af8c8177dddc6907875b2c23fd5c842922c8a2c5a1be"];
+    let satoshi = hex!["3f53e37c21e24df9cacc2ec69d010d144fe4dace6b2f087f466ade8b6b72278f"];
     let sudo_address: AccountId =
-        hex!["c4387fd74bc774db3f9a2f6ea37b99218b1412677f20e25df4ff9043ed54e9ce"].unchecked_into();
+        hex!["d3581c060b04fe74f625f053d6392edb86e94b3d02de7bba4728f761c0700773"].unchecked_into();
 
     let auth1: AccountId = alice.unchecked_into();
     let auth2: AccountId = bob.unchecked_into();
