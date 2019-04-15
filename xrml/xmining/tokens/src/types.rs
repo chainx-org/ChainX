@@ -7,6 +7,7 @@ use serde_derive::{Deserialize, Serialize};
 use super::{Token, Trait};
 use primitives::traits::As;
 use xstaking::VoteWeight;
+use xsupport::trace;
 
 /// This module only tracks the vote weight related changes.
 /// All the amount related has been taken care by assets module.
@@ -55,6 +56,15 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
     fn set_amount(&mut self, _: u64, _: bool) {}
 
     fn set_last_acum_weight(&mut self, latest_deposit_weight: u64) {
+        trace!(
+            target: "tokens",
+            "[set_last_acum_weight] [psudu_intention] amount: {:?}, last_acum_weight: {:?}, last_acum_weight_update: {:?}, current_block: {:?}, latest_deposit_weight: {:?}",
+            self.amount(),
+            self.last_acum_weight(),
+            self.last_acum_weight_update(),
+            <system::Module<T>>::block_number(),
+            latest_deposit_weight
+        );
         self.staking.last_total_deposit_weight = latest_deposit_weight;
     }
 
@@ -79,6 +89,15 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
     fn set_amount(&mut self, _: u64, _: bool) {}
 
     fn set_last_acum_weight(&mut self, latest_deposit_weight: u64) {
+        trace!(
+            target: "tokens",
+            "[set_last_acum_weight] [depositor] amount: {:?}, last_acum_weight: {:?}, last_acum_weight_update: {:?}, current_block: {:?} => latest_deposit_weight: {:?}",
+            self.amount(),
+            self.last_acum_weight(),
+            self.last_acum_weight_update(),
+            <system::Module<T>>::block_number(),
+            latest_deposit_weight
+        );
         self.staking.last_deposit_weight = latest_deposit_weight;
     }
 

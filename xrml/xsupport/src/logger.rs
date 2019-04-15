@@ -5,6 +5,10 @@ pub use log::{
 
 #[macro_export]
 macro_rules! error {
+    (target: $target:expr, $($arg:tt)+) => (
+        #[cfg(feature = "std")]
+        $crate::logger::error_m!(target: $target, "[runtime|{}] {}", module_path!(), format!($($arg)*));
+    );
     ($($arg:tt)*) => (
         #[cfg(feature = "std")]
         $crate::logger::error_m!(target: "runtime", "[runtime|{}|{}L] {}", module_path!(), line!(), format!($($arg)*));
@@ -13,6 +17,10 @@ macro_rules! error {
 
 #[macro_export]
 macro_rules! warn {
+    (target: $target:expr, $($arg:tt)+) => (
+        #[cfg(feature = "std")]
+        $crate::logger::warn_m!(target: $target, "[runtime|{}] {}", module_path!(), format!($($arg)*));
+    );
     ($($arg:tt)*) => (
         #[cfg(feature = "std")]
         $crate::logger::warn_m!(target: "runtime", "[runtime|{}] {}", module_path!(), format!($($arg)*));
@@ -20,6 +28,10 @@ macro_rules! warn {
 }
 #[macro_export]
 macro_rules! info {
+    (target: $target:expr, $($arg:tt)+) => (
+        #[cfg(feature = "std")]
+        $crate::logger::info_m!(target: $target, "[runtime|{}] {}", module_path!(), format!($($arg)*));
+    );
     ($($arg:tt)*) => (
         #[cfg(feature = "std")]
         $crate::logger::info_m!(target: "runtime", "[runtime|{}] {}", module_path!(), format!($($arg)*));
@@ -27,6 +39,10 @@ macro_rules! info {
 }
 #[macro_export]
 macro_rules! debug {
+    (target: $target:expr, $($arg:tt)+) => (
+        #[cfg(feature = "std")]
+        $crate::logger::debug_m!(target: $target, "[runtime|{}] {}", module_path!(), format!($($arg)*));
+    );
     ($($arg:tt)*) => (
         #[cfg(feature = "std")]
         $crate::logger::debug_m!(target: "runtime", "[runtime|{}] {}", module_path!(), format!($($arg)*));
@@ -34,6 +50,10 @@ macro_rules! debug {
 }
 #[macro_export]
 macro_rules! trace {
+    (target: $target:expr, $($arg:tt)+) => (
+        #[cfg(feature = "std")]
+        $crate::logger::trace_m!(target: $target, "[runtime|{}] {}", module_path!(), format!($($arg)*));
+    );
     ($($arg:tt)*) => (
         #[cfg(feature = "std")]
         $crate::logger::trace_m!(target: "runtime", "[runtime|{}] {}", module_path!(), format!($($arg)*));

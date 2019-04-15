@@ -23,7 +23,7 @@ use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder};
 #[cfg(feature = "std")]
 use xsupport::u8array_to_string;
-use xsupport::{debug, error, info};
+use xsupport::{debug, error, info, token, trace};
 
 pub use self::types::{
     DepositRecord, DepositVoteWeight, PseduIntentionProfs, PseduIntentionVoteWeight,
@@ -87,6 +87,7 @@ decl_module! {
                 "Cannot claim from unsupport token."
             );
 
+            debug!("[claim] who: {:?}, token: {:?}", who, token!(token));
             Self::apply_claim(&who, &token)?;
         }
 
@@ -143,7 +144,7 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
         }
 
         debug!(
-            "on_issue token: {:?}, who: {:?}, vlaue: {:?}",
+            "[on_issue] token: {:?}, who: {:?}, vlaue: {:?}",
             u8array_to_string(target),
             source,
             value
@@ -155,6 +156,12 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
                 last_deposit_weight: 0,
                 last_deposit_weight_update: <system::Module<T>>::block_number(),
             },
+        );
+        debug!(
+            "[on_issue] deposit_records: ({:?}, {:?}) = {:?}",
+            source,
+            token!(target),
+            Self::deposit_records((source.clone(), target.clone()))
         );
         Self::update_vote_weight(source, target, value, true);
 
@@ -233,7 +240,12 @@ impl<T: Trait> Module<T> {
     fn issue_reward(source: &T::AccountId, token: &Token, value: T::Balance) -> Result {
         let psedu_intention = Self::psedu_intention_profiles(token);
         if psedu_intention.last_total_deposit_weight == 0 {
-            info!("should issue reward to {:?}, but the last_total_deposit_weight of Token: {:?} is zero.", source, u8array_to_string(token));
+            info!(
+                target: "tokens",
+                "should issue reward to {:?}, but the last_total_deposit_weight of Token: {:?} is zero.",
+                source,
+                u8array_to_string(token)
+            );
             return Ok(());
         }
         let blocks = Self::wait_blocks(token)?;
@@ -297,6 +309,19 @@ impl<T: Trait> Module<T> {
 
         <PseduIntentionProfiles<T>>::insert(target, p_vote_weight);
         <DepositRecords<T>>::insert(&key, d_vote_weight);
+        trace!(
+            target: "tokens",
+            "[update_vote_weight] PseduIntentionProfiles: {:?} = {:?}",
+            token!(target),
+            Self::psedu_intention_profiles(target)
+        );
+        trace!(
+            target: "tokens",
+            "[update_vote_weight] DepositRecords: ({:?}, {:?}) = {:?}",
+            source,
+            token!(target),
+            Self::deposit_records(&key)
+        );
     }
 
     #[cfg(feature = "std")]

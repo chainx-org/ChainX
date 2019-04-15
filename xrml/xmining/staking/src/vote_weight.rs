@@ -4,6 +4,7 @@
 use super::*;
 
 use rstd::result::Result as StdResult;
+use xsupport::{error, trace};
 
 pub trait VoteWeight<BlockNumber: As<u64>> {
     fn amount(&self) -> u64;
@@ -142,43 +143,110 @@ impl<T: Trait> Module<T> {
 
         let source_vote_weight = source.latest_acum_weight(current_block);
 
+        trace!(
+            target: "claim",
+            "[generic_claim] [source info] last_acum_weight({:?}) + amount({:?}) * (current_block({:?}) - last_acum_weight_update({:?}) = latest_acum_weight(source_vote_weight) {:?}",
+            source.last_acum_weight(),
+            source.amount(),
+            current_block,
+            source.last_acum_weight_update(),
+            source_vote_weight
+        );
+
         if source_vote_weight == 0 {
             return Err("the vote weight of claimer is zero.");
         }
 
         let target_vote_weight = target.latest_acum_weight(current_block);
 
+        trace!(
+            target: "claim",
+            "[generic_claim] [target info] last_acum_weight({:?}) + amount({:?}) * (current_block({:?}) - last_acum_weight_update({:?}) = latest_acum_weight(source_vote_weight) {:?}",
+            target.last_acum_weight(),
+            target.amount(),
+            current_block,
+            target.last_acum_weight_update(),
+            target_vote_weight
+        );
+
         let total_jackpot: u64 = xassets::Module::<T>::pcx_free_balance(target_jackpot_addr).as_();
 
         // source_vote_weight * total_jackpot could overflow.
         let dividend = match (source_vote_weight as u128).checked_mul(total_jackpot as u128) {
             Some(x) => T::Balance::sa((x / target_vote_weight as u128) as u64),
-            None => panic!("source_vote_weight * total_jackpot overflow"),
+            None => {
+                error!(
+                    "[generic_claim] source_vote_weight * total_jackpot overflow, source_vote_weight: {:?}, total_jackpot: {:?}",
+                    source_vote_weight, total_jackpot
+                );
+                panic!("source_vote_weight * total_jackpot overflow")
+            }
         };
+
+        trace!(target: "claim", "[generic_claim] total_jackpot: {:?}, dividend: {:?}", total_jackpot, dividend);
 
         match claim_type {
             ClaimType::Intention => {
                 xassets::Module::<T>::pcx_move_free_balance(target_jackpot_addr, who, dividend)
-                    .map_err(|e| e.info())?;
+                    .map_err(|e| {
+                        error!(
+                            "[generic_claim] fail to move {:?} from jackpot_addr to some nominator, current jackpot_balance: {:?}",
+                            dividend,
+                            xassets::Module::<T>::pcx_free_balance(target_jackpot_addr),
+                        );
+                        e.info()
+                    })?;
             }
             ClaimType::PseduIntention(token) => {
                 let channel_or_council = Self::channel_or_council_of(who, &token);
-                // FIXME be configurable
-                let to_channel_or_council = T::Balance::sa(dividend.as_() * 1 / 10);
+                // 10% claim distributes to the channel of depositor.
+                let to_channel_or_council = T::Balance::sa(dividend.as_() / 10);
+
+                trace!(
+                    target: "claim",
+                    "[before moving to channel_or_council] should move {:?} from the jackpot to channel_or_council, current jackpot_balance: {:?}",
+                    to_channel_or_council,
+                    xassets::Module::<T>::pcx_free_balance(target_jackpot_addr)
+                );
 
                 xassets::Module::<T>::pcx_move_free_balance(
                     target_jackpot_addr,
                     &channel_or_council,
                     to_channel_or_council,
                 )
-                .map_err(|e| e.info())?;
+                    .map_err(|e| {
+                        error!(
+                            "[generic_claim] [deposite_claim] fail to move {:?} from jackpot_addr to channel_or_council, current jackpot_balance: {:?}",
+                            to_channel_or_council,
+                            xassets::Module::<T>::pcx_free_balance(target_jackpot_addr)
+                        );
+                        e.info()
+                    })?;
+
+                trace!(target: "claim", "[after moving to channel_or_council] jackpot_balance: {:?}", xassets::Module::<T>::pcx_free_balance(target_jackpot_addr));
+
+                trace!(
+                    target: "claim",
+                    "[before moving to depositor] should move {:?} from jackpot to depositor, current jackpot_balance: {:?}",
+                    dividend - to_channel_or_council,
+                    xassets::Module::<T>::pcx_free_balance(target_jackpot_addr)
+                );
 
                 xassets::Module::<T>::pcx_move_free_balance(
                     target_jackpot_addr,
                     who,
                     dividend - to_channel_or_council,
                 )
-                .map_err(|e| e.info())?;
+                    .map_err(|e| {
+                        error!(
+                            "[generic_claim] [deposite_claim] fail to move {:?} from jackpot_addr to some depositor, current jackpot_balance: {:?}",
+                            dividend - to_channel_or_council,
+                            xassets::Module::<T>::pcx_free_balance(target_jackpot_addr),
+                        );
+                        e.info()
+                    })?;
+
+                trace!(target: "claim", "[after moving to depositor] jackpot_balance: {:?}", xassets::Module::<T>::pcx_free_balance(target_jackpot_addr));
             }
         }
 
@@ -189,6 +257,19 @@ impl<T: Trait> Module<T> {
         target.set_last_acum_weight_update(current_block);
 
         Ok((source_vote_weight, target_vote_weight, dividend))
+    }
+
+    /// This is for updating the vote weight of depositors, the delta changes is handled by assets module.
+    pub fn update_bare_vote_weight_both_way<
+        U: VoteWeight<T::BlockNumber>,
+        V: VoteWeight<T::BlockNumber>,
+    >(
+        source: &mut U,
+        target: &mut V,
+    ) {
+        // Update to the latest vote weight
+        Self::generic_update_vote_weight(source);
+        Self::generic_update_vote_weight(target);
     }
 
     pub fn update_vote_weight_both_way<
