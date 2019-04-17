@@ -20,8 +20,8 @@ use client;
 use error_chain::*;
 
 error_chain! {
-    links {
-        Client(client::error::Error, client::error::ErrorKind) #[doc = "Client error"];
+    foreign_links {
+        Client(client::error::Error) #[doc = "Client error"];
     }
 
     errors {

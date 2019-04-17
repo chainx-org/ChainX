@@ -8,8 +8,8 @@ use crate::errors;
 use crate::rpc;
 
 error_chain! {
-    links {
-        Client(client::error::Error, client::error::ErrorKind) #[doc = "Client error"];
+    foreign_links {
+        Client(client::error::Error) #[doc = "Client error"];
     }
     errors {
         /// Not implemented yet
