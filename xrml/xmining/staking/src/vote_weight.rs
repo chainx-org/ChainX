@@ -94,7 +94,7 @@ where
 }
 
 impl<T: Trait> Module<T> {
-    fn generic_update_vote_weight<V: VoteWeight<T::BlockNumber>>(who: &mut V) {
+    pub fn generic_update_vote_weight<V: VoteWeight<T::BlockNumber>>(who: &mut V) {
         let current_block = <system::Module<T>>::block_number();
 
         let latest_acum_weight = who.latest_acum_weight(current_block);

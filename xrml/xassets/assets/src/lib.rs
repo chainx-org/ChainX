@@ -410,6 +410,9 @@ impl<T: Trait> Module<T> {
             Some(b) => b,
             None => return Err("free balance too high to issue"),
         };
+
+        AssetTriggerEventAfter::<T>::on_issue_before(token, who);
+
         // set to storage
         let imbalance = Self::make_type_balance_be(&key, type_, new_free);
         let positive = if let SignedImbalance::Positive(p) = imbalance {
@@ -503,10 +506,14 @@ impl<T: Trait> Module<T> {
         if to_type == AssetType::Free {
             Self::try_new_account(&to_key);
         }
+
+        AssetTriggerEventAfter::<T>::on_move_before(token, from, from_type, to, to_type, value);
+
         let from_imbalance = Self::make_type_balance_be(&from_key, from_type, new_from_balance);
         let to_imbalance = Self::make_type_balance_be(&to_key, to_type, new_to_balance);
 
         AssetTriggerEventAfter::<T>::on_move(token, from, from_type, to, to_type, value)?;
+
         Ok((from_imbalance, to_imbalance))
     }
 

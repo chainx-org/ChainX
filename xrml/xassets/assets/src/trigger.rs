@@ -6,6 +6,15 @@ use crate::types::{AssetErr, AssetType, Token};
 use crate::{Module, RawEvent, Trait};
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {
+    fn on_move_before(
+        _token: &Token,
+        _from: &AccountId,
+        _from_type: AssetType,
+        _to: &AccountId,
+        _to_type: AssetType,
+        _value: Balance,
+    ) {
+    }
     fn on_move(
         _token: &Token,
         _from: &AccountId,
@@ -16,6 +25,7 @@ impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {
     ) -> result::Result<(), AssetErr> {
         Ok(())
     }
+    fn on_issue_before(_: &Token, _: &AccountId) {}
     fn on_issue(_: &Token, _: &AccountId, _: Balance) -> Result {
         Ok(())
     }
@@ -60,6 +70,16 @@ impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRe
 pub struct AssetTriggerEventAfter<T: Trait>(::rstd::marker::PhantomData<T>);
 
 impl<T: Trait> AssetTriggerEventAfter<T> {
+    pub fn on_move_before(
+        token: &Token,
+        from: &T::AccountId,
+        from_type: AssetType,
+        to: &T::AccountId,
+        to_type: AssetType,
+        value: T::Balance,
+    ) {
+        T::OnAssetChanged::on_move_before(token, from, from_type, to, to_type, value);
+    }
     pub fn on_move(
         token: &Token,
         from: &T::AccountId,
@@ -78,6 +98,9 @@ impl<T: Trait> AssetTriggerEventAfter<T> {
         ));
         T::OnAssetChanged::on_move(token, from, from_type, to, to_type, value)?;
         Ok(())
+    }
+    pub fn on_issue_before(token: &Token, who: &T::AccountId) {
+        T::OnAssetChanged::on_issue_before(token, who);
     }
     pub fn on_issue(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         Module::<T>::deposit_event(RawEvent::Issue(token.clone(), who.clone(), value));

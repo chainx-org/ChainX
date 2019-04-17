@@ -24,6 +24,8 @@ use xaccounts::{IntentionJackpotAccountIdFor, Name, TrusteeEntity, TrusteeIntent
 use xassets::{Chain, Memo, Token};
 use xr_primitives::{traits::TrusteeForChain, XString};
 use xsupport::info;
+#[cfg(feature = "std")]
+use xsupport::who;
 
 pub use self::shifter::{OnReward, OnRewardCalculation};
 pub use self::types::{ClaimType, IntentionProfs, NominationRecord, RewardHolder};
@@ -485,6 +487,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_claim(who: &T::AccountId, target: &T::AccountId) -> Result {
+        info!(target: "claim", "[vote claim] who: {:?}, target: {:?}", who, who!(target));
         let mut iprof = <IntentionProfiles<T>>::get(target);
         let mut record = Self::nomination_record_of(who, target);
 

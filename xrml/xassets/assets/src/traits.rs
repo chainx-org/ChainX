@@ -13,6 +13,14 @@ pub trait ChainT {
 }
 
 pub trait OnAssetChanged<AccountId, Balance> {
+    fn on_move_before(
+        token: &Token,
+        from: &AccountId,
+        from_type: AssetType,
+        to: &AccountId,
+        to_type: AssetType,
+        value: Balance,
+    );
     fn on_move(
         token: &Token,
         from: &AccountId,
@@ -21,6 +29,7 @@ pub trait OnAssetChanged<AccountId, Balance> {
         to_type: AssetType,
         value: Balance,
     ) -> result::Result<(), AssetErr>;
+    fn on_issue_before(token: &Token, who: &AccountId);
     fn on_issue(token: &Token, who: &AccountId, value: Balance) -> Result;
     fn on_destroy(token: &Token, who: &AccountId, value: Balance) -> Result;
     fn on_set_balance(

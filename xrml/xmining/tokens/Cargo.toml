@@ -25,6 +25,17 @@ xspot = { package = "xrml-xdex-spot", path = "../../xdex/spot", default-features
 xstaking = { package = "xrml-xmining-staking", path = "../../xmining/staking", default-features = false }
 
 [dev-dependencies]
+# Substrate
+substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
+indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate" }
+timestamp = { package ="srml-timestamp", git = "https://github.com/chainpool/substrate" }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default-features = false }
+# ChainX
+xfee-manager = { package = "xrml-xfee-manager", path = "../../xfee/manager" }
+xrecords = { package = "xrml-xassets-records", path = "../../xassets/records" }
+xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
+xsession = { package = "xrml-xsession", path = "../../xsession", default-features = false }
 
 [features]
 default = ["std"]

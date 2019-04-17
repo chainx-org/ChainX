@@ -42,8 +42,7 @@ impl<T: Trait> Module<T> {
     fn gather_candidates() -> Vec<(T::Balance, T::AccountId)> {
         let mut intentions = Self::intentions()
             .into_iter()
-            .filter(|v| Self::is_active(v))
-            .filter(|v| !Self::total_nomination_of(&v).is_zero())
+            .filter(|v| Self::is_active(v) && !Self::total_nomination_of(&v).is_zero())
             .map(|v| (Self::total_nomination_of(&v), v))
             .collect::<Vec<_>>();
         intentions.sort_unstable_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(&b1));

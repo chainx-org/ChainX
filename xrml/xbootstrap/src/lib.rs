@@ -88,6 +88,13 @@ decl_storage! {
 
                 xassets::Module::<T>::bootstrap_register_asset(pcx, true, false).unwrap();
 
+                // xtokens
+                for (token, value_of) in config.endowed_users.iter() {
+                    for (who, _value) in value_of {
+                        xtokens::Module::<T>::bootstrap_update_vote_weight(who, token);
+                    }
+                }
+
                 // init for asset_list
                 for (asset, is_online, is_psedu_intention, init_list) in config.asset_list.iter() {
                     let token = asset.token();
@@ -160,13 +167,6 @@ decl_storage! {
                 let init_accounts = config.multisig_init_info.0.clone();
                 // deploy multisig and build first trustee info
                 xmultisig::Module::<T>::deploy_in_genesis(init_accounts, required_num, vec![(Chain::Bitcoin, trustees)]);
-
-                // xtokens
-                for (token, value_of) in config.endowed_users.iter() {
-                    for (who, value) in value_of {
-                        xtokens::Module::<T>::bootstrap_update_vote_weight(who, token, *value, true);
-                    }
-                }
 
                 // xspot
                 for (base, quote, pip_precision, tick_precision, price, status) in config.pair_list.iter() {

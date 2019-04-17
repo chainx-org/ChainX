@@ -21,9 +21,9 @@ use support::{
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder};
+use xsupport::{debug, error, info};
 #[cfg(feature = "std")]
-use xsupport::u8array_to_string;
-use xsupport::{debug, error, info, token, trace};
+use xsupport::{token, u8array_to_string};
 
 pub use self::types::{
     DepositRecord, DepositVoteWeight, PseduIntentionProfs, PseduIntentionVoteWeight,
@@ -117,24 +117,54 @@ decl_storage! {
 }
 
 impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
-    fn on_move(
+    fn on_move_before(
         token: &Token,
         from: &T::AccountId,
         _: AssetType,
         to: &T::AccountId,
         _: AssetType,
-        value: T::Balance,
-    ) -> StdResult<(), AssetErr> {
+        _value: T::Balance,
+    ) {
         // Exclude PCX and asset type changes on same account.
         if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == token.clone()
             || from.clone() == to.clone()
         {
-            return Ok(());
+            return;
         }
 
-        Self::update_vote_weight(from, token, value, false);
-        Self::update_vote_weight(to, token, value, true);
+        Self::try_init_receiver_vote_weight(to, token);
+
+        Self::update_depositor_vote_weight_only(from, token);
+        Self::update_depositor_vote_weight_only(to, token);
+    }
+
+    fn on_move(
+        _token: &Token,
+        _from: &T::AccountId,
+        _: AssetType,
+        _to: &T::AccountId,
+        _: AssetType,
+        _value: T::Balance,
+    ) -> StdResult<(), AssetErr> {
         Ok(())
+    }
+
+    fn on_issue_before(target: &Token, source: &T::AccountId) {
+        // Exclude PCX
+        if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == target.clone() {
+            return;
+        }
+
+        Self::try_init_receiver_vote_weight(source, target);
+
+        debug!(
+            "[on_issue_before] deposit_records: ({:?}, {:?}) = {:?}",
+            source,
+            token!(target),
+            Self::deposit_records((source.clone(), target.clone()))
+        );
+
+        Self::update_bare_vote_weight(source, target);
     }
 
     fn on_issue(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
@@ -149,27 +179,12 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
             source,
             value
         );
-        Self::issue_reward(source, target, value)?;
-        <DepositRecords<T>>::insert(
-            (source.clone(), target.clone()),
-            DepositVoteWeight {
-                last_deposit_weight: 0,
-                last_deposit_weight_update: <system::Module<T>>::block_number(),
-            },
-        );
-        debug!(
-            "[on_issue] deposit_records: ({:?}, {:?}) = {:?}",
-            source,
-            token!(target),
-            Self::deposit_records((source.clone(), target.clone()))
-        );
-        Self::update_vote_weight(source, target, value, true);
 
-        Ok(())
+        Self::issue_reward(source, target, value)
     }
 
-    fn on_destroy(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
-        Self::update_vote_weight(source, target, value, false);
+    fn on_destroy(target: &Token, source: &T::AccountId, _value: T::Balance) -> Result {
+        Self::update_bare_vote_weight(source, target);
         Ok(())
     }
 }
@@ -214,6 +229,20 @@ impl<T: Trait> Module<T> {
         <DepositRecords<T>>::insert(&key, d_vote_weight);
 
         Ok(())
+    }
+
+    /// Ensure the vote weight of some depositor or transfer receiver is initialized.
+    fn try_init_receiver_vote_weight(who: &T::AccountId, token: &Token) {
+        let key = (who.clone(), token.clone());
+        if !<DepositRecords<T>>::exists(&key) {
+            <DepositRecords<T>>::insert(
+                &key,
+                DepositVoteWeight {
+                    last_deposit_weight: 0,
+                    last_deposit_weight_update: <system::Module<T>>::block_number(),
+                },
+            );
+        }
     }
 
     /// Transform outside irreversible blocks to native blocks.
@@ -282,8 +311,24 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// Actually update the vote weight and nomination balance of source and target.
-    fn update_vote_weight(source: &T::AccountId, target: &Token, value: T::Balance, to_add: bool) {
+    fn update_depositor_vote_weight_only(from: &T::AccountId, target: &Token) {
+        let key = (from.clone(), target.clone());
+        let mut d_vote_weight: DepositVoteWeight<T::BlockNumber> = Self::deposit_records(&key);
+
+        {
+            let mut record = DepositRecord::<T> {
+                depositor: from,
+                staking: &mut d_vote_weight,
+                token: target,
+            };
+
+            <xstaking::Module<T>>::generic_update_vote_weight(&mut record);
+        }
+
+        <DepositRecords<T>>::insert(&key, d_vote_weight);
+    }
+
+    fn update_bare_vote_weight(source: &T::AccountId, target: &Token) {
         let key = (source.clone(), target.clone());
         let mut p_vote_weight = <PseduIntentionProfiles<T>>::get(target);
         let mut d_vote_weight: DepositVoteWeight<T::BlockNumber> = Self::deposit_records(&key);
@@ -299,39 +344,17 @@ impl<T: Trait> Module<T> {
                 staking: &mut d_vote_weight,
             };
 
-            <xstaking::Module<T>>::update_vote_weight_both_way(
-                &mut prof,
-                &mut record,
-                value.as_(),
-                to_add,
-            );
+            <xstaking::Module<T>>::update_bare_vote_weight_both_way(&mut prof, &mut record);
         }
 
         <PseduIntentionProfiles<T>>::insert(target, p_vote_weight);
         <DepositRecords<T>>::insert(&key, d_vote_weight);
-        trace!(
-            target: "tokens",
-            "[update_vote_weight] PseduIntentionProfiles: {:?} = {:?}",
-            token!(target),
-            Self::psedu_intention_profiles(target)
-        );
-        trace!(
-            target: "tokens",
-            "[update_vote_weight] DepositRecords: ({:?}, {:?}) = {:?}",
-            source,
-            token!(target),
-            Self::deposit_records(&key)
-        );
     }
 
     #[cfg(feature = "std")]
-    pub fn bootstrap_update_vote_weight(
-        source: &T::AccountId,
-        target: &Token,
-        value: T::Balance,
-        to_add: bool,
-    ) {
-        Self::update_vote_weight(source, target, value, to_add)
+    pub fn bootstrap_update_vote_weight(source: &T::AccountId, target: &Token) {
+        Self::try_init_receiver_vote_weight(source, target);
+        Self::update_bare_vote_weight(source, target);
     }
 }
 
