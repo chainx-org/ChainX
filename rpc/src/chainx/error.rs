@@ -45,9 +45,9 @@ error_chain! {
             description("TradingPair Index Error"),
             display("TradingPair Index Error"),
         }
-        QuotationssPieceErr{
-            description("Quotationss Piece Err"),
-            display("Quotationss Piece Err"),
+        QuotationsPieceErr{
+            description("Quotations Piece Err"),
+            display("Quotations Piece Err"),
         }
         PageSizeErr{
             description("Page Size Must Between 0~100"),
@@ -113,9 +113,9 @@ impl From<Error> for rpc::Error {
                 message: "Get cert Remaining Shares failed.".into(),
                 data: None,
             },
-            Error(ErrorKind::QuotationssPieceErr, _) => rpc::Error {
+            Error(ErrorKind::QuotationsPieceErr, _) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 5),
-                message: "Quotationss Piece Err.".into(),
+                message: "Quotations Piece Err.".into(),
                 data: None,
             },
             Error(ErrorKind::TradingPairIndexErr, _) => rpc::Error {

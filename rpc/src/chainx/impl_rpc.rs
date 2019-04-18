@@ -460,7 +460,7 @@ where
         Ok(Some(psedu_records))
     }
 
-    fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>> {
+    fn trading_pairs(&self) -> Result<Option<Vec<(PairInfo)>>> {
         let mut pairs = Vec::new();
         let state = self.best_state()?;
 
@@ -486,12 +486,21 @@ where
                         info.update_height = price.2;
                     }
 
+                    let price_volatility_key = <xspot::PriceVolatility<Runtime>>::key();
+                    let price_volatility =
+                        Self::pickout::<u32>(&state, &price_volatility_key)?.unwrap() as u64;
+
                     let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&i);
                     if let Some(handicap) =
                         Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key)?
                     {
                         info.buy_one = handicap.highest_bid;
+                        info.maximum_bid =
+                            handicap.lowest_offer + handicap.lowest_offer * price_volatility / 100;
+
                         info.sell_one = handicap.lowest_offer;
+                        info.minimum_offer =
+                            handicap.highest_bid - handicap.highest_bid * price_volatility / 100;
                     }
 
                     pairs.push(info);
@@ -502,71 +511,96 @@ where
         Ok(Some(pairs))
     }
 
-    fn quotationss(&self, id: TradingPairIndex, piece: u32) -> Result<Option<QuotationsList>> {
+    fn quotations(
+        &self,
+        pair_index: TradingPairIndex,
+        piece: u32,
+    ) -> Result<Option<QuotationsList>> {
         if piece < 1 || piece > 10 {
-            return Err(ErrorKind::QuotationssPieceErr.into());
+            return Err(ErrorKind::QuotationsPieceErr.into());
         }
+
         let mut quotationslist = QuotationsList::default();
-        quotationslist.id = id;
+        quotationslist.id = pair_index;
         quotationslist.piece = piece;
         quotationslist.sell = Vec::new();
         quotationslist.buy = Vec::new();
 
         let state = self.best_state()?;
-        let pair_key = <xspot::TradingPairOf<Runtime>>::key_for(&id);
+        let pair_key = <xspot::TradingPairOf<Runtime>>::key_for(&pair_index);
         if let Some(pair) = Self::pickout::<TradingPair>(&state, &pair_key)? {
             let min_unit = 10_u64.pow(pair.tick_precision);
 
             //盘口
-            let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&id);
+            let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&pair_index);
 
             if let Some(handicap) = Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key)? {
                 //先买档
-                let mut opponent_price: Balance = handicap.highest_bid;
-                let mut price_volatility: Balance = 10;
+                let mut opponent_price = handicap.highest_bid;
 
+                // price_volatility definitely exists.
                 let price_volatility_key = <xspot::PriceVolatility<Runtime>>::key();
-                if let Some(p) = Self::pickout::<u32>(&state, &price_volatility_key)? {
-                    price_volatility = p.into();
-                }
+                let price_volatility =
+                    Self::pickout::<u32>(&state, &price_volatility_key)?.unwrap() as u64;
 
-                let max_price: Balance =
-                    (handicap.lowest_offer * (100_u64 + price_volatility as Balance)) / 100_u64;
-                let min_price: Balance =
-                    (handicap.lowest_offer * (100_u64 - price_volatility as Balance)) / 100_u64;
+                let max_price = (handicap.lowest_offer * (100_u64 + price_volatility)) / 100_u64;
+                let min_price = (handicap.lowest_offer * (100_u64 - price_volatility)) / 100_u64;
+
                 let mut n = 0;
+
+                let sum_of_quotations = |quotations: Vec<(AccountId, OrderIndex)>| {
+                    quotations
+                        .iter()
+                        .map(|q| {
+                            let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(q);
+                            Self::pickout::<OrderInfo<Runtime>>(&state, &order_key).unwrap()
+                        })
+                        .map(|order| {
+                            let order = order.unwrap();
+                            order
+                                .amount()
+                                .checked_sub(order.already_filled)
+                                .unwrap_or_default()
+                        })
+                        .sum::<Balance>()
+                };
+
+                let push_sum_quotations_given_price =
+                    |n: u32,
+                     price: Balance,
+                     quotations_info: &mut Vec<(Balance, Balance)>|
+                     -> Result<u32> {
+                        let quotations_key =
+                            <xspot::QuotationsOf<Runtime>>::key_for(&(pair_index, price));
+
+                        if let Some(quotations) =
+                            Self::pickout::<Vec<(AccountId, OrderIndex)>>(&state, &quotations_key)?
+                        {
+                            if !quotations.is_empty() {
+                                quotations_info.push((price, sum_of_quotations(quotations)));
+                                return Ok(n + 1);
+                            }
+                        };
+
+                        Ok(n)
+                    };
 
                 loop {
                     if n > piece || opponent_price == 0 || opponent_price < min_price {
                         break;
                     }
 
-                    let quotations_key =
-                        <xspot::QuotationsOf<Runtime>>::key_for(&(id, opponent_price));
-                    if let Some(list) =
-                        Self::pickout::<Vec<(AccountId, OrderIndex)>>(&state, &quotations_key)?
-                    {
-                        let mut sum: Balance = 0;
-                        for item in &list {
-                            let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(item);
-                            if let Some(order) =
-                                Self::pickout::<OrderInfo<Runtime>>(&state, &order_key)?
-                            {
-                                sum += match order.amount().checked_sub(order.already_filled) {
-                                    Some(v) => v,
-                                    None => Default::default(),
-                                };
-                            }
-                        }
-                        quotationslist.buy.push((opponent_price, sum));
-                        n += 1;
-                    };
+                    n = push_sum_quotations_given_price(
+                        n,
+                        opponent_price,
+                        &mut quotationslist.buy,
+                    )?;
 
-                    opponent_price = match opponent_price.checked_sub(As::sa(min_unit)) {
-                        Some(v) => v,
-                        None => Default::default(),
-                    };
+                    opponent_price = opponent_price
+                        .checked_sub(As::sa(min_unit))
+                        .unwrap_or_default();
                 }
+
                 //再卖档
                 opponent_price = handicap.lowest_offer;
                 n = 0;
@@ -575,31 +609,15 @@ where
                         break;
                     }
 
-                    let quotations_key =
-                        <xspot::QuotationsOf<Runtime>>::key_for(&(id, opponent_price));
-                    if let Some(list) =
-                        Self::pickout::<Vec<(AccountId, OrderIndex)>>(&state, &quotations_key)?
-                    {
-                        let mut sum: Balance = 0;
-                        for item in &list {
-                            let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(item);
-                            if let Some(order) =
-                                Self::pickout::<OrderInfo<Runtime>>(&state, &order_key)?
-                            {
-                                sum += match order.amount().checked_sub(order.already_filled) {
-                                    Some(v) => v,
-                                    None => Default::default(),
-                                };
-                            }
-                        }
-                        quotationslist.sell.push((opponent_price, sum));
-                        n += 1;
-                    };
+                    n = push_sum_quotations_given_price(
+                        n,
+                        opponent_price,
+                        &mut quotationslist.sell,
+                    )?;
 
-                    opponent_price = match opponent_price.checked_add(As::sa(min_unit)) {
-                        Some(v) => v,
-                        None => Default::default(),
-                    };
+                    opponent_price = opponent_price
+                        .checked_add(As::sa(min_unit))
+                        .unwrap_or_default();
                 }
             };
         } else {

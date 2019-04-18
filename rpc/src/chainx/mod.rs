@@ -94,11 +94,11 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
         who: AccountId,
     ) -> Result<Option<Vec<PseduNominationRecord>>>;
 
-    #[rpc(name = "chainx_getOrderPairs")]
-    fn order_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>;
+    #[rpc(name = "chainx_getTradingPairs")]
+    fn trading_pairs(&self) -> Result<Option<Vec<(PairInfo)>>>;
 
     #[rpc(name = "chainx_getQuotations")]
-    fn quotationss(&self, id: TradingPairIndex, piece: u32) -> Result<Option<QuotationsList>>;
+    fn quotations(&self, id: TradingPairIndex, piece: u32) -> Result<Option<QuotationsList>>;
 
     #[rpc(name = "chainx_getOrders")]
     fn orders(

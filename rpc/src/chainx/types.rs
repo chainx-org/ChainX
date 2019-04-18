@@ -150,7 +150,9 @@ pub struct PairInfo {
     pub aver_price: Balance,
     pub update_height: BlockNumber,
     pub buy_one: Balance,
+    pub maximum_bid: Balance,
     pub sell_one: Balance,
+    pub minimum_offer: Balance,
 }
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
