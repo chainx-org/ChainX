@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1.0", default-features = false }
-parity-codec = { version = "3.2", default-features = false, features = ["derive"] }
+parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
 libsecp256k1 = "0.2.2"
 tiny-keccak = "1.4.2"
 # Substrate

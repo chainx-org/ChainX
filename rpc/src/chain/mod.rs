@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -164,13 +164,13 @@ where
                 .map_err(|e| warn!("Block notification stream error: {:?}", e));
 
             sink
-                .sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
-                .send_all(
-                    stream::iter_result(vec![Ok(header)])
-                        .chain(stream)
-                )
-                // we ignore the resulting Stream (if the first stream is over we are unsubscribed)
-                .map(|_| ())
+				.sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
+				.send_all(
+					stream::iter_result(vec![Ok(header)])
+						.chain(stream)
+				)
+				// we ignore the resulting Stream (if the first stream is over we are unsubscribed)
+				.map(|_| ())
         });
     }
 }
@@ -199,7 +199,6 @@ where
         &self,
         number: Option<number::NumberOrHex<NumberFor<Block>>>,
     ) -> Result<Option<Block::Hash>> {
-        let number: Option<number::NumberOrHex<NumberFor<Block>>> = number.into();
         Ok(match number {
             None => Some(self.client.info()?.chain.best_hash),
             Some(num_or_hex) => self
