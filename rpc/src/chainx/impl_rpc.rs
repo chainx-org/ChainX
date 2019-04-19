@@ -170,7 +170,7 @@ where
     ) -> Result<Option<PageData<DepositInfo>>> {
         let best_number = self.best_number()?;
 
-        let list: Vec<xrecords::RecordInfo<AccountId, Balance, Timestamp>> = self
+        let list: Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> = self
             .client
             .runtime_api()
             .deposit_list_of(&best_number, chain)
@@ -188,7 +188,7 @@ where
         page_size: u32,
     ) -> Result<Option<PageData<WithdrawInfo>>> {
         let best_number = self.best_number()?;
-        let list: Vec<xrecords::RecordInfo<AccountId, Balance, Timestamp>> = self
+        let list: Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> = self
             .client
             .runtime_api()
             .withdrawal_list_of(&best_number, chain)

@@ -19,7 +19,7 @@ use xsupport::{error, info};
 #[cfg(feature = "std")]
 use xsupport::{token, u8array_to_addr, u8array_to_string};
 
-pub use self::types::{AddrStr, Application, LinkedMultiKey, RecordInfo, TxState};
+pub use self::types::{AddrStr, Application, HeightOrTime, LinkedMultiKey, RecordInfo, TxState};
 
 pub trait Trait: system::Trait + xassets::Trait + timestamp::Trait {
     /// The overarching event type.
@@ -73,11 +73,11 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as XAssetsRecords {
         /// linked node header
-        pub ApplicationMHeader get(application_mheader): map Chain => Option<MultiNodeIndex<Chain, Application<T::AccountId, T::Balance, T::Moment>>>;
+        pub ApplicationMHeader get(application_mheader): map Chain => Option<MultiNodeIndex<Chain, Application<T::AccountId, T::Balance, T::BlockNumber>>>;
         /// linked node tail
-        pub ApplicationMTail get(application_mtail): map Chain => Option<MultiNodeIndex<Chain, Application<T::AccountId, T::Balance, T::Moment>>>;
+        pub ApplicationMTail get(application_mtail): map Chain => Option<MultiNodeIndex<Chain, Application<T::AccountId, T::Balance, T::BlockNumber>>>;
         /// withdrawal applications collection, use serial number to mark them, and has prev and next to link them
-        pub ApplicationMap get(application_map): map u32 => Option<Node<Application<T::AccountId, T::Balance, T::Moment>>>;
+        pub ApplicationMap get(application_map): map u32 => Option<Node<Application<T::AccountId, T::Balance, T::BlockNumber>>>;
         /// withdrawal application serial number
         pub SerialNumber get(number): u32 = 0;
     }
@@ -146,14 +146,14 @@ impl<T: Trait> Module<T> {
             u8array_to_string(&ext)
         );
 
-        let appl = Application::<T::AccountId, T::Balance, T::Moment>::new(
+        let appl = Application::<T::AccountId, T::Balance, T::BlockNumber>::new(
             id,
             who.clone(),
             token.clone(),
             balance,
             addr,
             ext,
-            timestamp::Module::<T>::now(),
+            system::Module::<T>::block_number(),
         );
 
         let n = Node::new(appl.clone());
@@ -276,7 +276,7 @@ impl<T: Trait> Module<T> {
 
     pub fn withdrawal_applications(
         chain: Chain,
-    ) -> Vec<Application<T::AccountId, T::Balance, T::Moment>> {
+    ) -> Vec<Application<T::AccountId, T::Balance, T::BlockNumber>> {
         let mut vec = Vec::new();
         // begin from header
         if let Some(header) = Self::application_mheader(chain) {

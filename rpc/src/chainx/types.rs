@@ -210,7 +210,7 @@ pub enum WithdrawStatus {
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DepositInfo {
-    pub time: u64,
+    pub time: Timestamp,
     /// txid
     pub txid: String,
     /// deposit-balance
@@ -229,17 +229,25 @@ pub struct DepositInfo {
     pub total_confirm: u32,
 }
 
-impl From<RecordInfo<AccountId, Balance, Timestamp>> for DepositInfo {
-    fn from(record: RecordInfo<AccountId, Balance, Timestamp>) -> Self {
+impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for DepositInfo {
+    fn from(record: RecordInfo<AccountId, Balance, BlockNumber, Timestamp>) -> Self {
         let (confirm, total_confirm) =
             if let TxState::Confirming(confirm, total_confirm) = record.state {
                 (confirm, total_confirm)
             } else {
-                panic!("deposit record only has comfirm state")
+                panic!("deposit record only has comfirm state");
             };
 
+        let time = if let HeightOrTime::<BlockNumber, Timestamp>::Timestamp(time) =
+            record.height_or_time
+        {
+            time
+        } else {
+            panic!("deposit record should be timestamp, not height");
+        };
+
         DepositInfo {
-            time: record.time,
+            time,
             txid: format!("0x{:}", record.txid.to_hex::<String>()),
             balance: record.balance,
             token: String::from_utf8_lossy(&record.token).into_owned(),
@@ -265,7 +273,7 @@ impl From<RecordInfo<AccountId, Balance, Timestamp>> for DepositInfo {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WithdrawInfo {
-    pub time: u64,
+    pub height: BlockNumber,
     ///id
     pub id: u32,
     /// txid
@@ -284,10 +292,17 @@ pub struct WithdrawInfo {
     pub memo: String,
 }
 
-impl From<RecordInfo<AccountId, Balance, Timestamp>> for WithdrawInfo {
-    fn from(record: RecordInfo<AccountId, Balance, Timestamp>) -> Self {
+impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for WithdrawInfo {
+    fn from(record: RecordInfo<AccountId, Balance, BlockNumber, Timestamp>) -> Self {
+        let height =
+            if let HeightOrTime::<BlockNumber, Timestamp>::Height(height) = record.height_or_time {
+                height
+            } else {
+                panic!("deposit record should be timestamp, not height");
+            };
+
         WithdrawInfo {
-            time: record.time,
+            height,
             id: record.withdrawal_id,
             txid: format!("0x{:}", record.txid.to_hex::<String>()),
             balance: record.balance,

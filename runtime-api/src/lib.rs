@@ -7,7 +7,7 @@ use sr_primitives::traits::AuthorityIdFor;
 
 use client::decl_runtime_apis;
 
-use chainx_primitives::{AccountIdForApi, Balance, Timestamp};
+use chainx_primitives::{AccountIdForApi, Balance, BlockNumber, Timestamp};
 
 pub mod xassets_api {
     use super::*;
@@ -20,8 +20,8 @@ pub mod xassets_api {
             fn valid_assets() -> Vec<Token>;
             fn all_assets() -> Vec<(Asset, bool)>;
             fn valid_assets_of(who: AccountIdForApi) -> Vec<(Token, BTreeMap<AssetType, Balance>)>;
-            fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdForApi, Balance, Timestamp>>;
-            fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdForApi, Balance, Timestamp>>;
+            fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdForApi, Balance, BlockNumber, Timestamp>>;
+            fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdForApi, Balance, BlockNumber, Timestamp>>;
             fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result<(), Vec<u8>>;
             fn minimal_withdrawal_value(token: Token) -> Option<Balance>;
         }

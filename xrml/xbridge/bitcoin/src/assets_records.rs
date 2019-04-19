@@ -7,7 +7,7 @@ use rstd::prelude::Vec;
 // CHainX
 use xassets::{Chain, ChainT};
 use xr_primitives::generic::b58;
-use xrecords::{self, RecordInfo, TxState};
+use xrecords::{self, HeightOrTime, RecordInfo, TxState};
 use xsupport::error;
 
 // light-bitcoin
@@ -21,7 +21,8 @@ use super::types::{TxType, VoteResult};
 use super::{Module, Trait};
 
 impl<T: Trait> Module<T> {
-    pub fn withdrawal_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::Moment>> {
+    pub fn withdrawal_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::BlockNumber, T::Moment>>
+    {
         let mut records = xrecords::Module::<T>::withdrawal_applications(Chain::Bitcoin)
             .into_iter()
             .map(|appl| RecordInfo {
@@ -31,7 +32,7 @@ impl<T: Trait> Module<T> {
                 txid: Vec::new(),
                 addr: appl.addr(), // for btc, it's bas58 addr
                 ext: appl.ext(),
-                time: appl.time(),
+                height_or_time: HeightOrTime::<T::BlockNumber, T::Moment>::Height(appl.height()),
                 withdrawal_id: appl.id(), // only for withdrawal
                 state: TxState::Applying,
             })
@@ -102,7 +103,7 @@ impl<T: Trait> Module<T> {
         records
     }
 
-    pub fn deposit_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::Moment>> {
+    pub fn deposit_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::BlockNumber, T::Moment>> {
         let mut records = Vec::new();
 
         let best = Self::best_index();
@@ -138,22 +139,26 @@ impl<T: Trait> Module<T> {
                             let (account_info, balance, ext) = r;
 
                             let tx_hash = tx_info.raw_tx.hash();
-                            let info = RecordInfo::<T::AccountId, T::Balance, T::Moment> {
-                                who: account_info.map(|(a, _)| a).unwrap_or_default(),
-                                token: Self::TOKEN.to_vec(),
-                                balance: As::sa(balance),
-                                txid: tx_hash.as_ref().to_vec(),
-                                addr: b58::to_base58(
-                                    Self::input_addr_for(tx_hash)
-                                        .unwrap_or_default()
-                                        .layout()
-                                        .to_vec(),
-                                ),
-                                ext,
-                                time: As::sa(timestamp as u64),
-                                withdrawal_id: 0, // only for withdrawal
-                                state,
-                            };
+                            let info =
+                                RecordInfo::<T::AccountId, T::Balance, T::BlockNumber, T::Moment> {
+                                    who: account_info.map(|(a, _)| a).unwrap_or_default(),
+                                    token: Self::TOKEN.to_vec(),
+                                    balance: As::sa(balance),
+                                    txid: tx_hash.as_ref().to_vec(),
+                                    addr: b58::to_base58(
+                                        Self::input_addr_for(tx_hash)
+                                            .unwrap_or_default()
+                                            .layout()
+                                            .to_vec(),
+                                    ),
+                                    ext,
+                                    height_or_time:
+                                        HeightOrTime::<T::BlockNumber, T::Moment>::Timestamp(
+                                            As::sa(timestamp as u64),
+                                        ),
+                                    withdrawal_id: 0, // only for withdrawal
+                                    state,
+                                };
                             records.push(info);
                         }
                     }

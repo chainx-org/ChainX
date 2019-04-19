@@ -34,10 +34,18 @@ impl Default for TxState {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct RecordInfo<AccountId, Balance, Moment> {
+pub enum HeightOrTime<BlockNumber, Timestamp> {
+    Height(BlockNumber),
+    Timestamp(Timestamp),
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct RecordInfo<AccountId, Balance, BlockNumber: Default, Timestamp> {
     pub who: AccountId,
     pub token: Token,
     pub balance: Balance,
@@ -47,8 +55,8 @@ pub struct RecordInfo<AccountId, Balance, Moment> {
     pub addr: AddrStr,
     /// memo or ext info
     pub ext: Memo,
-    /// tx time
-    pub time: Moment,
+    /// tx height
+    pub height_or_time: HeightOrTime<BlockNumber, Timestamp>,
     /// only for withdrawal, mark which id for application
     pub withdrawal_id: u32, // only for withdrawal
     /// tx state
@@ -59,21 +67,21 @@ pub struct RecordInfo<AccountId, Balance, Moment> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Application<AccountId, Balance, Moment> {
+pub struct Application<AccountId, Balance, BlockNumber> {
     pub id: u32,
     pub applicant: AccountId,
     pub token: Token,
     pub balance: Balance,
     pub addr: AddrStr,
     pub ext: Memo,
-    pub time: Moment,
+    pub height: BlockNumber,
 }
 
-impl<AccountId, Balance, Moment> Application<AccountId, Balance, Moment>
+impl<AccountId, Balance, BlockNumber> Application<AccountId, Balance, BlockNumber>
 where
     AccountId: Codec + Clone,
     Balance: Codec + Copy + Clone,
-    Moment: Codec + Clone,
+    BlockNumber: Codec + Clone,
 {
     pub fn new(
         id: u32,
@@ -82,16 +90,16 @@ where
         balance: Balance,
         addr: AddrStr,
         ext: Memo,
-        time: Moment,
+        height: BlockNumber,
     ) -> Self {
-        Application::<AccountId, Balance, Moment> {
+        Application::<AccountId, Balance, BlockNumber> {
             id,
             applicant,
             token,
             balance,
             addr,
             ext,
-            time,
+            height,
         }
     }
     pub fn id(&self) -> u32 {
@@ -112,12 +120,12 @@ where
     pub fn ext(&self) -> Memo {
         self.ext.clone()
     }
-    pub fn time(&self) -> Moment {
-        self.time.clone()
+    pub fn height(&self) -> BlockNumber {
+        self.height.clone()
     }
 }
 
-impl<AccountId, Balance, Moment> NodeT for Application<AccountId, Balance, Moment> {
+impl<AccountId, Balance, BlockNumber> NodeT for Application<AccountId, Balance, BlockNumber> {
     type Index = u32;
     fn index(&self) -> Self::Index {
         self.id

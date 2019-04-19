@@ -375,7 +375,7 @@ impl_runtime_apis! {
             XAssets::valid_assets_of(&who)
         }
 
-        fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, TimestampU64>> {
+        fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, TimestampU64>> {
             match chain {
                 xassets::Chain::Bitcoin => XBridgeOfBTC::withdrawal_list(),
                 xassets::Chain::Ethereum => Vec::new(),
@@ -383,7 +383,7 @@ impl_runtime_apis! {
             }
         }
 
-        fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, TimestampU64>> {
+        fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, TimestampU64>> {
             match chain {
                 xassets::Chain::Bitcoin => XBridgeOfBTC::deposit_list(),
                 xassets::Chain::Ethereum => Vec::new(),

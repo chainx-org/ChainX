@@ -19,7 +19,7 @@ use chainx_runtime::{Call, Runtime};
 use xaccounts::{IntentionProps, TrusteeEntity, TrusteeIntentionProps, TrusteeSessionInfo};
 use xassets::{Asset, AssetType, Chain, Token};
 use xbitcoin::{TrusteeAddrInfo as BtcTrusteeAddrInfo, VoteResult};
-use xrecords::{RecordInfo, TxState};
+use xrecords::{HeightOrTime, RecordInfo, TxState};
 use xspot::{
     HandicapInfo, OrderDirection, OrderIndex, OrderInfo, OrderStatus, OrderType, TradeHistoryIndex,
     TradingPair, TradingPairIndex,
