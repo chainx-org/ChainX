@@ -302,24 +302,22 @@ impl<
 
         let valid = if let (Some(sender), Some(index), Some(acceleration)) = (xt.sender(), xt.index(), xt.acceleration()) {
             // check index
-            let mut expected_index = <system::Module<System>>::account_nonce(sender);
+            let expected_index = <system::Module<System>>::account_nonce(sender);
             if index < &expected_index {
                 return TransactionValidity::Invalid(ApplyError::Stale as i8);
             }
-            if *index > expected_index + As::sa(256) {
-                return TransactionValidity::Unknown(ApplyError::Future as i8);
-            }
-
-            let mut deps = Vec::new();
-            while expected_index < *index {
-                deps.push((sender, expected_index).encode());
-                expected_index = expected_index + One::one();
-            }
+            let index = *index;
+            let provides = vec![(sender, index).encode()];
+            let requires = if expected_index < index {
+                vec![(sender, index - One::one()).encode()]
+            } else {
+                vec![]
+            };
 
             TransactionValidity::Valid {
                 priority: acceleration.as_() as TransactionPriority,
-                requires: deps,
-                provides: vec![(sender, *index).encode()],
+                requires,
+                provides,
                 longevity: TransactionLongevity::max_value(),
             }
         } else {
