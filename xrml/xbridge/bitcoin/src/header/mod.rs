@@ -3,7 +3,7 @@
 mod header_proof;
 
 // Substrate
-use rstd::result::Result as StdResult;
+use rstd::result;
 use support::StorageMap;
 
 // ChainX
@@ -13,8 +13,6 @@ use xsupport::{debug, error, info};
 use btc_chain::BlockHeader;
 use btc_primitives::H256;
 
-#[cfg(feature = "std")]
-use super::hash_strip;
 use super::tx::{handle_tx, remove_unused_tx};
 use super::types::BlockHeaderInfo;
 use super::{BlockHashFor, BlockHeaderFor, Module, Trait};
@@ -45,7 +43,7 @@ impl ChainErr {
 
 pub fn check_prev_and_convert<T: Trait>(
     header: BlockHeader,
-) -> StdResult<BlockHeaderInfo, ChainErr> {
+) -> result::Result<BlockHeaderInfo, ChainErr> {
     let prev_hash = &header.previous_header_hash;
     let prev_info = Module::<T>::block_header_for(prev_hash).ok_or_else(|| {
         error!(
@@ -66,11 +64,15 @@ pub fn check_prev_and_convert<T: Trait>(
     })?;
     let best_height = best_info.height;
 
+    //      confirmed = best_height - (confirmations - 1)
+    //           |--------- confirmations = 6 ------------|
+    // b(prev) - b(confirm) - b - b - b - b - b(best_index)
+    //      \    b_fork(ancient_fork)
     let confirmations = Module::<T>::confirmation_number();
     let this_height = prev_height + 1;
-    if this_height < best_height - confirmations {
-        error!("[check_prev_and_convert]|fatal error for bitcoin fork|best:{:?}|header:{:?}|confirmations:{:?}|height:{:} < best_height - confirmations:{:}",
-               best_info, header, confirmations, this_height, best_height - confirmations);
+    if this_height <= best_height - (confirmations - 1) {
+        error!("[check_prev_and_convert]|fatal error for bitcoin fork|best:{:?}|header:{:?}|confirmations:{:?}|height:{:} <= best_height - confirmations:{:}",
+               best_info, header, confirmations, this_height, best_height - (confirmations - 1));
         return Err(ChainErr::AncientFork);
     }
     Ok(BlockHeaderInfo {
@@ -99,33 +101,43 @@ pub fn remove_unused_headers<T: Trait>(header_info: &BlockHeaderInfo) {
             BlockHeaderFor::<T>::remove(h);
             debug!(
                 "[remove_unused_headers]|remove old header|height:{:}|hash:{:}",
-                del,
-                hash_strip(&h)
+                del, h
             );
         }
         BlockHashFor::<T>::remove(&del);
     }
 }
 
+///      confirmed = best_height - (confirmations - 1)
+///           |--------- confirmations = 6 ------------|
+/// b(prev) - b(confirm) - b - b - b - b - b(best_index)
+/// #issue 501 https://github.com/chainpool/ChainX/issues/501
 pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256, u32) {
     // update confirmd status
     let confirmations = Module::<T>::confirmation_number();
     let mut prev_hash = header_info.header.previous_header_hash.clone();
-    for _ in 1..confirmations {
-        if let Some(info) = Module::<T>::block_header_for(&prev_hash) {
-            prev_hash = info.header.previous_header_hash
+    // start from prev, thus start from 1,when confirmations = 6, it's 1..5 => [1,2,3,4]
+    // b(100)(confirmed) - b(101)(need_confirmed) - b(102) - b(103) - b(104) - b(105)(best) - b(106)(current)
+    //                                                                           prev        current 0
+    //                                                                 prev     current 1 (start loop from this)
+    //                                                       prev     current 2
+    //                                              prev     current 3
+    //                                  prev     current 4
+    for _i in 1..(confirmations - 1) {
+        if let Some(current_info) = Module::<T>::block_header_for(&prev_hash) {
+            prev_hash = current_info.header.previous_header_hash
         } else {
             // if not find current header info, jump out of loop
             info!(
                 "[update_confirmed_header]|not find for hash:{:?}, current reverse count:{:}",
-                prev_hash, confirmations
+                prev_hash, _i
             );
             break;
         }
     }
 
     if let Some(mut header) = Module::<T>::block_header_for(&prev_hash) {
-        handle_confirm_block::<T>(&header);
+        handle_confirmed_block::<T>(&header);
         header.confirmed = true;
         BlockHeaderFor::<T>::insert(&prev_hash, header);
     } else {
@@ -138,25 +150,57 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256
         return (header.hash(), height);
     }
 
-    (prev_hash, header_info.height - confirmations)
+    // e.g. header_info.height = 106
+    // 106 - (6 - 1) = 101
+    (prev_hash, header_info.height - (confirmations - 1))
 }
 
-fn handle_confirm_block<T: Trait>(confirmed_header: &BlockHeaderInfo) {
+fn handle_confirmed_block<T: Trait>(confirmed_header: &BlockHeaderInfo) {
     debug!(
-        "[handle_confirm_block]|Confirmed: height:{:}|hash:{:}",
+        "[handle_confirmed_block]|Confirmed: height:{:}|hash:{:}",
         confirmed_header.height as u64,
-        hash_strip(&confirmed_header.header.hash()),
+        confirmed_header.header.hash(),
     );
     for txid in confirmed_header.txid_list.iter() {
         // deposit & withdraw
         match handle_tx::<T>(txid) {
             Err(_e) => {
                 error!(
-                    "[handle_confirm_block]|Handle tx failed, the error info:{:}|tx_hash:{:}",
+                    "[handle_confirmed_block]|Handle tx failed, the error info:{:}|tx_hash:{:}",
                     _e, txid,
                 );
             }
             Ok(()) => (),
         }
+    }
+}
+
+/// not include confirmed block, when confirmations = 6, it's 0..5 => [0,1,2,3,4]
+/// b(100)(confirmed) - b(101) - b(102) - b(103) - b(104) - b(105)(best)
+///                                                         current 0
+///                                              current 1
+///                                    current 2
+///                           current 3
+///       prev        current 4
+pub fn find_confirmed_block<T: Trait>(current: &H256) -> BlockHeaderInfo {
+    let confirmations = Module::<T>::confirmation_number();
+    let mut current_hash = current.clone();
+    for _ in 0..(confirmations - 1) {
+        if let Some(info) = Module::<T>::block_header_for(current_hash) {
+            if info.confirmed == true {
+                return info;
+            }
+
+            current_hash = info.header.previous_header_hash
+        } else {
+            break;
+        }
+    }
+
+    if let Some(info) = Module::<T>::block_header_for(current_hash) {
+        info
+    } else {
+        let (header, _) = Module::<T>::genesis_info();
+        Module::<T>::block_header_for(header.hash()).expect("genesis hash must exist!")
     }
 }

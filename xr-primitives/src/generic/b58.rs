@@ -24,19 +24,19 @@ static BASE58_DIGITS: [Option<u8>; 128] = [
     Some(55), Some(56), Some(57), None,     None,     None,     None,     None,     // 120-127
 ];
 
-pub fn from(data: Vec<u8>) -> Result<Vec<u8>, &'static str> {
+pub fn from(data: &[u8]) -> Result<Vec<u8>, &'static str> {
     // 11/15 is just over log_256(58)
     let mut scratch = Vec::new();
     for _i in 0..=data.len() * 11 / 15 {
         scratch.push(0);
     }
     // Build in base 256
-    for d58 in data.clone() {
+    for d58 in data {
         // Compute "X = X * 58 + next_digit" in base 256
-        if d58 as usize > BASE58_DIGITS.len() {
+        if *d58 as usize > BASE58_DIGITS.len() {
             return Err("BadByte");
         }
-        let mut carry = match BASE58_DIGITS[d58 as usize] {
+        let mut carry = match BASE58_DIGITS[*d58 as usize] {
             Some(d58) => u32::from(d58),
             None => {
                 return Err("BadByte");

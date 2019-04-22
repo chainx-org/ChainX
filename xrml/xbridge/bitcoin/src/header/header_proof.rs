@@ -2,7 +2,7 @@
 
 // Substrate
 use primitives::traits::As;
-use rstd::{cmp, result::Result as StdResult};
+use rstd::{cmp, result};
 use support::dispatch::Result;
 
 // ChainX
@@ -23,7 +23,7 @@ pub struct HeaderVerifier<'a> {
 }
 
 impl<'a> HeaderVerifier<'a> {
-    pub fn new<T: Trait>(header: &'a BlockHeader, height: u32) -> StdResult<Self, ChainErr> {
+    pub fn new<T: Trait>(header: &'a BlockHeader, height: u32) -> result::Result<Self, ChainErr> {
         let now: T::Moment = timestamp::Module::<T>::now();
         let current_time: u32 = now.as_() as u32;
 

@@ -1,7 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
 // Substrate
-use rstd::{prelude::Vec, result::Result as StdResult};
+use rstd::{prelude::Vec, result};
 use support::dispatch::Result;
 
 // light-bitcoin
@@ -17,16 +17,13 @@ use crate::types::RelayTx;
 use crate::Trait;
 
 // ChainX
-#[cfg(feature = "std")]
-use crate::hash_strip;
 use xsupport::{debug, error};
 
 pub fn validate_transaction<T: Trait>(tx: &RelayTx, merkle_root: H256) -> Result {
     let tx_hash = tx.raw.hash();
     debug!(
         "[validate_transaction]|txhash:{:}|relay tx:{:?}",
-        hash_strip(&tx_hash),
-        tx
+        tx_hash, tx
     );
 
     // verify merkle proof
@@ -81,7 +78,7 @@ fn verify_sig(sig: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Byt
 /// Check signed transactions
 pub fn parse_and_check_signed_tx<T: Trait>(
     tx: &Transaction,
-) -> StdResult<Vec<Bytes>, &'static str> {
+) -> result::Result<Vec<Bytes>, &'static str> {
     // parse sigs from transaction first input
     let script: Script = tx.inputs[0].script_sig.clone().into();
     if script.len() < 2 {

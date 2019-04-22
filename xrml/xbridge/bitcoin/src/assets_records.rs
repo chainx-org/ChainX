@@ -13,8 +13,6 @@ use xsupport::error;
 // light-bitcoin
 use btc_keys::DisplayLayout;
 
-#[cfg(feature = "std")]
-use super::hash_strip;
 use super::tx::handler::parse_deposit_outputs;
 use super::tx::utils::ensure_identical;
 use super::types::{TxType, VoteResult};
@@ -43,23 +41,20 @@ impl<T: Trait> Module<T> {
                 // no proposal, all records is under applying
             }
             Some(proposal) => {
-                let best = Self::best_index();
-                let header_info = if let Some(header_info) = Self::block_header_for(&best) {
-                    header_info
-                } else {
-                    error!(
-                        "[withdrawal_list] error!, could not find block for this hash[{:}]!",
-                        hash_strip(&best),
-                    );
-                    return Vec::new();
-                };
-
                 // find proposal txhash
                 let confirmations = Module::<T>::confirmation_number();
-                let mut prev_hash = header_info.header.previous_header_hash.clone();
+                let mut current_hash = Self::best_index();
                 let mut tx_hash: Vec<u8> = Default::default();
-                for _ in 1..confirmations {
-                    if let Some(info) = Module::<T>::block_header_for(prev_hash) {
+                // not include confirmed block, when confirmations = 6, it's 0..5 => [0,1,2,3,4]
+                // b(100)(confirmed) - b(101) - b(102) - b(103) - b(104) - b(105)(best)
+                //                                                         current 0
+                //                                              current 1
+                //                                    current 2
+                //                           current 3
+                //                  current 4
+                for _ in 0..(confirmations - 1) {
+                    if let Some(info) = Module::<T>::block_header_for(current_hash) {
+                        // lookup withdrawal tx in current header
                         for txid in info.txid_list {
                             if let Some(tx_info) = Self::tx_for(&txid) {
                                 if tx_info.tx_type == TxType::Withdrawal {
@@ -74,13 +69,13 @@ impl<T: Trait> Module<T> {
                                 }
                             }
                         }
-                        prev_hash = info.header.previous_header_hash
+                        current_hash = info.header.previous_header_hash
                     } else {
                         error!(
                             "[withdrawal_list] error!, could not find block for this hash[{:}]!",
-                            hash_strip(&best),
+                            current_hash
                         );
-                        return Vec::new();
+                        break;
                     }
                 }
                 for record in records.iter_mut() {
@@ -106,27 +101,24 @@ impl<T: Trait> Module<T> {
     pub fn deposit_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::BlockNumber, T::Moment>> {
         let mut records = Vec::new();
 
-        let best = Self::best_index();
-        let header_info = if let Some(header_info) = Self::block_header_for(&best) {
-            header_info
-        } else {
-            error!(
-                "[deposit_list] error!, could not find block for this hash[{:}]!",
-                hash_strip(&best),
-            );
-            return Vec::new();
-        };
-
         // find proposal txhash
         let confirmations = Module::<T>::confirmation_number();
-        let mut prev_hash = header_info.header.previous_header_hash.clone();
-        for i in 1..confirmations {
-            if let Some(info) = Module::<T>::block_header_for(prev_hash) {
+        // not include confirmed block, when confirmations = 6, it's 0..5 => [0,1,2,3,4]
+        // b(100)(confirmed) - b(101) - b(102) - b(103) - b(104) - b(105)(best)
+        //                                                         current 0
+        //                                              current 1
+        //                                    current 2
+        //                           current 3
+        //                  current 4
+        let mut current_hash = Self::best_index();
+        for index in 0..(confirmations - 1) {
+            if let Some(info) = Module::<T>::block_header_for(current_hash) {
                 for txid in info.txid_list {
                     if let Some(tx_info) = Self::tx_for(&txid) {
                         if tx_info.tx_type == TxType::Deposit {
                             let timestamp = info.header.time;
-                            let state = TxState::Confirming(i, confirmations);
+                            // for 0 is 1 confirmed(s), not zero
+                            let state = TxState::Confirming(index + 1, confirmations);
 
                             let r = match parse_deposit_outputs::<T>(&tx_info.raw_tx) {
                                 Ok(r) => r,
@@ -163,11 +155,11 @@ impl<T: Trait> Module<T> {
                         }
                     }
                 }
-                prev_hash = info.header.previous_header_hash
+                current_hash = info.header.previous_header_hash
             } else {
                 error!(
                     "[deposit_list] error!, could not find block for this hash[{:}]!",
-                    hash_strip(&best),
+                    current_hash
                 );
                 return Vec::new();
             }

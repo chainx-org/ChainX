@@ -38,7 +38,7 @@ decl_module! {
             Self::withdrawal(&who, &token, balance, Default::default(), Default::default())
         }
 
-        fn withdrawal_finish_from_root(withdrawal_id: u32, success: bool) -> Result {
+        pub fn fix_withdrawal_state(withdrawal_id: u32, success: bool) -> Result {
             match Self::withdrawal_finish(withdrawal_id, success) {
                 Ok(_) => {
                     info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
@@ -53,7 +53,7 @@ decl_module! {
 
         pub fn fix_withdrawal_state_list(item: Vec<(u32, bool)>) -> Result {
             for (withdrawal_id, success) in item {
-                let _ = Self::withdrawal_finish_from_root(withdrawal_id, success);
+                let _ = Self::fix_withdrawal_state(withdrawal_id, success);
             }
             Ok(())
         }

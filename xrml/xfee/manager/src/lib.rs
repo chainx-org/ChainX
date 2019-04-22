@@ -8,7 +8,7 @@ pub mod types;
 
 // Substrate
 use primitives::traits::{As, CheckedDiv, CheckedMul, CheckedSub};
-use rstd::result::Result as StdResult;
+use rstd::result;
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
 
 // ChainX
@@ -115,7 +115,7 @@ impl<T: Trait> Module<T> {
         encoded_len: usize,
         power: u64,
         acc: Acceleration,
-    ) -> StdResult<T::Balance, &'static str> {
+    ) -> result::Result<T::Balance, &'static str> {
         let b = xassets::Module::<T>::pcx_free_balance(transactor);
 
         let transaction_fee = Self::transaction_fee(power, encoded_len as u64) * As::sa(acc as u64);

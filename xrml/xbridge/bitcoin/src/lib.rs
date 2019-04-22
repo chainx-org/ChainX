@@ -15,13 +15,14 @@ use parity_codec::{Decode, Encode};
 
 // Substrate
 use primitives::traits::As;
-use rstd::{prelude::*, result::Result as StdResult};
+use rstd::{prelude::*, result};
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue};
 use system::ensure_signed;
 
 // ChainX
 use xaccounts::TrusteeEntity;
 use xassets::{Chain, ChainT, Memo, Token};
+use xr_primitives::traits::Extractable;
 use xr_primitives::{generic::b58, traits::TrusteeForChain, XString};
 use xrecords::TxState;
 use xsupport::{debug, ensure_with_errorlog, error, info, warn};
@@ -34,8 +35,6 @@ use btc_keys::{Address, DisplayLayout, Error as AddressError};
 use btc_primitives::H256;
 use btc_ser::{deserialize, Reader};
 
-#[cfg(feature = "std")]
-pub use self::tx::utils::hash_strip;
 use self::tx::utils::{get_sig_num, get_sig_num_from_trustees, inspect_address_from_transaction};
 use self::tx::{
     check_withdraw_tx, create_multi_address, detect_transaction_type, handle_tx,
@@ -51,6 +50,7 @@ pub type AddrStr = XString;
 pub trait Trait:
     system::Trait + timestamp::Trait + xrecords::Trait + xaccounts::Trait + xfee_manager::Trait
 {
+    type AccountExtractor: Extractable<Self::AccountId>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
@@ -58,7 +58,7 @@ decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
         <T as xassets::Trait>::Balance {
-        /// version, block hash, block height, prev block hash, merkle root, timestamp, nonce, wait confirm block height, wait confirm block hash
+        /// version, block hash, block height, prev block hash, merkle root, timestamp, nonce, wait confirmed block height, wait confirmed block hash
         InsertHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
         /// tx hash, block hash, tx type
         InsertTx(H256, H256, TxType),
@@ -104,7 +104,7 @@ decl_storage! {
         /// get ParamsInfo from genesis_config
         pub ParamsInfo get(params_info) config(): Params;
         ///  NetworkId for testnet or mainnet
-        pub NetworkId get(network_id): u32;
+        pub NetworkId get(network_id) config(): u32;
         /// reserved count for block
         pub ReservedBlock get(reserved_block) config(): u32;
         /// get ConfirmationNumber from genesis_config
@@ -116,6 +116,56 @@ decl_storage! {
 
         // ext
         pub LastTrusteeSessionNumber get(last_trustee_session_number): u32 = 0;
+    }
+    add_extra_genesis {
+        config(genesis_hash): H256;
+        build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
+            use runtime_io::with_externalities;
+            use substrate_primitives::Blake2Hasher;
+            use primitives::StorageOverlay;
+            use support::{StorageMap, StorageValue};
+
+            let (genesis_header, number): (BlockHeader, u32) = config.genesis.clone();
+            if config.network_id == 0 && number % config.params_info.retargeting_interval() != 0 {
+                panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
+            }
+
+            let genesis_hash = genesis_header.hash();
+
+            if genesis_hash != config.genesis_hash {
+                panic!("the genesis block not much the genesis_hash!|genesis_block's hash:{:?}|config genesis_hash:{:?}", genesis_hash, config.genesis_hash);
+            }
+
+            let header_info = BlockHeaderInfo {
+                header: genesis_header,
+                height: number,
+                confirmed: true,
+                txid_list: [].to_vec(),
+            };
+
+            let s = storage.clone().build_storage().unwrap().0;
+            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
+            with_externalities(&mut init, || {
+                BlockHeaderFor::<T>::insert(&genesis_hash, header_info.clone());
+                BlockHashFor::<T>::insert(&header_info.height, vec![genesis_hash.clone()]);
+
+                BestIndex::<T>::put(genesis_hash);
+
+                Module::<T>::deposit_event(RawEvent::InsertHeader(
+                    header_info.header.version,
+                    header_info.header.hash(),
+                    header_info.height,
+                    header_info.header.previous_header_hash,
+                    header_info.header.merkle_root_hash,
+                    header_info.header.time,
+                    header_info.header.nonce,
+                    header_info.height,
+                    genesis_hash,
+                ));
+            });
+            let init: StorageOverlay = init.into();
+            storage.extend(init);
+        });
     }
 }
 
@@ -169,6 +219,10 @@ decl_module! {
 
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
+        }
+
+        pub fn fix_withdrawal_state_by_trustees(withdrawal_id: u32, success: bool) -> Result {
+            xrecords::Module::<T>::fix_withdrawal_state(withdrawal_id, success)
         }
 
         pub fn remove_tx_and_proposal(txhash: Option<H256>, drop_proposal: bool) -> Result {
@@ -226,7 +280,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, ()> for Module<T> {
 
     fn generate_new_trustees(
         candidates: &Vec<T::AccountId>,
-    ) -> StdResult<Vec<T::AccountId>, &'static str> {
+    ) -> result::Result<Vec<T::AccountId>, &'static str> {
         let (trustees, _, hot_trustee_addr_info, cold_trustee_addr_info) =
             Self::try_to_generate_new_trustees(candidates)?;
         let trustees = trustees
@@ -262,7 +316,7 @@ impl<T: Trait> Module<T> {
     /// cold: cold_trustee_addr)>)
     pub fn try_to_generate_new_trustees(
         candidates: &Vec<T::AccountId>,
-    ) -> StdResult<
+    ) -> result::Result<
         (
             Vec<(T::AccountId, (Vec<u8>, Vec<u8>))>,
             (u32, u32),
@@ -387,8 +441,8 @@ impl<T: Trait> Module<T> {
         ))
     }
 
-    pub fn verify_btc_address(data: &[u8]) -> StdResult<Address, AddressError> {
-        let r = b58::from(data.to_vec()).map_err(|_| AddressError::InvalidAddress)?;
+    pub fn verify_btc_address(data: &[u8]) -> result::Result<Address, AddressError> {
+        let r = b58::from(data).map_err(|_| AddressError::InvalidAddress)?;
         Address::from_layout(&r)
     }
 
@@ -411,15 +465,15 @@ impl<T: Trait> Module<T> {
             Self::block_header_for(&header.hash()).is_none(),
             "Header already exists.",
             "hash:{:}",
-            hash_strip(&header.hash()),
+            header.hash(),
         );
         // current should exist yet
         ensure_with_errorlog!(
             Self::block_header_for(&header.previous_header_hash).is_some(),
             "Can't find previous header",
             "prev hash:{:}|current hash:{:}",
-            hash_strip(&header.previous_header_hash),
-            hash_strip(&header.hash()),
+            header.previous_header_hash,
+            header.hash(),
         );
 
         // convert btc header to self header info
@@ -440,10 +494,10 @@ impl<T: Trait> Module<T> {
             }
         });
 
-        debug!("[apply_push_header]|verify pass, insert to storage|height:{:}|hash:{:}block hashs for this height:{:?}",
+        debug!("[apply_push_header]|verify pass, insert to storage|height:{:}|hash:{:}|block hashs for this height:{:?}",
             header_info.height,
-            hash_strip(&hash),
-            Self::block_hash_for(header_info.height).into_iter().map(|hash| hash_strip(&hash)).collect::<Vec<_>>()
+            hash,
+            Self::block_hash_for(header_info.height)
         );
 
         let best_header = match Self::block_header_for(Self::best_index()) {
@@ -451,24 +505,26 @@ impl<T: Trait> Module<T> {
             None => return Err("can't find the best header in ChainX"),
         };
 
-        let (confirm_hash, confirm_height) = if header_info.height > best_header.height {
+        let (confirmed_hash, confirmed_height) = if header_info.height > best_header.height {
             header::remove_unused_headers::<T>(&header_info);
 
-            let (confirm_hash, confirm_height) = header::update_confirmed_header::<T>(&header_info);
+            let (confirmed_hash, confirmed_height) =
+                header::update_confirmed_header::<T>(&header_info);
             info!(
                 "[apply_push_header]|update to new height|height:{:}|hash:{:}",
-                header_info.height,
-                hash_strip(&hash),
+                header_info.height, hash,
             );
             // change new best index
             BestIndex::<T>::put(hash);
-            (confirm_hash, confirm_height)
+            (confirmed_hash, confirmed_height)
         } else {
             info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}",
                 best_header.height,
                 header_info.height
             );
-            (Default::default(), Default::default())
+            let info = header::find_confirmed_block::<T>(&hash);
+
+            (info.header.hash(), info.height)
         };
         Self::deposit_event(RawEvent::InsertHeader(
             header_info.header.version,
@@ -478,8 +534,8 @@ impl<T: Trait> Module<T> {
             header_info.header.merkle_root_hash,
             header_info.header.time,
             header_info.header.nonce,
-            confirm_height,
-            confirm_hash,
+            confirmed_height,
+            confirmed_hash,
         ));
 
         Ok(())
@@ -507,7 +563,7 @@ impl<T: Trait> Module<T> {
             BlockHeaderFor::<T>::insert(&tx.block_hash, header_info);
         } else {
             // not pass check! this tx has already been inserted to this block
-            error!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash, hash_strip(&tx_hash), header_info.txid_list);
+            error!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash, tx_hash, header_info.txid_list);
             return Err("this block already has this tx");
         }
 
@@ -531,7 +587,7 @@ impl<T: Trait> Module<T> {
 
                     debug!(
                         "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
-                        hash_strip(&tx_hash),
+                        tx_hash,
                         u8array_to_string(&b58::to_base58(input_addr.layout().to_vec())),
                     );
                     InputAddrFor::<T>::insert(&tx_hash, input_addr)
@@ -553,10 +609,10 @@ impl<T: Trait> Module<T> {
 
         debug!(
             "[apply_push_transaction]|verify pass|txhash:{:}|is existed:{:}|tx type:{:?}|block_hash:{:}|height:{:}|confirmed:{:}",
-            hash_strip(&tx_hash),
+            tx_hash,
             _existed,
             tx_type,
-            hash_strip(&tx.block_hash),
+            tx.block_hash,
             height,
             confirmed
         );
@@ -567,10 +623,10 @@ impl<T: Trait> Module<T> {
             tx.block_hash.clone(),
             tx_type,
         ));
-        // if confirm, handle this tx for deposit or withdrawal
+        // if confirmed, handle this tx for deposit or withdrawal
         if confirmed {
             handle_tx::<T>(&tx_hash).map_err(|e| {
-                error!("Handle tx error: {:}", hash_strip(&tx_hash));
+                error!("Handle tx error: {:}", tx_hash);
                 e
             })?;
         }
@@ -620,6 +676,9 @@ impl<T: Trait> Module<T> {
         let (sig_num, _) = get_sig_num::<T>();
         match tx {
             Some(tx) => {
+                // check this tx is same to proposal
+                tx::utils::ensure_identical(&tx, &proposal.tx)?;
+
                 // sign
                 // check first and get signatures from commit transaction
                 let sigs = parse_and_check_signed_tx::<T>(&tx)?;

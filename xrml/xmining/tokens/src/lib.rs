@@ -11,7 +11,7 @@ use parity_codec::Encode;
 
 // Substrate
 use primitives::traits::{As, Hash};
-use rstd::{prelude::*, result::Result as StdResult};
+use rstd::{prelude::*, result};
 use substrate_primitives::crypto::UncheckedFrom;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
@@ -145,7 +145,7 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
         _to: &T::AccountId,
         _: AssetType,
         _value: T::Balance,
-    ) -> StdResult<(), AssetErr> {
+    ) -> result::Result<(), AssetErr> {
         Ok(())
     }
 
@@ -246,7 +246,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Transform outside irreversible blocks to native blocks.
-    fn wait_blocks(token: &Token) -> StdResult<u64, &'static str> {
+    fn wait_blocks(token: &Token) -> result::Result<u64, &'static str> {
         let seconds_per_block: T::Moment = timestamp::Module::<T>::minimum_period();
         match token.as_slice() {
             // btc

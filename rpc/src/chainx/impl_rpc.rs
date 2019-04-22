@@ -804,7 +804,7 @@ where
             .collect::<Vec<_>>();
 
         // result is (Vec<(accountid, (hot pubkey, cold pubkey)), (required count, total count), hot_trustee_addr, cold_trustee_addr)>)
-        // StdResult<(Vec<(AccountId, (Vec<u8>, Vec<u8>))>, (u32, u32), BtcTrusteeAddrInfo, BtcTrusteeAddrInfo), Vec<u8>>
+        // result::Result<(Vec<(AccountId, (Vec<u8>, Vec<u8>))>, (u32, u32), BtcTrusteeAddrInfo, BtcTrusteeAddrInfo), Vec<u8>>
         let runtime_result = self
             .client
             .runtime_api()

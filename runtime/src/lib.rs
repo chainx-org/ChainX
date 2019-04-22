@@ -116,10 +116,12 @@ impl xaura::Trait for Runtime {
 
 // bridge
 impl xbitcoin::Trait for Runtime {
+    type AccountExtractor = xr_primitives::generic::Extractor<AccountId>;
     type Event = Event;
 }
 
 impl xsdot::Trait for Runtime {
+    type AccountExtractor = xr_primitives::generic::Extractor<AccountId>;
     type Event = Event;
 }
 

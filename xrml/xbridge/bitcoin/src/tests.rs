@@ -331,7 +331,7 @@ fn test_accountid() {
         v.push(d);
     }
     assert_eq!(v.len(), 2);
-    let mut slice: Vec<u8> = b58::from(v[0].to_vec()).unwrap();
+    let mut slice: Vec<u8> = b58::from(v[0]).unwrap();
     let account_id: H256 = Decode::decode(&mut slice[1..33].to_vec().as_slice()).unwrap();
     let bytes =
         hex::decode("fcd66b3b5a737f8284fef82d377d9c2391628bbe11ec63eb372b032ce2618725").unwrap();

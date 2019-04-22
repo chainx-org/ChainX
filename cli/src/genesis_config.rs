@@ -138,22 +138,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let bonding_duration = blocks_per_session * sessions_per_era; // freeze 150*12 blocks for non-intention
     let intention_bonding_duration = bonding_duration * 10; // freeze 150*12*10 blocks for intention
 
-    let btc_genesis = (
-        BlockHeader {
-            version: 536870912,
-            previous_header_hash: h256_from_rev_str(
-                "00000000000000f51b45a318afa95726b947aeb5154e65fd1bde2e2a798e2cc6",
-            ),
-            merkle_root_hash: h256_from_rev_str(
-                "c9212ace69e32dcfe2d09383c7b8fea8da1151cd70af58ea2b7155afa5e92f47",
-            ),
-            time: 1553231960,
-            bits: Compact::new(436271905),
-            nonce: 4083801566,
-        },
-        1485555,
-    );
-
     let params_info = Params::new(
         520159231,            // max_bits
         2 * 60 * 60,          // block_max_future
@@ -240,8 +224,26 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         xbitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
-            genesis: btc_genesis.clone(),
-            params_info: params_info.clone(), // retargeting_factor
+            genesis: (
+                BlockHeader {
+                    version: 536870912,
+                    previous_header_hash: h256_from_rev_str(
+                        "00000000000000f51b45a318afa95726b947aeb5154e65fd1bde2e2a798e2cc6",
+                    ),
+                    merkle_root_hash: h256_from_rev_str(
+                        "c9212ace69e32dcfe2d09383c7b8fea8da1151cd70af58ea2b7155afa5e92f47",
+                    ),
+                    time: 1553231960,
+                    bits: Compact::new(436271905),
+                    nonce: 4083801566,
+                },
+                1485555,
+            ),
+            genesis_hash: h256_from_rev_str(
+                "000000000000004a38f07e3e4cf4638c3c367576c907cdcbf2bd7bd2e6347326",
+            ),
+            params_info, // retargeting_factor
+            network_id: 1,
             confirmation_number: 6,
             reserved_block: 2100,
             btc_withdrawal_fee: 40000,
@@ -255,11 +257,11 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 pcx_precision,
                 b"ChainX's crypto currency in Polkadot ecology".to_vec(),
             ),
-            // asset, is_online, is_psedu_intention, init for account
-            // Vec<(Asset, bool, Vec<(T::AccountId, u64)>)>;
+            // asset, is_online, is_psedu_intention
+            // Vec<(Asset, bool, bool)>;
             asset_list: vec![
-                (btc_asset.clone(), true, true, vec![]),
-                (sdot_asset.clone(), true, true, vec![]),
+                (btc_asset.clone(), true, true),
+                (sdot_asset.clone(), true, true),
             ],
             // xstaking
             intentions: full_endowed
@@ -296,10 +298,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             ],
             // xgrandpa
             authorities: endowed.clone(),
-            // xbitcoin
-            genesis: btc_genesis,
-            params_info,
-            network_id: 1,
+            // xmultisig (include trustees)
             multisig_init_info: (
                 endowed
                     .iter()

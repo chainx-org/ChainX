@@ -3,7 +3,7 @@
 
 use super::*;
 
-use rstd::result::Result as StdResult;
+use rstd::result;
 use xsupport::{error, trace};
 
 pub trait VoteWeight<BlockNumber: As<u64>> {
@@ -134,7 +134,7 @@ impl<T: Trait> Module<T> {
         target: &mut V,
         target_jackpot_addr: &T::AccountId,
         claim_type: ClaimType,
-    ) -> StdResult<(u64, u64, T::Balance), &'static str>
+    ) -> result::Result<(u64, u64, T::Balance), &'static str>
     where
         U: VoteWeight<T::BlockNumber>,
         V: VoteWeight<T::BlockNumber>, // + Jackpot<T::Balance>,

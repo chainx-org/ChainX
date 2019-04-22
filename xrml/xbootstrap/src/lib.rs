@@ -19,8 +19,8 @@ decl_storage! {
 
     add_extra_genesis {
         // xassets
-        config(asset_list): Vec<(xassets::Asset, bool, bool, Vec<(T::AccountId, u64)>)>;
         config(pcx): (xassets::Token, xassets::Precision, xassets::Desc);
+        config(asset_list): Vec<(xassets::Asset, bool, bool)>;
 
         // xstaking
         config(intentions): Vec<(T::AccountId, T::Balance, xaccounts::Name, xaccounts::URL)>;
@@ -35,11 +35,6 @@ decl_storage! {
         // grandpa
         config(authorities): Vec<(T::SessionKey, u64)>;
 
-        // xbitcoin
-        config(network_id): u32;
-        config(genesis): (btc_chain::BlockHeader, u32);
-        config(params_info): xbitcoin::Params;
-
         // multisig
         config(multisig_init_info): (Vec<(T::AccountId, bool)>, u32);
 
@@ -47,12 +42,10 @@ decl_storage! {
             use parity_codec::{Encode, KeyedVec};
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
-            use support::{StorageMap, StorageValue};
-            use primitives::{StorageOverlay, traits::As};
+            use support::StorageMap;
+            use primitives::StorageOverlay;
             use xaccounts::{TrusteeEntity, TrusteeIntentionProps};
             use xassets::{ChainT, Token, Chain, Asset};
-            use btc_chain::BlockHeader;
-            use xbitcoin::BlockHeaderInfo;
             use xspot::CurrencyPair;
 
             // grandpa
@@ -96,36 +89,9 @@ decl_storage! {
                 }
 
                 // init for asset_list
-                for (asset, is_online, is_psedu_intention, init_list) in config.asset_list.iter() {
-                    let token = asset.token();
+                for (asset, is_online, is_psedu_intention) in config.asset_list.iter() {
                     xassets::Module::<T>::bootstrap_register_asset(asset.clone(), *is_online, *is_psedu_intention).unwrap();
-
-                    for (accountid, value) in init_list {
-                        let value: T::Balance = As::sa(*value);
-                        xassets::Module::<T>::issue(&token, &accountid, value).unwrap();
-                    }
                 }
-
-                // xbitcoin
-                // xbitcoin should be initialized earlier than xstaking due to the network_id.
-                let (header, number): (BlockHeader, u32) = config.genesis.clone();
-                if config.network_id == 0 && number % config.params_info.retargeting_interval() != 0 {
-                    panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
-                }
-                let genesis = BlockHeaderInfo {
-                    header: header,
-                    height: number,
-                    confirmed: true,
-                    txid_list: [].to_vec(),
-                };
-                let genesis_header = genesis.header.hash();
-
-                let mut hashes = Vec::new();
-                hashes.push(genesis_header.clone());
-                <xbitcoin::BlockHashFor<T>>::insert(&genesis.height, hashes);
-                <xbitcoin::BlockHeaderFor<T>>::insert(&genesis_header, genesis);
-                <xbitcoin::BestIndex<T>>::put(genesis_header);
-                <xbitcoin::NetworkId<T>>::put(config.network_id);
 
                 // xstaking
                 let pcx = xassets::Module::<T>::TOKEN.to_vec();

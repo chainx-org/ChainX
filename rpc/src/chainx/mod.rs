@@ -1,7 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
 use std::collections::BTreeMap;
-use std::result::Result as StdResult;
+use std::result;
 use std::sync::Arc;
 
 use jsonrpc_derive::rpc;
@@ -158,7 +158,7 @@ where
     }
 
     /// Get best number of the chain.
-    fn best_number(&self) -> StdResult<BlockId<Block>, client::error::Error> {
+    fn best_number(&self) -> result::Result<BlockId<Block>, client::error::Error> {
         let best_hash = self.client.info()?.chain.best_hash;
         Ok(BlockId::Hash(best_hash))
     }
@@ -166,8 +166,10 @@ where
     /// Get state of best number of the chain.
     fn best_state(
         &self,
-    ) -> StdResult<<B as client::backend::Backend<Block, Blake2Hasher>>::State, client::error::Error>
-    {
+    ) -> result::Result<
+        <B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        client::error::Error,
+    > {
         let state = self.client.state_at(&self.best_number()?)?;
         Ok(state)
     }
@@ -176,7 +178,7 @@ where
     fn pickout<ReturnValue: Decode>(
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
         key: &[u8],
-    ) -> StdResult<Option<ReturnValue>, error::Error> {
+    ) -> result::Result<Option<ReturnValue>, error::Error> {
         Ok(state
             .storage(&Self::storage_key(key).0)
             .map_err(|e| error::Error::from_state(Box::new(e)))?

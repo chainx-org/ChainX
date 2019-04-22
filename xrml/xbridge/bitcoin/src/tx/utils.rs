@@ -13,8 +13,6 @@ use xsupport::u8array_to_addr;
 // light-bitcoin
 use btc_chain::{OutPoint, Transaction};
 use btc_keys::{Address, Network};
-#[cfg(feature = "std")]
-use btc_primitives::H256;
 use btc_script::{Script, ScriptAddress};
 
 use crate::types::TrusteeAddrInfo;
@@ -164,14 +162,6 @@ pub fn get_sig_num_from_trustees(trustee_num: u32) -> (u32, u32) {
         None => 0,
     };
     (sig_num, trustee_num)
-}
-
-#[cfg(feature = "std")]
-#[inline]
-pub fn hash_strip(hash: &H256) -> String {
-    let mut s = format!("{:}", hash)[..10].to_owned();
-    s += "...";
-    s
 }
 
 pub fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result<(), &'static str> {

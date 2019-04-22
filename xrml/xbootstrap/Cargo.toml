@@ -19,7 +19,6 @@ xstaking = { package = "xrml-xmining-staking", path = "../xmining/staking", defa
 xtokens = { package = "xrml-xmining-tokens", path = "../xmining/tokens", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../xassets/assets",  default-features = false }
 xaccounts = { package = "xrml-xaccounts", path = "../xaccounts",  default-features = false }
-xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xbridge/bitcoin",  default-features = false }
 xspot = { package = "xrml-xdex-spot", path = "../xdex/spot", default-features = false }
 xmultisig = { package = "xrml-xmultisig", path = "../xmultisig", default-features = false }
 # light-bitocin
@@ -42,7 +41,6 @@ std = [
     "xtokens/std",
     "xassets/std",
     "xaccounts/std",
-    "xbitcoin/std",
     "xspot/std",
     "xmultisig/std",
     # light-bitcoin

@@ -2,14 +2,14 @@
 
 // Substrate
 use primitives::traits::As;
-use rstd::{prelude::Vec, result::Result as StdResult};
+use rstd::{prelude::Vec, result};
 use support::{dispatch::Result, StorageMap, StorageValue};
 
 // ChainX
 use xaccounts;
 use xassets::{self, Chain, ChainT};
 use xfee_manager;
-use xr_primitives::generic::{b58, Extracter};
+use xr_primitives::generic::b58;
 use xr_primitives::traits::Extractable;
 use xrecords;
 #[cfg(feature = "std")]
@@ -22,8 +22,6 @@ use btc_keys::{Address, DisplayLayout};
 use btc_primitives::H256;
 use btc_script::Script;
 
-#[cfg(feature = "std")]
-use crate::hash_strip;
 use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
 use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait, TxFor};
 
@@ -35,7 +33,7 @@ pub struct TxHandler {
 }
 
 impl TxHandler {
-    pub fn new<T: Trait>(txid: &H256) -> StdResult<TxHandler, &'static str> {
+    pub fn new<T: Trait>(txid: &H256) -> result::Result<TxHandler, &'static str> {
         let tx_info = Module::<T>::tx_for(txid).ok_or("not find this txinfo for this txid")?;
         if tx_info.done {
             error!(
@@ -189,9 +187,7 @@ impl TxHandler {
                     deposit_token::<T>(&accountid, deposit_balance);
                     info!(
                         "[deposit]|deposit success|who:{:?}|balance:{:}|tx_hash:{:}",
-                        accountid,
-                        deposit_balance,
-                        hash_strip(&self.tx_hash)
+                        accountid, deposit_balance, self.tx_hash
                     );
                 } else {
                     info!(
@@ -206,9 +202,7 @@ impl TxHandler {
                     insert_pending_deposit::<T>(&addr, &self.tx_hash, deposit_balance);
                     info!(
                         "[deposit]|deposit into pending|addr:{:?}|balance:{:}|tx_hash:{:}",
-                        addr,
-                        deposit_balance,
-                        hash_strip(&self.tx_hash)
+                        addr, deposit_balance, self.tx_hash
                     );
                 } else {
                     error!("[deposit]|the deposit balance is 0, but not get binding info from opreturn, maybe it's not a related tx|tx:{:?}|txinfo:{:?}", self.tx_hash, self.tx_info);
@@ -234,12 +228,12 @@ impl TxHandler {
 /// Try updating the binding address, remove pending deposit if the updating goes well.
 /// return validator name and this accountid
 fn handle_opreturn<T: Trait>(script: &[u8]) -> Option<(T::AccountId, Vec<u8>)> {
-    Extracter::<T::AccountId>::new(script.to_vec()).account_info()
+    T::AccountExtractor::account_info(script)
 }
 
 pub fn parse_deposit_outputs<T: Trait>(
     tx: &Transaction,
-) -> StdResult<(Option<(T::AccountId, Vec<u8>)>, u64, Vec<u8>), &'static str> {
+) -> result::Result<(Option<(T::AccountId, Vec<u8>)>, u64, Vec<u8>), &'static str> {
     let trustee_address = get_hot_trustee_address::<T>()?;
     let mut deposit_balance = 0;
     let mut account_info = None;
@@ -307,8 +301,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
             PendingDepositMap::<T>::insert(input_address, list);
             info!(
                 "[insert_pending_deposit]|Add pending deposit|txhash:{:}|balance:{:}",
-                hash_strip(txid),
-                balance
+                txid, balance
             );
         }
         None => {
@@ -317,8 +310,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
             PendingDepositMap::<T>::insert(input_address, list);
             info!(
                 "[insert_pending_deposit]|New pending deposit|txhash:{:}|balance:{:}",
-                hash_strip(txid),
-                balance
+                txid, balance
             );
         }
     };

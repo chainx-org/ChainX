@@ -12,7 +12,7 @@ use parity_codec::Encode;
 
 // Substrate
 use primitives::traits::Hash;
-use rstd::{marker::PhantomData, prelude::*, result::Result as StdResult};
+use rstd::{marker::PhantomData, prelude::*, result};
 use substrate_primitives::crypto::UncheckedFrom;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, Dispatchable, Parameter, StorageMap,
@@ -229,7 +229,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         addr: &T::AccountId,
         required: bool,
-    ) -> StdResult<u32, &'static str> {
+    ) -> result::Result<u32, &'static str> {
         if let Some(addr_info) = Self::multisig_addr_info(addr) {
             for (index, (id, req)) in addr_info.owner_list.iter().enumerate() {
                 if id == who {
@@ -250,7 +250,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         multi_sig_addr: &T::AccountId,
         multi_sig_id: T::Hash,
-    ) -> StdResult<bool, &'static str> {
+    ) -> result::Result<bool, &'static str> {
         let index = Self::is_owner(who, multi_sig_addr, false)?;
 
         let mut pending = if let Some(pending) =
@@ -286,14 +286,14 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         addr: &T::AccountId,
         required: bool,
-    ) -> StdResult<u32, &'static str> {
+    ) -> result::Result<u32, &'static str> {
         Self::is_owner(who, addr, required)
     }
     fn only_many_owner(
         who: &T::AccountId,
         multi_sig_addr: &T::AccountId,
         multi_sig_id: T::Hash,
-    ) -> StdResult<bool, &'static str> {
+    ) -> result::Result<bool, &'static str> {
         Self::confirm_and_check(who, multi_sig_addr, multi_sig_id)
     }
 }

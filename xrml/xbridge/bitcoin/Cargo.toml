@@ -11,6 +11,8 @@ serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
 # Substrate
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
@@ -34,8 +36,6 @@ btc-script = { package = "script", git = "https://github.com/chainx-org/light-bi
 [dev-dependencies]
 hex = "0.3"
 # Substrate
-runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
 # ChainX
 xsystem = { package = "xrml-xsystem", path = "../../xsystem" }
@@ -49,6 +49,8 @@ std = [
     "parity-codec/std",
     # Substrate
     "rstd/std",
+    "runtime-io/std",
+    "substrate-primitives/std",
     "primitives/std",
     "support/std",
     "system/std",

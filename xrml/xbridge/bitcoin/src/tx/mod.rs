@@ -6,7 +6,7 @@ mod validator;
 
 // Substrate
 use primitives::traits::As;
-use rstd::{prelude::*, result::Result as StdResult};
+use rstd::{prelude::*, result};
 use support::{dispatch::Result, StorageMap};
 
 // ChainX
@@ -20,8 +20,6 @@ use btc_keys::{Address, Type};
 use btc_primitives::{Bytes, H256};
 use btc_script::{Builder, Opcode, Script};
 
-#[cfg(feature = "std")]
-use crate::hash_strip;
 use crate::types::{RelayTx, TrusteeAddrInfo, TxType};
 use crate::{InputAddrFor, Module, RawEvent, Trait, TxFor};
 
@@ -38,9 +36,11 @@ pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
 ///        _________
 ///  addr |        | Some(addr)
 ///       |   tx   | Some(addr)
-///       |________| None
+///       |________| None (OP_RETURN or something unknown)
 /// then judge type
-pub fn detect_transaction_type<T: Trait>(relay_tx: &RelayTx) -> StdResult<TxType, &'static str> {
+pub fn detect_transaction_type<T: Trait>(
+    relay_tx: &RelayTx,
+) -> result::Result<TxType, &'static str> {
     let current_session_number = xaccounts::Module::<T>::current_session_number(Chain::Bitcoin);
     let (hot_addr, cold_addr) = get_trustee_address_pair::<T>(current_session_number)?;
     // parse input addr
@@ -111,10 +111,7 @@ pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
 }
 
 pub fn remove_unused_tx<T: Trait>(txid: &H256) {
-    debug!(
-        "[remove_unused_tx]|remove old tx|tx_hash:{:}",
-        hash_strip(txid)
-    );
+    debug!("[remove_unused_tx]|remove old tx|tx_hash:{:}", txid);
     TxFor::<T>::remove(txid);
     InputAddrFor::<T>::remove(txid);
 }

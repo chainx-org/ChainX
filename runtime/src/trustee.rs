@@ -15,6 +15,7 @@ impl TrusteeCall<AccountId> for Call {
         match self {
             Call::XBridgeOfBTC(call) => match call {
                 XBitcoinCall::set_btc_withdrawal_fee(_) => true,
+                XBitcoinCall::fix_withdrawal_state_by_trustees(_, _) => true,
                 _ => false,
             },
             Call::XMultiSig(call) => match call {

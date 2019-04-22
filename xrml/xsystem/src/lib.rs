@@ -10,7 +10,7 @@ pub mod types;
 
 // Substrate
 use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInherent, RuntimeString};
-use rstd::{prelude::Vec, result::Result as StdResult};
+use rstd::{prelude::Vec, result};
 use support::{decl_module, decl_storage, dispatch::Result, StorageValue};
 use system::ensure_inherent;
 
@@ -104,7 +104,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
         Some(Call::set_block_producer(producer))
     }
 
-    fn check_inherent(call: &Self::Call, _data: &InherentData) -> StdResult<(), Self::Error> {
+    fn check_inherent(call: &Self::Call, _data: &InherentData) -> result::Result<(), Self::Error> {
         let producer = match call {
             Call::set_block_producer(ref p) => p.clone(),
             _ => return Err(RuntimeString::from("not found producer in call").into()),

@@ -4,13 +4,16 @@
 use parity_codec::Decode;
 use parity_codec::Encode;
 
+#[cfg(feature = "std")]
+use rstd::result;
+
 use inherents::IsFatalError;
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
 
 use super::RuntimeString;
 #[cfg(feature = "std")]
-use super::{InherentData, InherentIdentifier, StdResult, INHERENT_IDENTIFIER};
+use super::{InherentData, InherentIdentifier, INHERENT_IDENTIFIER};
 
 #[derive(Encode)]
 #[cfg_attr(feature = "std", derive(Debug, Decode))]
@@ -52,7 +55,7 @@ impl ProvideInherentData for InherentDataProvider {
     fn provide_inherent_data(
         &self,
         inherent_data: &mut InherentData,
-    ) -> StdResult<(), RuntimeString> {
+    ) -> result::Result<(), RuntimeString> {
         inherent_data.put_data(INHERENT_IDENTIFIER, &self.block_producer_name)
     }
 

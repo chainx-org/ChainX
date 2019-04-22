@@ -20,13 +20,13 @@ use system::ensure_signed;
 
 // ChainX
 use xassets::{Chain, ChainT};
-use xr_primitives::generic::Extracter;
 use xr_primitives::traits::Extractable;
 
 pub use self::types::{EcdsaSignature, EthereumAddress};
 
 /// Configuration trait.
 pub trait Trait: xaccounts::Trait + xassets::Trait + xrecords::Trait {
+    type AccountExtractor: Extractable<Self::AccountId>;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -67,7 +67,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             let input = contains(sign_data.clone(), input_data).ok_or("sign_data not contains input_data")?;
-            let (who, node_name) = Extracter::<T::AccountId>::new(input).account_info().ok_or("extracter account_id error")?;
+            let (who, node_name) = T::AccountExtractor::account_info(&input).ok_or("extractor account_id error")?;
 
             let signer = eth_recover(&ethereum_signature, &sign_data).ok_or("Invalid Ethereum signature")?;
 
