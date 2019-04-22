@@ -47,6 +47,7 @@ xtokens = { package = "xrml-xmining-tokens", path = "../xrml/xmining/tokens" }
 xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport"  }
 xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot"  }
 xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin" }
+xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig" }
 
 # bitcoin
 btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin" }

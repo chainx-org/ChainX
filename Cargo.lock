@@ -3943,6 +3943,7 @@ dependencies = [
  "xrml-xdex-spot 0.4.0",
  "xrml-xmining-staking 0.4.0",
  "xrml-xmining-tokens 0.4.0",
+ "xrml-xmultisig 0.4.0",
  "xrml-xsession 0.1.0",
  "xrml-xsupport 0.4.0",
 ]

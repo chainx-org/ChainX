@@ -128,6 +128,9 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
         &self,
         candidates: Vec<AccountId>,
     ) -> Result<Option<MockBitcoinTrustee>>;
+
+    #[rpc(name = "chainx_particularAccounts")]
+    fn particular_accounts(&self) -> Result<Option<serde_json::Value>>;
 }
 
 /// ChainX API

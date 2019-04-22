@@ -789,6 +789,35 @@ where
 
         Ok(Some(mock))
     }
+
+    fn particular_accounts(&self) -> Result<Option<serde_json::Value>> {
+        use serde_json::json;
+        let state = self.best_state()?;
+
+        // team addr
+        let key = xaccounts::TeamAddress::<Runtime>::key();
+        let team_addr = Self::pickout::<AccountId>(&state, &key)?;
+
+        let key = xaccounts::CouncilAddress::<Runtime>::key();
+        let council_addr = Self::pickout::<AccountId>(&state, &key)?;
+
+        let mut map = BTreeMap::new();
+        for chain in Chain::iterator() {
+            let key = xmultisig::TrusteeMultiSigAddr::<Runtime>::key_for(chain);
+            let addr = Self::pickout::<AccountId>(&state, &key)?;
+            if let Some(a) = addr {
+                map.insert(chain, a);
+            }
+        }
+
+        Ok(Some(json!(
+        {
+            "teamAddress": team_addr,
+            "councilAddress": council_addr,
+            "trusteesAddress": map
+        }
+        )))
+    }
 }
 
 fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {
