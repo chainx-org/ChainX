@@ -62,8 +62,8 @@ fn put_order_reserve_should_work() {
         assert_ok!(XSpot::put_order(
             Origin::signed(1),
             0,
-            OrderType::Limit,
-            OrderDirection::Buy,
+            Type::Limit,
+            Side::Buy,
             1000,
             1_210_000,
         ));
@@ -81,8 +81,8 @@ fn inject_order_should_work() {
         assert_ok!(XSpot::put_order(
             Origin::signed(1),
             0,
-            OrderType::Limit,
-            OrderDirection::Buy,
+            Type::Limit,
+            Side::Buy,
             1000,
             1_210_000,
         ));
@@ -95,8 +95,8 @@ fn inject_order_should_work() {
         assert_ok!(XSpot::put_order(
             Origin::signed(1),
             0,
-            OrderType::Limit,
-            OrderDirection::Buy,
+            Type::Limit,
+            Side::Buy,
             2000,
             1_000_000,
         ));
@@ -123,8 +123,8 @@ fn price_too_high_or_too_low_should_not_work() {
         assert_ok!(XSpot::put_order(
             Origin::signed(1),
             0,
-            OrderType::Limit,
-            OrderDirection::Buy,
+            Type::Limit,
+            Side::Buy,
             1000,
             1_210_000,
         ));
@@ -135,8 +135,8 @@ fn price_too_high_or_too_low_should_not_work() {
             XSpot::put_order(
                 Origin::signed(1),
                 0,
-                OrderType::Limit,
-                OrderDirection::Buy,
+                Type::Limit,
+                Side::Buy,
                 1000,
                 2_210_000,
             ),
@@ -149,21 +149,14 @@ fn price_too_high_or_too_low_should_not_work() {
         assert_ok!(XSpot::put_order(
             Origin::signed(1),
             0,
-            OrderType::Limit,
-            OrderDirection::Sell,
+            Type::Limit,
+            Side::Sell,
             1000,
             1_210_000,
         ));
 
         assert_noop!(
-            XSpot::put_order(
-                Origin::signed(1),
-                0,
-                OrderType::Limit,
-                OrderDirection::Sell,
-                1000,
-                890_000,
-            ),
+            XSpot::put_order(Origin::signed(1), 0, Type::Limit, Side::Sell, 1000, 890_000,),
             "The ask price can not lower than the PriceVolatility of current highest_bid."
         );
     })
@@ -182,7 +175,7 @@ fn update_handicap_should_work() {
             Origin::signed(1),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             1000,
             1_210_000,
         ));
@@ -193,7 +186,7 @@ fn update_handicap_should_work() {
             Origin::signed(1),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             1000,
             1_310_000,
         ));
@@ -204,7 +197,7 @@ fn update_handicap_should_work() {
             Origin::signed(2),
             0,
             OrderType::Limit,
-            OrderDirection::Sell,
+            Side::Sell,
             500,
             1_200_000
         ));
@@ -215,7 +208,7 @@ fn update_handicap_should_work() {
             Origin::signed(2),
             0,
             OrderType::Limit,
-            OrderDirection::Sell,
+            Side::Sell,
             800,
             1_3200_000
         ));
@@ -239,7 +232,7 @@ fn match_order_should_work() {
             Origin::signed(1),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             1000,
             1_000_000,
         ));
@@ -248,7 +241,7 @@ fn match_order_should_work() {
             Origin::signed(1),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             1000,
             1_200_000,
         ));
@@ -257,7 +250,7 @@ fn match_order_should_work() {
             Origin::signed(2),
             0,
             OrderType::Limit,
-            OrderDirection::Sell,
+            Side::Sell,
             500,
             1_200_000
         ));
@@ -267,21 +260,21 @@ fn match_order_should_work() {
         let order_1_1 = XSpot::order_info_of((1, 1)).unwrap();
 
         assert_eq!(order_1_1.already_filled, 500);
-        assert_eq!(order_1_1.status, OrderStatus::ParitialExecuted);
+        assert_eq!(order_1_1.status, Status::ParitialFill);
         assert_eq!(order_1_1.executed_indices, vec![0]);
 
         assert_ok!(XSpot::put_order(
             Origin::signed(2),
             0,
             OrderType::Limit,
-            OrderDirection::Sell,
+            Side::Sell,
             700,
             1_200_000
         ));
 
         assert_eq!(XSpot::order_info_of((1, 1)), None);
         let order_2_1 = XSpot::order_info_of((2, 1)).unwrap();
-        assert_eq!(order_2_1.status, OrderStatus::ParitialExecuted);
+        assert_eq!(order_2_1.status, Status::ParitialFill);
         assert_eq!(order_2_1.already_filled, 500);
         assert_eq!(order_2_1.remaining, 200);
         assert_eq!(order_2_1.executed_indices, vec![1]);
@@ -303,7 +296,7 @@ fn cancel_order_should_work() {
             Origin::signed(1),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             1000,
             1_000_000,
         ));
@@ -312,7 +305,7 @@ fn cancel_order_should_work() {
             Origin::signed(1),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             1000,
             1_200_000,
         ));
@@ -321,7 +314,7 @@ fn cancel_order_should_work() {
             Origin::signed(2),
             0,
             OrderType::Limit,
-            OrderDirection::Sell,
+            Side::Sell,
             500,
             1_200_000
         ));
@@ -352,7 +345,7 @@ fn reap_orders_should_work() {
             Origin::signed(1),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             1000,
             1_000_000,
         ));
@@ -361,7 +354,7 @@ fn reap_orders_should_work() {
             Origin::signed(1),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             5000,
             1_200_000,
         ));
@@ -370,7 +363,7 @@ fn reap_orders_should_work() {
             Origin::signed(2),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             2000,
             2_000_000
         ));
@@ -379,7 +372,7 @@ fn reap_orders_should_work() {
             Origin::signed(3),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             1000,
             2_100_000
         ));
@@ -388,7 +381,7 @@ fn reap_orders_should_work() {
             Origin::signed(3),
             0,
             OrderType::Limit,
-            OrderDirection::Buy,
+            Side::Buy,
             3000,
             900_000
         ));
@@ -397,7 +390,7 @@ fn reap_orders_should_work() {
             Origin::signed(4),
             0,
             OrderType::Limit,
-            OrderDirection::Sell,
+            Side::Sell,
             20_000,
             900_000
         ));

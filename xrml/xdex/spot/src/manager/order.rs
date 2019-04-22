@@ -14,7 +14,7 @@ impl<T: Trait> Module<T> {
         pair: &TradingPair,
         order: &mut OrderInfo<T>,
         pair_index: TradingPairIndex,
-        direction: OrderDirection,
+        side: Side,
         price: T::Price,
     ) {
         let handicap = <HandicapOf<T>>::get(pair_index);
@@ -22,7 +22,7 @@ impl<T: Trait> Module<T> {
 
         // If the price is too low or too high, we only need to check if the handicap should be updated,
         // otherwise we should match this order.
-        let skip_match_order = match direction {
+        let skip_match_order = match side {
             Buy => lowest_offer.is_zero() || price < lowest_offer,
             Sell => highest_bid.is_zero() || price > highest_bid,
         };
@@ -33,7 +33,7 @@ impl<T: Trait> Module<T> {
                 quotations.push((order.submitter(), order.index()))
             });
 
-            match direction {
+            match side {
                 Buy if price > highest_bid => {
                     <HandicapOf<T>>::mutate(pair_index, |handicap| handicap.highest_bid = price);
                 }
@@ -55,7 +55,7 @@ impl<T: Trait> Module<T> {
         pair_index: TradingPairIndex,
         price: T::Price,
         order_type: OrderType,
-        direction: OrderDirection,
+        side: Side,
         amount: T::Balance,
         remaining: T::Balance,
     ) -> Order<TradingPairIndex, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
@@ -69,7 +69,7 @@ impl<T: Trait> Module<T> {
             order_index,
             who,
             order_type,
-            direction,
+            side,
             amount,
             remaining,
         );
@@ -83,7 +83,7 @@ impl<T: Trait> Module<T> {
             order.pair_index(),
             order.order_type(),
             order.price(),
-            order.direction(),
+            order.side(),
             order.amount(),
             order.created_at(),
         ));
@@ -98,7 +98,7 @@ impl<T: Trait> Module<T> {
         order_index: OrderIndex,
         submitter: T::AccountId,
         class: OrderType,
-        direction: OrderDirection,
+        side: Side,
         amount: T::Balance,
         remaining: T::Balance,
     ) -> Order<TradingPairIndex, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
@@ -107,7 +107,7 @@ impl<T: Trait> Module<T> {
             pair_index,
             order_index,
             class,
-            direction,
+            side,
             submitter,
             amount,
             price,
@@ -118,7 +118,7 @@ impl<T: Trait> Module<T> {
             props,
             Zero::zero(),
             current_block,
-            OrderStatus::ZeroExecuted,
+            OrderStatus::ZeroFill,
             Default::default(),
             remaining,
         )
@@ -139,7 +139,7 @@ impl<T: Trait> Module<T> {
         // Remove the full filled order, otherwise the quotations, order status and handicap
         // should be updated.
         if order.is_fulfilled() {
-            order.status = OrderStatus::AllExecuted;
+            order.status = OrderStatus::Filled;
             <OrderInfoOf<T>>::remove(&(order.submitter(), order.index()));
         } else {
             <QuotationsOf<T>>::mutate(&(order.pair_index(), order.price()), |quotations| {
@@ -148,7 +148,7 @@ impl<T: Trait> Module<T> {
 
             // Since the handicap is not always related to a real order, this guard statement is neccessary!
             if order.already_filled > Zero::zero() {
-                order.status = OrderStatus::ParitialExecuted;
+                order.status = OrderStatus::ParitialFill;
             }
 
             <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), order.clone());
@@ -161,7 +161,7 @@ impl<T: Trait> Module<T> {
         taker_order: &mut OrderInfo<T>,
         pair: &TradingPair,
         opponent_price: T::Price,
-        opponent_direction: OrderDirection,
+        opponent_side: Side,
     ) {
         let quotations = <QuotationsOf<T>>::get(&(pair.index, opponent_price));
         for quotation in quotations.iter() {
@@ -170,8 +170,8 @@ impl<T: Trait> Module<T> {
             }
             // Find the matched order.
             if let Some(mut maker_order) = <OrderInfoOf<T>>::get(quotation) {
-                if opponent_direction != maker_order.direction() {
-                    panic!("opponent direction error");
+                if opponent_side != maker_order.side() {
+                    panic!("opponent side error");
                 }
 
                 let turnover = cmp::min(
@@ -199,7 +199,7 @@ impl<T: Trait> Module<T> {
                         maker_order.index(),
                     );
 
-                    Self::update_handicap(&pair, opponent_price, maker_order.direction());
+                    Self::update_handicap(&pair, opponent_price, maker_order.side());
                 }
 
                 Self::update_latest_and_average_price(pair.index, opponent_price);
@@ -220,9 +220,9 @@ impl<T: Trait> Module<T> {
         //  Buy: [ lowest_offer  , my_quote ]
         // Sell: [ my_quote , highest_bid   ]
         // FIXME refine later
-        match taker_order.direction() {
+        match taker_order.side() {
             Buy => {
-                let (opponent_direction, floor, ceiling) = (Sell, lowest_offer, my_quote);
+                let (opponent_side, floor, ceiling) = (Sell, lowest_offer, my_quote);
 
                 let mut opponent_price = floor;
 
@@ -234,13 +234,13 @@ impl<T: Trait> Module<T> {
                         taker_order,
                         pair,
                         opponent_price,
-                        opponent_direction,
+                        opponent_side,
                     );
                     opponent_price = Self::tick_up(opponent_price, tick);
                 }
             }
             Sell => {
-                let (opponent_direction, floor, ceiling) = (Buy, my_quote, highest_bid);
+                let (opponent_side, floor, ceiling) = (Buy, my_quote, highest_bid);
 
                 let mut opponent_price = ceiling;
 
@@ -252,7 +252,7 @@ impl<T: Trait> Module<T> {
                         taker_order,
                         pair,
                         opponent_price,
-                        opponent_direction,
+                        opponent_side,
                     );
                     opponent_price = Self::tick_down(opponent_price, tick);
                 }
@@ -267,13 +267,13 @@ impl<T: Trait> Module<T> {
         who: T::AccountId,
         order_index: OrderIndex,
         pair: TradingPair,
-        order_direction: OrderDirection,
+        order_side: Side,
     ) {
         <OrderInfoOf<T>>::remove(&(who.clone(), order_index));
 
         Self::remove_quotation(pair_index, price, who, order_index);
 
-        Self::update_handicap(&pair, price, order_direction);
+        Self::update_handicap(&pair, price, order_side);
     }
 
     fn update_order_on_execute(
@@ -290,9 +290,9 @@ impl<T: Trait> Module<T> {
         };
 
         order.status = if order.already_filled == order.amount() {
-            OrderStatus::AllExecuted
+            OrderStatus::Filled
         } else if order.already_filled < order.amount() {
-            OrderStatus::ParitialExecuted
+            OrderStatus::ParitialFill
         } else {
             panic!("Already filled of an order can't greater than the order's amount.");
         };
@@ -323,7 +323,7 @@ impl<T: Trait> Module<T> {
         Self::update_order_on_execute(taker_order, &turnover, trade_history_index);
 
         let (maker_turnover_amount, taker_turnover_amount) = Self::delivery_asset_to_each_other(
-            maker_order.direction(),
+            maker_order.side(),
             &pair,
             turnover,
             price,
@@ -360,7 +360,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
     ) -> Result {
         // Unreserve the remaining asset.
-        let (refund_token, refund_amount) = match order.direction() {
+        let (refund_token, refund_amount) = match order.side() {
             Sell => (pair.base(), order.remaining_in_base()),
             Buy => (pair.quote(), order.remaining),
         };

@@ -23,7 +23,7 @@ use system::ensure_signed;
 // ChainX
 use xassets::{ChainT, OnAssetRegisterOrRevoke, Token};
 use xsupport::info;
-use OrderDirection::{Buy, Sell};
+use Side::{Buy, Sell};
 
 pub use self::manager::types::*;
 
@@ -64,7 +64,7 @@ decl_module! {
             origin,
             pair_index: TradingPairIndex,
             order_type: OrderType,
-            direction: OrderDirection,
+            side: Side,
             amount: T::Balance,
             price: T::Price
         ) -> Result {
@@ -82,18 +82,18 @@ decl_module! {
                 "Price must be an integer multiple of the tick precision"
             );
 
-            Self::is_within_quotation_range(price, &direction, pair_index)?;
-            Self::has_too_many_backlog_orders(pair_index, price, direction)?;
+            Self::is_within_quotation_range(price, &side, pair_index)?;
+            Self::has_too_many_backlog_orders(pair_index, price, side)?;
 
-            // Reserve the token according to the order direction.
-            let (reserve_token, reserve_amount) = match direction {
+            // Reserve the token according to the order side.
+            let (reserve_token, reserve_amount) = match side {
                 Buy => (pair.quote_as_ref(), Self::convert_base_to_quote(amount, price, &pair)?),
                 Sell => (pair.base_as_ref(), amount),
             };
 
             Self::put_order_reserve(&who, reserve_token, reserve_amount)?;
 
-            Self::apply_put_order(who, pair_index, order_type, direction, amount, price, reserve_amount)
+            Self::apply_put_order(who, pair_index, order_type, side, amount, price, reserve_amount)
         }
 
         pub fn cancel_order(origin, pair_index: TradingPairIndex, order_index: OrderIndex) -> Result {
@@ -130,7 +130,7 @@ decl_event!(
     {
         UpdateOrder(AccountId, OrderIndex, Balance, BlockNumber, OrderStatus, Balance, Vec<TradeHistoryIndex>),
 
-        PutOrder(AccountId, OrderIndex, TradingPairIndex, OrderType, Price, OrderDirection, Balance, BlockNumber),
+        PutOrder(AccountId, OrderIndex, TradingPairIndex, OrderType, Price, Side, Balance, BlockNumber),
 
         FillOrder(TradeHistoryIndex, TradingPairIndex, Price, AccountId, AccountId, OrderIndex, OrderIndex, Balance, u64),
 
@@ -222,7 +222,7 @@ impl<T: Trait> Module<T> {
 
         let pair = Self::trading_pair(&pair_index)?;
         if tick_precision < pair.tick_precision {
-            return Err("unit_precision error!");
+            return Err("tick_precision can not less than the one of pair!");
         }
 
         <TradingPairOf<T>>::mutate(pair_index, |pair| {
@@ -310,14 +310,14 @@ impl<T: Trait> Module<T> {
         who: T::AccountId,
         pair_index: TradingPairIndex,
         order_type: OrderType,
-        direction: OrderDirection,
+        side: Side,
         amount: T::Balance,
         price: T::Price,
         reserve_amount: T::Balance,
     ) -> Result {
         info!(
-            "transactor:{:?}, pair_index:{:}, order_type:{:?}, direction:{:?}, amount:{:?}, price:{:?}",
-            who, pair_index, order_type, direction, amount, price
+            "transactor:{:?}, pair_index:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
+            who, pair_index, order_type, side, amount, price
         );
 
         let pair = Self::trading_pair(&pair_index)?;
@@ -327,12 +327,12 @@ impl<T: Trait> Module<T> {
             pair_index,
             price,
             order_type,
-            direction,
+            side,
             amount,
             reserve_amount,
         );
 
-        Self::try_match_order(&pair, &mut order, pair_index, direction, price);
+        Self::try_match_order(&pair, &mut order, pair_index, side, price);
 
         Ok(())
     }
@@ -353,9 +353,8 @@ impl<T: Trait> Module<T> {
             None => return Err("The order doesn't exist"),
         };
         ensure!(
-            order_status == OrderStatus::ZeroExecuted
-                || order_status == OrderStatus::ParitialExecuted,
-            "Only ZeroExecuted and ParitialExecuted order can be canceled"
+            order_status == OrderStatus::ZeroFill || order_status == OrderStatus::ParitialFill,
+            "Only ZeroFill and ParitialFill order can be canceled"
         );
 
         Ok(())
@@ -383,7 +382,7 @@ impl<T: Trait> Module<T> {
             who.clone(),
             order_index,
             pair,
-            order.direction(),
+            order.side(),
         );
 
         Ok(())

@@ -11,12 +11,12 @@ impl<T: Trait> Module<T> {
     ///
     /// When there is no quotions at a certain price given the trading pair, we should check out
     /// whether the current handicap is true. If it's not true, adjust a tick accordingly.
-    pub(super) fn update_handicap(pair: &TradingPair, price: T::Price, direction: OrderDirection) {
+    pub(super) fn update_handicap(pair: &TradingPair, price: T::Price, side: Side) {
         let tick_precision = pair.tick_precision;
 
         if <QuotationsOf<T>>::get(&(pair.index, price)).is_empty() {
             let mut handicap = <HandicapOf<T>>::get(pair.index);
-            match direction {
+            match side {
                 Sell => {
                     if !handicap.lowest_offer.is_zero() {
                         if <QuotationsOf<T>>::get(&(pair.index, handicap.lowest_offer)).is_empty() {
@@ -24,7 +24,7 @@ impl<T: Trait> Module<T> {
                             <HandicapOf<T>>::insert(pair.index, &handicap);
 
                             debug!(
-                                "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, direction: {:?}",
+                                "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
                                 pair.index,
                                 handicap.lowest_offer,
                                 Sell,
@@ -39,10 +39,8 @@ impl<T: Trait> Module<T> {
                             <HandicapOf<T>>::insert(pair.index, &handicap);
 
                             debug!(
-                                "[update_handicap] pair_index: {:?}, highest_bid: {:?}, direction: {:?}",
-                                pair.index,
-                                handicap.highest_bid,
-                                Buy
+                                "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
+                                pair.index, handicap.highest_bid, Buy
                             );
                         }
                     }
@@ -55,7 +53,7 @@ impl<T: Trait> Module<T> {
         pair: &TradingPair,
         order: &mut OrderInfo<T>,
     ) {
-        match order.direction() {
+        match order.side() {
             Buy => Self::update_handicap_of_buyers(pair, order),
             Sell => Self::update_handicap_of_sellers(pair, order),
         }
@@ -82,7 +80,7 @@ impl<T: Trait> Module<T> {
                 handicap.lowest_offer = Self::tick_up(highest_bid, pair.tick());
 
                 debug!(
-                    "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, direction: {:?}",
+                    "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
                     order.pair_index(),
                     handicap.lowest_offer,
                     Sell,
@@ -93,7 +91,7 @@ impl<T: Trait> Module<T> {
             <HandicapOf<T>>::insert(order.pair_index(), handicap);
 
             debug!(
-                "[update_handicap] pair_index: {:?}, highest_bid: {:?}, direction: {:?}",
+                "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
                 order.pair_index(),
                 highest_bid,
                 Buy
@@ -110,7 +108,7 @@ impl<T: Trait> Module<T> {
                 handicap.highest_bid = Self::tick_down(lowest_offer, pair.tick());
 
                 debug!(
-                    "[update_handicap] pair_index: {:?}, highest_bid: {:?}, direction: {:?}",
+                    "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
                     order.pair_index(),
                     handicap.highest_bid,
                     Buy
@@ -121,7 +119,7 @@ impl<T: Trait> Module<T> {
             <HandicapOf<T>>::insert(order.pair_index(), handicap);
 
             debug!(
-                "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, direction: {:?}",
+                "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
                 order.pair_index(),
                 lowest_offer,
                 Sell,

@@ -2,12 +2,13 @@
 //! This module handles all the asset related actions.
 
 use super::*;
-use xassets::AssetType::{Free, ReservedDexSpot};
+use xassets::AssetType::{self, Free, ReservedDexSpot};
+use xsupport::error;
 
 impl<T: Trait> Module<T> {
     /// Delivery asset to maker and taker respectively when execute the order.
     pub(super) fn delivery_asset_to_each_other(
-        maker_order_direction: OrderDirection,
+        maker_order_side: Side,
         pair: &TradingPair,
         turnover: T::Balance,
         price: T::Price,
@@ -20,7 +21,7 @@ impl<T: Trait> Module<T> {
         let base = pair.base_as_ref();
         let quote = pair.quote_as_ref();
 
-        let (maker_turnover_amount, taker_turnover_amount) = match maker_order_direction {
+        let (maker_turnover_amount, taker_turnover_amount) = match maker_order_side {
             Sell => {
                 // maker(seller): unserve the base currency and move to the taker.
                 // taker(buyer): unserve the quote currency and move to the maker.
@@ -58,9 +59,7 @@ impl<T: Trait> Module<T> {
         from: &T::AccountId,
         to: &T::AccountId,
     ) -> Result {
-        let _ = <xassets::Module<T>>::move_balance(token, from, ReservedDexSpot, to, Free, value)
-            .map_err(|e| e.info())?;
-        Ok(())
+        Self::move_balance(token, from, ReservedDexSpot, to, Free, value)
     }
 
     /// Actually reserve tokens required by putting order.
@@ -73,9 +72,7 @@ impl<T: Trait> Module<T> {
             return Err("Can not put order if transactor's free token too low");
         }
 
-        let _ = <xassets::Module<T>>::move_balance(token, who, Free, who, ReservedDexSpot, value)
-            .map_err(|e| e.info())?;
-        Ok(())
+        Self::move_balance(token, who, Free, who, ReservedDexSpot, value)
     }
 
     #[inline]
@@ -84,8 +81,25 @@ impl<T: Trait> Module<T> {
         token: &Token,
         value: T::Balance,
     ) -> Result {
-        let _ = <xassets::Module<T>>::move_balance(token, who, ReservedDexSpot, who, Free, value)
-            .map_err(|e| e.info())?;
+        Self::move_balance(token, who, ReservedDexSpot, who, Free, value)
+    }
+
+    fn move_balance(
+        token: &Token,
+        from: &T::AccountId,
+        from_type: AssetType,
+        to: &T::AccountId,
+        to_type: AssetType,
+        value: T::Balance,
+    ) -> Result {
+        let _ = <xassets::Module<T>>::move_balance(token, from, from_type, to, to_type, value)
+            .map_err(|e| {
+                error!(
+                    "[move_balance] Fail to move {:?} from {:?}'s {:?} to {:?}'s {:?}",
+                    value, from, from_type, to, to_type
+                );
+                e.info()
+            })?;
         Ok(())
     }
 }

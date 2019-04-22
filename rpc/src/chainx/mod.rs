@@ -10,7 +10,7 @@ use parity_codec::Decode;
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
-use runtime_primitives::traits::{As, Block as BlockT, NumberFor, Zero};
+use runtime_primitives::traits::{Block as BlockT, NumberFor, Zero};
 use state_machine::Backend;
 
 use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
@@ -21,7 +21,7 @@ use xassets::{Asset, AssetType, Chain, Token};
 use xbitcoin::{TrusteeAddrInfo as BtcTrusteeAddrInfo, VoteResult};
 use xrecords::{HeightOrTime, RecordInfo, TxState};
 use xspot::{
-    HandicapInfo, OrderDirection, OrderIndex, OrderInfo, OrderStatus, OrderType, TradeHistoryIndex,
+    HandicapInfo, OrderIndex, OrderInfo, OrderStatus, OrderType, Side, TradeHistoryIndex,
     TradingPair, TradingPairIndex,
 };
 use xstaking::IntentionProfs;

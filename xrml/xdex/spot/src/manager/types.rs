@@ -31,29 +31,29 @@ impl Default for OrderType {
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum OrderDirection {
+pub enum Side {
     Buy,
     Sell,
 }
-impl Default for OrderDirection {
+impl Default for Side {
     fn default() -> Self {
-        OrderDirection::Buy
+        Side::Buy
     }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum OrderStatus {
-    ZeroExecuted,
-    ParitialExecuted,
-    AllExecuted,
-    ParitialExecutedAndCanceled,
+    ZeroFill,
+    ParitialFill,
+    Filled,
+    ParitialFillAndCanceled,
     Canceled,
 }
 
 impl Default for OrderStatus {
     fn default() -> Self {
-        OrderStatus::ZeroExecuted
+        OrderStatus::ZeroFill
     }
 }
 
@@ -202,7 +202,7 @@ impl TradingPair {
 pub struct OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber>(
     AccountId,
     PairIndex,
-    OrderDirection,
+    Side,
     Amount,
     Price,
     OrderIndex,
@@ -217,14 +217,14 @@ impl<PairIndex: Clone, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber:
         pair_index: PairIndex,
         index: OrderIndex,
         class: OrderType,
-        direction: OrderDirection,
+        side: Side,
         submitter: AccountId,
         amount: Amount,
         price: Price,
         created_at: BlockNumber,
     ) -> Self {
         OrderProperty(
-            submitter, pair_index, direction, amount, price, index, class, created_at,
+            submitter, pair_index, side, amount, price, index, class, created_at,
         )
     }
 
@@ -236,7 +236,7 @@ impl<PairIndex: Clone, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber:
         self.1.clone()
     }
 
-    pub fn direction(&self) -> OrderDirection {
+    pub fn side(&self) -> Side {
         self.2
     }
 
@@ -302,7 +302,7 @@ impl<
             Order {{
                 submitter: {:?},
                 pair_index: {:?},
-                direction: {:?},
+                side: {:?},
                 amount: {:?},
                 price: {:?},
                 order_index: {:?},
@@ -317,7 +317,7 @@ impl<
             }}",
             self.submitter(),
             self.pair_index(),
-            self.direction(),
+            self.side(),
             self.amount(),
             self.price(),
             self.index(),
@@ -367,8 +367,8 @@ impl<
         self.props.pair_index()
     }
 
-    pub fn direction(&self) -> OrderDirection {
-        self.props.direction()
+    pub fn side(&self) -> Side {
+        self.props.side()
     }
 
     pub fn amount(&self) -> Balance {
@@ -407,8 +407,7 @@ impl<
 
     /// If the `status` of order is Canceled or ParitialExecutedAndCanceled.
     pub fn is_canceled(&self) -> bool {
-        self.status == OrderStatus::Canceled
-            || self.status == OrderStatus::ParitialExecutedAndCanceled
+        self.status == OrderStatus::Canceled || self.status == OrderStatus::ParitialFillAndCanceled
     }
 
     fn sub_remaining(&mut self, value: Balance) {
@@ -433,7 +432,7 @@ impl<
     /// ParitialExecutedAndCanceled, or else Canceled.
     pub fn update_status_on_cancel(&mut self) {
         self.status = if !self.already_filled.is_zero() {
-            OrderStatus::ParitialExecutedAndCanceled
+            OrderStatus::ParitialFillAndCanceled
         } else {
             OrderStatus::Canceled
         };

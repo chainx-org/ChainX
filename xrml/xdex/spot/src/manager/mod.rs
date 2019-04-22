@@ -14,7 +14,7 @@ impl<T: Trait> Module<T> {
     /// - buy:  (~, lowest_offer + 10% * lowest_offer]
     pub(crate) fn is_within_quotation_range(
         quote: T::Price,
-        direction: &OrderDirection,
+        side: &Side,
         pair_index: TradingPairIndex,
     ) -> Result {
         let handicap = <HandicapOf<T>>::get(pair_index);
@@ -23,7 +23,7 @@ impl<T: Trait> Module<T> {
         let volatility = <PriceVolatility<T>>::get();
         let fluctuation_of = |h: T::Price| T::Price::sa(h.as_() * volatility as u64 / 100_u64);
 
-        match *direction {
+        match *side {
             Buy => {
                 debug!(
                     "[is_within_quotation_range] Buy: quote: {:?}, lowest_offer: {:?}, fluctuation: {:?}",
@@ -64,14 +64,14 @@ impl<T: Trait> Module<T> {
     pub(crate) fn has_too_many_backlog_orders(
         pair_index: TradingPairIndex,
         price: T::Price,
-        direction: OrderDirection,
+        side: Side,
     ) -> Result {
         let quotations = <QuotationsOf<T>>::get(&(pair_index, price));
         if quotations.len() >= MAX_BACKLOG_ORDER {
             if let Some(order) = <OrderInfoOf<T>>::get(&quotations[0]) {
-                if order.direction() == direction {
+                if order.side() == side {
                     return Err(
-                        "Too many backlog orders given the price and direction in the trading pair.",
+                        "Too many backlog orders given the price and side in the trading pair.",
                     );
                 }
             }

@@ -349,7 +349,7 @@ impl WithdrawTxInfo {
 pub struct OrderDetails {
     pub submitter: AccountIdForRpc,
     pub pair_index: TradingPairIndex,
-    pub direction: OrderDirection,
+    pub side: Side,
     pub amount: Balance,
     pub price: Balance,
     pub index: OrderIndex,
@@ -367,7 +367,7 @@ impl From<OrderInfo<Runtime>> for OrderDetails {
         OrderDetails {
             submitter: order.submitter().into(),
             pair_index: order.pair_index(),
-            direction: order.direction(),
+            side: order.side(),
             amount: order.amount(),
             price: order.price(),
             index: order.index(),
