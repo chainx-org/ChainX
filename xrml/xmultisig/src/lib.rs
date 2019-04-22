@@ -34,7 +34,7 @@ pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
     /// generate multisig addr for a accountid
     fn multi_sig_addr_for(who: &AccountId) -> AccountId;
 
-    fn multi_sig_addr_for_trustees(trustees: &Vec<AccountId>) -> AccountId;
+    fn multi_sig_addr_for_trustees(chain: Chain, trustees: &Vec<AccountId>) -> AccountId;
 
     fn multi_sig_id_for(who: &AccountId, addr: &AccountId, data: &[u8]) -> Hash;
 }
@@ -71,8 +71,9 @@ where
         UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }
 
-    fn multi_sig_addr_for_trustees(trustees: &Vec<T::AccountId>) -> T::AccountId {
+    fn multi_sig_addr_for_trustees(chain: Chain, trustees: &Vec<T::AccountId>) -> T::AccountId {
         let mut buf = Vec::<u8>::new();
+        buf.extend_from_slice(&chain.encode());
         for trustee in trustees {
             buf.extend_from_slice(trustee.as_ref());
         }
@@ -96,6 +97,7 @@ where
 {
     fn gen_genesis_multisig(accounts: Vec<T::AccountId>) -> (T::AccountId, T::AccountId) {
         let mut buf = Vec::<u8>::new();
+        buf.extend_from_slice(b"Team");
         for a in accounts.iter() {
             buf.extend_from_slice(a.as_ref());
         }
@@ -369,7 +371,7 @@ impl<T: Trait> Module<T> {
 
     fn deploy_trustee_addr(chain: Chain, trustee_list: Vec<T::AccountId>) -> Result {
         // generate new addr
-        let addr = T::MultiSig::multi_sig_addr_for_trustees(&trustee_list);
+        let addr = T::MultiSig::multi_sig_addr_for_trustees(chain, &trustee_list);
         let deployer = trustee_list
             .get(0)
             .ok_or("the trustee_list len must large than 1")?
