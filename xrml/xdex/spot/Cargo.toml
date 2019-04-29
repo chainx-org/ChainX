@@ -32,6 +32,7 @@ xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts" }
 xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../../xbridge/bitcoin" }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records" }
 xfee-manager = { package = "xrml-xfee-manager", path = "../../xfee/manager" }
+xr-primitives = { path = "../../../xr-primitives" }
 
 [features]
 default = ["std"]

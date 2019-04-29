@@ -56,7 +56,16 @@ impl timestamp::Trait for Test {
 }
 
 impl xbitcoin::Trait for Test {
+    type AccountExtractor = DummyAccountExtractorForBitcoin;
     type Event = ();
+}
+
+pub struct DummyAccountExtractorForBitcoin;
+
+impl xr_primitives::traits::Extractable<u64> for DummyAccountExtractorForBitcoin {
+    fn account_info(data: &[u8]) -> Option<(u64, Vec<u8>)> {
+        None
+    }
 }
 
 impl xaccounts::Trait for Test {

@@ -33,6 +33,7 @@ use substrate_primitives::{ed25519, Pair as PairT};
 use substrate_service::{
     construct_service_factory, FactoryFullConfiguration, FullBackend, FullClient, FullComponents,
     FullExecutor, LightBackend, LightClient, LightComponents, LightExecutor, TaskExecutor,
+    TelemetryOnConnect,
 };
 use transaction_pool::txpool::Pool as TransactionPool;
 
@@ -184,13 +185,20 @@ construct_service_factory! {
                         )?);
                     },
                     Some(_) => {
-                        executor.spawn(grandpa::run_grandpa_voter(
-                            config,
-                            link_half,
-                            service.network(),
-                            service.config.custom.inherent_data_providers.clone(),
-                            service.on_exit(),
-                        )?);
+                        let telemetry_on_connect = TelemetryOnConnect {
+                          on_exit: Box::new(service.on_exit()),
+                          telemetry_connection_sinks: service.telemetry_on_connect_stream(),
+                          executor: &executor,
+                        };
+                        let grandpa_config = grandpa::GrandpaParams {
+                          config: config,
+                          link: link_half,
+                          network: service.network(),
+                          inherent_data_providers: service.config.custom.inherent_data_providers.clone(),
+                          on_exit: service.on_exit(),
+                          telemetry_on_connect: Some(telemetry_on_connect),
+                        };
+                        executor.spawn(grandpa::run_grandpa_voter(grandpa_config)?);
                     },
                 }
 

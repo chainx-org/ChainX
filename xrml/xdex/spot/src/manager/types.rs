@@ -193,6 +193,10 @@ impl TradingPair {
     pub fn tick(&self) -> u64 {
         10_u64.pow(self.tick_precision)
     }
+
+    pub fn fluctuation(&self) -> u64 {
+        100 * self.tick()
+    }
 }
 
 /// We use property to express these immutable information of an order.

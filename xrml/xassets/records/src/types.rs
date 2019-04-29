@@ -132,7 +132,7 @@ impl<AccountId, Balance, BlockNumber> NodeT for Application<AccountId, Balance, 
     }
 }
 
-pub struct LinkedMultiKey<T: Trait>(support::storage::generator::PhantomData<T>);
+pub struct LinkedMultiKey<T: Trait>(rstd::marker::PhantomData<T>);
 
 impl<T: Trait> LinkedNodeCollection for LinkedMultiKey<T> {
     type Header = ApplicationMHeader<T>;

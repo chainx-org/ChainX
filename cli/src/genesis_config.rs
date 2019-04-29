@@ -211,7 +211,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         xtokens: Some(XTokensConfig {
             token_discount: vec![
                 (xbitcoin::Module::<Runtime>::TOKEN.to_vec(), 50),
-                (sdot_asset.token(), 100),
+                (sdot_asset.token(), 10),
             ],
             _genesis_phantom_data: Default::default(),
         }),
@@ -228,26 +228,26 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 BlockHeader {
                     version: 536870912,
                     previous_header_hash: h256_from_rev_str(
-                        "00000000000000f51b45a318afa95726b947aeb5154e65fd1bde2e2a798e2cc6",
+                        "0000000000000f3b669061e1437c502eda529057c33a115b63abdb328b5b4645",
                     ),
                     merkle_root_hash: h256_from_rev_str(
-                        "c9212ace69e32dcfe2d09383c7b8fea8da1151cd70af58ea2b7155afa5e92f47",
+                        "b954ca2828475be7f5f772a26369b51e6808d853a0e62219af0dcb9f8f9aa0ad",
                     ),
-                    time: 1553231960,
-                    bits: Compact::new(436271905),
-                    nonce: 4083801566,
+                    time: 1556000895,
+                    bits: Compact::new(437247136),
+                    nonce: 472822001,
                 },
-                1485555,
+                1511056,
             ),
             genesis_hash: h256_from_rev_str(
-                "000000000000004a38f07e3e4cf4638c3c367576c907cdcbf2bd7bd2e6347326",
+                "0000000000000e6b5c9b88cf3b2b89374841769d075c2698cc80c2eac98cdd54",
             ),
             params_info, // retargeting_factor
             network_id: 1,
             confirmation_number: 6,
             reserved_block: 2100,
             btc_withdrawal_fee: 40000,
-            max_withdrawal_count: 10,
+            max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }),
         xbootstrap: Some(XBootstrapConfig {
@@ -324,7 +324,7 @@ pub struct RecordOfSDOT {
 
 fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> {
     let mut reader = csv::Reader::from_reader(&include_bytes!("dot_tx.csv")[..]);
-    let mut res = Vec::with_capacity(3053);
+    let mut res = Vec::with_capacity(3052);
     for result in reader.deserialize() {
         let record: RecordOfSDOT = result?;
         let mut sdot_addr = [0u8; 20];
@@ -338,5 +338,5 @@ fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> 
 fn test_quantity_sum() {
     let res = load_sdot_info().unwrap();
     let sum: u64 = res.iter().map(|(_, quantity)| *quantity).sum();
-    assert_eq!(sum, 4999466375u64 + 5 * 20 * 1000);
+    assert_eq!(sum, 4999466375u64);
 }

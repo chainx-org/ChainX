@@ -486,21 +486,15 @@ where
                         info.update_height = price.2;
                     }
 
-                    let price_volatility_key = <xspot::PriceVolatility<Runtime>>::key();
-                    let price_volatility =
-                        Self::pickout::<u32>(&state, &price_volatility_key)?.unwrap() as u64;
-
                     let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&i);
                     if let Some(handicap) =
                         Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key)?
                     {
                         info.buy_one = handicap.highest_bid;
-                        info.maximum_bid =
-                            handicap.lowest_offer + handicap.lowest_offer * price_volatility / 100;
+                        info.maximum_bid = handicap.lowest_offer + pair.fluctuation();
 
                         info.sell_one = handicap.lowest_offer;
-                        info.minimum_offer =
-                            handicap.highest_bid - handicap.highest_bid * price_volatility / 100;
+                        info.minimum_offer = handicap.highest_bid - pair.fluctuation();
                     }
 
                     pairs.push(info);
@@ -525,10 +519,6 @@ where
         quotationslist.piece = piece;
 
         let state = self.best_state()?;
-
-        // price_volatility definitely exists.
-        let key = <xspot::PriceVolatility<Runtime>>::key();
-        let price_volatility = Self::pickout::<u32>(&state, &key)?.unwrap() as u64;
 
         let sum_of_quotations = |orders: Vec<(AccountId, OrderIndex)>| {
             orders
@@ -567,16 +557,15 @@ where
 
         let pair_key = <xspot::TradingPairOf<Runtime>>::key_for(&pair_index);
         if let Some(pair) = Self::pickout::<TradingPair>(&state, &pair_key)? {
-            let tick = 10_u64.pow(pair.tick_precision);
+            let tick = pair.tick();
 
             let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&pair_index);
             if let Some(handicap) = Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key)? {
                 let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
-                let maximum_bid = lowest_offer + lowest_offer * price_volatility / 100_u64;
-                let minimum_offer = highest_bid - highest_bid * price_volatility / 100_u64;
+                let maximum_bid = lowest_offer + pair.fluctuation();
+                let minimum_offer = highest_bid - pair.fluctuation();
 
-                // [lowest_offer, lowest_offer * 110%]
                 for price in (lowest_offer..=maximum_bid).step_by(tick as usize) {
                     push_sum_quotations_at(price, &mut quotationslist.buy)?;
                     if quotationslist.buy.len() == piece as usize {
@@ -584,7 +573,6 @@ where
                     }
                 }
 
-                // [90% * highest_bid, highest_bid]
                 for price in (minimum_offer..=highest_bid).step_by(tick as usize) {
                     push_sum_quotations_at(price, &mut quotationslist.sell)?;
                     if quotationslist.sell.len() == piece as usize {

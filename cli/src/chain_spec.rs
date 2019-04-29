@@ -49,7 +49,7 @@ pub fn development_config() -> ChainSpec {
             CHAINX_TELEMETRY_URL.to_string(),
             0,
         )])),
-        None,
+        Some("ChainX V0.9.9"),
         None,
         None,
     )
@@ -62,12 +62,12 @@ fn local_testnet_genesis() -> GenesisConfig {
 /// Local testnet config (multivalidator Alice + Bob)
 pub fn local_testnet_config() -> ChainSpec {
     let boot_nodes = vec![
-    //        "/ip4/47.96.134.203/tcp/31126/p2p/QmRZ2URFsxZ2uCjr4cdrP9QvHr8qQg5gXMBhLsVchgNi4S".into(),
-    //        "/ip4/47.96.97.52/tcp/31127/p2p/QmeCNS75ZRHAUsAUtH6DjcaxVFWwkBaT5KQtx91WvAh9i5".into(),
-    //        "/ip4/47.110.232.108/tcp/31129/p2p/QmQ7vca7aum3q1toVPUf8T6SiUPdhFuMPpyJgYAxeoUXtf".into(),
-        ];
+        "/ip4/47.96.134.203/tcp/31126/p2p/QmUzwniXCadDYiHBQhw4CnMNRRttnVAXE2TBdDYXcT65va".into(),
+        "/ip4/47.96.97.52/tcp/31127/p2p/QmUXuCPovJpMf3Y1AAA5pZJkPhMQkmX1tEgHhCz82cDtiA".into(),
+        "/ip4/47.110.232.108/tcp/31129/p2p/QmRnWu3c7Mq7bVHTwJTrSC76XKMQJx4cmGofhSA5XTkk9q".into(),
+    ];
     ChainSpec::from_genesis(
-        "ChainX Local V0.9.8",
+        "ChainX V0.9.9",
         "chainx_testnet",
         local_testnet_genesis,
         boot_nodes,

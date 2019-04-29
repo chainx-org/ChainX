@@ -20,8 +20,9 @@ impl<T: Trait> Module<T> {
         let handicap = <HandicapOf<T>>::get(pair_index);
         let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
-        let volatility = <PriceVolatility<T>>::get();
-        let fluctuation_of = |h: T::Price| T::Price::sa(h.as_() * volatility as u64 / 100_u64);
+        let pair = Self::trading_pair(&pair_index)?;
+
+        let fluctuation = T::Price::sa(pair.fluctuation());
 
         match *side {
             Buy => {
@@ -29,14 +30,14 @@ impl<T: Trait> Module<T> {
                     "[is_within_quotation_range] Buy: quote: {:?}, lowest_offer: {:?}, fluctuation: {:?}",
                     quote,
                     lowest_offer,
-                    fluctuation_of(lowest_offer)
+                    fluctuation
                 );
 
                 if lowest_offer.is_zero() {
                     return Ok(());
                 }
 
-                if quote > lowest_offer && quote - lowest_offer > fluctuation_of(lowest_offer) {
+                if quote > lowest_offer && quote - lowest_offer > fluctuation {
                     return Err("The bid price can not higher than the PriceVolatility of current lowest_offer.");
                 }
             }
@@ -45,14 +46,14 @@ impl<T: Trait> Module<T> {
                     "[is_within_quotation_range] Sell: quote: {:?}, highest_bid: {:?}, fluctuation: {:?}",
                     quote,
                     highest_bid,
-                    fluctuation_of(highest_bid)
+                    fluctuation
                 );
 
                 if lowest_offer.is_zero() {
                     return Ok(());
                 }
 
-                if quote < highest_bid && highest_bid - quote > fluctuation_of(highest_bid) {
+                if quote < highest_bid && highest_bid - quote > fluctuation {
                     return Err("The ask price can not lower than the PriceVolatility of current highest_bid.");
                 }
             }
