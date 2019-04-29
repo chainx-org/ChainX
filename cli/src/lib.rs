@@ -27,7 +27,7 @@ mod service;
 
 use std::ops::Deref;
 
-use log::info;
+use log::{info, warn};
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
 pub use cli::{error, IntoExit, NoCustom, VersionInfo};
@@ -92,6 +92,12 @@ where
             info!("  version {}", config.full_version());
             info!("  by ChainX, 2018-2019");
             info!("Chain specification: {}", config.chain_spec.name());
+            if let Some(id) = config.chain_spec.protocol_id() {
+                info!("Chain protocol_id: {:}", id);
+            } else {
+                warn!("Not set protocol_id! may receive other blockchain network msg");
+            }
+            info!("Chain properties: {:?}", config.chain_spec.properties());
             info!("Node name: {}", config.name);
             info!("Roles: {:?}", config.roles);
             let runtime = RuntimeBuilder::new()

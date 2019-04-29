@@ -1,4 +1,5 @@
 // Copyright 2018-2019 Chainpool.
+use serde_json::json;
 
 use telemetry::TelemetryEndpoints;
 
@@ -24,9 +25,16 @@ pub fn staging_testnet_config() -> ChainSpec {
             (STAGING_TELEMETRY_URL.to_string(), 0),
             (CHAINX_TELEMETRY_URL.to_string(), 0),
         ])),
+        Some("STAGE ChainX V0.9.9"),
         None,
-        None,
-        None,
+        Some(
+            json!({
+                "network": "testnet"
+            })
+            .as_object()
+            .unwrap()
+            .to_owned(),
+        ),
     )
 }
 
@@ -49,9 +57,16 @@ pub fn development_config() -> ChainSpec {
             CHAINX_TELEMETRY_URL.to_string(),
             0,
         )])),
-        Some("ChainX V0.9.9"),
+        Some("DEV ChainX V0.9.9"),
         None,
-        None,
+        Some(
+            json!({
+                "network": "testnet"
+            })
+            .as_object()
+            .unwrap()
+            .to_owned(),
+        ),
     )
 }
 
@@ -75,8 +90,15 @@ pub fn local_testnet_config() -> ChainSpec {
             (STAGING_TELEMETRY_URL.to_string(), 0),
             (CHAINX_TELEMETRY_URL.to_string(), 0),
         ])),
+        Some("LOCAL ChainX V0.9.9"),
         None,
-        None,
-        None,
+        Some(
+            json!({
+                "network": "testnet"
+            })
+            .as_object()
+            .unwrap()
+            .to_owned(),
+        ),
     )
 }
