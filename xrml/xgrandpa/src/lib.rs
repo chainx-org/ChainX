@@ -32,7 +32,7 @@
 // re-export since this is necessary for `impl_apis` in runtime.
 pub use fg_primitives;
 use fg_primitives::ScheduledChange;
-use primitives::traits::{Convert, CurrentHeight};
+use primitives::traits::{As, Convert, CurrentHeight};
 use rstd::prelude::*;
 use substrate_primitives::ed25519::Public as AuthorityId;
 use support::storage::unhashed::StorageVec;
@@ -117,6 +117,7 @@ decl_storage! {
         PendingChange get(pending_change): Option<StoredPendingChange<T::BlockNumber, T::SessionKey>>;
         // next block number where we can force a change.
         NextForced get(next_forced): Option<T::BlockNumber>;
+        SessionsPerGrandpa get(sessions_per_grandpa) config(): u32 = 100;
     }
     add_extra_genesis {
         config(authorities): Vec<(T::SessionKey, u64)>;
@@ -141,6 +142,12 @@ decl_storage! {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+
+        /// Set the number of sessions in an grandpa.
+        fn set_sessions_per_era(per_grandpa: u32) {
+            <SessionsPerGrandpa<T>>::put(per_grandpa);
+        }
+
         fn deposit_event<T>() = default;
 
         /// Report some misbehaviour.
@@ -182,7 +189,6 @@ impl<T: Trait> Module<T> {
     /// Get the current set of authorities, along with their respective weights.
     pub fn grandpa_authorities() -> Vec<(T::SessionKey, u64)> {
         let tmp = <AuthorityStorageVec<T::SessionKey>>::items();
-        info!("--------------authority:{:?}", tmp.clone());
         tmp
     }
 
@@ -205,8 +211,6 @@ impl<T: Trait> Module<T> {
         in_blocks: T::BlockNumber,
         forced: Option<T::BlockNumber>,
     ) -> Result {
-        use primitives::traits::As;
-
         if Self::pending_change().is_none() {
             let scheduled_at = system::ChainContext::<T>::default().current_height();
 
@@ -279,6 +283,12 @@ where
 {
     fn on_session_change() {
         use primitives::traits::Zero;
+
+        if <xsession::Module<T>>::current_index().as_() % <Module<T>>::sessions_per_grandpa() as u64
+            == 0
+        {
+            return;
+        }
 
         let next_authorities = <xsession::Module<T>>::validators()
             .into_iter()
