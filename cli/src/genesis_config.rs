@@ -1,7 +1,5 @@
 // Copyright 2018-2019 Chainpool.
 
-use hex_literal::{hex, hex_impl};
-use rustc_hex::FromHex;
 use serde_derive::Deserialize;
 use substrate_primitives::{crypto::UncheckedInto, ed25519::Public as AuthorityId};
 
@@ -13,8 +11,8 @@ use chainx_runtime::{
     Runtime,
 };
 use chainx_runtime::{
-    ConsensusConfig, GenesisConfig, SessionConfig, SudoConfig, TimestampConfig, XAccountsConfig,
-    XAssetsConfig, XAssetsProcessConfig, XBootstrapConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
+    ConsensusConfig, GenesisConfig, SessionConfig, TimestampConfig, XAccountsConfig, XAssetsConfig,
+    XAssetsProcessConfig, XBootstrapConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
     XFeeManagerConfig, XSpotConfig, XStakingConfig, XTokensConfig,
 };
 
@@ -26,23 +24,13 @@ pub enum GenesisSpec {
     Local,
     Multi,
 }
+const PCX_PRECISION: u16 = 8;
 
 pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
     let sdot_claims = load_sdot_info().unwrap();
+    let mut genesis_node_info = load_genesis_node_info().unwrap();
 
-    // account pub and pri key
-    let alice = hex!["a2308187439ac204df9e299e1e54afefafea4bf348e03dad679737c91871dc53"];
-    let bob = hex!["6488ceea630000b48fed318d13248ea7c566c0f4d2b8b90d12a136ad6eb02323"];
-    let charlie = hex!["56758d236714a2fa7981af8c8177dddc6907875b2c23fd5c842922c8a2c5a1be"];
-    let satoshi = hex!["3f53e37c21e24df9cacc2ec69d010d144fe4dace6b2f087f466ade8b6b72278f"];
-    let sudo_address: AccountId =
-        hex!["d3581c060b04fe74f625f053d6392edb86e94b3d02de7bba4728f761c0700773"].unchecked_into();
-
-    let auth1: AccountId = alice.unchecked_into();
-    let auth2: AccountId = bob.unchecked_into();
-    let auth3: AccountId = charlie.unchecked_into();
-    let auth4: AccountId = satoshi.unchecked_into();
     let initial_authorities_len = match genesis_spec {
         GenesisSpec::Dev => 1,
         GenesisSpec::Local => 4,
@@ -50,9 +38,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     };
 
     const CONSENSUS_TIME: u64 = 1;
-
-    let pcx_precision = 8_u16;
-
     let btc_asset = Asset::new(
         <xbitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(), // token
         b"X-BTC".to_vec(),
@@ -71,66 +56,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     )
     .unwrap();
 
-    let apply_prec = |x| (x * 10_u64.pow(pcx_precision as u32) as f64) as u64;
-
-    let mut full_endowed = vec![
-        (
-            auth1,                 // auth
-            apply_prec(12.5),      // balance
-            b"Alice".to_vec(),     // name
-            b"Alice.com".to_vec(), // url
-            "03f72c448a0e59f48d4adef86cba7b278214cece8e56ef32ba1d179e0a8129bdba"
-                .from_hex()
-                .unwrap(), // hot_entity
-            "02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee"
-                .from_hex()
-                .unwrap(), // cold_entity
-        ),
-        (
-            auth2,
-            apply_prec(12.5),
-            b"Bob".to_vec(),
-            b"Bob.com".to_vec(),
-            "0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd"
-                .from_hex()
-                .unwrap(),
-            "03ece1a20b5468b12fd7beda3e62ef6b2f6ad9774489e9aff1c8bc684d87d70780"
-                .from_hex()
-                .unwrap(),
-        ),
-        (
-            auth3,
-            apply_prec(12.5),
-            b"Charlie".to_vec(),
-            b"Charlie.com".to_vec(),
-            "0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40"
-                .from_hex()
-                .unwrap(),
-            "02e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2"
-                .from_hex()
-                .unwrap(),
-        ),
-        (
-            auth4,
-            apply_prec(12.5),
-            b"Satoshi".to_vec(),
-            b"Satoshi.com".to_vec(),
-            "0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3"
-                .from_hex()
-                .unwrap(),
-            "020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f"
-                .from_hex()
-                .unwrap(),
-        ),
-    ];
-
-    full_endowed.truncate(initial_authorities_len);
-
-    let endowed = full_endowed
-        .clone()
-        .into_iter()
-        .map(|(auth, balance, _, _, _, _)| (auth, balance))
-        .collect::<Vec<(AuthorityId, _)>>();
+    genesis_node_info.truncate(initial_authorities_len);
 
     let blocks_per_session = 150; // 150 blocks per session
     let sessions_per_era = 2; // update validators set per 12 sessions
@@ -149,10 +75,9 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!("./chainx_runtime.compact.wasm").to_vec(),
-            authorities: endowed
+            authorities: genesis_node_info
                 .iter()
-                .cloned()
-                .map(|(account, _)| account.into())
+                .map(|(_, authority_id, _, _, _, _, _, _)| authority_id.clone().into())
                 .collect(),
         }),
         system: None,
@@ -160,19 +85,20 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             minimum_period: CONSENSUS_TIME, // 2 second block time.
         }),
         xsession: Some(SessionConfig {
-            validators: endowed
+            validators: genesis_node_info
                 .iter()
-                .cloned()
-                .map(|(account, balance)| (account.into(), balance))
+                .map(|(_, authority_id, balance, _, _, _, _, _)| {
+                    (authority_id.clone().into(), *balance)
+                })
                 .collect(),
             session_length: blocks_per_session,
-            keys: endowed
+            keys: genesis_node_info
                 .iter()
-                .cloned()
-                .map(|(account, _)| (account.clone().into(), account.into()))
+                .map(|(account, authority_id, _, _, _, _, _, _)| {
+                    (account.clone().into(), authority_id.clone().into())
+                })
                 .collect(),
         }),
-        sudo: Some(SudoConfig { key: sudo_address }),
         // chainx runtime module
         xfee_manager: Some(XFeeManagerConfig {
             producer_fee_proportion: (1, 10),
@@ -198,7 +124,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             _genesis_phantom_data: Default::default(),
         }),
         xstaking: Some(XStakingConfig {
-            initial_reward: apply_prec(50.0),
+            initial_reward: ((50 as f64) * 10_u64.pow(PCX_PRECISION as u32) as f64) as u64,
             validator_count: 100,
             minimum_validator_count: 4,
             sessions_per_era,
@@ -254,7 +180,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // xassets
             pcx: (
                 b"Polkadot ChainX".to_vec(),
-                pcx_precision,
+                PCX_PRECISION,
                 b"ChainX's crypto currency in Polkadot ecology".to_vec(),
             ),
             // asset, is_online, is_psedu_intention
@@ -264,15 +190,27 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 (sdot_asset.clone(), true, true),
             ],
             // xstaking
-            intentions: full_endowed
-                .clone()
-                .into_iter()
-                .map(|(who, value, name, url, _, _)| (who.into(), value, name, url))
+            intentions: genesis_node_info
+                .iter()
+                .map(|(account_id, authority_id, value, name, url, memo, _, _)| {
+                    (
+                        account_id.clone(),
+                        authority_id.clone(),
+                        *value,
+                        name.clone(),
+                        url.clone(),
+                        memo.clone(),
+                    )
+                })
                 .collect(),
-            trustee_intentions: full_endowed
-                .into_iter()
-                .map(|(who, _, _, _, hot_entity, cold_entity)| {
-                    (who.into(), hot_entity, cold_entity)
+            trustee_intentions: genesis_node_info
+                .iter()
+                .map(|(account_id, _, _, _, _, _, hot_entity, cold_entity)| {
+                    (
+                        account_id.clone().into(),
+                        hot_entity.clone().into(),
+                        cold_entity.clone().into(),
+                    )
                 })
                 .collect(),
             // xtokens
@@ -297,13 +235,17 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 ),
             ],
             // xgrandpa
-            authorities: endowed.clone(),
+            authorities: genesis_node_info
+                .iter()
+                .map(|(_, authority_id, balance, _, _, _, _, _)| {
+                    (authority_id.clone().into(), *balance)
+                })
+                .collect(),
             // xmultisig (include trustees)
             multisig_init_info: (
-                endowed
+                genesis_node_info
                     .iter()
-                    .cloned()
-                    .map(|(account, _)| (account.into(), true))
+                    .map(|(account, _, _, _, _, _, _, _)| (account.clone().into(), true))
                     .collect(),
                 3,
             ),
@@ -323,6 +265,8 @@ pub struct RecordOfSDOT {
 }
 
 fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> {
+    use rustc_hex::FromHex;
+
     let mut reader = csv::Reader::from_reader(&include_bytes!("dot_tx.csv")[..]);
     let mut res = Vec::with_capacity(3052);
     for result in reader.deserialize() {
@@ -330,6 +274,63 @@ fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> 
         let mut sdot_addr = [0u8; 20];
         sdot_addr.copy_from_slice(&record.to[2..].from_hex::<Vec<u8>>()?);
         res.push((sdot_addr, (record.quantity * 1000.0).round() as u64));
+    }
+    Ok(res)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RecordOfGenesisNode {
+    account_id: String,
+    authority_key: String,
+    money: f64,
+    node_name: String,
+    node_url: String,
+    memo: String,
+    hot_entity: String,
+    cold_entity: String,
+}
+
+fn load_genesis_node_info() -> Result<
+    Vec<(
+        AccountId,
+        AuthorityId,
+        u64,
+        Vec<u8>,
+        Vec<u8>,
+        Vec<u8>,
+        Vec<u8>,
+        Vec<u8>,
+    )>,
+    Box<dyn std::error::Error>,
+> {
+    use hex::FromHex;
+
+    let mut reader = csv::Reader::from_reader(&include_bytes!("genesis_node.csv")[..]);
+    let mut res = Vec::with_capacity(29);
+    for result in reader.deserialize() {
+        let record: RecordOfGenesisNode = result?;
+        let mut account_buffer = [0u8; 32];
+        account_buffer.copy_from_slice(&Vec::from_hex(&record.account_id).unwrap());
+        let account_id = account_buffer.unchecked_into();
+        let mut authority_buffer = [0u8; 32];
+        authority_buffer.copy_from_slice(&Vec::from_hex(&record.authority_key).unwrap());
+        let authority_key = authority_buffer.unchecked_into();
+        let money = (record.money * 10_u64.pow(PCX_PRECISION as u32) as f64) as u64;
+        let node_name = Vec::from_hex(hex::encode(&record.node_name)).unwrap();
+        let node_url = Vec::from_hex(hex::encode(&record.node_url)).unwrap();
+        let memo = Vec::from_hex(hex::encode(&record.memo)).unwrap();
+        let hot_key = Vec::from_hex(&record.hot_entity).unwrap();
+        let cold_key = Vec::from_hex(&record.cold_entity).unwrap();
+        res.push((
+            account_id,
+            authority_key,
+            money,
+            node_name,
+            node_url,
+            memo,
+            hot_key,
+            cold_key,
+        ));
     }
     Ok(res)
 }

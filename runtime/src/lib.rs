@@ -179,11 +179,6 @@ impl indices::Trait for Runtime {
     type Event = Event;
 }
 
-impl sudo::Trait for Runtime {
-    type Event = Event;
-    type Proposal = Call;
-}
-
 impl xmultisig::Trait for Runtime {
     type MultiSig = xmultisig::SimpleMultiSigIdFor<Runtime>;
     type GenesisMultiSig = xmultisig::ChainXGenesisMultisig<Runtime>;
@@ -209,7 +204,6 @@ construct_runtime!(
         FinalityTracker: finality_tracker::{Module, Call, Inherent},
         Grandpa: xgrandpa::{Module, Call, Storage, Log(), Event<T>},
         Aura: xaura::{Module, Inherent(Timestamp)},
-        Sudo: sudo,
 
         // chainx runtime module
         XSystem: xsystem::{Module, Call, Storage, Inherent},

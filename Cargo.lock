@@ -394,7 +394,7 @@ dependencies = [
  "chainx-runtime 0.4.0",
  "csv 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "exit-future 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "runtime-api 0.4.0",

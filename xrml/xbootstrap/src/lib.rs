@@ -23,7 +23,7 @@ decl_storage! {
         config(asset_list): Vec<(xassets::Asset, bool, bool)>;
 
         // xstaking
-        config(intentions): Vec<(T::AccountId, T::Balance, xaccounts::Name, xaccounts::URL)>;
+        config(intentions): Vec<(T::AccountId, T::SessionKey, T::Balance, xaccounts::Name, xaccounts::URL, Vec<u8>)>;
         config(trustee_intentions): Vec<(T::AccountId, Vec<u8>, Vec<u8>)>;
 
         // xtokens
@@ -95,24 +95,24 @@ decl_storage! {
 
                 // xstaking
                 let pcx = xassets::Module::<T>::TOKEN.to_vec();
-                for (intention, value, name, url) in config.intentions.clone().into_iter() {
-                    xstaking::Module::<T>::bootstrap_register(&intention, name).unwrap();
+                for (account_id, validator_key, value, name, url, memo) in config.intentions.clone().into_iter() {
+                    xstaking::Module::<T>::bootstrap_register(&account_id, name).unwrap();
 
-                    <xassets::Module<T>>::pcx_issue(&intention, value).unwrap();
+                    <xassets::Module<T>>::pcx_issue(&account_id, value).unwrap();
 
                     <xassets::Module<T>>::move_balance(
                         &pcx,
-                        &intention,
+                        &account_id,
                         xassets::AssetType::Free,
-                        &intention,
+                        &account_id,
                         xassets::AssetType::ReservedStaking,
                         value,
                     ).unwrap();
 
-                    xstaking::Module::<T>::bootstrap_refresh(&intention, Some(url), Some(true), None, None);
-                    xstaking::Module::<T>::bootstrap_update_vote_weight(&intention, &intention, value, true);
+                    xstaking::Module::<T>::bootstrap_refresh(&account_id, Some(url), Some(true), Some(validator_key), Some(memo));
+                    xstaking::Module::<T>::bootstrap_update_vote_weight(&account_id, &account_id, value, true);
 
-                    <xstaking::StakeWeight<T>>::insert(&intention, value);
+                    <xstaking::StakeWeight<T>>::insert(&account_id, value);
                 }
 
                 let mut trustees = Vec::new();

@@ -2,7 +2,6 @@
 
 use xfee_manager::SwitchStore;
 
-use sudo::Call as SudoCall;
 use xassets::Call as XAssetsCall;
 use xbitcoin::Call as XBitcoinCall;
 use xmultisig::Call as XMultiSigCall;
@@ -26,12 +25,6 @@ impl CheckFee for Call {
     fn check_fee(&self, switch: SwitchStore) -> Option<u64> {
         // must allow
         let first_check = match self {
-            // TODO remove at mainnet chain
-            Call::Sudo(call) => match call {
-                SudoCall::sudo(_) => Some(1),
-                SudoCall::set_key(_) => Some(1),
-                _ => None,
-            },
             Call::XMultiSig(call) => match call {
                 XMultiSigCall::deploy(_, _) => Some(1000),
                 XMultiSigCall::execute(_, _) => Some(50),
