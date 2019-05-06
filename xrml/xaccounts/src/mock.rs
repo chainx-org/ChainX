@@ -32,16 +32,6 @@ impl system::Trait for Test {
     type Log = DigestItem;
 }
 
-impl balances::Trait for Test {
-    type Balance = u64;
-    type OnFreeBalanceZero = ();
-    type OnNewAccount = Indices;
-    type TransactionPayment = ();
-    type TransferPayment = ();
-    type DustRemoval = ();
-    type Event = ();
-}
-
 impl consensus::Trait for Test {
     type Log = DigestItem;
     type SessionKey = UintAuthorityId;
@@ -50,7 +40,7 @@ impl consensus::Trait for Test {
 
 impl indices::Trait for Test {
     type AccountIndex = u32;
-    type IsDeadAccount = Balances;
+    type IsDeadAccount = ();
     type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
     type Event = ();
 }
@@ -79,11 +69,6 @@ impl IntentionJackpotAccountIdFor<u64> for MockDeterminator {
     }
 }
 
-pub type System = system::Module<Test>;
-pub type Balances = balances::Module<Test>;
-pub type Indices = indices::Module<Test>;
-pub type XAccounts = Module<Test>;
-
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut t = system::GenesisConfig::<Test>::default()
         .build_storage()
@@ -109,19 +94,5 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .0,
     );
 
-    t.extend(
-        balances::GenesisConfig::<Test> {
-            balances: vec![(1, 10), (2, 20), (3, 30), (4, 40), (10, 100), (20, 100)],
-            existential_deposit: 0,
-            transfer_fee: 0,
-            creation_fee: 0,
-            transaction_base_fee: 0,
-            transaction_byte_fee: 0,
-            vesting: vec![],
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
     runtime_io::TestExternalities::new(t)
 }

@@ -86,7 +86,7 @@ pub fn new_test_ext(authorities: Vec<u64>) -> runtime_io::TestExternalities<Blak
         .0,
     );
     t.extend(
-        timestamp::GenesisConfig::<Test> { period: 1 }
+        timestamp::GenesisConfig::<Test> { minimum_period: 1 }
             .build_storage()
             .unwrap()
             .0,
