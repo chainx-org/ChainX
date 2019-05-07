@@ -10,6 +10,7 @@ mod trustee;
 mod xexecutive;
 
 use parity_codec::Decode;
+use rstd::collections::btree_map::BTreeMap;
 use rstd::prelude::*;
 
 // substrate
@@ -49,8 +50,10 @@ use chainx_primitives::{
 pub use xaccounts;
 pub use xassets;
 pub use xbitcoin;
+pub use xbridge_common;
+pub use xbridge_features;
 
-use xbitcoin::TrusteeAddrInfo;
+use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
 
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
@@ -99,6 +102,13 @@ impl consensus::Trait for Runtime {
     type InherentOfflineReport = ();
 }
 
+impl indices::Trait for Runtime {
+    type AccountIndex = AccountIndex;
+    type IsDeadAccount = XAssets;
+    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
+    type Event = Event;
+}
+
 impl xsession::Trait for Runtime {
     type ConvertAccountIdToSessionKey = ();
     type OnSessionChange = (XStaking, xgrandpa::SyncedAuthorities<Runtime>);
@@ -114,27 +124,15 @@ impl xaura::Trait for Runtime {
     type HandleReport = xaura::StakingSlasher<Runtime>;
 }
 
-// bridge
-impl xbitcoin::Trait for Runtime {
-    type AccountExtractor = xr_primitives::generic::Extractor<AccountId>;
-    type Event = Event;
-}
-
-impl xsdot::Trait for Runtime {
-    type AccountExtractor = xr_primitives::generic::Extractor<AccountId>;
-    type Event = Event;
-}
-
 impl xbootstrap::Trait for Runtime {}
 
-// cxrml trait
+// xrml trait
 impl xsystem::Trait for Runtime {
     type ValidatorList = Session;
     type Validator = XAccounts;
 }
 
 impl xaccounts::Trait for Runtime {
-    type Event = Event;
     type DetermineIntentionJackpotAccountId = xaccounts::SimpleAccountIdDeterminator<Runtime>;
 }
 // fees
@@ -172,10 +170,23 @@ impl xspot::Trait for Runtime {
     type Event = Event;
 }
 
-impl indices::Trait for Runtime {
-    type AccountIndex = AccountIndex;
-    type IsDeadAccount = XAssets;
-    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
+// bridge
+impl xbitcoin::Trait for Runtime {
+    type AccountExtractor = xbridge_common::extractor::Extractor<AccountId>;
+    type TrusteeSessionProvider = XBridgeFeatures;
+    type TrusteeMultiSigProvider = xbridge_features::trustees::BitcoinTrusteeMultiSig<Runtime>;
+    type CrossChainProvider = XBridgeFeatures;
+    type Event = Event;
+}
+
+impl xsdot::Trait for Runtime {
+    type AccountExtractor = xbridge_common::extractor::Extractor<AccountId>;
+    type CrossChainProvider = XBridgeFeatures;
+    type Event = Event;
+}
+
+impl xbridge_features::Trait for Runtime {
+    type TrusteeMultiSig = xbridge_features::SimpleTrusteeMultiSigIdFor<Runtime>;
     type Event = Event;
 }
 
@@ -207,7 +218,7 @@ construct_runtime!(
 
         // chainx runtime module
         XSystem: xsystem::{Module, Call, Storage, Inherent},
-        XAccounts: xaccounts,
+        XAccounts: xaccounts::{Module, Strorage},
         // fee
         XFeeManager: xfee_manager::{Module, Call, Storage, Config<T>, Event<T>},
         // assets
@@ -222,6 +233,7 @@ construct_runtime!(
         // bridge
         XBridgeOfBTC: xbitcoin::{Module, Call, Storage, Config<T>, Event<T>},
         XBridgeOfSDOT: xsdot::{Module, Call, Storage, Config<T>, Event<T>},
+        XBridgeFeatures: xbridge_features,
         // multisig
         XMultiSig: xmultisig::{Module, Call, Storage, Event<T>},
 
@@ -367,7 +379,7 @@ impl_runtime_apis! {
             XAssets::all_assets()
         }
 
-        fn valid_assets_of(who: AccountId) -> Vec<(xassets::Token, rstd::collections::btree_map::BTreeMap<xassets::AssetType, Balance>)> {
+        fn valid_assets_of(who: AccountId) -> Vec<(xassets::Token, BTreeMap<xassets::AssetType, Balance>)> {
             XAssets::valid_assets_of(&who)
         }
 
@@ -444,9 +456,25 @@ impl_runtime_apis! {
     }
 
     impl runtime_api::xbridge_api::XBridgeApi<Block> for Runtime {
-        // result is (Vec<(accountid, (hot pubkey, cold pubkey)), (required count, total count), hot_trustee_addr, cold_trustee_addr)>)
-        fn mock_bitcoin_new_trustees(candidates: Vec<AccountId>) -> Result<(Vec<(AccountId, (Vec<u8>, Vec<u8>))>, (u32, u32), TrusteeAddrInfo, TrusteeAddrInfo), Vec<u8>> {
-            XBridgeOfBTC::try_to_generate_new_trustees(&candidates).map_err(|e_str| e_str.as_bytes().to_vec())
+        fn mock_new_trustees(chain: xassets::Chain, candidates: Vec<AccountId>) -> Result<GenericAllSessionInfo<AccountId>, Vec<u8>> {
+            XBridgeFeatures::mock_trustee_session_impl(chain, candidates).map_err(|e| e.as_bytes().to_vec())
+        }
+        fn trustee_props_for(who: AccountId) ->  BTreeMap<xassets::Chain, GenericTrusteeIntentionProps> {
+            XBridgeFeatures::trustee_props_for(&who)
+        }
+        fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>> {
+            let mut map = BTreeMap::new();
+            for chain in xassets::Chain::iterator() {
+                if let Some((_, info)) = Self::trustee_session_info_for(*chain) {
+                    map.insert(*chain, info);
+                }
+            }
+            map
+        }
+        fn trustee_session_info_for(chain: xassets::Chain) -> Option<(u32, GenericAllSessionInfo<AccountId>)> {
+            XBridgeFeatures::current_trustee_session_info_for(chain).map(|info| (
+                (XBridgeFeatures::current_session_number(chain), info)
+            ))
         }
     }
 }

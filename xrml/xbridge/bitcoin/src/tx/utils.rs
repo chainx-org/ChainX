@@ -1,14 +1,10 @@
 // Copyright 2018-2019 Chainpool.
-
-use parity_codec::Decode;
-
 // Substrate
 use rstd::result::Result;
 
 // ChainX
+use xbridge_common::{traits::TrusteeSession, types::TrusteeSessionInfo, utils::two_thirds_unsafe};
 use xsupport::error;
-#[cfg(feature = "std")]
-use xsupport::u8array_to_addr;
 
 // light-bitcoin
 use btc_chain::{OutPoint, Transaction};
@@ -70,72 +66,38 @@ pub fn equal_addr(addr1: &Address, addr2: &Address) -> bool {
     addr1.hash == addr2.hash
 }
 
-#[inline]
-fn trustee_addr_info<T: Trait>(is_hot: bool) -> Result<TrusteeAddrInfo, &'static str> {
-    let (hot_address, cold_address) =
-        xaccounts::Module::<T>::trustee_address(xassets::Chain::Bitcoin)
-            .ok_or("Should set trustee address first.")?;
+pub fn trustee_session<T: Trait>(
+) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddrInfo>, &'static str> {
+    T::TrusteeSessionProvider::current_trustee_session()
+}
 
-    let addr_info: TrusteeAddrInfo = if is_hot {
-        Decode::decode(&mut hot_address.as_slice()).ok_or_else(|| {
-            error!(
-                "[trustee_addr_info]|parse hot trustee addr info error|src:{:}",
-                u8array_to_addr(&hot_address)
-            );
-            "parse hot trustee addr info error"
-        })?
-    } else {
-        Decode::decode(&mut cold_address.as_slice()).ok_or_else(|| {
-            error!(
-                "[trustee_addr_info]|parse cold trustee addr info error|src:{:}",
-                u8array_to_addr(&hot_address)
-            );
-            "parse cold trustee addr info error"
-        })?
-    };
-    Ok(addr_info)
+#[inline]
+fn trustee_addr_info_pair<T: Trait>() -> Result<(TrusteeAddrInfo, TrusteeAddrInfo), &'static str> {
+    T::TrusteeSessionProvider::current_trustee_session()
+        .map(|session_info| (session_info.hot_address, session_info.cold_address))
+}
+
+#[inline]
+pub fn get_trustee_address_pair<T: Trait>() -> Result<(Address, Address), &'static str> {
+    trustee_addr_info_pair::<T>().map(|(hot_info, cold_info)| (hot_info.addr, cold_info.addr))
+}
+
+#[inline]
+pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), &'static str> {
+    T::TrusteeSessionProvider::last_trustee_session().map(|session_info| {
+        (
+            session_info.hot_address.addr,
+            session_info.cold_address.addr,
+        )
+    })
 }
 
 pub fn get_hot_trustee_address<T: Trait>() -> Result<Address, &'static str> {
-    trustee_addr_info::<T>(true).map(|addr_info| addr_info.addr)
+    trustee_addr_info_pair::<T>().map(|(addr_info, _)| addr_info.addr)
 }
 
 pub fn get_hot_trustee_redeem_script<T: Trait>() -> Result<Script, &'static str> {
-    trustee_addr_info::<T>(true).map(|addr_info| addr_info.redeem_script.into())
-}
-
-// pub fn get_cold_trustee_address<T: Trait>() -> Result<Address, &'static str> {
-//     trustee_addr_info::<T>(false).map(|addr_info| addr_info.addr)
-// }
-//
-// pub fn get_cold_trustee_redeem_script<T: Trait>() -> Result<Script, &'static str> {
-//     trustee_addr_info::<T>(false).map(|addr_info| addr_info.redeem_script.into())
-// }
-
-pub fn get_trustee_address_pair<T: Trait>(
-    session: u32,
-) -> Result<(Address, Address), &'static str> {
-    let (hot_address, cold_address) =
-        xaccounts::Module::<T>::trustee_address_of(xassets::Chain::Bitcoin, session)
-            .ok_or("Should set trustee address first.")?;
-
-    let hot_info: TrusteeAddrInfo =
-        Decode::decode(&mut hot_address.as_slice()).ok_or_else(|| {
-            error!(
-                "[get_trustee_address_pair]|parse hot trustee addr info error|src:{:}",
-                u8array_to_addr(&hot_address)
-            );
-            "parse hot trustee addr info error"
-        })?;
-    let cold_info: TrusteeAddrInfo =
-        Decode::decode(&mut cold_address.as_slice()).ok_or_else(|| {
-            error!(
-                "[get_trustee_address_pair]|parse cold trustee addr info error|src:{:}",
-                u8array_to_addr(&hot_address)
-            );
-            "parse cold trustee addr info error"
-        })?;
-    Ok((hot_info.addr, cold_info.addr))
+    trustee_addr_info_pair::<T>().map(|(addr_info, _)| addr_info.redeem_script.into())
 }
 
 /// Get the required number of signatures
@@ -143,25 +105,11 @@ pub fn get_trustee_address_pair<T: Trait>(
 /// trustee_num: Total number of multiple signatures
 /// NOTE: Signature ratio greater than 2/3
 pub fn get_sig_num<T: Trait>() -> (u32, u32) {
-    let trustee_list = xaccounts::Module::<T>::trustee_list(xassets::Chain::Bitcoin)
+    let trustee_list = T::TrusteeSessionProvider::current_trustee_session()
+        .map(|session_info| session_info.trustee_list)
         .expect("the trustee_list must exist; qed");
     let trustee_num = trustee_list.len() as u32;
-    get_sig_num_from_trustees(trustee_num)
-}
-
-#[inline]
-pub fn get_sig_num_from_trustees(trustee_num: u32) -> (u32, u32) {
-    let sig_num = match 2_u32.checked_mul(trustee_num) {
-        Some(m) => {
-            if m % 3 == 0 {
-                m / 3
-            } else {
-                m / 3 + 1
-            }
-        }
-        None => 0,
-    };
-    (sig_num, trustee_num)
+    (two_thirds_unsafe(trustee_num), trustee_num)
 }
 
 pub fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result<(), &'static str> {

@@ -1,0 +1,58 @@
+[package]
+name = "xrml-xbridge-features"
+version = "0.1.0"
+authors = ["Chainpool <http://chainx.org>"]
+edition = "2018"
+
+
+[dependencies]
+serde = { version = "1.0", default_features = false }
+serde_derive = { version = "1.0", optional = true }
+parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+
+# chainx runtime module
+xr-primitives = { path = "../../../xr-primitives", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
+xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
+xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
+xmultisig = { package = "xrml-xmultisig", path = "../../xmultisig", default-features = false }
+# bridge
+xbridge-common = {package = "xrml-xbridge-common", path = "../common", default-features = false }
+xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../bitcoin", default-features = false }
+xsdot = { package = "xrml-xbridge-sdot", path = "../sdot", default-features = false }
+
+# chain
+# bitcoin
+btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
+
+[features]
+default = ["std"]
+std=[
+    "serde/std",
+    "serde_derive",
+    "parity-codec/std",
+    "substrate-primitives/std",
+    "rstd/std",
+    "runtime-io/std",
+    "primitives/std",
+    "support/std",
+    "system/std",
+    # chainx runtime module
+    "xr-primitives/std",
+    "xsupport/std",
+    "xaccounts/std",
+    "xassets/std",
+    "xmultisig/std",
+    # bridge
+    "xbridge-common/std",
+    "xbitcoin/std",
+    "xsdot/std",
+    # chain
+    "btc-keys/std",
+]

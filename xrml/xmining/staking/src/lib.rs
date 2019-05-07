@@ -20,9 +20,9 @@ use support::{
 use system::ensure_signed;
 
 // ChainX
-use xaccounts::{IntentionJackpotAccountIdFor, Name, TrusteeEntity, TrusteeIntentionProps, URL};
-use xassets::{Chain, Memo, Token};
-use xr_primitives::{traits::TrusteeForChain, XString};
+use xaccounts::IntentionJackpotAccountIdFor;
+use xassets::{Memo, Token};
+use xr_primitives::{Name, XString, URL};
 use xsupport::info;
 #[cfg(feature = "std")]
 use xsupport::who;
@@ -35,7 +35,7 @@ const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const SESSIONS_PER_ROUND: u64 = 210_000;
 
 pub trait Trait:
-    xassets::Trait + xaccounts::Trait + xsystem::Trait + xsession::Trait + xbitcoin::Trait
+    xassets::Trait + xaccounts::Trait + xsystem::Trait + xsession::Trait + xbridge_features::Trait
 {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -223,27 +223,6 @@ decl_module! {
             Self::apply_register(&who, name)?;
         }
 
-        fn setup_trustee(origin, chain: Chain, about: XString, hot_entity: TrusteeEntity, cold_entity: TrusteeEntity) {
-            let who = ensure_signed(origin)?;
-
-            ensure!(Self::is_intention(&who), "Transactor is not an intention.");
-            ensure!(Self::is_active(&who), "Intention must be active.");
-
-            xaccounts::is_valid_about::<T>(&about)?;
-
-            Self::validate_trustee_entity(&chain, &hot_entity)?;
-            Self::validate_trustee_entity(&chain, &cold_entity)?;
-
-            <xaccounts::TrusteeIntentionPropertiesOf<T>>::insert(
-                &(who, chain),
-                TrusteeIntentionProps {
-                    about,
-                    hot_entity,
-                    cold_entity
-                }
-            );
-        }
-
         /// Set the number of sessions in an era.
         fn set_sessions_per_era(#[compact] new: T::BlockNumber) {
             <NextSessionsPerEra<T>>::put(new);
@@ -367,21 +346,6 @@ impl<T: Trait> Module<T> {
 
     pub fn is_active(who: &T::AccountId) -> bool {
         <xaccounts::Module<T>>::intention_props_of(who).is_active
-    }
-
-    pub fn validate_trustee_entity(chain: &Chain, entity: &TrusteeEntity) -> Result {
-        #[allow(unreachable_patterns)]
-        match chain {
-            Chain::Bitcoin => match entity {
-                TrusteeEntity::Bitcoin(pubkey) => {
-                    xbitcoin::Module::<T>::check_address(pubkey)?;
-                }
-                _ => return Err("when chain is Bitcoin, the TrusteeEntity must be TrusteeEntity::Bitcoin either"),
-            },
-            _ => return Err("Unsupported chain."),
-        }
-
-        Ok(())
     }
 
     // Private mutables

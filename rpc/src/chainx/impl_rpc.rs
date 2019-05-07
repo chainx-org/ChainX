@@ -1,26 +1,52 @@
 // Copyright 2018-2019 Chainpool.
 
+use serde_json::{json, Value};
+
+use std::collections::btree_map::BTreeMap;
 use std::convert::Into;
 use std::iter::FromIterator;
+use std::result;
 
 use parity_codec::{Decode, Encode};
-use rustc_hex::{FromHex, ToHex};
-
+use rustc_hex::FromHex;
+// substrate
 use client::runtime_api::Metadata;
 use primitives::crypto::UncheckedInto;
+use primitives::{Blake2Hasher, H160, H256};
+use runtime_primitives::generic::{BlockId, SignedBlock};
+use runtime_primitives::traits::{Block as BlockT, NumberFor, Zero};
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use support::storage::generator::{StorageMap, StorageValue};
-use xassets::ChainT;
+// chainx
+use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
+use chainx_runtime::{Call, Runtime};
+use xr_primitives::Name;
 
-use btc_keys::{Address, DisplayLayout};
+use xaccounts::IntentionProps;
+use xassets::{Asset, AssetType, Chain, ChainT, Token};
+use xspot::{HandicapInfo, OrderIndex, OrderInfo, TradingPair, TradingPairIndex};
+use xstaking::IntentionProfs;
+use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
+
+use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
+use xbridge_features::{
+    self,
+    crosschain_binding::{BitcoinAddress, EthereumAddress},
+};
 
 use runtime_api::{
     xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xfee_api::XFeeApi, xmining_api::XMiningApi,
     xspot_api::XSpotApi,
 };
 
-use super::*;
-use parity_codec::alloc::collections::btree_map::BTreeMap;
+use super::error::{ErrorKind, Result};
+use super::types::*;
+
+use super::types::{
+    parse_trustee_props, parse_trustee_session_info, AssetInfo, PageData, TotalAssetInfo,
+    MAX_PAGE_SIZE,
+};
+use super::{ChainX, ChainXApi};
 
 impl<B, E, Block, RA>
     ChainXApi<NumberFor<Block>, AccountIdForRpc, Balance, BlockNumber, SignedBlock<Block>>
@@ -250,11 +276,24 @@ where
         let validators: Vec<AccountId> = validators.into_iter().map(|(who, _)| who).collect();
 
         // get all bridge trustee list
-        let mut all_trustees: BTreeMap<Chain, Vec<AccountId>> = BTreeMap::new();
-        for chain in Chain::iterator() {
-            let (info, _) = Self::current_trustee_session_info(&state, *chain)?.unwrap_or_default();
-            all_trustees.insert(*chain, info.trustee_list);
-        }
+        let all_session_info: Result<BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>>> =
+            self.client
+                .runtime_api()
+                .trustee_session_info(&self.best_number()?)
+                .map_err(Into::into);
+        let all_trustees = all_session_info?
+            .into_iter()
+            .map(|(chain, info)| {
+                (
+                    chain,
+                    info.trustees_info
+                        .into_iter()
+                        .map(|(accountid, _)| accountid)
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+
         let is_trustee = |who: &AccountId| -> Vec<Chain> {
             let mut ret = vec![];
             for (chain, trustees) in all_trustees.iter() {
@@ -279,7 +318,7 @@ where
                 let mut info = IntentionInfo::default();
 
                 let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
-                if let Some(name) = Self::pickout::<xaccounts::Name>(&state, &key)? {
+                if let Some(name) = Self::pickout::<Name>(&state, &key)? {
                     info.name = String::from_utf8_lossy(&name).into_owned();
                 }
 
@@ -636,72 +675,65 @@ where
 
     fn address(&self, who: AccountIdForRpc, chain: Chain) -> Result<Option<Vec<String>>> {
         let state = self.best_state()?;
-        let mut v = vec![];
-        let key = <xaccounts::CrossChainBindOf<Runtime>>::key_for(&(chain, who.unchecked_into()));
-        match Self::pickout::<Vec<Vec<u8>>>(&state, &key)? {
-            Some(addrs) => {
-                for addr in addrs {
-                    let a = Address::from_layout(&addr.as_slice()).unwrap_or_default();
-                    v.push(a.to_string());
-                }
-                Ok(Some(v))
-            }
-            None => Ok(Some(v)),
-        }
-    }
 
-    fn trustee_session_info(&self, chain: Chain) -> Result<Option<CurrentTrusteeSessionInfo>> {
-        let state = self.best_state()?;
-        let info_option = Self::current_trustee_session_info(&state, chain)?;
-        Ok(info_option
-            .map(|(info, session_number)| match chain {
-                Chain::Bitcoin => {
-                    let hot_addr_info: BtcTrusteeAddrInfo =
-                        Decode::decode(&mut info.hot_address.as_slice()).unwrap_or_default();
-                    let cold_addr_info: BtcTrusteeAddrInfo =
-                        Decode::decode(&mut info.cold_address.as_slice()).unwrap_or_default();
-                    let hot_addr = hot_addr_info.addr;
-                    let hot_str = hot_addr.to_string();
-                    let cold_address = cold_addr_info.addr;
-                    let cold_str = cold_address.to_string();
-                    Some(CurrentTrusteeSessionInfo {
-                        session_number,
-                        trustee_list: info
-                            .trustee_list
-                            .into_iter()
-                            .map(|accountid| accountid.into())
-                            .collect(),
-                        hot_entity: hot_str,
-                        cold_entity: cold_str,
-                    })
-                }
-                _ => None,
-            })
-            .and_then(|result| result))
-    }
-
-    fn trustee_info_for_accountid(&self, who: AccountIdForRpc) -> Result<Vec<TrusteeInfo>> {
         let who: AccountId = who.unchecked_into();
-        let state = self.best_state()?;
-        let mut trustee_info = Vec::new();
-
-        for chain in Chain::iterator() {
-            let key =
-                <xaccounts::TrusteeIntentionPropertiesOf<Runtime>>::key_for(&(who.clone(), *chain));
-
-            if let Some(props) = Self::pickout::<TrusteeIntentionProps>(&state, &key)? {
-                let hot_entity = match props.hot_entity {
-                    TrusteeEntity::Bitcoin(pubkey) => pubkey.to_hex(),
-                };
-                let cold_entity = match props.cold_entity {
-                    TrusteeEntity::Bitcoin(pubkey) => pubkey.to_hex(),
-                };
-
-                trustee_info.push(TrusteeInfo::new(*chain, hot_entity, cold_entity))
+        match chain {
+            Chain::Bitcoin => {
+                let key = <xbridge_features::BitcoinCrossChainBinding<Runtime>>::key_for(&who);
+                match Self::pickout::<Vec<BitcoinAddress>>(&state, &key)? {
+                    Some(addrs) => {
+                        let v = addrs
+                            .into_iter()
+                            .map(|addr| addr.to_string())
+                            .collect::<Vec<_>>();
+                        Ok(Some(v))
+                    }
+                    None => Ok(Some(vec![])),
+                }
             }
+            Chain::Ethereum => {
+                let key = <xbridge_features::EthereumCrossChainBinding<Runtime>>::key_for(&who);
+                match Self::pickout::<Vec<EthereumAddress>>(&state, &key)? {
+                    Some(addrs) => {
+                        let v = addrs
+                            .into_iter()
+                            .map(|addr| {
+                                let addr: H160 = addr.into();
+                                format!("{:?}", addr)
+                            })
+                            .collect::<Vec<_>>();
+                        Ok(Some(v))
+                    }
+                    None => Ok(Some(vec![])),
+                }
+            }
+            _ => Err(ErrorKind::RuntimeErr(b"not support for this chain".to_vec()).into()),
         }
+    }
 
-        Ok(trustee_info)
+    fn trustee_session_info(&self, chain: Chain) -> Result<Option<Value>> {
+        let b = self.best_number()?;
+
+        let session_info: Result<Option<(u32, GenericAllSessionInfo<AccountId>)>> = self
+            .client
+            .runtime_api()
+            .trustee_session_info_for(&b, chain)
+            .map_err(Into::into);
+        session_info.map(|option_data| {
+            option_data.and_then(|(number, info)| parse_trustee_session_info(chain, number, info))
+        })
+    }
+
+    fn trustee_info_for_accountid(&self, who: AccountIdForRpc) -> Result<Option<Value>> {
+        let who: AccountId = who.unchecked_into();
+        let b = self.best_number()?;
+
+        let props_info: Result<BTreeMap<Chain, GenericTrusteeIntentionProps>> = self
+            .client
+            .runtime_api()
+            .trustee_props_for(&b, who)
+            .map_err(Into::into);
+        props_info.map(|data| parse_trustee_props(data))
     }
 
     fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>> {
@@ -731,31 +763,20 @@ where
 
     fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>> {
         let state = self.best_state()?;
-        let (trustee_session_info, _) =
-            Self::current_trustee_session_info(&state, chain)?.unwrap_or_default();
         match chain {
             Chain::Bitcoin => {
-                let hot_addr_info: BtcTrusteeAddrInfo =
-                    Decode::decode(&mut trustee_session_info.hot_address.as_slice())
-                        .unwrap_or_default();
                 let key = <xbitcoin::CurrentWithdrawalProposal<Runtime>>::key();
-                if let Some(proposal) =
-                    Self::pickout::<xbitcoin::WithdrawalProposal<AccountId>>(&state, &key)?
-                {
-                    let script: String = hot_addr_info.redeem_script.to_hex();
-                    Ok(Some(WithdrawTxInfo::new(proposal, script)))
-                } else {
-                    Ok(None)
-                }
+                Self::pickout::<xbitcoin::WithdrawalProposal<AccountId>>(&state, &key).map(
+                    |option_data| {
+                        option_data.map(|proposal| WithdrawTxInfo::from_bitcoin_proposal(proposal))
+                    },
+                )
             }
             _ => Ok(None),
         }
     }
 
-    fn mock_bitcoin_new_trustees(
-        &self,
-        candidates: Vec<AccountIdForRpc>,
-    ) -> Result<Option<MockBitcoinTrustee>> {
+    fn mock_bitcoin_new_trustees(&self, candidates: Vec<AccountIdForRpc>) -> Result<Option<Value>> {
         let b = self.best_number()?;
 
         let candidates: Vec<AccountId> = candidates
@@ -763,23 +784,17 @@ where
             .map(|a| a.unchecked_into())
             .collect::<Vec<_>>();
 
-        // result is (Vec<(accountid, (hot pubkey, cold pubkey)), (required count, total count), hot_trustee_addr, cold_trustee_addr)>)
-        // result::Result<(Vec<(AccountId, (Vec<u8>, Vec<u8>))>, (u32, u32), BtcTrusteeAddrInfo, BtcTrusteeAddrInfo), Vec<u8>>
-        let runtime_result = self
+        let runtime_result: result::Result<GenericAllSessionInfo<AccountId>, Vec<u8>> = self
             .client
             .runtime_api()
-            .mock_bitcoin_new_trustees(&b, candidates)?;
+            .mock_new_trustees(&b, Chain::Bitcoin, candidates)?;
 
-        let mock = match runtime_result {
-            Err(e) => return Err(ErrorKind::RuntimeErr(e).into()),
-            Ok(item) => item.into(),
-        };
-
-        Ok(Some(mock))
+        runtime_result
+            .map(|all_session_info| parse_trustee_session_info(Chain::Bitcoin, 0, all_session_info))
+            .map_err(|e| ErrorKind::RuntimeErr(e).into())
     }
 
-    fn particular_accounts(&self) -> Result<Option<serde_json::Value>> {
-        use serde_json::json;
+    fn particular_accounts(&self) -> Result<Option<Value>> {
         let state = self.best_state()?;
 
         // team addr
@@ -791,7 +806,7 @@ where
 
         let mut map = BTreeMap::new();
         for chain in Chain::iterator() {
-            let key = xmultisig::TrusteeMultiSigAddr::<Runtime>::key_for(chain);
+            let key = xbridge_features::TrusteeMultiSigAddr::<Runtime>::key_for(chain);
             let addr = Self::pickout::<AccountId>(&state, &key)?;
             if let Some(a) = addr {
                 map.insert(chain, a);

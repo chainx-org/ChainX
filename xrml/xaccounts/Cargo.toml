@@ -18,7 +18,6 @@ consensus = { package = "srml-consensus", git = "https://github.com/chainpool/su
 # ChainX
 xr-primitives = { path = "../../xr-primitives", default-features = false }
 xsystem = { package ="xrml-xsystem", path = "../../xrml/xsystem", default-features = false }
-xassets = { package = "xrml-xassets-assets", path = "../../xrml/xassets/assets", default-features = false }
 
 [dev-dependencies]
 # Substrate
@@ -43,5 +42,4 @@ std = [
     # ChainX
     "xr-primitives/std",
     "xsystem/std",
-    "xassets/std",
 ]

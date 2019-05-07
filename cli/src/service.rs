@@ -33,7 +33,6 @@ use substrate_primitives::{ed25519, Pair as PairT};
 use substrate_service::{
     construct_service_factory, FactoryFullConfiguration, FullBackend, FullClient, FullComponents,
     FullExecutor, LightBackend, LightClient, LightComponents, LightExecutor, TaskExecutor,
-    TelemetryOnConnect,
 };
 use transaction_pool::txpool::Pool as TransactionPool;
 
@@ -104,7 +103,7 @@ construct_service_factory! {
                 let (block_import, link_half) = service.config.custom.grandpa_import_setup.take()
                     .expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
-                if let Some(ref key) = local_key {
+                if let Some(ref key) = local_key {  //--key
                     info!("Using authority key {:?}", key.public());
                     let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
                         client: service.client(),

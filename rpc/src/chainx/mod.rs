@@ -1,40 +1,28 @@
 // Copyright 2018-2019 Chainpool.
 
-use std::collections::BTreeMap;
 use std::result;
 use std::sync::Arc;
 
 use jsonrpc_derive::rpc;
 use parity_codec::Decode;
+use serde_json::Value;
 
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
-use runtime_primitives::generic::{BlockId, SignedBlock};
-use runtime_primitives::traits::{Block as BlockT, NumberFor, Zero};
+use runtime_primitives::generic::BlockId;
+use runtime_primitives::traits::Block as BlockT;
 use state_machine::Backend;
 
-use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
-use chainx_runtime::{Call, Runtime};
-
-use xaccounts::{IntentionProps, TrusteeEntity, TrusteeIntentionProps, TrusteeSessionInfo};
-use xassets::{Asset, AssetType, Chain, Token};
-use xbitcoin::{TrusteeAddrInfo as BtcTrusteeAddrInfo, VoteResult};
-use xrecords::{HeightOrTime, RecordInfo, TxState};
-use xspot::{
-    HandicapInfo, OrderIndex, OrderInfo, OrderStatus, OrderType, Side, TradeHistoryIndex,
-    TradingPair, TradingPairIndex,
-};
-use xstaking::IntentionProfs;
-use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
+use xassets::Chain;
+use xspot::TradingPairIndex;
 
 mod error;
 mod impl_rpc;
-pub mod types;
+mod types;
+mod utils;
 
-use self::error::{ErrorKind, Result};
+use self::error::Result;
 use self::types::*;
-
-const MAX_PAGE_SIZE: u32 = 100;
 
 /// ChainX API
 #[rpc]
@@ -112,10 +100,10 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>>;
 
     #[rpc(name = "chainx_getTrusteeSessionInfo")]
-    fn trustee_session_info(&self, chain: Chain) -> Result<Option<CurrentTrusteeSessionInfo>>;
+    fn trustee_session_info(&self, chain: Chain) -> Result<Option<Value>>;
 
     #[rpc(name = "chainx_getTrusteeInfoByAccount")]
-    fn trustee_info_for_accountid(&self, who: AccountId) -> Result<Vec<TrusteeInfo>>;
+    fn trustee_info_for_accountid(&self, who: AccountId) -> Result<Option<Value>>;
 
     #[rpc(name = "chainx_getFeeByCallAndLength")]
     fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>>;
@@ -124,10 +112,7 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>>;
 
     #[rpc(name = "chainx_getMockBitcoinNewTrustees")]
-    fn mock_bitcoin_new_trustees(
-        &self,
-        candidates: Vec<AccountId>,
-    ) -> Result<Option<MockBitcoinTrustee>>;
+    fn mock_bitcoin_new_trustees(&self, candidates: Vec<AccountId>) -> Result<Option<Value>>;
 
     #[rpc(name = "chainx_particularAccounts")]
     fn particular_accounts(&self) -> Result<Option<serde_json::Value>>;
@@ -188,23 +173,5 @@ where
             .map(StorageData)
             .map(|s| Decode::decode(&mut s.0.as_slice()))
             .unwrap_or(None))
-    }
-
-    fn current_trustee_session_info(
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        chain: Chain,
-    ) -> Result<Option<(TrusteeSessionInfo<AccountId>, u32)>> {
-        use support::storage::generator::StorageMap;
-        let key = <xaccounts::TrusteeSessionInfoLen<Runtime>>::key_for(&chain);
-        let session_length = Self::pickout::<u32>(state, &key)?.unwrap_or_default();
-        let session_number = if session_length == 0 {
-            u32::max_value()
-        } else {
-            session_length - 1
-        };
-        let key = <xaccounts::TrusteeSessionInfoOf<Runtime>>::key_for(&(chain, session_number));
-
-        Self::pickout::<TrusteeSessionInfo<AccountId>>(state, &key)
-            .map(|item_option| item_option.map(|item| (item, session_number)))
     }
 }

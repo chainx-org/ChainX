@@ -10,3 +10,6 @@ pub mod traits;
 use rstd::prelude::Vec;
 
 pub type XString = Vec<u8>;
+pub type Name = XString;
+pub type URL = XString;
+pub type AddrStr = XString;

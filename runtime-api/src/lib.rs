@@ -76,11 +76,19 @@ pub mod xsession_api {
 
 pub mod xbridge_api {
     use super::*;
-    use xbitcoin::TrusteeAddrInfo;
+    use rstd::collections::btree_map::BTreeMap;
+    use xassets::Chain;
+    use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
     decl_runtime_apis! {
         pub trait XBridgeApi {
-            /// generate a mock trustee info, result is (Vec<(accountid, (hot pubkey, cold pubkey)), (required count, total count), hot_trustee_addr, cold_trustee_addr)>)
-            fn mock_bitcoin_new_trustees(candidates: Vec<AccountIdForApi>) -> Result<(Vec<(AccountIdForApi, (Vec<u8>, Vec<u8>))>, (u32, u32), TrusteeAddrInfo, TrusteeAddrInfo), Vec<u8>>;
+            /// generate a mock trustee info
+            fn mock_new_trustees(chain: Chain, candidates: Vec<AccountIdForApi>) -> Result<GenericAllSessionInfo<AccountIdForApi>, Vec<u8>>;
+
+            fn trustee_props_for(who: AccountIdForApi) ->  BTreeMap<xassets::Chain, GenericTrusteeIntentionProps>;
+
+            fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountIdForApi>>;
+
+            fn trustee_session_info_for(chain: Chain) -> Option<(u32, GenericAllSessionInfo<AccountIdForApi>)>;
         }
     }
 }

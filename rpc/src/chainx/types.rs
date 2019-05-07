@@ -1,16 +1,39 @@
 // Copyright 2018-2019 Chainpool.
 
+use std::collections::btree_map::BTreeMap;
 use std::convert::From;
+use std::iter::FromIterator;
 
+use log::error;
 use rustc_hex::ToHex;
 use serde_derive::{Deserialize, Serialize};
+use serde_json::{json, Map, Value};
+
+// chainx
+use chainx_primitives::{AccountId, AccountIdForRpc, Balance, BlockNumber, Timestamp};
+use chainx_runtime::Runtime;
+
+use xassets::{Asset, AssetType, Chain};
+use xrecords::{HeightOrTime, RecordInfo, TxState};
+use xspot::{
+    OrderIndex, OrderInfo, OrderStatus, OrderType, Side, TradeHistoryIndex, TradingPairIndex,
+};
+
+use xbitcoin::VoteResult;
+use xbridge_common::{
+    traits::IntoVecu8,
+    types::{GenericAllSessionInfo, GenericTrusteeIntentionProps},
+};
+use xbridge_features::trustees::{BitcoinPublic, BitcoinTrusteeAddrInfo};
 
 use btc_keys::DisplayLayout;
 use btc_ser::serialize as btc_serialize;
 
 use xr_primitives::generic::b58;
 
-use super::*;
+use super::utils::try_hex_or_str;
+
+pub const MAX_PAGE_SIZE: u32 = 100;
 
 // utils
 #[derive(Debug, Serialize, Deserialize)]
@@ -109,31 +132,97 @@ pub struct IntentionInfo {
     pub last_total_vote_weight_update: BlockNumber,
 }
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TrusteeInfo {
+fn parse_generic_trustee_props(
     chain: Chain,
-    hot_entity: String,
-    cold_entity: String,
-}
-
-impl TrusteeInfo {
-    pub fn new(chain: Chain, hot_entity: String, cold_entity: String) -> Self {
-        TrusteeInfo {
-            chain,
-            hot_entity: "0x".to_string() + &hot_entity,
-            cold_entity: "0x".to_string() + &cold_entity,
+    props: &GenericTrusteeIntentionProps,
+) -> Option<Value> {
+    let result = match chain {
+        Chain::Bitcoin => {
+            let hot_public = BitcoinPublic::from_vecu8(props.0.hot_entity.as_slice());
+            let cold_public = BitcoinPublic::from_vecu8(props.0.cold_entity.as_slice());
+            if hot_public.is_none() || cold_public.is_none() {
+                error!(
+                    "parse_generic_trustee_props for bitcoin error|hot_entity:{:}|cold_entity:{:}",
+                    try_hex_or_str(&props.0.hot_entity),
+                    try_hex_or_str(&props.0.cold_entity)
+                );
+                return None;
+            } else {
+                let format_public = |public: &BitcoinPublic| -> Option<String> {
+                    match public {
+                        BitcoinPublic::Normal(_) => {
+                            error!("bitcoin TrusteeIntentionProps entity should be `Compressed`, not `Normal`, something wrong in chain!|public:{:?}", public);
+                            return None;
+                        }
+                        BitcoinPublic::Compressed(ref hash) => Some(format!("{:?}", hash)),
+                    }
+                };
+                json!({
+                    "about": String::from_utf8_lossy(&props.0.about).into_owned(),
+                    "hotEntity": format_public(&hot_public.unwrap()),
+                    "coldEntity": format_public(&cold_public.unwrap()),
+                })
+            }
         }
-    }
+        // TODO when add other trustee, must add related parse here
+        _ => unimplemented!("not support for other chain"),
+    };
+    Some(result)
 }
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CurrentTrusteeSessionInfo {
-    pub session_number: u32,
-    pub trustee_list: Vec<AccountIdForRpc>,
-    pub hot_entity: String,
-    pub cold_entity: String,
+pub fn parse_trustee_props(map: BTreeMap<Chain, GenericTrusteeIntentionProps>) -> Option<Value> {
+    let map = Map::from_iter(map.into_iter().map(|(chain, generic_props)| {
+        (
+            format!("{:?}", chain),
+            parse_generic_trustee_props(chain, &generic_props).unwrap_or(Value::Null),
+        )
+    }));
+    Some(Value::Object(map))
+}
+
+pub fn parse_trustee_session_addr(chain: Chain, addr: &[u8]) -> Option<Value> {
+    let result = match chain {
+        Chain::Bitcoin => {
+            let trustee_addr_info = BitcoinTrusteeAddrInfo::from_vecu8(addr);
+            let trustee_addr_info = if trustee_addr_info.is_none() {
+                return None;
+            } else {
+                trustee_addr_info.unwrap()
+            };
+
+            let address =
+                String::from_utf8_lossy(&b58::to_base58(trustee_addr_info.addr.layout().to_vec()))
+                    .into_owned();
+            json!({
+                "addr": address,
+                "redeemScript": try_hex_or_str(&trustee_addr_info.redeem_script)
+            })
+        }
+        // TODO when add other trustee, must add related parse here
+        _ => unimplemented!("not support for other chain"),
+    };
+    Some(result)
+}
+
+pub fn parse_trustee_session_info(
+    chain: Chain,
+    number: u32,
+    info: GenericAllSessionInfo<AccountId>,
+) -> Option<Value> {
+    let hot = parse_trustee_session_addr(chain, &info.hot_entity);
+    let cold = parse_trustee_session_addr(chain, &info.cold_entity);
+    Some(json!({
+        "sessionNumber": number,
+        "hotEntity": hot,
+        "coldEntity": cold,
+        "trusteeList": info.trustees_info.into_iter().map(|(accountid, generic_props)| {
+            let accountid :AccountIdForRpc= accountid.into();
+            json!({
+                "accountId": accountid,
+                "props": parse_generic_trustee_props(chain, &generic_props),
+            })
+        }).collect::<Vec<_>>()
+    }))
 }
 
 /// OrderPair info
@@ -320,25 +409,23 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for WithdrawIn
 pub struct WithdrawTxInfo {
     /// tx
     pub tx: String,
-    /// redeem_script
-    pub redeem_script: String,
     /// sign_status
     pub sign_status: bool,
-
+    pub withdrawal_id_list: Vec<u32>,
     pub trustee_list: Vec<(AccountId, bool)>,
 }
 impl WithdrawTxInfo {
-    pub fn new(proposal: xbitcoin::WithdrawalProposal<AccountId>, script: String) -> Self {
+    pub fn from_bitcoin_proposal(proposal: xbitcoin::WithdrawalProposal<AccountId>) -> Self {
         let bytes = btc_serialize(&proposal.tx);
         let tx: String = bytes.to_hex();
         WithdrawTxInfo {
             tx: "0x".to_string() + &tx,
-            redeem_script: "0x".to_string() + &script,
             sign_status: if proposal.sig_state == VoteResult::Finish {
                 true
             } else {
                 false
             },
+            withdrawal_id_list: proposal.withdrawal_id_list,
             trustee_list: proposal.trustee_list,
         }
     }
@@ -378,90 +465,6 @@ impl From<OrderInfo<Runtime>> for OrderDetails {
             executed_indices: order.executed_indices,
             already_filled: order.already_filled,
             last_update_at: order.last_update_at,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BitcoinAddrEntity {
-    pub address: String,
-    pub redeem_script: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BitcoinTrusteeInfo {
-    account_id: AccountIdForRpc,
-    hot_pubkey: String,
-    cold_pubkey: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BitcoinMultiSigCount {
-    required: u32,
-    total: u32,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MockBitcoinTrustee {
-    /// accountid, hot pubkey, cold pubkey
-    pub trustee_info: Vec<BitcoinTrusteeInfo>,
-    pub counts: BitcoinMultiSigCount,
-    pub hot_entity: BitcoinAddrEntity,
-    pub cold_entity: BitcoinAddrEntity,
-}
-
-impl
-    From<(
-        Vec<(AccountId, (Vec<u8>, Vec<u8>))>,
-        (u32, u32),
-        BtcTrusteeAddrInfo,
-        BtcTrusteeAddrInfo,
-    )> for MockBitcoinTrustee
-{
-    fn from(
-        info: (
-            Vec<(AccountId, (Vec<u8>, Vec<u8>))>,
-            (u32, u32),
-            BtcTrusteeAddrInfo,
-            BtcTrusteeAddrInfo,
-        ),
-    ) -> Self {
-        let trustee_info: Vec<BitcoinTrusteeInfo> = info
-            .0
-            .into_iter()
-            .map(|info| {
-                let hot: String = (info.1).0.to_hex();
-                let cold: String = (info.1).1.to_hex();
-                BitcoinTrusteeInfo {
-                    account_id: info.0.into(),
-                    hot_pubkey: "0x".to_string() + &hot,
-                    cold_pubkey: "0x".to_string() + &cold,
-                }
-            })
-            .collect();
-
-        let hot_script: String = info.2.redeem_script.to_hex();
-        let cold_script: String = info.3.redeem_script.to_hex();
-        MockBitcoinTrustee {
-            trustee_info,
-            counts: BitcoinMultiSigCount {
-                required: (info.1).0,
-                total: (info.1).1,
-            },
-            hot_entity: BitcoinAddrEntity {
-                address: String::from_utf8_lossy(&b58::to_base58(info.2.addr.layout().to_vec()))
-                    .into_owned(),
-                redeem_script: "0x".to_string() + &hot_script,
-            },
-            cold_entity: BitcoinAddrEntity {
-                address: String::from_utf8_lossy(&b58::to_base58(info.3.addr.layout().to_vec()))
-                    .into_owned(),
-                redeem_script: "0x".to_string() + &cold_script,
-            },
         }
     }
 }

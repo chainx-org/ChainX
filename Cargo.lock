@@ -156,7 +156,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "base58"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/chainx-common#a5262289c36021024bf389279af95b505011e63d"
+source = "git+https://github.com/chainx-org/chainx-common#b59f0c76e59cf627e23bd006d93884ce0eb7ed3b"
 dependencies = [
  "ustd 0.1.0 (git+https://github.com/chainx-org/chainx-common)",
 ]
@@ -360,7 +360,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "chain"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#a4513503017369764b73690e39b2c54792eed057"
+source = "git+https://github.com/chainx-org/light-bitcoin#82b16cdf10870c2c9da6ddfc95cf7e4c30997053"
 dependencies = [
  "crypto 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -476,6 +476,8 @@ dependencies = [
  "xrml-xaura 0.1.0",
  "xrml-xbootstrap 0.4.0",
  "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xbridge-common 0.1.0",
+ "xrml-xbridge-features 0.1.0",
  "xrml-xbridge-sdot 0.9.0",
  "xrml-xdex-spot 0.4.0",
  "xrml-xfee-manager 0.4.0",
@@ -684,7 +686,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "crypto"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#a4513503017369764b73690e39b2c54792eed057"
+source = "git+https://github.com/chainx-org/light-bitcoin#82b16cdf10870c2c9da6ddfc95cf7e4c30997053"
 dependencies = [
  "digest 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
@@ -1265,7 +1267,7 @@ dependencies = [
 [[package]]
 name = "impl-codec"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/chainx-common#a5262289c36021024bf389279af95b505011e63d"
+source = "git+https://github.com/chainx-org/chainx-common#b59f0c76e59cf627e23bd006d93884ce0eb7ed3b"
 dependencies = [
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ustd 0.1.0 (git+https://github.com/chainx-org/chainx-common)",
@@ -1282,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "impl-serde"
 version = "0.1.1"
-source = "git+https://github.com/chainx-org/chainx-common#a5262289c36021024bf389279af95b505011e63d"
+source = "git+https://github.com/chainx-org/chainx-common#b59f0c76e59cf627e23bd006d93884ce0eb7ed3b"
 dependencies = [
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1427,7 +1429,7 @@ dependencies = [
 [[package]]
 name = "keys"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#a4513503017369764b73690e39b2c54792eed057"
+source = "git+https://github.com/chainx-org/light-bitcoin#82b16cdf10870c2c9da6ddfc95cf7e4c30997053"
 dependencies = [
  "base58 0.1.0 (git+https://github.com/chainx-org/chainx-common)",
  "crypto 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
@@ -1960,7 +1962,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "merkle"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#a4513503017369764b73690e39b2c54792eed057"
+source = "git+https://github.com/chainx-org/light-bitcoin#82b16cdf10870c2c9da6ddfc95cf7e4c30997053"
 dependencies = [
  "bit-vec 0.5.1 (git+https://github.com/koushiro/bit-vec?branch=work)",
  "chain 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
@@ -2424,7 +2426,7 @@ dependencies = [
 [[package]]
 name = "primitive-types"
 version = "0.2.2"
-source = "git+https://github.com/chainx-org/chainx-common#a5262289c36021024bf389279af95b505011e63d"
+source = "git+https://github.com/chainx-org/chainx-common#b59f0c76e59cf627e23bd006d93884ce0eb7ed3b"
 dependencies = [
  "fixed-hash 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "impl-codec 0.2.0 (git+https://github.com/chainx-org/chainx-common)",
@@ -2436,7 +2438,7 @@ dependencies = [
 [[package]]
 name = "primitives"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#a4513503017369764b73690e39b2c54792eed057"
+source = "git+https://github.com/chainx-org/light-bitcoin#82b16cdf10870c2c9da6ddfc95cf7e4c30997053"
 dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitive-types 0.2.2 (git+https://github.com/chainx-org/chainx-common)",
@@ -2767,6 +2769,7 @@ dependencies = [
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
  "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xbridge-common 0.1.0",
  "xrml-xdex-spot 0.4.0",
  "xrml-xsupport 0.4.0",
 ]
@@ -2868,7 +2871,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "script"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#a4513503017369764b73690e39b2c54792eed057"
+source = "git+https://github.com/chainx-org/light-bitcoin#82b16cdf10870c2c9da6ddfc95cf7e4c30997053"
 dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "crypto 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
@@ -2955,7 +2958,7 @@ dependencies = [
 [[package]]
 name = "serialization"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#a4513503017369764b73690e39b2c54792eed057"
+source = "git+https://github.com/chainx-org/light-bitcoin#82b16cdf10870c2c9da6ddfc95cf7e4c30997053"
 dependencies = [
  "primitives 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "ustd 0.1.0 (git+https://github.com/chainx-org/chainx-common)",
@@ -3999,6 +4002,8 @@ dependencies = [
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
  "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xbridge-common 0.1.0",
+ "xrml-xbridge-features 0.1.0",
  "xrml-xdex-spot 0.4.0",
  "xrml-xmining-staking 0.4.0",
  "xrml-xmining-tokens 0.4.0",
@@ -4733,7 +4738,7 @@ dependencies = [
 [[package]]
 name = "ustd"
 version = "0.1.0"
-source = "git+https://github.com/chainx-org/chainx-common#a5262289c36021024bf389279af95b505011e63d"
+source = "git+https://github.com/chainx-org/chainx-common#b59f0c76e59cf627e23bd006d93884ce0eb7ed3b"
 dependencies = [
  "cfg-if 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -5019,14 +5024,11 @@ dependencies = [
  "integer-sqrt 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
- "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
 ]
 
 [[package]]
@@ -5067,7 +5069,6 @@ dependencies = [
  "srml-timestamp 1.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 0.4.0",
- "xrml-xassets-assets 0.4.0",
  "xrml-xsystem 0.4.0",
 ]
 
@@ -5167,12 +5168,14 @@ dependencies = [
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-finality-grandpa-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
- "xrml-xaccounts 0.4.0",
+ "xr-primitives 0.4.0",
  "xrml-xassets-assets 0.4.0",
+ "xrml-xbridge-features 0.1.0",
  "xrml-xdex-spot 0.4.0",
  "xrml-xmining-staking 0.4.0",
  "xrml-xmining-tokens 0.4.0",
  "xrml-xmultisig 0.4.0",
+ "xrml-xsupport 0.4.0",
 ]
 
 [[package]]
@@ -5203,9 +5206,50 @@ dependencies = [
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
+ "xrml-xbridge-common 0.1.0",
  "xrml-xfee-manager 0.4.0",
  "xrml-xsupport 0.4.0",
  "xrml-xsystem 0.4.0",
+]
+
+[[package]]
+name = "xrml-xbridge-common"
+version = "0.1.0"
+dependencies = [
+ "keys 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
+ "xrml-xsupport 0.4.0",
+]
+
+[[package]]
+name = "xrml-xbridge-features"
+version = "0.1.0"
+dependencies = [
+ "keys 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "sr-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
+ "xrml-xaccounts 0.4.0",
+ "xrml-xassets-assets 0.4.0",
+ "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xbridge-common 0.1.0",
+ "xrml-xbridge-sdot 0.9.0",
+ "xrml-xmultisig 0.4.0",
+ "xrml-xsupport 0.4.0",
 ]
 
 [[package]]
@@ -5222,9 +5266,9 @@ dependencies = [
  "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
  "tiny-keccak 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "xr-primitives 0.4.0",
- "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
+ "xrml-xbridge-common 0.1.0",
  "xrml-xsystem 0.4.0",
 ]
 
@@ -5296,7 +5340,7 @@ dependencies = [
  "xrml-xaccounts 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
- "xrml-xbridge-bitcoin 0.9.0",
+ "xrml-xbridge-features 0.1.0",
  "xrml-xfee-manager 0.4.0",
  "xrml-xsession 0.1.0",
  "xrml-xsupport 0.4.0",
@@ -5347,11 +5391,8 @@ dependencies = [
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 1.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
- "xr-primitives 0.4.0",
  "xrml-xaccounts 0.4.0",
- "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
- "xrml-xbridge-bitcoin 0.9.0",
  "xrml-xfee-manager 0.4.0",
  "xrml-xsession 0.1.0",
  "xrml-xsupport 0.4.0",
@@ -5372,6 +5413,7 @@ dependencies = [
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 1.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
  "xrml-xaccounts 0.4.0",
  "xrml-xsystem 0.4.0",
 ]

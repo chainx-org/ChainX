@@ -1,8 +1,8 @@
 // Copyright 2018-2019 Chainpool.
 
 use rstd::prelude::Vec;
+use xr_primitives::{generic::b58, Name};
 
-use super::b58;
 use crate::traits::Extractable;
 
 /// Definition of something that the external world might want to say; its
@@ -21,7 +21,7 @@ where
     AccountId: Default + AsMut<[u8]> + AsRef<[u8]>,
 {
     /// same to `substrate/core/primitives/src/crypto.rs:trait Ss58Codec`
-    fn account_info(data: &[u8]) -> Option<(AccountId, Vec<u8>)> {
+    fn account_info(data: &[u8]) -> Option<(AccountId, Option<Name>)> {
         let v = split(data);
         if v.len() < 1 {
             return None;
@@ -50,9 +50,9 @@ where
         res.as_mut().copy_from_slice(&d[1..len + 1]);
         // channel is a validator
         let channel_name = if v.len() > 1 {
-            v[1].to_vec()
+            Some(v[1].to_vec())
         } else {
-            Vec::new()
+            None
         };
 
         Some((res, channel_name))

@@ -6,11 +6,12 @@ use rstd::{prelude::Vec, result};
 use support::{dispatch::Result, StorageMap, StorageValue};
 
 // ChainX
-use xaccounts;
-use xassets::{self, Chain, ChainT};
+use xr_primitives::{generic::b58, Name};
+
+use xassets::{self, ChainT};
+use xbridge_common::traits::{CrossChainBinding, Extractable};
 use xfee_manager;
-use xr_primitives::generic::b58;
-use xr_primitives::traits::Extractable;
+
 use xrecords;
 #[cfg(feature = "std")]
 use xsupport::u8array_to_string;
@@ -168,12 +169,11 @@ impl TxHandler {
                 // remove old unbinding deposit info
                 remove_pending_deposit::<T>(&input_addr, &accountid);
                 // update or override binding info
-                update_binding::<T>(accountid.clone(), channel_name, input_addr.clone());
+                update_binding::<T>(&accountid, channel_name, input_addr.clone());
                 DepositAccountInfo::AccountId(accountid)
             } else {
                 // no opreturn, use addr to get accountid
-                let key = (Chain::Bitcoin, input_addr.layout().to_vec());
-                match xaccounts::Module::<T>::address_map(&key) {
+                match T::CrossChainProvider::get_binding_info(&input_addr) {
                     Some((accountid, _)) => DepositAccountInfo::AccountId(accountid),
                     None => DepositAccountInfo::Address(input_addr.clone()),
                 }
@@ -227,13 +227,13 @@ impl TxHandler {
 
 /// Try updating the binding address, remove pending deposit if the updating goes well.
 /// return validator name and this accountid
-fn handle_opreturn<T: Trait>(script: &[u8]) -> Option<(T::AccountId, Vec<u8>)> {
+fn handle_opreturn<T: Trait>(script: &[u8]) -> Option<(T::AccountId, Option<Name>)> {
     T::AccountExtractor::account_info(script)
 }
 
 pub fn parse_deposit_outputs<T: Trait>(
     tx: &Transaction,
-) -> result::Result<(Option<(T::AccountId, Vec<u8>)>, u64, Vec<u8>), &'static str> {
+) -> result::Result<(Option<(T::AccountId, Option<Name>)>, u64, Vec<u8>), &'static str> {
     let trustee_address = get_hot_trustee_address::<T>()?;
     let mut deposit_balance = 0;
     let mut account_info = None;
@@ -267,13 +267,8 @@ pub fn parse_deposit_outputs<T: Trait>(
 }
 
 /// bind account
-fn update_binding<T: Trait>(who: T::AccountId, channel_name: Vec<u8>, input_addr: Address) {
-    // override old binding
-    xaccounts::apply_update_binding::<T>(
-        who,
-        (Chain::Bitcoin, input_addr.layout().to_vec()),
-        channel_name,
-    );
+fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>, input_addr: Address) {
+    T::CrossChainProvider::update_binding(who, input_addr, channel_name)
 }
 
 pub fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {

@@ -50,6 +50,8 @@ members = [
     "xrml/xdex/spot",
     "xrml/xmining/staking",
     "xrml/xmining/tokens",
+    "xrml/xbridge/common",
     "xrml/xbridge/bitcoin",
     "xrml/xbridge/sdot",
+    "xrml/xbridge/features",
 ]

@@ -20,8 +20,8 @@ xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features =
 xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
-xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../../xbridge/bitcoin", default-features = false }
 xsession = { package = "xrml-xsession", path = "../../xsession", default-features = false }
+xbridge-features = { package = "xrml-xbridge-features", path = "../../xbridge/features", default-features = false }
 
 [dev-dependencies]
 # Substrate
@@ -51,6 +51,6 @@ std = [
     "xaccounts/std",
     "xsupport/std",
     "xassets/std",
-    "xbitcoin/std",
     "xsession/std",
+    "xbridge-features/std",
 ]

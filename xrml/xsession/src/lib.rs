@@ -33,7 +33,7 @@ use support::{
 use system::ensure_signed;
 
 // ChainX
-use xaccounts::Name;
+use xr_primitives::Name;
 
 /// A session has changed.
 pub trait OnSessionChange<T> {

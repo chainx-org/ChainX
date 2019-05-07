@@ -15,12 +15,14 @@ runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate"
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 # ChainX
+xr-primitives = { path = "../../xr-primitives", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../xsupport",  default-features = false }
+xassets = { package = "xrml-xassets-assets", path = "../xassets/assets",  default-features = false }
 xstaking = { package = "xrml-xmining-staking", path = "../xmining/staking", default-features = false }
 xtokens = { package = "xrml-xmining-tokens", path = "../xmining/tokens", default-features = false }
-xassets = { package = "xrml-xassets-assets", path = "../xassets/assets",  default-features = false }
-xaccounts = { package = "xrml-xaccounts", path = "../xaccounts",  default-features = false }
 xspot = { package = "xrml-xdex-spot", path = "../xdex/spot", default-features = false }
 xmultisig = { package = "xrml-xmultisig", path = "../xmultisig", default-features = false }
+xbridge-features = { package = "xrml-xbridge-features", path = "../xbridge/features", default-features = false }
 # light-bitocin
 btc-chain = { package = "chain", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
 
@@ -37,12 +39,14 @@ std = [
     "primitives/std",
     "support/std",
     # ChainX
+    "xr-primitives/std",
+    "xsupport/std",
+    "xassets/std",
     "xstaking/std",
     "xtokens/std",
-    "xassets/std",
-    "xaccounts/std",
     "xspot/std",
     "xmultisig/std",
+    "xbridge-features/std",
     # light-bitcoin
     "btc-chain/std",
 ]

@@ -114,15 +114,8 @@ impl<T: Trait> Module<T> {
             let asset = asset_info.0;
             let chain = asset.chain();
 
-            let bind = <xaccounts::CrossChainBindOf<T>>::get(&(chain, who.clone()));
-            if let Some(first_bind) = bind.get(0) {
-                if let Some((_accountid, channel_accountid)) =
-                    <xaccounts::CrossChainAddressMapOf<T>>::get(&(chain, first_bind.clone()))
-                {
-                    // if the channel not set for this addr, return council_addr instead
-                    return channel_accountid.unwrap_or(council_address);
-                }
-            }
+            return xbridge_features::Module::<T>::get_first_binding_channel(who, chain)
+                .unwrap_or(council_address);
         }
 
         return council_address;

@@ -7,6 +7,9 @@ use serde_derive::{Deserialize, Serialize};
 // Substrate
 use rstd::prelude::Vec;
 
+// chainx
+use xbridge_common::traits::IntoVecu8;
+
 // light-bitcoin
 use btc_chain::{BlockHeader, Transaction};
 use btc_keys::Address;
@@ -105,20 +108,22 @@ pub struct DepositCache {
     pub txid: H256,
     pub balance: u64,
 }
-//
-//#[derive(PartialEq, Clone, Encode, Decode, Default)]
-//#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-//#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-//pub struct TrusteeScriptInfo {
-//    pub hot_redeem_script: Vec<u8>,
-//    pub cold_redeem_script: Vec<u8>,
-//}
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TrusteeAddrInfo {
     pub addr: Address,
     pub redeem_script: Vec<u8>,
+}
+
+impl IntoVecu8 for TrusteeAddrInfo {
+    fn into_vecu8(self) -> Vec<u8> {
+        self.encode()
+    }
+    fn from_vecu8(src: &[u8]) -> Option<Self> {
+        Decode::decode(&mut src.as_ref())
+    }
 }
 
 #[cfg(feature = "std")]

@@ -6,7 +6,10 @@
 
 use support::{decl_module, decl_storage};
 
-pub trait Trait: xtokens::Trait + xmultisig::Trait {}
+#[cfg(feature = "std")]
+use xr_primitives::{Name, URL};
+
+pub trait Trait: xtokens::Trait + xmultisig::Trait + xbridge_features::Trait {}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -23,7 +26,7 @@ decl_storage! {
         config(asset_list): Vec<(xassets::Asset, bool, bool)>;
 
         // xstaking
-        config(intentions): Vec<(T::AccountId, T::SessionKey, T::Balance, xaccounts::Name, xaccounts::URL, Vec<u8>)>;
+        config(intentions): Vec<(T::AccountId, T::SessionKey, T::Balance, Name, URL, Vec<u8>)>;
         config(trustee_intentions): Vec<(T::AccountId, Vec<u8>, Vec<u8>)>;
 
         // xtokens
@@ -36,7 +39,7 @@ decl_storage! {
         config(authorities): Vec<(T::SessionKey, u64)>;
 
         // multisig
-        config(multisig_init_info): (Vec<(T::AccountId, bool)>, u32);
+        config(multisig_init_info): (Vec<(T::AccountId, bool)>);
 
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use parity_codec::{Encode, KeyedVec};
@@ -44,9 +47,10 @@ decl_storage! {
             use substrate_primitives::Blake2Hasher;
             use support::StorageMap;
             use primitives::StorageOverlay;
-            use xaccounts::{TrusteeEntity, TrusteeIntentionProps};
             use xassets::{ChainT, Token, Chain, Asset};
             use xspot::CurrencyPair;
+            use xbridge_features::H264;
+            use xsupport::warn;
 
             // grandpa
             let auth_count = config.authorities.len() as u32;
@@ -118,21 +122,29 @@ decl_storage! {
                 let mut trustees = Vec::new();
                 for (i, hot_entity, cold_entity) in config.trustee_intentions.clone().into_iter() {
                     trustees.push(i.clone());
-                    <xaccounts::TrusteeIntentionPropertiesOf<T>>::insert(
-                        &(i, xassets::Chain::Bitcoin),
-                        TrusteeIntentionProps {
-                            about: b"".to_vec(),
-                            hot_entity: TrusteeEntity::Bitcoin(hot_entity),
-                            cold_entity: TrusteeEntity::Bitcoin(cold_entity),
-                        }
-                    );
+                    xbridge_features::Module::<T>::setup_bitcoin_trustee_impl(i, b"ChainX init".to_vec(), H264::from_slice(&hot_entity), H264::from_slice(&cold_entity)).unwrap();
+                }
+                // deploy trustee multisig addr
+                let len = trustees.len();
+                let result = xbridge_features::Module::<T>::deploy_trustee_in_genesis(vec![(Chain::Bitcoin, trustees)]);
+                if len >= 4 {
+                    result.unwrap();
                 }
 
                 // xmultisig
-                let required_num = config.multisig_init_info.1;
-                let init_accounts = config.multisig_init_info.0.clone();
-                // deploy multisig and build first trustee info
-                xmultisig::Module::<T>::deploy_in_genesis(init_accounts, required_num, vec![(Chain::Bitcoin, trustees)]);
+                let init_accounts = config.multisig_init_info.clone();
+                let len = init_accounts.len() as u32;
+                let two_thirds = |sum: u32| {
+                    let m = 2 * sum;
+                    if m % 3 == 0 { m / 3 } else { m / 3 + 1 }
+                };
+                let required_num = two_thirds(len);
+                // deploy multisig, just for `TeamAddress` and `CouncilAddress`
+                if len >= 4 {
+                    xmultisig::Module::<T>::deploy_in_genesis(init_accounts, required_num).unwrap();
+                } else {
+                    warn!("[xmultisig|deploy_in_genesis]|can't generate TeamAddr and CouncilAddr for less then 4 init account");
+                }
 
                 // xspot
                 for (base, quote, pip_precision, tick_precision, price, status) in config.pair_list.iter() {

@@ -93,7 +93,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
 
         if !Self::is_validator(&producer) {
             error!(
-                "[create_inherent] producer_name:{:?}, producer:{:} not in current validators!, validators is:{:?}",
+                "[create_inherent] producer_name:{:?}, producer:{:?} not in current validators!, validators is:{:?}",
                 std::str::from_utf8(&producer_name).unwrap_or(&format!("{:?}", producer_name)),
                 producer,
                 T::ValidatorList::validator_list()
@@ -112,7 +112,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
 
         if !Self::is_validator(&producer) {
             error!(
-                "[check_inherent] producer:{:} not in current validators!, validators is:{:?}",
+                "[check_inherent] producer:{:?} not in current validators!, validators is:{:?}",
                 producer,
                 T::ValidatorList::validator_list()
             );

@@ -10,13 +10,12 @@ use rstd::{prelude::*, result};
 use support::{dispatch::Result, StorageMap};
 
 // ChainX
-use xassets::Chain;
 use xsupport::{debug, error};
 
 // light-bitcoin
 use btc_chain::Transaction;
 use btc_crypto::dhash160;
-use btc_keys::{Address, Type};
+use btc_keys::{Address, Public, Type};
 use btc_primitives::{Bytes, H256};
 use btc_script::{Builder, Opcode, Script};
 
@@ -25,8 +24,8 @@ use crate::{InputAddrFor, Module, RawEvent, Trait, TxFor};
 
 use self::handler::TxHandler;
 use self::utils::{
-    equal_addr, get_hot_trustee_address, get_networkid, get_trustee_address_pair,
-    inspect_address_from_transaction, parse_addr_from_script,
+    equal_addr, get_hot_trustee_address, get_last_trustee_address_pair, get_networkid,
+    get_trustee_address_pair, inspect_address_from_transaction, parse_addr_from_script,
 };
 pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
 
@@ -41,8 +40,7 @@ pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
 pub fn detect_transaction_type<T: Trait>(
     relay_tx: &RelayTx,
 ) -> result::Result<TxType, &'static str> {
-    let current_session_number = xaccounts::Module::<T>::current_session_number(Chain::Bitcoin);
-    let (hot_addr, cold_addr) = get_trustee_address_pair::<T>(current_session_number)?;
+    let (hot_addr, cold_addr) = get_trustee_address_pair::<T>()?;
     // parse input addr
     let outpoint = &relay_tx.raw.inputs[0].previous_output;
     let input_addr = match inspect_address_from_transaction::<T>(&relay_tx.previous_raw, outpoint) {
@@ -77,8 +75,7 @@ pub fn detect_transaction_type<T: Trait>(
         // outputs contains other addr, it's user addr, thus it's a withdrawal
         return Ok(TxType::Withdrawal);
     } else {
-        let last_number = Module::<T>::last_trustee_session_number();
-        if let Ok((old_hot_addr, old_cold_addr)) = get_trustee_address_pair::<T>(last_number) {
+        if let Ok((old_hot_addr, old_cold_addr)) = get_last_trustee_address_pair::<T>() {
             let input_is_old_trustee =
                 equal_addr(&input_addr, &old_hot_addr) || equal_addr(&input_addr, &old_cold_addr);
             if input_is_old_trustee && all_outputs_trustee {
@@ -117,20 +114,28 @@ pub fn remove_unused_tx<T: Trait>(txid: &H256) {
 }
 
 pub fn create_multi_address<T: Trait>(
-    pubkeys: &Vec<Vec<u8>>,
+    pubkeys: &Vec<Public>,
     sig_num: u32,
-    trustee_num: u32,
 ) -> Option<TrusteeAddrInfo> {
+    let sum = pubkeys.len() as u32;
+    if sig_num > sum {
+        panic!("required sig num should less than trustee_num; qed")
+    }
+    if sum > 15 {
+        error!("bitcoin's multisig can't more than 15, current is:{:}", sum);
+        return None;
+    }
+
     let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + sig_num as u8 - 1) {
         Some(o) => o,
         None => return None,
     };
     let mut build = Builder::default().push_opcode(opcode);
-    for (_, pubkey) in pubkeys.iter().enumerate() {
-        build = build.push_bytes(pubkey);
+    for pubkey in pubkeys.iter() {
+        build = build.push_bytes(&pubkey);
     }
 
-    let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + trustee_num as u8 - 1) {
+    let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + sum as u8 - 1) {
         Some(o) => o,
         None => return None,
     };
@@ -167,7 +172,7 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
                     .map_err(|_| "Parse addr error")?;
                 appl_withdrawal_list.push((addr, record.data.balance().as_() as u64));
             }
-            // TODO allow cold address in future, means withdrawal direct from cold address
+            // not allow deposit directly to cold address, only hot address allow
             let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
             // withdrawal addr list for tx outputs
             let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();

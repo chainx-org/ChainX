@@ -5,15 +5,15 @@ use substrate_primitives::{crypto::UncheckedInto, ed25519::Public as AuthorityId
 
 use chainx_primitives::AccountId;
 use chainx_runtime::{
-    xaccounts::TrusteeInfoConfig,
     xassets::{self, Asset, Chain, ChainT},
     xbitcoin::{self, Params},
+    xbridge_common::types::TrusteeInfoConfig,
     Runtime,
 };
 use chainx_runtime::{
-    ConsensusConfig, GenesisConfig, SessionConfig, TimestampConfig, XAccountsConfig, XAssetsConfig,
-    XAssetsProcessConfig, XBootstrapConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
-    XFeeManagerConfig, XSpotConfig, XStakingConfig, XTokensConfig,
+    ConsensusConfig, GenesisConfig, SessionConfig, TimestampConfig, XAssetsConfig,
+    XAssetsProcessConfig, XBootstrapConfig, XBridgeFeaturesConfig, XBridgeOfBTCConfig,
+    XBridgeOfSDOTConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XTokensConfig,
 };
 
 use btc_chain::BlockHeader;
@@ -105,16 +105,7 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             transaction_base_fee: 10000,
             transaction_byte_fee: 100,
         }),
-        xaccounts: Some(XAccountsConfig {
-            trustee_info_config: vec![(
-                Chain::Bitcoin,
-                TrusteeInfoConfig {
-                    min_trustee_count: 4,
-                    max_trustee_count: 15,
-                },
-            )],
-            _genesis_phantom_data: Default::default(),
-        }),
+
         xassets: Some(XAssetsConfig {
             memo_len: 128,
             _genesis_phantom_data: Default::default(),
@@ -145,9 +136,6 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             price_volatility: 10,
             _genesis_phantom_data: Default::default(),
         }),
-        xsdot: Some(XBridgeOfSDOTConfig {
-            claims: sdot_claims,
-        }),
         xbitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: (
@@ -174,6 +162,19 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             reserved_block: 2100,
             btc_withdrawal_fee: 40000,
             max_withdrawal_count: 100,
+            _genesis_phantom_data: Default::default(),
+        }),
+        xsdot: Some(XBridgeOfSDOTConfig {
+            claims: sdot_claims,
+        }),
+        xbridge_features: Some(XBridgeFeaturesConfig {
+            trustee_info_config: vec![(
+                Chain::Bitcoin,
+                TrusteeInfoConfig {
+                    min_trustee_count: 4,
+                    max_trustee_count: 15,
+                },
+            )],
             _genesis_phantom_data: Default::default(),
         }),
         xbootstrap: Some(XBootstrapConfig {
@@ -242,13 +243,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 })
                 .collect(),
             // xmultisig (include trustees)
-            multisig_init_info: (
-                genesis_node_info
-                    .iter()
-                    .map(|(account, _, _, _, _, _, _, _)| (account.clone().into(), true))
-                    .collect(),
-                3,
-            ),
+            multisig_init_info: genesis_node_info
+                .iter()
+                .map(|(account, _, _, _, _, _, _, _)| (account.clone().into(), true))
+                .collect(),
         }),
     }
 }

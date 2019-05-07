@@ -5,7 +5,7 @@ use system;
 
 use super::{AccountId, Call};
 use xbitcoin::Call as XBitcoinCall;
-use xmultisig::Call as XMultiSigCall;
+use xbridge_features::Call as XBridgeFeaturesCall;
 use xmultisig::TrusteeCall;
 use xsupport::{error, info};
 
@@ -14,12 +14,12 @@ impl TrusteeCall<AccountId> for Call {
         // only allow trustee function
         match self {
             Call::XBridgeOfBTC(call) => match call {
-                XBitcoinCall::set_btc_withdrawal_fee(_) => true,
+                XBitcoinCall::set_btc_withdrawal_fee_by_trustees(_) => true,
                 XBitcoinCall::fix_withdrawal_state_by_trustees(_, _) => true,
                 _ => false,
             },
-            Call::XMultiSig(call) => match call {
-                XMultiSigCall::transition_trustee_session(_, _) => true,
+            Call::XBridgeFeatures(call) => match call {
+                XBridgeFeaturesCall::transition_trustee_session(_, _) => true,
                 _ => false,
             },
             _ => false,

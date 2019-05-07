@@ -1,0 +1,40 @@
+[package]
+name = "xrml-xbridge-common"
+version = "0.1.0"
+authors = ["Chainpool <http://chainx.org>"]
+edition = "2018"
+
+
+[dependencies]
+serde = { version = "1.0", default_features = false }
+serde_derive = { version = "1.0", optional = true }
+parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+
+# chainx runtime module
+xr-primitives = { path = "../../../xr-primitives", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
+
+# for chain
+btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
+
+[dev-dependencies]
+serde_derive = "1.0"
+substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+rustc-hex = "2"
+
+[features]
+default = ["std"]
+std=[
+    "serde/std",
+    "serde_derive",
+    "parity-codec/std",
+    "rstd/std",
+    "primitives/std",
+    # chainx runtime module
+    "xr-primitives/std",
+    "xsupport/std",
+    # chain
+    "btc-keys/std",
+]

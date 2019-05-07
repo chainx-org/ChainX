@@ -51,7 +51,9 @@ xprocess = { package = "xrml-xassets-process", path = "../xrml/xassets/process",
 xstaking = { package = "xrml-xmining-staking", path = "../xrml/xmining/staking", default-features = false }
 xtokens = { package = "xrml-xmining-tokens", path = "../xrml/xmining/tokens", default-features = false }
 # bridge
+xbridge-common = { package = "xrml-xbridge-common", path = "../xrml/xbridge/common", default-features = false }
 xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin", default-features = false }
+xbridge-features = { package = "xrml-xbridge-features", path = "../xrml/xbridge/features", default-features = false }
 xsdot = { package = "xrml-xbridge-sdot", path = "../xrml/xbridge/sdot", default-features = false }
 # dex
 xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-features = false }
@@ -111,8 +113,10 @@ std = [
     "xstaking/std",
     "xtokens/std",
     # bridge
+    "xbridge-common/std",
     "xbitcoin/std",
     "xsdot/std",
+    "xbridge-features/std",
     # dex
     "xspot/std",
     # multisig

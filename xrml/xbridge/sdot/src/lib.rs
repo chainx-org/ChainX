@@ -20,13 +20,14 @@ use system::ensure_signed;
 
 // ChainX
 use xassets::{Chain, ChainT};
-use xr_primitives::traits::Extractable;
+use xbridge_common::traits::{CrossChainBinding, Extractable};
 
 pub use self::types::{EcdsaSignature, EthereumAddress};
 
 /// Configuration trait.
-pub trait Trait: xaccounts::Trait + xassets::Trait + xrecords::Trait {
+pub trait Trait: xassets::Trait + xrecords::Trait {
     type AccountExtractor: Extractable<Self::AccountId>;
+    type CrossChainProvider: CrossChainBinding<Self::AccountId, EthereumAddress>;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -79,7 +80,7 @@ decl_module! {
 
             deposit_token::<T>(&who, balance_due);
 
-            xaccounts::apply_update_binding::<T>(who, (Chain::Ethereum, signer.to_vec()), node_name);
+            T::CrossChainProvider::update_binding(&who, signer, node_name);
 
             // Let's deposit an event to let the outside world know this happened.
             Self::deposit_event(RawEvent::Claimed(sender, signer, balance_due));

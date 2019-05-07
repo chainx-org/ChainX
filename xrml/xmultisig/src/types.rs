@@ -34,6 +34,6 @@ pub struct AddrInfo<AccountId> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub struct PendingState<Proposal> {
     pub yet_needed: u32,
-    pub owners_done: u32,
+    pub owners_done: u64,
     pub proposal: Box<Proposal>,
 }

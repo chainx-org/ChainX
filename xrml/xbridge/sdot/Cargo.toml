@@ -16,9 +16,9 @@ support = {  package = "srml-support", git = "https://github.com/chainpool/subst
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
 # ChainX
 xr-primitives = {  package = "xr-primitives", path = "../../../xr-primitives", default-features = false }
-xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records", default-features = false }
+xbridge-common = {package = "xrml-xbridge-common", path = "../common", default-features = false }
 
 [dev-dependencies]
 # Substrate
@@ -38,7 +38,7 @@ std = [
     "system/std",
     # ChainX
     "xr-primitives/std",
-    "xaccounts/std",
     "xassets/std",
     "xrecords/std",
+    "xbridge-common/std",
 ]

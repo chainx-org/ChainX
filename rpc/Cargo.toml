@@ -45,8 +45,10 @@ xsession = { package = "xrml-xsession", path = "../xrml/xsession" }
 xstaking = { package ="xrml-xmining-staking", path = "../xrml/xmining/staking" }
 xtokens = { package = "xrml-xmining-tokens", path = "../xrml/xmining/tokens" }
 xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport"  }
-xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot"  }
+xbridge-common = { package = "xrml-xbridge-common", path = "../xrml/xbridge/common" }
 xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin" }
+xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot"  }
+xbridge-features = { package = "xrml-xbridge-features", path = "../xrml/xbridge/features" }
 xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig" }
 
 # bitcoin

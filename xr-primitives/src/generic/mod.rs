@@ -2,12 +2,10 @@
 
 pub mod b58;
 mod checked_extrinsic;
-mod extractor;
 mod unchecked_mortal_compact_extrinsic;
 mod unchecked_mortal_extrinsic;
 
 pub use self::checked_extrinsic::CheckedExtrinsic;
-pub use self::extractor::Extractor;
 pub use self::unchecked_mortal_compact_extrinsic::UncheckedMortalCompactExtrinsic;
 pub use self::unchecked_mortal_extrinsic::UncheckedMortalExtrinsic;
 

@@ -15,11 +15,8 @@ primitives = { package = "sr-primitives", git = "https://github.com/chainpool/su
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
 # ChainX
-xr-primitives = { path = "../../xr-primitives", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../xsupport", default-features = false }
-xassets = { package = "xrml-xassets-assets", path = "../xassets/assets", default-features = false }
 xaccounts = { package = "xrml-xaccounts", path = "../xaccounts", default-features = false }
-xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xbridge/bitcoin", default-features = false }
 
 [dev-dependencies]
 runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
@@ -42,9 +39,6 @@ std=[
     "support/std",
     "system/std",
     # ChainX
-    "xr-primitives/std",
     "xsupport/std",
-    "xassets/std",
     "xaccounts/std",
-    "xbitcoin/std",
 ]

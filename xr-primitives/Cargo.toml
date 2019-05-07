@@ -15,11 +15,6 @@ runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate"
 runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 
-[dev-dependencies]
-serde_derive = "1.0"
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
-rustc-hex = "2"
-
 [features]
 default = ["std"]
 std = [
