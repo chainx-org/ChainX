@@ -1,8 +1,9 @@
 // Copyright 2018-2019 Chainpool.
 
+use parity_codec::{Decode, Encode};
+
 #[cfg(feature = "std")]
-use parity_codec::Decode;
-use parity_codec::Encode;
+use serde_derive::{Deserialize, Serialize};
 
 #[cfg(feature = "std")]
 use rstd::result;
@@ -14,6 +15,19 @@ use inherents::ProvideInherentData;
 use super::RuntimeString;
 #[cfg(feature = "std")]
 use super::{InherentData, InherentIdentifier, INHERENT_IDENTIFIER};
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum NetworkType {
+    Mainnet,
+    Testnet,
+}
+
+impl Default for NetworkType {
+    fn default() -> Self {
+        NetworkType::Testnet
+    }
+}
 
 #[derive(Encode)]
 #[cfg_attr(feature = "std", derive(Debug, Decode))]

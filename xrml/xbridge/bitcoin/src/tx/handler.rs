@@ -227,8 +227,8 @@ impl TxHandler {
 
 /// Try updating the binding address, remove pending deposit if the updating goes well.
 /// return validator name and this accountid
-fn handle_opreturn<T: Trait>(script: &[u8]) -> Option<(T::AccountId, Option<Name>)> {
-    T::AccountExtractor::account_info(script)
+fn handle_opreturn<T: Trait>(script: &[u8], addr_type: u8) -> Option<(T::AccountId, Option<Name>)> {
+    T::AccountExtractor::account_info(script, addr_type)
 }
 
 pub fn parse_deposit_outputs<T: Trait>(
@@ -249,7 +249,8 @@ pub fn parse_deposit_outputs<T: Trait>(
             if has_opreturn == false {
                 // only handle first opreturn output
                 // OP_CODE PUSH ... (2 BYTES)
-                account_info = handle_opreturn::<T>(&script[2..]);
+                let addr_type = xsystem::Module::<T>::address_type();
+                account_info = handle_opreturn::<T>(&script[2..], addr_type);
                 if account_info.is_some() {
                     original.extend(script.to_vec());
                 }

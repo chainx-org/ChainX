@@ -19,6 +19,7 @@ system = { package = "srml-system", git = "https://github.com/chainpool/substrat
 timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", default-features = false }
 # ChainX
 xr-primitives = { path = "../../../xr-primitives", default-features = false }
+xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records", default-features = false }
@@ -38,8 +39,6 @@ btc-script = { package = "script", git = "https://github.com/chainx-org/light-bi
 hex = "0.3"
 # Substrate
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
-# ChainX
-xsystem = { package = "xrml-xsystem", path = "../../xsystem" }
 
 [features]
 default = ["std"]
@@ -58,6 +57,7 @@ std = [
     "timestamp/std",
     # ChainX
     "xr-primitives/std",
+    "xsystem/std",
     "xsupport/std",
     "xassets/std",
     "xrecords/std",

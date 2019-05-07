@@ -19,6 +19,7 @@ xr-primitives = {  package = "xr-primitives", path = "../../../xr-primitives", d
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records", default-features = false }
 xbridge-common = {package = "xrml-xbridge-common", path = "../common", default-features = false }
+xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
 
 [dev-dependencies]
 # Substrate
@@ -38,6 +39,7 @@ std = [
     "system/std",
     # ChainX
     "xr-primitives/std",
+    "xsystem/std",
     "xassets/std",
     "xrecords/std",
     "xbridge-common/std",

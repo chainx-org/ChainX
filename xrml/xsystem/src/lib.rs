@@ -21,7 +21,10 @@ use xsupport::{error, info};
 
 #[cfg(feature = "std")]
 pub use self::types::InherentDataProvider;
-pub use self::types::InherentError;
+pub use self::types::{InherentError, NetworkType};
+
+/// 44 for Mainnet, 42 for Testnet
+pub type AddressType = u32;
 
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"producer";
 
@@ -62,6 +65,8 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as XSystem {
         pub BlockProducer get(block_producer): Option<T::AccountId>;
+
+        pub NetworkProps get(network_props) config(): (NetworkType, AddressType);
     }
 }
 
@@ -69,6 +74,10 @@ impl<T: Trait> Module<T> {
     fn is_validator(producer: &T::AccountId) -> bool {
         let validators = T::ValidatorList::validator_list();
         validators.contains(&producer)
+    }
+
+    pub fn address_type() -> u8 {
+        Self::network_props().1 as u8
     }
 }
 

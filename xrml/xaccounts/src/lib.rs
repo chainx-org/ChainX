@@ -1,6 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
-//! this module is for chainx accounts
+//! This module mainly stores some special kinds of account
+//! that could be queried from various function modules.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 

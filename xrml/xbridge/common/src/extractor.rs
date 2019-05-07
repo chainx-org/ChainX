@@ -21,7 +21,7 @@ where
     AccountId: Default + AsMut<[u8]> + AsRef<[u8]>,
 {
     /// same to `substrate/core/primitives/src/crypto.rs:trait Ss58Codec`
-    fn account_info(data: &[u8]) -> Option<(AccountId, Option<Name>)> {
+    fn account_info(data: &[u8], addr_type: u8) -> Option<(AccountId, Option<Name>)> {
         let v = split(data);
         if v.len() < 1 {
             return None;
@@ -39,9 +39,11 @@ where
             // Invalid length. AccountId is Public, Public is 32 bytes, 1 bytes version, 2 bytes checksum
             return None;
         }
-        // check version
-        if d[0] != 42 {
-            // Invalid version.
+
+        // Check if the deposit address matches the current network.
+        //
+        // The first byte of pubkey indicates the network type.
+        if d[0] != addr_type {
             return None;
         }
         // check checksum

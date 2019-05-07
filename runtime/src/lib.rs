@@ -217,7 +217,7 @@ construct_runtime!(
         Aura: xaura::{Module, Inherent(Timestamp)},
 
         // chainx runtime module
-        XSystem: xsystem::{Module, Call, Storage, Inherent},
+        XSystem: xsystem::{Module, Call, Storage, Inherent, Config<T>},
         XAccounts: xaccounts::{Module, Strorage},
         // fee
         XFeeManager: xfee_manager::{Module, Call, Storage, Config<T>, Event<T>},

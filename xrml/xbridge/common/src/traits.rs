@@ -10,7 +10,7 @@ use xsupport::error;
 use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
 pub trait Extractable<AccountId> {
-    fn account_info(data: &[u8]) -> Option<(AccountId, Option<Name>)>;
+    fn account_info(data: &[u8], addr_type: u8) -> Option<(AccountId, Option<Name>)>;
 }
 
 pub trait TrusteeForChain<AccountId, TrusteeEntity: IntoVecu8, TrusteeAddress: IntoVecu8> {

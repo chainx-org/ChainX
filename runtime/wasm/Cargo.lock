@@ -3723,6 +3723,7 @@ dependencies = [
  "xrml-xbridge-common 0.1.0",
  "xrml-xfee-manager 0.4.0",
  "xrml-xsupport 0.4.0",
+ "xrml-xsystem 0.4.0",
 ]
 
 [[package]]
@@ -3779,6 +3780,7 @@ dependencies = [
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
  "xrml-xbridge-common 0.1.0",
+ "xrml-xsystem 0.4.0",
 ]
 
 [[package]]

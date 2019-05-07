@@ -25,7 +25,7 @@ use xbridge_common::traits::{CrossChainBinding, Extractable};
 pub use self::types::{EcdsaSignature, EthereumAddress};
 
 /// Configuration trait.
-pub trait Trait: xassets::Trait + xrecords::Trait {
+pub trait Trait: xsystem::Trait + xassets::Trait + xrecords::Trait {
     type AccountExtractor: Extractable<Self::AccountId>;
     type CrossChainProvider: CrossChainBinding<Self::AccountId, EthereumAddress>;
     /// The overarching event type.
@@ -68,7 +68,8 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             let input = contains(sign_data.clone(), input_data).ok_or("sign_data not contains input_data")?;
-            let (who, node_name) = T::AccountExtractor::account_info(&input).ok_or("extractor account_id error")?;
+            let addr_type = xsystem::Module::<T>::address_type();
+            let (who, node_name) = T::AccountExtractor::account_info(&input, addr_type).ok_or("extractor account_id error")?;
 
             let signer = eth_recover(&ethereum_signature, &sign_data).ok_or("Invalid Ethereum signature")?;
 

@@ -29,7 +29,7 @@ pub fn staging_testnet_config() -> ChainSpec {
         None,
         Some(
             json!({
-                "network": "testnet",
+                "network_type": "testnet",
                 "address_type": 44
             })
             .as_object()
@@ -62,7 +62,7 @@ pub fn development_config() -> ChainSpec {
         None,
         Some(
             json!({
-                "network": "testnet",
+                "network_type": "testnet",
                 "address_type": 44
             })
             .as_object()
@@ -96,7 +96,7 @@ pub fn local_testnet_config() -> ChainSpec {
         None,
         Some(
             json!({
-                "network": "testnet",
+                "network_type": "testnet",
                 "address_type": 44
             })
             .as_object()

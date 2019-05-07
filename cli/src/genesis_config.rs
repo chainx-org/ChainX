@@ -13,7 +13,8 @@ use chainx_runtime::{
 use chainx_runtime::{
     ConsensusConfig, GenesisConfig, SessionConfig, TimestampConfig, XAssetsConfig,
     XAssetsProcessConfig, XBootstrapConfig, XBridgeFeaturesConfig, XBridgeOfBTCConfig,
-    XBridgeOfSDOTConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XTokensConfig,
+    XBridgeOfSDOTConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    XTokensConfig,
 };
 
 use btc_chain::BlockHeader;
@@ -100,6 +101,10 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .collect(),
         }),
         // chainx runtime module
+        xsystem: Some(XSystemConfig {
+            network_props: (xsystem::NetworkType::Testnet, 44),
+            _genesis_phantom_data: Default::default(),
+        }),
         xfee_manager: Some(XFeeManagerConfig {
             producer_fee_proportion: (1, 10),
             transaction_base_fee: 10000,

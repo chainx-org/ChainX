@@ -49,7 +49,9 @@ pub use self::types::{
     BlockHeaderInfo, Params, RelayTx, TrusteeAddrInfo, TxInfo, VoteResult, WithdrawalProposal,
 };
 
-pub trait Trait: system::Trait + timestamp::Trait + xrecords::Trait + xfee_manager::Trait {
+pub trait Trait:
+    system::Trait + timestamp::Trait + xsystem::Trait + xrecords::Trait + xfee_manager::Trait
+{
     type AccountExtractor: Extractable<Self::AccountId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, TrusteeAddrInfo>;
     type TrusteeMultiSigProvider: TrusteeMultiSig<Self::AccountId>;
