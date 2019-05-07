@@ -46,6 +46,9 @@ btc-chain = { package = "chain", git = "https://github.com/chainx-org/light-bitc
 service-test = { package = "substrate-service-test", git = "https://github.com/chainpool/substrate" }
 
 [features]
+msgbus-log = [
+    "cli/msgbus-log"
+]
 msgbus-redis = [
     "cli/msgbus-redis"
 ]

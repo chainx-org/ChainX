@@ -40,6 +40,7 @@ use transaction_pool::txpool::Pool as TransactionPool;
 use chainx_primitives::{AccountId, Block};
 use chainx_runtime::{GenesisConfig, RuntimeApi};
 use runtime_api::xsession_api::XSessionApi;
+use substrate_service::TelemetryOnConnect;
 
 type XSystemInherentDataProvider = xsystem::InherentDataProvider;
 

@@ -19,6 +19,7 @@ futures = "0.1.17"
 vergen = "3"
 
 [features]
+msgbus-log = ["chainx-cli/msgbus-log"]
 msgbus-redis = ["chainx-cli/msgbus-redis"]
 msgbus-redis-keyhash = ["msgbus-redis", "chainx-cli/msgbus-redis-keyhash"]
 cache-lru = ["chainx-cli/cache-lru"]
