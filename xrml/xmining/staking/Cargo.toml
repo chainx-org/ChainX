@@ -32,6 +32,10 @@ timestamp = { package ="srml-timestamp", git = "https://github.com/chainpool/sub
 # ChainX
 xfee-manager = { package = "xrml-xfee-manager", path = "../../xfee/manager" }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records" }
+xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../../xbridge/bitcoin" }
+xbridge-features = { package = "xrml-xbridge-features", path = "../../xbridge/features" }
+xbridge-common = { package = "xrml-xbridge-common", path = "../../xbridge/common" }
+xmultisig = { package = "xrml-xmultisig", path = "../../xmultisig", default-features = false }
 
 [features]
 default = ["std"]

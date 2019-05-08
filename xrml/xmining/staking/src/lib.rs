@@ -239,6 +239,12 @@ decl_module! {
             <ValidatorCount<T>>::put(new);
         }
 
+        /// The severity of missed blocks per session.
+        fn set_missed_blocks_severity(new: Compact<u32>) {
+            let new: u32 = new.into();
+            <MissedBlockSeverity<T>>::put(new);
+        }
+
         /// Force there to be a new era. This also forces a new session immediately after.
         /// `apply_rewards` should be true for validators to get the session reward.
         fn force_new_era(apply_rewards: bool) -> Result {
@@ -317,6 +323,8 @@ decl_storage! {
         pub OfflineValidatorsPerSession get(offline_validators_per_session): Vec<T::AccountId>;
         /// Total blocks that each active validator missed in the current session.
         pub MissedOfPerSession get(missed_of_per_session): map T::AccountId => u32;
+        /// The higher the severity, the more slash for missed blocks.
+        pub MissedBlockSeverity get(missed_blocks_severity) config(): u32;
     }
 }
 

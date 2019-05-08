@@ -128,7 +128,8 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             bonding_duration,
             intention_bonding_duration,
             current_era: 0,
-            minimum_penalty: 10_000_000, // 0.1 PCX by default
+            minimum_penalty: 1_000_000, // 0.01 PCX by default
+            missed_blocks_severity: 3,
         }),
         xtokens: Some(XTokensConfig {
             token_discount: vec![

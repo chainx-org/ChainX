@@ -87,7 +87,7 @@ impl<T: Trait> Module<T> {
         let missed = <MissedOfPerSession<T>>::take(who) as u64;
         let reward_per_block = Self::reward_of_per_block(my_reward);
         let total_slash = cmp::max(
-            T::Balance::sa(reward_per_block.as_() * 10 * missed),
+            T::Balance::sa(reward_per_block.as_() * missed * Self::missed_blocks_severity() as u64),
             T::Balance::sa(Self::minimum_penalty().as_() * missed),
         );
 
