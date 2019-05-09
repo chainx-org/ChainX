@@ -84,7 +84,7 @@ where
         "ChainX",
         args,
         exit,
-        |exit, custom_args, config| {
+        |exit, _cli_args, custom_args, config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
             info!("  by ChainX, 2018-2019");
