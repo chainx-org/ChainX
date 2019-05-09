@@ -228,6 +228,7 @@ pub fn parse_trustee_session_info(
         "sessionNumber": number,
         "hotEntity": hot,
         "coldEntity": cold,
+        "counts": info.counts,
         "trusteeList": info.trustees_info.into_iter().map(|(accountid, generic_props)| {
             let accountid :AccountIdForRpc= accountid.into();
             json!({
