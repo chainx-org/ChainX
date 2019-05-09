@@ -140,8 +140,12 @@ where
     }
 
     /// Generate storage key.
-    fn storage_key(key: &[u8]) -> StorageKey {
-        let hashed = primitives::twox_128(key).to_vec();
+    fn storage_key(key: &[u8], hasher:Hasher) -> StorageKey {
+        let hashed = match hasher {
+            Hasher::TWOX128=>primitives::twox_128(key).to_vec(),
+            Hasher::BLAKE2256=>primitives::blake2_256(key).to_vec(),
+        };
+        
         StorageKey(hashed)
     }
 
@@ -166,9 +170,10 @@ where
     fn pickout<ReturnValue: Decode>(
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
         key: &[u8],
+        hasher:Hasher,
     ) -> result::Result<Option<ReturnValue>, error::Error> {
         Ok(state
-            .storage(&Self::storage_key(key).0)
+            .storage(&Self::storage_key(key,hasher).0)
             .map_err(|e| error::Error::from_state(Box::new(e)))?
             .map(StorageData)
             .map(|s| Decode::decode(&mut s.0.as_slice()))

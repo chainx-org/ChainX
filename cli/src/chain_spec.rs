@@ -30,7 +30,8 @@ pub fn staging_testnet_config() -> ChainSpec {
         Some(
             json!({
                 "network_type": "testnet",
-                "address_type": 44
+                "address_type": 44,
+                "bitcoin_type": "mainnet"
             })
             .as_object()
             .unwrap()
@@ -63,7 +64,8 @@ pub fn development_config() -> ChainSpec {
         Some(
             json!({
                 "network_type": "testnet",
-                "address_type": 44
+                "address_type": 44,
+                "bitcoin_type": "mainnet"
             })
             .as_object()
             .unwrap()
@@ -97,7 +99,8 @@ pub fn local_testnet_config() -> ChainSpec {
         Some(
             json!({
                 "network_type": "testnet",
-                "address_type": 44
+                "address_type": 44,
+                "bitcoin_type": "mainnet"
             })
             .as_object()
             .unwrap()

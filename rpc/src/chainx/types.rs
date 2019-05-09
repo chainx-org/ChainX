@@ -35,6 +35,19 @@ use super::utils::try_hex_or_str;
 
 pub const MAX_PAGE_SIZE: u32 = 100;
 
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum Hasher {
+    TWOX128,
+    BLAKE2256,
+}
+impl Default for Hasher {
+    fn default() -> Self {
+        Hasher::TWOX128
+    }
+}
+
 // utils
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
