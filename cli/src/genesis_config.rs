@@ -1,5 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 
+use hex::FromHex;
 use serde_derive::Deserialize;
 use substrate_primitives::{crypto::UncheckedInto, ed25519::Public as AuthorityId};
 
@@ -22,20 +23,24 @@ use btc_primitives::{h256_from_rev_str, Compact};
 
 pub enum GenesisSpec {
     Dev,
-    Local,
-    Multi,
+    Testnet,
+    Mainnet,
 }
 const PCX_PRECISION: u16 = 8;
 
-pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
+fn hex(account: &str) -> [u8; 32] {
+    <[u8; 32] as FromHex>::from_hex(account).unwrap()
+}
+
+pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
     let sdot_claims = load_sdot_info().unwrap();
     let mut genesis_node_info = load_genesis_node_info().unwrap();
 
     let initial_authorities_len = match genesis_spec {
         GenesisSpec::Dev => 1,
-        GenesisSpec::Local => 4,
-        GenesisSpec::Multi => 4,
+        GenesisSpec::Testnet => genesis_node_info.len(),
+        GenesisSpec::Mainnet => genesis_node_info.len(),
     };
 
     const CONSENSUS_TIME: u64 = 1;
@@ -59,8 +64,23 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     genesis_node_info.truncate(initial_authorities_len);
 
+    let team_account = vec![
+        hex("a2308187439ac204df9e299e1e54afefafea4bf348e03dad679737c91871dc53"),
+        hex("6488ceea630000b48fed318d13248ea7c566c0f4d2b8b90d12a136ad6eb02323"),
+        hex("56758d236714a2fa7981af8c8177dddc6907875b2c23fd5c842922c8a2c5a1be"),
+    ];
+
+    let council_account = vec![
+        hex("a2308187439ac204df9e299e1e54afefafea4bf348e03dad679737c91871dc53"),
+        hex("6488ceea630000b48fed318d13248ea7c566c0f4d2b8b90d12a136ad6eb02323"),
+        hex("56758d236714a2fa7981af8c8177dddc6907875b2c23fd5c842922c8a2c5a1be"),
+        hex("3f53e37c21e24df9cacc2ec69d010d144fe4dace6b2f087f466ade8b6b72278f"),
+        hex("d3581c060b04fe74f625f053d6392edb86e94b3d02de7bba4728f761c0700773"),
+        hex("eb9c5cc73a88e455c86ee59f9d7437666dd4b1b3f54334dff83b0d3d1e4a41a9"),
+    ];
+
     let blocks_per_session = 150; // 150 blocks per session
-    let sessions_per_era = 2; // update validators set per 12 sessions
+    let sessions_per_era = 12; // update validators set per 12 sessions
     let sessions_per_epoch = sessions_per_era * 10; // update trustees set per 12*10 sessions
     let bonding_duration = blocks_per_session * sessions_per_era; // freeze 150*12 blocks for non-intention
     let intention_bonding_duration = bonding_duration * 10; // freeze 150*12*10 blocks for intention
@@ -249,10 +269,16 @@ pub fn testnet_genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 })
                 .collect(),
             // xmultisig (include trustees)
-            multisig_init_info: genesis_node_info
-                .iter()
-                .map(|(account, _, _, _, _, _, _, _)| (account.clone().into(), true))
-                .collect(),
+            multisig_init_info: (
+                team_account
+                    .iter()
+                    .map(|&account| account.unchecked_into())
+                    .collect(),
+                council_account
+                    .iter()
+                    .map(|&account| account.unchecked_into())
+                    .collect(),
+            ),
         }),
     }
 }
@@ -269,14 +295,11 @@ pub struct RecordOfSDOT {
 }
 
 fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> {
-    use rustc_hex::FromHex;
-
     let mut reader = csv::Reader::from_reader(&include_bytes!("dot_tx.csv")[..]);
     let mut res = Vec::with_capacity(3052);
     for result in reader.deserialize() {
         let record: RecordOfSDOT = result?;
-        let mut sdot_addr = [0u8; 20];
-        sdot_addr.copy_from_slice(&record.to[2..].from_hex::<Vec<u8>>()?);
+        let sdot_addr = <[u8; 20] as FromHex>::from_hex(&record.to[2..])?;
         res.push((sdot_addr, (record.quantity * 1000.0).round() as u64));
     }
     Ok(res)
@@ -307,22 +330,18 @@ fn load_genesis_node_info() -> Result<
     )>,
     Box<dyn std::error::Error>,
 > {
-    use hex::FromHex;
-
     let mut reader = csv::Reader::from_reader(&include_bytes!("genesis_node.csv")[..]);
     let mut res = Vec::with_capacity(29);
     for result in reader.deserialize() {
         let record: RecordOfGenesisNode = result?;
-        let mut account_buffer = [0u8; 32];
-        account_buffer.copy_from_slice(&Vec::from_hex(&record.account_id).unwrap());
-        let account_id = account_buffer.unchecked_into();
-        let mut authority_buffer = [0u8; 32];
-        authority_buffer.copy_from_slice(&Vec::from_hex(&record.authority_key).unwrap());
-        let authority_key = authority_buffer.unchecked_into();
+
+        let account_id = hex(&record.account_id).unchecked_into();
+        let authority_key = hex(&record.authority_key).unchecked_into();
+
         let money = (record.money * 10_u64.pow(PCX_PRECISION as u32) as f64) as u64;
-        let node_name = Vec::from_hex(hex::encode(&record.node_name)).unwrap();
-        let node_url = Vec::from_hex(hex::encode(&record.node_url)).unwrap();
-        let memo = Vec::from_hex(hex::encode(&record.memo)).unwrap();
+        let node_name = record.node_name.into_bytes();
+        let node_url = record.node_url.into_bytes();
+        let memo = record.memo.into_bytes();
         let hot_key = Vec::from_hex(&record.hot_entity).unwrap();
         let cold_key = Vec::from_hex(&record.cold_entity).unwrap();
         res.push((

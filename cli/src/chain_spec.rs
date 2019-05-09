@@ -5,7 +5,7 @@ use telemetry::TelemetryEndpoints;
 
 use chainx_runtime::GenesisConfig;
 
-use super::genesis_config::{testnet_genesis, GenesisSpec};
+use super::genesis_config::{genesis, GenesisSpec};
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const CHAINX_TELEMETRY_URL: &str = "wss://stats.chainx.org/submit/";
@@ -14,22 +14,22 @@ const CHAINX_TELEMETRY_URL: &str = "wss://stats.chainx.org/submit/";
 pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
 
 /// Staging testnet config.
-pub fn staging_testnet_config() -> ChainSpec {
+pub fn mainnet_config() -> ChainSpec {
     let boot_nodes = vec![];
     ChainSpec::from_genesis(
-        "ChainX Staging Testnet",
-        "chainx_staging_testnet",
-        staging_testnet_config_genesis,
+        "ChainX Mainnet",
+        "chainx_mainnet",
+        mainnet_config_genesis,
         boot_nodes,
         Some(TelemetryEndpoints::new(vec![
             (STAGING_TELEMETRY_URL.to_string(), 0),
             (CHAINX_TELEMETRY_URL.to_string(), 0),
         ])),
-        Some("STAGE ChainX V0.9.9"),
+        Some("ChainX Mainnet"),
         None,
         Some(
             json!({
-                "network_type": "testnet",
+                "network_type": "mainnet",
                 "address_type": 44,
                 "bitcoin_type": "mainnet"
             })
@@ -40,12 +40,12 @@ pub fn staging_testnet_config() -> ChainSpec {
     )
 }
 
-fn staging_testnet_config_genesis() -> GenesisConfig {
-    testnet_genesis(GenesisSpec::Multi)
+fn mainnet_config_genesis() -> GenesisConfig {
+    genesis(GenesisSpec::Mainnet)
 }
 
 fn development_config_genesis() -> GenesisConfig {
-    testnet_genesis(GenesisSpec::Dev)
+    genesis(GenesisSpec::Dev)
 }
 
 /// Development config (single validator Alice)
@@ -74,12 +74,11 @@ pub fn development_config() -> ChainSpec {
     )
 }
 
-fn local_testnet_genesis() -> GenesisConfig {
-    testnet_genesis(GenesisSpec::Local)
+fn testnet_genesis() -> GenesisConfig {
+    genesis(GenesisSpec::Testnet)
 }
 
-/// Local testnet config (multivalidator Alice + Bob)
-pub fn local_testnet_config() -> ChainSpec {
+pub fn testnet_config() -> ChainSpec {
     let boot_nodes = vec![
         "/ip4/47.96.134.203/tcp/31126/p2p/QmUzwniXCadDYiHBQhw4CnMNRRttnVAXE2TBdDYXcT65va".into(),
         "/ip4/47.96.97.52/tcp/31127/p2p/QmUXuCPovJpMf3Y1AAA5pZJkPhMQkmX1tEgHhCz82cDtiA".into(),
@@ -88,13 +87,13 @@ pub fn local_testnet_config() -> ChainSpec {
     ChainSpec::from_genesis(
         "ChainX V0.9.9",
         "chainx_testnet",
-        local_testnet_genesis,
+        testnet_genesis,
         boot_nodes,
         Some(TelemetryEndpoints::new(vec![
             (STAGING_TELEMETRY_URL.to_string(), 0),
             (CHAINX_TELEMETRY_URL.to_string(), 0),
         ])),
-        Some("LOCAL ChainX V0.9.9"),
+        Some("ChainX Testnet V0.9.9"),
         None,
         Some(
             json!({

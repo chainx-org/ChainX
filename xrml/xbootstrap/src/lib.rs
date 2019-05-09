@@ -39,7 +39,7 @@ decl_storage! {
         config(authorities): Vec<(T::SessionKey, u64)>;
 
         // multisig
-        config(multisig_init_info): (Vec<(T::AccountId, bool)>);
+        config(multisig_init_info): (Vec<T::AccountId>, Vec<T::AccountId>);
 
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use parity_codec::{Encode, KeyedVec};
@@ -50,7 +50,7 @@ decl_storage! {
             use xassets::{ChainT, Token, Chain, Asset};
             use xspot::CurrencyPair;
             use xbridge_features::H264;
-            use xsupport::warn;
+            use xsupport::error;
 
             // grandpa
             let auth_count = config.authorities.len() as u32;
@@ -132,18 +132,21 @@ decl_storage! {
                 }
 
                 // xmultisig
-                let init_accounts = config.multisig_init_info.clone();
-                let len = init_accounts.len() as u32;
-                let two_thirds = |sum: u32| {
-                    let m = 2 * sum;
-                    if m % 3 == 0 { m / 3 } else { m / 3 + 1 }
-                };
-                let required_num = two_thirds(len);
+                let team_accounts: Vec<(T::AccountId, bool)> = config.multisig_init_info.0.clone().into_iter().map(|account| (account, true)).collect();
+                let council_accounts: Vec<(T::AccountId, bool)> = config.multisig_init_info.1.clone().into_iter().map(|account| (account, true)).collect();
                 // deploy multisig, just for `TeamAddress` and `CouncilAddress`
-                if len >= 4 {
-                    xmultisig::Module::<T>::deploy_in_genesis(init_accounts, required_num).unwrap();
+                if team_accounts.len() != 3 || council_accounts.len() != 6 {
+                    error!("[xmultisig|deploy_in_genesis]|can't generate TeamAddr and CouncilAddr for team(len:{:?}) or council(len:{:?}) account",
+                            team_accounts.len(), council_accounts.len());
+                    panic!("init genesis failed: team or council lenth not right");
                 } else {
-                    warn!("[xmultisig|deploy_in_genesis]|can't generate TeamAddr and CouncilAddr for less then 4 init account");
+                    let two_thirds = |sum: u32| {
+                        let m = 2 * sum;
+                        if m % 3 == 0 { m / 3 } else { m / 3 + 1 }
+                    };
+                    let team_required_num = two_thirds(team_accounts.len() as u32);
+                    let council_required_num = two_thirds(council_accounts.len() as u32);
+                    xmultisig::Module::<T>::deploy_in_genesis(team_accounts, team_required_num, council_accounts, council_required_num).unwrap();
                 }
 
                 // xspot

@@ -43,8 +43,8 @@ use super::error::{ErrorKind, Result};
 use super::types::*;
 
 use super::types::{
-    parse_trustee_props, parse_trustee_session_info, AssetInfo, PageData, TotalAssetInfo,
-    MAX_PAGE_SIZE,Hasher,
+    parse_trustee_props, parse_trustee_session_info, AssetInfo, Hasher, PageData, TotalAssetInfo,
+    MAX_PAGE_SIZE,
 };
 use super::{ChainX, ChainXApi};
 
@@ -126,7 +126,9 @@ where
             );
 
             let key = <xassets::TotalAssetBalance<Runtime>>::key_for(asset.token().as_ref());
-            if let Some(info) = Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key, Hasher::BLAKE2256)? {
+            if let Some(info) =
+                Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key, Hasher::BLAKE2256)?
+            {
                 bmap.extend(info.iter());
             }
 
@@ -239,8 +241,9 @@ where
                     who.clone().unchecked_into(),
                     intention.clone(),
                 ));
-                if let Some(record) =
-                    Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(&state, &key, Hasher::BLAKE2256)?
+                if let Some(record) = Self::pickout::<
+                    xstaking::NominationRecord<Balance, BlockNumber>,
+                >(&state, &key, Hasher::BLAKE2256)?
                 {
                     let revocations = record
                         .revocations
@@ -323,7 +326,9 @@ where
                 }
 
                 let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
-                if let Some(props) = Self::pickout::<IntentionProps<AuthorityId>>(&state, &key, Hasher::BLAKE2256)? {
+                if let Some(props) =
+                    Self::pickout::<IntentionProps<AuthorityId>>(&state, &key, Hasher::BLAKE2256)?
+                {
                     info.url = String::from_utf8_lossy(&props.url).into_owned();
                     info.is_active = props.is_active;
                     info.about = String::from_utf8_lossy(&props.about).into_owned();
@@ -334,16 +339,22 @@ where
                 }
 
                 let key = <xstaking::IntentionProfiles<Runtime>>::key_for(&intention);
-                if let Some(profs) =
-                    Self::pickout::<IntentionProfs<Balance, BlockNumber>>(&state, &key, Hasher::BLAKE2256)?
-                {
+                if let Some(profs) = Self::pickout::<IntentionProfs<Balance, BlockNumber>>(
+                    &state,
+                    &key,
+                    Hasher::BLAKE2256,
+                )? {
                     let key = (
                         jackpot_addr.clone(),
                         xassets::Module::<Runtime>::TOKEN.to_vec(),
                     );
                     let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
-                    let map = Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &balances_key, Hasher::BLAKE2256)?
-                        .unwrap_or_default();
+                    let map = Self::pickout::<BTreeMap<AssetType, Balance>>(
+                        &state,
+                        &balances_key,
+                        Hasher::BLAKE2256,
+                    )?
+                    .unwrap_or_default();
                     let free = map
                         .get(&AssetType::Free)
                         .map(|free| *free)
@@ -359,8 +370,9 @@ where
                     intention.clone(),
                     intention.clone(),
                 ));
-                if let Some(record) =
-                    Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(&state, &key, Hasher::BLAKE2256)?
+                if let Some(record) = Self::pickout::<
+                    xstaking::NominationRecord<Balance, BlockNumber>,
+                >(&state, &key, Hasher::BLAKE2256)?
                 {
                     info.self_vote = record.nomination;
                 }
@@ -393,16 +405,22 @@ where
                 let mut info = PseduIntentionInfo::default();
 
                 let key = <xtokens::PseduIntentionProfiles<Runtime>>::key_for(&token);
-                if let Some(vote_weight) =
-                    Self::pickout::<PseduIntentionVoteWeight<Balance>>(&state, &key, Hasher::BLAKE2256)?
-                {
+                if let Some(vote_weight) = Self::pickout::<PseduIntentionVoteWeight<Balance>>(
+                    &state,
+                    &key,
+                    Hasher::BLAKE2256,
+                )? {
                     let key = (
                         jackpot_addr.clone(),
                         xassets::Module::<Runtime>::TOKEN.to_vec(),
                     );
                     let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
-                    let map = Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &balances_key, Hasher::BLAKE2256)?
-                        .unwrap_or_default();
+                    let map = Self::pickout::<BTreeMap<AssetType, Balance>>(
+                        &state,
+                        &balances_key,
+                        Hasher::BLAKE2256,
+                    )?
+                    .unwrap_or_default();
                     let free = map
                         .get(&AssetType::Free)
                         .map(|free| *free)
@@ -472,9 +490,11 @@ where
                     who.clone().unchecked_into(),
                     token.clone(),
                 ));
-                if let Some(vote_weight) =
-                    Self::pickout::<DepositVoteWeight<BlockNumber>>(&state, &key, Hasher::BLAKE2256)?
-                {
+                if let Some(vote_weight) = Self::pickout::<DepositVoteWeight<BlockNumber>>(
+                    &state,
+                    &key,
+                    Hasher::BLAKE2256,
+                )? {
                     record.last_total_deposit_weight = vote_weight.last_deposit_weight;
                     record.last_total_deposit_weight_update =
                         vote_weight.last_deposit_weight_update;
@@ -485,7 +505,8 @@ where
                     token.clone(),
                 ));
 
-                if let Some(balances) = Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key, Hasher::BLAKE2256)?
+                if let Some(balances) =
+                    Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key, Hasher::BLAKE2256)?
                 {
                     record.balance = balances.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v);
                 }
@@ -517,18 +538,22 @@ where
                     info.unit_precision = pair.tick_precision;
 
                     let price_key = <xspot::TradingPairInfoOf<Runtime>>::key_for(&i);
-                    if let Some(price) =
-                        Self::pickout::<(Balance, Balance, BlockNumber)>(&state, &price_key, Hasher::BLAKE2256)?
-                    {
+                    if let Some(price) = Self::pickout::<(Balance, Balance, BlockNumber)>(
+                        &state,
+                        &price_key,
+                        Hasher::BLAKE2256,
+                    )? {
                         info.last_price = price.0;
                         info.aver_price = price.1;
                         info.update_height = price.2;
                     }
 
                     let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&i);
-                    if let Some(handicap) =
-                        Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key, Hasher::BLAKE2256)?
-                    {
+                    if let Some(handicap) = Self::pickout::<HandicapInfo<Runtime>>(
+                        &state,
+                        &handicap_key,
+                        Hasher::BLAKE2256,
+                    )? {
                         info.buy_one = handicap.highest_bid;
                         info.sell_one = handicap.lowest_offer;
 
@@ -568,7 +593,8 @@ where
                 .iter()
                 .map(|q| {
                     let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(q);
-                    Self::pickout::<OrderInfo<Runtime>>(&state, &order_key, Hasher::BLAKE2256).unwrap()
+                    Self::pickout::<OrderInfo<Runtime>>(&state, &order_key, Hasher::BLAKE2256)
+                        .unwrap()
                 })
                 .map(|order| {
                     let order = order.unwrap();
@@ -584,9 +610,11 @@ where
             |price: Balance, quotations_info: &mut Vec<(Balance, Balance)>| -> Result<()> {
                 let quotations_key = <xspot::QuotationsOf<Runtime>>::key_for(&(pair_index, price));
 
-                if let Some(orders) =
-                    Self::pickout::<Vec<(AccountId, OrderIndex)>>(&state, &quotations_key, Hasher::BLAKE2256)?
-                {
+                if let Some(orders) = Self::pickout::<Vec<(AccountId, OrderIndex)>>(
+                    &state,
+                    &quotations_key,
+                    Hasher::BLAKE2256,
+                )? {
                     if !orders.is_empty() {
                         quotations_info.push((price, sum_of_quotations(orders)));
                     }
@@ -603,7 +631,9 @@ where
             let tick = pair.tick();
 
             let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&pair_index);
-            if let Some(handicap) = Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key, Hasher::BLAKE2256)? {
+            if let Some(handicap) =
+                Self::pickout::<HandicapInfo<Runtime>>(&state, &handicap_key, Hasher::BLAKE2256)?
+            {
                 let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
                 let maximum_bid = if lowest_offer.is_zero() {
@@ -661,7 +691,9 @@ where
             for i in (0..len).rev() {
                 let order_key =
                     <xspot::OrderInfoOf<Runtime>>::key_for(&(who.clone().unchecked_into(), i));
-                if let Some(order) = Self::pickout::<OrderInfo<Runtime>>(&state, &order_key, Hasher::BLAKE2256)? {
+                if let Some(order) =
+                    Self::pickout::<OrderInfo<Runtime>>(&state, &order_key, Hasher::BLAKE2256)?
+                {
                     if total >= page_index * page_size && total < ((page_index + 1) * page_size) {
                         orders.push(order.clone().into());
                     }
@@ -779,11 +811,14 @@ where
         match chain {
             Chain::Bitcoin => {
                 let key = <xbitcoin::CurrentWithdrawalProposal<Runtime>>::key();
-                Self::pickout::<xbitcoin::WithdrawalProposal<AccountId>>(&state, &key, Hasher::TWOX128).map(
-                    |option_data| {
-                        option_data.map(|proposal| WithdrawTxInfo::from_bitcoin_proposal(proposal))
-                    },
+                Self::pickout::<xbitcoin::WithdrawalProposal<AccountId>>(
+                    &state,
+                    &key,
+                    Hasher::TWOX128,
                 )
+                .map(|option_data| {
+                    option_data.map(|proposal| WithdrawTxInfo::from_bitcoin_proposal(proposal))
+                })
             }
             _ => Ok(None),
         }

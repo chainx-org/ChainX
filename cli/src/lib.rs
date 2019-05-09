@@ -39,12 +39,9 @@ use self::service::set_validator_name;
 /// The chain specification option.
 #[derive(Clone, Debug)]
 pub enum ChainSpec {
-    /// Whatever the current runtime is, with just Alice as an auth.
     Development,
-    /// Whatever the current runtime is, with simple Alice/Bob auths.
-    LocalTestnet,
-    /// Whatever the current runtime is with the "global testnet" defaults.
-    StagingTestnet,
+    Testnet,
+    Mainnet,
 }
 
 /// Get a chain config from a spec setting.
@@ -52,8 +49,8 @@ impl ChainSpec {
     pub(crate) fn load(self) -> Result<chain_spec::ChainSpec, String> {
         Ok(match self {
             ChainSpec::Development => chain_spec::development_config(),
-            ChainSpec::LocalTestnet => chain_spec::local_testnet_config(),
-            ChainSpec::StagingTestnet => chain_spec::staging_testnet_config(),
+            ChainSpec::Testnet => chain_spec::testnet_config(),
+            ChainSpec::Mainnet => chain_spec::mainnet_config(),
         })
     }
 
@@ -61,8 +58,8 @@ impl ChainSpec {
         match s {
             // TODO wait for substrate fix for command sequence
             "dev" | "" => Some(ChainSpec::Development),
-            "local" => Some(ChainSpec::LocalTestnet),
-            "staging" => Some(ChainSpec::StagingTestnet),
+            "testnet" => Some(ChainSpec::Testnet),
+            "mainnet" => Some(ChainSpec::Testnet),
             _ => None,
         }
     }

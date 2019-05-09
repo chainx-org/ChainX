@@ -35,7 +35,7 @@ pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
 }
 
 pub trait GenesisMultiSig<AccountId> {
-    fn gen_genesis_multisig(accounts: Vec<AccountId>) -> (AccountId, AccountId);
+    fn gen_genesis_multisig() -> (AccountId, AccountId);
 }
 
 pub trait TrusteeCall<AccountId> {
@@ -81,14 +81,9 @@ impl<T: Trait> GenesisMultiSig<T::AccountId> for ChainXGenesisMultisig<T>
 where
     T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
 {
-    fn gen_genesis_multisig(accounts: Vec<T::AccountId>) -> (T::AccountId, T::AccountId) {
-        let mut buf = Vec::<u8>::new();
-        buf.extend_from_slice(b"Team");
-        for a in accounts.iter() {
-            buf.extend_from_slice(a.as_ref());
-        }
+    fn gen_genesis_multisig() -> (T::AccountId, T::AccountId) {
         let team_multisig_addr: T::AccountId =
-            UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]));
+            UncheckedFrom::unchecked_from(T::Hashing::hash(&b"Team"[..]));
         let council_multisig_addr: T::AccountId =
             UncheckedFrom::unchecked_from(T::Hashing::hash(&b"Council"[..]));
         (team_multisig_addr, council_multisig_addr)
@@ -320,32 +315,42 @@ impl<T: Trait> Module<T> {
     }
 
     #[cfg(feature = "std")]
-    pub fn deploy_in_genesis(owners: Vec<(T::AccountId, bool)>, required_num: u32) -> Result {
+    pub fn deploy_in_genesis(
+        team: Vec<(T::AccountId, bool)>,
+        team_required_num: u32,
+        council: Vec<(T::AccountId, bool)>,
+        council_required_num: u32,
+    ) -> Result {
         use support::StorageValue;
 
-        if owners.len() < 1 {
-            error!("[deploy_in_genesis]|the owners count can't be zero|owners.len:{:}|required_num:{:?}", owners.len(), required_num);
+        if team.len() < 1 || council.len() < 1 {
+            error!(
+                "[deploy_in_genesis]|the team:{:?} and council:{:?} count can't be zero",
+                team.len(),
+                council.len()
+            );
             panic!("the owners count can't be zero");
         }
-        let deployer = owners.get(0).unwrap().clone().0;
+        let team_deployer = team.get(0).unwrap().clone().0;
 
-        let (team_multisig_addr, council_multisig_addr) = T::GenesisMultiSig::gen_genesis_multisig(
-            owners.iter().map(|(a, _)| a.clone()).collect(),
-        );
+        let (team_multisig_addr, council_multisig_addr) =
+            T::GenesisMultiSig::gen_genesis_multisig();
 
         Self::deploy_impl(
             AddrType::Normal,
             &team_multisig_addr,
-            &deployer,
-            owners.clone(),
-            required_num,
+            &team_deployer,
+            team,
+            team_required_num,
         )?;
+
+        let council_deployer = council.get(0).unwrap().clone().0;
         Self::deploy_impl(
             AddrType::Root,
             &council_multisig_addr,
-            &deployer,
-            owners.clone(),
-            required_num,
+            &council_deployer,
+            council,
+            council_required_num,
         )?;
 
         RootAddrList::<T>::put(vec![council_multisig_addr.clone()]);
