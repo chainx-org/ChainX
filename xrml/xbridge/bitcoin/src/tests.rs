@@ -356,10 +356,10 @@ fn test_sign_state() {
     data.push((3, true));
     data.push((4, true));
     let vote_state = false;
-    update_trustee_vote_state::<Test>(vote_state, &1, &mut data);
-    update_trustee_vote_state::<Test>(vote_state, &3, &mut data);
-    update_trustee_vote_state::<Test>(vote_state, &2, &mut data);
-    update_trustee_vote_state::<Test>(vote_state, &4, &mut data);
+    insert_trustee_vote_state::<Test>(vote_state, &1, &mut data);
+    insert_trustee_vote_state::<Test>(vote_state, &3, &mut data);
+    insert_trustee_vote_state::<Test>(vote_state, &2, &mut data);
+    insert_trustee_vote_state::<Test>(vote_state, &4, &mut data);
     let d = vec![(1, false), (3, false), (2, false), (4, false)];
     assert_eq!(data, d);
 }

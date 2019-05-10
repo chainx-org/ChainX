@@ -27,7 +27,7 @@ use xbridge_common::{
     utils::two_thirds_unsafe,
 };
 use xr_primitives::{generic::b58, AddrStr};
-use xrecords::TxState;
+use xrecords::{ApplicationState, TxState};
 use xsupport::{debug, ensure_with_errorlog, error, info, warn};
 #[cfg(feature = "std")]
 use xsupport::{trustees, u8array_to_string};
@@ -42,12 +42,12 @@ use btc_ser::{deserialize, Reader};
 use self::tx::utils::{get_sig_num, inspect_address_from_transaction, trustee_session};
 use self::tx::{
     check_withdraw_tx, create_multi_address, detect_transaction_type, handle_tx,
-    parse_and_check_signed_tx, update_trustee_vote_state, validate_transaction,
+    insert_trustee_vote_state, parse_and_check_signed_tx, validate_transaction,
 };
-use self::types::{BindStatus, DepositCache, TxType};
 pub use self::types::{
     BlockHeaderInfo, Params, RelayTx, TrusteeAddrInfo, TxInfo, VoteResult, WithdrawalProposal,
 };
+use self::types::{DepositCache, TxType};
 
 pub trait Trait:
     system::Trait + timestamp::Trait + xsystem::Trait + xrecords::Trait + xfee_manager::Trait
@@ -76,13 +76,11 @@ decl_event!(
         /// create withdraw tx, who proposal, withdrawal list id
         CreateWithdrawalProposal(AccountId, Vec<u32>),
         /// Sign withdraw tx
-        UpdateSignWithdrawTx(AccountId, bool),
+        SignWithdrawalProposal(AccountId, bool),
         /// WithdrawalFatalErr, tx hash, Proposal hash,
         WithdrawalFatalErr(Vec<u8>, Vec<u8>),
         /// reject_count, sum_count, withdrawal id list
-        DropWithdrawTx(u32, u32, Vec<u32>),
-        /// tx hash, input addr, account addr, bind state (init|update)
-        Bind(H256, AddrStr, AccountId, BindStatus),
+        DropWithdrawalProposal(u32, u32, Vec<u32>),
     }
 );
 
@@ -201,9 +199,7 @@ decl_module! {
             let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| "Parse transaction err")?;
             debug!("[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
 
-            Self::apply_create_withdraw(tx, withdrawal_id_list.clone())?;
-
-            Self::deposit_event(RawEvent::CreateWithdrawalProposal(from, withdrawal_id_list));
+            Self::apply_create_withdraw(from, tx, withdrawal_id_list.clone())?;
             Ok(())
         }
 
@@ -223,11 +219,10 @@ decl_module! {
             Ok(())
         }
 
-        pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, success: bool) -> Result {
+        pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: ApplicationState) -> Result {
             let from = ensure_signed(origin)?;
             T::TrusteeMultiSigProvider::check_multisig(&from)?;
-
-            xrecords::Module::<T>::fix_withdrawal_state(withdrawal_id, success)
+            xrecords::Module::<T>::fix_withdrawal_state_by_trustees(withdrawal_id, state)
         }
 
         pub fn set_btc_withdrawal_fee_by_trustees(origin, fee: T::Balance) -> Result {
@@ -563,7 +558,11 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn apply_create_withdraw(tx: Transaction, withdrawal_id_list: Vec<u32>) -> Result {
+    fn apply_create_withdraw(
+        who: T::AccountId,
+        tx: Transaction,
+        withdrawal_id_list: Vec<u32>,
+    ) -> Result {
         let withdraw_amount = Self::max_withdrawal_count();
         if withdrawal_id_list.len() > withdraw_amount as usize {
             error!("[apply_create_withdraw]|Exceeding the maximum withdrawal amount|current list len:{:}|max:{:}", withdrawal_id_list.len(), withdraw_amount);
@@ -575,21 +574,54 @@ impl<T: Trait> Module<T> {
         withdrawal_id_list.dedup();
 
         check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
-
         info!(
             "[apply_create_withdraw]|create new withdraw|withdrawal idlist:{:?}",
             withdrawal_id_list
         );
 
+        // check sig
+        let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
+        let apply_sig = if sigs_count == 0 {
+            false
+        } else if sigs_count == 1 {
+            true
+        } else {
+            error!("[apply_create_withdraw]|the sigs for tx could not more than 1 in apply_create_withdraw|current sigs:{:}", sigs_count);
+            return Err("the sigs for tx could not more than 1 in apply_create_withdraw");
+        };
+
+        xrecords::Module::<T>::withdrawal_processing(&withdrawal_id_list)?;
         // log event
         for id in withdrawal_id_list.iter() {
             Self::deposit_event(RawEvent::Withdrawal(*id, Vec::new(), TxState::Signing));
         }
 
-        let candidate =
-            WithdrawalProposal::new(VoteResult::Unfinish, withdrawal_id_list, tx, Vec::new());
-        CurrentWithdrawalProposal::<T>::put(candidate);
+        let mut proposal = WithdrawalProposal::new(
+            VoteResult::Unfinish,
+            withdrawal_id_list.clone(),
+            tx,
+            Vec::new(),
+        );
+
         info!("[apply_create_withdraw]|Through the legality check of withdrawal");
+
+        Self::deposit_event(RawEvent::CreateWithdrawalProposal(
+            who.clone(),
+            withdrawal_id_list,
+        ));
+
+        if apply_sig {
+            info!("[apply_create_withdraw]apply sign after create proposal");
+            // due to `SignWithdrawalProposal` event should after `CreateWithdrawalProposal`, thus this function should after proposal
+            // but this function would have an error return, this error return should not meet.
+            if let Err(s) = insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list) {
+                // should not be error in this function, if hit this branch, panic to clear all modification
+                panic!(s)
+            }
+        }
+
+        CurrentWithdrawalProposal::<T>::put(proposal);
+
         Ok(())
     }
 
@@ -602,29 +634,38 @@ impl<T: Trait> Module<T> {
             return Err("proposal is on FINISH state, can't sign for this proposal");
         }
 
-        let (sig_num, _) = get_sig_num::<T>();
+        let (sig_num, total) = get_sig_num::<T>();
         match tx {
             Some(tx) => {
-                // check this tx is same to proposal
+                // check this tx is same to proposal, just check input and output, not include sigs
                 tx::utils::ensure_identical(&tx, &proposal.tx)?;
 
                 // sign
                 // check first and get signatures from commit transaction
-                let sigs = parse_and_check_signed_tx::<T>(&tx)?;
+                let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
 
-                if sigs.len() <= proposal.trustee_list.len() {
+                let confirmed_count = proposal
+                    .trustee_list
+                    .iter()
+                    .filter(|(_, vote)| *vote == true)
+                    .count() as u32;
+
+                if sigs_count != confirmed_count + 1 {
                     error!(
-                        "[apply_sig_withdraw]|tx sigs len:{:}|proposal trustee len:{:}",
-                        sigs.len(),
-                        proposal.trustee_list.len()
+                        "[apply_sig_withdraw]|Need to sign on the latest signature results|sigs count:{:}|confirmed count:{:}",
+                        sigs_count,
+                        confirmed_count
                     );
                     return Err("Need to sign on the latest signature results");
                 }
 
-                update_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list);
-
-                if sigs.len() as u32 >= sig_num {
-                    info!("[apply_sig_withdraw]Signature completed: {:}", sigs.len());
+                insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list)?;
+                // check required count
+                // required count should be equal or more than (2/3)*total
+                // e.g. total=6 => required=2*6/3=4, thus equal to 4 should mark as finish
+                if sigs_count == sig_num {
+                    // mark as finish, can't do anything for this proposal
+                    info!("[apply_sig_withdraw]Signature completed: {:}", sigs_count);
                     proposal.sig_state = VoteResult::Finish;
 
                     // log event
@@ -643,17 +684,22 @@ impl<T: Trait> Module<T> {
             }
             None => {
                 // reject
-                update_trustee_vote_state::<T>(false, &who, &mut proposal.trustee_list);
+                insert_trustee_vote_state::<T>(false, &who, &mut proposal.trustee_list)?;
 
                 let reject_count = proposal
                     .trustee_list
                     .iter()
                     .filter(|(_, vote)| *vote == false)
                     .count() as u32;
-                if reject_count >= sig_num {
+
+                // reject count just need  < (total-required) / total
+                // e.g. total=6 => required=2*6/3=4, thus, reject should more than (6-4) = 2
+                // > 2 equal to total - required + 1 = 6-4+1 = 3
+                let need_reject = total - sig_num + 1;
+                if reject_count == need_reject {
                     info!(
                         "[apply_sig_withdraw]|{:}/{:} opposition, clear withdrawal propoal",
-                        reject_count, sig_num
+                        reject_count, total
                     );
                     CurrentWithdrawalProposal::<T>::kill();
 
@@ -666,7 +712,7 @@ impl<T: Trait> Module<T> {
                         ));
                     }
 
-                    Self::deposit_event(RawEvent::DropWithdrawTx(
+                    Self::deposit_event(RawEvent::DropWithdrawalProposal(
                         reject_count as u32,
                         sig_num as u32,
                         proposal.withdrawal_id_list.clone(),

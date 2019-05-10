@@ -68,13 +68,6 @@ impl<AccountId> WithdrawalProposal<AccountId> {
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum BindStatus {
-    Init,
-    Update,
-}
-
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum VoteResult {
     Unfinish,
     Finish,

@@ -13,3 +13,6 @@ pub type XString = Vec<u8>;
 pub type Name = XString;
 pub type URL = XString;
 pub type AddrStr = XString;
+pub type Memo = XString;
+pub type Token = XString;
+pub type Desc = XString;

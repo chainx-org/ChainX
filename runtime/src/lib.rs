@@ -39,7 +39,7 @@ use version::RuntimeVersion;
 use chainx_primitives;
 use runtime_api;
 use xgrandpa::fg_primitives::{self, ScheduledChange};
-use xr_primitives;
+use xr_primitives::AddrStr;
 
 // chainx
 use chainx_primitives::{
@@ -399,7 +399,7 @@ impl_runtime_apis! {
             }
         }
 
-        fn verify_address(token: xassets::Token, addr: xrecords::AddrStr, ext: xassets::Memo) -> Result<(), Vec<u8>> {
+        fn verify_address(token: xassets::Token, addr: AddrStr, ext: xassets::Memo) -> Result<(), Vec<u8>> {
             XAssetsProcess::verify_address(token, addr, ext).map_err(|e| e.as_bytes().to_vec())
         }
 

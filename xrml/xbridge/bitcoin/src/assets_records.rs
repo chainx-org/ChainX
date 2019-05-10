@@ -45,14 +45,15 @@ impl<T: Trait> Module<T> {
                 let confirmations = Module::<T>::confirmation_number();
                 let mut current_hash = Self::best_index();
                 let mut tx_hash: Vec<u8> = Default::default();
+                let mut tx_confirmed = 1;
                 // not include confirmed block, when confirmations = 6, it's 0..5 => [0,1,2,3,4]
                 // b(100)(confirmed) - b(101) - b(102) - b(103) - b(104) - b(105)(best)
-                //                                                         current 0
-                //                                              current 1
-                //                                    current 2
-                //                           current 3
-                //                  current 4
-                for _ in 0..(confirmations - 1) {
+                //                                                         current 1
+                //                                              current 2
+                //                                    current 3
+                //                           current 4
+                //                  current 5
+                for confirmed in 1_u32..confirmations {
                     if let Some(info) = Module::<T>::block_header_for(current_hash) {
                         // lookup withdrawal tx in current header
                         for txid in info.txid_list {
@@ -64,6 +65,7 @@ impl<T: Trait> Module<T> {
                                             ensure_identical(&tx_info.raw_tx, &proposal.tx)
                                         {
                                             tx_hash = tx_info.raw_tx.hash().as_ref().to_vec();
+                                            tx_confirmed = confirmed;
                                         }
                                     }
                                 }
@@ -79,7 +81,6 @@ impl<T: Trait> Module<T> {
                     }
                 }
                 for record in records.iter_mut() {
-                    record.txid = tx_hash.clone();
                     if proposal
                         .withdrawal_id_list
                         .iter()
@@ -88,7 +89,10 @@ impl<T: Trait> Module<T> {
                         // in proposal, change state , not in proposal, state is Applying
                         record.state = match proposal.sig_state {
                             VoteResult::Unfinish => TxState::Signing,
-                            VoteResult::Finish => TxState::Processing,
+                            VoteResult::Finish => {
+                                record.txid = tx_hash.clone();
+                                TxState::Confirming(tx_confirmed, confirmations)
+                            }
                         };
                     }
                 }

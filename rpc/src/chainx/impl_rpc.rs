@@ -20,7 +20,7 @@ use support::storage::{StorageMap, StorageValue};
 // chainx
 use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::{Call, Runtime};
-use xr_primitives::Name;
+use xr_primitives::{AddrStr, Name};
 
 use xaccounts::IntentionProps;
 use xassets::{Asset, AssetType, Chain, ChainT, Token};
@@ -140,7 +140,7 @@ where
 
     fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<bool>> {
         let token: xassets::Token = token.as_bytes().to_vec();
-        let addr: xrecords::AddrStr = addr.as_bytes().to_vec();
+        let addr: AddrStr = addr.as_bytes().to_vec();
         let memo: xassets::Memo = memo.as_bytes().to_vec();
 
         // test valid before call runtime api

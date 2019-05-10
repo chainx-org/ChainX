@@ -76,38 +76,49 @@ fn verify_sig(sig: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Byt
 }
 
 /// Check signed transactions
-pub fn parse_and_check_signed_tx<T: Trait>(
-    tx: &Transaction,
-) -> result::Result<Vec<Bytes>, &'static str> {
-    // parse sigs from transaction first input
-    let script: Script = tx.inputs[0].script_sig.clone().into();
-    if script.len() < 2 {
-        return Err("Invalid signature, script_sig is too short");
-    }
-    let (sigs, _) = script
-        .extract_multi_scriptsig()
-        .map_err(|_| "Invalid signature")?;
-
+pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, &'static str> {
     let redeem_script = get_hot_trustee_redeem_script::<T>()?;
-
     let (pubkeys, _, _) = redeem_script
         .parse_redeem_script()
         .ok_or("Parse redeem script failed")?;
-
     let bytes_sedeem_script = redeem_script.to_bytes();
-    for sig in sigs.iter() {
-        let mut verify = false;
-        for pubkey in pubkeys.iter() {
-            if verify_sig(sig, pubkey, tx, &bytes_sedeem_script) {
-                verify = true;
-                break;
+
+    let mut v = Vec::new();
+    // any input check meet error would return
+    for i in 0..tx.inputs.len() {
+        // parse sigs from transaction inputs
+        let script: Script = tx.inputs[i].script_sig.clone().into();
+        if script.len() < 2 {
+            return Err("Invalid signature, script_sig is too short");
+        }
+        let (sigs, _) = script
+            .extract_multi_scriptsig()
+            .map_err(|_| "Invalid signature")?;
+
+        for sig in sigs.iter() {
+            let mut verify = false;
+            for pubkey in pubkeys.iter() {
+                if verify_sig(sig, pubkey, tx, &bytes_sedeem_script) {
+                    verify = true;
+                    break;
+                }
+            }
+            if !verify {
+                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}", tx);
+                return Err("Verify sign failed");
             }
         }
-        if !verify {
-            error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}", tx);
-            return Err("Verify sign failed");
-        }
+        v.push(sigs.len());
     }
+    assert!(
+        v.len() > 0,
+        "the list length must more than one, due to must have inputs; qed"
+    );
 
-    Ok(sigs)
+    let first = v.get(0).unwrap();
+    if v[1..].iter().all(|item| item == first) {
+        Ok(*first as u32)
+    } else {
+        Err("all inputs sigs count should be same, otherwise it's an invalid tx")
+    }
 }

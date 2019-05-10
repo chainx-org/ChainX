@@ -9,17 +9,21 @@ pub mod types;
 
 // Substrate
 use rstd::prelude::*;
-use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue};
 
 // ChainX
+use xr_primitives::AddrStr;
+
 use xassets::{AssetType, Chain, ChainT, Memo, Token};
 use xsupport::storage::linked_node::{MultiNodeIndex, Node};
 
-use xsupport::{error, info};
+use xsupport::{error, info, warn};
 #[cfg(feature = "std")]
 use xsupport::{token, u8array_to_addr, u8array_to_string};
 
-pub use self::types::{AddrStr, Application, HeightOrTime, LinkedMultiKey, RecordInfo, TxState};
+pub use self::types::{
+    Application, ApplicationState, HeightOrTime, LinkedMultiKey, RecordInfo, TxState,
+};
 
 pub trait Trait: system::Trait + xassets::Trait + timestamp::Trait {
     /// The overarching event type.
@@ -38,8 +42,25 @@ decl_module! {
             Self::withdrawal(&who, &token, balance, Default::default(), Default::default())
         }
 
-        pub fn fix_withdrawal_state(withdrawal_id: u32, success: bool) -> Result {
-            match Self::withdrawal_finish(withdrawal_id, success) {
+        pub fn fix_withdrawal_state_by_trustees(withdrawal_id: u32, state: ApplicationState) -> Result {
+            if let Some(node) = Self::application_map(withdrawal_id) {
+                if node.data.state != ApplicationState::Processing {
+                    error!("[fix_withdrawal_state_by_trustees]only allow `Processing` for this application|id:{:}|state:{:?}", withdrawal_id, node.data.state);
+                    return Err("only allow `Processing` for this application")
+                }
+            }
+            match state {
+                ApplicationState::RootFinish | ApplicationState::RootCancel => { /*do nothing*/ },
+                _ => {
+                    error!("[fix_withdrawal_state_by_trustees]|state only allow `RootFinish` and `RootCancel`|state:{:?}", state);
+                    return Err("state only allow `RootFinish` and `RootCancel`")
+                }
+            }
+            Self::fix_withdrawal_state(withdrawal_id, state)
+        }
+
+        pub fn fix_withdrawal_state(withdrawal_id: u32, state: ApplicationState) -> Result {
+            match Self::withdrawal_finish_impl(withdrawal_id, state) {
                 Ok(_) => {
                     info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
                     Ok(())
@@ -51,9 +72,9 @@ decl_module! {
             }
         }
 
-        pub fn fix_withdrawal_state_list(item: Vec<(u32, bool)>) -> Result {
-            for (withdrawal_id, success) in item {
-                let _ = Self::fix_withdrawal_state(withdrawal_id, success);
+        pub fn fix_withdrawal_state_list(item: Vec<(u32, ApplicationState)>) -> Result {
+            for (withdrawal_id, state) in item {
+                let _ = Self::fix_withdrawal_state(withdrawal_id, state);
             }
             Ok(())
         }
@@ -65,8 +86,8 @@ decl_event!(
         <T as system::Trait>::AccountId,
         <T as xassets::Trait>::Balance {
         Deposit(AccountId, Token, Balance),
-        WithdrawalApply(u32, AccountId, Chain, Token, Balance, Memo, AddrStr, TxState),
-        WithdrawalFinish(u32, bool),
+        WithdrawalApply(u32, AccountId, Chain, Token, Balance, Memo, AddrStr),
+        WithdrawalFinish(u32, ApplicationState),
     }
 );
 
@@ -146,6 +167,7 @@ impl<T: Trait> Module<T> {
             u8array_to_string(&ext)
         );
 
+        // state is Applying
         let appl = Application::<T::AccountId, T::Balance, T::BlockNumber>::new(
             id,
             who.clone(),
@@ -182,17 +204,71 @@ impl<T: Trait> Module<T> {
             appl.balance,
             appl.ext,
             appl.addr, // if btc, the addr is base58 addr
-            TxState::Applying,
         ));
         Ok(())
     }
 
+    /// change Applying to Processing
+    pub fn withdrawal_processing(serial_number: &[u32]) -> Result {
+        let mut v = Vec::new();
+        for id in serial_number.iter() {
+            if let Some(node) = Self::application_map(id) {
+                if node.data.state() != ApplicationState::Applying {
+                    error!("[withdrawal_processing]|application state not `Applying`|id:{:}|state:{:?}", id, node.data.state());
+                    return Err("application state not `Applying`");
+                }
+                v.push((*id, node));
+            } else {
+                error!(
+                    "[withdrawal_processing]|id not in application records|id:{:}",
+                    id
+                );
+                return Err("id not in application records");
+            }
+        }
+        // mark all records is `Processing`
+        for (id, node) in v.iter_mut() {
+            node.data.state = ApplicationState::Processing;
+            ApplicationMap::<T>::insert(id, node);
+        }
+        Ok(())
+    }
+
     /// withdrawal finish, let the locking token destroy
-    pub fn withdrawal_finish(serial_number: u32, success: bool) -> Result {
+    /// Change Processing to final state
+    pub fn withdrawal_finish(serial_number: u32) -> Result {
+        if let Some(node) = Self::application_map(serial_number) {
+            if node.data.state != ApplicationState::Processing {
+                error!("[withdrawal_finish]only allow `Processing` for this application|id:{:}|state:{:?}", serial_number, node.data.state);
+                return Err("only allow `Processing` for this application");
+            }
+        }
+        Self::withdrawal_finish_impl(serial_number, ApplicationState::NormalFinish)
+    }
+
+    pub fn withdrawal_revoke(who: &T::AccountId, serial_number: u32) -> Result {
+        if let Some(node) = Self::application_map(serial_number) {
+            if node.data.applicant != *who {
+                error!(
+                    "[withdrawal_revoke]|the applicant is not this account|applicant:{:?}|who:{:?}",
+                    node.data.applicant, who
+                );
+                return Err("the applicant is not this account");
+            }
+
+            if node.data.state != ApplicationState::Applying {
+                error!("[withdrawal_finish]only allow `Processing` for this application|id:{:}|state:{:?}", serial_number, node.data.state);
+                return Err("only allow `Applying` state for applicant revoke");
+            }
+        }
+        Self::withdrawal_finish_impl(serial_number, ApplicationState::NormalCancel)
+    }
+
+    fn withdrawal_finish_impl(serial_number: u32, state: ApplicationState) -> Result {
         let mut node = if let Some(node) = Self::application_map(serial_number) {
             node
         } else {
-            error!("[withdrawal_finish]|withdrawal application record not exist|withdrawal id:{:}|success:{:}", serial_number, success);
+            error!("[withdrawal_finish]|withdrawal application record not exist|withdrawal id:{:}|state:{:?}", serial_number, state);
             return Err("withdrawal application record not exist");
         };
 
@@ -213,13 +289,19 @@ impl<T: Trait> Module<T> {
             balance
         );
         // destroy reserved token
-        if success {
-            Self::destroy(&who, &token, balance)?;
-        } else {
-            Self::unlock(&who, &token, balance)?;
+        match state {
+            ApplicationState::NormalFinish | ApplicationState::RootFinish => {
+                Self::destroy(&who, &token, balance)?;
+            }
+            ApplicationState::NormalCancel | ApplicationState::RootCancel => {
+                Self::unlock(&who, &token, balance)?;
+            }
+            _ => {
+                warn!("[withdrawal_finish_impl]|should not meet this branch in normally, except in root|state:{:?}", state);
+            }
         }
 
-        Self::deposit_event(RawEvent::WithdrawalFinish(serial_number, success));
+        Self::deposit_event(RawEvent::WithdrawalFinish(serial_number, state));
         Ok(())
     }
 

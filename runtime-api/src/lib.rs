@@ -13,7 +13,7 @@ pub mod xassets_api {
     use super::*;
     use rstd::collections::btree_map::BTreeMap;
     use xassets::{Asset, AssetType, Memo, Token};
-    use xrecords::AddrStr;
+    use xr_primitives::AddrStr;
 
     decl_runtime_apis! {
         pub trait XAssetsApi {

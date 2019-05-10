@@ -214,19 +214,26 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
 
 /// Update the signature status of trustee
 /// state: false -> Veto signature, true -> Consent signature
-pub fn update_trustee_vote_state<T: Trait>(
+/// only allow insert once
+pub fn insert_trustee_vote_state<T: Trait>(
     state: bool,
     who: &T::AccountId,
     trustee_list: &mut Vec<(T::AccountId, bool)>,
-) {
+) -> Result {
     match trustee_list.iter_mut().find(|ref info| info.0 == *who) {
-        Some((_, old_state)) => {
+        Some(_) => {
             // if account is exist, override state
-            *old_state = state;
+            error!("[insert_trustee_vote_state]|already vote for this withdrawal proposal|who:{:?}|old vote:{:}", who, state);
+            return Err("already vote for this withdrawal proposal");
         }
         None => {
             trustee_list.push((who.clone(), state));
+            debug!(
+                "[insert_trustee_vote_state]|insert new vote|who:{:?}|state:{:}",
+                who, state
+            );
         }
     }
-    Module::<T>::deposit_event(RawEvent::UpdateSignWithdrawTx(who.clone(), state));
+    Module::<T>::deposit_event(RawEvent::SignWithdrawalProposal(who.clone(), state));
+    Ok(())
 }

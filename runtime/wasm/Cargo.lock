@@ -3622,6 +3622,7 @@ dependencies = [
  "sr-std 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 1.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 1.0.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 0.4.0",
  "xrml-xassets-assets 0.4.0",
  "xrml-xassets-records 0.4.0",
  "xrml-xbridge-bitcoin 0.9.0",

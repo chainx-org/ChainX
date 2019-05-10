@@ -389,7 +389,7 @@ pub struct WithdrawInfo {
     /// btc-address
     pub address: String,
     /// withdraw status
-    pub status: TxState,
+    pub status: Value,
     /// OP_RETURN
     pub memo: String,
 }
@@ -403,6 +403,17 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for WithdrawIn
                 panic!("deposit record should be timestamp, not height");
             };
 
+        let status = match record.state {
+            TxState::Confirming(a, b) => json!({
+                "value": "Confirming",
+                "confirm": a,
+                "total_confirm": b,
+            }),
+            _ => json!({
+                "value": record.state
+            }),
+        };
+
         WithdrawInfo {
             height,
             id: record.withdrawal_id,
@@ -411,7 +422,7 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for WithdrawIn
             token: String::from_utf8_lossy(&record.token).into_owned(),
             accountid: record.who.into(),
             address: String::from_utf8_lossy(&record.addr).into_owned(),
-            status: record.state,
+            status,
             memo: String::from_utf8_lossy(&record.ext).into_owned(),
         }
     }

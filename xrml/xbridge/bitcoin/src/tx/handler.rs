@@ -84,7 +84,7 @@ impl TxHandler {
             match ensure_identical(&self.tx_info.raw_tx, &proposal.tx) {
                 Ok(()) => {
                     for number in proposal.withdrawal_id_list.iter() {
-                        match xrecords::Module::<T>::withdrawal_finish(*number, true) {
+                        match xrecords::Module::<T>::withdrawal_finish(*number) {
                             Ok(_) => {
                                 info!("[withdraw]|ID of withdrawal completion: {:}", *number);
                             }

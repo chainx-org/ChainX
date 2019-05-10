@@ -15,20 +15,20 @@ use system::ensure_signed;
 
 // ChainX
 use xassets::{Chain, ChainT, Memo, Token};
-use xrecords::AddrStr;
+use xr_primitives::AddrStr;
 #[cfg(feature = "std")]
 use xsupport::token;
-use xsupport::warn;
+use xsupport::{debug, warn};
 
 pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn withdraw(origin, token: Token, value: T::Balance, addr: AddrStr, ext: Memo) -> Result {
-            runtime_io::print("[xassets process withdrawal] withdraw");
             let who = ensure_signed(origin)?;
-
             Self::check_black_list(&token)?;
+
+            debug!("[withdraw]withdraw|who:{:?}|token:{:}|value:{:}", who, token!(token), value);
 
             let asset = xassets::Module::<T>::get_asset(&token)?;
             if asset.chain() == Chain::ChainX {
@@ -44,6 +44,11 @@ decl_module! {
 
             xrecords::Module::<T>::withdrawal(&who, &token, value, addr, ext)?;
             Ok(())
+        }
+
+        fn revoke_withdraw(origin, id: u32) -> Result {
+            let from = ensure_signed(origin)?;
+            xrecords::Module::<T>::withdrawal_revoke(&from, id)
         }
     }
 }

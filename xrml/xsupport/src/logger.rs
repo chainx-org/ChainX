@@ -64,8 +64,11 @@ macro_rules! trace {
 #[inline]
 pub fn u8array_to_addr(s: &[u8]) -> String {
     for i in s {
-        if *i < 0x41 || *i > 0x7A {
-            // 0x41 = 'A' 0x7A = 'z'
+        // 0x30 = '0' 0x39 = '9'; 0x41 = 'A' 0x7A = 'z'
+        if (0x30 <= *i && *i <= 0x39) || (0x41 <= *i && *i <= 0x7A) {
+            continue;
+        } else {
+            // 0x30 = '0' 0x7A = 'z'
             return u8array_to_hex(s); // when any item is not a char, use hex to decode it
         }
     }

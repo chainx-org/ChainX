@@ -12,7 +12,7 @@ use support::StorageMap;
 
 use primitives::traits::{Saturating, Zero};
 // ChainX
-use xr_primitives::XString;
+pub use xr_primitives::{Desc, Memo, Token};
 
 use super::traits::ChainT;
 use super::{Module, Trait};
@@ -24,10 +24,7 @@ const MAX_DESC_LEN: usize = 128;
 
 pub type TokenString = &'static [u8];
 pub type DescString = TokenString;
-pub type Token = XString;
-pub type Desc = XString;
 pub type Precision = u16;
-pub type Memo = XString;
 
 pub type SignedImbalanceT<T> = SignedImbalance<<T as Trait>::Balance, PositiveImbalance<T>>;
 
