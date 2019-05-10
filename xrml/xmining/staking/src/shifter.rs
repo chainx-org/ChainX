@@ -181,7 +181,7 @@ impl<T: Trait> Module<T> {
 
         // In the first round, 20% reward goes to the team.
         let current_index = <xsession::Module<T>>::current_index().as_();
-        session_reward = if current_index <= SESSIONS_PER_ROUND {
+        session_reward = if current_index < SESSIONS_PER_ROUND {
             let to_team = T::Balance::sa(session_reward.as_() * 2 / 10);
             debug!("[reward] issue to the team: {:?}", to_team);
             let _ =

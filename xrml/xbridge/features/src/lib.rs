@@ -29,6 +29,7 @@ use system::ensure_signed;
 
 // chainx runtime module
 use xassets::Chain;
+use xmultisig::MultiSigPermission;
 use xr_primitives::XString;
 use xsupport::{error, info};
 
@@ -358,7 +359,7 @@ impl<T: Trait> Module<T> {
 
         let trustee_list = trustee_list
             .into_iter()
-            .map(|accountid| (accountid, true))
+            .map(|accountid| (accountid, MultiSigPermission::ConfirmAndPropose))
             .collect::<Vec<_>>();
         xmultisig::Module::<T>::deploy_impl_unsafe(
             xmultisig::AddrType::Trustee,

@@ -232,11 +232,14 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .collect(),
             trustee_intentions: genesis_node_info
                 .iter()
+                .filter(|(_, _, _, _, _, _, hot_entity, cold_entity)| {
+                    hot_entity.is_some() && cold_entity.is_some()
+                })
                 .map(|(account_id, _, _, _, _, _, hot_entity, cold_entity)| {
                     (
                         account_id.clone().into(),
-                        hot_entity.clone().into(),
-                        cold_entity.clone().into(),
+                        hot_entity.clone().unwrap().into(),
+                        cold_entity.clone().unwrap().into(),
                     )
                 })
                 .collect(),
@@ -325,8 +328,8 @@ fn load_genesis_node_info() -> Result<
         Vec<u8>,
         Vec<u8>,
         Vec<u8>,
-        Vec<u8>,
-        Vec<u8>,
+        Option<Vec<u8>>,
+        Option<Vec<u8>>,
     )>,
     Box<dyn std::error::Error>,
 > {
@@ -342,8 +345,15 @@ fn load_genesis_node_info() -> Result<
         let node_name = record.node_name.into_bytes();
         let node_url = record.node_url.into_bytes();
         let memo = record.memo.into_bytes();
-        let hot_key = Vec::from_hex(&record.hot_entity).unwrap();
-        let cold_key = Vec::from_hex(&record.cold_entity).unwrap();
+        let get_entity = |entity: String| {
+            if entity.is_empty() {
+                None
+            } else {
+                Some(Vec::from_hex(&entity).unwrap())
+            }
+        };
+        let hot_key = get_entity(record.hot_entity);
+        let cold_key = get_entity(record.cold_entity);
         res.push((
             account_id,
             authority_key,

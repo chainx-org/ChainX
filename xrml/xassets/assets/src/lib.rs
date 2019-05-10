@@ -83,7 +83,7 @@ decl_module! {
         /// register_asset to module, should allow by root
         fn register_asset(asset: Asset, is_online: bool, is_psedu_intention: bool) -> Result {
             asset.is_valid()?;
-            info!("[register_asset]|register a new asset|asset:{:?}|is_online:{:}|is_psedu_intention:{:}", asset, is_online, is_psedu_intention);
+            info!("[register_asset]|{:?}|is_online:{:}|is_psedu_intention:{:}", asset, is_online, is_psedu_intention);
 
             let token = asset.token();
 
@@ -120,7 +120,7 @@ decl_module! {
         fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
             let transactor = ensure_signed(origin)?;
             let dest = <T as system::Trait>::Lookup::lookup(dest)?;
-            debug!("[transfer]|transfer asset|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));
+            debug!("[transfer]|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));
             is_valid_memo::<T>(&memo)?;
             if transactor == dest {
                 return Ok(())

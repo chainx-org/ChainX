@@ -46,9 +46,11 @@ decl_storage! {
             use runtime_io::with_externalities;
             use substrate_primitives::Blake2Hasher;
             use support::StorageMap;
+            use primitives::traits::As;
             use primitives::StorageOverlay;
             use xassets::{ChainT, Token, Chain, Asset};
             use xspot::CurrencyPair;
+            use xmultisig::MultiSigPermission;
             use xbridge_features::H264;
             use xsupport::error;
 
@@ -110,7 +112,7 @@ decl_storage! {
                         xassets::AssetType::Free,
                         &account_id,
                         xassets::AssetType::ReservedStaking,
-                        value,
+                        value
                     ).unwrap();
 
                     xstaking::Module::<T>::bootstrap_refresh(&account_id, Some(url), Some(true), Some(validator_key), Some(memo));
@@ -122,8 +124,14 @@ decl_storage! {
                 let mut trustees = Vec::new();
                 for (i, hot_entity, cold_entity) in config.trustee_intentions.clone().into_iter() {
                     trustees.push(i.clone());
-                    xbridge_features::Module::<T>::setup_bitcoin_trustee_impl(i, b"ChainX init".to_vec(), H264::from_slice(&hot_entity), H264::from_slice(&cold_entity)).unwrap();
+                    xbridge_features::Module::<T>::setup_bitcoin_trustee_impl(
+                        i,
+                        b"ChainX init".to_vec(),
+                        H264::from_slice(&hot_entity),
+                        H264::from_slice(&cold_entity),
+                    ).unwrap();
                 }
+
                 // deploy trustee multisig addr
                 let len = trustees.len();
                 let result = xbridge_features::Module::<T>::deploy_trustee_in_genesis(vec![(Chain::Bitcoin, trustees)]);
@@ -132,12 +140,29 @@ decl_storage! {
                 }
 
                 // xmultisig
-                let team_accounts: Vec<(T::AccountId, bool)> = config.multisig_init_info.0.clone().into_iter().map(|account| (account, true)).collect();
-                let council_accounts: Vec<(T::AccountId, bool)> = config.multisig_init_info.1.clone().into_iter().map(|account| (account, true)).collect();
-                // deploy multisig, just for `TeamAddress` and `CouncilAddress`
+                // Deploy multisig for `TeamAddress` and `CouncilAddress`
+                let team_accounts = config
+                    .multisig_init_info
+                    .0
+                    .clone()
+                    .into_iter()
+                    .map(|account| (account, MultiSigPermission::ConfirmAndPropose))
+                    .collect::<Vec<(T::AccountId, MultiSigPermission)>>();
+
+                let council_accounts = config
+                    .multisig_init_info
+                    .1
+                    .clone()
+                    .into_iter()
+                    .map(|account| (account, MultiSigPermission::ConfirmAndPropose))
+                    .collect::<Vec<(T::AccountId, MultiSigPermission)>>();
+
                 if team_accounts.len() != 3 || council_accounts.len() != 6 {
-                    error!("[xmultisig|deploy_in_genesis]|can't generate TeamAddr and CouncilAddr for team(len:{:?}) or council(len:{:?}) account",
-                            team_accounts.len(), council_accounts.len());
+                    error!(
+                        "[xmultisig|deploy_in_genesis]|can't generate TeamAddr and CouncilAddr for team(len:{:?}) or council(len:{:?}) account",
+                        team_accounts.len(),
+                        council_accounts.len(),
+                    );
                     panic!("init genesis failed: team or council lenth not right");
                 } else {
                     let two_thirds = |sum: u32| {
@@ -146,7 +171,17 @@ decl_storage! {
                     };
                     let team_required_num = two_thirds(team_accounts.len() as u32);
                     let council_required_num = two_thirds(council_accounts.len() as u32);
-                    xmultisig::Module::<T>::deploy_in_genesis(team_accounts, team_required_num, council_accounts, council_required_num).unwrap();
+
+                    let team_account = xmultisig::Module::<T>::deploy_in_genesis(
+                        team_accounts,
+                        team_required_num,
+                        council_accounts,
+                        council_required_num
+                    ).unwrap();
+
+                    // After deploying the multisig for team, issue the genesis initial 20% immediately.
+                    // The amount is hard-coded here. 50 * 20% = 10
+                    <xassets::Module<T>>::pcx_issue(&team_account, T::Balance::sa(10)).unwrap();
                 }
 
                 // xspot

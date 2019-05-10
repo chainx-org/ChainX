@@ -9,6 +9,13 @@ use rstd::prelude::*;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum MultiSigPermission {
+    ConfirmOnly,
+    ConfirmAndPropose,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum AddrType {
     Normal,
     Root,
@@ -26,7 +33,7 @@ impl Default for AddrType {
 pub struct AddrInfo<AccountId> {
     pub addr_type: AddrType,
     pub required_num: u32,
-    pub owner_list: Vec<(AccountId, bool)>,
+    pub owner_list: Vec<(AccountId, MultiSigPermission)>,
 }
 
 // struct for the status of a pending operation.

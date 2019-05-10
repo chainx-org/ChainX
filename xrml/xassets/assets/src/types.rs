@@ -50,7 +50,7 @@ impl Chain {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Asset {
     token: Token,
@@ -58,6 +58,21 @@ pub struct Asset {
     chain: Chain,
     precision: Precision,
     desc: Desc,
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Debug for Asset {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Asset: {{token: {}, token_name: {}, chain: {:?}, precision: {}, desc: {}}}",
+            String::from_utf8_lossy(&self.token).into_owned(),
+            String::from_utf8_lossy(&self.token_name).into_owned(),
+            self.chain,
+            self.precision,
+            String::from_utf8_lossy(&self.desc).into_owned()
+        )
+    }
 }
 
 impl Asset {

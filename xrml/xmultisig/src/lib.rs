@@ -21,7 +21,7 @@ use system::ensure_signed;
 
 use xsupport::{debug, error, info};
 
-pub use self::types::{AddrInfo, AddrType, PendingState};
+pub use self::types::{AddrInfo, AddrType, MultiSigPermission, PendingState};
 
 // MAX_OWNERS equal PendingState.owners_done bits length
 const MAX_OWNERS: u32 = 64;
@@ -125,11 +125,13 @@ decl_module! {
             debug!("[execute]|create a proposal|who:{:?}|for addr:{:?}|proposal:{:?}", from, multi_sig_addr, proposal);
             Self::execute_impl(&from, &multi_sig_addr, proposal)
         }
+
         fn confirm(origin, multi_sig_addr: T::AccountId, multi_sig_id: T::Hash) -> Result {
             let from = ensure_signed(origin)?;
             debug!("[execute]|confirm for a proposal|who:{:?}|for addr:{:?}|multi_sig_id:{:}", from, multi_sig_addr, multi_sig_id);
             Self::confirm_impl(&from, &multi_sig_addr, multi_sig_id)
         }
+
         // remove multisig addr
         fn remove_multi_sig_for(origin, multi_sig_addr: T::AccountId, multi_sig_id: T::Hash) -> Result {
             let from: T::AccountId = ensure_signed(origin)?;
@@ -184,7 +186,7 @@ impl<T: Trait> Module<T> {
         if let Some(addr_info) = Self::multisig_addr_info(addr) {
             for (index, (id, req)) in addr_info.owner_list.iter().enumerate() {
                 if id == who {
-                    if required && (*req == false) {
+                    if required && (*req == MultiSigPermission::ConfirmOnly) {
                         return Err("it's the owner but not required owner");
                     } else {
                         return Ok(index as u32);
@@ -254,11 +256,11 @@ impl<T: Trait> Module<T> {
         addr_type: AddrType,
         multi_addr: &T::AccountId,
         deployer: &T::AccountId,
-        owners: Vec<(T::AccountId, bool)>,
+        owners: Vec<(T::AccountId, MultiSigPermission)>,
         required_num: u32,
     ) -> Result {
         let mut owner_list = Vec::new();
-        owner_list.push((deployer.clone(), true));
+        owner_list.push((deployer.clone(), MultiSigPermission::ConfirmAndPropose));
         owner_list.extend(owners.into_iter().filter(|info| {
             if info.0 == *deployer {
                 false
@@ -307,7 +309,7 @@ impl<T: Trait> Module<T> {
         addr_type: AddrType,
         multi_addr: &T::AccountId,
         deployer: &T::AccountId,
-        owners: Vec<(T::AccountId, bool)>,
+        owners: Vec<(T::AccountId, MultiSigPermission)>,
         required_num: u32,
     ) {
         let _ = Self::deploy_impl(addr_type, multi_addr, deployer, owners, required_num)
@@ -316,11 +318,11 @@ impl<T: Trait> Module<T> {
 
     #[cfg(feature = "std")]
     pub fn deploy_in_genesis(
-        team: Vec<(T::AccountId, bool)>,
+        team: Vec<(T::AccountId, MultiSigPermission)>,
         team_required_num: u32,
-        council: Vec<(T::AccountId, bool)>,
+        council: Vec<(T::AccountId, MultiSigPermission)>,
         council_required_num: u32,
-    ) -> Result {
+    ) -> result::Result<T::AccountId, &'static str> {
         use support::StorageValue;
 
         if team.len() < 1 || council.len() < 1 {
@@ -355,10 +357,10 @@ impl<T: Trait> Module<T> {
 
         RootAddrList::<T>::put(vec![council_multisig_addr.clone()]);
 
-        // set to related place
-        xaccounts::TeamAddress::<T>::put(team_multisig_addr);
+        xaccounts::TeamAddress::<T>::put(&team_multisig_addr);
         xaccounts::CouncilAddress::<T>::put(council_multisig_addr);
-        Ok(())
+
+        Ok(team_multisig_addr)
     }
 
     fn check_proposal(addr_info: &AddrInfo<T::AccountId>, proposal: &Box<T::Proposal>) -> Result {
