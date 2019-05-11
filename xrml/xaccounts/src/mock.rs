@@ -57,7 +57,6 @@ impl timestamp::Trait for Test {
 }
 
 impl Trait for Test {
-    type Event = ();
     type DetermineIntentionJackpotAccountId = MockDeterminator;
 }
 

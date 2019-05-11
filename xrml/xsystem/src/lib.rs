@@ -12,7 +12,7 @@ pub mod types;
 use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInherent, RuntimeString};
 use rstd::{prelude::Vec, result};
 use support::{decl_module, decl_storage, dispatch::Result, StorageValue};
-use system::ensure_inherent;
+use system::ensure_none;
 
 // ChainX
 #[cfg(feature = "std")]
@@ -45,7 +45,7 @@ pub trait Validator<AccountId> {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn set_block_producer(origin, producer: T::AccountId) -> Result {
-            ensure_inherent(origin)?;
+            ensure_none(origin)?;
             info!("height:{:}, blockproducer: {:?}|name:{:}", system::Module::<T>::block_number(), producer, u8array_to_string(&T::Validator::get_validator_name(&producer).unwrap_or_default()));
 
             if Self::is_validator(&producer) == false {

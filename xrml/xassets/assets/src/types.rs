@@ -245,6 +245,7 @@ mod imbalances {
     /// Opaque, move-only struct with private fields that serves as a token denoting that
     /// funds have been created without any equal and opposite accounting.
     #[must_use]
+    #[cfg_attr(feature = "std", derive(Debug, PartialEq))]
     pub struct PositiveImbalance<T: Trait>(T::Balance, Token, AssetType);
     impl<T: Trait> PositiveImbalance<T> {
         /// Create a new positive imbalance from a balance.
@@ -256,6 +257,7 @@ mod imbalances {
     /// Opaque, move-only struct with private fields that serves as a token denoting that
     /// funds have been destroyed without any equal and opposite accounting.
     #[must_use]
+    #[cfg_attr(feature = "std", derive(Debug, PartialEq))]
     pub struct NegativeImbalance<T: Trait>(T::Balance, Token, AssetType);
     impl<T: Trait> NegativeImbalance<T> {
         /// Create a new negative imbalance from a balance.
