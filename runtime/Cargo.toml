@@ -61,7 +61,7 @@ xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-featur
 xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig", default-features = false }
 
 [dev-dependencies]
-hex-literal = "0.1.0"
+hex-literal = "0.2.0"
 
 [features]
 default = ["std"]

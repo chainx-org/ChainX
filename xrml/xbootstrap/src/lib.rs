@@ -157,7 +157,7 @@ decl_storage! {
                     .map(|account| (account, MultiSigPermission::ConfirmAndPropose))
                     .collect::<Vec<(T::AccountId, MultiSigPermission)>>();
 
-                if team_accounts.len() != 3 || council_accounts.len() != 6 {
+                if team_accounts.len() != 3 || council_accounts.len() != 5 {
                     error!(
                         "[xmultisig|deploy_in_genesis]|can't generate TeamAddr and CouncilAddr for team(len:{:?}) or council(len:{:?}) account",
                         team_accounts.len(),
@@ -169,8 +169,13 @@ decl_storage! {
                         let m = 2 * sum;
                         if m % 3 == 0 { m / 3 } else { m / 3 + 1 }
                     };
+                    let third_fives = |sum: u32| {
+                        let m = 3 * sum;
+                        if m % 5 == 0 { m / 5 } else { m / 5 + 1 }
+                    };
+
                     let team_required_num = two_thirds(team_accounts.len() as u32);
-                    let council_required_num = two_thirds(council_accounts.len() as u32);
+                    let council_required_num = third_fives(council_accounts.len() as u32);
 
                     let team_account = xmultisig::Module::<T>::deploy_in_genesis(
                         team_accounts,

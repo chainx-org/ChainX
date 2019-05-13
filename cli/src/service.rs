@@ -24,13 +24,14 @@ use std::time::Duration;
 
 use log::{info, warn};
 
+use client::LongestChain;
 use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
+use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use inherents::InherentDataProviders;
 use network::construct_simple_protocol;
 use sr_primitives::generic::BlockId;
 use sr_primitives::traits::ProvideRuntimeApi;
 use substrate_primitives::{ed25519, Pair as PairT};
-use client::LongestChain;
 use substrate_service::{
     construct_service_factory, FactoryFullConfiguration, FullBackend, FullClient, FullComponents,
     FullExecutor, LightBackend, LightClient, LightComponents, LightExecutor, TaskExecutor,
@@ -210,8 +211,7 @@ construct_service_factory! {
         LightService = LightComponents<Self>
             { |config, executor| <LightComponents<Factory>>::new(config, executor) },
         FullImportQueue = AuraImportQueue<Self::Block>
-            { |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>,
-				select_chain: Self::SelectChain| {
+            { |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>, select_chain: Self::SelectChain| {
                 let slot_duration = SlotDuration::get_or_compute(&*client)?;
                 let (block_import, link_half) =
                     grandpa::block_import::<_, _, _, RuntimeApi, FullClient<Self>, _>(
@@ -226,23 +226,37 @@ construct_service_factory! {
                     slot_duration,
                     block_import,
                     Some(justification_import),
+                    None,
+                    None,
                     client,
                     NothingExtra,
                     config.custom.inherent_data_providers.clone(),
                 ).map_err(Into::into)
             }},
         LightImportQueue = AuraImportQueue<Self::Block>
-        { |config: &FactoryFullConfiguration<Self>, client: Arc<LightClient<Self>>| {
-            import_queue::<_, _, _, ed25519::Pair>(
-                            SlotDuration::get_or_compute(&*client)?,
-                            client.clone(),
-                            None,
-                            client,
-                            NothingExtra,
-                            config.custom.inherent_data_providers.clone(),
-                        ).map_err(Into::into)
-                    }
-        },
+            { |config: &FactoryFullConfiguration<Self>, client: Arc<LightClient<Self>>| {
+                let fetch_checker = client.backend().blockchain().fetcher()
+                    .upgrade()
+                    .map(|fetcher| fetcher.checker().clone())
+                    .ok_or_else(|| "Trying to start light import queue without active fetch checker")?;
+                let block_import = grandpa::light_block_import::<_, _, _, RuntimeApi, LightClient<Self>>(
+                    client.clone(), Arc::new(fetch_checker), client.clone()
+                )?;
+                let block_import = Arc::new(block_import);
+                let finality_proof_import = block_import.clone();
+                let finality_proof_request_builder = finality_proof_import.create_finality_proof_request_builder();
+
+                import_queue::<_, _, _, ed25519::Pair>(
+                    SlotDuration::get_or_compute(&*client)?,
+                    block_import,
+                    None,
+                    Some(finality_proof_import),
+                    Some(finality_proof_request_builder),
+                    client,
+                    NothingExtra,
+                    config.custom.inherent_data_providers.clone(),
+                ).map_err(Into::into)
+            }},
         SelectChain = LongestChain<FullBackend<Self>, Self::Block>
             { |config: &FactoryFullConfiguration<Self>, client: Arc<FullClient<Self>>| {
                 Ok(LongestChain::new(
@@ -251,6 +265,9 @@ construct_service_factory! {
                 ))
             }
         },
+        FinalityProofProvider = { |client: Arc<FullClient<Self>>| {
+            Ok(Some(Arc::new(GrandpaFinalityProofProvider::new(client.clone(), client)) as _))
+        }},
     }
 }
 

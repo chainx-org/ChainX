@@ -65,18 +65,17 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     genesis_node_info.truncate(initial_authorities_len);
 
     let team_account = vec![
-        hex("a2308187439ac204df9e299e1e54afefafea4bf348e03dad679737c91871dc53"),
-        hex("6488ceea630000b48fed318d13248ea7c566c0f4d2b8b90d12a136ad6eb02323"),
-        hex("56758d236714a2fa7981af8c8177dddc6907875b2c23fd5c842922c8a2c5a1be"),
+        hex("a5b74e024ed2823e5dc4d4e77313c0601393f107c7fa62b9e8ca54930b12d545"),
+        hex("bf40736f7157faf64411ef36de9b6dae8133be3edf460a50d9e84cc05829dc21"),
+        hex("120bdbc81e1172e17becc965a51dc1bf3e782162eadee54b5d94fec8a0288c83"),
     ];
 
     let council_account = vec![
-        hex("a2308187439ac204df9e299e1e54afefafea4bf348e03dad679737c91871dc53"),
-        hex("6488ceea630000b48fed318d13248ea7c566c0f4d2b8b90d12a136ad6eb02323"),
-        hex("56758d236714a2fa7981af8c8177dddc6907875b2c23fd5c842922c8a2c5a1be"),
-        hex("3f53e37c21e24df9cacc2ec69d010d144fe4dace6b2f087f466ade8b6b72278f"),
-        hex("d3581c060b04fe74f625f053d6392edb86e94b3d02de7bba4728f761c0700773"),
-        hex("eb9c5cc73a88e455c86ee59f9d7437666dd4b1b3f54334dff83b0d3d1e4a41a9"),
+        hex("1595e186c3a915cfbd4f601b23a88bbaab873bfefbb09d231483e424633093e7"),
+        hex("a4e99224b97dee6798f3fb90b835d63e3f4059f334f09a44e23420ca993e45f0"),
+        hex("7ad04497564c5da319794aa8c99375d61878f471124dbc83dcc5a3cd6418af11"),
+        hex("b16a5254fff78ab974abd25c64430ae5944e201916d003807226b6e2a0fcd1f1"),
+        hex("041b0452b3defb8bdcaab8f4786fa634ae6f841cbe1ee9e1959bd94eaa021f7f"),
     ];
 
     let blocks_per_session = 150; // 150 blocks per session
@@ -86,7 +85,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let intention_bonding_duration = bonding_duration * 10; // freeze 150*12*10 blocks for intention
 
     let params_info = Params::new(
-        520159231,            // max_bits
+        486604799,            // max_bits
         2 * 60 * 60,          // block_max_future
         2 * 7 * 24 * 60 * 60, // target_timespan_seconds
         10 * 60,              // target_spacing_seconds
@@ -108,9 +107,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         xsession: Some(SessionConfig {
             validators: genesis_node_info
                 .iter()
-                .map(|(_, authority_id, balance, _, _, _, _, _)| {
-                    (authority_id.clone().into(), *balance)
-                })
+                .map(|(account, _, balance, _, _, _, _, _)| (account.clone().into(), *balance))
                 .collect(),
             session_length: blocks_per_session,
             keys: genesis_node_info
@@ -122,7 +119,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         // chainx runtime module
         xsystem: Some(XSystemConfig {
-            network_props: (xsystem::NetworkType::Testnet, 44),
+            network_props: (xsystem::NetworkType::Mainnet, 44),
             _genesis_phantom_data: Default::default(),
         }),
         xfee_manager: Some(XFeeManagerConfig {
@@ -166,25 +163,25 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: (
                 BlockHeader {
-                    version: 536870912,
+                    version: 545259520,
                     previous_header_hash: h256_from_rev_str(
-                        "0000000000000f3b669061e1437c502eda529057c33a115b63abdb328b5b4645",
+                        "00000000000000000001b2505c11119fcf29be733ec379f686518bf1090a522a",
                     ),
                     merkle_root_hash: h256_from_rev_str(
-                        "b954ca2828475be7f5f772a26369b51e6808d853a0e62219af0dcb9f8f9aa0ad",
+                        "cc09d95fd8ccc985826b9eb46bf73f8449116f18535423129f0574500985cf90",
                     ),
-                    time: 1556000895,
-                    bits: Compact::new(437247136),
-                    nonce: 472822001,
+                    time: 1556958733,
+                    bits: Compact::new(388628280),
+                    nonce: 2897942742,
                 },
-                1511056,
+                574560,
             ),
             genesis_hash: h256_from_rev_str(
-                "0000000000000e6b5c9b88cf3b2b89374841769d075c2698cc80c2eac98cdd54",
+                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
             ),
             params_info, // retargeting_factor
-            network_id: 1,
-            confirmation_number: 6,
+            network_id: 0,
+            confirmation_number: 4,
             reserved_block: 2100,
             btc_withdrawal_fee: 40000,
             max_withdrawal_count: 100,
@@ -197,7 +194,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             trustee_info_config: vec![(
                 Chain::Bitcoin,
                 TrusteeInfoConfig {
-                    min_trustee_count: 4,
+                    min_trustee_count: 3,
                     max_trustee_count: 15,
                 },
             )],

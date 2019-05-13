@@ -56,10 +56,9 @@ impl ChainSpec {
 
     pub(crate) fn from(s: &str) -> Option<Self> {
         match s {
-            // TODO wait for substrate fix for command sequence
-            "dev" | "" => Some(ChainSpec::Development),
+            "mainnet" | "" => Some(ChainSpec::Mainnet),
             "testnet" => Some(ChainSpec::Testnet),
-            "mainnet" => Some(ChainSpec::Testnet),
+            "dev" => Some(ChainSpec::Development),
             _ => None,
         }
     }
