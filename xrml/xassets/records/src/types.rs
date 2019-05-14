@@ -18,7 +18,6 @@ use super::{ApplicationMHeader, ApplicationMTail, ApplicationMap, Trait};
 ///        release token => NormalCancel(can from Applying directly)|RootCancel (final state)
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub enum ApplicationState {
     Applying,
     Processing,
@@ -119,7 +118,6 @@ impl<T: Trait> LinkedNodeCollection for LinkedMultiKey<T> {
 // for rpc
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub enum TxState {
     NotApplying,
     Applying,
@@ -139,7 +137,6 @@ impl Default for TxState {
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub enum HeightOrTime<BlockNumber, Timestamp> {
     Height(BlockNumber),
     Timestamp(Timestamp),

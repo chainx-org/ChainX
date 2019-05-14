@@ -1,10 +1,14 @@
 // Copyright 2018-2019 Chainpool.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 
 use chainx_cli::VersionInfo;
 use error_chain::quick_main;
 use futures::{future, sync::oneshot, Future};
+use serde_json::value::Value;
 
 // handles ctrl-c
 struct Exit;
@@ -30,6 +34,84 @@ impl chainx_cli::IntoExit for Exit {
     }
 }
 
+fn combine_conf(
+    cmd_args: Vec<String>,
+    path: &std::path::Path,
+) -> Result<Vec<String>, Box<std::error::Error>> {
+    let opts_from_cmd = cmd_args
+        .iter()
+        .filter(|i| i.starts_with("--"))
+        .map(|i| i.split("=").collect::<Vec<&str>>()[0])
+        .collect::<Vec<&str>>();
+
+    let mut bytes = Vec::new();
+    File::open(path)?.read_to_end(&mut bytes)?;
+
+    let json: HashMap<String, Value> =
+        serde_json::from_slice(&bytes).expect("JSON was not well-formatted");
+
+    let mut opts: Vec<String> = Vec::new();
+
+    for (opt, v) in json.clone().into_iter() {
+        let opt = format!("--{}", opt);
+
+        match v {
+            Value::Bool(b) => {
+                if !opts_from_cmd.contains(&&opt.as_ref()) {
+                    opts.push(format!("{}={}", opt, b));
+                }
+            }
+            Value::Number(b) => {
+                if !opts_from_cmd.contains(&&opt.as_ref()) {
+                    opts.push(format!("{}={}", opt, b));
+                }
+            }
+            Value::String(v) => {
+                if !v.is_empty() {
+                    if !opts_from_cmd.contains(&&opt.as_ref()) {
+                        opts.push(format!("{}={}", opt, v));
+                    }
+                }
+            }
+            Value::Array(arr) => {
+                let arr = arr
+                    .iter()
+                    .map(|a| format!("{}={}", opt, a.as_str().unwrap()))
+                    .collect::<Vec<String>>();
+                opts.extend(arr);
+            }
+            Value::Null => {}
+            Value::Object(_) => panic!("Unsupported nested configuration"),
+        }
+    }
+
+    let mut args = cmd_args;
+    args.extend(opts);
+    Ok(args)
+}
+
+fn try_combine_options_config(cmd_args: Vec<String>) -> Vec<String> {
+    let mut options_conf: Option<String> = None;
+    let mut args_iter = cmd_args.iter();
+    while let Some(arg) = args_iter.next() {
+        if arg == "--options-config" {
+            let conf = args_iter.next().expect("The argument '--options-config <CONFIG_JSON_PATH>' requires a value but none was supplied");
+            options_conf = Some(conf.to_string());
+        } else if arg.starts_with("--options-config=") {
+            options_conf = Some(arg.split("=").collect::<Vec<&str>>()[1].to_string());
+        }
+    }
+
+    if let Some(options_conf) = options_conf {
+        let path = std::path::Path::new(&options_conf);
+        let combined_args =
+            combine_conf(cmd_args, path).expect("Error processing --options-config");
+        combined_args
+    } else {
+        cmd_args
+    }
+}
+
 fn run() -> chainx_cli::error::Result<()> {
     let version = VersionInfo {
         name: "ChainX",
@@ -40,7 +122,9 @@ fn run() -> chainx_cli::error::Result<()> {
         description: "Fully Decentralized Interchain Crypto Asset Management on Polkadot",
         support_url: "https://github.com/chainx-org/ChainX",
     };
-    chainx_cli::run(::std::env::args(), Exit, version)
+
+    let args = try_combine_options_config(::std::env::args().collect::<Vec<String>>());
+    chainx_cli::run(args, Exit, version)
 }
 
 quick_main!(run);

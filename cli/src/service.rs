@@ -115,7 +115,6 @@ construct_service_factory! {
 
                     let client = service.client();
                     let accountid_from_localkey: AccountId = key.public();
-                    info!("Using authority key: {:?}, accountid is: {:?}", key.public(), accountid_from_localkey);
                     // use validator name to get accountid and sessionkey from runtime storage
                     let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
                     let best_hash = client.info()?.chain.best_hash;

@@ -417,7 +417,11 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for WithdrawIn
         WithdrawInfo {
             height,
             id: record.withdrawal_id,
-            txid: format!("0x{:}", record.txid.to_hex::<String>()),
+            txid: if record.txid.len() > 0 {
+                format!("0x{:}", record.txid.to_hex::<String>())
+            } else {
+                "".to_string()
+            },
             balance: record.balance,
             token: String::from_utf8_lossy(&record.token).into_owned(),
             accountid: record.who.into(),
