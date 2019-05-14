@@ -649,14 +649,14 @@ where
                 };
 
                 for price in (lowest_offer..=maximum_bid).step_by(tick as usize) {
-                    push_sum_quotations_at(price, &mut quotationslist.buy)?;
+                    push_sum_quotations_at(price, &mut quotationslist.sell)?;
                     if quotationslist.buy.len() == piece as usize {
                         break;
                     }
                 }
 
                 for price in (minimum_offer..=highest_bid).step_by(tick as usize) {
-                    push_sum_quotations_at(price, &mut quotationslist.sell)?;
+                    push_sum_quotations_at(price, &mut quotationslist.buy)?;
                     if quotationslist.sell.len() == piece as usize {
                         break;
                     }
