@@ -7,7 +7,7 @@ use primitives::traits::{As, One, Zero};
 use rstd::cmp;
 use xaccounts::IntentionJackpotAccountIdFor;
 use xsession::OnSessionChange;
-use xsupport::debug;
+use xsupport::{debug, info};
 #[cfg(feature = "std")]
 use xsupport::{validators, who};
 

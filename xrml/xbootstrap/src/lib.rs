@@ -76,14 +76,14 @@ decl_storage! {
                 // xassets
                 let chainx: Token = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
 
+                let (pcx_name, pcx_precision, pcx_desc) = (config.pcx.0.clone(), config.pcx.1, config.pcx.2.clone());
                 let pcx = Asset::new(
                     chainx,
-                    config.pcx.0.clone(),
+                    pcx_name,
                     Chain::ChainX,
-                    config.pcx.1,
-                    config.pcx.2.clone(),
-                )
-                .unwrap();
+                    pcx_precision,
+                    pcx_desc
+                ).unwrap();
 
                 xassets::Module::<T>::bootstrap_register_asset(pcx, true, false).unwrap();
 
@@ -186,7 +186,10 @@ decl_storage! {
 
                     // After deploying the multisig for team, issue the genesis initial 20% immediately.
                     // The amount is hard-coded here. 50 * 20% = 10
-                    <xassets::Module<T>>::pcx_issue(&team_account, T::Balance::sa(10)).unwrap();
+                    <xassets::Module<T>>::pcx_issue(
+                        &team_account,
+                        T::Balance::sa(10 * 10_u64.pow(pcx_precision as u32))
+                    ).unwrap();
                 }
 
                 // xspot

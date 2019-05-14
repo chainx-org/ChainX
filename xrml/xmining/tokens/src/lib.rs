@@ -21,7 +21,7 @@ use support::{
 use xassets::{AssetErr, AssetType, ChainT, Token};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder};
-use xsupport::{debug, error, info};
+use xsupport::{debug, error};
 #[cfg(feature = "std")]
 use xsupport::{token, u8array_to_string};
 
@@ -269,7 +269,7 @@ impl<T: Trait> Module<T> {
     fn issue_reward(source: &T::AccountId, token: &Token, value: T::Balance) -> Result {
         let psedu_intention = Self::psedu_intention_profiles(token);
         if psedu_intention.last_total_deposit_weight == 0 {
-            info!(
+            debug!(
                 target: "tokens",
                 "should issue reward to {:?}, but the last_total_deposit_weight of Token: {:?} is zero.",
                 source,

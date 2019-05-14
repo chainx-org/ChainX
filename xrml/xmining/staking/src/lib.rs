@@ -23,7 +23,7 @@ use system::ensure_signed;
 use xaccounts::IntentionJackpotAccountIdFor;
 use xassets::{Memo, Token};
 use xr_primitives::{Name, XString, URL};
-use xsupport::info;
+use xsupport::debug;
 #[cfg(feature = "std")]
 use xsupport::who;
 
@@ -459,7 +459,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_claim(who: &T::AccountId, target: &T::AccountId) -> Result {
-        info!(target: "claim", "[vote claim] who: {:?}, target: {:?}", who, who!(target));
+        debug!(target: "claim", "[vote claim] who: {:?}, target: {:?}", who, who!(target));
         let mut iprof = <IntentionProfiles<T>>::get(target);
         let mut record = Self::nomination_record_of(who, target);
 
