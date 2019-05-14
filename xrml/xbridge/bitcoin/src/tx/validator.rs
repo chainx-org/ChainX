@@ -96,7 +96,9 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u
         // parse sigs from transaction inputs
         let script: Script = tx.inputs[i].script_sig.clone().into();
         if script.len() < 2 {
-            return Ok(0);
+            // if script length less than 2, it must has no sig in input, use 0 to represent it
+            v.push(0);
+            continue;
         }
         let (sigs, _) = script
             .extract_multi_scriptsig()
@@ -120,6 +122,11 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u
     assert!(
         v.len() > 0,
         "the list length must more than one, due to must have inputs; qed"
+    );
+
+    assert!(
+        v.len() == tx.inputs.len(),
+        "the list length must equal to inputs counts; qed"
     );
 
     let first = v.get(0).unwrap();
