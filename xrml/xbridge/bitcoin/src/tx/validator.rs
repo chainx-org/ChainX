@@ -49,10 +49,17 @@ pub fn validate_transaction<T: Trait>(tx: &RelayTx, merkle_root: H256) -> Result
     Ok(())
 }
 
-fn verify_sig(sig: &Bytes, pubkey: &Bytes, tx: &Transaction, script_pubkey: &Bytes) -> bool {
+fn verify_sig(
+    sig: &Bytes,
+    pubkey: &Bytes,
+    tx: &Transaction,
+    script_pubkey: &Bytes,
+    index: usize,
+) -> bool {
     let tx_signer: TransactionInputSigner = tx.clone().into();
+    // TODO WARNNING!!! when support WitnessV0, the `input_amount` must set value
     let checker = TransactionSignatureChecker {
-        input_index: 0,
+        input_index: index,
         input_amount: 0,
         signer: tx_signer,
     };
@@ -98,7 +105,7 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u
         for sig in sigs.iter() {
             let mut verify = false;
             for pubkey in pubkeys.iter() {
-                if verify_sig(sig, pubkey, tx, &bytes_sedeem_script) {
+                if verify_sig(sig, pubkey, tx, &bytes_sedeem_script, i) {
                     verify = true;
                     break;
                 }
