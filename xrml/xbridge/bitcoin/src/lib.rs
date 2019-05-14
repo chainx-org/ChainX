@@ -643,6 +643,10 @@ impl<T: Trait> Module<T> {
                 // sign
                 // check first and get signatures from commit transaction
                 let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
+                if sigs_count == 0 {
+                    error!("[apply_sig_withdraw]|the tx sig should not be zero, zero is the source tx without any sig|tx{:?}", tx);
+                    return Err("sigs count should not be zero for apply sig");
+                }
 
                 let confirmed_count = proposal
                     .trustee_list

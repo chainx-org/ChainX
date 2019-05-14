@@ -96,7 +96,7 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u
         // parse sigs from transaction inputs
         let script: Script = tx.inputs[i].script_sig.clone().into();
         if script.len() < 2 {
-            return Err("Invalid signature, script_sig is too short");
+            return Ok(0);
         }
         let (sigs, _) = script
             .extract_multi_scriptsig()
