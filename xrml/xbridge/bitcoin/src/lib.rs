@@ -705,6 +705,12 @@ impl<T: Trait> Module<T> {
                         "[apply_sig_withdraw]|{:}/{:} opposition, clear withdrawal propoal",
                         reject_count, total
                     );
+
+                    // release withdrawal for applications
+                    for id in proposal.withdrawal_id_list.iter() {
+                        let _ = xrecords::Module::<T>::withdrawal_revoke_by_trustee(*id);
+                    }
+
                     CurrentWithdrawalProposal::<T>::kill();
 
                     // log event

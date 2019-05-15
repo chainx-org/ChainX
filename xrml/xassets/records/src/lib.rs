@@ -257,11 +257,21 @@ impl<T: Trait> Module<T> {
             }
 
             if node.data.state != ApplicationState::Applying {
-                error!("[withdrawal_finish]only allow `Processing` for this application|id:{:}|state:{:?}", serial_number, node.data.state);
+                error!("[withdrawal_finish]|only allow `Applying` for this application|id:{:}|state:{:?}", serial_number, node.data.state);
                 return Err("only allow `Applying` state for applicant revoke");
             }
         }
         Self::withdrawal_finish_impl(serial_number, ApplicationState::NormalCancel)
+    }
+
+    pub fn withdrawal_revoke_by_trustee(serial_number: u32) -> Result {
+        if let Some(node) = Self::application_map(serial_number) {
+            if node.data.state != ApplicationState::Processing {
+                error!("[withdrawal_revoke_by_trustee]|only allow `Processing` for this application|id:{:}|state:{:?}", serial_number, node.data.state);
+                return Err("only allow `Processing` state for applicant revoke");
+            }
+        }
+        Self::withdrawal_finish_impl(serial_number, ApplicationState::RootCancel)
     }
 
     fn withdrawal_finish_impl(serial_number: u32, state: ApplicationState) -> Result {
