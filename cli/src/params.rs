@@ -8,13 +8,9 @@ pub struct ChainXParams {
     pub validator_name: Option<String>,
 
     // This option is actually unused and only for the auto generated help, which could be refined later.
-    #[structopt(
-        long = "options-config",
-        value_name = "CONFIG_JSON_PATH",
-        parse(from_os_str)
-    )]
-    /// pass [OPTIONS] via a JSON file, you can override them from the command line.
-    pub options_config: Option<PathBuf>,
+    #[structopt(long = "config", value_name = "CONFIG_JSON_PATH", parse(from_os_str))]
+    /// pass [FLAGS] or [OPTIONS] via a JSON file, you can override them from the command line.
+    pub config: Option<PathBuf>,
 }
 
 impl cli::AugmentClap for ChainXParams {

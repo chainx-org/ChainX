@@ -57,8 +57,8 @@ fn combine_conf(
 
         match v {
             Value::Bool(b) => {
-                if !opts_from_cmd.contains(&&opt.as_ref()) {
-                    opts.push(format!("{}={}", opt, b));
+                if !opts_from_cmd.contains(&&opt.as_ref()) && b {
+                    opts.push(format!("{}", opt));
                 }
             }
             Value::Number(b) => {
@@ -94,18 +94,19 @@ fn try_combine_options_config(cmd_args: Vec<String>) -> Vec<String> {
     let mut options_conf: Option<String> = None;
     let mut args_iter = cmd_args.iter();
     while let Some(arg) = args_iter.next() {
-        if arg == "--options-config" {
-            let conf = args_iter.next().expect("The argument '--options-config <CONFIG_JSON_PATH>' requires a value but none was supplied");
+        if arg == "--config" {
+            let conf = args_iter.next().expect(
+                "The argument '--config <CONFIG_JSON_PATH>' requires a value but none was supplied",
+            );
             options_conf = Some(conf.to_string());
-        } else if arg.starts_with("--options-config=") {
+        } else if arg.starts_with("--config=") {
             options_conf = Some(arg.split("=").collect::<Vec<&str>>()[1].to_string());
         }
     }
 
     if let Some(options_conf) = options_conf {
         let path = std::path::Path::new(&options_conf);
-        let combined_args =
-            combine_conf(cmd_args, path).expect("Error processing --options-config");
+        let combined_args = combine_conf(cmd_args, path).expect("Error processing --config");
         combined_args
     } else {
         cmd_args
