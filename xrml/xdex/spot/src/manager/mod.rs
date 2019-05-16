@@ -49,7 +49,7 @@ impl<T: Trait> Module<T> {
                     fluctuation
                 );
 
-                if lowest_offer.is_zero() {
+                if highest_bid.is_zero() {
                     return Ok(());
                 }
 

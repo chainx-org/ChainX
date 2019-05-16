@@ -560,9 +560,12 @@ where
                         if !handicap.lowest_offer.is_zero() {
                             info.maximum_bid = handicap.lowest_offer + pair.fluctuation();
                         }
-                        if !handicap.highest_bid.is_zero() {
+                        if handicap.highest_bid > pair.fluctuation() {
                             info.minimum_offer = handicap.highest_bid - pair.fluctuation();
+                        }else {
+                            info.minimum_offer =  10_u64.pow(pair.tick_precision);//tick
                         }
+
                     }
 
                     pairs.push(info);
@@ -642,10 +645,11 @@ where
                     lowest_offer + pair.fluctuation()
                 };
 
-                let minimum_offer = if highest_bid.is_zero() {
-                    0
-                } else {
+                let minimum_offer = if highest_bid > pair.fluctuation() {
                     highest_bid - pair.fluctuation()
+                } else {
+                    10_u64.pow(pair.tick_precision)
+
                 };
 
                 for price in (lowest_offer..=maximum_bid).step_by(tick as usize) {
