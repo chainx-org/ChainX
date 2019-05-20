@@ -30,7 +30,6 @@ use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, for_each_tuple, StorageMap,
     StorageValue,
 };
-use system::ensure_signed;
 
 // ChainX
 use xr_primitives::Name;
@@ -68,14 +67,6 @@ pub trait Trait: timestamp::Trait + xaccounts::Trait {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
-
-        /// Sets the session key of `_validator` to `_key`. This doesn't take effect until the next
-        /// session.
-        fn set_key(origin, key: T::SessionKey) {
-            let who = ensure_signed(origin)?;
-            // set new value for next session
-            <NextKeyFor<T>>::insert(who, key);
-        }
 
         /// Set a new session length. Won't kick in until the next session change (at current length).
         fn set_length(#[compact] new: T::BlockNumber) {
@@ -119,9 +110,10 @@ decl_storage! {
         /// Block at which the session length last changed.
         LastLengthChange: Option<T::BlockNumber>;
         /// The next key for a given validator.
-        pub NextKeyFor get(next_key_for) build(|config: &GenesisConfig<T>| {
+        NextKeyFor get(next_key_for) build(|config: &GenesisConfig<T>| {
             config.keys.clone()
         }): map T::AccountId => Option<T::SessionKey>;
+        KeyFilterMap: map T::SessionKey => Option<T::AccountId>;
         /// The next session length.
         NextSessionLength: Option<T::BlockNumber>;
     }
@@ -142,6 +134,22 @@ impl<T: Trait> Module<T> {
             let r = Self::next_key_for(&a);
             (a, r)
         })
+    }
+
+    pub fn check_key(key: &T::SessionKey) -> Result {
+        if <KeyFilterMap<T>>::get(key).is_some() {
+            return Err("The authority key already exits.");
+        }
+
+        Ok(())
+    }
+
+    pub fn set_key(who: &T::AccountId, key: &T::SessionKey) {
+        if let Some(old_key) = <NextKeyFor<T>>::get(who) {
+            <KeyFilterMap<T>>::remove(old_key);
+        }
+        <NextKeyFor<T>>::insert(who, key);
+        <KeyFilterMap<T>>::insert(key, who);
     }
 }
 

@@ -33,8 +33,10 @@ use sr_primitives::generic::BlockId;
 use sr_primitives::traits::ProvideRuntimeApi;
 use substrate_primitives::{ed25519, Pair as PairT};
 use substrate_service::{
-    construct_service_factory, FactoryFullConfiguration, FullBackend, FullClient, FullComponents,
-    FullExecutor, LightBackend, LightClient, LightComponents, LightExecutor, TaskExecutor,
+    construct_service_factory,
+    error::{Error as ServiceError, ErrorKind as ServiceErrorKind},
+    FactoryFullConfiguration, FullBackend, FullClient, FullComponents, FullExecutor, LightBackend,
+    LightClient, LightComponents, LightExecutor, TaskExecutor,
 };
 use transaction_pool::txpool::Pool as TransactionPool;
 
@@ -148,11 +150,13 @@ construct_service_factory! {
                         .register_provider(XSystemInherentDataProvider::new(name.as_bytes().to_vec())).expect("blockproducer set err; qed");
 
                     let client = service.client();
+                    let select_chain = service.select_chain()
+                        .ok_or_else(|| ServiceError::from(ServiceErrorKind::SelectChainRequired))?;
                     executor.spawn(start_aura(
                         SlotDuration::get_or_compute(&*client)?,
                         key.clone(),
                         client,
-                        service.select_chain(),
+                        select_chain,
                         block_import.clone(),
                         proposer,
                         service.network(),

@@ -209,6 +209,10 @@ decl_module! {
                 }
             }
 
+            if let Some(next_key) = next_key.as_ref() {
+                <xsession::Module<T>>::check_key(next_key)?;
+            }
+
             Self::apply_refresh(&who, url, desire_to_run, next_key, about);
         }
 
@@ -535,12 +539,11 @@ impl<T: Trait> Module<T> {
             });
         }
         if let Some(next_key) = next_key.clone() {
-            let session_key = next_key.clone();
-            <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
-                props.session_key = Some(session_key);
-            });
+            <xsession::Module<T>>::set_key(who, &next_key);
 
-            <xsession::NextKeyFor<T>>::insert(who, next_key);
+            <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
+                props.session_key = Some(next_key);
+            });
         }
 
         Self::deposit_event(RawEvent::Refresh(
