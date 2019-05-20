@@ -13,6 +13,7 @@ pub mod xassets_api {
     use super::*;
     use rstd::collections::btree_map::BTreeMap;
     use xassets::{Asset, AssetType, Memo, Token};
+    use xprocess::WithdrawalLimit;
     use xr_primitives::AddrStr;
 
     decl_runtime_apis! {
@@ -23,7 +24,7 @@ pub mod xassets_api {
             fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdForApi, Balance, BlockNumber, Timestamp>>;
             fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountIdForApi, Balance, BlockNumber, Timestamp>>;
             fn verify_address(token: Token, addr: AddrStr, ext: Memo) -> Result<(), Vec<u8>>;
-            fn minimal_withdrawal_value(token: Token) -> Option<Balance>;
+            fn withdrawal_limit(token: Token) -> Option<WithdrawalLimit<Balance>>;
         }
     }
 }

@@ -161,4 +161,6 @@ pub struct RecordInfo<AccountId, Balance, BlockNumber: Default, Timestamp> {
     pub withdrawal_id: u32, // only for withdrawal
     /// tx state
     pub state: TxState,
+    /// application state
+    pub application_state: Option<ApplicationState>,
 }

@@ -33,6 +33,7 @@ impl<T: Trait> Module<T> {
                 height_or_time: HeightOrTime::<T::BlockNumber, T::Moment>::Height(appl.height()),
                 withdrawal_id: appl.id(), // only for withdrawal
                 state: TxState::Applying,
+                application_state: Some(appl.state()),
             })
             .collect::<Vec<_>>();
 
@@ -90,8 +91,12 @@ impl<T: Trait> Module<T> {
                         record.state = match proposal.sig_state {
                             VoteResult::Unfinish => TxState::Signing,
                             VoteResult::Finish => {
-                                record.txid = tx_hash.clone();
-                                TxState::Confirming(tx_confirmed, confirmations)
+                                if tx_hash.len() != 0 {
+                                    record.txid = tx_hash.clone();
+                                    TxState::Confirming(tx_confirmed, confirmations)
+                                } else {
+                                    TxState::Broadcasting
+                                }
                             }
                         };
                     }
@@ -154,6 +159,7 @@ impl<T: Trait> Module<T> {
                                         ),
                                     withdrawal_id: 0, // only for withdrawal
                                     state,
+                                    application_state: None,
                                 };
                             records.push(info);
                         }

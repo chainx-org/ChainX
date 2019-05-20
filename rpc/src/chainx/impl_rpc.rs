@@ -24,6 +24,7 @@ use xr_primitives::{AddrStr, Name};
 
 use xaccounts::IntentionProps;
 use xassets::{Asset, AssetType, Chain, ChainT, Token};
+use xprocess::WithdrawalLimit;
 use xspot::{HandicapInfo, OrderIndex, OrderInfo, TradingPair, TradingPairIndex};
 use xstaking::IntentionProfs;
 use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
@@ -176,7 +177,7 @@ where
         }
     }
 
-    fn minimal_withdrawal_value(&self, token: String) -> Result<Option<Balance>> {
+    fn withdrawal_limit(&self, token: String) -> Result<Option<WithdrawalLimit<Balance>>> {
         let token: xassets::Token = token.as_bytes().to_vec();
 
         // test valid before call runtime api
@@ -186,7 +187,7 @@ where
         let b = self.best_number()?;
         self.client
             .runtime_api()
-            .minimal_withdrawal_value(&b, token)
+            .withdrawal_limit(&b, token)
             .map_err(Into::into)
     }
 

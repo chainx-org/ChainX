@@ -388,8 +388,10 @@ pub struct WithdrawInfo {
     pub accountid: AccountIdForRpc,
     /// btc-address
     pub address: String,
-    /// withdraw status
+    /// withdraw tx status
     pub status: Value,
+    /// application status
+    pub application_status: String,
     /// OP_RETURN
     pub memo: String,
 }
@@ -427,6 +429,12 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for WithdrawIn
             accountid: record.who.into(),
             address: String::from_utf8_lossy(&record.addr).into_owned(),
             status,
+            application_status: format!(
+                "{:?}",
+                record
+                    .application_state
+                    .expect("application state must exist for withdrawal records, not None; qed")
+            ),
             memo: String::from_utf8_lossy(&record.ext).into_owned(),
         }
     }

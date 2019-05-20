@@ -14,6 +14,7 @@ use runtime_primitives::traits::Block as BlockT;
 use state_machine::Backend;
 
 use xassets::Chain;
+use xprocess::WithdrawalLimit;
 use xspot::TradingPairIndex;
 
 mod error;
@@ -45,8 +46,8 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     #[rpc(name = "chainx_verifyAddressValidity")]
     fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<bool>>;
 
-    #[rpc(name = "chainx_getMinimalWithdrawalValueByToken")]
-    fn minimal_withdrawal_value(&self, token: String) -> Result<Option<Balance>>;
+    #[rpc(name = "chainx_getWithdrawalLimitByToken")]
+    fn withdrawal_limit(&self, token: String) -> Result<Option<WithdrawalLimit<Balance>>>;
 
     #[rpc(name = "chainx_getDepositList")]
     fn deposit_list(

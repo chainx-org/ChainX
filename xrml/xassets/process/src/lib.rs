@@ -7,6 +7,10 @@
 mod mock;
 mod tests;
 
+use parity_codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde_derive::{Deserialize, Serialize};
+
 // Substrate
 use primitives::traits::As;
 use rstd::prelude::Vec;
@@ -19,6 +23,14 @@ use xr_primitives::AddrStr;
 #[cfg(feature = "std")]
 use xsupport::token;
 use xsupport::{debug, warn};
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct WithdrawalLimit<Balance> {
+    pub minimal_withdrawal: Balance,
+    pub fee: Balance,
+}
 
 pub trait Trait: xassets::Trait + xrecords::Trait + xbitcoin::Trait {}
 
@@ -37,8 +49,9 @@ decl_module! {
 
             Self::verify_addr(&token, &addr, &ext)?;
 
-            let min = Self::minimal_withdrawal_value(&token).expect("all token should has minimal withdrawal value");
-            if value <= min {
+            let limit = Self::withdrawal_limit(&token).ok_or("token should has withdrawal limit")?;
+            // withdrawal value should larger than minimal_withdrawal, allow equal
+            if value < limit.minimal_withdrawal {
                 return Err("withdrawal value should larger than requirement")
             }
 
@@ -86,10 +99,15 @@ impl<T: Trait> Module<T> {
         Self::verify_addr(&token, &addr, &ext)
     }
 
-    pub fn minimal_withdrawal_value(token: &Token) -> Option<T::Balance> {
+    pub fn withdrawal_limit(token: &Token) -> Option<WithdrawalLimit<T::Balance>> {
         match token.as_slice() {
             <xbitcoin::Module<T> as ChainT>::TOKEN => {
-                Some(As::sa(xbitcoin::Module::<T>::btc_withdrawal_fee()))
+                let fee = As::sa(xbitcoin::Module::<T>::btc_withdrawal_fee());
+                let limit = WithdrawalLimit::<T::Balance> {
+                    minimal_withdrawal: fee * As::sa(3) / As::sa(2),
+                    fee,
+                };
+                Some(limit)
             }
             _ => None,
         }

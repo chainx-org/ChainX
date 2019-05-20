@@ -16,6 +16,7 @@ xr-primitives = { path = "../xr-primitives", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records", default-features = false }
+xprocess = { package = "xrml-xassets-process", path = "../xrml/xassets/process", default-features = false }
 xspot= { package = "xrml-xdex-spot", path = "../xrml/xdex/spot",  default-features = false }
 xbridge-common = { package = "xrml-xbridge-common", path = "../xrml/xbridge/common",  default-features = false }
 xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin",  default-features = false }
@@ -34,6 +35,7 @@ std = [
     "xsupport/std",
     "xassets/std",
     "xrecords/std",
+    "xprocess/std",
     "xspot/std",
     "xbridge-common/std",
     "xbitcoin/std",

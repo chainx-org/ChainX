@@ -40,6 +40,7 @@ xr-primitives = { path = "../xr-primitives" }
 # chainx runtime module
 xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets" }
 xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records" }
+xprocess = { package = "xrml-xassets-process", path = "../xrml/xassets/process" }
 xaccounts = { package = "xrml-xaccounts", path = "../xrml/xaccounts" }
 xsession = { package = "xrml-xsession", path = "../xrml/xsession" }
 xstaking = { package ="xrml-xmining-staking", path = "../xrml/xmining/staking" }

@@ -52,6 +52,7 @@ pub use xassets;
 pub use xbitcoin;
 pub use xbridge_common;
 pub use xbridge_features;
+pub use xprocess;
 
 use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
 
@@ -403,8 +404,8 @@ impl_runtime_apis! {
             XAssetsProcess::verify_address(token, addr, ext).map_err(|e| e.as_bytes().to_vec())
         }
 
-        fn minimal_withdrawal_value(token: xassets::Token) -> Option<Balance> {
-            XAssetsProcess::minimal_withdrawal_value(&token)
+        fn withdrawal_limit(token: xassets::Token) -> Option<xprocess::WithdrawalLimit<Balance>> {
+            XAssetsProcess::withdrawal_limit(&token)
         }
     }
 
