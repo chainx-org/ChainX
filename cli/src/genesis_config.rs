@@ -147,6 +147,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             current_era: 0,
             minimum_penalty: 1_000_000, // 0.01 PCX by default
             missed_blocks_severity: 3,
+            maximum_intention_count: 1000,
         }),
         xtokens: Some(XTokensConfig {
             token_discount: vec![

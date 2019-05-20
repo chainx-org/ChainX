@@ -56,7 +56,7 @@ decl_storage! {
         /// intention => intention name
         pub IntentionNameOf get(intention_name_of): map T::AccountId => Option<Name>;
 
-        pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps<T::SessionKey>;
+        pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps<T::SessionKey, T::BlockNumber>;
 
         pub TeamAddress get(team_address): T::AccountId;
         pub CouncilAddress get(council_address): T::AccountId;

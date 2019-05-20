@@ -327,9 +327,11 @@ where
                 }
 
                 let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
-                if let Some(props) =
-                    Self::pickout::<IntentionProps<AuthorityId>>(&state, &key, Hasher::BLAKE2256)?
-                {
+                if let Some(props) = Self::pickout::<IntentionProps<AuthorityId, BlockNumber>>(
+                    &state,
+                    &key,
+                    Hasher::BLAKE2256,
+                )? {
                     info.url = String::from_utf8_lossy(&props.url).into_owned();
                     info.is_active = props.is_active;
                     info.about = String::from_utf8_lossy(&props.about).into_owned();

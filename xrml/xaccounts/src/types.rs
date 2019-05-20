@@ -7,13 +7,15 @@ use serde_derive::{Deserialize, Serialize};
 // ChainX
 use xr_primitives::{XString, URL};
 
-/// Intention mutable properties
+/// Intention properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct IntentionProps<SessionKey> {
+pub struct IntentionProps<SessionKey, BlockNumber> {
     pub url: URL,
     pub is_active: bool,
     pub about: XString,
     pub session_key: Option<SessionKey>,
+    pub registered_at: BlockNumber,
+    pub last_inactive_since: BlockNumber,
 }

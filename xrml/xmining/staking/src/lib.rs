@@ -219,6 +219,7 @@ decl_module! {
             xaccounts::is_valid_name::<T>(&name)?;
 
             ensure!(!Self::is_intention(&who), "Cannot register if transactor is an intention already.");
+            ensure!(Self::intentions().len() < Self::maximum_intention_count() as usize, "Cannot register if there are already too many intentions");
 
             Self::apply_register(&who, name)?;
         }
@@ -243,6 +244,12 @@ decl_module! {
         fn set_missed_blocks_severity(new: Compact<u32>) {
             let new: u32 = new.into();
             <MissedBlockSeverity<T>>::put(new);
+        }
+
+        /// The maximum number of intentions.
+        fn set_maximum_intention_count(new: Compact<u32>) {
+            let new: u32 = new.into();
+            <MaximumIntentionCount<T>>::put(new);
         }
 
         /// Force there to be a new era. This also forces a new session immediately after.
@@ -295,6 +302,9 @@ decl_storage! {
         pub BondingDuration get(bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(1000);
         /// The length of the bonding duration in blocks for intention.
         pub IntentionBondingDuration get(intention_bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
+
+        /// Maximum number of intentions.
+        pub MaximumIntentionCount get(maximum_intention_count) config(): u32;
 
         pub SessionsPerEpoch get(sessions_per_epoch) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
 
@@ -509,6 +519,9 @@ impl<T: Trait> Module<T> {
         if let Some(desire_to_run) = desire_to_run {
             <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
                 props.is_active = desire_to_run;
+                if !desire_to_run {
+                    props.last_inactive_since = <system::Module<T>>::block_number();
+                }
             });
         }
         if let Some(about) = about.clone() {
@@ -543,10 +556,11 @@ impl<T: Trait> Module<T> {
     fn apply_register(intention: &T::AccountId, name: Name) -> Result {
         <xaccounts::IntentionOf<T>>::insert(&name, intention.clone());
         <xaccounts::IntentionNameOf<T>>::insert(intention, name);
-        <xaccounts::IntentionPropertiesOf<T>>::insert(
-            intention,
-            xaccounts::IntentionProps::default(),
-        );
+        let mut intention_props = xaccounts::IntentionProps::default();
+        let block_number = <system::Module<T>>::block_number();
+        intention_props.registered_at = block_number;
+        intention_props.last_inactive_since = block_number;
+        <xaccounts::IntentionPropertiesOf<T>>::insert(intention, intention_props);
 
         <Intentions<T>>::mutate(|i| i.push(intention.clone()));
         <IntentionProfiles<T>>::insert(

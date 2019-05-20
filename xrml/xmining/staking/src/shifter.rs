@@ -114,6 +114,7 @@ impl<T: Trait> Module<T> {
         if should_be_enforced && validators.len() > Self::minimum_validator_count() as usize {
             <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
                 props.is_active = false;
+                props.last_inactive_since = <system::Module<T>>::block_number();
                 info!(
                     "[slash_active_offline_validator] validator enforced to be inactive: {:?}",
                     who!(who)
@@ -127,7 +128,7 @@ impl<T: Trait> Module<T> {
 
     /// These offline validators choose to be inactive by themselves.
     /// Since they are already inactive at present, they won't share the reward,
-    /// so we only need to slash them for the missed blocks when they were active.
+    /// so we only need to slash them at the minimal penalty for the missed blocks when they were active.
     fn slash_inactive_offline_validators() {
         let slashed = <OfflineValidatorsPerSession<T>>::get();
         if slashed.is_empty() {
