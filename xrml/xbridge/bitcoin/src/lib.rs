@@ -222,7 +222,7 @@ decl_module! {
         pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: ApplicationState) -> Result {
             let from = ensure_signed(origin)?;
             T::TrusteeMultiSigProvider::check_multisig(&from)?;
-            xrecords::Module::<T>::fix_withdrawal_state_by_trustees(withdrawal_id, state)
+            xrecords::Module::<T>::fix_withdrawal_state_by_trustees(Chain::Bitcoin, withdrawal_id, state)
         }
 
         pub fn set_btc_withdrawal_fee_by_trustees(origin, fee: T::Balance) -> Result {

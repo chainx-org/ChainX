@@ -42,23 +42,6 @@ decl_module! {
             Self::withdrawal(&who, &token, balance, Default::default(), Default::default())
         }
 
-        pub fn fix_withdrawal_state_by_trustees(withdrawal_id: u32, state: ApplicationState) -> Result {
-            if let Some(node) = Self::application_map(withdrawal_id) {
-                if node.data.state != ApplicationState::Processing {
-                    error!("[fix_withdrawal_state_by_trustees]only allow `Processing` for this application|id:{:}|state:{:?}", withdrawal_id, node.data.state);
-                    return Err("only allow `Processing` for this application")
-                }
-            }
-            match state {
-                ApplicationState::RootFinish | ApplicationState::RootCancel => { /*do nothing*/ },
-                _ => {
-                    error!("[fix_withdrawal_state_by_trustees]|state only allow `RootFinish` and `RootCancel`|state:{:?}", state);
-                    return Err("state only allow `RootFinish` and `RootCancel`")
-                }
-            }
-            Self::fix_withdrawal_state(withdrawal_id, state)
-        }
-
         pub fn fix_withdrawal_state(withdrawal_id: u32, state: ApplicationState) -> Result {
             match Self::withdrawal_finish_impl(withdrawal_id, state) {
                 Ok(_) => {
@@ -272,6 +255,36 @@ impl<T: Trait> Module<T> {
             }
         }
         Self::withdrawal_finish_impl(serial_number, ApplicationState::RootCancel)
+    }
+
+    pub fn fix_withdrawal_state_by_trustees(
+        chain: Chain,
+        withdrawal_id: u32,
+        state: ApplicationState,
+    ) -> Result {
+        if let Some(node) = Self::application_map(withdrawal_id) {
+            if node.data.state != ApplicationState::Processing {
+                error!("[fix_withdrawal_state_by_trustees]only allow `Processing` for this application|id:{:}|state:{:?}", withdrawal_id, node.data.state);
+                return Err("only allow `Processing` for this application");
+            }
+
+            let token = node.data.token();
+            let (asset, _, _) =
+                xassets::Module::<T>::asset_info(token).ok_or("token symbol should be existed")?;
+            let token_chain = asset.chain();
+            if token_chain != chain {
+                error!("[fix_withdrawal_state_by_trustees]|caller trustee has no right to fix this record|trustee chain:{:?}|record token:{:?}|record chain:{:?}", chain, token!(token), token_chain);
+                return Err("this trustee is no right to fix this record");
+            }
+        }
+        match state {
+            ApplicationState::RootFinish | ApplicationState::RootCancel => { /*do nothing*/ }
+            _ => {
+                error!("[fix_withdrawal_state_by_trustees]|state only allow `RootFinish` and `RootCancel`|state:{:?}", state);
+                return Err("state only allow `RootFinish` and `RootCancel`");
+            }
+        }
+        Self::fix_withdrawal_state(withdrawal_id, state)
     }
 
     fn withdrawal_finish_impl(serial_number: u32, state: ApplicationState) -> Result {

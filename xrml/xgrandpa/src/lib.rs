@@ -285,7 +285,8 @@ where
         use primitives::traits::Zero;
 
         let sessions_per_grandpa = <Module<T>>::sessions_per_grandpa() as u64;
-        if <xsession::Module<T>>::current_index().as_() % sessions_per_grandpa != sessions_per_grandpa - 1
+        if <xsession::Module<T>>::current_index().as_() % sessions_per_grandpa
+            != sessions_per_grandpa - 1
         {
             return;
         }

@@ -1,7 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
-use rstd::prelude::Vec;
 use primitives::traits::MaybeDebug;
+use rstd::prelude::Vec;
 use substrate_primitives::blake2::blake2_512;
 
 use xr_primitives::{generic::b58, Name};
@@ -118,15 +118,18 @@ fn test_extractor() {
 
         let result = Extractor::<Public>::account_info(
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
-            44
+            44,
         );
         assert_eq!(result, Some((addr.unchecked_into(), None)));
 
         let result = Extractor::<Public>::account_info(
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4@channel1".as_bytes(),
-            44
+            44,
         );
-        assert_eq!(result, Some((addr.unchecked_into(), Some(b"channel1".to_vec()))));
+        assert_eq!(
+            result,
+            Some((addr.unchecked_into(), Some(b"channel1".to_vec())))
+        );
     }
     {
         // test for sr25519
@@ -134,7 +137,7 @@ fn test_extractor() {
 
         let result = Extractor::<Public>::account_info(
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
-            44
+            44,
         );
         assert_eq!(result, Some((addr.unchecked_into(), None)));
     }
@@ -148,13 +151,13 @@ fn test_extractor() {
         let addr = H256::from_slice(&addr);
         let result = Extractor::<Public>::account_info(
             "5C4xGQZwoNEM5mdk2U3vJbFZPr6ZKFSiqWnc9JRDcJ3w2x5D".as_bytes(),
-            42
+            42,
         );
         assert_eq!(result, None);
         // new checksum
         let result = Extractor::<Public>::account_info(
             "5C4xGQZwoNEM5mdk2U3vJbFZPr6ZKFSiqWnc9JRDcJ3w334p".as_bytes(),
-            42
+            42,
         );
         assert_eq!(result, Some((addr.unchecked_into(), None)));
     }
@@ -164,7 +167,7 @@ fn test_extractor() {
 
         let result = Extractor::<Public>::account_info(
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
-            42
+            42,
         );
         assert_eq!(result, None);
     }
