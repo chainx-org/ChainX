@@ -18,35 +18,29 @@ use runtime_primitives::traits::{Block as BlockT, NumberFor, Zero};
 use runtime_primitives::traits::{Header, ProvideRuntimeApi};
 use support::storage::{StorageMap, StorageValue};
 // chainx
-use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
+use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber};
 use chainx_runtime::{Call, Runtime};
 use xr_primitives::{AddrStr, Name};
 
 use xaccounts::IntentionProps;
-use xassets::{Asset, AssetType, Chain, ChainT, Token};
+use xassets::{AssetType, Chain, ChainT, Token};
+use xbridge_common::types::GenericAllSessionInfo;
+use xbridge_features::{
+    self,
+    crosschain_binding::{BitcoinAddress, EthereumAddress},
+};
 use xprocess::WithdrawalLimit;
 use xspot::{HandicapInfo, OrderIndex, OrderInfo, TradingPair, TradingPairIndex};
 use xstaking::IntentionProfs;
 use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
 
-use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
-use xbridge_features::{
-    self,
-    crosschain_binding::{BitcoinAddress, EthereumAddress},
-};
-
 use runtime_api::{
     xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xfee_api::XFeeApi, xmining_api::XMiningApi,
-    xspot_api::XSpotApi,
+    xspot_api::XSpotApi, xstaking_api::XStakingApi,
 };
 
 use super::error::{ErrorKind, Result};
 use super::types::*;
-
-use super::types::{
-    parse_trustee_props, parse_trustee_session_info, AssetInfo, Hasher, PageData, TotalAssetInfo,
-    MAX_PAGE_SIZE,
-};
 use super::{ChainX, ChainXApi};
 
 impl<B, E, Block, RA>
@@ -63,6 +57,7 @@ where
         + XMiningApi<Block>
         + XSpotApi<Block>
         + XFeeApi<Block>
+        + XStakingApi<Block>
         + XBridgeApi<Block>,
 {
     fn block_info(&self, number: Option<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
@@ -88,13 +83,7 @@ where
         page_size: u32,
     ) -> Result<Option<PageData<AssetInfo>>> {
         let b = self.best_number()?;
-        let assets: Result<Vec<(Token, BTreeMap<AssetType, Balance>)>> = self
-            .client
-            .runtime_api()
-            .valid_assets_of(&b, who.unchecked_into())
-            .map_err(Into::into);
-
-        let assets = assets?;
+        let assets = self.valid_assets_of(b, who.unchecked_into())?;
         let final_result = assets
             .into_iter()
             .map(|(token, map)| {
@@ -113,9 +102,7 @@ where
 
     fn assets(&self, page_index: u32, page_size: u32) -> Result<Option<PageData<TotalAssetInfo>>> {
         let b = self.best_number()?;
-        let assets: Result<Vec<(Asset, bool)>> =
-            self.client.runtime_api().all_assets(&b).map_err(Into::into);
-        let assets = assets?;
+        let assets = self.all_assets(b)?;
 
         let state = self.best_state()?;
 
@@ -184,11 +171,7 @@ where
         if xassets::is_valid_token(&token).is_err() {
             return Ok(None);
         }
-        let b = self.best_number()?;
-        self.client
-            .runtime_api()
-            .withdrawal_limit(&b, token)
-            .map_err(Into::into)
+        self.withdrawal_limit(self.best_number()?, token)
     }
 
     fn deposit_list(
@@ -198,12 +181,7 @@ where
         page_size: u32,
     ) -> Result<Option<PageData<DepositInfo>>> {
         let best_number = self.best_number()?;
-
-        let list: Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> = self
-            .client
-            .runtime_api()
-            .deposit_list_of(&best_number, chain)
-            .unwrap_or_default();
+        let list = self.deposit_list_of(best_number, chain).unwrap_or_default();
 
         // convert recordinfo to deposit
         let records: Vec<DepositInfo> = list.into_iter().map(Into::into).collect();
@@ -217,12 +195,9 @@ where
         page_size: u32,
     ) -> Result<Option<PageData<WithdrawInfo>>> {
         let best_number = self.best_number()?;
-        let list: Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> = self
-            .client
-            .runtime_api()
-            .withdrawal_list_of(&best_number, chain)
+        let list = self
+            .withdrawal_list_of(best_number, chain)
             .unwrap_or_default();
-
         let records: Vec<WithdrawInfo> = list.into_iter().map(Into::into).collect();
         into_pagedata(records, page_index, page_size)
     }
@@ -235,35 +210,35 @@ where
 
         let mut records = Vec::new();
 
-        let key = <xstaking::Intentions<Runtime>>::key();
-        if let Some(intentions) = Self::pickout::<Vec<AccountId>>(&state, &key, Hasher::TWOX128)? {
-            for intention in intentions {
-                let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
-                    who.clone().unchecked_into(),
-                    intention.clone(),
+        let intentions = self.intention_set(self.best_number()?)?;
+
+        for intention in intentions {
+            let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
+                who.clone().unchecked_into(),
+                intention.clone(),
+            ));
+            if let Some(record) = Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(
+                &state,
+                &key,
+                Hasher::BLAKE2256,
+            )? {
+                let revocations = record
+                    .revocations
+                    .iter()
+                    .map(|x| Revocation {
+                        block_number: x.0,
+                        value: x.1,
+                    })
+                    .collect::<Vec<_>>();
+                records.push((
+                    intention.into(),
+                    NominationRecord {
+                        nomination: record.nomination,
+                        last_vote_weight: record.last_vote_weight,
+                        last_vote_weight_update: record.last_vote_weight_update,
+                        revocations,
+                    },
                 ));
-                if let Some(record) = Self::pickout::<
-                    xstaking::NominationRecord<Balance, BlockNumber>,
-                >(&state, &key, Hasher::BLAKE2256)?
-                {
-                    let revocations = record
-                        .revocations
-                        .iter()
-                        .map(|x| Revocation {
-                            block_number: x.0,
-                            value: x.1,
-                        })
-                        .collect::<Vec<_>>();
-                    records.push((
-                        intention.into(),
-                        NominationRecord {
-                            nomination: record.nomination,
-                            last_vote_weight: record.last_vote_weight,
-                            last_vote_weight_update: record.last_vote_weight_update,
-                            revocations,
-                        },
-                    ));
-                }
             }
         }
 
@@ -279,13 +254,14 @@ where
             .expect("Validators can't be empty");
         let validators: Vec<AccountId> = validators.into_iter().map(|(who, _)| who).collect();
 
+        let best_number = self.best_number()?;
+
         // get all bridge trustee list
-        let all_session_info: Result<BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>>> =
-            self.client
-                .runtime_api()
-                .trustee_session_info(&self.best_number()?)
-                .map_err(Into::into);
-        let all_trustees = all_session_info?
+        let all_session_info: BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>> = self
+            .client
+            .runtime_api()
+            .trustee_session_info(&best_number)?;
+        let all_trustees = all_session_info
             .into_iter()
             .map(|(chain, info)| {
                 (
@@ -308,84 +284,78 @@ where
             ret
         };
 
-        let key = <xstaking::Intentions<Runtime>>::key();
+        let intentions = self.intention_set(best_number)?;
+        let jackpot_addr_list =
+            self.multi_jackpot_accountid_for(best_number, intentions.clone())?;
 
-        if let Some(intentions) = Self::pickout::<Vec<AccountId>>(&state, &key, Hasher::TWOX128)? {
-            let jackpot_addr_list: Result<Vec<AccountId>> = self
-                .client
-                .runtime_api()
-                .multi_jackpot_accountid_for(&self.best_number()?, intentions.clone())
-                .map_err(Into::into);
-            let jackpot_addr_list: Vec<AccountId> = jackpot_addr_list?;
+        for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
+            let mut info = IntentionInfo::default();
 
-            for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
-                let mut info = IntentionInfo::default();
-
-                let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
-                if let Some(name) = Self::pickout::<Name>(&state, &key, Hasher::BLAKE2256)? {
-                    info.name = String::from_utf8_lossy(&name).into_owned();
-                }
-
-                let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
-                if let Some(props) = Self::pickout::<IntentionProps<AuthorityId, BlockNumber>>(
-                    &state,
-                    &key,
-                    Hasher::BLAKE2256,
-                )? {
-                    info.url = String::from_utf8_lossy(&props.url).into_owned();
-                    info.is_active = props.is_active;
-                    info.about = String::from_utf8_lossy(&props.about).into_owned();
-                    info.session_key = match props.session_key {
-                        Some(s) => s.into(),
-                        None => intention.clone().into(),
-                    };
-                }
-
-                let key = <xstaking::IntentionProfiles<Runtime>>::key_for(&intention);
-                if let Some(profs) = Self::pickout::<IntentionProfs<Balance, BlockNumber>>(
-                    &state,
-                    &key,
-                    Hasher::BLAKE2256,
-                )? {
-                    let key = (
-                        jackpot_addr.clone(),
-                        xassets::Module::<Runtime>::TOKEN.to_vec(),
-                    );
-                    let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
-                    let map = Self::pickout::<BTreeMap<AssetType, Balance>>(
-                        &state,
-                        &balances_key,
-                        Hasher::BLAKE2256,
-                    )?
-                    .unwrap_or_default();
-                    let free = map
-                        .get(&AssetType::Free)
-                        .map(|free| *free)
-                        .unwrap_or_default();
-                    info.jackpot = free;
-                    info.jackpot_address = jackpot_addr.into();
-                    info.total_nomination = profs.total_nomination;
-                    info.last_total_vote_weight = profs.last_total_vote_weight;
-                    info.last_total_vote_weight_update = profs.last_total_vote_weight_update;
-                }
-
-                let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
-                    intention.clone(),
-                    intention.clone(),
-                ));
-                if let Some(record) = Self::pickout::<
-                    xstaking::NominationRecord<Balance, BlockNumber>,
-                >(&state, &key, Hasher::BLAKE2256)?
-                {
-                    info.self_vote = record.nomination;
-                }
-
-                info.is_validator = validators.iter().any(|i| i == &intention);
-                info.is_trustee = is_trustee(&intention);
-                info.account = intention.into();
-
-                intention_info.push(info);
+            let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
+            if let Some(name) = Self::pickout::<Name>(&state, &key, Hasher::BLAKE2256)? {
+                info.name = String::from_utf8_lossy(&name).into_owned();
             }
+
+            let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
+            if let Some(props) = Self::pickout::<IntentionProps<AuthorityId, BlockNumber>>(
+                &state,
+                &key,
+                Hasher::BLAKE2256,
+            )? {
+                info.url = String::from_utf8_lossy(&props.url).into_owned();
+                info.is_active = props.is_active;
+                info.about = String::from_utf8_lossy(&props.about).into_owned();
+                info.session_key = match props.session_key {
+                    Some(s) => s.into(),
+                    None => intention.clone().into(),
+                };
+            }
+
+            let key = <xstaking::Intentions<Runtime>>::key_for(&intention);
+            if let Some(profs) = Self::pickout::<IntentionProfs<Balance, BlockNumber>>(
+                &state,
+                &key,
+                Hasher::BLAKE2256,
+            )? {
+                let key = (
+                    jackpot_addr.clone(),
+                    xassets::Module::<Runtime>::TOKEN.to_vec(),
+                );
+                let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
+                let map = Self::pickout::<BTreeMap<AssetType, Balance>>(
+                    &state,
+                    &balances_key,
+                    Hasher::BLAKE2256,
+                )?
+                .unwrap_or_default();
+                let free = map
+                    .get(&AssetType::Free)
+                    .map(|free| *free)
+                    .unwrap_or_default();
+                info.jackpot = free;
+                info.jackpot_address = jackpot_addr.into();
+                info.total_nomination = profs.total_nomination;
+                info.last_total_vote_weight = profs.last_total_vote_weight;
+                info.last_total_vote_weight_update = profs.last_total_vote_weight_update;
+            }
+
+            let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
+                intention.clone(),
+                intention.clone(),
+            ));
+            if let Some(record) = Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(
+                &state,
+                &key,
+                Hasher::BLAKE2256,
+            )? {
+                info.self_vote = record.nomination;
+            }
+
+            info.is_validator = validators.iter().any(|i| i == &intention);
+            info.is_trustee = is_trustee(&intention);
+            info.account = intention.into();
+
+            intention_info.push(info);
         }
 
         Ok(Some(intention_info))
@@ -395,14 +365,11 @@ where
         let state = self.best_state()?;
         let mut psedu_intentions = Vec::new();
 
+        let best_number = self.best_number()?;
         let key = <xtokens::PseduIntentions<Runtime>>::key();
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key, Hasher::TWOX128)? {
-            let jackpot_addr_list: Result<Vec<AccountId>> = self
-                .client
-                .runtime_api()
-                .multi_token_jackpot_accountid_for(&self.best_number()?, tokens.clone())
-                .map_err(Into::into);
-            let jackpot_addr_list = jackpot_addr_list?;
+            let jackpot_addr_list =
+                self.multi_token_jackpot_accountid_for(best_number, tokens.clone())?;
 
             for (token, jackpot_addr) in tokens.into_iter().zip(jackpot_addr_list) {
                 let mut info = PseduIntentionInfo::default();
@@ -446,17 +413,12 @@ where
                 //因此，如果前端要换算折合投票数的时候
                 //应该=(资产数量[含精度的数字]*price)/(10^资产精度)=PCX[含PCX精度]
 
-                let b = self.best_number()?;
-                if let Ok(Some(price)) = self
-                    .client
-                    .runtime_api()
-                    .aver_asset_price(&b, token.clone())
-                {
+                if let Ok(Some(price)) = self.aver_asset_price(best_number, token.clone()) {
                     info.price = price;
                 };
 
                 let b = self.best_number()?;
-                if let Ok(Some(power)) = self.client.runtime_api().asset_power(&b, token.clone()) {
+                if let Ok(Some(power)) = self.asset_power(b, token.clone()) {
                     info.power = power;
                 };
 
@@ -762,28 +724,17 @@ where
     }
 
     fn trustee_session_info(&self, chain: Chain) -> Result<Option<Value>> {
-        let b = self.best_number()?;
-
-        let session_info: Result<Option<(u32, GenericAllSessionInfo<AccountId>)>> = self
-            .client
-            .runtime_api()
-            .trustee_session_info_for(&b, chain)
-            .map_err(Into::into);
-        session_info.map(|option_data| {
-            option_data.and_then(|(number, info)| parse_trustee_session_info(chain, number, info))
-        })
+        if let Some((number, info)) = self.trustee_session_info_for(self.best_number()?, chain)? {
+            return Ok(parse_trustee_session_info(chain, number, info));
+        } else {
+            return Ok(None);
+        }
     }
 
     fn trustee_info_for_accountid(&self, who: AccountIdForRpc) -> Result<Option<Value>> {
         let who: AccountId = who.unchecked_into();
-        let b = self.best_number()?;
-
-        let props_info: Result<BTreeMap<Chain, GenericTrusteeIntentionProps>> = self
-            .client
-            .runtime_api()
-            .trustee_props_for(&b, who)
-            .map_err(Into::into);
-        props_info.map(|data| parse_trustee_props(data))
+        let props_info = self.trustee_props_for(self.best_number()?, who)?;
+        Ok(parse_trustee_props(props_info))
     }
 
     fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>> {
@@ -802,12 +753,7 @@ where
         };
         let b = self.best_number()?;
 
-        let transaction_fee: Result<Option<u64>> = self
-            .client
-            .runtime_api()
-            .transaction_fee(&b, call.encode(), tx_length)
-            .map_err(Into::into);
-        let transaction_fee = transaction_fee?;
+        let transaction_fee = self.transaction_fee(b, call.encode(), tx_length)?;
         Ok(transaction_fee)
     }
 

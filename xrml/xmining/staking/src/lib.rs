@@ -15,7 +15,8 @@ use parity_codec::Compact;
 use primitives::traits::{As, Lookup, StaticLookup, Zero};
 use rstd::prelude::*;
 use support::{
-    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
+    decl_event, decl_module, decl_storage, dispatch::Result, ensure, EnumerableStorageMap,
+    StorageMap, StorageValue,
 };
 use system::ensure_signed;
 
@@ -200,7 +201,7 @@ decl_module! {
 
             if let Some(desire_to_run) = desire_to_run.as_ref() {
                 if !desire_to_run {
-                    let active = Self::intentions().into_iter()
+                    let active = Self::intention_set().into_iter()
                         .filter(|n| Self::is_active(n))
                         .collect::<Vec<_>>();
                     if active.len() <= Self::minimum_validator_count() as usize {
@@ -224,7 +225,7 @@ decl_module! {
 
             ensure!(!Self::is_intention(&who), "Cannot register if transactor is an intention already.");
             ensure!(!Self::name_exists(name.clone()), "This name has already been taken.");
-            ensure!(Self::intentions().len() < Self::maximum_intention_count() as usize, "Cannot register if there are already too many intentions");
+            ensure!(Self::intention_set().len() < Self::maximum_intention_count() as usize, "Cannot register if there are already too many intentions");
 
             Self::apply_register(&who, name)?;
         }
@@ -315,8 +316,6 @@ decl_storage! {
 
         /// The current era index.
         pub CurrentEra get(current_era) config(): T::BlockNumber;
-        /// All the accounts with a desire to stake.
-        pub Intentions get(intentions): Vec<T::AccountId>;
 
         /// The next value of sessions per era.
         pub NextSessionsPerEra get(next_sessions_per_era): Option<T::BlockNumber>;
@@ -328,7 +327,8 @@ decl_storage! {
 
         pub StakeWeight get(stake_weight): map T::AccountId => T::Balance;
 
-        pub IntentionProfiles get(intention_profiles): map T::AccountId => IntentionProfs<T::Balance, T::BlockNumber>;
+        /// All the accounts with a desire to stake.
+        pub Intentions get(intentions): linked_map T::AccountId => IntentionProfs<T::Balance, T::BlockNumber>;
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
 
@@ -360,7 +360,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
-        <IntentionProfiles<T>>::get(intention).total_nomination
+        <Intentions<T>>::get(intention).total_nomination
     }
 
     pub fn is_intention(who: &T::AccountId) -> bool {
@@ -373,6 +373,12 @@ impl<T: Trait> Module<T> {
 
     pub fn is_active(who: &T::AccountId) -> bool {
         <xaccounts::Module<T>>::intention_props_of(who).is_active
+    }
+
+    pub fn intention_set() -> Vec<T::AccountId> {
+        <Intentions<T>>::enumerate()
+            .map(|(account, _)| account)
+            .collect()
     }
 
     // Private mutables
@@ -479,7 +485,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_claim(who: &T::AccountId, target: &T::AccountId) -> Result {
         debug!(target: "claim", "[vote claim] who: {:?}, target: {:?}", who, who!(target));
-        let mut iprof = <IntentionProfiles<T>>::get(target);
+        let mut iprof = <Intentions<T>>::get(target);
         let mut record = Self::nomination_record_of(who, target);
 
         let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(target);
@@ -496,7 +502,7 @@ impl<T: Trait> Module<T> {
             dividend,
         ));
 
-        <IntentionProfiles<T>>::insert(target, iprof);
+        <Intentions<T>>::insert(target, iprof);
         Self::mutate_nomination_record(who, target, record);
 
         Ok(())
@@ -570,8 +576,7 @@ impl<T: Trait> Module<T> {
         intention_props.last_inactive_since = block_number;
         <xaccounts::IntentionPropertiesOf<T>>::insert(intention, intention_props);
 
-        <Intentions<T>>::mutate(|i| i.push(intention.clone()));
-        <IntentionProfiles<T>>::insert(
+        <Intentions<T>>::insert(
             intention,
             IntentionProfs {
                 total_nomination: Zero::zero(),
@@ -600,12 +605,12 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
         to_add: bool,
     ) {
-        let mut iprof = <IntentionProfiles<T>>::get(target);
+        let mut iprof = <Intentions<T>>::get(target);
         let mut record = Self::nomination_record_of(source, target);
 
         Self::update_vote_weight_both_way(&mut iprof, &mut record, value.as_(), to_add);
 
-        <IntentionProfiles<T>>::insert(target, iprof);
+        <Intentions<T>>::insert(target, iprof);
         Self::mutate_nomination_record(source, target, record);
     }
 }

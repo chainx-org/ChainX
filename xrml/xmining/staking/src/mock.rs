@@ -121,7 +121,7 @@ impl xbridge_common::traits::TrusteeMultiSig<u64> for DummyBitcoinTrusteeMultiSi
 
 pub struct DummyGenesisMultiSig;
 impl xmultisig::GenesisMultiSig<u64> for DummyGenesisMultiSig {
-    fn gen_genesis_multisig(_accounts: Vec<u64>) -> (u64, u64) {
+    fn gen_genesis_multisig() -> (u64, u64) {
         (666, 888)
     }
 }
@@ -182,7 +182,7 @@ impl xbitcoin::Trait for Test {
 
 pub struct DummyExtractor;
 impl xbridge_common::traits::Extractable<u64> for DummyExtractor {
-    fn account_info(_data: &[u8]) -> Option<(u64, Option<Vec<u8>>)> {
+    fn account_info(_data: &[u8], _: u8) -> Option<(u64, Option<Vec<u8>>)> {
         Some((999, None))
     }
 }
@@ -256,6 +256,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             sessions_per_epoch: 10,
             minimum_penalty: 10_000_000, // 0.1 PCX by default
             missed_blocks_severity: 3,
+            maximum_intention_count: 1000,
         }
         .build_storage()
         .unwrap()
@@ -291,7 +292,6 @@ pub type Indices = indices::Module<Test>;
 pub type System = system::Module<Test>;
 pub type XSession = xsession::Module<Test>;
 pub type XAssets = xassets::Module<Test>;
-pub type XMultiSig = xmultisig::Module<Test>;
 pub type XAccounts = xaccounts::Module<Test>;
 pub type XBridgeFeatures = xbridge_features::Module<Test>;
 pub type XStaking = Module<Test>;

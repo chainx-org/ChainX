@@ -1,5 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 
+use std::collections::btree_map::BTreeMap;
 use std::result;
 use std::sync::Arc;
 
@@ -7,13 +8,22 @@ use jsonrpc_derive::rpc;
 use parity_codec::Decode;
 use serde_json::Value;
 
+use chainx_primitives::{AccountId, Balance, BlockNumber, Timestamp};
+use client::runtime_api::Metadata;
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::BlockId;
 use runtime_primitives::traits::Block as BlockT;
+use runtime_primitives::traits::ProvideRuntimeApi;
 use state_machine::Backend;
 
-use xassets::Chain;
+use runtime_api::{
+    xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xfee_api::XFeeApi, xmining_api::XMiningApi,
+    xspot_api::XSpotApi, xstaking_api::XStakingApi,
+};
+
+use xassets::{Asset, AssetType, Chain, Token};
+use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
 use xprocess::WithdrawalLimit;
 use xspot::TradingPairIndex;
 
@@ -119,6 +129,21 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     fn particular_accounts(&self) -> Result<Option<serde_json::Value>>;
 }
 
+/// Wrap runtime apis in ChainX API.
+macro_rules! wrap_runtime_apis {
+    (
+        $(
+            fn $fn_name:ident( $($arg:ident : $arg_ty:ty),* ) -> $ret:ty;
+        )+
+    ) => {
+        $(
+            fn $fn_name(&self, number: BlockId<Block>, $($arg: $arg_ty),* ) -> result::Result<$ret, error::Error> {
+                self.client.runtime_api().$fn_name( &number, $($arg),* ).map_err(Into::into)
+            }
+        )+
+    };
+}
+
 /// ChainX API
 pub struct ChainX<B, E, Block, RA>
 where
@@ -134,6 +159,15 @@ where
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
     E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync,
     Block: BlockT<Hash = H256> + 'static,
+    RA: Send + Sync + 'static,
+    client::Client<B, E, Block, RA>: ProvideRuntimeApi,
+    <client::Client<B, E, Block, RA> as ProvideRuntimeApi>::Api: Metadata<Block>
+        + XAssetsApi<Block>
+        + XMiningApi<Block>
+        + XSpotApi<Block>
+        + XFeeApi<Block>
+        + XStakingApi<Block>
+        + XBridgeApi<Block>,
 {
     /// Create new ChainX API RPC handler.
     pub fn new(client: Arc<client::Client<B, E, Block, RA>>) -> Self {
@@ -179,5 +213,33 @@ where
             .map(StorageData)
             .map(|s| Decode::decode(&mut s.0.as_slice()))
             .unwrap_or(None))
+    }
+
+    wrap_runtime_apis! {
+        // XAssetsApi
+        fn all_assets() -> Vec<(Asset, bool)>;
+        fn valid_assets_of(who: AccountId) -> Vec<(Token, BTreeMap<AssetType, Balance>)>;
+        fn withdrawal_list_of(chain: Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, Timestamp>>;
+        fn deposit_list_of(chain: Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, Timestamp>>;
+        fn withdrawal_limit(token: Token) -> Option<WithdrawalLimit<Balance>>;
+
+        // XMiningApi
+        fn asset_power(token: Token) -> Option<Balance>;
+        fn multi_jackpot_accountid_for(intentions: Vec<AccountId>) -> Vec<AccountId>;
+        fn multi_token_jackpot_accountid_for(tokens: Vec<Token>) -> Vec<AccountId>;
+
+        // XSpotApi
+        fn aver_asset_price(token: Token) -> Option<Balance>;
+
+        // XFeeApi
+        fn transaction_fee(power: Vec<u8>, encoded_len: u64) -> Option<u64>;
+
+        // XStakingApi
+        fn intention_set() -> Vec<AccountId>;
+
+        // XBridgeApi
+        fn trustee_props_for(who: AccountId) -> BTreeMap<Chain, GenericTrusteeIntentionProps>;
+        fn trustee_session_info_for(chain: Chain) -> Option<(u32, GenericAllSessionInfo<AccountId>)>;
+
     }
 }

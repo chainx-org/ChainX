@@ -323,10 +323,18 @@ fn offline_should_slash_and_kick() {
         // Account 6 is a validator
         assert_eq!(
             XStaking::validators(),
-            vec![(10, 15), (30, 15), (40, 15), (6, 5), (20, 5)]
+            vec![(40, 15), (30, 15), (10, 15), (20, 5), (6, 5)]
         );
-        let total_active_stake = 15 + 15 + 15 + 5 + 5;
-        let reward = 50_00000000 * 8 / 10 * 5 / total_active_stake;
+        let mut total_active_stake = 15 + 15 + 15 + 5 + 5;
+        let mut rewards = 5_000_000_000 * 8 / 10;
+        let mut reward_of = Vec::new();
+        for (val, stakes) in XStaking::validators() {
+            let reward = rewards * stakes / total_active_stake;
+            reward_of.push((val, reward));
+            rewards -= reward;
+            total_active_stake -= stakes;
+        }
+        let reward = reward_of[4].1;
         let jackpot1 = reward - reward / 10;
         assert_eq!(XAssets::pcx_free_balance(&jackpot_addr), jackpot1);
 
@@ -336,10 +344,19 @@ fn offline_should_slash_and_kick() {
         XStaking::on_offline_validator(&6);
         assert_eq!(
             XStaking::validators(),
-            vec![(10, 15), (30, 15), (40, 15), (6, 5), (20, 5)]
+            vec![(40, 15), (30, 15), (10, 15), (20, 5), (6, 5)]
         );
 
-        let reward = 50_00000000 * 8 / 10 * 5 / total_active_stake;
+        let mut total_active_stake = 15 + 15 + 15 + 5 + 5;
+        let mut rewards = 5_000_000_000 * 8 / 10;
+        let mut reward_of = Vec::new();
+        for (val, stakes) in XStaking::validators() {
+            let reward = rewards * stakes / total_active_stake;
+            reward_of.push((val, reward));
+            rewards -= reward;
+            total_active_stake -= stakes;
+        }
+        let reward = reward_of[4].1;
         let jackpot2 = reward - reward / 10;
         assert_eq!(
             XAssets::pcx_free_balance(&jackpot_addr),
@@ -352,7 +369,7 @@ fn offline_should_slash_and_kick() {
         // Validator 6 be kicked
         assert_eq!(
             XStaking::validators(),
-            [(10, 15), (30, 15), (40, 15), (20, 5)]
+            vec![(40, 15), (30, 15), (10, 15), (20, 5)]
         );
         assert_eq!(XAssets::pcx_free_balance(&jackpot_addr), 0);
         assert_eq!(XAccounts::intention_props_of(&2).is_active, false);

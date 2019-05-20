@@ -40,11 +40,12 @@ impl<T: Trait> Module<T> {
 
     /// Gather all the active intentions sorted by total nomination.
     fn gather_candidates() -> Vec<(T::Balance, T::AccountId)> {
-        let mut intentions = Self::intentions()
+        let mut intentions = Self::intention_set()
             .into_iter()
             .filter(|v| Self::is_active(v) && !Self::total_nomination_of(&v).is_zero())
             .map(|v| (Self::total_nomination_of(&v), v))
             .collect::<Vec<_>>();
+        // FIXME sort via iterator
         intentions.sort_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(&b1));
         intentions
     }
@@ -192,7 +193,7 @@ impl<T: Trait> Module<T> {
             session_reward
         };
 
-        let mut active_intentions = Self::intentions()
+        let mut active_intentions = Self::intention_set()
             .into_iter()
             .filter(|i| Self::is_active(i))
             .map(|id| {
@@ -271,7 +272,7 @@ impl<T: Trait> Module<T> {
         // Update to the latest total nomination
         let validators = validators
             .into_iter()
-            .map(|v| (Self::intention_profiles(&v).total_nomination.as_(), v))
+            .map(|v| (Self::intentions(&v).total_nomination.as_(), v))
             .map(|(a, b)| (b, a))
             .collect::<Vec<_>>();
         <xsession::Module<T>>::set_validators(validators.as_slice());

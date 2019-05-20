@@ -75,6 +75,16 @@ pub mod xsession_api {
     }
 }
 
+pub mod xstaking_api {
+    use super::*;
+
+    decl_runtime_apis! {
+        pub trait XStakingApi {
+            fn intention_set() -> Vec<AccountIdForApi>;
+        }
+    }
+}
+
 pub mod xbridge_api {
     use super::*;
     use rstd::collections::btree_map::BTreeMap;

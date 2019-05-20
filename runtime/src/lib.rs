@@ -456,6 +456,12 @@ impl_runtime_apis! {
         }
     }
 
+    impl runtime_api::xstaking_api::XStakingApi<Block> for Runtime {
+        fn intention_set() -> Vec<AccountId> {
+            XStaking::intention_set()
+        }
+    }
+
     impl runtime_api::xbridge_api::XBridgeApi<Block> for Runtime {
         fn mock_new_trustees(chain: xassets::Chain, candidates: Vec<AccountId>) -> Result<GenericAllSessionInfo<AccountId>, Vec<u8>> {
             XBridgeFeatures::mock_trustee_session_impl(chain, candidates).map_err(|e| e.as_bytes().to_vec())
