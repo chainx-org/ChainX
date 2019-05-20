@@ -117,7 +117,7 @@ decl_storage! {
         PendingChange get(pending_change): Option<StoredPendingChange<T::BlockNumber, T::SessionKey>>;
         // next block number where we can force a change.
         NextForced get(next_forced): Option<T::BlockNumber>;
-        SessionsPerGrandpa get(sessions_per_grandpa) config(): u32 = 100;
+        SessionsPerGrandpa get(sessions_per_grandpa) config(): u32 = 12;
     }
     add_extra_genesis {
         config(authorities): Vec<(T::SessionKey, u64)>;
@@ -173,7 +173,7 @@ decl_module! {
                     }
                 }
 
-                if block_number == pending_change.scheduled_at + pending_change.delay {
+                if block_number >= pending_change.scheduled_at + pending_change.delay {
                     Self::deposit_event(
                         RawEvent::NewAuthorities(pending_change.next_authorities.clone())
                     );
@@ -284,8 +284,8 @@ where
     fn on_session_change() {
         use primitives::traits::Zero;
 
-        if <xsession::Module<T>>::current_index().as_() % <Module<T>>::sessions_per_grandpa() as u64
-            == 0
+        let sessions_per_grandpa = <Module<T>>::sessions_per_grandpa() as u64;
+        if <xsession::Module<T>>::current_index().as_() % sessions_per_grandpa != sessions_per_grandpa - 1
         {
             return;
         }
@@ -325,8 +325,6 @@ where
         // when we record old authority sets, we can use `finality_tracker::median`
         // to figure out _who_ failed. until then, we can't meaningfully guard
         // against `next == last` the way that normal session changes do.
-        info!("-----------on_stalled");
-
         let next_authorities = <xsession::Module<T>>::validators()
             .into_iter()
             .map(|(account_id, weight)| {
