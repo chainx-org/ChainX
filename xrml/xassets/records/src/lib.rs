@@ -270,7 +270,7 @@ impl<T: Trait> Module<T> {
 
             let token = node.data.token();
             let (asset, _, _) =
-                xassets::Module::<T>::asset_info(token).ok_or("token symbol should be existed")?;
+                xassets::Module::<T>::asset_info(&token).ok_or("token symbol should be existed")?;
             let token_chain = asset.chain();
             if token_chain != chain {
                 error!("[fix_withdrawal_state_by_trustees]|caller trustee has no right to fix this record|trustee chain:{:?}|record token:{:?}|record chain:{:?}", chain, token!(token), token_chain);
