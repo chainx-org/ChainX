@@ -219,6 +219,7 @@ decl_module! {
             xaccounts::is_valid_name::<T>(&name)?;
 
             ensure!(!Self::is_intention(&who), "Cannot register if transactor is an intention already.");
+            ensure!(!Self::name_exists(name.clone()), "This name has already been taken.");
             ensure!(Self::intentions().len() < Self::maximum_intention_count() as usize, "Cannot register if there are already too many intentions");
 
             Self::apply_register(&who, name)?;
@@ -360,6 +361,10 @@ impl<T: Trait> Module<T> {
 
     pub fn is_intention(who: &T::AccountId) -> bool {
         <xaccounts::Module<T>>::intention_name_of(who).is_some()
+    }
+
+    pub fn name_exists(name: Name) -> bool {
+        <xaccounts::Module<T>>::intention_of(name).is_some()
     }
 
     pub fn is_active(who: &T::AccountId) -> bool {
