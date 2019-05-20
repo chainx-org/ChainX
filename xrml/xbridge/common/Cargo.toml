@@ -11,7 +11,7 @@ serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-
+substrate-primitives = { package = "substrate-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 # chainx runtime module
 xr-primitives = { path = "../../../xr-primitives", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
@@ -32,6 +32,7 @@ std=[
     "parity-codec/std",
     "rstd/std",
     "primitives/std",
+    "substrate-primitives/std",
     # chainx runtime module
     "xr-primitives/std",
     "xsupport/std",
