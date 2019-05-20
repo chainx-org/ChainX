@@ -145,21 +145,22 @@ impl TxHandler {
             })
             .expect("must set input addr before; qed");
 
-        let (account_info, deposit_balance, original_opretion) =
+        let (account_info, deposit_balance, original_opreturn) =
             parse_deposit_outputs::<T>(&self.tx_info.raw_tx)?;
+        let original_opreturn = original_opreturn.unwrap_or_default();
 
         debug!(
             "[deposit]|parse outputs|account_info:{:?}|balance:{:}|opreturn:{:}|",
             account_info,
             deposit_balance,
-            if original_opretion.len() > 2 {
+            if original_opreturn.len() > 2 {
                 format!(
                     "{:?}|{:}",
-                    original_opretion[..2].to_vec(),
-                    u8array_to_string(&original_opretion[2..])
+                    original_opreturn[..2].to_vec(),
+                    u8array_to_string(&original_opreturn[2..])
                 )
             } else {
-                u8array_to_string(&original_opretion)
+                u8array_to_string(&original_opreturn)
             }
         );
 
@@ -216,7 +217,7 @@ impl TxHandler {
             xassets::Chain::Bitcoin,
             Module::<T>::TOKEN.to_vec(),
             As::sa(deposit_balance),
-            original_opretion,
+            original_opreturn,
             b58::to_base58(input_addr.layout().to_vec()),
             self.tx_hash.as_bytes().to_vec(),
             xrecords::TxState::Confirmed,
@@ -233,12 +234,12 @@ fn handle_opreturn<T: Trait>(script: &[u8], addr_type: u8) -> Option<(T::Account
 
 pub fn parse_deposit_outputs<T: Trait>(
     tx: &Transaction,
-) -> result::Result<(Option<(T::AccountId, Option<Name>)>, u64, Vec<u8>), &'static str> {
+) -> result::Result<(Option<(T::AccountId, Option<Name>)>, u64, Option<Vec<u8>>), &'static str> {
     let trustee_address = get_hot_trustee_address::<T>()?;
     let mut deposit_balance = 0;
     let mut account_info = None;
     let mut has_opreturn = false;
-    let mut original = Vec::new();
+    let mut original = None;
     // parse
     for output in tx.outputs.iter() {
         // out script
@@ -251,9 +252,7 @@ pub fn parse_deposit_outputs<T: Trait>(
                 // OP_CODE PUSH ... (2 BYTES)
                 let addr_type = xsystem::Module::<T>::address_type();
                 account_info = handle_opreturn::<T>(&script[2..], addr_type);
-                if account_info.is_some() {
-                    original.extend(script.to_vec());
-                }
+                original = Some(script.to_vec());
                 has_opreturn = true;
             }
             continue;

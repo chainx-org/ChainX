@@ -152,7 +152,7 @@ impl<T: Trait> Module<T> {
                                             .layout()
                                             .to_vec(),
                                     ),
-                                    ext,
+                                    ext: ext.unwrap_or_default(), // op return
                                     height_or_time:
                                         HeightOrTime::<T::BlockNumber, T::Moment>::Timestamp(
                                             As::sa(timestamp as u64),
