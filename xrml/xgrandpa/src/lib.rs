@@ -158,6 +158,7 @@ decl_module! {
 
         fn on_finalize(block_number: T::BlockNumber) {
             if let Some(pending_change) = <PendingChange<T>>::get() {
+                info!("--current block number:{:?}, pending_change scheduled_at:{:?}", block_number, pending_change.scheduled_at);
                 if block_number == pending_change.scheduled_at {
                     if let Some(median) = pending_change.forced {
                         Self::deposit_log(RawLog::ForcedAuthoritiesChangeSignal(

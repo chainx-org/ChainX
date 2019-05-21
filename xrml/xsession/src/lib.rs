@@ -113,7 +113,9 @@ decl_storage! {
         NextKeyFor get(next_key_for) build(|config: &GenesisConfig<T>| {
             config.keys.clone()
         }): map T::AccountId => Option<T::SessionKey>;
-        KeyFilterMap: map T::SessionKey => Option<T::AccountId>;
+        KeyFilterMap build(|config: &GenesisConfig<T>| {
+            config.keys.clone().into_iter().map(|(a, b)| (b, a)).collect::<Vec<(T::SessionKey, T::AccountId)>>()
+        }): map T::SessionKey => Option<T::AccountId>;
         /// The next session length.
         NextSessionLength: Option<T::BlockNumber>;
     }
