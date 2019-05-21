@@ -1,6 +1,6 @@
 [package]
 name = "chainx-primitives"
-version = "0.3.0"
+version = "1.0.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 edition = "2018"
 
