@@ -167,7 +167,7 @@ impl<T: Trait> Module<T> {
 
             Self::deposit_event(RawEvent::FeeForJackpot(jackpot_addr, for_jackpot));
         } else {
-            let council = xaccounts::Module::<T>::council_address();
+            let council = xaccounts::Module::<T>::council_account();
 
             warn!(
                 "[calc_fee]|current block not set producer!|council:{:},{:?}",

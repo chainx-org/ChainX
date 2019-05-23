@@ -108,17 +108,17 @@ impl<T: Trait> Module<T> {
     }
 
     fn channel_or_council_of(who: &T::AccountId, token: &Token) -> T::AccountId {
-        let council_address = xaccounts::Module::<T>::council_address();
+        let council_account = xaccounts::Module::<T>::council_account();
 
         if let Some(asset_info) = <xassets::AssetInfo<T>>::get(token) {
             let asset = asset_info.0;
             let chain = asset.chain();
 
             return xbridge_features::Module::<T>::get_first_binding_channel(who, chain)
-                .unwrap_or(council_address);
+                .unwrap_or(council_account);
         }
 
-        return council_address;
+        return council_account;
     }
 
     pub fn generic_claim<U, V>(

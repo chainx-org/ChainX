@@ -14,8 +14,7 @@ use client::runtime_api::Metadata;
 use primitives::crypto::UncheckedInto;
 use primitives::{Blake2Hasher, H160, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
-use runtime_primitives::traits::{Block as BlockT, NumberFor, Zero};
-use runtime_primitives::traits::{Header, ProvideRuntimeApi};
+use runtime_primitives::traits::{Block as BlockT, Header, NumberFor, ProvideRuntimeApi, Zero};
 use support::storage::{StorageMap, StorageValue};
 // chainx
 use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber};
@@ -259,10 +258,10 @@ where
             return Ok(None);
         };
 
-        let jackpot_addr = self.jackpot_accountid_for(self.best_number()?, who.clone())?;
+        let jackpot_account = self.jackpot_accountid_for(self.best_number()?, who.clone())?;
         Ok(Some(json!({
             "sessionKey": session_key,
-            "jackpotAddress": jackpot_addr,
+            "jackpotAccount": jackpot_account,
         })))
     }
 
@@ -303,10 +302,10 @@ where
         };
 
         let intentions = self.intention_set(best_number)?;
-        let jackpot_addr_list =
+        let jackpot_account_list =
             self.multi_jackpot_accountid_for(best_number, intentions.clone())?;
 
-        for (intention, jackpot_addr) in intentions.into_iter().zip(jackpot_addr_list) {
+        for (intention, jackpot_account) in intentions.into_iter().zip(jackpot_account_list) {
             let mut info = IntentionInfo::default();
 
             let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
@@ -333,7 +332,7 @@ where
                 Hasher::BLAKE2256,
             )? {
                 let key = (
-                    jackpot_addr.clone(),
+                    jackpot_account.clone(),
                     xassets::Module::<Runtime>::TOKEN.to_vec(),
                 );
                 let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
@@ -348,7 +347,7 @@ where
                     .map(|free| *free)
                     .unwrap_or_default();
                 info.jackpot = free;
-                info.jackpot_address = jackpot_addr.into();
+                info.jackpot_account = jackpot_account.into();
                 info.total_nomination = profs.total_nomination;
                 info.last_total_vote_weight = profs.last_total_vote_weight;
                 info.last_total_vote_weight_update = profs.last_total_vote_weight_update;
@@ -383,10 +382,10 @@ where
         let best_number = self.best_number()?;
         let key = <xtokens::PseduIntentions<Runtime>>::key();
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key, Hasher::TWOX128)? {
-            let jackpot_addr_list =
+            let jackpot_account_list =
                 self.multi_token_jackpot_accountid_for(best_number, tokens.clone())?;
 
-            for (token, jackpot_addr) in tokens.into_iter().zip(jackpot_addr_list) {
+            for (token, jackpot_account) in tokens.into_iter().zip(jackpot_account_list) {
                 let mut info = PseduIntentionInfo::default();
 
                 let key = <xtokens::PseduIntentionProfiles<Runtime>>::key_for(&token);
@@ -396,7 +395,7 @@ where
                     Hasher::BLAKE2256,
                 )? {
                     let key = (
-                        jackpot_addr.clone(),
+                        jackpot_account.clone(),
                         xassets::Module::<Runtime>::TOKEN.to_vec(),
                     );
                     let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
@@ -411,7 +410,7 @@ where
                         .map(|free| *free)
                         .unwrap_or_default();
                     info.jackpot = free;
-                    info.jackpot_address = jackpot_addr.into();
+                    info.jackpot_account = jackpot_account.into();
                     info.last_total_deposit_weight = vote_weight.last_total_deposit_weight;
                     info.last_total_deposit_weight_update =
                         vote_weight.last_total_deposit_weight_update;
@@ -432,8 +431,7 @@ where
                     info.price = price;
                 };
 
-                let b = self.best_number()?;
-                if let Ok(Some(power)) = self.asset_power(b, token.clone()) {
+                if let Ok(Some(power)) = self.asset_power(best_number, token.clone()) {
                     info.power = power;
                 };
 
@@ -766,9 +764,10 @@ where
         } else {
             return Err(ErrorKind::DecodeErr.into());
         };
-        let b = self.best_number()?;
 
-        let transaction_fee = self.transaction_fee(b, call.encode(), tx_length)?;
+        let transaction_fee =
+            self.transaction_fee(self.best_number()?, call.encode(), tx_length)?;
+
         Ok(transaction_fee)
     }
 
@@ -791,8 +790,6 @@ where
     }
 
     fn mock_bitcoin_new_trustees(&self, candidates: Vec<AccountIdForRpc>) -> Result<Option<Value>> {
-        let b = self.best_number()?;
-
         let candidates: Vec<AccountId> = candidates
             .into_iter()
             .map(|a| a.unchecked_into())
@@ -801,7 +798,7 @@ where
         let runtime_result: result::Result<GenericAllSessionInfo<AccountId>, Vec<u8>> = self
             .client
             .runtime_api()
-            .mock_new_trustees(&b, Chain::Bitcoin, candidates)?;
+            .mock_new_trustees(&self.best_number()?, Chain::Bitcoin, candidates)?;
 
         runtime_result
             .map(|all_session_info| parse_trustee_session_info(Chain::Bitcoin, 0, all_session_info))
@@ -812,11 +809,11 @@ where
         let state = self.best_state()?;
 
         // team addr
-        let key = xaccounts::TeamAddress::<Runtime>::key();
-        let team_addr = Self::pickout::<AccountId>(&state, &key, Hasher::TWOX128)?;
+        let key = xaccounts::TeamAccount::<Runtime>::key();
+        let team_account = Self::pickout::<AccountId>(&state, &key, Hasher::TWOX128)?;
 
-        let key = xaccounts::CouncilAddress::<Runtime>::key();
-        let council_addr = Self::pickout::<AccountId>(&state, &key, Hasher::TWOX128)?;
+        let key = xaccounts::CouncilAccount::<Runtime>::key();
+        let council_account = Self::pickout::<AccountId>(&state, &key, Hasher::TWOX128)?;
 
         let mut map = BTreeMap::new();
         for chain in Chain::iterator() {
@@ -829,9 +826,9 @@ where
 
         Ok(Some(json!(
         {
-            "teamAddress": team_addr,
-            "councilAddress": council_addr,
-            "trusteesAddress": map
+            "teamAccount": team_account,
+            "councilAccount": council_account,
+            "trusteesAccount": map
         }
         )))
     }

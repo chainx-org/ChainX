@@ -58,8 +58,8 @@ decl_storage! {
 
         pub IntentionPropertiesOf get(intention_props_of): map T::AccountId => IntentionProps<T::SessionKey, T::BlockNumber>;
 
-        pub TeamAddress get(team_address): T::AccountId;
-        pub CouncilAddress get(council_address): T::AccountId;
+        pub TeamAccount get(team_account): T::AccountId;
+        pub CouncilAccount get(council_account): T::AccountId;
     }
 }
 

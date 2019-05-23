@@ -357,8 +357,8 @@ impl<T: Trait> Module<T> {
 
         RootAddrList::<T>::put(vec![council_multisig_addr.clone()]);
 
-        xaccounts::TeamAddress::<T>::put(&team_multisig_addr);
-        xaccounts::CouncilAddress::<T>::put(council_multisig_addr);
+        xaccounts::TeamAccount::<T>::put(&team_multisig_addr);
+        xaccounts::CouncilAccount::<T>::put(council_multisig_addr);
 
         Ok(team_multisig_addr)
     }
