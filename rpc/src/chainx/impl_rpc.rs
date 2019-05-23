@@ -245,6 +245,27 @@ where
         Ok(Some(records))
     }
 
+    fn intention(&self, who: AccountIdForRpc) -> Result<Option<Value>> {
+        let state = self.best_state()?;
+        let who: AccountId = who.unchecked_into();
+        let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&who);
+        let session_key: AccountIdForRpc = if let Some(props) = Self::pickout::<
+            IntentionProps<AuthorityId, BlockNumber>,
+        >(
+            &state, &key, Hasher::BLAKE2256
+        )? {
+            props.session_key.unwrap_or(who.clone()).into()
+        } else {
+            return Ok(None);
+        };
+
+        let jackpot_addr = self.jackpot_accountid_for(self.best_number()?, who.clone())?;
+        Ok(Some(json!({
+            "sessionKey": session_key,
+            "jackpotAddress": jackpot_addr,
+        })))
+    }
+
     fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>> {
         let state = self.best_state()?;
         let mut intention_info = Vec::new();
@@ -257,10 +278,7 @@ where
         let best_number = self.best_number()?;
 
         // get all bridge trustee list
-        let all_session_info: BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>> = self
-            .client
-            .runtime_api()
-            .trustee_session_info(&best_number)?;
+        let all_session_info = self.trustee_session_info(best_number)?;
         let all_trustees = all_session_info
             .into_iter()
             .map(|(chain, info)| {
@@ -305,10 +323,7 @@ where
                 info.url = String::from_utf8_lossy(&props.url).into_owned();
                 info.is_active = props.is_active;
                 info.about = String::from_utf8_lossy(&props.about).into_owned();
-                info.session_key = match props.session_key {
-                    Some(s) => s.into(),
-                    None => intention.clone().into(),
-                };
+                info.session_key = props.session_key.unwrap_or(intention.clone()).into();
             }
 
             let key = <xstaking::Intentions<Runtime>>::key_for(&intention);
@@ -723,7 +738,7 @@ where
         }
     }
 
-    fn trustee_session_info(&self, chain: Chain) -> Result<Option<Value>> {
+    fn trustee_session_info_for(&self, chain: Chain) -> Result<Option<Value>> {
         if let Some((number, info)) = self.trustee_session_info_for(self.best_number()?, chain)? {
             return Ok(parse_trustee_session_info(chain, number, info));
         } else {

@@ -84,6 +84,9 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     #[rpc(name = "chainx_getIntentions")]
     fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>>;
 
+    #[rpc(name = "chainx_getIntentionByAccount")]
+    fn intention(&self, who: AccountId) -> Result<Option<Value>>;
+
     #[rpc(name = "chainx_getPseduIntentions")]
     fn psedu_intentions(&self) -> Result<Option<Vec<PseduIntentionInfo>>>;
 
@@ -111,7 +114,7 @@ pub trait ChainXApi<Number, AccountId, Balance, BlockNumber, SignedBlock> {
     fn address(&self, who: AccountId, chain: Chain) -> Result<Option<Vec<String>>>;
 
     #[rpc(name = "chainx_getTrusteeSessionInfo")]
-    fn trustee_session_info(&self, chain: Chain) -> Result<Option<Value>>;
+    fn trustee_session_info_for(&self, chain: Chain) -> Result<Option<Value>>;
 
     #[rpc(name = "chainx_getTrusteeInfoByAccount")]
     fn trustee_info_for_accountid(&self, who: AccountId) -> Result<Option<Value>>;
@@ -225,6 +228,7 @@ where
 
         // XMiningApi
         fn asset_power(token: Token) -> Option<Balance>;
+        fn jackpot_accountid_for(who: AccountId) -> AccountId;
         fn multi_jackpot_accountid_for(intentions: Vec<AccountId>) -> Vec<AccountId>;
         fn multi_token_jackpot_accountid_for(tokens: Vec<Token>) -> Vec<AccountId>;
 
@@ -240,6 +244,6 @@ where
         // XBridgeApi
         fn trustee_props_for(who: AccountId) -> BTreeMap<Chain, GenericTrusteeIntentionProps>;
         fn trustee_session_info_for(chain: Chain) -> Option<(u32, GenericAllSessionInfo<AccountId>)>;
-
+        fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>>;
     }
 }

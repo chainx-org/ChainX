@@ -309,11 +309,11 @@ fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> 
 #[derive(Debug, Deserialize)]
 pub struct RecordOfGenesisNode {
     account_id: String,
-    authority_key: String,
+    session_key: String,
     money: f64,
-    node_name: String,
-    node_url: String,
-    memo: String,
+    name: String,
+    url: String,
+    about: String,
     hot_entity: String,
     cold_entity: String,
 }
@@ -337,12 +337,12 @@ fn load_genesis_node_info() -> Result<
         let record: RecordOfGenesisNode = result?;
 
         let account_id = hex(&record.account_id).unchecked_into();
-        let authority_key = hex(&record.authority_key).unchecked_into();
+        let authority_key = hex(&record.session_key).unchecked_into();
 
         let money = (record.money * 10_u64.pow(PCX_PRECISION as u32) as f64) as u64;
-        let node_name = record.node_name.into_bytes();
-        let node_url = record.node_url.into_bytes();
-        let memo = record.memo.into_bytes();
+        let node_name = record.name.into_bytes();
+        let node_url = record.url.into_bytes();
+        let memo = record.about.into_bytes();
         let get_entity = |entity: String| {
             if entity.is_empty() {
                 None
