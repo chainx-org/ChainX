@@ -92,10 +92,17 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         4,                    // retargeting_factor
     );
 
+    let active_genesis_nodes = genesis_node_info
+        .iter()
+        .filter(|(_, _, balance, _, _, _, _, _)| *balance > 0)
+        .collect::<Vec<_>>();
+
+    assert!(active_genesis_nodes.len() == 4);
+
     GenesisConfig {
         consensus: Some(ConsensusConfig {
             code: include_bytes!("./chainx_runtime.compact.wasm").to_vec(),
-            authorities: genesis_node_info
+            authorities: active_genesis_nodes
                 .iter()
                 .map(|(_, authority_id, _, _, _, _, _, _)| authority_id.clone().into())
                 .collect(),
@@ -105,7 +112,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             minimum_period: CONSENSUS_TIME, // 2 second block time.
         }),
         xsession: Some(SessionConfig {
-            validators: genesis_node_info
+            validators: active_genesis_nodes
                 .iter()
                 .map(|(account, _, balance, _, _, _, _, _)| (account.clone().into(), *balance))
                 .collect(),
@@ -263,7 +270,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 ),
             ],
             // xgrandpa
-            authorities: genesis_node_info
+            authorities: active_genesis_nodes
                 .iter()
                 .map(|(_, authority_id, balance, _, _, _, _, _)| {
                     (authority_id.clone().into(), *balance)
