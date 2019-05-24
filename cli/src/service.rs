@@ -165,7 +165,7 @@ construct_service_factory! {
                         service.config.force_authoring,
                     )?);
 
-                    info!("Running Grandpa session as Authority {}", key.public());
+                    info!("Running Grandpa session as Authority {:?}", key.public());
                 }
 
                 let local_key = if service.config.disable_grandpa {
