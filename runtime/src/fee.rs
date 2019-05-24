@@ -53,6 +53,7 @@ impl CheckFee for Call {
             },
             Call::XAssetsProcess(call) => match call {
                 XAssetsProcessCall::withdraw(_, _, _, _) => Some(3),
+                XAssetsProcessCall::revoke_withdraw(_) => Some(10),
                 _ => None,
             },
             // xbridge

@@ -39,7 +39,9 @@ use btc_primitives::H256;
 pub use btc_primitives::H264;
 use btc_ser::{deserialize, Reader};
 
-use self::tx::utils::{get_sig_num, inspect_address_from_transaction, trustee_session};
+use self::tx::utils::{
+    get_sig_num, get_trustee_address_pair, inspect_address_from_transaction, trustee_session,
+};
 use self::tx::{
     check_withdraw_tx, create_multi_address, detect_transaction_type, handle_tx,
     insert_trustee_vote_state, parse_and_check_signed_tx, validate_transaction,
@@ -260,7 +262,7 @@ impl<T: Trait> ChainT for Module<T> {
 
     fn check_addr(addr: &[u8], _: &[u8]) -> Result {
         // this addr is base58 addr
-        let _ = Self::verify_btc_address(addr)
+        let address = Self::verify_btc_address(addr)
             .map_err(|_| "Verify btc addr err")
             .map_err(|e| {
                 error!(
@@ -269,6 +271,12 @@ impl<T: Trait> ChainT for Module<T> {
                 );
                 e
             })?;
+
+        let (hot_addr, cold_addr) = get_trustee_address_pair::<T>()?;
+        if address == hot_addr || address == cold_addr {
+            return Err("current addr is equal to hot or cold trustee addr");
+        }
+
         Ok(())
     }
 }
