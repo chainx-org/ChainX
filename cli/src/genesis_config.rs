@@ -81,7 +81,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let blocks_per_session = 150; // 150 blocks per session
     let sessions_per_era = 12; // update validators set per 12 sessions
     let sessions_per_epoch = sessions_per_era * 10; // update trustees set per 12*10 sessions
-    let bonding_duration = blocks_per_session * sessions_per_era; // freeze 150*12 blocks for non-intention
+    let bonding_duration = blocks_per_session * sessions_per_era * 72; // freeze 150*12*72 blocks for non-intention
     let intention_bonding_duration = bonding_duration * 10; // freeze 150*12*10 blocks for intention
 
     let params_info = Params::new(

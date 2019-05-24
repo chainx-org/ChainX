@@ -409,7 +409,7 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for WithdrawIn
             TxState::Confirming(a, b) => json!({
                 "value": "Confirming",
                 "confirm": a,
-                "total_confirm": b,
+                "totalConfirm": b,
             }),
             _ => json!({
                 "value": record.state
