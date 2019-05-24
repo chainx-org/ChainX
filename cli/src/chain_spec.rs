@@ -21,7 +21,7 @@ pub fn mainnet_config() -> ChainSpec {
         "/ip4/47.110.232.108/tcp/31129/p2p/QmZpqsZ5XMSMHThbiUFTUxCY3efjz2uGDGH3Jh3rAcKA8R".into(),
     ];
     ChainSpec::from_genesis(
-        "ChainX Mainnet",
+        "ChainX",
         "chainx_mainnet",
         mainnet_config_genesis,
         boot_nodes,
