@@ -164,27 +164,27 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             // start genesis block: (genesis, blocknumber)
             genesis: (
                 BlockHeader {
-                    version: 545259520,
+                    version: 536870912,
                     previous_header_hash: h256_from_rev_str(
-                        "00000000000000000001b2505c11119fcf29be733ec379f686518bf1090a522a",
+                        "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
                     ),
                     merkle_root_hash: h256_from_rev_str(
-                        "cc09d95fd8ccc985826b9eb46bf73f8449116f18535423129f0574500985cf90",
+                        "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
                     ),
-                    time: 1556958733,
-                    bits: Compact::new(388628280),
-                    nonce: 2897942742,
+                    time: 1558168296,
+                    bits: Compact::new(388627269),
+                    nonce: 1439505020,
                 },
-                574560,
+                576576,
             ),
             genesis_hash: h256_from_rev_str(
-                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+                "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882",
             ),
             params_info, // retargeting_factor
             network_id: 0,
             confirmation_number: 4,
             reserved_block: 2100,
-            btc_withdrawal_fee: 40000,
+            btc_withdrawal_fee: 100000,
             max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }),
