@@ -251,6 +251,10 @@ pub fn parse_deposit_outputs<T: Trait>(
                 // only handle first opreturn output
                 // OP_CODE PUSH ... (2 BYTES)
                 let addr_type = xsystem::Module::<T>::address_type();
+                if script.len() < 2 {
+                    continue;
+                }
+
                 account_info = handle_opreturn::<T>(&script[2..], addr_type);
                 original = Some(script.to_vec());
                 has_opreturn = true;
