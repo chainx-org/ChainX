@@ -88,13 +88,13 @@ impl CheckFee for Call {
             },
             // xmining
             Call::XStaking(call) => match call {
-                XStakingCall::register(_) => Some(1000),
+                XStakingCall::register(_) => Some(1_000_000),
                 XStakingCall::refresh(_, _, _, _) => Some(1000),
                 XStakingCall::nominate(_, _, _) => Some(5),
                 XStakingCall::unnominate(_, _, _) => Some(3),
                 XStakingCall::renominate(_, _, _, _) => Some(8),
                 XStakingCall::unfreeze(_, _) => Some(2),
-                XStakingCall::claim(_) => Some(3),
+                XStakingCall::claim(_) => Some(30),
 
                 _ => None,
             },
