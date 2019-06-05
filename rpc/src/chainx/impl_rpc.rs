@@ -13,8 +13,8 @@ use rustc_hex::FromHex;
 use client::runtime_api::Metadata;
 use primitives::crypto::UncheckedInto;
 use primitives::{Blake2Hasher, H160, H256};
-use runtime_primitives::generic::{BlockId, SignedBlock};
-use runtime_primitives::traits::{Block as BlockT, Header, NumberFor, ProvideRuntimeApi, Zero};
+use runtime_primitives::generic::SignedBlock;
+use runtime_primitives::traits::{Block as BlockT, NumberFor, ProvideRuntimeApi, Zero};
 use support::storage::{StorageMap, StorageValue};
 // chainx
 use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber};
@@ -43,8 +43,14 @@ use super::types::*;
 use super::{ChainX, ChainXApi};
 
 impl<B, E, Block, RA>
-    ChainXApi<NumberFor<Block>, AccountIdForRpc, Balance, BlockNumber, SignedBlock<Block>>
-    for ChainX<B, E, Block, RA>
+    ChainXApi<
+        NumberFor<Block>,
+        <Block as BlockT>::Hash,
+        AccountIdForRpc,
+        Balance,
+        BlockNumber,
+        SignedBlock<Block>,
+    > for ChainX<B, E, Block, RA>
 where
     B: client::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
     E: client::CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync + 'static,
@@ -60,19 +66,7 @@ where
         + XBridgeApi<Block>,
 {
     fn block_info(&self, number: Option<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
-        let hash = match number {
-            None => Some(self.client.info()?.chain.best_hash),
-            Some(number) => self
-                .client
-                .header(&BlockId::number(number))?
-                .map(|h| h.hash()),
-        };
-        let block_hash = match hash {
-            None => self.client.info()?.chain.best_hash,
-            Some(h) => h,
-        };
-
-        Ok(self.client.block(&BlockId::Hash(block_hash))?)
+        Ok(self.client.block(&self.block_id_by_number(number)?)?)
     }
 
     fn assets_of(
@@ -80,9 +74,9 @@ where
         who: AccountIdForRpc,
         page_index: u32,
         page_size: u32,
+        hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<PageData<AssetInfo>>> {
-        let b = self.best_number()?;
-        let assets = self.valid_assets_of(b, who.unchecked_into())?;
+        let assets = self.valid_assets_of(self.block_id_by_hash(hash)?, who.unchecked_into())?;
         let final_result = assets
             .into_iter()
             .map(|(token, map)| {
@@ -99,11 +93,15 @@ where
         into_pagedata(final_result, page_index, page_size)
     }
 
-    fn assets(&self, page_index: u32, page_size: u32) -> Result<Option<PageData<TotalAssetInfo>>> {
-        let b = self.best_number()?;
-        let assets = self.all_assets(b)?;
+    fn assets(
+        &self,
+        page_index: u32,
+        page_size: u32,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<PageData<TotalAssetInfo>>> {
+        let assets = self.all_assets(self.block_id_by_hash(hash)?)?;
 
-        let state = self.best_state()?;
+        let state = self.state_at(hash)?;
 
         let mut all_assets = Vec::new();
 
@@ -125,35 +123,33 @@ where
         into_pagedata(all_assets, page_index, page_size)
     }
 
-    fn verify_addr(&self, token: String, addr: String, memo: String) -> Result<Option<bool>> {
+    fn verify_addr(
+        &self,
+        token: String,
+        addr: String,
+        memo: String,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<bool>> {
         let token: xassets::Token = token.as_bytes().to_vec();
         let addr: AddrStr = addr.as_bytes().to_vec();
         let memo: xassets::Memo = memo.as_bytes().to_vec();
 
-        // test valid before call runtime api
         if let Err(_e) = xassets::is_valid_token(&token) {
-            //            return Ok(Some(String::from_utf8_lossy(e.as_ref()).into_owned()));
             return Ok(Some(false));
         }
 
         if addr.len() > 256 || memo.len() > 256 {
-            //            return Ok(Some("the addr or memo may be too long".to_string()));
             return Ok(Some(false));
         }
 
-        let b = self.best_number()?;
         let ret = self
             .client
             .runtime_api()
-            .verify_address(&b, token, addr, memo)
+            .verify_address(&self.block_id_by_hash(hash)?, token, addr, memo)
             .and_then(|r| match r {
                 Ok(()) => Ok(None),
                 Err(s) => Ok(Some(String::from_utf8_lossy(s.as_ref()).into_owned())),
             });
-        //            .map_err(|e| e.into());
-        // Err() => substrate inner err
-        // Ok(None) => runtime_api return true
-        // Ok(Some(err_info)) => runtime_api return false, Some() contains err info
         match ret {
             Err(_) => Ok(Some(false)),
             Ok(ret) => match ret {
@@ -163,14 +159,17 @@ where
         }
     }
 
-    fn withdrawal_limit(&self, token: String) -> Result<Option<WithdrawalLimit<Balance>>> {
+    fn withdrawal_limit(
+        &self,
+        token: String,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<WithdrawalLimit<Balance>>> {
         let token: xassets::Token = token.as_bytes().to_vec();
 
-        // test valid before call runtime api
         if xassets::is_valid_token(&token).is_err() {
             return Ok(None);
         }
-        self.withdrawal_limit(self.best_number()?, token)
+        self.withdrawal_limit(self.block_id_by_hash(hash)?, token)
     }
 
     fn deposit_list(
@@ -178,9 +177,11 @@ where
         chain: Chain,
         page_index: u32,
         page_size: u32,
+        hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<PageData<DepositInfo>>> {
-        let best_number = self.best_number()?;
-        let list = self.deposit_list_of(best_number, chain).unwrap_or_default();
+        let list = self
+            .deposit_list_of(self.block_id_by_hash(hash)?, chain)
+            .unwrap_or_default();
 
         // convert recordinfo to deposit
         let records: Vec<DepositInfo> = list.into_iter().map(Into::into).collect();
@@ -192,10 +193,10 @@ where
         chain: Chain,
         page_index: u32,
         page_size: u32,
+        hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<PageData<WithdrawInfo>>> {
-        let best_number = self.best_number()?;
         let list = self
-            .withdrawal_list_of(best_number, chain)
+            .withdrawal_list_of(self.block_id_by_hash(hash)?, chain)
             .unwrap_or_default();
         let records: Vec<WithdrawInfo> = list.into_iter().map(Into::into).collect();
         into_pagedata(records, page_index, page_size)
@@ -204,12 +205,13 @@ where
     fn nomination_records(
         &self,
         who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<(AccountIdForRpc, NominationRecord)>>> {
-        let state = self.best_state()?;
+        let state = self.state_at(hash)?;
 
         let mut records = Vec::new();
 
-        let intentions = self.intention_set(self.best_number()?)?;
+        let intentions = self.intention_set(self.block_id_by_hash(hash)?)?;
 
         for intention in intentions {
             let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
@@ -244,8 +246,12 @@ where
         Ok(Some(records))
     }
 
-    fn intention(&self, who: AccountIdForRpc) -> Result<Option<Value>> {
-        let state = self.best_state()?;
+    fn intention(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Value>> {
+        let state = self.state_at(hash)?;
         let who: AccountId = who.unchecked_into();
         let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&who);
         let session_key: AccountIdForRpc = if let Some(props) = Self::pickout::<
@@ -258,15 +264,20 @@ where
             return Ok(None);
         };
 
-        let jackpot_account = self.jackpot_accountid_for(self.best_number()?, who.clone())?;
+        let jackpot_account =
+            self.jackpot_accountid_for(self.block_id_by_hash(hash)?, who.clone())?;
         Ok(Some(json!({
             "sessionKey": session_key,
             "jackpotAccount": jackpot_account,
         })))
     }
 
-    fn intentions(&self) -> Result<Option<Vec<IntentionInfo>>> {
-        let state = self.best_state()?;
+    fn intentions(
+        &self,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Vec<IntentionInfo>>> {
+        let state = self.state_at(hash)?;
+
         let mut intention_info = Vec::new();
 
         let key = <xsession::Validators<Runtime>>::key();
@@ -274,10 +285,10 @@ where
             .expect("Validators can't be empty");
         let validators: Vec<AccountId> = validators.into_iter().map(|(who, _)| who).collect();
 
-        let best_number = self.best_number()?;
+        let block_id = self.block_id_by_hash(hash)?;
 
         // get all bridge trustee list
-        let all_session_info = self.trustee_session_info(best_number)?;
+        let all_session_info = self.trustee_session_info(block_id)?;
         let all_trustees = all_session_info
             .into_iter()
             .map(|(chain, info)| {
@@ -301,9 +312,9 @@ where
             ret
         };
 
-        let intentions = self.intention_set(best_number)?;
+        let intentions = self.intention_set(block_id)?;
         let jackpot_account_list =
-            self.multi_jackpot_accountid_for(best_number, intentions.clone())?;
+            self.multi_jackpot_accountid_for(block_id, intentions.clone())?;
 
         for (intention, jackpot_account) in intentions.into_iter().zip(jackpot_account_list) {
             let mut info = IntentionInfo::default();
@@ -375,15 +386,19 @@ where
         Ok(Some(intention_info))
     }
 
-    fn psedu_intentions(&self) -> Result<Option<Vec<PseduIntentionInfo>>> {
-        let state = self.best_state()?;
+    fn psedu_intentions(
+        &self,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Vec<PseduIntentionInfo>>> {
+        let block_id = self.block_id_by_hash(hash)?;
+        let state = self.state_at(hash)?;
+
         let mut psedu_intentions = Vec::new();
 
-        let best_number = self.best_number()?;
         let key = <xtokens::PseduIntentions<Runtime>>::key();
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key, Hasher::TWOX128)? {
             let jackpot_account_list =
-                self.multi_token_jackpot_accountid_for(best_number, tokens.clone())?;
+                self.multi_token_jackpot_accountid_for(block_id, tokens.clone())?;
 
             for (token, jackpot_account) in tokens.into_iter().zip(jackpot_account_list) {
                 let mut info = PseduIntentionInfo::default();
@@ -427,11 +442,11 @@ where
                 //因此，如果前端要换算折合投票数的时候
                 //应该=(资产数量[含精度的数字]*price)/(10^资产精度)=PCX[含PCX精度]
 
-                if let Ok(Some(price)) = self.aver_asset_price(best_number, token.clone()) {
+                if let Ok(Some(price)) = self.aver_asset_price(block_id, token.clone()) {
                     info.price = price;
                 };
 
-                if let Ok(Some(power)) = self.asset_power(best_number, token.clone()) {
+                if let Ok(Some(power)) = self.asset_power(block_id, token.clone()) {
                     info.power = power;
                 };
 
@@ -455,8 +470,9 @@ where
     fn psedu_nomination_records(
         &self,
         who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<PseduNominationRecord>>> {
-        let state = self.best_state()?;
+        let state = self.state_at(hash)?;
         let mut psedu_records = Vec::new();
 
         let key = <xtokens::PseduIntentions<Runtime>>::key();
@@ -498,9 +514,12 @@ where
         Ok(Some(psedu_records))
     }
 
-    fn trading_pairs(&self) -> Result<Option<Vec<(PairInfo)>>> {
+    fn trading_pairs(
+        &self,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Vec<(PairInfo)>>> {
         let mut pairs = Vec::new();
-        let state = self.best_state()?;
+        let state = self.state_at(hash)?;
 
         let len_key = <xspot::TradingPairCount<Runtime>>::key();
         if let Some(len) = Self::pickout::<TradingPairIndex>(&state, &len_key, Hasher::TWOX128)? {
@@ -557,6 +576,7 @@ where
         &self,
         pair_index: TradingPairIndex,
         piece: u32,
+        hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<QuotationsList>> {
         if piece < 1 || piece > 10 {
             return Err(ErrorKind::QuotationsPieceErr.into());
@@ -566,7 +586,7 @@ where
         quotationslist.id = pair_index;
         quotationslist.piece = piece;
 
-        let state = self.best_state()?;
+        let state = self.state_at(hash)?;
 
         let sum_of_quotations = |orders: Vec<(AccountId, OrderIndex)>| {
             orders
@@ -654,6 +674,7 @@ where
         who: AccountIdForRpc,
         page_index: u32,
         page_size: u32,
+        hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<PageData<OrderDetails>>> {
         if page_size > MAX_PAGE_SIZE || page_size < 1 {
             return Err(ErrorKind::PageSizeErr.into());
@@ -663,7 +684,7 @@ where
 
         let mut page_total = 0;
 
-        let state = self.best_state()?;
+        let state = self.state_at(hash)?;
 
         let order_len_key = <xspot::OrderCountOf<Runtime>>::key_for(&who.unchecked_into());
         if let Some(len) = Self::pickout::<OrderIndex>(&state, &order_len_key, Hasher::BLAKE2256)? {
@@ -698,8 +719,13 @@ where
         }))
     }
 
-    fn address(&self, who: AccountIdForRpc, chain: Chain) -> Result<Option<Vec<String>>> {
-        let state = self.best_state()?;
+    fn address(
+        &self,
+        who: AccountIdForRpc,
+        chain: Chain,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Vec<String>>> {
+        let state = self.state_at(hash)?;
 
         let who: AccountId = who.unchecked_into();
         match chain {
@@ -736,21 +762,36 @@ where
         }
     }
 
-    fn trustee_session_info_for(&self, chain: Chain) -> Result<Option<Value>> {
-        if let Some((number, info)) = self.trustee_session_info_for(self.best_number()?, chain)? {
+    fn trustee_session_info_for(
+        &self,
+        chain: Chain,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Value>> {
+        if let Some((number, info)) =
+            self.trustee_session_info_for(self.block_id_by_hash(hash)?, chain)?
+        {
             return Ok(parse_trustee_session_info(chain, number, info));
         } else {
             return Ok(None);
         }
     }
 
-    fn trustee_info_for_accountid(&self, who: AccountIdForRpc) -> Result<Option<Value>> {
+    fn trustee_info_for_accountid(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Value>> {
         let who: AccountId = who.unchecked_into();
-        let props_info = self.trustee_props_for(self.best_number()?, who)?;
+        let props_info = self.trustee_props_for(self.block_id_by_hash(hash)?, who)?;
         Ok(parse_trustee_props(props_info))
     }
 
-    fn fee(&self, call_params: String, tx_length: u64) -> Result<Option<u64>> {
+    fn fee(
+        &self,
+        call_params: String,
+        tx_length: u64,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<u64>> {
         if !call_params.starts_with("0x") {
             return Err(ErrorKind::BinanryStartErr.into());
         }
@@ -766,13 +807,17 @@ where
         };
 
         let transaction_fee =
-            self.transaction_fee(self.best_number()?, call.encode(), tx_length)?;
+            self.transaction_fee(self.block_id_by_hash(hash)?, call.encode(), tx_length)?;
 
         Ok(transaction_fee)
     }
 
-    fn withdraw_tx(&self, chain: Chain) -> Result<Option<WithdrawTxInfo>> {
-        let state = self.best_state()?;
+    fn withdraw_tx(
+        &self,
+        chain: Chain,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<WithdrawTxInfo>> {
+        let state = self.state_at(hash)?;
         match chain {
             Chain::Bitcoin => {
                 let key = <xbitcoin::CurrentWithdrawalProposal<Runtime>>::key();
@@ -789,7 +834,11 @@ where
         }
     }
 
-    fn mock_bitcoin_new_trustees(&self, candidates: Vec<AccountIdForRpc>) -> Result<Option<Value>> {
+    fn mock_bitcoin_new_trustees(
+        &self,
+        candidates: Vec<AccountIdForRpc>,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Value>> {
         let candidates: Vec<AccountId> = candidates
             .into_iter()
             .map(|a| a.unchecked_into())
@@ -798,15 +847,15 @@ where
         let runtime_result: result::Result<GenericAllSessionInfo<AccountId>, Vec<u8>> = self
             .client
             .runtime_api()
-            .mock_new_trustees(&self.best_number()?, Chain::Bitcoin, candidates)?;
+            .mock_new_trustees(&self.block_id_by_hash(hash)?, Chain::Bitcoin, candidates)?;
 
         runtime_result
             .map(|all_session_info| parse_trustee_session_info(Chain::Bitcoin, 0, all_session_info))
             .map_err(|e| ErrorKind::RuntimeErr(e).into())
     }
 
-    fn particular_accounts(&self) -> Result<Option<Value>> {
-        let state = self.best_state()?;
+    fn particular_accounts(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Option<Value>> {
+        let state = self.state_at(hash)?;
 
         // team addr
         let key = xaccounts::TeamAccount::<Runtime>::key();

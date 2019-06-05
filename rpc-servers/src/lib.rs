@@ -64,6 +64,7 @@ where
     Y: apis::system::SystemApi<Block::Hash, NumberFor<Block>>,
     X: apis::chainx::ChainXApi<
         NumberFor<Block>,
+        <Block as BlockT>::Hash,
         AccountIdForRpc,
         Balance,
         BlockNumber,
