@@ -83,7 +83,10 @@ where
         "ChainX",
         args,
         exit,
-        cli::init_logger,
+        |s, _| {
+            cli::init_logger(s);
+            Ok(())
+        },
         |exit, _cli_args, custom_args, config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
