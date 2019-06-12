@@ -77,12 +77,13 @@ where
     T: Into<std::ffi::OsString> + Clone,
     E: IntoExit,
 {
-    cli::parse_and_execute::<service::Factory, NoCustom, ChainXParams, _, _, _, _, _>(
+    cli::parse_and_execute::<service::Factory, NoCustom, ChainXParams, _, _, _, _, _, _>(
         load_spec,
         &version,
         "ChainX",
         args,
         exit,
+        cli::init_logger,
         |exit, _cli_args, custom_args, config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
