@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
+log4rs = { version = "0.8.3", features = ["rolling_file_appender", "compound_policy", "size_trigger", "fixed_window_roller"] }
 structopt = "0.2.13"
 tokio = "0.1.7"
 exit-future = "0.1"
