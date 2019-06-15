@@ -3786,6 +3786,8 @@ dependencies = [
  "srml-timestamp 2.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate)",
  "xrml-xassets-assets 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-sdot 1.0.0",
  "xrml-xsupport 1.0.0",
 ]
 

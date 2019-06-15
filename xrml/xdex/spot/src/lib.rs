@@ -21,7 +21,7 @@ use support::{
 use system::ensure_signed;
 
 // ChainX
-use xassets::{ChainT, OnAssetRegisterOrRevoke, Token};
+use xassets::{AssetType::ReservedDexSpot, ChainT, OnAssetRegisterOrRevoke, Token};
 use xsupport::info;
 use Side::{Buy, Sell};
 
@@ -39,7 +39,7 @@ pub type OrderInfo<T> = Order<
 
 pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
 
-pub trait Trait: xassets::Trait + timestamp::Trait {
+pub trait Trait: xassets::Trait + xbitcoin::Trait + xsdot::Trait {
     type Price: Parameter
         + Member
         + SimpleArithmetic
@@ -118,6 +118,25 @@ decl_module! {
                 );
         }
 
+        /// Refund the accumulative locked asset due to the loss of accuracy of Self::convert_base_to_quote().
+        fn refund_locked(who: T::AccountId, token: Token) {
+            let btc = <xbitcoin::Module<T> as ChainT>::TOKEN;
+            let sdot = <xsdot::Module<T> as ChainT>::TOKEN;
+            ensure!(token == btc.to_vec() || token == sdot.to_vec(), "Only BTC and SDOT could have this refunding issue.");
+
+            // The max order count won't exceed 10000 when this issue is resolved.
+            let order_count = cmp::min(10000, Self::order_count_of(&who));
+            for index in 0..order_count {
+                if Self::order_info_of((who.clone(), index)).is_some() {
+                    return Err("Cannot refund if the user's open orders are not empty.");
+                }
+            }
+            let value = <xassets::Module<T>>::asset_balance_of(&who, &token, ReservedDexSpot);
+            if !value.is_zero() {
+                Self::refund_reserved_dex_spot(&who, &token, value);
+                info!("[refund_locked] who: {:?}, token: {:?}, value: {:?}", who, token, value);
+            }
+        }
     }
 }
 

@@ -83,6 +83,8 @@ impl<T: Trait> Module<T> {
 
     /// Convert the base currency to the quote currency given the trading pair.
     ///
+    /// NOTE: There is a loss of accuracy here.
+    ///
     /// PCX/BTC
     /// amount: measured by the base currency, e.g., PCX.
     /// price: measured by the quote currency, e.g., BTC.

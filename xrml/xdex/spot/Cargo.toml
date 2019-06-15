@@ -21,6 +21,8 @@ timestamp = { package ="srml-timestamp", git = "https://github.com/chainpool/sub
 # ChainX
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
+xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../../xbridge/bitcoin", default-features = false }
+xsdot = { package = "xrml-xbridge-sdot", path = "../../xbridge/sdot", default-features = false }
 
 [dev-dependencies]
 # Substrate
@@ -29,10 +31,13 @@ consensus = { package = "srml-consensus", git = "https://github.com/chainpool/su
 # ChainX
 xsystem = { package = "xrml-xsystem", path = "../../xsystem" }
 xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts" }
-xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../../xbridge/bitcoin" }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records" }
 xfee-manager = { package = "xrml-xfee-manager", path = "../../xfee/manager" }
 xr-primitives = { path = "../../../xr-primitives" }
+xbridge-features = { package = "xrml-xbridge-features", path = "../../xbridge/features" }
+xbridge-common = { package = "xrml-xbridge-common", path = "../../xbridge/common" }
+xmultisig = { package = "xrml-xmultisig", path = "../../xmultisig", default-features = false }
+
 
 [features]
 default = ["std"]

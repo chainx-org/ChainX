@@ -1,5 +1,5 @@
 // Copyright 2019 Chainpool.
-//! This module handles all the asset related actions.
+//! This module handles all the asset related operations.
 
 use super::*;
 use xassets::AssetType::{self, Free, ReservedDexSpot};
@@ -75,6 +75,7 @@ impl<T: Trait> Module<T> {
         Self::move_balance(token, who, Free, who, ReservedDexSpot, value)
     }
 
+    /// Unreserve the locked asset when the order is canceled.
     #[inline]
     pub(crate) fn cancel_order_unreserve(
         who: &T::AccountId,
@@ -84,6 +85,17 @@ impl<T: Trait> Module<T> {
         Self::move_balance(token, who, ReservedDexSpot, who, Free, value)
     }
 
+    /// Refund the remaining reserved asset when the order is fulfilled.
+    #[inline]
+    pub(crate) fn refund_reserved_dex_spot(
+        who: &T::AccountId,
+        token: &Token,
+        remaining: T::Balance,
+    ) {
+        let _ = Self::move_balance(token, who, ReservedDexSpot, who, Free, remaining);
+    }
+
+    /// Wrap the move_balance function in xassets module.
     fn move_balance(
         token: &Token,
         from: &T::AccountId,
@@ -92,14 +104,15 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: T::Balance,
     ) -> Result {
-        let _ = <xassets::Module<T>>::move_balance(token, from, from_type, to, to_type, value)
-            .map_err(|e| {
+        <xassets::Module<T>>::move_balance(token, from, from_type, to, to_type, value).map_err(
+            |e| {
                 error!(
                     "[move_balance] Fail to move {:?} from {:?}'s {:?} to {:?}'s {:?}",
                     value, from, from_type, to, to_type
                 );
                 e.info()
-            })?;
+            },
+        )?;
         Ok(())
     }
 }

@@ -5,8 +5,10 @@
 use super::mock::*;
 use super::*;
 
+use rstd::collections::btree_map::BTreeMap;
 use runtime_io::with_externalities;
 use support::{assert_noop, assert_ok};
+use xassets::AssetType;
 
 #[test]
 fn add_trading_pair_should_work() {
@@ -65,7 +67,7 @@ fn put_order_reserve_should_work() {
             OrderType::Limit,
             Side::Buy,
             1000,
-            1_210_000,
+            1_000_200,
         ));
         assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 9);
     })
@@ -84,13 +86,13 @@ fn inject_order_should_work() {
             OrderType::Limit,
             Side::Buy,
             1000,
-            1_210_000,
+            1_000_100,
         ));
         let order = XSpot::order_info_of(&(1, 0)).unwrap();
         assert_eq!(order.submitter(), 1);
         assert_eq!(order.pair_index(), 0);
         assert_eq!(order.amount(), 1_000);
-        assert_eq!(order.price(), 1_210_000);
+        assert_eq!(order.price(), 1_000_100);
 
         assert_ok!(XSpot::put_order(
             Origin::signed(1),
@@ -126,7 +128,7 @@ fn price_too_high_or_too_low_should_not_work() {
             OrderType::Limit,
             Side::Buy,
             1000,
-            1_210_000,
+            1_000_200,
         ));
 
         assert_ok!(XSpot::set_handicap(0, 1_000_000, 1_100_000));
@@ -206,7 +208,7 @@ fn update_handicap_should_work() {
             OrderType::Limit,
             Side::Sell,
             500,
-            1_200_000
+            1_310_000 - 100
         ));
 
         assert_eq!(XSpot::handicap_of(0).lowest_offer, 0);
@@ -250,7 +252,7 @@ fn match_order_should_work() {
             OrderType::Limit,
             Side::Buy,
             1000,
-            1_200_000,
+            1_000_100,
         ));
 
         assert_ok!(XSpot::put_order(
@@ -259,7 +261,7 @@ fn match_order_should_work() {
             OrderType::Limit,
             Side::Sell,
             500,
-            1_200_000
+            1_000_100
         ));
 
         assert_eq!(XSpot::order_info_of((2, 0)), None);
@@ -276,7 +278,7 @@ fn match_order_should_work() {
             OrderType::Limit,
             Side::Sell,
             700,
-            1_200_000
+            1_000_100
         ));
 
         assert_eq!(XSpot::order_info_of((1, 1)), None);
@@ -314,7 +316,7 @@ fn cancel_order_should_work() {
             OrderType::Limit,
             Side::Buy,
             1000,
-            1_200_000,
+            1_000_100,
         ));
 
         assert_ok!(XSpot::put_order(
@@ -323,10 +325,10 @@ fn cancel_order_should_work() {
             OrderType::Limit,
             Side::Sell,
             500,
-            1_200_000
+            1_000_200
         ));
 
-        assert_eq!(XSpot::quotations_of((0, 1_200_000)), vec![(1, 1)]);
+        assert_eq!(XSpot::quotations_of((0, 1_000_100)), vec![(1, 1)]);
         assert_ok!(XSpot::cancel_order(Origin::signed(1), 0, 1));
 
         assert_eq!(XSpot::quotations_of((0, 1_200_000)), vec![]);
@@ -399,13 +401,177 @@ fn reap_orders_should_work() {
             OrderType::Limit,
             Side::Sell,
             20_000,
-            900_000
+            2_100_000 - 100
         ));
 
         assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 3);
-        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 6000);
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
         assert_eq!(XAssets::free_balance_of(&2, &trading_pair.quote()), 6);
         assert_eq!(XAssets::free_balance_of(&3, &trading_pair.quote()), 6);
-        assert_eq!(XSpot::order_info_of((4, 0)).unwrap().already_filled, 12_000);
+        assert_eq!(XSpot::order_info_of((4, 0)).unwrap().already_filled, 1_000);
+    })
+}
+
+#[test]
+fn refund_remaining_of_taker_order_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        let trading_pair = XSpot::trading_pair_of(0).unwrap();
+
+        let base = trading_pair.base();
+        let quote = trading_pair.quote();
+
+        assert_ok!(XAssets::pcx_issue(&1, 1000000));
+        assert_ok!(XAssets::pcx_issue(&2, 237000000));
+
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 489994));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(1),
+            0,
+            OrderType::Limit,
+            Side::Sell,
+            1000000,
+            2058800,
+        ));
+        // 2058
+        let btc_for_seller1 =
+            XSpot::convert_base_to_quote(1_000_000, 2058800, &trading_pair).unwrap();
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(2),
+            0,
+            OrderType::Limit,
+            Side::Sell,
+            237000000,
+            2058800,
+        ));
+        // 487935
+        let btc_for_seller2 =
+            XSpot::convert_base_to_quote(237000000, 2058800, &trading_pair).unwrap();
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(3),
+            0,
+            OrderType::Limit,
+            Side::Buy,
+            238000000,
+            2058800
+        ));
+
+        // 489994
+        let btc_reserved_for_buyer =
+            XSpot::convert_base_to_quote(238000000, 2058800, &trading_pair).unwrap();
+
+        // remaining is 1
+        let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, 0);
+        bmap.insert(AssetType::ReservedDexSpot, 0);
+        assert_eq!(XAssets::asset_balance((1, base.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, btc_for_seller1);
+        assert_eq!(XAssets::asset_balance((1, quote.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, 0);
+        bmap.insert(AssetType::ReservedDexSpot, 0);
+        assert_eq!(XAssets::asset_balance((2, base.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, btc_for_seller2);
+        assert_eq!(XAssets::asset_balance((2, quote.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, 238000000);
+        assert_eq!(XAssets::asset_balance((3, base.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, remaining);
+        bmap.insert(AssetType::ReservedDexSpot, 0);
+        assert_eq!(XAssets::asset_balance((3, quote.clone())), bmap);
+    })
+}
+
+#[test]
+fn refund_remaining_of_maker_order_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        let trading_pair = XSpot::trading_pair_of(0).unwrap();
+
+        let base = trading_pair.base();
+        let quote = trading_pair.quote();
+
+        assert_ok!(XAssets::pcx_issue(&1, 1000000));
+        assert_ok!(XAssets::pcx_issue(&2, 237000000));
+
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 489994));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(3),
+            0,
+            OrderType::Limit,
+            Side::Buy,
+            238000000,
+            2058800
+        ));
+
+        // 489994
+        let btc_reserved_for_buyer =
+            XSpot::convert_base_to_quote(238000000, 2058800, &trading_pair).unwrap();
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(1),
+            0,
+            OrderType::Limit,
+            Side::Sell,
+            1000000,
+            2058800,
+        ));
+        // 2058
+        let btc_for_seller1 =
+            XSpot::convert_base_to_quote(1_000_000, 2058800, &trading_pair).unwrap();
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(2),
+            0,
+            OrderType::Limit,
+            Side::Sell,
+            237_000_000,
+            2_058_800,
+        ));
+        // 487935
+        let btc_for_seller2 =
+            XSpot::convert_base_to_quote(237_000_000, 2_058_800, &trading_pair).unwrap();
+
+        // remaining is 1
+        let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, 0);
+        bmap.insert(AssetType::ReservedDexSpot, 0);
+        assert_eq!(XAssets::asset_balance((1, base.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, btc_for_seller1);
+        assert_eq!(XAssets::asset_balance((1, quote.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, 0);
+        bmap.insert(AssetType::ReservedDexSpot, 0);
+        assert_eq!(XAssets::asset_balance((2, base.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, btc_for_seller2);
+        assert_eq!(XAssets::asset_balance((2, quote.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, 238_000_000);
+        assert_eq!(XAssets::asset_balance((3, base.clone())), bmap);
+
+        let mut bmap = BTreeMap::new();
+        bmap.insert(AssetType::Free, remaining);
+        bmap.insert(AssetType::ReservedDexSpot, 0);
+        assert_eq!(XAssets::asset_balance((3, quote.clone())), bmap);
     })
 }
