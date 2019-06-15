@@ -95,6 +95,9 @@ decl_module! {
                 <NominationRecords<T>>::get((who.clone(), from.clone())).is_some(),
                 "Cannot renominate if the from party is not your nominee."
             );
+            if Self::is_intention(&who) && who == from {
+                return Err("Cannot renominate the intention self-bonded.");
+            }
             ensure!(
                 value <= Self::revokable_of(&who, &from),
                 "Cannot renominate if greater than your current nomination."

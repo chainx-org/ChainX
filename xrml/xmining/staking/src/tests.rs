@@ -22,8 +22,20 @@ fn register_should_work() {
             XStaking::register(Origin::signed(1), b"name".to_vec(),),
             "Cannot register if transactor is an intention already."
         );
+    });
+}
 
-        assert_ok!(XStaking::register(Origin::signed(2), b"name".to_vec(),));
+#[test]
+fn register_an_existing_name_should_not_work() {
+    with_externalities(&mut new_test_ext(), || {
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+
+        assert_ok!(XStaking::register(Origin::signed(1), b"name".to_vec(),));
+        assert_noop!(
+            XStaking::register(Origin::signed(2), b"name".to_vec()),
+            "This name has already been taken."
+        );
     });
 }
 
@@ -84,13 +96,35 @@ fn nominate_should_work() {
 }
 
 #[test]
+fn renominate_by_intention_should_not_work() {
+    with_externalities(&mut new_test_ext(), || {
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+
+        assert_ok!(XStaking::register(Origin::signed(1), b"name".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(3), b"name3".to_vec(),));
+
+        System::set_block_number(2);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 5, vec![]));
+
+        System::set_block_number(3);
+        XSession::check_rotate_session(System::block_number());
+        assert_noop!(
+            XStaking::renominate(Origin::signed(1), 1.into(), 3.into(), 3, b"memo".to_vec()),
+            "Cannot renominate the intention self-bonded."
+        );
+    });
+}
+
+#[test]
 fn renominate_should_work() {
     with_externalities(&mut new_test_ext(), || {
         System::set_block_number(1);
         XSession::check_rotate_session(System::block_number());
 
         assert_ok!(XStaking::register(Origin::signed(1), b"name".to_vec(),));
-        assert_ok!(XStaking::register(Origin::signed(3), b"name".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(3), b"name3".to_vec(),));
 
         System::set_block_number(2);
         XSession::check_rotate_session(System::block_number());
