@@ -40,7 +40,7 @@ use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageVa
 use system::ensure_signed;
 
 // ChainX
-use xsupport::info;
+use xsupport::{info, debug};
 
 mod mock;
 mod tests;
@@ -158,7 +158,7 @@ decl_module! {
 
         fn on_finalize(block_number: T::BlockNumber) {
             if let Some(pending_change) = <PendingChange<T>>::get() {
-                info!("--current block number:{:?}, pending_change scheduled_at:{:?}", block_number, pending_change.scheduled_at);
+                debug!("--current block number:{:?}, pending_change scheduled_at:{:?}", block_number, pending_change.scheduled_at);
                 if block_number == pending_change.scheduled_at {
                     if let Some(median) = pending_change.forced {
                         Self::deposit_log(RawLog::ForcedAuthoritiesChangeSignal(
@@ -339,7 +339,6 @@ where
             .collect::<Vec<(<T as consensus::Trait>::SessionKey, u64)>>();
 
         let median = <finality_tracker::Module<T>>::median();
-        info!("----on_stalled, next_authorities:{:?}", next_authorities);
 
         // schedule a change for `further_wait` blocks.
         let _ = <Module<T>>::schedule_change(next_authorities, further_wait, Some(median));
