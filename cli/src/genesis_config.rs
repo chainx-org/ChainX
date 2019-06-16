@@ -97,7 +97,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         .filter(|(_, _, balance, _, _, _, _, _)| *balance > 0)
         .collect::<Vec<_>>();
 
-    assert!(active_genesis_nodes.len() == 4);
+    assert!((active_genesis_nodes.len() == 4) | (genesis_spec as u8 == GenesisSpec::Dev as u8));
 
     GenesisConfig {
         consensus: Some(ConsensusConfig {
