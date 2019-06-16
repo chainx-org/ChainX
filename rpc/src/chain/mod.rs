@@ -30,8 +30,8 @@ use runtime_primitives::traits::{Block as BlockT, Header, NumberFor};
 
 use crate::subscriptions::Subscriptions;
 
-mod error;
-mod number;
+pub mod error;
+pub mod number;
 #[cfg(test)]
 mod tests;
 

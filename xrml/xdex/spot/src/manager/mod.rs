@@ -20,7 +20,7 @@ impl<T: Trait> Module<T> {
         let handicap = <HandicapOf<T>>::get(pair_index);
         let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
-        let pair = Self::trading_pair(&pair_index)?;
+        let pair = Self::trading_pair(pair_index)?;
 
         let fluctuation = T::Price::sa(pair.fluctuation());
 

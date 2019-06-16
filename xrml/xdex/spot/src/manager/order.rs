@@ -325,7 +325,7 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         turnover: T::Balance,
     ) -> Result {
-        let pair = Self::trading_pair(&pair_index)?;
+        let pair = Self::trading_pair(pair_index)?;
 
         let trade_history_index = Self::trade_history_index_of(pair_index);
         <TradeHistoryIndexOf<T>>::insert(pair_index, trade_history_index + 1);

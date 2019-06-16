@@ -33,7 +33,7 @@ mod types;
 mod utils;
 
 use self::error::Result;
-use self::types::*;
+pub use self::types::*;
 
 /// ChainX API
 #[rpc]

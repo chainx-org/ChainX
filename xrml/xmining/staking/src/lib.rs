@@ -29,7 +29,7 @@ use xsupport::debug;
 use xsupport::who;
 
 pub use self::shifter::{OnReward, OnRewardCalculation};
-pub use self::types::{ClaimType, IntentionProfs, NominationRecord, RewardHolder};
+pub use self::types::*;
 pub use self::vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
@@ -457,11 +457,12 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_unnominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
-        let freeze_until = if Self::is_intention(source) && *source == *target {
-            <system::Module<T>>::block_number() + Self::intention_bonding_duration()
+        let bonding_duration = if Self::is_intention(source) && *source == *target {
+            Self::intention_bonding_duration()
         } else {
-            <system::Module<T>>::block_number() + Self::bonding_duration()
+            Self::bonding_duration()
         };
+        let freeze_until = <system::Module<T>>::block_number() + bonding_duration;
 
         let mut revocations = Self::nomination_record_of(source, target).revocations;
 
@@ -474,9 +475,10 @@ impl<T: Trait> Module<T> {
 
         Self::unnominate_reserve(source, value)?;
 
-        if let Some(mut record) = <NominationRecords<T>>::get(&(source.clone(), target.clone())) {
+        let nr_key = (source.clone(), target.clone());
+        if let Some(mut record) = <NominationRecords<T>>::get(&nr_key) {
             record.revocations = revocations;
-            <NominationRecords<T>>::insert(&(source.clone(), target.clone()), record);
+            <NominationRecords<T>>::insert(&nr_key, record);
         }
 
         Self::apply_update_vote_weight(source, target, value, false);
