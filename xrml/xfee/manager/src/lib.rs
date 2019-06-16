@@ -8,13 +8,19 @@ pub mod types;
 
 // Substrate
 use primitives::traits::{As, CheckedDiv, CheckedMul, CheckedSub};
+use rstd::collections::btree_map::BTreeMap;
+use rstd::prelude::Vec;
 use rstd::result;
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageValue};
 
 // ChainX
 use chainx_primitives::Acceleration;
+use xr_primitives::XString;
+
 use xaccounts::IntentionJackpotAccountIdFor;
-use xsupport::{trace, warn};
+#[cfg(feature = "std")]
+use xsupport::u8array_to_string;
+use xsupport::{info, trace, warn};
 
 pub use self::types::SwitchStore;
 
@@ -57,12 +63,44 @@ decl_module! {
         fn set_switch_store(switch: SwitchStore) {
             Switch::<T>::put(switch)
         }
+
+        /// Set a new weight for a method.
+        fn set_method_call_weight(method: Vec<u8>, weight: u64) {
+            <MethodCallWeight<T>>::mutate(|method_weight| {
+                match (*method_weight).insert(method.clone(), weight) {
+                    Some(_a) => {
+                        info!("reset new fee|key:{:}|new value:{:}|old value:{:}", u8array_to_string(&method), weight, _a);
+                    },
+                    None => {
+                        info!("set new fee|key:{:}|value:{:}", u8array_to_string(&method), weight);
+                    },
+                }
+            });
+        }
+
+        /// Remove a method weight.
+        fn remove_method_call_weight(method: Vec<u8>) {
+            <MethodCallWeight<T>>::mutate(|method_weight| {
+                match (*method_weight).remove(&method) {
+                    Some(_a) => {
+                        info!("remove an existing method weight|key:{:}|value:{:}", u8array_to_string(&method), _a);
+                    },
+                    None => {
+                        info!("method {:} does not exist", u8array_to_string(&method));
+                    }
+                }
+            });
+        }
     }
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as XFeeManager {
-        pub Switch get(switch): SwitchStore; // Emergency control
+        /// Emergency control
+        pub Switch get(switch): SwitchStore;
+        /// Each callable method in runtime normally has a different weight.
+        pub MethodCallWeight get(method_call_weight): BTreeMap<XString, u64>;
+        /// How much fee of a block should be rewarded to the block producer.
         pub ProducerFeeProportion get(producer_fee_proportion) config(): (u32, u32);
         /// The fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): T::Balance;

@@ -444,8 +444,9 @@ impl_runtime_apis! {
             };
 
             let switch = xfee_manager::SwitchStore::default();
-            call.check_fee(switch).map(|power|
-                XFeeManager::transaction_fee(power, encoded_len)
+            let method_call_weight = XFeeManager::method_call_weight();
+            call.check_fee(switch, method_call_weight).map(|weight|
+                XFeeManager::transaction_fee(weight, encoded_len)
             )
         }
     }

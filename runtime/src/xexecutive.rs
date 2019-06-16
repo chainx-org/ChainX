@@ -215,9 +215,10 @@ impl<
         if signed_extrinsic {
             let acc = acc.unwrap();
             let switch = <xfee_manager::Module<System>>::switch();
-            if let Some(fee_power) = f.check_fee(switch) {
+            let method_weight_map = <xfee_manager::Module<System>>::method_call_weight();
+            if let Some(weight) = f.check_fee(switch, method_weight_map) {
                 // pay any fees.
-                Payment::make_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).map_err(|_| internal::ApplyError::CantPay)?;
+                Payment::make_payment(&s.clone().unwrap(), encoded_len, weight, acc.as_() as u32).map_err(|_| internal::ApplyError::CantPay)?;
 
                 // AUDIT: Under no circumstances may this function panic from here onwards.
 
@@ -331,7 +332,8 @@ impl<
         let acc = xt.acceleration().unwrap();
         let (f, s) = xt.deconstruct();
         let switch = <xfee_manager::Module<System>>::switch();
-        if let Some(fee_power) = f.check_fee(switch) {
+        let method_call_weight = <xfee_manager::Module<System>>::method_call_weight();
+        if let Some(fee_power) = f.check_fee(switch, method_call_weight) {
             if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).is_err() {
                 return TransactionValidity::Invalid(ApplyError::CantPay as i8);
             } else {
