@@ -12,20 +12,24 @@ tiny-keccak = "1.4.2"
 # Substrate
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-support = {  package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
 # ChainX
-xr-primitives = {  package = "xr-primitives", path = "../../../xr-primitives", default-features = false }
+xr-primitives = { package = "xr-primitives", path = "../../../xr-primitives", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records", default-features = false }
-xbridge-common = {package = "xrml-xbridge-common", path = "../common", default-features = false }
+xbridge-common = { package = "xrml-xbridge-common", path = "../common", default-features = false }
 xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 
 [dev-dependencies]
+hex-literal = "0.2"
+ethereum-types = "0.6"
 # Substrate
 substrate-primitives = { git = "https://github.com/chainpool/substrate" }
-# ChainX
-xsystem = { package = "xrml-xsystem", path = "../../xsystem" }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
+indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate" }
+timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate" }
 
 [features]
 default = ["std"]

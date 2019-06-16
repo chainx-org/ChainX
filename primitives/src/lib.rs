@@ -2,7 +2,6 @@
 
 //! Shareable ChainX types.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
 
 use runtime_primitives::{
     generic,
