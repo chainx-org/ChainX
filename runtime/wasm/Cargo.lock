@@ -3766,6 +3766,7 @@ dependencies = [
  "xrml-xassets-assets 1.0.0",
  "xrml-xassets-records 1.0.0",
  "xrml-xbridge-common 1.0.0",
+ "xrml-xsupport 1.0.0",
  "xrml-xsystem 1.0.0",
 ]
 
