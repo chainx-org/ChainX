@@ -207,7 +207,7 @@ fn init_logger_log4rs(spec: &str, params: ChainXParams) -> Result<(), String> {
     };
 
     if params.log_size == 0 {
-        return Err("the `--log-size` can't be 0".to_string())
+        return Err("the `--log-size` can't be 0".to_string());
     }
 
     let trigger = trigger::size::SizeTrigger::new(1024 * 1024 * params.log_size);

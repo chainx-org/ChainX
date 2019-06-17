@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-use primitives::BuildStorage;
 use primitives::testing::{Digest, DigestItem, Header};
 use primitives::traits::{BlakeTwo256, IdentityLookup};
+use primitives::BuildStorage;
 use substrate_primitives::{Blake2Hasher, H256};
 use support::impl_outer_origin;
 

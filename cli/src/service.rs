@@ -181,6 +181,13 @@ construct_service_factory! {
                     name: Some(service.config.name.clone())
                 };
 
+                executor.spawn(grandpa::run_grandpa_observer(
+                    config,
+                    link_half,
+                    service.network(),
+                    service.on_exit(),
+                )?);
+/*
                 match config.local_key {
                     None => {
                         executor.spawn(grandpa::run_grandpa_observer(
@@ -207,6 +214,7 @@ construct_service_factory! {
                         executor.spawn(grandpa::run_grandpa_voter(grandpa_config)?);
                     },
                 }
+*/
 
                 Ok(service)
             }

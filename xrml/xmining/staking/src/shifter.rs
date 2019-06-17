@@ -7,7 +7,7 @@ use primitives::traits::{As, One, Zero};
 use rstd::cmp;
 use xaccounts::IntentionJackpotAccountIdFor;
 use xsession::OnSessionChange;
-use xsupport::{debug, info};
+use xsupport::{debug, info, warn};
 #[cfg(feature = "std")]
 use xsupport::{validators, who};
 
@@ -164,9 +164,23 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    /// Report the total missed blocks info to the session module.
+    fn report_total_missed_blocks_count() {
+        if <xsession::SessionTotalMissedBlocksCount<T>>::exists() {
+            warn!("[report_total_missed_blocks] xsession::SessionTotalMissedBlocksCount should not exist on new session.");
+        }
+        let total_missed = Self::offline_validators_per_session()
+            .iter()
+            .map(|v| Self::missed_of_per_session(v))
+            .fold(0u32, |acc, x| acc + x);
+        <xsession::SessionTotalMissedBlocksCount<T>>::put(total_missed);
+    }
+
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or
     /// move to a new era.
     fn new_session() {
+        Self::report_total_missed_blocks_count();
+
         // No reward but only slash for these offline validators that are inactive atm.
         Self::slash_inactive_offline_validators();
 
