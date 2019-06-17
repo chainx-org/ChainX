@@ -295,7 +295,7 @@ where
         );
         if u64::from(total_missed) < finalize_threshold {
             let height = system::ChainContext::<T>::default().current_height();
-            storage::unhashed::put(well_known_keys::AURA_FINALIZE, &height.encode());
+            storage::unhashed::put(well_known_keys::AURA_FINALIZE, &height);
         } else {
             warn!("[on_session_change of grandpa] So many missed blocks({:?}) that grandpa fail to finalize.", total_missed);
         }
