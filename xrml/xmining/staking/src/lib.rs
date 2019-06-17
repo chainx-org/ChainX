@@ -195,11 +195,11 @@ decl_module! {
             ensure!(Self::is_intention(&who), "Cannot refresh if transactor is not an intention.");
 
             if let Some(url) = url.as_ref() {
-                xaccounts::is_valid_url::<T>(url)?;
+                xaccounts::is_valid_url(url)?;
             }
 
             if let Some(about) = about.as_ref() {
-                xaccounts::is_valid_about::<T>(about)?;
+                xaccounts::is_valid_about(about)?;
             }
 
             if let Some(desire_to_run) = desire_to_run.as_ref() {
@@ -224,7 +224,7 @@ decl_module! {
         fn register(origin, name: Name) {
             let who = ensure_signed(origin)?;
 
-            xaccounts::is_valid_name::<T>(&name)?;
+            xaccounts::is_valid_name(&name)?;
 
             ensure!(!Self::is_intention(&who), "Cannot register if transactor is an intention already.");
             ensure!(!Self::name_exists(name.clone()), "This name has already been taken.");

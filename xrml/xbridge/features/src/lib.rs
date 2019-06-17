@@ -163,7 +163,7 @@ impl<T: Trait> Module<T> {
             xaccounts::Module::<T>::is_intention(&who),
             "Transactor is not an intention."
         );
-        xaccounts::is_valid_about::<T>(&about)?;
+        xaccounts::is_valid_about(&about)?;
 
         let hot_pubkey = xbitcoin::Module::<T>::check_trustee_entity(hot_entity.as_ref())?;
         let cold_pubkey = xbitcoin::Module::<T>::check_trustee_entity(cold_entity.as_ref())?;

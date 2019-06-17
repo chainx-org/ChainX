@@ -22,9 +22,6 @@ xsystem = { package ="xrml-xsystem", path = "../../xrml/xsystem", default-featur
 [dev-dependencies]
 # Substrate
 runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
-session = { package = "srml-session", git = "https://github.com/chainpool/substrate" }
-timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate" }
-indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate" }
 
 [features]
 default = ["std"]
