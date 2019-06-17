@@ -274,14 +274,14 @@ impl<T: Trait> Module<T> {
             Self::new_era();
         } else {
             if validators.len() < current_validator_count {
-                Self::set_validators_on_new_session(validators);
+                Self::set_validators_on_non_era(validators);
             }
         }
     }
 
     /// We only reduce the offline validators on non-era session.
     /// This happens when there are offline validators that are enforced to be inactive.
-    fn set_validators_on_new_session(validators: Vec<T::AccountId>) {
+    pub fn set_validators_on_non_era(validators: Vec<T::AccountId>) {
         // Update to the latest total nomination
         let validators = validators
             .into_iter()
@@ -290,7 +290,7 @@ impl<T: Trait> Module<T> {
             .collect::<Vec<_>>();
         <xsession::Module<T>>::set_validators(validators.as_slice());
         info!(
-            "[set_validators_on_new_session] new validator set due to enforcing inactive: {:?}",
+            "[set_validators_on_non_era] new validator set due to enforcing inactive: {:?}",
             validators!(validators)
         );
     }

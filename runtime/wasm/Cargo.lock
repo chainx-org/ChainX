@@ -332,6 +332,7 @@ dependencies = [
  "xrml-xbridge-sdot 1.0.0",
  "xrml-xdex-spot 1.0.0",
  "xrml-xfee-manager 1.0.0",
+ "xrml-xfisher 1.0.0",
  "xrml-xmining-staking 1.0.0",
  "xrml-xmining-tokens 1.0.0",
  "xrml-xmultisig 1.0.0",
@@ -3808,6 +3809,26 @@ dependencies = [
  "xrml-xassets-assets 1.0.0",
  "xrml-xsupport 1.0.0",
  "xrml-xsystem 1.0.0",
+]
+
+[[package]]
+name = "xrml-xfisher"
+version = "1.0.0"
+dependencies = [
+ "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.91 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.91 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "sr-std 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "xr-primitives 1.0.0",
+ "xrml-xaccounts 1.0.0",
+ "xrml-xassets-assets 1.0.0",
+ "xrml-xmining-staking 1.0.0",
+ "xrml-xsession 1.0.0",
+ "xrml-xsupport 1.0.0",
 ]
 
 [[package]]

@@ -350,6 +350,7 @@ impl<
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -588,3 +589,4 @@ mod tests {
         run_test(true);
     }
 }
+*/

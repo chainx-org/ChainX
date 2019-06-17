@@ -37,6 +37,7 @@ members = [
     "xr-primitives",
     # ChainX runtime module libraries
     "xrml/xbootstrap",
+    "xrml/xfisher",
     "xrml/xsystem",
     "xrml/xsupport",
     "xrml/xaccounts",

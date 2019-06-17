@@ -6,26 +6,28 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
 #![recursion_limit = "512"]
 mod fee;
+mod tests;
 mod trustee;
 mod xexecutive;
 
-use parity_codec::Decode;
+use parity_codec::{Decode, Encode};
 use rstd::collections::btree_map::BTreeMap;
 use rstd::prelude::*;
+use rstd::result;
 
 // substrate
 use client::{
     block_builder::api::{self as block_builder_api, CheckInherentsResult, InherentData},
     impl_runtime_apis, runtime_api as client_api,
 };
-use runtime_primitives::generic;
 use runtime_primitives::traits::{
     AuthorityIdFor, BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup,
 };
 use runtime_primitives::transaction_validity::TransactionValidity;
-use runtime_primitives::ApplyResult;
 pub use runtime_primitives::{create_runtime_str, Perbill, Permill};
+use runtime_primitives::{generic, ApplyResult};
 use substrate_primitives::OpaqueMetadata;
+use substrate_primitives::H512;
 pub use support::{construct_runtime, StorageValue};
 
 pub use timestamp::BlockPeriod;
@@ -53,6 +55,10 @@ pub use xbitcoin;
 pub use xbridge_common;
 pub use xbridge_features;
 pub use xprocess;
+
+use xsupport::ensure_with_errorlog;
+#[cfg(feature = "std")]
+use xsupport::u8array_to_string;
 
 use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
 
@@ -153,6 +159,11 @@ impl xrecords::Trait for Runtime {
     type Event = Event;
 }
 
+impl xfisher::Trait for Runtime {
+    type Event = Event;
+    type CheckHeader = HeaderChecker;
+}
+
 impl xprocess::Trait for Runtime {}
 
 impl xstaking::Trait for Runtime {
@@ -202,6 +213,56 @@ impl finality_tracker::Trait for Runtime {
     type OnFinalizationStalled = xgrandpa::SyncedAuthorities<Runtime>;
 }
 
+pub struct HeaderChecker;
+impl xfisher::CheckHeader<AccountId> for HeaderChecker {
+    fn check_header(
+        signer: &AccountId,
+        first: &(xfisher::RawHeader, u64, H512),
+        second: &(xfisher::RawHeader, u64, H512),
+    ) -> support::dispatch::Result {
+        if (*first).1 != (*second).1 {
+            return Err("slot number not same");
+        }
+
+        let fst_header = verify_header(first, signer)?;
+        let snd_header = verify_header(second, signer)?;
+        if fst_header.hash() == snd_header.hash() {
+            return Err("same header, do nothing for this");
+        }
+        Ok(())
+    }
+}
+fn verify_header(
+    header: &(xfisher::RawHeader, u64, H512),
+    expected_author: &AccountId,
+) -> result::Result<Header, &'static str> {
+    // hard code, digest with other type can't be decode in runtime, thus just can decode pre header(header without digest)
+    // 3 * hash + vec<u8> + CompactNumber
+    ensure_with_errorlog!(
+        header.0.as_slice().len() <= 3 * 32 + 1 + 16,
+        "should use pre header",
+        "should use pre header|current len:{:?}", header.0.as_slice().len()
+    );
+
+    let pre_header: Header = Decode::decode(&mut header.0.as_slice()).ok_or("decode header err")?;
+
+    // verify sign
+    let to_sign = ((*header).1, pre_header.hash()).encode();
+
+    ensure_with_errorlog!(
+        runtime_io::ed25519_verify(&(header.2).0, &to_sign[..], expected_author.clone()),
+        "check signature failed",
+        "check signature failed|slot:{:}|pre_hash:{:?}|to_sign:{:}|sig:{:}|author:{:?}",
+        (*header).1,
+        pre_header.hash(),
+        u8array_to_string(&to_sign[..]),
+        header.2,
+        expected_author
+    );
+
+    Ok(pre_header)
+}
+
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, AuthorityId, AuthoritySignature>) where
         Block = Block,
@@ -239,6 +300,9 @@ construct_runtime!(
         XMultiSig: xmultisig::{Module, Call, Storage, Event<T>},
 
         XBootstrap: xbootstrap::{Config<T>},
+
+        // fisher
+        XFisher: xfisher::{Module, Call, Storage, Event<T>},
     }
 );
 

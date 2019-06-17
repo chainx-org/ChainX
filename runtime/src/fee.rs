@@ -8,6 +8,7 @@ use xfee_manager::SwitchStore;
 use xassets::Call as XAssetsCall;
 use xbitcoin::Call as XBitcoinCall;
 use xbridge_features::Call as XBridgeFeaturesCall;
+use xfisher::Call as XFisherCall;
 use xmultisig::Call as XMultiSigCall;
 use xprocess::Call as XAssetsProcessCall;
 use xsdot::Call as SdotCall;
@@ -140,6 +141,10 @@ impl CheckFee for Call {
 
             XBridgeFeatures, XBridgeFeaturesCall => (
                 setup_bitcoin_trustee : 1000,
+            );
+
+            XFisher, XFisherCall => (
+                report_double_signer : 5,
             );
 
         }
