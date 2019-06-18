@@ -214,12 +214,12 @@ impl finality_tracker::Trait for Runtime {
 }
 
 pub struct HeaderChecker;
-impl xfisher::CheckHeader<AccountId> for HeaderChecker {
+impl xfisher::CheckHeader<AccountId, BlockNumber> for HeaderChecker {
     fn check_header(
         signer: &AccountId,
         first: &(xfisher::RawHeader, u64, H512),
         second: &(xfisher::RawHeader, u64, H512),
-    ) -> support::dispatch::Result {
+    ) -> result::Result<(BlockNumber, BlockNumber), &'static str> {
         if (*first).1 != (*second).1 {
             return Err("slot number not same");
         }
@@ -229,7 +229,7 @@ impl xfisher::CheckHeader<AccountId> for HeaderChecker {
         if fst_header.hash() == snd_header.hash() {
             return Err("same header, do nothing for this");
         }
-        Ok(())
+        Ok((fst_header.number, snd_header.number))
     }
 }
 fn verify_header(
@@ -241,7 +241,8 @@ fn verify_header(
     ensure_with_errorlog!(
         header.0.as_slice().len() <= 3 * 32 + 1 + 16,
         "should use pre header",
-        "should use pre header|current len:{:?}", header.0.as_slice().len()
+        "should use pre header|current len:{:?}",
+        header.0.as_slice().len()
     );
 
     let pre_header: Header = Decode::decode(&mut header.0.as_slice()).ok_or("decode header err")?;

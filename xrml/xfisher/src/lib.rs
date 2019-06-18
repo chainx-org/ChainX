@@ -8,6 +8,7 @@ use primitives::traits::{Lookup, StaticLookup};
 use substrate_primitives::H512;
 
 use rstd::prelude::*;
+use rstd::result;
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue};
 use system::ensure_signed;
 
@@ -19,25 +20,28 @@ use xsupport::{u8array_to_string, who};
 pub trait Trait: xstaking::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-    type CheckHeader: CheckHeader<<Self as system::Trait>::AccountId>;
+    type CheckHeader: CheckHeader<
+        <Self as system::Trait>::AccountId,
+        <Self as system::Trait>::BlockNumber,
+    >;
 }
 
-pub trait CheckHeader<AccountId> {
+pub trait CheckHeader<AccountId, BlockNumber: Default> {
     /// Check if the header is signed by the given signer.
     fn check_header(
         signer: &AccountId,
         first: &(RawHeader, u64, H512),
         second: &(RawHeader, u64, H512),
-    ) -> Result;
+    ) -> result::Result<(BlockNumber, BlockNumber), &'static str>;
 }
 
-impl<AccountId> CheckHeader<AccountId> for () {
+impl<AccountId, BlockNumber: Default> CheckHeader<AccountId, BlockNumber> for () {
     fn check_header(
         _signer: &AccountId,
         _first: &(RawHeader, u64, H512),
         _second: &(RawHeader, u64, H512),
-    ) -> Result {
-        Ok(())
+    ) -> result::Result<(BlockNumber, BlockNumber), &'static str> {
+        Ok((Default::default(), Default::default()))
     }
 }
 
@@ -52,7 +56,6 @@ decl_module! {
         fn report_double_signer(
             origin,
             double_signer: <T::Lookup as StaticLookup>::Source,
-            height: T::BlockNumber,
             fst_header: (RawHeader, u64, H512),
             snd_header: (RawHeader, u64, H512)
         ) -> Result {
@@ -64,22 +67,26 @@ decl_module! {
             );
 
             let double_signer = system::ChainContext::<T>::default().lookup(double_signer)?;
-            let reported_key = (height, double_signer.clone());
-            ensure_with_errorlog!(
-                <Reported<T>>::get(&reported_key).is_none(),
-                "The double signer at this height has been reported already.",
-                "The double signer at this height has been reported already|key:{:?}", reported_key
-            );
-            debug!("report double signer|signer:{:?}|height:{:}|first:({:?}, {:}, {:?})|second:({:?}, {:}, {:?})",
-                double_signer, height,
+            debug!("report double signer|signer:{:?}|first:({:?}, {:}, {:?})|second:({:?}, {:}, {:?})",
+                double_signer,
                 u8array_to_string(&fst_header.0), fst_header.1, fst_header.2,
                 u8array_to_string(&snd_header.0), snd_header.1, snd_header.2,
             );
-            T::CheckHeader::check_header(&who, &fst_header, &snd_header)?;
 
-            Self::slash(&double_signer, height);
+            let (fst_height, snd_height) = T::CheckHeader::check_header(&who, &fst_header, &snd_header)?;
 
-            <Reported<T>>::insert(&reported_key, ());
+            let reported_key1 = (fst_height, double_signer.clone());
+            let reported_key2 = (snd_height, double_signer.clone());
+            ensure_with_errorlog!(
+                <Reported<T>>::get(&reported_key1).is_none() && <Reported<T>>::get(&reported_key2).is_none(),
+                "The double signer at this height has been reported already.",
+                "The double signer at this height has been reported already|header1_key:{:?}|header2_key:{:?}", reported_key1, reported_key2
+            );
+
+            Self::slash(&double_signer, fst_height, snd_height, fst_header.1);
+
+            <Reported<T>>::insert(&reported_key1, ());
+            <Reported<T>>::insert(&reported_key2, ());
             Ok(())
         }
 
@@ -119,7 +126,7 @@ decl_event!(
     <T as xassets::Trait>::Balance,
     <T as system::Trait>::AccountId
     {
-        SlashDoubleSigner(BlockNumber, AccountId, Balance),
+        SlashDoubleSigner(BlockNumber, BlockNumber, u64, AccountId, Balance),
     }
 );
 
@@ -144,7 +151,12 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn slash(who: &T::AccountId, number: T::BlockNumber) {
+    fn slash(
+        who: &T::AccountId,
+        fst_height: T::BlockNumber,
+        snd_height: T::BlockNumber,
+        slot: u64,
+    ) {
         // Slash the whole jackpot of double signer.
         let council = xaccounts::Module::<T>::council_account();
         let jackpot = xstaking::Module::<T>::jackpot_accountid_for(who);
@@ -166,6 +178,12 @@ impl<T: Trait> Module<T> {
 
         Self::try_reset_validators_given_double_signer(who);
 
-        Self::deposit_event(RawEvent::SlashDoubleSigner(number, who.clone(), slashed));
+        Self::deposit_event(RawEvent::SlashDoubleSigner(
+            fst_height,
+            snd_height,
+            slot,
+            who.clone(),
+            slashed,
+        ));
     }
 }
