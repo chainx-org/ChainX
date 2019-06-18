@@ -58,7 +58,7 @@ pub use xprocess;
 
 use xsupport::ensure_with_errorlog;
 #[cfg(feature = "std")]
-use xsupport::u8array_to_string;
+use xsupport::u8array_to_hex;
 
 use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
 
@@ -256,7 +256,7 @@ fn verify_header(
         "check signature failed|slot:{:}|pre_hash:{:?}|to_sign:{:}|sig:{:}|author:{:?}",
         (*header).1,
         pre_header.hash(),
-        u8array_to_string(&to_sign[..]),
+        u8array_to_hex(&to_sign[..]),
         header.2,
         expected_author
     );

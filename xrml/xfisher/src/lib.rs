@@ -15,7 +15,7 @@ use system::ensure_signed;
 // ChainX
 use xsupport::{debug, ensure_with_errorlog, info};
 #[cfg(feature = "std")]
-use xsupport::{u8array_to_string, who};
+use xsupport::{u8array_to_hex, who};
 
 pub trait Trait: xstaking::Trait {
     /// The overarching event type.
@@ -67,26 +67,24 @@ decl_module! {
             );
 
             let double_signer = system::ChainContext::<T>::default().lookup(double_signer)?;
-            debug!("report double signer|signer:{:?}|first:({:?}, {:}, {:?})|second:({:?}, {:}, {:?})",
+            debug!("report double signer|signer:{:?}|first:({:?}, {:}, {:?})|existed:{:?}|second:({:?}, {:}, {:?})|existed:{:?}",
                 double_signer,
-                u8array_to_string(&fst_header.0), fst_header.1, fst_header.2,
-                u8array_to_string(&snd_header.0), snd_header.1, snd_header.2,
+                u8array_to_hex(&fst_header.0), fst_header.1, fst_header.2, <Reported<T>>::get(&fst_header.2).is_none(),
+                u8array_to_hex(&snd_header.0), snd_header.1, snd_header.2, <Reported<T>>::get(&snd_header.2).is_none(),
+            );
+
+            ensure_with_errorlog!(
+                <Reported<T>>::get(&fst_header.2).is_none() || <Reported<T>>::get(&snd_header.2).is_none(),
+                "The double signer at this height has been reported already.",
+                "The double signer at this height has been reported already|fst_sig:{:?}|snd_sig:{:?}", fst_header.2, snd_header.2
             );
 
             let (fst_height, snd_height) = T::CheckHeader::check_header(&who, &fst_header, &snd_header)?;
 
-            let reported_key1 = (fst_height, double_signer.clone());
-            let reported_key2 = (snd_height, double_signer.clone());
-            ensure_with_errorlog!(
-                <Reported<T>>::get(&reported_key1).is_none() && <Reported<T>>::get(&reported_key2).is_none(),
-                "The double signer at this height has been reported already.",
-                "The double signer at this height has been reported already|header1_key:{:?}|header2_key:{:?}", reported_key1, reported_key2
-            );
-
             Self::slash(&double_signer, fst_height, snd_height, fst_header.1);
 
-            <Reported<T>>::insert(&reported_key1, ());
-            <Reported<T>>::insert(&reported_key2, ());
+            <Reported<T>>::insert(&fst_header.2, ());
+            <Reported<T>>::insert(&snd_header.2, ());
             Ok(())
         }
 
@@ -113,7 +111,7 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as XFisher {
         /// If the validator has been reported the double sign misbehavior at a certain height.
-        pub Reported get(reported): map (T::BlockNumber, T::AccountId) => Option<()>;
+        pub Reported get(reported): map H512 => Option<()>;
 
         /// Qualified accounts to report the double signer.
         pub Fishermen get(fishermen): Vec<T::AccountId>;
