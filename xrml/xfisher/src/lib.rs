@@ -79,7 +79,7 @@ decl_module! {
                 "The double signer at this height has been reported already|fst_sig:{:?}|snd_sig:{:?}", fst_header.2, snd_header.2
             );
 
-            let (fst_height, snd_height) = T::CheckHeader::check_header(&who, &fst_header, &snd_header)?;
+            let (fst_height, snd_height) = T::CheckHeader::check_header(&double_signer, &fst_header, &snd_header)?;
 
             Self::slash(&double_signer, fst_height, snd_height, fst_header.1);
 
