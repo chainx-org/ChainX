@@ -4,7 +4,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // Substrate
-use primitives::traits::{Lookup, StaticLookup};
 use substrate_primitives::H512;
 
 use rstd::prelude::*;
@@ -13,7 +12,7 @@ use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMa
 use system::ensure_signed;
 
 // ChainX
-use xsupport::{debug, ensure_with_errorlog, info};
+use xsupport::{debug, ensure_with_errorlog, error, info, warn};
 #[cfg(feature = "std")]
 use xsupport::{u8array_to_hex, who};
 
@@ -21,23 +20,23 @@ pub trait Trait: xstaking::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     type CheckHeader: CheckHeader<
-        <Self as system::Trait>::AccountId,
+        <Self as consensus::Trait>::SessionKey,
         <Self as system::Trait>::BlockNumber,
     >;
 }
 
-pub trait CheckHeader<AccountId, BlockNumber: Default> {
+pub trait CheckHeader<SessionKey, BlockNumber: Default> {
     /// Check if the header is signed by the given signer.
     fn check_header(
-        signer: &AccountId,
+        signer: &SessionKey,
         first: &(RawHeader, u64, H512),
         second: &(RawHeader, u64, H512),
     ) -> result::Result<(BlockNumber, BlockNumber), &'static str>;
 }
 
-impl<AccountId, BlockNumber: Default> CheckHeader<AccountId, BlockNumber> for () {
+impl<SessionKey, BlockNumber: Default> CheckHeader<SessionKey, BlockNumber> for () {
     fn check_header(
-        _signer: &AccountId,
+        _signer: &SessionKey,
         _first: &(RawHeader, u64, H512),
         _second: &(RawHeader, u64, H512),
     ) -> result::Result<(BlockNumber, BlockNumber), &'static str> {
@@ -55,7 +54,7 @@ decl_module! {
         /// the header is tuple of (pre_header(Vec<u8>), signature(64Bytes), slot(u64))
         fn report_double_signer(
             origin,
-            double_signer: <T::Lookup as StaticLookup>::Source,
+            double_signer: T::SessionKey,
             fst_header: (RawHeader, u64, H512),
             snd_header: (RawHeader, u64, H512)
         ) -> Result {
@@ -66,7 +65,6 @@ decl_module! {
                 "Only the fisherman can report the double signer|current fishermen:{:?}|sender{:?}", Self::fishermen(), who
             );
 
-            let double_signer = system::ChainContext::<T>::default().lookup(double_signer)?;
             debug!("report double signer|signer:{:?}|first:({:?}, {:}, {:?})|existed:{:?}|second:({:?}, {:}, {:?})|existed:{:?}",
                 double_signer,
                 u8array_to_hex(&fst_header.0), fst_header.1, fst_header.2, <Reported<T>>::get(&fst_header.2).is_none(),
@@ -129,32 +127,8 @@ decl_event!(
 );
 
 impl<T: Trait> Module<T> {
-    /// Try removing the double signer from the validator set.
-    fn try_reset_validators_given_double_signer(who: &T::AccountId) {
-        let mut validators = <xsession::Module<T>>::validators()
-            .into_iter()
-            .map(|(v, _)| v)
-            .collect::<Vec<_>>();
-
-        if validators.contains(who)
-            && validators.len() > xstaking::Module::<T>::minimum_validator_count() as usize
-        {
-            validators.retain(|x| *x != *who);
-            info!(
-                "[slash_double_signer] {:?} has been removed from the validator set, the latest validator set: {:?}",
-                who!(who),
-                validators.clone()
-            );
-            xstaking::Module::<T>::set_validators_on_non_era(validators);
-        }
-    }
-
-    fn slash(
-        who: &T::AccountId,
-        fst_height: T::BlockNumber,
-        snd_height: T::BlockNumber,
-        slot: u64,
-    ) {
+    /// Actually slash the double signer.
+    fn apply_slash(who: &T::AccountId) -> T::Balance {
         // Slash the whole jackpot of double signer.
         let council = xaccounts::Module::<T>::council_account();
         let jackpot = xstaking::Module::<T>::jackpot_accountid_for(who);
@@ -174,14 +148,28 @@ impl<T: Trait> Module<T> {
             info!("[slash_double_signer] force {:?} to be inactive", who!(who));
         });
 
-        Self::try_reset_validators_given_double_signer(who);
+        slashed
+    }
 
-        Self::deposit_event(RawEvent::SlashDoubleSigner(
-            fst_height,
-            snd_height,
-            slot,
-            who.clone(),
-            slashed,
-        ));
+    fn slash(
+        double_signed_key: &T::SessionKey,
+        fst_height: T::BlockNumber,
+        snd_height: T::BlockNumber,
+        slot: u64,
+    ) {
+        if let Some(who) = xsession::Module::<T>::account_id_for(double_signed_key) {
+            if !xstaking::Module::<T>::is_intention(&who) {
+                warn!("[slash] Try to slash only to find that it is not an intention|session_key:{:?}|accountid:{:?}", double_signed_key, who);
+                return;
+            }
+
+            let slashed = Self::apply_slash(&who);
+
+            Self::deposit_event(RawEvent::SlashDoubleSigner(
+                fst_height, snd_height, slot, who, slashed,
+            ));
+        } else {
+            error!("[slash] Cannot find the account id given the double signed session key|session_key:{:?}", double_signed_key);
+        }
     }
 }

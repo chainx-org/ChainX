@@ -149,6 +149,10 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    pub fn account_id_for(key: &T::SessionKey) -> Option<T::AccountId> {
+        <KeyFilterMap<T>>::get(key)
+    }
+
     pub fn set_key(who: &T::AccountId, key: &T::SessionKey) {
         if let Some(old_key) = <NextKeyFor<T>>::get(who) {
             <KeyFilterMap<T>>::remove(old_key);

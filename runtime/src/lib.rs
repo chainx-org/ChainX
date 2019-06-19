@@ -214,9 +214,9 @@ impl finality_tracker::Trait for Runtime {
 }
 
 pub struct HeaderChecker;
-impl xfisher::CheckHeader<AccountId, BlockNumber> for HeaderChecker {
+impl xfisher::CheckHeader<AuthorityId, BlockNumber> for HeaderChecker {
     fn check_header(
-        signer: &AccountId,
+        signer: &AuthorityId,
         first: &(xfisher::RawHeader, u64, H512),
         second: &(xfisher::RawHeader, u64, H512),
     ) -> result::Result<(BlockNumber, BlockNumber), &'static str> {
@@ -234,7 +234,7 @@ impl xfisher::CheckHeader<AccountId, BlockNumber> for HeaderChecker {
 }
 fn verify_header(
     header: &(xfisher::RawHeader, u64, H512),
-    expected_author: &AccountId,
+    expected_author: &AuthorityId,
 ) -> result::Result<Header, &'static str> {
     // hard code, digest with other type can't be decode in runtime, thus just can decode pre header(header without digest)
     // 3 * hash + vec<u8> + CompactNumber
@@ -253,7 +253,7 @@ fn verify_header(
     ensure_with_errorlog!(
         runtime_io::ed25519_verify(&(header.2).0, &to_sign[..], expected_author.clone()),
         "check signature failed",
-        "check signature failed|slot:{:}|pre_hash:{:?}|to_sign:{:}|sig:{:}|author:{:?}",
+        "check signature failed|slot:{:}|pre_hash:{:?}|to_sign:{:}|sig:{:?}|author:{:?}",
         (*header).1,
         pre_header.hash(),
         u8array_to_hex(&to_sign[..]),
