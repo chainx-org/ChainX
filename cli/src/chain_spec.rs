@@ -51,15 +51,15 @@ fn development_config_genesis() -> GenesisConfig {
 /// Development config (single validator Alice)
 pub fn development_config() -> ChainSpec {
     ChainSpec::from_genesis(
-        "Development",
-        "dev",
+        "ChainX Dev",
+        "chainx_dev",
         development_config_genesis,
         vec![],
         Some(TelemetryEndpoints::new(vec![(
             CHAINX_TELEMETRY_URL.to_string(),
             0,
         )])),
-        Some("DEV ChainX V0.9.10"),
+        Some("ChainX Dev"),
         None,
         Some(
             json!({
@@ -85,7 +85,7 @@ pub fn testnet_config() -> ChainSpec {
         //"/ip4/47.110.232.108/tcp/31129/p2p/QmRnWu3c7Mq7bVHTwJTrSC76XKMQJx4cmGofhSA5XTkk9q".into(),
     ];
     ChainSpec::from_genesis(
-        "ChainX Local TF",
+        "ChainX Testnet",
         "chainx_testnet",
         testnet_genesis,
         boot_nodes,
@@ -93,7 +93,7 @@ pub fn testnet_config() -> ChainSpec {
             (STAGING_TELEMETRY_URL.to_string(), 0),
             (CHAINX_TELEMETRY_URL.to_string(), 0),
         ])),
-        Some("ChainX Testnet V0.9.10"),
+        Some("ChainX Testnet"),
         None,
         Some(
             json!({
