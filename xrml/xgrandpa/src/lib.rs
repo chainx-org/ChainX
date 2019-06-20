@@ -242,6 +242,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    #[allow(dead_code)]
     /// Deposit one of this module's logs.
     fn deposit_log(log: Log<T>) {
         <system::Module<T>>::deposit_log(<T as Trait>::Log::from(log).into());

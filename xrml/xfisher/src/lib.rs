@@ -12,9 +12,9 @@ use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMa
 use system::ensure_signed;
 
 // ChainX
-use xsupport::{debug, ensure_with_errorlog, error, info, warn};
 #[cfg(feature = "std")]
-use xsupport::{u8array_to_hex, who};
+use xsupport::u8array_to_hex;
+use xsupport::{debug, ensure_with_errorlog, error, info, warn};
 
 pub trait Trait: xstaking::Trait {
     /// The overarching event type.
@@ -79,7 +79,7 @@ decl_module! {
 
             let (fst_height, snd_height) = T::CheckHeader::check_header(&double_signer, &fst_header, &snd_header)?;
 
-            Self::slash(&double_signer, fst_height, snd_height, fst_header.1);
+            let _ = Self::slash(&double_signer, fst_height, snd_height, fst_header.1);
 
             <Reported<T>>::insert(&fst_header.2, ());
             <Reported<T>>::insert(&snd_header.2, ());
@@ -127,49 +127,25 @@ decl_event!(
 );
 
 impl<T: Trait> Module<T> {
-    /// Actually slash the double signer.
-    fn apply_slash(who: &T::AccountId) -> T::Balance {
-        // Slash the whole jackpot of double signer.
-        let council = xaccounts::Module::<T>::council_account();
-        let jackpot = xstaking::Module::<T>::jackpot_accountid_for(who);
-
-        let slashed = <xassets::Module<T>>::pcx_free_balance(&jackpot);
-        let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot, &council, slashed);
-        info!(
-            "[slash_double_signer] {:?} is slashed: {:?}",
-            who!(who),
-            slashed
-        );
-
-        // Force the double signer to be inactive.
-        <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
-            props.is_active = false;
-            props.last_inactive_since = <system::Module<T>>::block_number();
-            info!("[slash_double_signer] force {:?} to be inactive", who!(who));
-        });
-
-        slashed
-    }
-
     fn slash(
         double_signed_key: &T::SessionKey,
         fst_height: T::BlockNumber,
         snd_height: T::BlockNumber,
         slot: u64,
-    ) {
+    ) -> Result {
         if let Some(who) = xsession::Module::<T>::account_id_for(double_signed_key) {
-            if !xstaking::Module::<T>::is_intention(&who) {
+            if let Ok(slashed) = xstaking::Module::<T>::slash_double_signer(&who) {
+                Self::deposit_event(RawEvent::SlashDoubleSigner(
+                    fst_height, snd_height, slot, who, slashed,
+                ));
+                Ok(())
+            } else {
                 warn!("[slash] Try to slash only to find that it is not an intention|session_key:{:?}|accountid:{:?}", double_signed_key, who);
-                return;
+                Err("Fail to slash the double signer")
             }
-
-            let slashed = Self::apply_slash(&who);
-
-            Self::deposit_event(RawEvent::SlashDoubleSigner(
-                fst_height, snd_height, slot, who, slashed,
-            ));
         } else {
             error!("[slash] Cannot find the account id given the double signed session key|session_key:{:?}", double_signed_key);
+            Err("Cannot find the account id given the double signed key")
         }
     }
 }

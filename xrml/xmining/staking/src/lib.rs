@@ -5,6 +5,7 @@
 
 mod mock;
 mod shifter;
+pub mod slash;
 mod tests;
 pub mod types;
 pub mod vote_weight;
@@ -334,6 +335,9 @@ decl_storage! {
         pub Intentions get(intentions): linked_map T::AccountId => IntentionProfs<T::Balance, T::BlockNumber>;
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
+
+        /// Reported validators that did evil, reset per session.
+        pub EvilValidatorsPerSession get(evil_validators): Vec<T::AccountId>;
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(minimum_penalty) config(): T::Balance;
