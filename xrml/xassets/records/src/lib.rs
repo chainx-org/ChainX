@@ -247,11 +247,26 @@ impl<T: Trait> Module<T> {
         Self::withdrawal_finish_impl(serial_number, ApplicationState::NormalCancel)
     }
 
+    /// revoke to applying
+    pub fn withdrawal_recover_by_trustee(serial_number: u32) -> Result {
+        if let Some(mut node) = Self::application_map(serial_number) {
+            if node.data.state != ApplicationState::Processing {
+                error!("[withdrawal_recover_by_trustee]|only allow `Processing` for this application|id:{:}|state:{:?}", serial_number, node.data.state);
+                return Err("only allow `Processing` state for applicant recover to `Applying`");
+            }
+            node.data.state = ApplicationState::Applying;
+            ApplicationMap::<T>::insert(serial_number, node);
+            return Ok(());
+        }
+        Err("not find this application for this id")
+    }
+
+    /// revoke to cancel
     pub fn withdrawal_revoke_by_trustee(serial_number: u32) -> Result {
         if let Some(node) = Self::application_map(serial_number) {
             if node.data.state != ApplicationState::Processing {
                 error!("[withdrawal_revoke_by_trustee]|only allow `Processing` for this application|id:{:}|state:{:?}", serial_number, node.data.state);
-                return Err("only allow `Processing` state for applicant revoke");
+                return Err("only allow `Processing` state for applicant revoke to `RootCancel`");
             }
         }
         Self::withdrawal_finish_impl(serial_number, ApplicationState::RootCancel)

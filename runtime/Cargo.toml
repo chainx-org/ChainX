@@ -57,6 +57,8 @@ xbridge-features = { package = "xrml-xbridge-features", path = "../xrml/xbridge/
 xsdot = { package = "xrml-xbridge-sdot", path = "../xrml/xbridge/sdot", default-features = false }
 # dex
 xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-features = false }
+# fisher
+xfisher = { package = "xrml-xfisher", path = "../xrml/xfisher", default-features = false }
 # multisig
 xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig", default-features = false }
 
@@ -109,6 +111,7 @@ std = [
     "xassets/std",
     "xrecords/std",
     "xprocess/std",
+    "xfisher/std",
     # mining
     "xstaking/std",
     "xtokens/std",

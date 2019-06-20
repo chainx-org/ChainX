@@ -7,7 +7,7 @@ use primitives::traits::{As, One, Zero};
 use rstd::cmp;
 use xaccounts::IntentionJackpotAccountIdFor;
 use xsession::OnSessionChange;
-use xsupport::{debug, info};
+use xsupport::{debug, info, warn};
 #[cfg(feature = "std")]
 use xsupport::{validators, who};
 
@@ -84,10 +84,12 @@ impl<T: Trait> Module<T> {
         let council = xaccounts::Module::<T>::council_account();
 
         // Slash 10 times per block reward for each missed block.
-        let missed = <MissedOfPerSession<T>>::take(who) as u64;
+        let missed = u64::from(<MissedOfPerSession<T>>::take(who));
         let reward_per_block = Self::reward_of_per_block(my_reward);
         let total_slash = cmp::max(
-            T::Balance::sa(reward_per_block.as_() * missed * Self::missed_blocks_severity() as u64),
+            T::Balance::sa(
+                reward_per_block.as_() * missed * u64::from(Self::missed_blocks_severity()),
+            ),
             T::Balance::sa(Self::minimum_penalty().as_() * missed),
         );
 
@@ -151,7 +153,7 @@ impl<T: Trait> Module<T> {
         ));
 
         for who in inactive_slashed.iter() {
-            let missed = T::Balance::sa(<MissedOfPerSession<T>>::take(who) as u64);
+            let missed = T::Balance::sa(u64::from(<MissedOfPerSession<T>>::take(who)));
             let should_slash = missed * Self::minimum_penalty();
             let council = xaccounts::Module::<T>::council_account();
 
@@ -164,9 +166,23 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    /// Report the total missed blocks info to the session module.
+    fn report_total_missed_blocks_count() {
+        if <xsession::SessionTotalMissedBlocksCount<T>>::exists() {
+            warn!("[report_total_missed_blocks] xsession::SessionTotalMissedBlocksCount should not exist on new session.");
+        }
+        let total_missed = Self::offline_validators_per_session()
+            .iter()
+            .map(|v| Self::missed_of_per_session(v))
+            .fold(0u32, |acc, x| acc + x);
+        <xsession::SessionTotalMissedBlocksCount<T>>::put(total_missed);
+    }
+
     /// Session has just changed. We need to determine whether we pay a reward, slash and/or
     /// move to a new era.
     fn new_session() {
+        Self::report_total_missed_blocks_count();
+
         // No reward but only slash for these offline validators that are inactive atm.
         Self::slash_inactive_offline_validators();
 
@@ -176,6 +192,10 @@ impl<T: Trait> Module<T> {
             .collect::<Vec<_>>();
 
         let current_validator_count = validators.len();
+
+        // Try removing the evil validators first.
+        let evil_validators = <EvilValidatorsPerSession<T>>::take();
+        validators.retain(|x| !evil_validators.contains(x));
 
         // apply good session reward
         let mut session_reward = Self::this_session_reward();
@@ -213,10 +233,12 @@ impl<T: Trait> Module<T> {
             // May become zero after meeting the last one.
             if !total_active_stake.is_zero() {
                 // stake * session_reward could overflow.
-                let reward = match (stake.as_() as u128).checked_mul(session_reward.as_() as u128) {
+                let reward = match (u128::from(stake.as_()))
+                    .checked_mul(u128::from(session_reward.as_()))
+                {
                     Some(x) => {
-                        let r = x / total_active_stake.as_() as u128;
-                        if r < u64::max_value() as u128 {
+                        let r = x / u128::from(total_active_stake.as_());
+                        if r < u128::from(u64::max_value()) {
                             T::Balance::sa(r as u64)
                         } else {
                             panic!("reward of per intention definitely less than u64::max_value()")
@@ -258,16 +280,14 @@ impl<T: Trait> Module<T> {
 
         if is_new_era {
             Self::new_era();
-        } else {
-            if validators.len() < current_validator_count {
-                Self::set_validators_on_new_session(validators);
-            }
+        } else if validators.len() < current_validator_count {
+            Self::set_validators_on_non_era(validators);
         }
     }
 
     /// We only reduce the offline validators on non-era session.
     /// This happens when there are offline validators that are enforced to be inactive.
-    fn set_validators_on_new_session(validators: Vec<T::AccountId>) {
+    pub fn set_validators_on_non_era(validators: Vec<T::AccountId>) {
         // Update to the latest total nomination
         let validators = validators
             .into_iter()
@@ -276,7 +296,7 @@ impl<T: Trait> Module<T> {
             .collect::<Vec<_>>();
         <xsession::Module<T>>::set_validators(validators.as_slice());
         info!(
-            "[set_validators_on_new_session] new validator set due to enforcing inactive: {:?}",
+            "[set_validators_on_non_era] new validator set due to enforcing inactive: {:?}",
             validators!(validators)
         );
     }
@@ -311,7 +331,7 @@ impl<T: Trait> Module<T> {
         }
 
         for (total_nomination, intention) in candidates.iter() {
-            <StakeWeight<T>>::insert(intention, total_nomination.clone());
+            <StakeWeight<T>>::insert(intention, *total_nomination);
         }
 
         let desired_validator_count = <ValidatorCount<T>>::get() as usize;

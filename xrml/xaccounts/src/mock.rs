@@ -2,13 +2,13 @@
 
 #![cfg(test)]
 
-use super::*;
-
-use primitives::testing::{ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId};
+use primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use primitives::traits::{BlakeTwo256, IdentityLookup};
 use primitives::BuildStorage;
 use substrate_primitives::{Blake2Hasher, H256};
 use support::impl_outer_origin;
+
+use super::*;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -26,7 +26,7 @@ impl system::Trait for Test {
     type Hashing = BlakeTwo256;
     type Digest = Digest;
     type AccountId = u64;
-    type Lookup = IdentityLookup<u64>;
+    type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
@@ -38,33 +38,13 @@ impl consensus::Trait for Test {
     type InherentOfflineReport = ();
 }
 
-impl indices::Trait for Test {
-    type AccountIndex = u32;
-    type IsDeadAccount = ();
-    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
-    type Event = ();
-}
-
-impl session::Trait for Test {
-    type ConvertAccountIdToSessionKey = ConvertUintAuthorityId;
-    type OnSessionChange = ();
-    type Event = ();
-}
-
-impl timestamp::Trait for Test {
-    type Moment = u64;
-    type OnTimestampSet = ();
-}
-
 impl Trait for Test {
-    type DetermineIntentionJackpotAccountId = MockDeterminator;
+    type DetermineIntentionJackpotAccountId = MockAccountIdDeterminator;
 }
-
-pub struct MockDeterminator;
-
-impl IntentionJackpotAccountIdFor<u64> for MockDeterminator {
+pub struct MockAccountIdDeterminator;
+impl IntentionJackpotAccountIdFor<u64> for MockAccountIdDeterminator {
     fn accountid_for(_: &u64) -> u64 {
-        1000
+        0
     }
 }
 
@@ -82,16 +62,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .unwrap()
         .0,
     );
-    t.extend(
-        session::GenesisConfig::<Test> {
-            session_length: 1,
-            validators: vec![10, 20],
-            keys: vec![],
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-
     runtime_io::TestExternalities::new(t)
 }
+
+pub type XAccounts = Module<Test>;

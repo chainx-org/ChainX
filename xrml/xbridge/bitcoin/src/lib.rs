@@ -716,7 +716,7 @@ impl<T: Trait> Module<T> {
 
                     // release withdrawal for applications
                     for id in proposal.withdrawal_id_list.iter() {
-                        let _ = xrecords::Module::<T>::withdrawal_revoke_by_trustee(*id);
+                        let _ = xrecords::Module::<T>::withdrawal_recover_by_trustee(*id);
                     }
 
                     CurrentWithdrawalProposal::<T>::kill();

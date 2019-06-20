@@ -21,7 +21,7 @@ use support::{
 use system::ensure_signed;
 
 // ChainX
-use xassets::{ChainT, OnAssetRegisterOrRevoke, Token};
+use xassets::{AssetType::ReservedDexSpot, ChainT, OnAssetRegisterOrRevoke, Token};
 use xsupport::info;
 use Side::{Buy, Sell};
 
@@ -39,7 +39,7 @@ pub type OrderInfo<T> = Order<
 
 pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
 
-pub trait Trait: xassets::Trait + timestamp::Trait {
+pub trait Trait: xassets::Trait + xbitcoin::Trait + xsdot::Trait {
     type Price: Parameter
         + Member
         + SimpleArithmetic
@@ -74,7 +74,7 @@ decl_module! {
             ensure!(!amount.is_zero(), "Amount can't be zero");
             ensure!(order_type == OrderType::Limit, "Only support Limit order for now");
 
-            let pair = Self::trading_pair(&pair_index)?;
+            let pair = Self::trading_pair(pair_index)?;
 
             ensure!(pair.online, "The trading pair must be online");
             ensure!(
@@ -118,6 +118,25 @@ decl_module! {
                 );
         }
 
+        /// Refund the accumulative locked asset due to the loss of accuracy of Self::convert_base_to_quote().
+        fn refund_locked(who: T::AccountId, token: Token) {
+            let btc = <xbitcoin::Module<T> as ChainT>::TOKEN;
+            let sdot = <xsdot::Module<T> as ChainT>::TOKEN;
+            ensure!(token == btc.to_vec() || token == sdot.to_vec(), "Only BTC and SDOT could have this refunding issue.");
+
+            // The max order count won't exceed 10000 when this issue is resolved.
+            let order_count = cmp::min(10000, Self::order_count_of(&who));
+            for index in 0..order_count {
+                if Self::order_info_of((who.clone(), index)).is_some() {
+                    return Err("Cannot refund if the user's open orders are not empty.");
+                }
+            }
+            let value = <xassets::Module<T>>::asset_balance_of(&who, &token, ReservedDexSpot);
+            if !value.is_zero() {
+                Self::refund_reserved_dex_spot(&who, &token, value);
+                info!("[refund_locked] who: {:?}, token: {:?}, value: {:?}", who, token, value);
+            }
+        }
     }
 }
 
@@ -220,7 +239,7 @@ impl<T: Trait> Module<T> {
             pair_index, tick_precision, online
         );
 
-        let pair = Self::trading_pair(&pair_index)?;
+        let pair = Self::trading_pair(pair_index)?;
         if tick_precision < pair.tick_precision {
             return Err("tick_precision can not less than the one of pair!");
         }
@@ -271,7 +290,7 @@ impl<T: Trait> Module<T> {
     pub fn aver_asset_price(token: &Token) -> Option<T::Balance> {
         let pcx = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
         let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
-        let pcx_precision = 10_u128.pow(pcx_asset.precision() as u32);
+        let pcx_precision = 10_u128.pow(u32::from(pcx_asset.precision()));
 
         let pair_len = <TradingPairCount<T>>::get();
         for i in 0..pair_len {
@@ -281,7 +300,7 @@ impl<T: Trait> Module<T> {
                 // XXX/PCX
                 if pair.base().eq(token) && pair.quote().eq(&pcx) {
                     if let Some((_, aver, _)) = <TradingPairInfoOf<T>>::get(i) {
-                        let price = match (aver.as_() as u128).checked_mul(pcx_precision) {
+                        let price = match (u128::from(aver.as_())).checked_mul(pcx_precision) {
                             Some(x) => x / pip_precision,
                             None => panic!("aver * pow_pcx_precision overflow"),
                         };
@@ -292,7 +311,7 @@ impl<T: Trait> Module<T> {
                 } else if pair.base().eq(&pcx) && pair.quote().eq(token) {
                     if let Some((_, aver, _)) = <TradingPairInfoOf<T>>::get(i) {
                         let price = match pip_precision.checked_mul(pcx_precision) {
-                            Some(x) => x / (aver.as_() as u128),
+                            Some(x) => x / (u128::from(aver.as_())),
                             None => panic!("pow_pcx_precision * pow_pair_precision overflow"),
                         };
 
@@ -320,7 +339,7 @@ impl<T: Trait> Module<T> {
             who, pair_index, order_type, side, amount, price
         );
 
-        let pair = Self::trading_pair(&pair_index)?;
+        let pair = Self::trading_pair(pair_index)?;
 
         let mut order = Self::inject_order(
             who,
@@ -342,7 +361,7 @@ impl<T: Trait> Module<T> {
         pair_index: TradingPairIndex,
         order_index: OrderIndex,
     ) -> Result {
-        let pair = Self::trading_pair(&pair_index)?;
+        let pair = Self::trading_pair(pair_index)?;
         ensure!(
             pair.online,
             "Can't cancel order if the trading pair is already offline"
@@ -370,7 +389,7 @@ impl<T: Trait> Module<T> {
             who, pair_index, order_index
         );
 
-        let pair = Self::trading_pair(&pair_index)?;
+        let pair = Self::trading_pair(pair_index)?;
         let mut order = Self::order_info_of(&(who.clone(), order_index))
             .expect("We have ensured the order exists.");
 
@@ -389,7 +408,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// In order to get trading pair easier.
-    fn trading_pair(pair_index: &TradingPairIndex) -> result::Result<TradingPair, &'static str> {
+    fn trading_pair(pair_index: TradingPairIndex) -> result::Result<TradingPair, &'static str> {
         <TradingPairOf<T>>::get(pair_index).ok_or("The order pair doesn't exist.")
     }
 }

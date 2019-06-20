@@ -20,7 +20,7 @@ impl<T: Trait> Module<T> {
         let handicap = <HandicapOf<T>>::get(pair_index);
         let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
-        let pair = Self::trading_pair(&pair_index)?;
+        let pair = Self::trading_pair(pair_index)?;
 
         let fluctuation = T::Price::sa(pair.fluctuation());
 
@@ -82,6 +82,8 @@ impl<T: Trait> Module<T> {
     }
 
     /// Convert the base currency to the quote currency given the trading pair.
+    ///
+    /// NOTE: There is a loss of accuracy here.
     ///
     /// PCX/BTC
     /// amount: measured by the base currency, e.g., PCX.

@@ -1,5 +1,5 @@
 [package]
-name = "xrml-xaccounts"
+name = "xrml-xfisher"
 version = "1.0.0"
 authors = ["Chainpool <http://chainx.org>"]
 edition = "2018"
@@ -17,11 +17,14 @@ system = { package = "srml-system", git = "https://github.com/chainpool/substrat
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default-features = false }
 # ChainX
 xr-primitives = { path = "../../xr-primitives", default-features = false }
-xsystem = { package ="xrml-xsystem", path = "../../xrml/xsystem", default-features = false }
+xaccounts = { package = "xrml-xaccounts", path = "../xaccounts", default-features = false }
+xsupport = { package = "xrml-xsupport", path = "../xsupport", default-features = false }
+xassets = { package = "xrml-xassets-assets", path = "../xassets/assets", default-features = false }
+xsession = { package = "xrml-xsession", path = "../xsession", default-features = false }
+xstaking= { package = "xrml-xmining-staking", path = "../xmining/staking", default-features = false }
 
 [dev-dependencies]
 # Substrate
-runtime_io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
 
 [features]
 default = ["std"]
@@ -38,5 +41,9 @@ std = [
     "consensus/std",
     # ChainX
     "xr-primitives/std",
-    "xsystem/std",
+    "xaccounts/std",
+    "xsupport/std",
+    "xassets/std",
+    "xsession/std",
+    "xstaking/std",
 ]

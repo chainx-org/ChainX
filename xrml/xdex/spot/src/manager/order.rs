@@ -134,7 +134,7 @@ impl<T: Trait> Module<T> {
 
         #[cfg(feature = "std")]
         let end = Local::now().timestamp_millis();
-        debug!("[match order] elasped time: {:}", end - begin);
+        debug!("[match order] elasped time: {:}ms", end - begin);
 
         // Remove the full filled order, otherwise the quotations, order status and handicap
         // should be updated.
@@ -276,15 +276,16 @@ impl<T: Trait> Module<T> {
         Self::update_handicap(&pair, price, order_side);
     }
 
+    /// Update the status of order after the turnover is calculated.
     fn update_order_on_execute(
         order: &mut OrderInfo<T>,
-        amount: &T::Balance,
+        turnover: &T::Balance,
         trade_history_index: TradeHistoryIndex,
     ) {
         order.executed_indices.push(trade_history_index);
 
         // Unwrap or default?
-        order.already_filled = match order.already_filled.checked_add(amount) {
+        order.already_filled = match order.already_filled.checked_add(turnover) {
             Some(x) => x,
             None => panic!("add order.already_filled overflow"),
         };
@@ -304,9 +305,19 @@ impl<T: Trait> Module<T> {
         <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), order);
     }
 
+    /// Due to the loss of precision in Self::convert_base_to_quote(),
+    /// the remaining could still be non-zero when the order is full filled, which must be refunded.
+    fn try_refund_remaining(order: &mut OrderInfo<T>, token: &Token) {
+        if order.is_fulfilled() && !order.remaining.is_zero() {
+            Self::refund_reserved_dex_spot(&order.submitter(), token, order.remaining);
+            order.remaining = Zero::zero();
+        }
+    }
+
     /// 1. update the taker and maker order based on the turnover
     /// 2. delivery asset to each other
-    /// 3. update the remaining of orders
+    /// 3. update the remaining field of orders
+    /// 4. try refunding the non-zero remaining asset if order is fulfilled
     fn execute_order(
         pair_index: TradingPairIndex,
         maker_order: &mut OrderInfo<T>,
@@ -314,7 +325,7 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         turnover: T::Balance,
     ) -> Result {
-        let pair = Self::trading_pair(&pair_index)?;
+        let pair = Self::trading_pair(pair_index)?;
 
         let trade_history_index = Self::trade_history_index_of(pair_index);
         <TradeHistoryIndexOf<T>>::insert(pair_index, trade_history_index + 1);
@@ -333,6 +344,14 @@ impl<T: Trait> Module<T> {
 
         maker_order.decrease_remaining_on_execute(maker_turnover_amount);
         taker_order.decrease_remaining_on_execute(taker_turnover_amount);
+
+        let refunding_token_type = |order: &OrderInfo<T>| match order.side() {
+            Buy => pair.quote(),
+            Sell => pair.base(),
+        };
+
+        Self::try_refund_remaining(maker_order, &refunding_token_type(maker_order));
+        Self::try_refund_remaining(taker_order, &refunding_token_type(taker_order));
 
         Self::insert_refreshed_order(maker_order);
         Self::insert_refreshed_order(taker_order);

@@ -78,7 +78,7 @@ impl<T: Trait> xsystem::Validator<T::AccountId> for Module<T> {
     }
 }
 
-pub fn is_valid_name<T: Trait>(name: &[u8]) -> Result {
+pub fn is_valid_name(name: &[u8]) -> Result {
     if name.len() > 12 || name.len() < 2 {
         return Err("The length of name must be in range [2, 12].");
     }
@@ -86,7 +86,7 @@ pub fn is_valid_name<T: Trait>(name: &[u8]) -> Result {
     Ok(())
 }
 
-pub fn is_valid_about<T: Trait>(about: &[u8]) -> Result {
+pub fn is_valid_about(about: &[u8]) -> Result {
     if about.len() > 128 {
         return Err("The length of about must be in range [0, 128].");
     }
@@ -94,20 +94,16 @@ pub fn is_valid_about<T: Trait>(about: &[u8]) -> Result {
     Ok(())
 }
 
-pub fn is_valid_url<T: Trait>(url: &[u8]) -> Result {
+pub fn is_valid_url(url: &[u8]) -> Result {
     if url.len() > 24 || url.len() < 4 {
         return Err("The length of url must be in range [4, 24].");
     }
-    // number, capital letter, lowercase letter, .
-    let is_valid = |n: &u8| -> bool {
-        *n >= 0x30 && *n <= 0x39
-            || *n >= 0x41 && *n <= 0x5A
-            || *n >= 0x61 && *n <= 0x7A
-            || *n == 0x2E
-    };
+    // ASCII alphanumeric character and '.'
+    let is_valid = |n: &u8| -> bool { n.is_ascii_alphanumeric() || *n == b'.' };
 
     if url.iter().filter(|n| !is_valid(n)).count() > 0 {
-        return Err("Only numbers, letters and . are allowed.");
+        return Err("Only ASCII alphanumeric character and . are allowed.");
     }
+
     Ok(())
 }

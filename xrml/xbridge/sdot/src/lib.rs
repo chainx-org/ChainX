@@ -21,6 +21,8 @@ use system::ensure_signed;
 // ChainX
 use xassets::{Chain, ChainT};
 use xbridge_common::traits::{CrossChainBinding, Extractable};
+use xr_primitives::Name;
+use xsupport::{error, warn};
 
 pub use self::types::{EcdsaSignature, EthereumAddress};
 
@@ -67,24 +69,36 @@ decl_module! {
             // This is a public call, so we ensure that the origin is some signed account.
             let sender = ensure_signed(origin)?;
 
-            let input = contains(sign_data.clone(), input_data).ok_or("sign_data not contains input_data")?;
+            // Recover the Ethereum address from signature.
+            let signer = match recover_eth_address(&ethereum_signature, &sign_data, &input_data) {
+                Some(eth_address) => eth_address,
+                None => {
+                    error!("[sdot_claim]|Invalid Ethereum transaction signature|signature:{:?}|raw:{:?}|data:{:?}", ethereum_signature, sign_data, input_data);
+                    return Err("Invalid Ethereum transaction signature");
+                }
+            };
+
             let addr_type = xsystem::Module::<T>::address_type();
-            let (who, node_name) = T::AccountExtractor::account_info(&input, addr_type).ok_or("extractor account_id error")?;
+            let (account_id, channel_name) = handle_input_data::<T>(&input_data, addr_type).ok_or("Extract account info error")?;
 
-            let signer = eth_recover(&ethereum_signature, &sign_data).ok_or("Invalid Ethereum signature")?;
-
-            let balance_due = <Claims<T>>::take(&signer).ok_or("Ethereum address has no claim")?;
+            let balance = match <Claims<T>>::take(&signer) {
+                Some(balance) => balance,
+                None => {
+                    warn!("[sdot_claim]|The Ethereum address `{:?}` has no SDOT claims", signer);
+                    return Err("The Ethereum address has no SDOT claims");
+                }
+            };
 
             let total = Self::total();
-            ensure!(total >= balance_due, "Balance is less than remaining total of claims");
-            <Total<T>>::mutate(|t| *t -= balance_due);
+            ensure!(total >= balance, "Balance is less than the total amount of SDOT");
+            <Total<T>>::mutate(|t| *t -= balance);
 
-            deposit_token::<T>(&who, balance_due);
+            deposit_token::<T>(&account_id, balance);
 
-            T::CrossChainProvider::update_binding(&who, signer, node_name);
+            update_binding::<T>(&account_id, signer, channel_name);
 
             // Let's deposit an event to let the outside world know this happened.
-            Self::deposit_event(RawEvent::Claimed(sender, signer, balance_due));
+            Self::deposit_event(RawEvent::Claimed(sender, signer, balance));
 
             Ok(())
         }
@@ -101,6 +115,24 @@ impl<T: Trait> ChainT for Module<T> {
     fn check_addr(_addr: &[u8], _: &[u8]) -> Result {
         Ok(())
     }
+}
+
+// Recover Ethereum address from signature, return the Ethereum address.
+fn recover_eth_address(
+    signature: &EcdsaSignature,
+    raw: &[u8],
+    data: &[u8],
+) -> Option<EthereumAddress> {
+    if !contains(raw, data) {
+        return None;
+    }
+    eth_recover(signature, raw)
+}
+
+fn contains(seq: &[u8], sub_seq: &[u8]) -> bool {
+    seq.windows(sub_seq.len())
+        .position(|window| window == sub_seq)
+        .is_some()
 }
 
 fn ecdsa_recover(sig: &EcdsaSignature, msg: &[u8; 32]) -> Option<[u8; 64]> {
@@ -121,18 +153,31 @@ fn eth_recover(s: &EcdsaSignature, sign_data: &[u8]) -> Option<EthereumAddress> 
     Some(res)
 }
 
-fn contains(lvec: Vec<u8>, svec: Vec<u8>) -> Option<Vec<u8>> {
-    let mut lvec = lvec;
-    for _ in 0..lvec.len() - svec.len() {
-        if lvec.starts_with(&svec) {
-            return Some(svec);
-        }
-        lvec.remove(0);
-    }
-    None
+/// Try updating the binding address, remove pending deposit if the updating goes well.
+/// return this account id and validator name
+fn handle_input_data<T: Trait>(
+    input: &[u8],
+    addr_type: u8,
+) -> Option<(T::AccountId, Option<Name>)> {
+    T::AccountExtractor::account_info(input, addr_type)
 }
 
 fn deposit_token<T: Trait>(who: &T::AccountId, balance: T::Balance) {
     let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
-    let _ = <xrecords::Module<T>>::deposit(&who, &token, balance);
+    let _ = <xrecords::Module<T>>::deposit(&who, &token, balance).map_err(|e| {
+        error!(
+            "call xrecords to deposit error!, must use root to fix this error. reason:{:?}",
+            e
+        );
+        e
+    });
+}
+
+/// bind account
+fn update_binding<T: Trait>(
+    who: &T::AccountId,
+    input_addr: EthereumAddress,
+    channel_name: Option<Name>,
+) {
+    T::CrossChainProvider::update_binding(who, input_addr, channel_name)
 }

@@ -30,8 +30,8 @@ use runtime_primitives::traits::{Block as BlockT, Header, NumberFor};
 
 use crate::subscriptions::Subscriptions;
 
-mod error;
-mod number;
+pub mod error;
+pub mod number;
 #[cfg(test)]
 mod tests;
 
@@ -209,7 +209,11 @@ where
     }
 
     fn finalized_head(&self) -> Result<Block::Hash> {
-        Ok(self.client.info()?.chain.finalized_hash)
+        let (_, finalized_hash) = self
+            .client
+            .get_finalized_info(self.client.info()?.chain.best_hash);
+        Ok(finalized_hash.unwrap_or(self.client.info()?.chain.genesis_hash))
+        // Ok(self.client.info()?.chain.finalized_hash)
     }
 
     fn subscribe_new_head(&self, _metadata: Self::Metadata, subscriber: Subscriber<Block::Header>) {

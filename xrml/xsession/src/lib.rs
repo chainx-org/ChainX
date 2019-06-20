@@ -104,6 +104,9 @@ decl_storage! {
         /// Timestamp when current session started.
         pub CurrentStart get(current_start) build(|_| T::Moment::zero()): T::Moment;
 
+        /// Total missed blocks count in the last session.
+        pub SessionTotalMissedBlocksCount get(session_total_missed_blocks_count) : u32;
+
         /// New session is being forced is this entry exists; in which case, the boolean value is whether
         /// the new session should be considered a normal rotation (rewardable) or exceptional (slashable).
         pub ForcingNewSession get(forcing_new_session): Option<bool>;
@@ -144,6 +147,10 @@ impl<T: Trait> Module<T> {
         }
 
         Ok(())
+    }
+
+    pub fn account_id_for(key: &T::SessionKey) -> Option<T::AccountId> {
+        <KeyFilterMap<T>>::get(key)
     }
 
     pub fn set_key(who: &T::AccountId, key: &T::SessionKey) {

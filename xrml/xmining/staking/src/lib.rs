@@ -5,6 +5,7 @@
 
 mod mock;
 mod shifter;
+pub mod slash;
 mod tests;
 pub mod types;
 pub mod vote_weight;
@@ -29,7 +30,7 @@ use xsupport::debug;
 use xsupport::who;
 
 pub use self::shifter::{OnReward, OnRewardCalculation};
-pub use self::types::{ClaimType, IntentionProfs, NominationRecord, RewardHolder};
+pub use self::types::*;
 pub use self::vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
@@ -95,6 +96,9 @@ decl_module! {
                 <NominationRecords<T>>::get((who.clone(), from.clone())).is_some(),
                 "Cannot renominate if the from party is not your nominee."
             );
+            if Self::is_intention(&who) && who == from {
+                return Err("Cannot renominate the intention self-bonded.");
+            }
             ensure!(
                 value <= Self::revokable_of(&who, &from),
                 "Cannot renominate if greater than your current nomination."
@@ -192,11 +196,11 @@ decl_module! {
             ensure!(Self::is_intention(&who), "Cannot refresh if transactor is not an intention.");
 
             if let Some(url) = url.as_ref() {
-                xaccounts::is_valid_url::<T>(url)?;
+                xaccounts::is_valid_url(url)?;
             }
 
             if let Some(about) = about.as_ref() {
-                xaccounts::is_valid_about::<T>(about)?;
+                xaccounts::is_valid_about(about)?;
             }
 
             if let Some(desire_to_run) = desire_to_run.as_ref() {
@@ -221,7 +225,7 @@ decl_module! {
         fn register(origin, name: Name) {
             let who = ensure_signed(origin)?;
 
-            xaccounts::is_valid_name::<T>(&name)?;
+            xaccounts::is_valid_name(&name)?;
 
             ensure!(!Self::is_intention(&who), "Cannot register if transactor is an intention already.");
             ensure!(!Self::name_exists(name.clone()), "This name has already been taken.");
@@ -331,6 +335,9 @@ decl_storage! {
         pub Intentions get(intentions): linked_map T::AccountId => IntentionProfs<T::Balance, T::BlockNumber>;
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
+
+        /// Reported validators that did evil, reset per session.
+        pub EvilValidatorsPerSession get(evil_validators): Vec<T::AccountId>;
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(minimum_penalty) config(): T::Balance;
@@ -454,11 +461,12 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_unnominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
-        let freeze_until = if Self::is_intention(source) && *source == *target {
-            <system::Module<T>>::block_number() + Self::intention_bonding_duration()
+        let bonding_duration = if Self::is_intention(source) && *source == *target {
+            Self::intention_bonding_duration()
         } else {
-            <system::Module<T>>::block_number() + Self::bonding_duration()
+            Self::bonding_duration()
         };
+        let freeze_until = <system::Module<T>>::block_number() + bonding_duration;
 
         let mut revocations = Self::nomination_record_of(source, target).revocations;
 
@@ -471,9 +479,10 @@ impl<T: Trait> Module<T> {
 
         Self::unnominate_reserve(source, value)?;
 
-        if let Some(mut record) = <NominationRecords<T>>::get(&(source.clone(), target.clone())) {
+        let nr_key = (source.clone(), target.clone());
+        if let Some(mut record) = <NominationRecords<T>>::get(&nr_key) {
             record.revocations = revocations;
-            <NominationRecords<T>>::insert(&(source.clone(), target.clone()), record);
+            <NominationRecords<T>>::insert(&nr_key, record);
         }
 
         Self::apply_update_vote_weight(source, target, value, false);
