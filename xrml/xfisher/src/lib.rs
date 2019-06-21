@@ -65,16 +65,20 @@ decl_module! {
                 "Only the fisherman can report the double signer|current fishermen:{:?}|sender{:?}", Self::fishermen(), who
             );
 
-            debug!("report double signer|signer:{:?}|first:({:?}, {:}, {:?})|existed:{:?}|second:({:?}, {:}, {:?})|existed:{:?}",
+            let fst_not_existed = <Reported<T>>::get(&fst_header.2).is_none();
+            let snd_not_existed = <Reported<T>>::get(&snd_header.2).is_none();
+
+            debug!("report double signer|signer:{:?}|first:({:?}, {:}, {:?})|not existed:{:}|second:({:?}, {:}, {:?})|not existed:{:}",
                 double_signer,
-                u8array_to_hex(&fst_header.0), fst_header.1, fst_header.2, <Reported<T>>::get(&fst_header.2).is_none(),
-                u8array_to_hex(&snd_header.0), snd_header.1, snd_header.2, <Reported<T>>::get(&snd_header.2).is_none(),
+                u8array_to_hex(&fst_header.0), fst_header.1, fst_header.2, fst_not_existed,
+                u8array_to_hex(&snd_header.0), snd_header.1, snd_header.2, snd_not_existed,
             );
 
             ensure_with_errorlog!(
-                <Reported<T>>::get(&fst_header.2).is_none() || <Reported<T>>::get(&snd_header.2).is_none(),
+                fst_not_existed || snd_not_existed,
                 "The double signer at this height has been reported already.",
-                "The double signer at this height has been reported already|fst_sig:{:?}|snd_sig:{:?}", fst_header.2, snd_header.2
+                "The double signer at this height has been reported already|fst_sig:{:?}|not existed:{:}|snd_sig:{:?}|not existed:{:}",
+                fst_header.2, fst_not_existed, snd_header.2, snd_not_existed
             );
 
             let (fst_height, snd_height) = T::CheckHeader::check_header(&double_signer, &fst_header, &snd_header)?;
