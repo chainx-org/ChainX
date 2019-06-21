@@ -195,7 +195,11 @@ impl<T: Trait> Module<T> {
 
         // Try removing the evil validators first.
         let evil_validators = <EvilValidatorsPerSession<T>>::take();
-        validators.retain(|x| !evil_validators.contains(x));
+        for evil_val in evil_validators.iter() {
+            if validators.len() > Self::minimum_validator_count() as usize {
+                validators.retain(|x| *x != *evil_val);
+            }
+        }
 
         // apply good session reward
         let mut session_reward = Self::this_session_reward();
