@@ -14,12 +14,13 @@ impl TrusteeCall<AccountId> for Call {
         // only allow trustee function
         match self {
             Call::XBridgeOfBTC(call) => match call {
-                XBitcoinCall::set_btc_withdrawal_fee_by_trustees(_) => true,
-                XBitcoinCall::fix_withdrawal_state_by_trustees(_, _) => true,
+                XBitcoinCall::set_btc_withdrawal_fee_by_trustees(..) => true,
+                XBitcoinCall::fix_withdrawal_state_by_trustees(..) => true,
+                XBitcoinCall::remove_pending_by_trustees(..) => true,
                 _ => false,
             },
             Call::XBridgeFeatures(call) => match call {
-                XBridgeFeaturesCall::transition_trustee_session(_, _) => true,
+                XBridgeFeaturesCall::transition_trustee_session(..) => true,
                 _ => false,
             },
             _ => false,

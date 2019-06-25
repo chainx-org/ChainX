@@ -39,6 +39,7 @@ use btc_primitives::H256;
 pub use btc_primitives::H264;
 use btc_ser::{deserialize, Reader};
 
+use self::tx::handler::remove_pending_deposit;
 use self::tx::utils::{
     get_sig_num, get_trustee_address_pair, inspect_address_from_transaction, trustee_session,
 };
@@ -221,20 +222,6 @@ decl_module! {
             Ok(())
         }
 
-        pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: ApplicationState) -> Result {
-            let from = ensure_signed(origin)?;
-            T::TrusteeMultiSigProvider::check_multisig(&from)?;
-            xrecords::Module::<T>::fix_withdrawal_state_by_trustees(Chain::Bitcoin, withdrawal_id, state)
-        }
-
-        pub fn set_btc_withdrawal_fee_by_trustees(origin, fee: T::Balance) -> Result {
-            let from = ensure_signed(origin)?;
-            T::TrusteeMultiSigProvider::check_multisig(&from)?;
-
-            Self::set_btc_withdrawal_fee(fee)?;
-            Ok(())
-        }
-
         pub fn remove_tx_and_proposal(txhash: Option<H256>, drop_proposal: bool) -> Result {
             if let Some(hash) = txhash {
                 TxFor::<T>::remove(&hash);
@@ -246,9 +233,38 @@ decl_module! {
             Ok(())
         }
 
+        pub fn remove_pending(addr: BitcoinAddress, who: Option<T::AccountId>) -> Result {
+            if let Some(w) = who {
+                remove_pending_deposit::<T>(&addr, &w);
+            } else {
+                info!("[remove_pending]|release pending deposit directly, not deposit to someone|addr:{:?}", addr);
+                PendingDepositMap::<T>::remove(&addr);
+            }
+            Ok(())
+        }
+
         pub fn set_btc_withdrawal_fee(fee: T::Balance) -> Result {
             BtcWithdrawalFee::<T>::put(fee.as_() as u64);
             Ok(())
+        }
+
+        pub fn set_btc_withdrawal_fee_by_trustees(origin, fee: T::Balance) -> Result {
+            let from = ensure_signed(origin)?;
+            T::TrusteeMultiSigProvider::check_multisig(&from)?;
+
+            Self::set_btc_withdrawal_fee(fee)
+        }
+
+        pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: ApplicationState) -> Result {
+            let from = ensure_signed(origin)?;
+            T::TrusteeMultiSigProvider::check_multisig(&from)?;
+            xrecords::Module::<T>::fix_withdrawal_state_by_trustees(Chain::Bitcoin, withdrawal_id, state)
+        }
+
+        pub fn remove_pending_by_trustees(origin, addr: BitcoinAddress, who: Option<T::AccountId>) -> Result {
+            let from = ensure_signed(origin)?;
+            T::TrusteeMultiSigProvider::check_multisig(&from)?;
+            Self::remove_pending(addr, who)
         }
     }
 }

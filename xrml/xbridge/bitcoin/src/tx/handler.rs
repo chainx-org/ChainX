@@ -315,7 +315,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
     };
 }
 
-fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::AccountId) {
+pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::AccountId) {
     if let Some(record) = Module::<T>::pending_deposit(input_address) {
         for r in record {
             deposit_token::<T>(who, r.balance);
