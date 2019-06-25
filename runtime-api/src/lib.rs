@@ -35,10 +35,10 @@ pub mod xmining_api {
 
     decl_runtime_apis! {
         pub trait XMiningApi {
-            fn jackpot_accountid_for(who: AccountIdForApi) -> AccountIdForApi;
-            fn multi_jackpot_accountid_for(who: Vec<AccountIdForApi>) -> Vec<AccountIdForApi>;
-            fn token_jackpot_accountid_for(token: Token) -> AccountIdForApi;
-            fn multi_token_jackpot_accountid_for(token: Vec<Token>) -> Vec<AccountIdForApi>;
+            fn jackpot_accountid_for_unsafe(who: AccountIdForApi) -> AccountIdForApi;
+            fn multi_jackpot_accountid_for_unsafe(who: Vec<AccountIdForApi>) -> Vec<AccountIdForApi>;
+            fn token_jackpot_accountid_for_unsafe(token: Token) -> AccountIdForApi;
+            fn multi_token_jackpot_accountid_for_unsafe(token: Vec<Token>) -> Vec<AccountIdForApi>;
             fn asset_power(token: Token) -> Option<Balance>;
         }
     }

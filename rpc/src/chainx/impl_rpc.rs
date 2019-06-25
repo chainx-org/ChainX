@@ -265,7 +265,7 @@ where
         };
 
         let jackpot_account =
-            self.jackpot_accountid_for(self.block_id_by_hash(hash)?, who.clone())?;
+            self.jackpot_accountid_for_unsafe(self.block_id_by_hash(hash)?, who.clone())?;
         Ok(Some(json!({
             "sessionKey": session_key,
             "jackpotAccount": jackpot_account,
@@ -314,7 +314,7 @@ where
 
         let intentions = self.intention_set(block_id)?;
         let jackpot_account_list =
-            self.multi_jackpot_accountid_for(block_id, intentions.clone())?;
+            self.multi_jackpot_accountid_for_unsafe(block_id, intentions.clone())?;
 
         for (intention, jackpot_account) in intentions.into_iter().zip(jackpot_account_list) {
             let mut info = IntentionInfo::default();
@@ -398,7 +398,7 @@ where
         let key = <xtokens::PseduIntentions<Runtime>>::key();
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key, Hasher::TWOX128)? {
             let jackpot_account_list =
-                self.multi_token_jackpot_accountid_for(block_id, tokens.clone())?;
+                self.multi_token_jackpot_accountid_for_unsafe(block_id, tokens.clone())?;
 
             for (token, jackpot_account) in tokens.into_iter().zip(jackpot_account_list) {
                 let mut info = PseduIntentionInfo::default();

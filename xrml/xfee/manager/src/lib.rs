@@ -183,7 +183,7 @@ impl<T: Trait> Module<T> {
         };
 
         if let Some(p) = xsystem::Module::<T>::block_producer() {
-            let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(&p);
+            let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(&p);
 
             trace!(
                 "[calc_fee]|move fee|from:{:},{:?}|to jackpot:{:},{:?}|to_producer:{:},{:}",

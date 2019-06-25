@@ -497,7 +497,7 @@ impl<T: Trait> Module<T> {
         let mut iprof = <Intentions<T>>::get(target);
         let mut record = Self::nomination_record_of(who, target);
 
-        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(target);
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(target);
         let (source_vote_weight, target_vote_weight, dividend) = Self::generic_claim(
             &mut record,
             who,
@@ -629,13 +629,13 @@ impl<T: Trait> Module<T> {
         xsession::Module::<T>::validators()
     }
 
-    pub fn jackpot_accountid_for(who: &T::AccountId) -> T::AccountId {
-        T::DetermineIntentionJackpotAccountId::accountid_for(who)
+    pub fn jackpot_accountid_for_unsafe(who: &T::AccountId) -> T::AccountId {
+        T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who)
     }
 
-    pub fn multi_jackpot_accountid_for(whos: &Vec<T::AccountId>) -> Vec<T::AccountId> {
+    pub fn multi_jackpot_accountid_for_unsafe(whos: &Vec<T::AccountId>) -> Vec<T::AccountId> {
         whos.into_iter()
-            .map(|who| T::DetermineIntentionJackpotAccountId::accountid_for(who))
+            .map(|who| T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who))
             .collect()
     }
 }

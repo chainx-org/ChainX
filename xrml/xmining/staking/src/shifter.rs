@@ -58,7 +58,7 @@ impl<T: Trait> Module<T> {
 
         let to_jackpot = reward - off_the_table;
         // issue to jackpot
-        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who);
         let _ = <xassets::Module<T>>::pcx_issue(&jackpot_addr, to_jackpot);
         debug!(
             "[reward] issue to {:?}'s jackpot: {:?}",
@@ -93,7 +93,7 @@ impl<T: Trait> Module<T> {
             T::Balance::sa(Self::minimum_penalty().as_() * missed),
         );
 
-        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who);
         let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
 
         let (slashed, should_be_enforced) = if total_slash <= jackpot_balance {
@@ -157,7 +157,7 @@ impl<T: Trait> Module<T> {
             let should_slash = missed * Self::minimum_penalty();
             let council = xaccounts::Module::<T>::council_account();
 
-            let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(who);
+            let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who);
             let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
 
             let slash = cmp::min(should_slash, jackpot_balance);

@@ -13,7 +13,7 @@ impl<T: Trait> Module<T> {
 
         // Slash the whole jackpot of double signer.
         let council = xaccounts::Module::<T>::council_account();
-        let jackpot = Self::jackpot_accountid_for(who);
+        let jackpot = Self::jackpot_accountid_for_unsafe(who);
 
         let slashed = <xassets::Module<T>>::pcx_free_balance(&jackpot);
         let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot, &council, slashed);

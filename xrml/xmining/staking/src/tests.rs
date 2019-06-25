@@ -348,7 +348,7 @@ fn offline_should_slash_and_kick() {
         XSession::check_rotate_session(System::block_number());
 
         assert_ok!(XStaking::nominate(Origin::signed(4), 6.into(), 5, vec![]));
-        let jackpot_addr = XStaking::jackpot_accountid_for(&6);
+        let jackpot_addr = XStaking::jackpot_accountid_for_unsafe(&6);
         assert_eq!(XAssets::pcx_free_balance(&jackpot_addr), 0);
 
         System::set_block_number(2);

@@ -287,9 +287,9 @@ where
 
         // XMiningApi
         fn asset_power(token: Token) -> Option<Balance>;
-        fn jackpot_accountid_for(who: AccountId) -> AccountId;
-        fn multi_jackpot_accountid_for(intentions: Vec<AccountId>) -> Vec<AccountId>;
-        fn multi_token_jackpot_accountid_for(tokens: Vec<Token>) -> Vec<AccountId>;
+        fn jackpot_accountid_for_unsafe(who: AccountId) -> AccountId;
+        fn multi_jackpot_accountid_for_unsafe(intentions: Vec<AccountId>) -> Vec<AccountId>;
+        fn multi_token_jackpot_accountid_for_unsafe(tokens: Vec<Token>) -> Vec<AccountId>;
 
         // XSpotApi
         fn aver_asset_price(token: Token) -> Option<Balance>;

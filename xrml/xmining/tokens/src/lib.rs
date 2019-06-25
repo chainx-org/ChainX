@@ -39,7 +39,8 @@ pub trait Trait: xsystem::Trait + xstaking::Trait + xspot::Trait + xsdot::Trait 
 }
 
 pub trait TokenJackpotAccountIdFor<AccountId: Sized, BlockNumber> {
-    fn accountid_for(token: &Token) -> AccountId;
+    fn accountid_for_unsafe(token: &Token) -> AccountId;
+    fn accountid_for_safe(token: &Token) -> Option<AccountId>;
 }
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
@@ -50,16 +51,19 @@ where
     T::AccountId: UncheckedFrom<T::Hash>,
     T::BlockNumber: parity_codec::Codec,
 {
-    fn accountid_for(token: &Token) -> T::AccountId {
-        let (_, _, init_number) =
-            xassets::Module::<T>::asset_info(token).expect("the asset must be existed before");
-        let token_hash = T::Hashing::hash(token);
-        let block_num_hash = T::Hashing::hash(init_number.encode().as_ref());
+    fn accountid_for_unsafe(token: &Token) -> T::AccountId {
+        Self::accountid_for_safe(token).expect("the asset must be existed before")
+    }
+    fn accountid_for_safe(token: &Token) -> Option<T::AccountId> {
+        xassets::Module::<T>::asset_info(token).map(|(_, _, init_number)| {
+            let token_hash = T::Hashing::hash(token);
+            let block_num_hash = T::Hashing::hash(init_number.encode().as_ref());
 
-        let mut buf = Vec::new();
-        buf.extend_from_slice(token_hash.as_ref());
-        buf.extend_from_slice(block_num_hash.as_ref());
-        UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
+            let mut buf = Vec::new();
+            buf.extend_from_slice(token_hash.as_ref());
+            buf.extend_from_slice(block_num_hash.as_ref());
+            UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
+        })
     }
 }
 
@@ -200,7 +204,7 @@ impl<T: Trait> Module<T> {
                 token,
                 staking: &mut p_vote_weight,
             };
-            let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
+            let addr = T::DetermineTokenJackpotAccountId::accountid_for_unsafe(token);
 
             let mut record = DepositRecord::<T> {
                 depositor: who,
@@ -279,7 +283,7 @@ impl<T: Trait> Module<T> {
         }
         let blocks = Self::wait_blocks(token)?;
 
-        let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
+        let addr = T::DetermineTokenJackpotAccountId::accountid_for_unsafe(token);
         let jackpot = xassets::Module::<T>::pcx_free_balance(&addr).as_();
 
         let depositor_vote_weight = blocks as u128 * value.as_() as u128;
@@ -407,20 +411,20 @@ impl<T: Trait> OnRewardCalculation<T::AccountId, T::Balance> for Module<T> {
 
 impl<T: Trait> OnReward<T::AccountId, T::Balance> for Module<T> {
     fn reward(token: &Token, value: T::Balance) {
-        let addr = T::DetermineTokenJackpotAccountId::accountid_for(token);
+        let addr = T::DetermineTokenJackpotAccountId::accountid_for_unsafe(token);
         let _ = xassets::Module::<T>::pcx_issue(&addr, value);
     }
 }
 
 impl<T: Trait> Module<T> {
-    pub fn token_jackpot_accountid_for(token: &Token) -> T::AccountId {
-        T::DetermineTokenJackpotAccountId::accountid_for(token)
+    pub fn token_jackpot_accountid_for_unsafe(token: &Token) -> T::AccountId {
+        T::DetermineTokenJackpotAccountId::accountid_for_unsafe(token)
     }
 
-    pub fn multi_token_jackpot_accountid_for(tokens: &Vec<Token>) -> Vec<T::AccountId> {
+    pub fn multi_token_jackpot_accountid_for_unsafe(tokens: &Vec<Token>) -> Vec<T::AccountId> {
         tokens
             .into_iter()
-            .map(|t| T::DetermineTokenJackpotAccountId::accountid_for(t))
+            .map(|t| T::DetermineTokenJackpotAccountId::accountid_for_unsafe(t))
             .collect()
     }
 

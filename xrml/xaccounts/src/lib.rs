@@ -26,7 +26,10 @@ pub trait Trait: system::Trait + consensus::Trait {
 }
 
 pub trait IntentionJackpotAccountIdFor<AccountId: Sized> {
-    fn accountid_for(origin: &AccountId) -> AccountId;
+    /// when use `*_unsafe`, must confirm accountid is an intention
+    fn accountid_for_unsafe(origin: &AccountId) -> AccountId;
+
+    fn accountid_for_safe(origin: &AccountId) -> Option<AccountId>;
 }
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
@@ -35,11 +38,14 @@ impl<T: Trait> IntentionJackpotAccountIdFor<T::AccountId> for SimpleAccountIdDet
 where
     T::AccountId: UncheckedFrom<T::Hash>,
 {
-    fn accountid_for(origin: &T::AccountId) -> T::AccountId {
-        let name = Module::<T>::intention_name_of(origin)
-            .expect("The original account must be an existing intention.");
-        // name
-        UncheckedFrom::unchecked_from(T::Hashing::hash(&name))
+    fn accountid_for_unsafe(origin: &T::AccountId) -> T::AccountId {
+        Self::accountid_for_safe(origin)
+            .expect("The original account must be an existing intention.")
+    }
+
+    fn accountid_for_safe(origin: &T::AccountId) -> Option<T::AccountId> {
+        Module::<T>::intention_name_of(origin)
+            .map(|name| UncheckedFrom::unchecked_from(T::Hashing::hash(&name)))
     }
 }
 

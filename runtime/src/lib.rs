@@ -475,17 +475,17 @@ impl_runtime_apis! {
     }
 
     impl runtime_api::xmining_api::XMiningApi<Block> for Runtime {
-        fn jackpot_accountid_for(who: AccountId) -> AccountId {
-            XStaking::jackpot_accountid_for(&who)
+        fn jackpot_accountid_for_unsafe(who: AccountId) -> AccountId {
+            XStaking::jackpot_accountid_for_unsafe(&who)
         }
-        fn multi_jackpot_accountid_for(whos: Vec<AccountId>) -> Vec<AccountId> {
-            XStaking::multi_jackpot_accountid_for(&whos)
+        fn multi_jackpot_accountid_for_unsafe(whos: Vec<AccountId>) -> Vec<AccountId> {
+            XStaking::multi_jackpot_accountid_for_unsafe(&whos)
         }
-        fn token_jackpot_accountid_for(token: xassets::Token) -> AccountId {
-            XTokens::token_jackpot_accountid_for(&token)
+        fn token_jackpot_accountid_for_unsafe(token: xassets::Token) -> AccountId {
+            XTokens::token_jackpot_accountid_for_unsafe(&token)
         }
-        fn multi_token_jackpot_accountid_for(tokens: Vec<xassets::Token>) -> Vec<AccountId> {
-            XTokens::multi_token_jackpot_accountid_for(&tokens)
+        fn multi_token_jackpot_accountid_for_unsafe(tokens: Vec<xassets::Token>) -> Vec<AccountId> {
+            XTokens::multi_token_jackpot_accountid_for_unsafe(&tokens)
         }
         fn asset_power(token: xassets::Token) -> Option<Balance> {
             XTokens::asset_power(&token)
