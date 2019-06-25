@@ -222,7 +222,7 @@ pub fn test_multi_address() {
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
     //let test = hex_script!("52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae");
-    let multisig_address = Address {
+    let multisig_address = btc_keys::Address {
         kind: btc_keys::Type::P2SH,
         network: btc_keys::Network::Testnet,
         hash: dhash160(&script),
@@ -233,7 +233,7 @@ pub fn test_multi_address() {
     );
 }
 
-fn create_multi_address(pubkeys: Vec<Vec<u8>>) -> Address {
+fn create_multi_address(pubkeys: Vec<Vec<u8>>) -> btc_keys::Address {
     let mut build = Builder::default().push_opcode(Opcode::OP_3);
     for (_, pubkey) in pubkeys.iter().enumerate() {
         build = build.push_bytes(pubkey);
@@ -242,7 +242,7 @@ fn create_multi_address(pubkeys: Vec<Vec<u8>>) -> Address {
         .push_opcode(Opcode::OP_4)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
-    let multisig_address = Address {
+    let multisig_address = btc_keys::Address {
         kind: btc_keys::Type::P2SH,
         network: btc_keys::Network::Testnet,
         hash: dhash160(&script),
@@ -298,7 +298,7 @@ fn test_create_multi_address() {
 
     assert_eq!(cold_layout_addr, layout);
 
-    let addr = Address::from_layout(&mut cold_layout_addr.as_slice()).unwrap();
+    let addr = btc_keys::Address::from_layout(&mut cold_layout_addr.as_slice()).unwrap();
 
     assert_eq!(cold_addr, addr);
 

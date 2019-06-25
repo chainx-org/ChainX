@@ -13,6 +13,7 @@ use support::impl_outer_origin;
 
 // light-bitcoin
 use btc_primitives::{h256_from_rev_str, Compact};
+use xbridge_common::traits::IntoVecu8;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -35,16 +36,6 @@ impl system::Trait for Test {
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
-}
-
-impl balances::Trait for Test {
-    type Balance = u64;
-    type OnFreeBalanceZero = ();
-    type OnNewAccount = ();
-    type TransactionPayment = ();
-    type TransferPayment = ();
-    type DustRemoval = ();
-    type Event = ();
 }
 
 impl consensus::Trait for Test {
@@ -81,13 +72,15 @@ impl xsystem::Validator<AccountId> for MockValidator {
 }
 
 impl xaccounts::Trait for Test {
-    type Event = ();
     type DetermineIntentionJackpotAccountId = MockDeterminator;
 }
 
 pub struct MockDeterminator;
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for MockDeterminator {
-    fn accountid_for(_: &u64) -> u64 {
+    fn accountid_for_safe(_: &u64) -> Option<u64> {
+        Some(1000)
+    }
+    fn accountid_for_unsafe(_: &u64) -> u64 {
         1000
     }
 }
@@ -98,14 +91,66 @@ impl xrecords::Trait for Test {
 
 impl xassets::Trait for Test {
     type Event = ();
+    type Balance = u64;
+    type OnNewAccount = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
 }
 
-impl xfee_manager::Trait for Test {}
+impl xfee_manager::Trait for Test {
+    type Event = ();
+}
 
 impl Trait for Test {
+    type AccountExtractor = DummyExtractor;
+    type TrusteeSessionProvider = DummyTrusteeSession;
+    type TrusteeMultiSigProvider = DummyBitcoinTrusteeMultiSig;
+    type CrossChainProvider = DummyCrossChain;
     type Event = ();
+}
+
+pub struct DummyTrusteeSession;
+impl xbridge_common::traits::TrusteeSession<u64, TrusteeAddrInfo> for DummyTrusteeSession {
+    fn current_trustee_session() -> std::result::Result<TrusteeSessionInfo<u64, TrusteeAddrInfo>, &'static str> {
+        Ok(TrusteeSessionInfo{
+            trustee_list:[0,1,2].to_vec(),
+            hot_address:TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
+            cold_address:TrusteeAddrInfo::from_vecu8(&[1]).unwrap()
+        })
+    }
+
+    fn last_trustee_session() -> std::result::Result<TrusteeSessionInfo<u64, TrusteeAddrInfo>, &'static str>
+    {
+        Ok(TrusteeSessionInfo{
+            trustee_list:[0,1,2].to_vec(),
+            hot_address:TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
+            cold_address:TrusteeAddrInfo::from_vecu8(&[1]).unwrap()
+        })
+    }
+}
+
+pub struct DummyCrossChain;
+impl xbridge_common::traits::CrossChainBinding<u64, BitcoinAddress> for DummyCrossChain {
+    fn update_binding(who: &u64, addr: btc_keys::Address, channel_name: Option<Vec<u8>>){
+    }
+
+    fn get_binding_info(addr: &btc_keys::Address) -> Option<(u64, Option<u64>)> {
+        Some((0, Some(0)))
+    }
+}
+
+pub struct DummyExtractor;
+impl xbridge_common::traits::Extractable<u64> for DummyExtractor {
+    fn account_info(_data: &[u8], _: u8) -> Option<(u64, Option<Vec<u8>>)> {
+        Some((999, None))
+    }
+}
+
+pub struct DummyBitcoinTrusteeMultiSig;
+impl xbridge_common::traits::TrusteeMultiSig<u64> for DummyBitcoinTrusteeMultiSig {
+    fn multisig_for_trustees() -> u64 {
+        777
+    }
 }
 
 pub type Timestamp = timestamp::Module<Test>;
@@ -136,6 +181,9 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                 },
                 1457525,
             ),
+            genesis_hash: h256_from_rev_str(
+                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+            ),
             params_info: Params::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
@@ -143,6 +191,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                 10 * 60,              // target_spacing_seconds
                 4,
             ), // retargeting_factor
+            network_id: 0,
             confirmation_number: 3,
             reserved_block: 2100,
             btc_withdrawal_fee: 1000,
@@ -181,6 +230,9 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
                 },
                 1457525,
             ),
+            genesis_hash: h256_from_rev_str(
+                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+            ),
             params_info: Params::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
@@ -188,6 +240,7 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
                 10 * 60,              // target_spacing_seconds
                 4,
             ), // retargeting_factor
+            network_id: 0,
             confirmation_number: 3,
             reserved_block: 2100,
             btc_withdrawal_fee: 1000,
@@ -226,6 +279,9 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
                 },
                 1457525,
             ),
+            genesis_hash: h256_from_rev_str(
+                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+            ),
             params_info: Params::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
@@ -233,6 +289,7 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
                 10 * 60,              // target_spacing_seconds
                 4,
             ), // retargeting_factor
+            network_id: 0,
             confirmation_number: 3,
             reserved_block: 2100,
             btc_withdrawal_fee: 1000,
@@ -272,6 +329,9 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
                 },
                 1457525,
             ),
+            genesis_hash: h256_from_rev_str(
+                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+            ),
             params_info: Params::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
@@ -279,6 +339,7 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
                 10 * 60,              // target_spacing_seconds
                 4,
             ), // retargeting_factor
+            network_id: 0,
             confirmation_number: 3,
             reserved_block: 2100,
             btc_withdrawal_fee: 1000,
