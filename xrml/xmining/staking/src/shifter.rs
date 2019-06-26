@@ -202,18 +202,18 @@ impl<T: Trait> Module<T> {
         }
 
         // apply good session reward
-        let mut session_reward = Self::this_session_reward();
+        let this_session_reward = Self::this_session_reward();
 
         // In the first round, 20% reward goes to the team.
         let current_index = <xsession::Module<T>>::current_index().as_();
-        session_reward = if current_index < SESSIONS_PER_ROUND {
-            let to_team = T::Balance::sa(session_reward.as_() * 2 / 10);
+        let mut session_reward = if current_index < SESSIONS_PER_ROUND {
+            let to_team = T::Balance::sa(this_session_reward.as_() / 5);
             debug!("[reward] issue to the team: {:?}", to_team);
             let _ =
                 <xassets::Module<T>>::pcx_issue(&xaccounts::Module::<T>::team_account(), to_team);
-            session_reward - to_team
+            this_session_reward - to_team
         } else {
-            session_reward
+            this_session_reward
         };
 
         let mut active_intentions = Self::intention_set()
@@ -232,6 +232,8 @@ impl<T: Trait> Module<T> {
         let mut total_active_stake = active_intentions
             .iter()
             .fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + *x);
+
+        Self::deposit_event(RawEvent::Reward(total_active_stake, this_session_reward));
 
         for (holder, stake) in active_intentions.iter() {
             // May become zero after meeting the last one.
@@ -272,8 +274,6 @@ impl<T: Trait> Module<T> {
                 session_reward -= reward;
             }
         }
-
-        Self::deposit_event(RawEvent::Reward(total_active_stake, session_reward));
 
         // Reset slashed validator set
         <OfflineValidatorsPerSession<T>>::kill();
