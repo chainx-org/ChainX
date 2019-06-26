@@ -128,8 +128,11 @@ impl xmultisig::GenesisMultiSig<u64> for DummyGenesisMultiSig {
 
 pub struct DummyDetermineIntentionJackpotAccountId;
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJackpotAccountId {
-    fn accountid_for(origin: &u64) -> u64 {
+    fn accountid_for_unsafe(origin: &u64) -> u64 {
         origin + 100
+    }
+    fn accountid_for_safe(origin: &u64) -> Option<u64> {
+        Some(origin + 100)
     }
 }
 

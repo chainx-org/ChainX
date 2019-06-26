@@ -4,6 +4,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod mock;
+mod reward;
 mod shifter;
 pub mod slash;
 mod tests;
@@ -29,7 +30,7 @@ use xsupport::debug;
 #[cfg(feature = "std")]
 use xsupport::who;
 
-pub use self::shifter::{OnReward, OnRewardCalculation};
+pub use self::reward::{OnReward, OnRewardCalculation};
 pub use self::types::*;
 pub use self::vote_weight::VoteWeight;
 
