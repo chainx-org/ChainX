@@ -5,7 +5,9 @@ use rstd::result::Result;
 
 // ChainX
 use xbridge_common::{traits::TrusteeSession, types::TrusteeSessionInfo, utils::two_thirds_unsafe};
-use xsupport::error;
+#[cfg(feature = "std")]
+use xsupport::u8array_to_hex;
+use xsupport::{error, warn};
 
 // light-bitcoin
 use btc_chain::{OutPoint, Transaction};
@@ -24,18 +26,60 @@ pub fn get_networkid<T: Trait>() -> Network {
 }
 
 pub fn parse_addr_from_script<T: Trait>(script: &Script) -> Option<Address> {
-    let script_addresses = script.extract_destinations().unwrap_or_default();
-    // find addr in this transaction
-    if script_addresses.len() == 1 {
-        let address: &ScriptAddress = &script_addresses[0];
-        let addr = Address {
-            kind: address.kind,
-            network: get_networkid::<T>(),
-            hash: address.hash.clone(), // public key hash
-        };
-        return Some(addr);
+    // only `p2pk`, `p2pkh`, `p2sh` could parse
+    script.extract_destinations().map_err(|_e|{
+        error!(
+            "[parse_addr_from_script]|parse output script error|e:{:?}|script:{:?}",
+            _e,
+            u8array_to_hex(&script)
+        );
+        _e
+    }).ok().and_then(|script_addresses| {
+        // find addr in this transaction
+        if script_addresses.len() == 1 {
+            let address: &ScriptAddress = &script_addresses[0];
+            let addr = Address {
+                kind: address.kind,
+                network: get_networkid::<T>(),
+                hash: address.hash.clone(), // public key hash
+            };
+            return Some(addr);
+        }
+        // the type is `NonStandard`, `Multisig`, `NullData`, `WitnessScript`, `WitnessKey`
+        warn!("[parse_addr_from_script]|can't parse addr from output script|type:{:?}|addr:{:?}|script:{:}", script.script_type(), script_addresses, u8array_to_hex(&script));
+        None
+    })
+}
+
+/// parse addr from a transaction output, getting addr from prev_tx output
+/// notice, only can parse `p2pk`, `p2pkh`, `p2sh` output,
+/// other type would return None
+pub fn inspect_address_from_transaction<T: Trait>(
+    tx: &Transaction,
+    outpoint: &OutPoint,
+) -> Option<Address> {
+    tx.outputs
+        .get(outpoint.index as usize)
+        .map(|output| {
+            let script: Script = (*output).script_pubkey.clone().into();
+            script
+        })
+        .and_then(|script| parse_addr_from_script::<T>(&script))
+}
+
+/// judge a script's addr is equal to second param
+pub fn is_key<T: Trait>(script: &Script, trustee_address: &Address) -> bool {
+    if let Some(addr) = parse_addr_from_script::<T>(script) {
+        if addr.hash == trustee_address.hash {
+            return true;
+        }
     }
-    None
+    false
+}
+
+#[inline]
+pub fn equal_addr(addr1: &Address, addr2: &Address) -> bool {
+    addr1.hash == addr2.hash
 }
 
 pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
@@ -78,35 +122,6 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
         // do nothing
         None
     }
-}
-
-/// parse addr from a transaction output
-pub fn inspect_address_from_transaction<T: Trait>(
-    tx: &Transaction,
-    outpoint: &OutPoint,
-) -> Option<Address> {
-    tx.outputs
-        .get(outpoint.index as usize)
-        .map(|output| {
-            let script: Script = (*output).script_pubkey.clone().into();
-            script
-        })
-        .and_then(|script| parse_addr_from_script::<T>(&script))
-}
-
-/// judge a script's addr is equal to second param
-pub fn is_key<T: Trait>(script: &Script, trustee_address: &Address) -> bool {
-    if let Some(addr) = parse_addr_from_script::<T>(script) {
-        if addr.hash == trustee_address.hash {
-            return true;
-        }
-    }
-    false
-}
-
-#[inline]
-pub fn equal_addr(addr1: &Address, addr2: &Address) -> bool {
-    addr1.hash == addr2.hash
 }
 
 pub fn trustee_session<T: Trait>(

@@ -40,9 +40,7 @@ pub use btc_primitives::H264;
 use btc_ser::{deserialize, Reader};
 
 use self::tx::handler::remove_pending_deposit;
-use self::tx::utils::{
-    get_sig_num, get_trustee_address_pair, inspect_address_from_transaction, trustee_session,
-};
+use self::tx::utils::{get_sig_num, get_trustee_address_pair, trustee_session};
 use self::tx::{
     check_withdraw_tx, create_multi_address, detect_transaction_type, handle_tx,
     insert_trustee_vote_state, parse_and_check_signed_tx, validate_transaction,
@@ -523,25 +521,20 @@ impl<T: Trait> Module<T> {
         // get tx_type
         let (tx_type, _existed) = match Self::tx_for(&tx_hash) {
             None => {
-                let tx_type = detect_transaction_type::<T>(&tx)?;
+                let (tx_type, input_addr) = detect_transaction_type::<T>(&tx)?;
                 if tx_type == TxType::Irrelevance {
                     warn!("[apply_push_transaction]|this tx is not related to any important addr, maybe an irrelevance tx, drop it|relay_tx:{:?}|block_height:{:}", tx, height);
                     return Err("this tx is not related to any important addr, maybe an irrelevance tx, drop it");
                 }
                 // parse first input addr, may delete when only use opreturn to get accountid
                 // only deposit tx store prev input tx's addr, for deposit to lookup related accountid
-                if tx_type == TxType::Deposit {
-                    let outpoint = &tx.raw.inputs[0].previous_output;
-                    let input_addr =
-                        inspect_address_from_transaction::<T>(&tx.previous_raw, outpoint)
-                            .expect("when deposit, the first input must could parse an addr; qed");
-
+                if let Some(addr) = input_addr {
                     debug!(
                         "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
                         tx_hash,
-                        u8array_to_string(&b58::to_base58(input_addr.layout().to_vec())),
+                        u8array_to_string(&b58::to_base58(addr.layout().to_vec())),
                     );
-                    InputAddrFor::<T>::insert(&tx_hash, input_addr)
+                    InputAddrFor::<T>::insert(&tx_hash, addr)
                 }
                 // set tx into storage
                 #[allow(deprecated)]

@@ -15,7 +15,7 @@ use xfee_manager;
 use xrecords;
 #[cfg(feature = "std")]
 use xsupport::u8array_to_string;
-use xsupport::{debug, error, info};
+use xsupport::{debug, error, info, warn};
 
 // light-bitcoin
 use btc_chain::Transaction;
@@ -132,17 +132,10 @@ impl TxHandler {
     }
 
     fn deposit<T: Trait>(&self) -> Result {
-        // check first input
-        let input_addr: Address = Module::<T>::input_addr_for(&self.tx_hash)
-            .ok_or_else(|| {
-                error!(
-                    "[deposit]|deposit tx must have input addr|tx:{:?}",
-                    self.tx_info
-                );
-                ""
-            })
-            .expect("must set input addr before; qed");
+        // try to get check first input for this deposit tx
+        let input_addr: Option<Address> = Module::<T>::input_addr_for(&self.tx_hash);
 
+        // parse deposit account info from opreturn
         let (account_info, deposit_balance, original_opreturn) =
             parse_deposit_outputs::<T>(&self.tx_info.raw_tx)?;
         let original_opreturn = original_opreturn.unwrap_or_default();
@@ -151,33 +144,37 @@ impl TxHandler {
             "[deposit]|parse outputs|account_info:{:?}|balance:{:}|opreturn:{:}|",
             account_info,
             deposit_balance,
-            if original_opreturn.len() > 2 {
-                // trick, just for print log
-                format!(
-                    "{:?}|{:}",
-                    original_opreturn[..2].to_vec(),
-                    u8array_to_string(&original_opreturn[2..])
-                )
-            } else {
-                format!("{:?}", original_opreturn)
-            }
+            trick_print_opreturn(&original_opreturn)
         );
 
-        // get accounid from related info
-        let deposit_account_info: DepositAccountInfo<T::AccountId> =
-            if let Some((accountid, channel_name)) = account_info {
+        // get accounid from related info, judge accountinfo is accountid or address
+        let deposit_account_info: DepositAccountInfo<T::AccountId> = if let Some((
+            accountid,
+            channel_name,
+        )) = account_info
+        {
+            if let Some(addr) = input_addr {
                 // remove old unbinding deposit info
-                remove_pending_deposit::<T>(&input_addr, &accountid);
+                remove_pending_deposit::<T>(&addr, &accountid);
                 // update or override binding info
-                update_binding::<T>(&accountid, channel_name, input_addr.clone());
-                DepositAccountInfo::AccountId(accountid)
+                update_binding::<T>(&accountid, channel_name, addr.clone());
             } else {
+                // no input addr
+                warn!("[deposit]|no input addr for this deposit tx, but has opreturn to get accountid|tx_hash:{:?}|who:{:?}", self.tx_hash, accountid);
+            }
+            DepositAccountInfo::AccountId(accountid)
+        } else {
+            if let Some(addr) = input_addr {
                 // no opreturn, use addr to get accountid
-                match T::CrossChainProvider::get_binding_info(&input_addr) {
+                match T::CrossChainProvider::get_binding_info(&addr) {
                     Some((accountid, _)) => DepositAccountInfo::AccountId(accountid),
-                    None => DepositAccountInfo::Address(input_addr.clone()),
+                    None => DepositAccountInfo::Address(addr.clone()),
                 }
-            };
+            } else {
+                error!("[deposit]|no input addr for this deposit tx, neither has opreturn to get accountid!|tx_hash:{:?}", self.tx_hash);
+                return Err("should not happen, no input addr for this deposit tx, neither has opreturn to get accountid");
+            }
+        };
         // deposit
 
         // deposit for this account or store this deposit cache
@@ -217,7 +214,9 @@ impl TxHandler {
             Module::<T>::TOKEN.to_vec(),
             As::sa(deposit_balance),
             original_opreturn,
-            b58::to_base58(input_addr.layout().to_vec()),
+            input_addr
+                .map(|addr| b58::to_base58(addr.layout().to_vec()))
+                .unwrap_or_default(), // unwrap is no input addr
             self.tx_hash.as_bytes().to_vec(),
             xrecords::TxState::Confirmed,
         ));
@@ -343,5 +342,20 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::Accoun
             ));
         }
         PendingDepositMap::<T>::remove(input_address);
+    }
+}
+
+#[cfg(feature = "std")]
+#[inline]
+fn trick_print_opreturn(opreturn: &[u8]) -> String {
+    if opreturn.len() > 2 {
+        // trick, just for print log
+        format!(
+            "{:?}|{:}",
+            &opreturn[..2],
+            u8array_to_string(&opreturn[2..])
+        )
+    } else {
+        format!("{:?}", opreturn)
     }
 }

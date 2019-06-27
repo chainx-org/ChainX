@@ -29,6 +29,22 @@ use self::utils::{
 };
 pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
 
+pub fn detect_transaction_type<T: Trait>(
+    relay_tx: &RelayTx,
+) -> result::Result<(TxType, Option<Address>), &'static str> {
+    let addr_pair = get_trustee_address_pair::<T>()?;
+    let last_addr_pair = get_last_trustee_address_pair::<T>()
+        .map_err(|_e| {
+            error!(
+                "[detect_transaction_type]|get_last_trustee_address_pair|err:{:?}",
+                _e
+            );
+            _e
+        })
+        .ok();
+    detect_transaction_type_impl::<T>(relay_tx, addr_pair, last_addr_pair)
+}
+
 /// parse tx's inputs/outputs into Option<Address>
 /// e.g
 /// notice the relay tx only has first input
@@ -37,10 +53,14 @@ pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
 ///       |   tx   | Some(addr)
 ///       |________| None (OP_RETURN or something unknown)
 /// then judge type
-pub fn detect_transaction_type<T: Trait>(
+/// when type is deposit, would return Option<Addr> for this deposit input_addr
+#[inline]
+pub fn detect_transaction_type_impl<T: Trait>(
     relay_tx: &RelayTx,
-) -> result::Result<TxType, &'static str> {
-    let (hot_addr, cold_addr) = get_trustee_address_pair::<T>()?;
+    trustee_addr_pair: (Address, Address),
+    old_trustee_addr_pair: Option<(Address, Address)>,
+) -> result::Result<(TxType, Option<Address>), &'static str> {
+    let (hot_addr, cold_addr) = trustee_addr_pair;
     // parse input addr
     let outpoint = &relay_tx.raw.inputs[0].previous_output;
     let input_addr = match inspect_address_from_transaction::<T>(&relay_tx.previous_raw, outpoint) {
@@ -70,17 +90,17 @@ pub fn detect_transaction_type<T: Trait>(
     // judge tx type
     if input_is_trustee {
         if all_outputs_trustee {
-            return Ok(TxType::HotAndCold);
+            return Ok((TxType::HotAndCold, None));
         }
         // outputs contains other addr, it's user addr, thus it's a withdrawal
-        return Ok(TxType::Withdrawal);
+        return Ok((TxType::Withdrawal, None));
     } else {
-        if let Ok((old_hot_addr, old_cold_addr)) = get_last_trustee_address_pair::<T>() {
+        if let Some((old_hot_addr, old_cold_addr)) = old_trustee_addr_pair {
             let input_is_old_trustee =
                 equal_addr(&input_addr, &old_hot_addr) || equal_addr(&input_addr, &old_cold_addr);
             if input_is_old_trustee && all_outputs_trustee {
                 // input should from old trustee addr, outputs should all be current trustee addrs
-                return Ok(TxType::TrusteeTransition);
+                return Ok((TxType::TrusteeTransition, None));
             }
         }
         // any output contains hot trustee addr
@@ -94,11 +114,11 @@ pub fn detect_transaction_type<T: Trait>(
             false
         });
         if check_outputs {
-            return Ok(TxType::Deposit);
+            return Ok((TxType::Deposit, Some(input_addr)));
         }
     }
 
-    Ok(TxType::Irrelevance)
+    Ok((TxType::Irrelevance, None))
 }
 
 pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
