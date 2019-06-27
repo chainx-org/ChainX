@@ -177,64 +177,60 @@ impl AssetErr {
     }
 }
 
-/// Token can only use numbers (0x30~0x39), capital letters (0x41~0x5A), lowercase letters (0x61~0x7A), -(0x2D), .(0x2E), |(0x7C),  ~(0x7E).
+/// Token can only use ASCII alphanumeric character or "-.|~".
 pub fn is_valid_token(v: &[u8]) -> Result {
     if v.len() > MAX_TOKEN_LEN || v.is_empty() {
         return Err("Token length is zero or too long.");
     }
-    let is_valid = |c: &u8| -> bool {
-        (*c >= 0x30 && *c <= 0x39) // number
-            || (*c >= 0x41 && *c <= 0x5A) // capital
-            || (*c >= 0x61 && *c <= 0x7A) // small
-            || (*c == 0x2D) // -
-            || (*c == 0x2E) // .
-            || (*c == 0x7C) // |
-            || (*c == 0x7E) // ~
-    };
+    let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || "-.|~".as_bytes().contains(c) };
     for c in v.iter() {
         if !is_valid(c) {
-            return Err(
-                "Token can only use numbers, capital/lowercase letters or '-', '.', '|', '~'.",
-            );
+            return Err("Token can only use ASCII alphanumeric character or '-', '.', '|', '~'.");
         }
     }
     Ok(())
 }
 
-pub fn is_valid_token_name(v: &[u8]) -> Result {
-    if v.len() > MAX_TOKEN_LEN || v.is_empty() {
+#[inline]
+/// Visible ASCII char [0x20, 0x7E]
+fn is_ascii_invisible(c: &u8) -> bool {
+    *c < 0x20 || *c > 0x7E
+}
+
+/// A valid token name should have a legal length and be visible ASCII chars only.
+pub fn is_valid_token_name(name: &[u8]) -> Result {
+    if name.len() > MAX_TOKEN_LEN || name.is_empty() {
         return Err("Token name is zero or too long.");
     }
-    for c in v.iter() {
-        // Visible ASCII char [0x20, 0x7E]
-        if *c < 0x20 || *c > 0x7E {
-            return Err("Token name can not use an invisiable ASCII char.");
+    xaccounts::is_xss_proof(name)?;
+    for c in name.iter() {
+        if is_ascii_invisible(c) {
+            return Err("Token name can not use an invisible ASCII char.");
         }
     }
     Ok(())
 }
 
-/// Desc can only be Visible ASCII chars.
-pub fn is_valid_desc(v: &[u8]) -> Result {
-    if v.len() > MAX_DESC_LEN {
+/// A valid desc should be visible ASCII chars only and not too long.
+pub fn is_valid_desc(desc: &[u8]) -> Result {
+    if desc.len() > MAX_DESC_LEN {
         return Err("Token desc too long");
     }
-    for c in v.iter() {
-        // Visible ASCII char [0x20, 0x7E]
-        if *c < 0x20 || *c > 0x7E {
+    xaccounts::is_xss_proof(desc)?;
+    for c in desc.iter() {
+        if is_ascii_invisible(c) {
             return Err("Desc can not use an invisiable ASCII char.");
         }
     }
     Ok(())
 }
 
-pub fn is_valid_memo<T: Trait>(msg: &Memo) -> Result {
-    // filter char
-    // judge len
-    if msg.len() as u32 > Module::<T>::memo_len() {
+/// A valid memo should have a legal length and be xss proof.
+pub fn is_valid_memo<T: Trait>(memo: &Memo) -> Result {
+    if memo.len() as u32 > Module::<T>::memo_len() {
         return Err("memo is too long");
     }
-    Ok(())
+    xaccounts::is_xss_proof(memo)
 }
 
 mod imbalances {

@@ -43,8 +43,11 @@ impl Trait for Test {
 }
 pub struct MockAccountIdDeterminator;
 impl IntentionJackpotAccountIdFor<u64> for MockAccountIdDeterminator {
-    fn accountid_for(_: &u64) -> u64 {
+    fn accountid_for_unsafe(_: &u64) -> u64 {
         0
+    }
+    fn accountid_for_safe(_: &u64) -> Option<u64> {
+        Some(0)
     }
 }
 
