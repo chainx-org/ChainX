@@ -97,6 +97,9 @@ decl_storage! {
         pub BlockHeaderFor get(block_header_for): map H256 => Option<BlockHeaderInfo>;
         /// tx info for txhash
         pub TxFor get(tx_for): map H256 => Option<TxInfo>;
+        /// mark tx has been handled, in case re-handle this tx
+        /// do not need to remove after this tx is removed from ChainX
+        pub TxMarkFor get(tx_mark_for): map H256 => Option<()>;
         /// tx first input addr for this tx
         pub InputAddrFor get(input_addr_for): map H256 => Option<BitcoinAddress>;
 
@@ -541,6 +544,7 @@ impl<T: Trait> Module<T> {
                     InputAddrFor::<T>::insert(&tx_hash, input_addr)
                 }
                 // set tx into storage
+                #[allow(deprecated)]
                 TxFor::<T>::insert(
                     &tx_hash,
                     TxInfo {

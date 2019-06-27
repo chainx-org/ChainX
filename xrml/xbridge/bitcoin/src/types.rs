@@ -88,6 +88,10 @@ pub struct TxInfo {
     pub raw_tx: Transaction,
     pub tx_type: TxType,
     pub height: u32,
+    #[deprecated(
+        since = "1.0.0",
+        note = "Please not modify this property, use `TxMarkFor` instead of it"
+    )]
     pub done: bool,
 }
 
