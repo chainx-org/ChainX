@@ -17,6 +17,8 @@ use crate::types::RelayTx;
 use crate::Trait;
 
 // ChainX
+#[cfg(feature = "std")]
+use xsupport::u8array_to_hex;
 use xsupport::{debug, error};
 
 pub fn validate_transaction<T: Trait>(tx: &RelayTx, merkle_root: H256) -> Result {
@@ -113,7 +115,7 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u
                 }
             }
             if !verify {
-                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}", tx);
+                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, u8array_to_hex(&bytes_sedeem_script));
                 return Err("Verify sign failed");
             }
         }

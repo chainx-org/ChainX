@@ -26,7 +26,7 @@ use btc_script::Script;
 use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
 use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait, TxFor};
 
-use super::utils::{ensure_identical, get_hot_trustee_address, is_key};
+use super::utils::{ensure_identical, get_hot_trustee_address, is_key, parse_opreturn};
 
 pub struct TxHandler {
     pub tx_hash: H256,
@@ -154,13 +154,14 @@ impl TxHandler {
             account_info,
             deposit_balance,
             if original_opreturn.len() > 2 {
+                // trick, just for print log
                 format!(
                     "{:?}|{:}",
                     original_opreturn[..2].to_vec(),
                     u8array_to_string(&original_opreturn[2..])
                 )
             } else {
-                u8array_to_string(&original_opreturn)
+                format!("{:?}", original_opreturn)
             }
         );
 
@@ -236,6 +237,15 @@ pub fn parse_deposit_outputs<T: Trait>(
     tx: &Transaction,
 ) -> result::Result<(Option<(T::AccountId, Option<Name>)>, u64, Option<Vec<u8>>), &'static str> {
     let trustee_address = get_hot_trustee_address::<T>()?;
+    parse_deposit_outputs_impl::<T>(tx, &trustee_address)
+}
+
+// just for test easy
+#[inline]
+pub fn parse_deposit_outputs_impl<T: Trait>(
+    tx: &Transaction,
+    hot_addr: &Address,
+) -> result::Result<(Option<(T::AccountId, Option<Name>)>, u64, Option<Vec<u8>>), &'static str> {
     let mut deposit_balance = 0;
     let mut account_info = None;
     let mut has_opreturn = false;
@@ -247,23 +257,25 @@ pub fn parse_deposit_outputs<T: Trait>(
         // bind address [btc address --> chainx AccountId]
         // is_null_data_script is not null
         if script.is_null_data_script() {
+            // only handle first valid account info opreturn, other opreturn would drop
             if has_opreturn == false {
-                // only handle first opreturn output
-                // OP_CODE PUSH ... (2 BYTES)
-                let addr_type = xsystem::Module::<T>::address_type();
-                if script.len() < 2 {
-                    continue;
+                if let Some(v) = parse_opreturn(&script) {
+                    let addr_type = xsystem::Module::<T>::address_type();
+                    let info = handle_opreturn::<T>(&v, addr_type);
+                    if info.is_some() {
+                        // only set first valid account info
+                        original = Some(script.to_vec());
+                        account_info = info;
+                        has_opreturn = true;
+                    }
                 }
-
-                account_info = handle_opreturn::<T>(&script[2..], addr_type);
-                original = Some(script.to_vec());
-                has_opreturn = true;
             }
             continue;
         }
 
+        // not a opreturn out, do follow
         // get deposit money
-        if is_key::<T>(&script, &trustee_address) && output.value > 0 {
+        if is_key::<T>(&script, hot_addr) && output.value > 0 {
             deposit_balance += output.value;
         }
     }

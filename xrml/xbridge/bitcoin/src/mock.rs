@@ -111,28 +111,28 @@ impl Trait for Test {
 
 pub struct DummyTrusteeSession;
 impl xbridge_common::traits::TrusteeSession<u64, TrusteeAddrInfo> for DummyTrusteeSession {
-    fn current_trustee_session() -> std::result::Result<TrusteeSessionInfo<u64, TrusteeAddrInfo>, &'static str> {
-        Ok(TrusteeSessionInfo{
-            trustee_list:[0,1,2].to_vec(),
-            hot_address:TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
-            cold_address:TrusteeAddrInfo::from_vecu8(&[1]).unwrap()
+    fn current_trustee_session(
+    ) -> std::result::Result<TrusteeSessionInfo<u64, TrusteeAddrInfo>, &'static str> {
+        Ok(TrusteeSessionInfo {
+            trustee_list: [0, 1, 2].to_vec(),
+            hot_address: TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
+            cold_address: TrusteeAddrInfo::from_vecu8(&[1]).unwrap(),
         })
     }
 
-    fn last_trustee_session() -> std::result::Result<TrusteeSessionInfo<u64, TrusteeAddrInfo>, &'static str>
-    {
-        Ok(TrusteeSessionInfo{
-            trustee_list:[0,1,2].to_vec(),
-            hot_address:TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
-            cold_address:TrusteeAddrInfo::from_vecu8(&[1]).unwrap()
+    fn last_trustee_session(
+    ) -> std::result::Result<TrusteeSessionInfo<u64, TrusteeAddrInfo>, &'static str> {
+        Ok(TrusteeSessionInfo {
+            trustee_list: [0, 1, 2].to_vec(),
+            hot_address: TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
+            cold_address: TrusteeAddrInfo::from_vecu8(&[1]).unwrap(),
         })
     }
 }
 
 pub struct DummyCrossChain;
 impl xbridge_common::traits::CrossChainBinding<u64, BitcoinAddress> for DummyCrossChain {
-    fn update_binding(who: &u64, addr: btc_keys::Address, channel_name: Option<Vec<u8>>){
-    }
+    fn update_binding(who: &u64, addr: btc_keys::Address, channel_name: Option<Vec<u8>>) {}
 
     fn get_binding_info(addr: &btc_keys::Address) -> Option<(u64, Option<u64>)> {
         Some((0, Some(0)))
@@ -141,9 +141,27 @@ impl xbridge_common::traits::CrossChainBinding<u64, BitcoinAddress> for DummyCro
 
 pub struct DummyExtractor;
 impl xbridge_common::traits::Extractable<u64> for DummyExtractor {
-    fn account_info(_data: &[u8], _: u8) -> Option<(u64, Option<Vec<u8>>)> {
-        Some((999, None))
+    fn account_info(data: &[u8], _: u8) -> Option<(u64, Option<Vec<u8>>)> {
+        let v = split(data);
+        if v.len() < 1 {
+            return None;
+        }
+
+        if v[0].len() != 48 {
+            return None;
+        }
+
+        let channel_name = if v.len() > 1 {
+            Some(v[1].to_vec())
+        } else {
+            None
+        };
+        Some((999, channel_name))
     }
+}
+
+fn split(data: &[u8]) -> Vec<Vec<u8>> {
+    data.split(|x| *x == b'@').map(|d| d.to_vec()).collect()
 }
 
 pub struct DummyBitcoinTrusteeMultiSig;
@@ -343,6 +361,55 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
             confirmation_number: 3,
             reserved_block: 2100,
             btc_withdrawal_fee: 1000,
+            max_withdrawal_count: 100,
+            _genesis_phantom_data: Default::default(),
+        }
+        .build_storage()
+        .unwrap()
+        .0,
+    );
+    r.into()
+}
+
+pub fn new_test_mainnet() -> runtime_io::TestExternalities<Blake2Hasher> {
+    let mut r = system::GenesisConfig::<Test>::default()
+        .build_storage()
+        .unwrap()
+        .0;
+
+    // bridge btc
+    r.extend(
+        GenesisConfig::<Test> {
+            // start genesis block: (genesis, blocknumber)
+            genesis: (
+                BlockHeader {
+                    version: 545259520,
+                    previous_header_hash: h256_from_rev_str(
+                        "00000000000000000001b2505c11119fcf29be733ec379f686518bf1090a522a",
+                    ),
+                    merkle_root_hash: h256_from_rev_str(
+                        "cc09d95fd8ccc985826b9eb46bf73f8449116f18535423129f0574500985cf90",
+                    ),
+                    time: 1556958733,
+                    bits: Compact::new(388628280),
+                    nonce: 2897942742,
+                },
+                574560,
+            ),
+            genesis_hash: h256_from_rev_str(
+                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+            ),
+            params_info: Params::new(
+                486604799,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            network_id: 0,
+            confirmation_number: 4,
+            reserved_block: 2100,
+            btc_withdrawal_fee: 40000,
             max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }

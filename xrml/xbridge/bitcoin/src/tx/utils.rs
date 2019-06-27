@@ -1,5 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 // Substrate
+use rstd::prelude::Vec;
 use rstd::result::Result;
 
 // ChainX
@@ -9,7 +10,7 @@ use xsupport::error;
 // light-bitcoin
 use btc_chain::{OutPoint, Transaction};
 use btc_keys::{Address, Network};
-use btc_script::{Script, ScriptAddress};
+use btc_script::{Opcode, Script, ScriptAddress};
 
 use crate::types::TrusteeAddrInfo;
 use crate::{Module, Trait};
@@ -35,6 +36,48 @@ pub fn parse_addr_from_script<T: Trait>(script: &Script) -> Option<Address> {
         return Some(addr);
     }
     None
+}
+
+pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
+    if script.is_null_data_script() {
+        // jump OP_RETURN, when after `is_null_data_script`, subscript must larger and equal than 1
+        let s = script.subscript(1);
+        if s.len() == 0 {
+            error!("[parse_opreturn]|nothing after `OP_RETURN`, valid in rule but not valid for public consensus");
+            return None;
+        }
+        // script must large then 1
+        if s[0] < Opcode::OP_PUSHDATA1 as u8 {
+            if s[0] as usize == (&s[1..]).len() {
+                return Some(s[1..].to_vec());
+            } else {
+                error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len:{:?}|real:{:?}", s[0], &s[1..]);
+                return None;
+            }
+        } else if s[0] == Opcode::OP_PUSHDATA1 as u8 {
+            // when subscript [0] is `OP_PUSHDATA1`, must have [1], or is an invalid data
+            if s.len() < 2 {
+                error!(
+                    "[parse_opreturn]|nothing after `OP_PUSHDATA1`, not a valid opreturn|{:?}",
+                    s
+                );
+                return None;
+            }
+            // script must large then 2
+            if s[1] as usize == (&s[2..]).len() {
+                return Some(s[2..].to_vec());
+            } else {
+                error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len mark:{:?}|len:{:?}|real:{:?}", s[0], s[1], &s[2..]);
+                return None;
+            }
+        } else {
+            error!("[parse_opreturn]|unexpect! opreturn source error, opreturn should not");
+            None
+        }
+    } else {
+        // do nothing
+        None
+    }
 }
 
 /// parse addr from a transaction output

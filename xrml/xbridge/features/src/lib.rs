@@ -104,9 +104,17 @@ decl_module! {
         pub fn transition_trustee_session(origin, chain: Chain, new_trustees: Vec<T::AccountId>) -> Result {
             let who = ensure_signed(origin)?;
             // judge current addr
-            BitcoinTrusteeMultiSig::<T>::check_multisig(&who)?;
-            info!("[transition_trustee_session]|try to transition trustee|from multisig addr:{:?}|chain:{:?}|new_trustees:{:?}", who, chain, new_trustees);
-            Self::transition_trustee_session_impl(chain, new_trustees)
+            match chain {
+                Chain::Bitcoin => {
+                    BitcoinTrusteeMultiSig::<T>::check_multisig(&who)?;
+                    info!("[transition_trustee_session]|try to transition trustee|from multisig addr:{:?}|chain:{:?}|new_trustees:{:?}", who, chain, new_trustees);
+                    Self::transition_trustee_session_impl(chain, new_trustees)
+                }
+                _ => {
+                    error!("[transition_trustee_session]|not support transition trustee for this chain|chain:{:?}", chain);
+                    Err("not support transition trustee for this chain")
+                }
+            }
         }
 
         pub fn transition_trustee_session_by_root(chain: Chain, new_trustees: Vec<T::AccountId>) -> Result {
