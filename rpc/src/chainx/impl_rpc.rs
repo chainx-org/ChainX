@@ -22,7 +22,7 @@ use chainx_runtime::{Call, Runtime};
 use xr_primitives::{AddrStr, Name};
 
 use xaccounts::IntentionProps;
-use xassets::{AssetType, Chain, ChainT, Token};
+use xassets::{AssetLimit, AssetType, Chain, ChainT, Token};
 use xbridge_common::types::GenericAllSessionInfo;
 use xbridge_features::{
     self,
@@ -117,7 +117,17 @@ where
                 bmap.extend(info.iter());
             }
 
-            all_assets.push(TotalAssetInfo::new(asset, valid, bmap));
+            let mut lmap = BTreeMap::<AssetLimit, bool>::from_iter(
+                xassets::AssetLimit::iterator().map(|t| (*t, false)),
+            );
+            let key = <xassets::AssetLimitProps<Runtime>>::key_for(asset.token().as_ref());
+            if let Some(limit) =
+                Self::pickout::<BTreeMap<AssetLimit, bool>>(&state, &key, Hasher::BLAKE2256)?
+            {
+                lmap.extend(limit.iter());
+            }
+
+            all_assets.push(TotalAssetInfo::new(asset, valid, bmap, lmap));
         }
 
         into_pagedata(all_assets, page_index, page_size)

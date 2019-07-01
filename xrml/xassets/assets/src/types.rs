@@ -28,24 +28,37 @@ pub type Precision = u16;
 
 pub type SignedImbalanceT<T> = SignedImbalance<<T as Trait>::Balance, PositiveImbalance<T>>;
 
-#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum Chain {
-    ChainX,
-    Bitcoin,
-    Ethereum,
+macro_rules! define_enum {
+    (
+    $(#[$attr:meta])*
+    $Name:ident { $($Variant:ident),* $(,)* }) =>
+    {
+        $(#[$attr])*
+        pub enum $Name {
+            $($Variant),*,
+        }
+        impl $Name {
+            pub fn iterator() -> Iter<'static, $Name> {
+                static ENUM_ITEMS: &[$Name] = &[$($Name::$Variant),*];
+                ENUM_ITEMS.iter()
+            }
+        }
+    }
 }
+
+define_enum!(
+    #[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+    Chain {
+        ChainX,
+        Bitcoin,
+        Ethereum,
+    }
+);
 
 impl Default for Chain {
     fn default() -> Self {
         Chain::ChainX
-    }
-}
-
-impl Chain {
-    pub fn iterator() -> Iter<'static, Chain> {
-        static CHAINS: [Chain; 3] = [Chain::ChainX, Chain::Bitcoin, Chain::Ethereum];
-        CHAINS.iter()
     }
 }
 
@@ -119,39 +132,36 @@ impl Asset {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum AssetType {
-    Free,
-    ReservedStaking,
-    ReservedStakingRevocation,
-    ReservedWithdrawal,
-    ReservedDexSpot,
-    ReservedDexFuture,
-    ReservedCurrency,
-}
-
-// TODO use marco to improve it
-impl AssetType {
-    pub fn iterator() -> Iter<'static, AssetType> {
-        static TYPES: [AssetType; 7] = [
-            AssetType::Free,
-            AssetType::ReservedStaking,
-            AssetType::ReservedStakingRevocation,
-            AssetType::ReservedWithdrawal,
-            AssetType::ReservedDexSpot,
-            AssetType::ReservedDexFuture,
-            AssetType::ReservedCurrency,
-        ];
-        TYPES.iter()
+define_enum!(
+    #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+    AssetType {
+        Free,
+        ReservedStaking,
+        ReservedStakingRevocation,
+        ReservedWithdrawal,
+        ReservedDexSpot,
+        ReservedDexFuture,
+        ReservedCurrency,
     }
-}
+);
 
 impl Default for AssetType {
     fn default() -> Self {
         AssetType::Free
     }
 }
+
+define_enum!(
+    #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+    AssetLimit {
+        CanMove,
+        CanTransfer,
+        CanDestroyWithdrawal,
+        CanDestroyFree,
+    }
+);
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
@@ -162,6 +172,7 @@ pub enum AssetErr {
     TotalAssetOverFlow,
     InvalidToken,
     InvalidAccount,
+    NotAllow,
 }
 
 impl AssetErr {
@@ -173,6 +184,7 @@ impl AssetErr {
             AssetErr::TotalAssetOverFlow => "total balance too high for this asset",
             AssetErr::InvalidToken => "not a valid token for this account",
             AssetErr::InvalidAccount => "account Locked",
+            AssetErr::NotAllow => "not allow to do",
         }
     }
 }
