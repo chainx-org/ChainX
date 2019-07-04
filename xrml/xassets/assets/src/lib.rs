@@ -542,6 +542,8 @@ impl<T: Trait> Module<T> {
             None => return Err("current balance too low to destroy"),
         };
 
+        AssetTriggerEventAfter::<T>::on_destroy_before(token, who);
+
         let imbalance = Self::make_type_balance_be(&key, type_, new);
         let negative = if let SignedImbalance::Negative(n) = imbalance {
             n

@@ -7,6 +7,7 @@ use super::*;
 
 use runtime_io::with_externalities;
 use support::assert_ok;
+use xassets::Chain;
 
 #[test]
 fn issue_sdot_should_work() {
@@ -346,6 +347,69 @@ fn move_sdot_to_an_account_never_deposited_should_work() {
                 last_deposit_weight_update: 5
             }
         );
+    });
+}
+
+#[test]
+fn vote_weight_update_on_withdraw_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        System::set_block_number(3);
+        XSession::check_rotate_session(System::block_number());
+        let btc = b"BTC".to_vec();
+
+        // deposit
+        assert_ok!(XRecords::deposit(&1, &btc, 100));
+        assert_eq!(
+            XTokens::deposit_records((1, btc.clone())),
+            DepositVoteWeight {
+                last_deposit_weight: 0,
+                last_deposit_weight_update: 3
+            }
+        );
+        assert_eq!(
+            XTokens::psedu_intention_profiles(&btc),
+            PseduIntentionVoteWeight {
+                last_total_deposit_weight: 0,
+                last_total_deposit_weight_update: 3
+            }
+        );
+        assert_eq!(XAssets::free_balance_of(&1, &btc), 100);
+
+        System::set_block_number(4);
+        XSession::check_rotate_session(System::block_number());
+
+        // withdraw
+        assert_ok!(XRecords::withdrawal(
+            &1,
+            &btc,
+            100,
+            b"addr".to_vec(),
+            b"ext".to_vec()
+        ));
+
+        let numbers = XRecords::withdrawal_application_numbers(Chain::Bitcoin, 10).unwrap();
+        assert_eq!(numbers.len(), 1);
+        assert_ok!(XRecords::withdrawal_processing(&numbers));
+        for i in numbers {
+            assert_ok!(XRecords::withdrawal_finish(i));
+        }
+
+        assert_eq!(
+            XTokens::deposit_records((1, btc.clone())),
+            DepositVoteWeight {
+                last_deposit_weight: 0 + 100,
+                last_deposit_weight_update: 4
+            }
+        );
+        assert_eq!(
+            XTokens::psedu_intention_profiles(&btc),
+            PseduIntentionVoteWeight {
+                last_total_deposit_weight: 0 + 100,
+                last_total_deposit_weight_update: 4
+            }
+        );
+
+        assert_eq!(XAssets::free_balance_of(&1, &btc), 0);
     });
 }
 

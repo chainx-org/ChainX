@@ -187,8 +187,11 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
         Self::issue_reward(source, target, value)
     }
 
-    fn on_destroy(target: &Token, source: &T::AccountId, _value: T::Balance) -> Result {
+    fn on_destroy_before(target: &Token, source: &T::AccountId) {
         Self::update_bare_vote_weight(source, target);
+    }
+
+    fn on_destroy(_target: &Token, _source: &T::AccountId, _value: T::Balance) -> Result {
         Ok(())
     }
 }

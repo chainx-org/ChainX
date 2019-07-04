@@ -62,8 +62,11 @@ impl xaccounts::Trait for Test {
 
 pub struct DummyDetermineIntentionJackpotAccountId;
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJackpotAccountId {
-    fn accountid_for(origin: &u64) -> u64 {
+    fn accountid_for_unsafe(origin: &u64) -> u64 {
         origin + 100
+    }
+    fn accountid_for_safe(origin: &u64) -> Option<u64> {
+        Some(origin + 100)
     }
 }
 
@@ -213,8 +216,11 @@ impl Trait for Test {
 
 pub struct DummyDetermineTokenJackpotAccountId;
 impl TokenJackpotAccountIdFor<u64, u64> for DummyDetermineTokenJackpotAccountId {
-    fn accountid_for(_token: &Token) -> u64 {
+    fn accountid_for_unsafe(_token: &Token) -> u64 {
         10
+    }
+    fn accountid_for_safe(_token: &Token) -> Option<u64> {
+        Some(10)
     }
 }
 
@@ -393,5 +399,6 @@ pub type XAssets = xassets::Module<Test>;
 pub type XStaking = xstaking::Module<Test>;
 pub type XBitcoin = xbitcoin::Module<Test>;
 pub type XSdot = xsdot::Module<Test>;
+pub type XRecords = xrecords::Module<Test>;
 pub type XTokens = Module<Test>;
 pub type XBridgeFeatures = xbridge_features::Module<Test>;

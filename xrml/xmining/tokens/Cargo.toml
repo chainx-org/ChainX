@@ -36,6 +36,9 @@ xfee-manager = { package = "xrml-xfee-manager", path = "../../xfee/manager" }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records" }
 xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
 xsession = { package = "xrml-xsession", path = "../../xsession", default-features = false }
+xbridge-features = { package = "xrml-xbridge-features", path = "../../xbridge/features" }
+xbridge-common = { package = "xrml-xbridge-common", path = "../../xbridge/common" }
+xmultisig = { package = "xrml-xmultisig", path = "../../xmultisig", default-features = false }
 
 [features]
 default = ["std"]

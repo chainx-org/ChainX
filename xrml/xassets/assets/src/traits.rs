@@ -31,6 +31,7 @@ pub trait OnAssetChanged<AccountId, Balance> {
     ) -> result::Result<(), AssetErr>;
     fn on_issue_before(token: &Token, who: &AccountId);
     fn on_issue(token: &Token, who: &AccountId, value: Balance) -> Result;
+    fn on_destroy_before(token: &Token, who: &AccountId);
     fn on_destroy(token: &Token, who: &AccountId, value: Balance) -> Result;
     fn on_set_balance(
         _token: &Token,

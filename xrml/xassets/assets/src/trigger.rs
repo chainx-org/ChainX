@@ -29,6 +29,7 @@ impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {
     fn on_issue(_: &Token, _: &AccountId, _: Balance) -> Result {
         Ok(())
     }
+    fn on_destroy_before(_: &Token, _: &AccountId) {}
     fn on_destroy(_: &Token, _: &AccountId, _: Balance) -> Result {
         Ok(())
     }
@@ -106,6 +107,9 @@ impl<T: Trait> AssetTriggerEventAfter<T> {
         Module::<T>::deposit_event(RawEvent::Issue(token.clone(), who.clone(), value));
         T::OnAssetChanged::on_issue(token, who, value)?;
         Ok(())
+    }
+    pub fn on_destroy_before(token: &Token, who: &T::AccountId) {
+        T::OnAssetChanged::on_destroy_before(token, who);
     }
     pub fn on_destroy(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         Module::<T>::deposit_event(RawEvent::Destory(token.clone(), who.clone(), value));
