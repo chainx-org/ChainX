@@ -16,6 +16,8 @@ use btc_keys::Address;
 use btc_primitives::{Compact, H256};
 use merkle::PartialMerkleTree;
 
+use crate::traits::RelayTransaction;
+
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum TxType {
@@ -23,6 +25,8 @@ pub enum TxType {
     Deposit,
     HotAndCold,
     TrusteeTransition,
+    Lock,
+    Unlock,
     Irrelevance,
 }
 
@@ -39,6 +43,21 @@ pub struct RelayTx {
     pub raw: Transaction,
     pub merkle_proof: PartialMerkleTree,
     pub previous_raw: Transaction,
+}
+
+impl RelayTransaction for RelayTx {
+    fn block_hash(&self) -> &H256 {
+        &self.block_hash
+    }
+    fn raw_tx(&self) -> &Transaction {
+        &self.raw
+    }
+    fn merkle_proof(&self) -> &PartialMerkleTree {
+        &self.merkle_proof
+    }
+    fn prev_tx(&self) -> Option<&Transaction> {
+        Some(&self.previous_raw)
+    }
 }
 
 #[derive(PartialEq, Clone, Encode, Decode)]

@@ -124,11 +124,15 @@ impl Asset {
     pub fn desc(&self) -> Desc {
         self.desc.clone()
     }
+    pub fn precision(&self) -> Precision {
+        self.precision
+    }
+
     pub fn set_desc(&mut self, desc: Desc) {
         self.desc = desc
     }
-    pub fn precision(&self) -> Precision {
-        self.precision
+    pub fn set_token_name(&mut self, token_name: Token) {
+        self.token_name = token_name
     }
 }
 
@@ -158,6 +162,7 @@ define_enum!(
     AssetLimit {
         CanMove,
         CanTransfer,
+        CanWithdraw,
         CanDestroyWithdrawal,
         CanDestroyFree,
     }

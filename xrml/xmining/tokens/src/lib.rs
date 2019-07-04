@@ -7,64 +7,29 @@ mod mock;
 mod tests;
 pub mod types;
 
-use parity_codec::Encode;
-
 // Substrate
-use primitives::traits::{As, Hash};
+use primitives::traits::As;
 use rstd::{prelude::*, result};
-use substrate_primitives::crypto::UncheckedFrom;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
 };
 
 // ChainX
-use xassets::{AssetErr, AssetType, ChainT, Token};
+use xassets::{AssetErr, AssetType, ChainT, Token, TokenJackpotAccountIdFor};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{ClaimType, OnReward, OnRewardCalculation, RewardHolder};
-use xsupport::{debug, error};
 #[cfg(feature = "std")]
-use xsupport::{token, u8array_to_string};
+use xsupport::token;
+use xsupport::{debug, ensure_with_errorlog};
 
 pub use self::types::{
     DepositRecord, DepositVoteWeight, PseduIntentionProfs, PseduIntentionVoteWeight,
 };
 
-pub trait Trait: xsystem::Trait + xstaking::Trait + xspot::Trait + xsdot::Trait {
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-
-    type DetermineTokenJackpotAccountId: TokenJackpotAccountIdFor<
-        Self::AccountId,
-        Self::BlockNumber,
-    >;
-}
-
-pub trait TokenJackpotAccountIdFor<AccountId: Sized, BlockNumber> {
-    fn accountid_for_unsafe(token: &Token) -> AccountId;
-    fn accountid_for_safe(token: &Token) -> Option<AccountId>;
-}
-
-pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
-
-impl<T: Trait> TokenJackpotAccountIdFor<T::AccountId, T::BlockNumber>
-    for SimpleAccountIdDeterminator<T>
-where
-    T::AccountId: UncheckedFrom<T::Hash>,
-    T::BlockNumber: parity_codec::Codec,
+pub trait Trait:
+    xsystem::Trait + xstaking::Trait + xspot::Trait + xsdot::Trait + xbridge_common::Trait
 {
-    fn accountid_for_unsafe(token: &Token) -> T::AccountId {
-        Self::accountid_for_safe(token).expect("the asset must be existed before")
-    }
-    fn accountid_for_safe(token: &Token) -> Option<T::AccountId> {
-        xassets::Module::<T>::asset_info(token).map(|(_, _, init_number)| {
-            let token_hash = T::Hashing::hash(token);
-            let block_num_hash = T::Hashing::hash(init_number.encode().as_ref());
-
-            let mut buf = Vec::new();
-            buf.extend_from_slice(token_hash.as_ref());
-            buf.extend_from_slice(block_num_hash.as_ref());
-            UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
-        })
-    }
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 decl_event!(
@@ -99,6 +64,10 @@ decl_module! {
             ensure!(value <= 100, "TokenDiscount cannot exceed 100.");
             <TokenDiscount<T>>::insert(token, value);
         }
+
+        fn set_deposit_reward(value: T::Balance) {
+            DepositReward::<T>::put(value);
+        }
     }
 }
 
@@ -113,6 +82,9 @@ decl_storage! {
         pub PseduIntentionProfiles get(psedu_intention_profiles): map Token => PseduIntentionVoteWeight<T::BlockNumber>;
 
         pub DepositRecords get(deposit_records): map (T::AccountId, Token) => DepositVoteWeight<T::BlockNumber>;
+
+        /// when deposit success, reward some pcx to user for claiming. Default is 100000 = 0.001 PCX; 0.001*100000000
+        pub DepositReward get(deposit_reward): T::Balance = As::sa(100000);
     }
 
     add_extra_genesis {
@@ -130,9 +102,7 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
         _value: T::Balance,
     ) {
         // Exclude PCX and asset type changes on same account.
-        if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == token.clone()
-            || from.clone() == to.clone()
-        {
+        if <xassets::Module<T> as ChainT>::TOKEN == token.as_slice() || from.clone() == to.clone() {
             return;
         }
 
@@ -155,7 +125,7 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
 
     fn on_issue_before(target: &Token, source: &T::AccountId) {
         // Exclude PCX
-        if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == target.clone() {
+        if <xassets::Module<T> as ChainT>::TOKEN == target.as_slice() {
             return;
         }
 
@@ -163,8 +133,8 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
 
         debug!(
             "[on_issue_before] deposit_records: ({:?}, {:?}) = {:?}",
-            source,
             token!(target),
+            source,
             Self::deposit_records((source.clone(), target.clone()))
         );
 
@@ -173,13 +143,13 @@ impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
 
     fn on_issue(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
         // Exclude PCX
-        if <xassets::Module<T> as ChainT>::TOKEN.to_vec() == target.clone() {
+        if <xassets::Module<T> as ChainT>::TOKEN == target.as_slice() {
             return Ok(());
         }
 
         debug!(
             "[on_issue] token: {:?}, who: {:?}, vlaue: {:?}",
-            u8array_to_string(target),
+            token!(target),
             source,
             value
         );
@@ -252,27 +222,6 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    /// Transform outside irreversible blocks to native blocks.
-    fn wait_blocks(token: &Token) -> result::Result<u64, &'static str> {
-        let seconds_per_block: T::Moment = timestamp::Module::<T>::minimum_period();
-        match token.as_slice() {
-            // btc
-            <xbitcoin::Module<T> as ChainT>::TOKEN => {
-                let irr_block: u32 = <xbitcoin::Module<T>>::confirmation_number();
-                let seconds = (irr_block * 10 * 60) as u64;
-                Ok(seconds / seconds_per_block.as_())
-            }
-            <xsdot::Module<T> as ChainT>::TOKEN => Ok(0u64),
-            _ => {
-                error!(
-                    "[wait_blocks] token {:?} is unsupported",
-                    u8array_to_string(token)
-                );
-                Err("This token is not supported.")
-            }
-        }
-    }
-
     fn issue_reward(source: &T::AccountId, token: &Token, value: T::Balance) -> Result {
         let psedu_intention = Self::psedu_intention_profiles(token);
         if psedu_intention.last_total_deposit_weight == 0 {
@@ -280,34 +229,21 @@ impl<T: Trait> Module<T> {
                 target: "tokens",
                 "should issue reward to {:?}, but the last_total_deposit_weight of Token: {:?} is zero.",
                 source,
-                u8array_to_string(token)
+                token!(token)
             );
             return Ok(());
         }
-        let blocks = Self::wait_blocks(token)?;
 
-        let addr = T::DetermineTokenJackpotAccountId::accountid_for_unsafe(token);
-        let jackpot = xassets::Module::<T>::pcx_free_balance(&addr).as_();
+        ensure_with_errorlog!(
+            Self::psedu_intentions().contains(&token),
+            "Cannot claim from unsupport token.",
+            "Cannot claim from unsupport token|token:{:}",
+            token!(token)
+        );
 
-        let depositor_vote_weight = blocks as u128 * value.as_() as u128;
-
-        let reward = match depositor_vote_weight.checked_mul(jackpot as u128) {
-            Some(x) => {
-                let reward =
-                    x / (depositor_vote_weight + psedu_intention.last_total_deposit_weight as u128);
-                if reward > jackpot as u128 {
-                    panic!("The issue reward is no more than the jackpot balance");
-                }
-                if reward < u64::max_value() as u128 {
-                    T::Balance::sa(reward as u64)
-                } else {
-                    panic!("reward on issue definitely less than u64::max_value()")
-                }
-            }
-            None => panic!("blocks * jackpot * value overflow on issue"),
-        };
-
-        xassets::Module::<T>::pcx_move_free_balance(&addr, source, reward).map_err(|e| e.info())?;
+        // when deposit(issue) success, reward some pcx for account to claim
+        let reward_value = Self::deposit_reward();
+        xbridge_common::Module::<T>::reward_from_jackpot(token, source, reward_value);
 
         Self::deposit_event(RawEvent::DepositorReward(
             source.clone(),

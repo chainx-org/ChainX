@@ -52,6 +52,7 @@ use chainx_primitives::{
 pub use xaccounts;
 pub use xassets;
 pub use xbitcoin;
+pub use xbitcoin::lockup as xbitcoin_lockup;
 pub use xbridge_common;
 pub use xbridge_features;
 pub use xprocess;
@@ -153,6 +154,7 @@ impl xassets::Trait for Runtime {
     type Event = Event;
     type OnAssetChanged = (XTokens);
     type OnAssetRegisterOrRevoke = (XTokens, XSpot);
+    type DetermineTokenJackpotAccountId = xassets::SimpleAccountIdDeterminator<Runtime>;
 }
 
 impl xrecords::Trait for Runtime {
@@ -174,7 +176,6 @@ impl xstaking::Trait for Runtime {
 
 impl xtokens::Trait for Runtime {
     type Event = Event;
-    type DetermineTokenJackpotAccountId = xtokens::SimpleAccountIdDeterminator<Runtime>;
 }
 
 impl xspot::Trait for Runtime {
@@ -183,11 +184,20 @@ impl xspot::Trait for Runtime {
 }
 
 // bridge
+impl xbridge_common::Trait for Runtime {
+    type Event = Event;
+}
+
 impl xbitcoin::Trait for Runtime {
+    type XBitcoinLockup = Self;
     type AccountExtractor = xbridge_common::extractor::Extractor<AccountId>;
     type TrusteeSessionProvider = XBridgeFeatures;
     type TrusteeMultiSigProvider = xbridge_features::trustees::BitcoinTrusteeMultiSig<Runtime>;
     type CrossChainProvider = XBridgeFeatures;
+    type Event = Event;
+}
+
+impl xbitcoin_lockup::Trait for Runtime {
     type Event = Event;
 }
 
@@ -304,6 +314,9 @@ construct_runtime!(
 
         // fisher
         XFisher: xfisher::{Module, Call, Storage, Event<T>},
+
+        XBridgeCommon: xbridge_common::{Module, Storage, Event<T>},
+        XBridgeOfBTCLockup: xbitcoin_lockup::{Module, Call, Storage, Event<T>},
     }
 );
 

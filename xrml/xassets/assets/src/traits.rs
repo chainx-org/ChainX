@@ -4,6 +4,11 @@ use support::dispatch::Result;
 
 use crate::types::{AssetErr, AssetType, Chain, Token};
 
+pub trait TokenJackpotAccountIdFor<AccountId: Sized, BlockNumber> {
+    fn accountid_for_unsafe(token: &Token) -> AccountId;
+    fn accountid_for_safe(token: &Token) -> Option<AccountId>;
+}
+
 pub trait ChainT {
     const TOKEN: &'static [u8];
     fn chain() -> Chain;

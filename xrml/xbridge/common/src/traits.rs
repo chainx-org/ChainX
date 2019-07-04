@@ -4,7 +4,7 @@ use rstd::{prelude::Vec, result};
 
 use primitives::traits::MaybeDebug;
 
-use xr_primitives::Name;
+use xr_primitives::{Name, Token};
 use xsupport::error;
 
 use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
@@ -79,6 +79,11 @@ pub trait CrossChainBinding<AccountId, Address> {
     fn update_binding(who: &AccountId, addr: Address, channel_name: Option<Name>);
     /// return accountid, and option channel name
     fn get_binding_info(input_addr: &Address) -> Option<(AccountId, Option<AccountId>)>;
+}
+
+pub trait CrossChainBindingV2<AccountId> {
+    fn update_binding(token: &Token, who: &AccountId, channel_name: Option<Name>);
+    fn get_binding_info(token: &Token, who: &AccountId) -> Option<AccountId>;
 }
 
 pub trait AsRefAndMutOption<T> {

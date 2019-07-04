@@ -2,7 +2,7 @@
 
 #![cfg(test)]
 
-use super::*;
+use crate::*;
 
 // Substrate
 use primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
@@ -95,13 +95,24 @@ impl xassets::Trait for Test {
     type OnNewAccount = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
+    type DetermineTokenJackpotAccountId = ();
 }
 
 impl xfee_manager::Trait for Test {
     type Event = ();
 }
 
+impl xbridge_common::Trait for Test {
+    type Event = ();
+}
+
+impl lockup::Trait for Test {
+    type Event = ();
+}
+
 impl Trait for Test {
+    type XBitcoinLockup = Self;
+
     type AccountExtractor = DummyExtractor;
     type TrusteeSessionProvider = DummyTrusteeSession;
     type TrusteeMultiSigProvider = DummyBitcoinTrusteeMultiSig;
@@ -200,7 +211,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                 1457525,
             ),
             genesis_hash: h256_from_rev_str(
-                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+                "0000000000000059227e29b86313c99ac908a1d71db97632b402f13a569b4709",
             ),
             params_info: Params::new(
                 520159231,            // max_bits
@@ -249,7 +260,7 @@ pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Ha
                 1457525,
             ),
             genesis_hash: h256_from_rev_str(
-                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+                "0000000000000059227e29b86313c99ac908a1d71db97632b402f13a569b4709",
             ),
             params_info: Params::new(
                 520159231,            // max_bits
@@ -298,7 +309,7 @@ pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
                 1457525,
             ),
             genesis_hash: h256_from_rev_str(
-                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+                "0000000000000059227e29b86313c99ac908a1d71db97632b402f13a569b4709",
             ),
             params_info: Params::new(
                 520159231,            // max_bits
@@ -348,7 +359,7 @@ pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
                 1457525,
             ),
             genesis_hash: h256_from_rev_str(
-                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
+                "0000000000000059227e29b86313c99ac908a1d71db97632b402f13a569b4709",
             ),
             params_info: Params::new(
                 520159231,            // max_bits

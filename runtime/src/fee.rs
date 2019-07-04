@@ -6,6 +6,7 @@ use xr_primitives::XString;
 use xfee_manager::SwitchStore;
 
 use xassets::Call as XAssetsCall;
+use xbitcoin::lockup::Call as XBitcoinLockupCall;
 use xbitcoin::Call as XBitcoinCall;
 use xbridge_features::Call as XBridgeFeaturesCall;
 use xfisher::Call as XFisherCall;
@@ -111,9 +112,13 @@ impl CheckFee for Call {
 
             XBridgeOfBTC, XBitcoinCall => (
                 push_header : 10,
-                push_transaction : 8,
+                push_transaction : 50,
                 sign_withdraw_tx : 5,
                 create_withdraw_tx : 5,
+            );
+
+            XBridgeOfBTCLockup, XBitcoinLockupCall => (
+                push_transaction : 50,
             );
 
             XStaking, XStakingCall => (

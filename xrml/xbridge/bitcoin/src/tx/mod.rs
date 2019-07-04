@@ -10,27 +10,31 @@ use rstd::{prelude::*, result};
 use support::{dispatch::Result, StorageMap};
 
 // ChainX
-use xsupport::{debug, error};
+use xsupport::{debug, error, warn};
 
 // light-bitcoin
 use btc_chain::Transaction;
 use btc_crypto::dhash160;
-use btc_keys::{Address, Public, Type};
+use btc_keys::{Address, Network, Public, Type};
 use btc_primitives::{Bytes, H256};
 use btc_script::{Builder, Opcode, Script};
 
-use crate::types::{RelayTx, TrusteeAddrInfo, TxType};
+use crate::traits::RelayTransaction;
+use crate::types::{TrusteeAddrInfo, TxType};
 use crate::{InputAddrFor, Module, RawEvent, Trait, TxFor};
+
+use crate::lockup::detect_lockup_type;
 
 use self::handler::TxHandler;
 use self::utils::{
     equal_addr, get_hot_trustee_address, get_last_trustee_address_pair, get_networkid,
-    get_trustee_address_pair, inspect_address_from_transaction, parse_addr_from_script,
+    get_trustee_address_pair, inspect_address_from_transaction, parse_output_addr,
+    parse_output_addr_with_networkid,
 };
 pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
 
-pub fn detect_transaction_type<T: Trait>(
-    relay_tx: &RelayTx,
+pub fn detect_transaction_type<T: Trait, RT: RelayTransaction>(
+    relay_tx: &RT,
 ) -> result::Result<(TxType, Option<Address>), &'static str> {
     let addr_pair = get_trustee_address_pair::<T>()?;
     let last_addr_pair = get_last_trustee_address_pair::<T>()
@@ -42,7 +46,14 @@ pub fn detect_transaction_type<T: Trait>(
             _e
         })
         .ok();
-    detect_transaction_type_impl::<T>(relay_tx, addr_pair, last_addr_pair)
+    let network = get_networkid::<T>();
+    detect_transaction_type_impl::<_, _>(
+        relay_tx,
+        network,
+        addr_pair,
+        last_addr_pair,
+        detect_lockup_type::<T::XBitcoinLockup>,
+    )
 }
 
 /// parse tx's inputs/outputs into Option<Address>
@@ -55,70 +66,92 @@ pub fn detect_transaction_type<T: Trait>(
 /// then judge type
 /// when type is deposit, would return Option<Addr> for this deposit input_addr
 #[inline]
-pub fn detect_transaction_type_impl<T: Trait>(
-    relay_tx: &RelayTx,
+pub fn detect_transaction_type_impl<RT: RelayTransaction, F: Fn(&Transaction) -> TxType>(
+    relay_tx: &RT,
+    network: Network,
     trustee_addr_pair: (Address, Address),
     old_trustee_addr_pair: Option<(Address, Address)>,
+    detect_lockup_type: F,
 ) -> result::Result<(TxType, Option<Address>), &'static str> {
     let (hot_addr, cold_addr) = trustee_addr_pair;
     // parse input addr
-    let outpoint = &relay_tx.raw.inputs[0].previous_output;
-    let input_addr = match inspect_address_from_transaction::<T>(&relay_tx.previous_raw, outpoint) {
-        Some(a) => a,
-        None => return Err("Inspect address failed in this transaction"),
+    let input_addr = match relay_tx.prev_tx() {
+        Some(prev_tx) => {
+            let outpoint = &relay_tx.raw_tx().inputs[0].previous_output;
+            match inspect_address_from_transaction(prev_tx, outpoint, network) {
+                Some(a) => Some(a),
+                None => return Err("Inspect address failed in this transaction"),
+            }
+        }
+        None => None,
     };
     // parse output addr
     let outputs: Vec<Option<Address>> = relay_tx
-        .raw
+        .raw_tx()
         .outputs
         .iter()
-        .map(|out| parse_addr_from_script::<T>(&out.script_pubkey.to_vec().into()))
+        .map(|out| parse_output_addr_with_networkid(&out.script_pubkey.to_vec().into(), network))
         .collect();
     // ---------- parse finish
-    // judge input has trustee addr
-    let input_is_trustee =
-        equal_addr(&input_addr, &hot_addr) || equal_addr(&input_addr, &cold_addr);
-    // judge if all outputs contains hot/cold trustee
-    let all_outputs_trustee = outputs.iter().all(|item| {
-        if let Some(addr) = item {
-            if equal_addr(addr, &hot_addr) || equal_addr(addr, &cold_addr) {
-                return true;
-            }
-        }
-        false
-    });
+
     // judge tx type
-    if input_is_trustee {
-        if all_outputs_trustee {
-            return Ok((TxType::HotAndCold, None));
-        }
-        // outputs contains other addr, it's user addr, thus it's a withdrawal
-        return Ok((TxType::Withdrawal, None));
-    } else {
-        if let Some((old_hot_addr, old_cold_addr)) = old_trustee_addr_pair {
-            let input_is_old_trustee =
-                equal_addr(&input_addr, &old_hot_addr) || equal_addr(&input_addr, &old_cold_addr);
-            if input_is_old_trustee && all_outputs_trustee {
-                // input should from old trustee addr, outputs should all be current trustee addrs
-                return Ok((TxType::TrusteeTransition, None));
-            }
-        }
-        // any output contains hot trustee addr
-        let check_outputs = outputs.iter().any(|item| {
-            if let Some(addr) = item {
-                // only hot addr for deposit
-                if equal_addr(addr, &hot_addr) {
-                    return true;
+    match input_addr {
+        // with input_addr, allow `Withdrawal`, `Deposit`, `HotAndCold`, `TrusteeTransition`
+        Some(input_addr) => {
+            // judge input has trustee addr
+            let input_is_trustee =
+                equal_addr(&input_addr, &hot_addr) || equal_addr(&input_addr, &cold_addr);
+            // judge if all outputs contains hot/cold trustee
+            let all_outputs_trustee = outputs.iter().all(|item| {
+                if let Some(addr) = item {
+                    if equal_addr(addr, &hot_addr) || equal_addr(addr, &cold_addr) {
+                        return true;
+                    }
+                }
+                false
+            });
+            // judge tx type
+            if input_is_trustee {
+                if all_outputs_trustee {
+                    return Ok((TxType::HotAndCold, None));
+                }
+                // outputs contains other addr, it's user addr, thus it's a withdrawal
+                return Ok((TxType::Withdrawal, None));
+            } else {
+                if let Some((old_hot_addr, old_cold_addr)) = old_trustee_addr_pair {
+                    let input_is_old_trustee = equal_addr(&input_addr, &old_hot_addr)
+                        || equal_addr(&input_addr, &old_cold_addr);
+                    if input_is_old_trustee && all_outputs_trustee {
+                        // input should from old trustee addr, outputs should all be current trustee addrs
+                        return Ok((TxType::TrusteeTransition, None));
+                    }
+                }
+                // any output contains hot trustee addr
+                let check_outputs = outputs.iter().any(|item| {
+                    if let Some(addr) = item {
+                        // only hot addr for deposit
+                        if equal_addr(addr, &hot_addr) {
+                            return true;
+                        }
+                    }
+                    false
+                });
+                if check_outputs {
+                    return Ok((TxType::Deposit, Some(input_addr)));
                 }
             }
-            false
-        });
-        if check_outputs {
-            return Ok((TxType::Deposit, Some(input_addr)));
+            warn!(
+                "[detect_transaction_type_impl]|it's an irrelevance tx|tx_hash:{:?}",
+                relay_tx.raw_tx().hash()
+            );
+            Ok((TxType::Irrelevance, None))
+        }
+        None => {
+            // without input_addr, allow `Lock`, `Unlock`
+            let t = detect_lockup_type(relay_tx.raw_tx());
+            Ok((t, None))
         }
     }
-
-    Ok((TxType::Irrelevance, None))
 }
 
 pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
@@ -199,8 +232,7 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
             let mut tx_withdraw_list = Vec::new();
             for output in tx.outputs.iter() {
                 let script: Script = output.script_pubkey.clone().into();
-                let addr =
-                    parse_addr_from_script::<T>(&script).ok_or("not found addr in this out")?;
+                let addr = parse_output_addr::<T>(&script).ok_or("not found addr in this out")?;
                 if addr.hash != hot_trustee_address.hash {
                     // expect change to trustee_addr output
                     tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));

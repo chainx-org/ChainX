@@ -6,7 +6,7 @@ use rstd::{prelude::Vec, result};
 use support::{dispatch::Result, StorageMap, StorageValue};
 
 // ChainX
-use xr_primitives::{generic::b58, Name};
+use xr_primitives::Name;
 
 use xassets::{self, ChainT};
 use xbridge_common::traits::{CrossChainBinding, Extractable};
@@ -14,19 +14,21 @@ use xfee_manager;
 
 use xrecords;
 #[cfg(feature = "std")]
-use xsupport::u8array_to_string;
+use xsupport::try_hex_or_str;
 use xsupport::{debug, error, info, warn};
 
 // light-bitcoin
 use btc_chain::Transaction;
-use btc_keys::{Address, DisplayLayout};
+use btc_keys::Address;
 use btc_primitives::H256;
 use btc_script::Script;
 
 use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
 use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait, TxMarkFor};
 
-use super::utils::{ensure_identical, get_hot_trustee_address, is_key, parse_opreturn};
+use super::utils::{addr2vecu8, ensure_identical, get_hot_trustee_address, is_key, parse_opreturn};
+
+use crate::lockup::{handle_lockup_tx, handle_unlock_tx};
 
 pub struct TxHandler {
     pub tx_hash: H256,
@@ -51,6 +53,10 @@ impl TxHandler {
     }
 
     pub fn handle<T: Trait>(&self) -> Result {
+        debug!(
+            "[TxHandler]|handle tx|type:{:?}|hash:{:}|tx:{:?}",
+            self.tx_info.tx_type, self.tx_hash, self.tx_info.raw_tx
+        );
         match self.tx_info.tx_type {
             TxType::Withdrawal => {
                 // TODO refactor
@@ -58,6 +64,9 @@ impl TxHandler {
             }
             TxType::Deposit => {
                 self.deposit::<T>()?;
+            }
+            TxType::Lock | TxType::Unlock => {
+                handle_lockup_tx::<T::XBitcoinLockup>(self)?;
             }
             _ => {
                 info!(
@@ -177,6 +186,9 @@ impl TxHandler {
         };
         // deposit
 
+        // handle locked utxo, if any error in it, just print error log
+        handle_unlock_tx::<T::XBitcoinLockup>(&self.tx_info.raw_tx, &self.tx_hash);
+
         // deposit for this account or store this deposit cache
         let deposit_account = match deposit_account_info {
             DepositAccountInfo::AccountId(accountid) => {
@@ -214,9 +226,7 @@ impl TxHandler {
             Module::<T>::TOKEN.to_vec(),
             As::sa(deposit_balance),
             original_opreturn,
-            input_addr
-                .map(|addr| b58::to_base58(addr.layout().to_vec()))
-                .unwrap_or_default(), // unwrap is no input addr
+            input_addr.map(|addr| addr2vecu8(&addr)).unwrap_or_default(), // unwrap is no input addr
             self.tx_hash.as_bytes().to_vec(),
             xrecords::TxState::Confirmed,
         ));
@@ -338,7 +348,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::Accoun
                 xassets::Chain::Bitcoin,
                 Module::<T>::TOKEN.to_vec(),
                 As::sa(r.balance),
-                b58::to_base58(input_address.layout().to_vec()),
+                addr2vecu8(input_address),
             ));
         }
         PendingDepositMap::<T>::remove(input_address);
@@ -350,11 +360,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::Accoun
 fn trick_print_opreturn(opreturn: &[u8]) -> String {
     if opreturn.len() > 2 {
         // trick, just for print log
-        format!(
-            "{:?}|{:}",
-            &opreturn[..2],
-            u8array_to_string(&opreturn[2..])
-        )
+        format!("{:?}|{:}", &opreturn[..2], try_hex_or_str(&opreturn[2..]))
     } else {
         format!("{:?}", opreturn)
     }

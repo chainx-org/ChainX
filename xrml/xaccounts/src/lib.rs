@@ -32,6 +32,16 @@ pub trait IntentionJackpotAccountIdFor<AccountId: Sized> {
     fn accountid_for_safe(origin: &AccountId) -> Option<AccountId>;
 }
 
+impl<AccountId: Default> IntentionJackpotAccountIdFor<AccountId> for () {
+    fn accountid_for_unsafe(_: &AccountId) -> AccountId {
+        AccountId::default()
+    }
+
+    fn accountid_for_safe(_: &AccountId) -> Option<AccountId> {
+        Some(AccountId::default())
+    }
+}
+
 pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
 
 impl<T: Trait> IntentionJackpotAccountIdFor<T::AccountId> for SimpleAccountIdDeterminator<T>

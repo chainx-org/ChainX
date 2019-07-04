@@ -12,26 +12,26 @@ pub mod types;
 mod mock;
 mod tests;
 
-use parity_codec::Codec;
-
+use parity_codec::{Codec, Encode};
 // Substrate
 use primitives::traits::{
-    As, CheckedAdd, CheckedSub, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
+    As, CheckedAdd, CheckedSub, Hash, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
     StaticLookup, Zero,
 };
 use rstd::collections::btree_map::BTreeMap;
 use rstd::{prelude::*, result};
+use substrate_primitives::crypto::UncheckedFrom;
 
 use support::traits::{Imbalance, SignedImbalance};
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, Parameter, StorageMap};
 use system::{ensure_signed, IsDeadAccount, OnNewAccount};
 
 // ChainX
-use xsupport::{debug, ensure_with_errorlog, info};
+use xsupport::{debug, ensure_with_errorlog, error, info};
 #[cfg(feature = "std")]
 use xsupport::{token, u8array_to_string};
 
-pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke};
+pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJackpotAccountIdFor};
 use self::trigger::AssetTriggerEventAfter;
 
 pub use self::types::{
@@ -39,6 +39,39 @@ pub use self::types::{
     Desc, DescString, Memo, NegativeImbalance, PositiveImbalance, Precision, SignedImbalanceT,
     Token, TokenString,
 };
+
+pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
+
+impl<AccountId: Default, BlockNumber> TokenJackpotAccountIdFor<AccountId, BlockNumber> for () {
+    fn accountid_for_unsafe(_: &Token) -> AccountId {
+        AccountId::default()
+    }
+    fn accountid_for_safe(_: &Token) -> Option<AccountId> {
+        Some(AccountId::default())
+    }
+}
+
+impl<T: Trait> TokenJackpotAccountIdFor<T::AccountId, T::BlockNumber>
+    for SimpleAccountIdDeterminator<T>
+where
+    T::AccountId: UncheckedFrom<T::Hash>,
+    T::BlockNumber: parity_codec::Codec,
+{
+    fn accountid_for_unsafe(token: &Token) -> T::AccountId {
+        Self::accountid_for_safe(token).expect("the asset must be existed before")
+    }
+    fn accountid_for_safe(token: &Token) -> Option<T::AccountId> {
+        Module::<T>::asset_info(token).map(|(_, _, init_number)| {
+            let token_hash = T::Hashing::hash(token);
+            let block_num_hash = T::Hashing::hash(init_number.encode().as_ref());
+
+            let mut buf = Vec::new();
+            buf.extend_from_slice(token_hash.as_ref());
+            buf.extend_from_slice(block_num_hash.as_ref());
+            UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
+        })
+    }
+}
 
 pub trait Trait: system::Trait {
     type Balance: Parameter
@@ -59,6 +92,12 @@ pub trait Trait: system::Trait {
     type OnAssetChanged: OnAssetChanged<Self::AccountId, Self::Balance>;
 
     type OnAssetRegisterOrRevoke: OnAssetRegisterOrRevoke;
+
+    /// Generate virtual AccountId for each (psedu) token
+    type DetermineTokenJackpotAccountId: TokenJackpotAccountIdFor<
+        Self::AccountId,
+        Self::BlockNumber,
+    >;
 }
 
 decl_event!(
@@ -106,6 +145,17 @@ decl_module! {
             T::OnAssetRegisterOrRevoke::on_revoke(&token)?;
             Self::deposit_event(RawEvent::Revoke(token));
             Ok(())
+        }
+
+        fn modify_asset_info(token: Token, token_name: Option<Token>, desc: Option<Desc>) {
+            if let Some(ref mut info) = Self::asset_info(&token) {
+                token_name.map(|name| info.0.set_token_name(name));
+                desc.map(|desc| info.0.set_desc(desc));
+
+                AssetInfo::<T>::insert(token, info);
+            } else {
+                error!("[modify_asset_info]|asset not exist|token:{:}", token!(token));
+            }
         }
 
         /// set free token for an account

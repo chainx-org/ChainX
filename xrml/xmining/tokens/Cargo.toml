@@ -9,7 +9,6 @@ serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
 # Substrate
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
@@ -19,6 +18,7 @@ timestamp = { package ="srml-timestamp", git = "https://github.com/chainpool/sub
 xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
+xbridge-common = {package = "xrml-xbridge-common", path = "../../xbridge/common", default-features = false }
 xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../../xbridge/bitcoin", default-features = false }
 xsdot = { package = "xrml-xbridge-sdot", path = "../../xbridge/sdot", default-features = false }
 xspot = { package = "xrml-xdex-spot", path = "../../xdex/spot", default-features = false }
@@ -47,7 +47,6 @@ std = [
     "serde_derive",
     "parity-codec/std",
     # Substrate
-    "substrate-primitives/std",
     "rstd/std",
     "primitives/std",
     "support/std",
@@ -57,6 +56,7 @@ std = [
     "xsystem/std",
     "xsupport/std",
     "xassets/std",
+    "xbridge-common/std",
     "xbitcoin/std",
     "xspot/std",
     "xstaking/std",

@@ -1,9 +1,9 @@
 // Copyright 2018-2019 Chainpool.
 
 // Substrate
+use primitives::traits::MaybeDebug;
 use rstd::{prelude::Vec, result};
 use support::dispatch::Result;
-
 // light-bitcoin
 use btc_chain::Transaction;
 use btc_keys::Public;
@@ -12,8 +12,8 @@ use btc_script::{
     Script, SignatureChecker, SignatureVersion, TransactionInputSigner, TransactionSignatureChecker,
 };
 
+use crate::traits::RelayTransaction;
 use crate::tx::utils::get_hot_trustee_redeem_script;
-use crate::types::RelayTx;
 use crate::Trait;
 
 // ChainX
@@ -21,15 +21,18 @@ use crate::Trait;
 use xsupport::u8array_to_hex;
 use xsupport::{debug, error};
 
-pub fn validate_transaction<T: Trait>(tx: &RelayTx, merkle_root: H256) -> Result {
-    let tx_hash = tx.raw.hash();
+pub fn validate_transaction<T: Trait, RT: RelayTransaction + MaybeDebug>(
+    tx: &RT,
+    merkle_root: H256,
+) -> Result {
+    let tx_hash = tx.tx_hash();
     debug!(
         "[validate_transaction]|txhash:{:}|relay tx:{:?}",
         tx_hash, tx
     );
 
     // verify merkle proof
-    match tx.merkle_proof.clone().parse() {
+    match tx.merkle_proof().clone().parse() {
         Ok(parsed) => {
             if merkle_root != parsed.root {
                 return Err("Check failed for merkle tree proof");
@@ -41,12 +44,14 @@ pub fn validate_transaction<T: Trait>(tx: &RelayTx, merkle_root: H256) -> Result
         Err(_) => return Err("Parse partial merkle tree failed"),
     }
 
-    // verify prev tx for input
-    // only check the first(0) input in transaction
-    let previous_txid = tx.previous_raw.hash();
-    if previous_txid != tx.raw.inputs[0].previous_output.hash {
-        error!("[validate_transaction]|relay previou tx's hash not equail to relay tx first input|relaytx:{:?}", tx);
-        return Err("Previous tx id not equal input point hash");
+    if let Some(prev) = tx.prev_tx() {
+        // verify prev tx for input
+        // only check the first(0) input in transaction
+        let previous_txid = prev.hash();
+        if previous_txid != tx.raw_tx().inputs[0].previous_output.hash {
+            error!("[validate_transaction]|relay previou tx's hash not equail to relay tx first input|relaytx:{:?}", tx);
+            return Err("Previous tx id not equal input point hash");
+        }
     }
     Ok(())
 }
