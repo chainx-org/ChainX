@@ -207,6 +207,9 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
                 }
             }
 
+            tx_withdraw_list.sort();
+            appl_withdrawal_list.sort();
+
             // appl_withdrawal_list must match to tx_withdraw_list
             if appl_withdrawal_list.len() != tx_withdraw_list.len() {
                 error!("withdrawal tx's outputs not equal to withdrawal application list, withdrawal application len:{:}, withdrawal tx's outputs len:{:}|withdrawal application list:{:?}, tx withdrawal outputs:{:?}",
@@ -217,16 +220,25 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
                 return Err("withdrawal tx's outputs not equal to withdrawal application list");
             }
 
-            for item in appl_withdrawal_list.iter() {
-                if !tx_withdraw_list.contains(item) {
-                    error!(
-                        "withdrawal tx's output not match to withdrawal application. withdrawal application list:{:?}, tx withdrawal outputs:{:?}",
-                        withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(),
-                        tx_withdraw_list
-                    );
-                    return Err("withdrawal tx's output not match to withdrawal application");
+            
+            let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
+                if a.0 == b.0 && a.1 == b.1 {
+                    return true
                 }
+                else {
+                    error!(
+                        "withdrawal tx's output not match to withdrawal application. withdrawal application :{:?}, tx withdrawal output:{:?}",
+                        a,
+                        b
+                    );
+                    return false
+                }
+            }).count();
+
+            if count != appl_withdrawal_list.len() {
+                return Err("withdrawal tx's output list not match to withdrawal application list");
             }
+
             Ok(())
         }
     }
