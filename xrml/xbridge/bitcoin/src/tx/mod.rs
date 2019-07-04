@@ -220,7 +220,6 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
                 return Err("withdrawal tx's outputs not equal to withdrawal application list");
             }
 
-            
             let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
                 if a.0 == b.0 && a.1 == b.1 {
                     return true

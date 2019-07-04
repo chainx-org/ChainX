@@ -204,6 +204,61 @@ pub fn test_address() {
 }
 
 #[test]
+pub fn test_check_trustee_entity() {
+    let addr_ok_3 =
+        hex::decode("0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40").unwrap();
+    let public3 = Public::from_slice(&addr_ok_3).map_err(|_| "Invalid Public");
+    assert_eq!(XBridgeOfBTC::check_trustee_entity(&addr_ok_3), public3);
+
+    let addr_ok_2 =
+        hex::decode("0211252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40").unwrap();
+    let public2 = Public::from_slice(&addr_ok_2).map_err(|_| "Invalid Public");
+    assert_eq!(XBridgeOfBTC::check_trustee_entity(&addr_ok_2), public2);
+
+    let addr_too_long =
+        hex::decode("0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40cc")
+            .unwrap();
+    assert_eq!(
+        XBridgeOfBTC::check_trustee_entity(&addr_too_long),
+        Err("Invalid Public")
+    );
+
+    let addr_normal=hex::decode("0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae4011252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40").unwrap();
+    assert_eq!(
+        XBridgeOfBTC::check_trustee_entity(&addr_normal),
+        Err("not allow Normal Public for bitcoin now")
+    );
+
+    let addr_err_type =
+        hex::decode("0411252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40").unwrap();
+    assert_eq!(
+        XBridgeOfBTC::check_trustee_entity(&addr_err_type),
+        Err("not Compressed Public(2|3)")
+    );
+
+    let addr_zero =
+        hex::decode("020000000000000000000000000000000000000000000000000000000000000000").unwrap();
+    assert_eq!(
+        XBridgeOfBTC::check_trustee_entity(&addr_zero),
+        Err("not Compressed Public(Zero32)")
+    );
+
+    let addr_EC_P =
+        hex::decode("02fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f").unwrap();
+    assert_eq!(
+        XBridgeOfBTC::check_trustee_entity(&addr_EC_P),
+        Err("not Compressed Public(EC_P)")
+    );
+
+    let addr_EC_P_2 =
+        hex::decode("02fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc3f").unwrap();
+    assert_eq!(
+        XBridgeOfBTC::check_trustee_entity(&addr_EC_P_2),
+        Err("not Compressed Public(EC_P)")
+    );
+}
+
+#[test]
 pub fn test_multi_address() {
     let pub1 = String::from("0311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae40");
     let pub2 = String::from("02e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a2");

@@ -316,12 +316,33 @@ fn check_keys(keys: &[Public]) -> Result {
     Ok(())
 }
 
+//const EC_P = Buffer.from('fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f', 'hex')
+const EC_P: [u8; 32] = [
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
+];
+
+const ZERO_P: [u8; 32] = [0; 32];
+
 impl<T: Trait> TrusteeForChain<T::AccountId, Public, TrusteeAddrInfo> for Module<T> {
     fn check_trustee_entity(raw_addr: &[u8]) -> result::Result<Public, &'static str> {
         let public = Public::from_slice(raw_addr).map_err(|_| "Invalid Public")?;
         if let Public::Normal(_) = public {
             return Err("not allow Normal Public for bitcoin now");
         }
+
+        if 2 != raw_addr[0] && 3 != raw_addr[0] {
+            return Err("not Compressed Public(prefix not 2|3)");
+        }
+
+        if &ZERO_P == &raw_addr[1..33] {
+            return Err("not Compressed Public(Zero32)");
+        }
+
+        if &raw_addr[1..33] >= &EC_P {
+            return Err("not Compressed Public(EC_P)");
+        }
+
         Ok(public)
     }
 
