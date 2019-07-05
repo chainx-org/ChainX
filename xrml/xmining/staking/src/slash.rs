@@ -25,11 +25,8 @@ impl<T: Trait> Module<T> {
         );
 
         // Force the double signer to be inactive.
-        <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
-            props.is_active = false;
-            props.last_inactive_since = <system::Module<T>>::block_number();
-            info!("[slash_double_signer] force {:?} to be inactive", who!(who));
-        });
+        info!("[slash_double_signer] force {:?} to be inactive", who!(who));
+        Self::force_to_be_inactive(who);
 
         // Note the double signer so that he could be removed from the current validator set on new session.
         <EvilValidatorsPerSession<T>>::mutate(|evil_validators| {
@@ -88,14 +85,11 @@ impl<T: Trait> Module<T> {
         // Force those slashed yet can't afford the penalty to be inactive when the validators is not too few.
         // Then these inactive validators will not be rewarded.
         if should_be_enforced && validators.len() > Self::minimum_validator_count() as usize {
-            <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
-                props.is_active = false;
-                props.last_inactive_since = <system::Module<T>>::block_number();
-                info!(
-                    "[slash_active_offline_validator] validator enforced to be inactive: {:?}",
-                    who!(who)
-                );
-            });
+            info!(
+                "[slash_active_offline_validator] validator enforced to be inactive: {:?}",
+                who!(who)
+            );
+            Self::force_to_be_inactive(who);
 
             // remove from the current validator set
             validators.retain(|x| *x != *who);

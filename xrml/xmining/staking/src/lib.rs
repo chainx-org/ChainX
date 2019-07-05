@@ -274,6 +274,11 @@ decl_module! {
             <MinimumPenalty<T>>::put(new);
         }
 
+        /// Set the minimum validator candidate threshold.
+        fn set_minimum_candidate_threshold(new: (T::Balance, T::Balance)) {
+            <MinimumCandidateThreshold<T>>::put(new);
+        }
+
     }
 }
 
@@ -307,6 +312,8 @@ decl_storage! {
         pub ValidatorCount get(validator_count) config(): u32;
         /// Minimum number of staking participants before emergency conditions are imposed.
         pub MinimumValidatorCount get(minimum_validator_count) config(): u32 = DEFAULT_MINIMUM_VALIDATOR_COUNT;
+        /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
+        pub MinimumCandidateThreshold get(minimum_candidate_threshold) : (T::Balance, T::Balance);
         /// The length of a staking era in sessions.
         pub SessionsPerEra get(sessions_per_era) config(): T::BlockNumber = T::BlockNumber::sa(1000);
         /// The length of the bonding duration in blocks.
@@ -367,6 +374,14 @@ impl<T: Trait> Module<T> {
         <NominationRecords<T>>::get(&(nominator.clone(), nominee.clone())).unwrap_or(record)
     }
 
+    pub fn self_bonded_of(who: &T::AccountId) -> T::Balance {
+        if let Some(record) = <NominationRecords<T>>::get(&(who.clone(), who.clone())) {
+            record.nomination
+        } else {
+            Default::default()
+        }
+    }
+
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
         <Intentions<T>>::get(intention).total_nomination
     }
@@ -390,6 +405,12 @@ impl<T: Trait> Module<T> {
     }
 
     // Private mutables
+    fn force_to_be_inactive(who: &T::AccountId) {
+        <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
+            props.is_active = false;
+            props.last_inactive_since = <system::Module<T>>::block_number();
+        });
+    }
 
     fn mutate_nomination_record(
         nominator: &T::AccountId,

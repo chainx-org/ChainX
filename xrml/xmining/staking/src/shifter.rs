@@ -14,11 +14,30 @@ impl<T: Trait> Module<T> {
     fn gather_candidates() -> Vec<(T::Balance, T::AccountId)> {
         let mut intentions = Self::intention_set()
             .into_iter()
-            .filter(|v| Self::is_active(v) && !Self::total_nomination_of(&v).is_zero())
+            .filter(|v| Self::is_qualified_candidate(&v))
             .map(|v| (Self::total_nomination_of(&v), v))
             .collect::<Vec<_>>();
         intentions.sort_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(&b1));
         intentions
+    }
+
+    /// A qualified candidate for validator election should be active and reach the minimum candidate threshold.
+    fn is_qualified_candidate(who: &T::AccountId) -> bool {
+        Self::is_active(who) && Self::meet_candidate_threshold(who)
+    }
+
+    /// See if the minimum candidate threshold is satified, otherwise it will be forced to be inactive.
+    fn meet_candidate_threshold(who: &T::AccountId) -> bool {
+        let (self_bonded, total_bonded) = Self::minimum_candidate_threshold();
+        let satisfy_the_threshold = Self::self_bonded_of(who) >= self_bonded
+            && Self::total_nomination_of(who) >= total_bonded;
+
+        if !satisfy_the_threshold {
+            info!("[meet_candidate_threshold] force {:?} to be inactive since it doesn't meet the minimum candidate threshold", who!(who));
+            Self::force_to_be_inactive(who);
+        }
+
+        satisfy_the_threshold
     }
 
     /// Report the total missed blocks info to the session module.

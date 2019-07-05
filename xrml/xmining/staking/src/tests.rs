@@ -277,9 +277,15 @@ fn claim_should_work() {
         assert_eq!(XAssets::pcx_free_balance(&2), 20);
         System::set_block_number(2);
         XSession::check_rotate_session(System::block_number());
+        assert_ok!(XAssets::pcx_issue(&2, 10 * 100_000_000));
+        assert_eq!(XAssets::pcx_free_balance(&2), 20 + 10 * 100_000_000);
+        assert_ok!(XStaking::nominate(
+            Origin::signed(2),
+            2.into(),
+            10 * 100_000_000,
+            vec![]
+        ));
         assert_eq!(XAssets::pcx_free_balance(&2), 20);
-        assert_ok!(XStaking::nominate(Origin::signed(2), 2.into(), 10, vec![]));
-        assert_eq!(XAssets::pcx_free_balance(&2), 10);
         System::set_block_number(3);
         XSession::check_rotate_session(System::block_number());
         assert_eq!(XAssets::pcx_free_balance(&2), 400000010);
@@ -407,5 +413,74 @@ fn offline_should_slash_and_kick() {
         );
         assert_eq!(XAssets::pcx_free_balance(&jackpot_addr), 0);
         assert_eq!(XAccounts::intention_props_of(&2).is_active, false);
+    });
+}
+
+#[test]
+fn minimum_candidate_threshold_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(XStaking::set_minimum_candidate_threshold((
+            0,
+            10 * 100_000_000
+        )));
+        assert_ok!(XStaking::register(Origin::signed(6), b"name".to_vec(),));
+        assert_ok!(XStaking::refresh(
+            Origin::signed(6),
+            None,
+            Some(true),
+            None,
+            None
+        ));
+
+        assert_ok!(XAssets::pcx_issue(&1, 5));
+        assert_ok!(XStaking::nominate(Origin::signed(1), 6.into(), 5, vec![]));
+
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+
+        assert_eq!(XStaking::is_active(&6), false);
+
+        assert_eq!(
+            XStaking::validators(),
+            vec![
+                (40, 4000000000),
+                (30, 3000000000),
+                (20, 2000000000),
+                (10, 1000000000)
+            ]
+        );
+
+        assert_ok!(XAssets::pcx_issue(&1, 10 * 100_000_000));
+        assert_ok!(XStaking::nominate(
+            Origin::signed(1),
+            6.into(),
+            10 * 100_000_000,
+            vec![]
+        ));
+
+        assert_ok!(XStaking::refresh(
+            Origin::signed(6),
+            None,
+            Some(true),
+            None,
+            None
+        ));
+
+        System::set_block_number(2);
+        XSession::check_rotate_session(System::block_number());
+
+        assert_eq!(XStaking::is_active(&6), true);
+
+        // Account 6 is a validator
+        assert_eq!(
+            XStaking::validators(),
+            vec![
+                (40, 4000000000),
+                (30, 3000000000),
+                (20, 2000000000),
+                (6, 1000000005),
+                (10, 1000000000)
+            ]
+        );
     });
 }
