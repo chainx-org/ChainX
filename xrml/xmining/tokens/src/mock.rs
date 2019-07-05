@@ -261,6 +261,25 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         (sdot_asset.clone(), true, true, vec![]),
     ];
 
+    let pair_list = vec![
+        (
+            XAssets::TOKEN.to_vec(),
+            XBitcoin::TOKEN.to_vec(),
+            9,
+            2,
+            100000,
+            true,
+        ),
+        (
+            sdot_asset.token(),
+            XAssets::TOKEN.to_vec(),
+            4,
+            2,
+            100000,
+            true,
+        ),
+    ];
+
     t.extend(
         consensus::GenesisConfig::<Test> {
             code: vec![],
@@ -327,7 +346,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     t.extend(
         GenesisConfig::<Test> {
-            token_discount: vec![(sdot_asset.token(), 50)],
+            token_discount: vec![(sdot_asset.token(), 50), (btc_asset.token(), 10)],
             _genesis_phantom_data: Default::default(),
         }
         .build_storage()
@@ -355,6 +374,16 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                 let value: u64 = *value;
                 XAssets::issue(&token, &accountid, value).unwrap();
             }
+        }
+
+        for (base, quote, pip_precision, tick_precision, price, status) in pair_list.iter() {
+            let _ = XSpot::add_trading_pair(
+                xspot::CurrencyPair::new(base.clone(), quote.clone()),
+                *pip_precision,
+                *tick_precision,
+                *price,
+                *status,
+            );
         }
 
         let intentions = vec![
@@ -399,6 +428,7 @@ pub type XAssets = xassets::Module<Test>;
 pub type XStaking = xstaking::Module<Test>;
 pub type XBitcoin = xbitcoin::Module<Test>;
 pub type XSdot = xsdot::Module<Test>;
+pub type XSpot = xspot::Module<Test>;
 pub type XRecords = xrecords::Module<Test>;
-pub type XTokens = Module<Test>;
 pub type XBridgeFeatures = xbridge_features::Module<Test>;
+pub type XTokens = Module<Test>;

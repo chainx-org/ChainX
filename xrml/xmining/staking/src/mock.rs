@@ -295,7 +295,28 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             pcx_desc,
         )
         .unwrap();
+
+        let btc = Asset::new(
+            b"BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8, // bitcoin precision
+            b"ChainX's Cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap();
+
+        let sdot = Asset::new(
+            b"SDOT".to_vec(), // token
+            b"Shadow DOT".to_vec(),
+            Chain::Ethereum,
+            3, //  precision
+            b"ChainX's Shadow Polkadot from Ethereum".to_vec(),
+        )
+        .unwrap();
+
         XAssets::bootstrap_register_asset(pcx, true, false).unwrap();
+        XAssets::bootstrap_register_asset(btc, true, true).unwrap();
+        XAssets::bootstrap_register_asset(sdot, true, true).unwrap();
 
         let intentions = vec![
             (10, 10 * 100_000_000, b"name10".to_vec(), b"".to_vec()),
@@ -324,6 +345,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             XStaking::bootstrap_refresh(&intention, Some(url), Some(true), None, None);
             XStaking::bootstrap_update_vote_weight(&intention, &intention, value, true);
         }
+
         XAssets::pcx_issue(&1, 10).unwrap();
         XAssets::pcx_issue(&2, 20).unwrap();
         XAssets::pcx_issue(&3, 30).unwrap();

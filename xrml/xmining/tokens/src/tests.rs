@@ -498,3 +498,43 @@ fn total_token_reward_should_be_right() {
         );
     });
 }
+
+#[test]
+fn cross_chain_assets_grow_too_fast_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        XStaking::set_distribution_ratio((1, 1)).unwrap();
+
+        let trading_pair = XSpot::trading_pair_of(0).unwrap();
+        // assert_ok!(XSpot::set_handicap(0, 1_000_000, 1_100_000));
+        print!("base: {:?}", String::from_utf8_lossy(&trading_pair.quote()));
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 10);
+        assert_ok!(XSpot::put_order(
+            Origin::signed(1),
+            0,
+            xspot::OrderType::Limit,
+            xspot::Side::Buy,
+            1000,
+            1_000_200,
+        ));
+
+        let sdot = <XSdot as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&sdot, &1, 10_000));
+
+        let btc = <XBitcoin as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&btc, &1, 10_000_000));
+
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+
+        println!("---------- (10, 1)");
+        XStaking::set_distribution_ratio((10, 1)).unwrap();
+        System::set_block_number(2);
+        XSession::check_rotate_session(System::block_number());
+
+        println!("---------- (1, 10)");
+        XStaking::set_distribution_ratio((1, 10)).unwrap();
+        System::set_block_number(3);
+        XSession::check_rotate_session(System::block_number());
+    });
+}

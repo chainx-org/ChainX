@@ -417,6 +417,18 @@ fn offline_should_slash_and_kick() {
 }
 
 #[test]
+fn multiply_by_rational_should_work() {
+    assert_eq!(XStaking::multiply_by_rational(100u64, 1, 3), 33);
+    assert_eq!(XStaking::multiply_by_rational(100u64, 2, 3), 66);
+    assert_eq!(XStaking::multiply_by_rational(200u64, 1, 3), 66);
+    assert_eq!(XStaking::multiply_by_rational(200u64, 1, 5), 40);
+    assert_eq!(
+        XStaking::multiply_by_rational(u64::max_value(), 2, 5),
+        (u128::from(u64::max_value()) * u128::from(2u32) / u128::from(5u32)) as u64
+    );
+}
+
+#[test]
 fn minimum_candidate_threshold_should_work() {
     with_externalities(&mut new_test_ext(), || {
         assert_ok!(XStaking::set_minimum_candidate_threshold((

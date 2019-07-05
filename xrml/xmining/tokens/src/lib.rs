@@ -374,15 +374,18 @@ impl<T: Trait> Module<T> {
         return pcx_asset.precision().as_();
     }
 
+    /// Compute the mining power of the given token.
     pub fn asset_power(token: &Token) -> Option<T::Balance> {
         let one_pcx = 10_u64.pow(Self::pcx_precision());
 
+        // One PCX one vote.
         if token.eq(&<xassets::Module<T> as ChainT>::TOKEN.to_vec()) {
             return Some(As::sa(one_pcx));
         }
 
         let discount = <TokenDiscount<T>>::get(token) as u64;
 
+        // One SDOT 0.1 vote.
         if token.eq(&<xsdot::Module<T> as ChainT>::TOKEN.to_vec()) {
             return Some(As::sa(one_pcx * discount / 100));
         } else {
@@ -399,8 +402,8 @@ impl<T: Trait> Module<T> {
         None
     }
 
-    // Convert the total issuance of some token to equivalent PCX, including the PCX precision.
-    // aver_asset_price(token) * total_issuance(token) / 10^token.precision
+    /// Convert the total issuance of some token to equivalent PCX, including the PCX precision.
+    /// aver_asset_price(token) * total_issuance(token) / 10^token.precision
     pub fn trans_pcx_stake(token: &Token) -> Option<T::Balance> {
         if let Some(power) = Self::asset_power(token) {
             match <xassets::Module<T>>::get_asset(token) {
