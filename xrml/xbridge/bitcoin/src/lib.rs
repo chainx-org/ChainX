@@ -40,7 +40,7 @@ use btc_primitives::H256;
 pub use btc_primitives::H264;
 use btc_ser::{deserialize, Reader};
 
-use self::traits::RelayTransaction;
+pub use self::traits::RelayTransaction;
 use self::tx::handler::remove_pending_deposit;
 #[cfg(feature = "std")]
 use self::tx::utils::addr2vecu8;
@@ -54,6 +54,7 @@ pub use self::types::{
 };
 use self::types::{DepositCache, TxType};
 
+pub use self::lockup::types::LockupRelayTx;
 use self::lockup::Trait as LockupTrait;
 
 pub trait Trait:
@@ -126,6 +127,8 @@ decl_storage! {
         pub ConfirmationNumber get(confirmation_number) config(): u32;
         /// get BtcWithdrawalFee from genesis_config
         pub BtcWithdrawalFee get(btc_withdrawal_fee) config(): u64;
+        /// min deposit value limit, default is 10w sotashi(0.001 BTC)
+        pub BtcMinDeposit get(btc_min_deposit): u64 = 1 * 100000;
         /// max withdraw account count in bitcoin withdrawal transaction
         pub MaxWithdrawalCount get(max_withdrawal_count) config(): u32;
     }
@@ -266,11 +269,22 @@ decl_module! {
             Ok(())
         }
 
+        pub fn set_btc_deposit_limit(value: T::Balance) {
+            BtcMinDeposit::<T>::put(value.as_() as u64);
+        }
+
         pub fn set_btc_withdrawal_fee_by_trustees(origin, fee: T::Balance) -> Result {
             let from = ensure_signed(origin)?;
             T::TrusteeMultiSigProvider::check_multisig(&from)?;
 
             Self::set_btc_withdrawal_fee(fee)
+        }
+
+        pub fn set_btc_deposit_limit_by_trustees(origin, value: T::Balance) {
+            let from = ensure_signed(origin)?;
+            T::TrusteeMultiSigProvider::check_multisig(&from)?;
+
+            let _ = Self::set_btc_deposit_limit(value);
         }
 
         pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: ApplicationState) -> Result {

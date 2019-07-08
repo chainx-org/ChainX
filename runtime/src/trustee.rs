@@ -15,6 +15,7 @@ impl TrusteeCall<AccountId> for Call {
         match self {
             Call::XBridgeOfBTC(call) => match call {
                 XBitcoinCall::set_btc_withdrawal_fee_by_trustees(..) => true,
+                XBitcoinCall::set_btc_deposit_limit_by_trustees(..) => true,
                 XBitcoinCall::fix_withdrawal_state_by_trustees(..) => true,
                 XBitcoinCall::remove_pending_by_trustees(..) => true,
                 _ => false,

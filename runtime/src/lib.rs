@@ -551,16 +551,17 @@ impl_runtime_apis! {
         fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>> {
             let mut map = BTreeMap::new();
             for chain in xassets::Chain::iterator() {
-                if let Some((_, info)) = Self::trustee_session_info_for(*chain) {
+                if let Some((_, info)) = Self::trustee_session_info_for(*chain, None) {
                     map.insert(*chain, info);
                 }
             }
             map
         }
-        fn trustee_session_info_for(chain: xassets::Chain) -> Option<(u32, GenericAllSessionInfo<AccountId>)> {
-            XBridgeFeatures::current_trustee_session_info_for(chain).map(|info| (
-                (XBridgeFeatures::current_session_number(chain), info)
-            ))
+        fn trustee_session_info_for(chain: xassets::Chain, number: Option<u32>) -> Option<(u32, GenericAllSessionInfo<AccountId>)> {
+            XBridgeFeatures::trustee_session_info_for(chain, number).map(|info| {
+                let num = number.unwrap_or(XBridgeFeatures::current_session_number(chain));
+                (num, info)
+            })
         }
     }
 }

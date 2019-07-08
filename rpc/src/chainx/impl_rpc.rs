@@ -14,7 +14,7 @@ use client::runtime_api::Metadata;
 use primitives::crypto::UncheckedInto;
 use primitives::{Blake2Hasher, H160, H256};
 use runtime_primitives::generic::SignedBlock;
-use runtime_primitives::traits::{Block as BlockT, NumberFor, ProvideRuntimeApi, Zero};
+use runtime_primitives::traits::{As, Block as BlockT, NumberFor, ProvideRuntimeApi, Zero};
 use support::storage::{StorageMap, StorageValue};
 // chainx
 use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber};
@@ -180,6 +180,30 @@ where
             return Ok(None);
         }
         self.withdrawal_limit(self.block_id_by_hash(hash)?, token)
+    }
+
+    fn deposit_limit(
+        &self,
+        token: String,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<DepositLimit>> {
+        let token: xassets::Token = token.as_bytes().to_vec();
+
+        if xassets::is_valid_token(&token).is_err() {
+            return Ok(None);
+        }
+        let state = self.state_at(hash)?;
+        // todo use `cando` to refactor if
+        if token.as_slice() == xbitcoin::Module::<Runtime>::TOKEN {
+            let key = <xbitcoin::BtcMinDeposit<Runtime>>::key();
+            Self::pickout::<u64>(&state, &key, Hasher::TWOX128).map(|value| {
+                Some(DepositLimit {
+                    minimal_deposit: value.unwrap_or(As::sa(100000)),
+                })
+            })
+        } else {
+            return Ok(None);
+        }
     }
 
     fn deposit_list(
@@ -775,10 +799,11 @@ where
     fn trustee_session_info_for(
         &self,
         chain: Chain,
+        number: Option<u32>,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Value>> {
         if let Some((number, info)) =
-            self.trustee_session_info_for(self.block_id_by_hash(hash)?, chain)?
+            self.trustee_session_info_for(self.block_id_by_hash(hash)?, chain, number)?
         {
             return Ok(parse_trustee_session_info(chain, number, info));
         } else {

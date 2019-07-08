@@ -330,12 +330,21 @@ impl<T: Trait> Module<T> {
         Ok(generic_all_info)
     }
 
-    pub fn current_trustee_session_info_for(
+    pub fn trustee_session_info_for(
         chain: Chain,
+        number: Option<u32>,
     ) -> Option<GenericAllSessionInfo<T::AccountId>> {
         match chain {
             Chain::Bitcoin => {
-                let session_info = <Self as TrusteeSession<T::AccountId, BitcoinTrusteeAddrInfo>>::current_trustee_session().ok();
+                let session_info = if let Some(num) = number {
+                    <Self as TrusteeSession<T::AccountId, BitcoinTrusteeAddrInfo>>::trustee_session(
+                        num,
+                    )
+                    .ok()
+                } else {
+                    <Self as TrusteeSession<T::AccountId, BitcoinTrusteeAddrInfo>>::current_trustee_session().ok()
+                };
+
                 session_info.map(|info| {
                     into_generic_all_info(info, |accountid: &T::AccountId| {
                         Self::bitcoin_trustee_intention_props_of(accountid)

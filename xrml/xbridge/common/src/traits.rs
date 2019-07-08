@@ -23,6 +23,10 @@ pub trait TrusteeForChain<AccountId, TrusteeEntity: IntoVecu8, TrusteeAddress: I
 }
 
 pub trait TrusteeSession<AccountId, TrusteeAddress: IntoVecu8> {
+    fn trustee_session(
+        number: u32,
+    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, &'static str>;
+
     fn current_trustee_session(
     ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, &'static str>;
 

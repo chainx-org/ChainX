@@ -375,6 +375,12 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for DepositInf
     }
 }
 
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DepositLimit {
+    pub minimal_deposit: Balance,
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WithdrawInfo {

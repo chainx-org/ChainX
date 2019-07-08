@@ -99,7 +99,7 @@ pub mod xbridge_api {
 
             fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountIdForApi>>;
 
-            fn trustee_session_info_for(chain: Chain) -> Option<(u32, GenericAllSessionInfo<AccountIdForApi>)>;
+            fn trustee_session_info_for(chain: Chain, number: Option<u32>) -> Option<(u32, GenericAllSessionInfo<AccountIdForApi>)>;
         }
     }
 }

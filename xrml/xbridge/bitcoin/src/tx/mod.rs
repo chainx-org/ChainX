@@ -47,9 +47,12 @@ pub fn detect_transaction_type<T: Trait, RT: RelayTransaction>(
         })
         .ok();
     let network = get_networkid::<T>();
+    let min_deposit = Module::<T>::btc_min_deposit();
+
     detect_transaction_type_impl::<_, _>(
         relay_tx,
         network,
+        min_deposit,
         addr_pair,
         last_addr_pair,
         detect_lockup_type::<T::XBitcoinLockup>,
@@ -69,6 +72,7 @@ pub fn detect_transaction_type<T: Trait, RT: RelayTransaction>(
 pub fn detect_transaction_type_impl<RT: RelayTransaction, F: Fn(&Transaction) -> TxType>(
     relay_tx: &RT,
     network: Network,
+    min_deposit: u64,
     trustee_addr_pair: (Address, Address),
     old_trustee_addr_pair: Option<(Address, Address)>,
     detect_lockup_type: F,
@@ -86,11 +90,16 @@ pub fn detect_transaction_type_impl<RT: RelayTransaction, F: Fn(&Transaction) ->
         None => None,
     };
     // parse output addr
-    let outputs: Vec<Option<Address>> = relay_tx
+    let outputs: Vec<(Option<Address>, u64)> = relay_tx
         .raw_tx()
         .outputs
         .iter()
-        .map(|out| parse_output_addr_with_networkid(&out.script_pubkey.to_vec().into(), network))
+        .map(|out| {
+            (
+                parse_output_addr_with_networkid(&out.script_pubkey.to_vec().into(), network),
+                out.value,
+            )
+        })
         .collect();
     // ---------- parse finish
 
@@ -102,7 +111,7 @@ pub fn detect_transaction_type_impl<RT: RelayTransaction, F: Fn(&Transaction) ->
             let input_is_trustee =
                 equal_addr(&input_addr, &hot_addr) || equal_addr(&input_addr, &cold_addr);
             // judge if all outputs contains hot/cold trustee
-            let all_outputs_trustee = outputs.iter().all(|item| {
+            let all_outputs_trustee = outputs.iter().all(|(item, _)| {
                 if let Some(addr) = item {
                     if equal_addr(addr, &hot_addr) || equal_addr(addr, &cold_addr) {
                         return true;
@@ -127,11 +136,15 @@ pub fn detect_transaction_type_impl<RT: RelayTransaction, F: Fn(&Transaction) ->
                     }
                 }
                 // any output contains hot trustee addr
-                let check_outputs = outputs.iter().any(|item| {
+                let check_outputs = outputs.iter().any(|(item, value)| {
                     if let Some(addr) = item {
                         // only hot addr for deposit
                         if equal_addr(addr, &hot_addr) {
-                            return true;
+                            if *value >= min_deposit {
+                                return true;
+                            } else {
+                                warn!("[detect_transaction_type_impl]|it's maybe a deposit tx, but not match deposit min limit|value:{:}", value);
+                            }
                         }
                     }
                     false

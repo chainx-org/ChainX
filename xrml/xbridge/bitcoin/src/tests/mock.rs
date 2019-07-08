@@ -123,6 +123,21 @@ impl Trait for Test {
 
 pub struct DummyTrusteeSession;
 impl xbridge_common::traits::TrusteeSession<AccountId, TrusteeAddrInfo> for DummyTrusteeSession {
+    fn trustee_session(
+        number: u32,
+    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddrInfo>, &'static str> {
+        Ok(TrusteeSessionInfo {
+            trustee_list: [
+                AccountId::from_slice(&[0]),
+                AccountId::from_slice(&[1]),
+                AccountId::from_slice(&[2]),
+            ]
+            .to_vec(),
+            hot_address: TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
+            cold_address: TrusteeAddrInfo::from_vecu8(&[1]).unwrap(),
+        })
+    }
+
     fn current_trustee_session(
     ) -> std::result::Result<TrusteeSessionInfo<AccountId, TrusteeAddrInfo>, &'static str> {
         Ok(TrusteeSessionInfo {
