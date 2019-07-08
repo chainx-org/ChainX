@@ -92,10 +92,19 @@ fn verify_sig(
 /// Check signed transactions
 pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, &'static str> {
     let redeem_script = get_hot_trustee_redeem_script::<T>()?;
-    let (pubkeys, _, _) = redeem_script
+    parse_and_check_signed_tx_impl(tx, redeem_script)
+}
+
+/// for test convenient
+#[inline]
+pub fn parse_and_check_signed_tx_impl(
+    tx: &Transaction,
+    script: Script,
+) -> result::Result<u32, &'static str> {
+    let (pubkeys, _, _) = script
         .parse_redeem_script()
         .ok_or("Parse redeem script failed")?;
-    let bytes_sedeem_script = redeem_script.to_bytes();
+    let bytes_redeem_script = script.to_bytes();
 
     let mut v = Vec::new();
     // any input check meet error would return
@@ -114,13 +123,13 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u
         for sig in sigs.iter() {
             let mut verify = false;
             for pubkey in pubkeys.iter() {
-                if verify_sig(sig, pubkey, tx, &bytes_sedeem_script, i) {
+                if verify_sig(sig, pubkey, tx, &bytes_redeem_script, i) {
                     verify = true;
                     break;
                 }
             }
             if !verify {
-                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, u8array_to_hex(&bytes_sedeem_script));
+                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, u8array_to_hex(&bytes_redeem_script));
                 return Err("Verify sign failed");
             }
         }

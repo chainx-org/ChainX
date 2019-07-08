@@ -120,7 +120,7 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         /// register_asset to module, should allow by root
-        fn register_asset(asset: Asset, is_online: bool, is_psedu_intention: bool) -> Result {
+        pub fn register_asset(asset: Asset, is_online: bool, is_psedu_intention: bool) -> Result {
             asset.is_valid()?;
             info!("[register_asset]|{:?}|is_online:{:}|is_psedu_intention:{:}", asset, is_online, is_psedu_intention);
 
@@ -138,7 +138,7 @@ decl_module! {
         }
 
         /// revoke asset, mark this asset is invalid
-        fn revoke_asset(token: Token) -> Result {
+        pub fn revoke_asset(token: Token) -> Result {
             is_valid_token(&token)?;
             Self::remove_asset(&token)?;
 
@@ -147,7 +147,7 @@ decl_module! {
             Ok(())
         }
 
-        fn modify_asset_info(token: Token, token_name: Option<Token>, desc: Option<Desc>) {
+        pub fn modify_asset_info(token: Token, token_name: Option<Token>, desc: Option<Desc>) {
             if let Some(ref mut info) = Self::asset_info(&token) {
                 token_name.map(|name| info.0.set_token_name(name));
                 desc.map(|desc| info.0.set_desc(desc));
@@ -159,29 +159,37 @@ decl_module! {
         }
 
         /// set free token for an account
-        fn set_balance(who: <T::Lookup as StaticLookup>::Source, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> Result {
+        pub fn set_balance(who: <T::Lookup as StaticLookup>::Source, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> Result {
             let who = <T as system::Trait>::Lookup::lookup(who)?;
             info!("[set_balance]|set balances by root|who:{:?}|token:{:}|balances_map:{:?}", who, token!(token), balances);
             Self::set_balance_by_root(&who, &token, balances)?;
             Ok(())
         }
 
-        fn set_asset_limit_props(token: Token, props: BTreeMap<AssetLimit, bool>) {
-            AssetLimitProps::<T>::insert(&token, props)
+        pub fn set_asset_limit_props(token: Token, props: BTreeMap<AssetLimit, bool>) {
+            if Self::asset_info(&token).is_some() {
+                AssetLimitProps::<T>::insert(&token, props)
+            } else {
+                error!("[set_asset_limit_props]|asset not exist|token:{:}", token!(token));
+            }
         }
 
-        fn modify_asset_limit(token: Token, limit: AssetLimit, can_do: bool) {
-            AssetLimitProps::<T>::mutate(token, |limit_map| {
-                if can_do {
-                    limit_map.remove(&limit);
-                } else {
-                    limit_map.insert(limit, false);
-                }
-            })
+        pub fn modify_asset_limit(token: Token, limit: AssetLimit, can_do: bool) {
+            if Self::asset_info(&token).is_some() {
+                AssetLimitProps::<T>::mutate(token, |limit_map| {
+                    if can_do {
+                        limit_map.remove(&limit);
+                    } else {
+                        limit_map.insert(limit, false);
+                    }
+                })
+            } else {
+                error!("[set_asset_limit_props]|asset not exist|token:{:}", token!(token));
+            }
         }
 
         /// transfer between account
-        fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
+        pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
             let transactor = ensure_signed(origin)?;
             let dest = <T as system::Trait>::Lookup::lookup(dest)?;
             debug!("[transfer]|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));

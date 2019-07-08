@@ -36,7 +36,7 @@ btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoi
 btc-script = { package = "script", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
 
 [dev-dependencies]
-hex = "0.3"
+hex-literal = "0.2"
 # Substrate
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
 

@@ -4,7 +4,7 @@ use parity_codec::Decode;
 // substrate
 use primitives::traits::{As, MaybeDebug};
 use rstd::{prelude::*, result};
-use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap};
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue};
 use system::ensure_signed;
 
 // light-bitcoin
@@ -18,7 +18,7 @@ use xbridge_common::traits::{CrossChainBindingV2, Extractable};
 use xr_primitives::Name;
 #[cfg(feature = "std")]
 use xsupport::try_hex_or_str;
-use xsupport::{debug, error, warn};
+use xsupport::{debug, error, info, warn};
 
 use crate::tx::handler::TxHandler;
 use crate::tx::utils::{
@@ -58,9 +58,9 @@ decl_module! {
 
             XBitcoin::<T>::apply_push_transaction(relay_tx)?;
 
-            // 8 is trick number for call difficulty power, if change in `runtime/src/fee.rs`,
+            // 50 is trick number for call difficulty power, if change in `runtime/src/fee.rs`,
             // should modify this number.
-            xbridge_common::Module::<T>::reward_relayer(&Self::TOKEN.to_vec(), &from, 8, tx.len() as u64);
+            xbridge_common::Module::<T>::reward_relayer(&Self::TOKEN.to_vec(), &from, 50, tx.len() as u64);
             Ok(())
         }
 
@@ -69,6 +69,11 @@ decl_module! {
                 destroy_utxo::<T>(utxo.0, utxo.1);
                 Self::deposit_event(RawEvent::UnlockedFromRoot(utxo.0, utxo.1));
             }
+        }
+
+        pub fn set_locked_coin_limit(limit: (u64, u64)) {
+            LockedCoinLimit::<T>::put(&limit);
+            info!("[set_locked_coin_limit]|set new lockup bitoin limit to:{:?}", limit);
         }
     }
 }
@@ -81,8 +86,8 @@ decl_storage! {
         /// sum value for single Bitcoin addr
         pub AddressLockedCoin get(address_locked_coin): map BitcoinAddress => u64;
 
-        /// single addr and ont output limit coin value, default limit is 0.1 BTC ~ 10 BTC
-        pub LockedCoinLimit get(locked_coin_limit): (u64, u64) = (1*10000000, 10*100000000);
+        /// single addr and ont output limit coin value, default limit is 0.01 BTC ~ 10 BTC
+        pub LockedCoinLimit get(locked_coin_limit): (u64, u64) = (1*1000000, 10*100000000);
     }
 }
 
@@ -200,7 +205,10 @@ pub fn handle_lockup_tx<T: Trait>(tx_handle: &TxHandler) -> Result {
     Ok(())
 }
 
-fn handle_lock_tx<T: Trait>(tx: &Transaction, tx_hash: &H256) -> result::Result<(), &'static str> {
+pub(crate) fn handle_lock_tx<T: Trait>(
+    tx: &Transaction,
+    tx_hash: &H256,
+) -> result::Result<(), &'static str> {
     let network = get_networkid::<T>();
     let addr_type = xsystem::Module::<T>::address_type();
     let value_limit = Module::<T>::locked_coin_limit();
@@ -221,13 +229,19 @@ fn handle_lock_tx<T: Trait>(tx: &Transaction, tx_hash: &H256) -> result::Result<
     })?;
     let output_value = tx.outputs[out_index].value;
 
-    // set storage and issue token
+    // new value should not more than single addr limit
     let current_value = Module::<T>::address_locked_coin(addr);
     let addr_value = current_value + output_value;
     if addr_value > value_limit.1 {
         error!("[handle_lock_tx]|lock value more than single addr limit|cur_value:{:}|try lock:{:}|addr:{:?}", current_value, output_value, addr);
-        return Ok(()); // must return ok, not err
+        return Err("lock value more than single addr limit");
     }
+
+    // set storage and issue token
+
+    // try to unlock tx before new issue, if any error in it, just print error log
+    // it's unlock and lock tx
+    handle_unlock_tx::<T>(tx, tx_hash);
 
     let (accountid, channel) = account_info;
     let key = (*tx_hash, out_index as u32);
@@ -332,6 +346,8 @@ where
                     let value = output.value;
                     if limit.0 <= value && value <= limit.1 {
                         return Some((addr, index, account_info));
+                    } else {
+                        warn!("[parse_lock_info]|it's a lock tx but output value not match limit|value:{:}|limit:{:?}", value, limit);
                     }
                 }
             }

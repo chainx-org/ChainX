@@ -17,9 +17,9 @@ use support::{decl_event, decl_module, decl_storage, StorageMap};
 
 use xassets::TokenJackpotAccountIdFor;
 use xr_primitives::{Name, Token};
+use xsupport::{debug, error, warn};
 #[cfg(feature = "std")]
-use xsupport::token;
-use xsupport::{debug, error};
+use xsupport::{token, try_hex_or_str};
 
 use crate::traits::CrossChainBindingV2;
 
@@ -30,7 +30,7 @@ pub trait Trait: system::Trait + xaccounts::Trait + xassets::Trait + xfee_manage
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId {
-        ChannelBinding(Token, AccountId, Option<AccountId>),
+        ChannelBinding(Token, AccountId, AccountId),
     }
 );
 
@@ -92,22 +92,31 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> CrossChainBindingV2<T::AccountId> for Module<T> {
     fn update_binding(token: &Token, who: &T::AccountId, channel_name: Option<Name>) {
-        let channel_accountid = channel_name
-            .and_then(|name| xaccounts::Module::<T>::intention_of(name))
-            .map(|accountid| {
-                if Self::get_binding_info(token, who).is_none() {
-                    // set to storage
-                    let key = (token.clone(), who.clone());
-                    CrossChainBinding::<T>::insert(&key, accountid.clone());
-                }
-                accountid
-            });
+        if let Some(name) = channel_name {
+            if let Some(channel) = xaccounts::Module::<T>::intention_of(&name) {
+                match Self::get_binding_info(token, who) {
+                    None => {
+                        // set to storage
+                        let key = (token.clone(), who.clone());
+                        CrossChainBinding::<T>::insert(&key, channel.clone());
 
-        Self::deposit_event(RawEvent::ChannelBinding(
-            token.clone(),
-            who.clone(),
-            channel_accountid,
-        ));
+                        Self::deposit_event(RawEvent::ChannelBinding(
+                            token.clone(),
+                            who.clone(),
+                            channel,
+                        ));
+                    }
+                    Some(_channel) => {
+                        debug!("[update_binding]|already has binding, do nothing|token:{:}|who:{:?}|channel:{:?}", token!(token), who, _channel);
+                    }
+                }
+            } else {
+                warn!(
+                    "[update_binding]|channel not exist, do not set binding|name:{:?}",
+                    try_hex_or_str(&name)
+                );
+            };
+        };
     }
     fn get_binding_info(token: &Token, who: &T::AccountId) -> Option<T::AccountId> {
         Self::crosschain_binding(&(token.clone(), who.clone()))

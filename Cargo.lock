@@ -5617,7 +5617,7 @@ version = "1.0.1"
 dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "crypto 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex-literal 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "keys 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "merkle 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",

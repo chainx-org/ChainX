@@ -2,7 +2,7 @@
 
 pub mod handler;
 pub mod utils;
-mod validator;
+pub mod validator;
 
 // Substrate
 use primitives::traits::As;

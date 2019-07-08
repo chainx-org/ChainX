@@ -8,6 +8,7 @@ use crate::*;
 use primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use primitives::traits::{BlakeTwo256, IdentityLookup};
 use primitives::BuildStorage;
+use substrate_primitives::ed25519::Public;
 use substrate_primitives::{Blake2Hasher, H256 as S_H256};
 use support::impl_outer_origin;
 
@@ -19,7 +20,7 @@ impl_outer_origin! {
     pub enum Origin for Test {}
 }
 
-type AccountId = u64;
+type AccountId = Public;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
@@ -32,7 +33,7 @@ impl system::Trait for Test {
     type Hashing = BlakeTwo256;
     type Digest = Digest;
     type AccountId = AccountId;
-    type Lookup = IdentityLookup<u64>;
+    type Lookup = IdentityLookup<AccountId>;
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
@@ -64,9 +65,9 @@ impl xsystem::ValidatorList<AccountId> for MockValidatorList {
 pub struct MockValidator;
 impl xsystem::Validator<AccountId> for MockValidator {
     fn get_validator_by_name(_name: &[u8]) -> Option<AccountId> {
-        Some(0)
+        Some(AccountId::default())
     }
-    fn get_validator_name(accountid: &u64) -> Option<Vec<u8>> {
+    fn get_validator_name(accountid: &AccountId) -> Option<Vec<u8>> {
         None
     }
 }
@@ -76,12 +77,12 @@ impl xaccounts::Trait for Test {
 }
 
 pub struct MockDeterminator;
-impl xaccounts::IntentionJackpotAccountIdFor<u64> for MockDeterminator {
-    fn accountid_for_safe(_: &u64) -> Option<u64> {
-        Some(1000)
+impl xaccounts::IntentionJackpotAccountIdFor<AccountId> for MockDeterminator {
+    fn accountid_for_unsafe(_: &AccountId) -> AccountId {
+        AccountId::default()
     }
-    fn accountid_for_unsafe(_: &u64) -> u64 {
-        1000
+    fn accountid_for_safe(_: &AccountId) -> Option<AccountId> {
+        Some(AccountId::default())
     }
 }
 
@@ -90,12 +91,12 @@ impl xrecords::Trait for Test {
 }
 
 impl xassets::Trait for Test {
-    type Event = ();
     type Balance = u64;
     type OnNewAccount = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
     type DetermineTokenJackpotAccountId = ();
+    type Event = ();
 }
 
 impl xfee_manager::Trait for Test {
@@ -113,7 +114,7 @@ impl lockup::Trait for Test {
 impl Trait for Test {
     type XBitcoinLockup = Self;
 
-    type AccountExtractor = DummyExtractor;
+    type AccountExtractor = xbridge_common::extractor::Extractor<AccountId>;
     type TrusteeSessionProvider = DummyTrusteeSession;
     type TrusteeMultiSigProvider = DummyBitcoinTrusteeMultiSig;
     type CrossChainProvider = DummyCrossChain;
@@ -121,20 +122,30 @@ impl Trait for Test {
 }
 
 pub struct DummyTrusteeSession;
-impl xbridge_common::traits::TrusteeSession<u64, TrusteeAddrInfo> for DummyTrusteeSession {
+impl xbridge_common::traits::TrusteeSession<AccountId, TrusteeAddrInfo> for DummyTrusteeSession {
     fn current_trustee_session(
-    ) -> std::result::Result<TrusteeSessionInfo<u64, TrusteeAddrInfo>, &'static str> {
+    ) -> std::result::Result<TrusteeSessionInfo<AccountId, TrusteeAddrInfo>, &'static str> {
         Ok(TrusteeSessionInfo {
-            trustee_list: [0, 1, 2].to_vec(),
+            trustee_list: [
+                AccountId::from_slice(&[0]),
+                AccountId::from_slice(&[1]),
+                AccountId::from_slice(&[2]),
+            ]
+            .to_vec(),
             hot_address: TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
             cold_address: TrusteeAddrInfo::from_vecu8(&[1]).unwrap(),
         })
     }
 
     fn last_trustee_session(
-    ) -> std::result::Result<TrusteeSessionInfo<u64, TrusteeAddrInfo>, &'static str> {
+    ) -> std::result::Result<TrusteeSessionInfo<AccountId, TrusteeAddrInfo>, &'static str> {
         Ok(TrusteeSessionInfo {
-            trustee_list: [0, 1, 2].to_vec(),
+            trustee_list: [
+                AccountId::from_slice(&[0]),
+                AccountId::from_slice(&[1]),
+                AccountId::from_slice(&[2]),
+            ]
+            .to_vec(),
             hot_address: TrusteeAddrInfo::from_vecu8(&[0]).unwrap(),
             cold_address: TrusteeAddrInfo::from_vecu8(&[1]).unwrap(),
         })
@@ -142,198 +153,30 @@ impl xbridge_common::traits::TrusteeSession<u64, TrusteeAddrInfo> for DummyTrust
 }
 
 pub struct DummyCrossChain;
-impl xbridge_common::traits::CrossChainBinding<u64, BitcoinAddress> for DummyCrossChain {
-    fn update_binding(who: &u64, addr: btc_keys::Address, channel_name: Option<Vec<u8>>) {}
+impl xbridge_common::traits::CrossChainBinding<AccountId, BitcoinAddress> for DummyCrossChain {
+    fn update_binding(who: &AccountId, addr: btc_keys::Address, channel_name: Option<Vec<u8>>) {}
 
-    fn get_binding_info(addr: &btc_keys::Address) -> Option<(u64, Option<u64>)> {
-        Some((0, Some(0)))
+    fn get_binding_info(addr: &btc_keys::Address) -> Option<(AccountId, Option<AccountId>)> {
+        Some((
+            AccountId::from_slice(&[0]),
+            Some(AccountId::from_slice(&[1])),
+        ))
     }
-}
-
-pub struct DummyExtractor;
-impl xbridge_common::traits::Extractable<u64> for DummyExtractor {
-    fn account_info(data: &[u8], _: u8) -> Option<(u64, Option<Vec<u8>>)> {
-        let v = split(data);
-        if v.len() < 1 {
-            return None;
-        }
-
-        if v[0].len() != 48 {
-            return None;
-        }
-
-        let channel_name = if v.len() > 1 {
-            Some(v[1].to_vec())
-        } else {
-            None
-        };
-        Some((999, channel_name))
-    }
-}
-
-fn split(data: &[u8]) -> Vec<Vec<u8>> {
-    data.split(|x| *x == b'@').map(|d| d.to_vec()).collect()
 }
 
 pub struct DummyBitcoinTrusteeMultiSig;
-impl xbridge_common::traits::TrusteeMultiSig<u64> for DummyBitcoinTrusteeMultiSig {
-    fn multisig_for_trustees() -> u64 {
-        777
+impl xbridge_common::traits::TrusteeMultiSig<AccountId> for DummyBitcoinTrusteeMultiSig {
+    fn multisig_for_trustees() -> AccountId {
+        AccountId::from_slice(&[9])
     }
 }
 
 pub type Timestamp = timestamp::Module<Test>;
+pub type XAssets = xassets::Module<Test>;
 pub type XBridgeOfBTC = Module<Test>;
+pub type XBridgeOfBTCLockup = lockup::Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut r = system::GenesisConfig::<Test>::default()
-        .build_storage()
-        .unwrap()
-        .0;
-
-    // bridge btc
-    r.extend(
-        GenesisConfig::<Test> {
-            // start genesis block: (genesis, blocknumber)
-            genesis: (
-                BlockHeader {
-                    version: 980090880,
-                    previous_header_hash: h256_from_rev_str(
-                        "00000000000000ab706b663326210d03780fea6ecfe0cc59c78f0c7dddba9cc2",
-                    ),
-                    merkle_root_hash: h256_from_rev_str(
-                        "91ee572484dabc6edf5a8da44a4fb55b5040facf66624b2a37c4f633070c60c8",
-                    ),
-                    time: 1550454022,
-                    bits: Compact::new(436283074),
-                    nonce: 47463732,
-                },
-                1457525,
-            ),
-            genesis_hash: h256_from_rev_str(
-                "0000000000000059227e29b86313c99ac908a1d71db97632b402f13a569b4709",
-            ),
-            params_info: Params::new(
-                520159231,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,
-            ), // retargeting_factor
-            network_id: 0,
-            confirmation_number: 3,
-            reserved_block: 2100,
-            btc_withdrawal_fee: 1000,
-            max_withdrawal_count: 100,
-            _genesis_phantom_data: Default::default(),
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-    r.into()
-}
-
-pub fn new_test_ext_err_genesisblock() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut r = system::GenesisConfig::<Test>::default()
-        .build_storage()
-        .unwrap()
-        .0;
-
-    // bridge btc
-    r.extend(
-        GenesisConfig::<Test> {
-            // start genesis block: (genesis, blocknumber)
-            genesis: (
-                BlockHeader {
-                    version: 980090880,
-                    previous_header_hash: h256_from_rev_str(
-                        "00000000000000ab706b663326210d03780fea6ecfe0cc59c78f0c7dddba9cc2",
-                    ),
-                    merkle_root_hash: h256_from_rev_str(
-                        "91ee572484dabc6edf5a8da44a4fb55b5040facf66624b2a37c4f633070c60c8",
-                    ),
-                    time: 1550454022,
-                    bits: Compact::new(436283074),
-                    nonce: 47463732,
-                },
-                1457525,
-            ),
-            genesis_hash: h256_from_rev_str(
-                "0000000000000059227e29b86313c99ac908a1d71db97632b402f13a569b4709",
-            ),
-            params_info: Params::new(
-                520159231,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,
-            ), // retargeting_factor
-            network_id: 0,
-            confirmation_number: 3,
-            reserved_block: 2100,
-            btc_withdrawal_fee: 1000,
-            max_withdrawal_count: 100,
-            _genesis_phantom_data: Default::default(),
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-    r.into()
-}
-
-pub fn new_test_ext2() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut r = system::GenesisConfig::<Test>::default()
-        .build_storage()
-        .unwrap()
-        .0;
-
-    // bridge btc
-    r.extend(
-        GenesisConfig::<Test> {
-            // start genesis block: (genesis, blocknumber)
-            genesis: (
-                BlockHeader {
-                    version: 980090880,
-                    previous_header_hash: h256_from_rev_str(
-                        "00000000000000ab706b663326210d03780fea6ecfe0cc59c78f0c7dddba9cc2",
-                    ),
-                    merkle_root_hash: h256_from_rev_str(
-                        "91ee572484dabc6edf5a8da44a4fb55b5040facf66624b2a37c4f633070c60c8",
-                    ),
-                    time: 1550454022,
-                    bits: Compact::new(436283074),
-                    nonce: 47463732,
-                },
-                1457525,
-            ),
-            genesis_hash: h256_from_rev_str(
-                "0000000000000059227e29b86313c99ac908a1d71db97632b402f13a569b4709",
-            ),
-            params_info: Params::new(
-                520159231,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,
-            ), // retargeting_factor
-            network_id: 0,
-            confirmation_number: 3,
-            reserved_block: 2100,
-            btc_withdrawal_fee: 1000,
-            max_withdrawal_count: 100,
-            _genesis_phantom_data: Default::default(),
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-    r.into()
-}
-
-#[allow(unused)]
-pub fn new_test_ext3() -> runtime_io::TestExternalities<Blake2Hasher> {
     let mut r = system::GenesisConfig::<Test>::default()
         .build_storage()
         .unwrap()
@@ -387,6 +230,16 @@ pub fn new_test_mainnet() -> runtime_io::TestExternalities<Blake2Hasher> {
         .build_storage()
         .unwrap()
         .0;
+
+    r.extend(
+        xsystem::GenesisConfig::<Test> {
+            network_props: (xsystem::NetworkType::Mainnet, 44),
+            _genesis_phantom_data: Default::default(),
+        }
+        .build_storage()
+        .unwrap()
+        .0,
+    );
 
     // bridge btc
     r.extend(

@@ -57,9 +57,9 @@ impl TxHandler {
             "[TxHandler]|handle tx|type:{:?}|hash:{:}|tx:{:?}",
             self.tx_info.tx_type, self.tx_hash, self.tx_info.raw_tx
         );
+        // if err, do no mark this tx has been handled
         match self.tx_info.tx_type {
             TxType::Withdrawal => {
-                // TODO refactor
                 self.withdraw::<T>()?;
             }
             TxType::Deposit => {
@@ -136,6 +136,7 @@ impl TxHandler {
             xfee_manager::Switch::<T>::mutate(|switch| {
                 switch.xbtc = true;
             });
+            // do not return Err, mark this tx has been handled
         }
         Ok(())
     }

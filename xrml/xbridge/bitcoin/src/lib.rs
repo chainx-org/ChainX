@@ -206,9 +206,9 @@ decl_module! {
 
             Self::apply_push_transaction(relay_tx)?;
 
-            // 8 is trick number for call difficulty power, if change in `runtime/src/fee.rs`,
+            // 50 is trick number for call difficulty power, if change in `runtime/src/fee.rs`,
             // should modify this number.
-            xbridge_common::Module::<T>::reward_relayer(&Self::TOKEN.to_vec(), &from, 8, tx.len() as u64);
+            xbridge_common::Module::<T>::reward_relayer(&Self::TOKEN.to_vec(), &from, 50, tx.len() as u64);
             Ok(())
         }
 
