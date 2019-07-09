@@ -162,6 +162,7 @@ define_enum!(
     AssetLimit {
         CanMove,
         CanTransfer,
+        CanDeposit,
         CanWithdraw,
         CanDestroyWithdrawal,
         CanDestroyFree,
