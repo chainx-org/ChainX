@@ -189,6 +189,12 @@ impl xbitcoin::Trait for Test {
     type Event = ();
 }
 
+impl xsdot::Trait for Test {
+    type AccountExtractor = DummyExtractor;
+    type CrossChainProvider = XBridgeFeatures;
+    type Event = ();
+}
+
 impl xbitcoin::lockup::Trait for Test {
     type Event = ();
 }

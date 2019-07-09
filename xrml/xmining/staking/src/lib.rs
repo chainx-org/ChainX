@@ -38,7 +38,7 @@ const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const SESSIONS_PER_ROUND: u64 = 210_000;
 
 pub trait Trait:
-    xassets::Trait + xaccounts::Trait + xsystem::Trait + xsession::Trait + xbridge_features::Trait
+    xsystem::Trait + xsession::Trait + xbridge_features::Trait + xsdot::Trait + xbridge_common::Trait
 {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -55,7 +55,7 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         /// Transactor could be an intention.
-        fn nominate(
+        pub fn nominate(
             origin,
             target: <T::Lookup as StaticLookup>::Source,
             value: T::Balance,
@@ -643,6 +643,21 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     pub fn validators() -> Vec<(T::AccountId, u64)> {
         xsession::Module::<T>::validators()
+    }
+
+    pub fn cross_chain_assets_are_growing_too_fast() -> rstd::result::Result<(u128, u128), ()> {
+        let total_staked = Self::intention_set()
+            .into_iter()
+            .filter(|i| Self::is_active(i))
+            .map(|id| Self::total_nomination_of(&id).as_())
+            .sum::<u64>();
+
+        let total_cross_chain_assets = T::OnRewardCalculation::psedu_intentions_info()
+            .iter()
+            .map(|(_, x)| x.as_())
+            .sum::<u64>();
+
+        Self::are_growing_too_fast(total_cross_chain_assets, total_staked)
     }
 
     pub fn jackpot_accountid_for_unsafe(who: &T::AccountId) -> T::AccountId {

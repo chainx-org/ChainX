@@ -5813,6 +5813,7 @@ dependencies = [
  "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xbridge-features 1.0.0",
+ "xrml-xbridge-sdot 1.0.0",
  "xrml-xfee-manager 1.0.0",
  "xrml-xmultisig 1.0.0",
  "xrml-xsession 1.0.0",

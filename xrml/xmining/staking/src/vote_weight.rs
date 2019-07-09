@@ -4,6 +4,8 @@
 use super::*;
 
 use rstd::result;
+use xassets::ChainT;
+use xbridge_common::traits::CrossChainBindingV2;
 use xsupport::{error, trace};
 
 impl<B, C> VoteWeight<C> for IntentionProfs<B, C>
@@ -93,17 +95,22 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn referral_or_council_of(who: &T::AccountId, token: &Token) -> T::AccountId {
-        let council_account = xaccounts::Module::<T>::council_account();
+        // Get referral from xbridge_common since v1.0.3.
+        let referral = if <xsdot::Module<T> as ChainT>::TOKEN == token.as_slice()
+            || <xbitcoin::Module<T> as ChainT>::TOKEN == token.as_slice()
+        {
+            if let Some(asset_info) = <xassets::AssetInfo<T>>::get(token) {
+                let asset = asset_info.0;
+                let chain = asset.chain();
+                xbridge_features::Module::<T>::get_first_binding_channel(who, chain)
+            } else {
+                None
+            }
+        } else {
+            xbridge_common::Module::<T>::get_binding_info(token, who)
+        };
 
-        if let Some(asset_info) = <xassets::AssetInfo<T>>::get(token) {
-            let asset = asset_info.0;
-            let chain = asset.chain();
-
-            return xbridge_features::Module::<T>::get_first_binding_channel(who, chain)
-                .unwrap_or(council_account);
-        }
-
-        council_account
+        referral.unwrap_or_else(xaccounts::Module::<T>::council_account)
     }
 
     pub fn generic_claim<U, V>(

@@ -76,6 +76,7 @@ impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = (XTokens);
     type OnAssetRegisterOrRevoke = (XTokens);
+    type DetermineTokenJackpotAccountId = DummyDetermineTokenJackpotAccountId;
 }
 
 impl xfee_manager::Trait for Test {
@@ -167,10 +168,15 @@ impl xsession::Trait for Test {
 }
 
 impl xbitcoin::Trait for Test {
+    type XBitcoinLockup = Self;
     type AccountExtractor = DummyExtractor;
     type TrusteeSessionProvider = XBridgeFeatures;
     type TrusteeMultiSigProvider = DummyBitcoinTrusteeMultiSig;
     type CrossChainProvider = XBridgeFeatures;
+    type Event = ();
+}
+
+impl xbitcoin::lockup::Trait for Test {
     type Event = ();
 }
 
@@ -209,9 +215,12 @@ impl xsdot::Trait for Test {
     type Event = ();
 }
 
+impl xbridge_common::Trait for Test {
+    type Event = ();
+}
+
 impl Trait for Test {
     type Event = ();
-    type DetermineTokenJackpotAccountId = DummyDetermineTokenJackpotAccountId;
 }
 
 pub struct DummyDetermineTokenJackpotAccountId;

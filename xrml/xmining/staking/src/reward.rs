@@ -1,5 +1,6 @@
 use super::*;
 use rstd::convert::TryInto;
+use rstd::result;
 use xaccounts::IntentionJackpotAccountIdFor;
 
 // Who will be rewarded on new session.
@@ -67,11 +68,24 @@ impl<T: Trait> Module<T> {
 
     /// Whether the cross chain assets are growing too fast than the staked native assets.
     ///
-    /// total_cross_chain_assets > distribution_ratio * total_staked
-    fn is_growing_too_fast(total_cross_chain_assets: u64, total_staked: u64) -> bool {
+    /// if total_cross_chain_assets > distribution_ratio * total_staked, return the double discount for cross-chain assets.
+    pub(super) fn are_growing_too_fast(
+        total_cross_chain_assets: u64,
+        total_staked: u64,
+    ) -> result::Result<(u128, u128), ()> {
         let (numerator, denominator) = Self::distribution_ratio();
-        u128::from(total_cross_chain_assets) * u128::from(denominator)
+
+        debug!("[are_growing_too_fast] distribution_ratio: {:?}, total_cross_chain_assets: {:?}, total_staked: {:?}", (numerator, denominator), total_cross_chain_assets, total_staked);
+
+        if u128::from(total_cross_chain_assets) * u128::from(denominator)
             > u128::from(numerator) * u128::from(total_staked)
+        {
+            let num = u128::from(numerator) * u128::from(total_staked);
+            let denom = u128::from(denominator) * u128::from(total_cross_chain_assets);
+            return Ok((num, denom));
+        }
+
+        Err(())
     }
 
     /// Calculate the individual reward according to the proportion and total reward.
@@ -181,10 +195,12 @@ impl<T: Trait> Module<T> {
         let (intentions, total_staked) = Self::get_staked_info();
         let (psedu_intentions, total_cross_chain_assets) = Self::get_psedu_intentions_info();
 
-        let (for_staked, for_cross_chain_assets) = if Self::is_growing_too_fast(
+        let (for_staked, for_cross_chain_assets) = if Self::are_growing_too_fast(
             total_cross_chain_assets.as_(),
             total_staked.as_(),
-        ) {
+        )
+        .is_ok()
+        {
             let (numerator, denominator) = Self::distribution_ratio();
 
             let for_cross_chain_assets = T::Balance::sa(Self::multiply_by_rational(

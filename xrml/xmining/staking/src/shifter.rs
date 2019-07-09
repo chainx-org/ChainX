@@ -47,8 +47,8 @@ impl<T: Trait> Module<T> {
         }
         let total_missed = Self::offline_validators_per_session()
             .iter()
-            .map(|v| Self::missed_of_per_session(v))
-            .fold(0u32, |acc, x| acc + x);
+            .map(Self::missed_of_per_session)
+            .sum::<u32>();
         <xsession::SessionTotalMissedBlocksCount<T>>::put(total_missed);
     }
 
