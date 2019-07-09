@@ -49,10 +49,11 @@ use self::tx::{
     check_withdraw_tx, create_multi_address, detect_transaction_type, handle_tx,
     insert_trustee_vote_state, parse_and_check_signed_tx, validate_transaction,
 };
+use self::types::DepositCache;
 pub use self::types::{
-    BlockHeaderInfo, Params, RelayTx, TrusteeAddrInfo, TxInfo, VoteResult, WithdrawalProposal,
+    BlockHeaderInfo, Params, RelayTx, TrusteeAddrInfo, TxInfo, TxType, VoteResult,
+    WithdrawalProposal,
 };
-use self::types::{DepositCache, TxType};
 
 pub use self::lockup::types::LockupRelayTx;
 use self::lockup::Trait as LockupTrait;
