@@ -118,7 +118,7 @@ where
             }
 
             let mut lmap = BTreeMap::<AssetLimit, bool>::from_iter(
-                xassets::AssetLimit::iterator().map(|t| (*t, false)),
+                xassets::AssetLimit::iterator().map(|t| (*t, true)),
             );
             let key = <xassets::AssetLimitProps<Runtime>>::key_for(asset.token().as_ref());
             if let Some(limit) =
