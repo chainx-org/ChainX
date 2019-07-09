@@ -92,11 +92,16 @@ pub fn start_http(addr: &std::net::SocketAddr, io: RpcHandler) -> io::Result<htt
 }
 
 /// Start WS server listening on given address.
-pub fn start_ws(addr: &std::net::SocketAddr, io: RpcHandler) -> io::Result<ws::Server> {
+pub fn start_ws(
+    addr: &std::net::SocketAddr,
+    ws_max_connections: usize,
+    io: RpcHandler,
+) -> io::Result<ws::Server> {
     ws::ServerBuilder::with_meta_extractor(io, |context: &ws::RequestContext| {
         Metadata::new(context.sender())
     })
     .max_payload(MAX_PAYLOAD)
+    .max_connections(ws_max_connections)
     .start(addr)
     .map_err(|err| match err {
         ws::Error(ws::ErrorKind::Io(io), _) => io,
