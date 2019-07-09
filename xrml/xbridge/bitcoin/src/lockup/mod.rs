@@ -66,8 +66,9 @@ decl_module! {
 
         pub fn release_lock(utxos: Vec<(H256, u32)>) {
             for utxo in utxos {
-                destroy_utxo::<T>(utxo.0, utxo.1);
-                Self::deposit_event(RawEvent::UnlockedFromRoot(utxo.0, utxo.1));
+                if destroy_utxo::<T>(utxo.0, utxo.1) {
+                    Self::deposit_event(RawEvent::UnlockedFromRoot(utxo.0, utxo.1));
+                }
             }
         }
 
@@ -266,17 +267,18 @@ pub fn handle_unlock_tx<T: Trait>(tx: &Transaction, tx_hash: &H256) {
     debug!("[handle_unlock_tx]|do unlock tx|tx_hash:{:}", tx_hash);
     // delete utxo storage and destroy token
     for (index, input) in tx.inputs.iter().enumerate() {
-        destroy_utxo::<T>(input.previous_output.hash, input.previous_output.index);
-        Module::<T>::deposit_event(RawEvent::Unlock(
-            *tx_hash,
-            index as u32,
-            input.previous_output.hash,
-            input.previous_output.index,
-        ));
+        if destroy_utxo::<T>(input.previous_output.hash, input.previous_output.index) {
+            Module::<T>::deposit_event(RawEvent::Unlock(
+                *tx_hash,
+                index as u32,
+                input.previous_output.hash,
+                input.previous_output.index,
+            ));
+        }
     }
 }
 
-fn destroy_utxo<T: Trait>(hash: H256, index: u32) {
+fn destroy_utxo<T: Trait>(hash: H256, index: u32) -> bool {
     let key = (hash, index);
     if let Some((accountid, value, addr)) = LockedUpBTC::<T>::take(&key) {
         let addr_value = AddressLockedCoin::<T>::take(&addr);
@@ -290,6 +292,9 @@ fn destroy_utxo<T: Trait>(hash: H256, index: u32) {
             hash, index
         );
         destroy_token::<T>(&accountid, value);
+        true
+    } else {
+        false
     }
 }
 

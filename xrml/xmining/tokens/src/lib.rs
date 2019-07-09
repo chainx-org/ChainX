@@ -27,7 +27,12 @@ pub use self::types::{
 };
 
 pub trait Trait:
-    xsystem::Trait + xstaking::Trait + xspot::Trait + xsdot::Trait + xbridge_common::Trait
+    xsystem::Trait
+    + xstaking::Trait
+    + xspot::Trait
+    + xsdot::Trait
+    + xbridge_common::Trait
+    + xbitcoin::lockup::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -381,13 +386,22 @@ impl<T: Trait> Module<T> {
         // One SDOT 0.1 vote.
         if <xsdot::Module<T> as ChainT>::TOKEN == token.as_slice() {
             return Some(As::sa(Self::one_pcx() * discount / 100));
-        } else if let Some(price) = <xspot::Module<T>>::aver_asset_price(token) {
-            let power = match (u128::from(price.as_())).checked_mul(u128::from(discount)) {
-                Some(x) => T::Balance::sa((x / 100) as u64),
-                None => panic!("price * discount overflow"),
+        } else {
+            // L-BTC shares the price of X-BTC as it doesn't have a trading pair.
+            let token = if <xbitcoin::lockup::Module<T> as ChainT>::TOKEN == token.as_slice() {
+                <xbitcoin::Module<T> as ChainT>::TOKEN.to_vec()
+            } else {
+                token.clone()
             };
 
-            return Some(power);
+            if let Some(price) = <xspot::Module<T>>::aver_asset_price(&token) {
+                let power = match (u128::from(price.as_())).checked_mul(u128::from(discount)) {
+                    Some(x) => T::Balance::sa((x / 100) as u64),
+                    None => panic!("price * discount overflow"),
+                };
+
+                return Some(power);
+            }
         }
 
         None

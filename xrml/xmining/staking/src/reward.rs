@@ -75,11 +75,12 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<(u128, u128), ()> {
         let (numerator, denominator) = Self::distribution_ratio();
 
-        debug!("[are_growing_too_fast] distribution_ratio: {:?}, total_cross_chain_assets: {:?}, total_staked: {:?}", (numerator, denominator), total_cross_chain_assets, total_staked);
+        let indeed_grow_too_fast = u128::from(total_cross_chain_assets) * u128::from(denominator)
+            > u128::from(numerator) * u128::from(total_staked);
 
-        if u128::from(total_cross_chain_assets) * u128::from(denominator)
-            > u128::from(numerator) * u128::from(total_staked)
-        {
+        debug!("[are_growing_too_fast] distribution_ratio: {:?}, total_cross_chain_assets: {:?}, total_staked: {:?}, really_grow_too_fast: {:?}", (numerator, denominator), total_cross_chain_assets, total_staked, indeed_grow_too_fast);
+
+        if indeed_grow_too_fast {
             let num = u128::from(numerator) * u128::from(total_staked);
             let denom = u128::from(denominator) * u128::from(total_cross_chain_assets);
             return Ok((num, denom));
@@ -212,10 +213,9 @@ impl<T: Trait> Module<T> {
             let for_staked = session_reward - for_cross_chain_assets;
 
             debug!(
-                "[distribute_session_reward] cross-chain assets are growing too fast: cross-chain asssets: {:?}, total_staked: {:?}, ratio: {:?}",
-                total_cross_chain_assets,
-                total_staked,
-                (numerator, denominator)
+                "[distribute_session_reward] cross-chain assets are truely growing too fast: reward for cross-chain asssets: {:?}, reward for total_staked: {:?}",
+                for_cross_chain_assets,
+                for_staked,
             );
 
             Self::reward_accordingly(intentions, for_staked, total_staked, validators);
