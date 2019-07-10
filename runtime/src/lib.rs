@@ -521,7 +521,7 @@ impl_runtime_apis! {
                 return None;
             };
 
-            let switch = xfee_manager::SwitchStore::default();
+            let switch = xfee_manager::Module::<Runtime>::switcher();
             let method_call_weight = XFeeManager::method_call_weight();
             call.check_fee(switch, method_call_weight).map(|weight|
                 XFeeManager::transaction_fee(weight, encoded_len)

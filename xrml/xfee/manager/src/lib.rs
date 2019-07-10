@@ -22,7 +22,7 @@ use xaccounts::IntentionJackpotAccountIdFor;
 use xsupport::u8array_to_string;
 use xsupport::{info, trace, warn};
 
-pub use self::types::SwitchStore;
+pub use self::types::CallSwitcher;
 
 /// Simple payment making trait, operating on a single generic `AccountId` type.
 pub trait MakePayment<AccountId> {
@@ -59,9 +59,19 @@ decl_module! {
             Ok(())
         }
 
-        /// first version, when add more SWITCH, should use new switch
-        fn set_switch_store(switch: SwitchStore) {
-            Switch::<T>::put(switch)
+        /// set open/close for switcher
+        pub fn modify_switcher(switch: CallSwitcher, open: bool) {
+            Switcher::<T>::mutate(|map| {
+                if open {
+                    map.insert(switch, true)
+                } else {
+                    map.remove(&switch)
+                }
+            });
+        }
+
+        pub fn set_switcher(all_switcher: BTreeMap<CallSwitcher, bool>) {
+            Switcher::<T>::put(all_switcher)
         }
 
         /// Set a new weight for a method.
@@ -96,8 +106,10 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XFeeManager {
+        // deprecated in v1.0.3
+        // pub Switch get(switch): SwitchStore;
+        pub Switcher get(switcher): BTreeMap<CallSwitcher, bool>;
         /// Emergency control
-        pub Switch get(switch): SwitchStore;
         /// Each callable method in runtime normally has a different weight.
         pub MethodCallWeight get(method_call_weight): BTreeMap<XString, u64>;
         /// How much fee of a block should be rewarded to the block producer.
@@ -139,8 +151,8 @@ impl<T: Trait> MakePayment<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn set_switch(store: SwitchStore) {
-        Switch::<T>::put(store);
+    pub fn get_switcher(switcher: CallSwitcher) -> bool {
+        Self::switcher().get(&switcher).map(|b| *b).unwrap_or(false)
     }
 
     pub fn transaction_fee(power: u64, encoded_len: u64) -> T::Balance {

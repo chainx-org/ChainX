@@ -117,9 +117,10 @@ impl TxHandler {
                         tx_hash.as_bytes().to_vec(),
                     ));
 
-                    xfee_manager::Switch::<T>::mutate(|switch| {
-                        switch.xbtc = true;
-                    });
+                    let _ = xfee_manager::Module::<T>::modify_switcher(
+                        xfee_manager::CallSwitcher::XBTC,
+                        true,
+                    );
 
                     return Err(e);
                 }
@@ -133,9 +134,8 @@ impl TxHandler {
                 Default::default(),
             ));
 
-            xfee_manager::Switch::<T>::mutate(|switch| {
-                switch.xbtc = true;
-            });
+            let _ =
+                xfee_manager::Module::<T>::modify_switcher(xfee_manager::CallSwitcher::XBTC, true);
             // do not return Err, mark this tx has been handled
         }
         Ok(())
