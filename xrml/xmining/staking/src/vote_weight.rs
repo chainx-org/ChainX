@@ -8,10 +8,10 @@ use xassets::ChainT;
 use xbridge_common::traits::CrossChainBindingV2;
 use xsupport::{error, trace};
 
-impl<B, C> VoteWeight<C> for IntentionProfs<B, C>
+impl<Balance, BlockNumber> VoteWeight<BlockNumber> for IntentionProfs<Balance, BlockNumber>
 where
-    B: Default + As<u64> + Clone,
-    C: Default + As<u64> + Clone,
+    Balance: Default + As<u64> + Clone,
+    BlockNumber: Default + As<u64> + Clone,
 {
     fn amount(&self) -> u64 {
         self.total_nomination.clone().as_()
@@ -24,7 +24,7 @@ where
         } else {
             amount -= value;
         }
-        self.total_nomination = B::sa(amount);
+        self.total_nomination = Balance::sa(amount);
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -39,15 +39,15 @@ where
         self.last_total_vote_weight_update.clone().as_()
     }
 
-    fn set_last_acum_weight_update(&mut self, current_block: C) {
+    fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
         self.last_total_vote_weight_update = current_block;
     }
 }
 
-impl<B, C> VoteWeight<C> for NominationRecord<B, C>
+impl<Balance, BlockNumber> VoteWeight<BlockNumber> for NominationRecord<Balance, BlockNumber>
 where
-    B: Default + As<u64> + Clone,
-    C: Default + As<u64> + Clone,
+    Balance: Default + As<u64> + Clone,
+    BlockNumber: Default + As<u64> + Clone,
 {
     fn amount(&self) -> u64 {
         self.nomination.clone().as_()
@@ -60,7 +60,7 @@ where
         } else {
             amount -= value;
         }
-        self.nomination = B::sa(amount);
+        self.nomination = Balance::sa(amount);
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -75,7 +75,7 @@ where
         self.last_vote_weight_update.clone().as_()
     }
 
-    fn set_last_acum_weight_update(&mut self, current_block: C) {
+    fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
         self.last_vote_weight_update = current_block;
     }
 }

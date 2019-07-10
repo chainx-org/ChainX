@@ -228,21 +228,10 @@ impl<T: Trait> Module<T> {
     }
 
     fn issue_reward(source: &T::AccountId, token: &Token, value: T::Balance) -> Result {
-        let psedu_intention = Self::psedu_intention_profiles(token);
-        if psedu_intention.last_total_deposit_weight == 0 {
-            debug!(
-                target: "tokens",
-                "should issue reward to {:?}, but the last_total_deposit_weight of Token: {:?} is zero.",
-                source,
-                token!(token)
-            );
-            return Ok(());
-        }
-
         ensure_with_errorlog!(
             Self::psedu_intentions().contains(&token),
-            "Cannot claim from unsupport token.",
-            "Cannot claim from unsupport token|token:{:}",
+            "Cannot issue deposit reward since this token is not a psedu intention.",
+            "Cannot issue deposit reward since this token is not a psedu intention.|token:{:}",
             token!(token)
         );
 

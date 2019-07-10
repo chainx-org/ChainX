@@ -73,8 +73,8 @@ impl<T: Trait> Module<T> {
         let acc = 1_u64;
         // version(1) + addr + sig + index(compact) + era(relay usually use `Immortal`) + acc(compact)
         let extrinsic_len = 1 + (1 + 32) + 64 + 1 + 1 + 1;
-        // module + call + accountid + tx_source
-        let func_len = 1 + 1 + 32 + tx_len;
+        // module + call + tx_source
+        let func_len = 1 + 1 + tx_len;
 
         let len = extrinsic_len + func_len;
 
