@@ -71,8 +71,8 @@ impl<T: Trait> Module<T> {
     pub fn reward_relayer(token: &Token, who: &T::AccountId, power: u64, tx_len: u64) {
         // todo may use a storage to adjust `Acceleration`
         let acc = 1_u64;
-        // version(1) + addr + sig + index + era(relay usually use `Immortal`) + acc
-        let extrinsic_len = 1 + (1 + 32) + 64 + 8 + 1 + 4;
+        // version(1) + addr + sig + index(compact) + era(relay usually use `Immortal`) + acc(compact)
+        let extrinsic_len = 1 + (1 + 32) + 64 + 1 + 1 + 1;
         // module + call + accountid + tx_source
         let func_len = 1 + 1 + 32 + tx_len;
 
