@@ -4,6 +4,41 @@ use rstd::result;
 use xsupport::info;
 
 impl<T: Trait> Module<T> {
+    /// Actually slash the account being punished, all the slashed value will go to the council.
+    fn apply_slash(slashed_account: &T::AccountId, value: T::Balance) {
+        let council = xaccounts::Module::<T>::council_account();
+        let _ = <xassets::Module<T>>::pcx_move_free_balance(&slashed_account, &council, value);
+    }
+
+    /// Slash the total balance of misbehavior's jackpot, return the actually slashed value.
+    ///
+    /// This is considered be be successful always.
+    fn slash_whole_jackpot(who: &T::AccountId) -> T::Balance {
+        let jackpot = Self::jackpot_accountid_for_unsafe(who);
+        let slashed = <xassets::Module<T>>::pcx_free_balance(&jackpot);
+        Self::apply_slash(&jackpot, slashed);
+        slashed
+    }
+
+    /// Try slash given the intention account and value, otherwise empty the whole jackpot.
+    ///
+    /// If the balance of its jackpot is unable to pay, just slash it all and return the actually slash value.
+    fn try_slash_or_clear(
+        who: &T::AccountId,
+        should_slash: T::Balance,
+    ) -> result::Result<(), T::Balance> {
+        let jackpot_account = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who);
+        let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_account);
+
+        if should_slash <= jackpot_balance {
+            Self::apply_slash(&jackpot_account, should_slash);
+            Ok(())
+        } else {
+            Self::apply_slash(&jackpot_account, jackpot_balance);
+            Err(jackpot_balance)
+        }
+    }
+
     /// Slash the double signer and return the slashed balance.
     ///
     /// TODO extract the similar slashing logic in shifter.rs.
@@ -13,11 +48,7 @@ impl<T: Trait> Module<T> {
         }
 
         // Slash the whole jackpot of double signer.
-        let council = xaccounts::Module::<T>::council_account();
-        let jackpot = Self::jackpot_accountid_for_unsafe(who);
-
-        let slashed = <xassets::Module<T>>::pcx_free_balance(&jackpot);
-        let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot, &council, slashed);
+        let slashed = Self::slash_whole_jackpot(who);
         info!(
             "[slash_double_signer] {:?} is slashed: {:?}",
             who!(who),
@@ -25,8 +56,9 @@ impl<T: Trait> Module<T> {
         );
 
         // Force the double signer to be inactive.
-        info!("[slash_double_signer] force {:?} to be inactive", who!(who));
-        Self::force_to_be_inactive(who);
+        if Self::try_force_inactive(who).is_ok() {
+            info!("[slash_double_signer] force {:?} to be inactive", who!(who));
+        }
 
         // Note the double signer so that he could be removed from the current validator set on new session.
         <EvilValidatorsPerSession<T>>::mutate(|evil_validators| {
@@ -52,8 +84,6 @@ impl<T: Trait> Module<T> {
         my_reward: T::Balance,
         validators: &mut Vec<T::AccountId>,
     ) {
-        let council = xaccounts::Module::<T>::council_account();
-
         // Slash 10 times per block reward for each missed block.
         let missed = u64::from(<MissedOfPerSession<T>>::take(who));
         let reward_per_block = Self::reward_of_per_block(my_reward);
@@ -64,16 +94,12 @@ impl<T: Trait> Module<T> {
             T::Balance::sa(Self::minimum_penalty().as_() * missed),
         );
 
-        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who);
-        let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
-
-        let (slashed, should_be_enforced) = if total_slash <= jackpot_balance {
-            (total_slash, false)
-        } else {
-            (jackpot_balance, true)
-        };
-
-        let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &council, slashed);
+        let (slashed, should_be_enforced) =
+            if let Err(slashed) = Self::try_slash_or_clear(who, total_slash) {
+                (slashed, true)
+            } else {
+                (total_slash, false)
+            };
 
         debug!(
             "[slash_active_offline_validator] {:?} is actually slashed: {:?}, should be slashed: {:?}",
@@ -89,7 +115,7 @@ impl<T: Trait> Module<T> {
                 "[slash_active_offline_validator] validator enforced to be inactive: {:?}",
                 who!(who)
             );
-            Self::force_to_be_inactive(who);
+            Self::force_inactive_unsafe(who);
 
             // remove from the current validator set
             validators.retain(|x| *x != *who);
@@ -123,14 +149,7 @@ impl<T: Trait> Module<T> {
         for who in inactive_slashed.iter() {
             let missed = T::Balance::sa(u64::from(<MissedOfPerSession<T>>::take(who)));
             let should_slash = missed * Self::minimum_penalty();
-            let council = xaccounts::Module::<T>::council_account();
-
-            let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who);
-            let jackpot_balance = <xassets::Module<T>>::pcx_free_balance(&jackpot_addr);
-
-            let slash = cmp::min(should_slash, jackpot_balance);
-
-            let _ = <xassets::Module<T>>::pcx_move_free_balance(&jackpot_addr, &council, slash);
+            let _ = Self::try_slash_or_clear(who, should_slash);
         }
     }
 }

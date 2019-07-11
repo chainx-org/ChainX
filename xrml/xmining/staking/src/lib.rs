@@ -205,13 +205,8 @@ decl_module! {
             }
 
             if let Some(desire_to_run) = desire_to_run.as_ref() {
-                if !desire_to_run {
-                    let active = Self::intention_set().into_iter()
-                        .filter(|n| Self::is_active(n))
-                        .collect::<Vec<_>>();
-                    if active.len() <= Self::minimum_validator_count() as usize {
-                        return Err("Cannot pull out when there are too few active intentions.");
-                    }
+                if !desire_to_run && !Self::is_able_to_apply_inactive() {
+                    return Err("Cannot pull out when there are too few active intentions.");
                 }
             }
 
@@ -409,12 +404,32 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
+    pub fn is_able_to_apply_inactive() -> bool {
+        let active = Self::intention_set()
+            .into_iter()
+            .filter(|n| Self::is_active(n))
+            .collect::<Vec<_>>();
+        active.len() > Self::minimum_validator_count() as usize
+    }
+
     // Private mutables
-    fn force_to_be_inactive(who: &T::AccountId) {
+    fn apply_inactive(who: &T::AccountId) {
         <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
             props.is_active = false;
             props.last_inactive_since = <system::Module<T>>::block_number();
         });
+    }
+
+    fn force_inactive_unsafe(who: &T::AccountId) {
+        Self::apply_inactive(who);
+    }
+
+    fn try_force_inactive(who: &T::AccountId) -> Result {
+        if !Self::is_able_to_apply_inactive() {
+            return Err("Cannot force inactive when there are too few active intentions.");
+        }
+        Self::apply_inactive(who);
+        Ok(())
     }
 
     fn mutate_nomination_record(

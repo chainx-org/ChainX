@@ -32,9 +32,8 @@ impl<T: Trait> Module<T> {
         let satisfy_the_threshold = Self::self_bonded_of(who) >= self_bonded
             && Self::total_nomination_of(who) >= total_bonded;
 
-        if !satisfy_the_threshold {
+        if !satisfy_the_threshold && Self::try_force_inactive(who).is_ok() {
             info!("[meet_candidate_threshold] force {:?} to be inactive since it doesn't meet the minimum candidate threshold", who!(who));
-            Self::force_to_be_inactive(who);
         }
 
         satisfy_the_threshold
