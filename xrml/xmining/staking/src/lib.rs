@@ -27,6 +27,7 @@ use system::ensure_signed;
 use xaccounts::IntentionJackpotAccountIdFor;
 use xassets::{AssetErr, Memo, Token};
 use xr_primitives::{Name, XString, URL};
+use xsession::SessionKeyUsability;
 use xsupport::debug;
 #[cfg(feature = "std")]
 use xsupport::who;
@@ -210,9 +211,21 @@ decl_module! {
                 }
             }
 
-            if let Some(next_key) = next_key.as_ref() {
-                <xsession::Module<T>>::check_key(next_key)?;
-            }
+            let next_key = if let Some(next_key) = next_key.as_ref() {
+                match <xsession::Module<T>>::check_session_key_usability(next_key) {
+                    SessionKeyUsability::Unused => Some(next_key.clone()),
+                    SessionKeyUsability::UsedBy(cur_owner) => {
+                        // If this session key is already used by the transactor, set it to None to skip the meaningless writing.
+                        if cur_owner == who {
+                            None
+                        } else {
+                            return Err("This authority key is already used by some other intention.");
+                        }
+                    }
+                }
+            } else {
+                None
+            };
 
             Self::apply_refresh(&who, url, desire_to_run, next_key, about);
         }
