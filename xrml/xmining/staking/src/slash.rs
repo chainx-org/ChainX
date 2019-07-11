@@ -94,7 +94,7 @@ impl<T: Trait> Module<T> {
             T::Balance::sa(Self::minimum_penalty().as_() * missed),
         );
 
-        let (slashed, should_be_enforced) =
+        let (_slashed, should_be_enforced) =
             if let Err(slashed) = Self::try_slash_or_clear(who, total_slash) {
                 (slashed, true)
             } else {
@@ -104,7 +104,7 @@ impl<T: Trait> Module<T> {
         debug!(
             "[slash_active_offline_validator] {:?} is actually slashed: {:?}, should be slashed: {:?}",
             who!(who),
-            slashed,
+            _slashed,
             total_slash
         );
 
