@@ -147,6 +147,29 @@ decl_module! {
             Ok(())
         }
 
+        /// set free token for an account
+        pub fn set_balance(who: <T::Lookup as StaticLookup>::Source, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> Result {
+            let who = <T as system::Trait>::Lookup::lookup(who)?;
+            info!("[set_balance]|set balances by root|who:{:?}|token:{:}|balances_map:{:?}", who, token!(token), balances);
+            Self::set_balance_by_root(&who, &token, balances)?;
+            Ok(())
+        }
+
+        /// transfer between account
+        pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
+            let transactor = ensure_signed(origin)?;
+            let dest = <T as system::Trait>::Lookup::lookup(dest)?;
+            debug!("[transfer]|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));
+            is_valid_memo::<T>(&memo)?;
+            if transactor == dest {
+                return Ok(())
+            }
+
+            Self::can_transfer(&token)?;
+            let _ = Self::move_free_balance(&token, &transactor, &dest, value).map_err(|e| e.info())?;
+            Ok(())
+        }
+
         pub fn modify_asset_info(token: Token, token_name: Option<Token>, desc: Option<Desc>) {
             if let Some(ref mut info) = Self::asset_info(&token) {
                 token_name.map(|name| info.0.set_token_name(name));
@@ -156,14 +179,6 @@ decl_module! {
             } else {
                 error!("[modify_asset_info]|asset not exist|token:{:}", token!(token));
             }
-        }
-
-        /// set free token for an account
-        pub fn set_balance(who: <T::Lookup as StaticLookup>::Source, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> Result {
-            let who = <T as system::Trait>::Lookup::lookup(who)?;
-            info!("[set_balance]|set balances by root|who:{:?}|token:{:}|balances_map:{:?}", who, token!(token), balances);
-            Self::set_balance_by_root(&who, &token, balances)?;
-            Ok(())
         }
 
         pub fn set_asset_limit_props(token: Token, props: BTreeMap<AssetLimit, bool>) {
@@ -186,21 +201,6 @@ decl_module! {
             } else {
                 error!("[set_asset_limit_props]|asset not exist|token:{:}", token!(token));
             }
-        }
-
-        /// transfer between account
-        pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
-            let transactor = ensure_signed(origin)?;
-            let dest = <T as system::Trait>::Lookup::lookup(dest)?;
-            debug!("[transfer]|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));
-            is_valid_memo::<T>(&memo)?;
-            if transactor == dest {
-                return Ok(())
-            }
-
-            Self::can_transfer(&token)?;
-            let _ = Self::move_free_balance(&token, &transactor, &dest, value).map_err(|e| e.info())?;
-            Ok(())
         }
     }
 }
