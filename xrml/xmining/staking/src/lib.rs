@@ -300,8 +300,6 @@ decl_event!(
     {
         /// All validators have been rewarded by the given balance.
         Reward(Balance, Balance),
-        /// All rewards issued to all (psedu-)intentions.
-        SessionReward(Balance, Balance, Balance, Balance),
         /// Missed blocks by each offline validator per session.
         MissedBlocksOfOfflineValidatorPerSession(Vec<(AccountId, u32)>),
         EnforceValidatorsInactive(Vec<AccountId>),
