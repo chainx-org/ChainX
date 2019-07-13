@@ -8,7 +8,7 @@ use chainx_runtime::GenesisConfig;
 use super::genesis_config::{genesis, GenesisSpec};
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const CHAINX_TELEMETRY_URL: &str = "wss://stats.chainx.org/submit/";
+const CHAINX_TELEMETRY_URL: &str = "ws://stats.chainx.org:1024/submit/";
 
 /// Specialised `ChainSpec`.
 pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;

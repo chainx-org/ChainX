@@ -2,10 +2,7 @@ use rustc_hex::ToHex;
 pub fn try_hex_or_str(src: &[u8]) -> String {
     let check_is_str = |src: &[u8]| -> bool {
         for c in src {
-            if (b'0' <= *c && *c <= b'9')
-                || (b'a' <= *c && *c <= b'z')
-                || (b'A' <= *c && *c <= b'Z')
-            {
+            if 0x21 <= *c && *c <= 0x7E {
                 continue;
             } else {
                 return false;

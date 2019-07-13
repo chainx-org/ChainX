@@ -157,22 +157,25 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn apply_match_order_given_opponent_price(
+    fn apply_match_order_given_counterparty(
         taker_order: &mut OrderInfo<T>,
         pair: &TradingPair,
-        opponent_price: T::Price,
-        opponent_side: Side,
+        counterparty_price: T::Price,
+        counterparty_side: Side,
     ) {
-        let quotations = <QuotationsOf<T>>::get(&(pair.index, opponent_price));
+        let quotations = <QuotationsOf<T>>::get(&(pair.index, counterparty_price));
+        let mut fulfilled_orders = Vec::new();
+
         for quotation in quotations.iter() {
             if taker_order.is_fulfilled() {
-                return;
+                break;
             }
             // Find the matched order.
             if let Some(mut maker_order) = <OrderInfoOf<T>>::get(quotation) {
-                if opponent_side != maker_order.side() {
-                    panic!("opponent side error");
-                }
+                assert!(
+                    counterparty_side == maker_order.side(),
+                    "Opponent side should match the side of maker order."
+                );
 
                 let turnover = cmp::min(
                     taker_order.remaining_in_base(),
@@ -184,27 +187,22 @@ impl<T: Trait> Module<T> {
                     pair.index,
                     &mut maker_order,
                     taker_order,
-                    opponent_price,
+                    counterparty_price,
                     turnover,
                 );
 
                 // Remove maker_order if it has been full filled.
                 if maker_order.is_fulfilled() {
-                    <OrderInfoOf<T>>::remove(&(maker_order.submitter(), maker_order.index()));
-
-                    Self::remove_quotation(
-                        pair.index,
-                        opponent_price,
-                        maker_order.submitter(),
-                        maker_order.index(),
-                    );
-
-                    Self::update_handicap(&pair, opponent_price, maker_order.side());
+                    fulfilled_orders.push((maker_order.submitter(), maker_order.index()));
+                    Self::update_handicap(&pair, counterparty_price, maker_order.side());
                 }
 
-                Self::update_latest_and_average_price(pair.index, opponent_price);
+                Self::update_latest_and_average_price(pair.index, counterparty_price);
             }
         }
+
+        // Remove the fulfilled orders as well as the quotations.
+        Self::remove_orders_and_quotations(pair.index, counterparty_price, fulfilled_orders);
     }
 
     fn apply_match_order(
@@ -222,39 +220,39 @@ impl<T: Trait> Module<T> {
         // FIXME refine later
         match taker_order.side() {
             Buy => {
-                let (opponent_side, floor, ceiling) = (Sell, lowest_offer, my_quote);
+                let (counterparty_side, floor, ceiling) = (Sell, lowest_offer, my_quote);
 
-                let mut opponent_price = floor;
+                let mut counterparty_price = floor;
 
-                while !opponent_price.is_zero() && opponent_price <= ceiling {
+                while !counterparty_price.is_zero() && counterparty_price <= ceiling {
                     if taker_order.is_fulfilled() {
                         return;
                     }
-                    Self::apply_match_order_given_opponent_price(
+                    Self::apply_match_order_given_counterparty(
                         taker_order,
                         pair,
-                        opponent_price,
-                        opponent_side,
+                        counterparty_price,
+                        counterparty_side,
                     );
-                    opponent_price = Self::tick_up(opponent_price, tick);
+                    counterparty_price = Self::tick_up(counterparty_price, tick);
                 }
             }
             Sell => {
-                let (opponent_side, floor, ceiling) = (Buy, my_quote, highest_bid);
+                let (counterparty_side, floor, ceiling) = (Buy, my_quote, highest_bid);
 
-                let mut opponent_price = ceiling;
+                let mut counterparty_price = ceiling;
 
-                while !opponent_price.is_zero() && opponent_price >= floor {
+                while !counterparty_price.is_zero() && counterparty_price >= floor {
                     if taker_order.is_fulfilled() {
                         return;
                     }
-                    Self::apply_match_order_given_opponent_price(
+                    Self::apply_match_order_given_counterparty(
                         taker_order,
                         pair,
-                        opponent_price,
-                        opponent_side,
+                        counterparty_price,
+                        counterparty_side,
                     );
-                    opponent_price = Self::tick_down(opponent_price, tick);
+                    counterparty_price = Self::tick_down(counterparty_price, tick);
                 }
             }
         }
@@ -269,9 +267,10 @@ impl<T: Trait> Module<T> {
         pair: TradingPair,
         order_side: Side,
     ) {
-        <OrderInfoOf<T>>::remove(&(who.clone(), order_index));
+        let order_key = (who, order_index);
 
-        Self::remove_quotation(pair_index, price, who, order_index);
+        <OrderInfoOf<T>>::remove(&order_key);
+        Self::remove_quotation(pair_index, price, order_key);
 
         Self::update_handicap(&pair, price, order_side);
     }

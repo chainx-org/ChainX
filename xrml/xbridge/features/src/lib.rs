@@ -104,9 +104,17 @@ decl_module! {
         pub fn transition_trustee_session(origin, chain: Chain, new_trustees: Vec<T::AccountId>) -> Result {
             let who = ensure_signed(origin)?;
             // judge current addr
-            BitcoinTrusteeMultiSig::<T>::check_multisig(&who)?;
-            info!("[transition_trustee_session]|try to transition trustee|from multisig addr:{:?}|chain:{:?}|new_trustees:{:?}", who, chain, new_trustees);
-            Self::transition_trustee_session_impl(chain, new_trustees)
+            match chain {
+                Chain::Bitcoin => {
+                    BitcoinTrusteeMultiSig::<T>::check_multisig(&who)?;
+                    info!("[transition_trustee_session]|try to transition trustee|from multisig addr:{:?}|chain:{:?}|new_trustees:{:?}", who, chain, new_trustees);
+                    Self::transition_trustee_session_impl(chain, new_trustees)
+                }
+                _ => {
+                    error!("[transition_trustee_session]|not support transition trustee for this chain|chain:{:?}", chain);
+                    Err("not support transition trustee for this chain")
+                }
+            }
         }
 
         pub fn transition_trustee_session_by_root(chain: Chain, new_trustees: Vec<T::AccountId>) -> Result {
@@ -322,12 +330,21 @@ impl<T: Trait> Module<T> {
         Ok(generic_all_info)
     }
 
-    pub fn current_trustee_session_info_for(
+    pub fn trustee_session_info_for(
         chain: Chain,
+        number: Option<u32>,
     ) -> Option<GenericAllSessionInfo<T::AccountId>> {
         match chain {
             Chain::Bitcoin => {
-                let session_info = <Self as TrusteeSession<T::AccountId, BitcoinTrusteeAddrInfo>>::current_trustee_session().ok();
+                let session_info = if let Some(num) = number {
+                    <Self as TrusteeSession<T::AccountId, BitcoinTrusteeAddrInfo>>::trustee_session(
+                        num,
+                    )
+                    .ok()
+                } else {
+                    <Self as TrusteeSession<T::AccountId, BitcoinTrusteeAddrInfo>>::current_trustee_session().ok()
+                };
+
                 session_info.map(|info| {
                     into_generic_all_info(info, |accountid: &T::AccountId| {
                         Self::bitcoin_trustee_intention_props_of(accountid)

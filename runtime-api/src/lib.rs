@@ -35,10 +35,10 @@ pub mod xmining_api {
 
     decl_runtime_apis! {
         pub trait XMiningApi {
-            fn jackpot_accountid_for(who: AccountIdForApi) -> AccountIdForApi;
-            fn multi_jackpot_accountid_for(who: Vec<AccountIdForApi>) -> Vec<AccountIdForApi>;
-            fn token_jackpot_accountid_for(token: Token) -> AccountIdForApi;
-            fn multi_token_jackpot_accountid_for(token: Vec<Token>) -> Vec<AccountIdForApi>;
+            fn jackpot_accountid_for_unsafe(who: AccountIdForApi) -> AccountIdForApi;
+            fn multi_jackpot_accountid_for_unsafe(who: Vec<AccountIdForApi>) -> Vec<AccountIdForApi>;
+            fn token_jackpot_accountid_for_unsafe(token: Token) -> AccountIdForApi;
+            fn multi_token_jackpot_accountid_for_unsafe(token: Vec<Token>) -> Vec<AccountIdForApi>;
             fn asset_power(token: Token) -> Option<Balance>;
         }
     }
@@ -99,7 +99,7 @@ pub mod xbridge_api {
 
             fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountIdForApi>>;
 
-            fn trustee_session_info_for(chain: Chain) -> Option<(u32, GenericAllSessionInfo<AccountIdForApi>)>;
+            fn trustee_session_info_for(chain: Chain, number: Option<u32>) -> Option<(u32, GenericAllSessionInfo<AccountIdForApi>)>;
         }
     }
 }

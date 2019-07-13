@@ -30,75 +30,98 @@ fn ss58hash(data: &[u8]) -> [u8; 64] {
     blake2_512(&v)
 }
 
+#[inline]
+fn parse_chainx_addr<AccountId>(data: &[u8], addr_type: u8) -> Option<AccountId>
+where
+    AccountId: Default + MaybeDebug + AsMut<[u8]> + AsRef<[u8]>,
+{
+    let d: Vec<u8> = match b58::from(data) {
+        Ok(a) => a,
+        Err(_) => {
+            error!(
+                "[account_info]|base58 decode error|data:{:}",
+                u8array_to_string(data)
+            );
+            return None;
+        }
+    };
+
+    let mut res = AccountId::default();
+    let len = res.as_ref().len();
+    if d.len() != len + 3 {
+        error!("[account_info]|Invalid length. AccountId is Public, Public is 32 bytes, 1 bytes version, 2 bytes checksum|need len:{:}|len:{:}",  len + 3, d.len());
+        // Invalid length. AccountId is Public, Public is 32 bytes, 1 bytes version, 2 bytes checksum
+        return None;
+    }
+
+    // Check if the deposit address matches the current network.
+    // The first byte of pubkey indicates the network type.
+    if d[0] != addr_type {
+        error!(
+            "[account_info]|data type error|need:{:}|current:{:}",
+            addr_type, d[0]
+        );
+        return None;
+    }
+    // check checksum
+    let hash = ss58hash(&d[0..len + 1]);
+    if d[len + 1..len + 3] != hash[0..2] {
+        error!(
+            "[account_info]|ss58 checksum error|calc:{:?}|provide:{:?}",
+            hash[0..2].to_vec(),
+            d[len + 1..len + 3].to_vec()
+        );
+        return None;
+    }
+    // first byte is version
+    res.as_mut().copy_from_slice(&d[1..len + 1]);
+    Some(res)
+}
+
+pub fn parse_account_info<AccountId>(
+    data: &[u8],
+    addr_type: u8,
+) -> Option<(AccountId, Option<Name>)>
+where
+    AccountId: Default + MaybeDebug + AsMut<[u8]> + AsRef<[u8]>,
+{
+    let v = split(data);
+    if v.len() < 1 {
+        error!(
+            "[account_info]|can't parse data|data:{:}",
+            u8array_to_string(data)
+        );
+        return None;
+    }
+
+    let op = &v[0];
+    let res = if let Some(accountid) = parse_chainx_addr(op, addr_type) {
+        accountid
+    } else {
+        return None;
+    };
+
+    // channel is a validator
+    let channel_name = if v.len() > 1 {
+        Some(v[1].to_vec())
+    } else {
+        None
+    };
+
+    debug!(
+        "[account_info]|parse account info success!|who:{:?}|channel:{:?}",
+        res, channel_name
+    );
+    Some((res, channel_name))
+}
+
 impl<AccountId> Extractable<AccountId> for Extractor<AccountId>
 where
     AccountId: Default + MaybeDebug + AsMut<[u8]> + AsRef<[u8]>,
 {
     /// same to `substrate/core/primitives/src/crypto.rs:trait Ss58Codec`
     fn account_info(data: &[u8], addr_type: u8) -> Option<(AccountId, Option<Name>)> {
-        let v = split(data);
-        if v.len() < 1 {
-            error!(
-                "[account_info]|can't parse data|data:{:}",
-                u8array_to_string(data)
-            );
-            return None;
-        }
-
-        let op = &v[0];
-        let d: Vec<u8> = match b58::from(op) {
-            Ok(a) => a,
-            Err(_) => {
-                error!(
-                    "[account_info]|base58 decode error|data:{:}",
-                    u8array_to_string(data)
-                );
-                return None;
-            }
-        };
-
-        let mut res = AccountId::default();
-        let len = res.as_ref().len();
-        if d.len() != len + 3 {
-            error!("[account_info]|Invalid length. AccountId is Public, Public is 32 bytes, 1 bytes version, 2 bytes checksum|need len:{:}|len:{:}",  len + 3, d.len());
-            // Invalid length. AccountId is Public, Public is 32 bytes, 1 bytes version, 2 bytes checksum
-            return None;
-        }
-
-        // Check if the deposit address matches the current network.
-        // The first byte of pubkey indicates the network type.
-        if d[0] != addr_type {
-            error!(
-                "[account_info]|data type error|need:{:}|current:{:}",
-                addr_type, d[0]
-            );
-            return None;
-        }
-        // check checksum
-        let hash = ss58hash(&d[0..len + 1]);
-        if d[len + 1..len + 3] != hash[0..2] {
-            error!(
-                "[account_info]|ss58 checksum error|calc:{:?}|provide:{:?}",
-                hash[0..2].to_vec(),
-                d[len + 1..len + 3].to_vec()
-            );
-            return None;
-        }
-
-        // first byte is version
-        res.as_mut().copy_from_slice(&d[1..len + 1]);
-        // channel is a validator
-        let channel_name = if v.len() > 1 {
-            Some(v[1].to_vec())
-        } else {
-            None
-        };
-
-        debug!(
-            "[account_info]|parse account info success!|who:{:?}|channel:{:?}",
-            res, channel_name
-        );
-        Some((res, channel_name))
+        parse_account_info(data, addr_type)
     }
 }
 

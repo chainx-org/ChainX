@@ -59,7 +59,7 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
         who: &T::AccountId,
         value: Self::Balance,
     ) -> result::Result<Self::PositiveImbalance, &'static str> {
-        Self::inner_issue(&Self::TOKEN.to_vec(), who, value)
+        Self::inner_issue(&Self::TOKEN.to_vec(), who, AssetType::Free, value)
     }
 
     fn withdraw(
@@ -88,7 +88,7 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
     }
 
     fn deposit_creating(who: &T::AccountId, value: Self::Balance) -> Self::PositiveImbalance {
-        Self::inner_issue(&Self::TOKEN.to_vec(), who, value)
+        Self::inner_issue(&Self::TOKEN.to_vec(), who, AssetType::Free, value)
             .unwrap_or(PositiveImbalance::<T>::zero())
     }
 

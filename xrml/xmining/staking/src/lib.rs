@@ -4,9 +4,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod mock;
+mod reward;
 mod shifter;
 pub mod slash;
 mod tests;
+pub mod traits;
 pub mod types;
 pub mod vote_weight;
 
@@ -23,21 +25,21 @@ use system::ensure_signed;
 
 // ChainX
 use xaccounts::IntentionJackpotAccountIdFor;
-use xassets::{Memo, Token};
+use xassets::{AssetErr, Memo, Token};
 use xr_primitives::{Name, XString, URL};
+use xsession::SessionKeyUsability;
 use xsupport::debug;
 #[cfg(feature = "std")]
 use xsupport::who;
 
-pub use self::shifter::{OnReward, OnRewardCalculation};
+pub use self::traits::*;
 pub use self::types::*;
-pub use self::vote_weight::VoteWeight;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const SESSIONS_PER_ROUND: u64 = 210_000;
 
 pub trait Trait:
-    xassets::Trait + xaccounts::Trait + xsystem::Trait + xsession::Trait + xbridge_features::Trait
+    xsystem::Trait + xsession::Trait + xbridge_features::Trait + xsdot::Trait + xbridge_common::Trait
 {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -54,7 +56,7 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         /// Transactor could be an intention.
-        fn nominate(
+        pub fn nominate(
             origin,
             target: <T::Lookup as StaticLookup>::Source,
             value: T::Balance,
@@ -161,7 +163,7 @@ decl_module! {
             let record = Self::nomination_record_of(&who, &target);
             let mut revocations = record.revocations;
 
-            ensure!(revocations.len() > 0, "Revocation list is empty");
+            ensure!(!revocations.is_empty(), "Revocation list is empty");
             ensure!(
                 revocation_index < revocations.len() as u32,
                 "Revocation index out of range."
@@ -204,19 +206,26 @@ decl_module! {
             }
 
             if let Some(desire_to_run) = desire_to_run.as_ref() {
-                if !desire_to_run {
-                    let active = Self::intention_set().into_iter()
-                        .filter(|n| Self::is_active(n))
-                        .collect::<Vec<_>>();
-                    if active.len() <= Self::minimum_validator_count() as usize {
-                        return Err("Cannot pull out when there are too few active intentions.");
-                    }
+                if !desire_to_run && !Self::is_able_to_apply_inactive() {
+                    return Err("Cannot pull out when there are too few active intentions.");
                 }
             }
 
-            if let Some(next_key) = next_key.as_ref() {
-                <xsession::Module<T>>::check_key(next_key)?;
-            }
+            let next_key = if let Some(next_key) = next_key.as_ref() {
+                match <xsession::Module<T>>::check_session_key_usability(next_key) {
+                    SessionKeyUsability::Unused => Some(next_key.clone()),
+                    SessionKeyUsability::UsedBy(cur_owner) => {
+                        // If this session key is already used by the transactor, set it to None to skip the meaningless writing.
+                        if cur_owner == who {
+                            None
+                        } else {
+                            return Err("This authority key is already used by some other intention.");
+                        }
+                    }
+                }
+            } else {
+                None
+            };
 
             Self::apply_refresh(&who, url, desire_to_run, next_key, about);
         }
@@ -262,15 +271,20 @@ decl_module! {
             <MaximumIntentionCount<T>>::put(new);
         }
 
-        /// Force there to be a new era. This also forces a new session immediately after.
-        /// `apply_rewards` should be true for validators to get the session reward.
-        fn force_new_era(apply_rewards: bool) -> Result {
-            Self::apply_force_new_era(apply_rewards)
-        }
-
         /// Set the offline slash grace period.
         fn set_minimum_penalty(new: T::Balance) {
             <MinimumPenalty<T>>::put(new);
+        }
+
+        /// Set the distribution ratio between cross-chain assets and native assets.
+        pub fn set_distribution_ratio(new: (u32, u32)) {
+            ensure!(new.0 > 0 && new.1 > 0, "DistributionRatio can not be zero.");
+            <DistributionRatio<T>>::put(new);
+        }
+
+        /// Set the minimum validator candidate threshold.
+        fn set_minimum_candidate_threshold(new: (T::Balance, T::Balance)) {
+            <MinimumCandidateThreshold<T>>::put(new);
         }
 
     }
@@ -286,6 +300,8 @@ decl_event!(
     {
         /// All validators have been rewarded by the given balance.
         Reward(Balance, Balance),
+        /// All rewards issued to all (psedu-)intentions.
+        SessionReward(Balance, Balance, Balance, Balance),
         /// Missed blocks by each offline validator per session.
         MissedBlocksOfOfflineValidatorPerSession(Vec<(AccountId, u32)>),
         EnforceValidatorsInactive(Vec<AccountId>),
@@ -306,6 +322,8 @@ decl_storage! {
         pub ValidatorCount get(validator_count) config(): u32;
         /// Minimum number of staking participants before emergency conditions are imposed.
         pub MinimumValidatorCount get(minimum_validator_count) config(): u32 = DEFAULT_MINIMUM_VALIDATOR_COUNT;
+        /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
+        pub MinimumCandidateThreshold get(minimum_candidate_threshold) : (T::Balance, T::Balance);
         /// The length of a staking era in sessions.
         pub SessionsPerEra get(sessions_per_era) config(): T::BlockNumber = T::BlockNumber::sa(1000);
         /// The length of the bonding duration in blocks.
@@ -320,6 +338,9 @@ decl_storage! {
 
         /// The current era index.
         pub CurrentEra get(current_era) config(): T::BlockNumber;
+
+        /// Allocation ratio of native asset and cross-chain assets.
+        pub DistributionRatio get(distribution_ratio): (u32, u32) = (1u32, 1u32);
 
         /// The next value of sessions per era.
         pub NextSessionsPerEra get(next_sessions_per_era): Option<T::BlockNumber>;
@@ -366,6 +387,14 @@ impl<T: Trait> Module<T> {
         <NominationRecords<T>>::get(&(nominator.clone(), nominee.clone())).unwrap_or(record)
     }
 
+    pub fn self_bonded_of(who: &T::AccountId) -> T::Balance {
+        if let Some(record) = <NominationRecords<T>>::get(&(who.clone(), who.clone())) {
+            record.nomination
+        } else {
+            Default::default()
+        }
+    }
+
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
         <Intentions<T>>::get(intention).total_nomination
     }
@@ -388,7 +417,33 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
+    pub fn is_able_to_apply_inactive() -> bool {
+        let active = Self::intention_set()
+            .into_iter()
+            .filter(|n| Self::is_active(n))
+            .collect::<Vec<_>>();
+        active.len() > Self::minimum_validator_count() as usize
+    }
+
     // Private mutables
+    fn apply_inactive(who: &T::AccountId) {
+        <xaccounts::IntentionPropertiesOf<T>>::mutate(who, |props| {
+            props.is_active = false;
+            props.last_inactive_since = <system::Module<T>>::block_number();
+        });
+    }
+
+    fn force_inactive_unsafe(who: &T::AccountId) {
+        Self::apply_inactive(who);
+    }
+
+    fn try_force_inactive(who: &T::AccountId) -> Result {
+        if !Self::is_able_to_apply_inactive() {
+            return Err("Cannot force inactive when there are too few active intentions.");
+        }
+        Self::apply_inactive(who);
+        Ok(())
+    }
 
     fn mutate_nomination_record(
         nominator: &T::AccountId,
@@ -406,7 +461,7 @@ impl<T: Trait> Module<T> {
             xassets::AssetType::ReservedStaking,
             value,
         )
-        .map_err(|e| e.info())
+        .map_err(AssetErr::info)
     }
 
     fn unnominate_reserve(who: &T::AccountId, value: T::Balance) -> Result {
@@ -417,7 +472,7 @@ impl<T: Trait> Module<T> {
             xassets::AssetType::ReservedStakingRevocation,
             value,
         )
-        .map_err(|e| e.info())
+        .map_err(AssetErr::info)
     }
 
     fn staking_unreserve(who: &T::AccountId, value: T::Balance) -> Result {
@@ -428,24 +483,13 @@ impl<T: Trait> Module<T> {
             xassets::AssetType::Free,
             value,
         )
-        .map_err(|e| e.info())
-    }
-
-    // Just force_new_era without origin check.
-    fn apply_force_new_era(apply_rewards: bool) -> Result {
-        <ForcingNewEra<T>>::put(());
-        <xsession::Module<T>>::apply_force_new_session(apply_rewards)
+        .map_err(AssetErr::info)
     }
 
     fn apply_nominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
         Self::staking_reserve(source, value)?;
         Self::apply_update_vote_weight(source, target, value, true);
-        Self::deposit_event(RawEvent::Nominate(
-            source.clone(),
-            target.clone(),
-            value.clone(),
-        ));
-
+        Self::deposit_event(RawEvent::Nominate(source.clone(), target.clone(), value));
         Ok(())
     }
 
@@ -497,7 +541,7 @@ impl<T: Trait> Module<T> {
         let mut iprof = <Intentions<T>>::get(target);
         let mut record = Self::nomination_record_of(who, target);
 
-        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for(target);
+        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(target);
         let (source_vote_weight, target_vote_weight, dividend) = Self::generic_claim(
             &mut record,
             who,
@@ -629,13 +673,28 @@ impl<T: Trait> Module<T> {
         xsession::Module::<T>::validators()
     }
 
-    pub fn jackpot_accountid_for(who: &T::AccountId) -> T::AccountId {
-        T::DetermineIntentionJackpotAccountId::accountid_for(who)
+    pub fn cross_chain_assets_are_growing_too_fast() -> rstd::result::Result<(u128, u128), ()> {
+        let total_staked = Self::intention_set()
+            .into_iter()
+            .filter(|i| Self::is_active(i))
+            .map(|id| Self::total_nomination_of(&id).as_())
+            .sum::<u64>();
+
+        let total_cross_chain_assets = T::OnRewardCalculation::psedu_intentions_info()
+            .iter()
+            .map(|(_, x)| x.as_())
+            .sum::<u64>();
+
+        Self::are_growing_too_fast(total_cross_chain_assets, total_staked)
     }
 
-    pub fn multi_jackpot_accountid_for(whos: &Vec<T::AccountId>) -> Vec<T::AccountId> {
-        whos.into_iter()
-            .map(|who| T::DetermineIntentionJackpotAccountId::accountid_for(who))
+    pub fn jackpot_accountid_for_unsafe(who: &T::AccountId) -> T::AccountId {
+        T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who)
+    }
+
+    pub fn multi_jackpot_accountid_for_unsafe(whos: &[T::AccountId]) -> Vec<T::AccountId> {
+        whos.iter()
+            .map(|who| T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who))
             .collect()
     }
 }

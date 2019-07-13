@@ -68,7 +68,7 @@ impl<T: Trait> Module<T> {
 
     /// This is only used for updating the handicap. Return zero when underflow.
     pub(super) fn tick_down(v: T::Price, tick: u64) -> T::Price {
-        v.checked_sub(&As::sa(tick)).unwrap_or(Zero::zero())
+        v.checked_sub(&As::sa(tick)).unwrap_or_else(Zero::zero)
     }
 
     fn update_handicap_of_buyers(pair: &TradingPair, order: &mut OrderInfo<T>) {
@@ -133,26 +133,41 @@ impl<T: Trait> Module<T> {
         seconds_per_hour / period.as_()
     }
 
-    /// This happens on the order has been full filled or canceled.
+    /// This happens when the maker orders have been full filled.
+    pub(super) fn remove_orders_and_quotations(
+        pair_index: TradingPairIndex,
+        price: T::Price,
+        fulfilled_orders: Vec<(T::AccountId, OrderIndex)>,
+    ) {
+        debug!(
+            "[remove_orders_and_quotations] These fulfilled orders will be removed: {:?}",
+            fulfilled_orders
+        );
+        for order_key in fulfilled_orders.iter() {
+            <OrderInfoOf<T>>::remove(order_key);
+        }
+
+        <QuotationsOf<T>>::mutate(&(pair_index, price), |quotations| {
+            quotations.retain(|i| !fulfilled_orders.contains(i));
+        });
+    }
+
+    /// This happens when the order is killed.
     pub(super) fn remove_quotation(
         pair_index: TradingPairIndex,
         price: T::Price,
-        who: T::AccountId,
-        order_index: OrderIndex,
+        order_key: (T::AccountId, OrderIndex),
     ) {
-        let quotations_of_key = &(pair_index, price);
-        let mut quotations = <QuotationsOf<T>>::get(quotations_of_key);
-        if let Some(idx) = quotations
-            .iter()
-            .position(|i| i == &(who.clone(), order_index))
-        {
-            let _removed = quotations.swap_remove(idx);
-            debug!(
-                "[remove_quotation] who: {:?}, order_index: {:?}, removed order: {:?}",
-                who, order_index, _removed
-            );
-        }
-        <QuotationsOf<T>>::insert(quotations_of_key, quotations);
+        <QuotationsOf<T>>::mutate(&(pair_index, price), |quotations| {
+            if let Some(idx) = quotations.iter().position(|i| i == &order_key) {
+                // NOTE: Can't use swap_remove since the original order must be preserved.
+                let _removed = quotations.remove(idx);
+                debug!(
+                    "[remove_quotation] (who, order_index): {:?}, removed order: {:?}",
+                    order_key, _removed
+                );
+            }
+        });
     }
 
     /// This happens after an order has been executed.

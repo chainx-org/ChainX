@@ -14,7 +14,7 @@ use client::runtime_api::Metadata;
 use primitives::crypto::UncheckedInto;
 use primitives::{Blake2Hasher, H160, H256};
 use runtime_primitives::generic::SignedBlock;
-use runtime_primitives::traits::{Block as BlockT, NumberFor, ProvideRuntimeApi, Zero};
+use runtime_primitives::traits::{As, Block as BlockT, NumberFor, ProvideRuntimeApi, Zero};
 use support::storage::{StorageMap, StorageValue};
 // chainx
 use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber};
@@ -22,7 +22,7 @@ use chainx_runtime::{Call, Runtime};
 use xr_primitives::{AddrStr, Name};
 
 use xaccounts::IntentionProps;
-use xassets::{AssetType, Chain, ChainT, Token};
+use xassets::{AssetLimit, AssetType, Chain, ChainT, Token};
 use xbridge_common::types::GenericAllSessionInfo;
 use xbridge_features::{
     self,
@@ -117,7 +117,17 @@ where
                 bmap.extend(info.iter());
             }
 
-            all_assets.push(TotalAssetInfo::new(asset, valid, bmap));
+            let mut lmap = BTreeMap::<AssetLimit, bool>::from_iter(
+                xassets::AssetLimit::iterator().map(|t| (*t, true)),
+            );
+            let key = <xassets::AssetLimitProps<Runtime>>::key_for(asset.token().as_ref());
+            if let Some(limit) =
+                Self::pickout::<BTreeMap<AssetLimit, bool>>(&state, &key, Hasher::BLAKE2256)?
+            {
+                lmap.extend(limit.iter());
+            }
+
+            all_assets.push(TotalAssetInfo::new(asset, valid, bmap, lmap));
         }
 
         into_pagedata(all_assets, page_index, page_size)
@@ -170,6 +180,30 @@ where
             return Ok(None);
         }
         self.withdrawal_limit(self.block_id_by_hash(hash)?, token)
+    }
+
+    fn deposit_limit(
+        &self,
+        token: String,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<DepositLimit>> {
+        let token: xassets::Token = token.as_bytes().to_vec();
+
+        if xassets::is_valid_token(&token).is_err() {
+            return Ok(None);
+        }
+        let state = self.state_at(hash)?;
+        // todo use `cando` to refactor if
+        if token.as_slice() == xbitcoin::Module::<Runtime>::TOKEN {
+            let key = <xbitcoin::BtcMinDeposit<Runtime>>::key();
+            Self::pickout::<u64>(&state, &key, Hasher::TWOX128).map(|value| {
+                Some(DepositLimit {
+                    minimal_deposit: value.unwrap_or(As::sa(100000)),
+                })
+            })
+        } else {
+            return Ok(None);
+        }
     }
 
     fn deposit_list(
@@ -265,7 +299,7 @@ where
         };
 
         let jackpot_account =
-            self.jackpot_accountid_for(self.block_id_by_hash(hash)?, who.clone())?;
+            self.jackpot_accountid_for_unsafe(self.block_id_by_hash(hash)?, who.clone())?;
         Ok(Some(json!({
             "sessionKey": session_key,
             "jackpotAccount": jackpot_account,
@@ -314,7 +348,7 @@ where
 
         let intentions = self.intention_set(block_id)?;
         let jackpot_account_list =
-            self.multi_jackpot_accountid_for(block_id, intentions.clone())?;
+            self.multi_jackpot_accountid_for_unsafe(block_id, intentions.clone())?;
 
         for (intention, jackpot_account) in intentions.into_iter().zip(jackpot_account_list) {
             let mut info = IntentionInfo::default();
@@ -398,7 +432,7 @@ where
         let key = <xtokens::PseduIntentions<Runtime>>::key();
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key, Hasher::TWOX128)? {
             let jackpot_account_list =
-                self.multi_token_jackpot_accountid_for(block_id, tokens.clone())?;
+                self.multi_token_jackpot_accountid_for_unsafe(block_id, tokens.clone())?;
 
             for (token, jackpot_account) in tokens.into_iter().zip(jackpot_account_list) {
                 let mut info = PseduIntentionInfo::default();
@@ -765,10 +799,11 @@ where
     fn trustee_session_info_for(
         &self,
         chain: Chain,
+        number: Option<u32>,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Value>> {
         if let Some((number, info)) =
-            self.trustee_session_info_for(self.block_id_by_hash(hash)?, chain)?
+            self.trustee_session_info_for(self.block_id_by_hash(hash)?, chain, number)?
         {
             return Ok(parse_trustee_session_info(chain, number, info));
         } else {

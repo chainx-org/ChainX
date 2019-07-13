@@ -22,7 +22,7 @@ use xassets::{Chain, ChainT, Memo, Token};
 use xr_primitives::AddrStr;
 #[cfg(feature = "std")]
 use xsupport::token;
-use xsupport::{debug, warn};
+use xsupport::{debug, ensure_with_errorlog};
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
@@ -38,7 +38,8 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn withdraw(origin, token: Token, value: T::Balance, addr: AddrStr, ext: Memo) -> Result {
             let who = ensure_signed(origin)?;
-            Self::check_black_list(&token)?;
+
+            Self::can_withdraw(&token)?;
 
             debug!("[withdraw]withdraw|who:{:?}|token:{:}|value:{:}", who, token!(token), value);
 
@@ -73,18 +74,14 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
-    fn check_black_list(token: &Token) -> Result {
-        let list = Self::token_black_list();
-        if list.contains(token) {
-            warn!(
-                "[check_black_list]|try asset:{:?}|current block list:{:?}",
-                token!(token),
-                list.into_iter()
-                    .map(|item| token!(item))
-                    .collect::<Vec<_>>()
-            );
-            return Err("this token is in blacklist");
-        }
+    #[inline]
+    fn can_withdraw(token: &Token) -> Result {
+        ensure_with_errorlog!(
+            xassets::Module::<T>::can_do(token, xassets::AssetLimit::CanWithdraw),
+            "this asset do not allow withdraw",
+            "this asset do not allow withdraw|token:{:}",
+            token!(token),
+        );
         Ok(())
     }
 

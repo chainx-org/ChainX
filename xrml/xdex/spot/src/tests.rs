@@ -575,3 +575,98 @@ fn refund_remaining_of_maker_order_should_work() {
         assert_eq!(XAssets::asset_balance((3, quote.clone())), bmap);
     })
 }
+
+#[test]
+fn quotations_order_should_be_preserved_when_removing_orders_and_quotations() {
+    with_externalities(&mut new_test_ext(), || {
+        let trading_pair = XSpot::trading_pair_of(0).unwrap();
+
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 100));
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &2, 100));
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 100));
+        assert_ok!(XAssets::pcx_issue(&2, 20000));
+        assert_ok!(XAssets::pcx_issue(&3, 20000));
+        assert_ok!(XAssets::pcx_issue(&4, 20000));
+        assert_ok!(XAssets::pcx_issue(&5, 20000));
+        assert_ok!(XAssets::pcx_issue(&6, 20000));
+
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(1),
+            0,
+            OrderType::Limit,
+            Side::Buy,
+            1000,
+            1_000_000,
+        ));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(2),
+            0,
+            OrderType::Limit,
+            Side::Buy,
+            5000,
+            1_100_000,
+        ));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(3),
+            0,
+            OrderType::Limit,
+            Side::Buy,
+            2000,
+            2_000_000
+        ));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(4),
+            0,
+            OrderType::Limit,
+            Side::Sell,
+            4_000,
+            2_000_000
+        ));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(2),
+            0,
+            OrderType::Limit,
+            Side::Sell,
+            2_000,
+            2_000_000
+        ));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(5),
+            0,
+            OrderType::Limit,
+            Side::Sell,
+            500,
+            2_000_000
+        ));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(6),
+            0,
+            OrderType::Limit,
+            Side::Sell,
+            600,
+            2_000_000
+        ));
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(3),
+            0,
+            OrderType::Limit,
+            Side::Buy,
+            3_500,
+            2_000_000
+        ));
+
+        assert_eq!(
+            XSpot::quotations_of((0, 2_000_000)),
+            [(2, 1), (5, 0), (6, 0)]
+        );
+    })
+}

@@ -6,15 +6,11 @@ use rstd::prelude::Vec;
 
 // CHainX
 use xassets::{Chain, ChainT};
-use xr_primitives::generic::b58;
 use xrecords::{self, HeightOrTime, RecordInfo, TxState};
 use xsupport::error;
 
-// light-bitcoin
-use btc_keys::DisplayLayout;
-
 use super::tx::handler::parse_deposit_outputs;
-use super::tx::utils::ensure_identical;
+use super::tx::utils::{addr2vecu8, ensure_identical};
 use super::types::{TxType, VoteResult};
 use super::{Module, Trait};
 
@@ -146,12 +142,9 @@ impl<T: Trait> Module<T> {
                                     token: Self::TOKEN.to_vec(),
                                     balance: As::sa(balance),
                                     txid: tx_hash.as_ref().to_vec(),
-                                    addr: b58::to_base58(
-                                        Self::input_addr_for(tx_hash)
-                                            .unwrap_or_default()
-                                            .layout()
-                                            .to_vec(),
-                                    ),
+                                    addr: Self::input_addr_for(tx_hash)
+                                        .map(|addr| addr2vecu8(&addr))
+                                        .unwrap_or_default(),
                                     ext: ext.unwrap_or_default(), // op return
                                     height_or_time:
                                         HeightOrTime::<T::BlockNumber, T::Moment>::Timestamp(
