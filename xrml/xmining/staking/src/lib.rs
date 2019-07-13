@@ -311,6 +311,8 @@ decl_event!(
         Claim(u64, u64, Balance),
         Refresh(AccountId, Option<URL>, Option<bool>, Option<SessionKey>, Option<XString>),
         Unfreeze(AccountId, AccountId),
+        /// All rewards issued to all (psedu-)intentions.
+        SessionReward(Balance, Balance, Balance, Balance),
     }
 );
 
