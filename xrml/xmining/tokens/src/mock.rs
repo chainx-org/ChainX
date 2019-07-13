@@ -62,8 +62,11 @@ impl xaccounts::Trait for Test {
 
 pub struct DummyDetermineIntentionJackpotAccountId;
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJackpotAccountId {
-    fn accountid_for(origin: &u64) -> u64 {
+    fn accountid_for_unsafe(origin: &u64) -> u64 {
         origin + 100
+    }
+    fn accountid_for_safe(origin: &u64) -> Option<u64> {
+        Some(origin + 100)
     }
 }
 
@@ -73,6 +76,7 @@ impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = (XTokens);
     type OnAssetRegisterOrRevoke = (XTokens);
+    type DetermineTokenJackpotAccountId = DummyDetermineTokenJackpotAccountId;
 }
 
 impl xfee_manager::Trait for Test {
@@ -164,10 +168,15 @@ impl xsession::Trait for Test {
 }
 
 impl xbitcoin::Trait for Test {
+    type XBitcoinLockup = Self;
     type AccountExtractor = DummyExtractor;
     type TrusteeSessionProvider = XBridgeFeatures;
     type TrusteeMultiSigProvider = DummyBitcoinTrusteeMultiSig;
     type CrossChainProvider = XBridgeFeatures;
+    type Event = ();
+}
+
+impl xbitcoin::lockup::Trait for Test {
     type Event = ();
 }
 
@@ -206,15 +215,21 @@ impl xsdot::Trait for Test {
     type Event = ();
 }
 
+impl xbridge_common::Trait for Test {
+    type Event = ();
+}
+
 impl Trait for Test {
     type Event = ();
-    type DetermineTokenJackpotAccountId = DummyDetermineTokenJackpotAccountId;
 }
 
 pub struct DummyDetermineTokenJackpotAccountId;
 impl TokenJackpotAccountIdFor<u64, u64> for DummyDetermineTokenJackpotAccountId {
-    fn accountid_for(_token: &Token) -> u64 {
+    fn accountid_for_unsafe(_token: &Token) -> u64 {
         10
+    }
+    fn accountid_for_safe(_token: &Token) -> Option<u64> {
+        Some(10)
     }
 }
 
@@ -253,6 +268,25 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let asset_list = vec![
         (btc_asset.clone(), true, true, vec![]),
         (sdot_asset.clone(), true, true, vec![]),
+    ];
+
+    let pair_list = vec![
+        (
+            XAssets::TOKEN.to_vec(),
+            XBitcoin::TOKEN.to_vec(),
+            9,
+            2,
+            100000,
+            true,
+        ),
+        (
+            sdot_asset.token(),
+            XAssets::TOKEN.to_vec(),
+            4,
+            2,
+            100000,
+            true,
+        ),
     ];
 
     t.extend(
@@ -321,7 +355,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     t.extend(
         GenesisConfig::<Test> {
-            token_discount: vec![(sdot_asset.token(), 50)],
+            token_discount: vec![(sdot_asset.token(), 50), (btc_asset.token(), 10)],
             _genesis_phantom_data: Default::default(),
         }
         .build_storage()
@@ -349,6 +383,16 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
                 let value: u64 = *value;
                 XAssets::issue(&token, &accountid, value).unwrap();
             }
+        }
+
+        for (base, quote, pip_precision, tick_precision, price, status) in pair_list.iter() {
+            let _ = XSpot::add_trading_pair(
+                xspot::CurrencyPair::new(base.clone(), quote.clone()),
+                *pip_precision,
+                *tick_precision,
+                *price,
+                *status,
+            );
         }
 
         let intentions = vec![
@@ -393,5 +437,8 @@ pub type XAssets = xassets::Module<Test>;
 pub type XStaking = xstaking::Module<Test>;
 pub type XBitcoin = xbitcoin::Module<Test>;
 pub type XSdot = xsdot::Module<Test>;
+pub type XSpot = xspot::Module<Test>;
+pub type XRecords = xrecords::Module<Test>;
+pub type XBridgeFeatures = xbridge_features::Module<Test>;
 pub type XTokens = Module<Test>;
 pub type XBridgeFeatures = xbridge_features::Module<Test>;

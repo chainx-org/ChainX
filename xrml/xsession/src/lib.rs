@@ -58,6 +58,11 @@ macro_rules! impl_session_change {
 
 for_each_tuple!(impl_session_change);
 
+pub enum SessionKeyUsability<AccountId> {
+    UsedBy(AccountId),
+    Unused,
+}
+
 pub trait Trait: timestamp::Trait + xaccounts::Trait {
     type ConvertAccountIdToSessionKey: Convert<Self::AccountId, Option<Self::SessionKey>>;
     type OnSessionChange: OnSessionChange<Self::Moment>;
@@ -141,12 +146,12 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    pub fn check_key(key: &T::SessionKey) -> Result {
-        if <KeyFilterMap<T>>::get(key).is_some() {
-            return Err("The authority key already exits.");
+    pub fn check_session_key_usability(key: &T::SessionKey) -> SessionKeyUsability<T::AccountId> {
+        if let Some(cur_owner) = <KeyFilterMap<T>>::get(key) {
+            SessionKeyUsability::UsedBy(cur_owner)
+        } else {
+            SessionKeyUsability::Unused
         }
-
-        Ok(())
     }
 
     pub fn account_id_for(key: &T::SessionKey) -> Option<T::AccountId> {

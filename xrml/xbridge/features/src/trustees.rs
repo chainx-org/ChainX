@@ -23,23 +23,37 @@ pub type BitcoinTrusteeSessionInfo<AccountId> =
 
 /// for bitcoin
 impl<T: Trait> TrusteeSession<T::AccountId, BitcoinTrusteeAddrInfo> for Module<T> {
+    fn trustee_session(
+        number: u32,
+    ) -> result::Result<TrusteeSessionInfo<T::AccountId, BitcoinTrusteeAddrInfo>, &'static str>
+    {
+        Self::bitcoin_trustee_session_info_of(number).ok_or_else(|| {
+            error!(
+                "[trustee_session]|not found info for this session|chain:{:?}|number:{:}",
+                Chain::Bitcoin,
+                number
+            );
+            "not found info for this session"
+        })
+    }
+
     fn current_trustee_session(
     ) -> result::Result<TrusteeSessionInfo<T::AccountId, BitcoinTrusteeAddrInfo>, &'static str>
     {
         let number = Self::current_session_number(Chain::Bitcoin);
-        Self::bitcoin_trustee_session_info_of(number).ok_or_else(|| {
-            error!("[current_trustee_session]|not found session info for current session|chain:{:?}|number:{:}", Chain::Bitcoin, number);
-            "not found session info for current session"
-        })
+        Self::trustee_session(number)
     }
 
     fn last_trustee_session(
     ) -> result::Result<TrusteeSessionInfo<T::AccountId, BitcoinTrusteeAddrInfo>, &'static str>
     {
         let number = Self::last_session_number(Chain::Bitcoin);
-        Self::bitcoin_trustee_session_info_of(number).ok_or_else(|| {
-            warn!("[last_trustee_session]|not found session info for last session|chain:{:?}|number:{:}", Chain::Bitcoin, number);
-            "not found session info for last session"
+        Self::trustee_session(number).map_err(|e| {
+            warn!(
+                "[last_trustee_session]|last trustee session not exist yet for this chain|Chain:{:?}",
+                Chain::Bitcoin
+            );
+            e
         })
     }
 }

@@ -3,9 +3,10 @@ use rstd::collections::btree_map::BTreeMap;
 
 use xr_primitives::XString;
 
-use xfee_manager::SwitchStore;
+use xfee_manager::CallSwitcher;
 
 use xassets::Call as XAssetsCall;
+use xbitcoin::lockup::Call as XBitcoinLockupCall;
 use xbitcoin::Call as XBitcoinCall;
 use xbridge_features::Call as XBridgeFeaturesCall;
 use xfisher::Call as XFisherCall;
@@ -21,7 +22,7 @@ use crate::Call;
 pub trait CheckFee {
     fn check_fee(
         &self,
-        switch: SwitchStore,
+        switcher: BTreeMap<CallSwitcher, bool>,
         method_weight_map: BTreeMap<XString, u64>,
     ) -> Option<u64>;
 }
@@ -33,7 +34,7 @@ impl CheckFee for Call {
     /// fee_power = power_per_call
     fn check_fee(
         &self,
-        switch: SwitchStore,
+        switcher: BTreeMap<CallSwitcher, bool>,
         method_weight_map: BTreeMap<XString, u64>,
     ) -> Option<u64> {
         // MultiSigCall is on the top priority and can't be forbidden.
@@ -46,19 +47,26 @@ impl CheckFee for Call {
             }
         }
 
+        let get_switcher = |call_switcher: CallSwitcher| -> bool {
+            switcher.get(&call_switcher).map(|b| *b).unwrap_or(false)
+        };
+
         // Check if a certain emergency switch is on.
-        if switch.global {
+        if get_switcher(CallSwitcher::Global) {
             return None;
         };
 
         match self {
-            Call::XSpot(..) if switch.spot => {
+            Call::XSpot(..) if get_switcher(CallSwitcher::Spot) => {
                 return None;
             }
-            Call::XBridgeOfBTC(..) if switch.xbtc => {
+            Call::XBridgeOfBTC(..) if get_switcher(CallSwitcher::XBTC) => {
                 return None;
             }
-            Call::XBridgeOfSDOT(..) if switch.sdot => {
+            Call::XBridgeOfBTCLockup(..) if get_switcher(CallSwitcher::XBTCLockup) => {
+                return None;
+            }
+            Call::XBridgeOfSDOT(..) if get_switcher(CallSwitcher::SDOT) => {
                 return None;
             }
             _ => (),
@@ -111,9 +119,13 @@ impl CheckFee for Call {
 
             XBridgeOfBTC, XBitcoinCall => (
                 push_header : 10,
-                push_transaction : 8,
+                push_transaction : 50,
                 sign_withdraw_tx : 5,
                 create_withdraw_tx : 5,
+            );
+
+            XBridgeOfBTCLockup, XBitcoinLockupCall => (
+                push_transaction : 50,
             );
 
             XStaking, XStakingCall => (

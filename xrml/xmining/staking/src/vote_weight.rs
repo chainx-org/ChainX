@@ -4,28 +4,14 @@
 use super::*;
 
 use rstd::result;
+use xassets::ChainT;
+use xbridge_common::traits::CrossChainBindingV2;
 use xsupport::{error, trace};
 
-pub trait VoteWeight<BlockNumber: As<u64>> {
-    fn amount(&self) -> u64;
-    fn set_amount(&mut self, value: u64, to_add: bool);
-
-    fn last_acum_weight(&self) -> u64;
-    fn set_last_acum_weight(&mut self, s: u64);
-
-    fn last_acum_weight_update(&self) -> u64;
-    fn set_last_acum_weight_update(&mut self, num: BlockNumber);
-
-    fn latest_acum_weight(&self, current_block: BlockNumber) -> u64 {
-        self.last_acum_weight()
-            + self.amount() * (current_block.as_() - self.last_acum_weight_update())
-    }
-}
-
-impl<B, C> VoteWeight<C> for IntentionProfs<B, C>
+impl<Balance, BlockNumber> VoteWeight<BlockNumber> for IntentionProfs<Balance, BlockNumber>
 where
-    B: Default + As<u64> + Clone,
-    C: Default + As<u64> + Clone,
+    Balance: Default + As<u64> + Clone,
+    BlockNumber: Default + As<u64> + Clone,
 {
     fn amount(&self) -> u64 {
         self.total_nomination.clone().as_()
@@ -38,7 +24,7 @@ where
         } else {
             amount -= value;
         }
-        self.total_nomination = B::sa(amount);
+        self.total_nomination = Balance::sa(amount);
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -53,15 +39,15 @@ where
         self.last_total_vote_weight_update.clone().as_()
     }
 
-    fn set_last_acum_weight_update(&mut self, current_block: C) {
+    fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
         self.last_total_vote_weight_update = current_block;
     }
 }
 
-impl<B, C> VoteWeight<C> for NominationRecord<B, C>
+impl<Balance, BlockNumber> VoteWeight<BlockNumber> for NominationRecord<Balance, BlockNumber>
 where
-    B: Default + As<u64> + Clone,
-    C: Default + As<u64> + Clone,
+    Balance: Default + As<u64> + Clone,
+    BlockNumber: Default + As<u64> + Clone,
 {
     fn amount(&self) -> u64 {
         self.nomination.clone().as_()
@@ -74,7 +60,7 @@ where
         } else {
             amount -= value;
         }
-        self.nomination = B::sa(amount);
+        self.nomination = Balance::sa(amount);
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -89,7 +75,7 @@ where
         self.last_vote_weight_update.clone().as_()
     }
 
-    fn set_last_acum_weight_update(&mut self, current_block: C) {
+    fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
         self.last_vote_weight_update = current_block;
     }
 }
@@ -109,17 +95,22 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn referral_or_council_of(who: &T::AccountId, token: &Token) -> T::AccountId {
-        let council_account = xaccounts::Module::<T>::council_account();
+        // Get referral from xbridge_common since v1.0.3.
+        let referral = if <xsdot::Module<T> as ChainT>::TOKEN == token.as_slice()
+            || <xbitcoin::Module<T> as ChainT>::TOKEN == token.as_slice()
+        {
+            if let Some(asset_info) = <xassets::AssetInfo<T>>::get(token) {
+                let asset = asset_info.0;
+                let chain = asset.chain();
+                xbridge_features::Module::<T>::get_first_binding_channel(who, chain)
+            } else {
+                None
+            }
+        } else {
+            xbridge_common::Module::<T>::get_binding_info(token, who)
+        };
 
-        if let Some(asset_info) = <xassets::AssetInfo<T>>::get(token) {
-            let asset = asset_info.0;
-            let chain = asset.chain();
-
-            return xbridge_features::Module::<T>::get_first_binding_channel(who, chain)
-                .unwrap_or(council_account);
-        }
-
-        council_account
+        referral.unwrap_or_else(xaccounts::Module::<T>::council_account)
     }
 
     pub fn generic_claim<U, V>(

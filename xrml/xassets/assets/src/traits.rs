@@ -4,6 +4,11 @@ use support::dispatch::Result;
 
 use crate::types::{AssetErr, AssetType, Chain, Token};
 
+pub trait TokenJackpotAccountIdFor<AccountId: Sized, BlockNumber> {
+    fn accountid_for_unsafe(token: &Token) -> AccountId;
+    fn accountid_for_safe(token: &Token) -> Option<AccountId>;
+}
+
 pub trait ChainT {
     const TOKEN: &'static [u8];
     fn chain() -> Chain;
@@ -31,6 +36,7 @@ pub trait OnAssetChanged<AccountId, Balance> {
     ) -> result::Result<(), AssetErr>;
     fn on_issue_before(token: &Token, who: &AccountId);
     fn on_issue(token: &Token, who: &AccountId, value: Balance) -> Result;
+    fn on_destroy_before(token: &Token, who: &AccountId);
     fn on_destroy(token: &Token, who: &AccountId, value: Balance) -> Result;
     fn on_set_balance(
         _token: &Token,

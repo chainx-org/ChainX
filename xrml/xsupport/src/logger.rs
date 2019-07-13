@@ -77,6 +77,27 @@ pub fn u8array_to_addr(s: &[u8]) -> String {
 
 #[cfg(feature = "std")]
 #[inline]
+pub fn try_hex_or_str(src: &[u8]) -> String {
+    let check_is_str = |src: &[u8]| -> bool {
+        for c in src {
+            // 0x21 = !, 0x71 = ~
+            if 0x21 <= *c && *c <= 0x7E {
+                continue;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    };
+    if check_is_str(src) {
+        u8array_to_string(src)
+    } else {
+        u8array_to_hex(src)
+    }
+}
+
+#[cfg(feature = "std")]
+#[inline]
 pub fn u8array_to_string(s: &[u8]) -> String {
     String::from_utf8_lossy(s).into_owned()
 }

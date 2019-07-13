@@ -67,6 +67,10 @@ impl xbridge_features::Trait for Test {
     type Event = ();
 }
 
+impl xbridge_common::Trait for Test {
+    type Event = ();
+}
+
 impl xmultisig::Trait for Test {
     type MultiSig = DummyMultiSig;
     type GenesisMultiSig = DummyGenesisMultiSig;
@@ -128,8 +132,11 @@ impl xmultisig::GenesisMultiSig<u64> for DummyGenesisMultiSig {
 
 pub struct DummyDetermineIntentionJackpotAccountId;
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJackpotAccountId {
-    fn accountid_for(origin: &u64) -> u64 {
+    fn accountid_for_unsafe(origin: &u64) -> u64 {
         origin + 100
+    }
+    fn accountid_for_safe(origin: &u64) -> Option<u64> {
+        Some(origin + 100)
     }
 }
 
@@ -139,6 +146,7 @@ impl xassets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
+    type DetermineTokenJackpotAccountId = ();
 }
 
 impl xfee_manager::Trait for Test {
@@ -173,10 +181,21 @@ impl xsession::Trait for Test {
 }
 
 impl xbitcoin::Trait for Test {
+    type XBitcoinLockup = Self;
     type AccountExtractor = DummyExtractor;
     type TrusteeSessionProvider = XBridgeFeatures;
     type TrusteeMultiSigProvider = DummyBitcoinTrusteeMultiSig;
     type CrossChainProvider = XBridgeFeatures;
+    type Event = ();
+}
+
+impl xsdot::Trait for Test {
+    type AccountExtractor = DummyExtractor;
+    type CrossChainProvider = XBridgeFeatures;
+    type Event = ();
+}
+
+impl xbitcoin::lockup::Trait for Test {
     type Event = ();
 }
 
@@ -222,7 +241,12 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     t.extend(
         xsession::GenesisConfig::<Test> {
             session_length: 1,
-            validators: vec![(10, 10), (20, 20), (30, 30), (40, 40)],
+            validators: vec![
+                (10, 10 * 100_000_000),
+                (20, 20 * 100_000_000),
+                (30, 30 * 100_000_000),
+                (40, 40 * 100_000_000),
+            ],
             keys: vec![
                 (10, UintAuthorityId(10)),
                 (20, UintAuthorityId(20)),
@@ -277,12 +301,63 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             pcx_desc,
         )
         .unwrap();
+
+        let btc = Asset::new(
+            b"BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8, // bitcoin precision
+            b"ChainX's Cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap();
+
+        let sdot = Asset::new(
+            b"SDOT".to_vec(), // token
+            b"Shadow DOT".to_vec(),
+            Chain::Ethereum,
+            3, //  precision
+            b"ChainX's Shadow Polkadot from Ethereum".to_vec(),
+        )
+        .unwrap();
+
         XAssets::bootstrap_register_asset(pcx, true, false).unwrap();
+        XAssets::bootstrap_register_asset(btc, true, true).unwrap();
+        XAssets::bootstrap_register_asset(sdot, true, true).unwrap();
+
+        let intentions = vec![
+            (10, 10 * 100_000_000, b"name10".to_vec(), b"".to_vec()),
+            (20, 20 * 100_000_000, b"name20".to_vec(), b"".to_vec()),
+            (30, 30 * 100_000_000, b"name30".to_vec(), b"".to_vec()),
+            (40, 40 * 100_000_000, b"name40".to_vec(), b"".to_vec()),
+        ];
+
+        // xstaking
+        let pcx = XAssets::TOKEN.to_vec();
+        for (intention, value, name, url) in intentions.clone().into_iter() {
+            XStaking::bootstrap_register(&intention, name).unwrap();
+
+            XAssets::pcx_issue(&intention, value).unwrap();
+
+            XAssets::move_balance(
+                &pcx,
+                &intention,
+                xassets::AssetType::Free,
+                &intention,
+                xassets::AssetType::ReservedStaking,
+                value,
+            )
+            .unwrap();
+
+            XStaking::bootstrap_refresh(&intention, Some(url), Some(true), None, None);
+            XStaking::bootstrap_update_vote_weight(&intention, &intention, value, true);
+        }
+
         XAssets::pcx_issue(&1, 10).unwrap();
         XAssets::pcx_issue(&2, 20).unwrap();
         XAssets::pcx_issue(&3, 30).unwrap();
         XAssets::pcx_issue(&4, 40).unwrap();
-        XAssets::pcx_issue(&6, 30).unwrap();
+        XAssets::pcx_issue(&5, 50).unwrap();
+        XAssets::pcx_issue(&6, 30 * 100_000_000).unwrap();
     });
     let init: StorageOverlay = init.into();
     runtime_io::TestExternalities::new(init)

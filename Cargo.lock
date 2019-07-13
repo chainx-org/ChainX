@@ -423,7 +423,7 @@ dependencies = [
 
 [[package]]
 name = "chainx"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "chainx-cli 1.0.0",
  "ctrlc 3.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -524,7 +524,7 @@ dependencies = [
  "xrml-xassets-records 1.0.0",
  "xrml-xaura 1.0.0",
  "xrml-xbootstrap 1.0.0",
- "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xbridge-features 1.0.0",
  "xrml-xbridge-sdot 1.0.0",
@@ -3118,7 +3118,7 @@ dependencies = [
  "xrml-xassets-assets 1.0.0",
  "xrml-xassets-process 1.0.0",
  "xrml-xassets-records 1.0.0",
- "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xdex-spot 1.0.0",
  "xrml-xsupport 1.0.0",
@@ -4377,7 +4377,7 @@ dependencies = [
  "xrml-xassets-assets 1.0.0",
  "xrml-xassets-process 1.0.0",
  "xrml-xassets-records 1.0.0",
- "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xbridge-features 1.0.0",
  "xrml-xdex-spot 1.0.0",
@@ -5518,6 +5518,7 @@ dependencies = [
  "srml-system 2.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 1.0.0",
+ "xrml-xaccounts 1.0.0",
  "xrml-xsupport 1.0.0",
 ]
 
@@ -5540,7 +5541,7 @@ dependencies = [
  "xrml-xaccounts 1.0.0",
  "xrml-xassets-assets 1.0.0",
  "xrml-xassets-records 1.0.0",
- "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xfee-manager 1.0.0",
  "xrml-xsupport 1.0.0",
  "xrml-xsystem 1.0.0",
@@ -5612,11 +5613,11 @@ dependencies = [
 
 [[package]]
 name = "xrml-xbridge-bitcoin"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "crypto 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex-literal 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "keys 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "merkle 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5655,8 +5656,13 @@ dependencies = [
  "serde_derive 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "srml-support 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 2.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate)",
  "xr-primitives 1.0.0",
+ "xrml-xaccounts 1.0.0",
+ "xrml-xassets-assets 1.0.0",
+ "xrml-xfee-manager 1.0.0",
  "xrml-xsupport 1.0.0",
 ]
 
@@ -5677,7 +5683,7 @@ dependencies = [
  "xr-primitives 1.0.0",
  "xrml-xaccounts 1.0.0",
  "xrml-xassets-assets 1.0.0",
- "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xbridge-sdot 1.0.0",
  "xrml-xmultisig 1.0.0",
@@ -5732,7 +5738,7 @@ dependencies = [
  "xrml-xaccounts 1.0.0",
  "xrml-xassets-assets 1.0.0",
  "xrml-xassets-records 1.0.0",
- "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xbridge-features 1.0.0",
  "xrml-xbridge-sdot 1.0.0",
@@ -5804,9 +5810,10 @@ dependencies = [
  "xrml-xaccounts 1.0.0",
  "xrml-xassets-assets 1.0.0",
  "xrml-xassets-records 1.0.0",
- "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xbridge-features 1.0.0",
+ "xrml-xbridge-sdot 1.0.0",
  "xrml-xfee-manager 1.0.0",
  "xrml-xmultisig 1.0.0",
  "xrml-xsession 1.0.0",
@@ -5833,11 +5840,14 @@ dependencies = [
  "xrml-xaccounts 1.0.0",
  "xrml-xassets-assets 1.0.0",
  "xrml-xassets-records 1.0.0",
- "xrml-xbridge-bitcoin 1.0.0",
+ "xrml-xbridge-bitcoin 1.0.1",
+ "xrml-xbridge-common 1.0.0",
+ "xrml-xbridge-features 1.0.0",
  "xrml-xbridge-sdot 1.0.0",
  "xrml-xdex-spot 1.0.0",
  "xrml-xfee-manager 1.0.0",
  "xrml-xmining-staking 1.0.0",
+ "xrml-xmultisig 1.0.0",
  "xrml-xsession 1.0.0",
  "xrml-xsupport 1.0.0",
  "xrml-xsystem 1.0.0",

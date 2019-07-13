@@ -28,6 +28,10 @@ fn test_is_valid_name() {
         is_valid_name("namenamename_".as_bytes()),
         "The length of name must be in range [2, 12]."
     );
+    assert_noop!(
+        is_valid_name("<script>".as_bytes()),
+        "'<' and '>' are not allowed, which could be abused off-chain."
+    );
 }
 
 #[test]
@@ -38,6 +42,10 @@ fn test_is_valid_about() {
     assert_noop!(
         is_valid_about("abcd".repeat(33).as_bytes()),
         "The length of about must be in range [0, 128]."
+    );
+    assert_noop!(
+        is_valid_about("<script>".as_bytes()),
+        "'<' and '>' are not allowed, which could be abused off-chain."
     );
 }
 

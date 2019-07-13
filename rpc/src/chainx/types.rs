@@ -13,7 +13,7 @@ use serde_json::{json, Map, Value};
 use chainx_primitives::{AccountId, AccountIdForRpc, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
 
-use xassets::{Asset, AssetType, Chain};
+use xassets::{Asset, AssetLimit, AssetType, Chain};
 use xrecords::{HeightOrTime, RecordInfo, TxState};
 use xspot::{
     OrderIndex, OrderInfo, OrderStatus, OrderType, Side, TradeHistoryIndex, TradingPairIndex,
@@ -74,6 +74,7 @@ pub struct TotalAssetInfo {
     desc: String,
     online: bool,
     details: BTreeMap<AssetType, Balance>,
+    limit_props: BTreeMap<AssetLimit, bool>,
 }
 
 impl TotalAssetInfo {
@@ -81,6 +82,7 @@ impl TotalAssetInfo {
         asset: Asset,
         online: bool,
         details: BTreeMap<AssetType, Balance>,
+        limit_props: BTreeMap<AssetLimit, bool>,
     ) -> TotalAssetInfo {
         TotalAssetInfo {
             name: String::from_utf8_lossy(&asset.token()).into_owned(),
@@ -90,6 +92,7 @@ impl TotalAssetInfo {
             desc: String::from_utf8_lossy(&asset.desc()).into_owned(),
             online,
             details,
+            limit_props,
         }
     }
 }
@@ -370,6 +373,12 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for DepositInf
             total_confirm,
         }
     }
+}
+
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DepositLimit {
+    pub minimal_deposit: Balance,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

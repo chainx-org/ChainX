@@ -26,7 +26,20 @@ pub trait Trait: system::Trait + consensus::Trait {
 }
 
 pub trait IntentionJackpotAccountIdFor<AccountId: Sized> {
-    fn accountid_for(origin: &AccountId) -> AccountId;
+    /// when use `*_unsafe`, must confirm accountid is an intention
+    fn accountid_for_unsafe(origin: &AccountId) -> AccountId;
+
+    fn accountid_for_safe(origin: &AccountId) -> Option<AccountId>;
+}
+
+impl<AccountId: Default> IntentionJackpotAccountIdFor<AccountId> for () {
+    fn accountid_for_unsafe(_: &AccountId) -> AccountId {
+        AccountId::default()
+    }
+
+    fn accountid_for_safe(_: &AccountId) -> Option<AccountId> {
+        Some(AccountId::default())
+    }
 }
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
@@ -35,11 +48,14 @@ impl<T: Trait> IntentionJackpotAccountIdFor<T::AccountId> for SimpleAccountIdDet
 where
     T::AccountId: UncheckedFrom<T::Hash>,
 {
-    fn accountid_for(origin: &T::AccountId) -> T::AccountId {
-        let name = Module::<T>::intention_name_of(origin)
-            .expect("The original account must be an existing intention.");
-        // name
-        UncheckedFrom::unchecked_from(T::Hashing::hash(&name))
+    fn accountid_for_unsafe(origin: &T::AccountId) -> T::AccountId {
+        Self::accountid_for_safe(origin)
+            .expect("The original account must be an existing intention.")
+    }
+
+    fn accountid_for_safe(origin: &T::AccountId) -> Option<T::AccountId> {
+        Module::<T>::intention_name_of(origin)
+            .map(|name| UncheckedFrom::unchecked_from(T::Hashing::hash(&name)))
     }
 }
 
@@ -78,22 +94,33 @@ impl<T: Trait> xsystem::Validator<T::AccountId> for Module<T> {
     }
 }
 
+/// Although xss is imperceptible on-chain, we merely want to make it look safer off-chain.
+pub fn is_xss_proof(input: &[u8]) -> Result {
+    if input.contains(&b'<') || input.contains(&b'>') {
+        return Err("'<' and '>' are not allowed, which could be abused off-chain.");
+    }
+    Ok(())
+}
+
+/// A valid name should be [2, 12] in length and xss-proof.
 pub fn is_valid_name(name: &[u8]) -> Result {
     if name.len() > 12 || name.len() < 2 {
         return Err("The length of name must be in range [2, 12].");
     }
 
-    Ok(())
+    is_xss_proof(name)
 }
 
+/// A valid about should be [0, 128] in length and xss-proof.
 pub fn is_valid_about(about: &[u8]) -> Result {
     if about.len() > 128 {
         return Err("The length of about must be in range [0, 128].");
     }
 
-    Ok(())
+    is_xss_proof(about)
 }
 
+/// The url actually obeys the slightly modifed domain name rule.
 pub fn is_valid_url(url: &[u8]) -> Result {
     if url.len() > 24 || url.len() < 4 {
         return Err("The length of url must be in range [4, 24].");

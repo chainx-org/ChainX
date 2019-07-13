@@ -30,6 +30,7 @@ where
 pub trait Rpc {
     fn start_rpc(
         &self,
+        ws_max_connections: usize,
         task_executor: TaskExecutor,
     ) -> (
         Result<Option<rpc::HttpServer>, io::Error>,
@@ -40,6 +41,7 @@ pub trait Rpc {
 impl Rpc for substrate_service::LightComponents<service::Factory> {
     fn start_rpc(
         &self,
+        ws_max_connections: usize,
         task_executor: TaskExecutor,
     ) -> (
         Result<Option<rpc::HttpServer>, io::Error>,
@@ -79,7 +81,9 @@ impl Rpc for substrate_service::LightComponents<service::Factory> {
                 rpc::start_http(address, handler())
             });
         let rpc_ws: Result<Option<rpc::WsServer>, io::Error> =
-            maybe_start_server(config.rpc_ws, |address| rpc::start_ws(address, handler()));
+            maybe_start_server(config.rpc_ws, |address| {
+                rpc::start_ws(address, ws_max_connections, handler())
+            });
         (rpc_http, rpc_ws)
     }
 }
@@ -87,6 +91,7 @@ impl Rpc for substrate_service::LightComponents<service::Factory> {
 impl Rpc for substrate_service::FullComponents<service::Factory> {
     fn start_rpc(
         &self,
+        ws_max_connections: usize,
         task_executor: TaskExecutor,
     ) -> (
         Result<Option<rpc::HttpServer>, io::Error>,
@@ -126,7 +131,9 @@ impl Rpc for substrate_service::FullComponents<service::Factory> {
                 rpc::start_http(address, handler())
             });
         let rpc_ws: Result<Option<rpc::WsServer>, io::Error> =
-            maybe_start_server(config.rpc_ws, |address| rpc::start_ws(address, handler()));
+            maybe_start_server(config.rpc_ws, |address| {
+                rpc::start_ws(address, ws_max_connections, handler())
+            });
         (rpc_http, rpc_ws)
     }
 }

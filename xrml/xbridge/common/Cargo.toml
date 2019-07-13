@@ -12,9 +12,14 @@ parity-codec = { version = "3.3", default-features = false, features = ["derive"
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
 substrate-primitives = { package = "substrate-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
 # chainx runtime module
 xr-primitives = { path = "../../../xr-primitives", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
+xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
+xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", default-features = false }
+xfee_manager = { package = "xrml-xfee-manager", path = "../../xfee/manager", default-features = false }
 
 # for chain
 btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin", default-features = false }
@@ -33,9 +38,14 @@ std=[
     "rstd/std",
     "primitives/std",
     "substrate-primitives/std",
+    "support/std",
+    "system/std",
     # chainx runtime module
     "xr-primitives/std",
     "xsupport/std",
+    "xaccounts/std",
+    "xassets/std",
+    "xfee_manager/std",
     # chain
     "btc-keys/std",
 ]

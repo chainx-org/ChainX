@@ -52,6 +52,7 @@ use chainx_primitives::{
 pub use xaccounts;
 pub use xassets;
 pub use xbitcoin;
+pub use xbitcoin::lockup as xbitcoin_lockup;
 pub use xbridge_common;
 pub use xbridge_features;
 pub use xprocess;
@@ -70,7 +71,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 2,
+    spec_version: 3,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
 };
@@ -153,6 +154,7 @@ impl xassets::Trait for Runtime {
     type Event = Event;
     type OnAssetChanged = (XTokens);
     type OnAssetRegisterOrRevoke = (XTokens, XSpot);
+    type DetermineTokenJackpotAccountId = xassets::SimpleAccountIdDeterminator<Runtime>;
 }
 
 impl xrecords::Trait for Runtime {
@@ -174,7 +176,6 @@ impl xstaking::Trait for Runtime {
 
 impl xtokens::Trait for Runtime {
     type Event = Event;
-    type DetermineTokenJackpotAccountId = xtokens::SimpleAccountIdDeterminator<Runtime>;
 }
 
 impl xspot::Trait for Runtime {
@@ -183,11 +184,20 @@ impl xspot::Trait for Runtime {
 }
 
 // bridge
+impl xbridge_common::Trait for Runtime {
+    type Event = Event;
+}
+
 impl xbitcoin::Trait for Runtime {
+    type XBitcoinLockup = Self;
     type AccountExtractor = xbridge_common::extractor::Extractor<AccountId>;
     type TrusteeSessionProvider = XBridgeFeatures;
     type TrusteeMultiSigProvider = xbridge_features::trustees::BitcoinTrusteeMultiSig<Runtime>;
     type CrossChainProvider = XBridgeFeatures;
+    type Event = Event;
+}
+
+impl xbitcoin_lockup::Trait for Runtime {
     type Event = Event;
 }
 
@@ -304,6 +314,9 @@ construct_runtime!(
 
         // fisher
         XFisher: xfisher::{Module, Call, Storage, Event<T>},
+
+        XBridgeCommon: xbridge_common::{Module, Storage, Event<T>},
+        XBridgeOfBTCLockup: xbitcoin_lockup::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -475,17 +488,17 @@ impl_runtime_apis! {
     }
 
     impl runtime_api::xmining_api::XMiningApi<Block> for Runtime {
-        fn jackpot_accountid_for(who: AccountId) -> AccountId {
-            XStaking::jackpot_accountid_for(&who)
+        fn jackpot_accountid_for_unsafe(who: AccountId) -> AccountId {
+            XStaking::jackpot_accountid_for_unsafe(&who)
         }
-        fn multi_jackpot_accountid_for(whos: Vec<AccountId>) -> Vec<AccountId> {
-            XStaking::multi_jackpot_accountid_for(&whos)
+        fn multi_jackpot_accountid_for_unsafe(whos: Vec<AccountId>) -> Vec<AccountId> {
+            XStaking::multi_jackpot_accountid_for_unsafe(&whos)
         }
-        fn token_jackpot_accountid_for(token: xassets::Token) -> AccountId {
-            XTokens::token_jackpot_accountid_for(&token)
+        fn token_jackpot_accountid_for_unsafe(token: xassets::Token) -> AccountId {
+            XTokens::token_jackpot_accountid_for_unsafe(&token)
         }
-        fn multi_token_jackpot_accountid_for(tokens: Vec<xassets::Token>) -> Vec<AccountId> {
-            XTokens::multi_token_jackpot_accountid_for(&tokens)
+        fn multi_token_jackpot_accountid_for_unsafe(tokens: Vec<xassets::Token>) -> Vec<AccountId> {
+            XTokens::multi_token_jackpot_accountid_for_unsafe(&tokens)
         }
         fn asset_power(token: xassets::Token) -> Option<Balance> {
             XTokens::asset_power(&token)
@@ -508,7 +521,7 @@ impl_runtime_apis! {
                 return None;
             };
 
-            let switch = xfee_manager::SwitchStore::default();
+            let switch = xfee_manager::Module::<Runtime>::switcher();
             let method_call_weight = XFeeManager::method_call_weight();
             call.check_fee(switch, method_call_weight).map(|weight|
                 XFeeManager::transaction_fee(weight, encoded_len)
@@ -538,16 +551,17 @@ impl_runtime_apis! {
         fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>> {
             let mut map = BTreeMap::new();
             for chain in xassets::Chain::iterator() {
-                if let Some((_, info)) = Self::trustee_session_info_for(*chain) {
+                if let Some((_, info)) = Self::trustee_session_info_for(*chain, None) {
                     map.insert(*chain, info);
                 }
             }
             map
         }
-        fn trustee_session_info_for(chain: xassets::Chain) -> Option<(u32, GenericAllSessionInfo<AccountId>)> {
-            XBridgeFeatures::current_trustee_session_info_for(chain).map(|info| (
-                (XBridgeFeatures::current_session_number(chain), info)
-            ))
+        fn trustee_session_info_for(chain: xassets::Chain, number: Option<u32>) -> Option<(u32, GenericAllSessionInfo<AccountId>)> {
+            XBridgeFeatures::trustee_session_info_for(chain, number).map(|info| {
+                let num = number.unwrap_or(XBridgeFeatures::current_session_number(chain));
+                (num, info)
+            })
         }
     }
 }

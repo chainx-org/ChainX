@@ -304,12 +304,14 @@ where
             match config.roles {
                 ServiceRoles::LIGHT => run_until_exit(
                     runtime,
+                    custom_args.ws_max_connections,
                     service::Factory::new_light(config, executor)
                         .map_err(|e| format!("{:?}", e))?,
                     exit,
                 ),
                 _ => run_until_exit(
                     runtime,
+                    custom_args.ws_max_connections,
                     service::Factory::new_full(config, executor).map_err(|e| format!("{:?}", e))?,
                     exit,
                 ),
@@ -321,7 +323,12 @@ where
     .map(|_| ())
 }
 
-fn run_until_exit<T, C, E>(mut runtime: Runtime, service: T, e: E) -> error::Result<()>
+fn run_until_exit<T, C, E>(
+    mut runtime: Runtime,
+    ws_max_connections: usize,
+    service: T,
+    e: E,
+) -> error::Result<()>
 where
     T: Deref<Target = substrate_service::Service<C>> + native_rpc::Rpc,
     C: substrate_service::Components,
@@ -330,7 +337,7 @@ where
     let (exit_send, exit) = exit_future::signal();
 
     let executor = runtime.executor();
-    let (_http, _ws) = service.start_rpc(executor.clone());
+    let (_http, _ws) = service.start_rpc(ws_max_connections, executor.clone());
     cli::informant::start(&service, exit.clone(), executor.clone());
 
     let _ = runtime.block_on(e.into_exit());

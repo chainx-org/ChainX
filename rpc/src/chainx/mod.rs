@@ -75,6 +75,9 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
         hash: Option<Hash>,
     ) -> Result<Option<WithdrawalLimit<Balance>>>;
 
+    #[rpc(name = "chainx_getDepositLimitByToken")]
+    fn deposit_limit(&self, token: String, hash: Option<Hash>) -> Result<Option<DepositLimit>>;
+
     #[rpc(name = "chainx_getDepositList")]
     fn deposit_list(
         &self,
@@ -145,7 +148,12 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     ) -> Result<Option<Vec<String>>>;
 
     #[rpc(name = "chainx_getTrusteeSessionInfo")]
-    fn trustee_session_info_for(&self, chain: Chain, hash: Option<Hash>) -> Result<Option<Value>>;
+    fn trustee_session_info_for(
+        &self,
+        chain: Chain,
+        number: Option<u32>,
+        hash: Option<Hash>,
+    ) -> Result<Option<Value>>;
 
     #[rpc(name = "chainx_getTrusteeInfoByAccount")]
     fn trustee_info_for_accountid(
@@ -287,9 +295,9 @@ where
 
         // XMiningApi
         fn asset_power(token: Token) -> Option<Balance>;
-        fn jackpot_accountid_for(who: AccountId) -> AccountId;
-        fn multi_jackpot_accountid_for(intentions: Vec<AccountId>) -> Vec<AccountId>;
-        fn multi_token_jackpot_accountid_for(tokens: Vec<Token>) -> Vec<AccountId>;
+        fn jackpot_accountid_for_unsafe(who: AccountId) -> AccountId;
+        fn multi_jackpot_accountid_for_unsafe(intentions: Vec<AccountId>) -> Vec<AccountId>;
+        fn multi_token_jackpot_accountid_for_unsafe(tokens: Vec<Token>) -> Vec<AccountId>;
 
         // XSpotApi
         fn aver_asset_price(token: Token) -> Option<Balance>;
@@ -302,7 +310,7 @@ where
 
         // XBridgeApi
         fn trustee_props_for(who: AccountId) -> BTreeMap<Chain, GenericTrusteeIntentionProps>;
-        fn trustee_session_info_for(chain: Chain) -> Option<(u32, GenericAllSessionInfo<AccountId>)>;
+        fn trustee_session_info_for(chain: Chain, number: Option<u32>) -> Option<(u32, GenericAllSessionInfo<AccountId>)>;
         fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>>;
     }
 }

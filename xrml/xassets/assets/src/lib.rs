@@ -12,33 +12,66 @@ pub mod types;
 mod mock;
 mod tests;
 
-use parity_codec::Codec;
-
+use parity_codec::{Codec, Encode};
 // Substrate
 use primitives::traits::{
-    As, CheckedAdd, CheckedSub, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
+    As, CheckedAdd, CheckedSub, Hash, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
     StaticLookup, Zero,
 };
 use rstd::collections::btree_map::BTreeMap;
 use rstd::{prelude::*, result};
+use substrate_primitives::crypto::UncheckedFrom;
 
 use support::traits::{Imbalance, SignedImbalance};
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, Parameter, StorageMap};
 use system::{ensure_signed, IsDeadAccount, OnNewAccount};
 
 // ChainX
-use xsupport::{debug, info};
+use xsupport::{debug, ensure_with_errorlog, error, info};
 #[cfg(feature = "std")]
 use xsupport::{token, u8array_to_string};
 
-pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke};
+pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJackpotAccountIdFor};
 use self::trigger::AssetTriggerEventAfter;
 
 pub use self::types::{
-    is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetType, Chain, Desc,
-    DescString, Memo, NegativeImbalance, PositiveImbalance, Precision, SignedImbalanceT, Token,
-    TokenString,
+    is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetLimit, AssetType, Chain,
+    Desc, DescString, Memo, NegativeImbalance, PositiveImbalance, Precision, SignedImbalanceT,
+    Token, TokenString,
 };
+
+pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
+
+impl<AccountId: Default, BlockNumber> TokenJackpotAccountIdFor<AccountId, BlockNumber> for () {
+    fn accountid_for_unsafe(_: &Token) -> AccountId {
+        AccountId::default()
+    }
+    fn accountid_for_safe(_: &Token) -> Option<AccountId> {
+        Some(AccountId::default())
+    }
+}
+
+impl<T: Trait> TokenJackpotAccountIdFor<T::AccountId, T::BlockNumber>
+    for SimpleAccountIdDeterminator<T>
+where
+    T::AccountId: UncheckedFrom<T::Hash>,
+    T::BlockNumber: parity_codec::Codec,
+{
+    fn accountid_for_unsafe(token: &Token) -> T::AccountId {
+        Self::accountid_for_safe(token).expect("the asset must be existed before")
+    }
+    fn accountid_for_safe(token: &Token) -> Option<T::AccountId> {
+        Module::<T>::asset_info(token).map(|(_, _, init_number)| {
+            let token_hash = T::Hashing::hash(token);
+            let block_num_hash = T::Hashing::hash(init_number.encode().as_ref());
+
+            let mut buf = Vec::new();
+            buf.extend_from_slice(token_hash.as_ref());
+            buf.extend_from_slice(block_num_hash.as_ref());
+            UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
+        })
+    }
+}
 
 pub trait Trait: system::Trait {
     type Balance: Parameter
@@ -59,6 +92,12 @@ pub trait Trait: system::Trait {
     type OnAssetChanged: OnAssetChanged<Self::AccountId, Self::Balance>;
 
     type OnAssetRegisterOrRevoke: OnAssetRegisterOrRevoke;
+
+    /// Generate virtual AccountId for each (psedu) token
+    type DetermineTokenJackpotAccountId: TokenJackpotAccountIdFor<
+        Self::AccountId,
+        Self::BlockNumber,
+    >;
 }
 
 decl_event!(
@@ -81,7 +120,7 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         /// register_asset to module, should allow by root
-        fn register_asset(asset: Asset, is_online: bool, is_psedu_intention: bool) -> Result {
+        pub fn register_asset(asset: Asset, is_online: bool, is_psedu_intention: bool) -> Result {
             asset.is_valid()?;
             info!("[register_asset]|{:?}|is_online:{:}|is_psedu_intention:{:}", asset, is_online, is_psedu_intention);
 
@@ -99,7 +138,7 @@ decl_module! {
         }
 
         /// revoke asset, mark this asset is invalid
-        fn revoke_asset(token: Token) -> Result {
+        pub fn revoke_asset(token: Token) -> Result {
             is_valid_token(&token)?;
             Self::remove_asset(&token)?;
 
@@ -109,7 +148,7 @@ decl_module! {
         }
 
         /// set free token for an account
-        fn set_balance(who: <T::Lookup as StaticLookup>::Source, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> Result {
+        pub fn set_balance(who: <T::Lookup as StaticLookup>::Source, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> Result {
             let who = <T as system::Trait>::Lookup::lookup(who)?;
             info!("[set_balance]|set balances by root|who:{:?}|token:{:}|balances_map:{:?}", who, token!(token), balances);
             Self::set_balance_by_root(&who, &token, balances)?;
@@ -117,7 +156,7 @@ decl_module! {
         }
 
         /// transfer between account
-        fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
+        pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, token: Token, value: T::Balance, memo: Memo) -> Result {
             let transactor = ensure_signed(origin)?;
             let dest = <T as system::Trait>::Lookup::lookup(dest)?;
             debug!("[transfer]|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));
@@ -125,8 +164,43 @@ decl_module! {
             if transactor == dest {
                 return Ok(())
             }
+
+            Self::can_transfer(&token)?;
             let _ = Self::move_free_balance(&token, &transactor, &dest, value).map_err(|e| e.info())?;
             Ok(())
+        }
+
+        pub fn modify_asset_info(token: Token, token_name: Option<Token>, desc: Option<Desc>) {
+            if let Some(ref mut info) = Self::asset_info(&token) {
+                token_name.map(|name| info.0.set_token_name(name));
+                desc.map(|desc| info.0.set_desc(desc));
+
+                AssetInfo::<T>::insert(token, info);
+            } else {
+                error!("[modify_asset_info]|asset not exist|token:{:}", token!(token));
+            }
+        }
+
+        pub fn set_asset_limit_props(token: Token, props: BTreeMap<AssetLimit, bool>) {
+            if Self::asset_info(&token).is_some() {
+                AssetLimitProps::<T>::insert(&token, props)
+            } else {
+                error!("[set_asset_limit_props]|asset not exist|token:{:}", token!(token));
+            }
+        }
+
+        pub fn modify_asset_limit(token: Token, limit: AssetLimit, can_do: bool) {
+            if Self::asset_info(&token).is_some() {
+                AssetLimitProps::<T>::mutate(token, |limit_map| {
+                    if can_do {
+                        limit_map.remove(&limit);
+                    } else {
+                        limit_map.insert(limit, false);
+                    }
+                })
+            } else {
+                error!("[set_asset_limit_props]|asset not exist|token:{:}", token!(token));
+            }
         }
     }
 }
@@ -138,6 +212,10 @@ decl_storage! {
 
         /// asset info for every token, key is token token
         pub AssetInfo get(asset_info): map Token => Option<(Asset, bool, T::BlockNumber)>;
+        /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
+        /// notice if not set AssetLimit, default is true for this limit
+        /// if want let limit make sense, must set false for the limit
+        pub AssetLimitProps get(asset_limit_props): map Token => BTreeMap<AssetLimit, bool>;
 
         /// asset balance for user&token, use btree_map to accept different asset type
         pub AssetBalance get(asset_balance): map (T::AccountId, Token) => BTreeMap<AssetType, T::Balance>;
@@ -286,6 +364,57 @@ impl<T: Trait> Module<T> {
             return Err("this token asset not exist!");
         }
     }
+
+    pub fn can_do(token: &Token, limit: AssetLimit) -> bool {
+        Self::asset_limit_props(token)
+            .get(&limit)
+            .map(|b| *b)
+            .unwrap_or(true)
+    }
+    // can do wrapper
+    #[inline]
+    pub fn can_move(token: &Token) -> Result {
+        ensure_with_errorlog!(
+            Self::can_do(token, AssetLimit::CanMove),
+            "this asset do not allow move",
+            "this asset do not allow move|token:{:}",
+            token!(token)
+        );
+        Ok(())
+    }
+
+    #[inline]
+    pub fn can_transfer(token: &Token) -> Result {
+        ensure_with_errorlog!(
+            Self::can_do(token, AssetLimit::CanTransfer),
+            "this asset do not allow transfer",
+            "this asset do not allow transfer|token:{:}",
+            token!(token)
+        );
+        Ok(())
+    }
+
+    #[inline]
+    pub fn can_destroy_withdrawal(token: &Token) -> Result {
+        ensure_with_errorlog!(
+            Self::can_do(token, AssetLimit::CanDestroyWithdrawal),
+            "this asset do not allow destroy withdrawal",
+            "this asset do not allow destroy withdrawal|token:{:}",
+            token!(token)
+        );
+        Ok(())
+    }
+
+    #[inline]
+    pub fn can_destroy_free(token: &Token) -> Result {
+        ensure_with_errorlog!(
+            Self::can_do(token, AssetLimit::CanDestroyFree),
+            "this asset do not allow destroy free token",
+            "this asset do not allow destroy free token|token:{:}",
+            token!(token)
+        );
+        Ok(())
+    }
 }
 
 /// token issue destroy reserve/unreserve, it's core function
@@ -319,14 +448,44 @@ impl<T: Trait> Module<T> {
 
     pub fn issue(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         {
-            let _imbalance = Self::inner_issue(token, who, value)?;
+            Self::is_valid_asset(token)?;
+
+            // may set storage inner
+            Self::try_new_account(&(who.clone(), token.clone()));
+
+            let type_ = AssetType::Free;
+            debug!("[issue]normal issue token for this account");
+            let _imbalance = Self::inner_issue(token, who, type_, value)?;
         }
         Ok(())
     }
 
     pub fn destroy(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
         {
-            let _imbalance = Self::inner_destroy(token, who, value)?;
+            Self::should_not_chainx(token)?;
+            Self::is_valid_asset(token)?;
+
+            Self::can_destroy_withdrawal(token)?;
+
+            let type_ = AssetType::ReservedWithdrawal;
+
+            debug!("[destroy]|normal destroy withdrawal token for account");
+            let _imbalance = Self::inner_destroy(token, who, type_, value)?;
+        }
+        Ok(())
+    }
+
+    pub fn destroy_free(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
+        {
+            Self::should_not_chainx(token)?;
+            Self::is_valid_asset(token)?;
+
+            Self::can_destroy_free(token)?;
+
+            let type_ = AssetType::Free;
+
+            debug!("[destroy_free]|destroy free token for account directly");
+            let _imbalance = Self::inner_destroy(token, who, type_, value)?;
         }
         Ok(())
     }
@@ -389,32 +548,30 @@ impl<T: Trait> Module<T> {
     fn inner_issue(
         token: &Token,
         who: &T::AccountId,
+        type_: AssetType,
         value: T::Balance,
     ) -> result::Result<PositiveImbalance<T>, &'static str> {
-        Self::is_valid_asset(token)?;
         let key = (who.clone(), token.clone());
-        let type_ = AssetType::Free;
-        // may set storage inner
-        Self::try_new_account(&key);
+        let current = Self::asset_type_balance(&key, type_);
 
         debug!(
-            "[issue]|issue to account|token:{:}|who:{:?}|value:{:}",
+            "[issue]|issue to account|token:{:}|who:{:?}|type:{:?}|current:{:}|value:{:}",
             token!(token),
             who,
+            type_,
+            current,
             value
         );
-
-        let free = Self::asset_type_balance(&key, type_);
         // check
-        let new_free = match free.checked_add(&value) {
+        let new = match current.checked_add(&value) {
             Some(b) => b,
-            None => return Err("free balance too high to issue"),
+            None => return Err("current balance too high to issue"),
         };
 
         AssetTriggerEventAfter::<T>::on_issue_before(token, who);
 
         // set to storage
-        let imbalance = Self::make_type_balance_be(&key, type_, new_free);
+        let imbalance = Self::make_type_balance_be(&key, type_, new);
         let positive = if let SignedImbalance::Positive(p) = imbalance {
             p
         } else {
@@ -429,24 +586,23 @@ impl<T: Trait> Module<T> {
     fn inner_destroy(
         token: &Token,
         who: &T::AccountId,
+        type_: AssetType,
         value: T::Balance,
     ) -> result::Result<NegativeImbalance<T>, &'static str> {
-        Self::should_not_chainx(token)?;
-        Self::is_valid_asset(token)?;
-
         let key = (who.clone(), token.clone());
-        let type_ = AssetType::ReservedWithdrawal;
+        let current = Self::asset_type_balance(&key, type_);
 
-        let reserved = Self::asset_type_balance(&key, type_);
-
-        debug!("[destroy]|destroy withdrawwed token for account|token:{:}|who:{:?}|current reserved:{:}|balance:{:}", token!(token), who, reserved, value);
+        debug!("[destroy_directly]|destroy token for account|token:{:}|who:{:?}|type:{:?}|current:{:}|destroy:{:}",
+               token!(token), who, type_, current, value);
         // check
-        let new_reserved_token = match reserved.checked_sub(&value) {
+        let new = match current.checked_sub(&value) {
             Some(b) => b,
-            None => return Err("reserved balance too low to destroy"),
+            None => return Err("current balance too low to destroy"),
         };
 
-        let imbalance = Self::make_type_balance_be(&key, type_, new_reserved_token);
+        AssetTriggerEventAfter::<T>::on_destroy_before(token, who);
+
+        let imbalance = Self::make_type_balance_be(&key, type_, new);
         let negative = if let SignedImbalance::Negative(n) = imbalance {
             n
         } else {
@@ -482,6 +638,8 @@ impl<T: Trait> Module<T> {
         }
         // check
         Self::is_valid_asset(token).map_err(|_| AssetErr::InvalidToken)?;
+
+        Self::can_move(token).map_err(|_| AssetErr::NotAllow)?;
 
         let from_key = (from.clone(), token.clone());
         let to_key = (to.clone(), token.clone());

@@ -9,6 +9,7 @@ serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
 # Substrate
+substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
 runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
 primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
@@ -17,10 +18,10 @@ system = { package = "srml-system", git = "https://github.com/chainpool/substrat
 # ChainX
 xr-primitives = { path = "../../../xr-primitives", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
+xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts", default-features = false }
 
 [dev-dependencies]
 # Substrate
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
 indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate" }
 
 [features]
@@ -30,6 +31,7 @@ std = [
     "serde_derive",
     "parity-codec/std",
     # Substrate
+    "substrate-primitives/std",
     "rstd/std",
     "runtime-io/std",
     "primitives/std",

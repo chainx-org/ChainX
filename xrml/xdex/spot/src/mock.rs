@@ -57,6 +57,7 @@ impl timestamp::Trait for Test {
 }
 
 impl xbitcoin::Trait for Test {
+    type XBitcoinLockup = Self;
     type AccountExtractor = DummyExtractor;
     type TrusteeSessionProvider = XBridgeFeatures;
     type TrusteeMultiSigProvider = DummyBitcoinTrusteeMultiSig;
@@ -85,9 +86,16 @@ impl xaccounts::Trait for Test {
 
 pub struct DummyDetermineIntentionJackpotAccountId;
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJackpotAccountId {
-    fn accountid_for(origin: &u64) -> u64 {
+    fn accountid_for_unsafe(origin: &u64) -> u64 {
         origin + 100
     }
+    fn accountid_for_safe(origin: &u64) -> Option<u64> {
+        Some(origin + 100)
+    }
+}
+
+impl xbridge_common::Trait for Test {
+    type Event = ();
 }
 
 impl xassets::Trait for Test {
@@ -96,6 +104,7 @@ impl xassets::Trait for Test {
     type OnNewAccount = Indices;
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
+    type DetermineTokenJackpotAccountId = ();
 }
 
 impl xrecords::Trait for Test {
@@ -105,6 +114,16 @@ impl xrecords::Trait for Test {
 impl xsystem::Trait for Test {
     type ValidatorList = DummyDetermineValidatorList;
     type Validator = DummyDetermineValidator;
+}
+
+impl xsdot::Trait for Test {
+    type AccountExtractor = DummyExtractor;
+    type CrossChainProvider = XBridgeFeatures;
+    type Event = ();
+}
+
+impl xbitcoin::lockup::Trait for Test {
+    type Event = ();
 }
 
 pub struct DummyDetermineValidatorList;

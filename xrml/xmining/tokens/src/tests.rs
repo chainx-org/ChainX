@@ -7,6 +7,7 @@ use super::*;
 
 use runtime_io::with_externalities;
 use support::assert_ok;
+use xassets::Chain;
 
 #[test]
 fn issue_sdot_should_work() {
@@ -350,6 +351,69 @@ fn move_sdot_to_an_account_never_deposited_should_work() {
 }
 
 #[test]
+fn vote_weight_update_on_withdraw_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        System::set_block_number(3);
+        XSession::check_rotate_session(System::block_number());
+        let btc = b"BTC".to_vec();
+
+        // deposit
+        assert_ok!(XRecords::deposit(&1, &btc, 100));
+        assert_eq!(
+            XTokens::deposit_records((1, btc.clone())),
+            DepositVoteWeight {
+                last_deposit_weight: 0,
+                last_deposit_weight_update: 3
+            }
+        );
+        assert_eq!(
+            XTokens::psedu_intention_profiles(&btc),
+            PseduIntentionVoteWeight {
+                last_total_deposit_weight: 0,
+                last_total_deposit_weight_update: 3
+            }
+        );
+        assert_eq!(XAssets::free_balance_of(&1, &btc), 100);
+
+        System::set_block_number(4);
+        XSession::check_rotate_session(System::block_number());
+
+        // withdraw
+        assert_ok!(XRecords::withdrawal(
+            &1,
+            &btc,
+            100,
+            b"addr".to_vec(),
+            b"ext".to_vec()
+        ));
+
+        let numbers = XRecords::withdrawal_application_numbers(Chain::Bitcoin, 10).unwrap();
+        assert_eq!(numbers.len(), 1);
+        assert_ok!(XRecords::withdrawal_processing(&numbers));
+        for i in numbers {
+            assert_ok!(XRecords::withdrawal_finish(i));
+        }
+
+        assert_eq!(
+            XTokens::deposit_records((1, btc.clone())),
+            DepositVoteWeight {
+                last_deposit_weight: 0 + 100,
+                last_deposit_weight_update: 4
+            }
+        );
+        assert_eq!(
+            XTokens::psedu_intention_profiles(&btc),
+            PseduIntentionVoteWeight {
+                last_total_deposit_weight: 0 + 100,
+                last_total_deposit_weight_update: 4
+            }
+        );
+
+        assert_eq!(XAssets::free_balance_of(&1, &btc), 0);
+    });
+}
+
+#[test]
 fn total_token_reward_should_be_right() {
     with_externalities(&mut new_test_ext(), || {
         // validators: 1, 2, 3, 4
@@ -431,6 +495,98 @@ fn total_token_reward_should_be_right() {
                 .map(|x| XAssets::pcx_free_balance(x))
                 .sum::<u64>(),
             5_000_000_000 * 5
+        );
+    });
+}
+
+#[test]
+fn cross_chain_assets_grow_too_fast_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        XStaking::set_distribution_ratio((1, 1)).unwrap();
+        assert_ok!(XAssets::pcx_issue(&1, 100_000_000_000));
+        assert_ok!(XStaking::nominate(
+            Origin::signed(1),
+            1.into(),
+            10_000_000_000,
+            vec![]
+        ));
+
+        let trading_pair = XSpot::trading_pair_of(0).unwrap();
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
+        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 10);
+        assert_ok!(XSpot::put_order(
+            Origin::signed(1),
+            0,
+            xspot::OrderType::Limit,
+            xspot::Side::Buy,
+            1000,
+            1_000_000,
+        ));
+
+        let sdot = <XSdot as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&sdot, &1, 10_000));
+
+        let btc = <XBitcoin as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&btc, &1, 10_000_000));
+
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+
+        // BTC: 10000010000, SDOT, 500000000
+        //
+        // total_cross_chain_assets: 10500010000
+        // total_staked: 10500000000
+        //
+        // BTC 1BTC = 999.99904761 PCX
+        assert_eq!(
+            XTokens::asset_power(&trading_pair.quote()),
+            Some((100_000_000_000u128 * 10_500_000_000u128 / 10_500_010_000u128) as u64)
+        );
+        // PCX
+        assert_eq!(
+            XTokens::asset_power(&trading_pair.base()),
+            Some(100_000_000)
+        );
+
+        assert_ok!(XSpot::put_order(
+            Origin::signed(1),
+            0,
+            xspot::OrderType::Limit,
+            xspot::Side::Buy,
+            1000,
+            10_000_000,
+        ));
+
+        // cross_chain_assets: staked: = 1:9
+        XStaking::set_distribution_ratio((1, 9)).unwrap();
+        System::set_block_number(3);
+        XSession::check_rotate_session(System::block_number());
+
+        // BTC 1BTC = 111.11100529 PCX
+        assert_eq!(
+            XTokens::asset_power(&trading_pair.quote()),
+            Some((100_000_000_000u128 * 10_500_000_000u128 / 94_500_090_000u128) as u64)
+        );
+        // PCX
+        assert_eq!(
+            XTokens::asset_power(&trading_pair.base()),
+            Some(100_000_000)
+        );
+
+        // cross_chain_assets: staked: = 9:1
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 100_000_000_000));
+        XStaking::set_distribution_ratio((9, 1)).unwrap();
+        System::set_block_number(2);
+        XSession::check_rotate_session(System::block_number());
+        // BTC 1BTC = 0.94490078 PCX
+        assert_eq!(
+            XTokens::asset_power(&trading_pair.quote()),
+            Some((100_000_000_000u128 * 94_500_000_000u128 / 100_010_500_010_000u128) as u64)
+        );
+        // PCX
+        assert_eq!(
+            XTokens::asset_power(&trading_pair.base()),
+            Some(100_000_000)
         );
     });
 }
