@@ -227,7 +227,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn issue_reward(source: &T::AccountId, token: &Token, value: T::Balance) -> Result {
+    fn issue_reward(source: &T::AccountId, token: &Token, _value: T::Balance) -> Result {
         ensure_with_errorlog!(
             Self::psedu_intentions().contains(&token),
             "Cannot issue deposit reward since this token is not a psedu intention.",
@@ -242,7 +242,7 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::DepositorReward(
             source.clone(),
             token.clone(),
-            value,
+            reward_value,
         ));
 
         Ok(())
