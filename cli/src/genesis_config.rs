@@ -35,7 +35,21 @@ fn hex(account: &str) -> [u8; 32] {
 pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
     let sdot_claims = load_sdot_info().unwrap();
-    let mut genesis_node_info = load_genesis_node_info().unwrap();
+    let (mut genesis_node_info, team_council) = match genesis_spec {
+        GenesisSpec::Dev | GenesisSpec::Testnet  => (
+            load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
+            load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
+        ),
+        GenesisSpec::Mainnet => (
+            load_genesis_node_info(&include_bytes!("mainnet_genesis_node.csv")[..]).unwrap(),
+            load_team_council_info(&include_bytes!("mainnet_team_council.csv")[..]).unwrap(),
+        ),
+    };
+
+    assert_eq!(team_council.len(), 8);
+
+    let team_account = team_council[..3].to_vec();
+    let council_account = team_council[3..8].to_vec();
 
     let initial_authorities_len = match genesis_spec {
         GenesisSpec::Dev => 1,
@@ -63,20 +77,6 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     .unwrap();
 
     genesis_node_info.truncate(initial_authorities_len);
-
-    let team_account = vec![
-        hex("a5b74e024ed2823e5dc4d4e77313c0601393f107c7fa62b9e8ca54930b12d545"),
-        hex("bf40736f7157faf64411ef36de9b6dae8133be3edf460a50d9e84cc05829dc21"),
-        hex("120bdbc81e1172e17becc965a51dc1bf3e782162eadee54b5d94fec8a0288c83"),
-    ];
-
-    let council_account = vec![
-        hex("1595e186c3a915cfbd4f601b23a88bbaab873bfefbb09d231483e424633093e7"),
-        hex("a4e99224b97dee6798f3fb90b835d63e3f4059f334f09a44e23420ca993e45f0"),
-        hex("7ad04497564c5da319794aa8c99375d61878f471124dbc83dcc5a3cd6418af11"),
-        hex("b16a5254fff78ab974abd25c64430ae5944e201916d003807226b6e2a0fcd1f1"),
-        hex("041b0452b3defb8bdcaab8f4786fa634ae6f841cbe1ee9e1959bd94eaa021f7f"),
-    ];
 
     let blocks_per_session = 150; // 150 blocks per session
     let sessions_per_era = 12; // update validators set per 12 sessions
@@ -277,16 +277,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 })
                 .collect(),
             // xmultisig (include trustees)
-            multisig_init_info: (
-                team_account
-                    .iter()
-                    .map(|&account| account.unchecked_into())
-                    .collect(),
-                council_account
-                    .iter()
-                    .map(|&account| account.unchecked_into())
-                    .collect(),
-            ),
+            multisig_init_info: (team_account, council_account),
         }),
     }
 }
@@ -325,7 +316,9 @@ pub struct RecordOfGenesisNode {
     cold_entity: String,
 }
 
-fn load_genesis_node_info() -> Result<
+fn load_genesis_node_info(
+    csv: &[u8],
+) -> Result<
     Vec<(
         AccountId,
         AuthorityId,
@@ -338,7 +331,7 @@ fn load_genesis_node_info() -> Result<
     )>,
     Box<dyn std::error::Error>,
 > {
-    let mut reader = csv::Reader::from_reader(&include_bytes!("genesis_node.csv")[..]);
+    let mut reader = csv::Reader::from_reader(csv);
     let mut res = Vec::with_capacity(29);
     for result in reader.deserialize() {
         let record: RecordOfGenesisNode = result?;
@@ -369,6 +362,22 @@ fn load_genesis_node_info() -> Result<
             hot_key,
             cold_key,
         ));
+    }
+    Ok(res)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RecordOfTeamCouncil {
+    account_id: String,
+}
+
+fn load_team_council_info(csv: &[u8]) -> Result<Vec<AccountId>, Box<dyn std::error::Error>> {
+    let mut reader = csv::Reader::from_reader(csv);
+    let mut res = Vec::with_capacity(7);
+    for result in reader.deserialize() {
+        let record: RecordOfTeamCouncil = result?;
+        let account_id = hex(&record.account_id).unchecked_into();
+        res.push(account_id);
     }
     Ok(res)
 }
