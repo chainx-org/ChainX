@@ -35,16 +35,21 @@ fn hex(account: &str) -> [u8; 32] {
 pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
     let sdot_claims = load_sdot_info().unwrap();
-    let (mut genesis_node_info, team_council) = match genesis_spec {
-        GenesisSpec::Dev | GenesisSpec::Testnet  => (
-            load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
-            load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
-        ),
-        GenesisSpec::Mainnet => (
-            load_genesis_node_info(&include_bytes!("mainnet_genesis_node.csv")[..]).unwrap(),
-            load_team_council_info(&include_bytes!("mainnet_team_council.csv")[..]).unwrap(),
-        ),
-    };
+    let (mut genesis_node_info, team_council, network_props, bitcoin_network_id) =
+        match genesis_spec {
+            GenesisSpec::Dev | GenesisSpec::Testnet => (
+                load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
+                load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
+                (xsystem::NetworkType::Testnet, 42),
+                1, // bitcoin testnet
+            ),
+            GenesisSpec::Mainnet => (
+                load_genesis_node_info(&include_bytes!("mainnet_genesis_node.csv")[..]).unwrap(),
+                load_team_council_info(&include_bytes!("mainnet_team_council.csv")[..]).unwrap(),
+                (xsystem::NetworkType::Mainnet, 44),
+                0, // bitcoin mainnet
+            ),
+        };
 
     assert_eq!(team_council.len(), 8);
 
@@ -126,7 +131,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         // chainx runtime module
         xsystem: Some(XSystemConfig {
-            network_props: (xsystem::NetworkType::Mainnet, 44),
+            network_props,
             _genesis_phantom_data: Default::default(),
         }),
         xfee_manager: Some(XFeeManagerConfig {
@@ -188,7 +193,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
             ),
             params_info, // retargeting_factor
-            network_id: 0,
+            network_id: bitcoin_network_id,
             confirmation_number: 4,
             reserved_block: 2100,
             btc_withdrawal_fee: 40000,
