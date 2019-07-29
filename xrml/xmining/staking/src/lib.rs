@@ -2,6 +2,7 @@
 //! Staking manager: Periodically determines the best set of validators.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "128"]
 
 mod mock;
 mod reward;
@@ -28,9 +29,9 @@ use xaccounts::IntentionJackpotAccountIdFor;
 use xassets::{AssetErr, Memo, Token};
 use xr_primitives::{Name, XString, URL};
 use xsession::SessionKeyUsability;
-use xsupport::debug;
 #[cfg(feature = "std")]
 use xsupport::who;
+use xsupport::{debug, error};
 
 pub use self::traits::*;
 pub use self::types::*;
@@ -76,6 +77,10 @@ decl_module! {
                 "Cannot nominate if greater than your avaliable free balance."
             );
 
+            if !Self::is_nominating_intention_itself(&who, &target) {
+                Self::wont_reach_upper_bound(&target, value)?;
+            }
+
             Self::apply_nominate(&who, &target, value)?;
         }
 
@@ -105,6 +110,10 @@ decl_module! {
                 value <= Self::revokable_of(&who, &from),
                 "Cannot renominate if greater than your current nomination."
             );
+
+            if !Self::is_nominating_intention_itself(&who, &to) {
+                Self::wont_reach_upper_bound(&to, value)?;
+            }
 
             Self::apply_renominate(&who, &from, &to, value)?;
         }
@@ -287,6 +296,11 @@ decl_module! {
             <MinimumCandidateThreshold<T>>::put(new);
         }
 
+        /// Set the factor of intention's total nomination upper bond.
+        fn set_upper_bond_factor(new: u32) {
+            <UpperBoundFactor<T>>::put(new);
+        }
+
     }
 }
 
@@ -357,6 +371,9 @@ decl_storage! {
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
 
+        /// The upper bound nominations of the intention that could absorb is up to the self-bonded.
+        pub UpperBoundFactor get(upper_bound_factor): u32 = 10u32;
+
         /// Reported validators that did evil, reset per session.
         pub EvilValidatorsPerSession get(evil_validators): Vec<T::AccountId>;
 
@@ -393,6 +410,10 @@ impl<T: Trait> Module<T> {
         } else {
             Default::default()
         }
+    }
+
+    pub fn upper_bound_of(who: &T::AccountId) -> T::Balance {
+        Self::self_bonded_of(who) * T::Balance::sa(u64::from(Self::upper_bound_factor()))
     }
 
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
@@ -612,6 +633,21 @@ impl<T: Trait> Module<T> {
             next_key,
             about,
         ));
+    }
+
+    fn wont_reach_upper_bound(nominee: &T::AccountId, value: T::Balance) -> Result {
+        let total_nomination = Self::total_nomination_of(nominee);
+        let upper_bound = Self::upper_bound_of(nominee);
+        if total_nomination + value <= upper_bound {
+            Ok(())
+        } else {
+            error!("Fail to (re)nominate, upper bound of nominee({:?}) is {:?}, current total_nomination: {:?}, want to nominate: {:?}", nominee, upper_bound, total_nomination, value);
+            Err("Cannot (re)nominate if the target is reaching the upper bound of total nomination.")
+        }
+    }
+
+    fn is_nominating_intention_itself(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
+        Self::is_intention(nominator) && *nominator == *nominee
     }
 
     #[cfg(feature = "std")]

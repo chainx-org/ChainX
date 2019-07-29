@@ -496,3 +496,41 @@ fn minimum_candidate_threshold_should_work() {
         );
     });
 }
+
+#[test]
+fn upper_bound_of_total_nomination_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(XStaking::register(Origin::signed(1), b"name1".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(2), b"name2".to_vec(),));
+
+        assert_noop!(
+            XStaking::nominate(Origin::signed(3), 1.into(), 5, vec![]),
+            "Cannot (re)nominate if the target is reaching the upper bound of total nomination."
+        );
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 1, vec![]));
+
+        assert_noop!(
+            XStaking::nominate(Origin::signed(3), 1.into(), 10, vec![]),
+            "Cannot (re)nominate if the target is reaching the upper bound of total nomination."
+        );
+
+        assert_ok!(XStaking::nominate(Origin::signed(3), 1.into(), 9, vec![]));
+
+        assert_ok!(XStaking::nominate(Origin::signed(2), 2.into(), 2, vec![]));
+        assert_ok!(XStaking::nominate(Origin::signed(3), 2.into(), 15, vec![]));
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 1, vec![]));
+        assert_noop!(
+            XStaking::renominate(Origin::signed(3), 2.into(), 1.into(), 10, vec![]),
+            "Cannot (re)nominate if the target is reaching the upper bound of total nomination."
+        );
+        assert_ok!(XStaking::renominate(
+            Origin::signed(3),
+            2.into(),
+            1.into(),
+            9,
+            vec![]
+        ));
+    });
+}
