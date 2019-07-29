@@ -68,8 +68,8 @@ pub fn development_config() -> ChainSpec {
         Some(
             json!({
                 "network_type": "testnet",
-                "address_type": 44,
-                "bitcoin_type": "mainnet"
+                "address_type": 42,
+                "bitcoin_type": "testnet"
             })
             .as_object()
             .unwrap()
@@ -98,8 +98,8 @@ pub fn testnet_config() -> ChainSpec {
         Some(
             json!({
                 "network_type": "testnet",
-                "address_type": 44,
-                "bitcoin_type": "mainnet"
+                "address_type": 42,
+                "bitcoin_type": "testnet"
             })
             .as_object()
             .unwrap()
