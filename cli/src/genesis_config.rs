@@ -35,21 +35,62 @@ fn hex(account: &str) -> [u8; 32] {
 pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
     let sdot_claims = load_sdot_info().unwrap();
-    let (mut genesis_node_info, team_council, network_props, bitcoin_network_id) =
-        match genesis_spec {
-            GenesisSpec::Dev | GenesisSpec::Testnet => (
-                load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
-                load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
-                (xsystem::NetworkType::Testnet, 42),
+    let (code, mut genesis_node_info, team_council, network_props, bitcoin) = match genesis_spec {
+        GenesisSpec::Dev | GenesisSpec::Testnet => (
+            include_bytes!("chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 3
+            load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
+            load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
+            (xsystem::NetworkType::Testnet, 42),
+            (
+                (
+                    BlockHeader {
+                        version: 536870912,
+                        previous_header_hash: h256_from_rev_str(
+                            "00000000000eb69f32cfc2f901adcf8227ca32d48938bf109b895c51bbfcb3b9",
+                        ),
+                        merkle_root_hash: h256_from_rev_str(
+                            "33bd6cef3ecc329d45bd380f26f601a47eb5ea80e7e0ffdacaf1cce9fb80d548",
+                        ),
+                        time: 1563351551,
+                        bits: Compact::new(436440084),
+                        nonce: 4101456444,
+                    },
+                    1569346,
+                ),
+                h256_from_rev_str(
+                    "00000000000000edb9e6783365e359e68fa932d4fbb95ceda1207c06644daf24",
+                ),
                 1, // bitcoin testnet
             ),
-            GenesisSpec::Mainnet => (
-                load_genesis_node_info(&include_bytes!("mainnet_genesis_node.csv")[..]).unwrap(),
-                load_team_council_info(&include_bytes!("mainnet_team_council.csv")[..]).unwrap(),
-                (xsystem::NetworkType::Mainnet, 44),
+        ),
+        GenesisSpec::Mainnet => (
+            include_bytes!("./mainnet_chainx_runtime.compact.wasm").to_vec(), // mainnet genesis runtime version is 0
+            load_genesis_node_info(&include_bytes!("mainnet_genesis_node.csv")[..]).unwrap(),
+            load_team_council_info(&include_bytes!("mainnet_team_council.csv")[..]).unwrap(),
+            (xsystem::NetworkType::Mainnet, 44),
+            (
+                (
+                    BlockHeader {
+                        version: 536870912,
+                        previous_header_hash: h256_from_rev_str(
+                            "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
+                        ),
+                        merkle_root_hash: h256_from_rev_str(
+                            "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
+                        ),
+                        time: 1558168296,
+                        bits: Compact::new(388627269),
+                        nonce: 1439505020,
+                    },
+                    576576,
+                ),
+                h256_from_rev_str(
+                    "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882",
+                ),
                 0, // bitcoin mainnet
             ),
-        };
+        ),
+    };
 
     assert_eq!(team_council.len(), 8);
 
@@ -106,7 +147,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     GenesisConfig {
         consensus: Some(ConsensusConfig {
-            code: include_bytes!("./chainx_runtime.compact.wasm").to_vec(),
+            code,
             authorities: active_genesis_nodes
                 .iter()
                 .map(|(_, authority_id, _, _, _, _, _, _)| authority_id.clone().into())
@@ -174,29 +215,13 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         }),
         xbitcoin: Some(XBridgeOfBTCConfig {
             // start genesis block: (genesis, blocknumber)
-            genesis: (
-                BlockHeader {
-                    version: 545259520,
-                    previous_header_hash: h256_from_rev_str(
-                        "00000000000000000001b2505c11119fcf29be733ec379f686518bf1090a522a",
-                    ),
-                    merkle_root_hash: h256_from_rev_str(
-                        "cc09d95fd8ccc985826b9eb46bf73f8449116f18535423129f0574500985cf90",
-                    ),
-                    time: 1556958733,
-                    bits: Compact::new(388628280),
-                    nonce: 2897942742,
-                },
-                574560,
-            ),
-            genesis_hash: h256_from_rev_str(
-                "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
-            ),
+            genesis: bitcoin.0,
+            genesis_hash: bitcoin.1,
             params_info, // retargeting_factor
-            network_id: bitcoin_network_id,
+            network_id: bitcoin.2,
             confirmation_number: 4,
             reserved_block: 2100,
-            btc_withdrawal_fee: 40000,
+            btc_withdrawal_fee: 100000,
             max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }),
