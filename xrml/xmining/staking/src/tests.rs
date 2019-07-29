@@ -552,6 +552,7 @@ fn renominate_limitation_should_work() {
         ));
     });
 }
+
 #[test]
 fn upper_bound_of_total_nomination_should_work() {
     with_externalities(&mut new_test_ext(), || {
@@ -587,5 +588,34 @@ fn upper_bound_of_total_nomination_should_work() {
             9,
             vec![]
         ));
+    });
+}
+
+#[test]
+fn max_unbond_entries_limit_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(XStaking::register(Origin::signed(1), b"name1".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(2), b"name2".to_vec(),));
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 10, vec![]));
+
+        assert_ok!(XStaking::nominate(Origin::signed(3), 1.into(), 20, vec![]));
+
+        for i in 2..12 {
+            System::set_block_number(i);
+            XSession::check_rotate_session(System::block_number());
+            assert_ok!(XStaking::unnominate(Origin::signed(3), 1.into(), 1, vec![]));
+        }
+
+        System::set_block_number(12);
+        XSession::check_rotate_session(System::block_number());
+        assert_noop!(
+            XStaking::unnominate(Origin::signed(3), 1.into(), 1, vec![]),
+            "Cannot unnomiate if the limit of max unbond entries is reached."
+        );
+
+        assert_ok!(XStaking::unfreeze(Origin::signed(3), 1.into(), 1));
+
+        assert_ok!(XStaking::unnominate(Origin::signed(3), 1.into(), 1, vec![]));
     });
 }

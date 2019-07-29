@@ -124,6 +124,7 @@ decl_module! {
             Self::apply_renominate(&who, &from, &to, value, current_block)?;
         }
 
+        /// Unbond the nomination.
         fn unnominate(
             origin,
             target: <T::Lookup as StaticLookup>::Source,
@@ -143,6 +144,10 @@ decl_module! {
                 value <= Self::revokable_of(&who, &target),
                 "Cannot unnominate if greater than your revokable nomination."
             );
+            ensure!(
+                Self::current_revocations_count(&who, &target) < Self::max_unbond_entries_per_intention() as usize,
+                "Cannot unnomiate if the limit of max unbond entries is reached."
+            );
 
             Self::apply_unnominate(&who, &target, value)?;
         }
@@ -160,6 +165,7 @@ decl_module! {
             Self::apply_claim(&who, &target)?;
         }
 
+        /// Free the locked unnomination.
         fn unfreeze(
             origin,
             target: <T::Lookup as StaticLookup>::Source,
@@ -191,7 +197,6 @@ decl_module! {
             }
 
             Self::staking_unreserve(&who, value)?;
-
             revocations.swap_remove(revocation_index as usize);
             if let Some(mut record) = <NominationRecords<T>>::get(&nominate_pair) {
                 record.revocations = revocations;
@@ -383,7 +388,11 @@ decl_storage! {
         /// Reported validators that did evil, reset per session.
         pub EvilValidatorsPerSession get(evil_validators): Vec<T::AccountId>;
 
+        /// The height of user's last nomination.
         pub LastRenominationOf get(last_renomination_of): map T::AccountId => Option<T::BlockNumber>;
+
+        /// The maximum ongoing unbond entries simultaneously against per intention.
+        pub MaxUnbondEntriesPerIntention get(max_unbond_entries_per_intention): u32 = 10u32;
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(minimum_penalty) config(): T::Balance;
@@ -658,6 +667,10 @@ impl<T: Trait> Module<T> {
 
     fn is_nominating_intention_itself(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
         Self::is_intention(nominator) && *nominator == *nominee
+    }
+
+    fn current_revocations_count(who: &T::AccountId, target: &T::AccountId) -> usize {
+        Self::nomination_record_of(who, target).revocations.len()
     }
 
     #[cfg(feature = "std")]
