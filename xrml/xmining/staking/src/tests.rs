@@ -123,8 +123,13 @@ fn renominate_should_work() {
         System::set_block_number(1);
         XSession::check_rotate_session(System::block_number());
 
+        assert_ok!(XStaking::set_bonding_duration(0));
+
         assert_ok!(XStaking::register(Origin::signed(1), b"name".to_vec(),));
         assert_ok!(XStaking::register(Origin::signed(3), b"name3".to_vec(),));
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 5, vec![]));
+        assert_ok!(XStaking::nominate(Origin::signed(3), 3.into(), 5, vec![]));
 
         System::set_block_number(2);
         XSession::check_rotate_session(System::block_number());
@@ -497,6 +502,56 @@ fn minimum_candidate_threshold_should_work() {
     });
 }
 
+#[test]
+fn renominate_limitation_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(XStaking::set_bonding_duration(2));
+
+        assert_ok!(XStaking::register(Origin::signed(1), b"name1".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(2), b"name2".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(3), b"name3".to_vec(),));
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 5, vec![]));
+        assert_ok!(XStaking::nominate(Origin::signed(2), 2.into(), 5, vec![]));
+        assert_ok!(XStaking::nominate(Origin::signed(3), 3.into(), 5, vec![]));
+
+        assert_ok!(XStaking::nominate(Origin::signed(4), 1.into(), 10, vec![]));
+
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::renominate(
+            Origin::signed(4),
+            1.into(),
+            2.into(),
+            3,
+            b"memo".to_vec()
+        ));
+
+        System::set_block_number(2);
+        XSession::check_rotate_session(System::block_number());
+        assert_noop!(
+            XStaking::renominate(Origin::signed(4), 1.into(), 3.into(), 3, b"memo".to_vec()),
+            "Cannot renominate if your last renomination is not expired."
+        );
+
+        System::set_block_number(3);
+        XSession::check_rotate_session(System::block_number());
+        assert_noop!(
+            XStaking::renominate(Origin::signed(4), 1.into(), 3.into(), 3, b"memo".to_vec()),
+            "Cannot renominate if your last renomination is not expired."
+        );
+
+        System::set_block_number(4);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::renominate(
+            Origin::signed(4),
+            1.into(),
+            3.into(),
+            3,
+            b"memo".to_vec()
+        ));
+    });
+}
 #[test]
 fn upper_bound_of_total_nomination_should_work() {
     with_externalities(&mut new_test_ext(), || {

@@ -115,7 +115,13 @@ decl_module! {
                 Self::wont_reach_upper_bound(&to, value)?;
             }
 
-            Self::apply_renominate(&who, &from, &to, value)?;
+            let bonding_duration = Self::bonding_duration();
+            let current_block = <system::Module<T>>::block_number();
+            if let Some(last_renomination) = Self::last_renomination_of(&who) {
+                ensure!(current_block > last_renomination + bonding_duration, "Cannot renominate if your last renomination is not expired.");
+            }
+
+            Self::apply_renominate(&who, &from, &to, value, current_block)?;
         }
 
         fn unnominate(
@@ -377,6 +383,8 @@ decl_storage! {
         /// Reported validators that did evil, reset per session.
         pub EvilValidatorsPerSession get(evil_validators): Vec<T::AccountId>;
 
+        pub LastRenominationOf get(last_renomination_of): map T::AccountId => Option<T::BlockNumber>;
+
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(minimum_penalty) config(): T::Balance;
         /// The active validators that have ever been offline per session.
@@ -519,9 +527,11 @@ impl<T: Trait> Module<T> {
         from: &T::AccountId,
         to: &T::AccountId,
         value: T::Balance,
+        current_block: T::BlockNumber,
     ) -> Result {
         Self::apply_update_vote_weight(who, from, value, false);
         Self::apply_update_vote_weight(who, to, value, true);
+        <LastRenominationOf<T>>::insert(who, current_block);
         Ok(())
     }
 
