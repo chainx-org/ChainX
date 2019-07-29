@@ -230,6 +230,12 @@ pub(crate) fn handle_lock_tx<T: Trait>(
     })?;
     let output_value = tx.outputs[out_index].value;
 
+    // set storage and issue token
+
+    // try to unlock tx before new issue, if any error in it, just print error log
+    // it's unlock and lock tx
+    handle_unlock_tx::<T>(tx, tx_hash);
+
     // new value should not more than single addr limit
     let current_value = Module::<T>::address_locked_coin(addr);
     let addr_value = current_value + output_value;
@@ -237,12 +243,6 @@ pub(crate) fn handle_lock_tx<T: Trait>(
         error!("[handle_lock_tx]|lock value more than single addr limit|cur_value:{:}|try lock:{:}|addr:{:?}", current_value, output_value, addr);
         return Err("lock value more than single addr limit");
     }
-
-    // set storage and issue token
-
-    // try to unlock tx before new issue, if any error in it, just print error log
-    // it's unlock and lock tx
-    handle_unlock_tx::<T>(tx, tx_hash);
 
     let (accountid, channel) = account_info;
     let key = (*tx_hash, out_index as u32);
