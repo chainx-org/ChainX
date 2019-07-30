@@ -12,6 +12,11 @@ pub enum ClaimType {
     PseduIntention(Token),
 }
 
+pub enum Delta {
+    Add(u64),
+    Sub(u64),
+}
+
 /// Intention mutable properties
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]

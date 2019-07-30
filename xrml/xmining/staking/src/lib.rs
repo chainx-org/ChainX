@@ -526,7 +526,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_nominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
         Self::staking_reserve(source, value)?;
-        Self::apply_update_vote_weight(source, target, value, true);
+        Self::apply_update_vote_weight(source, target, Delta::Add(value.as_()));
         Self::deposit_event(RawEvent::Nominate(source.clone(), target.clone(), value));
         Ok(())
     }
@@ -538,8 +538,8 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
         current_block: T::BlockNumber,
     ) -> Result {
-        Self::apply_update_vote_weight(who, from, value, false);
-        Self::apply_update_vote_weight(who, to, value, true);
+        Self::apply_update_vote_weight(who, from, Delta::Sub(value.as_()));
+        Self::apply_update_vote_weight(who, to, Delta::Add(value.as_()));
         <LastRenominationOf<T>>::insert(who, current_block);
         Ok(())
     }
@@ -569,7 +569,7 @@ impl<T: Trait> Module<T> {
             <NominationRecords<T>>::insert(&nr_key, record);
         }
 
-        Self::apply_update_vote_weight(source, target, value, false);
+        Self::apply_update_vote_weight(source, target, Delta::Sub(value.as_()));
 
         Self::deposit_event(RawEvent::Unnominate(freeze_until));
 
@@ -704,23 +704,17 @@ impl<T: Trait> Module<T> {
     pub fn bootstrap_update_vote_weight(
         source: &T::AccountId,
         target: &T::AccountId,
-        value: T::Balance,
-        to_add: bool,
+        delta: Delta,
     ) {
-        Self::apply_update_vote_weight(source, target, value, to_add)
+        Self::apply_update_vote_weight(source, target, delta)
     }
 
     /// Actually update the vote weight and nomination balance of source and target.
-    fn apply_update_vote_weight(
-        source: &T::AccountId,
-        target: &T::AccountId,
-        value: T::Balance,
-        to_add: bool,
-    ) {
+    fn apply_update_vote_weight(source: &T::AccountId, target: &T::AccountId, delta: Delta) {
         let mut iprof = <Intentions<T>>::get(target);
         let mut record = Self::nomination_record_of(source, target);
 
-        Self::update_vote_weight_both_way(&mut iprof, &mut record, value.as_(), to_add);
+        Self::update_vote_weight_both_way(&mut iprof, &mut record, &delta);
 
         <Intentions<T>>::insert(target, iprof);
         Self::mutate_nomination_record(source, target, record);
