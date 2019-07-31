@@ -89,7 +89,7 @@ where
         {
             let key = <xstaking::BondingDuration<Runtime>>::key();
             if let Some(bonding_duration) =
-                Self::pickout::<BlockNumber>(&state, &key, Hasher::BLAKE2256)?
+                Self::pickout::<BlockNumber>(&state, &key, Hasher::TWOX128)?
             {
                 return Ok(Some(last_renomination + bonding_duration));
             }
