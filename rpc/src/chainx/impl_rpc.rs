@@ -546,16 +546,13 @@ where
                 if let Some((_, interval)) =
                     Self::pickout::<(u32, BlockNumber)>(&state, &key, Hasher::BLAKE2256)?
                 {
-                    let key = <xtokens::LastClaimOf<Runtime>>::key_for(&who);
+                    let key =
+                        <xtokens::LastClaimOf<Runtime>>::key_for(&(who.clone(), token.clone()));
 
-                    if let Some(last_claim_info) = Self::pickout::<BTreeMap<Token, BlockNumber>>(
-                        &state,
-                        &key,
-                        Hasher::BLAKE2256,
-                    )? {
-                        if let Some(last_claim) = last_claim_info.get(&token) {
-                            record.next_claim = last_claim + interval;
-                        }
+                    if let Some(last_claim) =
+                        Self::pickout::<BlockNumber>(&state, &key, Hasher::BLAKE2256)?
+                    {
+                        record.next_claim = last_claim + interval;
                     }
                 }
 
