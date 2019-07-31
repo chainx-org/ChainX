@@ -107,16 +107,14 @@ impl<T: Trait> Module<T> {
         referral.unwrap_or_else(xaccounts::Module::<T>::council_account)
     }
 
-    pub fn generic_claim<U, V>(
+    pub fn compute_dividend<U, V>(
         source: &mut U,
-        who: &T::AccountId,
         target: &mut V,
         target_jackpot: &T::AccountId,
-        claim_type: ClaimType,
     ) -> result::Result<(u64, u64, T::Balance), &'static str>
     where
         U: VoteWeight<T::BlockNumber>,
-        V: VoteWeight<T::BlockNumber>, // + Jackpot<T::Balance>,
+        V: VoteWeight<T::BlockNumber>,
     {
         let current_block = <system::Module<T>>::block_number();
 
@@ -165,8 +163,26 @@ impl<T: Trait> Module<T> {
 
         trace!(target: "claim", "[generic_claim] total_jackpot: {:?}, dividend: {:?}", total_jackpot, dividend);
 
+        Ok((source_vote_weight, target_vote_weight, dividend))
+    }
+
+    pub fn generic_claim<U, V>(
+        source: &mut U,
+        who: &T::AccountId,
+        target: &mut V,
+        target_jackpot: &T::AccountId,
+        claim_type: ClaimType,
+    ) -> result::Result<(u64, u64, T::Balance), &'static str>
+    where
+        U: VoteWeight<T::BlockNumber>,
+        V: VoteWeight<T::BlockNumber>,
+    {
+        let (source_vote_weight, target_vote_weight, dividend) =
+            Self::compute_dividend(source, target, target_jackpot)?;
+
         Self::claim_transfer(claim_type, target_jackpot, who, dividend)?;
 
+        let current_block = <system::Module<T>>::block_number();
         source.set_state_on_claim(0, current_block);
         target.set_state_on_claim(target_vote_weight - source_vote_weight, current_block);
 
@@ -174,7 +190,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Transfer from the jackpot to the receivers given the calculated dividend.
-    pub(crate) fn claim_transfer(
+    pub fn claim_transfer(
         claim_type: ClaimType,
         jackpot: &T::AccountId,
         who: &T::AccountId,

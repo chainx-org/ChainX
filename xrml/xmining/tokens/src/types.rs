@@ -27,6 +27,15 @@ pub struct DepositVoteWeight<BlockNumber: Default> {
     pub last_deposit_weight_update: BlockNumber,
 }
 
+impl<BlockNumber: Default> DepositVoteWeight<BlockNumber> {
+    pub fn new(last_deposit_weight: u64, last_deposit_weight_update: BlockNumber) -> Self {
+        DepositVoteWeight {
+            last_deposit_weight,
+            last_deposit_weight_update,
+        }
+    }
+}
+
 /// `PseduIntentionProfs` and `DepositRecord` is to wrap the vote weight of token,
 /// sharing the vote weight calculation logic originated from staking module.
 pub struct PseduIntentionProfs<'a, T: Trait> {
@@ -34,10 +43,30 @@ pub struct PseduIntentionProfs<'a, T: Trait> {
     pub staking: &'a mut PseduIntentionVoteWeight<T::BlockNumber>,
 }
 
+impl<'a, T: Trait> PseduIntentionProfs<'a, T> {
+    pub fn new(token: &'a Token, p: &'a mut PseduIntentionVoteWeight<T::BlockNumber>) -> Self {
+        PseduIntentionProfs { token, staking: p }
+    }
+}
+
 pub struct DepositRecord<'a, T: Trait> {
     pub depositor: &'a T::AccountId,
     pub token: &'a Token,
     pub staking: &'a mut DepositVoteWeight<T::BlockNumber>,
+}
+
+impl<'a, T: Trait> DepositRecord<'a, T> {
+    pub fn new(
+        depositor: &'a T::AccountId,
+        token: &'a Token,
+        d: &'a mut DepositVoteWeight<T::BlockNumber>,
+    ) -> Self {
+        DepositRecord {
+            depositor,
+            token,
+            staking: d,
+        }
+    }
 }
 
 impl<'a, T: Trait> VoteWeightBase<T::BlockNumber> for PseduIntentionProfs<'a, T> {

@@ -15,6 +15,7 @@ use substrate_primitives::{Blake2Hasher, H256};
 use support::impl_outer_origin;
 
 use xassets::{Asset, Chain, ChainT, Token};
+use xstaking::Delta;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -420,7 +421,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             .unwrap();
 
             XStaking::bootstrap_refresh(&intention, Some(url), Some(true), None, None);
-            XStaking::bootstrap_update_vote_weight(&intention, &intention, value, true);
+            XStaking::bootstrap_update_vote_weight(&intention, &intention, Delta::Add(value));
         }
 
         xaccounts::TeamAccount::<Test>::put(666);

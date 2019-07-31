@@ -301,6 +301,7 @@ pub struct PseduNominationRecord {
     pub last_total_deposit_weight: u64,
     /// last update time of vote weight
     pub last_total_deposit_weight_update: BlockNumber,
+    pub next_claim: BlockNumber,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

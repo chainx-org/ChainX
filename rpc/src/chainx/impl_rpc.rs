@@ -42,6 +42,13 @@ use super::error::{ErrorKind, Result};
 use super::types::*;
 use super::{ChainX, ChainXApi};
 
+/// Convert &[u8] to String
+macro_rules! String {
+    ($str:expr) => {
+        String::from_utf8_lossy($str).into_owned()
+    };
+}
+
 impl<B, E, Block, RA>
     ChainXApi<
         NumberFor<Block>,
@@ -69,6 +76,27 @@ where
         Ok(self.client.block(&self.block_id_by_number(number)?)?)
     }
 
+    fn next_renominate(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<BlockNumber>> {
+        let state = self.state_at(hash)?;
+        let who: AccountId = who.unchecked_into();
+        let key = <xstaking::LastRenominationOf<Runtime>>::key_for(&who);
+        if let Some(last_renomination) =
+            Self::pickout::<BlockNumber>(&state, &key, Hasher::BLAKE2256)?
+        {
+            let key = <xstaking::BondingDuration<Runtime>>::key();
+            if let Some(bonding_duration) =
+                Self::pickout::<BlockNumber>(&state, &key, Hasher::BLAKE2256)?
+            {
+                return Ok(Some(last_renomination + bonding_duration));
+            }
+        }
+        Ok(None)
+    }
+
     fn assets_of(
         &self,
         who: AccountIdForRpc,
@@ -85,7 +113,7 @@ where
                 );
                 bmap.extend(map.iter());
                 AssetInfo {
-                    name: String::from_utf8_lossy(&token).into_owned(),
+                    name: String!(&token),
                     details: bmap,
                 }
             })
@@ -158,15 +186,13 @@ where
             .verify_address(&self.block_id_by_hash(hash)?, token, addr, memo)
             .and_then(|r| match r {
                 Ok(()) => Ok(None),
-                Err(s) => Ok(Some(String::from_utf8_lossy(s.as_ref()).into_owned())),
+                Err(s) => Ok(Some(String!(s.as_ref()))),
             });
-        match ret {
-            Err(_) => Ok(Some(false)),
-            Ok(ret) => match ret {
-                None => Ok(Some(true)),
-                Some(_) => Ok(Some(false)),
-            },
-        }
+        let is_valid = match ret {
+            Err(_) | Ok(Some(_)) => false,
+            Ok(None) => true,
+        };
+        Ok(Some(is_valid))
     }
 
     fn withdrawal_limit(
@@ -246,12 +272,12 @@ where
         let mut records = Vec::new();
 
         let intentions = self.intention_set(self.block_id_by_hash(hash)?)?;
+        let who: AccountId = who.unchecked_into();
 
         for intention in intentions {
-            let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
-                who.clone().unchecked_into(),
-                intention.clone(),
-            ));
+            let key =
+                <xstaking::NominationRecords<Runtime>>::key_for(&(who.clone(), intention.clone()));
+
             if let Some(record) = Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(
                 &state,
                 &key,
@@ -355,7 +381,7 @@ where
 
             let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
             if let Some(name) = Self::pickout::<Name>(&state, &key, Hasher::BLAKE2256)? {
-                info.name = String::from_utf8_lossy(&name).into_owned();
+                info.name = String!(&name);
             }
 
             let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
@@ -364,9 +390,9 @@ where
                 &key,
                 Hasher::BLAKE2256,
             )? {
-                info.url = String::from_utf8_lossy(&props.url).into_owned();
+                info.url = String!(&props.url);
                 info.is_active = props.is_active;
-                info.about = String::from_utf8_lossy(&props.about).into_owned();
+                info.about = String!(&props.about);
                 info.session_key = props.session_key.unwrap_or(intention.clone()).into();
             }
 
@@ -493,7 +519,7 @@ where
                         .fold(Zero::zero(), |acc, (_, v)| acc + *v);
                 }
 
-                info.id = String::from_utf8_lossy(&token).into_owned();
+                info.id = String!(&token);
                 psedu_intentions.push(info);
             }
         }
@@ -509,15 +535,33 @@ where
         let state = self.state_at(hash)?;
         let mut psedu_records = Vec::new();
 
+        let who: AccountId = who.unchecked_into();
+
         let key = <xtokens::PseduIntentions<Runtime>>::key();
         if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key, Hasher::TWOX128)? {
             for token in tokens {
                 let mut record = PseduNominationRecord::default();
 
-                let key = <xtokens::DepositRecords<Runtime>>::key_for(&(
-                    who.clone().unchecked_into(),
-                    token.clone(),
-                ));
+                let key = <xtokens::ClaimRestrictionOf<Runtime>>::key_for(&token);
+                if let Some((_, interval)) =
+                    Self::pickout::<(u32, BlockNumber)>(&state, &key, Hasher::BLAKE2256)?
+                {
+                    let key = <xtokens::LastClaimOf<Runtime>>::key_for(&who);
+
+                    if let Some(last_claim_info) = Self::pickout::<BTreeMap<Token, BlockNumber>>(
+                        &state,
+                        &key,
+                        Hasher::BLAKE2256,
+                    )? {
+                        if let Some(last_claim) = last_claim_info.get(&token) {
+                            record.next_claim = last_claim + interval;
+                        }
+                    }
+                }
+
+                let wt_key = (who.clone(), token.clone());
+
+                let key = <xtokens::DepositRecords<Runtime>>::key_for(&wt_key);
                 if let Some(vote_weight) = Self::pickout::<DepositVoteWeight<BlockNumber>>(
                     &state,
                     &key,
@@ -528,18 +572,14 @@ where
                         vote_weight.last_deposit_weight_update;
                 }
 
-                let key = <xassets::AssetBalance<Runtime>>::key_for(&(
-                    who.clone().unchecked_into(),
-                    token.clone(),
-                ));
-
+                let key = <xassets::AssetBalance<Runtime>>::key_for(&wt_key);
                 if let Some(balances) =
                     Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key, Hasher::BLAKE2256)?
                 {
                     record.balance = balances.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v);
                 }
 
-                record.id = String::from_utf8_lossy(&token).into_owned();
+                record.id = String!(&token);
 
                 psedu_records.push(record);
             }
@@ -562,8 +602,8 @@ where
                 if let Some(pair) = Self::pickout::<TradingPair>(&state, &key, Hasher::BLAKE2256)? {
                     let mut info = PairInfo::default();
                     info.id = pair.index;
-                    info.assets = String::from_utf8_lossy(pair.base_as_ref()).into_owned();
-                    info.currency = String::from_utf8_lossy(pair.quote_as_ref()).into_owned();
+                    info.assets = String!(pair.base_as_ref());
+                    info.currency = String!(pair.quote_as_ref());
                     info.precision = pair.pip_precision;
                     info.online = pair.online;
                     info.unit_precision = pair.tick_precision;
@@ -591,10 +631,10 @@ where
                         if !handicap.lowest_offer.is_zero() {
                             info.maximum_bid = handicap.lowest_offer + pair.fluctuation();
                         }
-                        if handicap.highest_bid > pair.fluctuation() {
-                            info.minimum_offer = handicap.highest_bid - pair.fluctuation();
+                        info.minimum_offer = if handicap.highest_bid > pair.fluctuation() {
+                            handicap.highest_bid - pair.fluctuation()
                         } else {
-                            info.minimum_offer = 10_u64.pow(pair.tick_precision); //tick
+                            pair.tick()
                         }
                     }
 
@@ -715,22 +755,22 @@ where
         }
 
         let mut orders = Vec::new();
-
         let mut page_total = 0;
 
         let state = self.state_at(hash)?;
 
-        let order_len_key = <xspot::OrderCountOf<Runtime>>::key_for(&who.unchecked_into());
+        let who: AccountId = who.unchecked_into();
+
+        let order_len_key = <xspot::OrderCountOf<Runtime>>::key_for(&who);
         if let Some(len) = Self::pickout::<OrderIndex>(&state, &order_len_key, Hasher::BLAKE2256)? {
             let mut total: u32 = 0;
             for i in (0..len).rev() {
-                let order_key =
-                    <xspot::OrderInfoOf<Runtime>>::key_for(&(who.clone().unchecked_into(), i));
+                let order_key = <xspot::OrderInfoOf<Runtime>>::key_for(&(who.clone(), i));
                 if let Some(order) =
                     Self::pickout::<OrderInfo<Runtime>>(&state, &order_key, Hasher::BLAKE2256)?
                 {
                     if total >= page_index * page_size && total < ((page_index + 1) * page_size) {
-                        orders.push(order.clone().into());
+                        orders.push(order.into());
                     }
                     total += 1;
                 }
