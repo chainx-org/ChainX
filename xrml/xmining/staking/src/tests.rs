@@ -80,6 +80,7 @@ fn nominate_should_work() {
 
         System::set_block_number(2);
         XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 10, vec![]));
         assert_ok!(XStaking::nominate(Origin::signed(2), 1.into(), 15, vec![]));
 
         assert_eq!(XAssets::pcx_free_balance(&2), 20 - 15);
@@ -123,8 +124,13 @@ fn renominate_should_work() {
         System::set_block_number(1);
         XSession::check_rotate_session(System::block_number());
 
+        assert_ok!(XStaking::set_bonding_duration(0));
+
         assert_ok!(XStaking::register(Origin::signed(1), b"name".to_vec(),));
         assert_ok!(XStaking::register(Origin::signed(3), b"name3".to_vec(),));
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 5, vec![]));
+        assert_ok!(XStaking::nominate(Origin::signed(3), 3.into(), 5, vec![]));
 
         System::set_block_number(2);
         XSession::check_rotate_session(System::block_number());
@@ -207,6 +213,7 @@ fn unnominate_should_work() {
         XSession::check_rotate_session(System::block_number());
 
         assert_ok!(XStaking::register(Origin::signed(1), b"name".to_vec(),));
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 10, vec![]));
         assert_ok!(XStaking::nominate(Origin::signed(2), 1.into(), 15, vec![]));
 
         System::set_block_number(2);
@@ -288,131 +295,9 @@ fn claim_should_work() {
         assert_eq!(XAssets::pcx_free_balance(&2), 20);
         System::set_block_number(3);
         XSession::check_rotate_session(System::block_number());
-        assert_eq!(XAssets::pcx_free_balance(&2), 400000010);
+        assert_eq!(XAssets::pcx_free_balance(&2), 36363656);
         assert_ok!(XStaking::claim(Origin::signed(2), 2.into()));
-        assert_eq!(XAssets::pcx_free_balance(&2), 4000000010);
-    });
-}
-
-#[test]
-fn offline_should_slash_and_kick() {
-    // Test that an offline validator gets slashed and kicked
-    with_externalities(&mut new_test_ext(), || {
-        assert_eq!(XAssets::pcx_free_balance(&6), 30);
-        assert_ok!(XStaking::register(Origin::signed(6), b"name".to_vec(),));
-        assert_ok!(XStaking::refresh(
-            Origin::signed(6),
-            None,
-            Some(true),
-            None,
-            None
-        ));
-
-        assert_ok!(XStaking::register(Origin::signed(10), b"name1".to_vec(),));
-        assert_ok!(XStaking::refresh(
-            Origin::signed(10),
-            None,
-            Some(true),
-            None,
-            None
-        ));
-
-        assert_ok!(XStaking::register(Origin::signed(20), b"name2".to_vec(),));
-        assert_ok!(XStaking::refresh(
-            Origin::signed(20),
-            None,
-            Some(true),
-            None,
-            None
-        ));
-
-        assert_ok!(XStaking::register(Origin::signed(30), b"name3".to_vec(),));
-        assert_ok!(XStaking::refresh(
-            Origin::signed(30),
-            None,
-            Some(true),
-            None,
-            None
-        ));
-
-        assert_ok!(XStaking::register(Origin::signed(40), b"name4".to_vec(),));
-        assert_ok!(XStaking::refresh(
-            Origin::signed(40),
-            None,
-            Some(true),
-            None,
-            None
-        ));
-
-        assert_ok!(XStaking::nominate(Origin::signed(1), 20.into(), 5, vec![]));
-        assert_ok!(XStaking::nominate(Origin::signed(2), 30.into(), 15, vec![]));
-        assert_ok!(XStaking::nominate(Origin::signed(3), 40.into(), 15, vec![]));
-        assert_ok!(XStaking::nominate(Origin::signed(4), 10.into(), 15, vec![]));
-
-        assert_eq!(XAccounts::intention_props_of(&6).is_active, true);
-        System::set_block_number(1);
-        XSession::check_rotate_session(System::block_number());
-
-        assert_ok!(XStaking::nominate(Origin::signed(4), 6.into(), 5, vec![]));
-        let jackpot_addr = XStaking::jackpot_accountid_for_unsafe(&6);
-        assert_eq!(XAssets::pcx_free_balance(&jackpot_addr), 0);
-
-        System::set_block_number(2);
-        XSession::check_rotate_session(System::block_number());
-
-        // Account 6 is a validator
-        assert_eq!(
-            XStaking::validators(),
-            vec![(40, 15), (30, 15), (10, 15), (20, 5), (6, 5)]
-        );
-        let mut total_active_stake = 15 + 15 + 15 + 5 + 5;
-        let mut rewards = 5_000_000_000 * 8 / 10;
-        let mut reward_of = Vec::new();
-        for (val, stakes) in XStaking::validators() {
-            let reward = rewards * stakes / total_active_stake;
-            reward_of.push((val, reward));
-            rewards -= reward;
-            total_active_stake -= stakes;
-        }
-        let reward = reward_of[4].1;
-        let jackpot1 = reward - reward / 10;
-        assert_eq!(XAssets::pcx_free_balance(&jackpot_addr), jackpot1);
-
-        System::set_block_number(3);
-        XSession::check_rotate_session(System::block_number());
-        // Validator 6 get slashed immediately
-        XStaking::on_offline_validator(&6);
-        assert_eq!(
-            XStaking::validators(),
-            vec![(40, 15), (30, 15), (10, 15), (20, 5), (6, 5)]
-        );
-
-        let mut total_active_stake = 15 + 15 + 15 + 5 + 5;
-        let mut rewards = 5_000_000_000 * 8 / 10;
-        let mut reward_of = Vec::new();
-        for (val, stakes) in XStaking::validators() {
-            let reward = rewards * stakes / total_active_stake;
-            reward_of.push((val, reward));
-            rewards -= reward;
-            total_active_stake -= stakes;
-        }
-        let reward = reward_of[4].1;
-        let jackpot2 = reward - reward / 10;
-        assert_eq!(
-            XAssets::pcx_free_balance(&jackpot_addr),
-            jackpot2 + jackpot1
-        );
-
-        System::set_block_number(4);
-        XSession::check_rotate_session(System::block_number());
-
-        // Validator 6 be kicked
-        assert_eq!(
-            XStaking::validators(),
-            vec![(40, 15), (30, 15), (10, 15), (20, 5)]
-        );
-        assert_eq!(XAssets::pcx_free_balance(&jackpot_addr), 0);
-        assert_eq!(XAccounts::intention_props_of(&2).is_active, false);
+        assert_eq!(XAssets::pcx_free_balance(&2), 363636383);
     });
 }
 
@@ -445,6 +330,8 @@ fn minimum_candidate_threshold_should_work() {
         ));
 
         assert_ok!(XAssets::pcx_issue(&1, 5));
+
+        assert_ok!(XStaking::nominate(Origin::signed(6), 6.into(), 5, vec![]));
         assert_ok!(XStaking::nominate(Origin::signed(1), 6.into(), 5, vec![]));
 
         System::set_block_number(1);
@@ -463,6 +350,13 @@ fn minimum_candidate_threshold_should_work() {
         );
 
         assert_ok!(XAssets::pcx_issue(&1, 10 * 100_000_000));
+        assert_ok!(XAssets::pcx_issue(&6, 1_000_000_000));
+        assert_ok!(XStaking::nominate(
+            Origin::signed(6),
+            6.into(),
+            1_000_000_000,
+            vec![]
+        ));
         assert_ok!(XStaking::nominate(
             Origin::signed(1),
             6.into(),
@@ -489,10 +383,128 @@ fn minimum_candidate_threshold_should_work() {
             vec![
                 (40, 4000000000),
                 (30, 3000000000),
+                (6, 2000000010),
                 (20, 2000000000),
-                (6, 1000000005),
                 (10, 1000000000)
             ]
         );
+    });
+}
+
+#[test]
+fn renominate_limitation_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(XStaking::set_bonding_duration(2));
+
+        assert_ok!(XStaking::register(Origin::signed(1), b"name1".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(2), b"name2".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(3), b"name3".to_vec(),));
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 5, vec![]));
+        assert_ok!(XStaking::nominate(Origin::signed(2), 2.into(), 5, vec![]));
+        assert_ok!(XStaking::nominate(Origin::signed(3), 3.into(), 5, vec![]));
+
+        assert_ok!(XStaking::nominate(Origin::signed(4), 1.into(), 10, vec![]));
+
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::renominate(
+            Origin::signed(4),
+            1.into(),
+            2.into(),
+            3,
+            b"memo".to_vec()
+        ));
+
+        System::set_block_number(2);
+        XSession::check_rotate_session(System::block_number());
+        assert_noop!(
+            XStaking::renominate(Origin::signed(4), 1.into(), 3.into(), 3, b"memo".to_vec()),
+            "Cannot renominate if your last renomination is not expired."
+        );
+
+        System::set_block_number(3);
+        XSession::check_rotate_session(System::block_number());
+        assert_noop!(
+            XStaking::renominate(Origin::signed(4), 1.into(), 3.into(), 3, b"memo".to_vec()),
+            "Cannot renominate if your last renomination is not expired."
+        );
+
+        System::set_block_number(4);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::renominate(
+            Origin::signed(4),
+            1.into(),
+            3.into(),
+            3,
+            b"memo".to_vec()
+        ));
+    });
+}
+
+#[test]
+fn upper_bound_of_total_nomination_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(XStaking::register(Origin::signed(1), b"name1".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(2), b"name2".to_vec(),));
+
+        assert_noop!(
+            XStaking::nominate(Origin::signed(3), 1.into(), 5, vec![]),
+            "Cannot (re)nominate if the target is reaching the upper bound of total nomination."
+        );
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 1, vec![]));
+
+        assert_noop!(
+            XStaking::nominate(Origin::signed(3), 1.into(), 10, vec![]),
+            "Cannot (re)nominate if the target is reaching the upper bound of total nomination."
+        );
+
+        assert_ok!(XStaking::nominate(Origin::signed(3), 1.into(), 9, vec![]));
+
+        assert_ok!(XStaking::nominate(Origin::signed(2), 2.into(), 2, vec![]));
+        assert_ok!(XStaking::nominate(Origin::signed(3), 2.into(), 15, vec![]));
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 1, vec![]));
+        assert_noop!(
+            XStaking::renominate(Origin::signed(3), 2.into(), 1.into(), 10, vec![]),
+            "Cannot (re)nominate if the target is reaching the upper bound of total nomination."
+        );
+        assert_ok!(XStaking::renominate(
+            Origin::signed(3),
+            2.into(),
+            1.into(),
+            9,
+            vec![]
+        ));
+    });
+}
+
+#[test]
+fn max_unbond_entries_limit_should_work() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(XStaking::register(Origin::signed(1), b"name1".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(2), b"name2".to_vec(),));
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 10, vec![]));
+
+        assert_ok!(XStaking::nominate(Origin::signed(3), 1.into(), 20, vec![]));
+
+        for i in 2..12 {
+            System::set_block_number(i);
+            XSession::check_rotate_session(System::block_number());
+            assert_ok!(XStaking::unnominate(Origin::signed(3), 1.into(), 1, vec![]));
+        }
+
+        System::set_block_number(12);
+        XSession::check_rotate_session(System::block_number());
+        assert_noop!(
+            XStaking::unnominate(Origin::signed(3), 1.into(), 1, vec![]),
+            "Cannot unnomiate if the limit of max unbond entries is reached."
+        );
+
+        assert_ok!(XStaking::unfreeze(Origin::signed(3), 1.into(), 1));
+
+        assert_ok!(XStaking::unnominate(Origin::signed(3), 1.into(), 1, vec![]));
     });
 }

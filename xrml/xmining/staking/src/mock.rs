@@ -349,7 +349,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             .unwrap();
 
             XStaking::bootstrap_refresh(&intention, Some(url), Some(true), None, None);
-            XStaking::bootstrap_update_vote_weight(&intention, &intention, value, true);
+            XStaking::bootstrap_update_vote_weight(&intention, &intention, Delta::Add(value));
         }
 
         XAssets::pcx_issue(&1, 10).unwrap();

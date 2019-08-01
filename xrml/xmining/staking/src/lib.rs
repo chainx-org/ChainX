@@ -2,6 +2,7 @@
 //! Staking manager: Periodically determines the best set of validators.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "128"]
 
 mod mock;
 mod reward;
@@ -28,9 +29,9 @@ use xaccounts::IntentionJackpotAccountIdFor;
 use xassets::{AssetErr, Memo, Token};
 use xr_primitives::{Name, XString, URL};
 use xsession::SessionKeyUsability;
-use xsupport::debug;
 #[cfg(feature = "std")]
 use xsupport::who;
+use xsupport::{debug, error};
 
 pub use self::traits::*;
 pub use self::types::*;
@@ -76,6 +77,10 @@ decl_module! {
                 "Cannot nominate if greater than your avaliable free balance."
             );
 
+            if !Self::is_nominating_intention_itself(&who, &target) {
+                Self::wont_reach_upper_bound(&target, value)?;
+            }
+
             Self::apply_nominate(&who, &target, value)?;
         }
 
@@ -106,9 +111,20 @@ decl_module! {
                 "Cannot renominate if greater than your current nomination."
             );
 
-            Self::apply_renominate(&who, &from, &to, value)?;
+            if !Self::is_nominating_intention_itself(&who, &to) {
+                Self::wont_reach_upper_bound(&to, value)?;
+            }
+
+            let bonding_duration = Self::bonding_duration();
+            let current_block = <system::Module<T>>::block_number();
+            if let Some(last_renomination) = Self::last_renomination_of(&who) {
+                ensure!(current_block > last_renomination + bonding_duration, "Cannot renominate if your last renomination is not expired.");
+            }
+
+            Self::apply_renominate(&who, &from, &to, value, current_block)?;
         }
 
+        /// Unbond the nomination.
         fn unnominate(
             origin,
             target: <T::Lookup as StaticLookup>::Source,
@@ -128,6 +144,10 @@ decl_module! {
                 value <= Self::revokable_of(&who, &target),
                 "Cannot unnominate if greater than your revokable nomination."
             );
+            ensure!(
+                Self::current_revocations_count(&who, &target) < Self::max_unbond_entries_per_intention() as usize,
+                "Cannot unnomiate if the limit of max unbond entries is reached."
+            );
 
             Self::apply_unnominate(&who, &target, value)?;
         }
@@ -145,6 +165,7 @@ decl_module! {
             Self::apply_claim(&who, &target)?;
         }
 
+        /// Free the locked unnomination.
         fn unfreeze(
             origin,
             target: <T::Lookup as StaticLookup>::Source,
@@ -176,7 +197,6 @@ decl_module! {
             }
 
             Self::staking_unreserve(&who, value)?;
-
             revocations.swap_remove(revocation_index as usize);
             if let Some(mut record) = <NominationRecords<T>>::get(&nominate_pair) {
                 record.revocations = revocations;
@@ -287,6 +307,11 @@ decl_module! {
             <MinimumCandidateThreshold<T>>::put(new);
         }
 
+        /// Set the factor of intention's total nomination upper bond.
+        fn set_upper_bond_factor(new: u32) {
+            <UpperBoundFactor<T>>::put(new);
+        }
+
     }
 }
 
@@ -357,8 +382,17 @@ decl_storage! {
 
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
 
+        /// The upper bound nominations of the intention that could absorb is up to the self-bonded.
+        pub UpperBoundFactor get(upper_bound_factor): u32 = 10u32;
+
         /// Reported validators that did evil, reset per session.
         pub EvilValidatorsPerSession get(evil_validators): Vec<T::AccountId>;
+
+        /// The height of user's last nomination.
+        pub LastRenominationOf get(last_renomination_of): map T::AccountId => Option<T::BlockNumber>;
+
+        /// The maximum ongoing unbond entries simultaneously against per intention.
+        pub MaxUnbondEntriesPerIntention get(max_unbond_entries_per_intention): u32 = 10u32;
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(minimum_penalty) config(): T::Balance;
@@ -393,6 +427,10 @@ impl<T: Trait> Module<T> {
         } else {
             Default::default()
         }
+    }
+
+    pub fn upper_bound_of(who: &T::AccountId) -> T::Balance {
+        Self::self_bonded_of(who) * T::Balance::sa(u64::from(Self::upper_bound_factor()))
     }
 
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
@@ -488,7 +526,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_nominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
         Self::staking_reserve(source, value)?;
-        Self::apply_update_vote_weight(source, target, value, true);
+        Self::apply_update_vote_weight(source, target, Delta::Add(value.as_()));
         Self::deposit_event(RawEvent::Nominate(source.clone(), target.clone(), value));
         Ok(())
     }
@@ -498,9 +536,11 @@ impl<T: Trait> Module<T> {
         from: &T::AccountId,
         to: &T::AccountId,
         value: T::Balance,
+        current_block: T::BlockNumber,
     ) -> Result {
-        Self::apply_update_vote_weight(who, from, value, false);
-        Self::apply_update_vote_weight(who, to, value, true);
+        Self::apply_update_vote_weight(who, from, Delta::Sub(value.as_()));
+        Self::apply_update_vote_weight(who, to, Delta::Add(value.as_()));
+        <LastRenominationOf<T>>::insert(who, current_block);
         Ok(())
     }
 
@@ -529,7 +569,7 @@ impl<T: Trait> Module<T> {
             <NominationRecords<T>>::insert(&nr_key, record);
         }
 
-        Self::apply_update_vote_weight(source, target, value, false);
+        Self::apply_update_vote_weight(source, target, Delta::Sub(value.as_()));
 
         Self::deposit_event(RawEvent::Unnominate(freeze_until));
 
@@ -614,6 +654,25 @@ impl<T: Trait> Module<T> {
         ));
     }
 
+    fn wont_reach_upper_bound(nominee: &T::AccountId, value: T::Balance) -> Result {
+        let total_nomination = Self::total_nomination_of(nominee);
+        let upper_bound = Self::upper_bound_of(nominee);
+        if total_nomination + value <= upper_bound {
+            Ok(())
+        } else {
+            error!("Fail to (re)nominate, upper bound of nominee({:?}) is {:?}, current total_nomination: {:?}, want to nominate: {:?}", nominee, upper_bound, total_nomination, value);
+            Err("Cannot (re)nominate if the target is reaching the upper bound of total nomination.")
+        }
+    }
+
+    fn is_nominating_intention_itself(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
+        Self::is_intention(nominator) && *nominator == *nominee
+    }
+
+    fn current_revocations_count(who: &T::AccountId, target: &T::AccountId) -> usize {
+        Self::nomination_record_of(who, target).revocations.len()
+    }
+
     #[cfg(feature = "std")]
     pub fn bootstrap_register(intention: &T::AccountId, name: Name) -> Result {
         Self::apply_register(intention, name)
@@ -645,23 +704,17 @@ impl<T: Trait> Module<T> {
     pub fn bootstrap_update_vote_weight(
         source: &T::AccountId,
         target: &T::AccountId,
-        value: T::Balance,
-        to_add: bool,
+        delta: Delta,
     ) {
-        Self::apply_update_vote_weight(source, target, value, to_add)
+        Self::apply_update_vote_weight(source, target, delta)
     }
 
     /// Actually update the vote weight and nomination balance of source and target.
-    fn apply_update_vote_weight(
-        source: &T::AccountId,
-        target: &T::AccountId,
-        value: T::Balance,
-        to_add: bool,
-    ) {
+    fn apply_update_vote_weight(source: &T::AccountId, target: &T::AccountId, delta: Delta) {
         let mut iprof = <Intentions<T>>::get(target);
         let mut record = Self::nomination_record_of(source, target);
 
-        Self::update_vote_weight_both_way(&mut iprof, &mut record, value.as_(), to_add);
+        Self::update_vote_weight_both_way(&mut iprof, &mut record, &delta);
 
         <Intentions<T>>::insert(target, iprof);
         Self::mutate_nomination_record(source, target, record);

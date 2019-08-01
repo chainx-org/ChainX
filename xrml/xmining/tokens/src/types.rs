@@ -6,7 +6,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use super::{Token, Trait};
 use primitives::traits::As;
-use xstaking::VoteWeight;
+use xstaking::{VoteWeight, VoteWeightBase};
 use xsupport::trace;
 
 /// This module only tracks the vote weight related changes.
@@ -27,11 +27,26 @@ pub struct DepositVoteWeight<BlockNumber: Default> {
     pub last_deposit_weight_update: BlockNumber,
 }
 
+impl<BlockNumber: Default> DepositVoteWeight<BlockNumber> {
+    pub fn new(last_deposit_weight: u64, last_deposit_weight_update: BlockNumber) -> Self {
+        DepositVoteWeight {
+            last_deposit_weight,
+            last_deposit_weight_update,
+        }
+    }
+}
+
 /// `PseduIntentionProfs` and `DepositRecord` is to wrap the vote weight of token,
 /// sharing the vote weight calculation logic originated from staking module.
 pub struct PseduIntentionProfs<'a, T: Trait> {
     pub token: &'a Token,
     pub staking: &'a mut PseduIntentionVoteWeight<T::BlockNumber>,
+}
+
+impl<'a, T: Trait> PseduIntentionProfs<'a, T> {
+    pub fn new(token: &'a Token, p: &'a mut PseduIntentionVoteWeight<T::BlockNumber>) -> Self {
+        PseduIntentionProfs { token, staking: p }
+    }
 }
 
 pub struct DepositRecord<'a, T: Trait> {
@@ -40,7 +55,21 @@ pub struct DepositRecord<'a, T: Trait> {
     pub staking: &'a mut DepositVoteWeight<T::BlockNumber>,
 }
 
-impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
+impl<'a, T: Trait> DepositRecord<'a, T> {
+    pub fn new(
+        depositor: &'a T::AccountId,
+        token: &'a Token,
+        d: &'a mut DepositVoteWeight<T::BlockNumber>,
+    ) -> Self {
+        DepositRecord {
+            depositor,
+            token,
+            staking: d,
+        }
+    }
+}
+
+impl<'a, T: Trait> VoteWeightBase<T::BlockNumber> for PseduIntentionProfs<'a, T> {
     fn amount(&self) -> u64 {
         xassets::Module::<T>::all_type_total_asset_balance(&self.token).as_()
     }
@@ -53,7 +82,7 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
         self.staking.last_total_deposit_weight_update.as_()
     }
 
-    fn set_amount(&mut self, _: u64, _: bool) {}
+    fn set_amount(&mut self, _: u64) {}
 
     fn set_last_acum_weight(&mut self, latest_deposit_weight: u64) {
         trace!(
@@ -73,7 +102,9 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {
     }
 }
 
-impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
+impl<'a, T: Trait> VoteWeight<T::BlockNumber> for PseduIntentionProfs<'a, T> {}
+
+impl<'a, T: Trait> VoteWeightBase<T::BlockNumber> for DepositRecord<'a, T> {
     fn amount(&self) -> u64 {
         xassets::Module::<T>::all_type_asset_balance(&self.depositor, &self.token).as_()
     }
@@ -86,7 +117,7 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
         self.staking.last_deposit_weight_update.as_()
     }
 
-    fn set_amount(&mut self, _: u64, _: bool) {}
+    fn set_amount(&mut self, _: u64) {}
 
     fn set_last_acum_weight(&mut self, latest_deposit_weight: u64) {
         trace!(
@@ -105,3 +136,5 @@ impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {
         self.staking.last_deposit_weight_update = current_block;
     }
 }
+
+impl<'a, T: Trait> VoteWeight<T::BlockNumber> for DepositRecord<'a, T> {}

@@ -8,23 +8,15 @@ use xassets::ChainT;
 use xbridge_common::traits::CrossChainBindingV2;
 use xsupport::{error, trace};
 
-impl<Balance, BlockNumber> VoteWeight<BlockNumber> for IntentionProfs<Balance, BlockNumber>
-where
-    Balance: Default + As<u64> + Clone,
-    BlockNumber: Default + As<u64> + Clone,
+impl<Balance: Default + As<u64> + Clone, BlockNumber: Default + As<u64> + Clone>
+    VoteWeightBase<BlockNumber> for IntentionProfs<Balance, BlockNumber>
 {
     fn amount(&self) -> u64 {
         self.total_nomination.clone().as_()
     }
 
-    fn set_amount(&mut self, value: u64, to_add: bool) {
-        let mut amount = Self::amount(self);
-        if to_add {
-            amount += value;
-        } else {
-            amount -= value;
-        }
-        self.total_nomination = Balance::sa(amount);
+    fn set_amount(&mut self, new: u64) {
+        self.total_nomination = Balance::sa(new);
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -44,23 +36,20 @@ where
     }
 }
 
-impl<Balance, BlockNumber> VoteWeight<BlockNumber> for NominationRecord<Balance, BlockNumber>
-where
-    Balance: Default + As<u64> + Clone,
-    BlockNumber: Default + As<u64> + Clone,
+impl<Balance: Default + Clone + As<u64>, BlockNumber: Default + Clone + As<u64>>
+    VoteWeight<BlockNumber> for IntentionProfs<Balance, BlockNumber>
+{
+}
+
+impl<Balance: Default + As<u64> + Clone, BlockNumber: Default + As<u64> + Clone>
+    VoteWeightBase<BlockNumber> for NominationRecord<Balance, BlockNumber>
 {
     fn amount(&self) -> u64 {
         self.nomination.clone().as_()
     }
 
-    fn set_amount(&mut self, value: u64, to_add: bool) {
-        let mut amount = Self::amount(self);
-        if to_add {
-            amount += value;
-        } else {
-            amount -= value;
-        }
-        self.nomination = Balance::sa(amount);
+    fn set_amount(&mut self, new: u64) {
+        self.nomination = Balance::sa(new);
     }
 
     fn last_acum_weight(&self) -> u64 {
@@ -80,6 +69,11 @@ where
     }
 }
 
+impl<Balance: Default + As<u64> + Clone, BlockNumber: Default + As<u64> + Clone>
+    VoteWeight<BlockNumber> for NominationRecord<Balance, BlockNumber>
+{
+}
+
 impl<T: Trait> Module<T> {
     pub fn generic_update_vote_weight<V: VoteWeight<T::BlockNumber>>(who: &mut V) {
         let current_block = <system::Module<T>>::block_number();
@@ -90,8 +84,8 @@ impl<T: Trait> Module<T> {
         who.set_last_acum_weight_update(current_block);
     }
 
-    fn generic_apply_delta<V: VoteWeight<T::BlockNumber>>(who: &mut V, value: u64, to_add: bool) {
-        who.set_amount(value, to_add);
+    fn generic_apply_delta<V: VoteWeight<T::BlockNumber>>(who: &mut V, delta: &Delta) {
+        who.settle_and_set_amount(delta);
     }
 
     pub fn referral_or_council_of(who: &T::AccountId, token: &Token) -> T::AccountId {
@@ -113,16 +107,14 @@ impl<T: Trait> Module<T> {
         referral.unwrap_or_else(xaccounts::Module::<T>::council_account)
     }
 
-    pub fn generic_claim<U, V>(
+    pub fn compute_dividend<U, V>(
         source: &mut U,
-        who: &T::AccountId,
         target: &mut V,
         target_jackpot: &T::AccountId,
-        claim_type: ClaimType,
     ) -> result::Result<(u64, u64, T::Balance), &'static str>
     where
         U: VoteWeight<T::BlockNumber>,
-        V: VoteWeight<T::BlockNumber>, // + Jackpot<T::Balance>,
+        V: VoteWeight<T::BlockNumber>,
     {
         let current_block = <system::Module<T>>::block_number();
 
@@ -157,8 +149,9 @@ impl<T: Trait> Module<T> {
         let total_jackpot: u64 = xassets::Module::<T>::pcx_free_balance(target_jackpot).as_();
 
         // source_vote_weight * total_jackpot could overflow.
-        let dividend = match (source_vote_weight as u128).checked_mul(total_jackpot as u128) {
-            Some(x) => T::Balance::sa((x / target_vote_weight as u128) as u64),
+        let dividend = match (u128::from(source_vote_weight)).checked_mul(u128::from(total_jackpot))
+        {
+            Some(x) => T::Balance::sa((x / u128::from(target_vote_weight)) as u64),
             None => {
                 error!(
                     "[generic_claim] source_vote_weight * total_jackpot overflow, source_vote_weight: {:?}, total_jackpot: {:?}",
@@ -170,19 +163,34 @@ impl<T: Trait> Module<T> {
 
         trace!(target: "claim", "[generic_claim] total_jackpot: {:?}, dividend: {:?}", total_jackpot, dividend);
 
+        Ok((source_vote_weight, target_vote_weight, dividend))
+    }
+
+    pub fn generic_claim<U, V>(
+        source: &mut U,
+        who: &T::AccountId,
+        target: &mut V,
+        target_jackpot: &T::AccountId,
+        claim_type: ClaimType,
+    ) -> result::Result<(u64, u64, T::Balance), &'static str>
+    where
+        U: VoteWeight<T::BlockNumber>,
+        V: VoteWeight<T::BlockNumber>,
+    {
+        let (source_vote_weight, target_vote_weight, dividend) =
+            Self::compute_dividend(source, target, target_jackpot)?;
+
         Self::claim_transfer(claim_type, target_jackpot, who, dividend)?;
 
-        source.set_last_acum_weight(0);
-        source.set_last_acum_weight_update(current_block);
-
-        target.set_last_acum_weight(target_vote_weight - source_vote_weight);
-        target.set_last_acum_weight_update(current_block);
+        let current_block = <system::Module<T>>::block_number();
+        source.set_state_on_claim(0, current_block);
+        target.set_state_on_claim(target_vote_weight - source_vote_weight, current_block);
 
         Ok((source_vote_weight, target_vote_weight, dividend))
     }
 
     /// Transfer from the jackpot to the receivers given the calculated dividend.
-    pub(crate) fn claim_transfer(
+    pub fn claim_transfer(
         claim_type: ClaimType,
         jackpot: &T::AccountId,
         who: &T::AccountId,
@@ -275,14 +283,13 @@ impl<T: Trait> Module<T> {
     >(
         source: &mut U,
         target: &mut V,
-        value: u64,
-        to_add: bool,
+        delta: &Delta,
     ) {
         // Update to the latest vote weight
         Self::generic_update_vote_weight(source);
         Self::generic_update_vote_weight(target);
         // Update the nomination balance
-        Self::generic_apply_delta(source, value, to_add);
-        Self::generic_apply_delta(target, value, to_add);
+        Self::generic_apply_delta(source, &delta);
+        Self::generic_apply_delta(target, &delta);
     }
 }

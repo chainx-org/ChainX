@@ -51,6 +51,7 @@ decl_storage! {
             use xassets::{ChainT, Token, Chain, Asset};
             use xspot::CurrencyPair;
             use xmultisig::MultiSigPermission;
+            use xstaking::Delta;
             use xbridge_features::H264;
             use xsupport::error;
 
@@ -116,7 +117,7 @@ decl_storage! {
                     ).unwrap();
 
                     xstaking::Module::<T>::bootstrap_refresh(&account_id, Some(url), Some(true), Some(validator_key), Some(memo));
-                    xstaking::Module::<T>::bootstrap_update_vote_weight(&account_id, &account_id, value, true);
+                    xstaking::Module::<T>::bootstrap_update_vote_weight(&account_id, &account_id, Delta::Add(value.as_()));
 
                     <xstaking::StakeWeight<T>>::insert(&account_id, value);
                 }
