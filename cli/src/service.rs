@@ -43,7 +43,6 @@ use transaction_pool::txpool::Pool as TransactionPool;
 use chainx_primitives::{AccountId, Block};
 use chainx_runtime::{GenesisConfig, RuntimeApi};
 use runtime_api::xsession_api::XSessionApi;
-use substrate_service::TelemetryOnConnect;
 
 type XSystemInherentDataProvider = xsystem::InherentDataProvider;
 
@@ -246,6 +245,7 @@ construct_service_factory! {
             }},
         LightImportQueue = AuraImportQueue<Self::Block>
             { |config: &FactoryFullConfiguration<Self>, client: Arc<LightClient<Self>>| {
+                #[allow(deprecated)]
                 let fetch_checker = client.backend().blockchain().fetcher()
                     .upgrade()
                     .map(|fetcher| fetcher.checker().clone())
@@ -270,6 +270,7 @@ construct_service_factory! {
             }},
         SelectChain = LongestChain<FullBackend<Self>, Self::Block>
             { |config: &FactoryFullConfiguration<Self>, client: Arc<FullClient<Self>>| {
+                #[allow(deprecated)]
                 Ok(LongestChain::new(
                     client.backend().clone(),
                     client.import_lock()

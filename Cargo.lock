@@ -423,7 +423,7 @@ dependencies = [
 
 [[package]]
 name = "chainx"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "chainx-cli 1.0.0",
  "ctrlc 3.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
