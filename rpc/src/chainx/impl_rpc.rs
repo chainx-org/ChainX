@@ -543,17 +543,15 @@ where
                 let mut record = PseduNominationRecord::default();
 
                 let key = <xtokens::ClaimRestrictionOf<Runtime>>::key_for(&token);
-                if let Some((_, interval)) =
+                let (_, interval) =
                     Self::pickout::<(u32, BlockNumber)>(&state, &key, Hasher::BLAKE2256)?
-                {
-                    let key =
-                        <xtokens::LastClaimOf<Runtime>>::key_for(&(who.clone(), token.clone()));
+                        .unwrap_or((10u32, xtokens::BLOCKS_PER_WEEK));
+                let key = <xtokens::LastClaimOf<Runtime>>::key_for(&(who.clone(), token.clone()));
 
-                    if let Some(last_claim) =
-                        Self::pickout::<BlockNumber>(&state, &key, Hasher::BLAKE2256)?
-                    {
-                        record.next_claim = last_claim + interval;
-                    }
+                if let Some(last_claim) =
+                    Self::pickout::<BlockNumber>(&state, &key, Hasher::BLAKE2256)?
+                {
+                    record.next_claim = last_claim + interval;
                 }
 
                 let wt_key = (who.clone(), token.clone());
