@@ -1,5 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 use rstd::collections::btree_map::BTreeMap;
+use rstd::prelude::Vec;
 
 use xr_primitives::XString;
 
@@ -71,94 +72,112 @@ impl CheckFee for Call {
             }
             _ => (),
         }
+        call_weight_func(&self, &method_weight_map)
+    }
+}
 
-        macro_rules! get_method_call_weight {
-            ($module:ty, $func:ty, $default:expr) => {
-            {
-                let method_weight_key = stringify!($module $func).as_bytes().to_vec();
-                let method_weight = method_weight_map.get(&method_weight_key);
-                Some(method_weight.map(|x| *x).unwrap_or($default))
-            }
-            };
+macro_rules! get_method_call_weight_func {
+    ($fee_map:expr, $module:ty, $func:ty, $default:expr) => {
+        {
+            let method_weight_key = stringify!($module $func).as_bytes().to_vec();
+            let method_weight = $fee_map.get(&method_weight_key);
+            Some(method_weight.map(|x| *x).unwrap_or($default))
         }
+    };
+}
 
-        macro_rules! match_method_call {
-            (
+macro_rules! match_method_call_func {
+    (
+        $(
+            $module:ident, $module_call:ident => (
                 $(
-                    $module:ident, $module_call:ident => (
-                        $(
-                            $method:ident : $default:expr,
-                        )+
-                    );
+                    $method:ident : $default:expr,
                 )+
-            ) => {
-                match self {
-                    $(
-                        Call::$module(call) => match call {
-                            $(
-                                $module_call::$method(..) => get_method_call_weight!($module, $method, $default),
-                            )+
-                            _ => None,
-                        },
-                    )+
-                    _ => None,
-                }
-            };
+            );
+        )+
+    ) => {
+        #[inline]
+        pub fn call_weight_func(func_call: &Call, method_weight_map: &BTreeMap<XString, u64>) -> Option<u64> {
+            match func_call {
+                $(
+                    Call::$module(call) => match call {
+                        $(
+                            $module_call::$method(..) => get_method_call_weight_func!(method_weight_map, $module, $method, $default),
+                        )+
+                        _ => None,
+                    },
+                )+
+                _ => None,
+            }
         }
 
-        match_method_call! {
-
-            XAssets, XAssetsCall => (
-                transfer : 1,
-            );
-
-            XAssetsProcess, XAssetsProcessCall => (
-                withdraw : 3,
-                revoke_withdraw : 10,
-            );
-
-            XBridgeOfBTC, XBitcoinCall => (
-                push_header : 10,
-                push_transaction : 50,
-                sign_withdraw_tx : 5,
-                create_withdraw_tx : 5,
-            );
-
-            XBridgeOfBTCLockup, XBitcoinLockupCall => (
-                push_transaction : 50,
-            );
-
-            XStaking, XStakingCall => (
-                claim : 3,
-                refresh : 10_000,
-                nominate : 5,
-                unfreeze : 2,
-                register : 100_000,
-                unnominate : 3,
-                renominate : 800,
-            );
-
-            XTokens, XTokensCall => (
-                claim : 3,
-            );
-
-            XSpot, XSpotCall => (
-                put_order : 8,
-                cancel_order : 2,
-            );
-
-            XBridgeOfSDOT, SdotCall => (
-                claim : 2,
-            );
-
-            XBridgeFeatures, XBridgeFeaturesCall => (
-                setup_bitcoin_trustee : 1000,
-            );
-
-            XFisher, XFisherCall => (
-                report_double_signer : 5,
-            );
-
+        #[allow(unused)]
+        pub fn call_weight_map(method_weight_map: &BTreeMap<XString, u64>) -> BTreeMap<Vec<u8>, u64> {
+            let mut m = BTreeMap::new();
+            $(
+                $(
+                    if let Some(v) = get_method_call_weight_func!(method_weight_map, $module, $method, $default) {
+                        let key = stringify!($module$method).as_bytes().to_vec();
+                        m.insert(key, v);
+                    }
+                )+
+            )+
+            m
         }
     }
+}
+
+match_method_call_func! {
+
+    XAssets, XAssetsCall => (
+        transfer : 1,
+    );
+
+    XAssetsProcess, XAssetsProcessCall => (
+        withdraw : 3,
+        revoke_withdraw : 10,
+    );
+
+    XBridgeOfBTC, XBitcoinCall => (
+        push_header : 10,
+        push_transaction : 50,
+        sign_withdraw_tx : 5,
+        create_withdraw_tx : 5,
+    );
+
+    XBridgeOfBTCLockup, XBitcoinLockupCall => (
+        push_transaction : 50,
+    );
+
+    XStaking, XStakingCall => (
+        claim : 3,
+        refresh : 10_000,
+        nominate : 5,
+        unfreeze : 2,
+        register : 100_000,
+        unnominate : 3,
+        renominate : 800,
+    );
+
+    XTokens, XTokensCall => (
+        claim : 3,
+    );
+
+    XSpot, XSpotCall => (
+        put_order : 8,
+        cancel_order : 2,
+    );
+
+    XBridgeOfSDOT, SdotCall => (
+        claim : 2,
+    );
+
+    XBridgeFeatures, XBridgeFeaturesCall => (
+        setup_bitcoin_trustee : 1000,
+    );
+
+    XFisher, XFisherCall => (
+        report_double_signer : 5,
+    );
+
 }

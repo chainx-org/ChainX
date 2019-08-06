@@ -882,6 +882,21 @@ where
         Ok(transaction_fee)
     }
 
+    fn fee_weight_map(
+        &self,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<BTreeMap<String, u64>> {
+        self.client
+            .runtime_api()
+            .fee_weight_map(&self.block_id_by_hash(hash)?)
+            .map(|m| {
+                m.into_iter()
+                    .map(|(k, v)| (String::from_utf8_lossy(&k).into_owned(), v))
+                    .collect()
+            })
+            .map_err(Into::into)
+    }
+
     fn withdraw_tx(
         &self,
         chain: Chain,

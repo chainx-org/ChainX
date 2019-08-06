@@ -527,6 +527,11 @@ impl_runtime_apis! {
                 XFeeManager::transaction_fee(weight, encoded_len)
             )
         }
+
+        fn fee_weight_map() -> BTreeMap<Vec<u8>, u64> {
+            let method_call_weight = XFeeManager::method_call_weight();
+            fee::call_weight_map(&method_call_weight)
+        }
     }
 
     impl runtime_api::xsession_api::XSessionApi<Block> for Runtime {
