@@ -85,7 +85,7 @@ fn nominate_should_work() {
 
         assert_eq!(XAssets::pcx_free_balance(&2), 20 - 15);
         assert_eq!(
-            XStaking::nomination_record_of(&2, &1),
+            <NominationRecords<Test>>::get(&(2, 1)).unwrap(),
             NominationRecord {
                 nomination: 15,
                 last_vote_weight: 0,
@@ -138,7 +138,7 @@ fn renominate_should_work() {
 
         assert_eq!(XAssets::pcx_free_balance(&2), 20 - 15);
         assert_eq!(
-            XStaking::nomination_record_of(&2, &1),
+            <NominationRecords<Test>>::get(&(2, 1)).unwrap(),
             NominationRecord {
                 nomination: 15,
                 last_vote_weight: 0,
@@ -157,7 +157,7 @@ fn renominate_should_work() {
             b"memo".to_vec()
         ));
         assert_eq!(
-            XStaking::nomination_record_of(&2, &1),
+            <NominationRecords<Test>>::get(&(2, 1)).unwrap(),
             NominationRecord {
                 nomination: 5,
                 last_vote_weight: 15,
@@ -166,7 +166,7 @@ fn renominate_should_work() {
             }
         );
         assert_eq!(
-            XStaking::nomination_record_of(&2, &3),
+            <NominationRecords<Test>>::get(&(2, 3)).unwrap(),
             NominationRecord {
                 nomination: 10,
                 last_vote_weight: 0,
@@ -186,7 +186,7 @@ fn renominate_should_work() {
             b"memo".to_vec()
         ));
         assert_eq!(
-            XStaking::nomination_record_of(&2, &1),
+            <NominationRecords<Test>>::get(&(2, 1)).unwrap(),
             NominationRecord {
                 nomination: 0,
                 last_vote_weight: 20,
@@ -195,7 +195,7 @@ fn renominate_should_work() {
             }
         );
         assert_eq!(
-            XStaking::nomination_record_of(&2, &3),
+            <NominationRecords<Test>>::get(&(2, 3)).unwrap(),
             NominationRecord {
                 nomination: 15,
                 last_vote_weight: 10,
@@ -240,7 +240,7 @@ fn unnominate_should_work() {
         ));
 
         assert_eq!(
-            XStaking::nomination_record_of(&2, &1),
+            <NominationRecords<Test>>::get(&(2, 1)).unwrap(),
             NominationRecord {
                 nomination: 5,
                 last_vote_weight: 432015,
@@ -254,7 +254,7 @@ fn unnominate_should_work() {
         assert_ok!(XStaking::unnominate(Origin::signed(2), 1.into(), 5, vec![]));
 
         assert_eq!(
-            XStaking::nomination_record_of(&2, &1),
+            <NominationRecords<Test>>::get(&(2, 1)).unwrap(),
             NominationRecord {
                 nomination: 0,
                 last_vote_weight: 432020,
@@ -506,5 +506,196 @@ fn max_unbond_entries_limit_should_work() {
         assert_ok!(XStaking::unfreeze(Origin::signed(3), 1.into(), 1));
 
         assert_ok!(XStaking::unnominate(Origin::signed(3), 1.into(), 1, vec![]));
+    });
+}
+
+#[test]
+fn switch_to_u128_when_overflow() {
+    with_externalities(&mut new_test_ext(), || {
+        assert_ok!(XStaking::register(Origin::signed(1), b"name1".to_vec(),));
+        assert_ok!(XStaking::register(Origin::signed(2), b"name2".to_vec(),));
+
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 2, vec![]));
+        assert_eq!(
+            <NominationRecords<Test>>::get(&(1, 1)).unwrap(),
+            NominationRecord {
+                nomination: 2,
+                last_vote_weight: 0,
+                last_vote_weight_update: 1,
+                revocations: vec![]
+            }
+        );
+
+        // user overflow
+        //
+        // 18446744073709551615 = u64::max_value()
+        //
+        // 18446744073709551614 = 2 * (u64::max_value() / 2)
+        System::set_block_number(1 + u64::max_value() / 2);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::nominate(Origin::signed(3), 1.into(), 1, vec![]));
+
+        assert_eq!(
+            <NominationRecords<Test>>::get(&(3, 1)).unwrap(),
+            NominationRecord {
+                nomination: 1,
+                last_vote_weight: 0,
+                last_vote_weight_update: 1 + u64::max_value() / 2,
+                revocations: vec![]
+            }
+        );
+
+        System::set_block_number(2 + u64::max_value() / 2);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::claim(Origin::signed(3), 1.into()));
+
+        assert_eq!(
+            XStaking::nomination_records(&(3, 1)).unwrap(),
+            NominationRecord {
+                nomination: 1,
+                last_vote_weight: 0,
+                last_vote_weight_update: 2 + u64::max_value() / 2,
+                revocations: vec![]
+            }
+        );
+
+        assert_eq!(<Intentions<Test>>::exists(&1), false);
+        assert_eq!(
+            XStaking::intentions_v1(&1),
+            IntentionProfsV1 {
+                total_nomination: 3,
+                last_total_vote_weight: 2u128 * (2u128 + u128::from(u64::max_value() / 2) - 1u128), // 18446744073709551616
+                last_total_vote_weight_update: 2 + u64::max_value() / 2,
+            }
+        );
+
+        assert_ok!(XStaking::nominate(Origin::signed(1), 1.into(), 1, vec![]));
+
+        assert_eq!(<NominationRecords<Test>>::get(&(1, 1)).is_none(), true);
+        assert_eq!(
+            XStaking::nomination_records_v1(&(1, 1)).unwrap(),
+            NominationRecordV1 {
+                nomination: 3,
+                last_vote_weight: 2u128 * (2u128 + u128::from(u64::max_value() / 2) - 1u128), // 18446744073709551616
+                last_vote_weight_update: 2 + u64::max_value() / 2,
+                revocations: vec![]
+            }
+        );
+
+        assert_eq!(
+            XStaking::intentions_v1(&1),
+            IntentionProfsV1 {
+                total_nomination: 4,
+                last_total_vote_weight: 2u128 * (2u128 + u128::from(u64::max_value() / 2) - 1u128), // 18446744073709551616
+                last_total_vote_weight_update: 2 + u64::max_value() / 2,
+            }
+        );
+
+        System::set_block_number(3 + u64::max_value() / 2);
+        XSession::check_rotate_session(System::block_number());
+
+        assert_ok!(XAssets::pcx_issue(&1, 1000));
+        assert_ok!(XStaking::nominate(Origin::signed(3), 1.into(), 1, vec![]));
+        assert_eq!(
+            XStaking::nomination_records(&(3, 1)).unwrap(),
+            NominationRecord {
+                nomination: 2,
+                last_vote_weight: 1u64,
+                last_vote_weight_update: 3 + u64::max_value() / 2,
+                revocations: vec![]
+            }
+        );
+
+        assert_ok!(XStaking::nominate(Origin::signed(2), 2.into(), 2, vec![]));
+        assert_ok!(XStaking::renominate(
+            Origin::signed(3),
+            1.into(),
+            2.into(),
+            1,
+            b"memo".to_vec()
+        ));
+
+        assert_eq!(
+            XStaking::nomination_records(&(3, 1)).unwrap(),
+            NominationRecord {
+                nomination: 1,
+                last_vote_weight: 1u64,
+                last_vote_weight_update: 3 + u64::max_value() / 2,
+                revocations: vec![]
+            }
+        );
+
+        assert_eq!(
+            XStaking::nomination_records(&(3, 2)).unwrap(),
+            NominationRecord {
+                nomination: 1,
+                last_vote_weight: 0u64,
+                last_vote_weight_update: 3 + u64::max_value() / 2,
+                revocations: vec![]
+            }
+        );
+
+        assert_ok!(XAssets::pcx_issue(&1, 10_000));
+        assert_ok!(XStaking::nominate(
+            Origin::signed(1),
+            1.into(),
+            10_000,
+            vec![]
+        ));
+        assert_ok!(XAssets::pcx_issue(&3, 10_000));
+        assert_ok!(XStaking::nominate(
+            Origin::signed(3),
+            1.into(),
+            10_000,
+            vec![]
+        ));
+
+        System::set_block_number(3 + u64::max_value() / 2 + u64::max_value() / 10);
+        XSession::check_rotate_session(System::block_number());
+
+        assert_ok!(XStaking::unnominate(Origin::signed(3), 1.into(), 1, vec![]));
+
+        assert_eq!(XStaking::nomination_records(&(3, 1)), None);
+        assert_eq!(
+            XStaking::nomination_records_v1(&(3, 1)).unwrap(),
+            NominationRecordV1 {
+                nomination: 10_000,
+                last_vote_weight: 1u128 + 10_001u128 * u128::from(u64::max_value() / 10),
+                last_vote_weight_update: 3 + u64::max_value() / 2 + u64::max_value() / 10,
+                revocations: vec![(3u64 + u64::max_value() / 2 + u64::max_value() / 10 + 1, 1)]
+            }
+        );
+
+        System::set_block_number(4 + u64::max_value() / 2 + u64::max_value() / 10);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::unnominate(Origin::signed(3), 1.into(), 2, vec![]));
+        assert_eq!(
+            XStaking::nomination_records_v1(&(3, 1)).unwrap(),
+            NominationRecordV1 {
+                nomination: 10_000 - 2,
+                last_vote_weight: 1u128 + 10_001u128 * u128::from(u64::max_value() / 10) + 10_000,
+                last_vote_weight_update: 4 + u64::max_value() / 2 + u64::max_value() / 10,
+                revocations: vec![
+                    (3u64 + u64::max_value() / 2 + u64::max_value() / 10 + 1, 1),
+                    (4u64 + u64::max_value() / 2 + u64::max_value() / 10 + 1, 2)
+                ]
+            }
+        );
+
+        System::set_block_number(4 + u64::max_value() / 2 + u64::max_value() / 10);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XStaking::unfreeze(Origin::signed(3), 1.into(), 0));
+        assert_eq!(
+            XStaking::nomination_records_v1(&(3, 1)).unwrap(),
+            NominationRecordV1 {
+                nomination: 10_000 - 2,
+                last_vote_weight: 1u128 + 10_001u128 * u128::from(u64::max_value() / 10) + 10_000,
+                last_vote_weight_update: 4 + u64::max_value() / 2 + u64::max_value() / 10,
+                revocations: vec![(4u64 + u64::max_value() / 2 + u64::max_value() / 10 + 1, 2)]
+            }
+        );
     });
 }

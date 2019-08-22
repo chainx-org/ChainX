@@ -4,6 +4,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
+mod impls;
 mod mock;
 mod reward;
 mod shifter;
@@ -13,11 +14,14 @@ pub mod traits;
 pub mod types;
 pub mod vote_weight;
 
+use crate as xstaking;
+
 use parity_codec::Compact;
 
 // Substrate
 use primitives::traits::{As, Lookup, StaticLookup, Zero};
 use rstd::prelude::*;
+use rstd::result;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, EnumerableStorageMap,
     StorageMap, StorageValue,
@@ -35,13 +39,12 @@ use xsupport::{debug, error};
 
 pub use self::traits::*;
 pub use self::types::*;
+pub use self::vote_weight::*;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const SESSIONS_PER_ROUND: u64 = 210_000;
 
-pub trait Trait:
-    xsystem::Trait + xsession::Trait + xbridge_features::Trait + xsdot::Trait + xbridge_common::Trait
-{
+pub trait Trait: xsystem::Trait + xsession::Trait + xassets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -99,15 +102,17 @@ decl_module! {
 
             xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot renominate zero.");
+
+            let key = (who.clone(), from.clone());
             ensure!(
-                <NominationRecords<T>>::get((who.clone(), from.clone())).is_some(),
+                Self::nomination_record_exists(&key),
                 "Cannot renominate if the from party is not your nominee."
             );
             if Self::is_intention(&who) && who == from {
                 return Err("Cannot renominate the intention self-bonded.");
             }
             ensure!(
-                value <= Self::revokable_of(&who, &from),
+                value <= Self::revokable_of(&key),
                 "Cannot renominate if greater than your current nomination."
             );
 
@@ -136,16 +141,18 @@ decl_module! {
 
             xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot unnominate zero.");
+
+            let key = (who.clone(), target.clone());
             ensure!(
-                <NominationRecords<T>>::get((who.clone(), target.clone())).is_some(),
+                Self::nomination_record_exists(&key),
                 "Cannot unnominate if target is not your nominee."
             );
             ensure!(
-                value <= Self::revokable_of(&who, &target),
+                value <= Self::revokable_of(&key),
                 "Cannot unnominate if greater than your revokable nomination."
             );
             ensure!(
-                Self::current_revocations_count(&who, &target) < Self::max_unbond_entries_per_intention() as usize,
+                Self::revocations_of(&key).len() < Self::max_unbond_entries_per_intention() as usize,
                 "Cannot unnomiate if the limit of max unbond entries is reached."
             );
 
@@ -158,11 +165,12 @@ decl_module! {
             let target = system::ChainContext::<T>::default().lookup(target)?;
 
             ensure!(
-                <NominationRecords<T>>::get((who.clone(), target.clone())).is_some(),
+                Self::nomination_record_exists(&(who.clone(), target.clone())),
                 "Cannot claim if target is not your nominee."
             );
 
-            Self::apply_claim(&who, &target)?;
+            debug!(target: "claim", "[vote claim] who: {:?}, target: {:?}", who, who!(target));
+            <Self as Claim<T::AccountId, T::Balance>>::claim(&who, &target)?;
         }
 
         /// Free the locked unnomination.
@@ -174,15 +182,14 @@ decl_module! {
             let who = ensure_signed(origin)?;
             let target = system::ChainContext::<T>::default().lookup(target)?;
 
-            let nominate_pair = (who.clone(), target.clone());
+            let key = (who.clone(), target.clone());
 
             ensure!(
-                <NominationRecords<T>>::get(&nominate_pair).is_some(),
+                Self::nomination_record_exists(&key),
                 "Cannot unfreeze if target is not your nominee."
             );
 
-            let record = Self::nomination_record_of(&who, &target);
-            let mut revocations = record.revocations;
+            let mut revocations = Self::revocations_of(&key);
 
             ensure!(!revocations.is_empty(), "Revocation list is empty");
             ensure!(
@@ -198,10 +205,18 @@ decl_module! {
 
             Self::staking_unreserve(&who, value)?;
             revocations.swap_remove(revocation_index as usize);
-            if let Some(mut record) = <NominationRecords<T>>::get(&nominate_pair) {
-                record.revocations = revocations;
-                <NominationRecords<T>>::insert(&nominate_pair, record);
+
+            match Self::try_get_nomination_record(&key) {
+                Ok(mut record) => {
+                    record.revocations = revocations;
+                    <NominationRecords<T>>::insert(&key, record);
+                }
+                Err(mut record_v1) => {
+                    record_v1.revocations = revocations;
+                    <NominationRecordsV1<T>>::insert(&key, record_v1);
+                }
             }
+
             Self::deposit_event(RawEvent::Unfreeze(who, target));
         }
 
@@ -312,6 +327,28 @@ decl_module! {
             <UpperBoundFactor<T>>::put(new);
         }
 
+        fn set_nomination_record(nominator: T::AccountId, nominee: T::AccountId, new: NominationRecord<T::Balance, T::BlockNumber>) {
+            let key = (nominator, nominee);
+            ensure!(<NominationRecords<T>>::exists(&key), "The NominationRecord must already exist.");
+            <NominationRecords<T>>::insert(&key, new);
+        }
+
+        fn set_intention_profs(intention: T::AccountId, new: IntentionProfs<T::Balance, T::BlockNumber>) {
+            ensure!(<Intentions<T>>::exists(&intention), "The IntentionProfs must already exist.");
+            <Intentions<T>>::insert(&intention, new);
+        }
+
+        fn set_nomination_record_v1(nominator: T::AccountId, nominee: T::AccountId, new: NominationRecordV1<T::Balance, T::BlockNumber>) {
+            let key = (nominator, nominee);
+            ensure!(<NominationRecordsV1<T>>::exists(&key), "The NominationRecordV1 must already exist.");
+            <NominationRecordsV1<T>>::insert(&key, new);
+        }
+
+        fn set_intention_profs_v1(intention: T::AccountId, new: IntentionProfsV1<T::Balance, T::BlockNumber>) {
+            ensure!(<IntentionsV1<T>>::exists(&intention), "The IntentionProfsV1 must already exist.");
+            <IntentionsV1<T>>::insert(&intention, new);
+        }
+
     }
 }
 
@@ -336,6 +373,8 @@ decl_event!(
         Unfreeze(AccountId, AccountId),
         /// All rewards issued to all (psedu-)intentions.
         SessionReward(Balance, Balance, Balance, Balance),
+        /// u128 version of Claim
+        ClaimV1(u128, u128, Balance),
     }
 );
 
@@ -377,10 +416,16 @@ decl_storage! {
 
         pub StakeWeight get(stake_weight): map T::AccountId => T::Balance;
 
-        /// All the accounts with a desire to stake.
+        /// All the accounts with a desire to be a validator.
         pub Intentions get(intentions): linked_map T::AccountId => IntentionProfs<T::Balance, T::BlockNumber>;
 
+        /// This is same with Intentions with the weight field extended from u64 to u128. Ref intention_profs! comments.
+        pub IntentionsV1 get(intentions_v1): linked_map T::AccountId => IntentionProfsV1<T::Balance, T::BlockNumber>;
+
         pub NominationRecords get(nomination_records): map (T::AccountId, T::AccountId) => Option<NominationRecord<T::Balance, T::BlockNumber>>;
+
+        /// This is same with NominationRecords with the weight field extended from u64 to u128. Ref intention_profs! comments.
+        pub NominationRecordsV1 get(nomination_records_v1): map (T::AccountId, T::AccountId) => Option<NominationRecordV1<T::Balance, T::BlockNumber>>;
 
         /// The upper bound nominations of the intention that could absorb is up to the self-bonded.
         pub UpperBoundFactor get(upper_bound_factor): u32 = 10u32;
@@ -407,25 +452,46 @@ decl_storage! {
 
 impl<T: Trait> Module<T> {
     // Public immutables
-    pub fn revokable_of(source: &T::AccountId, target: &T::AccountId) -> T::Balance {
-        Self::nomination_record_of(source, target).nomination
-    }
-
-    /// How many votes nominator have nomianted for the nominee.
-    pub fn nomination_record_of(
-        nominator: &T::AccountId,
-        nominee: &T::AccountId,
-    ) -> NominationRecord<T::Balance, T::BlockNumber> {
-        let mut record = NominationRecord::default();
-        record.last_vote_weight_update = <system::Module<T>>::block_number();
-        <NominationRecords<T>>::get(&(nominator.clone(), nominee.clone())).unwrap_or(record)
+    pub fn revokable_of(key: &(T::AccountId, T::AccountId)) -> T::Balance {
+        match Self::try_get_nomination_record(key) {
+            Ok(v) => v.nomination,
+            Err(v1) => v1.nomination,
+        }
     }
 
     pub fn self_bonded_of(who: &T::AccountId) -> T::Balance {
-        if let Some(record) = <NominationRecords<T>>::get(&(who.clone(), who.clone())) {
-            record.nomination
+        match Self::try_get_nomination_record(&(who.clone(), who.clone())) {
+            Ok(v) => v.nomination,
+            Err(v1) => v1.nomination,
+        }
+    }
+
+    pub fn revocations_of(key: &(T::AccountId, T::AccountId)) -> Vec<(T::BlockNumber, T::Balance)> {
+        match Self::try_get_nomination_record(key) {
+            Ok(v) => v.revocations,
+            Err(v1) => v1.revocations,
+        }
+    }
+
+    /// Try get NominationRecord, otherwise return Err(NominationRecordV1).
+    pub fn try_get_nomination_record(
+        key: &(T::AccountId, T::AccountId),
+    ) -> result::Result<
+        NominationRecord<T::Balance, T::BlockNumber>,
+        NominationRecordV1<T::Balance, T::BlockNumber>,
+    > {
+        if let Some(record_v1) = <NominationRecordsV1<T>>::get(key) {
+            Err(record_v1)
         } else {
-            Default::default()
+            // When the storage doesn't exist explicitly,
+            // return a default value with the `last_vote_weight_update` altered to the current block,
+            // which is neccessary for initializing someone' vote weight, e.g.,
+            // A -> B, (A,B)'s NominationRecord doesn't exist yet.
+            Ok(<NominationRecords<T>>::get(key).unwrap_or({
+                let mut record = NominationRecord::default();
+                record.last_vote_weight_update = <system::Module<T>>::block_number();
+                record
+            }))
         }
     }
 
@@ -433,8 +499,41 @@ impl<T: Trait> Module<T> {
         Self::self_bonded_of(who) * T::Balance::sa(u64::from(Self::upper_bound_factor()))
     }
 
+    /// Try get IntentionProfs, otherwise return Err(IntentionProfsV1).
+    pub fn try_get_intention_profs(
+        intention: &T::AccountId,
+    ) -> result::Result<
+        IntentionProfs<T::Balance, T::BlockNumber>,
+        IntentionProfsV1<T::Balance, T::BlockNumber>,
+    > {
+        if <Intentions<T>>::exists(intention) {
+            Ok(<Intentions<T>>::get(intention))
+        } else {
+            Err(<IntentionsV1<T>>::get(intention))
+        }
+    }
+
     pub fn total_nomination_of(intention: &T::AccountId) -> T::Balance {
-        <Intentions<T>>::get(intention).total_nomination
+        match Self::try_get_intention_profs(intention) {
+            Ok(v) => v.total_nomination,
+            Err(v1) => v1.total_nomination,
+        }
+    }
+
+    pub fn intention_set() -> Vec<T::AccountId> {
+        let mut intentions = <Intentions<T>>::enumerate()
+            .map(|(account, _)| account)
+            .collect::<Vec<_>>();
+        intentions.extend(
+            <IntentionsV1<T>>::enumerate()
+                .map(|(account, _)| account)
+                .collect::<Vec<_>>(),
+        );
+        intentions
+    }
+
+    pub fn nomination_record_exists(key: &(T::AccountId, T::AccountId)) -> bool {
+        <NominationRecords<T>>::get(key).is_some() || <NominationRecordsV1<T>>::get(key).is_some()
     }
 
     pub fn is_intention(who: &T::AccountId) -> bool {
@@ -447,12 +546,6 @@ impl<T: Trait> Module<T> {
 
     pub fn is_active(who: &T::AccountId) -> bool {
         <xaccounts::Module<T>>::intention_props_of(who).is_active
-    }
-
-    pub fn intention_set() -> Vec<T::AccountId> {
-        <Intentions<T>>::enumerate()
-            .map(|(account, _)| account)
-            .collect()
     }
 
     pub fn is_able_to_apply_inactive() -> bool {
@@ -481,14 +574,6 @@ impl<T: Trait> Module<T> {
         }
         Self::apply_inactive(who);
         Ok(())
-    }
-
-    fn mutate_nomination_record(
-        nominator: &T::AccountId,
-        nominee: &T::AccountId,
-        record: NominationRecord<T::Balance, T::BlockNumber>,
-    ) {
-        <NominationRecords<T>>::insert(&(nominator.clone(), nominee.clone()), record);
     }
 
     fn staking_reserve(who: &T::AccountId, value: T::Balance) -> Result {
@@ -545,6 +630,8 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_unnominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
+        Self::unnominate_reserve(source, value)?;
+
         let bonding_duration = if Self::is_intention(source) && *source == *target {
             Self::intention_bonding_duration()
         } else {
@@ -552,7 +639,8 @@ impl<T: Trait> Module<T> {
         };
         let freeze_until = <system::Module<T>>::block_number() + bonding_duration;
 
-        let mut revocations = Self::nomination_record_of(source, target).revocations;
+        let key = (source.clone(), target.clone());
+        let mut revocations = Self::revocations_of(&key);
 
         if let Some(index) = revocations.iter().position(|&n| n.0 == freeze_until) {
             let (freeze_until, old_value) = revocations[index];
@@ -561,42 +649,20 @@ impl<T: Trait> Module<T> {
             revocations.push((freeze_until, value));
         }
 
-        Self::unnominate_reserve(source, value)?;
-
-        let nr_key = (source.clone(), target.clone());
-        if let Some(mut record) = <NominationRecords<T>>::get(&nr_key) {
-            record.revocations = revocations;
-            <NominationRecords<T>>::insert(&nr_key, record);
+        match Self::try_get_nomination_record(&key) {
+            Ok(mut record) => {
+                record.revocations = revocations;
+                <NominationRecords<T>>::insert(&key, record);
+            }
+            Err(mut record_v1) => {
+                record_v1.revocations = revocations;
+                <NominationRecordsV1<T>>::insert(&key, record_v1);
+            }
         }
 
         Self::apply_update_vote_weight(source, target, Delta::Sub(value.as_()));
 
         Self::deposit_event(RawEvent::Unnominate(freeze_until));
-
-        Ok(())
-    }
-
-    fn apply_claim(who: &T::AccountId, target: &T::AccountId) -> Result {
-        debug!(target: "claim", "[vote claim] who: {:?}, target: {:?}", who, who!(target));
-        let mut iprof = <Intentions<T>>::get(target);
-        let mut record = Self::nomination_record_of(who, target);
-
-        let jackpot_addr = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(target);
-        let (source_vote_weight, target_vote_weight, dividend) = Self::generic_claim(
-            &mut record,
-            who,
-            &mut iprof,
-            &jackpot_addr,
-            ClaimType::Intention,
-        )?;
-        Self::deposit_event(RawEvent::Claim(
-            source_vote_weight,
-            target_vote_weight,
-            dividend,
-        ));
-
-        <Intentions<T>>::insert(target, iprof);
-        Self::mutate_nomination_record(who, target, record);
 
         Ok(())
     }
@@ -669,10 +735,6 @@ impl<T: Trait> Module<T> {
         Self::is_intention(nominator) && *nominator == *nominee
     }
 
-    fn current_revocations_count(who: &T::AccountId, target: &T::AccountId) -> usize {
-        Self::nomination_record_of(who, target).revocations.len()
-    }
-
     #[cfg(feature = "std")]
     pub fn bootstrap_register(intention: &T::AccountId, name: Name) -> Result {
         Self::apply_register(intention, name)
@@ -690,11 +752,7 @@ impl<T: Trait> Module<T> {
 
         <Intentions<T>>::insert(
             intention,
-            IntentionProfs {
-                total_nomination: Zero::zero(),
-                last_total_vote_weight: 0,
-                last_total_vote_weight_update: <system::Module<T>>::block_number(),
-            },
+            IntentionProfs::new(Zero::zero(), 0, <system::Module<T>>::block_number()),
         );
 
         Ok(())
@@ -711,13 +769,23 @@ impl<T: Trait> Module<T> {
 
     /// Actually update the vote weight and nomination balance of source and target.
     fn apply_update_vote_weight(source: &T::AccountId, target: &T::AccountId, delta: Delta) {
-        let mut iprof = <Intentions<T>>::get(target);
-        let mut record = Self::nomination_record_of(source, target);
+        let current_block = <system::Module<T>>::block_number();
 
-        Self::update_vote_weight_both_way(&mut iprof, &mut record, &delta);
+        let ((source_vote_weight, _source_overflow), (target_vote_weight, _target_overflow)) =
+            <Self as ComputeWeight<T::AccountId>>::settle_weight(
+                source,
+                target,
+                current_block.as_(),
+            );
 
-        <Intentions<T>>::insert(target, iprof);
-        Self::mutate_nomination_record(source, target, record);
+        Self::apply_update_staker_vote_weight(
+            source,
+            target,
+            source_vote_weight,
+            current_block,
+            &delta,
+        );
+        Self::apply_update_intention_vote_weight(target, target_vote_weight, current_block, &delta);
     }
 }
 
@@ -749,5 +817,26 @@ impl<T: Trait> Module<T> {
         whos.iter()
             .map(|who| T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who))
             .collect()
+    }
+
+    pub fn intentions_info_common() -> Vec<IntentionInfoCommon<T::AccountId, T::Balance>> {
+        let validators = Self::validators()
+            .into_iter()
+            .map(|(a, _)| a)
+            .collect::<Vec<_>>();
+        Self::intention_set()
+            .iter()
+            .map(|intention| {
+                let jackpot_account = Self::jackpot_accountid_for_unsafe(intention);
+                IntentionInfoCommon {
+                    account: intention.clone(),
+                    name: <xaccounts::IntentionNameOf<T>>::get(intention),
+                    jackpot_balance: xassets::Module::<T>::pcx_free_balance(&jackpot_account),
+                    self_bonded: Self::self_bonded_of(intention),
+                    is_validator: validators.contains(intention),
+                    jackpot_account,
+                }
+            })
+            .collect::<Vec<_>>()
     }
 }

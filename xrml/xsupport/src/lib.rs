@@ -63,13 +63,15 @@ macro_rules! validators {
 #[macro_export]
 macro_rules! who {
     ( $( $x:ident )+ ) => {
-
-        <xaccounts::IntentionNameOf<T>>::get($($x)+)
-            .map(|name| {
-                use xsupport::u8array_to_string;
-                format!("{:?}({:})", $($x)+, u8array_to_string(&name))
-            })
-            .unwrap()
+        {
+            use std::borrow::Borrow;
+            <xaccounts::IntentionNameOf<T>>::get($($x.borrow())+)
+                .map(|name| {
+                    use xsupport::u8array_to_string;
+                    format!("{:?}({:})", $($x)+, u8array_to_string(&name))
+                })
+                .unwrap()
+        }
     };
 }
 

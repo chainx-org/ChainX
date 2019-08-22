@@ -669,3 +669,92 @@ fn claim_has_frequency_limit_should_work() {
         XTokens::claim(Origin::signed(100), sdot.clone()).unwrap();
     });
 }
+
+#[test]
+fn switch_to_u128_when_overflow() {
+    with_externalities(&mut new_test_ext(), || {
+        System::set_block_number(1);
+        XSession::check_rotate_session(System::block_number());
+
+        let xbtc = <XBitcoin as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&xbtc, &1, 100));
+        assert_eq!(
+            XTokens::psedu_intention_profiles(&xbtc),
+            PseduIntentionVoteWeight {
+                last_total_deposit_weight: 0,
+                last_total_deposit_weight_update: 1
+            }
+        );
+
+        System::set_block_number(1 + u64::max_value() / 100);
+        XSession::check_rotate_session(System::block_number());
+
+        // u64::max_value() 18446744073709551615
+        let xbtc = <XBitcoin as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&xbtc, &2, 100));
+
+        let last_total_deposit_weight =
+            (u128::from(100u64) * u128::from(u64::max_value() / 100u64)) as u64;
+        let last_total_deposit_weight_update = 1 + u64::max_value() / 100;
+        assert_eq!(
+            XTokens::psedu_intention_profiles(&xbtc),
+            PseduIntentionVoteWeight {
+                last_total_deposit_weight,
+                last_total_deposit_weight_update
+            }
+        );
+
+        System::set_block_number(2 + u64::max_value() / 100);
+        XSession::check_rotate_session(System::block_number());
+
+        let xbtc = <XBitcoin as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&xbtc, &3, 100));
+
+        assert_eq!(
+            XTokens::deposit_records((3, xbtc.clone())),
+            DepositVoteWeight {
+                last_deposit_weight: 0,
+                last_deposit_weight_update: 2 + u64::max_value() / 100
+            }
+        );
+
+        let last_total_deposit_weight =
+            u128::from(100u64) * u128::from(u64::max_value() / 100u64) + 200u128;
+        let last_total_deposit_weight_update = 2 + u64::max_value() / 100;
+
+        assert_eq!(<PseduIntentionProfiles<Test>>::exists(&xbtc), false);
+        assert_eq!(
+            XTokens::psedu_intention_profiles_v1(&xbtc).unwrap(),
+            PseduIntentionVoteWeightV1 {
+                last_total_deposit_weight,
+                last_total_deposit_weight_update
+            }
+        );
+
+        System::set_block_number(2 + u64::max_value() / 100 + u64::max_value() / 10);
+        XSession::check_rotate_session(System::block_number());
+        assert_ok!(XAssets::issue(&xbtc, &3, 100));
+
+        assert_eq!(<DepositRecords<Test>>::exists((3, xbtc.clone())), false);
+        assert_eq!(
+            XTokens::deposit_records_v1((3, xbtc.clone())).unwrap(),
+            DepositVoteWeightV1 {
+                last_deposit_weight: 100u128 * u128::from(u64::max_value() / 10),
+                last_deposit_weight_update: 2 + u64::max_value() / 100 + u64::max_value() / 10
+            }
+        );
+
+        let last_total_deposit_weight = u128::from(100u64) * u128::from(u64::max_value() / 100u64)
+            + 200u128
+            + 300u128 * u128::from(u64::max_value() / 10);
+        let last_total_deposit_weight_update = 2 + u64::max_value() / 100 + u64::max_value() / 10;
+
+        assert_eq!(
+            XTokens::psedu_intention_profiles_v1(&xbtc).unwrap(),
+            PseduIntentionVoteWeightV1 {
+                last_total_deposit_weight,
+                last_total_deposit_weight_update
+            }
+        );
+    });
+}

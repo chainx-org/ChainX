@@ -1,46 +1,35 @@
 // Copyright 2018-2019 Chainpool.
 
+use super::*;
+
 use serde_json::{json, Value};
 
-use std::collections::btree_map::BTreeMap;
-use std::convert::Into;
 use std::iter::FromIterator;
-use std::result;
 
 use parity_codec::{Decode, Encode};
 use rustc_hex::FromHex;
 // substrate
-use client::runtime_api::Metadata;
 use primitives::crypto::UncheckedInto;
 use primitives::{Blake2Hasher, H160, H256};
 use runtime_primitives::generic::SignedBlock;
-use runtime_primitives::traits::{As, Block as BlockT, NumberFor, ProvideRuntimeApi, Zero};
-use support::storage::{StorageMap, StorageValue};
-// chainx
-use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber};
-use chainx_runtime::{Call, Runtime};
-use xr_primitives::{AddrStr, Name};
+use runtime_primitives::traits::{As, Block as BlockT, NumberFor, ProvideRuntimeApi};
 
-use xaccounts::IntentionProps;
-use xassets::{AssetLimit, AssetType, Chain, ChainT, Token};
+// chainx
+use chainx_primitives::AccountIdForRpc;
+use chainx_runtime::Call;
+use xr_primitives::AddrStr;
+
+use xassets::{AssetLimit, AssetType, Chain, ChainT};
 use xbridge_common::types::GenericAllSessionInfo;
 use xbridge_features::{
     self,
     crosschain_binding::{BitcoinAddress, EthereumAddress},
 };
-use xprocess::WithdrawalLimit;
 use xspot::{HandicapInfo, OrderIndex, OrderInfo, TradingPair, TradingPairIndex};
-use xstaking::IntentionProfs;
-use xtokens::{DepositVoteWeight, PseduIntentionVoteWeight};
+use xtokens::DepositVoteWeight;
 
-use runtime_api::{
-    xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xfee_api::XFeeApi, xmining_api::XMiningApi,
-    xspot_api::XSpotApi, xstaking_api::XStakingApi,
-};
-
-use super::error::{ErrorKind, Result};
-use super::types::*;
-use super::{ChainX, ChainXApi};
+use crate::chainx::chainx_trait::ChainXApi;
+use crate::chainx::utils::*;
 
 /// Convert &[u8] to String
 macro_rules! String {
@@ -266,7 +255,7 @@ where
         &self,
         who: AccountIdForRpc,
         hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<Vec<(AccountIdForRpc, NominationRecord)>>> {
+    ) -> Result<Option<Vec<(AccountIdForRpc, NominationRecordForRpc)>>> {
         let state = self.state_at(hash)?;
 
         let mut records = Vec::new();
@@ -275,31 +264,31 @@ where
         let who: AccountId = who.unchecked_into();
 
         for intention in intentions {
-            let key =
-                <xstaking::NominationRecords<Runtime>>::key_for(&(who.clone(), intention.clone()));
+            let nr_key = (who.clone(), intention.clone());
+            self.nomination_record_v1_does_not_exist(&state, &nr_key)?;
+            let record = self.get_nomination_record(&state, &nr_key)?;
+            records.push((intention.into(), record.into()));
+        }
 
-            if let Some(record) = Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(
-                &state,
-                &key,
-                Hasher::BLAKE2256,
-            )? {
-                let revocations = record
-                    .revocations
-                    .iter()
-                    .map(|x| Revocation {
-                        block_number: x.0,
-                        value: x.1,
-                    })
-                    .collect::<Vec<_>>();
-                records.push((
-                    intention.into(),
-                    NominationRecord {
-                        nomination: record.nomination,
-                        last_vote_weight: record.last_vote_weight,
-                        last_vote_weight_update: record.last_vote_weight_update,
-                        revocations,
-                    },
-                ));
+        Ok(Some(records))
+    }
+
+    fn nomination_records_v1(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Vec<(AccountIdForRpc, NominationRecordV1ForRpc)>>> {
+        let state = self.state_at(hash)?;
+
+        let mut records = Vec::new();
+
+        let intentions = self.intention_set(self.block_id_by_hash(hash)?)?;
+        let who: AccountId = who.unchecked_into();
+
+        for intention in intentions {
+            let nr_key = (who.clone(), intention.clone());
+            if let Some(record) = self.into_or_get_nomination_record_v1(&state, &nr_key)? {
+                records.push((intention.into(), record.into()));
             }
         }
 
@@ -313,19 +302,16 @@ where
     ) -> Result<Option<Value>> {
         let state = self.state_at(hash)?;
         let who: AccountId = who.unchecked_into();
-        let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&who);
-        let session_key: AccountIdForRpc = if let Some(props) = Self::pickout::<
-            IntentionProps<AuthorityId, BlockNumber>,
-        >(
-            &state, &key, Hasher::BLAKE2256
-        )? {
-            props.session_key.unwrap_or(who.clone()).into()
-        } else {
-            return Ok(None);
-        };
+
+        let session_key: AccountIdForRpc =
+            if let Ok(session_key) = self.get_session_key(&state, &who) {
+                session_key.unwrap_or(who.clone()).into()
+            } else {
+                return Ok(None);
+            };
 
         let jackpot_account =
-            self.jackpot_accountid_for_unsafe(self.block_id_by_hash(hash)?, who.clone())?;
+            self.jackpot_accountid_for_unsafe(self.block_id_by_hash(hash)?, who)?;
         Ok(Some(json!({
             "sessionKey": session_key,
             "jackpotAccount": jackpot_account,
@@ -337,194 +323,65 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<IntentionInfo>>> {
         let state = self.state_at(hash)?;
-
-        let mut intention_info = Vec::new();
-
-        let key = <xsession::Validators<Runtime>>::key();
-        let validators = Self::pickout::<Vec<(AccountId, u64)>>(&state, &key, Hasher::TWOX128)?
-            .expect("Validators can't be empty");
-        let validators: Vec<AccountId> = validators.into_iter().map(|(who, _)| who).collect();
-
         let block_id = self.block_id_by_hash(hash)?;
 
-        // get all bridge trustee list
-        let all_session_info = self.trustee_session_info(block_id)?;
-        let all_trustees = all_session_info
-            .into_iter()
-            .map(|(chain, info)| {
-                (
-                    chain,
-                    info.trustees_info
-                        .into_iter()
-                        .map(|(accountid, _)| accountid)
-                        .collect::<Vec<_>>(),
-                )
-            })
-            .collect::<BTreeMap<_, _>>();
-
-        let is_trustee = |who: &AccountId| -> Vec<Chain> {
-            let mut ret = vec![];
-            for (chain, trustees) in all_trustees.iter() {
-                if trustees.contains(who) {
-                    ret.push(*chain);
-                }
+        let mut intentions_info = Vec::new();
+        for info_wrapper in self.get_intentions_info_wrapper(&state, block_id)? {
+            if info_wrapper.intention_profs_wrapper.is_err() {
+                return Err(ErrorKind::DeprecatedV0Err("chainx_getIntentions".into()).into());
             }
-            ret
-        };
-
-        let intentions = self.intention_set(block_id)?;
-        let jackpot_account_list =
-            self.multi_jackpot_accountid_for_unsafe(block_id, intentions.clone())?;
-
-        for (intention, jackpot_account) in intentions.into_iter().zip(jackpot_account_list) {
-            let mut info = IntentionInfo::default();
-
-            let key = <xaccounts::IntentionNameOf<Runtime>>::key_for(&intention);
-            if let Some(name) = Self::pickout::<Name>(&state, &key, Hasher::BLAKE2256)? {
-                info.name = String!(&name);
-            }
-
-            let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(&intention);
-            if let Some(props) = Self::pickout::<IntentionProps<AuthorityId, BlockNumber>>(
-                &state,
-                &key,
-                Hasher::BLAKE2256,
-            )? {
-                info.url = String!(&props.url);
-                info.is_active = props.is_active;
-                info.about = String!(&props.about);
-                info.session_key = props.session_key.unwrap_or(intention.clone()).into();
-            }
-
-            let key = <xstaking::Intentions<Runtime>>::key_for(&intention);
-            if let Some(profs) = Self::pickout::<IntentionProfs<Balance, BlockNumber>>(
-                &state,
-                &key,
-                Hasher::BLAKE2256,
-            )? {
-                let key = (
-                    jackpot_account.clone(),
-                    xassets::Module::<Runtime>::TOKEN.to_vec(),
-                );
-                let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
-                let map = Self::pickout::<BTreeMap<AssetType, Balance>>(
-                    &state,
-                    &balances_key,
-                    Hasher::BLAKE2256,
-                )?
-                .unwrap_or_default();
-                let free = map
-                    .get(&AssetType::Free)
-                    .map(|free| *free)
-                    .unwrap_or_default();
-                info.jackpot = free;
-                info.jackpot_account = jackpot_account.into();
-                info.total_nomination = profs.total_nomination;
-                info.last_total_vote_weight = profs.last_total_vote_weight;
-                info.last_total_vote_weight_update = profs.last_total_vote_weight_update;
-            }
-
-            let key = <xstaking::NominationRecords<Runtime>>::key_for(&(
-                intention.clone(),
-                intention.clone(),
-            ));
-            if let Some(record) = Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(
-                &state,
-                &key,
-                Hasher::BLAKE2256,
-            )? {
-                info.self_vote = record.nomination;
-            }
-
-            info.is_validator = validators.iter().any(|i| i == &intention);
-            info.is_trustee = is_trustee(&intention);
-            info.account = intention.into();
-
-            intention_info.push(info);
+            intentions_info.push(info_wrapper.into());
         }
 
-        Ok(Some(intention_info))
+        Ok(Some(intentions_info))
+    }
+
+    fn intentions_v1(
+        &self,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Vec<IntentionInfoV1>>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+
+        Ok(Some(
+            self.get_intentions_info_wrapper(&state, block_id)?
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        ))
     }
 
     fn psedu_intentions(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<PseduIntentionInfo>>> {
-        let block_id = self.block_id_by_hash(hash)?;
         let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
 
-        let mut psedu_intentions = Vec::new();
-
-        let key = <xtokens::PseduIntentions<Runtime>>::key();
-        if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key, Hasher::TWOX128)? {
-            let jackpot_account_list =
-                self.multi_token_jackpot_accountid_for_unsafe(block_id, tokens.clone())?;
-
-            for (token, jackpot_account) in tokens.into_iter().zip(jackpot_account_list) {
-                let mut info = PseduIntentionInfo::default();
-
-                let key = <xtokens::PseduIntentionProfiles<Runtime>>::key_for(&token);
-                if let Some(vote_weight) = Self::pickout::<PseduIntentionVoteWeight<Balance>>(
-                    &state,
-                    &key,
-                    Hasher::BLAKE2256,
-                )? {
-                    let key = (
-                        jackpot_account.clone(),
-                        xassets::Module::<Runtime>::TOKEN.to_vec(),
-                    );
-                    let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
-                    let map = Self::pickout::<BTreeMap<AssetType, Balance>>(
-                        &state,
-                        &balances_key,
-                        Hasher::BLAKE2256,
-                    )?
-                    .unwrap_or_default();
-                    let free = map
-                        .get(&AssetType::Free)
-                        .map(|free| *free)
-                        .unwrap_or_default();
-                    info.jackpot = free;
-                    info.jackpot_account = jackpot_account.into();
-                    info.last_total_deposit_weight = vote_weight.last_total_deposit_weight;
-                    info.last_total_deposit_weight_update =
-                        vote_weight.last_total_deposit_weight_update;
-                }
-
-                let key = <xtokens::TokenDiscount<Runtime>>::key_for(&token);
-                if let Some(discount) = Self::pickout::<u32>(&state, &key, Hasher::BLAKE2256)? {
-                    info.discount = discount;
-                }
-
-                //注意
-                //这里返回的是以PCX计价的"单位"token的价格，已含pcx精度
-                //譬如1BTC=10000PCX，则返回的是10000*（10.pow(pcx精度))
-                //因此，如果前端要换算折合投票数的时候
-                //应该=(资产数量[含精度的数字]*price)/(10^资产精度)=PCX[含PCX精度]
-
-                if let Ok(Some(price)) = self.aver_asset_price(block_id, token.clone()) {
-                    info.price = price;
-                };
-
-                if let Ok(Some(power)) = self.asset_power(block_id, token.clone()) {
-                    info.power = power;
-                };
-
-                let key = <xassets::TotalAssetBalance<Runtime>>::key_for(&token);
-                if let Some(total_asset_balance) =
-                    Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key, Hasher::BLAKE2256)?
-                {
-                    info.circulation = total_asset_balance
-                        .iter()
-                        .fold(Zero::zero(), |acc, (_, v)| acc + *v);
-                }
-
-                info.id = String!(&token);
-                psedu_intentions.push(info);
+        let mut psedu_intentions_info = Vec::new();
+        for info_wrapper in self.get_psedu_intentions_info_wrapper(&state, block_id)? {
+            if info_wrapper.psedu_intention_profs_wrapper.is_err() {
+                return Err(ErrorKind::DeprecatedV0Err("chainx_getPseduIntentions".into()).into());
             }
+            psedu_intentions_info.push(info_wrapper.into());
         }
 
-        Ok(Some(psedu_intentions))
+        Ok(Some(psedu_intentions_info))
+    }
+
+    fn psedu_intentions_v1(
+        &self,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Vec<PseduIntentionInfoV1>>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+
+        Ok(Some(
+            self.get_psedu_intentions_info_wrapper(&state, block_id)?
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        ))
     }
 
     fn psedu_nomination_records(
@@ -533,51 +390,56 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<PseduNominationRecord>>> {
         let state = self.state_at(hash)?;
+
+        let who: AccountId = who.unchecked_into();
+
+        let mut psedu_records = Vec::new();
+
+        for token in self.get_psedu_intentions(&state)? {
+            let wt_key = (who.clone(), token.clone());
+
+            self.deposit_record_v1_does_not_exist(&state, &wt_key)?;
+
+            let mut record = PseduNominationRecord::default();
+
+            let key = <xtokens::DepositRecords<Runtime>>::key_for(&wt_key);
+            if let Some(vote_weight) =
+                Self::pickout::<DepositVoteWeight<BlockNumber>>(&state, &key, Hasher::BLAKE2256)?
+            {
+                record.last_total_deposit_weight = vote_weight.last_deposit_weight;
+                record.last_total_deposit_weight_update = vote_weight.last_deposit_weight_update;
+            }
+
+            record.common = self.get_psedu_nomination_record_common(&state, &who, &token)?;
+
+            psedu_records.push(record);
+        }
+
+        Ok(Some(psedu_records))
+    }
+
+    fn psedu_nomination_records_v1(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Vec<PseduNominationRecordV1>>> {
+        let state = self.state_at(hash)?;
         let mut psedu_records = Vec::new();
 
         let who: AccountId = who.unchecked_into();
 
-        let key = <xtokens::PseduIntentions<Runtime>>::key();
-        if let Some(tokens) = Self::pickout::<Vec<Token>>(&state, &key, Hasher::TWOX128)? {
-            for token in tokens {
-                let mut record = PseduNominationRecord::default();
+        for token in self.get_psedu_intentions(&state)? {
+            let mut record = PseduNominationRecordV1::default();
+            record.common = self.get_psedu_nomination_record_common(&state, &who, &token)?;
 
-                let key = <xtokens::ClaimRestrictionOf<Runtime>>::key_for(&token);
-                let (_, interval) =
-                    Self::pickout::<(u32, BlockNumber)>(&state, &key, Hasher::BLAKE2256)?
-                        .unwrap_or((10u32, xtokens::BLOCKS_PER_WEEK));
-                let key = <xtokens::LastClaimOf<Runtime>>::key_for(&(who.clone(), token.clone()));
-
-                if let Some(last_claim) =
-                    Self::pickout::<BlockNumber>(&state, &key, Hasher::BLAKE2256)?
-                {
-                    record.next_claim = last_claim + interval;
-                }
-
-                let wt_key = (who.clone(), token.clone());
-
-                let key = <xtokens::DepositRecords<Runtime>>::key_for(&wt_key);
-                if let Some(vote_weight) = Self::pickout::<DepositVoteWeight<BlockNumber>>(
-                    &state,
-                    &key,
-                    Hasher::BLAKE2256,
-                )? {
-                    record.last_total_deposit_weight = vote_weight.last_deposit_weight;
-                    record.last_total_deposit_weight_update =
-                        vote_weight.last_deposit_weight_update;
-                }
-
-                let key = <xassets::AssetBalance<Runtime>>::key_for(&wt_key);
-                if let Some(balances) =
-                    Self::pickout::<BTreeMap<AssetType, Balance>>(&state, &key, Hasher::BLAKE2256)?
-                {
-                    record.balance = balances.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v);
-                }
-
-                record.id = String!(&token);
-
-                psedu_records.push(record);
+            if let Some(vote_weight) =
+                self.into_or_get_deposit_vote_weight_v1(&state, &(who.clone(), token))?
+            {
+                record.last_total_deposit_weight = format!("{}", vote_weight.last_deposit_weight);
+                record.last_total_deposit_weight_update = vote_weight.last_deposit_weight_update;
             }
+
+            psedu_records.push(record);
         }
 
         Ok(Some(psedu_records))

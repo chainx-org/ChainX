@@ -69,6 +69,14 @@ error_chain! {
             description("Decode Hex Err"),
             display("Decode Hex Err"),
         }
+        IntentionProfsErr {
+            description("IntentionProfs Err"),
+            display("IntentionProfs Err"),
+        }
+        PseduIntentionVoteWeightErr {
+            description("PseduIntentionVoteWeight Err"),
+            display("PseduIntentionVoteWeight Err"),
+        }
         /// Execution error.
         Execution(e: Box<state_machine::Error>) {
             description("state execution error"),
@@ -77,6 +85,10 @@ error_chain! {
         RuntimeErr(e: Vec<u8>) {
             description("runtime error"),
             display("error: {:}", str::from_utf8(&e).unwrap_or_default()),
+        }
+        DeprecatedV0Err(deprecated: String) {
+            description("Deprecated Error"),
+            display("{:} is Deprecated, Please Use {:}V1 Instead", deprecated, deprecated),
         }
     }
 }
@@ -159,6 +171,21 @@ impl From<Error> for rpc::Error {
                     "Runtime execute error: {:}",
                     str::from_utf8(&e).unwrap_or_default()
                 ),
+                data: None,
+            },
+            Error(ErrorKind::DeprecatedV0Err(e), _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 14),
+                message: format!("{:} is Deprecated, Please Use {:}V1 Instead", e, e),
+                data: None,
+            },
+            Error(ErrorKind::IntentionProfsErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 15),
+                message: "IntentionProfs Err.".into(),
+                data: None,
+            },
+            Error(ErrorKind::PseduIntentionVoteWeightErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 16),
+                message: "PseduIntentionVoteWeight Err.".into(),
                 data: None,
             },
             e => errors::internal(e),

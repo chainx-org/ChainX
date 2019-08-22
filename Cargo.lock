@@ -3121,6 +3121,7 @@ dependencies = [
  "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xdex-spot 1.0.0",
+ "xrml-xmining-staking 1.0.0",
  "xrml-xsupport 1.0.0",
 ]
 
