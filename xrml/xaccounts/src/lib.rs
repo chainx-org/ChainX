@@ -76,6 +76,8 @@ decl_storage! {
 
         pub TeamAccount get(team_account): T::AccountId;
         pub CouncilAccount get(council_account): T::AccountId;
+
+        pub BlockedAccounts get(blocked_accounts): Vec<T::AccountId>;
     }
 }
 
