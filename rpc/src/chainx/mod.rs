@@ -1,10 +1,13 @@
 // Copyright 2018-2019 Chainpool.
 
+#[macro_use]
+mod cache;
+#[macro_use]
+mod utils;
 mod chainx_impl;
 mod chainx_trait;
 mod error;
 mod types;
-mod utils;
 
 use std::collections::btree_map::BTreeMap;
 use std::result;
@@ -38,6 +41,7 @@ use xprocess::WithdrawalLimit;
 use xspot::TradingPairIndex;
 use xtokens::*;
 
+pub use self::cache::set_cache_flag;
 pub use self::chainx_trait::ChainXApi;
 use self::error::{ErrorKind, Result};
 pub use self::types::*;
@@ -222,7 +226,7 @@ where
             common.power = power;
         };
 
-        common.id = String::from_utf8_lossy(token).into_owned();
+        common.id = to_string!(token);
         common.jackpot_account = jackpot_account.into();
         Ok(common)
     }
@@ -417,7 +421,7 @@ where
         token: &Token,
     ) -> result::Result<PseduNominationRecordCommon, error::Error> {
         let mut common = PseduNominationRecordCommon::default();
-        common.id = String::from_utf8_lossy(token).into_owned();
+        common.id = to_string!(token);
         common.balance = self.get_total_asset_balance_of(state, &(who.clone(), token.clone()))?;
         common.next_claim = self.get_next_claim(state, who.clone(), token)?;
         Ok(common)

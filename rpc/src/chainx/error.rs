@@ -90,6 +90,10 @@ error_chain! {
             description("Deprecated Error"),
             display("{:} is Deprecated, Please Use {:}V1 Instead", deprecated, deprecated),
         }
+        CacheErr {
+            description("Cache fetch lock error"),
+            display("Cache fetch lock error"),
+        }
     }
 }
 

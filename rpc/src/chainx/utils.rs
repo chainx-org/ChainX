@@ -6,6 +6,7 @@ use std::iter::FromIterator;
 
 use log::error;
 use rustc_hex::ToHex;
+
 use serde_json::{json, Map, Value};
 
 use btc_keys::DisplayLayout;
@@ -20,6 +21,13 @@ use xbridge_common::{
 };
 use xbridge_features::trustees::{BitcoinPublic, BitcoinTrusteeAddrInfo};
 
+/// Convert &[u8] to String
+macro_rules! to_string {
+    ($str:expr) => {
+        String::from_utf8_lossy($str).into_owned()
+    };
+}
+
 pub fn try_hex_or_str(src: &[u8]) -> String {
     let check_is_str = |src: &[u8]| -> bool {
         for c in src {
@@ -32,7 +40,7 @@ pub fn try_hex_or_str(src: &[u8]) -> String {
         return true;
     };
     if check_is_str(src) {
-        String::from_utf8_lossy(src).into_owned()
+        to_string!(src)
     } else {
         format!("0x{:}", src.to_hex::<String>())
     }
@@ -64,7 +72,7 @@ fn parse_generic_trustee_props(
                     }
                 };
                 json!({
-                    "about": String::from_utf8_lossy(&props.0.about).into_owned(),
+                    "about": to_string!(&props.0.about),
                     "hotEntity": format_public(&hot_public.unwrap()),
                     "coldEntity": format_public(&cold_public.unwrap()),
                 })
@@ -96,9 +104,7 @@ pub fn parse_trustee_session_addr(chain: Chain, addr: &[u8]) -> Option<Value> {
                 trustee_addr_info.unwrap()
             };
 
-            let address =
-                String::from_utf8_lossy(&b58::to_base58(trustee_addr_info.addr.layout().to_vec()))
-                    .into_owned();
+            let address = to_string!(&b58::to_base58(trustee_addr_info.addr.layout().to_vec()));
             json!({
                 "addr": address,
                 "redeemScript": try_hex_or_str(&trustee_addr_info.redeem_script)

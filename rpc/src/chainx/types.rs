@@ -143,7 +143,7 @@ impl From<xstaking::NominationRecordV1<Balance, BlockNumber>> for NominationReco
 }
 
 /// Intention properties
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionPropsForRpc {
     /// url
@@ -170,7 +170,7 @@ impl IntentionPropsForRpc {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionInfoCommon {
     #[serde(flatten)]
@@ -181,7 +181,7 @@ pub struct IntentionInfoCommon {
     pub is_trustee: Vec<Chain>,
 }
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionInfoCommonForRpc {
     /// account id of intention
@@ -212,7 +212,7 @@ impl From<xstaking::IntentionInfoCommon<AccountId, Balance>> for IntentionInfoCo
 }
 
 /// Due to the serde inability about u128, we use String instead of u128 here.
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionProfsV1ForRpc {
     /// total nomination from all nominators
@@ -234,7 +234,7 @@ impl From<xstaking::IntentionProfsV1<Balance, BlockNumber>> for IntentionProfsV1
 }
 
 /// Intention info
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionInfo {
     #[serde(flatten)]
@@ -244,7 +244,7 @@ pub struct IntentionInfo {
 }
 
 /// Intention info
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionInfoV1 {
     #[serde(flatten)]

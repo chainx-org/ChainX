@@ -32,6 +32,7 @@ sr-primitives = { package = "sr-primitives", git = "https://github.com/chainpool
 
 # chainx
 rpc-servers = { package = "substrate-rpc-servers", path = "../rpc-servers" }
+substrate-rpc = { package = "substrate-rpc", path = "../rpc" }
 chainx-primitives = { path = "../primitives" }
 chainx-executor = { path = "../executor" }
 chainx-runtime = { path = "../runtime" }

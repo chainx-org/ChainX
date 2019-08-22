@@ -293,6 +293,8 @@ where
                 .map_err(|e| format!("{:?}", e))?;
             let executor = runtime.executor();
 
+            substrate_rpc::set_cache_flag(custom_args.rpc_cache);
+
             if config.roles == ServiceRoles::AUTHORITY {
                 let name = custom_args
                     .validator_name

@@ -39,6 +39,9 @@ pub struct ChainXParams {
     #[structopt(long = "log-compression")]
     /// When use `log4rs`, compress the old log to save space. the log would like `chainx.log.gz.0`
     pub log_compression: bool,
+    #[structopt(long = "rpc-cache")]
+    /// Open LRU Cache for some rpc
+    pub rpc_cache: bool,
 }
 
 impl cli::AugmentClap for ChainXParams {

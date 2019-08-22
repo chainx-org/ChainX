@@ -31,13 +31,6 @@ use xtokens::DepositVoteWeight;
 use crate::chainx::chainx_trait::ChainXApi;
 use crate::chainx::utils::*;
 
-/// Convert &[u8] to String
-macro_rules! String {
-    ($str:expr) => {
-        String::from_utf8_lossy($str).into_owned()
-    };
-}
-
 impl<B, E, Block, RA>
     ChainXApi<
         NumberFor<Block>,
@@ -102,7 +95,7 @@ where
                 );
                 bmap.extend(map.iter());
                 AssetInfo {
-                    name: String!(&token),
+                    name: to_string!(&token),
                     details: bmap,
                 }
             })
@@ -175,7 +168,7 @@ where
             .verify_address(&self.block_id_by_hash(hash)?, token, addr, memo)
             .and_then(|r| match r {
                 Ok(()) => Ok(None),
-                Err(s) => Ok(Some(String!(s.as_ref()))),
+                Err(s) => Ok(Some(to_string!(s.as_ref()))),
             });
         let is_valid = match ret {
             Err(_) | Ok(Some(_)) => false,
@@ -322,6 +315,7 @@ where
         &self,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<IntentionInfo>>> {
+        lru_cache!(Option<Vec<IntentionInfo>>; hash; self {
         let state = self.state_at(hash)?;
         let block_id = self.block_id_by_hash(hash)?;
 
@@ -334,12 +328,14 @@ where
         }
 
         Ok(Some(intentions_info))
+        });
     }
 
     fn intentions_v1(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<IntentionInfoV1>>> {
+        lru_cache!(Option<Vec<IntentionInfoV1>>; hash; self {
         let state = self.state_at(hash)?;
         let block_id = self.block_id_by_hash(hash)?;
 
@@ -349,6 +345,7 @@ where
                 .map(Into::into)
                 .collect(),
         ))
+        });
     }
 
     fn psedu_intentions(
@@ -459,8 +456,8 @@ where
                 if let Some(pair) = Self::pickout::<TradingPair>(&state, &key, Hasher::BLAKE2256)? {
                     let mut info = PairInfo::default();
                     info.id = pair.index;
-                    info.assets = String!(pair.base_as_ref());
-                    info.currency = String!(pair.quote_as_ref());
+                    info.assets = to_string!(pair.base_as_ref());
+                    info.currency = to_string!(pair.quote_as_ref());
                     info.precision = pair.pip_precision;
                     info.online = pair.online;
                     info.unit_precision = pair.tick_precision;
@@ -751,11 +748,7 @@ where
         self.client
             .runtime_api()
             .fee_weight_map(&self.block_id_by_hash(hash)?)
-            .map(|m| {
-                m.into_iter()
-                    .map(|(k, v)| (String::from_utf8_lossy(&k).into_owned(), v))
-                    .collect()
-            })
+            .map(|m| m.into_iter().map(|(k, v)| (to_string!(&k), v)).collect())
             .map_err(Into::into)
     }
 
