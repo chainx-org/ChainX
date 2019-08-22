@@ -4385,6 +4385,7 @@ dependencies = [
  "xrml-xbridge-common 1.0.0",
  "xrml-xbridge-features 1.0.0",
  "xrml-xdex-spot 1.0.0",
+ "xrml-xfee-manager 1.0.0",
  "xrml-xmining-staking 1.0.0",
  "xrml-xmining-tokens 1.0.0",
  "xrml-xmultisig 1.0.0",

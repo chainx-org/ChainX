@@ -154,7 +154,7 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     fn fee(&self, call_params: String, tx_length: u64, hash: Option<Hash>) -> Result<Option<u64>>;
 
     #[rpc(name = "chainx_getFeeWeightMap")]
-    fn fee_weight_map(&self, hash: Option<Hash>) -> Result<BTreeMap<String, u64>>;
+    fn fee_weight_map(&self, hash: Option<Hash>) -> Result<Value>;
 
     #[rpc(name = "chainx_getWithdrawTx")]
     fn withdraw_tx(&self, chain: Chain, hash: Option<Hash>) -> Result<Option<WithdrawTxInfo>>;

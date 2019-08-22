@@ -741,15 +741,28 @@ where
         Ok(transaction_fee)
     }
 
-    fn fee_weight_map(
-        &self,
-        hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<String, u64>> {
-        self.client
+    fn fee_weight_map(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Value> {
+        let fee_weight: Result<BTreeMap<String, Balance>> = self
+            .client
             .runtime_api()
             .fee_weight_map(&self.block_id_by_hash(hash)?)
             .map(|m| m.into_iter().map(|(k, v)| (to_string!(&k), v)).collect())
-            .map_err(Into::into)
+            .map_err(Into::into);
+        let fee_weight = fee_weight?;
+        let state = self.state_at(hash)?;
+        let key = <xfee_manager::TransactionBaseFee<Runtime>>::key();
+        let transaction_base_fee =
+            Self::pickout::<Balance>(&state, &key, Hasher::TWOX128)?.unwrap_or(10000);
+        let key = <xfee_manager::TransactionByteFee<Runtime>>::key();
+        let transaction_byte_fee =
+            Self::pickout::<Balance>(&state, &key, Hasher::TWOX128)?.unwrap_or(100);
+        Ok(json!(
+            {
+                "transactionBaseFee": transaction_base_fee,
+                "transactionByteFee": transaction_byte_fee,
+                "feeWeight": fee_weight,
+            }
+        ))
     }
 
     fn withdraw_tx(

@@ -54,6 +54,7 @@ xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin" 
 xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot"  }
 xbridge-features = { package = "xrml-xbridge-features", path = "../xrml/xbridge/features" }
 xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig" }
+xfee_manager = { package = "xrml-xfee-manager", path = "../xrml/xfee/manager" }
 
 # bitcoin
 btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin" }
