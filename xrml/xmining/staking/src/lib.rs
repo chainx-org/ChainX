@@ -35,7 +35,7 @@ use xr_primitives::{Name, XString, URL};
 use xsession::SessionKeyUsability;
 #[cfg(feature = "std")]
 use xsupport::who;
-use xsupport::{debug, error};
+use xsupport::{debug, error, info};
 
 pub use self::traits::*;
 pub use self::types::*;
@@ -102,6 +102,9 @@ decl_module! {
 
             xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot renominate zero.");
+            if !Self::is_intention(&from) || !Self::is_intention(&to) {
+                return Err("Cannot renominate against non-inentions.")
+            }
 
             let key = (who.clone(), from.clone());
             ensure!(
@@ -141,6 +144,7 @@ decl_module! {
 
             xassets::is_valid_memo::<T>(&memo)?;
             ensure!(!value.is_zero(), "Cannot unnominate zero.");
+            ensure!(Self::is_intention(&target), "Cannot unnominate against non-intention.");
 
             let key = (who.clone(), target.clone());
             ensure!(
@@ -164,6 +168,7 @@ decl_module! {
             let who = ensure_signed(origin)?;
             let target = system::ChainContext::<T>::default().lookup(target)?;
 
+            ensure!(Self::is_intention(&target), "Cannot claim against non-intention.");
             ensure!(
                 Self::nomination_record_exists(&(who.clone(), target.clone())),
                 "Cannot claim if target is not your nominee."
@@ -181,6 +186,7 @@ decl_module! {
         ) {
             let who = ensure_signed(origin)?;
             let target = system::ChainContext::<T>::default().lookup(target)?;
+            ensure!(Self::is_intention(&target), "Cannot unfreeze against non-intention.");
 
             let key = (who.clone(), target.clone());
 
@@ -272,7 +278,7 @@ decl_module! {
             xaccounts::is_valid_name(&name)?;
 
             ensure!(!Self::is_intention(&who), "Cannot register if transactor is an intention already.");
-            ensure!(!Self::name_exists(name.clone()), "This name has already been taken.");
+            ensure!(!Self::name_exists(&name), "This name has already been taken.");
             ensure!(Self::intention_set().len() < Self::maximum_intention_count() as usize, "Cannot register if there are already too many intentions");
 
             Self::apply_register(&who, name)?;
@@ -349,6 +355,16 @@ decl_module! {
             <IntentionsV1<T>>::insert(&intention, new);
         }
 
+        /// Remove the zombie intentions.
+        fn remove_zombie_intentions(zombies: Vec<T::AccountId>) {
+            for zombie in zombies.iter() {
+                if Self::is_intention(zombie) {
+                    info!("[remove_zombie_intentions] zombie intention {:?}({:?}) has been removed", zombie, who!(zombie));
+                    Self::apply_remove_intention_identity(zombie);
+                }
+            }
+        }
+
     }
 }
 
@@ -375,6 +391,7 @@ decl_event!(
         SessionReward(Balance, Balance, Balance, Balance),
         /// u128 version of Claim
         ClaimV1(u128, u128, Balance),
+        RemoveZombieIntentions(Vec<AccountId>),
     }
 );
 
@@ -523,10 +540,12 @@ impl<T: Trait> Module<T> {
     pub fn intention_set() -> Vec<T::AccountId> {
         let mut intentions = <Intentions<T>>::enumerate()
             .map(|(account, _)| account)
+            .filter(Self::is_intention)
             .collect::<Vec<_>>();
         intentions.extend(
             <IntentionsV1<T>>::enumerate()
                 .map(|(account, _)| account)
+                .filter(Self::is_intention)
                 .collect::<Vec<_>>(),
         );
         intentions
@@ -540,7 +559,7 @@ impl<T: Trait> Module<T> {
         <xaccounts::Module<T>>::intention_name_of(who).is_some()
     }
 
-    pub fn name_exists(name: Name) -> bool {
+    pub fn name_exists(name: &Name) -> bool {
         <xaccounts::Module<T>>::intention_of(name).is_some()
     }
 
@@ -740,21 +759,37 @@ impl<T: Trait> Module<T> {
         Self::apply_register(intention, name)
     }
 
-    /// Actually register an intention.
-    fn apply_register(intention: &T::AccountId, name: Name) -> Result {
+    fn apply_remove_intention_identity(who: &T::AccountId) {
+        if let Some(name) = <xaccounts::IntentionNameOf<T>>::take(who) {
+            <xaccounts::IntentionOf<T>>::remove(&name);
+        }
+        <xaccounts::IntentionPropertiesOf<T>>::remove(who);
+    }
+
+    fn apply_register_intention_identity(
+        intention: &T::AccountId,
+        name: Name,
+        block_number: T::BlockNumber,
+    ) {
         <xaccounts::IntentionOf<T>>::insert(&name, intention.clone());
         <xaccounts::IntentionNameOf<T>>::insert(intention, name);
+
         let mut intention_props = xaccounts::IntentionProps::default();
-        let block_number = <system::Module<T>>::block_number();
         intention_props.registered_at = block_number;
         intention_props.last_inactive_since = block_number;
         <xaccounts::IntentionPropertiesOf<T>>::insert(intention, intention_props);
+    }
 
-        <Intentions<T>>::insert(
-            intention,
-            IntentionProfs::new(Zero::zero(), 0, <system::Module<T>>::block_number()),
-        );
-
+    /// Actually register an intention.
+    fn apply_register(intention: &T::AccountId, name: Name) -> Result {
+        let block_number = <system::Module<T>>::block_number();
+        Self::apply_register_intention_identity(intention, name, block_number);
+        if !<Intentions<T>>::exists(intention) {
+            <Intentions<T>>::insert(
+                intention,
+                IntentionProfs::new(Zero::zero(), 0, block_number),
+            );
+        }
         Ok(())
     }
 
@@ -797,7 +832,7 @@ impl<T: Trait> Module<T> {
     pub fn cross_chain_assets_are_growing_too_fast() -> rstd::result::Result<(u128, u128), ()> {
         let total_staked = Self::intention_set()
             .into_iter()
-            .filter(|i| Self::is_active(i))
+            .filter(Self::is_active)
             .map(|id| Self::total_nomination_of(&id).as_())
             .sum::<u64>();
 
@@ -815,7 +850,7 @@ impl<T: Trait> Module<T> {
 
     pub fn multi_jackpot_accountid_for_unsafe(whos: &[T::AccountId]) -> Vec<T::AccountId> {
         whos.iter()
-            .map(|who| T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who))
+            .map(T::DetermineIntentionJackpotAccountId::accountid_for_unsafe)
             .collect()
     }
 

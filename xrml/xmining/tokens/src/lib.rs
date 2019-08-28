@@ -324,7 +324,7 @@ impl<T: Trait> Module<T> {
     pub fn multi_token_jackpot_accountid_for_unsafe(tokens: &[Token]) -> Vec<T::AccountId> {
         tokens
             .iter()
-            .map(|t| T::DetermineTokenJackpotAccountId::accountid_for_unsafe(t))
+            .map(T::DetermineTokenJackpotAccountId::accountid_for_unsafe)
             .collect()
     }
 }
