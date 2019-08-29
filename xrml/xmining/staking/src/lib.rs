@@ -854,24 +854,36 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-    pub fn intentions_info_common() -> Vec<IntentionInfoCommon<T::AccountId, T::Balance>> {
-        let validators = Self::validators()
-            .into_iter()
-            .map(|(a, _)| a)
-            .collect::<Vec<_>>();
+    pub fn intention_info_common_of(
+        who: &T::AccountId,
+    ) -> Option<IntentionInfoCommon<T::AccountId, T::Balance, T::SessionKey>> {
+        if Self::is_intention(who) {
+            let validators = Self::validators()
+                .into_iter()
+                .map(|(a, _)| a)
+                .collect::<Vec<_>>();
+            let session_key = xaccounts::Module::<T>::intention_props_of(who).session_key;
+            let jackpot_account = Self::jackpot_accountid_for_unsafe(who);
+            let jackpot_balance = xassets::Module::<T>::pcx_free_balance(&jackpot_account);
+            Some(IntentionInfoCommon {
+                account: who.clone(),
+                name: <xaccounts::IntentionNameOf<T>>::get(who),
+                self_bonded: Self::self_bonded_of(who),
+                is_validator: validators.contains(who),
+                session_key,
+                jackpot_account,
+                jackpot_balance,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn intentions_info_common(
+    ) -> Vec<IntentionInfoCommon<T::AccountId, T::Balance, T::SessionKey>> {
         Self::intention_set()
             .iter()
-            .map(|intention| {
-                let jackpot_account = Self::jackpot_accountid_for_unsafe(intention);
-                IntentionInfoCommon {
-                    account: intention.clone(),
-                    name: <xaccounts::IntentionNameOf<T>>::get(intention),
-                    jackpot_balance: xassets::Module::<T>::pcx_free_balance(&jackpot_account),
-                    self_bonded: Self::self_bonded_of(intention),
-                    is_validator: validators.contains(intention),
-                    jackpot_account,
-                }
-            })
+            .map(|i| Self::intention_info_common_of(i).unwrap())
             .collect::<Vec<_>>()
     }
 }

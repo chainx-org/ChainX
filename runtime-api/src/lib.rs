@@ -84,7 +84,8 @@ pub mod xstaking_api {
     decl_runtime_apis! {
         pub trait XStakingApi {
             fn intention_set() -> Vec<AccountIdForApi>;
-            fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountIdForApi, Balance>>;
+            fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi>>;
+            fn intention_info_common_of(intention: &AccountIdForApi) -> Option<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi>>;
         }
     }
 }

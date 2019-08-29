@@ -10,6 +10,20 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     #[rpc(name = "chainx_getNextRenominateByAccount")]
     fn next_renominate(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<BlockNumber>>;
 
+    #[rpc(name = "chainx_getStakingDividendByAccount")]
+    fn staking_dividend(
+        &self,
+        who: AccountId,
+        hash: Option<Hash>,
+    ) -> Result<BTreeMap<AccountIdForRpc, Balance>>;
+
+    #[rpc(name = "chainx_getCrossMiningDividendByAccount")]
+    fn cross_mining_dividend(
+        &self,
+        who: AccountId,
+        hash: Option<Hash>,
+    ) -> Result<BTreeMap<String, Value>>;
+
     #[rpc(name = "chainx_getAssetsByAccount")]
     fn assets_of(
         &self,
@@ -85,7 +99,7 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     fn intentions_v1(&self, hash: Option<Hash>) -> Result<Option<Vec<IntentionInfoV1>>>;
 
     #[rpc(name = "chainx_getIntentionByAccount")]
-    fn intention(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<Value>>;
+    fn intention(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<IntentionInfoV1>>;
 
     #[rpc(name = "chainx_getPseduIntentions")]
     fn psedu_intentions(&self, hash: Option<Hash>) -> Result<Option<Vec<PseduIntentionInfo>>>;

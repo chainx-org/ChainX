@@ -137,3 +137,56 @@ pub fn parse_trustee_session_info(
         }).collect::<Vec<_>>()
     }))
 }
+
+pub fn calculate_staking_dividend(
+    record_v1: &xstaking::NominationRecordV1<Balance, BlockNumber>,
+    intention_profs_v1: &xstaking::IntentionProfsV1<Balance, BlockNumber>,
+    jackpot_balance: Balance,
+    current_block: BlockNumber,
+) -> Balance {
+    let target_latest_vote_weight =
+        intention_profs_v1.settle_latest_vote_weight_safe(current_block);
+
+    if target_latest_vote_weight == 0 {
+        return 0;
+    }
+
+    let source_latest_vote_weight = record_v1.settle_latest_vote_weight_safe(current_block);
+
+    let dividend =
+        source_latest_vote_weight * u128::from(jackpot_balance) / target_latest_vote_weight;
+
+    dividend as u64
+}
+
+pub fn calculate_cross_mining_dividend(
+    d1: xtokens::DepositVoteWeightV1<Balance>,
+    p1: xtokens::PseduIntentionVoteWeightV1<Balance>,
+    jackpot_balance: Balance,
+    current_block: BlockNumber,
+    total_token_balance: Balance,
+    miner_balance: Balance,
+) -> (Balance, Balance) {
+    if current_block < p1.last_total_deposit_weight_update {
+        return (0, 0);
+    }
+
+    let duration = current_block - p1.last_total_deposit_weight_update;
+    let target_latest_vote_weight =
+        u128::from(total_token_balance) * u128::from(duration) + p1.last_total_deposit_weight;
+
+    if target_latest_vote_weight == 0 || current_block < d1.last_deposit_weight_update {
+        return (0, 0);
+    }
+
+    let duration = current_block - d1.last_deposit_weight_update;
+    let source_latest_vote_weight =
+        u128::from(miner_balance) * u128::from(duration) + d1.last_deposit_weight;
+
+    let dividend = (source_latest_vote_weight * u128::from(jackpot_balance)
+        / target_latest_vote_weight) as u64;
+
+    let for_referral = dividend / 10;
+
+    (for_referral, dividend - for_referral)
+}

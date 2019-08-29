@@ -9,13 +9,11 @@ use std::iter::FromIterator;
 use parity_codec::{Decode, Encode};
 use rustc_hex::FromHex;
 // substrate
-use primitives::crypto::UncheckedInto;
 use primitives::{Blake2Hasher, H160, H256};
 use runtime_primitives::generic::SignedBlock;
 use runtime_primitives::traits::{As, Block as BlockT, NumberFor, ProvideRuntimeApi};
 
 // chainx
-use chainx_primitives::AccountIdForRpc;
 use chainx_runtime::Call;
 use xr_primitives::AddrStr;
 
@@ -26,7 +24,6 @@ use xbridge_features::{
     crosschain_binding::{BitcoinAddress, EthereumAddress},
 };
 use xspot::{HandicapInfo, OrderIndex, OrderInfo, TradingPair, TradingPairIndex};
-use xtokens::DepositVoteWeight;
 
 use crate::chainx::chainx_trait::ChainXApi;
 use crate::chainx::utils::*;
@@ -77,6 +74,82 @@ where
             }
         }
         Ok(None)
+    }
+
+    fn staking_dividend(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<BTreeMap<AccountIdForRpc, Balance>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+
+        let block_number = self.client.header(&block_id)?.unwrap().number().as_();
+
+        let mut dividends = Vec::new();
+
+        for (intention, record_wrapper) in self.get_nomination_records_wrapper(who, hash)? {
+            let record_v1 = record_wrapper.into();
+            let intention_profs_v1 = self.into_or_get_intention_profs_v1(&state, &intention)?;
+
+            let jackpot_balance =
+                self.get_intention_jackpot_balance(&state, block_id, intention.clone())?;
+
+            let dividend = calculate_staking_dividend(
+                &record_v1,
+                &intention_profs_v1,
+                jackpot_balance,
+                block_number,
+            );
+
+            dividends.push((intention.into(), dividend as u64));
+        }
+
+        Ok(BTreeMap::from_iter(dividends.into_iter()))
+    }
+
+    fn cross_mining_dividend(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<BTreeMap<String, Value>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+        let who: AccountId = who.unchecked_into();
+
+        let block_number = self.client.header(&block_id)?.unwrap().number().as_();
+
+        let mut dividends = Vec::new();
+
+        for record_wrapper in self.get_psedu_nomination_records_wrapper(&state, who.clone())? {
+            let token = record_wrapper.common.id.clone().into_bytes();
+            let p1 = self.into_or_get_psedu_intention_profs_v1(&state, &token)?;
+            let d1 = record_wrapper.into();
+
+            let jackpot_balance =
+                self.get_psedu_intention_jackpot_balance(&state, block_id, token.clone())?;
+            let miner_balance = self.get_token_free_balance(&state, who.clone(), token.clone())?;
+            let total_token_balance = self.get_token_total_asset_balance(&state, &token)?;
+
+            let (referral, unclaimed) = calculate_cross_mining_dividend(
+                d1,
+                p1,
+                jackpot_balance,
+                block_number,
+                total_token_balance,
+                miner_balance,
+            );
+
+            dividends.push((
+                to_string!(&token),
+                json!({
+                    "referral": referral,
+                    "unclaimed": unclaimed
+                }),
+            ));
+        }
+
+        Ok(BTreeMap::from_iter(dividends.into_iter()))
     }
 
     fn assets_of(
@@ -249,18 +322,14 @@ where
         who: AccountIdForRpc,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<(AccountIdForRpc, NominationRecordForRpc)>>> {
-        let state = self.state_at(hash)?;
-
         let mut records = Vec::new();
-
-        let intentions = self.intention_set(self.block_id_by_hash(hash)?)?;
-        let who: AccountId = who.unchecked_into();
-
-        for intention in intentions {
-            let nr_key = (who.clone(), intention.clone());
-            self.nomination_record_v1_does_not_exist(&state, &nr_key)?;
-            let record = self.get_nomination_record(&state, &nr_key)?;
-            records.push((intention.into(), record.into()));
+        for (nominee, record_wrapper) in self.get_nomination_records_wrapper(who, hash)? {
+            if record_wrapper.0.is_err() {
+                return Err(
+                    ErrorKind::DeprecatedV0Err("chainx_getNominationRecords".into()).into(),
+                );
+            }
+            records.push((nominee.into(), record_wrapper.into()));
         }
 
         Ok(Some(records))
@@ -271,44 +340,26 @@ where
         who: AccountIdForRpc,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<(AccountIdForRpc, NominationRecordV1ForRpc)>>> {
-        let state = self.state_at(hash)?;
-
-        let mut records = Vec::new();
-
-        let intentions = self.intention_set(self.block_id_by_hash(hash)?)?;
-        let who: AccountId = who.unchecked_into();
-
-        for intention in intentions {
-            let nr_key = (who.clone(), intention.clone());
-            if let Some(record) = self.into_or_get_nomination_record_v1(&state, &nr_key)? {
-                records.push((intention.into(), record.into()));
-            }
-        }
-
-        Ok(Some(records))
+        Ok(Some(
+            self.get_nomination_records_wrapper(who, hash)?
+                .into_iter()
+                .map(|(a, b)| (a.into(), b.into()))
+                .collect(),
+        ))
     }
 
     fn intention(
         &self,
         who: AccountIdForRpc,
         hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<Value>> {
+    ) -> Result<Option<IntentionInfoV1>> {
         let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
         let who: AccountId = who.unchecked_into();
 
-        let session_key: AccountIdForRpc =
-            if let Ok(session_key) = self.get_session_key(&state, &who) {
-                session_key.unwrap_or(who.clone()).into()
-            } else {
-                return Ok(None);
-            };
-
-        let jackpot_account =
-            self.jackpot_accountid_for_unsafe(self.block_id_by_hash(hash)?, who)?;
-        Ok(Some(json!({
-            "sessionKey": session_key,
-            "jackpotAccount": jackpot_account,
-        })))
+        Ok(self
+            .get_intention_info_wrapper(&state, block_id, who)?
+            .map(Into::into))
     }
 
     fn intentions(
@@ -387,29 +438,16 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<PseduNominationRecord>>> {
         let state = self.state_at(hash)?;
-
         let who: AccountId = who.unchecked_into();
 
         let mut psedu_records = Vec::new();
-
-        for token in self.get_psedu_intentions(&state)? {
-            let wt_key = (who.clone(), token.clone());
-
-            self.deposit_record_v1_does_not_exist(&state, &wt_key)?;
-
-            let mut record = PseduNominationRecord::default();
-
-            let key = <xtokens::DepositRecords<Runtime>>::key_for(&wt_key);
-            if let Some(vote_weight) =
-                Self::pickout::<DepositVoteWeight<BlockNumber>>(&state, &key, Hasher::BLAKE2256)?
-            {
-                record.last_total_deposit_weight = vote_weight.last_deposit_weight;
-                record.last_total_deposit_weight_update = vote_weight.last_deposit_weight_update;
+        for record_wrapper in self.get_psedu_nomination_records_wrapper(&state, who)? {
+            if record_wrapper.deposit_vote_weight_wrapper.is_err() {
+                return Err(
+                    ErrorKind::DeprecatedV0Err("chainx_getPseduNominationRecords".into()).into(),
+                );
             }
-
-            record.common = self.get_psedu_nomination_record_common(&state, &who, &token)?;
-
-            psedu_records.push(record);
+            psedu_records.push(record_wrapper.into());
         }
 
         Ok(Some(psedu_records))
@@ -421,25 +459,14 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<PseduNominationRecordV1>>> {
         let state = self.state_at(hash)?;
-        let mut psedu_records = Vec::new();
-
         let who: AccountId = who.unchecked_into();
 
-        for token in self.get_psedu_intentions(&state)? {
-            let mut record = PseduNominationRecordV1::default();
-            record.common = self.get_psedu_nomination_record_common(&state, &who, &token)?;
-
-            if let Some(vote_weight) =
-                self.into_or_get_deposit_vote_weight_v1(&state, &(who.clone(), token))?
-            {
-                record.last_total_deposit_weight = format!("{}", vote_weight.last_deposit_weight);
-                record.last_total_deposit_weight_update = vote_weight.last_deposit_weight_update;
-            }
-
-            psedu_records.push(record);
-        }
-
-        Ok(Some(psedu_records))
+        Ok(Some(
+            self.get_psedu_nomination_records_wrapper(&state, who)?
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        ))
     }
 
     fn trading_pairs(
@@ -463,14 +490,16 @@ where
                     info.unit_precision = pair.tick_precision;
 
                     let price_key = <xspot::TradingPairInfoOf<Runtime>>::key_for(&i);
-                    if let Some(price) = Self::pickout::<(Balance, Balance, BlockNumber)>(
-                        &state,
-                        &price_key,
-                        Hasher::BLAKE2256,
-                    )? {
-                        info.last_price = price.0;
-                        info.aver_price = price.1;
-                        info.update_height = price.2;
+                    if let Some((last_price, aver_price, update_height)) =
+                        Self::pickout::<(Balance, Balance, BlockNumber)>(
+                            &state,
+                            &price_key,
+                            Hasher::BLAKE2256,
+                        )?
+                    {
+                        info.last_price = last_price;
+                        info.aver_price = aver_price;
+                        info.update_height = update_height;
                     }
 
                     let handicap_key = <xspot::HandicapOf<Runtime>>::key_for(&i);

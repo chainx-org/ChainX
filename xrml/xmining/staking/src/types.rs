@@ -2,6 +2,7 @@
 
 use super::*;
 use parity_codec::{Decode, Encode};
+use primitives::traits::SimpleArithmetic;
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
 
@@ -147,6 +148,19 @@ impl<Balance: Default, BlockNumber: Default> From<IntentionProfs<Balance, BlockN
     }
 }
 
+impl<
+        Balance: Default + As<u64> + Copy,
+        BlockNumber: Default + As<u64> + SimpleArithmetic + Copy,
+    > IntentionProfsV1<Balance, BlockNumber>
+{
+    pub fn settle_latest_vote_weight_safe(&self, current_block: BlockNumber) -> u128 {
+        assert!(current_block >= self.last_total_vote_weight_update);
+        let duration = current_block - self.last_total_vote_weight_update;
+        u128::from(self.total_nomination.as_()) * u128::from(duration.as_())
+            + self.last_total_vote_weight
+    }
+}
+
 /// Declare the struct NominationRecord(V1) and impl VoteWeight(V1) trait accordingly.
 ///
 /// Ref intention_profs! comments.
@@ -228,13 +242,26 @@ impl<Balance: Default, BlockNumber: Default> From<NominationRecord<Balance, Bloc
     }
 }
 
+impl<
+        Balance: Default + As<u64> + Copy,
+        BlockNumber: Default + As<u64> + SimpleArithmetic + Copy,
+    > NominationRecordV1<Balance, BlockNumber>
+{
+    pub fn settle_latest_vote_weight_safe(&self, current_block: BlockNumber) -> u128 {
+        assert!(current_block >= self.last_vote_weight_update);
+        let duration = current_block - self.last_vote_weight_update;
+        u128::from(self.nomination.as_()) * u128::from(duration.as_()) + self.last_vote_weight
+    }
+}
+
 /// This is useful for RPC exposed via runtime api.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct IntentionInfoCommon<AccountId, Balance> {
+pub struct IntentionInfoCommon<AccountId, Balance, SessionKey> {
     pub account: AccountId,
     pub name: Option<Vec<u8>>,
+    pub session_key: Option<SessionKey>,
     pub jackpot_account: AccountId,
     pub jackpot_balance: Balance,
     pub self_bonded: Balance,

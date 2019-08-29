@@ -18,6 +18,7 @@ use parity_codec::Decode;
 use serde_json::Value;
 
 use client::runtime_api::Metadata;
+use primitives::crypto::UncheckedInto;
 use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::BlockId;
@@ -27,7 +28,7 @@ use state_machine::Backend;
 
 use support::storage::{StorageMap, StorageValue};
 
-use chainx_primitives::{AccountId, AuthorityId, Balance, BlockNumber, Timestamp};
+use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
 
 use runtime_api::{
@@ -153,6 +154,22 @@ where
             .unwrap_or(None))
     }
 
+    fn try_get_v0_then_v1_or_default<V0: Decode + Default, V1: Decode + Default>(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        key: &[u8],
+        key_v1: &[u8],
+        hasher: Hasher,
+    ) -> result::Result<std::result::Result<V0, V1>, error::Error> {
+        if let Some(v) = Self::pickout::<V0>(state, key, hasher)? {
+            Ok(Ok(v))
+        } else if let Some(v1) = Self::pickout::<V1>(state, key_v1, hasher)? {
+            Ok(Err(v1))
+        } else {
+            Ok(Ok(Default::default()))
+        }
+    }
+
     wrap_runtime_apis! {
         // XAssetsApi
         fn all_assets() -> Vec<(Asset, bool)>;
@@ -175,7 +192,8 @@ where
 
         // XStakingApi
         fn intention_set() -> Vec<AccountId>;
-        fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountId, Balance>>;
+        fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>>;
+        fn intention_info_common_of(who: &AccountId) -> Option<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>>;
 
         // XBridgeApi
         fn trustee_props_for(who: AccountId) -> BTreeMap<Chain, GenericTrusteeIntentionProps>;
@@ -277,13 +295,13 @@ where
         Ok(Self::pickout::<Vec<Token>>(state, &key, Hasher::TWOX128)?.unwrap_or_default())
     }
 
-    /// Get free balance of PCX given an account.
-    fn get_pcx_free_balance(
+    fn get_token_free_balance(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
         who: AccountId,
+        token: Token,
     ) -> result::Result<Balance, error::Error> {
-        let key = (who, xassets::Module::<Runtime>::TOKEN.to_vec());
+        let key = (who, token);
         let balances_key = <xassets::AssetBalance<Runtime>>::key_for(&key);
         let map =
             Self::pickout::<BTreeMap<AssetType, Balance>>(state, &balances_key, Hasher::BLAKE2256)?
@@ -294,6 +312,40 @@ where
             .unwrap_or_default())
     }
 
+    /// Get free balance of PCX given an account.
+    fn get_pcx_free_balance(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        who: AccountId,
+    ) -> result::Result<Balance, error::Error> {
+        self.get_token_free_balance(state, who, xassets::Module::<Runtime>::TOKEN.to_vec())
+    }
+
+    fn get_intention_jackpot_balance(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        block_id: BlockId<Block>,
+        intention: AccountId,
+    ) -> result::Result<Balance, error::Error> {
+        let jackpot_account = self.jackpot_accountid_for_unsafe(block_id, intention)?;
+        self.get_pcx_free_balance(state, jackpot_account)
+    }
+
+    fn get_psedu_intention_jackpot_balance(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        block_id: BlockId<Block>,
+        token: Token,
+    ) -> result::Result<Balance, error::Error> {
+        let jackpot_accounts =
+            self.multi_token_jackpot_accountid_for_unsafe(block_id, vec![token])?;
+        self.get_pcx_free_balance(state, jackpot_accounts[0].clone())
+    }
+
+    fn sum_of_all_kinds_of_balance(balances: BTreeMap<AssetType, Balance>) -> Balance {
+        balances.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v)
+    }
+
     /// Get total balance of all kinds of some token.
     fn get_token_total_asset_balance(
         &self,
@@ -301,15 +353,11 @@ where
         token: &Token,
     ) -> result::Result<Balance, error::Error> {
         let key = <xassets::TotalAssetBalance<Runtime>>::key_for(token);
-        if let Some(total_asset_balance) =
+        Ok(
             Self::pickout::<BTreeMap<AssetType, Balance>>(state, &key, Hasher::BLAKE2256)?
-        {
-            Ok(total_asset_balance
-                .iter()
-                .fold(Zero::zero(), |acc, (_, v)| acc + *v))
-        } else {
-            Ok(Default::default())
-        }
+                .map(Self::sum_of_all_kinds_of_balance)
+                .unwrap_or_default(),
+        )
     }
 
     /// Get total balance of account given the token type.
@@ -319,13 +367,11 @@ where
         wt_key: &(AccountId, Token),
     ) -> result::Result<Balance, error::Error> {
         let key = <xassets::AssetBalance<Runtime>>::key_for(wt_key);
-        if let Some(balances) =
+        Ok(
             Self::pickout::<BTreeMap<AssetType, Balance>>(state, &key, Hasher::BLAKE2256)?
-        {
-            Ok(balances.iter().fold(Zero::zero(), |acc, (_, v)| acc + *v))
-        } else {
-            Ok(Default::default())
-        }
+                .map(Self::sum_of_all_kinds_of_balance)
+                .unwrap_or_default(),
+        )
     }
 
     fn get_token_discount(
@@ -335,6 +381,25 @@ where
     ) -> result::Result<u32, error::Error> {
         let key = <xtokens::TokenDiscount<Runtime>>::key_for(token);
         Ok(Self::pickout::<u32>(state, &key, Hasher::BLAKE2256)?.unwrap_or_default())
+    }
+
+    fn get_next_claim(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        who: AccountId,
+        token: &Token,
+    ) -> result::Result<BlockNumber, error::Error> {
+        let key = <xtokens::ClaimRestrictionOf<Runtime>>::key_for(token);
+        let (_, interval) = Self::pickout::<(u32, BlockNumber)>(state, &key, Hasher::BLAKE2256)?
+            .unwrap_or((10u32, xtokens::BLOCKS_PER_WEEK));
+
+        let key = <xtokens::LastClaimOf<Runtime>>::key_for(&(who, token.clone()));
+
+        Ok(
+            Self::pickout::<BlockNumber>(state, &key, Hasher::BLAKE2256)?
+                .map(|last_claim| last_claim + interval)
+                .unwrap_or_default(),
+        )
     }
 
     fn get_intention_props(
@@ -352,66 +417,41 @@ where
         Ok(props)
     }
 
-    fn get_nomination_record(
+    fn try_get_nomination_record(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
         nr_key: &(AccountId, AccountId),
-    ) -> result::Result<xstaking::NominationRecord<Balance, BlockNumber>, error::Error> {
-        let key = <xstaking::NominationRecords<Runtime>>::key_for(nr_key);
-        Ok(
-            Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(
-                state,
-                &key,
-                Hasher::BLAKE2256,
-            )?
-            .unwrap_or_default(),
-        )
-    }
-
-    fn into_or_get_nomination_record_v1(
-        &self,
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        nr_key: &(AccountId, AccountId),
-    ) -> result::Result<Option<xstaking::NominationRecordV1<Balance, BlockNumber>>, error::Error>
-    {
+    ) -> result::Result<
+        std::result::Result<
+            xstaking::NominationRecord<Balance, BlockNumber>,
+            xstaking::NominationRecordV1<Balance, BlockNumber>,
+        >,
+        error::Error,
+    > {
         let key = <xstaking::NominationRecords<Runtime>>::key_for(nr_key);
         let key_v1 = <xstaking::NominationRecordsV1<Runtime>>::key_for(nr_key);
-
-        if let Some(record) = Self::pickout::<xstaking::NominationRecord<Balance, BlockNumber>>(
-            state,
-            &key,
-            Hasher::BLAKE2256,
-        )? {
-            Ok(Some(record.into()))
-        } else if let Some(record_v1) = Self::pickout::<
-            xstaking::NominationRecordV1<Balance, BlockNumber>,
-        >(state, &key_v1, Hasher::BLAKE2256)?
-        {
-            Ok(Some(record_v1))
-        } else {
-            Ok(None)
-        }
+        self.try_get_v0_then_v1_or_default::<
+            xstaking::NominationRecord<Balance, BlockNumber>,
+            xstaking::NominationRecordV1<Balance, BlockNumber>
+        >(state, &key, &key_v1, Hasher::BLAKE2256)
     }
 
-    fn into_or_get_deposit_vote_weight_v1(
+    fn get_nomination_records_wrapper(
         &self,
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        wt_key: &(AccountId, Token),
-    ) -> result::Result<Option<DepositVoteWeightV1<BlockNumber>>, error::Error> {
-        let key = <DepositRecords<Runtime>>::key_for(wt_key);
-        let key_v1 = <DepositRecordsV1<Runtime>>::key_for(wt_key);
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> result::Result<Vec<(AccountId, NominationRecordWrapper)>, error::Error> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+        let who: AccountId = who.unchecked_into();
 
-        if let Some(vote_weight) =
-            Self::pickout::<DepositVoteWeight<BlockNumber>>(state, &key, Hasher::BLAKE2256)?
-        {
-            Ok(Some(vote_weight.into()))
-        } else if let Some(vote_weight_v1) =
-            Self::pickout::<DepositVoteWeightV1<BlockNumber>>(state, &key_v1, Hasher::BLAKE2256)?
-        {
-            Ok(Some(vote_weight_v1))
-        } else {
-            Ok(None)
+        let mut records = Vec::new();
+        for intention in self.intention_set(block_id)? {
+            let nr_key = (who.clone(), intention.clone());
+            let record = self.try_get_nomination_record(&state, &nr_key)?;
+            records.push((intention, NominationRecordWrapper(record)));
         }
+        Ok(records)
     }
 
     fn get_psedu_nomination_record_common(
@@ -427,41 +467,6 @@ where
         Ok(common)
     }
 
-    fn get_next_claim(
-        &self,
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        who: AccountId,
-        token: &Token,
-    ) -> result::Result<BlockNumber, error::Error> {
-        let key = <xtokens::ClaimRestrictionOf<Runtime>>::key_for(token);
-        let (_, interval) = Self::pickout::<(u32, BlockNumber)>(state, &key, Hasher::BLAKE2256)?
-            .unwrap_or((10u32, xtokens::BLOCKS_PER_WEEK));
-        let key = <xtokens::LastClaimOf<Runtime>>::key_for(&(who, token.clone()));
-
-        if let Some(last_claim) = Self::pickout::<BlockNumber>(state, &key, Hasher::BLAKE2256)? {
-            Ok(last_claim + interval)
-        } else {
-            Ok(Default::default())
-        }
-    }
-
-    fn get_session_key(
-        &self,
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        who: &AccountId,
-    ) -> result::Result<Option<AccountId>, error::Error> {
-        let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(who);
-        if let Some(props) = Self::pickout::<xaccounts::IntentionProps<AuthorityId, BlockNumber>>(
-            state,
-            &key,
-            Hasher::BLAKE2256,
-        )? {
-            Ok(props.session_key)
-        } else {
-            Ok(None)
-        }
-    }
-
     fn try_get_intention_profs(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
@@ -475,20 +480,61 @@ where
     > {
         let key = <xstaking::Intentions<Runtime>>::key_for(intention);
         let key_v1 = <xstaking::IntentionsV1<Runtime>>::key_for(intention);
+        self.try_get_v0_then_v1_or_default::<
+            xstaking::IntentionProfs<Balance, BlockNumber>,
+            xstaking::IntentionProfsV1<Balance, BlockNumber>
+        >(state, &key, &key_v1, Hasher::BLAKE2256)
+    }
 
-        if let Some(profs) = Self::pickout::<xstaking::IntentionProfs<Balance, BlockNumber>>(
-            state,
-            &key,
-            Hasher::BLAKE2256,
-        )? {
-            Ok(Ok(profs))
-        } else if let Some(profs_v1) = Self::pickout::<
-            xstaking::IntentionProfsV1<Balance, BlockNumber>,
-        >(state, &key_v1, Hasher::BLAKE2256)?
-        {
-            Ok(Err(profs_v1))
+    fn into_or_get_intention_profs_v1(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        intention: &AccountId,
+    ) -> result::Result<xstaking::IntentionProfsV1<Balance, BlockNumber>, error::Error> {
+        match self.try_get_intention_profs(state, intention)? {
+            Ok(x) => Ok(x.into()),
+            Err(x) => Ok(x),
+        }
+    }
+
+    fn into_intention_info_wrapper(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        block_id: BlockId<Block>,
+        common_info: xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>,
+    ) -> result::Result<IntentionInfoWrapper, error::Error> {
+        let who = common_info.account.clone();
+
+        let is_trustee = self.get_trustee_info_of(block_id, &who)?;
+        let intention_profs_wrapper = self.try_get_intention_profs(state, &who)?;
+
+        let intention_props =
+            IntentionPropsForRpc::new(self.get_intention_props(state, &who)?, who);
+
+        Ok(IntentionInfoWrapper {
+            intention_common: IntentionInfoCommon {
+                common: common_info.into(),
+                is_trustee,
+                intention_props,
+            },
+            intention_profs_wrapper,
+        })
+    }
+
+    fn get_intention_info_wrapper(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        block_id: BlockId<Block>,
+        who: AccountId,
+    ) -> result::Result<Option<IntentionInfoWrapper>, error::Error> {
+        if let Some(common_info) = self.intention_info_common_of(block_id, &who)? {
+            Ok(Some(self.into_intention_info_wrapper(
+                state,
+                block_id,
+                common_info,
+            )?))
         } else {
-            Err(ErrorKind::IntentionProfsErr.into())
+            Ok(None)
         }
     }
 
@@ -499,24 +545,7 @@ where
     ) -> result::Result<Vec<IntentionInfoWrapper>, error::Error> {
         let mut intentions_info = Vec::new();
         for common_info in self.intentions_info_common(block_id)? {
-            let intention = common_info.account.clone();
-
-            let is_trustee = self.get_trustee_info_of(block_id, &intention)?;
-            let intention_props = IntentionPropsForRpc::new(
-                self.get_intention_props(state, &intention)?,
-                intention.clone(),
-            );
-
-            let intention_profs_wrapper = self.try_get_intention_profs(state, &intention)?;
-
-            intentions_info.push(IntentionInfoWrapper {
-                intention_common: IntentionInfoCommon {
-                    common: common_info.into(),
-                    is_trustee,
-                    intention_props,
-                },
-                intention_profs_wrapper,
-            });
+            intentions_info.push(self.into_intention_info_wrapper(state, block_id, common_info)?);
         }
         Ok(intentions_info)
     }
@@ -534,17 +563,20 @@ where
     > {
         let key = <PseduIntentionProfiles<Runtime>>::key_for(token);
         let key_v1 = <PseduIntentionProfilesV1<Runtime>>::key_for(token);
+        self.try_get_v0_then_v1_or_default::<
+            PseduIntentionVoteWeight<Balance>,
+            PseduIntentionVoteWeightV1<Balance>
+        >(state, &key, &key_v1, Hasher::BLAKE2256)
+    }
 
-        if let Some(vote_weight) =
-            Self::pickout::<PseduIntentionVoteWeight<Balance>>(state, &key, Hasher::BLAKE2256)?
-        {
-            Ok(Ok(vote_weight))
-        } else if let Some(vote_weight_v1) =
-            Self::pickout::<PseduIntentionVoteWeightV1<Balance>>(state, &key_v1, Hasher::BLAKE2256)?
-        {
-            Ok(Err(vote_weight_v1))
-        } else {
-            Err(ErrorKind::PseduIntentionVoteWeightErr.into())
+    fn into_or_get_psedu_intention_profs_v1(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        token: &Token,
+    ) -> result::Result<xtokens::PseduIntentionVoteWeightV1<Balance>, error::Error> {
+        match self.try_get_psedu_intention_profs(state, token)? {
+            Ok(x) => Ok(x.into()),
+            Err(x) => Ok(x),
         }
     }
 
@@ -569,43 +601,38 @@ where
         Ok(psedu_intentions_info)
     }
 
-    // Check if the v1 storage exists.
-
-    fn nomination_record_v1_does_not_exist(
-        &self,
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        nr_key: &(AccountId, AccountId),
-    ) -> result::Result<(), error::Error> {
-        let key_v1 = <xstaking::NominationRecordsV1<Runtime>>::key_for(nr_key);
-        if Self::pickout::<xstaking::NominationRecordV1<Balance, BlockNumber>>(
-            state,
-            &key_v1,
-            Hasher::BLAKE2256,
-        )?
-        .is_some()
-        {
-            Err(ErrorKind::DeprecatedV0Err("chainx_getNominationRecords".into()).into())
-        } else {
-            Ok(())
-        }
-    }
-
-    fn deposit_record_v1_does_not_exist(
+    fn try_get_deposit_vote_weight(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
         wt_key: &(AccountId, Token),
-    ) -> result::Result<(), error::Error> {
-        let key_v1 = <xtokens::DepositRecordsV1<Runtime>>::key_for(wt_key);
-        if Self::pickout::<xtokens::DepositVoteWeightV1<BlockNumber>>(
-            state,
-            &key_v1,
-            Hasher::BLAKE2256,
-        )?
-        .is_some()
-        {
-            Err(ErrorKind::DeprecatedV0Err("chainx_getPseduNominationRecords".into()).into())
-        } else {
-            Ok(())
+    ) -> result::Result<
+        std::result::Result<
+            xtokens::DepositVoteWeight<Balance>,
+            xtokens::DepositVoteWeightV1<Balance>,
+        >,
+        error::Error,
+    > {
+        let key = <DepositRecords<Runtime>>::key_for(wt_key);
+        let key_v1 = <DepositRecordsV1<Runtime>>::key_for(wt_key);
+        self.try_get_v0_then_v1_or_default::<
+            DepositVoteWeight<BlockNumber>,
+            DepositVoteWeightV1<BlockNumber>
+        >(state, &key, &key_v1, Hasher::BLAKE2256)
+    }
+
+    fn get_psedu_nomination_records_wrapper(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+        who: AccountId,
+    ) -> result::Result<Vec<PseduNominationRecordWrapper>, error::Error> {
+        let mut psedu_records = Vec::new();
+        for token in self.get_psedu_intentions(&state)? {
+            psedu_records.push(PseduNominationRecordWrapper {
+                common: self.get_psedu_nomination_record_common(&state, &who, &token)?,
+                deposit_vote_weight_wrapper: self
+                    .try_get_deposit_vote_weight(&state, &(who.clone(), token))?,
+            });
         }
+        Ok(psedu_records)
     }
 }
