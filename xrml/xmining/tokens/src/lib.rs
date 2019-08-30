@@ -4,9 +4,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod cross_mining;
+mod impls;
 mod mock;
 mod tests;
 pub mod types;
+mod vote_weight;
+
+use crate as xtokens;
 
 // Substrate
 use primitives::traits::{As, Zero};
@@ -18,7 +22,7 @@ use support::{
 // ChainX
 use xassets::{AssetErr, AssetType, ChainT, Token, TokenJackpotAccountIdFor};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
-use xstaking::{ClaimType, VoteWeight};
+use xstaking::{Claim, ComputeWeight};
 #[cfg(feature = "std")]
 use xsupport::token;
 use xsupport::{debug, ensure_with_errorlog, warn};
@@ -26,12 +30,7 @@ use xsupport::{debug, ensure_with_errorlog, warn};
 pub use self::types::*;
 
 pub trait Trait:
-    xsystem::Trait
-    + xstaking::Trait
-    + xspot::Trait
-    + xsdot::Trait
-    + xbridge_common::Trait
-    + xbitcoin::lockup::Trait
+    xstaking::Trait + xspot::Trait + xbridge_features::Trait + xbitcoin::lockup::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -40,6 +39,7 @@ decl_event!(
     pub enum Event<T> where <T as xassets::Trait>::Balance, <T as system::Trait>::AccountId {
         DepositorReward(AccountId, Token, Balance),
         DepositorClaim(AccountId, Token, u64, u64, Balance),
+        DepositorClaimV1(AccountId, Token, u128, u128, Balance),
     }
 );
 
@@ -60,41 +60,7 @@ decl_module! {
             );
 
             debug!("[claim] who: {:?}, token: {:?}", who, token!(token));
-            let key = (who.clone(), token.clone());
-
-            let mut p = <PseduIntentionProfiles<T>>::get(&token);
-            let mut d = Self::deposit_records(&key);
-
-            let mut prof = PseduIntentionProfs::<T>::new(&token, &mut p);
-            let mut record = DepositRecord::<T>::new(&who, &token, &mut d);
-
-            let jackpot = T::DetermineTokenJackpotAccountId::accountid_for_unsafe(&token);
-
-            let (source_vote_weight, target_vote_weight, dividend) =
-                <xstaking::Module<T>>::compute_dividend(&mut record, &mut prof, &jackpot)?;
-
-            let current_block = <system::Module<T>>::block_number();
-
-            Self::can_claim(&who, &token, dividend, current_block)?;
-
-            <xstaking::Module<T>>::claim_transfer(ClaimType::PseduIntention(token.clone()), &jackpot, &who, dividend)?;
-
-            record.set_state_on_claim(0, current_block);
-            prof.set_state_on_claim(target_vote_weight - source_vote_weight, current_block);
-
-            <DepositRecords<T>>::insert(&key, d);
-            <PseduIntentionProfiles<T>>::insert(&token, p);
-
-            <LastClaimOf<T>>::insert(&key, current_block);
-
-            Self::deposit_event(RawEvent::DepositorClaim(
-                who,
-                token,
-                source_vote_weight,
-                target_vote_weight,
-                dividend,
-            ));
-
+            <Self as Claim<T::AccountId, T::Balance>>::claim(&who, &token)?;
         }
 
         /// Set the discount for converting the cross-chain asset to PCX based on the market value.
@@ -110,6 +76,28 @@ decl_module! {
 
         fn set_claim_restriction(token: Token, new: (u32, T::BlockNumber)) {
             <ClaimRestrictionOf<T>>::insert(token, new);
+        }
+
+        fn set_deposit_record(depositor: T::AccountId, token: Token, new: DepositVoteWeight<T::BlockNumber>) {
+            let key = (depositor, token);
+            ensure!(<DepositRecords<T>>::exists(&key), "The DepositVoteWeight must already exist.");
+            <DepositRecords<T>>::insert(&key, new);
+        }
+
+        fn set_deposit_record_v1(depositor: T::AccountId, token: Token, new: DepositVoteWeightV1<T::BlockNumber>) {
+            let key = (depositor, token);
+            ensure!(<DepositRecordsV1<T>>::exists(&key), "The DepositVoteWeightV1 must already exist.");
+            <DepositRecordsV1<T>>::insert(&key, new);
+        }
+
+        fn set_psedu_intention_profs(token: Token, new: PseduIntentionVoteWeight<T::BlockNumber>) {
+            ensure!(<PseduIntentionProfiles<T>>::exists(&token), "The PseduIntentionVoteWeight must already exist.");
+            <PseduIntentionProfiles<T>>::insert(&token, new);
+        }
+
+        fn set_psedu_intention_profs_v1(token: Token, new: PseduIntentionVoteWeightV1<T::BlockNumber>) {
+            ensure!(<PseduIntentionProfilesV1<T>>::exists(&token), "The PseduIntentionVoteWeightV1 must already exist.");
+            <PseduIntentionProfilesV1<T>>::insert(&token, new);
         }
     }
 }
@@ -133,7 +121,11 @@ decl_storage! {
 
         pub PseduIntentionProfiles get(psedu_intention_profiles): map Token => PseduIntentionVoteWeight<T::BlockNumber>;
 
+        pub PseduIntentionProfilesV1 get(psedu_intention_profiles_v1): map Token => Option<PseduIntentionVoteWeightV1<T::BlockNumber>>;
+
         pub DepositRecords get(deposit_records): map (T::AccountId, Token) => DepositVoteWeight<T::BlockNumber>;
+
+        pub DepositRecordsV1 get(deposit_records_v1): map (T::AccountId, Token) => Option<DepositVoteWeightV1<T::BlockNumber>>;
 
         /// when deposit success, reward some pcx to user for claiming. Default is 100000 = 0.001 PCX; 0.001*100000000
         pub DepositReward get(deposit_reward): T::Balance = As::sa(100_000);
@@ -141,80 +133,6 @@ decl_storage! {
 
     add_extra_genesis {
         config(token_discount): Vec<(Token, u32)>;
-    }
-}
-
-impl<T: Trait> OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
-    fn on_move_before(
-        token: &Token,
-        from: &T::AccountId,
-        _: AssetType,
-        to: &T::AccountId,
-        _: AssetType,
-        _value: T::Balance,
-    ) {
-        // Exclude PCX and asset type changes on same account.
-        if <xassets::Module<T> as ChainT>::TOKEN == token.as_slice() || from.clone() == to.clone() {
-            return;
-        }
-
-        Self::try_init_receiver_vote_weight(to, token);
-
-        Self::update_depositor_vote_weight_only(from, token);
-        Self::update_depositor_vote_weight_only(to, token);
-    }
-
-    fn on_move(
-        _token: &Token,
-        _from: &T::AccountId,
-        _: AssetType,
-        _to: &T::AccountId,
-        _: AssetType,
-        _value: T::Balance,
-    ) -> result::Result<(), AssetErr> {
-        Ok(())
-    }
-
-    fn on_issue_before(target: &Token, source: &T::AccountId) {
-        // Exclude PCX
-        if <xassets::Module<T> as ChainT>::TOKEN == target.as_slice() {
-            return;
-        }
-
-        Self::try_init_receiver_vote_weight(source, target);
-
-        debug!(
-            "[on_issue_before] deposit_records: ({:?}, {:?}) = {:?}",
-            token!(target),
-            source,
-            Self::deposit_records((source.clone(), target.clone()))
-        );
-
-        Self::update_bare_vote_weight(source, target);
-    }
-
-    fn on_issue(target: &Token, source: &T::AccountId, value: T::Balance) -> Result {
-        // Exclude PCX
-        if <xassets::Module<T> as ChainT>::TOKEN == target.as_slice() {
-            return Ok(());
-        }
-
-        debug!(
-            "[on_issue] token: {:?}, who: {:?}, vlaue: {:?}",
-            token!(target),
-            source,
-            value
-        );
-
-        Self::issue_reward(source, target, value)
-    }
-
-    fn on_destroy_before(target: &Token, source: &T::AccountId) {
-        Self::update_bare_vote_weight(source, target);
-    }
-
-    fn on_destroy(_target: &Token, _source: &T::AccountId, _value: T::Balance) -> Result {
-        Ok(())
     }
 }
 
@@ -233,6 +151,7 @@ impl<T: Trait> Module<T> {
         if !interval.is_zero() {
             if let Some(last_claim) = Self::last_claim(who, token) {
                 if current_block <= last_claim + interval {
+                    warn!("{:?} cannot claim until {:?}", who, last_claim + interval);
                     return Err("Can only claim once per claim limiting period.");
                 }
             }
@@ -274,14 +193,67 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    fn deposit_claim_event(
+        source_weight_info: (u128, bool),
+        target_weight_info: (u128, bool),
+        source: &T::AccountId,
+        target: &Token,
+        dividend: T::Balance,
+    ) {
+        let (source_vote_weight, source_overflow) = source_weight_info;
+        let (target_vote_weight, target_overflow) = target_weight_info;
+        if !source_overflow && !target_overflow {
+            Self::deposit_event(RawEvent::DepositorClaim(
+                source.clone(),
+                target.clone(),
+                source_vote_weight as u64,
+                target_vote_weight as u64,
+                dividend,
+            ));
+        } else {
+            Self::deposit_event(RawEvent::DepositorClaimV1(
+                source.clone(),
+                target.clone(),
+                source_vote_weight,
+                target_vote_weight,
+                dividend,
+            ));
+        }
+    }
+
+    fn try_get_deposit_record(
+        key: &(T::AccountId, Token),
+    ) -> result::Result<DepositVoteWeight<T::BlockNumber>, DepositVoteWeightV1<T::BlockNumber>>
+    {
+        if let Some(d1) = <DepositRecordsV1<T>>::get(key) {
+            Err(d1)
+        } else {
+            Ok(<DepositRecords<T>>::get(key))
+        }
+    }
+
+    fn try_get_psedu_intention_profs(
+        target: &Token,
+    ) -> result::Result<
+        PseduIntentionVoteWeight<T::BlockNumber>,
+        PseduIntentionVoteWeightV1<T::BlockNumber>,
+    > {
+        if let Some(p1) = <PseduIntentionProfilesV1<T>>::get(target) {
+            Err(p1)
+        } else {
+            Ok(<PseduIntentionProfiles<T>>::get(target))
+        }
+    }
+
     /// Ensure the vote weight of some depositor or transfer receiver is initialized.
-    fn try_init_receiver_vote_weight(who: &T::AccountId, token: &Token) {
+    fn try_init_receiver_vote_weight(
+        who: &T::AccountId,
+        token: &Token,
+        current_block: T::BlockNumber,
+    ) {
         let key = (who.clone(), token.clone());
         if !<DepositRecords<T>>::exists(&key) {
-            <DepositRecords<T>>::insert(
-                &key,
-                DepositVoteWeight::new(0, <system::Module<T>>::block_number()),
-            );
+            <DepositRecords<T>>::insert(&key, DepositVoteWeight::new(0u64, current_block));
         }
     }
 
@@ -306,38 +278,45 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn update_depositor_vote_weight_only(from: &T::AccountId, target: &Token) {
-        let key = (from.clone(), target.clone());
-        let mut d = Self::deposit_records(&key);
-        let mut record = DepositRecord::<T>::new(from, target, &mut d);
-
-        <xstaking::Module<T>>::generic_update_vote_weight(&mut record);
-
-        <DepositRecords<T>>::insert(&key, d);
-    }
-
-    fn update_bare_vote_weight(source: &T::AccountId, target: &Token) {
-        let key = (source.clone(), target.clone());
-        let mut p = <PseduIntentionProfiles<T>>::get(target);
-        let mut d = Self::deposit_records(&key);
-
-        let mut prof = PseduIntentionProfs::<T>::new(target, &mut p);
-        let mut record = DepositRecord::<T>::new(source, target, &mut d);
-
-        <xstaking::Module<T>>::update_bare_vote_weight_both_way(&mut prof, &mut record);
-
-        <PseduIntentionProfiles<T>>::insert(target, p);
-        <DepositRecords<T>>::insert(&key, d);
+    fn update_bare_vote_weight(
+        source: &T::AccountId,
+        target: &Token,
+        current_block: T::BlockNumber,
+    ) {
+        Self::update_depositor_vote_weight(source, target, current_block);
+        Self::update_psedu_intention_vote_weight(target, current_block);
     }
 
     #[cfg(feature = "std")]
     pub fn bootstrap_update_vote_weight(source: &T::AccountId, target: &Token) {
-        Self::try_init_receiver_vote_weight(source, target);
-        Self::update_bare_vote_weight(source, target);
+        let current_block = <system::Module<T>>::block_number();
+        Self::try_init_receiver_vote_weight(source, target, current_block);
+        Self::update_bare_vote_weight(source, target, current_block);
     }
 }
 
 impl<T: Trait> Module<T> {
+    pub fn referral_or_council_of(who: &T::AccountId, token: &Token) -> T::AccountId {
+        use xbridge_common::traits::CrossChainBindingV2;
+
+        // Get referral from xbridge_common since v1.0.3.
+        let referral = if <xsdot::Module<T> as ChainT>::TOKEN == token.as_slice()
+            || <xbitcoin::Module<T> as ChainT>::TOKEN == token.as_slice()
+        {
+            if let Some(asset_info) = <xassets::AssetInfo<T>>::get(token) {
+                let asset = asset_info.0;
+                let chain = asset.chain();
+                xbridge_features::Module::<T>::get_first_binding_channel(who, chain)
+            } else {
+                None
+            }
+        } else {
+            xbridge_common::Module::<T>::get_binding_info(token, who)
+        };
+
+        referral.unwrap_or_else(xaccounts::Module::<T>::council_account)
+    }
+
     pub fn token_jackpot_accountid_for_unsafe(token: &Token) -> T::AccountId {
         T::DetermineTokenJackpotAccountId::accountid_for_unsafe(token)
     }
@@ -345,7 +324,7 @@ impl<T: Trait> Module<T> {
     pub fn multi_token_jackpot_accountid_for_unsafe(tokens: &[Token]) -> Vec<T::AccountId> {
         tokens
             .iter()
-            .map(|t| T::DetermineTokenJackpotAccountId::accountid_for_unsafe(t))
+            .map(T::DetermineTokenJackpotAccountId::accountid_for_unsafe)
             .collect()
     }
 }

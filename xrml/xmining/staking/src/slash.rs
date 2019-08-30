@@ -1,3 +1,5 @@
+// Copyright 2018-2019 Chainpool.
+
 use super::*;
 use rstd::cmp;
 use rstd::result;
@@ -40,8 +42,6 @@ impl<T: Trait> Module<T> {
     }
 
     /// Slash the double signer and return the slashed balance.
-    ///
-    /// TODO extract the similar slashing logic in shifter.rs.
     pub fn slash_double_signer(who: &T::AccountId) -> result::Result<T::Balance, &'static str> {
         if !Self::is_intention(who) {
             return Err("Cannot slash if the reported double signer is not an intention");

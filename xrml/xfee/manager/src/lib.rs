@@ -101,6 +101,24 @@ decl_module! {
                 }
             });
         }
+
+        // due history reasons, can't export call in runtime for module `XAccounts`,
+        // thus let `XAccounts` root call in `XFeeManager` module
+        // blocked_accounts
+        /// add an account into blocked list
+        fn add_blocked_account(who: T::AccountId) {
+            xaccounts::BlockedAccounts::<T>::mutate(|list| {
+                if !list.contains(&who) {
+                    list.push(who);
+                }
+            });
+        }
+        /// remove an account into blocked list
+        fn remove_blocked_account(who: T::AccountId) {
+            xaccounts::BlockedAccounts::<T>::mutate(|list| {
+                list.retain(|i| *i != who);
+            });
+        }
     }
 }
 

@@ -71,8 +71,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 5,
-    impl_version: 5,
+    spec_version: 6,
+    impl_version: 6,
     apis: RUNTIME_API_VERSIONS,
 };
 
@@ -527,6 +527,11 @@ impl_runtime_apis! {
                 XFeeManager::transaction_fee(weight, encoded_len)
             )
         }
+
+        fn fee_weight_map() -> BTreeMap<Vec<u8>, u64> {
+            let method_call_weight = XFeeManager::method_call_weight();
+            fee::call_weight_map(&method_call_weight)
+        }
     }
 
     impl runtime_api::xsession_api::XSessionApi<Block> for Runtime {
@@ -538,6 +543,12 @@ impl_runtime_apis! {
     impl runtime_api::xstaking_api::XStakingApi<Block> for Runtime {
         fn intention_set() -> Vec<AccountId> {
             XStaking::intention_set()
+        }
+        fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>> {
+            XStaking::intentions_info_common()
+        }
+        fn intention_info_common_of(who: &AccountId) -> Option<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>> {
+            XStaking::intention_info_common_of(who)
         }
     }
 

@@ -32,3 +32,5 @@ pub mod state;
 pub mod system;
 
 use jsonrpc_core as rpc;
+
+pub use chainx::set_cache_flag;

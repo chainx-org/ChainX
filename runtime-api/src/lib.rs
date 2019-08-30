@@ -2,6 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use rstd::collections::btree_map::BTreeMap;
 use rstd::prelude::Vec;
 use sr_primitives::traits::AuthorityIdFor;
 
@@ -61,6 +62,8 @@ pub mod xfee_api {
     decl_runtime_apis! {
         pub trait XFeeApi {
             fn transaction_fee(call: Vec<u8>, encoded_len: u64) -> Option<u64>;
+
+            fn fee_weight_map() -> BTreeMap<Vec<u8>, u64>;
         }
     }
 }
@@ -81,13 +84,14 @@ pub mod xstaking_api {
     decl_runtime_apis! {
         pub trait XStakingApi {
             fn intention_set() -> Vec<AccountIdForApi>;
+            fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi>>;
+            fn intention_info_common_of(intention: &AccountIdForApi) -> Option<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi>>;
         }
     }
 }
 
 pub mod xbridge_api {
     use super::*;
-    use rstd::collections::btree_map::BTreeMap;
     use xassets::Chain;
     use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
     decl_runtime_apis! {
