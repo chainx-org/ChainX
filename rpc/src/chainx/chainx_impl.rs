@@ -357,7 +357,7 @@ where
         let block_id = self.block_id_by_hash(hash)?;
         let who: AccountId = who.unchecked_into();
 
-        let info_wrapper = self.get_intention_info_wrapper(&state, block_id, who)?;
+        let info_wrapper = self.get_intention_info_wrapper(&state, (block_id, hash), who)?;
         if let Some(ref info) = info_wrapper {
             if info.intention_profs_wrapper.is_err() {
                 return Err(
@@ -378,7 +378,7 @@ where
         let who: AccountId = who.unchecked_into();
 
         Ok(self
-            .get_intention_info_wrapper(&state, block_id, who)?
+            .get_intention_info_wrapper(&state, (block_id, hash), who)?
             .map(Into::into))
     }
 
@@ -386,37 +386,39 @@ where
         &self,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<IntentionInfo>>> {
-        lru_cache!(Option<Vec<IntentionInfo>>; hash; self {
+        let r = lru_cache!(Option<Vec<IntentionInfo>>; hash; self {
         let state = self.state_at(hash)?;
         let block_id = self.block_id_by_hash(hash)?;
 
         let mut intentions_info = Vec::new();
-        for info_wrapper in self.get_intentions_info_wrapper(&state, block_id)? {
+        for info_wrapper in self.get_intentions_info_wrapper(&state, (block_id, hash))? {
             if info_wrapper.intention_profs_wrapper.is_err() {
                 return Err(ErrorKind::DeprecatedV0Err("chainx_getIntentions".into()).into());
             }
             intentions_info.push(info_wrapper.into());
         }
 
-        Ok(Some(intentions_info))
+        Some(intentions_info)
         });
+        Ok(r)
     }
 
     fn intentions_v1(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<Vec<IntentionInfoV1>>> {
-        lru_cache!(Option<Vec<IntentionInfoV1>>; hash; self {
+        let r = lru_cache!(Option<Vec<IntentionInfoV1>>; hash; self {
         let state = self.state_at(hash)?;
         let block_id = self.block_id_by_hash(hash)?;
 
-        Ok(Some(
-            self.get_intentions_info_wrapper(&state, block_id)?
+        Some(
+            self.get_intentions_info_wrapper(&state, (block_id, hash))?
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-        ))
+        )
         });
+        Ok(r)
     }
 
     fn psedu_intentions(

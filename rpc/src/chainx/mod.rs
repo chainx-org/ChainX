@@ -445,6 +445,7 @@ where
         let block_id = self.block_id_by_hash(hash)?;
         let who: AccountId = who.unchecked_into();
 
+        let records = lru_cache!(AccountId, Vec<(AccountId, NominationRecordWrapper)>, size=512; key=who; hash; self {
         let mut records = Vec::new();
         for intention in self.intention_set(block_id)? {
             let nr_key = (who.clone(), intention.clone());
@@ -452,6 +453,8 @@ where
                 records.push((intention, NominationRecordWrapper(record)));
             }
         }
+        records
+        });
         Ok(records)
     }
 
@@ -501,51 +504,51 @@ where
     fn into_intention_info_wrapper(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        block_id: BlockId<Block>,
+        block_id: (BlockId<Block>, Option<<Block as BlockT>::Hash>),
         common_info: xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>,
     ) -> result::Result<IntentionInfoWrapper, error::Error> {
         let who = common_info.account.clone();
-
-        let is_trustee = self.get_trustee_info_of(block_id, &who)?;
+        let hash = block_id.1;
+        let info = lru_cache!(AccountId, IntentionInfoWrapper, size=512; key=who; hash; self {
+        let is_trustee = self.get_trustee_info_of(block_id.0, &who)?;
         let intention_profs_wrapper = self.try_get_intention_profs(state, &who)?;
 
         let intention_props =
-            IntentionPropsForRpc::new(self.get_intention_props(state, &who)?, who);
+            IntentionPropsForRpc::new(self.get_intention_props(state, &who)?, who.clone());
 
-        Ok(IntentionInfoWrapper {
+        IntentionInfoWrapper {
             intention_common: IntentionInfoCommon {
                 common: common_info.into(),
                 is_trustee,
                 intention_props,
             },
             intention_profs_wrapper,
-        })
+        }
+        });
+        Ok(info)
     }
 
     fn get_intention_info_wrapper(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        block_id: BlockId<Block>,
+        block_id: (BlockId<Block>, Option<<Block as BlockT>::Hash>),
         who: AccountId,
     ) -> result::Result<Option<IntentionInfoWrapper>, error::Error> {
-        if let Some(common_info) = self.intention_info_common_of(block_id, &who)? {
-            Ok(Some(self.into_intention_info_wrapper(
-                state,
-                block_id,
-                common_info,
-            )?))
+        let result = if let Some(common_info) = self.intention_info_common_of(block_id.0, &who)? {
+            Some(self.into_intention_info_wrapper(state, block_id, common_info)?)
         } else {
-            Ok(None)
-        }
+            None
+        };
+        Ok(result)
     }
 
     fn get_intentions_info_wrapper(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        block_id: BlockId<Block>,
+        block_id: (BlockId<Block>, Option<<Block as BlockT>::Hash>),
     ) -> result::Result<Vec<IntentionInfoWrapper>, error::Error> {
         let mut intentions_info = Vec::new();
-        for common_info in self.intentions_info_common(block_id)? {
+        for common_info in self.intentions_info_common(block_id.0)? {
             intentions_info.push(self.into_intention_info_wrapper(state, block_id, common_info)?);
         }
         Ok(intentions_info)

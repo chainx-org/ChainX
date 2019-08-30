@@ -20,41 +20,57 @@ pub(crate) fn get_cache_flag() -> bool {
 
 macro_rules! lru_cache {
     ($VT: ty; $hash:ident; $sel:ident $code_block:block) => {
-        let lru_cache_u32_key = 0u32;
-        lru_cache!(u32, $VT, size=1; key=lru_cache_u32_key; $hash; $sel $code_block)
+        {
+            let lru_cache_u32_key = 0u32;
+            lru_cache!(u32, $VT, size=1; key=lru_cache_u32_key; $hash; $sel $code_block)
+        }
     };
 
     ($KT:ty, $VT: ty, size=$size:expr; key=$key:ident; $hash:ident; $sel:ident $code_block:block) => {
-        if $hash.is_some() || !$crate::chainx::cache::get_cache_flag() {
-            return $code_block;
-        }
-        // do cache
-        let best_hash = $sel.client.info()?.chain.best_hash;
-        lazy_static::lazy_static! {
-            static ref CACHE: std::sync::Mutex<lru::LruCache<$KT, $crate::chainx::cache::Cache<$VT>>> = std::sync::Mutex::new(lru::LruCache::new($size));
-        }
-        let mut cache = match CACHE.lock() {
-            Ok(i) => i,
-            Err(_) => return Err(ErrorKind::CacheErr.into()),
-        };
-        if let Some(item) = cache.get(&$key) {
-            // hit cache
-            if item.hash == best_hash {
-                return Ok(item.data.clone());
+        {
+            let not_use_cache = $hash.is_some() || !$crate::chainx::cache::get_cache_flag();
+            let data = if !not_use_cache {
+                lazy_static::lazy_static! {
+                    static ref CACHE: std::sync::Mutex<lru::LruCache<$KT, $crate::chainx::cache::Cache<$VT>>> = std::sync::Mutex::new(lru::LruCache::new($size));
+                }
+                let mut cache = match CACHE.lock() {
+                    Ok(i) => i,
+                    Err(_) => return Err(ErrorKind::CacheErr.into()),
+                };
+                // do cache
+                let best_hash = $sel.client.info()?.chain.best_hash;
+                if let Some(item) = cache.get(&$key) {
+                    if item.hash == best_hash {
+                        // hit cache
+                        Ok(item.data.clone())
+                    } else {
+                        Err(Some((cache, best_hash)))
+                    }
+                } else {
+                    Err(Some((cache, best_hash)))
+                }
+            } else {
+                Err(None)
+            };
+            match data {
+                Ok(result) => result,
+                Err(op) => {
+                    let code_result = $code_block;
+                    match op {
+                        Some((mut c, best_hash)) => {
+                            c.put(
+                                $key.clone(),
+                                $crate::chainx::cache::Cache {
+                                    hash: best_hash,
+                                    data: code_result.clone(),
+                                },
+                            );
+                        },
+                        None => {}
+                    }
+                    code_result
+                }
             }
         }
-
-        // otherwise, do `code_block`, set result into cache, return it
-        let r = $code_block;
-        if let Ok(ref item) = r {
-            cache.put(
-                $key,
-                $crate::chainx::cache::Cache {
-                    hash: best_hash,
-                    data: item.clone(),
-                },
-            );
-        }
-        return r;
     };
 }

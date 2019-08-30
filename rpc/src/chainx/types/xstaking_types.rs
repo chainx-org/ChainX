@@ -207,7 +207,7 @@ pub struct IntentionInfoV1 {
     pub intention_profs: IntentionProfsV1ForRpc,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntentionInfoWrapper {
     pub intention_common: IntentionInfoCommon,
