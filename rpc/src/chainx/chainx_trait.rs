@@ -99,7 +99,10 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     fn intentions_v1(&self, hash: Option<Hash>) -> Result<Option<Vec<IntentionInfoV1>>>;
 
     #[rpc(name = "chainx_getIntentionByAccount")]
-    fn intention(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<IntentionInfoV1>>;
+    fn intention(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<IntentionInfo>>;
+
+    #[rpc(name = "chainx_getIntentionByAccountV1")]
+    fn intention_v1(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<IntentionInfoV1>>;
 
     #[rpc(name = "chainx_getPseduIntentions")]
     fn psedu_intentions(&self, hash: Option<Hash>) -> Result<Option<Vec<PseduIntentionInfo>>>;

@@ -154,7 +154,7 @@ where
             .unwrap_or(None))
     }
 
-    fn try_get_v0_then_v1_or_default<V0: Decode + Default, V1: Decode + Default>(
+    fn try_get_v0_then_v1<V0: Decode + Default, V1: Decode + Default>(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
         key: &[u8],
@@ -166,7 +166,7 @@ where
         } else if let Some(v1) = Self::pickout::<V1>(state, key_v1, hasher)? {
             Ok(Err(v1))
         } else {
-            Ok(Ok(Default::default()))
+            Err(ErrorKind::StorageNotExistErr.into())
         }
     }
 
@@ -430,7 +430,7 @@ where
     > {
         let key = <xstaking::NominationRecords<Runtime>>::key_for(nr_key);
         let key_v1 = <xstaking::NominationRecordsV1<Runtime>>::key_for(nr_key);
-        self.try_get_v0_then_v1_or_default::<
+        self.try_get_v0_then_v1::<
             xstaking::NominationRecord<Balance, BlockNumber>,
             xstaking::NominationRecordV1<Balance, BlockNumber>
         >(state, &key, &key_v1, Hasher::BLAKE2256)
@@ -448,8 +448,9 @@ where
         let mut records = Vec::new();
         for intention in self.intention_set(block_id)? {
             let nr_key = (who.clone(), intention.clone());
-            let record = self.try_get_nomination_record(&state, &nr_key)?;
-            records.push((intention, NominationRecordWrapper(record)));
+            if let Ok(record) = self.try_get_nomination_record(&state, &nr_key) {
+                records.push((intention, NominationRecordWrapper(record)));
+            }
         }
         Ok(records)
     }
@@ -480,7 +481,7 @@ where
     > {
         let key = <xstaking::Intentions<Runtime>>::key_for(intention);
         let key_v1 = <xstaking::IntentionsV1<Runtime>>::key_for(intention);
-        self.try_get_v0_then_v1_or_default::<
+        self.try_get_v0_then_v1::<
             xstaking::IntentionProfs<Balance, BlockNumber>,
             xstaking::IntentionProfsV1<Balance, BlockNumber>
         >(state, &key, &key_v1, Hasher::BLAKE2256)
@@ -563,7 +564,7 @@ where
     > {
         let key = <PseduIntentionProfiles<Runtime>>::key_for(token);
         let key_v1 = <PseduIntentionProfilesV1<Runtime>>::key_for(token);
-        self.try_get_v0_then_v1_or_default::<
+        self.try_get_v0_then_v1::<
             PseduIntentionVoteWeight<Balance>,
             PseduIntentionVoteWeightV1<Balance>
         >(state, &key, &key_v1, Hasher::BLAKE2256)
@@ -588,15 +589,17 @@ where
         let mut psedu_intentions_info = Vec::new();
 
         for (token, jackpot_account) in self.get_tokens_with_jackpot_account(state, block_id)? {
-            psedu_intentions_info.push(PseduIntentionInfoWrapper {
-                psedu_intention_common: self.get_psedu_intention_common(
-                    state,
-                    block_id,
-                    &token,
-                    jackpot_account,
-                )?,
-                psedu_intention_profs_wrapper: self.try_get_psedu_intention_profs(state, &token)?,
-            });
+            if let Ok(psedu_intention_profs_wrapper) = self.try_get_psedu_intention_profs(state, &token) {
+                psedu_intentions_info.push(PseduIntentionInfoWrapper {
+                    psedu_intention_common: self.get_psedu_intention_common(
+                        state,
+                        block_id,
+                        &token,
+                        jackpot_account,
+                    )?,
+                    psedu_intention_profs_wrapper
+                });
+            }
         }
         Ok(psedu_intentions_info)
     }
@@ -614,7 +617,7 @@ where
     > {
         let key = <DepositRecords<Runtime>>::key_for(wt_key);
         let key_v1 = <DepositRecordsV1<Runtime>>::key_for(wt_key);
-        self.try_get_v0_then_v1_or_default::<
+        self.try_get_v0_then_v1::<
             DepositVoteWeight<BlockNumber>,
             DepositVoteWeightV1<BlockNumber>
         >(state, &key, &key_v1, Hasher::BLAKE2256)
@@ -627,11 +630,12 @@ where
     ) -> result::Result<Vec<PseduNominationRecordWrapper>, error::Error> {
         let mut psedu_records = Vec::new();
         for token in self.get_psedu_intentions(&state)? {
-            psedu_records.push(PseduNominationRecordWrapper {
-                common: self.get_psedu_nomination_record_common(&state, &who, &token)?,
-                deposit_vote_weight_wrapper: self
-                    .try_get_deposit_vote_weight(&state, &(who.clone(), token))?,
-            });
+            if let Ok(deposit_vote_weight_wrapper) = self.try_get_deposit_vote_weight(&state, &(who.clone(), token.clone())) {
+                psedu_records.push(PseduNominationRecordWrapper {
+                    common: self.get_psedu_nomination_record_common(&state, &who, &token)?,
+                    deposit_vote_weight_wrapper
+                });
+            }
         }
         Ok(psedu_records)
     }

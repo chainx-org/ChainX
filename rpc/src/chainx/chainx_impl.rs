@@ -352,6 +352,26 @@ where
         &self,
         who: AccountIdForRpc,
         hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<IntentionInfo>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+        let who: AccountId = who.unchecked_into();
+
+        let info_wrapper = self.get_intention_info_wrapper(&state, block_id, who)?;
+        if let Some(ref info) = info_wrapper {
+            if info.intention_profs_wrapper.is_err() {
+                return Err(
+                    ErrorKind::DeprecatedV0Err("chainx_getIntentionByAccount".into()).into(),
+                );
+            }
+        }
+        Ok(info_wrapper.map(Into::into))
+    }
+
+    fn intention_v1(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<IntentionInfoV1>> {
         let state = self.state_at(hash)?;
         let block_id = self.block_id_by_hash(hash)?;
