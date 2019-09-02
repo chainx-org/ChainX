@@ -84,8 +84,11 @@ pub mod xstaking_api {
     decl_runtime_apis! {
         pub trait XStakingApi {
             fn intention_set() -> Vec<AccountIdForApi>;
-            fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi>>;
-            fn intention_info_common_of(intention: &AccountIdForApi) -> Option<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi>>;
+            // T::SessionKey should use AuthorityId here and ChainX is able to compile, but the tool depdendent on ChainX fails to compile when using AuthorityId.
+            // 2019-05-25: Compile ERROR: the return type of a function must have a statically known size
+            // 2019-07-15 ChainX is able compile, but the tool depdendent on ChainX is unable to compile.
+            fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi, BlockNumber>>;
+            fn intention_info_common_of(intention: &AccountIdForApi) -> Option<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi, BlockNumber>>;
         }
     }
 }

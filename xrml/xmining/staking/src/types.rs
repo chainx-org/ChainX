@@ -258,10 +258,10 @@ impl<
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct IntentionInfoCommon<AccountId, Balance, SessionKey> {
+pub struct IntentionInfoCommon<AccountId, Balance, SessionKey, BlockNumber> {
     pub account: AccountId,
     pub name: Option<Vec<u8>>,
-    pub session_key: Option<SessionKey>,
+    pub intention_props: xaccounts::IntentionProps<SessionKey, BlockNumber>,
     pub jackpot_account: AccountId,
     pub jackpot_balance: Balance,
     pub self_bonded: Balance,

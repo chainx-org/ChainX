@@ -78,26 +78,96 @@ decl_module! {
             <ClaimRestrictionOf<T>>::insert(token, new);
         }
 
-        fn set_deposit_record(depositor: T::AccountId, token: Token, new: DepositVoteWeight<T::BlockNumber>) {
+        fn set_deposit_record(
+            depositor: T::AccountId,
+            token: Token,
+            new_last_deposit_weight: Option<u64>,
+            new_last_deposit_weight_update: Option<T::BlockNumber>
+        ) {
             let key = (depositor, token);
-            ensure!(<DepositRecords<T>>::exists(&key), "The DepositVoteWeight must already exist.");
-            <DepositRecords<T>>::insert(&key, new);
+            ensure!(
+                <DepositRecords<T>>::exists(&key),
+                "The DepositVoteWeight must already exist."
+            );
+            let old = <DepositRecords<T>>::get(&key);
+            let last_deposit_weight = new_last_deposit_weight.unwrap_or(old.last_deposit_weight);
+            let last_deposit_weight_update =
+                new_last_deposit_weight_update.unwrap_or(old.last_deposit_weight_update);
+            <DepositRecords<T>>::insert(
+                &key,
+                DepositVoteWeight {
+                    last_deposit_weight,
+                    last_deposit_weight_update,
+                },
+            );
         }
 
-        fn set_deposit_record_v1(depositor: T::AccountId, token: Token, new: DepositVoteWeightV1<T::BlockNumber>) {
+        fn set_deposit_record_v1(
+            depositor: T::AccountId,
+            token: Token,
+            new_last_deposit_weight: Option<u128>,
+            new_last_deposit_weight_update: Option<T::BlockNumber>
+        ) {
             let key = (depositor, token);
-            ensure!(<DepositRecordsV1<T>>::exists(&key), "The DepositVoteWeightV1 must already exist.");
-            <DepositRecordsV1<T>>::insert(&key, new);
+            if let Some(old) = <DepositRecordsV1<T>>::get(&key) {
+                let last_deposit_weight = new_last_deposit_weight.unwrap_or(old.last_deposit_weight);
+                let last_deposit_weight_update =
+                    new_last_deposit_weight_update.unwrap_or(old.last_deposit_weight_update);
+                <DepositRecordsV1<T>>::insert(
+                    &key,
+                    DepositVoteWeightV1 {
+                        last_deposit_weight,
+                        last_deposit_weight_update,
+                    },
+                );
+            } else {
+                return Err("The DepositVoteWeightV1 must already exist.");
+            }
         }
 
-        fn set_psedu_intention_profs(token: Token, new: PseduIntentionVoteWeight<T::BlockNumber>) {
-            ensure!(<PseduIntentionProfiles<T>>::exists(&token), "The PseduIntentionVoteWeight must already exist.");
-            <PseduIntentionProfiles<T>>::insert(&token, new);
+        fn set_psedu_intention_profs(
+            token: Token,
+            new_last_total_deposit_weight: Option<u64>,
+            new_last_total_deposit_weight_update: Option<T::BlockNumber>
+        ) {
+            ensure!(
+                <PseduIntentionProfiles<T>>::exists(&token),
+                "The PseduIntentionVoteWeight must already exist."
+            );
+            let old = <PseduIntentionProfiles<T>>::get(&token);
+            let last_total_deposit_weight =
+                new_last_total_deposit_weight.unwrap_or(old.last_total_deposit_weight);
+            let last_total_deposit_weight_update =
+                new_last_total_deposit_weight_update.unwrap_or(old.last_total_deposit_weight_update);
+            <PseduIntentionProfiles<T>>::insert(
+                &token,
+                PseduIntentionVoteWeight {
+                    last_total_deposit_weight,
+                    last_total_deposit_weight_update,
+                },
+            );
         }
 
-        fn set_psedu_intention_profs_v1(token: Token, new: PseduIntentionVoteWeightV1<T::BlockNumber>) {
-            ensure!(<PseduIntentionProfilesV1<T>>::exists(&token), "The PseduIntentionVoteWeightV1 must already exist.");
-            <PseduIntentionProfilesV1<T>>::insert(&token, new);
+        fn set_psedu_intention_profs_v1(
+            token: Token,
+            new_last_total_deposit_weight: Option<u128>,
+            new_last_total_deposit_weight_update: Option<T::BlockNumber>
+        ) {
+            if let Some(old) = <PseduIntentionProfilesV1<T>>::get(&token) {
+                let last_total_deposit_weight =
+                    new_last_total_deposit_weight.unwrap_or(old.last_total_deposit_weight);
+                let last_total_deposit_weight_update = new_last_total_deposit_weight_update
+                    .unwrap_or(old.last_total_deposit_weight_update);
+                <PseduIntentionProfilesV1<T>>::insert(
+                    &token,
+                    PseduIntentionVoteWeightV1 {
+                        last_total_deposit_weight,
+                        last_total_deposit_weight_update,
+                    },
+                );
+            } else {
+                return Err("The PseduIntentionVoteWeightV1 must already exist.");
+            }
         }
     }
 }

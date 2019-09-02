@@ -136,7 +136,6 @@ pub struct IntentionInfoCommon {
 pub struct IntentionInfoCommonForRpc {
     /// account id of intention
     pub account: AccountIdForRpc,
-    pub session_key: AccountIdForRpc,
     /// name of intention
     pub name: String,
     /// is validator
@@ -149,13 +148,14 @@ pub struct IntentionInfoCommonForRpc {
     pub jackpot_account: AccountIdForRpc,
 }
 
-impl From<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>>
+impl From<xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber>>
     for IntentionInfoCommonForRpc
 {
-    fn from(common: xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>) -> Self {
+    fn from(
+        common: xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber>,
+    ) -> Self {
         Self {
             account: common.account.clone().into(),
-            session_key: common.session_key.unwrap_or(common.account).into(),
             name: to_string!(&common.name.unwrap_or_default()),
             is_validator: common.is_validator,
             self_vote: common.self_bonded,

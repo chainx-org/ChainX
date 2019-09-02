@@ -192,8 +192,8 @@ where
 
         // XStakingApi
         fn intention_set() -> Vec<AccountId>;
-        fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>>;
-        fn intention_info_common_of(who: &AccountId) -> Option<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>>;
+        fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber>>;
+        fn intention_info_common_of(who: &AccountId) -> Option<xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber>>;
 
         // XBridgeApi
         fn trustee_props_for(who: AccountId) -> BTreeMap<Chain, GenericTrusteeIntentionProps>;
@@ -402,21 +402,6 @@ where
         )
     }
 
-    fn get_intention_props(
-        &self,
-        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
-        intention: &AccountId,
-    ) -> result::Result<xaccounts::IntentionProps<AuthorityId, BlockNumber>, error::Error> {
-        let key = <xaccounts::IntentionPropertiesOf<Runtime>>::key_for(intention);
-        let props = Self::pickout::<xaccounts::IntentionProps<AuthorityId, BlockNumber>>(
-            state,
-            &key,
-            Hasher::BLAKE2256,
-        )?
-        .expect("Intention always has props; qed");
-        Ok(props)
-    }
-
     fn try_get_nomination_record(
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
@@ -505,7 +490,7 @@ where
         &self,
         state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
         block_id: (BlockId<Block>, Option<<Block as BlockT>::Hash>),
-        common_info: xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>,
+        common_info: xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber>,
     ) -> result::Result<IntentionInfoWrapper, error::Error> {
         let who = common_info.account.clone();
         let hash = block_id.1;
@@ -514,7 +499,7 @@ where
         let intention_profs_wrapper = self.try_get_intention_profs(state, &who)?;
 
         let intention_props =
-            IntentionPropsForRpc::new(self.get_intention_props(state, &who)?, who.clone());
+            IntentionPropsForRpc::new(common_info.intention_props.clone(), who.clone());
 
         IntentionInfoWrapper {
             intention_common: IntentionInfoCommon {
@@ -592,7 +577,9 @@ where
         let mut psedu_intentions_info = Vec::new();
 
         for (token, jackpot_account) in self.get_tokens_with_jackpot_account(state, block_id)? {
-            if let Ok(psedu_intention_profs_wrapper) = self.try_get_psedu_intention_profs(state, &token) {
+            if let Ok(psedu_intention_profs_wrapper) =
+                self.try_get_psedu_intention_profs(state, &token)
+            {
                 psedu_intentions_info.push(PseduIntentionInfoWrapper {
                     psedu_intention_common: self.get_psedu_intention_common(
                         state,
@@ -600,7 +587,7 @@ where
                         &token,
                         jackpot_account,
                     )?,
-                    psedu_intention_profs_wrapper
+                    psedu_intention_profs_wrapper,
                 });
             }
         }
@@ -620,10 +607,12 @@ where
     > {
         let key = <DepositRecords<Runtime>>::key_for(wt_key);
         let key_v1 = <DepositRecordsV1<Runtime>>::key_for(wt_key);
-        self.try_get_v0_then_v1::<
-            DepositVoteWeight<BlockNumber>,
-            DepositVoteWeightV1<BlockNumber>
-        >(state, &key, &key_v1, Hasher::BLAKE2256)
+        self.try_get_v0_then_v1::<DepositVoteWeight<BlockNumber>, DepositVoteWeightV1<BlockNumber>>(
+            state,
+            &key,
+            &key_v1,
+            Hasher::BLAKE2256,
+        )
     }
 
     fn get_psedu_nomination_records_wrapper(
@@ -633,10 +622,12 @@ where
     ) -> result::Result<Vec<PseduNominationRecordWrapper>, error::Error> {
         let mut psedu_records = Vec::new();
         for token in self.get_psedu_intentions(&state)? {
-            if let Ok(deposit_vote_weight_wrapper) = self.try_get_deposit_vote_weight(&state, &(who.clone(), token.clone())) {
+            if let Ok(deposit_vote_weight_wrapper) =
+                self.try_get_deposit_vote_weight(&state, &(who.clone(), token.clone()))
+            {
                 psedu_records.push(PseduNominationRecordWrapper {
                     common: self.get_psedu_nomination_record_common(&state, &who, &token)?,
-                    deposit_vote_weight_wrapper
+                    deposit_vote_weight_wrapper,
                 });
             }
         }
