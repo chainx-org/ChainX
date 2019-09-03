@@ -32,6 +32,7 @@ runtime_primitives = { package = "sr-primitives", git = "https://github.com/chai
 runtime_version = { package = "sr-version", git = "https://github.com/chainpool/substrate" }
 # substrate runtime module
 support = { package = "srml-support", git = "https://github.com/chainpool/substrate" }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate" }
 
 # chainx
 chainx-primitives = { path = "../primitives" }
