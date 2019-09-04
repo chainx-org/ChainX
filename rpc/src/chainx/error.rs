@@ -21,6 +21,10 @@ error_chain! {
             description("Not has this chain id"),
             display("Not has this chain id"),
         }
+        BlockNumberErr {
+            description("BlockNumber not exist for this hash"),
+            display("BlockNumber not exist for this hash"),
+        }
         /// Get certlist failed
         CertNameErr {
             description("Get cert name list failed"),
@@ -87,8 +91,8 @@ error_chain! {
             display("Cache fetch lock error"),
         }
         StorageNotExistErr {
-            description("Storage record does not exist"),
-            display("Storage record does not exist")
+            description("Storage record does not exist or not in archive"),
+            display("Storage record does not exist or not in archive")
         }
     }
 }
@@ -180,7 +184,7 @@ impl From<Error> for rpc::Error {
             },
             Error(ErrorKind::StorageNotExistErr, _) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 15),
-                message: "Storage record does not exist".into(),
+                message: "Storage record does not exist or not in archive".into(),
                 data: None,
             },
             e => errors::internal(e),

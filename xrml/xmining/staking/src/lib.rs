@@ -333,27 +333,98 @@ decl_module! {
             <UpperBoundFactor<T>>::put(new);
         }
 
-        fn set_nomination_record(nominator: T::AccountId, nominee: T::AccountId, new: NominationRecord<T::Balance, T::BlockNumber>) {
+        fn set_nomination_record(
+            nominator: T::AccountId,
+            nominee: T::AccountId,
+            new_nomination: Option<T::Balance>,
+            new_last_vote_weight: Option<u64>,
+            new_last_vote_weight_update: Option<T::BlockNumber>,
+            new_revocations: Option<(Vec<T::BlockNumber>, Vec<T::Balance>)>
+        ) {
             let key = (nominator, nominee);
-            ensure!(<NominationRecords<T>>::exists(&key), "The NominationRecord must already exist.");
-            <NominationRecords<T>>::insert(&key, new);
+            if let Some(old) = <NominationRecords<T>>::get(&key) {
+                <NominationRecords<T>>::insert(
+                    &key,
+                    NominationRecord::new(
+                        new_nomination.unwrap_or(old.nomination),
+                        new_last_vote_weight.unwrap_or(old.last_vote_weight),
+                        new_last_vote_weight_update.unwrap_or(old.last_vote_weight_update),
+                        if let Some((a, b)) = new_revocations {
+                            a.into_iter().zip(b.into_iter()).collect()
+                        } else {
+                            old.revocations
+                        }
+                    ),
+                );
+            } else {
+                return Err("The NominationRecord must already exist.");
+            }
         }
 
-        fn set_intention_profs(intention: T::AccountId, new: IntentionProfs<T::Balance, T::BlockNumber>) {
+        fn set_intention_profs(
+            intention: T::AccountId,
+            new_total_nomination: Option<T::Balance>,
+            new_last_total_vote_weight: Option<u64>,
+            new_last_total_vote_weight_update: Option<T::BlockNumber>
+        ) {
             ensure!(<Intentions<T>>::exists(&intention), "The IntentionProfs must already exist.");
-            <Intentions<T>>::insert(&intention, new);
+            let old = <Intentions<T>>::get(&intention);
+            <Intentions<T>>::insert(
+                &intention,
+                IntentionProfs::new(
+                    new_total_nomination.unwrap_or(old.total_nomination),
+                    new_last_total_vote_weight.unwrap_or(old.last_total_vote_weight),
+                    new_last_total_vote_weight_update.unwrap_or(old.last_total_vote_weight_update)
+                )
+            );
         }
 
-        fn set_nomination_record_v1(nominator: T::AccountId, nominee: T::AccountId, new: NominationRecordV1<T::Balance, T::BlockNumber>) {
+        fn set_nomination_record_v1(
+            nominator: T::AccountId,
+            nominee: T::AccountId,
+            new_nomination: Option<T::Balance>,
+            new_last_vote_weight: Option<u128>,
+            new_last_vote_weight_update: Option<T::BlockNumber>,
+            new_revocations: Option<(Vec<T::BlockNumber>, Vec<T::Balance>)>
+        ) {
             let key = (nominator, nominee);
-            ensure!(<NominationRecordsV1<T>>::exists(&key), "The NominationRecordV1 must already exist.");
-            <NominationRecordsV1<T>>::insert(&key, new);
+            if let Some(old) = <NominationRecordsV1<T>>::get(&key) {
+                <NominationRecordsV1<T>>::insert(
+                    &key,
+                    NominationRecordV1::new(
+                        new_nomination.unwrap_or(old.nomination),
+                        new_last_vote_weight.unwrap_or(old.last_vote_weight),
+                        new_last_vote_weight_update.unwrap_or(old.last_vote_weight_update),
+                        if let Some((a, b)) = new_revocations {
+                            a.into_iter().zip(b.into_iter()).collect()
+                        } else {
+                            old.revocations
+                        }
+                    ),
+                );
+            } else {
+                return Err("The NominationRecordV1 must already exist.");
+            }
         }
 
-        fn set_intention_profs_v1(intention: T::AccountId, new: IntentionProfsV1<T::Balance, T::BlockNumber>) {
-            ensure!(<IntentionsV1<T>>::exists(&intention), "The IntentionProfsV1 must already exist.");
-            <IntentionsV1<T>>::insert(&intention, new);
+        fn set_intention_profs_v1(
+            intention: T::AccountId,
+            new_total_nomination: Option<T::Balance>,
+            new_last_total_vote_weight: Option<u128>,
+            new_last_total_vote_weight_update: Option<T::BlockNumber>
+        ) {
+            ensure!(<IntentionsV1<T>>::exists(&intention), "The IntentionProfs must already exist.");
+            let old = <IntentionsV1<T>>::get(&intention);
+            <IntentionsV1<T>>::insert(
+                &intention,
+                IntentionProfsV1::new(
+                    new_total_nomination.unwrap_or(old.total_nomination),
+                    new_last_total_vote_weight.unwrap_or(old.last_total_vote_weight),
+                    new_last_total_vote_weight_update.unwrap_or(old.last_total_vote_weight_update)
+                )
+            );
         }
+
 
         /// Remove the zombie intentions.
         fn remove_zombie_intentions(zombies: Vec<T::AccountId>) {
@@ -856,13 +927,13 @@ impl<T: Trait> Module<T> {
 
     pub fn intention_info_common_of(
         who: &T::AccountId,
-    ) -> Option<IntentionInfoCommon<T::AccountId, T::Balance, T::SessionKey>> {
+    ) -> Option<IntentionInfoCommon<T::AccountId, T::Balance, T::SessionKey, T::BlockNumber>> {
         if Self::is_intention(who) {
             let validators = Self::validators()
                 .into_iter()
                 .map(|(a, _)| a)
                 .collect::<Vec<_>>();
-            let session_key = xaccounts::Module::<T>::intention_props_of(who).session_key;
+            let intention_props = xaccounts::Module::<T>::intention_props_of(who);
             let jackpot_account = Self::jackpot_accountid_for_unsafe(who);
             let jackpot_balance = xassets::Module::<T>::pcx_free_balance(&jackpot_account);
             Some(IntentionInfoCommon {
@@ -870,7 +941,7 @@ impl<T: Trait> Module<T> {
                 name: <xaccounts::IntentionNameOf<T>>::get(who),
                 self_bonded: Self::self_bonded_of(who),
                 is_validator: validators.contains(who),
-                session_key,
+                intention_props,
                 jackpot_account,
                 jackpot_balance,
             })
@@ -880,7 +951,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn intentions_info_common(
-    ) -> Vec<IntentionInfoCommon<T::AccountId, T::Balance, T::SessionKey>> {
+    ) -> Vec<IntentionInfoCommon<T::AccountId, T::Balance, T::SessionKey, T::BlockNumber>> {
         Self::intention_set()
             .iter()
             .map(|i| Self::intention_info_common_of(i).unwrap())

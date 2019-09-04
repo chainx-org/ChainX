@@ -4367,6 +4367,7 @@ dependencies = [
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate)",
  "sr-version 2.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "srml-system 2.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-client 2.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-consensus-common 2.0.0 (git+https://github.com/chainpool/substrate)",
  "substrate-executor 2.0.0 (git+https://github.com/chainpool/substrate)",

@@ -7,6 +7,9 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     #[rpc(name = "chainx_getBlockByNumber")]
     fn block_info(&self, number: Option<Number>) -> Result<Option<SignedBlock>>;
 
+    #[rpc(name = "chainx_getExtrinsicsEventsByBlockHash")]
+    fn extrinsics_events(&self, hash: Option<Hash>) -> Result<Value>;
+
     #[rpc(name = "chainx_getNextRenominateByAccount")]
     fn next_renominate(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<BlockNumber>>;
 

@@ -19,6 +19,7 @@ use super::{BlockHashFor, BlockHeaderFor, Module, Trait};
 
 pub use self::header_proof::HeaderVerifier;
 
+#[derive(PartialEq, Eq)]
 pub enum ChainErr {
     /// Unknown parent
     UnknownParent,

@@ -544,10 +544,10 @@ impl_runtime_apis! {
         fn intention_set() -> Vec<AccountId> {
             XStaking::intention_set()
         }
-        fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>> {
+        fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber >> {
             XStaking::intentions_info_common()
         }
-        fn intention_info_common_of(who: &AccountId) -> Option<xstaking::IntentionInfoCommon<AccountId, Balance, AccountId>> {
+        fn intention_info_common_of(who: &AccountId) -> Option<xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber>> {
             XStaking::intention_info_common_of(who)
         }
     }
