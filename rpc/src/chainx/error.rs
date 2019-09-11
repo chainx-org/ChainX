@@ -21,6 +21,10 @@ error_chain! {
             description("Not has this chain id"),
             display("Not has this chain id"),
         }
+        BlockNumberErr {
+            description("BlockNumber not exist for this hash"),
+            display("BlockNumber not exist for this hash"),
+        }
         /// Get certlist failed
         CertNameErr {
             description("Get cert name list failed"),
@@ -70,7 +74,7 @@ error_chain! {
             display("Decode Hex Err"),
         }
         /// Execution error.
-        Execution(e: Box<state_machine::Error>) {
+        Execution(e: Box<dyn state_machine::Error>) {
             description("state execution error"),
             display("Execution: {}", e),
         }
@@ -78,13 +82,25 @@ error_chain! {
             description("runtime error"),
             display("error: {:}", str::from_utf8(&e).unwrap_or_default()),
         }
+        DeprecatedV0Err(deprecated: String) {
+            description("Deprecated Error"),
+            display("{:} is Deprecated, Please Use {:}V1 Instead", deprecated, deprecated),
+        }
+        CacheErr {
+            description("Cache fetch lock error"),
+            display("Cache fetch lock error"),
+        }
+        StorageNotExistErr {
+            description("Storage record does not exist or not in archive"),
+            display("Storage record does not exist or not in archive")
+        }
     }
 }
 
 const ERROR: i64 = 1600;
 
-impl From<Box<state_machine::Error>> for Error {
-    fn from(e: Box<state_machine::Error>) -> Self {
+impl From<Box<dyn state_machine::Error>> for Error {
+    fn from(e: Box<dyn state_machine::Error>) -> Self {
         ErrorKind::Execution(e).into()
     }
 }
@@ -161,6 +177,16 @@ impl From<Error> for rpc::Error {
                 ),
                 data: None,
             },
+            Error(ErrorKind::DeprecatedV0Err(e), _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 14),
+                message: format!("{:} is Deprecated, Please Use {:}V1 Instead", e, e),
+                data: None,
+            },
+            Error(ErrorKind::StorageNotExistErr, _) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 15),
+                message: "Storage record does not exist or not in archive".into(),
+                data: None,
+            },
             e => errors::internal(e),
         }
     }
@@ -168,7 +194,7 @@ impl From<Error> for rpc::Error {
 
 impl Error {
     /// Chain a state error.
-    pub fn from_state(e: Box<state_machine::Error + Send>) -> Self {
+    pub fn from_state(e: Box<dyn state_machine::Error + Send>) -> Self {
         ErrorKind::Execution(e).into()
     }
 }

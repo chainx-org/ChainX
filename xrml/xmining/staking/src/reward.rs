@@ -1,3 +1,5 @@
+// Copyright 2018-2019 Chainpool.
+
 use super::*;
 use rstd::convert::TryInto;
 use rstd::result;

@@ -2072,6 +2072,7 @@ dependencies = [
  "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
  "xrml-xdex-spot 1.0.0",
+ "xrml-xmining-staking 1.0.0",
  "xrml-xsupport 1.0.0",
 ]
 
@@ -3792,9 +3793,11 @@ dependencies = [
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-system 2.0.0 (git+https://github.com/chainpool/substrate)",
  "srml-timestamp 2.0.0 (git+https://github.com/chainpool/substrate)",
+ "xrml-xaccounts 1.0.0",
  "xrml-xassets-assets 1.0.0",
  "xrml-xbridge-bitcoin 1.0.1",
  "xrml-xbridge-common 1.0.0",
+ "xrml-xbridge-features 1.0.0",
  "xrml-xbridge-sdot 1.0.0",
  "xrml-xdex-spot 1.0.0",
  "xrml-xmining-staking 1.0.0",

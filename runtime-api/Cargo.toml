@@ -20,6 +20,7 @@ xprocess = { package = "xrml-xassets-process", path = "../xrml/xassets/process",
 xspot= { package = "xrml-xdex-spot", path = "../xrml/xdex/spot",  default-features = false }
 xbridge-common = { package = "xrml-xbridge-common", path = "../xrml/xbridge/common",  default-features = false }
 xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin",  default-features = false }
+xstaking = { package = "xrml-xmining-staking", path = "../xrml/xmining/staking", default-features = false }
 
 [features]
 default = ["std"]

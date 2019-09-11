@@ -177,7 +177,11 @@ impl<
         let l = uxt.encode().len();
         match Self::apply_extrinsic_with_len(uxt, l, None) {
             Ok(internal::ApplyOutcome::Success) => (),
-            Ok(internal::ApplyOutcome::Fail(e)) => runtime_io::print(e),
+            Ok(internal::ApplyOutcome::Fail(e)) => {
+                use xsupport::error;
+                runtime_io::print(e);
+                error!("[apply_extrinsic] failed: {}", e);
+            },
             Err(internal::ApplyError::CantPay) => panic!("All extrinsics should have sender able to pay their fees"),
             Err(internal::ApplyError::BadSignature(_)) => panic!("All extrinsics should be properly signed"),
             Err(internal::ApplyError::Stale) | Err(internal::ApplyError::Future) => panic!("All extrinsics should have the correct nonce"),
@@ -212,11 +216,20 @@ impl<
         // decode parameters
         let (f, s) = xt.deconstruct();
 
+        if let Some(ref sender) = s {
+            // blocked check
+            let blocked = <xaccounts::Module<System>>::blocked_accounts();
+            if blocked.contains(sender) {
+                return Err(internal::ApplyError::NotAllow);
+            }
+        }
+
         if signed_extrinsic {
+            // fee check
             let acc = acc.unwrap();
             let switcher = <xfee_manager::Module<System>>::switcher();
-            let method_weight_map = <xfee_manager::Module<System>>::method_call_weight();
-            if let Some(weight) = f.check_fee(switcher, method_weight_map) {
+            let method_call_weight = <xfee_manager::Module<System>>::method_call_weight();
+            if let Some(weight) = f.check_fee(switcher, method_call_weight) {
                 // pay any fees.
                 Payment::make_payment(&s.clone().unwrap(), encoded_len, weight, acc.as_() as u32).map_err(|_| internal::ApplyError::CantPay)?;
 
@@ -277,6 +290,7 @@ impl<
         const INVALID_INDEX: i8 = -10;
         const ACC_ERROR: i8 = -30;
         const NOT_ALLOW: i8 = -1;
+        const BLOCKED_SENDER: i8 = -2;
 
         let encoded_len = uxt.encode().len();
 
@@ -331,6 +345,16 @@ impl<
 
         let acc = xt.acceleration().unwrap();
         let (f, s) = xt.deconstruct();
+
+        if let Some(ref sender) = s {
+            // blocked check
+            let blocked = <xaccounts::Module<System>>::blocked_accounts();
+            if blocked.contains(sender) {
+                return TransactionValidity::Invalid(BLOCKED_SENDER as i8);
+            }
+        }
+
+        // fee check
         let switcher = <xfee_manager::Module<System>>::switcher();
         let method_call_weight = <xfee_manager::Module<System>>::method_call_weight();
         if let Some(fee_power) = f.check_fee(switcher, method_call_weight) {

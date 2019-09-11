@@ -442,4 +442,3 @@ pub type XSpot = xspot::Module<Test>;
 pub type XRecords = xrecords::Module<Test>;
 pub type XBridgeFeatures = xbridge_features::Module<Test>;
 pub type XTokens = Module<Test>;
-pub type XBridgeFeatures = xbridge_features::Module<Test>;

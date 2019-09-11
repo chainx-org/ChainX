@@ -42,7 +42,7 @@ error_chain! {
             display("Invalid extrinsic format"),
         }
         /// Verification error
-        Verification(e: Box<::std::error::Error + Send>) {
+        Verification(e: Box<dyn ::std::error::Error + Send>) {
             description("extrinsic verification error"),
             display("Extrinsic verification error: {}", e.description()),
         }

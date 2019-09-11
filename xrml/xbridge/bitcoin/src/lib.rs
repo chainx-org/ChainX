@@ -299,6 +299,21 @@ decl_module! {
             T::TrusteeMultiSigProvider::check_multisig(&from)?;
             Self::remove_pending(addr, who)
         }
+
+        /// Dangerous! Be careful to set BestIndex
+        pub fn set_best_index(hash: H256) {
+            warn!("[set_best_index]|Dangerous! set new best index|hash:{:?}", hash);
+            BestIndex::<T>::put(hash);
+        }
+
+        pub fn set_header_confirmed_state(hash: H256, confirmed: bool) {
+            BlockHeaderFor::<T>::mutate(hash, |info| {
+                if let Some(info) = info {
+                    warn!("[set_header_confirmed_state]|modify header confirmed state|hash:{:?}|confirmed:{:}", hash, confirmed);
+                    info.confirmed = confirmed;
+                }
+            })
+        }
     }
 }
 

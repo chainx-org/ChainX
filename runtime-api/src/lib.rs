@@ -2,6 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use rstd::collections::btree_map::BTreeMap;
 use rstd::prelude::Vec;
 use sr_primitives::traits::AuthorityIdFor;
 
@@ -61,6 +62,8 @@ pub mod xfee_api {
     decl_runtime_apis! {
         pub trait XFeeApi {
             fn transaction_fee(call: Vec<u8>, encoded_len: u64) -> Option<u64>;
+
+            fn fee_weight_map() -> BTreeMap<Vec<u8>, u64>;
         }
     }
 }
@@ -81,13 +84,17 @@ pub mod xstaking_api {
     decl_runtime_apis! {
         pub trait XStakingApi {
             fn intention_set() -> Vec<AccountIdForApi>;
+            // T::SessionKey should use AuthorityId here and ChainX is able to compile, but the tool depdendent on ChainX fails to compile when using AuthorityId.
+            // 2019-05-25: Compile ERROR: the return type of a function must have a statically known size
+            // 2019-07-15 ChainX is able compile, but the tool depdendent on ChainX is unable to compile.
+            fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi, BlockNumber>>;
+            fn intention_info_common_of(intention: &AccountIdForApi) -> Option<xstaking::IntentionInfoCommon<AccountIdForApi, Balance, AccountIdForApi, BlockNumber>>;
         }
     }
 }
 
 pub mod xbridge_api {
     use super::*;
-    use rstd::collections::btree_map::BTreeMap;
     use xassets::Chain;
     use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
     decl_runtime_apis! {

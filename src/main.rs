@@ -37,7 +37,7 @@ impl chainx_cli::IntoExit for Exit {
 fn combine_conf(
     cmd_args: Vec<String>,
     path: &std::path::Path,
-) -> Result<Vec<String>, Box<std::error::Error>> {
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let opts_from_cmd = cmd_args
         .iter()
         .filter(|i| i.starts_with("--"))

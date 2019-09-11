@@ -15,8 +15,7 @@ RUN apt-get update && \
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH=$PATH:$HOME/.cargo/bin && \
-    rustup toolchain install nightly-x86_64-unknown-linux-gnu && \
-    cargo +nightly build --$PROFILE
+    cargo build --$PROFILE
 
 # ===== SECOND STAGE ======
 
