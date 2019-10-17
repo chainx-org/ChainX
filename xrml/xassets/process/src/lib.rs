@@ -68,7 +68,7 @@ decl_module! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as Withdrawal {
+    trait Store for Module<T: Trait> as XAssetsProcess {
         TokenBlackList get(token_black_list) config(): Vec<Token>;
     }
 }
