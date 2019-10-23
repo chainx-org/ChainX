@@ -95,15 +95,15 @@ macro_rules! intention_profs {
                 }
             }
 
-            impl<Balance: Default + As<u64> + Clone, BlockNumber: Default + As<u64> + Clone>
+            impl<Balance: Default + Into<u64> + From<u64> + Clone, BlockNumber: Default + primitives::traits::SimpleArithmetic + Clone>
                 $weight_base_trait<BlockNumber> for $struct_name<Balance, BlockNumber>
             {
                 fn amount(&self) -> u64 {
-                    self.total_nomination.clone().as_()
+                    self.total_nomination.clone().into()
                 }
 
                 fn set_amount(&mut self, new: u64) {
-                    self.total_nomination = Balance::sa(new);
+                    self.total_nomination = new.into();
                 }
 
                 fn last_acum_weight(&self) -> $weight_type {
@@ -115,7 +115,7 @@ macro_rules! intention_profs {
                 }
 
                 fn last_acum_weight_update(&self) -> u64 {
-                    self.last_total_vote_weight_update.clone().as_()
+                    self.last_total_vote_weight_update.clone().saturated_into::<u64>()
                 }
 
                 fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
@@ -123,7 +123,7 @@ macro_rules! intention_profs {
                 }
             }
 
-            impl<Balance: Default + Clone + As<u64>, BlockNumber: Default + Clone + As<u64>>
+            impl<Balance: Default + Clone + Into<u64> + From<u64>, BlockNumber: Default + Clone + primitives::traits::SimpleArithmetic>
                 $weight_trait<BlockNumber> for $struct_name<Balance, BlockNumber>
             {
             }
@@ -148,15 +148,14 @@ impl<Balance: Default, BlockNumber: Default> From<IntentionProfs<Balance, BlockN
     }
 }
 
-impl<
-        Balance: Default + As<u64> + Copy,
-        BlockNumber: Default + As<u64> + SimpleArithmetic + Copy,
-    > IntentionProfsV1<Balance, BlockNumber>
+impl<Balance: Default + Into<u64> + Copy, BlockNumber: Default + SimpleArithmetic + Copy>
+    IntentionProfsV1<Balance, BlockNumber>
 {
     pub fn settle_latest_vote_weight_safe(&self, current_block: BlockNumber) -> u128 {
         assert!(current_block >= self.last_total_vote_weight_update);
         let duration = current_block - self.last_total_vote_weight_update;
-        u128::from(self.total_nomination.as_()) * u128::from(duration.as_())
+        u128::from(self.total_nomination.saturated_into::<u64>())
+            * u128::from(duration.saturated_into::<u64>())
             + self.last_total_vote_weight
     }
 }
@@ -188,15 +187,15 @@ macro_rules! nomination_record {
                 }
             }
 
-            impl<Balance: Default + As<u64> + Clone, BlockNumber: Default + As<u64> + Clone>
+            impl<Balance: Default + Into<u64> + From<u64> + Clone, BlockNumber: Default + primitives::traits::SimpleArithmetic + Clone>
                 $weight_base_trait<BlockNumber> for $struct_name<Balance, BlockNumber>
             {
                 fn amount(&self) -> u64 {
-                    self.nomination.clone().as_()
+                    self.nomination.clone().into()
                 }
 
                 fn set_amount(&mut self, new: u64) {
-                    self.nomination = Balance::sa(new);
+                    self.nomination = new.into();
                 }
 
                 fn last_acum_weight(&self) -> $weight_type {
@@ -208,7 +207,7 @@ macro_rules! nomination_record {
                 }
 
                 fn last_acum_weight_update(&self) -> u64 {
-                    self.last_vote_weight_update.clone().as_()
+                    self.last_vote_weight_update.clone().saturated_into::<u64>()
                 }
 
                 fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
@@ -216,7 +215,7 @@ macro_rules! nomination_record {
                 }
             }
 
-            impl<Balance: Default + As<u64> + Clone, BlockNumber: Default + As<u64> + Clone>
+            impl<Balance: Default + Clone + Into<u64> + From<u64>, BlockNumber: Default + primitives::traits::SimpleArithmetic + Clone>
                 $weight_trait<BlockNumber> for $struct_name<Balance, BlockNumber>
             {
             }
@@ -229,8 +228,8 @@ nomination_record! {
     NominationRecordV1 : (VoteWeightBaseV1, VoteWeightV1) => u128;
 }
 
-impl<Balance: Default, BlockNumber: Default> From<NominationRecord<Balance, BlockNumber>>
-    for NominationRecordV1<Balance, BlockNumber>
+impl<Balance: Default + Into<u64>, BlockNumber: Default>
+    From<NominationRecord<Balance, BlockNumber>> for NominationRecordV1<Balance, BlockNumber>
 {
     fn from(record: NominationRecord<Balance, BlockNumber>) -> Self {
         NominationRecordV1 {
@@ -242,15 +241,14 @@ impl<Balance: Default, BlockNumber: Default> From<NominationRecord<Balance, Bloc
     }
 }
 
-impl<
-        Balance: Default + As<u64> + Copy,
-        BlockNumber: Default + As<u64> + SimpleArithmetic + Copy,
-    > NominationRecordV1<Balance, BlockNumber>
+impl<Balance: Default + Into<u64> + Copy, BlockNumber: Default + SimpleArithmetic + Copy>
+    NominationRecordV1<Balance, BlockNumber>
 {
     pub fn settle_latest_vote_weight_safe(&self, current_block: BlockNumber) -> u128 {
         assert!(current_block >= self.last_vote_weight_update);
         let duration = current_block - self.last_vote_weight_update;
-        u128::from(self.nomination.as_()) * u128::from(duration.as_()) + self.last_vote_weight
+        u128::from(self.nomination.into()) * u128::from(duration.saturated_into::<u64>())
+            + self.last_vote_weight
     }
 }
 

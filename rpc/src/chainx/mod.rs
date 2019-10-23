@@ -44,7 +44,7 @@ use xtokens::*;
 
 pub use self::cache::set_cache_flag;
 pub use self::chainx_trait::ChainXApi;
-use self::error::{ErrorKind, Result};
+use self::error::{Error, Result};
 pub use self::types::*;
 
 /// Wrap runtime apis in ChainX API.
@@ -108,7 +108,7 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> result::Result<BlockId<Block>, client::error::Error> {
         Ok(BlockId::Hash(
-            hash.unwrap_or(self.client.info()?.chain.best_hash),
+            hash.unwrap_or(self.client.info().chain.best_hash),
         ))
     }
 
@@ -118,14 +118,14 @@ where
         number: Option<NumberFor<Block>>,
     ) -> result::Result<BlockId<Block>, client::error::Error> {
         let hash = match number {
-            None => self.client.info()?.chain.best_hash,
+            None => self.client.info().chain.best_hash,
             Some(number) => self
                 .client
                 .header(&BlockId::number(number))?
                 .map(|h| h.hash())
-                .unwrap_or(self.client.info()?.chain.best_hash),
+                .unwrap_or(self.client.info().chain.best_hash),
         };
-        Ok(BlockId::Hash(hash))
+        Ok(BlockId::hash(hash))
     }
 
     /// Get chain state from client given the block hash.
@@ -148,7 +148,7 @@ where
     ) -> result::Result<Option<ReturnValue>, error::Error> {
         Ok(state
             .storage(&Self::storage_key(key, hasher).0)
-            .map_err(|e| error::Error::from_state(Box::new(e)))?
+            .map_err(|e| client::error::Error::from_state(Box::new(e)))?
             .map(StorageData)
             .map(|s| Decode::decode(&mut s.0.as_slice()))
             .unwrap_or(None))
@@ -166,7 +166,7 @@ where
         } else if let Some(v1) = Self::pickout::<V1>(state, key_v1, hasher)? {
             Ok(Err(v1))
         } else {
-            Err(ErrorKind::StorageNotExistErr.into())
+            Err(error::Error::StorageNotExistErr.into())
         }
     }
 

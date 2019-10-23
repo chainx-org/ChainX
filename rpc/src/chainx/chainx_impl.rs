@@ -11,7 +11,9 @@ use rustc_hex::FromHex;
 // substrate
 use primitives::{Blake2Hasher, H160, H256};
 use runtime_primitives::generic::SignedBlock;
-use runtime_primitives::traits::{As, Block as BlockT, NumberFor, ProvideRuntimeApi};
+use runtime_primitives::traits::{
+    Block as BlockT, NumberFor, ProvideRuntimeApi, SaturatedConversion,
+};
 
 // chainx
 use chainx_runtime::Call;
@@ -56,13 +58,13 @@ where
     }
 
     fn extrinsics_events(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Value> {
-        let hash = hash.unwrap_or(self.client.info()?.chain.best_hash);
+        let hash = hash.unwrap_or(self.client.info().chain.best_hash);
         let state = self.state_at(Some(hash))?;
         let number = if let Some(header) = self.client.header(&BlockId::Hash(hash))? {
             println!("header:{:?}", header);
             *header.number()
         } else {
-            return Err(ErrorKind::BlockNumberErr.into());
+            return Err(error::Error::BlockNumberErr.into());
         };
 
         let key = "System Events".as_bytes();
@@ -98,7 +100,7 @@ where
                 "number": number,
             }))
         } else {
-            Err(ErrorKind::StorageNotExistErr.into())
+            Err(Error::StorageNotExistErr.into())
         }
     }
 
@@ -131,7 +133,8 @@ where
         let state = self.state_at(hash)?;
         let block_id = self.block_id_by_hash(hash)?;
 
-        let block_number = self.client.header(&block_id)?.unwrap().number().as_();
+        let block_number =
+            (*self.client.header(&block_id)?.unwrap().number()).saturated_into::<u64>();
 
         let mut dividends = Vec::new();
 
@@ -164,7 +167,8 @@ where
         let block_id = self.block_id_by_hash(hash)?;
         let who: AccountId = who.unchecked_into();
 
-        let block_number = self.client.header(&block_id)?.unwrap().number().as_();
+        let block_number =
+            (*self.client.header(&block_id)?.unwrap().number()).saturated_into::<u64>();
 
         let mut dividends = Vec::new();
 
@@ -326,7 +330,7 @@ where
             let key = <xbitcoin::BtcMinDeposit<Runtime>>::key();
             Self::pickout::<u64>(&state, &key, Hasher::TWOX128).map(|value| {
                 Some(DepositLimit {
-                    minimal_deposit: value.unwrap_or(As::sa(100000)),
+                    minimal_deposit: value.unwrap_or(100000),
                 })
             })
         } else {
@@ -372,9 +376,7 @@ where
         let mut records = Vec::new();
         for (nominee, record_wrapper) in self.get_nomination_records_wrapper(who, hash)? {
             if record_wrapper.0.is_err() {
-                return Err(
-                    ErrorKind::DeprecatedV0Err("chainx_getNominationRecords".into()).into(),
-                );
+                return Err(Error::DeprecatedV0Err("chainx_getNominationRecords".into()).into());
             }
             records.push((nominee.into(), record_wrapper.into()));
         }
@@ -407,9 +409,7 @@ where
         let info_wrapper = self.get_intention_info_wrapper(&state, (block_id, hash), who)?;
         if let Some(ref info) = info_wrapper {
             if info.intention_profs_wrapper.is_err() {
-                return Err(
-                    ErrorKind::DeprecatedV0Err("chainx_getIntentionByAccount".into()).into(),
-                );
+                return Err(Error::DeprecatedV0Err("chainx_getIntentionByAccount".into()).into());
             }
         }
         Ok(info_wrapper.map(Into::into))
@@ -440,7 +440,7 @@ where
         let mut intentions_info = Vec::new();
         for info_wrapper in self.get_intentions_info_wrapper(&state, (block_id, hash))? {
             if info_wrapper.intention_profs_wrapper.is_err() {
-                return Err(ErrorKind::DeprecatedV0Err("chainx_getIntentions".into()).into());
+                return Err(Error::DeprecatedV0Err("chainx_getIntentions".into()).into());
             }
             intentions_info.push(info_wrapper.into());
         }
@@ -478,7 +478,7 @@ where
         let mut psedu_intentions_info = Vec::new();
         for info_wrapper in self.get_psedu_intentions_info_wrapper(&state, block_id)? {
             if info_wrapper.psedu_intention_profs_wrapper.is_err() {
-                return Err(ErrorKind::DeprecatedV0Err("chainx_getPseduIntentions".into()).into());
+                return Err(Error::DeprecatedV0Err("chainx_getPseduIntentions".into()).into());
             }
             psedu_intentions_info.push(info_wrapper.into());
         }
@@ -513,7 +513,7 @@ where
         for record_wrapper in self.get_psedu_nomination_records_wrapper(&state, who)? {
             if record_wrapper.deposit_vote_weight_wrapper.is_err() {
                 return Err(
-                    ErrorKind::DeprecatedV0Err("chainx_getPseduNominationRecords".into()).into(),
+                    Error::DeprecatedV0Err("chainx_getPseduNominationRecords".into()).into(),
                 );
             }
             psedu_records.push(record_wrapper.into());
@@ -605,7 +605,7 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<QuotationsList>> {
         if piece < 1 || piece > 10 {
-            return Err(ErrorKind::QuotationsPieceErr.into());
+            return Err(Error::QuotationsPieceErr(pair_index).into());
         }
 
         let mut quotationslist = QuotationsList::default();
@@ -689,7 +689,7 @@ where
                 }
             };
         } else {
-            return Err(ErrorKind::TradingPairIndexErr.into());
+            return Err(Error::TradingPairIndexErr(pair_index).into());
         }
 
         Ok(Some(quotationslist))
@@ -703,7 +703,7 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<PageData<OrderDetails>>> {
         if page_size > MAX_PAGE_SIZE || page_size < 1 {
-            return Err(ErrorKind::PageSizeErr.into());
+            return Err(Error::PageSizeErr(page_size).into());
         }
 
         let mut orders = Vec::new();
@@ -733,7 +733,7 @@ where
             page_total = total_page;
 
             if page_index >= total_page && total_page > 0 {
-                return Err(ErrorKind::PageIndexErr.into());
+                return Err(Error::PageIndexErr(page_index).into());
             }
         }
 
@@ -784,7 +784,7 @@ where
                     None => Ok(Some(vec![])),
                 }
             }
-            _ => Err(ErrorKind::RuntimeErr(b"not support for this chain".to_vec()).into()),
+            _ => Err(Error::RuntimeErr(b"not support for this chain".to_vec()).into()),
         }
     }
 
@@ -820,17 +820,17 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<u64>> {
         if !call_params.starts_with("0x") {
-            return Err(ErrorKind::BinanryStartErr.into());
+            return Err(Error::BinaryStartErr.into());
         }
         let call_params: Vec<u8> = if let Ok(hex_call) = call_params[2..].from_hex() {
             hex_call
         } else {
-            return Err(ErrorKind::HexDecodeErr.into());
+            return Err(Error::HexDecodeErr.into());
         };
         let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
             call
         } else {
-            return Err(ErrorKind::DecodeErr.into());
+            return Err(Error::DecodeErr.into());
         };
 
         let transaction_fee =
@@ -902,7 +902,7 @@ where
 
         runtime_result
             .map(|all_session_info| parse_trustee_session_info(Chain::Bitcoin, 0, all_session_info))
-            .map_err(|e| ErrorKind::RuntimeErr(e).into())
+            .map_err(|e| Error::RuntimeErr(e).into())
     }
 
     fn particular_accounts(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Option<Value>> {
@@ -936,12 +936,12 @@ where
 
 fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {
     if page_size == 0 {
-        return Err(ErrorKind::PageSizeErr.into());
+        return Err(Error::PageSizeErr(page_size).into());
     }
 
     let page_total = (src.len() as u32 + (page_size - 1)) / page_size;
     if page_index >= page_total && page_total > 0 {
-        return Err(ErrorKind::PageIndexErr.into());
+        return Err(Error::PageIndexErr(page_index).into());
     }
 
     let mut list = vec![];

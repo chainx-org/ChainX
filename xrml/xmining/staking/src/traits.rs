@@ -138,7 +138,7 @@ macro_rules! decl_vote_weight_trait {
     ( $($weight_trait:ident: $weight_base_trait:ident => $weight_type:ty;)+ ) => {
         $(
             /// Define the get and set methods for the vote weight operations.
-            pub trait $weight_base_trait<BlockNumber: As<u64>> {
+            pub trait $weight_base_trait<BlockNumber> {
                 fn amount(&self) -> u64;
                 fn set_amount(&mut self, new: u64);
 
@@ -150,7 +150,7 @@ macro_rules! decl_vote_weight_trait {
             }
 
             /// General logic for stage changes of the vote weight operations.
-            pub trait $weight_trait<BlockNumber: As<u64>>: $weight_base_trait<BlockNumber> {
+            pub trait $weight_trait<BlockNumber>: $weight_base_trait<BlockNumber> {
                 /// Set the new amount after settling the change of nomination.
                 fn settle_and_set_amount(&mut self, delta: &Delta) {
                     let new = match *delta {

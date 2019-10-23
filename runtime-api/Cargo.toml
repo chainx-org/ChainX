@@ -6,9 +6,9 @@ edition = "2018"
 
 [dependencies]
 # substrate
-client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", default-features = false }
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
-sr-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
+client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+sr-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 # chainx
 chainx-primitives = { path = "../primitives", default-features = false }
 xr-primitives = { path = "../xr-primitives", default-features = false }

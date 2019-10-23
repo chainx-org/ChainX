@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -14,28 +14,44 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Error helpers for Chain RPC module.
+
 use crate::errors;
 use crate::rpc;
 use client;
-use error_chain::*;
 
-error_chain! {
-    foreign_links {
-        Client(client::error::Error) #[doc = "Client error"];
-    }
-    errors {
-        /// Not implemented yet
-        Unimplemented {
-            description("not yet implemented"),
-            display("Method Not Implemented"),
+/// Chain RPC Result type.
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Chain RPC errors.
+#[derive(Debug, derive_more::Display, derive_more::From)]
+pub enum Error {
+    /// Client error.
+    Client(client::error::Error),
+    /// Other error type.
+    Other(String),
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Client(ref err) => Some(err),
+            _ => None,
         }
     }
 }
 
+/// Base error code for all chain errors.
+const BASE_ERROR: i64 = 3000;
+
 impl From<Error> for rpc::Error {
     fn from(e: Error) -> Self {
         match e {
-            Error(ErrorKind::Unimplemented, _) => errors::unimplemented(),
+            Error::Other(message) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(BASE_ERROR + 1),
+                message,
+                data: None,
+            },
             e => errors::internal(e),
         }
     }

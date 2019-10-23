@@ -6,14 +6,14 @@ pub use num_traits::{
     Bounded, One, Zero,
 };
 
-use runtime_primitives::traits::{As, MaybeDisplay, Member, SimpleArithmetic};
+use runtime_primitives::traits::{MaybeDisplay, Member, SimpleArithmetic};
 
 /// Work together with sr_primitives::traits::Applyable
 pub trait Accelerable: Sized + Send + Sync {
     type AccountId: Member + MaybeDisplay;
     type Index: Member + MaybeDisplay + SimpleArithmetic;
     type Call: Member;
-    type Acceleration: Member + MaybeDisplay + SimpleArithmetic + Copy + As<u64>;
+    type Acceleration: Member + MaybeDisplay + SimpleArithmetic + Copy + Into<u32> + From<u32>;
 
     fn acceleration(&self) -> Option<Self::Acceleration>;
 }

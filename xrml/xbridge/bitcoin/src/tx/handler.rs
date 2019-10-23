@@ -1,7 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 
 // Substrate
-use primitives::traits::As;
 use rstd::{prelude::Vec, result};
 use support::{dispatch::Result, StorageMap, StorageValue};
 
@@ -225,7 +224,7 @@ impl TxHandler {
             deposit_account,
             xassets::Chain::Bitcoin,
             Module::<T>::TOKEN.to_vec(),
-            As::sa(deposit_balance),
+            deposit_balance.into(),
             original_opreturn,
             input_addr.map(|addr| addr2vecu8(&addr)).unwrap_or_default(), // unwrap is no input addr
             self.tx_hash.as_bytes().to_vec(),
@@ -297,7 +296,7 @@ fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>, inpu
 
 pub fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
     let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
-    let _ = <xrecords::Module<T>>::deposit(&who, &token, As::sa(balance)).map_err(|e| {
+    let _ = <xrecords::Module<T>>::deposit(&who, &token, balance.into()).map_err(|e| {
         error!(
             "call xrecores to deposit error!, must use root to fix this error. reason:{:?}",
             e
@@ -348,7 +347,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::Accoun
                 who.clone(),
                 xassets::Chain::Bitcoin,
                 Module::<T>::TOKEN.to_vec(),
-                As::sa(r.balance),
+                r.balance.into(),
                 addr2vecu8(input_address),
             ));
         }

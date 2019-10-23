@@ -5,5 +5,5 @@ authors = ["Chainpool <http://www.chainx.org>"]
 edition = "2018"
 
 [dependencies]
-substrate-executor = { git = "https://github.com/chainpool/substrate" }
+substrate-executor = { git = "https://github.com/chainpool/substrate", branch="chainx-master" }
 chainx-runtime = { path = "../runtime" }

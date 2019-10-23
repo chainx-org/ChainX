@@ -71,9 +71,9 @@ impl<T: Trait> Module<T> {
     }
 
     fn reward_of_per_block(session_reward: T::Balance) -> T::Balance {
-        let session_length = <xsession::SessionLength<T>>::get().as_();
+        let session_length = <xsession::SessionLength<T>>::get().saturated_into::<u64>();
         let validators_count = <xsession::Validators<T>>::get().len() as u64;
-        T::Balance::sa(session_reward.as_() * validators_count / session_length)
+        (session_reward.into() * validators_count / session_length).into()
     }
 
     /// Actually slash a given active validator by a specific amount.
@@ -88,10 +88,8 @@ impl<T: Trait> Module<T> {
         let missed = u64::from(<MissedOfPerSession<T>>::take(who));
         let reward_per_block = Self::reward_of_per_block(my_reward);
         let total_slash = cmp::max(
-            T::Balance::sa(
-                reward_per_block.as_() * missed * u64::from(Self::missed_blocks_severity()),
-            ),
-            T::Balance::sa(Self::minimum_penalty().as_() * missed),
+            (reward_per_block.into() * missed * u64::from(Self::missed_blocks_severity())).into(),
+            (Self::minimum_penalty().saturated_into::<u64>() * missed).into(),
         );
 
         let (_slashed, should_be_enforced) =
@@ -147,7 +145,7 @@ impl<T: Trait> Module<T> {
         ));
 
         for who in inactive_slashed.iter() {
-            let missed = T::Balance::sa(u64::from(<MissedOfPerSession<T>>::take(who)));
+            let missed: T::Balance = u64::from(<MissedOfPerSession<T>>::take(who)).into();
             let should_slash = missed * Self::minimum_penalty();
             let _ = Self::try_slash_or_clear(who, should_slash);
         }

@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::Read;
 
 use chainx_cli::VersionInfo;
-use error_chain::quick_main;
 use futures::{future, sync::oneshot, Future};
 use serde_json::value::Value;
 
@@ -113,7 +112,7 @@ fn try_combine_options_config(cmd_args: Vec<String>) -> Vec<String> {
     }
 }
 
-fn run() -> chainx_cli::error::Result<()> {
+fn main() {
     let version = VersionInfo {
         name: "ChainX",
         commit: env!("VERGEN_SHA_SHORT"),
@@ -125,7 +124,9 @@ fn run() -> chainx_cli::error::Result<()> {
     };
 
     let args = try_combine_options_config(::std::env::args().collect::<Vec<String>>());
-    chainx_cli::run(args, Exit, version)
-}
 
-quick_main!(run);
+    if let Err(e) = chainx_cli::run(args, Exit, version) {
+        eprintln!("Error starting the node: {}\n\n{:?}", e, e);
+        std::process::exit(1)
+    }
+}

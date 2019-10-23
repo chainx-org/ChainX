@@ -11,7 +11,7 @@ pub use xtokens_types::*;
 use std::convert::From;
 
 use rustc_hex::ToHex;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use btc_ser::serialize as btc_serialize;

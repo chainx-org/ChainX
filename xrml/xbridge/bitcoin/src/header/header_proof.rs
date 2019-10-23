@@ -1,7 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
 // Substrate
-use primitives::traits::As;
+use primitives::traits::SaturatedConversion;
 use rstd::{cmp, result};
 use support::dispatch::Result;
 
@@ -25,7 +25,8 @@ pub struct HeaderVerifier<'a> {
 impl<'a> HeaderVerifier<'a> {
     pub fn new<T: Trait>(header: &'a BlockHeader, height: u32) -> result::Result<Self, ChainErr> {
         let now: T::Moment = timestamp::Module::<T>::now();
-        let current_time: u32 = now.as_() as u32;
+        // bitcoin use u32 to log time, we think the timestamp would not more then u32
+        let current_time: u32 = now.saturated_into::<u32>();
 
         Ok(HeaderVerifier {
             work: HeaderWork::new(header, height),

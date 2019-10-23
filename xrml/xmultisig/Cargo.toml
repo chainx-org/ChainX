@@ -9,19 +9,19 @@ serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
 # Substrate
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
-system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 # ChainX
 xsupport = { package = "xrml-xsupport", path = "../xsupport", default-features = false }
 xaccounts = { package = "xrml-xaccounts", path = "../xaccounts", default-features = false }
 
 [dev-dependencies]
-runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
-consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
-timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate" }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", branch="chainx-master" }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", branch="chainx-master" }
+timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", branch="chainx-master" }
 xsystem = { package = "xrml-xsystem", path = "../xsystem" }
 xsession = { package = "xrml-xsession", path = "../xsession" }
 xrecords = { package = "xrml-xassets-records", path = "../xassets/records" }

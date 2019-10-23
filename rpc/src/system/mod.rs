@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@
 //! Substrate system API.
 
 pub mod error;
+pub mod helpers;
 
-mod helpers;
 #[cfg(test)]
 mod tests;
 
@@ -29,6 +29,8 @@ use std::sync::Arc;
 
 use self::error::Result;
 pub use self::helpers::{Health, PeerInfo, Properties, SystemInfo};
+
+pub use self::gen_client::Client as SystemClient;
 
 /// Substrate system RPC API
 #[rpc]
@@ -110,7 +112,7 @@ impl<B: traits::Block> SystemApi<B::Hash, <B::Header as HeaderT>::Number> for Sy
 
     fn system_health(&self) -> Result<Health> {
         Ok(Health {
-            peers: self.sync.peers().len(),
+            peers: self.sync.peers_debug_info().len(),
             is_syncing: self.sync.is_major_syncing(),
             should_have_peers: self.should_have_peers,
         })
@@ -119,7 +121,7 @@ impl<B: traits::Block> SystemApi<B::Hash, <B::Header as HeaderT>::Number> for Sy
     fn system_peers(&self) -> Result<Vec<PeerInfo<B::Hash, <B::Header as HeaderT>::Number>>> {
         Ok(self
             .sync
-            .peers()
+            .peers_debug_info()
             .into_iter()
             .map(|(peer_id, p)| PeerInfo {
                 peer_id: peer_id.to_base58(),

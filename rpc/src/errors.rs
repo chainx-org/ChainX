@@ -1,4 +1,4 @@
-// Copyright 2018 Parity Technologies (UK) Ltd.
+// Copyright 2018-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -16,14 +16,6 @@
 
 use crate::rpc;
 use log::warn;
-
-pub fn unimplemented() -> rpc::Error {
-    rpc::Error {
-        code: rpc::ErrorCode::ServerError(1),
-        message: "Not implemented yet".into(),
-        data: None,
-    }
-}
 
 pub fn internal<E: ::std::fmt::Debug>(e: E) -> rpc::Error {
     warn!("Unknown error: {:?}", e);

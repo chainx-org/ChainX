@@ -516,6 +516,5 @@ fn test_deploy() {
         //        // no multisig addr
         //        let owners = vec![(a.clone(), true), (b.clone(), true), (c.clone(), false)];
         //        let origin = system::RawOrigin::Signed(a.clone()).into();
-
     })
 }

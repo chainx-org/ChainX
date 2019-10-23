@@ -1,200 +1,128 @@
 // Copyright 2018-2019 Chainpool.
 
-use error_chain::*;
+//! Error helpers for ChainX RPC module.
 
 use std::str;
 
 use crate::errors;
 use crate::rpc;
 
-error_chain! {
-    foreign_links {
-        Client(client::error::Error) #[doc = "Client error"];
-    }
-    errors {
-        /// Not implemented yet
-        Unimplemented {
-            description("not yet implemented"),
-            display("Method Not Implemented"),
-        }
-        ChainErr {
-            description("Not has this chain id"),
-            display("Not has this chain id"),
-        }
-        BlockNumberErr {
-            description("BlockNumber not exist for this hash"),
-            display("BlockNumber not exist for this hash"),
-        }
-        /// Get certlist failed
-        CertNameErr {
-            description("Get cert name list failed"),
-            display("Get cert name list failed"),
-        }
-        /// Get Properties failed
-        CertPropErr {
-            description("Get cert Properties failed"),
-            display("Get cert Properties failed"),
-        }
-        /// Get Owner failed
-        CertOwnerErr {
-            description("Get cert Owner failed"),
-            display("Get cert Owner failed"),
-        }
-        /// Get Remaining Shares failed
-        CertRemainingSharesErr {
-            description("Get cert Remaining Shares failed"),
-            display("Get cert Remaining Shares failed"),
-        }
-        TradingPairIndexErr{
-            description("TradingPair Index Error"),
-            display("TradingPair Index Error"),
-        }
-        QuotationsPieceErr{
-            description("Quotations Piece Err"),
-            display("Quotations Piece Err"),
-        }
-        PageSizeErr{
-            description("Page Size Must Between 0~100"),
-            display("Page Size Must Between 0~100"),
-        }
-        PageIndexErr{
-            description("Page Index Error"),
-            display("Page Index Error"),
-        }
-        DecodeErr {
-            description("Decode Data Error"),
-            display("Decode Data Error"),
-        }
-        BinanryStartErr {
-            description("Start With 0x"),
-            display("Start With 0x"),
-        }
-        HexDecodeErr {
-            description("Decode Hex Err"),
-            display("Decode Hex Err"),
-        }
-        /// Execution error.
-        Execution(e: Box<dyn state_machine::Error>) {
-            description("state execution error"),
-            display("Execution: {}", e),
-        }
-        RuntimeErr(e: Vec<u8>) {
-            description("runtime error"),
-            display("error: {:}", str::from_utf8(&e).unwrap_or_default()),
-        }
-        DeprecatedV0Err(deprecated: String) {
-            description("Deprecated Error"),
-            display("{:} is Deprecated, Please Use {:}V1 Instead", deprecated, deprecated),
-        }
-        CacheErr {
-            description("Cache fetch lock error"),
-            display("Cache fetch lock error"),
-        }
-        StorageNotExistErr {
-            description("Storage record does not exist or not in archive"),
-            display("Storage record does not exist or not in archive")
-        }
-    }
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug, derive_more::Display, derive_more::From)]
+pub enum Error {
+    /// Client error.
+    Client(client::error::Error),
+
+    #[display(fmt = "Method not yet implemented")]
+    Unimplemented,
+
+    #[display(fmt = "Quotations Piece Err: piece:{}", _0)]
+    QuotationsPieceErr(u32),
+
+    #[display(fmt = "TradingPair Index error or not exist: pair index:{}", _0)]
+    TradingPairIndexErr(u32),
+
+    #[display(fmt = "Page Size Must Between 0~100, size:{}", _0)]
+    PageSizeErr(u32),
+
+    #[display(fmt = "Page Index Error, index:{}", _0)]
+    PageIndexErr(u32),
+
+    #[display(fmt = "Decode Data Error")]
+    DecodeErr,
+
+    #[display(fmt = "Start With 0x")]
+    BinaryStartErr,
+
+    #[display(fmt = "Decode Hex Err")]
+    HexDecodeErr,
+
+    #[display(
+        fmt = "Runtime error, e:{:}",
+        "str::from_utf8(&_0).unwrap_or_default()"
+    )]
+    RuntimeErr(Vec<u8>),
+
+    #[display(fmt = "{:} is Deprecated, Please Use {:}V1 Instead", _0, _0)]
+    DeprecatedV0Err(String),
+
+    #[display(fmt = "Cache fetch lock error")]
+    CacheErr,
+
+    #[display(fmt = "Storage record does not exist or not in archive")]
+    StorageNotExistErr,
+
+    #[display(fmt = "BlockNumber not exist for this hash")]
+    BlockNumberErr,
 }
 
 const ERROR: i64 = 1600;
 
-impl From<Box<dyn state_machine::Error>> for Error {
-    fn from(e: Box<dyn state_machine::Error>) -> Self {
-        ErrorKind::Execution(e).into()
-    }
-}
-
 impl From<Error> for rpc::Error {
     fn from(e: Error) -> Self {
         match e {
-            Error(ErrorKind::Unimplemented, _) => errors::unimplemented(),
-            Error(ErrorKind::CertNameErr, _) => rpc::Error {
-                code: rpc::ErrorCode::ServerError(ERROR + 1),
-                message: "Get cert name list failed.".into(),
+            Error::Unimplemented => rpc::Error {
+                code: rpc::ErrorCode::ServerError(1),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::CertPropErr, _) => rpc::Error {
-                code: rpc::ErrorCode::ServerError(ERROR + 2),
-                message: "Get cert Properties failed.".into(),
-                data: None,
-            },
-            Error(ErrorKind::CertOwnerErr, _) => rpc::Error {
-                code: rpc::ErrorCode::ServerError(ERROR + 3),
-                message: "Get cert Owner failed.".into(),
-                data: None,
-            },
-            Error(ErrorKind::CertRemainingSharesErr, _) => rpc::Error {
-                code: rpc::ErrorCode::ServerError(ERROR + 4),
-                message: "Get cert Remaining Shares failed.".into(),
-                data: None,
-            },
-            Error(ErrorKind::QuotationsPieceErr, _) => rpc::Error {
+            Error::QuotationsPieceErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 5),
-                message: "Quotations Piece Err.".into(),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::TradingPairIndexErr, _) => rpc::Error {
+            Error::TradingPairIndexErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 6),
-                message: "TradingPair Index Error.".into(),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::PageSizeErr, _) => rpc::Error {
+            Error::PageSizeErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 7),
-                message: "Page Size Must Between 0~100.".into(),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::PageIndexErr, _) => rpc::Error {
+            Error::PageIndexErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 8),
-                message: "Page Index Error.".into(),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::DecodeErr, _) => rpc::Error {
+            Error::DecodeErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 9),
-                message: "Decode data error.".into(),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::BinanryStartErr, _) => rpc::Error {
+            Error::BinaryStartErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 10),
-                message: "Start With 0x.".into(),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::HexDecodeErr, _) => rpc::Error {
+            Error::HexDecodeErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 11),
-                message: "Decode Hex Err.".into(),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::Execution(e), _) => rpc::Error {
-                code: rpc::ErrorCode::ServerError(ERROR + 12),
-                message: format!("Execution: {}", e),
-                data: None,
-            },
-            Error(ErrorKind::RuntimeErr(e), _) => rpc::Error {
+            Error::RuntimeErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 13),
-                message: format!(
-                    "Runtime execute error: {:}",
-                    str::from_utf8(&e).unwrap_or_default()
-                ),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::DeprecatedV0Err(e), _) => rpc::Error {
+            Error::DeprecatedV0Err(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 14),
-                message: format!("{:} is Deprecated, Please Use {:}V1 Instead", e, e),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error(ErrorKind::StorageNotExistErr, _) => rpc::Error {
+            Error::StorageNotExistErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 15),
-                message: "Storage record does not exist or not in archive".into(),
+                message: format!("{:?}", e).into(),
+                data: None,
+            },
+            Error::BlockNumberErr => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 16),
+                message: format!("{:?}", e).into(),
                 data: None,
             },
             e => errors::internal(e),
         }
-    }
-}
-
-impl Error {
-    /// Chain a state error.
-    pub fn from_state(e: Box<dyn state_machine::Error + Send>) -> Self {
-        ErrorKind::Execution(e).into()
     }
 }

@@ -15,7 +15,7 @@ mod types;
 use parity_codec::Decode;
 
 // Substrate
-use primitives::traits::{As, MaybeDebug};
+use primitives::traits::MaybeDebug;
 use rstd::{prelude::*, result};
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue};
 use system::ensure_signed;
@@ -136,9 +136,7 @@ decl_storage! {
     add_extra_genesis {
         config(genesis_hash): H256;
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            use runtime_io::with_externalities;
-            use substrate_primitives::Blake2Hasher;
-            use primitives::StorageOverlay;
+            use runtime_io::with_storage;
             use support::{StorageMap, StorageValue};
 
             let (genesis_header, number): (BlockHeader, u32) = config.genesis.clone();
@@ -162,9 +160,9 @@ decl_storage! {
                 txid_list: [].to_vec(),
             };
 
-            let s = storage.clone().build_storage().unwrap().0;
-            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
-            with_externalities(&mut init, || {
+//            let s = storage.clone().build_storage().unwrap().0;
+//            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
+            with_storage(storage, || {
                 BlockHeaderFor::<T>::insert(&genesis_hash, header_info.clone());
                 BlockHashFor::<T>::insert(&header_info.height, vec![genesis_hash.clone()]);
 
@@ -182,8 +180,8 @@ decl_storage! {
                     genesis_hash,
                 ));
             });
-            let init: StorageOverlay = init.into();
-            storage.extend(init);
+//            let init: StorageOverlay = init.into();
+//            storage.extend(init);
         });
     }
 }
@@ -269,12 +267,12 @@ decl_module! {
         }
 
         pub fn set_btc_withdrawal_fee(fee: T::Balance) -> Result {
-            BtcWithdrawalFee::<T>::put(fee.as_() as u64);
+            BtcWithdrawalFee::<T>::put(fee.into());
             Ok(())
         }
 
         pub fn set_btc_deposit_limit(value: T::Balance) {
-            BtcMinDeposit::<T>::put(value.as_() as u64);
+            BtcMinDeposit::<T>::put(value.into());
         }
 
         pub fn set_btc_deposit_limit_by_trustees(origin, value: T::Balance) {

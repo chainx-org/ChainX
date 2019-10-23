@@ -15,11 +15,15 @@ mod tests;
 use parity_codec::{Codec, Encode};
 // Substrate
 use primitives::traits::{
-    As, CheckedAdd, CheckedSub, Hash, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
+    CheckedAdd, CheckedSub, Hash, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
     StaticLookup, Zero,
 };
 use rstd::collections::btree_map::BTreeMap;
-use rstd::{prelude::*, result};
+use rstd::{
+    convert::{TryFrom, TryInto},
+    prelude::*,
+    result,
+};
 use substrate_primitives::crypto::UncheckedFrom;
 
 use support::traits::{Imbalance, SignedImbalance};
@@ -77,11 +81,13 @@ pub trait Trait: system::Trait {
     type Balance: Parameter
         + Member
         + SimpleArithmetic
+        + From<u64>
+        + Into<u64>
+        + TryInto<u64>
+        + TryFrom<u64>
         + Codec
         + Default
         + Copy
-        + As<usize>
-        + As<u64>
         + MaybeDisplay
         + MaybeSerializeDebug;
     /// Handler for when a new account is created.

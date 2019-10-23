@@ -12,10 +12,6 @@ pub struct ChainXParams {
     /// Pass [FLAGS] or [OPTIONS] via a JSON file, you can override them from the command line.
     pub config: Option<PathBuf>,
 
-    #[structopt(long = "ws-max-connections", default_value = "100")]
-    /// The maximum number of connections that this WebSocket will support, default is 100
-    pub ws_max_connections: usize,
-
     #[structopt(long = "default-log")]
     /// Use `env_logger`, not `log4rs`. notice `env_logger` can't print into file directly
     pub default_log: bool,

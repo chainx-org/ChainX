@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -16,9 +16,11 @@
 
 use super::*;
 use assert_matches::assert_matches;
-use consensus::BlockOrigin;
-use test_client::runtime::{Block, Header, H256};
-use test_client::{self, TestClient};
+use test_client::{
+    consensus::BlockOrigin,
+    prelude::*,
+    runtime::{Block, Header, H256},
+};
 
 #[test]
 fn should_return_header() {
@@ -74,12 +76,9 @@ fn should_return_a_block() {
 
     // Genesis block is not justified
     assert_matches!(
-        api.block(Some(api.client.genesis_hash()).into()),
-        Ok(Some(SignedBlock {
-            justification: None,
-            ..
-        }))
-    );
+		api.block(Some(api.client.genesis_hash()).into()),
+		Ok(Some(SignedBlock { justification: None, .. }))
+	);
 
     assert_matches!(
         api.block(Some(block_hash).into()),
@@ -155,7 +154,7 @@ fn should_return_block_hash() {
 }
 
 #[test]
-fn should_return_finalised_hash() {
+fn should_return_finalized_hash() {
     let core = ::tokio::runtime::Runtime::new().unwrap();
     let remote = core.executor();
 
@@ -165,7 +164,7 @@ fn should_return_finalised_hash() {
     };
 
     assert_matches!(
-        client.finalised_head(),
+        client.finalized_head(),
         Ok(ref x) if x == &client.client.genesis_hash()
     );
 
@@ -175,19 +174,19 @@ fn should_return_finalised_hash() {
         .client
         .import(BlockOrigin::Own, builder.bake().unwrap())
         .unwrap();
-    // no finalisation yet
+    // no finalization yet
     assert_matches!(
-        client.finalised_head(),
+        client.finalized_head(),
         Ok(ref x) if x == &client.client.genesis_hash()
     );
 
-    // finalise
+    // finalize
     client
         .client
         .finalize_block(BlockId::number(1), None, true)
         .unwrap();
     assert_matches!(
-        client.finalised_head(),
+        client.finalized_head(),
         Ok(ref x) if x == &client.client.block_hash(1).unwrap().unwrap()
     );
 }
@@ -226,7 +225,7 @@ fn should_notify_about_latest_block() {
 }
 
 #[test]
-fn should_notify_about_finalised_block() {
+fn should_notify_about_finalized_block() {
     let mut core = ::tokio::runtime::Runtime::new().unwrap();
     let remote = core.executor();
     let (subscriber, id, transport) = Subscriber::new_test("test");
@@ -237,7 +236,7 @@ fn should_notify_about_finalised_block() {
             subscriptions: Subscriptions::new(remote),
         };
 
-        api.subscribe_finalised_heads(Default::default(), subscriber);
+        api.subscribe_finalized_heads(Default::default(), subscriber);
 
         // assert id assigned
         assert_eq!(core.block_on(id), Ok(Ok(SubscriptionId::Number(1))));

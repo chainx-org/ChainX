@@ -43,17 +43,14 @@ decl_storage! {
 
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use parity_codec::{Encode, KeyedVec};
-            use runtime_io::with_externalities;
-            use substrate_primitives::Blake2Hasher;
             use support::StorageMap;
-            use primitives::traits::As;
-            use primitives::StorageOverlay;
             use xassets::{ChainT, Token, Chain, Asset};
             use xspot::CurrencyPair;
             use xmultisig::MultiSigPermission;
             use xstaking::Delta;
             use xbridge_features::H264;
             use xsupport::error;
+            use runtime_io::with_storage;
 
             // grandpa
             let auth_count = config.authorities.len() as u32;
@@ -69,10 +66,10 @@ decl_storage! {
                 auth_count.encode(),
             );
 
-            let s = storage.clone().build_storage().unwrap().0;
-            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
+//            let s = storage.clone().build_storage().unwrap().0;
+//            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
 
-            with_externalities(&mut init, || {
+            with_storage(storage, || {
 
                 // xassets
                 let chainx: Token = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
@@ -117,7 +114,7 @@ decl_storage! {
                     ).unwrap();
 
                     xstaking::Module::<T>::bootstrap_refresh(&account_id, Some(url), Some(true), Some(validator_key), Some(memo));
-                    xstaking::Module::<T>::bootstrap_update_vote_weight(&account_id, &account_id, Delta::Add(value.as_()));
+                    xstaking::Module::<T>::bootstrap_update_vote_weight(&account_id, &account_id, Delta::Add(value.into()));
 
                     <xstaking::StakeWeight<T>>::insert(&account_id, value);
                 }
@@ -189,7 +186,7 @@ decl_storage! {
                     // The amount is hard-coded here. 50 * 20% = 10
                     <xassets::Module<T>>::pcx_issue(
                         &team_account,
-                        T::Balance::sa(10 * 10_u64.pow(pcx_precision as u32))
+                        (10 * 10_u64.pow(pcx_precision as u32)).into()
                     ).unwrap();
                 }
 
@@ -205,8 +202,8 @@ decl_storage! {
                 }
             });
 
-            let init: StorageOverlay = init.into();
-            storage.extend(init);
+//            let init: StorageOverlay = init.into();
+//            storage.extend(init);
         });
     }
 }

@@ -13,7 +13,7 @@ impl<T: Trait> Module<T> {
             <Self as ComputeWeight<T::AccountId>>::settle_claimer_weight(
                 from,
                 target,
-                current_block.as_(),
+                current_block.saturated_into::<u64>(),
             );
 
         Self::apply_update_depositor_vote_weight(from, target, new_deposit_weight, current_block);
@@ -89,7 +89,7 @@ impl<T: Trait> Module<T> {
         let (new_deposit_weight, _overflow) =
             <Self as ComputeWeight<T::AccountId>>::settle_claimee_weight(
                 target,
-                current_block.as_(),
+                current_block.saturated_into::<u64>(),
             );
         Self::apply_update_psedu_intention_vote_weight(target, new_deposit_weight, current_block);
     }

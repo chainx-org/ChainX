@@ -67,7 +67,7 @@ impl<T: Trait> Claim<T::AccountId, T::Balance> for Module<T> {
     ) -> Result {
         let referral_or_council = xtokens::Module::<T>::referral_or_council_of(claimer, claimee);
         // 10% claim distributes to the depositor's referral.
-        let to_referral_or_council = T::Balance::sa(dividend.as_() / 10);
+        let to_referral_or_council = (dividend.into() / 10).into();
 
         trace!(
             target: "claim",
@@ -125,7 +125,7 @@ impl<T: Trait> Claim<T::AccountId, T::Balance> for Module<T> {
             <Self as ComputeWeight<T::AccountId>>::settle_weight_on_claim(
                 claimer,
                 claimee,
-                current_block.as_(),
+                current_block.saturated_into::<u64>(),
             )?;
 
         let claimee_jackpot = T::DetermineTokenJackpotAccountId::accountid_for_unsafe(claimee);

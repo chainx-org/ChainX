@@ -14,17 +14,17 @@ type Payees<T> = Vec<(
 impl<T: Trait> Module<T> {
     /// Get the reward for the session, assuming it ends with this block.
     fn this_session_reward() -> T::Balance {
-        let current_index = <xsession::Module<T>>::current_index().as_();
-        let reward = Self::initial_reward().as_()
+        let current_index = <xsession::Module<T>>::current_index().saturated_into::<u64>();
+        let reward = Self::initial_reward().into()
             / u64::from(u32::pow(2, (current_index / SESSIONS_PER_ROUND) as u32));
-        T::Balance::sa(reward as u64)
+        reward.into()
     }
 
     /// Reward a given (potential) validator by a specific amount.
     /// Add the reward to their balance, and their jackpot, pro-rata.
     fn reward(who: &T::AccountId, reward: T::Balance) {
         // Validator only gains 10%, the rest 90% goes to the jackpot.
-        let off_the_table = T::Balance::sa(reward.as_() / 10);
+        let off_the_table = (reward.into() / 10).into();
         let _ = <xassets::Module<T>>::pcx_issue(who, off_the_table);
 
         let to_jackpot = reward - off_the_table;
@@ -98,14 +98,14 @@ impl<T: Trait> Module<T> {
     ) -> T::Balance {
         let (mine, total) = proportion;
 
-        match (u128::from(mine.as_())).checked_mul(u128::from(total_reward.as_())) {
+        match (u128::from(mine.into())).checked_mul(u128::from(total_reward.into())) {
             Some(x) => {
-                let r = x / u128::from(total.as_());
+                let r = x / u128::from(total.into());
                 assert!(
                     r < u128::from(u64::max_value()),
                     "reward of per intention definitely less than u64::max_value()"
                 );
-                T::Balance::sa(r as u64)
+                (r as u64).into()
             }
             None => panic!("stake * session_reward overflow!"),
         }
@@ -176,10 +176,10 @@ impl<T: Trait> Module<T> {
 
     /// In the first round, 20% reward of each session goes to the team.
     fn try_fund_team(this_session_reward: T::Balance) -> T::Balance {
-        let current_index = <xsession::Module<T>>::current_index().as_();
+        let current_index = <xsession::Module<T>>::current_index().saturated_into::<u64>();
 
         if current_index < SESSIONS_PER_ROUND {
-            let to_team = T::Balance::sa(this_session_reward.as_() / 5);
+            let to_team = (this_session_reward.into() / 5).into();
             debug!("[reward] issue to the team: {:?}", to_team);
             let _ =
                 <xassets::Module<T>>::pcx_issue(&xaccounts::Module::<T>::team_account(), to_team);
@@ -199,18 +199,19 @@ impl<T: Trait> Module<T> {
         let (psedu_intentions, total_cross_chain_assets) = Self::get_psedu_intentions_info();
 
         let (for_staked, for_cross_chain_assets) = if Self::are_growing_too_fast(
-            total_cross_chain_assets.as_(),
-            total_staked.as_(),
+            total_cross_chain_assets.into(),
+            total_staked.into(),
         )
         .is_ok()
         {
             let (numerator, denominator) = Self::distribution_ratio();
 
-            let for_cross_chain_assets = T::Balance::sa(Self::multiply_by_rational(
-                session_reward.as_(),
+            let for_cross_chain_assets = Self::multiply_by_rational(
+                session_reward.into(),
                 numerator,
                 numerator + denominator,
-            ));
+            )
+            .into();
 
             let for_staked = session_reward - for_cross_chain_assets;
 

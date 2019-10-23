@@ -358,9 +358,9 @@ impl_runtime_apis! {
             Executive::initialize_block(header)
         }
 
-        fn authorities() -> Vec<AuthorityId> {
-            panic!("Deprecated, please use `AuthoritiesApi`.")
-        }
+//        fn authorities() -> Vec<AuthorityId> {
+//            panic!("Deprecated, please use `AuthoritiesApi`.")
+//        }
     }
 
     impl client_api::Metadata<Block> for Runtime {

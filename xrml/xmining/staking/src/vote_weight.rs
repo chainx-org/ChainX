@@ -14,8 +14,9 @@ pub fn compute_dividend<T: Trait>(
     claimee_jackpot: &T::AccountId,
 ) -> T::Balance {
     let total_jackpot = xassets::Module::<T>::pcx_free_balance(&claimee_jackpot);
-    let dividend = match source_vote_weight.checked_mul(u128::from(total_jackpot.as_())) {
-        Some(x) => T::Balance::sa((x / target_vote_weight) as u64),
+    let dividend = match source_vote_weight.checked_mul(u128::from(total_jackpot.saturated_into()))
+    {
+        Some(x) => ((x / target_vote_weight) as u64).into(),
         None => {
             error!(
                 "[compute_dividvid] overflow: source_vote_weight({:?}) * total_jackpot({:?})",

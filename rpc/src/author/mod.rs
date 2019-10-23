@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -16,8 +16,15 @@
 
 //! Substrate block-author/full-node API.
 
+pub mod error;
+pub mod hash;
+
+#[cfg(test)]
+mod tests;
+
 use std::sync::Arc;
 
+use self::error::Result;
 use crate::rpc::futures::{Future, Sink, Stream};
 use crate::subscriptions::Subscriptions;
 use client::{self, Client};
@@ -31,12 +38,7 @@ use transaction_pool::txpool::{
     watcher::Status, BlockHash, ChainApi as PoolChainApi, ExHash, IntoPoolError, Pool,
 };
 
-pub mod error;
-
-#[cfg(test)]
-mod tests;
-
-use self::error::Result;
+pub use self::gen_client::Client as AuthorClient;
 
 /// Substrate authoring RPC API
 #[rpc]
@@ -51,6 +53,13 @@ pub trait AuthorApi<Hash, BlockHash> {
     /// Returns all pending extrinsics, potentially grouped by sender.
     #[rpc(name = "author_pendingExtrinsics")]
     fn pending_extrinsics(&self) -> Result<Vec<Bytes>>;
+
+    /// Remove given extrinsic from the pool and temporarily ban it to prevent reimporting.
+    #[rpc(name = "author_removeExtrinsic")]
+    fn remove_extrinsic(
+        &self,
+        bytes_or_hash: Vec<hash::ExtrinsicOrHash<Hash>>,
+    ) -> Result<Vec<Hash>>;
 
     /// Submit an extrinsic to watch.
     #[pubsub(
@@ -85,7 +94,7 @@ where
 {
     /// Substrate client
     client: Arc<Client<B, E, <P as PoolChainApi>::Block, RA>>,
-    /// Extrinsic pool
+    /// Transactions pool
     pool: Arc<Pool<P>>,
     /// Subscriptions manager
     subscriptions: Subscriptions,
@@ -121,15 +130,14 @@ where
     type Metadata = crate::metadata::Metadata;
 
     fn submit_extrinsic(&self, ext: Bytes) -> Result<ExHash<P>> {
-        let xt =
-            Decode::decode(&mut &ext[..]).ok_or(error::Error::from(error::ErrorKind::BadFormat))?;
-        let best_block_hash = self.client.info()?.chain.best_hash;
+        let xt = Decode::decode(&mut &ext[..]).ok_or(error::Error::BadFormat)?;
+        let best_block_hash = self.client.info().chain.best_hash;
         self.pool
             .submit_one(&generic::BlockId::hash(best_block_hash), xt)
             .map_err(|e| {
                 e.into_pool_error()
                     .map(Into::into)
-                    .unwrap_or_else(|e| error::ErrorKind::Verification(Box::new(e)).into())
+                    .unwrap_or_else(|e| error::Error::Verification(Box::new(e)).into())
             })
     }
 
@@ -141,6 +149,29 @@ where
             .collect())
     }
 
+    fn remove_extrinsic(
+        &self,
+        bytes_or_hash: Vec<hash::ExtrinsicOrHash<ExHash<P>>>,
+    ) -> Result<Vec<ExHash<P>>> {
+        let hashes = bytes_or_hash
+            .into_iter()
+            .map(|x| match x {
+                hash::ExtrinsicOrHash::Hash(h) => Ok(h),
+                hash::ExtrinsicOrHash::Extrinsic(bytes) => {
+                    let xt = Decode::decode(&mut &bytes[..]).ok_or(error::Error::BadFormat)?;
+                    Ok(self.pool.hash_of(&xt))
+                }
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(self
+            .pool
+            .remove_invalid(&hashes)
+            .into_iter()
+            .map(|tx| tx.hash.clone())
+            .collect())
+    }
+
     fn watch_extrinsic(
         &self,
         _metadata: Self::Metadata,
@@ -148,16 +179,16 @@ where
         xt: Bytes,
     ) {
         let submit = || -> Result<_> {
-            let best_block_hash = self.client.info()?.chain.best_hash;
+            let best_block_hash = self.client.info().chain.best_hash;
             let dxt =
                 <<P as PoolChainApi>::Block as traits::Block>::Extrinsic::decode(&mut &xt[..])
-                    .ok_or(error::Error::from(error::ErrorKind::BadFormat))?;
+                    .ok_or(error::Error::BadFormat)?;
             self.pool
                 .submit_and_watch(&generic::BlockId::hash(best_block_hash), dxt)
                 .map_err(|e| {
                     e.into_pool_error()
                         .map(Into::into)
-                        .unwrap_or_else(|e| error::ErrorKind::Verification(Box::new(e)).into())
+                        .unwrap_or_else(|e| error::Error::Verification(Box::new(e)).into())
                 })
         };
 

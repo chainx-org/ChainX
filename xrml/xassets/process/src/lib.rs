@@ -12,7 +12,6 @@ use parity_codec::{Decode, Encode};
 use serde_derive::{Deserialize, Serialize};
 
 // Substrate
-use primitives::traits::As;
 use rstd::prelude::Vec;
 use support::{decl_module, decl_storage, dispatch::Result};
 use system::ensure_signed;
@@ -99,9 +98,9 @@ impl<T: Trait> Module<T> {
     pub fn withdrawal_limit(token: &Token) -> Option<WithdrawalLimit<T::Balance>> {
         match token.as_slice() {
             <xbitcoin::Module<T> as ChainT>::TOKEN => {
-                let fee = As::sa(xbitcoin::Module::<T>::btc_withdrawal_fee());
+                let fee = xbitcoin::Module::<T>::btc_withdrawal_fee().into();
                 let limit = WithdrawalLimit::<T::Balance> {
-                    minimal_withdrawal: fee * As::sa(3) / As::sa(2),
+                    minimal_withdrawal: fee * 3.into() / 2.into(),
                     fee,
                 };
                 Some(limit)

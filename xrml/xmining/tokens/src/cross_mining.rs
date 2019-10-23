@@ -7,7 +7,7 @@ impl<T: Trait> Module<T> {
         let pcx = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
         let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
 
-        10_u64.pow(pcx_asset.precision().as_())
+        10_u64.pow(pcx_asset.precision().into())
     }
 
     /// This calculation doesn't take the DistributionRatio of cross-chain assets and native assets into account.
@@ -16,7 +16,7 @@ impl<T: Trait> Module<T> {
 
         // One SDOT 0.1 vote.
         if <xsdot::Module<T> as ChainT>::TOKEN == token.as_slice() {
-            return Some(As::sa(Self::one_pcx() * discount / 100));
+            return Some((Self::one_pcx() * discount / 100).into());
         } else {
             // L-BTC shares the price of X-BTC as it doesn't have a trading pair.
             let token = if <xbitcoin::lockup::Module<T> as ChainT>::TOKEN == token.as_slice() {
@@ -26,8 +26,8 @@ impl<T: Trait> Module<T> {
             };
 
             if let Some(price) = <xspot::Module<T>>::aver_asset_price(&token) {
-                let power = match (u128::from(price.as_())).checked_mul(u128::from(discount)) {
-                    Some(x) => T::Balance::sa((x / 100) as u64),
+                let power = match (u128::from(price.into())).checked_mul(u128::from(discount)) {
+                    Some(x) => ((x / 100) as u64).into(),
                     None => panic!("price * discount overflow"),
                 };
 
@@ -42,7 +42,7 @@ impl<T: Trait> Module<T> {
     pub fn internal_asset_power(token: &Token) -> Option<T::Balance> {
         // One PCX one vote.
         if <xassets::Module<T> as ChainT>::TOKEN == token.as_slice() {
-            return Some(As::sa(Self::one_pcx()));
+            return Some(Self::one_pcx().into());
         }
 
         Self::internal_cross_chain_asset_power(token)
@@ -55,14 +55,14 @@ impl<T: Trait> Module<T> {
             if let Ok((num, denom)) =
                 <xstaking::Module<T>>::cross_chain_assets_are_growing_too_fast()
             {
-                let double_discounted = power.map(|p| u128::from(p.as_()) * num / denom);
+                let double_discounted = power.map(|p| u128::from(p.into()) * num / denom);
                 debug!(
                     "[asset_power] should reduce the power again: original power: {:?}, double discount: {:?}/{:?} => final power: {:?}",
                     power,
                     num, denom,
                     double_discounted
                 );
-                return double_discounted.map(|p| T::Balance::sa(p as u64));
+                return double_discounted.map(|p| (p as u64).into());
             }
         }
 
@@ -76,10 +76,11 @@ impl<T: Trait> Module<T> {
             if let Ok(asset) = <xassets::Module<T>>::get_asset(token) {
                 let pow_precision = 10_u128.pow(u32::from(asset.precision()));
                 let total_balance =
-                    <xassets::Module<T>>::all_type_total_asset_balance(&token).as_();
+                    <xassets::Module<T>>::all_type_total_asset_balance(&token).into();
 
-                let total = match (u128::from(total_balance)).checked_mul(u128::from(power.as_())) {
-                    Some(x) => T::Balance::sa((x / pow_precision) as u64),
+                let total = match (u128::from(total_balance)).checked_mul(u128::from(power.into()))
+                {
+                    Some(x) => ((x / pow_precision) as u64).into(),
                     None => panic!("total_balance * price overflow"),
                 };
 

@@ -8,10 +8,10 @@ edition = "2018"
 serde = { version = "1.0", default-features = false }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
 # Substrate
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
-system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 # ChainX
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xr-primitives = { path = "../../../xr-primitives", default-features = false }
@@ -22,9 +22,9 @@ xassets = { package = "xrml-xassets-assets", path = "../../xassets/assets", defa
 
 [dev-dependencies]
 # Substrate
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
-runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate" }
-consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master" }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", branch="chainx-master" }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", branch="chainx-master" }
 
 [features]
 default = ["std"]

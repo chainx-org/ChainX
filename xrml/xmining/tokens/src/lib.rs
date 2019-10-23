@@ -13,7 +13,7 @@ mod vote_weight;
 use crate as xtokens;
 
 // Substrate
-use primitives::traits::{As, Zero};
+use primitives::traits::{SaturatedConversion, Zero};
 use rstd::{prelude::*, result};
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
@@ -184,7 +184,7 @@ decl_storage! {
         /// Cross-chain assets that are able to participate in the assets mining.
         pub PseduIntentions get(psedu_intentions) : Vec<Token>;
 
-        pub ClaimRestrictionOf get(claim_restriction_of): map Token => (u32, T::BlockNumber) = (10u32, T::BlockNumber::sa(BLOCKS_PER_WEEK));
+        pub ClaimRestrictionOf get(claim_restriction_of): map Token => (u32, T::BlockNumber) = (10u32, T::BlockNumber::saturated_from::<u64>(BLOCKS_PER_WEEK));
 
         /// Block height of last claim for some cross miner per token.
         pub LastClaimOf get(last_claim_of): map (T::AccountId, Token) => Option<T::BlockNumber>;
@@ -198,7 +198,7 @@ decl_storage! {
         pub DepositRecordsV1 get(deposit_records_v1): map (T::AccountId, Token) => Option<DepositVoteWeightV1<T::BlockNumber>>;
 
         /// when deposit success, reward some pcx to user for claiming. Default is 100000 = 0.001 PCX; 0.001*100000000
-        pub DepositReward get(deposit_reward): T::Balance = As::sa(100_000);
+        pub DepositReward get(deposit_reward): T::Balance = 100_000.into();
     }
 
     add_extra_genesis {
@@ -237,12 +237,13 @@ impl<T: Trait> Module<T> {
     ) -> Result {
         if !staking_requirement.is_zero() {
             let staked = <xassets::Module<T>>::pcx_type_balance(who, AssetType::ReservedStaking);
-            if staked < T::Balance::sa(u64::from(staking_requirement)) * dividend {
+            let staking_requirement: T::Balance = u64::from(staking_requirement).into();
+            if staked < staking_requirement * dividend {
                 warn!(
                     "cannot claim due to the insufficient staking, current dividend: {:?}, current staking: {:?}, required staking: {:?}",
                     dividend,
                     staked,
-                    T::Balance::sa(u64::from(staking_requirement)) * dividend
+                    staking_requirement * dividend
                 );
                 return Err("Cannot claim if what you have staked is too little.");
             }
