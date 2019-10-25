@@ -5290,6 +5290,7 @@ dependencies = [
  "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "xr-primitives 1.0.0",
  "xrml-xassets-assets 1.0.0",
+ "xrml-xassets-process 1.0.0",
  "xrml-xbridge-features 1.0.0",
  "xrml-xdex-spot 1.0.0",
  "xrml-xmining-staking 1.0.0",

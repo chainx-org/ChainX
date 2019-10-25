@@ -9,7 +9,10 @@ use support::{decl_module, decl_storage};
 #[cfg(feature = "std")]
 use xr_primitives::{Name, URL};
 
-pub trait Trait: xtokens::Trait + xmultisig::Trait + xbridge_features::Trait {}
+pub trait Trait:
+    xtokens::Trait + xmultisig::Trait + xbridge_features::Trait + xprocess::Trait
+{
+}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -40,6 +43,8 @@ decl_storage! {
 
         // multisig
         config(multisig_init_info): (Vec<T::AccountId>, Vec<T::AccountId>);
+        // other
+        config(mainnet): bool;
 
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use parity_codec::{Encode, KeyedVec};
@@ -199,6 +204,21 @@ decl_storage! {
                         *price,
                         *status
                     ).unwrap();
+                }
+
+                // bugfix: it's a trick to fix mainnet genesis.
+                // due to naming error in XAssetsProcess `decl_storage`, we remove genesis init for `XAssetsProcess`,
+                // and move genesis logic to here
+                // in mainnet, we use `b"Withdrawal TokenBlackList"` as the key to init `TokenBlackList`,
+                // in testnet, we use original key to init.
+                let token_name = b"SDOT".to_vec();
+                if config.mainnet {
+                    let key = b"Withdrawal TokenBlackList";
+                    let v = vec![token_name].encode();
+                    let k = substrate_primitives::twox_128(key).to_vec();
+                    support::storage::unhashed::put_raw(&k, &v);
+                } else {
+                    xprocess::Module::<T>::modify_token_black_list(token_name).unwrap();
                 }
             });
 

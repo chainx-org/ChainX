@@ -297,7 +297,7 @@ construct_runtime!(
         // assets
         XAssets: xassets,
         XAssetsRecords: xrecords::{Module, Call, Storage, Event<T>},
-        XAssetsProcess: xprocess::{Module, Call, Storage, Config<T>},
+        XAssetsProcess: xprocess::{Module, Call, Storage},
         // mining
         XStaking: xstaking,
         XTokens: xtokens::{Module, Call, Storage, Event<T>, Config<T>},

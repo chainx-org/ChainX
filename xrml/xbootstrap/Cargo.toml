@@ -18,6 +18,7 @@ support = { package = "srml-support", git = "https://github.com/chainpool/substr
 xr-primitives = { path = "../../xr-primitives", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../xsupport",  default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../xassets/assets",  default-features = false }
+xprocess = { package = "xrml-xassets-process", path = "../xassets/process",  default-features = false }
 xstaking = { package = "xrml-xmining-staking", path = "../xmining/staking", default-features = false }
 xtokens = { package = "xrml-xmining-tokens", path = "../xmining/tokens", default-features = false }
 xspot = { package = "xrml-xdex-spot", path = "../xdex/spot", default-features = false }
@@ -42,6 +43,7 @@ std = [
     "xr-primitives/std",
     "xsupport/std",
     "xassets/std",
+    "xprocess/std",
     "xstaking/std",
     "xtokens/std",
     "xspot/std",

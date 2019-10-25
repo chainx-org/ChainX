@@ -15,9 +15,13 @@ pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
 
 /// Staging testnet config.
 pub fn mainnet_config() -> ChainSpec {
-    let boot_nodes = vec![];
+    let boot_nodes = vec![
+        "/ip4/47.96.134.203/tcp/31126/p2p/QmTZBuK6KCi5KXxJjsun5j6m46Gsj9BgSuo5MxaDfbGDJe".into(),
+        "/ip4/47.96.97.52/tcp/31127/p2p/QmaiWDshcMMwEp5EbNKHhicqNQG6hWs6BquJqm3QTXgATW".into(),
+        "/ip4/47.110.232.108/tcp/31129/p2p/QmZpqsZ5XMSMHThbiUFTUxCY3efjz2uGDGH3Jh3rAcKA8R".into(),
+    ];
     ChainSpec::from_genesis(
-        "ChainX Mainnet",
+        "ChainX",
         "chainx_mainnet",
         mainnet_config_genesis,
         boot_nodes,
@@ -79,21 +83,17 @@ fn testnet_genesis() -> GenesisConfig {
 }
 
 pub fn testnet_config() -> ChainSpec {
-    let boot_nodes = vec![
-        //"/ip4/47.96.134.203/tcp/31126/p2p/QmUzwniXCadDYiHBQhw4CnMNRRttnVAXE2TBdDYXcT65va".into(),
-        //"/ip4/47.96.97.52/tcp/31127/p2p/QmUXuCPovJpMf3Y1AAA5pZJkPhMQkmX1tEgHhCz82cDtiA".into(),
-        //"/ip4/47.110.232.108/tcp/31129/p2p/QmRnWu3c7Mq7bVHTwJTrSC76XKMQJx4cmGofhSA5XTkk9q".into(),
-    ];
+    let boot_nodes = vec![];
     ChainSpec::from_genesis(
-        "ChainX Testnet",
-        "chainx_testnet",
+        "ChainX Testnet Taoism",
+        "chainx_testnet_taoism",
         testnet_genesis,
         boot_nodes,
-        Some(TelemetryEndpoints::new(vec![
-            (STAGING_TELEMETRY_URL.to_string(), 0),
-            (CHAINX_TELEMETRY_URL.to_string(), 0),
-        ])),
-        Some("ChainX Testnet"),
+        Some(TelemetryEndpoints::new(vec![(
+            CHAINX_TELEMETRY_URL.to_string(),
+            0,
+        )])),
+        Some("ChainX Testnet Taoism"),
         None,
         Some(
             json!({
