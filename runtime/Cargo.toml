@@ -61,6 +61,8 @@ xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-featur
 xfisher = { package = "xrml-xfisher", path = "../xrml/xfisher", default-features = false }
 # multisig
 xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig", default-features = false }
+# contracts
+xcontracts = { package = "xrml-xcontracts", path = "../xrml/xcontracts", default-features = false }
 
 [dev-dependencies]
 hex-literal = "0.2.0"
@@ -124,4 +126,6 @@ std = [
     "xspot/std",
     # multisig
     "xmultisig/std",
+    # contracts
+    "xcontracts/std",
 ]

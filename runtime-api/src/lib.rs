@@ -110,3 +110,23 @@ pub mod xbridge_api {
         }
     }
 }
+
+pub mod xcontracts_api {
+    use super::*;
+
+    decl_runtime_apis! {
+        /// The API to interact with contracts without using executive.
+        pub trait XContractsApi {
+            /// Perform a call from a specified account to a given contract.
+            ///
+            /// See the contracts' `call` dispatchable function for more details.
+            fn call(
+                origin: AccountIdForApi,
+                dest: AccountIdForApi,
+                value: Balance,
+                gas_limit: u64,
+                input_data: Vec<u8>,
+            ) -> chainx_primitives::ContractExecResult;
+        }
+    }
+}

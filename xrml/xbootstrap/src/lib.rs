@@ -71,9 +71,6 @@ decl_storage! {
                 auth_count.encode(),
             );
 
-//            let s = storage.clone().build_storage().unwrap().0;
-//            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
-
             with_storage(storage, || {
 
                 // xassets
@@ -221,9 +218,6 @@ decl_storage! {
                     xprocess::Module::<T>::modify_token_black_list(token_name).unwrap();
                 }
             });
-
-//            let init: StorageOverlay = init.into();
-//            storage.extend(init);
         });
     }
 }

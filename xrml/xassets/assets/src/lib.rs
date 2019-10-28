@@ -40,8 +40,8 @@ use self::trigger::AssetTriggerEventAfter;
 
 pub use self::types::{
     is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetLimit, AssetType, Chain,
-    Desc, DescString, Memo, NegativeImbalance, PositiveImbalance, Precision, SignedImbalanceT,
-    Token, TokenString,
+    Desc, DescString, Memo, NegativeImbalance, PositiveImbalance, Precision, SignedBalance,
+    SignedImbalanceT, Token, TokenString,
 };
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
@@ -109,7 +109,8 @@ pub trait Trait: system::Trait {
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
-        <T as Trait>::Balance
+        <T as Trait>::Balance,
+        SignedBalance = SignedBalance<T>,
     {
         Move(Token, AccountId, AssetType, AccountId, AssetType, Balance),
         Issue(Token, AccountId, Balance),
@@ -118,6 +119,8 @@ decl_event!(
         Register(Token, bool),
         Revoke(Token),
         NewAccount(AccountId),
+        /// change token balance, SignedBalance mark Positive or Negative
+        Change(Token, AccountId, AssetType, SignedBalance),
     }
 );
 
@@ -757,6 +760,23 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
     ) -> result::Result<(), AssetErr> {
         Self::pcx_move_balance(from, AssetType::Free, to, AssetType::Free, value)
+    }
+
+    pub fn pcx_make_free_balance_be(who: &T::AccountId, value: T::Balance) -> SignedImbalanceT<T> {
+        let key = (who.clone(), <Self as ChainT>::TOKEN.to_vec());
+        Self::try_new_account(&key);
+        let imbalance = Self::make_type_balance_be(&key, AssetType::Free, value);
+        let b = match imbalance {
+            SignedImbalance::Positive(ref p) => SignedBalance::Positive(p.peek()),
+            SignedImbalance::Negative(ref n) => SignedBalance::Negative(n.peek()),
+        };
+        Self::deposit_event(RawEvent::Change(
+            <Self as ChainT>::TOKEN.to_vec(),
+            who.clone(),
+            AssetType::Free,
+            b,
+        ));
+        imbalance
     }
 }
 

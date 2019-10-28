@@ -269,7 +269,7 @@ dependencies = [
  "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "serialization 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "ustd 0.1.0 (git+https://github.com/chainx-org/chainx-common)",
@@ -279,7 +279,8 @@ dependencies = [
 name = "chainx-primitives"
 version = "1.0.0"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -295,7 +296,7 @@ dependencies = [
  "runtime-api 1.0.0",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -324,6 +325,7 @@ dependencies = [
  "xrml-xbridge-common 1.0.0",
  "xrml-xbridge-features 1.0.0",
  "xrml-xbridge-sdot 1.0.0",
+ "xrml-xcontracts 2.0.0",
  "xrml-xdex-spot 1.0.0",
  "xrml-xfee-manager 1.0.0",
  "xrml-xfisher 1.0.0",
@@ -602,7 +604,7 @@ name = "erased-serde"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -881,7 +883,7 @@ version = "0.1.1"
 source = "git+https://github.com/chainx-org/chainx-common#b59f0c76e59cf627e23bd006d93884ce0eb7ed3b"
 dependencies = [
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -890,7 +892,7 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -898,7 +900,7 @@ name = "impl-serde"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -959,7 +961,7 @@ dependencies = [
  "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitives 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "serialization 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "ustd 0.1.0 (git+https://github.com/chainx-org/chainx-common)",
@@ -1635,7 +1637,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayvec 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1661,7 +1663,7 @@ dependencies = [
  "data-encoding 2.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multihash 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "percent-encoding 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "unsigned-varint 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1702,6 +1704,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "parity-wasm"
+version = "0.40.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "parking_lot"
@@ -1861,7 +1868,7 @@ dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "primitive-types 0.2.2 (git+https://github.com/chainx-org/chainx-common)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "ustd 0.1.0 (git+https://github.com/chainx-org/chainx-common)",
 ]
@@ -1909,6 +1916,16 @@ dependencies = [
 name = "protobuf"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "pwasm-utils"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-wasm 0.40.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "quick-error"
@@ -2255,7 +2272,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "serde"
-version = "1.0.94"
+version = "1.0.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2278,7 +2295,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "ryu 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2371,7 +2388,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "erased-serde 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2456,10 +2473,22 @@ dependencies = [
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+]
+
+[[package]]
+name = "sr-sandbox"
+version = "2.0.0"
+source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507d9637387b7c3b45551b93c7a0f7e3c5906"
+dependencies = [
+ "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "wasmi 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2477,7 +2506,7 @@ source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507
 dependencies = [
  "impl-serde 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
 ]
@@ -2488,7 +2517,7 @@ version = "2.0.0"
 source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507d9637387b7c3b45551b93c7a0f7e3c5906"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -2503,7 +2532,7 @@ version = "2.0.0"
 source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507d9637387b7c3b45551b93c7a0f7e3c5906"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -2518,7 +2547,7 @@ source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -2534,7 +2563,7 @@ version = "2.0.0"
 source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507d9637387b7c3b45551b93c7a0f7e3c5906"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
 ]
@@ -2545,7 +2574,7 @@ version = "2.0.0"
 source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507d9637387b7c3b45551b93c7a0f7e3c5906"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -2563,7 +2592,7 @@ dependencies = [
  "once_cell 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -2613,7 +2642,7 @@ source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -2627,7 +2656,7 @@ version = "2.0.0"
 source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507d9637387b7c3b45551b93c7a0f7e3c5906"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -2853,7 +2882,7 @@ dependencies = [
  "regex 1.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "schnorrkel 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "substrate-bip39 0.2.1 (git+https://github.com/paritytech/substrate-bip39?rev=44307fda4ea17fe97aeb93af317fbc8f6ed34193)",
@@ -2867,7 +2896,7 @@ name = "substrate-serializer"
 version = "2.0.0"
 source = "git+https://github.com/chainpool/substrate?branch=chainx-master#8ad507d9637387b7c3b45551b93c7a0f7e3c5906"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2897,7 +2926,7 @@ dependencies = [
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-async 2.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3201,7 +3230,7 @@ name = "toml"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3456,6 +3485,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasmi-validation"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "parity-wasm 0.40.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "web-sys"
 version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3548,7 +3585,7 @@ dependencies = [
  "integer-sqrt 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3560,7 +3597,7 @@ name = "xrml-grandpa"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3579,7 +3616,7 @@ name = "xrml-xaccounts"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3596,7 +3633,7 @@ name = "xrml-xassets-assets"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3614,7 +3651,7 @@ name = "xrml-xassets-process"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3633,7 +3670,7 @@ name = "xrml-xassets-records"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3649,7 +3686,7 @@ name = "xrml-xaura"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3665,7 +3702,7 @@ version = "1.0.0"
 dependencies = [
  "chain 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3695,7 +3732,7 @@ dependencies = [
  "primitives 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "script 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "serialization 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3721,7 +3758,7 @@ version = "1.0.0"
 dependencies = [
  "keys 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3741,7 +3778,7 @@ version = "1.0.0"
 dependencies = [
  "keys 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3765,7 +3802,7 @@ version = "1.0.0"
 dependencies = [
  "libsecp256k1 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3780,13 +3817,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "xrml-xcontracts"
+version = "2.0.0"
+dependencies = [
+ "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-wasm 0.40.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pwasm-utils 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "sr-sandbox 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "srml-support 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "srml-system 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "srml-timestamp 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
+ "wasmi-validation 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xrml-xaccounts 1.0.0",
+ "xrml-xassets-assets 1.0.0",
+ "xrml-xsupport 1.0.0",
+]
+
+[[package]]
 name = "xrml-xdex-spot"
 version = "1.0.0"
 dependencies = [
  "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3807,7 +3866,7 @@ version = "1.0.0"
 dependencies = [
  "chainx-primitives 1.0.0",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3824,7 +3883,7 @@ name = "xrml-xfisher"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3845,7 +3904,7 @@ name = "xrml-xmining-staking"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3869,7 +3928,7 @@ name = "xrml-xmining-tokens"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3893,7 +3952,7 @@ name = "xrml-xmultisig"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3909,7 +3968,7 @@ name = "xrml-xsession"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "srml-consensus 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3928,7 +3987,7 @@ dependencies = [
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -3940,7 +3999,7 @@ name = "xrml-xsystem"
 version = "1.0.0"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "srml-support 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
@@ -4158,6 +4217,7 @@ dependencies = [
 "checksum parity-send-wrapper 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "aa9777aa91b8ad9dd5aaa04a9b6bcb02c7f1deb952fca5a66034d5e63afc5c6f"
 "checksum parity-util-mem 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "89e80f22052161e0cb55cb5a8a75890420c525031f95c9d262dbb0434aa85dc1"
 "checksum parity-wasm 0.31.3 (registry+https://github.com/rust-lang/crates.io-index)" = "511379a8194230c2395d2f5fa627a5a7e108a9f976656ce723ae68fca4097bfc"
+"checksum parity-wasm 0.40.3 (registry+https://github.com/rust-lang/crates.io-index)" = "1e39faaa292a687ea15120b1ac31899b13586446521df6c149e46f1584671e0f"
 "checksum parking_lot 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)" = "d4d05f1349491390b1730afba60bb20d55761bef489a954546b58b4b34e1e2ac"
 "checksum parking_lot 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)" = "f0802bff09003b291ba756dc7e79313e51cc31667e94afbe847def490424cde5"
 "checksum parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ab41b4aed082705d1056416ae4468b6ea99d52599ecf3169b00088d43113e337"
@@ -4180,6 +4240,7 @@ dependencies = [
 "checksum proc-macro-hack-impl 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2b753ad9ed99dd8efeaa7d2fb8453c8f6bc3e54b97966d35f1bc77ca6865254a"
 "checksum proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)" = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
 "checksum protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5f00e4a3cb64ecfeac2c0a73c74c68ae3439d7a6bead3870be56ad5dd2620a6f"
+"checksum pwasm-utils 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d473123ba135028544926f7aa6f34058d8bc6f120c4fcd3777f84af724280b3"
 "checksum quick-error 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "5fb6ccf8db7bbcb9c2eae558db5ab4f3da1c2a87e4e597ed394726bc8ea6ca1d"
 "checksum quick-error 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9274b940887ce9addde99c4eee6b5c44cc494b182b97e73dc8ffdcb3397fd3f0"
 "checksum quote 0.6.12 (registry+https://github.com/rust-lang/crates.io-index)" = "faf4799c5d274f3868a4aae320a0a182cbd2baee377b378f080e16a23e9d80db"
@@ -4217,7 +4278,7 @@ dependencies = [
 "checksum semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 "checksum send_wrapper 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a0eddf2e8f50ced781f288c19f18621fa72a3779e3cb58dbf23b07469b0abeb4"
-"checksum serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)" = "076a696fdea89c19d3baed462576b8f6d663064414b5c793642da8dfeb99475b"
+"checksum serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)" = "9796c9b7ba2ffe7a9ce53c2287dfc48080f4b2b362fcc245a259b3a7201119dd"
 "checksum serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)" = "ef45eb79d6463b22f5f9e16d283798b7c0175ba6050bc25c1a946c122727fe7b"
 "checksum serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)" = "051c49229f282f7c6f3813f8286cc1e3323e8051823fce42c7ea80fe13521704"
 "checksum serialization 0.1.0 (git+https://github.com/chainx-org/light-bitcoin)" = "<none>"
@@ -4238,6 +4299,7 @@ dependencies = [
 "checksum sr-api-macros 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)" = "<none>"
 "checksum sr-io 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)" = "<none>"
 "checksum sr-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)" = "<none>"
+"checksum sr-sandbox 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)" = "<none>"
 "checksum sr-std 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)" = "<none>"
 "checksum sr-version 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)" = "<none>"
 "checksum srml-consensus 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)" = "<none>"
@@ -4329,6 +4391,7 @@ dependencies = [
 "checksum wasm-timer 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "3d6101df9a5987df809216bdda7289f52b58128e6b6a6546e9ee3e6b632b4921"
 "checksum wasmi 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "aebbaef470840d157a5c47c8c49f024da7b1b80e90ff729ca982b2b80447e78b"
 "checksum wasmi-validation 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ab380192444b3e8522ae79c0a1976e42a82920916ccdfbce3def89f456ea33f3"
+"checksum wasmi-validation 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6bc0356e3df56e639fc7f7d8a99741915531e27ed735d911ed83d7e1339c8188"
 "checksum web-sys 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)" = "22306ce642c58266cb5c5938150194911322bc179aa895146076217410ddbc82"
 "checksum weedle 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bcc44aa200daee8b1f3a004beaf16554369746f1b4486f0cf93b0caf8a3c2d1e"
 "checksum winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "167dc9d6949a9b857f3451275e911c3f44255842c1f7a76f33c55103a909087a"

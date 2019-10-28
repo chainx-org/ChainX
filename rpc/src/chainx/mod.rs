@@ -20,7 +20,7 @@ use serde_json::Value;
 use client::runtime_api::Metadata;
 use primitives::crypto::UncheckedInto;
 use primitives::storage::{StorageData, StorageKey};
-use primitives::{Blake2Hasher, H256};
+use primitives::{Blake2Hasher, Bytes, H256};
 use runtime_primitives::generic::BlockId;
 use runtime_primitives::traits::Block as BlockT;
 use runtime_primitives::traits::{Header, NumberFor, ProvideRuntimeApi, Zero};
@@ -28,12 +28,14 @@ use state_machine::Backend;
 
 use support::storage::{StorageMap, StorageValue};
 
-use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
+use chainx_primitives::{
+    AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, ContractExecResult, Timestamp,
+};
 use chainx_runtime::Runtime;
 
 use runtime_api::{
-    xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xfee_api::XFeeApi, xmining_api::XMiningApi,
-    xspot_api::XSpotApi, xstaking_api::XStakingApi,
+    xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xcontracts_api::XContractsApi,
+    xfee_api::XFeeApi, xmining_api::XMiningApi, xspot_api::XSpotApi, xstaking_api::XStakingApi,
 };
 
 use xassets::{Asset, AssetType, Chain, ChainT, Token};
@@ -86,7 +88,8 @@ where
         + XSpotApi<Block>
         + XFeeApi<Block>
         + XStakingApi<Block>
-        + XBridgeApi<Block>,
+        + XBridgeApi<Block>
+        + XContractsApi<Block>,
 {
     /// Create new ChainX API RPC handler.
     pub fn new(client: Arc<client::Client<B, E, Block, RA>>) -> Self {

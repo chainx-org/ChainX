@@ -42,7 +42,7 @@ pub enum Error {
         fmt = "Runtime error, e:{:}",
         "str::from_utf8(&_0).unwrap_or_default()"
     )]
-    RuntimeErr(Vec<u8>),
+    RuntimeErr(Vec<u8>, Option<String>),
 
     #[display(fmt = "{:} is Deprecated, Please Use {:}V1 Instead", _0, _0)]
     DeprecatedV0Err(String),
@@ -102,10 +102,14 @@ impl From<Error> for rpc::Error {
                 message: format!("{:?}", e).into(),
                 data: None,
             },
-            Error::RuntimeErr(_) => rpc::Error {
+            Error::RuntimeErr(e, msg) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 13),
-                message: format!("{:?}", e).into(),
-                data: None,
+                message: format!(
+                    "Runtime error, e:{:?}",
+                    str::from_utf8(&e).unwrap_or_default()
+                )
+                .into(),
+                data: msg.map(Into::into),
             },
             Error::DeprecatedV0Err(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 14),

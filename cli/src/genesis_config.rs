@@ -12,9 +12,9 @@ use chainx_runtime::{
     Runtime,
 };
 use chainx_runtime::{
-    ConsensusConfig, GenesisConfig, SessionConfig, TimestampConfig, XAssetsConfig,
+    xcontracts, ConsensusConfig, GenesisConfig, SessionConfig, TimestampConfig, XAssetsConfig,
     XBootstrapConfig, XBridgeFeaturesConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
-    XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
+    XContractsConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
 };
 
 use btc_chain::BlockHeader;
@@ -76,7 +76,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     let (code, mut genesis_node_info, team_council, network_props, bitcoin) = match genesis_spec {
         GenesisSpec::Dev => (
-            include_bytes!("chainx_runtime.compact.wasm").to_vec(), // dev genesis runtime version is 6
+            include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm").to_vec(), // dev genesis runtime version is 6
             load_genesis_node_info(&include_bytes!("dev_genesis_node.csv")[..]).unwrap(),
             load_team_council_info(&include_bytes!("dev_team_council.csv")[..]).unwrap(),
             (xsystem::NetworkType::Testnet, 42),
@@ -96,6 +96,16 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             (xsystem::NetworkType::Mainnet, 44),
             mainnet_bitcoin,
         ),
+    };
+    let contracts_config = match genesis_spec {
+        GenesisSpec::Dev => Some(XContractsConfig {
+            current_schedule: xcontracts::Schedule {
+                enable_println: true, // this should only be enabled on development chains
+                ..Default::default()
+            },
+            gas_price: 1,
+        }),
+        _ => None,
     };
 
     assert_eq!(team_council.len(), 8);
@@ -248,6 +258,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             )],
             _genesis_phantom_data: Default::default(),
         }),
+        xcontracts: contracts_config,
         xbootstrap: Some(XBootstrapConfig {
             // xassets
             pcx: (

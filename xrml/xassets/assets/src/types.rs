@@ -28,6 +28,15 @@ pub type Precision = u16;
 
 pub type SignedImbalanceT<T> = SignedImbalance<<T as Trait>::Balance, PositiveImbalance<T>>;
 
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+pub enum SignedBalance<T: Trait> {
+    /// A positive imbalance (funds have been created but none destroyed).
+    Positive(T::Balance),
+    /// A negative imbalance (funds have been destroyed but none created).
+    Negative(T::Balance),
+}
+
 macro_rules! define_enum {
     (
     $(#[$attr:meta])*
@@ -147,6 +156,7 @@ define_enum!(
         ReservedDexSpot,
         ReservedDexFuture,
         ReservedCurrency,
+        GasPayment,
     }
 );
 

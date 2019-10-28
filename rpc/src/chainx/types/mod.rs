@@ -325,3 +325,13 @@ pub struct QuotationsList {
     pub sell: Vec<(Balance, Balance)>,
     pub buy: Vec<(Balance, Balance)>,
 }
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct CallRequest {
+    pub origin: AccountId,
+    pub dest: AccountId,
+    pub gas_limit: u64,
+    pub input_data: Bytes,
+}

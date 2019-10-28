@@ -51,7 +51,8 @@ where
         + XSpotApi<Block>
         + XFeeApi<Block>
         + XStakingApi<Block>
-        + XBridgeApi<Block>,
+        + XBridgeApi<Block>
+        + XContractsApi<Block>,
 {
     fn block_info(&self, number: Option<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         Ok(self.client.block(&self.block_id_by_number(number)?)?)
@@ -397,38 +398,6 @@ where
         ))
     }
 
-    fn intention(
-        &self,
-        who: AccountIdForRpc,
-        hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<IntentionInfo>> {
-        let state = self.state_at(hash)?;
-        let block_id = self.block_id_by_hash(hash)?;
-        let who: AccountId = who.unchecked_into();
-
-        let info_wrapper = self.get_intention_info_wrapper(&state, (block_id, hash), who)?;
-        if let Some(ref info) = info_wrapper {
-            if info.intention_profs_wrapper.is_err() {
-                return Err(Error::DeprecatedV0Err("chainx_getIntentionByAccount".into()).into());
-            }
-        }
-        Ok(info_wrapper.map(Into::into))
-    }
-
-    fn intention_v1(
-        &self,
-        who: AccountIdForRpc,
-        hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<IntentionInfoV1>> {
-        let state = self.state_at(hash)?;
-        let block_id = self.block_id_by_hash(hash)?;
-        let who: AccountId = who.unchecked_into();
-
-        Ok(self
-            .get_intention_info_wrapper(&state, (block_id, hash), who)?
-            .map(Into::into))
-    }
-
     fn intentions(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
@@ -466,6 +435,38 @@ where
         )
         });
         Ok(r)
+    }
+
+    fn intention(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<IntentionInfo>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+        let who: AccountId = who.unchecked_into();
+
+        let info_wrapper = self.get_intention_info_wrapper(&state, (block_id, hash), who)?;
+        if let Some(ref info) = info_wrapper {
+            if info.intention_profs_wrapper.is_err() {
+                return Err(Error::DeprecatedV0Err("chainx_getIntentionByAccount".into()).into());
+            }
+        }
+        Ok(info_wrapper.map(Into::into))
+    }
+
+    fn intention_v1(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<IntentionInfoV1>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+        let who: AccountId = who.unchecked_into();
+
+        Ok(self
+            .get_intention_info_wrapper(&state, (block_id, hash), who)?
+            .map(Into::into))
     }
 
     fn psedu_intentions(
@@ -784,7 +785,7 @@ where
                     None => Ok(Some(vec![])),
                 }
             }
-            _ => Err(Error::RuntimeErr(b"not support for this chain".to_vec()).into()),
+            _ => Err(Error::RuntimeErr(b"not support for this chain".to_vec(), None).into()),
         }
     }
 
@@ -902,7 +903,7 @@ where
 
         runtime_result
             .map(|all_session_info| parse_trustee_session_info(Chain::Bitcoin, 0, all_session_info))
-            .map_err(|e| Error::RuntimeErr(e).into())
+            .map_err(|e| Error::RuntimeErr(e, None).into())
     }
 
     fn particular_accounts(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Option<Value>> {
@@ -931,6 +932,47 @@ where
             "trusteesAccount": map
         }
         )))
+    }
+
+    fn contract_call(
+        &self,
+        call_request: CallRequest,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<ContractExecResult> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().chain.best_hash));
+
+        let CallRequest {
+            origin,
+            dest,
+            gas_limit,
+            input_data,
+        } = call_request;
+        // let gas_limit = gas_limit.to_number().map_err(|e| Error {
+        //     code: ErrorCode::InvalidParams,
+        //     message: e,
+        //     data: None,
+        // })?;
+
+        let exec_result = api
+            .call(
+                &at,
+                origin,
+                dest,
+                Zero::zero(),
+                gas_limit,
+                input_data.to_vec(),
+            )
+            .map_err(|e| {
+                Error::RuntimeErr(
+                    b"Runtime trapped while executing a contract.".to_vec(),
+                    Some(format!("{:?}", e)),
+                )
+            })?;
+
+        Ok(exec_result)
     }
 }
 

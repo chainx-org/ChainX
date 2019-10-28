@@ -124,7 +124,7 @@ impl Rpc for substrate_service::FullComponents<service::Factory> {
 
             let chainx = rpc::apis::chainx::ChainX::new(client.clone());
             rpc::rpc_handler::<ComponentBlock<Self>, ComponentExHash<Self>, _, _, _, _, _>(
-                state, chain, author, system, chainx
+                state, chain, author, system, chainx,
             )
         };
         let rpc_http: Result<Option<rpc::HttpServer>, io::Error> =

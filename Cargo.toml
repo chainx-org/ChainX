@@ -55,4 +55,5 @@ members = [
     "xrml/xbridge/bitcoin",
     "xrml/xbridge/sdot",
     "xrml/xbridge/features",
+    "xrml/xcontracts",
 ]

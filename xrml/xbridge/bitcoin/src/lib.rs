@@ -160,8 +160,6 @@ decl_storage! {
                 txid_list: [].to_vec(),
             };
 
-//            let s = storage.clone().build_storage().unwrap().0;
-//            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
             with_storage(storage, || {
                 BlockHeaderFor::<T>::insert(&genesis_hash, header_info.clone());
                 BlockHashFor::<T>::insert(&header_info.height, vec![genesis_hash.clone()]);
@@ -180,8 +178,6 @@ decl_storage! {
                     genesis_hash,
                 ));
             });
-//            let init: StorageOverlay = init.into();
-//            storage.extend(init);
         });
     }
 }

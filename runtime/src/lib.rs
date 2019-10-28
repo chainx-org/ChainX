@@ -28,7 +28,7 @@ pub use runtime_primitives::{create_runtime_str, Perbill, Permill};
 use runtime_primitives::{generic, ApplyResult};
 use substrate_primitives::OpaqueMetadata;
 use substrate_primitives::H512;
-pub use support::{construct_runtime, StorageValue};
+pub use support::{construct_runtime, parameter_types, StorageValue};
 
 pub use timestamp::BlockPeriod;
 pub use timestamp::Call as TimestampCall;
@@ -46,8 +46,10 @@ use xr_primitives::AddrStr;
 // chainx
 use chainx_primitives::{
     Acceleration, AccountId, AccountIndex, AuthorityId, AuthoritySignature, Balance, BlockNumber,
-    Hash, Index, Signature, Timestamp as TimestampU64,
+    ContractExecResult, Hash, Index, Signature, Timestamp as TimestampU64,
 };
+
+use fee::CheckFee;
 
 pub use xaccounts;
 pub use xassets;
@@ -55,6 +57,7 @@ pub use xbitcoin;
 pub use xbitcoin::lockup as xbitcoin_lockup;
 pub use xbridge_common;
 pub use xbridge_features;
+pub use xcontracts;
 pub use xprocess;
 
 use xsupport::ensure_with_errorlog;
@@ -223,6 +226,49 @@ impl finality_tracker::Trait for Runtime {
     type OnFinalizationStalled = xgrandpa::SyncedAuthorities<Runtime>;
 }
 
+// TODO
+parameter_types! {
+    pub const TombstoneDeposit: Balance = 1 * 10000000;
+    pub const RentByteFee: Balance = 1 * 10000000;
+    pub const RentDepositOffset: Balance = 1000 * 10000000;
+    pub const SurchargeReward: Balance = 150 * 10000000;
+}
+
+pub struct DispatchFeeComputor;
+impl
+    xcontracts::ComputeDispatchFee<
+        <Runtime as xcontracts::Trait>::Call,
+        <Runtime as xassets::Trait>::Balance,
+    > for DispatchFeeComputor
+{
+    fn compute_dispatch_fee(
+        call: &<Runtime as xcontracts::Trait>::Call,
+    ) -> Option<<Runtime as xassets::Trait>::Balance> {
+        let switch = xfee_manager::Module::<Runtime>::switcher();
+        let method_call_weight = XFeeManager::method_call_weight();
+        let encoded_len = call.using_encoded(|encoded| encoded.len() as u64);
+        (*call)
+            .check_fee(switch, method_call_weight)
+            .map(|weight| XFeeManager::transaction_fee(weight, encoded_len))
+    }
+}
+
+impl xcontracts::Trait for Runtime {
+    type Call = Call;
+    type Event = Event;
+    type DetermineContractAddress = xcontracts::SimpleAddressDeterminator<Runtime>;
+    type ComputeDispatchFee = DispatchFeeComputor; //<Runtime>;
+    type TrieIdGenerator = xcontracts::TrieIdFromParentCounter<Runtime>;
+    type SignedClaimHandicap = xcontracts::DefaultSignedClaimHandicap;
+    type TombstoneDeposit = TombstoneDeposit;
+    type StorageSizeOffset = xcontracts::DefaultStorageSizeOffset;
+    type RentByteFee = RentByteFee;
+    type RentDepositOffset = RentDepositOffset;
+    type MaxDepth = xcontracts::DefaultMaxDepth;
+    type MaxValueSize = xcontracts::DefaultMaxValueSize;
+    type BlockGasLimit = xcontracts::DefaultBlockGasLimit;
+}
+
 pub struct HeaderChecker;
 impl xfisher::CheckHeader<AuthorityId, BlockNumber> for HeaderChecker {
     fn check_header(
@@ -317,6 +363,8 @@ construct_runtime!(
 
         XBridgeCommon: xbridge_common::{Module, Storage, Event<T>},
         XBridgeOfBTCLockup: xbitcoin_lockup::{Module, Call, Storage, Event<T>},
+
+        XContracts: xcontracts,
     }
 );
 
@@ -513,8 +561,6 @@ impl_runtime_apis! {
 
     impl runtime_api::xfee_api::XFeeApi<Block> for Runtime {
         fn transaction_fee(call_params: Vec<u8>, encoded_len: u64) -> Option<u64> {
-            use fee::CheckFee;
-
             let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
                 call
             } else {
@@ -573,6 +619,31 @@ impl_runtime_apis! {
                 let num = number.unwrap_or(XBridgeFeatures::current_session_number(chain));
                 (num, info)
             })
+        }
+    }
+
+    impl runtime_api::xcontracts_api::XContractsApi<Block> for Runtime {
+        fn call(
+            origin: AccountId,
+            dest: AccountId,
+            value: Balance,
+            gas_limit: u64,
+            input_data: Vec<u8>,
+        ) -> ContractExecResult {
+            let exec_result = XContracts::bare_call(
+                origin,
+                dest.into(),
+                value,
+                gas_limit,
+                input_data,
+            );
+            match exec_result {
+                Ok(v) => ContractExecResult::Success {
+                    status: v.status as u16,
+                    data: v.data,
+                },
+                Err(_) => ContractExecResult::Error,
+            }
         }
     }
 }

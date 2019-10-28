@@ -2,6 +2,11 @@
 
 //! Shareable ChainX types.
 #![cfg_attr(not(feature = "std"), no_std)]
+use parity_codec::{Decode, Encode};
+use rstd::prelude::Vec;
+
+#[cfg(feature = "std")]
+use serde_derive::{Deserialize, Serialize};
 
 use runtime_primitives::{
     generic,
@@ -71,3 +76,22 @@ pub type BlockId = generic::BlockId<Block>;
 
 /// Opaque, encoded, unchecked extrinsic.
 pub type UncheckedExtrinsic = OpaqueExtrinsic;
+
+/// A result of execution of a contract.
+#[derive(Eq, PartialEq, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum ContractExecResult {
+    /// The contract returned successfully.
+    ///
+    /// There is a status code and, optionally, some data returned by the contract.
+    Success {
+        /// Status code returned by the contract.
+        status: u16,
+        /// Output data returned by the contract.
+        ///
+        /// Can be empty.
+        data: Vec<u8>,
+    },
+    /// The contract execution either trapped or returned an error.
+    Error,
+}

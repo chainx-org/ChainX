@@ -188,4 +188,11 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
 
     #[rpc(name = "chainx_particularAccounts")]
     fn particular_accounts(&self, hash: Option<Hash>) -> Result<Option<serde_json::Value>>;
+
+    #[rpc(name = "chainx_contractCall")]
+    fn contract_call(
+        &self,
+        call_request: CallRequest,
+        at: Option<Hash>,
+    ) -> Result<ContractExecResult>;
 }
