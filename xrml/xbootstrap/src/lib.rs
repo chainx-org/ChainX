@@ -48,6 +48,7 @@ decl_storage! {
 
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use parity_codec::{Encode, KeyedVec};
+            use primitives::traits::Zero;
             use support::StorageMap;
             use xassets::{ChainT, Token, Chain, Asset};
             use xspot::CurrencyPair;
@@ -114,6 +115,13 @@ decl_storage! {
                         xassets::AssetType::ReservedStaking,
                         value
                     ).unwrap();
+                    // trick. due to commit 7afe0c7f2ece89eb4569a4126c9668ae767f1c6b
+                    // where value is zero, the item would be removed in btreemap.
+                    // but old genesis do not have this feature, thus, insert a zero value in to
+                    // the btreemap manually.
+                    xassets::AssetBalance::<T>::mutate(&(account_id.clone(), pcx.clone()), |b| {
+                        b.insert(xassets::AssetType::Free, Zero::zero());
+                    });
 
                     xstaking::Module::<T>::bootstrap_refresh(&account_id, Some(url), Some(true), Some(validator_key), Some(memo));
                     xstaking::Module::<T>::bootstrap_update_vote_weight(&account_id, &account_id, Delta::Add(value.into()));
