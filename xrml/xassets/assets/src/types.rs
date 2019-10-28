@@ -420,7 +420,13 @@ mod imbalances {
         fn drop(&mut self) {
             TotalAssetBalance::<T>::mutate(&self.1, |map| {
                 let balance = map.entry(self.2).or_default();
-                *balance = balance.saturating_sub(self.0)
+                let new_balance = balance.saturating_sub(self.0);
+                if new_balance == Zero::zero() {
+                    // remove Zero balance to save space
+                    map.remove(&self.2);
+                } else {
+                    *balance = new_balance;
+                }
             })
         }
     }

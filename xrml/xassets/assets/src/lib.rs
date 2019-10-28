@@ -533,10 +533,17 @@ impl<T: Trait> Module<T> {
     ) -> SignedImbalanceT<T> {
         let mut original: T::Balance = Zero::zero();
         AssetBalance::<T>::mutate(who_token, |balance_map| {
-            let balance = balance_map.entry(type_).or_default();
-            original = *balance;
-            // modify to new balance
-            *balance = new_balance;
+            if new_balance == Zero::zero() {
+                // remove Zero balance to save space
+                if let Some(old) = balance_map.remove(&type_) {
+                    original = old;
+                }
+            } else {
+                let balance = balance_map.entry(type_).or_default();
+                original = *balance;
+                // modify to new balance
+                *balance = new_balance;
+            }
         });
         let imbalance = if original <= new_balance {
             SignedImbalance::Positive(PositiveImbalance::<T>::new(
