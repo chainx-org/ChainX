@@ -32,13 +32,15 @@ pub fn validate_transaction<T: Trait, RT: RelayTransaction + MaybeDebug>(
     );
 
     // verify merkle proof
-    match tx.merkle_proof().clone().parse() {
-        Ok(parsed) => {
-            if merkle_root != parsed.root {
+    let mut matches = Vec::new();
+    let mut _indexes = Vec::new();
+    match tx.merkle_proof().extract_matches(&mut matches, &mut _indexes) {
+        Ok(hash) => {
+            if merkle_root != hash {
                 return Err("Check failed for merkle tree proof");
             }
-            if !parsed.hashes.iter().any(|h| *h == tx_hash) {
-                return Err("Tx hash should in ParsedPartialMerkleTree");
+            if !matches.iter().any(|h| *h == tx_hash) {
+                return Err("Tx hash should in matches of partial merkle tree");
             }
         }
         Err(_) => return Err("Parse partial merkle tree failed"),

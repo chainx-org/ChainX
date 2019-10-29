@@ -30,7 +30,6 @@ use sr_primitives::traits::{Bounded, CheckedAdd, CheckedSub, Zero};
 pub type AccountIdOf<T> = <T as system::Trait>::AccountId;
 pub type CallOf<T> = <T as Trait>::Call;
 pub type MomentOf<T> = <T as timestamp::Trait>::Moment;
-pub type SeedOf<T> = <T as system::Trait>::Hash;
 pub type BlockNumberOf<T> = <T as system::Trait>::BlockNumber;
 
 /// A type that represents a topic of an event. At the moment a hash is used.
