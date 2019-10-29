@@ -938,7 +938,7 @@ where
         &self,
         call_request: CallRequest,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<ContractExecResult> {
+    ) -> Result<Value> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
@@ -950,11 +950,6 @@ where
             gas_limit,
             input_data,
         } = call_request;
-        // let gas_limit = gas_limit.to_number().map_err(|e| Error {
-        //     code: ErrorCode::InvalidParams,
-        //     message: e,
-        //     data: None,
-        // })?;
 
         let exec_result = api
             .call(
@@ -972,7 +967,17 @@ where
                 )
             })?;
 
-        Ok(exec_result)
+        match exec_result {
+            ContractExecResult::Success { status, data } => {
+                Ok(json!({
+                    "status": status,
+                    "data": Bytes(data),
+                }))
+            },
+            ContractExecResult::Error(e) => {
+                Err(Error::RuntimeErr(e, None))
+            }
+        }
     }
 }
 

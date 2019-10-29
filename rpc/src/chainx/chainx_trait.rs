@@ -194,5 +194,5 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
         &self,
         call_request: CallRequest,
         at: Option<Hash>,
-    ) -> Result<ContractExecResult>;
+    ) -> Result<Value>;
 }

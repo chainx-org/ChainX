@@ -39,7 +39,7 @@ pub enum Error {
     HexDecodeErr,
 
     #[display(
-        fmt = "Runtime error, e:{:}",
+        fmt = "Runtime error, reason: {{{:}}}",
         "str::from_utf8(&_0).unwrap_or_default()"
     )]
     RuntimeErr(Vec<u8>, Option<String>),
@@ -64,48 +64,48 @@ impl From<Error> for rpc::Error {
         match e {
             Error::Unimplemented => rpc::Error {
                 code: rpc::ErrorCode::ServerError(1),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::QuotationsPieceErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 5),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::TradingPairIndexErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 6),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::PageSizeErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 7),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::PageIndexErr(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 8),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::DecodeErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 9),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::BinaryStartErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 10),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::HexDecodeErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 11),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::RuntimeErr(e, msg) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 13),
                 message: format!(
-                    "Runtime error, e:{:?}",
+                    "Runtime error, reason: {{{:}}}",
                     str::from_utf8(&e).unwrap_or_default()
                 )
                 .into(),
@@ -113,17 +113,17 @@ impl From<Error> for rpc::Error {
             },
             Error::DeprecatedV0Err(_) => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 14),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::StorageNotExistErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 15),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             Error::BlockNumberErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 16),
-                message: format!("{:?}", e).into(),
+                message: format!("{:}", e).into(),
                 data: None,
             },
             e => errors::internal(e),

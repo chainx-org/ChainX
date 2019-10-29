@@ -93,5 +93,5 @@ pub enum ContractExecResult {
         data: Vec<u8>,
     },
     /// The contract execution either trapped or returned an error.
-    Error,
+    Error(Vec<u8>),
 }

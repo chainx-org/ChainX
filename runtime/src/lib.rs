@@ -642,7 +642,7 @@ impl_runtime_apis! {
                     status: v.status as u16,
                     data: v.data,
                 },
-                Err(_) => ContractExecResult::Error,
+                Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
             }
         }
     }
