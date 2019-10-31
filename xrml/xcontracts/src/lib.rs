@@ -473,7 +473,16 @@ decl_module! {
             debug!("[call]|call contract|from:{:?}|dest:{:?}|value:{:?}|data:{:}", origin, dest, value, try_hex_or_str(&data));
 
             Self::bare_call(origin, dest, value, gas_limit, data)
-                .map(|_| ())
+                .and_then(|output| {
+                    if output.is_success() {
+                        Ok(()) // just drop output
+                    } else {
+                        Err(ExecError{
+                            reason: "fail to call the contract, please check input_data and contract",
+                            buffer: Vec::new(),
+                        })
+                    }
+                })
                 .map_err(|e| e.reason)
         }
 
@@ -507,7 +516,16 @@ decl_module! {
                         output
                     })
             })
-            .map(|_| ())
+            .and_then(|output| {
+                if output.is_success() {
+                    Ok(()) // just drop output
+                } else {
+                    Err(ExecError{
+                        reason: "fail to create contract, maybe instantiate data decode error",
+                        buffer: Vec::new(),
+                    })
+                }
+            })
             .map_err(|e| e.reason)
         }
 

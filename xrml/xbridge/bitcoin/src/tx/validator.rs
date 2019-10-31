@@ -34,7 +34,10 @@ pub fn validate_transaction<T: Trait, RT: RelayTransaction + MaybeDebug>(
     // verify merkle proof
     let mut matches = Vec::new();
     let mut _indexes = Vec::new();
-    match tx.merkle_proof().extract_matches(&mut matches, &mut _indexes) {
+    match tx
+        .merkle_proof()
+        .extract_matches(&mut matches, &mut _indexes)
+    {
         Ok(hash) => {
             if merkle_root != hash {
                 return Err("Check failed for merkle tree proof");

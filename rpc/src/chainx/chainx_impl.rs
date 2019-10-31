@@ -968,15 +968,11 @@ where
             })?;
 
         match exec_result {
-            ContractExecResult::Success { status, data } => {
-                Ok(json!({
-                    "status": status,
-                    "data": Bytes(data),
-                }))
-            },
-            ContractExecResult::Error(e) => {
-                Err(Error::RuntimeErr(e, None))
-            }
+            ContractExecResult::Success { status, data } => Ok(json!({
+                "status": status,
+                "data": Bytes(data),
+            })),
+            ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
         }
     }
 }
