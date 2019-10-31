@@ -276,7 +276,7 @@ where
                 init_logger_log4rs(s, cli.right)
             }
         },
-        |exit, _cli_args, custom_args, config| {
+        |exit, cli_args, custom_args, config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
             info!("  by ChainX, 2018-2019");
@@ -298,9 +298,12 @@ where
             substrate_rpc::set_cache_flag(custom_args.rpc_cache);
 
             if config.roles == ServiceRoles::AUTHORITY {
-                let name = custom_args
-                    .validator_name
-                    .expect("if in AUTHORITY mode, must point the validator name!");
+                let option_name = custom_args.validator_name;
+                let name = if cli_args.shared_params.dev {
+                    option_name.unwrap_or("Alice".to_string())
+                } else {
+                    option_name.ok_or("if in AUTHORITY mode, must point the validator name!")?
+                };
                 info!("Validator name: {:}", name);
                 set_validator_name(name);
             }
