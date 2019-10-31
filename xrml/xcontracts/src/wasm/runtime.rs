@@ -126,12 +126,16 @@ pub(crate) fn to_execution_result<E: Ext>(
         // Because panics are really undesirable in the runtime code, we treat this as
         // a trap for now. Eventually, we might want to revisit this.
         Err(sandbox::Error::Module) => Err(ExecError {
-            reason: "validation error",
+            reason: "validation error|Module is not valid, couldn't be instantiated or it's `start` function trapped",
             buffer: runtime.scratch_buf,
         }),
         // Any other kind of a trap should result in a failure.
-        Err(sandbox::Error::Execution) | Err(sandbox::Error::OutOfBounds) => Err(ExecError {
-            reason: "during execution",
+        Err(sandbox::Error::Execution) => Err(ExecError {
+            reason: "during execution|Failed to invoke an exported function for some reason|may be a wrong selector",
+            buffer: runtime.scratch_buf,
+        }),
+        Err(sandbox::Error::OutOfBounds) => Err(ExecError {
+            reason: "during execution|Access to a memory or table was made with an address or an index which is out of bounds",
             buffer: runtime.scratch_buf,
         }),
     }

@@ -905,7 +905,7 @@ fn dispatch_call_not_dispatched_after_top_level_transaction_failure() {
                     100_000,
                     vec![],
                 ),
-                "during execution"
+                "during execution|Failed to invoke an exported function for some reason|may be a wrong selector"
             );
             assert_eq!(
                 System::events(),
@@ -2095,7 +2095,7 @@ fn storage_max_value_limit() {
                     100_000,
                     Encode::encode(&(self::MaxValueSize::get() + 1)),
                 ),
-                "during execution"
+                "during execution|Failed to invoke an exported function for some reason|may be a wrong selector"
             );
         },
     );
@@ -2629,7 +2629,7 @@ fn cannot_self_destruct_while_live() {
             // self-destruct, resulting in a trap.
             assert_err!(
                 Contract::call(Origin::signed(ALICE), BOB, 0, 100_000, vec![0],),
-                "during execution"
+                "during execution|Failed to invoke an exported function for some reason|may be a wrong selector"
             );
 
             // Check that BOB is still alive.
