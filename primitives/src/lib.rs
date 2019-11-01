@@ -95,3 +95,24 @@ pub enum ContractExecResult {
     /// The contract execution either trapped or returned an error.
     Error(Vec<u8>),
 }
+
+/// A result type of the get storage call.
+///
+/// See [`ContractsApi::get_storage`] for more info.
+pub type GetStorageResult = Result<Option<Vec<u8>>, GetStorageError>;
+/// The possible errors that can happen querying the storage of a contract.
+#[derive(Eq, PartialEq, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum GetStorageError {
+    /// The given address doesn't point on a contract.
+    ContractDoesntExist,
+    /// The specified contract is a tombstone and thus cannot have any storage.
+    IsTombstone,
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Display for GetStorageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{:?}", self)
+    }
+}

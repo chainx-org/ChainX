@@ -243,7 +243,7 @@ where
     ) {
         self.subscribe_headers(
             subscriber,
-            || Ok(Some(self.client.info().chain.finalized_hash)),
+            || self.finalized_head().map(|h| Some(h)),
             || {
                 self.client
                     .finality_notification_stream()

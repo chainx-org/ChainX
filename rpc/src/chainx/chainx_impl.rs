@@ -975,6 +975,32 @@ where
             ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
         }
     }
+
+    fn contract_get_storage(
+        &self,
+        address: AccountIdForRpc,
+        key: H256,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Bytes>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().chain.best_hash));
+        let address: AccountId = address.unchecked_into();
+
+        let get_storage_result = api
+            .get_storage(&at, address, key.into())
+            .map_err(|e|
+                // Handle general API calling errors.
+                Error::RuntimeErr(
+                    b"Runtime trapped while querying storage.".to_vec(),
+                    Some(format!("{:?}", e)),
+                ))?
+            .map_err(|e| Error::ContractGetStorageError(e))?
+            .map(Bytes);
+
+        Ok(get_storage_result)
+    }
 }
 
 fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {

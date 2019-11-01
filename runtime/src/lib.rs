@@ -46,7 +46,8 @@ use xr_primitives::AddrStr;
 // chainx
 use chainx_primitives::{
     Acceleration, AccountId, AccountIndex, AuthorityId, AuthoritySignature, Balance, BlockNumber,
-    ContractExecResult, Hash, Index, Signature, Timestamp as TimestampU64,
+    ContractExecResult, GetStorageError, GetStorageResult, Hash, Index, Signature,
+    Timestamp as TimestampU64,
 };
 
 use fee::CheckFee;
@@ -644,6 +645,20 @@ impl_runtime_apis! {
                 },
                 Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
             }
+        }
+
+        fn get_storage(
+            address: AccountId,
+            key: [u8; 32],
+        ) -> GetStorageResult {
+            XContracts::get_storage(address, key).map_err(|rpc_err| {
+                use GetStorageError as RpcGetStorageError;
+                /// Map the contract error into the RPC layer error.
+                match rpc_err {
+                    xcontracts::GetStorageError::ContractDoesntExist => RpcGetStorageError::ContractDoesntExist,
+                    xcontracts::GetStorageError::IsTombstone => RpcGetStorageError::IsTombstone,
+                }
+            })
         }
     }
 }

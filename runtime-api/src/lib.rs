@@ -127,6 +127,17 @@ pub mod xcontracts_api {
                 gas_limit: u64,
                 input_data: Vec<u8>,
             ) -> chainx_primitives::ContractExecResult;
+
+            /// Query a given storage key in a given contract.
+            ///
+            /// Returns `Ok(Some(Vec<u8>))` if the storage value exists under the given key in the
+            /// specified account and `Ok(None)` if it doesn't. If the account specified by the address
+            /// doesn't exist, or doesn't have a contract or if the contract is a tombstone, then `Err`
+            /// is returned.
+            fn get_storage(
+                address: AccountIdForApi,
+                key: [u8; 32],
+            ) -> chainx_primitives::GetStorageResult;
         }
     }
 }

@@ -55,6 +55,8 @@ pub enum Error {
 
     #[display(fmt = "BlockNumber not exist for this hash")]
     BlockNumberErr,
+
+    ContractGetStorageError(chainx_primitives::GetStorageError),
 }
 
 const ERROR: i64 = 1600;
@@ -126,6 +128,21 @@ impl From<Error> for rpc::Error {
                 message: format!("{:}", e).into(),
                 data: None,
             },
+            Error::ContractGetStorageError(e) => {
+                use chainx_primitives::GetStorageError::*;
+                match e {
+                    ContractDoesntExist => rpc::Error {
+                        code: rpc::ErrorCode::ServerError(ERROR + 100),
+                        message: "The specified contract doesn't exist.".into(),
+                        data: None,
+                    },
+                    IsTombstone => rpc::Error {
+                        code: rpc::ErrorCode::ServerError(ERROR + 101),
+                        message: "The contract is a tombstone and doesn't have any storage.".into(),
+                        data: None,
+                    },
+                }
+            }
             e => errors::internal(e),
         }
     }

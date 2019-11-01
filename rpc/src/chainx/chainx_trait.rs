@@ -191,4 +191,12 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
 
     #[rpc(name = "chainx_contractCall")]
     fn contract_call(&self, call_request: CallRequest, at: Option<Hash>) -> Result<Value>;
+
+    #[rpc(name = "chainx_contractGetStorage")]
+    fn contract_get_storage(
+        &self,
+        address: AccountId,
+        key: H256,
+        at: Option<Hash>,
+    ) -> Result<Option<Bytes>>;
 }
