@@ -12,9 +12,10 @@ use chainx_runtime::{
     Runtime,
 };
 use chainx_runtime::{
-    xcontracts, ConsensusConfig, GenesisConfig, SessionConfig, TimestampConfig, XAssetsConfig,
-    XBootstrapConfig, XBridgeFeaturesConfig, XBridgeOfBTCConfig, XBridgeOfSDOTConfig,
-    XContractsConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig, XSystemConfig, XTokensConfig,
+    xcontracts, ChainSpec, ConsensusConfig, GenesisConfig, SessionConfig, TimestampConfig,
+    XAssetsConfig, XBootstrapConfig, XBridgeFeaturesConfig, XBridgeOfBTCConfig,
+    XBridgeOfSDOTConfig, XContractsConfig, XFeeManagerConfig, XSpotConfig, XStakingConfig,
+    XSystemConfig, XTokensConfig,
 };
 
 use btc_chain::BlockHeader;
@@ -26,6 +27,16 @@ pub enum GenesisSpec {
     Testnet,
     Mainnet,
 }
+impl Into<ChainSpec> for GenesisSpec {
+    fn into(self) -> ChainSpec {
+        match self {
+            GenesisSpec::Dev => ChainSpec::Dev,
+            GenesisSpec::Testnet => ChainSpec::Testnet,
+            GenesisSpec::Mainnet => ChainSpec::Mainnet,
+        }
+    }
+}
+
 const PCX_PRECISION: u16 = 8;
 
 fn hex(account: &str) -> [u8; 32] {
@@ -329,10 +340,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 .collect(),
             // xmultisig (include trustees)
             multisig_init_info: (team_account, council_account),
-            mainnet: match genesis_spec {
-                GenesisSpec::Mainnet => true,
-                _ => false,
-            },
+            chain_spec: genesis_spec.into(),
         }),
     }
 }

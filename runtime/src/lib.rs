@@ -61,6 +61,9 @@ pub use xbridge_features;
 pub use xcontracts;
 pub use xprocess;
 
+#[cfg(feature = "std")]
+pub use xbootstrap::{self, ChainSpec};
+
 use xsupport::ensure_with_errorlog;
 #[cfg(feature = "std")]
 use xsupport::u8array_to_hex;

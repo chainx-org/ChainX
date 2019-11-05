@@ -9,6 +9,11 @@ use support::{decl_module, decl_storage};
 #[cfg(feature = "std")]
 use xr_primitives::{Name, URL};
 
+#[cfg(feature = "std")]
+use parity_codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde_derive::{Deserialize, Serialize};
+
 pub trait Trait:
     xtokens::Trait + xmultisig::Trait + xbridge_features::Trait + xprocess::Trait
 {
@@ -16,6 +21,21 @@ pub trait Trait:
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug, Decode, Encode))]
+#[derive(Copy, Clone)]
+pub enum ChainSpec {
+    Dev,
+    Testnet,
+    Mainnet,
+}
+#[cfg(feature = "std")]
+impl Default for ChainSpec {
+    fn default() -> Self {
+        ChainSpec::Dev
     }
 }
 
@@ -44,7 +64,7 @@ decl_storage! {
         // multisig
         config(multisig_init_info): (Vec<T::AccountId>, Vec<T::AccountId>);
         // other
-        config(mainnet): bool;
+        config(chain_spec): ChainSpec;
 
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use parity_codec::{Encode, KeyedVec};
@@ -183,7 +203,14 @@ decl_storage! {
                     };
 
                     let team_required_num = two_thirds(team_accounts.len() as u32);
-                    let council_required_num = third_fives(council_accounts.len() as u32);
+
+                    let (council_accounts, council_required_num) =
+                        if let ChainSpec::Dev = config.chain_spec {
+                            (council_accounts[..1].to_vec(), 1)
+                        } else {
+                            let len = council_accounts.len() as u32;
+                            (council_accounts, third_fives(len))
+                        };
 
                     let team_account = xmultisig::Module::<T>::deploy_in_genesis(
                         team_accounts,
@@ -217,7 +244,7 @@ decl_storage! {
                 // in mainnet, we use `b"Withdrawal TokenBlackList"` as the key to init `TokenBlackList`,
                 // in testnet, we use original key to init.
                 let token_name = b"SDOT".to_vec();
-                if config.mainnet {
+                if let ChainSpec::Mainnet = config.chain_spec {
                     let key = b"Withdrawal TokenBlackList";
                     let v = vec![token_name].encode();
                     let k = substrate_primitives::twox_128(key).to_vec();
