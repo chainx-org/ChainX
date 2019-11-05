@@ -968,10 +968,15 @@ where
             })?;
 
         match exec_result {
-            ContractExecResult::Success { status, data } => Ok(json!({
-                "status": status,
-                "data": Bytes(data),
-            })),
+            ContractExecResult::Success { status, data } => {
+                let real_data: Vec<u8> =
+                    Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
+
+                Ok(json!({
+                    "status": status,
+                    "data": Bytes(real_data),
+                }))
+            }
             ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
         }
     }
