@@ -41,3 +41,6 @@ std = [
     "xr-primitives/std",
     "xsupport/std",
 ]
+no_oom = ["runtime-io/no_oom"]
+no_panic_handler = ["runtime-io/no_panic_handler"]
+no_global_allocator  = ["rstd/no_global_allocator"]
