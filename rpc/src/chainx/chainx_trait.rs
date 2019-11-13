@@ -10,6 +10,9 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     #[rpc(name = "chainx_getExtrinsicsEventsByBlockHash")]
     fn extrinsics_events(&self, hash: Option<Hash>) -> Result<Value>;
 
+    #[rpc(name = "chainx_getEventsByBlockHash")]
+    fn events(&self, hash: Option<Hash>) -> Result<Value>;
+
     #[rpc(name = "chainx_getNextRenominateByAccount")]
     fn next_renominate(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<BlockNumber>>;
 

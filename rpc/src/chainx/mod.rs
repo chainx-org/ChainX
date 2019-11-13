@@ -23,7 +23,7 @@ use primitives::storage::{StorageData, StorageKey};
 use primitives::{Blake2Hasher, Bytes, H256};
 use runtime_primitives::generic::BlockId;
 use runtime_primitives::traits::Block as BlockT;
-use runtime_primitives::traits::{Header, NumberFor, ProvideRuntimeApi, Zero};
+use runtime_primitives::traits::{Header as HeaderT, NumberFor, ProvideRuntimeApi, Zero};
 use state_machine::Backend;
 
 use support::storage::{StorageMap, StorageValue};
@@ -128,6 +128,17 @@ where
                 .unwrap_or(self.client.info().chain.best_hash),
         };
         Ok(BlockId::hash(hash))
+    }
+
+    fn block_number_by_hash(
+        &self,
+        hash: <Block as BlockT>::Hash,
+    ) -> result::Result<<<Block as BlockT>::Header as HeaderT>::Number, error::Error> {
+        if let Some(header) = self.client.header(&BlockId::Hash(hash))? {
+            Ok(*header.number())
+        } else {
+            Err(error::Error::BlockNumberErr.into())
+        }
     }
 
     /// Get chain state from client given the block hash.
@@ -374,6 +385,22 @@ where
                 .map(Self::sum_of_all_kinds_of_balance)
                 .unwrap_or_default(),
         )
+    }
+
+    fn get_events(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+    ) -> result::Result<
+        Vec<
+            system::EventRecord<
+                <chainx_runtime::Runtime as system::Trait>::Event,
+                <chainx_runtime::Runtime as system::Trait>::Hash,
+            >,
+        >,
+        error::Error,
+    > {
+        let key = "System Events".as_bytes();
+        Ok(Self::pickout(state, &key, Hasher::TWOX128)?.unwrap_or_default())
     }
 
     fn get_token_discount(

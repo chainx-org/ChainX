@@ -60,49 +60,51 @@ where
 
     fn extrinsics_events(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Value> {
         let hash = hash.unwrap_or(self.client.info().chain.best_hash);
-        let state = self.state_at(Some(hash))?;
-        let number = if let Some(header) = self.client.header(&BlockId::Hash(hash))? {
-            println!("header:{:?}", header);
-            *header.number()
-        } else {
-            return Err(error::Error::BlockNumberErr.into());
-        };
+        let number = self.block_number_by_hash(hash)?;
 
-        let key = "System Events".as_bytes();
-        if let Some(events) = Self::pickout::<
-            Vec<
-                system::EventRecord<
-                    <chainx_runtime::Runtime as system::Trait>::Event,
-                    <chainx_runtime::Runtime as system::Trait>::Hash,
-                >,
-            >,
-        >(&state, &key, Hasher::TWOX128)?
-        {
-            let mut result = BTreeMap::<u32, Vec<String>>::new();
-            for event_record in events {
-                match event_record.phase {
-                    system::Phase::ApplyExtrinsic(index) => {
-                        let event = format!("{:?}", event_record.event);
-                        match result.get_mut(&index) {
-                            Some(v) => v.push(event),
-                            None => {
-                                result.insert(index, vec![event]);
-                            }
+        let state = self.state_at(Some(hash))?;
+        let events = self.get_events(&state)?;
+        let mut result = BTreeMap::<u32, Vec<String>>::new();
+        for event_record in events {
+            match event_record.phase {
+                system::Phase::ApplyExtrinsic(index) => {
+                    let event = format!("{:?}", event_record.event);
+                    match result.get_mut(&index) {
+                        Some(v) => v.push(event),
+                        None => {
+                            result.insert(index, vec![event]);
                         }
                     }
-                    system::Phase::Finalization => {
-                        // do nothing
-                    }
+                }
+                system::Phase::Finalization => {
+                    // do nothing
                 }
             }
-            Ok(json!({
-                "events": result,
-                "blockHash": hash,
-                "number": number,
-            }))
-        } else {
-            Err(Error::StorageNotExistErr.into())
         }
+        Ok(json!({
+            "events": result,
+            "blockHash": hash,
+            "number": number,
+        }))
+    }
+
+    fn events(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Value> {
+        let hash = hash.unwrap_or(self.client.info().chain.best_hash);
+        let number = self.block_number_by_hash(hash)?;
+
+        let state = self.state_at(Some(hash))?;
+        let events = BTreeMap::<usize, String>::from_iter(
+            self.get_events(&state)?
+                .iter()
+                .enumerate()
+                .map(|(index, event_record)| (index, format!("{:?}", event_record.event))),
+        );
+
+        Ok(json!({
+            "events": events,
+            "blockHash": hash,
+            "number": number,
+        }))
     }
 
     fn next_renominate(
