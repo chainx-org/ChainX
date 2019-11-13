@@ -592,7 +592,7 @@ decl_module! {
         }
 
         /// Convert xrc20 token to asset balance. This function could not be called from an extrinsic,
-        /// just could be called inside the xrc20, erc777 and etc contract instance.
+        /// just could be called inside the xrc20, XRC777 and etc contract instance.
         pub fn convert_to_asset(origin, to: T::AccountId, #[compact] value: T::Balance) -> Result {
             let origin = ensure_signed(origin)?;
             // check token xrc20 is exist
@@ -1066,15 +1066,15 @@ decl_storage! {
         // ChainX modify
         // the map of token and token contract instance
         // addr <--xrc20--> token
-        // addr <---erc777---^
+        // addr <---XRC777---^
 
         /// The Token name of a token contract instance address.
-        /// notice the address could be xrc20, erc777, or other type contract
+        /// notice the address could be xrc20, XRC777, or other type contract
         pub TokenOfAddr get(token_of_addr): map T::AccountId => Option<Token>;
         // xrc20
         /// The XRC20 contract of a token name.
         pub XRC20InfoOfToken get(xrc20_of_token): map Token => Option<(T::AccountId, BTreeMap<XRC20Selector, Selector>)>;
-        // erc777 (in future)
+        // XRC777 (in future)
     }
 }
 
