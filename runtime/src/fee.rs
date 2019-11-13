@@ -71,7 +71,7 @@ impl CheckFee for Call {
             Call::XBridgeOfSDOT(..) if get_switcher(CallSwitcher::SDOT) => {
                 return None;
             }
-            Call::XContracts(..) if get_switcher(CallSwitcher::Contracts) => {
+            Call::XContracts(..) if get_switcher(CallSwitcher::XContracts) => {
                 return None;
             }
             _ => (),
@@ -80,6 +80,7 @@ impl CheckFee for Call {
     }
 }
 
+#[macro_export]
 macro_rules! get_method_call_weight_func {
     ($fee_map:expr, $module:ty, $func:ty, $default:expr) => {
         {
@@ -185,8 +186,9 @@ match_method_call_func! {
     );
 
     XContracts, XContractsCall => (
-        put_code : 500,
-        call : 100,
-        instantiate : 1000,
+        put_code : 250,
+        call : 10,
+        instantiate : 500,
+        convert_to_erc20: 10,
     );
 }

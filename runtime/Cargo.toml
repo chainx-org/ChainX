@@ -93,6 +93,7 @@ std = [
     "consensus/std",
     "sudo/std",
     "indices/std",
+    "finality-tracker/std",
 
     # chainx
     "chainx-primitives/std",

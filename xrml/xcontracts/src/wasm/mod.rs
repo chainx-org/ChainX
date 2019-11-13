@@ -1333,7 +1333,7 @@ mod tests {
                 &mut gas_meter
             ),
             Err(ExecError {
-                reason: "during execution|Failed to invoke an exported function for some reason|may be a wrong selector",
+                reason: "during execution|Failed to invoke an exported function for some reason|may be a wrong selector or decode params error",
                 buffer: _,
             })
         );
@@ -1378,7 +1378,7 @@ mod tests {
                 &mut gas_meter
             ),
             Err(ExecError {
-                reason: "during execution|Failed to invoke an exported function for some reason|may be a wrong selector",
+                reason: "during execution|Failed to invoke an exported function for some reason|may be a wrong selector or decode params error",
                 buffer: _,
             })
         );

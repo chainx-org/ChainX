@@ -3881,6 +3881,7 @@ dependencies = [
  "srml-timestamp 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "substrate-primitives 2.0.0 (git+https://github.com/chainpool/substrate?branch=chainx-master)",
  "wasmi-validation 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xr-primitives 1.0.0",
  "xrml-xaccounts 1.0.0",
  "xrml-xassets-assets 1.0.0",
  "xrml-xsupport 1.0.0",

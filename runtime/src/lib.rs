@@ -5,7 +5,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
 #![recursion_limit = "512"]
+
+#[macro_use]
 mod fee;
+mod erc20_fee;
 mod tests;
 mod trustee;
 mod xexecutive;
@@ -21,7 +24,7 @@ use client::{
     impl_runtime_apis, runtime_api as client_api,
 };
 use runtime_primitives::traits::{
-    AuthorityIdFor, BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup,
+    AuthorityIdFor, BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup, Zero,
 };
 use runtime_primitives::transaction_validity::TransactionValidity;
 pub use runtime_primitives::{create_runtime_str, Perbill, Permill};
@@ -41,15 +44,15 @@ use version::RuntimeVersion;
 use chainx_primitives;
 use runtime_api;
 use xgrandpa::fg_primitives::{self, ScheduledChange};
-use xr_primitives::AddrStr;
+pub use xr_primitives::{AddrStr, ContractExecResult, GetStorageError, GetStorageResult};
 
 // chainx
 use chainx_primitives::{
     Acceleration, AccountId, AccountIndex, AuthorityId, AuthoritySignature, Balance, BlockNumber,
-    ContractExecResult, GetStorageError, GetStorageResult, Hash, Index, Signature,
-    Timestamp as TimestampU64,
+    Hash, Index, Signature, Timestamp as TimestampU64,
 };
 
+use erc20_fee::Erc20CheckFee;
 use fee::CheckFee;
 
 pub use xaccounts;
@@ -58,7 +61,7 @@ pub use xbitcoin;
 pub use xbitcoin::lockup as xbitcoin_lockup;
 pub use xbridge_common;
 pub use xbridge_features;
-pub use xcontracts;
+pub use xcontracts::{self, ERC20Selector}; // re-export
 pub use xprocess;
 
 #[cfg(feature = "std")]
@@ -252,7 +255,7 @@ impl
         let method_call_weight = XFeeManager::method_call_weight();
         let encoded_len = call.using_encoded(|encoded| encoded.len() as u64);
         (*call)
-            .check_fee(switch, method_call_weight)
+            .check_erc20_fee(switch, method_call_weight)
             .map(|weight| XFeeManager::transaction_fee(weight, encoded_len))
     }
 }
@@ -662,6 +665,24 @@ impl_runtime_apis! {
                     xcontracts::GetStorageError::IsTombstone => RpcGetStorageError::IsTombstone,
                 }
             })
+        }
+
+        fn erc20_call(token: xassets::Token, selector: ERC20Selector, data: Vec<u8>) -> ContractExecResult {
+            // this call should not be called in extrinsics
+            let pay_gas = AccountId::default();
+            let gas_limit = 100 * 100000000;
+            // temp issue some balance for a 0x00...0000 accountid
+            let _ = XAssets::pcx_make_free_balance_be(&pay_gas, gas_limit);
+            let exec_result = XContracts::call_erc20(token, pay_gas.clone(), gas_limit, selector, data);
+            // remove all balance for this accountid
+            let _ = XAssets::pcx_make_free_balance_be(&pay_gas, Zero::zero());
+            match exec_result {
+                Ok(v) => ContractExecResult::Success {
+                    status: v.status as u16,
+                    data: v.data,
+                },
+                Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
+            }
         }
     }
 }

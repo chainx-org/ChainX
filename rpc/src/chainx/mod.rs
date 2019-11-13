@@ -28,10 +28,9 @@ use state_machine::Backend;
 
 use support::storage::{StorageMap, StorageValue};
 
-use chainx_primitives::{
-    AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, ContractExecResult, Timestamp,
-};
+use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
+use xr_primitives::{ContractExecResult, ERC20Selector};
 
 use runtime_api::{
     xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xcontracts_api::XContractsApi,

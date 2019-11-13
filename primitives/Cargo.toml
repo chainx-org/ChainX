@@ -19,6 +19,6 @@ std = [
     "serde_derive",
     "primitives/std",
     "rstd/std",
-    "runtime-primitives/std",
     "parity-codec/std",
+    "runtime-primitives/std",
 ]

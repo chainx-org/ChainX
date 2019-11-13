@@ -1006,6 +1006,107 @@ where
 
         Ok(get_storage_result)
     }
+
+    fn contract_erc20_call(
+        &self,
+        call_request: Erc20CallRequest,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Value> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().chain.best_hash));
+        let token = call_request.token.as_bytes().to_vec();
+        xassets::is_valid_token(&token).map_err(|e| {
+            Error::RuntimeErr(
+                e.as_bytes().to_vec(),
+                Some("not allow this token for this rpc call".to_string()),
+            )
+        })?;
+        let exec_result = api
+            .erc20_call(
+                &at,
+                token,
+                call_request.selector,
+                call_request.input_data.to_vec(),
+            )
+            .map_err(|e| {
+                Error::RuntimeErr(
+                    b"Runtime trapped while executing a contract.".to_vec(),
+                    Some(format!("{:?}", e)),
+                )
+            })?;
+
+        match exec_result {
+            ContractExecResult::Success { status, data } => {
+                let real_data: Vec<u8> =
+                    Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
+                // todo decode dependency on selector
+                let result = match call_request.selector {
+                    ERC20Selector::BalanceOf | ERC20Selector::TotalSupply => {
+                        let v: u64 =
+                            Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
+                        json!({
+                            "status": status,
+                            "data": v,
+                        })
+                    }
+                    ERC20Selector::Name | ERC20Selector::Symbol => {
+                        let v: Vec<u8> =
+                            Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
+                        json!({
+                            "status": status,
+                            "data": to_string!(&v),
+                        })
+                    }
+                    ERC20Selector::Decimals => {
+                        let v: u16 =
+                            Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
+                        json!({
+                            "status": status,
+                            "data": v,
+                        })
+                    }
+                    _ => json!({
+                        "status": status,
+                        "data": Bytes(real_data),
+                    }),
+                };
+
+                Ok(result)
+            }
+            ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
+        }
+    }
+
+    fn contract_erc20_info(
+        &self,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<BTreeMap<String, Value>> {
+        let state = self.state_at(hash)?;
+
+        let assets = self.all_assets(self.block_id_by_hash(hash)?)?;
+
+        let mut b = BTreeMap::new();
+
+        for (asset, _valid) in assets.into_iter() {
+            let token = asset.token();
+            let key = <xcontracts::Erc20InfoOfToken<Runtime>>::key_for(token.as_ref());
+            if let Some(info) = Self::pickout::<(
+                AccountId,
+                BTreeMap<xcontracts::ERC20Selector, xcontracts::Selector>,
+            )>(&state, &key, Hasher::BLAKE2256)?
+            {
+                b.insert(to_string!(&token), json!({
+                    "erc20": json!({
+                        "address": info.0,
+                        "selectors": info.1.into_iter().map(|(k, v)| (k, Bytes(v.to_vec()))).collect::<BTreeMap<_, _>>(),
+                    })
+                }));
+            }
+        }
+        Ok(b)
+    }
 }
 
 fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {

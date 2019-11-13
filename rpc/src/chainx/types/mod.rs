@@ -335,3 +335,12 @@ pub struct CallRequest {
     pub gas_limit: u64,
     pub input_data: Bytes,
 }
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct Erc20CallRequest {
+    pub token: String,
+    pub selector: ERC20Selector,
+    pub input_data: Bytes,
+}

@@ -199,4 +199,14 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
         key: H256,
         at: Option<Hash>,
     ) -> Result<Option<Bytes>>;
+
+    #[rpc(name = "chainx_contractErc20Call")]
+    fn contract_erc20_call(
+        &self,
+        call_request: Erc20CallRequest,
+        at: Option<Hash>,
+    ) -> Result<Value>;
+
+    #[rpc(name = "chainx_contractErc20Info")]
+    fn contract_erc20_info(&self, at: Option<Hash>) -> Result<BTreeMap<String, Value>>;
 }

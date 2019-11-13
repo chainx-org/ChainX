@@ -29,7 +29,9 @@ use sandbox;
 use sr_primitives::traits::{Bounded, SaturatedConversion};
 use system;
 
-use xsupport::debug;
+#[cfg(feature = "std")]
+use xsupport::try_hex_or_str;
+use xsupport::{debug, error};
 
 /// The value returned from ext_call and ext_instantiate contract external functions if the call or
 /// instantiation traps. This value is chosen as if the execution does not trap, the return value
@@ -103,8 +105,8 @@ pub(crate) fn to_execution_result<E: Ext>(
                 .try_into()
                 .expect("exit_code is masked into the range of a u8; qed");
             debug!(
-                "[to_execution_result]exit_code:{:?}|status:{:?}|data:{:?}",
-                exit_code, status, runtime.scratch_buf
+                "[to_execution_result]exit_code:{:?}|status:{:?}|data:{:}",
+                exit_code, status, try_hex_or_str(&runtime.scratch_buf)
             );
             Ok(ExecReturnValue {
                 status,
@@ -130,10 +132,19 @@ pub(crate) fn to_execution_result<E: Ext>(
             buffer: runtime.scratch_buf,
         }),
         // Any other kind of a trap should result in a failure.
-        Err(sandbox::Error::Execution) => Err(ExecError {
-            reason: "during execution|Failed to invoke an exported function for some reason|may be a wrong selector",
-            buffer: runtime.scratch_buf,
-        }),
+        Err(sandbox::Error::Execution) => {
+            if runtime.gas_meter.gas_left() == 0 {
+                Err(ExecError {
+                    reason: "during execution|Failed to invoke an exported function for some reason|reach gas limit",
+                    buffer: runtime.scratch_buf,
+                })
+            } else {
+                Err(ExecError {
+                    reason: "during execution|Failed to invoke an exported function for some reason|may be a wrong selector or decode params error",
+                    buffer: runtime.scratch_buf,
+                })
+            }
+        }
         Err(sandbox::Error::OutOfBounds) => Err(ExecError {
             reason: "during execution|Access to a memory or table was made with an address or an index which is out of bounds",
             buffer: runtime.scratch_buf,
@@ -655,7 +666,10 @@ define_env!(Env, <E: Ext>,
 
         // Charge gas for dispatching this call.
         let fee = {
-            let balance_fee = <<E as Ext>::T as Trait>::ComputeDispatchFee::compute_dispatch_fee(&call).ok_or(sandbox::HostError)?;
+            let balance_fee = <<E as Ext>::T as Trait>::ComputeDispatchFee::compute_dispatch_fee(&call).ok_or_else(|| {
+                error!("[ext_dispatch_call]|not allow to call this call in contract|caller:{:?}|contract:{:?}|call:{:?}", ctx.ext.caller(), ctx.ext.address(), call);
+                sandbox::HostError
+            })?;
             approx_gas_for_balance(ctx.gas_meter.gas_price(), balance_fee)
         };
         charge_gas(&mut ctx.gas_meter, ctx.schedule, RuntimeToken::ComputedDispatchFee(fee))?;

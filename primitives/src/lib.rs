@@ -2,11 +2,6 @@
 
 //! Shareable ChainX types.
 #![cfg_attr(not(feature = "std"), no_std)]
-use parity_codec::{Decode, Encode};
-use rstd::prelude::Vec;
-
-#[cfg(feature = "std")]
-use serde_derive::{Deserialize, Serialize};
 
 use runtime_primitives::{
     generic,
@@ -76,43 +71,3 @@ pub type BlockId = generic::BlockId<Block>;
 
 /// Opaque, encoded, unchecked extrinsic.
 pub type UncheckedExtrinsic = OpaqueExtrinsic;
-
-/// A result of execution of a contract.
-#[derive(Eq, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum ContractExecResult {
-    /// The contract returned successfully.
-    ///
-    /// There is a status code and, optionally, some data returned by the contract.
-    Success {
-        /// Status code returned by the contract.
-        status: u16,
-        /// Output data returned by the contract.
-        ///
-        /// Can be empty.
-        data: Vec<u8>,
-    },
-    /// The contract execution either trapped or returned an error.
-    Error(Vec<u8>),
-}
-
-/// A result type of the get storage call.
-///
-/// See [`ContractsApi::get_storage`] for more info.
-pub type GetStorageResult = Result<Option<Vec<u8>>, GetStorageError>;
-/// The possible errors that can happen querying the storage of a contract.
-#[derive(Eq, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum GetStorageError {
-    /// The given address doesn't point on a contract.
-    ContractDoesntExist,
-    /// The specified contract is a tombstone and thus cannot have any storage.
-    IsTombstone,
-}
-
-#[cfg(feature = "std")]
-impl std::fmt::Display for GetStorageError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{:?}", self)
-    }
-}

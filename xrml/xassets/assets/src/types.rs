@@ -156,6 +156,7 @@ define_enum!(
         ReservedDexSpot,
         ReservedDexFuture,
         ReservedCurrency,
+        ReservedErc20,
         GasPayment,
     }
 );

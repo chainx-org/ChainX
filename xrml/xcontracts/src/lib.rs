@@ -105,7 +105,7 @@ pub use crate::gas::{Gas, GasMeter};
 use codec::{Codec, Decode, Encode};
 use primitives::crypto::UncheckedFrom;
 use primitives::storage::well_known_keys::CHILD_STORAGE_KEY_PREFIX;
-use rstd::{marker::PhantomData, prelude::*};
+use rstd::{collections::btree_map::BTreeMap, marker::PhantomData, prelude::*};
 use runtime_io::blake2_256;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -121,12 +121,15 @@ use support::{
 };
 use system::{ensure_root, ensure_signed, RawOrigin};
 
+use xassets::{AssetType, Token};
+pub use xr_primitives::ERC20Selector; // re-export
+use xsupport::{debug, ensure_with_errorlog, error, info};
 #[cfg(feature = "std")]
-use xsupport::try_hex_or_str;
-use xsupport::{debug, info};
+use xsupport::{token, try_hex_or_str};
 
 pub type CodeHash<T> = <T as system::Trait>::Hash;
 pub type TrieId = Vec<u8>;
+pub type Selector = [u8; 4];
 
 /// A function that generates an `AccountId` for a contract upon instantiation.
 pub trait ContractAddressFor<CodeHash, AccountId> {
@@ -296,11 +299,13 @@ where
             .chain(b"default:")
             .chain(T::Hashing::hash(&buf[..]).as_ref().iter())
             .cloned()
-            .collect();
+            .collect::<Vec<_>>();
 
         debug!(
-            "[TrieIdGenerator]|contract:{:?}|new_seed:{:}|trie_id:{:?}",
-            account_id, new_seed, trie_id
+            "[TrieIdGenerator]|contract:{:?}|new_seed:{:}|trie_id:{:}",
+            account_id,
+            new_seed,
+            try_hex_or_str(&trie_id)
         );
         trie_id
     }
@@ -472,9 +477,10 @@ decl_module! {
             let dest = T::Lookup::lookup(dest)?;
             debug!("[call]|call contract|from:{:?}|dest:{:?}|value:{:?}|data:{:}", origin, dest, value, try_hex_or_str(&data));
 
-            Self::bare_call(origin, dest, value, gas_limit, data)
+            Self::bare_call(origin, dest.clone(), value, gas_limit, data)
                 .and_then(|output| {
                     if output.is_success() {
+                        debug!("[call]|call contract success|result:{:}|contract addr:{:?}", try_hex_or_str(&output.data), dest);
                         Ok(()) // just drop output
                     } else {
                         Err(ExecError{
@@ -505,7 +511,7 @@ decl_module! {
         ) -> Result {
             let origin = ensure_signed(origin)?;
             info!("[instantiate]|create new contract|from:{:?}|endowment:{:}|code_hash:{:?}|data:{:}", origin, endowment, code_hash, try_hex_or_str(&data));
-            Self::execute_wasm(origin, gas_limit, |ctx, gas_meter| {
+            Self::execute_wasm(origin, None, gas_limit, |ctx, gas_meter| {
                 ctx.instantiate(endowment, gas_meter, &code_hash, data)
                     .map(|(_address, output)| {
                         if output.is_success() {
@@ -564,15 +570,67 @@ decl_module! {
             // }
         }
 
-        pub fn set_gas_price(price: T::Balance) {
+        /// Set gas price by root
+        pub fn set_gas_price(#[compact] price: T::Balance) {
             info!("[set_gas_price]|set new gas price:{:}", price);
             GasPrice::<T>::mutate(|p| *p = price);
         }
 
+        /// Enable of Off println for contract. Just for debug.
         pub fn set_println(state: bool) {
             CurrentSchedule::<T>::mutate(|s| {
                 s.enable_println = state;
             });
+        }
+
+        // erc20 and runtime assets
+        /// Convert asset balance to erc20 token. This function would call erc20 `issue` interface.
+        /// The gas cast would deduct the caller.
+        pub fn convert_to_erc20(origin, token: Token, #[compact] value: T::Balance, #[compact] gas_limit: Gas) -> Result {
+            let origin = ensure_signed(origin)?;
+            Self::issue_to_erc20(token, origin, value, gas_limit)
+        }
+
+        /// Convert erc20 token to asset balance. This function could not be called from an extrinsic,
+        /// just could be called inside the erc20, erc777 and etc contract instance.
+        pub fn convert_to_asset(origin, to: T::AccountId, #[compact] value: T::Balance) -> Result {
+            let origin = ensure_signed(origin)?;
+            // check token erc20 is exist
+            Self::refund_to_asset(origin, to, value)
+        }
+
+        /// Set the erc20 addr and selectors for a token name.
+        pub fn set_token_erc20(token: Token, erc20_addr: T::AccountId, selectors: BTreeMap<ERC20Selector, Selector>) {
+            Erc20InfoOfToken::<T>::insert(token.clone(), (erc20_addr.clone(), selectors));
+            TokenOfAddr::<T>::insert(erc20_addr, token);
+        }
+
+        /// Set the erc20 selectors for a token name.
+        pub fn set_erc20_selector(token: Token, selectors: BTreeMap<ERC20Selector, Selector>) {
+            Erc20InfoOfToken::<T>::mutate(token, |info| {
+                if let Some(ref mut data) = info {
+                    data.1 = selectors;
+                }
+            })
+        }
+
+        /// Remove erc20 relationship for a token name.
+        pub fn remove_token_erc20(token: Token) {
+            if let Some(info) = Erc20InfoOfToken::<T>::take(&token) {
+                let _ = TokenOfAddr::<T>::take(info.0);
+            }
+        }
+
+        /// Force issue erc20 token.
+        pub fn force_issue_erc20(token: Token, issues: Vec<(T::AccountId, T::Balance)>, gas_limit: Gas) -> Result {
+            for (origin, value)  in issues {
+                let params = (origin.clone(), value).encode();
+
+                if let Err(_e) = Self::call_for_erc20(token.clone(), origin.clone(), gas_limit, ERC20Selector::Issue, params.clone()) {
+                    error!("[force_issue_erc20]|{:}|who:{:?}|value:{:}|gas_limit:{:}|params:{:}", _e.reason, origin, value, gas_limit, try_hex_or_str(&params))
+                }
+            }
+            Ok(())
         }
 
         fn on_finalize() {
@@ -608,7 +666,7 @@ impl<T: Trait> Module<T> {
                 buffer: input_data,
             });
         }
-        Self::execute_wasm(origin, gas_limit, |ctx, gas_meter| {
+        Self::execute_wasm(origin, None, gas_limit, |ctx, gas_meter| {
             ctx.call(dest, value, gas_meter, input_data)
         })
     }
@@ -631,11 +689,179 @@ impl<T: Trait> Module<T> {
         );
         Ok(maybe_value)
     }
+
+    /// Query a call to a specified erc20 token.
+    /// notice this function just allow to be called in runtime api, not allow in an extrinsic
+    pub fn call_erc20(
+        token: Token,
+        pay_gas: T::AccountId,
+        gas_limit: Gas,
+        selector: ERC20Selector,
+        data: Vec<u8>,
+    ) -> ExecResult {
+        match selector {
+            ERC20Selector::Issue | ERC20Selector::Destroy => {
+                return Err(ExecError {
+                    reason: "not allow selector 'Issue' or `Destroy` in call_erc20",
+                    buffer: Vec::new(),
+                })
+            }
+            _ => {}
+        }
+
+        Self::call_for_erc20(token, pay_gas, gas_limit, selector, data)
+    }
+
+    fn issue_to_erc20(
+        token: Token,
+        origin: T::AccountId,
+        value: T::Balance,
+        gas_limit: Gas,
+    ) -> Result {
+        // check
+        ensure_with_errorlog!(
+            xassets::Module::<T>::free_balance_of(&origin, &token) > value,
+            "not enough balance for this token to convert to erc20 token",
+            "not enough balance for this token to convert to erc20 token|token:{:}|who:{:?}|value:{:}",
+            token!(token), origin, value
+        );
+
+        let params = (origin.clone(), value).encode();
+
+        // call erc20 contract to issue erc20 token
+        let exec_value = Self::call_for_erc20(
+            token.clone(),
+            origin.clone(),
+            gas_limit,
+            ERC20Selector::Issue,
+            params,
+        )
+        .and_then(|output| {
+            if output.is_success() {
+                Ok(output)
+            } else {
+                Err(ExecError {
+                    reason: "fail to call the contract, please check params and erc20",
+                    buffer: Vec::new(),
+                })
+            }
+        })
+        .map_err(|e| e.reason)?;
+
+        let data: Vec<u8> = Decode::decode(&mut exec_value.data.as_slice()).ok_or_else(|| {
+            error!(
+                "[issue_to_erc20]|fail to decode wasm result|data:{:}",
+                try_hex_or_str(&exec_value.data)
+            );
+            "fail decode wasm result to vecu8"
+        })?;
+        // notice when standard erc20 return chech, this decode method should also change
+        let result: bool = Decode::decode(&mut data.as_slice()).ok_or_else(|| {
+            error!(
+                "[issue_to_erc20]|fail to decode wasm result|data:{:}",
+                try_hex_or_str(&data)
+            );
+            "fail decode wasm result to bool"
+        })?;
+        if !result {
+            return Err("fail to issue token in erc20 contract");
+        }
+
+        let erc20_addr = Self::erc20_of_token(&token)
+            .expect("erc20 info must be existed at here")
+            .0;
+        // success, transfer to the erc20 contract
+        let _ = xassets::Module::<T>::move_balance(
+            &token,
+            &origin,
+            AssetType::Free,
+            &erc20_addr,
+            AssetType::ReservedErc20,
+            value,
+        )
+        .map_err(|e| e.info())?;
+        Ok(())
+    }
+
+    fn call_for_erc20(
+        token: Token,
+        pay_gas: T::AccountId,
+        gas_limit: Gas,
+        enum_selector: ERC20Selector,
+        input_data: Vec<u8>,
+    ) -> ExecResult {
+        let info = Self::erc20_of_token(&token).ok_or_else(|| {
+            error!("no erc20 instance for this token|token:{:}", token!(token));
+            ExecError {
+                reason: "no erc20 instance for this token",
+                buffer: Vec::new(),
+            }
+        })?;
+        let erc20_addr = info.0;
+        let selectors = info.1;
+        let selector = selectors.get(&enum_selector).ok_or_else(|| {
+            error!(
+                "no issue selector in erc20 info for this token|token:{:}",
+                token!(token)
+            );
+            ExecError {
+                reason: "no issue selector in erc20 info for this token",
+                buffer: Vec::new(),
+            }
+        })?;
+
+        let mut data = selector.to_vec(); // provide selector
+        data.extend_from_slice(input_data.as_slice());
+
+        debug!("[call_for_erc20]|call erc20 instance|token:{:}|erc20:{:?}|pay gas:{:?}|selector:{:?}|data:{:}",
+            token!(token), erc20_addr, pay_gas, enum_selector, try_hex_or_str(&data));
+
+        Self::execute_wasm(
+            erc20_addr.clone(),
+            Some(pay_gas),
+            gas_limit,
+            |ctx, gas_meter| ctx.call(erc20_addr.clone(), Zero::zero(), gas_meter, data),
+        )
+    }
+
+    fn refund_to_asset(contract_addr: T::AccountId, to: T::AccountId, value: T::Balance) -> Result {
+        let token: Token = Self::token_of_addr(&contract_addr).ok_or_else(|| {
+            error!(
+                "no token for this erc20 address|erc20 addr:{:?}",
+                contract_addr
+            );
+            "no token for this erc20 address"
+        })?;
+        let current_reserved = xassets::Module::<T>::asset_balance_of(
+            &contract_addr,
+            &token,
+            AssetType::ReservedErc20,
+        );
+        ensure_with_errorlog!(
+            current_reserved > value,
+            "not enough balance for this erc20 instance to refund asset",
+            "not enough balance for this erc20 instance to refund asset|token:{:}|erc20:{:?}|value:{:}|current:{:}",
+            token!(token), contract_addr, value, current_reserved
+        );
+
+        // success, refund asset to this account
+        let _ = xassets::Module::<T>::move_balance(
+            &token,
+            &contract_addr,
+            AssetType::ReservedErc20,
+            &to,
+            AssetType::Free,
+            value,
+        )
+        .map_err(|e| e.info())?;
+        Ok(())
+    }
 }
 
 impl<T: Trait> Module<T> {
     fn execute_wasm(
         origin: T::AccountId,
+        buy_gas_account: Option<T::AccountId>,
         gas_limit: Gas,
         func: impl FnOnce(&mut ExecutionContext<T, WasmVm, WasmLoader>, &mut GasMeter<T>) -> ExecResult,
     ) -> ExecResult {
@@ -643,8 +869,9 @@ impl<T: Trait> Module<T> {
         //
         // NOTE: it is very important to avoid any state changes before
         // paying for the gas.
+        let pay_gas = buy_gas_account.unwrap_or(origin.clone());
         let mut gas_meter = try_or_exec_error!(
-            gas::buy_gas::<T>(&origin, gas_limit),
+            gas::buy_gas::<T>(&pay_gas, gas_limit),
             // We don't have a spare buffer here in the first place, so create a new empty one.
             Vec::new()
         );
@@ -669,17 +896,27 @@ impl<T: Trait> Module<T> {
         //
         // NOTE: This should go after the commit to the storage, since the storage changes
         // can alter the balance of the caller.
-        gas::refund_unused_gas::<T>(&origin, gas_meter);
+        gas::refund_unused_gas::<T>(&pay_gas, gas_meter);
 
         // Execute deferred actions.
         ctx.deferred.into_iter().for_each(|deferred| {
             use self::exec::DeferredAction::*;
             match deferred {
-                DepositEvent { topics, event } => <system::Module<T>>::deposit_event_indexed(
-                    &*topics,
-                    <T as Trait>::Event::from(event).into(),
-                ),
+                DepositEvent { topics, event } => {
+                    debug!(
+                        "[deferred_deposit_event]topics:{:?}|event:{:?}",
+                        topics, event
+                    );
+                    <system::Module<T>>::deposit_event_indexed(
+                        &*topics,
+                        <T as Trait>::Event::from(event).into(),
+                    );
+                }
                 DispatchRuntimeCall { origin: who, call } => {
+                    debug!(
+                        "[deferred_dispatch_runtime_call]origin:{:?}|call:{:?}",
+                        who, call
+                    );
                     let result = call.dispatch(RawOrigin::Signed(who.clone()).into());
                     Self::deposit_event(RawEvent::Dispatched(who, result.is_ok()));
                 }
@@ -824,7 +1061,20 @@ decl_storage! {
         /// The code associated with a given account.
         pub ContractInfoOf: map T::AccountId => Option<ContractInfo<T>>;
         /// The price of one unit of gas.
-        GasPrice get(gas_price) config(): T::Balance = 1.into();
+        pub GasPrice get(gas_price) config(): T::Balance = 1000.into();
+
+        // ChainX modify
+        // the map of token and token contract instance
+        // addr <--erc20--> token
+        // addr <---erc777---^
+
+        /// The Token name of a token contract instance address.
+        /// notice the address could be erc20, erc777, or other type contract
+        pub TokenOfAddr get(token_of_addr): map T::AccountId => Option<Token>;
+        // erc20
+        /// The Erc20 contract of a token name.
+        pub Erc20InfoOfToken get(erc20_of_token): map Token => Option<(T::AccountId, BTreeMap<ERC20Selector, Selector>)>;
+        // erc777 (in future)
     }
 }
 
@@ -950,8 +1200,8 @@ impl Default for Schedule {
             event_data_per_byte_cost: 1,
             event_per_topic_cost: 1,
             event_base_cost: 1,
-            call_base_cost: 135,
-            instantiate_base_cost: 175,
+            call_base_cost: 10,
+            instantiate_base_cost: 500,
             sandbox_data_read_cost: 1,
             sandbox_data_write_cost: 1,
             max_event_topics: 4,

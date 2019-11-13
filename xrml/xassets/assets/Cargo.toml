@@ -40,6 +40,7 @@ std = [
     # ChainX
     "xr-primitives/std",
     "xsupport/std",
+    "xaccounts/std",
 ]
 no_oom = ["runtime-io/no_oom"]
 no_panic_handler = ["runtime-io/no_panic_handler"]
