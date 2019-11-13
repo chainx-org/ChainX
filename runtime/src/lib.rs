@@ -8,9 +8,9 @@
 
 #[macro_use]
 mod fee;
-mod erc20_fee;
 mod tests;
 mod trustee;
+mod xcontracts_fee;
 mod xexecutive;
 
 use parity_codec::{Decode, Encode};
@@ -52,8 +52,8 @@ use chainx_primitives::{
     Hash, Index, Signature, Timestamp as TimestampU64,
 };
 
-use erc20_fee::Erc20CheckFee;
 use fee::CheckFee;
+use xcontracts_fee::XContractsCheckFee;
 
 pub use xaccounts;
 pub use xassets;
@@ -61,7 +61,7 @@ pub use xbitcoin;
 pub use xbitcoin::lockup as xbitcoin_lockup;
 pub use xbridge_common;
 pub use xbridge_features;
-pub use xcontracts::{self, ERC20Selector}; // re-export
+pub use xcontracts::{self, XRC20Selector}; // re-export
 pub use xprocess;
 
 #[cfg(feature = "std")]
@@ -255,7 +255,7 @@ impl
         let method_call_weight = XFeeManager::method_call_weight();
         let encoded_len = call.using_encoded(|encoded| encoded.len() as u64);
         (*call)
-            .check_erc20_fee(switch, method_call_weight)
+            .check_xcontracts_fee(switch, method_call_weight)
             .map(|weight| XFeeManager::transaction_fee(weight, encoded_len))
     }
 }
@@ -667,13 +667,13 @@ impl_runtime_apis! {
             })
         }
 
-        fn erc20_call(token: xassets::Token, selector: ERC20Selector, data: Vec<u8>) -> ContractExecResult {
+        fn xrc20_call(token: xassets::Token, selector: XRC20Selector, data: Vec<u8>) -> ContractExecResult {
             // this call should not be called in extrinsics
             let pay_gas = AccountId::default();
             let gas_limit = 100 * 100000000;
             // temp issue some balance for a 0x00...0000 accountid
             let _ = XAssets::pcx_make_free_balance_be(&pay_gas, gas_limit);
-            let exec_result = XContracts::call_erc20(token, pay_gas.clone(), gas_limit, selector, data);
+            let exec_result = XContracts::call_xrc20(token, pay_gas.clone(), gas_limit, selector, data);
             // remove all balance for this accountid
             let _ = XAssets::pcx_make_free_balance_be(&pay_gas, Zero::zero());
             match exec_result {

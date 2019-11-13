@@ -10,16 +10,16 @@ use xcontracts::Call as XContractsCall;
 
 use crate::Call;
 
-pub trait Erc20CheckFee {
-    fn check_erc20_fee(
+pub trait XContractsCheckFee {
+    fn check_xcontracts_fee(
         &self,
         switcher: BTreeMap<CallSwitcher, bool>,
         method_weight_map: BTreeMap<XString, u64>,
     ) -> Option<u64>;
 }
 
-impl Erc20CheckFee for Call {
-    fn check_erc20_fee(
+impl XContractsCheckFee for Call {
+    fn check_xcontracts_fee(
         &self,
         switcher: BTreeMap<CallSwitcher, bool>,
         method_weight_map: BTreeMap<XString, u64>,

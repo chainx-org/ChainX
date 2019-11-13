@@ -1009,9 +1009,9 @@ where
         Ok(get_storage_result)
     }
 
-    fn contract_erc20_call(
+    fn contract_xrc20_call(
         &self,
-        call_request: Erc20CallRequest,
+        call_request: XRC20CallRequest,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<Value> {
         let api = self.client.runtime_api();
@@ -1026,7 +1026,7 @@ where
             )
         })?;
         let exec_result = api
-            .erc20_call(
+            .xrc20_call(
                 &at,
                 token,
                 call_request.selector,
@@ -1045,7 +1045,7 @@ where
                     Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
                 // todo decode dependency on selector
                 let result = match call_request.selector {
-                    ERC20Selector::BalanceOf | ERC20Selector::TotalSupply => {
+                    XRC20Selector::BalanceOf | XRC20Selector::TotalSupply => {
                         let v: u64 =
                             Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
                         json!({
@@ -1053,7 +1053,7 @@ where
                             "data": v,
                         })
                     }
-                    ERC20Selector::Name | ERC20Selector::Symbol => {
+                    XRC20Selector::Name | XRC20Selector::Symbol => {
                         let v: Vec<u8> =
                             Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
                         json!({
@@ -1061,7 +1061,7 @@ where
                             "data": to_string!(&v),
                         })
                     }
-                    ERC20Selector::Decimals => {
+                    XRC20Selector::Decimals => {
                         let v: u16 =
                             Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
                         json!({
@@ -1081,7 +1081,7 @@ where
         }
     }
 
-    fn contract_erc20_info(
+    fn contract_xrc20_info(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<BTreeMap<String, Value>> {
@@ -1093,14 +1093,14 @@ where
 
         for (asset, _valid) in assets.into_iter() {
             let token = asset.token();
-            let key = <xcontracts::Erc20InfoOfToken<Runtime>>::key_for(token.as_ref());
+            let key = <xcontracts::XRC20InfoOfToken<Runtime>>::key_for(token.as_ref());
             if let Some(info) = Self::pickout::<(
                 AccountId,
-                BTreeMap<xcontracts::ERC20Selector, xcontracts::Selector>,
+                BTreeMap<xcontracts::XRC20Selector, xcontracts::Selector>,
             )>(&state, &key, Hasher::BLAKE2256)?
             {
                 b.insert(to_string!(&token), json!({
-                    "erc20": json!({
+                    "xrc20": json!({
                         "address": info.0,
                         "selectors": info.1.into_iter().map(|(k, v)| (k, Bytes(v.to_vec()))).collect::<BTreeMap<_, _>>(),
                     })

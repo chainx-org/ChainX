@@ -122,7 +122,7 @@ use support::{
 use system::{ensure_root, ensure_signed, RawOrigin};
 
 use xassets::{AssetType, Token};
-pub use xr_primitives::ERC20Selector; // re-export
+pub use xr_primitives::XRC20Selector; // re-export
 use xsupport::{debug, ensure_with_errorlog, error, info};
 #[cfg(feature = "std")]
 use xsupport::{token, try_hex_or_str};
@@ -583,51 +583,51 @@ decl_module! {
             });
         }
 
-        // erc20 and runtime assets
-        /// Convert asset balance to erc20 token. This function would call erc20 `issue` interface.
+        // xrc20 and runtime assets
+        /// Convert asset balance to xrc20 token. This function would call xrc20 `issue` interface.
         /// The gas cast would deduct the caller.
-        pub fn convert_to_erc20(origin, token: Token, #[compact] value: T::Balance, #[compact] gas_limit: Gas) -> Result {
+        pub fn convert_to_xrc20(origin, token: Token, #[compact] value: T::Balance, #[compact] gas_limit: Gas) -> Result {
             let origin = ensure_signed(origin)?;
-            Self::issue_to_erc20(token, origin, value, gas_limit)
+            Self::issue_to_xrc20(token, origin, value, gas_limit)
         }
 
-        /// Convert erc20 token to asset balance. This function could not be called from an extrinsic,
-        /// just could be called inside the erc20, erc777 and etc contract instance.
+        /// Convert xrc20 token to asset balance. This function could not be called from an extrinsic,
+        /// just could be called inside the xrc20, erc777 and etc contract instance.
         pub fn convert_to_asset(origin, to: T::AccountId, #[compact] value: T::Balance) -> Result {
             let origin = ensure_signed(origin)?;
-            // check token erc20 is exist
+            // check token xrc20 is exist
             Self::refund_to_asset(origin, to, value)
         }
 
-        /// Set the erc20 addr and selectors for a token name.
-        pub fn set_token_erc20(token: Token, erc20_addr: T::AccountId, selectors: BTreeMap<ERC20Selector, Selector>) {
-            Erc20InfoOfToken::<T>::insert(token.clone(), (erc20_addr.clone(), selectors));
-            TokenOfAddr::<T>::insert(erc20_addr, token);
+        /// Set the xrc20 addr and selectors for a token name.
+        pub fn set_token_xrc20(token: Token, xrc20_addr: T::AccountId, selectors: BTreeMap<XRC20Selector, Selector>) {
+            XRC20InfoOfToken::<T>::insert(token.clone(), (xrc20_addr.clone(), selectors));
+            TokenOfAddr::<T>::insert(xrc20_addr, token);
         }
 
-        /// Set the erc20 selectors for a token name.
-        pub fn set_erc20_selector(token: Token, selectors: BTreeMap<ERC20Selector, Selector>) {
-            Erc20InfoOfToken::<T>::mutate(token, |info| {
+        /// Set the xrc20 selectors for a token name.
+        pub fn set_xrc20_selector(token: Token, selectors: BTreeMap<XRC20Selector, Selector>) {
+            XRC20InfoOfToken::<T>::mutate(token, |info| {
                 if let Some(ref mut data) = info {
                     data.1 = selectors;
                 }
             })
         }
 
-        /// Remove erc20 relationship for a token name.
-        pub fn remove_token_erc20(token: Token) {
-            if let Some(info) = Erc20InfoOfToken::<T>::take(&token) {
+        /// Remove xrc20 relationship for a token name.
+        pub fn remove_token_xrc20(token: Token) {
+            if let Some(info) = XRC20InfoOfToken::<T>::take(&token) {
                 let _ = TokenOfAddr::<T>::take(info.0);
             }
         }
 
-        /// Force issue erc20 token.
-        pub fn force_issue_erc20(token: Token, issues: Vec<(T::AccountId, T::Balance)>, gas_limit: Gas) -> Result {
+        /// Force issue xrc20 token.
+        pub fn force_issue_xrc20(token: Token, issues: Vec<(T::AccountId, T::Balance)>, gas_limit: Gas) -> Result {
             for (origin, value)  in issues {
                 let params = (origin.clone(), value).encode();
 
-                if let Err(_e) = Self::call_for_erc20(token.clone(), origin.clone(), gas_limit, ERC20Selector::Issue, params.clone()) {
-                    error!("[force_issue_erc20]|{:}|who:{:?}|value:{:}|gas_limit:{:}|params:{:}", _e.reason, origin, value, gas_limit, try_hex_or_str(&params))
+                if let Err(_e) = Self::call_for_xrc20(token.clone(), origin.clone(), gas_limit, XRC20Selector::Issue, params.clone()) {
+                    error!("[force_issue_xrc20]|{:}|who:{:?}|value:{:}|gas_limit:{:}|params:{:}", _e.reason, origin, value, gas_limit, try_hex_or_str(&params))
                 }
             }
             Ok(())
@@ -690,29 +690,29 @@ impl<T: Trait> Module<T> {
         Ok(maybe_value)
     }
 
-    /// Query a call to a specified erc20 token.
+    /// Query a call to a specified xrc20 token.
     /// notice this function just allow to be called in runtime api, not allow in an extrinsic
-    pub fn call_erc20(
+    pub fn call_xrc20(
         token: Token,
         pay_gas: T::AccountId,
         gas_limit: Gas,
-        selector: ERC20Selector,
+        selector: XRC20Selector,
         data: Vec<u8>,
     ) -> ExecResult {
         match selector {
-            ERC20Selector::Issue | ERC20Selector::Destroy => {
+            XRC20Selector::Issue | XRC20Selector::Destroy => {
                 return Err(ExecError {
-                    reason: "not allow selector 'Issue' or `Destroy` in call_erc20",
+                    reason: "not allow selector 'Issue' or `Destroy` in call_xrc20",
                     buffer: Vec::new(),
                 })
             }
             _ => {}
         }
 
-        Self::call_for_erc20(token, pay_gas, gas_limit, selector, data)
+        Self::call_for_xrc20(token, pay_gas, gas_limit, selector, data)
     }
 
-    fn issue_to_erc20(
+    fn issue_to_xrc20(
         token: Token,
         origin: T::AccountId,
         value: T::Balance,
@@ -721,19 +721,19 @@ impl<T: Trait> Module<T> {
         // check
         ensure_with_errorlog!(
             xassets::Module::<T>::free_balance_of(&origin, &token) > value,
-            "not enough balance for this token to convert to erc20 token",
-            "not enough balance for this token to convert to erc20 token|token:{:}|who:{:?}|value:{:}",
+            "not enough balance for this token to convert to xrc20 token",
+            "not enough balance for this token to convert to xrc20 token|token:{:}|who:{:?}|value:{:}",
             token!(token), origin, value
         );
 
         let params = (origin.clone(), value).encode();
 
-        // call erc20 contract to issue erc20 token
-        let exec_value = Self::call_for_erc20(
+        // call xrc20 contract to issue xrc20 token
+        let exec_value = Self::call_for_xrc20(
             token.clone(),
             origin.clone(),
             gas_limit,
-            ERC20Selector::Issue,
+            XRC20Selector::Issue,
             params,
         )
         .and_then(|output| {
@@ -741,7 +741,7 @@ impl<T: Trait> Module<T> {
                 Ok(output)
             } else {
                 Err(ExecError {
-                    reason: "fail to call the contract, please check params and erc20",
+                    reason: "fail to call the contract, please check params and xrc20",
                     buffer: Vec::new(),
                 })
             }
@@ -750,62 +750,62 @@ impl<T: Trait> Module<T> {
 
         let data: Vec<u8> = Decode::decode(&mut exec_value.data.as_slice()).ok_or_else(|| {
             error!(
-                "[issue_to_erc20]|fail to decode wasm result|data:{:}",
+                "[issue_to_xrc20]|fail to decode wasm result|data:{:}",
                 try_hex_or_str(&exec_value.data)
             );
             "fail decode wasm result to vecu8"
         })?;
-        // notice when standard erc20 return chech, this decode method should also change
+        // notice when standard xrc20 return chech, this decode method should also change
         let result: bool = Decode::decode(&mut data.as_slice()).ok_or_else(|| {
             error!(
-                "[issue_to_erc20]|fail to decode wasm result|data:{:}",
+                "[issue_to_xrc20]|fail to decode wasm result|data:{:}",
                 try_hex_or_str(&data)
             );
             "fail decode wasm result to bool"
         })?;
         if !result {
-            return Err("fail to issue token in erc20 contract");
+            return Err("fail to issue token in xrc20 contract");
         }
 
-        let erc20_addr = Self::erc20_of_token(&token)
-            .expect("erc20 info must be existed at here")
+        let xrc20_addr = Self::xrc20_of_token(&token)
+            .expect("xrc20 info must be existed at here")
             .0;
-        // success, transfer to the erc20 contract
+        // success, transfer to the xrc20 contract
         let _ = xassets::Module::<T>::move_balance(
             &token,
             &origin,
             AssetType::Free,
-            &erc20_addr,
-            AssetType::ReservedErc20,
+            &xrc20_addr,
+            AssetType::ReservedXRC20,
             value,
         )
         .map_err(|e| e.info())?;
         Ok(())
     }
 
-    fn call_for_erc20(
+    fn call_for_xrc20(
         token: Token,
         pay_gas: T::AccountId,
         gas_limit: Gas,
-        enum_selector: ERC20Selector,
+        enum_selector: XRC20Selector,
         input_data: Vec<u8>,
     ) -> ExecResult {
-        let info = Self::erc20_of_token(&token).ok_or_else(|| {
-            error!("no erc20 instance for this token|token:{:}", token!(token));
+        let info = Self::xrc20_of_token(&token).ok_or_else(|| {
+            error!("no xrc20 instance for this token|token:{:}", token!(token));
             ExecError {
-                reason: "no erc20 instance for this token",
+                reason: "no xrc20 instance for this token",
                 buffer: Vec::new(),
             }
         })?;
-        let erc20_addr = info.0;
+        let xrc20_addr = info.0;
         let selectors = info.1;
         let selector = selectors.get(&enum_selector).ok_or_else(|| {
             error!(
-                "no issue selector in erc20 info for this token|token:{:}",
+                "no issue selector in xrc20 info for this token|token:{:}",
                 token!(token)
             );
             ExecError {
-                reason: "no issue selector in erc20 info for this token",
+                reason: "no issue selector in xrc20 info for this token",
                 buffer: Vec::new(),
             }
         })?;
@@ -813,34 +813,34 @@ impl<T: Trait> Module<T> {
         let mut data = selector.to_vec(); // provide selector
         data.extend_from_slice(input_data.as_slice());
 
-        debug!("[call_for_erc20]|call erc20 instance|token:{:}|erc20:{:?}|pay gas:{:?}|selector:{:?}|data:{:}",
-            token!(token), erc20_addr, pay_gas, enum_selector, try_hex_or_str(&data));
+        debug!("[call_for_xrc20]|call xrc20 instance|token:{:}|xrc20:{:?}|pay gas:{:?}|selector:{:?}|data:{:}",
+            token!(token), xrc20_addr, pay_gas, enum_selector, try_hex_or_str(&data));
 
         Self::execute_wasm(
-            erc20_addr.clone(),
+            xrc20_addr.clone(),
             Some(pay_gas),
             gas_limit,
-            |ctx, gas_meter| ctx.call(erc20_addr.clone(), Zero::zero(), gas_meter, data),
+            |ctx, gas_meter| ctx.call(xrc20_addr.clone(), Zero::zero(), gas_meter, data),
         )
     }
 
     fn refund_to_asset(contract_addr: T::AccountId, to: T::AccountId, value: T::Balance) -> Result {
         let token: Token = Self::token_of_addr(&contract_addr).ok_or_else(|| {
             error!(
-                "no token for this erc20 address|erc20 addr:{:?}",
+                "no token for this xrc20 address|xrc20 addr:{:?}",
                 contract_addr
             );
-            "no token for this erc20 address"
+            "no token for this xrc20 address"
         })?;
         let current_reserved = xassets::Module::<T>::asset_balance_of(
             &contract_addr,
             &token,
-            AssetType::ReservedErc20,
+            AssetType::ReservedXRC20,
         );
         ensure_with_errorlog!(
             current_reserved > value,
-            "not enough balance for this erc20 instance to refund asset",
-            "not enough balance for this erc20 instance to refund asset|token:{:}|erc20:{:?}|value:{:}|current:{:}",
+            "not enough balance for this xrc20 instance to refund asset",
+            "not enough balance for this xrc20 instance to refund asset|token:{:}|xrc20:{:?}|value:{:}|current:{:}",
             token!(token), contract_addr, value, current_reserved
         );
 
@@ -848,7 +848,7 @@ impl<T: Trait> Module<T> {
         let _ = xassets::Module::<T>::move_balance(
             &token,
             &contract_addr,
-            AssetType::ReservedErc20,
+            AssetType::ReservedXRC20,
             &to,
             AssetType::Free,
             value,
@@ -1065,15 +1065,15 @@ decl_storage! {
 
         // ChainX modify
         // the map of token and token contract instance
-        // addr <--erc20--> token
+        // addr <--xrc20--> token
         // addr <---erc777---^
 
         /// The Token name of a token contract instance address.
-        /// notice the address could be erc20, erc777, or other type contract
+        /// notice the address could be xrc20, erc777, or other type contract
         pub TokenOfAddr get(token_of_addr): map T::AccountId => Option<Token>;
-        // erc20
-        /// The Erc20 contract of a token name.
-        pub Erc20InfoOfToken get(erc20_of_token): map Token => Option<(T::AccountId, BTreeMap<ERC20Selector, Selector>)>;
+        // xrc20
+        /// The XRC20 contract of a token name.
+        pub XRC20InfoOfToken get(xrc20_of_token): map Token => Option<(T::AccountId, BTreeMap<XRC20Selector, Selector>)>;
         // erc777 (in future)
     }
 }

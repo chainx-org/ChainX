@@ -339,8 +339,8 @@ pub struct CallRequest {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct Erc20CallRequest {
+pub struct XRC20CallRequest {
     pub token: String,
-    pub selector: ERC20Selector,
+    pub selector: XRC20Selector,
     pub input_data: Bytes,
 }

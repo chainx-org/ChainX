@@ -63,7 +63,7 @@ impl std::fmt::Display for GetStorageError {
 
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum ERC20Selector {
+pub enum XRC20Selector {
     BalanceOf,
     TotalSupply,
     Name,

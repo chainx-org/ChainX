@@ -189,6 +189,6 @@ match_method_call_func! {
         put_code : 250,
         call : 10,
         instantiate : 500,
-        convert_to_erc20: 10,
+        convert_to_xrc20: 10,
     );
 }

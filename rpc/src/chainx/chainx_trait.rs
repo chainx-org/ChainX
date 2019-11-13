@@ -203,13 +203,13 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
         at: Option<Hash>,
     ) -> Result<Option<Bytes>>;
 
-    #[rpc(name = "chainx_contractErc20Call")]
-    fn contract_erc20_call(
+    #[rpc(name = "chainx_contractXRC20Call")]
+    fn contract_xrc20_call(
         &self,
-        call_request: Erc20CallRequest,
+        call_request: XRC20CallRequest,
         at: Option<Hash>,
     ) -> Result<Value>;
 
-    #[rpc(name = "chainx_contractErc20Info")]
-    fn contract_erc20_info(&self, at: Option<Hash>) -> Result<BTreeMap<String, Value>>;
+    #[rpc(name = "chainx_contractXRC20Info")]
+    fn contract_xrc20_info(&self, at: Option<Hash>) -> Result<BTreeMap<String, Value>>;
 }

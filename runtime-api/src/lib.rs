@@ -114,7 +114,7 @@ pub mod xbridge_api {
 pub mod xcontracts_api {
     use super::*;
     use xassets::Token;
-    use xr_primitives::{ContractExecResult, ERC20Selector, GetStorageResult};
+    use xr_primitives::{ContractExecResult, GetStorageResult, XRC20Selector};
 
     decl_runtime_apis! {
         /// The API to interact with contracts without using executive.
@@ -138,9 +138,9 @@ pub mod xcontracts_api {
             /// is returned.
             fn get_storage(address: AccountIdForApi, key: [u8; 32]) -> GetStorageResult;
 
-            fn erc20_call(
+            fn xrc20_call(
                 token: Token,
-                selector: ERC20Selector,
+                selector: XRC20Selector,
                 data: Vec<u8>,
             ) -> ContractExecResult;
         }
