@@ -1081,7 +1081,7 @@ where
         }
     }
 
-    fn contract_xrc20_info(
+    fn contract_xrc_token_info(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<BTreeMap<String, Value>> {

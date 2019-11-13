@@ -210,6 +210,6 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
         at: Option<Hash>,
     ) -> Result<Value>;
 
-    #[rpc(name = "chainx_contractXRC20Info")]
-    fn contract_xrc20_info(&self, at: Option<Hash>) -> Result<BTreeMap<String, Value>>;
+    #[rpc(name = "chainx_contractXRCTokenInfo")]
+    fn contract_xrc_token_info(&self, at: Option<Hash>) -> Result<BTreeMap<String, Value>>;
 }
