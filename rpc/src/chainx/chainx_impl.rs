@@ -1100,7 +1100,7 @@ where
             )>(&state, &key, Hasher::BLAKE2256)?
             {
                 b.insert(to_string!(&token), json!({
-                    "xrc20": json!({
+                    "XRC20": json!({
                         "address": info.0,
                         "selectors": info.1.into_iter().map(|(k, v)| (k, Bytes(v.to_vec()))).collect::<BTreeMap<_, _>>(),
                     })
