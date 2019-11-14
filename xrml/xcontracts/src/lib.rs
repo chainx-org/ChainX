@@ -720,10 +720,12 @@ impl<T: Trait> Module<T> {
     ) -> Result {
         // check
         ensure_with_errorlog!(
-            xassets::Module::<T>::free_balance_of(&origin, &token) > value,
+            xassets::Module::<T>::free_balance_of(&origin, &token) >= value,
             "not enough balance for this token to convert to xrc20 token",
-            "not enough balance for this token to convert to xrc20 token|token:{:}|who:{:?}|value:{:}",
-            token!(token), origin, value
+            "token:{:}|who:{:?}|value:{:}",
+            token!(token),
+            origin,
+            value
         );
 
         let params = (origin.clone(), value).encode();
@@ -838,10 +840,13 @@ impl<T: Trait> Module<T> {
             AssetType::ReservedXRC20,
         );
         ensure_with_errorlog!(
-            current_reserved > value,
+            current_reserved >= value,
             "not enough balance for this xrc20 instance to refund asset",
-            "not enough balance for this xrc20 instance to refund asset|token:{:}|xrc20:{:?}|value:{:}|current:{:}",
-            token!(token), contract_addr, value, current_reserved
+            "token:{:}|xrc20:{:?}|value:{:}|current:{:}",
+            token!(token),
+            contract_addr,
+            value,
+            current_reserved
         );
 
         // success, refund asset to this account

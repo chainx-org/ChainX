@@ -91,7 +91,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             xassets::Module::<T>::can_do(token, xassets::AssetLimit::CanWithdraw),
             "this asset do not allow withdraw",
-            "this asset do not allow withdraw|token:{:}",
+            "token:{:}",
             token!(token),
         );
         Ok(())

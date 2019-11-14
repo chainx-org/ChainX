@@ -386,7 +386,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::can_do(token, AssetLimit::CanMove),
             "this asset do not allow move",
-            "this asset do not allow move|token:{:}",
+            "token:{:}",
             token!(token)
         );
         Ok(())
@@ -397,7 +397,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::can_do(token, AssetLimit::CanTransfer),
             "this asset do not allow transfer",
-            "this asset do not allow transfer|token:{:}",
+            "token:{:}",
             token!(token)
         );
         Ok(())
@@ -408,7 +408,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::can_do(token, AssetLimit::CanDestroyWithdrawal),
             "this asset do not allow destroy withdrawal",
-            "this asset do not allow destroy withdrawal|token:{:}",
+            "token:{:}",
             token!(token)
         );
         Ok(())
@@ -419,7 +419,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::can_do(token, AssetLimit::CanDestroyFree),
             "this asset do not allow destroy free token",
-            "this asset do not allow destroy free token|token:{:}",
+            "token:{:}",
             token!(token)
         );
         Ok(())

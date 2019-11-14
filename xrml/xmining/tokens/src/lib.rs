@@ -332,7 +332,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::psedu_intentions().contains(&token),
             "Cannot issue deposit reward since this token is not a psedu intention.",
-            "Cannot issue deposit reward since this token is not a psedu intention.|token:{:}",
+            "token:{:}",
             token!(token)
         );
 
