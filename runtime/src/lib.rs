@@ -670,9 +670,10 @@ impl_runtime_apis! {
         fn xrc20_call(token: xassets::Token, selector: XRC20Selector, data: Vec<u8>) -> ContractExecResult {
             // this call should not be called in extrinsics
             let pay_gas = AccountId::default();
-            let gas_limit = 100 * 100000000;
+            let gas_limit = 500_0000;
+            let value = gas_limit * XContracts::gas_price();
             // temp issue some balance for a 0x00...0000 accountid
-            let _ = XAssets::pcx_make_free_balance_be(&pay_gas, gas_limit);
+            let _ = XAssets::pcx_make_free_balance_be(&pay_gas, value);
             let exec_result = XContracts::call_xrc20(token, pay_gas.clone(), gas_limit, selector, data);
             // remove all balance for this accountid
             let _ = XAssets::pcx_make_free_balance_be(&pay_gas, Zero::zero());

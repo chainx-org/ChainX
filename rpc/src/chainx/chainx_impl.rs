@@ -1043,7 +1043,6 @@ where
             ContractExecResult::Success { status, data } => {
                 let real_data: Vec<u8> =
                     Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
-                // todo decode dependency on selector
                 let result = match call_request.selector {
                     XRC20Selector::BalanceOf | XRC20Selector::TotalSupply => {
                         let v: u64 =

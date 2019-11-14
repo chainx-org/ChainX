@@ -114,7 +114,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 enable_println: true, // this should only be enabled on development chains
                 ..Default::default()
             },
-            gas_price: 1000,
+            gas_price: 5,
         }),
         _ => None,
     };

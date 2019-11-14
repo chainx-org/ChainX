@@ -254,8 +254,8 @@ pub fn refund_unused_gas<T: Trait>(transactor: &T::AccountId, gas_meter: GasMete
     };
 
     debug!(
-        "[refund_unused_gas]|account:{:?}|gas_payment:{:?}|refund:{:?}|real cost:{:?}",
-        transactor, gas_payment, remainder, pay_to_other
+        "[refund_unused_gas]|account:{:?}|gas_payment:{:?}|refund:{:?}|real cost:{:?}|gas_spent:{:}",
+        transactor, gas_payment, remainder, pay_to_other, gas_spent
     );
 
     let _ = xassets::Module::<T>::pcx_move_balance(

@@ -1061,7 +1061,7 @@ decl_storage! {
         /// The code associated with a given account.
         pub ContractInfoOf: map T::AccountId => Option<ContractInfo<T>>;
         /// The price of one unit of gas.
-        pub GasPrice get(gas_price) config(): T::Balance = 1000.into();
+        pub GasPrice get(gas_price) config(): T::Balance = 5.into();
 
         // ChainX modify
         // the map of token and token contract instance
@@ -1193,15 +1193,15 @@ impl Default for Schedule {
     fn default() -> Schedule {
         Schedule {
             version: 0,
-            put_code_per_byte_cost: 1,
+            put_code_per_byte_cost: 200,
             grow_mem_cost: 1,
             regular_op_cost: 1,
             return_data_per_byte_cost: 1,
-            event_data_per_byte_cost: 1,
+            event_data_per_byte_cost: 20,
             event_per_topic_cost: 1,
             event_base_cost: 1,
-            call_base_cost: 10,
-            instantiate_base_cost: 500,
+            call_base_cost: 60000,
+            instantiate_base_cost: 200000,
             sandbox_data_read_cost: 1,
             sandbox_data_write_cost: 1,
             max_event_topics: 4,
