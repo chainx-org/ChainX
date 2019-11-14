@@ -1191,25 +1191,48 @@ pub struct Schedule {
 
 impl Default for Schedule {
     fn default() -> Schedule {
-        Schedule {
-            version: 0,
-            put_code_per_byte_cost: 200,
-            grow_mem_cost: 1,
-            regular_op_cost: 1,
-            return_data_per_byte_cost: 1,
-            event_data_per_byte_cost: 20,
-            event_per_topic_cost: 1,
-            event_base_cost: 1,
-            call_base_cost: 60000,
-            instantiate_base_cost: 200000,
-            sandbox_data_read_cost: 1,
-            sandbox_data_write_cost: 1,
-            max_event_topics: 4,
-            max_stack_height: 64 * 1024,
-            max_memory_pages: 16,
-            max_table_size: 16 * 1024,
-            enable_println: false,
-            max_subject_len: 32,
+        if cfg!(test) {
+            Schedule {
+                version: 0,
+                put_code_per_byte_cost: 1,
+                grow_mem_cost: 1,
+                regular_op_cost: 1,
+                return_data_per_byte_cost: 1,
+                event_data_per_byte_cost: 1,
+                event_per_topic_cost: 1,
+                event_base_cost: 1,
+                call_base_cost: 135,
+                instantiate_base_cost: 175,
+                sandbox_data_read_cost: 1,
+                sandbox_data_write_cost: 1,
+                max_event_topics: 4,
+                max_stack_height: 64 * 1024,
+                max_memory_pages: 16,
+                max_table_size: 16 * 1024,
+                enable_println: false,
+                max_subject_len: 32,
+            }
+        } else {
+            Schedule {
+                version: 0,
+                put_code_per_byte_cost: 200,
+                grow_mem_cost: 1,
+                regular_op_cost: 1,
+                return_data_per_byte_cost: 1,
+                event_data_per_byte_cost: 20,
+                event_per_topic_cost: 1,
+                event_base_cost: 1,
+                call_base_cost: 60000,
+                instantiate_base_cost: 200000,
+                sandbox_data_read_cost: 1,
+                sandbox_data_write_cost: 1,
+                max_event_topics: 4,
+                max_stack_height: 64 * 1024,
+                max_memory_pages: 16,
+                max_table_size: 16 * 1024,
+                enable_println: false,
+                max_subject_len: 32,
+            }
         }
     }
 }

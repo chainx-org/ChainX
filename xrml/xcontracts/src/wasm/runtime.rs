@@ -140,7 +140,7 @@ pub(crate) fn to_execution_result<E: Ext>(
                 })
             } else {
                 Err(ExecError {
-                    reason: "during execution|Failed to invoke an exported function for some reason|may be a wrong selector or decode params error",
+                    reason: "during execution|Failed to invoke an exported function for some reason|wrong selector, decode params fail or inner error",
                     buffer: runtime.scratch_buf,
                 })
             }
