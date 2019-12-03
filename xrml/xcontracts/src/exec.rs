@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate. If not, see <http://www.gnu.org/licenses/>.
 
-use support::StorageMap;
+use support::{storage::unhashed, StorageMap};
 
 use super::{
     CodeHash, Config, ContractAddressFor, ContractInfo, ContractInfoOf, Event, RawEvent, Trait,
@@ -179,6 +179,11 @@ pub trait Ext {
 
     /// Returns the maximum allowed size of a storage item.
     fn max_value_size(&self) -> u32;
+
+    /// Returns the value of runtime under the given key.
+    ///
+    /// Returns `None` if the value doesn't exist.
+    fn get_runtime_storage(&self, key: &[u8]) -> Option<Vec<u8>>;
 }
 
 /// Loader is a companion of the `Vm` trait. It loads an appropriate abstract
@@ -807,6 +812,10 @@ where
 
     fn max_value_size(&self) -> u32 {
         self.ctx.config.max_value_size
+    }
+
+    fn get_runtime_storage(&self, key: &[u8]) -> Option<Vec<u8>> {
+        unhashed::get_raw(&key)
     }
 }
 

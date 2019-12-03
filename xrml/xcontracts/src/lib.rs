@@ -364,7 +364,7 @@ pub trait Trait: system::Trait + timestamp::Trait + xassets::Trait + xaccounts::
     type TombstoneDeposit: Get<Self::Balance>;
 
     /// Size of a contract at the time of instantiation. This is a simple way to ensure
-    /// that empty contract eventually gets deleted.
+    /// that empty contracts eventually gets deleted.
     type StorageSizeOffset: Get<u32>;
 
     /// Price of a byte of storage per one block interval. Should be greater than 0.
