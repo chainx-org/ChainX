@@ -120,7 +120,10 @@ fn should_watch_extrinsic() {
     let h = blake2_256(&replacement.encode());
     assert_eq!(
         runtime.block_on(data.into_future()).unwrap().0,
-        Some(format!(r#"{{"jsonrpc":"2.0","method":"test","params":{{"result":{{"usurped":"0x{}"}},"subscription":1}}}}"#, HexDisplay::from(&h)))
+        Some(format!(
+            r#"{{"jsonrpc":"2.0","method":"test","params":{{"result":{{"usurped":"0x{}"}},"subscription":1}}}}"#,
+            HexDisplay::from(&h)
+        ))
     );
 }
 

@@ -170,9 +170,6 @@ decl_module! {
             let dest = <T as system::Trait>::Lookup::lookup(dest)?;
             debug!("[transfer]|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));
             is_valid_memo::<T>(&memo)?;
-            if transactor == dest {
-                return Ok(())
-            }
 
             Self::can_transfer(&token)?;
             let _ = Self::move_free_balance(&token, &transactor, &dest, value).map_err(|e| e.info())?;
@@ -638,13 +635,6 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: T::Balance,
     ) -> result::Result<(SignedImbalanceT<T>, SignedImbalanceT<T>), AssetErr> {
-        if from == to && from_type == to_type {
-            // same account, same type, return directly
-            return Ok((
-                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
-                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
-            ));
-        }
         if value == Zero::zero() {
             // value is zero, do not read storage, no event
             return Ok((
@@ -652,6 +642,7 @@ impl<T: Trait> Module<T> {
                 SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
             ));
         }
+
         // check
         Self::is_valid_asset(token).map_err(|_| AssetErr::InvalidToken)?;
 
@@ -666,7 +657,7 @@ impl<T: Trait> Module<T> {
         debug!("[move_balance]|token:{:}|from:{:?}|f_type:{:?}|f_balance:{:}|to:{:?}|t_type:{:?}|t_balance:{:}|value:{:}",
                token!(token), from, from_type, from_balance, to, to_type, to_balance, value);
 
-        // test overflow
+        // judge balance is enough and test overflow
         let new_from_balance = match from_balance.checked_sub(&value) {
             Some(b) => b,
             None => return Err(AssetErr::NotEnough),
@@ -676,6 +667,16 @@ impl<T: Trait> Module<T> {
             None => return Err(AssetErr::OverFlow),
         };
 
+        // finish basic check, start self check
+        if from == to && from_type == to_type {
+            // same account, same type, return directly
+            return Ok((
+                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
+                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
+            ));
+        }
+
+        // !!! all check pass, start set storage
         // for account to set storage
         if to_type == AssetType::Free {
             Self::try_new_account(&to_key);
