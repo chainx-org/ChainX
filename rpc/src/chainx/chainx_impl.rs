@@ -970,18 +970,10 @@ where
             })?;
 
         match exec_result {
-            ContractExecResult::Success { status, data } => {
-                // try to decode return value.
-                // in ink! old version, the data is being encoded. thus, need to decode first.
-                // but in ink! new version, the data is not being encoded, thus do not need decode.
-                let real_data: Vec<u8> =
-                    Decode::decode(&mut data.as_slice()).unwrap_or(data);
-
-                Ok(json!({
-                    "status": status,
-                    "data": Bytes(real_data),
-                }))
-            }
+            ContractExecResult::Success { status, data } => Ok(json!({
+                "status": status,
+                "data": Bytes(data),
+            })),
             ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
         }
     }
