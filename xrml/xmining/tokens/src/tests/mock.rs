@@ -75,8 +75,8 @@ impl xassets::Trait for Test {
     type Balance = u64;
     type OnNewAccount = Indices;
     type Event = ();
-    type OnAssetChanged = (XTokens);
-    type OnAssetRegisterOrRevoke = (XTokens);
+    type OnAssetChanged = XTokens;
+    type OnAssetRegisterOrRevoke = XTokens;
     type DetermineTokenJackpotAccountId = DummyDetermineTokenJackpotAccountId;
 }
 
@@ -201,7 +201,8 @@ impl xrecords::Trait for Test {
 
 impl xstaking::Trait for Test {
     type Event = ();
-    type OnRewardCalculation = XTokens;
+    type OnDistributeAirdropAsset = XTokens;
+    type OnDistributeCrossChainAsset = XTokens;
     type OnReward = XTokens;
 }
 
@@ -226,11 +227,11 @@ impl Trait for Test {
 
 pub struct DummyDetermineTokenJackpotAccountId;
 impl TokenJackpotAccountIdFor<u64, u64> for DummyDetermineTokenJackpotAccountId {
-    fn accountid_for_unsafe(_token: &Token) -> u64 {
-        10
+    fn accountid_for_unsafe(token: &Token) -> u64 {
+        token.iter().map(|x| *x as u64).sum::<u64>() + 10000u64
     }
-    fn accountid_for_safe(_token: &Token) -> Option<u64> {
-        Some(10)
+    fn accountid_for_safe(token: &Token) -> Option<u64> {
+        Some(Self::accountid_for_unsafe(token))
     }
 }
 
@@ -257,6 +258,15 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     )
     .unwrap();
 
+    let lbtc_asset = Asset::new(
+        b"L-BTC".to_vec(),
+        b"L-BTC".to_vec(),
+        Chain::Bitcoin,
+        8, // bitcoin precision
+        b"ChainX's Lockup Bitcoin".to_vec(),
+    )
+    .unwrap();
+
     let sdot_asset = Asset::new(
         b"SDOT".to_vec(), // token
         b"Shadow DOT".to_vec(),
@@ -269,6 +279,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
     let asset_list = vec![
         (btc_asset.clone(), true, true, vec![]),
         (sdot_asset.clone(), true, true, vec![]),
+        (lbtc_asset, true, true, vec![]),
     ];
 
     let pair_list = vec![
@@ -309,10 +320,10 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         xsession::GenesisConfig::<Test> {
             session_length: 1,
             validators: vec![
-                (1, 125_000_000),
-                (2, 125_000_000),
-                (3, 125_000_000),
-                (4, 125_000_000),
+                (1, 1_250_000_000),
+                (2, 1_250_000_000),
+                (3, 1_250_000_000),
+                (4, 1_250_000_000),
             ],
             keys: vec![
                 (1, UintAuthorityId(1)),
@@ -386,6 +397,12 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             }
         }
 
+        // airdrop assets: SDOT:L-BTC = 1:1
+        XTokens::set_airdrop_distribution_ratio(b"SDOT".to_vec(), 1u32).unwrap();
+        XTokens::set_airdrop_distribution_ratio(b"L-BTC".to_vec(), 1u32).unwrap();
+        XTokens::set_fixed_cross_chain_asset_power_map(b"BTC".to_vec(), 400u32).unwrap();
+        XStaking::set_distribution_ratio((1u32, 9u32)).unwrap();
+
         for (base, quote, pip_precision, tick_precision, price, status) in pair_list.iter() {
             let _ = XSpot::add_trading_pair(
                 xspot::CurrencyPair::new(base.clone(), quote.clone()),
@@ -397,10 +414,10 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         }
 
         let intentions = vec![
-            (1, 125_000_000, b"".to_vec(), b"".to_vec()),
-            (2, 125_000_000, b"".to_vec(), b"".to_vec()),
-            (3, 125_000_000, b"".to_vec(), b"".to_vec()),
-            (4, 125_000_000, b"".to_vec(), b"".to_vec()),
+            (1, 1_250_000_000, b"".to_vec(), b"".to_vec()),
+            (2, 1_250_000_000, b"".to_vec(), b"".to_vec()),
+            (3, 1_250_000_000, b"".to_vec(), b"".to_vec()),
+            (4, 1_250_000_000, b"".to_vec(), b"".to_vec()),
         ];
 
         // xstaking
@@ -437,6 +454,7 @@ pub type XSession = xsession::Module<Test>;
 pub type XAssets = xassets::Module<Test>;
 pub type XStaking = xstaking::Module<Test>;
 pub type XBitcoin = xbitcoin::Module<Test>;
+pub type XLockupBitcoin = xbitcoin::lockup::Module<Test>;
 pub type XSdot = xsdot::Module<Test>;
 pub type XSpot = xspot::Module<Test>;
 pub type XRecords = xrecords::Module<Test>;

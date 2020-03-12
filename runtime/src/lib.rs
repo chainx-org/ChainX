@@ -162,7 +162,7 @@ impl xassets::Trait for Runtime {
     type Balance = Balance;
     type OnNewAccount = Indices;
     type Event = Event;
-    type OnAssetChanged = (XTokens);
+    type OnAssetChanged = XTokens;
     type OnAssetRegisterOrRevoke = (XTokens, XSpot);
     type DetermineTokenJackpotAccountId = xassets::SimpleAccountIdDeterminator<Runtime>;
 }
@@ -180,7 +180,8 @@ impl xprocess::Trait for Runtime {}
 
 impl xstaking::Trait for Runtime {
     type Event = Event;
-    type OnRewardCalculation = XTokens;
+    type OnDistributeAirdropAsset = XTokens;
+    type OnDistributeCrossChainAsset = XTokens;
     type OnReward = XTokens;
 }
 

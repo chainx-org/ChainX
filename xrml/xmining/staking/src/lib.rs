@@ -5,10 +5,10 @@
 #![recursion_limit = "256"]
 
 mod impls;
-mod mock;
 mod reward;
 mod shifter;
 pub mod slash;
+#[cfg(test)]
 mod tests;
 pub mod traits;
 pub mod types;
@@ -48,8 +48,11 @@ pub trait Trait: xsystem::Trait + xsession::Trait + xassets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
-    /// Need to calculate the reward for non-intentions.
-    type OnRewardCalculation: OnRewardCalculation<Self::AccountId, Self::Balance>;
+    /// Collect the airdrop asset shares info.
+    type OnDistributeAirdropAsset: OnDistributeAirdropAsset;
+
+    /// Collect the cross chain asset mining power info.
+    type OnDistributeCrossChainAsset: OnDistributeCrossChainAsset;
 
     /// Time to distribute reward
     type OnReward: OnReward<Self::AccountId, Self::Balance>;
@@ -436,6 +439,15 @@ decl_module! {
             }
         }
 
+        /// Set global PCX distribution ratio.
+        ///
+        /// Treasury and Airdrop asset ratio can be set to zero for no more rewarding them.
+        pub fn set_global_distribution_ratio(new: (u32, u32, u32)) {
+            // Essentially it's PCXStaking shares that can't be zero.
+            ensure!(new.2 > 0, "CrossMiningAndPCXStaking shares can not be zero");
+            <GlobalDistributionRatio<T>>::put(new);
+        }
+
     }
 }
 
@@ -490,6 +502,9 @@ decl_storage! {
 
         /// The current era index.
         pub CurrentEra get(current_era) config(): T::BlockNumber;
+
+        /// (Treasury, Airdrop, CrossMining+PcxStaking)
+        pub GlobalDistributionRatio get(global_distribution_ratio): (u32, u32, u32) = (12u32, 8u32, 80u32);
 
         /// Allocation ratio of native asset and cross-chain assets.
         pub DistributionRatio get(distribution_ratio): (u32, u32) = (1u32, 1u32);
@@ -898,21 +913,6 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     pub fn validators() -> Vec<(T::AccountId, u64)> {
         xsession::Module::<T>::validators()
-    }
-
-    pub fn cross_chain_assets_are_growing_too_fast() -> rstd::result::Result<(u128, u128), ()> {
-        let total_staked = Self::intention_set()
-            .into_iter()
-            .filter(Self::is_active)
-            .map(|id| Self::total_nomination_of(&id).into())
-            .sum::<u64>();
-
-        let total_cross_chain_assets = T::OnRewardCalculation::psedu_intentions_info()
-            .into_iter()
-            .map(|(_, x): (_, T::Balance)| x.into())
-            .sum::<u64>();
-
-        Self::are_growing_too_fast(total_cross_chain_assets, total_staked)
     }
 
     pub fn jackpot_accountid_for_unsafe(who: &T::AccountId) -> T::AccountId {

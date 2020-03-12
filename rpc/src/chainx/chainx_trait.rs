@@ -131,7 +131,7 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     ) -> Result<Option<Vec<PseduNominationRecordV1>>>;
 
     #[rpc(name = "chainx_getTradingPairs")]
-    fn trading_pairs(&self, hash: Option<Hash>) -> Result<Option<Vec<(PairInfo)>>>;
+    fn trading_pairs(&self, hash: Option<Hash>) -> Result<Option<Vec<PairInfo>>>;
 
     #[rpc(name = "chainx_getQuotations")]
     fn quotations(

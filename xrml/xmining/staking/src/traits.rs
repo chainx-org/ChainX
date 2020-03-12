@@ -2,14 +2,44 @@
 
 use super::*;
 
-/// Collect the staking info of virtual intentions from other modules, e.g., tokens.
-pub trait OnRewardCalculation<AccountId: Default, Balance> {
-    fn psedu_intentions_info() -> Vec<(RewardHolder<AccountId>, Balance)>;
+/// Get the airdrop asset info needed for the new minted PCX distribution from xtokens module.
+pub trait OnDistributeAirdropAsset {
+    /// Collect all the airdrop assets as well as their distribution shares.
+    fn collect_airdrop_assets_info() -> Vec<(Token, u32)>;
+    /// Calculate the total shares of airdrop assets.
+    fn total_shares() -> u32 {
+        Self::collect_airdrop_assets_info()
+            .iter()
+            .map(|(_, share)| share)
+            .sum()
+    }
 }
 
-impl<AccountId: Default, Balance> OnRewardCalculation<AccountId, Balance> for () {
-    fn psedu_intentions_info() -> Vec<(RewardHolder<AccountId>, Balance)> {
+impl OnDistributeAirdropAsset for () {
+    fn collect_airdrop_assets_info() -> Vec<(Token, u32)> {
         Vec::new()
+    }
+}
+
+/// Get the cross chain asset info needed for the new minted PCX distribution from xtokens module.
+pub trait OnDistributeCrossChainAsset {
+    /// Collect all the cross chain assets as well as their mining power.
+    fn collect_cross_chain_assets_info() -> Vec<(Token, u128)>;
+    /// Calculate the total mining power of cross chain assets.
+    fn total_cross_chain_mining_power() -> u128 {
+        Self::collect_cross_chain_assets_info()
+            .iter()
+            .map(|(_, power)| power)
+            .sum()
+    }
+}
+
+impl OnDistributeCrossChainAsset for () {
+    fn collect_cross_chain_assets_info() -> Vec<(Token, u128)> {
+        Vec::new()
+    }
+    fn total_cross_chain_mining_power() -> u128 {
+        Default::default()
     }
 }
 

@@ -212,7 +212,8 @@ impl xrecords::Trait for Test {
 
 impl Trait for Test {
     type Event = ();
-    type OnRewardCalculation = ();
+    type OnDistributeAirdropAsset = ();
+    type OnDistributeCrossChainAsset = ();
     type OnReward = ();
 }
 
@@ -311,6 +312,15 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         )
         .unwrap();
 
+        let lbtc = Asset::new(
+            b"L-BTC".to_vec(),
+            b"L-BTC".to_vec(),
+            Chain::Bitcoin,
+            8, // bitcoin precision
+            b"ChainX's Lockup Bitcoin".to_vec(),
+        )
+        .unwrap();
+
         let sdot = Asset::new(
             b"SDOT".to_vec(), // token
             b"Shadow DOT".to_vec(),
@@ -323,6 +333,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         XAssets::bootstrap_register_asset(pcx, true, false).unwrap();
         XAssets::bootstrap_register_asset(btc, true, true).unwrap();
         XAssets::bootstrap_register_asset(sdot, true, true).unwrap();
+        XAssets::bootstrap_register_asset(lbtc, true, true).unwrap();
 
         let intentions = vec![
             (10, 10 * 100_000_000, b"name10".to_vec(), b"".to_vec()),
@@ -351,6 +362,8 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             XStaking::bootstrap_refresh(&intention, Some(url), Some(true), None, None);
             XStaking::bootstrap_update_vote_weight(&intention, &intention, Delta::Add(value));
         }
+
+        XStaking::set_distribution_ratio((1u32, 9u32)).unwrap();
 
         XAssets::pcx_issue(&1, 10).unwrap();
         XAssets::pcx_issue(&2, 20).unwrap();

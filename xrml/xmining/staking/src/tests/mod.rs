@@ -1,14 +1,15 @@
 // Copyright 2018-2019 Chainpool.
 //! Tests for the module.
 
-#![cfg(test)]
-
-use super::mock::*;
 use super::*;
 
+use crate::tests::mock::*;
 use primitives::testing::UintAuthorityId;
 use runtime_io::with_externalities;
 use support::{assert_noop, assert_ok};
+
+mod mock;
+mod test_proposal09;
 
 #[test]
 fn register_should_work() {
@@ -268,6 +269,7 @@ fn unnominate_should_work() {
 #[test]
 fn claim_should_work() {
     with_externalities(&mut new_test_ext(), || {
+        // Register intention 2 and stay active
         assert_ok!(XStaking::register(Origin::signed(2), b"name".to_vec(),));
         assert_ok!(XStaking::refresh(
             Origin::signed(2),
@@ -278,10 +280,11 @@ fn claim_should_work() {
         ));
         assert_eq!(XAccounts::intention_props_of(&2).is_active, true);
         assert_eq!(XAssets::pcx_free_balance(&2), 20);
+
         System::set_block_number(1);
-        assert_eq!(XAssets::pcx_free_balance(&2), 20);
         XSession::check_rotate_session(System::block_number());
         assert_eq!(XAssets::pcx_free_balance(&2), 20);
+
         System::set_block_number(2);
         XSession::check_rotate_session(System::block_number());
         assert_ok!(XAssets::pcx_issue(&2, 10 * 100_000_000));
@@ -293,11 +296,16 @@ fn claim_should_work() {
             vec![]
         ));
         assert_eq!(XAssets::pcx_free_balance(&2), 20);
+
         System::set_block_number(3);
         XSession::check_rotate_session(System::block_number());
-        assert_eq!(XAssets::pcx_free_balance(&2), 36363656);
+        // stake of intention 2: 1_000_000_000
+        // total stake: 1_000_000_000 + 10_000_000_000
+        // for intention 2 + its jackpot: 1_000_000_000 * 2880000000 / 11_000_000_000 = 261818181
+        // for intention 2 = 261818181 / 10 = 26181818
+        assert_eq!(XAssets::pcx_free_balance(&2), 20 + 26181818);
         assert_ok!(XStaking::claim(Origin::signed(2), 2.into()));
-        assert_eq!(XAssets::pcx_free_balance(&2), 363636383);
+        assert_eq!(XAssets::pcx_free_balance(&2), 261818201);
     });
 }
 

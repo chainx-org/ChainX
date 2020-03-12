@@ -544,7 +544,7 @@ where
     fn trading_pairs(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<Vec<(PairInfo)>>> {
+    ) -> Result<Option<Vec<PairInfo>>> {
         let mut pairs = Vec::new();
         let state = self.state_at(hash)?;
 

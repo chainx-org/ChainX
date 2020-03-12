@@ -3,12 +3,16 @@
 use super::*;
 use rstd::cmp;
 use rstd::result;
-use xsupport::info;
+use xsupport::{debug, info};
 
 impl<T: Trait> Module<T> {
     /// Actually slash the account being punished, all the slashed value will go to the council.
     fn apply_slash(slashed_account: &T::AccountId, value: T::Balance) {
         let council = xaccounts::Module::<T>::council_account();
+        debug!(
+            "[apply_slash]slashed_account:{:?},value:{}",
+            slashed_account, value
+        );
         let _ = <xassets::Module<T>>::pcx_move_free_balance(&slashed_account, &council, value);
     }
 
