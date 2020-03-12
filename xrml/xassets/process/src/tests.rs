@@ -22,7 +22,7 @@ fn test_check_btc_addr() {
                 b"sdfds".to_vec(),
                 b"".to_vec()
             ),
-            "verify btc addr err"
+            "Verify btc addr err"
         );
 
         let origin = system::RawOrigin::Signed(1).into();
@@ -34,13 +34,14 @@ fn test_check_btc_addr() {
             b"".to_vec()
         ));
 
-        assert_eq!(XAssets::free_balance(&1, &b"BTC".to_vec()), 900);
+        assert_eq!(XAssets::free_balance_of(&1, &b"BTC".to_vec()), 900);
 
         let nums = XRecords::withdrawal_application_numbers(Chain::Bitcoin, 10).unwrap();
+        assert_ok!(XRecords::withdrawal_processing(&nums));
         for n in nums {
-            assert_ok!(XRecords::withdrawal_finish(n, true));
+            assert_ok!(XRecords::withdrawal_finish(n));
         }
-        assert_eq!(XAssets::all_type_balance_of(&1, &b"BTC".to_vec()), 900)
+        assert_eq!(XAssets::all_type_asset_balance(&1, &b"BTC".to_vec()), 900)
     })
 }
 
@@ -67,7 +68,7 @@ fn test_check_btc_addr2() {
 fn test_check_min_withdrawal() {
     with_externalities(&mut new_test_ext(), || {
         assert_ok!(XAssets::issue(&b"BTC".to_vec(), &1, 1000));
-
+        XBitCoin::set_btc_withdrawal_fee(100).unwrap();
         // less
         let origin = system::RawOrigin::Signed(1).into();
         assert_err!(
@@ -97,7 +98,7 @@ fn test_check_min_withdrawal() {
         assert_ok!(XProcess::withdraw(
             origin,
             b"BTC".to_vec(),
-            11,
+            150,
             b"mjKE11gjVN4JaC9U8qL6ZB5vuEBgmwik7b".to_vec(),
             b"".to_vec()
         ));
@@ -108,7 +109,8 @@ fn test_check_min_withdrawal() {
 fn test_check_blacklist() {
     with_externalities(&mut new_test_ext(), || {
         assert_ok!(XAssets::issue(&b"BTC".to_vec(), &1, 1000));
-
+        XAssets::modify_asset_limit(b"SDOT".to_vec(), xassets::AssetLimit::CanWithdraw, false)
+            .unwrap();
         // success
         let origin = system::RawOrigin::Signed(1).into();
         assert_ok!(XProcess::withdraw(
@@ -124,12 +126,12 @@ fn test_check_blacklist() {
         assert_err!(
             XProcess::withdraw(
                 origin,
-                b"XDOT".to_vec(),
+                b"SDOT".to_vec(),
                 11,
                 b"xxx".to_vec(),
                 b"xxx".to_vec()
             ),
-            "this token is in blacklist"
+            "this asset do not allow withdraw"
         );
 
         // failed

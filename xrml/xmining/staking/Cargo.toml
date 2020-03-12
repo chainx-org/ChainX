@@ -36,7 +36,7 @@ timestamp = { package ="srml-timestamp", git = "https://github.com/chainpool/sub
 xfee-manager = { package = "xrml-xfee-manager", path = "../../xfee/manager" }
 xrecords = { package = "xrml-xassets-records", path = "../../xassets/records" }
 xbridge-features = { package = "xrml-xbridge-features", path = "../../xbridge/features" }
-xmultisig = { package = "xrml-xmultisig", path = "../../xmultisig", default-features = false }
+xmultisig = { package = "xrml-xmultisig", path = "../../xmultisig" }
 
 [features]
 default = ["std"]

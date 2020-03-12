@@ -44,8 +44,6 @@ use system::ensure_signed;
 // ChainX
 use xsupport::{debug, warn};
 
-mod mock;
-mod tests;
 pub mod types;
 
 pub use self::types::{Log, OldStoredPendingChange, RawLog, StoredPendingChange};

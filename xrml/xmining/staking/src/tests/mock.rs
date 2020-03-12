@@ -277,6 +277,21 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .unwrap()
         .0,
     );
+    // t.extend(
+    //     xbridge_features::GenesisConfig::<Test> {
+    //         trustee_info_config: vec![(
+    //             Chain::Bitcoin,
+    //             xbridge_common::types::TrusteeInfoConfig {
+    //                 min_trustee_count: 3,
+    //                 max_trustee_count: 15,
+    //             },
+    //         )],
+    //         _genesis_phantom_data: Default::default(),
+    //     }
+    //         .build_storage()
+    //         .unwrap()
+    //         .0,
+    // );
 
     t.extend(
         GenesisConfig::<Test> {

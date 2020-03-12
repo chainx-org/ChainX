@@ -30,6 +30,11 @@ consensus = { package = "srml-consensus", git = "https://github.com/chainpool/su
 xsystem = { package = "xrml-xsystem", path = "../../xsystem" }
 xaccounts = { package = "xrml-xaccounts", path = "../../xaccounts" }
 xfee_manager = { package = "xrml-xfee-manager", path = "../../xfee/manager" }
+xbridge-common = { package = "xrml-xbridge-common", path = "../../xbridge/common" }
+xbridge-features = { package = "xrml-xbridge-features", path = "../../xbridge/features" }
+xmultisig = { package = "xrml-xmultisig", path = "../../xmultisig" }
+xstaking = { package = "xrml-xmining-staking", path = "../../xmining/staking" }
+xsession = { package = "xrml-xsession", path = "../../xsession" }
 
 [features]
 default = ["std"]

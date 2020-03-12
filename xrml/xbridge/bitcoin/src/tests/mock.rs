@@ -67,7 +67,7 @@ impl xsystem::Validator<AccountId> for MockValidator {
     fn get_validator_by_name(_name: &[u8]) -> Option<AccountId> {
         Some(AccountId::default())
     }
-    fn get_validator_name(accountid: &AccountId) -> Option<Vec<u8>> {
+    fn get_validator_name(_: &AccountId) -> Option<Vec<u8>> {
         None
     }
 }
@@ -124,7 +124,7 @@ impl Trait for Test {
 pub struct DummyTrusteeSession;
 impl xbridge_common::traits::TrusteeSession<AccountId, TrusteeAddrInfo> for DummyTrusteeSession {
     fn trustee_session(
-        number: u32,
+        _: u32,
     ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddrInfo>, &'static str> {
         Ok(TrusteeSessionInfo {
             trustee_list: [
@@ -169,9 +169,9 @@ impl xbridge_common::traits::TrusteeSession<AccountId, TrusteeAddrInfo> for Dumm
 
 pub struct DummyCrossChain;
 impl xbridge_common::traits::CrossChainBinding<AccountId, BitcoinAddress> for DummyCrossChain {
-    fn update_binding(who: &AccountId, addr: btc_keys::Address, channel_name: Option<Vec<u8>>) {}
+    fn update_binding(_: &AccountId, _: btc_keys::Address, _: Option<Vec<u8>>) {}
 
-    fn get_binding_info(addr: &btc_keys::Address) -> Option<(AccountId, Option<AccountId>)> {
+    fn get_binding_info(_: &btc_keys::Address) -> Option<(AccountId, Option<AccountId>)> {
         Some((
             AccountId::from_slice(&[0]),
             Some(AccountId::from_slice(&[1])),
@@ -186,7 +186,6 @@ impl xbridge_common::traits::TrusteeMultiSig<AccountId> for DummyBitcoinTrusteeM
     }
 }
 
-pub type Timestamp = timestamp::Module<Test>;
 pub type XAssets = xassets::Module<Test>;
 pub type XBridgeOfBTC = Module<Test>;
 pub type XBridgeOfBTCLockup = lockup::Module<Test>;

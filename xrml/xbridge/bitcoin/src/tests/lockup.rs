@@ -1,14 +1,13 @@
 use super::*;
 
 use crate::lockup::{detect_lockup_type, handle_lock_tx};
-use crate::tx::handler::TxHandler;
 use crate::types::TxType;
 
 #[test]
 fn test_detect_tx_type() {
     with_externalities(&mut new_test_mainnet(), || {
         // 0.1 ~ 10 BTC
-        XBridgeOfBTCLockup::set_locked_coin_limit((1 * 10000000, 10 * 100000000));
+        XBridgeOfBTCLockup::set_locked_coin_limit((1 * 10000000, 10 * 100000000)).unwrap();
 
         // normal output addr 1FCaFxCdupMpxYKHpa83rUKGi1BygevJxF
         // opreturn ChainX:5UufyWdcgonrEHoqHb54DDUYJ4vmWg4NDBxWhrpizNcz2ptV@Polkadog:1FCa
@@ -47,7 +46,7 @@ fn test_normal() {
         use rstd::collections::btree_map::BTreeMap;
         // init
         // 0.001 ~ 10 BTC
-        XBridgeOfBTCLockup::set_locked_coin_limit((1 * 100000, 10 * 100000000));
+        XBridgeOfBTCLockup::set_locked_coin_limit((1 * 100000, 10 * 100000000)).unwrap();
         // init assets
         let asset = xassets::Asset::new(
             XBridgeOfBTCLockup::TOKEN.to_vec(),
@@ -63,7 +62,7 @@ fn test_normal() {
         props.insert(xassets::AssetLimit::CanTransfer, false);
         props.insert(xassets::AssetLimit::CanWithdraw, false);
         props.insert(xassets::AssetLimit::CanDestroyWithdrawal, false);
-        XAssets::set_asset_limit_props(XBridgeOfBTCLockup::TOKEN.to_vec(), props);
+        XAssets::set_asset_limit_props(XBridgeOfBTCLockup::TOKEN.to_vec(), props).unwrap();
 
         let public = hex!("fa6efb5db13089b4712305e39d0a16867c6822e3b1f4c4619937ae8a21961030")
             .unchecked_into();

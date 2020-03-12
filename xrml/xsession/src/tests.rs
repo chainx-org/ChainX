@@ -129,7 +129,7 @@ fn session_change_should_work() {
 
         // Block 3: Set new key for validator 2; no visible change.
         System::set_block_number(3);
-        assert_ok!(XSession::set_key(Origin::signed(2), UintAuthorityId(5)));
+        XSession::set_key(&2, &UintAuthorityId(5));
         assert_eq!(
             Consensus::authorities(),
             vec![UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)]
@@ -146,7 +146,7 @@ fn session_change_should_work() {
         XSession::check_rotate_session(4);
         assert_eq!(
             Consensus::authorities(),
-            vec![UintAuthorityId(1), UintAuthorityId(5), UintAuthorityId(3)]
+            vec![UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)]
         );
     });
 }
