@@ -249,9 +249,11 @@ decl_module! {
                 xaccounts::is_valid_about(about)?;
             }
 
-            if let Some(desire_to_run) = desire_to_run.as_ref() {
-                if !desire_to_run && !Self::is_able_to_apply_inactive() {
-                    return Err("Cannot pull out when there are too few active intentions.");
+            if Self::is_active(&who) {
+                if let Some(desire_to_run) = desire_to_run.as_ref() {
+                    if !desire_to_run && !Self::is_able_to_apply_inactive() {
+                        return Err("Cannot pull out when there are too few active intentions.");
+                    }
                 }
             }
 

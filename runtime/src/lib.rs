@@ -660,7 +660,7 @@ impl_runtime_apis! {
         ) -> GetStorageResult {
             XContracts::get_storage(address, key).map_err(|rpc_err| {
                 use GetStorageError as RpcGetStorageError;
-                /// Map the contract error into the RPC layer error.
+                // Map the contract error into the RPC layer error.
                 match rpc_err {
                     xcontracts::GetStorageError::ContractDoesntExist => RpcGetStorageError::ContractDoesntExist,
                     xcontracts::GetStorageError::IsTombstone => RpcGetStorageError::IsTombstone,
