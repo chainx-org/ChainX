@@ -6,10 +6,10 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
-pwasm-utils = { version = "0.11.0", default-features = false }
+pwasm-utils = { version = "0.12.0", default-features = false }
 codec = { package = "parity-codec", version = "3.3", default-features = false, features = ["derive"] }
-parity-wasm = { version = "0.40.3", default-features = false }
-wasmi-validation = { version = "0.2.0", default-features = false }
+parity-wasm = { version = "0.41.0", default-features = false }
+wasmi-validation = { version = "0.3.0", default-features = false }
 primitives = { package = "substrate-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 sr-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
