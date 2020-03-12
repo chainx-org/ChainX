@@ -19,6 +19,7 @@ xsupport = { package = "xrml-xsupport", path = "../xsupport", default-features =
 xaccounts = { package = "xrml-xaccounts", path = "../xaccounts", default-features = false }
 
 [dev-dependencies]
+matches = "0.1"
 runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", branch="chainx-master" }
 consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", branch="chainx-master" }
 timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", branch="chainx-master" }

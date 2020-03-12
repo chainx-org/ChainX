@@ -115,7 +115,8 @@ impl xbridge_features::TrusteeMultiSigFor<u64> for DummyMultiSigIdFor {
 impl xmultisig::Trait for Test {
     type MultiSig = DummyMultiSig;
     type GenesisMultiSig = DummyGenesisMultiSig;
-    type Proposal = DummyTrusteeCall;
+    type Proposal = DummyCall;
+    type TrusteeCall = TrusteeCall;
     type Event = ();
 }
 
@@ -138,8 +139,16 @@ impl xmultisig::GenesisMultiSig<u64> for DummyGenesisMultiSig {
 }
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, Debug)]
-pub struct DummyTrusteeCall;
-impl xmultisig::TrusteeCall<u64> for DummyTrusteeCall {
+pub struct DummyCall;
+
+pub struct TrusteeCall(DummyCall);
+impl From<DummyCall> for TrusteeCall {
+    fn from(call: DummyCall) -> Self {
+        TrusteeCall(call)
+    }
+}
+
+impl xmultisig::LimitedCall<u64> for TrusteeCall {
     fn allow(&self) -> bool {
         true
     }
@@ -149,9 +158,9 @@ impl xmultisig::TrusteeCall<u64> for DummyTrusteeCall {
     }
 }
 
-impl support::dispatch::Dispatchable for DummyTrusteeCall {
+impl support::dispatch::Dispatchable for DummyCall {
     type Origin = Origin;
-    type Trait = DummyTrusteeCall;
+    type Trait = DummyCall;
     fn dispatch(self, _origin: Origin) -> support::dispatch::Result {
         Ok(())
     }

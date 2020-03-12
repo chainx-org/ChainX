@@ -227,6 +227,7 @@ impl xmultisig::Trait for Runtime {
     type MultiSig = xmultisig::SimpleMultiSigIdFor<Runtime>;
     type GenesisMultiSig = xmultisig::ChainXGenesisMultisig<Runtime>;
     type Proposal = Call;
+    type TrusteeCall = trustee::TrusteeCall;
     type Event = Event;
 }
 
@@ -234,7 +235,7 @@ impl finality_tracker::Trait for Runtime {
     type OnFinalizationStalled = xgrandpa::SyncedAuthorities<Runtime>;
 }
 
-// TODO
+// due to current contracts has close Rent mode, thus this params are useless
 parameter_types! {
     pub const TombstoneDeposit: Balance = 1 * 10000000;
     pub const RentByteFee: Balance = 1 * 10000000;
@@ -265,7 +266,7 @@ impl xcontracts::Trait for Runtime {
     type Call = Call;
     type Event = Event;
     type DetermineContractAddress = xcontracts::SimpleAddressDeterminator<Runtime>;
-    type ComputeDispatchFee = DispatchFeeComputor; //<Runtime>;
+    type ComputeDispatchFee = DispatchFeeComputor;
     type TrieIdGenerator = xcontracts::TrieIdFromParentCounter<Runtime>;
     type SignedClaimHandicap = xcontracts::DefaultSignedClaimHandicap;
     type TombstoneDeposit = TombstoneDeposit;

@@ -72,9 +72,9 @@ impl xbridge_common::traits::Extractable<u64> for DummyExtractor {
     }
 }
 
-impl support::dispatch::Dispatchable for DummyTrusteeCall {
+impl support::dispatch::Dispatchable for DummyLimitedCall {
     type Origin = Origin;
-    type Trait = DummyTrusteeCall;
+    type Trait = DummyLimitedCall;
     fn dispatch(self, _origin: Origin) -> support::dispatch::Result {
         Ok(())
     }
@@ -155,8 +155,8 @@ impl xbridge_common::traits::TrusteeMultiSig<u64> for DummyBitcoinTrusteeMultiSi
 }
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, Debug)]
-pub struct DummyTrusteeCall;
-impl xmultisig::TrusteeCall<u64> for DummyTrusteeCall {
+pub struct DummyLimitedCall;
+impl xmultisig::LimitedCall<u64> for DummyLimitedCall {
     fn allow(&self) -> bool {
         true
     }
@@ -169,7 +169,7 @@ impl xmultisig::TrusteeCall<u64> for DummyTrusteeCall {
 impl xmultisig::Trait for Test {
     type MultiSig = DummyMultiSig;
     type GenesisMultiSig = DummyGenesisMultiSig;
-    type Proposal = DummyTrusteeCall;
+    type Proposal = DummyLimitedCall;
     type Event = ();
 }
 
