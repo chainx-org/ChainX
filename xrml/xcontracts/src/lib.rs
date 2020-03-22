@@ -750,18 +750,11 @@ impl<T: Trait> Module<T> {
         })
         .map_err(|e| e.reason)?;
 
-        let data: Vec<u8> = Decode::decode(&mut exec_value.data.as_slice()).ok_or_else(|| {
+        // notice when standard xrc20 return chech, this decode method should also change
+        let result: bool = Decode::decode(&mut exec_value.data.as_slice()).ok_or_else(|| {
             error!(
                 "[issue_to_xrc20]|fail to decode wasm result|data:{:}",
                 try_hex_or_str(&exec_value.data)
-            );
-            "fail decode wasm result to vecu8"
-        })?;
-        // notice when standard xrc20 return chech, this decode method should also change
-        let result: bool = Decode::decode(&mut data.as_slice()).ok_or_else(|| {
-            error!(
-                "[issue_to_xrc20]|fail to decode wasm result|data:{:}",
-                try_hex_or_str(&data)
             );
             "fail decode wasm result to bool"
         })?;

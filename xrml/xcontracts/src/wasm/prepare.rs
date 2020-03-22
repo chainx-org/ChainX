@@ -309,6 +309,10 @@ impl<'a> ContractModule<'a> {
             if import.field().as_bytes() == b"gas"
                 || !C::can_satisfy(import.field().as_bytes(), func_ty)
             {
+                xsupport::debug!(
+                    "[scan_imports]non-existent function:{}",
+                    xsupport::u8array_to_string(import.field().as_bytes())
+                );
                 return Err("module imports a non-existent function");
             }
         }
