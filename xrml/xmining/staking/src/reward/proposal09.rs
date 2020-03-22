@@ -30,6 +30,8 @@ impl<T: Trait> Module<T> {
     }
 
     /// Proportional PCX allocation for the token assets.
+    ///
+    /// Return the value of unpaid reward.
     fn token_proportional_allocation<Entity, P: primitives::traits::SimpleArithmetic + Copy>(
         items: impl Iterator<Item = (Entity, P)>,
         total_shares: P,
@@ -37,7 +39,7 @@ impl<T: Trait> Module<T> {
         reward_calculator: &dyn Fn(T::Balance, P, P) -> T::Balance,
         apply_reward: &dyn Fn(&Entity, T::Balance),
         log: &dyn Fn(&Entity, T::Balance),
-    ) {
+    ) -> T::Balance {
         let mut total_reward = total_reward;
         let mut total_shares = total_shares;
 
@@ -50,10 +52,12 @@ impl<T: Trait> Module<T> {
                 total_shares -= share;
             }
         }
+
+        total_reward
     }
 
     /// Distribution for airdrop assets are fixed and dependent on AirdropDistributionRatioMap only.
-    fn distribute_to_airdrop_assets(total_reward: T::Balance) {
+    fn distribute_to_airdrop_assets(total_reward: T::Balance) -> T::Balance {
         let airdrop_assets_info = T::OnDistributeAirdropAsset::collect_airdrop_assets_info();
         // [PASS] airdrop_assets_info.sum() overflow check.
         //        sum of airdrop asset shares won't exceed u32::max_value(), ensured in tokens::set_airdrop_distribution_ratio().
@@ -68,6 +72,7 @@ impl<T: Trait> Module<T> {
                 _reward
             )
         };
+
         Self::token_proportional_allocation(
             airdrop_assets_info.into_iter(),
             total_shares,
@@ -75,10 +80,10 @@ impl<T: Trait> Module<T> {
             &Self::multiply_by_shares,
             &T::OnReward::reward,
             &logger,
-        );
+        )
     }
 
-    fn distribute_to_cross_chain_assets(total_reward: T::Balance) {
+    fn distribute_to_cross_chain_assets(total_reward: T::Balance) -> T::Balance {
         let cross_chain_assets_info =
             T::OnDistributeCrossChainAsset::collect_cross_chain_assets_info();
         // [PASS*] No risk of sum overflow practically.
@@ -102,7 +107,7 @@ impl<T: Trait> Module<T> {
             &Self::multiply_by_mining_power,
             &T::OnReward::reward,
             &logger,
-        );
+        )
     }
 
     /// Reward to all the intentions pro rata.
@@ -156,6 +161,7 @@ impl<T: Trait> Module<T> {
         // Otherwise the difference will be distruted to the council_account again.
         let m1 = total_cross_mining_power * u128::from(staking_shares);
         let m2 = u128::from(total_staking_power.into()) * u128::from(cross_mining_shares);
+        debug!("[collect_cross_mining_vs_staking]m1=total_cross_mining_power({})*staking_shares({}), m2=total_staking_power({})*cross_mining_shares({})", total_cross_mining_power, staking_shares, total_staking_power, cross_mining_shares);
         (m1, m2)
     }
 
@@ -217,7 +223,14 @@ impl<T: Trait> Module<T> {
             cross_mining_shares,
             staking_shares,
         );
-        Self::distribute_to_cross_chain_assets(for_cross_mining);
+        let unpaid_cross_mining_reward = Self::distribute_to_cross_chain_assets(for_cross_mining);
+        if !unpaid_cross_mining_reward.is_zero() {
+            debug!(
+                "[distribute_to_cross_mining_and_staking]unpaid_cross_mining_reward:{}",
+                unpaid_cross_mining_reward
+            );
+            Self::distribute_to_treasury(unpaid_cross_mining_reward);
+        }
     }
 
     /// Issue new PCX given the amount to the council account.
@@ -244,8 +257,16 @@ impl<T: Trait> Module<T> {
         }
 
         // airdrop -> SDOT, LBTC
+        // The unpaid airdrop reward happens when there is no airdrop asset.
         if !for_airdrop.is_zero() {
-            Self::distribute_to_airdrop_assets(for_airdrop);
+            let unpaid_airdrop_reward = Self::distribute_to_airdrop_assets(for_airdrop);
+            if !unpaid_airdrop_reward.is_zero() {
+                debug!(
+                    "[distribute_session_reward_impl_09]unpaid_airdrop_reward:{}",
+                    unpaid_airdrop_reward
+                );
+                Self::distribute_to_treasury(unpaid_airdrop_reward);
+            }
         }
 
         // cross_mining_and_staking -> XBTC, PCX

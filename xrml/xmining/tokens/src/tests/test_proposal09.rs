@@ -115,20 +115,23 @@ fn test09_airdrop_asset_power() {
     with_externalities(&mut new_test_ext(), || {
         // XBTC(0) + PCX(5_000_000_000) = 80%
         //
+        // PCX 72% 5_000_000_000 PCX
+        //
         // sdot + lbtc = 8%
         //   sdot:lbtc = 1:1
         //   sdot = 4% => equialent to have the mining power of 5_000_000_000 / (80 / 4)
+        //   5_000_000_000 / 18 / 1_000_000
         //   lbtc = 4%
         let (sdot, lbtc, xbtc) = tokens();
 
         assert_ok!(XAssets::issue(&sdot, &1, 1_000_000));
         assert_ok!(XAssets::issue(&lbtc, &1, 1_000_000));
 
-        let sdot_asset_power = XTokens::airdrop_asset_power(&sdot).unwrap();
-        let lbtc_asset_power = XTokens::airdrop_asset_power(&lbtc).unwrap();
-        let xbtc_asset_power = XTokens::cross_chain_asset_power(&xbtc).unwrap();
-        assert_eq!(sdot_asset_power, 250);
-        assert_eq!(lbtc_asset_power, 250);
+        let sdot_asset_power = XTokens::raw_airdrop_asset_power(&sdot).unwrap();
+        let lbtc_asset_power = XTokens::raw_airdrop_asset_power(&lbtc).unwrap();
+        let xbtc_asset_power = XTokens::raw_cross_chain_asset_power(&xbtc).unwrap();
+        assert_eq!(sdot_asset_power, 277);
+        assert_eq!(lbtc_asset_power, 277);
         assert_eq!(xbtc_asset_power, 400);
 
         // Double the issuanxe of airdrop assets
@@ -136,18 +139,18 @@ fn test09_airdrop_asset_power() {
         assert_ok!(XAssets::issue(&lbtc, &1, 1_000_000));
         assert_ok!(XAssets::issue(&xbtc, &1, 100));
 
-        let sdot_asset_power = XTokens::airdrop_asset_power(&sdot).unwrap();
-        let lbtc_asset_power = XTokens::airdrop_asset_power(&lbtc).unwrap();
-        assert_eq!(sdot_asset_power, 125);
-        assert_eq!(lbtc_asset_power, 125);
+        let sdot_asset_power = XTokens::raw_airdrop_asset_power(&sdot).unwrap();
+        let lbtc_asset_power = XTokens::raw_airdrop_asset_power(&lbtc).unwrap();
+        assert_eq!(sdot_asset_power, 138);
+        assert_eq!(lbtc_asset_power, 138);
 
         assert_ok!(XAssets::issue(&sdot, &1, 2_000_000));
         assert_ok!(XAssets::issue(&lbtc, &1, 2_000_000));
 
-        let sdot_asset_power = XTokens::airdrop_asset_power(&sdot).unwrap();
-        let lbtc_asset_power = XTokens::airdrop_asset_power(&lbtc).unwrap();
-        assert_eq!(sdot_asset_power, 62);
-        assert_eq!(lbtc_asset_power, 62);
+        let sdot_asset_power = XTokens::raw_airdrop_asset_power(&sdot).unwrap();
+        let lbtc_asset_power = XTokens::raw_airdrop_asset_power(&lbtc).unwrap();
+        assert_eq!(sdot_asset_power, 69);
+        assert_eq!(lbtc_asset_power, 69);
     });
 }
 
@@ -170,19 +173,19 @@ fn test09_cross_chain_asset_power() {
             vec![]
         ));
 
-        let xbtc_asset_power = XTokens::cross_chain_asset_power(&xbtc).unwrap();
+        let xbtc_asset_power = XTokens::raw_cross_chain_asset_power(&xbtc).unwrap();
         assert_eq!(xbtc_asset_power, 400);
 
         assert_ok!(XAssets::issue(&xbtc, &1, 100));
 
-        let xbtc_asset_power = XTokens::cross_chain_asset_power(&xbtc).unwrap();
+        let xbtc_asset_power = XTokens::raw_cross_chain_asset_power(&xbtc).unwrap();
         assert_eq!(xbtc_asset_power, 400);
 
         assert_ok!(XAssets::issue(&xbtc, &1, 10_000_000 - 100));
 
         // xbtc raw mining power: 4_000_000_000u64
         // xbtc mining power threshold: 9_000_000_000u64 / 9 = 1_000_000_000
-        let xbtc_asset_power = XTokens::cross_chain_asset_power(&xbtc).unwrap();
+        let xbtc_asset_power = XTokens::raw_cross_chain_asset_power(&xbtc).unwrap();
         assert_eq!(xbtc_asset_power, 100);
     });
 }

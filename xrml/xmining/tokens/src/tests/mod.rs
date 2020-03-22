@@ -523,6 +523,19 @@ fn total_token_reward_should_be_right() {
                 .sum::<u64>(),
             5_000_000_000 * 5
         );
+
+        assert_ok!(XTokens::remove_airdrop_asset(b"SDOT".to_vec()));
+        assert_ok!(XTokens::remove_airdrop_asset(b"L-BTC".to_vec()));
+        assert_ok!(XTokens::remove_cross_chain_asset(b"BTC".to_vec()));
+        System::set_block_number(8);
+        XSession::check_rotate_session(System::block_number());
+
+        assert_eq!(
+            all.iter()
+                .map(|x| XAssets::pcx_free_balance(x))
+                .sum::<u64>(),
+            5_000_000_000 * 6
+        );
     });
 }
 
