@@ -395,8 +395,8 @@ pub trait Trait: system::Trait + timestamp::Trait + xassets::Trait + xaccounts::
 /// and the account id that requested the account creation.
 ///
 /// Formula: `blake2_256(blake2_256(code) + blake2_256(data) + origin)`
-pub struct SimpleAddressDeterminator<T: Trait>(PhantomData<T>);
-impl<T: Trait> ContractAddressFor<CodeHash<T>, T::AccountId> for SimpleAddressDeterminator<T>
+pub struct SimpleAddressDeterminer<T: Trait>(PhantomData<T>);
+impl<T: Trait> ContractAddressFor<CodeHash<T>, T::AccountId> for SimpleAddressDeterminer<T>
 where
     T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
 {
@@ -445,7 +445,7 @@ decl_module! {
         ) -> Result {
             let origin = ensure_signed(origin)?;
 
-            let mut gas_meter= gas::buy_gas::<T>(&origin, gas_limit)?;
+            let mut gas_meter = gas::buy_gas::<T>(&origin, gas_limit)?;
 
             let schedule = <Module<T>>::current_schedule();
             let result = wasm::save_code::<T>(code, &mut gas_meter, &schedule);
@@ -1039,8 +1039,8 @@ decl_event! {
         /// successful execution or not.
         Dispatched(AccountId, bool),
 
-        /// An event from contract of account.
-        Contract(AccountId, Vec<u8>),
+        /// An event deposited upon execution of a contract from the account.
+        ContractExecution(AccountId, Vec<u8>),
     }
 }
 

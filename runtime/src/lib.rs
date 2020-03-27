@@ -265,7 +265,7 @@ impl
 impl xcontracts::Trait for Runtime {
     type Call = Call;
     type Event = Event;
-    type DetermineContractAddress = xcontracts::SimpleAddressDeterminator<Runtime>;
+    type DetermineContractAddress = xcontracts::SimpleAddressDeterminer<Runtime>;
     type ComputeDispatchFee = DispatchFeeComputor;
     type TrieIdGenerator = xcontracts::TrieIdFromParentCounter<Runtime>;
     type SignedClaimHandicap = xcontracts::DefaultSignedClaimHandicap;

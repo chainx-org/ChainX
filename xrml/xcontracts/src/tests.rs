@@ -82,7 +82,7 @@ impl_outer_origin! {
 impl_outer_dispatch! {
     pub enum Call for Test where origin: Origin {
         xassets::XAssets,
-        contract::Contract,
+        Contracts::Contracts,
     }
 }
 
@@ -225,7 +225,7 @@ impl Trait for Test {
 
 type XAssets = xassets::Module<Test>;
 type Timestamp = timestamp::Module<Test>;
-type Contract = Module<Test>;
+type Contracts = Module<Test>;
 type System = system::Module<Test>;
 
 pub struct DummyContractAddressFor;
@@ -392,7 +392,7 @@ where
 //    with_externalities(&mut ExtBuilder::default().gas_price(2).build(), || {
 //        XAssets::pcx_issue(&ALICE, 100_000_000);
 //
-//        assert_ok!(Contract::call(
+//        assert_ok!(Contracts::call(
 //            Origin::signed(ALICE),
 //            BOB,
 //            0,
@@ -538,10 +538,10 @@ fn instantiate_and_call_and_deposit_event() {
 
             System::initialize(&2, &[0u8; 32].into(), &[0u8; 32].into());
 
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
 
             // Check at the end to get hash on error easily
-            let creation = Contract::instantiate(
+            let creation = Contracts::instantiate(
                 Origin::signed(ALICE),
                 100,
                 100_000,
@@ -609,7 +609,10 @@ fn instantiate_and_call_and_deposit_event() {
                     },
                     EventRecord {
                         phase: Phase::ApplyExtrinsic(0),
-                        event: MetaEvent::contract(RawEvent::Contract(BOB, vec![1, 2, 3, 4])),
+                        event: MetaEvent::contract(RawEvent::ContractExecution(
+                            BOB,
+                            vec![1, 2, 3, 4]
+                        )),
                         topics: vec![],
                     },
                     EventRecord {
@@ -675,7 +678,7 @@ fn dispatch_call() {
 
             System::initialize(&2, &[0u8; 32].into(), &[0u8; 32].into());
 
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
 
             // Let's keep this assert even though it's redundant. If you ever need to update the
             // wasm source this test will fail and will show you the actual hash.
@@ -709,7 +712,7 @@ fn dispatch_call() {
 
             System::initialize(&5, &[0u8; 32].into(), &[0u8; 32].into());
 
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100,
                 100_000,
@@ -717,7 +720,7 @@ fn dispatch_call() {
                 vec![],
             ));
 
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB, // newly created account
                 0,
@@ -855,7 +858,7 @@ fn dispatch_call_not_dispatched_after_top_level_transaction_failure() {
 
             System::initialize(&2, &[0u8; 32].into(), &[0u8; 32].into());
 
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
 
             // Let's keep this assert even though it's redundant. If you ever need to update the
             // wasm source this test will fail and will show you the actual hash.
@@ -887,7 +890,7 @@ fn dispatch_call_not_dispatched_after_top_level_transaction_failure() {
 
             System::initialize(&5, &[0u8; 32].into(), &[0u8; 32].into());
 
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100,
                 100_000,
@@ -898,7 +901,7 @@ fn dispatch_call_not_dispatched_after_top_level_transaction_failure() {
             // Call the newly instantiated contract. The contract is expected to dispatch a call
             // and then trap.
             assert_err!(
-                Contract::call(
+                Contracts::call(
                     Origin::signed(ALICE),
                     BOB, // newly created account
                     0,
@@ -974,7 +977,8 @@ fn dispatch_call_not_dispatched_after_top_level_transaction_failure() {
 const CODE_SET_RENT: &str = r#"
 (module
     (import "env" "ext_dispatch_call" (func $ext_dispatch_call (param i32 i32)))
-    (import "env" "ext_set_storage" (func $ext_set_storage (param i32 i32 i32 i32)))
+	(import "env" "ext_set_storage" (func $ext_set_storage (param i32 i32 i32)))
+	(import "env" "ext_clear_storage" (func $ext_clear_storage (param i32)))
     (import "env" "ext_set_rent_allowance" (func $ext_set_rent_allowance (param i32 i32)))
     (import "env" "ext_scratch_size" (func $ext_scratch_size (result i32)))
     (import "env" "ext_scratch_read" (func $ext_scratch_read (param i32 i32 i32)))
@@ -984,7 +988,6 @@ const CODE_SET_RENT: &str = r#"
     (func $call_0
         (call $ext_set_storage
             (i32.const 1)
-            (i32.const 1)
             (i32.const 0)
             (i32.const 4)
         )
@@ -992,11 +995,8 @@ const CODE_SET_RENT: &str = r#"
 
     ;; remove the value inserted by call_1
     (func $call_1
-        (call $ext_set_storage
+		(call $ext_clear_storage
             (i32.const 1)
-            (i32.const 0)
-            (i32.const 0)
-            (i32.const 0)
         )
     )
 
@@ -1056,7 +1056,6 @@ const CODE_SET_RENT: &str = r#"
         )
         (call $ext_set_storage
             (i32.const 0)
-            (i32.const 1)
             (i32.const 0)
             (i32.const 4)
         )
@@ -1115,7 +1114,7 @@ mod call {
 //        &mut ExtBuilder::default().existential_deposit(50).build(),
 //        || {
 //            XAssets::pcx_issue(&ALICE, 1_000_000);
-//            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
+//            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
 //
 //            // If you ever need to update the wasm source this test will fail
 //            // and will show you the actual hash.
@@ -1148,8 +1147,8 @@ fn storage_size() {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 30_000,
                 100_000,
@@ -1165,7 +1164,7 @@ fn storage_size() {
                 <Test as Trait>::StorageSizeOffset::get() + 4
             );
 
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1181,7 +1180,7 @@ fn storage_size() {
                 <Test as Trait>::StorageSizeOffset::get() + 4 + 4
             );
 
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1209,8 +1208,8 @@ fn deduct_blocks() {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 30_000,
                 100_000,
@@ -1229,7 +1228,7 @@ fn deduct_blocks() {
             System::initialize(&5, &[0u8; 32].into(), &[0u8; 32].into());
 
             // Trigger rent through call
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1256,7 +1255,7 @@ fn deduct_blocks() {
             System::initialize(&12, &[0u8; 32].into(), &[0u8; 32].into());
 
             // Trigger rent through call
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1279,7 +1278,7 @@ fn deduct_blocks() {
             assert_eq!(XAssets::free_balance(&BOB), 30_000 - rent - rent_2);
 
             // Second call on same block should have no effect on rent
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1303,19 +1302,19 @@ fn deduct_blocks() {
 //fn call_contract_removals() {
 //    removals(|| {
 //        // Call on already-removed account might fail, and this is fine.
-//        Contract::call(Origin::signed(ALICE), BOB, 0, 100_000, call::null());
+//        Contracts::call(Origin::signed(ALICE), BOB, 0, 100_000, call::null());
 //        true
 //    });
 //}
 
 #[test]
 fn inherent_claim_surcharge_contract_removals() {
-    //    removals(|| Contract::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok());
+    //    removals(|| Contracts::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok());
 }
 
 #[test]
 fn signed_claim_surcharge_contract_removals() {
-    //    removals(|| Contract::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok());
+    //    removals(|| Contracts::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok());
 }
 
 #[test]
@@ -1323,44 +1322,44 @@ fn claim_surcharge_malus() {
     // Test surcharge malus for inherent
     claim_surcharge(
         4,
-        || Contract::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok(),
+        || Contracts::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok(),
         true,
     );
     claim_surcharge(
         3,
-        || Contract::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok(),
+        || Contracts::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok(),
         true,
     );
     claim_surcharge(
         2,
-        || Contract::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok(),
+        || Contracts::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok(),
         true,
     );
     claim_surcharge(
         1,
-        || Contract::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok(),
+        || Contracts::claim_surcharge(Origin::NONE, BOB, Some(ALICE)).is_ok(),
         false,
     );
 
     // Test surcharge malus for signed
     claim_surcharge(
         4,
-        || Contract::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok(),
+        || Contracts::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok(),
         true,
     );
     claim_surcharge(
         3,
-        || Contract::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok(),
+        || Contracts::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok(),
         false,
     );
     claim_surcharge(
         2,
-        || Contract::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok(),
+        || Contracts::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok(),
         false,
     );
     claim_surcharge(
         1,
-        || Contract::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok(),
+        || Contracts::claim_surcharge(Origin::signed(ALICE), BOB, None).is_ok(),
         false,
     );
 }
@@ -1375,8 +1374,8 @@ fn claim_surcharge(blocks: u64, trigger_call: impl Fn() -> bool, removes: bool) 
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100,
                 100_000,
@@ -1419,12 +1418,12 @@ fn removals(trigger_call: impl Fn() -> bool) {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 wasm.clone()
             ));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100,
                 100_000,
@@ -1476,12 +1475,12 @@ fn removals(trigger_call: impl Fn() -> bool) {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 wasm.clone()
             ));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 1_000,
                 100_000,
@@ -1532,12 +1531,12 @@ fn removals(trigger_call: impl Fn() -> bool) {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 wasm.clone()
             ));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 50 + XAssets::minimum_balance(),
                 100_000,
@@ -1558,7 +1557,7 @@ fn removals(trigger_call: impl Fn() -> bool) {
             assert_eq!(XAssets::free_balance(&BOB), 50 + XAssets::minimum_balance());
 
             // Transfer funds
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1604,12 +1603,12 @@ fn call_removed_contract() {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 wasm.clone()
             ));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100,
                 100_000,
@@ -1618,7 +1617,7 @@ fn call_removed_contract() {
             ));
 
             // Calling contract should succeed.
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1630,7 +1629,7 @@ fn call_removed_contract() {
             System::initialize(&10, &[0u8; 32].into(), &[0u8; 32].into());
 
             // chainx do not use rent to remove contract
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1640,13 +1639,13 @@ fn call_removed_contract() {
 
             // // Calling contract should remove contract and fail.
             // assert_err!(
-            //     Contract::call(Origin::signed(ALICE), BOB, 0, 100_000, call::null()),
+            //     Contracts::call(Origin::signed(ALICE), BOB, 0, 100_000, call::null()),
             //     "contract has been evicted"
             // );
 
             // // Subsequent contract calls should also fail.
             // assert_err!(
-            //     Contract::call(Origin::signed(ALICE), BOB, 0, 100_000, call::null()),
+            //     Contracts::call(Origin::signed(ALICE), BOB, 0, 100_000, call::null()),
             //     "contract has been evicted"
             // );
         },
@@ -1712,8 +1711,8 @@ fn default_rent_allowance_on_instantiate() {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 30_000,
                 100_000,
@@ -1735,7 +1734,7 @@ fn default_rent_allowance_on_instantiate() {
             System::initialize(&5, &[0u8; 32].into(), &[0u8; 32].into());
 
             // Trigger rent through call
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -1752,7 +1751,7 @@ fn default_rent_allowance_on_instantiate() {
 
 const CODE_RESTORATION: &str = r#"
 (module
-    (import "env" "ext_set_storage" (func $ext_set_storage (param i32 i32 i32 i32)))
+	(import "env" "ext_set_storage" (func $ext_set_storage (param i32 i32 i32)))
     (import "env" "ext_restore_to" (func $ext_restore_to (param i32 i32 i32 i32 i32 i32 i32 i32)))
     (import "env" "memory" (memory 1 1))
 
@@ -1777,7 +1776,6 @@ const CODE_RESTORATION: &str = r#"
         ;; Data to restore
         (call $ext_set_storage
             (i32.const 0)
-            (i32.const 1)
             (i32.const 0)
             (i32.const 4)
         )
@@ -1785,7 +1783,6 @@ const CODE_RESTORATION: &str = r#"
         ;; ACL
         (call $ext_set_storage
             (i32.const 100)
-            (i32.const 1)
             (i32.const 0)
             (i32.const 4)
         )
@@ -1840,12 +1837,12 @@ fn restoration(test_different_storage: bool, test_restore_to_with_dirty_storage:
         &mut ExtBuilder::default().existential_deposit(50).build(),
         || {
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 restoration_wasm
             ));
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 set_rent_wasm
@@ -1878,7 +1875,7 @@ fn restoration(test_different_storage: bool, test_restore_to_with_dirty_storage:
 
             // Create an account with address `BOB` with code `CODE_SET_RENT`.
             // The input parameter sets the rent allowance to 0.
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 30_000,
                 100_000,
@@ -1895,7 +1892,7 @@ fn restoration(test_different_storage: bool, test_restore_to_with_dirty_storage:
             assert_eq!(bob_contract.rent_allowance, 0);
 
             if test_different_storage {
-                assert_ok!(Contract::call(
+                assert_ok!(Contracts::call(
                     Origin::signed(ALICE),
                     BOB,
                     0,
@@ -1910,7 +1907,7 @@ fn restoration(test_different_storage: bool, test_restore_to_with_dirty_storage:
             // Call `BOB`, which makes it pay rent. Since the rent allowance is set to 0
             // we expect that it will get removed leaving tombstone.
             assert_err!(
-                Contract::call(Origin::signed(ALICE), BOB, 0, 100_000, call::null()),
+                Contracts::call(Origin::signed(ALICE), BOB, 0, 100_000, call::null()),
                 "contract has been evicted"
             );
             assert!(ContractInfoOf::<Test>::get(BOB)
@@ -1923,7 +1920,7 @@ fn restoration(test_different_storage: bool, test_restore_to_with_dirty_storage:
             /// Note that we can't use `ALICE` for creating `DJANGO` so we create yet another
             /// account `CHARLIE` and create `DJANGO` with it.
             XAssets::pcx_issue(&CHARLIE, 1_000_000);
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(CHARLIE),
                 30_000,
                 100_000,
@@ -1945,7 +1942,7 @@ fn restoration(test_different_storage: bool, test_restore_to_with_dirty_storage:
 
             // Perform a call to `DJANGO`. This should either perform restoration successfully or
             // fail depending on the test parameters.
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 DJANGO,
                 0,
@@ -1988,7 +1985,7 @@ fn restoration(test_different_storage: bool, test_restore_to_with_dirty_storage:
 const CODE_STORAGE_SIZE: &str = r#"
 (module
     (import "env" "ext_get_storage" (func $ext_get_storage (param i32) (result i32)))
-    (import "env" "ext_set_storage" (func $ext_set_storage (param i32 i32 i32 i32)))
+	(import "env" "ext_set_storage" (func $ext_set_storage (param i32 i32 i32)))
     (import "env" "ext_scratch_size" (func $ext_scratch_size (result i32)))
     (import "env" "ext_scratch_read" (func $ext_scratch_read (param i32 i32 i32)))
     (import "env" "memory" (memory 16 16))
@@ -2021,7 +2018,6 @@ const CODE_STORAGE_SIZE: &str = r#"
         ;; place a garbage value in storage, the size of which is specified by the call input.
         (call $ext_set_storage
             (i32.const 0)		;; Pointer to storage key
-            (i32.const 1)		;; Value is not null
             (i32.const 0)		;; Pointer to value
             (i32.load (i32.const 32))	;; Size of value
         )
@@ -2058,8 +2054,8 @@ fn storage_max_value_limit() {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 30_000,
                 100_000,
@@ -2078,7 +2074,7 @@ fn storage_max_value_limit() {
             );
 
             // Call contract with allowed storage value.
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -2088,7 +2084,7 @@ fn storage_max_value_limit() {
 
             // Call contract with too large a storage value.
             assert_err!(
-                Contract::call(
+                Contracts::call(
                     Origin::signed(ALICE),
                     BOB,
                     0,
@@ -2431,18 +2427,18 @@ fn deploy_and_call_other_contract() {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 callee_wasm
             ));
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 caller_wasm
             ));
 
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100_000,
                 100_000,
@@ -2452,12 +2448,31 @@ fn deploy_and_call_other_contract() {
 
             // Call BOB contract, which attempts to instantiate and call the callee contract and
             // makes various assertions on the results from those calls.
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
                 200_000,
                 callee_code_hash.as_ref().to_vec(),
+            ));
+        },
+    );
+}
+
+#[test]
+fn deploy_works_without_gas_price() {
+    let (wasm, code_hash) = compile_module::<Test>(CODE_GET_RUNTIME_STORAGE).unwrap();
+    with_externalities(
+        &mut ExtBuilder::default().existential_deposit(50).build(),
+        || {
+            XAssets::pcx_issue(&ALICE, 1_000_000);
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::instantiate(
+                Origin::signed(ALICE),
+                100,
+                100_000,
+                code_hash.into(),
+                vec![],
             ));
         },
     );
@@ -2569,10 +2584,10 @@ fn self_destruct_by_draining_balance() {
         &mut ExtBuilder::default().existential_deposit(50).build(),
         || {
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
 
             // Instantiate the BOB contract.
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100_000,
                 100_000,
@@ -2587,7 +2602,7 @@ fn self_destruct_by_draining_balance() {
             );
 
             // Call BOB with no input data, forcing it to self-destruct.
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -2608,10 +2623,10 @@ fn cannot_self_destruct_while_live() {
         &mut ExtBuilder::default().existential_deposit(50).build(),
         || {
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
 
             // Instantiate the BOB contract.
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100_000,
                 100_000,
@@ -2628,7 +2643,7 @@ fn cannot_self_destruct_while_live() {
             // Call BOB with input data, forcing it make a recursive call to itself to
             // self-destruct, resulting in a trap.
             assert_err!(
-                Contract::call(Origin::signed(ALICE), BOB, 0, 100_000, vec![0],),
+                Contracts::call(Origin::signed(ALICE), BOB, 0, 100_000, vec![0],),
                 "during execution|Failed to invoke an exported function for some reason|wrong selector, decode params fail or inner error"
             );
 
@@ -2646,7 +2661,7 @@ const CODE_DESTROY_AND_TRANSFER: &str = r#"
     (import "env" "ext_scratch_size" (func $ext_scratch_size (result i32)))
     (import "env" "ext_scratch_read" (func $ext_scratch_read (param i32 i32 i32)))
     (import "env" "ext_get_storage" (func $ext_get_storage (param i32) (result i32)))
-    (import "env" "ext_set_storage" (func $ext_set_storage (param i32 i32 i32 i32)))
+	(import "env" "ext_set_storage" (func $ext_set_storage (param i32 i32 i32)))
     (import "env" "ext_call" (func $ext_call (param i32 i32 i64 i32 i32 i32 i32) (result i32)))
     (import "env" "ext_instantiate" (func $ext_instantiate (param i32 i32 i64 i32 i32 i32 i32) (result i32)))
     (import "env" "memory" (memory 1 1))
@@ -2708,7 +2723,6 @@ const CODE_DESTROY_AND_TRANSFER: &str = r#"
         ;; Store the return address.
         (call $ext_set_storage
             (i32.const 16)	;; Pointer to the key
-            (i32.const 1)	;; Value is not null
             (i32.const 80)	;; Pointer to the value
             (i32.const 8)	;; Length of the value
         )
@@ -2806,12 +2820,12 @@ fn destroy_contract_and_transfer_funds() {
         || {
             // Create
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 callee_wasm
             ));
-            assert_ok!(Contract::put_code(
+            assert_ok!(Contracts::put_code(
                 Origin::signed(ALICE),
                 100_000,
                 caller_wasm
@@ -2819,7 +2833,7 @@ fn destroy_contract_and_transfer_funds() {
 
             // This deploys the BOB contract, which in turn deploys the CHARLIE contract during
             // construction.
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 200_000,
                 100_000,
@@ -2834,7 +2848,7 @@ fn destroy_contract_and_transfer_funds() {
             );
 
             // Call BOB, which calls CHARLIE, forcing CHARLIE to self-destruct.
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -2912,12 +2926,12 @@ fn cannot_self_destruct_in_constructor() {
         &mut ExtBuilder::default().existential_deposit(50).build(),
         || {
             XAssets::pcx_issue(&ALICE, 1_000_000);
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
 
             // Fail to instantiate the BOB contract since its final balance is below existential
             // deposit.
             assert_err!(
-                Contract::instantiate(
+                Contracts::instantiate(
                     Origin::signed(ALICE),
                     100_000,
                     100_000,
@@ -3031,15 +3045,15 @@ fn get_runtime_storage() {
                 0x14144020u32.to_le_bytes().to_vec().as_ref(),
             );
 
-            assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
-            assert_ok!(Contract::instantiate(
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
+            assert_ok!(Contracts::instantiate(
                 Origin::signed(ALICE),
                 100,
                 100_000,
                 code_hash.into(),
                 vec![],
             ));
-            assert_ok!(Contract::call(
+            assert_ok!(Contracts::call(
                 Origin::signed(ALICE),
                 BOB,
                 0,
@@ -3048,4 +3062,135 @@ fn get_runtime_storage() {
             ));
         },
     );
+}
+
+const CODE_CRYPTO_HASHES: &str = r#"
+(module
+	(import "env" "ext_scratch_size" (func $ext_scratch_size (result i32)))
+	(import "env" "ext_scratch_read" (func $ext_scratch_read (param i32 i32 i32)))
+	(import "env" "ext_scratch_write" (func $ext_scratch_write (param i32 i32)))
+
+	(import "env" "ext_hash_sha2_256" (func $ext_hash_sha2_256 (param i32 i32 i32)))
+	(import "env" "ext_hash_keccak_256" (func $ext_hash_keccak_256 (param i32 i32 i32)))
+	(import "env" "ext_hash_blake2_256" (func $ext_hash_blake2_256 (param i32 i32 i32)))
+	(import "env" "ext_hash_blake2_128" (func $ext_hash_blake2_128 (param i32 i32 i32)))
+
+	(import "env" "memory" (memory 1 1))
+
+	(type $hash_fn_sig (func (param i32 i32 i32)))
+	(table 8 funcref)
+	(elem (i32.const 1)
+		$ext_hash_sha2_256
+		$ext_hash_keccak_256
+		$ext_hash_blake2_256
+		$ext_hash_blake2_128
+	)
+	(data (i32.const 1) "20202010201008") ;; Output sizes of the hashes in order in hex.
+
+	;; Not in use by the tests besides instantiating the contract.
+	(func (export "deploy"))
+
+	;; Called by the tests.
+	;;
+	;; The `call` function expects data in a certain format in the scratch
+	;; buffer.
+	;;
+	;; 1. The first byte encodes an identifier for the crypto hash function
+	;;    under test. (*)
+	;; 2. The rest encodes the input data that is directly fed into the
+	;;    crypto hash function chosen in 1.
+	;;
+	;; The `deploy` function then computes the chosen crypto hash function
+	;; given the input and puts the result back into the scratch buffer.
+	;; After contract execution the test driver then asserts that the returned
+	;; values are equal to the expected bytes for the input and chosen hash
+	;; function.
+	;;
+	;; (*) The possible value for the crypto hash identifiers can be found below:
+	;;
+	;; | value | Algorithm | Bit Width |
+	;; |-------|-----------|-----------|
+	;; |     0 |      SHA2 |       256 |
+	;; |     1 |    KECCAK |       256 |
+	;; |     2 |    BLAKE2 |       256 |
+	;; |     3 |    BLAKE2 |       128 |
+	;; ---------------------------------
+	(func (export "call") (result i32)
+		(local $chosen_hash_fn i32)
+		(local $input_ptr i32)
+		(local $input_len i32)
+		(local $output_ptr i32)
+		(local $output_len i32)
+		(local.set $input_ptr (i32.const 10))
+		(call $ext_scratch_read (local.get $input_ptr) (i32.const 0) (call $ext_scratch_size))
+		(local.set $chosen_hash_fn (i32.load8_u (local.get $input_ptr)))
+		(if (i32.gt_u (local.get $chosen_hash_fn) (i32.const 7))
+			;; We check that the chosen hash fn  identifier is within bounds: [0,7]
+			(unreachable)
+		)
+		(local.set $input_ptr (i32.add (local.get $input_ptr) (i32.const 1)))
+		(local.set $input_len (i32.sub (call $ext_scratch_size) (i32.const 1)))
+		(local.set $output_ptr (i32.const 100))
+		(local.set $output_len (i32.load8_u (local.get $chosen_hash_fn)))
+		(call_indirect (type $hash_fn_sig)
+			(local.get $input_ptr)
+			(local.get $input_len)
+			(local.get $output_ptr)
+			(local.get $chosen_hash_fn) ;; Which crypto hash function to execute.
+		)
+		(call $ext_scratch_write
+			(local.get $output_ptr) ;; Linear memory location of the output buffer.
+			(local.get $output_len) ;; Number of output buffer bytes.
+		)
+		(i32.const 0)
+	)
+)
+"#;
+
+#[test]
+fn crypto_hashes() {
+    let (wasm, code_hash) = compile_module::<Test>(&CODE_CRYPTO_HASHES).unwrap();
+
+    with_externalities(
+        &mut ExtBuilder::default().existential_deposit(50).build(),
+        || {
+            XAssets::pcx_issue(&ALICE, 1_000_000);
+            assert_ok!(Contracts::put_code(Origin::signed(ALICE), 100_000, wasm));
+
+            // Instantiate the CRYPTO_HASHES contract.
+            assert_ok!(Contracts::instantiate(
+                Origin::signed(ALICE),
+                100_000,
+                100_000,
+                code_hash.into(),
+                vec![],
+            ));
+            // Perform the call.
+            let input = b"_DEAD_BEEF";
+            use runtime_io::*;
+            // Wraps a hash function into a more dynamic form usable for testing.
+            macro_rules! dyn_hash_fn {
+                ($name:ident) => {
+                    Box::new(|input| $name(input).as_ref().to_vec().into_boxed_slice())
+                };
+            }
+            // All hash functions and their associated output byte lengths.
+            let test_cases: &[(Box<dyn Fn(&[u8]) -> Box<[u8]>>, usize)] = &[
+                (dyn_hash_fn!(sha2_256), 32),
+                (dyn_hash_fn!(keccak_256), 32),
+                (dyn_hash_fn!(blake2_256), 32),
+                (dyn_hash_fn!(blake2_128), 16),
+            ];
+            // Test the given hash functions for the input: "_DEAD_BEEF"
+            for (n, (hash_fn, expected_size)) in test_cases.iter().enumerate() {
+                // We offset data in the contract tables by 1.
+                let mut params = vec![(n + 1) as u8];
+                params.extend_from_slice(input);
+                let result = <Module<Test>>::bare_call(ALICE, BOB, 0, 100_000, params).unwrap();
+                assert_eq!(result.status, 0);
+                let expected = hash_fn(input.as_ref());
+                assert_eq!(&result.data[..*expected_size], &*expected);
+            }
+        },
+    )
 }

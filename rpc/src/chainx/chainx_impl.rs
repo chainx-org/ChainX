@@ -941,6 +941,15 @@ where
         call_request: CallRequest,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<Value> {
+        /// A rough estimate of how much gas a decent hardware consumes per second,
+        /// using native execution.
+        /// This value is used to set the upper bound for maximal contract calls to
+        /// prevent blocking the RPC for too long.
+        ///
+        /// Based on W3F research spreadsheet:
+        /// https://docs.google.com/spreadsheets/d/1h0RqncdqiWI4KgxO0z9JIpZEJESXjX_ZCK6LFX6veDo/view
+        const GAS_PER_SECOND: u64 = 1_000_000_000;
+
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
@@ -952,6 +961,13 @@ where
             gas_limit,
             input_data,
         } = call_request;
+        let max_gas_limit = 5 * GAS_PER_SECOND;
+        if gas_limit > max_gas_limit {
+            return Err(Error::InvalidParams(format!(
+                "Requested gas limit is greater than maximum allowed: {} > {}",
+                gas_limit, max_gas_limit
+            )));
+        }
 
         let exec_result = api
             .call(

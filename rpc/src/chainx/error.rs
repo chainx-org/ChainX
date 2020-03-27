@@ -56,6 +56,9 @@ pub enum Error {
     #[display(fmt = "BlockNumber not exist for this hash")]
     BlockNumberErr,
 
+    #[display(fmt = "InvalidParams")]
+    InvalidParams(String),
+
     ContractGetStorageError(xr_primitives::GetStorageError),
 }
 
@@ -126,6 +129,11 @@ impl From<Error> for rpc::Error {
             Error::BlockNumberErr => rpc::Error {
                 code: rpc::ErrorCode::ServerError(ERROR + 16),
                 message: format!("{:}", e).into(),
+                data: None,
+            },
+            Error::InvalidParams(ref s) => rpc::Error {
+                code: rpc::ErrorCode::ServerError(ERROR + 17),
+                message: format!("{:}|reason:{}", &e, s).into(),
                 data: None,
             },
             Error::ContractGetStorageError(e) => {

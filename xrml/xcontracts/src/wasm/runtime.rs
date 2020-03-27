@@ -25,6 +25,7 @@ use codec::{Decode, Encode};
 use rstd::convert::TryInto;
 use rstd::mem;
 use rstd::prelude::*;
+use runtime_io::{blake2_128, blake2_256, keccak_256, sha2_256};
 use sandbox;
 use sr_primitives::traits::{Bounded, SaturatedConversion};
 use system;
@@ -45,6 +46,11 @@ const TRAP_RETURN_CODE: u32 = 0x0100;
 enum SpecialTrap {
     /// Signals that trap was generated in response to call `ext_return` host function.
     Return(Vec<u8>),
+    /// Signals that trap was generated because the contract exhausted its gas limit.
+    OutOfGas,
+    /// Signals that a trap was generated in response to a succesful call to the
+    /// `ext_terminate` host function.
+    Termination,
 }
 
 /// Can only be used for one call.
@@ -81,12 +87,27 @@ pub(crate) fn to_execution_result<E: Ext>(
     sandbox_result: Result<sandbox::ReturnValue, sandbox::Error>,
 ) -> ExecResult {
     debug!("[to_execution_result]sandbox_result:{:?}", sandbox_result);
-    // Special case. The trap was the result of the execution `return` host function.
-    if let Some(SpecialTrap::Return(data)) = runtime.special_trap {
-        return Ok(ExecReturnValue {
-            status: STATUS_SUCCESS,
-            data,
-        });
+    match runtime.special_trap {
+        // The trap was the result of the execution `return` host function.
+        Some(SpecialTrap::Return(data)) => {
+            return Ok(ExecReturnValue {
+                status: STATUS_SUCCESS,
+                data,
+            })
+        }
+        Some(SpecialTrap::Termination) => {
+            return Ok(ExecReturnValue {
+                status: STATUS_SUCCESS,
+                data: Vec::new(),
+            })
+        }
+        Some(SpecialTrap::OutOfGas) => {
+            return Err(ExecError {
+                reason: "ran out of gas during contract execution".into(),
+                buffer: runtime.scratch_buf,
+            })
+        }
+        None => (),
     }
 
     // Check the exact type of the error.
@@ -218,11 +239,15 @@ impl<T: Trait> Token<T> for RuntimeToken {
 fn charge_gas<T: Trait, Tok: Token<T>>(
     gas_meter: &mut GasMeter<T>,
     metadata: &Tok::Metadata,
+    special_trap: &mut Option<SpecialTrap>,
     token: Tok,
 ) -> Result<(), sandbox::HostError> {
     match gas_meter.charge(metadata, token) {
         GasMeterResult::Proceed => Ok(()),
-        GasMeterResult::OutOfGas => Err(sandbox::HostError),
+        GasMeterResult::OutOfGas => {
+            *special_trap = Some(SpecialTrap::OutOfGas);
+            Err(sandbox::HostError)
+        }
     }
 }
 
@@ -239,7 +264,12 @@ fn read_sandbox_memory<E: Ext>(
     ptr: u32,
     len: u32,
 ) -> Result<Vec<u8>, sandbox::HostError> {
-    charge_gas(ctx.gas_meter, ctx.schedule, RuntimeToken::ReadMemory(len))?;
+    charge_gas(
+        ctx.gas_meter,
+        ctx.schedule,
+        &mut ctx.special_trap,
+        RuntimeToken::ReadMemory(len),
+    )?;
 
     let mut buf = vec![0u8; len as usize];
     ctx.memory
@@ -261,8 +291,12 @@ fn read_sandbox_memory_into_scratch<E: Ext>(
     ptr: u32,
     len: u32,
 ) -> Result<(), sandbox::HostError> {
-    charge_gas(ctx.gas_meter, ctx.schedule, RuntimeToken::ReadMemory(len))?;
-
+    charge_gas(
+        ctx.gas_meter,
+        ctx.schedule,
+        &mut ctx.special_trap,
+        RuntimeToken::ReadMemory(len),
+    )?;
     ctx.scratch_buf.resize(len as usize, 0);
     ctx.memory
         .get(ptr, ctx.scratch_buf.as_mut_slice())
@@ -286,6 +320,7 @@ fn read_sandbox_memory_into_buf<E: Ext>(
     charge_gas(
         ctx.gas_meter,
         ctx.schedule,
+        &mut ctx.special_trap,
         RuntimeToken::ReadMemory(buf.len() as u32),
     )?;
 
@@ -320,6 +355,7 @@ fn read_sandbox_memory_as<E: Ext, D: Decode>(
 /// - designated area is not within the bounds of the sandbox memory.
 fn write_sandbox_memory<T: Trait>(
     schedule: &Schedule,
+    special_trap: &mut Option<SpecialTrap>,
     gas_meter: &mut GasMeter<T>,
     memory: &sandbox::Memory,
     ptr: u32,
@@ -328,6 +364,7 @@ fn write_sandbox_memory<T: Trait>(
     charge_gas(
         gas_meter,
         schedule,
+        special_trap,
         RuntimeToken::WriteMemory(buf.len() as u32),
     )?;
 
@@ -351,34 +388,50 @@ define_env!(Env, <E: Ext>,
     //
     // - amount: How much gas is used.
     gas(ctx, amount: u32) => {
-        charge_gas(&mut ctx.gas_meter, ctx.schedule, RuntimeToken::Explicit(amount))?;
+		charge_gas(
+			&mut ctx.gas_meter,
+			ctx.schedule,
+			&mut ctx.special_trap,
+			RuntimeToken::Explicit(amount)
+		)?;
         Ok(())
     },
 
-    // Change the value at the given key in the storage or remove the entry.
-	// The value length must not exceed the maximum defined by the Contracts module parameters.
+	// Set the value at the given key in the contract storage.
+	//
+	// The value length must not exceed the maximum defined by the contracts module parameters.
+	// Storing an empty value is disallowed.
+	//
+	// # Parameters
+	//
+	// - `key_ptr`: pointer into the linear memory where the location to store the value is placed.
+	// - `value_ptr`: pointer into the linear memory where the value to set is placed.
+	// - `value_len`: the length of the value in bytes.
     //
-    // - key_ptr: pointer into the linear
-    //   memory where the location of the requested value is placed.
-    // - value_non_null: if set to 0, then the entry
-    //   at the given location will be removed.
-    // - value_ptr: pointer into the linear memory
-    //   where the value to set is placed. If `value_non_null` is set to 0, then this parameter is ignored.
-    // - value_len: the length of the value. If `value_non_null` is set to 0, then this parameter is ignored.
-    ext_set_storage(ctx, key_ptr: u32, value_non_null: u32, value_ptr: u32, value_len: u32) => {
-        if value_non_null != 0 && ctx.ext.max_value_size() < value_len {
-            return Err(sandbox::HostError);
+    //  # Errors
+    //
+    // 	- If value length exceeds the configured maximum value length of a storage entry.
+    // 	- Upon trying to set an empty storage entry (value length is 0).
+	ext_set_storage(ctx, key_ptr: u32, value_ptr: u32, value_len: u32) => {
+		if value_len > ctx.ext.max_value_size() {
+			// Bail out if value length exceeds the set maximum value size.
+			return Err(sandbox::HostError);
         }
         let mut key: StorageKey = [0; 32];
         read_sandbox_memory_into_buf(ctx, key_ptr, &mut key)?;
-        let value =
-            if value_non_null != 0 {
-                Some(read_sandbox_memory(ctx, value_ptr, value_len)?)
-            } else {
-                None
-            };
-        ctx.ext.set_storage(key, value).map_err(|_| sandbox::HostError)?;
-
+		let value = Some(read_sandbox_memory(ctx, value_ptr, value_len)?);
+		ctx.ext.set_storage(key, value).map_err(|_| sandbox::HostError)?;
+        Ok(())
+    },
+	// Clear the value at the given key in the contract storage.
+	//
+	// # Parameters
+	//
+	// - `key_ptr`: pointer into the linear memory where the location to clear the value is placed.
+	ext_clear_storage(ctx, key_ptr: u32) => {
+		let mut key: StorageKey = [0; 32];
+		read_sandbox_memory_into_buf(ctx, key_ptr, &mut key)?;
+		ctx.ext.set_storage(key, None).map_err(|_| sandbox::HostError)?;
         Ok(())
     },
 
@@ -399,6 +452,36 @@ define_env!(Env, <E: Ext>,
             Ok(1)
         }
     },
+
+	// Transfer some value to another account.
+	//
+	// If the value transfer was succesful zero is returned. Otherwise one is returned.
+	// The scratch buffer is not touched. The receiver can be a plain account or
+	// a contract.
+	//
+	// - account_ptr: a pointer to the address of the beneficiary account
+	//   Should be decodable as an `T::AccountId`. Traps otherwise.
+	// - account_len: length of the address buffer.
+	// - value_ptr: a pointer to the buffer with value, how much value to send.
+	//   Should be decodable as a `T::Balance`. Traps otherwise.
+	// - value_len: length of the value buffer.
+	ext_transfer(
+		ctx,
+		account_ptr: u32,
+		account_len: u32,
+		value_ptr: u32,
+		value_len: u32
+	) -> u32 => {
+		let callee: <<E as Ext>::T as system::Trait>::AccountId =
+			read_sandbox_memory_as(ctx, account_ptr, account_len)?;
+		let value: <<E as Ext>::T as xassets::Trait>::Balance =
+			read_sandbox_memory_as(ctx, value_ptr, value_len)?;
+
+		match ctx.ext.transfer(&callee, value, ctx.gas_meter) {
+			Ok(_) => Ok(0),
+			Err(_) => Ok(1),
+		}
+	},
 
     // Make a call to another contract.
     //
@@ -488,6 +571,9 @@ define_env!(Env, <E: Ext>,
     // of the newly instantiated contract. In the case of a failure status, the scratch buffer is
     // cleared.
     //
+	// This call fails if it would bring the calling contract below the existential deposit.
+	// In order to destroy a contract `ext_terminate` must be used.
+	//
     // If the contract traps during execution or otherwise fails to complete successfully, then
     // this function clears the scratch buffer and returns 0x0100. As with a failure status, any
     // state changes made by the called contract are reverted.
@@ -566,12 +652,41 @@ define_env!(Env, <E: Ext>,
         }
     },
 
+	// Remove the calling account and transfer remaining balance.
+	//
+	// This function never returns. Either the termination was successful and the
+	// execution of the destroyed contract is halted. Or it failed during the termination
+	// which is considered fatal and results in a trap + rollback.
+	//
+	// - beneficiary_ptr: a pointer to the address of the beneficiary account where all
+	//   where all remaining funds of the caller are transfered.
+	//   Should be decodable as an `T::AccountId`. Traps otherwise.
+	// - beneficiary_len: length of the address buffer.
+	ext_terminate(
+		ctx,
+		beneficiary_ptr: u32,
+		beneficiary_len: u32
+	) => {
+		let beneficiary: <<E as Ext>::T as system::Trait>::AccountId =
+			read_sandbox_memory_as(ctx, beneficiary_ptr, beneficiary_len)?;
+
+		if let Ok(_) = ctx.ext.terminate(&beneficiary, ctx.gas_meter) {
+			ctx.special_trap = Some(SpecialTrap::Termination);
+		}
+		Err(sandbox::HostError)
+	},
+
     // Save a data buffer as a result of the execution, terminate the execution and return a
     // successful result to the caller.
     //
     // This is the only way to return a data buffer to the caller.
     ext_return(ctx, data_ptr: u32, data_len: u32) => {
-        charge_gas(ctx.gas_meter, ctx.schedule, RuntimeToken::ReturnData(data_len))?;
+		charge_gas(
+			ctx.gas_meter,
+			ctx.schedule,
+			&mut ctx.special_trap,
+			RuntimeToken::ReturnData(data_len)
+		)?;
 
         read_sandbox_memory_into_scratch(ctx, data_ptr, data_len)?;
         let output_buf = mem::replace(&mut ctx.scratch_buf, Vec::new());
@@ -672,7 +787,12 @@ define_env!(Env, <E: Ext>,
             })?;
             approx_gas_for_balance(ctx.gas_meter.gas_price(), balance_fee)
         };
-        charge_gas(&mut ctx.gas_meter, ctx.schedule, RuntimeToken::ComputedDispatchFee(fee))?;
+        charge_gas(
+			&mut ctx.gas_meter,
+			ctx.schedule,
+			&mut ctx.special_trap,
+			RuntimeToken::ComputedDispatchFee(fee)
+		)?;
 
         debug!("[ext_dispatch_call]|call in contract|caller:{:?}|contract:{:?}|fee gas:{:}|call:{:?}", ctx.ext.caller(), ctx.ext.address(), fee, call);
 
@@ -684,10 +804,10 @@ define_env!(Env, <E: Ext>,
     // Record a request to restore the caller contract to the specified contract.
     //
     // At the finalization stage, i.e. when all changes from the extrinsic that invoked this
-    // contract are commited, this function will compute a tombstone hash from the caller's
+	// contract are committed, this function will compute a tombstone hash from the caller's
     // storage and the given code hash and if the hash matches the hash found in the tombstone at
     // the specified address - kill the caller contract and restore the destination contract and set
-    // the specified `rent_allowance`. All caller's funds are transfered to the destination.
+	// the specified `rent_allowance`. All caller's funds are transferred to the destination.
     //
     // This function doesn't perform restoration right away but defers it to the end of the
     // transaction. If there is no tombstone in the destination address or if the hashes don't match
@@ -778,6 +898,7 @@ define_env!(Env, <E: Ext>,
         // Finally, perform the write.
         write_sandbox_memory(
             ctx.schedule,
+			&mut ctx.special_trap,
             ctx.gas_meter,
             &ctx.memory,
             dest_ptr,
@@ -825,6 +946,7 @@ define_env!(Env, <E: Ext>,
         charge_gas(
             ctx.gas_meter,
             ctx.schedule,
+			&mut ctx.special_trap,
             RuntimeToken::DepositEvent(topics.len() as u32, data_len)
         )?;
         ctx.ext.deposit_event(topics, event_data);
@@ -899,7 +1021,144 @@ define_env!(Env, <E: Ext>,
 			}
 		}
 	},
+
+	// Computes the SHA2 256-bit hash on the given input buffer.
+	//
+	// Returns the result directly into the given output buffer.
+	//
+	// # Note
+	//
+	// - The `input` and `output` buffer may overlap.
+	// - The output buffer is expected to hold at least 32 bytes (256 bits).
+	// - It is the callers responsibility to provide an output buffer that
+	//   is large enough to hold the expected amount of bytes returned by the
+	//   chosen hash function.
+	//
+	// # Parameters
+	//
+	// - `input_ptr`: the pointer into the linear memory where the input
+	//                data is placed.
+	// - `input_len`: the length of the input data in bytes.
+	// - `output_ptr`: the pointer into the linear memory where the output
+	//                 data is placed. The function will write the result
+	//                 directly into this buffer.
+	ext_hash_sha2_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+		compute_hash_on_intermediate_buffer(ctx, sha2_256, input_ptr, input_len, output_ptr)
+	},
+
+	// Computes the KECCAK 256-bit hash on the given input buffer.
+	//
+	// Returns the result directly into the given output buffer.
+	//
+	// # Note
+	//
+	// - The `input` and `output` buffer may overlap.
+	// - The output buffer is expected to hold at least 32 bytes (256 bits).
+	// - It is the callers responsibility to provide an output buffer that
+	//   is large enough to hold the expected amount of bytes returned by the
+	//   chosen hash function.
+	//
+	// # Parameters
+	//
+	// - `input_ptr`: the pointer into the linear memory where the input
+	//                data is placed.
+	// - `input_len`: the length of the input data in bytes.
+	// - `output_ptr`: the pointer into the linear memory where the output
+	//                 data is placed. The function will write the result
+	//                 directly into this buffer.
+	ext_hash_keccak_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+		compute_hash_on_intermediate_buffer(ctx, keccak_256, input_ptr, input_len, output_ptr)
+	},
+
+	// Computes the BLAKE2 256-bit hash on the given input buffer.
+	//
+	// Returns the result directly into the given output buffer.
+	//
+	// # Note
+	//
+	// - The `input` and `output` buffer may overlap.
+	// - The output buffer is expected to hold at least 32 bytes (256 bits).
+	// - It is the callers responsibility to provide an output buffer that
+	//   is large enough to hold the expected amount of bytes returned by the
+	//   chosen hash function.
+	//
+	// # Parameters
+	//
+	// - `input_ptr`: the pointer into the linear memory where the input
+	//                data is placed.
+	// - `input_len`: the length of the input data in bytes.
+	// - `output_ptr`: the pointer into the linear memory where the output
+	//                 data is placed. The function will write the result
+	//                 directly into this buffer.
+	ext_hash_blake2_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+		compute_hash_on_intermediate_buffer(ctx, blake2_256, input_ptr, input_len, output_ptr)
+	},
+
+	// Computes the BLAKE2 128-bit hash on the given input buffer.
+	//
+	// Returns the result directly into the given output buffer.
+	//
+	// # Note
+	//
+	// - The `input` and `output` buffer may overlap.
+	// - The output buffer is expected to hold at least 16 bytes (128 bits).
+	// - It is the callers responsibility to provide an output buffer that
+	//   is large enough to hold the expected amount of bytes returned by the
+	//   chosen hash function.
+	//
+	// # Parameters
+	//
+	// - `input_ptr`: the pointer into the linear memory where the input
+	//                data is placed.
+	// - `input_len`: the length of the input data in bytes.
+	// - `output_ptr`: the pointer into the linear memory where the output
+	//                 data is placed. The function will write the result
+	//                 directly into this buffer.
+	ext_hash_blake2_128(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+		compute_hash_on_intermediate_buffer(ctx, blake2_128, input_ptr, input_len, output_ptr)
+	},
 );
+
+/// Computes the given hash function on the scratch buffer.
+///
+/// Reads from the sandboxed input buffer into an intermediate buffer.
+/// Returns the result directly to the output buffer of the sandboxed memory.
+///
+/// It is the callers responsibility to provide an output buffer that
+/// is large enough to hold the expected amount of bytes returned by the
+/// chosen hash function.
+///
+/// # Note
+///
+/// The `input` and `output` buffers may overlap.
+fn compute_hash_on_intermediate_buffer<E, F, R>(
+    ctx: &mut Runtime<E>,
+    hash_fn: F,
+    input_ptr: u32,
+    input_len: u32,
+    output_ptr: u32,
+) -> Result<(), sandbox::HostError>
+where
+    E: Ext,
+    F: FnOnce(&[u8]) -> R,
+    R: AsRef<[u8]>,
+{
+    // Copy the input buffer directly into the scratch buffer to avoid
+    // heap allocations.
+    let input = read_sandbox_memory(ctx, input_ptr, input_len)?;
+    // Compute the hash on the scratch buffer using the given hash function.
+    let hash = hash_fn(&input);
+    // Write the resulting hash back into the sandboxed output buffer.
+    write_sandbox_memory(
+        ctx.schedule,
+        &mut ctx.special_trap,
+        ctx.gas_meter,
+        &ctx.memory,
+        output_ptr,
+        hash.as_ref(),
+    )?;
+    Ok(())
+}
 
 /// Finds duplicates in a given vector.
 ///

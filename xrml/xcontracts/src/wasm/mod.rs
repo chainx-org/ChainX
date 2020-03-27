@@ -176,6 +176,12 @@ mod tests {
     }
 
     #[derive(Debug, PartialEq, Eq)]
+    struct TerminationEntry {
+        beneficiary: u64,
+        gas_left: u64,
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
     struct TransferEntry {
         to: u64,
         value: u64,
@@ -188,6 +194,7 @@ mod tests {
         storage: HashMap<StorageKey, Vec<u8>>,
         rent_allowance: u64,
         instantiates: Vec<InstantiateEntry>,
+        terminations: Vec<TerminationEntry>,
         transfers: Vec<TransferEntry>,
         dispatches: Vec<DispatchEntry>,
         restores: Vec<RestoreEntry>,
@@ -245,6 +252,20 @@ mod tests {
                 },
             ))
         }
+        fn transfer(
+            &mut self,
+            to: &u64,
+            value: u64,
+            gas_meter: &mut GasMeter<Test>,
+        ) -> Result<(), &'static str> {
+            self.transfers.push(TransferEntry {
+                to: *to,
+                value,
+                data: Vec::new(),
+                gas_left: gas_meter.gas_left(),
+            });
+            Ok(())
+        }
         fn call(
             &mut self,
             to: &u64,
@@ -264,6 +285,17 @@ mod tests {
                 status: STATUS_SUCCESS,
                 data: Vec::new(),
             })
+        }
+        fn terminate(
+            &mut self,
+            beneficiary: &u64,
+            gas_meter: &mut GasMeter<Test>,
+        ) -> Result<(), &'static str> {
+            self.terminations.push(TerminationEntry {
+                beneficiary: *beneficiary,
+                gas_left: gas_meter.gas_left(),
+            });
+            Ok(())
         }
         fn note_dispatch_call(&mut self, call: Call) {
             self.dispatches.push(DispatchEntry(call));
@@ -355,6 +387,21 @@ mod tests {
             input_data: Vec<u8>,
         ) -> Result<(u64, ExecReturnValue), ExecError> {
             (**self).instantiate(code, value, gas_meter, input_data)
+        }
+        fn transfer(
+            &mut self,
+            to: &u64,
+            value: u64,
+            gas_meter: &mut GasMeter<Test>,
+        ) -> Result<(), &'static str> {
+            (**self).transfer(to, value, gas_meter)
+        }
+        fn terminate(
+            &mut self,
+            beneficiary: &u64,
+            gas_meter: &mut GasMeter<Test>,
+        ) -> Result<(), &'static str> {
+            (**self).terminate(beneficiary, gas_meter)
         }
         fn call(
             &mut self,

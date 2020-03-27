@@ -282,7 +282,11 @@ pub fn approx_gas_for_balance<Balance>(gas_price: Balance, balance: Balance) -> 
 where
     Balance: SimpleArithmetic,
 {
-    (balance / gas_price).saturated_into::<Gas>()
+    if gas_price.is_zero() {
+        Zero::zero()
+    } else {
+        (balance / gas_price).saturated_into::<Gas>()
+    }
 }
 
 /// A simple utility macro that helps to match against a
