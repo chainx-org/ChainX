@@ -25,7 +25,7 @@ use codec::{Decode, Encode};
 use rstd::convert::TryInto;
 use rstd::mem;
 use rstd::prelude::*;
-use runtime_io::{blake2_128, blake2_256, keccak_256, sha2_256};
+use runtime_io::{blake2_128, blake2_256, keccak_256};
 use sandbox;
 use sr_primitives::traits::{Bounded, SaturatedConversion};
 use system;
@@ -1022,29 +1022,29 @@ define_env!(Env, <E: Ext>,
 		}
 	},
 
-	// Computes the SHA2 256-bit hash on the given input buffer.
-	//
-	// Returns the result directly into the given output buffer.
-	//
-	// # Note
-	//
-	// - The `input` and `output` buffer may overlap.
-	// - The output buffer is expected to hold at least 32 bytes (256 bits).
-	// - It is the callers responsibility to provide an output buffer that
-	//   is large enough to hold the expected amount of bytes returned by the
-	//   chosen hash function.
-	//
-	// # Parameters
-	//
-	// - `input_ptr`: the pointer into the linear memory where the input
-	//                data is placed.
-	// - `input_len`: the length of the input data in bytes.
-	// - `output_ptr`: the pointer into the linear memory where the output
-	//                 data is placed. The function will write the result
-	//                 directly into this buffer.
-	ext_hash_sha2_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
-		compute_hash_on_intermediate_buffer(ctx, sha2_256, input_ptr, input_len, output_ptr)
-	},
+	// // Computes the SHA2 256-bit hash on the given input buffer.
+	// //
+	// // Returns the result directly into the given output buffer.
+	// //
+	// // # Note
+	// //
+	// // - The `input` and `output` buffer may overlap.
+	// // - The output buffer is expected to hold at least 32 bytes (256 bits).
+	// // - It is the callers responsibility to provide an output buffer that
+	// //   is large enough to hold the expected amount of bytes returned by the
+	// //   chosen hash function.
+	// //
+	// // # Parameters
+	// //
+	// // - `input_ptr`: the pointer into the linear memory where the input
+	// //                data is placed.
+	// // - `input_len`: the length of the input data in bytes.
+	// // - `output_ptr`: the pointer into the linear memory where the output
+	// //                 data is placed. The function will write the result
+	// //                 directly into this buffer.
+	// ext_hash_sha2_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+	// 	compute_hash_on_intermediate_buffer(ctx, sha2_256, input_ptr, input_len, output_ptr)
+	// },
 
 	// Computes the KECCAK 256-bit hash on the given input buffer.
 	//

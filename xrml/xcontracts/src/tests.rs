@@ -3070,7 +3070,7 @@ const CODE_CRYPTO_HASHES: &str = r#"
 	(import "env" "ext_scratch_read" (func $ext_scratch_read (param i32 i32 i32)))
 	(import "env" "ext_scratch_write" (func $ext_scratch_write (param i32 i32)))
 
-	(import "env" "ext_hash_sha2_256" (func $ext_hash_sha2_256 (param i32 i32 i32)))
+	;; (import "env" "ext_hash_sha2_256" (func $ext_hash_sha2_256 (param i32 i32 i32)))
 	(import "env" "ext_hash_keccak_256" (func $ext_hash_keccak_256 (param i32 i32 i32)))
 	(import "env" "ext_hash_blake2_256" (func $ext_hash_blake2_256 (param i32 i32 i32)))
 	(import "env" "ext_hash_blake2_128" (func $ext_hash_blake2_128 (param i32 i32 i32)))
@@ -3080,7 +3080,7 @@ const CODE_CRYPTO_HASHES: &str = r#"
 	(type $hash_fn_sig (func (param i32 i32 i32)))
 	(table 8 funcref)
 	(elem (i32.const 1)
-		$ext_hash_sha2_256
+	;;	$ext_hash_sha2_256
 		$ext_hash_keccak_256
 		$ext_hash_blake2_256
 		$ext_hash_blake2_128
@@ -3176,7 +3176,7 @@ fn crypto_hashes() {
             }
             // All hash functions and their associated output byte lengths.
             let test_cases: &[(Box<dyn Fn(&[u8]) -> Box<[u8]>>, usize)] = &[
-                (dyn_hash_fn!(sha2_256), 32),
+                // (dyn_hash_fn!(sha2_256), 32),
                 (dyn_hash_fn!(keccak_256), 32),
                 (dyn_hash_fn!(blake2_256), 32),
                 (dyn_hash_fn!(blake2_128), 16),
