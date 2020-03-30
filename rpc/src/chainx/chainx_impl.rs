@@ -1052,12 +1052,10 @@ where
 
         match exec_result {
             ContractExecResult::Success { status, data } => {
-                let real_data: Vec<u8> =
-                    Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
                 let result = match call_request.selector {
                     XRC20Selector::BalanceOf | XRC20Selector::TotalSupply => {
                         let v: u64 =
-                            Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
+                            Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
                         json!({
                             "status": status,
                             "data": v,
@@ -1065,7 +1063,7 @@ where
                     }
                     XRC20Selector::Name | XRC20Selector::Symbol => {
                         let v: Vec<u8> =
-                            Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
+                            Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
                         json!({
                             "status": status,
                             "data": to_string!(&v),
@@ -1073,7 +1071,7 @@ where
                     }
                     XRC20Selector::Decimals => {
                         let v: u16 =
-                            Decode::decode(&mut real_data.as_slice()).ok_or(Error::DecodeErr)?;
+                            Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
                         json!({
                             "status": status,
                             "data": v,
@@ -1081,7 +1079,7 @@ where
                     }
                     _ => json!({
                         "status": status,
-                        "data": Bytes(real_data),
+                        "data": Bytes(data),
                     }),
                 };
 
