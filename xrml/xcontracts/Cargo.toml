@@ -22,6 +22,7 @@ timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/su
 
 # chainx
 xr-primitives = { path = "../../xr-primitives", default-features = false }
+xsystem = { package = "xrml-xsystem", path = "../xsystem", default-features = false }
 xassets = { package = "xrml-xassets-assets", path = "../xassets/assets", default-features = false }
 xaccounts = { package = "xrml-xaccounts", path = "../xaccounts", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../xsupport", default-features = false }
@@ -51,6 +52,7 @@ std = [
     "wasmi-validation/std",
     # chainx
     "xr-primitives/std",
+    "xsystem/std",
     "xassets/std",
     "xaccounts/std",
     "xsupport/std",

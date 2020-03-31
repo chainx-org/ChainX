@@ -330,7 +330,7 @@ parameter_types! {
     pub const DefaultBlockGasLimit: u32 = 10_000_000;
 }
 
-pub trait Trait: system::Trait + timestamp::Trait + xassets::Trait + xaccounts::Trait {
+pub trait Trait: system::Trait + timestamp::Trait + xassets::Trait + xaccounts::Trait + xsystem::Trait {
     /// The outer call dispatch type.
     type Call: Parameter
         + Dispatchable<Origin = <Self as system::Trait>::Origin>
@@ -444,6 +444,23 @@ decl_module! {
             code: Vec<u8>
         ) -> Result {
             let origin = ensure_signed(origin)?;
+
+            let (network, _) = xsystem::Module::<T>::network_props();
+            match network {
+                xsystem::NetworkType::Mainnet => {
+                    let council = xaccounts::Module::<T>::council_account();
+                    ensure_with_errorlog!(
+                        origin == council,
+                        "[put_code]|in mainnet, only council account could do `put_code`.",
+                        "[put_code]|in mainnet, only council account could do `put_code`|current:{:?}|council:{:?}",
+                        origin, council
+                    );
+                    info!("[put_code]|mainnet put_code, from account:{:?}", origin);
+                },
+                xsystem::NetworkType::Testnet => {
+                    // do nothing
+                },
+            }
 
             let mut gas_meter = gas::buy_gas::<T>(&origin, gas_limit)?;
 

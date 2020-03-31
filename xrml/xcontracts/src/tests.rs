@@ -166,6 +166,30 @@ impl xassets::Trait for Test {
     type DetermineTokenJackpotAccountId = DummyDetermineTokenJackpotAccountId;
 }
 
+impl xsystem::Trait for Test {
+    type ValidatorList = MockValidatorList;
+    type Validator = MockValidator;
+}
+
+pub struct MockValidatorList;
+
+impl xsystem::ValidatorList<u64> for MockValidatorList {
+    fn validator_list() -> Vec<u64> {
+        vec![]
+    }
+}
+
+pub struct MockValidator;
+
+impl xsystem::Validator<u64> for MockValidator {
+    fn get_validator_by_name(_name: &[u8]) -> Option<u64> {
+        Some(0)
+    }
+    fn get_validator_name(_: &u64) -> Option<Vec<u8>> {
+        None
+    }
+}
+
 impl xaccounts::Trait for Test {
     type DetermineIntentionJackpotAccountId = MockAccountIdDeterminator;
 }
