@@ -16,10 +16,18 @@
 
 //! Substrate blockchain API.
 
+pub mod error;
+pub mod number;
+
+#[cfg(test)]
+mod tests;
+
 use std::sync::Arc;
 
+use self::error::Result;
 use crate::rpc::futures::{stream, Future, Sink, Stream};
 use crate::rpc::Result as RpcResult;
+use crate::subscriptions::Subscriptions;
 use client::{self, BlockchainEvents, Client};
 use jsonrpc_derive::rpc;
 use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId};
@@ -28,14 +36,7 @@ use primitives::{Blake2Hasher, H256};
 use runtime_primitives::generic::{BlockId, SignedBlock};
 use runtime_primitives::traits::{Block as BlockT, Header, NumberFor};
 
-use crate::subscriptions::Subscriptions;
-
-pub mod error;
-pub mod number;
-#[cfg(test)]
-mod tests;
-
-use self::error::Result;
+pub use self::gen_client::Client as ChainClient;
 
 /// Substrate blockchain API
 #[rpc]
@@ -133,7 +134,7 @@ where
 {
     fn unwrap_or_best(&self, hash: Option<Block::Hash>) -> Result<Block::Hash> {
         Ok(match hash.into() {
-            None => self.client.info()?.chain.best_hash,
+            None => self.client.info().chain.best_hash,
             Some(hash) => hash,
         })
     }
@@ -153,9 +154,7 @@ where
             // send current head right at the start.
             let header = best_block_hash()
                 .and_then(|hash| self.header(hash.into()))
-                .and_then(|header| {
-                    header.ok_or_else(|| self::error::ErrorKind::Unimplemented.into())
-                })
+                .and_then(|header| header.ok_or_else(|| "Best header missing.".to_owned().into()))
                 .map_err(Into::into);
 
             // send further subscriptions
@@ -164,13 +163,13 @@ where
                 .map_err(|e| warn!("Block notification stream error: {:?}", e));
 
             sink
-				.sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
-				.send_all(
-					stream::iter_result(vec![Ok(header)])
-						.chain(stream)
-				)
-				// we ignore the resulting Stream (if the first stream is over we are unsubscribed)
-				.map(|_| ())
+                .sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
+                .send_all(
+                    stream::iter_result(vec![Ok(header)])
+                        .chain(stream)
+                )
+                // we ignore the resulting Stream (if the first stream is over we are unsubscribed)
+                .map(|_| ())
         });
     }
 }
@@ -200,7 +199,7 @@ where
         number: Option<number::NumberOrHex<NumberFor<Block>>>,
     ) -> Result<Option<Block::Hash>> {
         Ok(match number {
-            None => Some(self.client.info()?.chain.best_hash),
+            None => Some(self.client.info().chain.best_hash),
             Some(num_or_hex) => self
                 .client
                 .header(&BlockId::number(num_or_hex.to_number()?))?
@@ -209,11 +208,11 @@ where
     }
 
     fn finalized_head(&self) -> Result<Block::Hash> {
+        // Ok(self.client.info().chain.finalized_hash)
         let (_, finalized_hash) = self
             .client
-            .get_finalized_info(self.client.info()?.chain.best_hash);
-        Ok(finalized_hash.unwrap_or(self.client.info()?.chain.genesis_hash))
-        // Ok(self.client.info()?.chain.finalized_hash)
+            .get_finalized_info(self.client.info().chain.best_hash);
+        Ok(finalized_hash.unwrap_or(self.client.info().chain.genesis_hash))
     }
 
     fn subscribe_new_head(&self, _metadata: Self::Metadata, subscriber: Subscriber<Block::Header>) {
@@ -244,7 +243,7 @@ where
     ) {
         self.subscribe_headers(
             subscriber,
-            || Ok(Some(self.client.info()?.chain.finalized_hash)),
+            || self.finalized_head().map(|h| Some(h)),
             || {
                 self.client
                     .finality_notification_stream()

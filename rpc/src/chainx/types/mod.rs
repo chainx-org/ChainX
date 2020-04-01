@@ -11,7 +11,7 @@ pub use xtokens_types::*;
 use std::convert::From;
 
 use rustc_hex::ToHex;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use btc_ser::serialize as btc_serialize;
@@ -324,4 +324,23 @@ pub struct QuotationsList {
     pub piece: u32,
     pub sell: Vec<(Balance, Balance)>,
     pub buy: Vec<(Balance, Balance)>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct CallRequest {
+    pub origin: AccountId,
+    pub dest: AccountId,
+    pub gas_limit: u64,
+    pub input_data: Bytes,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct XRC20CallRequest {
+    pub token: String,
+    pub selector: XRC20Selector,
+    pub input_data: Bytes,
 }

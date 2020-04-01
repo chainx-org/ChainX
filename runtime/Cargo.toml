@@ -10,24 +10,24 @@ safe-mix = { version = "1.0", default-features = false }
 serde = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false }
 
-client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", default-features = false }
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-consensus_aura = { package = "substrate-consensus-aura-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-consensus_authorities = { package = "substrate-consensus-authorities", git = "https://github.com/chainpool/substrate", default-features = false }
-offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+consensus_aura = { package = "substrate-consensus-aura-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+consensus_authorities = { package = "substrate-consensus-authorities", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 
-runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
-version = { package = "sr-version", git = "https://github.com/chainpool/substrate", default-features = false }
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
+runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+version = { package = "sr-version", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 
-support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
-system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
-timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", default-features = false }
-consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", default-features = false }
-sudo = { package = "srml-sudo", git = "https://github.com/chainpool/substrate", default-features = false }
-indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate", default-features = false }
-finality-tracker = { package = "srml-finality-tracker", git = "https://github.com/chainpool/substrate", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+sudo = { package = "srml-sudo", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+finality-tracker = { package = "srml-finality-tracker", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 
 # chainx
 chainx-primitives = { path = "../primitives", default-features = false }
@@ -61,6 +61,8 @@ xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-featur
 xfisher = { package = "xrml-xfisher", path = "../xrml/xfisher", default-features = false }
 # multisig
 xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig", default-features = false }
+# contracts
+xcontracts = { package = "xrml-xcontracts", path = "../xrml/xcontracts", default-features = false }
 
 [dev-dependencies]
 hex-literal = "0.2.0"
@@ -91,6 +93,7 @@ std = [
     "consensus/std",
     "sudo/std",
     "indices/std",
+    "finality-tracker/std",
 
     # chainx
     "chainx-primitives/std",
@@ -124,4 +127,6 @@ std = [
     "xspot/std",
     # multisig
     "xmultisig/std",
+    # contracts
+    "xcontracts/std",
 ]

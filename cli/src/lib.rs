@@ -17,7 +17,7 @@
 
 //! Substrate CLI library.
 
-#![feature(custom_attribute)]
+//#![feature(custom_attribute)]
 
 mod chain_spec;
 mod genesis_config;
@@ -30,6 +30,8 @@ use std::str::FromStr;
 
 use log::LevelFilter;
 use log::{info, warn};
+
+use tokio::prelude::Future;
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
 pub use cli::{error, IntoExit, NoCustom, VersionInfo};
@@ -274,7 +276,7 @@ where
                 init_logger_log4rs(s, cli.right)
             }
         },
-        |exit, _cli_args, custom_args, config| {
+        |exit, cli_args, custom_args, config| {
             info!("{}", version.name);
             info!("  version {}", config.full_version());
             info!("  by ChainX, 2018-2019");
@@ -296,9 +298,12 @@ where
             substrate_rpc::set_cache_flag(custom_args.rpc_cache);
 
             if config.roles == ServiceRoles::AUTHORITY {
-                let name = custom_args
-                    .validator_name
-                    .expect("if in AUTHORITY mode, must point the validator name!");
+                let option_name = custom_args.validator_name;
+                let name = if cli_args.shared_params.dev {
+                    option_name.unwrap_or("Alice".to_string())
+                } else {
+                    option_name.ok_or("if in AUTHORITY mode, must point the validator name!")?
+                };
                 info!("Validator name: {:}", name);
                 set_validator_name(name);
             }
@@ -306,14 +311,12 @@ where
             match config.roles {
                 ServiceRoles::LIGHT => run_until_exit(
                     runtime,
-                    custom_args.ws_max_connections,
                     service::Factory::new_light(config, executor)
                         .map_err(|e| format!("{:?}", e))?,
                     exit,
                 ),
                 _ => run_until_exit(
                     runtime,
-                    custom_args.ws_max_connections,
                     service::Factory::new_full(config, executor).map_err(|e| format!("{:?}", e))?,
                     exit,
                 ),
@@ -325,12 +328,7 @@ where
     .map(|_| ())
 }
 
-fn run_until_exit<T, C, E>(
-    mut runtime: Runtime,
-    ws_max_connections: usize,
-    service: T,
-    e: E,
-) -> error::Result<()>
+fn run_until_exit<T, C, E>(mut runtime: Runtime, service: T, e: E) -> error::Result<()>
 where
     T: Deref<Target = substrate_service::Service<C>> + native_rpc::Rpc,
     C: substrate_service::Components,
@@ -338,9 +336,11 @@ where
 {
     let (exit_send, exit) = exit_future::signal();
 
+    let informant = cli::informant::build(&service);
+    runtime.executor().spawn(exit.until(informant).map(|_| ()));
+
     let executor = runtime.executor();
-    let (_http, _ws) = service.start_rpc(ws_max_connections, executor.clone());
-    cli::informant::start(&service, exit.clone(), executor.clone());
+    let (_http, _ws) = service.start_rpc(executor.clone());
 
     let _ = runtime.block_on(e.into_exit());
     exit_send.fire();
@@ -349,5 +349,11 @@ where
     // but we need to keep holding a reference to the global telemetry guard
     let _telemetry = service.telemetry();
     drop(service);
+    // rpc and ws must be dropped near `drop(service)`, thus the network and task_executor would be dropped as well
+    drop((_http, _ws));
+
+    // TODO [andre]: timeout this future #1318
+    let _ = runtime.shutdown_on_idle().wait();
+
     Ok(())
 }

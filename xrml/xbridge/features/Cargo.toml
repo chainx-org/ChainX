@@ -9,12 +9,12 @@ edition = "2018"
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default_features = false }
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
-runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
-system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master", default_features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 
 # chainx runtime module
 xr-primitives = { path = "../../../xr-primitives", default-features = false }

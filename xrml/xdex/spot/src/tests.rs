@@ -465,18 +465,14 @@ fn refund_remaining_of_taker_order_should_work() {
         // remaining is 1
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
-        let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, 0);
-        bmap.insert(AssetType::ReservedDexSpot, 0);
+        let bmap = BTreeMap::new();
         assert_eq!(XAssets::asset_balance((1, base.clone())), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller1);
         assert_eq!(XAssets::asset_balance((1, quote.clone())), bmap);
 
-        let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, 0);
-        bmap.insert(AssetType::ReservedDexSpot, 0);
+        let bmap = BTreeMap::new();
         assert_eq!(XAssets::asset_balance((2, base.clone())), bmap);
 
         let mut bmap = BTreeMap::new();
@@ -489,7 +485,6 @@ fn refund_remaining_of_taker_order_should_work() {
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, remaining);
-        bmap.insert(AssetType::ReservedDexSpot, 0);
         assert_eq!(XAssets::asset_balance((3, quote.clone())), bmap);
     })
 }
@@ -547,18 +542,14 @@ fn refund_remaining_of_maker_order_should_work() {
         // remaining is 1
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
-        let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, 0);
-        bmap.insert(AssetType::ReservedDexSpot, 0);
+        let bmap = BTreeMap::new();
         assert_eq!(XAssets::asset_balance((1, base.clone())), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller1);
         assert_eq!(XAssets::asset_balance((1, quote.clone())), bmap);
 
-        let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, 0);
-        bmap.insert(AssetType::ReservedDexSpot, 0);
+        let bmap = BTreeMap::new();
         assert_eq!(XAssets::asset_balance((2, base.clone())), bmap);
 
         let mut bmap = BTreeMap::new();
@@ -571,7 +562,6 @@ fn refund_remaining_of_maker_order_should_work() {
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, remaining);
-        bmap.insert(AssetType::ReservedDexSpot, 0);
         assert_eq!(XAssets::asset_balance((3, quote.clone())), bmap);
     })
 }

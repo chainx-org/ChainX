@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@ use super::*;
 use assert_matches::assert_matches;
 use futures::sync::mpsc;
 use network::config::Roles;
-use network::{self, NodeIndex, PeerId, PeerInfo as NetworkPeerInfo, ProtocolStatus};
+use network::{self, PeerId, PeerInfo as NetworkPeerInfo, ProtocolStatus};
 use test_client::runtime::Block;
 
 struct Status {
@@ -50,23 +50,21 @@ impl network::SyncProvider<Block> for Status {
         network::NetworkState {
             peer_id: String::new(),
             listened_addresses: Default::default(),
-            is_reserved_only: false,
-            reserved_peers: Default::default(),
-            banned_peers: Default::default(),
+            external_addresses: Default::default(),
             connected_peers: Default::default(),
             not_connected_peers: Default::default(),
             average_download_per_sec: 0,
             average_upload_per_sec: 0,
+            peerset: serde_json::Value::Null,
         }
     }
 
-    fn peers(&self) -> Vec<(NodeIndex, NetworkPeerInfo<Block>)> {
+    fn peers_debug_info(&self) -> Vec<(PeerId, NetworkPeerInfo<Block>)> {
         let mut peers = vec![];
         for _peer in 0..self.peers {
             peers.push((
-                1,
+                self.peer_id.clone(),
                 NetworkPeerInfo {
-                    peer_id: self.peer_id.clone(),
                     roles: Roles::FULL,
                     protocol_version: 1,
                     best_hash: Default::default(),
@@ -193,7 +191,6 @@ fn system_peers() {
         .system_peers()
         .unwrap(),
         vec![PeerInfo {
-            index: 1,
             peer_id: peer_id.to_base58(),
             roles: "FULL".into(),
             protocol_version: 1,
@@ -210,13 +207,12 @@ fn system_network_state() {
         network::NetworkState {
             peer_id: String::new(),
             listened_addresses: Default::default(),
-            is_reserved_only: false,
-            reserved_peers: Default::default(),
-            banned_peers: Default::default(),
+            external_addresses: Default::default(),
             connected_peers: Default::default(),
             not_connected_peers: Default::default(),
             average_download_per_sec: 0,
             average_upload_per_sec: 0,
+            peerset: serde_json::Value::Null,
         }
     );
 }

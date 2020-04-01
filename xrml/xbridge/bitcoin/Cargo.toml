@@ -10,13 +10,13 @@ serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
 # Substrate
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
-runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", default-features = false }
-substrate-primitives = { git = "https://github.com/chainpool/substrate", default-features = false }
-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
-system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
-timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 # ChainX
 xr-primitives = { path = "../../../xr-primitives", default-features = false }
 xsystem = { package = "xrml-xsystem", path = "../../xsystem", default-features = false }
@@ -38,7 +38,7 @@ btc-script = { package = "script", git = "https://github.com/chainx-org/light-bi
 [dev-dependencies]
 hex-literal = "0.2"
 # Substrate
-consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate" }
+consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", branch="chainx-master" }
 
 [features]
 default = ["std"]

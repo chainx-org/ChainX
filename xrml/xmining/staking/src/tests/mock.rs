@@ -4,6 +4,7 @@
 
 use super::*;
 
+// Substrate
 use parity_codec::{Decode, Encode};
 use primitives::{
     testing::{ConvertUintAuthorityId, Digest, DigestItem, Header, UintAuthorityId},
@@ -14,8 +15,8 @@ use runtime_io::with_externalities;
 use substrate_primitives::{Blake2Hasher, H256};
 use support::impl_outer_origin;
 
+// ChainX
 use xassets::{Asset, Chain, ChainT, Token};
-use xstaking::Delta;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -61,6 +62,83 @@ impl xaccounts::Trait for Test {
     type DetermineIntentionJackpotAccountId = DummyDetermineIntentionJackpotAccountId;
 }
 
+impl xbridge_features::Trait for Test {
+    type TrusteeMultiSig = DummyMultiSigIdFor;
+    type Event = ();
+}
+
+impl xbridge_common::Trait for Test {
+    type Event = ();
+}
+
+impl xmultisig::Trait for Test {
+    type MultiSig = DummyMultiSig;
+    type GenesisMultiSig = DummyGenesisMultiSig;
+    type Proposal = DummyCall;
+    type TrusteeCall = TrusteeCall;
+    type Event = ();
+}
+
+pub struct DummyMultiSig;
+impl xmultisig::MultiSigFor<u64, H256> for DummyMultiSig {
+    fn multi_sig_addr_for(who: &u64) -> u64 {
+        who + 2
+    }
+
+    fn multi_sig_id_for(_who: &u64, _addr: &u64, _data: &[u8]) -> H256 {
+        H256::default()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Encode, Decode, Debug)]
+pub struct DummyCall;
+
+pub struct TrusteeCall(DummyCall);
+impl From<DummyCall> for TrusteeCall {
+    fn from(call: DummyCall) -> Self {
+        TrusteeCall(call)
+    }
+}
+
+impl xmultisig::LimitedCall<u64> for TrusteeCall {
+    fn allow(&self) -> bool {
+        true
+    }
+
+    fn exec(&self, _execiser: &u64) -> Result {
+        Ok(())
+    }
+}
+
+impl support::dispatch::Dispatchable for DummyCall {
+    type Origin = Origin;
+    type Trait = DummyCall;
+    fn dispatch(self, _origin: Origin) -> support::dispatch::Result {
+        Ok(())
+    }
+}
+
+pub struct DummyMultiSigIdFor;
+impl xbridge_features::TrusteeMultiSigFor<u64> for DummyMultiSigIdFor {
+    fn multi_sig_addr_for_trustees(_chain: xassets::Chain, _who: &Vec<u64>) -> u64 {
+        1
+    }
+}
+
+pub struct DummyBitcoinTrusteeMultiSig;
+impl xbridge_common::traits::TrusteeMultiSig<u64> for DummyBitcoinTrusteeMultiSig {
+    fn multisig_for_trustees() -> u64 {
+        777
+    }
+}
+
+pub struct DummyGenesisMultiSig;
+impl xmultisig::GenesisMultiSig<u64> for DummyGenesisMultiSig {
+    fn gen_genesis_multisig() -> (u64, u64) {
+        (666, 888)
+    }
+}
+
 pub struct DummyDetermineIntentionJackpotAccountId;
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for DummyDetermineIntentionJackpotAccountId {
     fn accountid_for_unsafe(origin: &u64) -> u64 {
@@ -75,9 +153,9 @@ impl xassets::Trait for Test {
     type Balance = u64;
     type OnNewAccount = Indices;
     type Event = ();
-    type OnAssetChanged = (XTokens);
-    type OnAssetRegisterOrRevoke = (XTokens);
-    type DetermineTokenJackpotAccountId = DummyDetermineTokenJackpotAccountId;
+    type OnAssetChanged = ();
+    type OnAssetRegisterOrRevoke = ();
+    type DetermineTokenJackpotAccountId = ();
 }
 
 impl xfee_manager::Trait for Test {
@@ -105,63 +183,6 @@ impl xsystem::Validator<u64> for DummyDetermineValidator {
     }
 }
 
-pub struct DummyMultiSigIdFor;
-impl xbridge_features::TrusteeMultiSigFor<u64> for DummyMultiSigIdFor {
-    fn multi_sig_addr_for_trustees(_chain: xassets::Chain, _who: &Vec<u64>) -> u64 {
-        1
-    }
-}
-
-impl xmultisig::Trait for Test {
-    type MultiSig = DummyMultiSig;
-    type GenesisMultiSig = DummyGenesisMultiSig;
-    type Proposal = DummyTrusteeCall;
-    type Event = ();
-}
-
-pub struct DummyMultiSig;
-impl xmultisig::MultiSigFor<u64, H256> for DummyMultiSig {
-    fn multi_sig_addr_for(who: &u64) -> u64 {
-        who + 2
-    }
-
-    fn multi_sig_id_for(_who: &u64, _addr: &u64, _data: &[u8]) -> H256 {
-        H256::default()
-    }
-}
-
-pub struct DummyGenesisMultiSig;
-impl xmultisig::GenesisMultiSig<u64> for DummyGenesisMultiSig {
-    fn gen_genesis_multisig() -> (u64, u64) {
-        (666, 888)
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Encode, Decode, Debug)]
-pub struct DummyTrusteeCall;
-impl xmultisig::TrusteeCall<u64> for DummyTrusteeCall {
-    fn allow(&self) -> bool {
-        true
-    }
-
-    fn exec(&self, _execiser: &u64) -> Result {
-        Ok(())
-    }
-}
-
-impl support::dispatch::Dispatchable for DummyTrusteeCall {
-    type Origin = Origin;
-    type Trait = DummyTrusteeCall;
-    fn dispatch(self, _origin: Origin) -> support::dispatch::Result {
-        Ok(())
-    }
-}
-
-impl xbridge_features::Trait for Test {
-    type TrusteeMultiSig = DummyMultiSigIdFor;
-    type Event = ();
-}
-
 impl xsession::Trait for Test {
     type ConvertAccountIdToSessionKey = ConvertUintAuthorityId;
     type OnSessionChange = XStaking;
@@ -177,6 +198,12 @@ impl xbitcoin::Trait for Test {
     type Event = ();
 }
 
+impl xsdot::Trait for Test {
+    type AccountExtractor = DummyExtractor;
+    type CrossChainProvider = XBridgeFeatures;
+    type Event = ();
+}
+
 impl xbitcoin::lockup::Trait for Test {
     type Event = ();
 }
@@ -188,50 +215,15 @@ impl xbridge_common::traits::Extractable<u64> for DummyExtractor {
     }
 }
 
-pub struct DummyBitcoinTrusteeMultiSig;
-impl xbridge_common::traits::TrusteeMultiSig<u64> for DummyBitcoinTrusteeMultiSig {
-    fn multisig_for_trustees() -> u64 {
-        777
-    }
-}
-
 impl xrecords::Trait for Test {
-    type Event = ();
-}
-
-impl xstaking::Trait for Test {
-    type Event = ();
-    type OnRewardCalculation = XTokens;
-    type OnReward = XTokens;
-}
-
-impl xspot::Trait for Test {
-    type Price = <Self as xassets::Trait>::Balance;
-    type Event = ();
-}
-
-impl xsdot::Trait for Test {
-    type AccountExtractor = DummyExtractor;
-    type CrossChainProvider = XBridgeFeatures;
-    type Event = ();
-}
-
-impl xbridge_common::Trait for Test {
     type Event = ();
 }
 
 impl Trait for Test {
     type Event = ();
-}
-
-pub struct DummyDetermineTokenJackpotAccountId;
-impl TokenJackpotAccountIdFor<u64, u64> for DummyDetermineTokenJackpotAccountId {
-    fn accountid_for_unsafe(_token: &Token) -> u64 {
-        10
-    }
-    fn accountid_for_safe(_token: &Token) -> Option<u64> {
-        Some(10)
-    }
+    type OnDistributeAirdropAsset = ();
+    type OnDistributeCrossChainAsset = ();
+    type OnReward = ();
 }
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
@@ -241,55 +233,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .0;
     let pcx_precision = 8;
     let apply_prec = |x| x * 10_u64.pow(pcx_precision as u32);
-
-    let pcx = (
-        b"Polkadot ChainX".to_vec(),
-        8_u16,
-        b"ChainX's crypto currency in Polkadot ecology".to_vec(),
-    );
-
-    let btc_asset = Asset::new(
-        <XBitcoin as ChainT>::TOKEN.to_vec(), // token
-        b"X-BTC".to_vec(),
-        Chain::Bitcoin,
-        8, // bitcoin precision
-        b"ChainX's Cross-chain Bitcoin".to_vec(),
-    )
-    .unwrap();
-
-    let sdot_asset = Asset::new(
-        b"SDOT".to_vec(), // token
-        b"Shadow DOT".to_vec(),
-        Chain::Ethereum,
-        3, //  precision
-        b"ChainX's Shadow Polkadot from Ethereum".to_vec(),
-    )
-    .unwrap();
-
-    let asset_list = vec![
-        (btc_asset.clone(), true, true, vec![]),
-        (sdot_asset.clone(), true, true, vec![]),
-    ];
-
-    let pair_list = vec![
-        (
-            XAssets::TOKEN.to_vec(),
-            XBitcoin::TOKEN.to_vec(),
-            9,
-            2,
-            100000,
-            true,
-        ),
-        (
-            sdot_asset.token(),
-            XAssets::TOKEN.to_vec(),
-            4,
-            2,
-            100000,
-            true,
-        ),
-    ];
-
     t.extend(
         consensus::GenesisConfig::<Test> {
             code: vec![],
@@ -309,16 +252,16 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         xsession::GenesisConfig::<Test> {
             session_length: 1,
             validators: vec![
-                (1, 125_000_000),
-                (2, 125_000_000),
-                (3, 125_000_000),
-                (4, 125_000_000),
+                (10, 10 * 100_000_000),
+                (20, 20 * 100_000_000),
+                (30, 30 * 100_000_000),
+                (40, 40 * 100_000_000),
             ],
             keys: vec![
-                (1, UintAuthorityId(1)),
-                (2, UintAuthorityId(2)),
-                (3, UintAuthorityId(3)),
-                (4, UintAuthorityId(4)),
+                (10, UintAuthorityId(10)),
+                (20, UintAuthorityId(20)),
+                (30, UintAuthorityId(30)),
+                (40, UintAuthorityId(40)),
             ],
         }
         .build_storage()
@@ -334,9 +277,24 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .unwrap()
         .0,
     );
+    // t.extend(
+    //     xbridge_features::GenesisConfig::<Test> {
+    //         trustee_info_config: vec![(
+    //             Chain::Bitcoin,
+    //             xbridge_common::types::TrusteeInfoConfig {
+    //                 min_trustee_count: 3,
+    //                 max_trustee_count: 15,
+    //             },
+    //         )],
+    //         _genesis_phantom_data: Default::default(),
+    //     }
+    //         .build_storage()
+    //         .unwrap()
+    //         .0,
+    // );
 
     t.extend(
-        xstaking::GenesisConfig::<Test> {
+        GenesisConfig::<Test> {
             initial_reward: apply_prec(50),
             current_era: 0,
             validator_count: 8,
@@ -353,54 +311,59 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .unwrap()
         .0,
     );
-
-    t.extend(
-        GenesisConfig::<Test> {
-            token_discount: vec![(sdot_asset.token(), 50), (btc_asset.token(), 10)],
-            _genesis_phantom_data: Default::default(),
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-
     let mut init: runtime_io::TestExternalities<Blake2Hasher> = t.into();
-
+    let pcx_token_name = b"PolkadotChainX".to_vec();
+    let pcx_desc = b"PCX onchain token".to_vec();
     with_externalities(&mut init, || {
         // xassets
         let chainx: Token = <XAssets as ChainT>::TOKEN.to_vec();
 
-        let pcx = Asset::new(chainx, pcx.0.clone(), Chain::ChainX, pcx.1, pcx.2.clone()).unwrap();
+        let pcx = Asset::new(
+            chainx.clone(),
+            pcx_token_name,
+            Chain::ChainX,
+            pcx_precision,
+            pcx_desc,
+        )
+        .unwrap();
+
+        let btc = Asset::new(
+            b"BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8, // bitcoin precision
+            b"ChainX's Cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap();
+
+        let lbtc = Asset::new(
+            b"L-BTC".to_vec(),
+            b"L-BTC".to_vec(),
+            Chain::Bitcoin,
+            8, // bitcoin precision
+            b"ChainX's Lockup Bitcoin".to_vec(),
+        )
+        .unwrap();
+
+        let sdot = Asset::new(
+            b"SDOT".to_vec(), // token
+            b"Shadow DOT".to_vec(),
+            Chain::Ethereum,
+            3, //  precision
+            b"ChainX's Shadow Polkadot from Ethereum".to_vec(),
+        )
+        .unwrap();
 
         XAssets::bootstrap_register_asset(pcx, true, false).unwrap();
-
-        // init for asset_list
-        for (asset, is_online, is_psedu_intention, init_list) in asset_list.iter() {
-            let token = asset.token();
-            XAssets::bootstrap_register_asset(asset.clone(), *is_online, *is_psedu_intention)
-                .unwrap();
-
-            for (accountid, value) in init_list {
-                let value: u64 = *value;
-                XAssets::issue(&token, &accountid, value).unwrap();
-            }
-        }
-
-        for (base, quote, pip_precision, tick_precision, price, status) in pair_list.iter() {
-            let _ = XSpot::add_trading_pair(
-                xspot::CurrencyPair::new(base.clone(), quote.clone()),
-                *pip_precision,
-                *tick_precision,
-                *price,
-                *status,
-            );
-        }
+        XAssets::bootstrap_register_asset(btc, true, true).unwrap();
+        XAssets::bootstrap_register_asset(sdot, true, true).unwrap();
+        XAssets::bootstrap_register_asset(lbtc, true, true).unwrap();
 
         let intentions = vec![
-            (1, 125_000_000, b"".to_vec(), b"".to_vec()),
-            (2, 125_000_000, b"".to_vec(), b"".to_vec()),
-            (3, 125_000_000, b"".to_vec(), b"".to_vec()),
-            (4, 125_000_000, b"".to_vec(), b"".to_vec()),
+            (10, 10 * 100_000_000, b"name10".to_vec(), b"".to_vec()),
+            (20, 20 * 100_000_000, b"name20".to_vec(), b"".to_vec()),
+            (30, 30 * 100_000_000, b"name30".to_vec(), b"".to_vec()),
+            (40, 40 * 100_000_000, b"name40".to_vec(), b"".to_vec()),
         ];
 
         // xstaking
@@ -424,8 +387,14 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             XStaking::bootstrap_update_vote_weight(&intention, &intention, Delta::Add(value));
         }
 
-        xaccounts::TeamAccount::<Test>::put(666);
-        xaccounts::CouncilAccount::<Test>::put(888);
+        XStaking::set_distribution_ratio((1u32, 9u32)).unwrap();
+
+        XAssets::pcx_issue(&1, 10).unwrap();
+        XAssets::pcx_issue(&2, 20).unwrap();
+        XAssets::pcx_issue(&3, 30).unwrap();
+        XAssets::pcx_issue(&4, 40).unwrap();
+        XAssets::pcx_issue(&5, 50).unwrap();
+        XAssets::pcx_issue(&6, 30 * 100_000_000).unwrap();
     });
     let init: StorageOverlay = init.into();
     runtime_io::TestExternalities::new(init)
@@ -435,10 +404,6 @@ pub type Indices = indices::Module<Test>;
 pub type System = system::Module<Test>;
 pub type XSession = xsession::Module<Test>;
 pub type XAssets = xassets::Module<Test>;
-pub type XStaking = xstaking::Module<Test>;
-pub type XBitcoin = xbitcoin::Module<Test>;
-pub type XSdot = xsdot::Module<Test>;
-pub type XSpot = xspot::Module<Test>;
-pub type XRecords = xrecords::Module<Test>;
+pub type XAccounts = xaccounts::Module<Test>;
 pub type XBridgeFeatures = xbridge_features::Module<Test>;
-pub type XTokens = Module<Test>;
+pub type XStaking = Module<Test>;

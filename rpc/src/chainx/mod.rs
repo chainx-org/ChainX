@@ -20,20 +20,21 @@ use serde_json::Value;
 use client::runtime_api::Metadata;
 use primitives::crypto::UncheckedInto;
 use primitives::storage::{StorageData, StorageKey};
-use primitives::{Blake2Hasher, H256};
+use primitives::{Blake2Hasher, Bytes, H256};
 use runtime_primitives::generic::BlockId;
 use runtime_primitives::traits::Block as BlockT;
-use runtime_primitives::traits::{Header, NumberFor, ProvideRuntimeApi, Zero};
+use runtime_primitives::traits::{Header as HeaderT, NumberFor, ProvideRuntimeApi, Zero};
 use state_machine::Backend;
 
 use support::storage::{StorageMap, StorageValue};
 
 use chainx_primitives::{AccountId, AccountIdForRpc, AuthorityId, Balance, BlockNumber, Timestamp};
 use chainx_runtime::Runtime;
+use xr_primitives::{ContractExecResult, XRC20Selector};
 
 use runtime_api::{
-    xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xfee_api::XFeeApi, xmining_api::XMiningApi,
-    xspot_api::XSpotApi, xstaking_api::XStakingApi,
+    xassets_api::XAssetsApi, xbridge_api::XBridgeApi, xcontracts_api::XContractsApi,
+    xfee_api::XFeeApi, xmining_api::XMiningApi, xspot_api::XSpotApi, xstaking_api::XStakingApi,
 };
 
 use xassets::{Asset, AssetType, Chain, ChainT, Token};
@@ -44,7 +45,7 @@ use xtokens::*;
 
 pub use self::cache::set_cache_flag;
 pub use self::chainx_trait::ChainXApi;
-use self::error::{ErrorKind, Result};
+use self::error::{Error, Result};
 pub use self::types::*;
 
 /// Wrap runtime apis in ChainX API.
@@ -86,7 +87,8 @@ where
         + XSpotApi<Block>
         + XFeeApi<Block>
         + XStakingApi<Block>
-        + XBridgeApi<Block>,
+        + XBridgeApi<Block>
+        + XContractsApi<Block>,
 {
     /// Create new ChainX API RPC handler.
     pub fn new(client: Arc<client::Client<B, E, Block, RA>>) -> Self {
@@ -108,7 +110,7 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> result::Result<BlockId<Block>, client::error::Error> {
         Ok(BlockId::Hash(
-            hash.unwrap_or(self.client.info()?.chain.best_hash),
+            hash.unwrap_or(self.client.info().chain.best_hash),
         ))
     }
 
@@ -118,14 +120,25 @@ where
         number: Option<NumberFor<Block>>,
     ) -> result::Result<BlockId<Block>, client::error::Error> {
         let hash = match number {
-            None => self.client.info()?.chain.best_hash,
+            None => self.client.info().chain.best_hash,
             Some(number) => self
                 .client
                 .header(&BlockId::number(number))?
                 .map(|h| h.hash())
-                .unwrap_or(self.client.info()?.chain.best_hash),
+                .unwrap_or(self.client.info().chain.best_hash),
         };
-        Ok(BlockId::Hash(hash))
+        Ok(BlockId::hash(hash))
+    }
+
+    fn block_number_by_hash(
+        &self,
+        hash: <Block as BlockT>::Hash,
+    ) -> result::Result<<<Block as BlockT>::Header as HeaderT>::Number, error::Error> {
+        if let Some(header) = self.client.header(&BlockId::Hash(hash))? {
+            Ok(*header.number())
+        } else {
+            Err(error::Error::BlockNumberErr.into())
+        }
     }
 
     /// Get chain state from client given the block hash.
@@ -148,7 +161,7 @@ where
     ) -> result::Result<Option<ReturnValue>, error::Error> {
         Ok(state
             .storage(&Self::storage_key(key, hasher).0)
-            .map_err(|e| error::Error::from_state(Box::new(e)))?
+            .map_err(|e| client::error::Error::from_state(Box::new(e)))?
             .map(StorageData)
             .map(|s| Decode::decode(&mut s.0.as_slice()))
             .unwrap_or(None))
@@ -166,7 +179,7 @@ where
         } else if let Some(v1) = Self::pickout::<V1>(state, key_v1, hasher)? {
             Ok(Err(v1))
         } else {
-            Err(ErrorKind::StorageNotExistErr.into())
+            Err(error::Error::StorageNotExistErr.into())
         }
     }
 
@@ -372,6 +385,22 @@ where
                 .map(Self::sum_of_all_kinds_of_balance)
                 .unwrap_or_default(),
         )
+    }
+
+    fn get_events(
+        &self,
+        state: &<B as client::backend::Backend<Block, Blake2Hasher>>::State,
+    ) -> result::Result<
+        Vec<
+            system::EventRecord<
+                <chainx_runtime::Runtime as system::Trait>::Event,
+                <chainx_runtime::Runtime as system::Trait>::Hash,
+            >,
+        >,
+        error::Error,
+    > {
+        let key = "System Events".as_bytes();
+        Ok(Self::pickout(state, &key, Hasher::TWOX128)?.unwrap_or_default())
     }
 
     fn get_token_discount(

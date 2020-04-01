@@ -110,3 +110,39 @@ pub mod xbridge_api {
         }
     }
 }
+
+pub mod xcontracts_api {
+    use super::*;
+    use xassets::Token;
+    use xr_primitives::{ContractExecResult, GetStorageResult, XRC20Selector};
+
+    decl_runtime_apis! {
+        /// The API to interact with contracts without using executive.
+        pub trait XContractsApi {
+            /// Perform a call from a specified account to a given contract.
+            ///
+            /// See the contracts' `call` dispatchable function for more details.
+            fn call(
+                origin: AccountIdForApi,
+                dest: AccountIdForApi,
+                value: Balance,
+                gas_limit: u64,
+                input_data: Vec<u8>,
+            ) -> ContractExecResult;
+
+            /// Query a given storage key in a given contract.
+            ///
+            /// Returns `Ok(Some(Vec<u8>))` if the storage value exists under the given key in the
+            /// specified account and `Ok(None)` if it doesn't. If the account specified by the address
+            /// doesn't exist, or doesn't have a contract or if the contract is a tombstone, then `Err`
+            /// is returned.
+            fn get_storage(address: AccountIdForApi, key: [u8; 32]) -> GetStorageResult;
+
+            fn xrc20_call(
+                token: Token,
+                selector: XRC20Selector,
+                data: Vec<u8>,
+            ) -> ContractExecResult;
+        }
+    }
+}

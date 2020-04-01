@@ -10,6 +10,7 @@ use xassets::Call as XAssetsCall;
 use xbitcoin::lockup::Call as XBitcoinLockupCall;
 use xbitcoin::Call as XBitcoinCall;
 use xbridge_features::Call as XBridgeFeaturesCall;
+use xcontracts::Call as XContractsCall;
 use xfisher::Call as XFisherCall;
 use xmultisig::Call as XMultiSigCall;
 use xprocess::Call as XAssetsProcessCall;
@@ -70,12 +71,16 @@ impl CheckFee for Call {
             Call::XBridgeOfSDOT(..) if get_switcher(CallSwitcher::SDOT) => {
                 return None;
             }
+            Call::XContracts(..) if get_switcher(CallSwitcher::XContracts) => {
+                return None;
+            }
             _ => (),
         }
         call_weight_func(&self, &method_weight_map)
     }
 }
 
+#[macro_export]
 macro_rules! get_method_call_weight_func {
     ($fee_map:expr, $module:ty, $func:ty, $default:expr) => {
         {
@@ -180,4 +185,10 @@ match_method_call_func! {
         report_double_signer : 5,
     );
 
+    XContracts, XContractsCall => (
+        put_code : 250,
+        call : 10,
+        instantiate : 500,
+        convert_to_xrc20: 10,
+    );
 }

@@ -5,9 +5,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
 #![recursion_limit = "512"]
+
+#[macro_use]
 mod fee;
 mod tests;
 mod trustee;
+mod xcontracts_fee;
 mod xexecutive;
 
 use parity_codec::{Decode, Encode};
@@ -21,14 +24,14 @@ use client::{
     impl_runtime_apis, runtime_api as client_api,
 };
 use runtime_primitives::traits::{
-    AuthorityIdFor, BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup,
+    AuthorityIdFor, BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup, Zero,
 };
 use runtime_primitives::transaction_validity::TransactionValidity;
 pub use runtime_primitives::{create_runtime_str, Perbill, Permill};
 use runtime_primitives::{generic, ApplyResult};
 use substrate_primitives::OpaqueMetadata;
 use substrate_primitives::H512;
-pub use support::{construct_runtime, StorageValue};
+pub use support::{construct_runtime, parameter_types, StorageValue};
 
 pub use timestamp::BlockPeriod;
 pub use timestamp::Call as TimestampCall;
@@ -41,7 +44,7 @@ use version::RuntimeVersion;
 use chainx_primitives;
 use runtime_api;
 use xgrandpa::fg_primitives::{self, ScheduledChange};
-use xr_primitives::AddrStr;
+pub use xr_primitives::{AddrStr, ContractExecResult, GetStorageError, GetStorageResult};
 
 // chainx
 use chainx_primitives::{
@@ -49,13 +52,20 @@ use chainx_primitives::{
     Hash, Index, Signature, Timestamp as TimestampU64,
 };
 
+use fee::CheckFee;
+use xcontracts_fee::XContractsCheckFee;
+
 pub use xaccounts;
 pub use xassets;
 pub use xbitcoin;
 pub use xbitcoin::lockup as xbitcoin_lockup;
 pub use xbridge_common;
 pub use xbridge_features;
+pub use xcontracts::{self, XRC20Selector}; // re-export
 pub use xprocess;
+
+#[cfg(feature = "std")]
+pub use xbootstrap::{self, ChainSpec};
 
 use xsupport::ensure_with_errorlog;
 #[cfg(feature = "std")]
@@ -71,8 +81,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 6,
-    impl_version: 6,
+    spec_version: 7,
+    impl_version: 7,
     apis: RUNTIME_API_VERSIONS,
 };
 
@@ -152,7 +162,7 @@ impl xassets::Trait for Runtime {
     type Balance = Balance;
     type OnNewAccount = Indices;
     type Event = Event;
-    type OnAssetChanged = (XTokens);
+    type OnAssetChanged = XTokens;
     type OnAssetRegisterOrRevoke = (XTokens, XSpot);
     type DetermineTokenJackpotAccountId = xassets::SimpleAccountIdDeterminator<Runtime>;
 }
@@ -170,7 +180,8 @@ impl xprocess::Trait for Runtime {}
 
 impl xstaking::Trait for Runtime {
     type Event = Event;
-    type OnRewardCalculation = XTokens;
+    type OnDistributeAirdropAsset = XTokens;
+    type OnDistributeCrossChainAsset = XTokens;
     type OnReward = XTokens;
 }
 
@@ -216,11 +227,55 @@ impl xmultisig::Trait for Runtime {
     type MultiSig = xmultisig::SimpleMultiSigIdFor<Runtime>;
     type GenesisMultiSig = xmultisig::ChainXGenesisMultisig<Runtime>;
     type Proposal = Call;
+    type TrusteeCall = trustee::TrusteeCall;
     type Event = Event;
 }
 
 impl finality_tracker::Trait for Runtime {
     type OnFinalizationStalled = xgrandpa::SyncedAuthorities<Runtime>;
+}
+
+// due to current contracts has close Rent mode, thus this params are useless
+parameter_types! {
+    pub const TombstoneDeposit: Balance = 1 * 10000000;
+    pub const RentByteFee: Balance = 1 * 10000000;
+    pub const RentDepositOffset: Balance = 1000 * 10000000;
+    pub const SurchargeReward: Balance = 150 * 10000000;
+}
+
+pub struct DispatchFeeComputor;
+impl
+    xcontracts::ComputeDispatchFee<
+        <Runtime as xcontracts::Trait>::Call,
+        <Runtime as xassets::Trait>::Balance,
+    > for DispatchFeeComputor
+{
+    fn compute_dispatch_fee(
+        call: &<Runtime as xcontracts::Trait>::Call,
+    ) -> Option<<Runtime as xassets::Trait>::Balance> {
+        let switch = xfee_manager::Module::<Runtime>::switcher();
+        let method_call_weight = XFeeManager::method_call_weight();
+        let encoded_len = call.using_encoded(|encoded| encoded.len() as u64);
+        (*call)
+            .check_xcontracts_fee(switch, method_call_weight)
+            .map(|weight| XFeeManager::transaction_fee(weight, encoded_len))
+    }
+}
+
+impl xcontracts::Trait for Runtime {
+    type Call = Call;
+    type Event = Event;
+    type DetermineContractAddress = xcontracts::SimpleAddressDeterminer<Runtime>;
+    type ComputeDispatchFee = DispatchFeeComputor;
+    type TrieIdGenerator = xcontracts::TrieIdFromParentCounter<Runtime>;
+    type SignedClaimHandicap = xcontracts::DefaultSignedClaimHandicap;
+    type TombstoneDeposit = TombstoneDeposit;
+    type StorageSizeOffset = xcontracts::DefaultStorageSizeOffset;
+    type RentByteFee = RentByteFee;
+    type RentDepositOffset = RentDepositOffset;
+    type MaxDepth = xcontracts::DefaultMaxDepth;
+    type MaxValueSize = xcontracts::DefaultMaxValueSize;
+    type BlockGasLimit = xcontracts::DefaultBlockGasLimit;
 }
 
 pub struct HeaderChecker;
@@ -297,7 +352,7 @@ construct_runtime!(
         // assets
         XAssets: xassets,
         XAssetsRecords: xrecords::{Module, Call, Storage, Event<T>},
-        XAssetsProcess: xprocess::{Module, Call, Storage, Config<T>},
+        XAssetsProcess: xprocess::{Module, Call, Storage},
         // mining
         XStaking: xstaking,
         XTokens: xtokens::{Module, Call, Storage, Event<T>, Config<T>},
@@ -317,6 +372,8 @@ construct_runtime!(
 
         XBridgeCommon: xbridge_common::{Module, Storage, Event<T>},
         XBridgeOfBTCLockup: xbitcoin_lockup::{Module, Call, Storage, Event<T>},
+
+        XContracts: xcontracts,
     }
 );
 
@@ -358,9 +415,9 @@ impl_runtime_apis! {
             Executive::initialize_block(header)
         }
 
-        fn authorities() -> Vec<AuthorityId> {
-            panic!("Deprecated, please use `AuthoritiesApi`.")
-        }
+//        fn authorities() -> Vec<AuthorityId> {
+//            panic!("Deprecated, please use `AuthoritiesApi`.")
+//        }
     }
 
     impl client_api::Metadata<Block> for Runtime {
@@ -513,8 +570,6 @@ impl_runtime_apis! {
 
     impl runtime_api::xfee_api::XFeeApi<Block> for Runtime {
         fn transaction_fee(call_params: Vec<u8>, encoded_len: u64) -> Option<u64> {
-            use fee::CheckFee;
-
             let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
                 call
             } else {
@@ -573,6 +628,64 @@ impl_runtime_apis! {
                 let num = number.unwrap_or(XBridgeFeatures::current_session_number(chain));
                 (num, info)
             })
+        }
+    }
+
+    impl runtime_api::xcontracts_api::XContractsApi<Block> for Runtime {
+        fn call(
+            origin: AccountId,
+            dest: AccountId,
+            value: Balance,
+            gas_limit: u64,
+            input_data: Vec<u8>,
+        ) -> ContractExecResult {
+            let exec_result = XContracts::bare_call(
+                origin,
+                dest.into(),
+                value,
+                gas_limit,
+                input_data,
+            );
+            match exec_result {
+                Ok(v) => ContractExecResult::Success {
+                    status: v.status as u16,
+                    data: v.data,
+                },
+                Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
+            }
+        }
+
+        fn get_storage(
+            address: AccountId,
+            key: [u8; 32],
+        ) -> GetStorageResult {
+            XContracts::get_storage(address, key).map_err(|rpc_err| {
+                use GetStorageError as RpcGetStorageError;
+                // Map the contract error into the RPC layer error.
+                match rpc_err {
+                    xcontracts::GetStorageError::ContractDoesntExist => RpcGetStorageError::ContractDoesntExist,
+                    xcontracts::GetStorageError::IsTombstone => RpcGetStorageError::IsTombstone,
+                }
+            })
+        }
+
+        fn xrc20_call(token: xassets::Token, selector: XRC20Selector, data: Vec<u8>) -> ContractExecResult {
+            // this call should not be called in extrinsics
+            let pay_gas = AccountId::default();
+            let gas_limit = 500_0000;
+            let value = gas_limit * XContracts::gas_price();
+            // temp issue some balance for a 0x00...0000 accountid
+            let _ = XAssets::pcx_make_free_balance_be(&pay_gas, value);
+            let exec_result = XContracts::call_xrc20(token, pay_gas.clone(), gas_limit, selector, data);
+            // remove all balance for this accountid
+            let _ = XAssets::pcx_make_free_balance_be(&pay_gas, Zero::zero());
+            match exec_result {
+                Ok(v) => ContractExecResult::Success {
+                    status: v.status as u16,
+                    data: v.data,
+                },
+                Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
+            }
         }
     }
 }

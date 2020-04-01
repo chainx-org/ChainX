@@ -15,11 +15,15 @@ mod tests;
 use parity_codec::{Codec, Encode};
 // Substrate
 use primitives::traits::{
-    As, CheckedAdd, CheckedSub, Hash, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
+    CheckedAdd, CheckedSub, Hash, MaybeDisplay, MaybeSerializeDebug, Member, SimpleArithmetic,
     StaticLookup, Zero,
 };
 use rstd::collections::btree_map::BTreeMap;
-use rstd::{prelude::*, result};
+use rstd::{
+    convert::{TryFrom, TryInto},
+    prelude::*,
+    result,
+};
 use substrate_primitives::crypto::UncheckedFrom;
 
 use support::traits::{Imbalance, SignedImbalance};
@@ -36,8 +40,8 @@ use self::trigger::AssetTriggerEventAfter;
 
 pub use self::types::{
     is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetLimit, AssetType, Chain,
-    Desc, DescString, Memo, NegativeImbalance, PositiveImbalance, Precision, SignedImbalanceT,
-    Token, TokenString,
+    Desc, DescString, Memo, NegativeImbalance, PositiveImbalance, Precision, SignedBalance,
+    SignedImbalanceT, Token, TokenString,
 };
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::rstd::marker::PhantomData<T>);
@@ -77,11 +81,13 @@ pub trait Trait: system::Trait {
     type Balance: Parameter
         + Member
         + SimpleArithmetic
+        + From<u64>
+        + Into<u64>
+        + TryInto<u64>
+        + TryFrom<u64>
         + Codec
         + Default
         + Copy
-        + As<usize>
-        + As<u64>
         + MaybeDisplay
         + MaybeSerializeDebug;
     /// Handler for when a new account is created.
@@ -103,7 +109,8 @@ pub trait Trait: system::Trait {
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
-        <T as Trait>::Balance
+        <T as Trait>::Balance,
+        SignedBalance = SignedBalance<T>,
     {
         Move(Token, AccountId, AssetType, AccountId, AssetType, Balance),
         Issue(Token, AccountId, Balance),
@@ -112,6 +119,8 @@ decl_event!(
         Register(Token, bool),
         Revoke(Token),
         NewAccount(AccountId),
+        /// change token balance, SignedBalance mark Positive or Negative
+        Change(Token, AccountId, AssetType, SignedBalance),
     }
 );
 
@@ -161,9 +170,6 @@ decl_module! {
             let dest = <T as system::Trait>::Lookup::lookup(dest)?;
             debug!("[transfer]|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", transactor, dest, token!(token), value, u8array_to_string(&memo));
             is_valid_memo::<T>(&memo)?;
-            if transactor == dest {
-                return Ok(())
-            }
 
             Self::can_transfer(&token)?;
             let _ = Self::move_free_balance(&token, &transactor, &dest, value).map_err(|e| e.info())?;
@@ -377,7 +383,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::can_do(token, AssetLimit::CanMove),
             "this asset do not allow move",
-            "this asset do not allow move|token:{:}",
+            "token:{:}",
             token!(token)
         );
         Ok(())
@@ -388,7 +394,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::can_do(token, AssetLimit::CanTransfer),
             "this asset do not allow transfer",
-            "this asset do not allow transfer|token:{:}",
+            "token:{:}",
             token!(token)
         );
         Ok(())
@@ -399,7 +405,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::can_do(token, AssetLimit::CanDestroyWithdrawal),
             "this asset do not allow destroy withdrawal",
-            "this asset do not allow destroy withdrawal|token:{:}",
+            "token:{:}",
             token!(token)
         );
         Ok(())
@@ -410,7 +416,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::can_do(token, AssetLimit::CanDestroyFree),
             "this asset do not allow destroy free token",
-            "this asset do not allow destroy free token|token:{:}",
+            "token:{:}",
             token!(token)
         );
         Ok(())
@@ -524,10 +530,17 @@ impl<T: Trait> Module<T> {
     ) -> SignedImbalanceT<T> {
         let mut original: T::Balance = Zero::zero();
         AssetBalance::<T>::mutate(who_token, |balance_map| {
-            let balance = balance_map.entry(type_).or_default();
-            original = *balance;
-            // modify to new balance
-            *balance = new_balance;
+            if new_balance == Zero::zero() {
+                // remove Zero balance to save space
+                if let Some(old) = balance_map.remove(&type_) {
+                    original = old;
+                }
+            } else {
+                let balance = balance_map.entry(type_).or_default();
+                original = *balance;
+                // modify to new balance
+                *balance = new_balance;
+            }
         });
         let imbalance = if original <= new_balance {
             SignedImbalance::Positive(PositiveImbalance::<T>::new(
@@ -622,13 +635,6 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: T::Balance,
     ) -> result::Result<(SignedImbalanceT<T>, SignedImbalanceT<T>), AssetErr> {
-        if from == to && from_type == to_type {
-            // same account, same type, return directly
-            return Ok((
-                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
-                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
-            ));
-        }
         if value == Zero::zero() {
             // value is zero, do not read storage, no event
             return Ok((
@@ -636,6 +642,7 @@ impl<T: Trait> Module<T> {
                 SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
             ));
         }
+
         // check
         Self::is_valid_asset(token).map_err(|_| AssetErr::InvalidToken)?;
 
@@ -650,7 +657,7 @@ impl<T: Trait> Module<T> {
         debug!("[move_balance]|token:{:}|from:{:?}|f_type:{:?}|f_balance:{:}|to:{:?}|t_type:{:?}|t_balance:{:}|value:{:}",
                token!(token), from, from_type, from_balance, to, to_type, to_balance, value);
 
-        // test overflow
+        // judge balance is enough and test overflow
         let new_from_balance = match from_balance.checked_sub(&value) {
             Some(b) => b,
             None => return Err(AssetErr::NotEnough),
@@ -660,6 +667,16 @@ impl<T: Trait> Module<T> {
             None => return Err(AssetErr::OverFlow),
         };
 
+        // finish basic check, start self check
+        if from == to && from_type == to_type {
+            // same account, same type, return directly
+            return Ok((
+                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
+                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
+            ));
+        }
+
+        // !!! all check pass, start set storage
         // for account to set storage
         if to_type == AssetType::Free {
             Self::try_new_account(&to_key);
@@ -751,6 +768,23 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
     ) -> result::Result<(), AssetErr> {
         Self::pcx_move_balance(from, AssetType::Free, to, AssetType::Free, value)
+    }
+
+    pub fn pcx_make_free_balance_be(who: &T::AccountId, value: T::Balance) -> SignedImbalanceT<T> {
+        let key = (who.clone(), <Self as ChainT>::TOKEN.to_vec());
+        Self::try_new_account(&key);
+        let imbalance = Self::make_type_balance_be(&key, AssetType::Free, value);
+        let b = match imbalance {
+            SignedImbalance::Positive(ref p) => SignedBalance::Positive(p.peek()),
+            SignedImbalance::Negative(ref n) => SignedBalance::Negative(n.peek()),
+        };
+        Self::deposit_event(RawEvent::Change(
+            <Self as ChainT>::TOKEN.to_vec(),
+            who.clone(),
+            AssetType::Free,
+            b,
+        ));
+        imbalance
     }
 }
 

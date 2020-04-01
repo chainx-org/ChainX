@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -16,16 +16,22 @@
 
 //! Substrate state API.
 
+pub mod error;
+
+#[cfg(test)]
+mod tests;
+
 use std::{
     collections::{BTreeMap, HashMap},
     ops::Range,
     sync::Arc,
 };
 
+use self::error::Result;
 use crate::rpc::futures::{stream, Future, Sink, Stream};
 use crate::rpc::Result as RpcResult;
+use crate::subscriptions::Subscriptions;
 use client::{self, runtime_api::Metadata, BlockchainEvents, CallExecutor, Client};
-use error_chain::bail;
 use jsonrpc_derive::rpc;
 use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId};
 use log::{trace, warn};
@@ -33,17 +39,13 @@ use primitives::hexdisplay::HexDisplay;
 use primitives::storage::{self, StorageChangeSet, StorageData, StorageKey};
 use primitives::{Blake2Hasher, Bytes, H256};
 use runtime_primitives::generic::BlockId;
-use runtime_primitives::traits::{As, Block as BlockT, Header, NumberFor, ProvideRuntimeApi};
+use runtime_primitives::traits::{
+    Block as BlockT, Header, NumberFor, ProvideRuntimeApi, SaturatedConversion,
+};
 use runtime_version::RuntimeVersion;
-use state_machine::ExecutionStrategy;
+use state_machine::{self, ExecutionStrategy};
 
-use crate::subscriptions::Subscriptions;
-
-mod error;
-#[cfg(test)]
-mod tests;
-
-use self::error::Result;
+pub use self::gen_client::Client as StateClient;
 
 /// Substrate state API
 #[rpc]
@@ -51,13 +53,13 @@ pub trait StateApi<Hash> {
     /// RPC Metadata
     type Metadata;
 
-    /// Call a contract at a block's state.
+    /// Call a contracts at a block's state.
     #[rpc(name = "state_call", alias("state_callAt"))]
     fn call(&self, name: String, bytes: Bytes, hash: Option<Hash>) -> Result<Bytes>;
 
-    //    /// Returns the keys with prefix, leave empty to get all the keys
-    //    #[rpc(name = "state_getKeys")]
-    //    fn storage_keys(&self, key: StorageKey, hash: Option<Hash>) -> Result<Vec<StorageKey>>;
+    /// Returns the keys with prefix, leave empty to get all the keys
+    #[rpc(name = "state_getKeys")]
+    fn storage_keys(&self, prefix: StorageKey, hash: Option<Hash>) -> Result<Vec<StorageKey>>;
 
     /// Returns a storage entry at a specific block's state.
     #[rpc(name = "state_getStorage", alias("state_getStorageAt"))]
@@ -70,6 +72,42 @@ pub trait StateApi<Hash> {
     /// Returns the size of a storage entry at a block's state.
     #[rpc(name = "state_getStorageSize", alias("state_getStorageSizeAt"))]
     fn storage_size(&self, key: StorageKey, hash: Option<Hash>) -> Result<Option<u64>>;
+
+    /// Returns the keys with prefix from a child storage, leave empty to get all the keys
+    #[rpc(name = "state_getChildKeys")]
+    fn child_storage_keys(
+        &self,
+        child_storage_key: StorageKey,
+        prefix: StorageKey,
+        hash: Option<Hash>,
+    ) -> Result<Vec<StorageKey>>;
+
+    /// Returns a child storage entry at a specific block's state.
+    #[rpc(name = "state_getChildStorage")]
+    fn child_storage(
+        &self,
+        child_storage_key: StorageKey,
+        key: StorageKey,
+        hash: Option<Hash>,
+    ) -> Result<Option<StorageData>>;
+
+    /// Returns the hash of a child storage entry at a block's state.
+    #[rpc(name = "state_getChildStorageHash")]
+    fn child_storage_hash(
+        &self,
+        child_storage_key: StorageKey,
+        key: StorageKey,
+        hash: Option<Hash>,
+    ) -> Result<Option<Hash>>;
+
+    /// Returns the size of a child storage entry at a block's state.
+    #[rpc(name = "state_getChildStorageSize")]
+    fn child_storage_size(
+        &self,
+        child_storage_key: StorageKey,
+        key: StorageKey,
+        hash: Option<Hash>,
+    ) -> Result<Option<u64>>;
 
     /// Returns the runtime metadata as an opaque blob.
     #[rpc(name = "state_getMetadata")]
@@ -204,15 +242,15 @@ where
                             blocks.push(hdr.hash());
                             last = hdr;
                         } else {
-                            bail!(invalid_block_range(
+                            return Err(invalid_block_range(
                                 Some(from),
                                 Some(to),
                                 format!("Parent of {} ({}) not found", last.number(), last.hash()),
-                            ))
+                            ));
                         }
                     }
                     if last.hash() != from.hash() {
-                        bail!(invalid_block_range(
+                        return Err(invalid_block_range(
                             Some(from),
                             Some(to),
                             format!(
@@ -220,7 +258,7 @@ where
                                 last.number(),
                                 last.hash()
                             ),
-                        ))
+                        ));
                     }
                     blocks.reverse();
                     blocks
@@ -229,8 +267,8 @@ where
                 let changes_trie_range = self
                     .client
                     .max_key_changes_range(from_number, BlockId::Hash(to.hash()))?;
-                let filtered_range_begin =
-                    changes_trie_range.map(|(begin, _)| (begin - from_number).as_() as usize);
+                let filtered_range_begin = changes_trie_range
+                    .map(|(begin, _)| (begin - from_number).saturated_into::<usize>());
                 let (unfiltered_range, filtered_range) =
                     split_range(blocks.len(), filtered_range_begin);
                 Ok(QueryStorageRange {
@@ -240,10 +278,10 @@ where
                     filtered_range,
                 })
             }
-            (from, to) => bail!(invalid_block_range(
+            (from, to) => Err(invalid_block_range(
                 from.as_ref(),
                 to.as_ref(),
-                "Invalid range or unknown block".into()
+                "Invalid range or unknown block".into(),
             )),
         }
     }
@@ -288,7 +326,7 @@ where
     ) -> Result<()> {
         let (begin, end) = match range.filtered_range {
             Some(ref filtered_range) => (
-                range.first_number + As::sa(filtered_range.start as u64),
+                range.first_number + filtered_range.start.saturated_into(),
                 BlockId::Hash(range.hashes[filtered_range.end - 1].clone()),
             ),
             None => return Ok(()),
@@ -301,7 +339,8 @@ where
                 if last_block == Some(block) {
                     continue;
                 }
-                let block_hash = range.hashes[(block - range.first_number).as_() as usize].clone();
+                let block_hash =
+                    range.hashes[(block - range.first_number).saturated_into::<usize>()].clone();
                 let id = BlockId::Hash(block_hash);
                 let value_at_block = self.client.storage(&id, key)?;
                 changes_map
@@ -330,7 +369,7 @@ where
     E: CallExecutor<Block, Blake2Hasher>,
 {
     fn unwrap_or_best(&self, hash: Option<Block::Hash>) -> Result<Block::Hash> {
-        crate::helpers::unwrap_or_else(|| Ok(self.client.info()?.chain.best_hash), hash)
+        crate::helpers::unwrap_or_else(|| Ok(self.client.info().chain.best_hash), hash)
     }
 }
 
@@ -358,17 +397,17 @@ where
         Ok(Bytes(return_data))
     }
 
-    //    fn storage_keys(
-    //        &self,
-    //        key_prefix: StorageKey,
-    //        block: Option<Block::Hash>,
-    //    ) -> Result<Vec<StorageKey>> {
-    //        let block = self.unwrap_or_best(block)?;
-    //        trace!(target: "rpc", "Querying storage keys at {:?}", block);
-    //        Ok(self
-    //            .client
-    //            .storage_keys(&BlockId::Hash(block), &key_prefix)?)
-    //    }
+    fn storage_keys(
+        &self,
+        key_prefix: StorageKey,
+        block: Option<Block::Hash>,
+    ) -> Result<Vec<StorageKey>> {
+        let block = self.unwrap_or_best(block)?;
+        trace!(target: "rpc", "Querying storage keys at {:?}", block);
+        Ok(self
+            .client
+            .storage_keys(&BlockId::Hash(block), &key_prefix)?)
+    }
 
     fn storage(&self, key: StorageKey, block: Option<Block::Hash>) -> Result<Option<StorageData>> {
         let block = self.unwrap_or_best(block)?;
@@ -381,14 +420,69 @@ where
         key: StorageKey,
         block: Option<Block::Hash>,
     ) -> Result<Option<Block::Hash>> {
-        use runtime_primitives::traits::{Hash, Header as HeaderT};
-        Ok(self
-            .storage(key, block)?
-            .map(|x| <Block::Header as HeaderT>::Hashing::hash(&x.0)))
+        let block = self.unwrap_or_best(block)?;
+        trace!(target: "rpc", "Querying storage hash at {:?} for key {}", block, HexDisplay::from(&key.0));
+        Ok(self.client.storage_hash(&BlockId::Hash(block), &key)?)
     }
 
     fn storage_size(&self, key: StorageKey, block: Option<Block::Hash>) -> Result<Option<u64>> {
         Ok(self.storage(key, block)?.map(|x| x.0.len() as u64))
+    }
+
+    fn child_storage(
+        &self,
+        child_storage_key: StorageKey,
+        key: StorageKey,
+        block: Option<Block::Hash>,
+    ) -> Result<Option<StorageData>> {
+        let block = self.unwrap_or_best(block)?;
+        trace!(target: "rpc", "Querying child storage at {:?} for key {}", block, HexDisplay::from(&key.0));
+        Ok(self
+            .client
+            .child_storage(&BlockId::Hash(block), &child_storage_key, &key)?)
+    }
+
+    fn child_storage_keys(
+        &self,
+        child_storage_key: StorageKey,
+        key_prefix: StorageKey,
+        block: Option<Block::Hash>,
+    ) -> Result<Vec<StorageKey>> {
+        let block = self.unwrap_or_best(block)?;
+        trace!(target: "rpc", "Querying child storage keys at {:?}", block);
+        Ok(self.client.child_storage_keys(
+            &BlockId::Hash(block),
+            &child_storage_key,
+            &key_prefix,
+        )?)
+    }
+
+    fn child_storage_hash(
+        &self,
+        child_storage_key: StorageKey,
+        key: StorageKey,
+        block: Option<Block::Hash>,
+    ) -> Result<Option<Block::Hash>> {
+        let block = self.unwrap_or_best(block)?;
+        trace!(
+            target: "rpc", "Querying child storage hash at {:?} for key {}",
+            block,
+            HexDisplay::from(&key.0),
+        );
+        Ok(self
+            .client
+            .child_storage_hash(&BlockId::Hash(block), &child_storage_key, &key)?)
+    }
+
+    fn child_storage_size(
+        &self,
+        child_storage_key: StorageKey,
+        key: StorageKey,
+        block: Option<Block::Hash>,
+    ) -> Result<Option<u64>> {
+        Ok(self
+            .child_storage(child_storage_key, key, block)?
+            .map(|x| x.0.len() as u64))
     }
 
     fn metadata(&self, block: Option<Block::Hash>) -> Result<Bytes> {
@@ -422,7 +516,7 @@ where
         let keys = Into::<Option<Vec<_>>>::into(keys);
         let stream = match self
             .client
-            .storage_changes_notification_stream(keys.as_ref().map(|x| &**x))
+            .storage_changes_notification_stream(keys.as_ref().map(|x| &**x), None)
         {
             Ok(stream) => stream,
             Err(err) => {
@@ -434,11 +528,7 @@ where
         // initial values
         let initial = stream::iter_result(
             keys.map(|keys| {
-                let block = self
-                    .client
-                    .info()
-                    .map(|info| info.chain.best_hash)
-                    .unwrap_or_default();
+                let block = self.client.info().chain.best_hash;
                 let changes = keys
                     .into_iter()
                     .map(|key| {
@@ -458,15 +548,24 @@ where
                 .map(|(block, changes)| {
                     Ok(StorageChangeSet {
                         block,
-                        changes: changes.iter().cloned().collect(),
+                        changes: changes
+                            .iter()
+                            .filter_map(|(o_sk, k, v)| {
+                                if o_sk.is_none() {
+                                    Some((k.clone(), v.cloned()))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect(),
                     })
                 });
 
             sink
-                .sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
-                .send_all(initial.chain(stream))
-                // we ignore the resulting Stream (if the first stream is over we are unsubscribed)
-                .map(|_| ())
+				.sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
+				.send_all(initial.chain(stream))
+				// we ignore the resulting Stream (if the first stream is over we are unsubscribed)
+				.map(|_| ())
         })
     }
 
@@ -488,11 +587,10 @@ where
         _meta: Self::Metadata,
         subscriber: Subscriber<RuntimeVersion>,
     ) {
-        let stream = match self
-            .client
-            .storage_changes_notification_stream(Some(&[StorageKey(
-                storage::well_known_keys::CODE.to_vec(),
-            )])) {
+        let stream = match self.client.storage_changes_notification_stream(
+            Some(&[StorageKey(storage::well_known_keys::CODE.to_vec())]),
+            None,
+        ) {
             Ok(stream) => stream,
             Err(err) => {
                 let _ = subscriber.reject(error::Error::from(err).into());
@@ -509,11 +607,9 @@ where
             let stream = stream
                 .map_err(|e| warn!("Error creating storage notification stream: {:?}", e))
                 .filter_map(move |_| {
+                    let info = client.info();
                     let version = client
-                        .info()
-                        .and_then(|info| {
-                            client.runtime_version_at(&BlockId::hash(info.chain.best_hash))
-                        })
+                        .runtime_version_at(&BlockId::hash(info.chain.best_hash))
                         .map_err(error::Error::from)
                         .map_err(Into::into);
                     if previous_version != version {
@@ -525,13 +621,13 @@ where
                 });
 
             sink
-                .sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
-                .send_all(
-                    stream::iter_result(vec![Ok(version)])
-                    .chain(stream)
-                )
-                // we ignore the resulting Stream (if the first stream is over we are unsubscribed)
-                .map(|_| ())
+				.sink_map_err(|e| warn!("Error sending notifications: {:?}", e))
+				.send_all(
+					stream::iter_result(vec![Ok(version)])
+					.chain(stream)
+				)
+				// we ignore the resulting Stream (if the first stream is over we are unsubscribed)
+				.map(|_| ())
         });
     }
 
@@ -572,11 +668,15 @@ fn invalid_block_range<H: Header>(
     from: Option<&H>,
     to: Option<&H>,
     reason: String,
-) -> error::ErrorKind {
+) -> error::Error {
     let to_string = |x: Option<&H>| match x {
         None => "unknown hash".into(),
         Some(h) => format!("{} ({})", h.number(), h.hash()),
     };
 
-    error::ErrorKind::InvalidBlockRange(to_string(from), to_string(to), reason)
+    error::Error::InvalidBlockRange {
+        from: to_string(from),
+        to: to_string(to),
+        details: reason,
+    }
 }

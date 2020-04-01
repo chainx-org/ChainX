@@ -9,10 +9,33 @@ use support::{decl_module, decl_storage};
 #[cfg(feature = "std")]
 use xr_primitives::{Name, URL};
 
-pub trait Trait: xtokens::Trait + xmultisig::Trait + xbridge_features::Trait {}
+#[cfg(feature = "std")]
+use parity_codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde_derive::{Deserialize, Serialize};
+
+pub trait Trait:
+    xtokens::Trait + xmultisig::Trait + xbridge_features::Trait + xprocess::Trait
+{
+}
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug, Decode, Encode))]
+#[derive(Copy, Clone)]
+pub enum ChainSpec {
+    Dev,
+    Testnet,
+    Mainnet,
+}
+#[cfg(feature = "std")]
+impl Default for ChainSpec {
+    fn default() -> Self {
+        ChainSpec::Dev
     }
 }
 
@@ -40,20 +63,20 @@ decl_storage! {
 
         // multisig
         config(multisig_init_info): (Vec<T::AccountId>, Vec<T::AccountId>);
+        // other
+        config(chain_spec): ChainSpec;
 
         build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
             use parity_codec::{Encode, KeyedVec};
-            use runtime_io::with_externalities;
-            use substrate_primitives::Blake2Hasher;
+            use primitives::traits::Zero;
             use support::StorageMap;
-            use primitives::traits::As;
-            use primitives::StorageOverlay;
             use xassets::{ChainT, Token, Chain, Asset};
             use xspot::CurrencyPair;
             use xmultisig::MultiSigPermission;
             use xstaking::Delta;
             use xbridge_features::H264;
             use xsupport::error;
+            use runtime_io::with_storage;
 
             // grandpa
             let auth_count = config.authorities.len() as u32;
@@ -69,10 +92,7 @@ decl_storage! {
                 auth_count.encode(),
             );
 
-            let s = storage.clone().build_storage().unwrap().0;
-            let mut init: runtime_io::TestExternalities<Blake2Hasher> = s.into();
-
-            with_externalities(&mut init, || {
+            with_storage(storage, || {
 
                 // xassets
                 let chainx: Token = <xassets::Module<T> as ChainT>::TOKEN.to_vec();
@@ -115,9 +135,16 @@ decl_storage! {
                         xassets::AssetType::ReservedStaking,
                         value
                     ).unwrap();
+                    // trick. due to commit 7afe0c7f2ece89eb4569a4126c9668ae767f1c6b
+                    // where value is zero, the item would be removed in btreemap.
+                    // but old genesis do not have this feature, thus, insert a zero value in to
+                    // the btreemap manually.
+                    xassets::AssetBalance::<T>::mutate(&(account_id.clone(), pcx.clone()), |b| {
+                        b.insert(xassets::AssetType::Free, Zero::zero());
+                    });
 
                     xstaking::Module::<T>::bootstrap_refresh(&account_id, Some(url), Some(true), Some(validator_key), Some(memo));
-                    xstaking::Module::<T>::bootstrap_update_vote_weight(&account_id, &account_id, Delta::Add(value.as_()));
+                    xstaking::Module::<T>::bootstrap_update_vote_weight(&account_id, &account_id, Delta::Add(value.into()));
 
                     <xstaking::StakeWeight<T>>::insert(&account_id, value);
                 }
@@ -176,7 +203,14 @@ decl_storage! {
                     };
 
                     let team_required_num = two_thirds(team_accounts.len() as u32);
-                    let council_required_num = third_fives(council_accounts.len() as u32);
+
+                    let (council_accounts, council_required_num) =
+                        if let ChainSpec::Dev = config.chain_spec {
+                            (council_accounts[..1].to_vec(), 1)
+                        } else {
+                            let len = council_accounts.len() as u32;
+                            (council_accounts, third_fives(len))
+                        };
 
                     let team_account = xmultisig::Module::<T>::deploy_in_genesis(
                         team_accounts,
@@ -189,7 +223,7 @@ decl_storage! {
                     // The amount is hard-coded here. 50 * 20% = 10
                     <xassets::Module<T>>::pcx_issue(
                         &team_account,
-                        T::Balance::sa(10 * 10_u64.pow(pcx_precision as u32))
+                        (10 * 10_u64.pow(pcx_precision as u32)).into()
                     ).unwrap();
                 }
 
@@ -203,10 +237,22 @@ decl_storage! {
                         *status
                     ).unwrap();
                 }
-            });
 
-            let init: StorageOverlay = init.into();
-            storage.extend(init);
+                // bugfix: it's a trick to fix mainnet genesis.
+                // due to naming error in XAssetsProcess `decl_storage`, we remove genesis init for `XAssetsProcess`,
+                // and move genesis logic to here
+                // in mainnet, we use `b"Withdrawal TokenBlackList"` as the key to init `TokenBlackList`,
+                // in testnet, we use original key to init.
+                let token_name = b"SDOT".to_vec();
+                if let ChainSpec::Mainnet = config.chain_spec {
+                    let key = b"Withdrawal TokenBlackList";
+                    let v = vec![token_name].encode();
+                    let k = substrate_primitives::twox_128(key).to_vec();
+                    support::storage::unhashed::put_raw(&k, &v);
+                } else {
+                    xprocess::Module::<T>::modify_token_black_list(token_name).unwrap();
+                }
+            });
         });
     }
 }

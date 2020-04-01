@@ -62,7 +62,7 @@ decl_module! {
             ensure_with_errorlog!(
                 Self::fishermen().contains(&who),
                 "Only the fisherman can report the double signer.",
-                "Only the fisherman can report the double signer|current fishermen:{:?}|sender{:?}", Self::fishermen(), who
+                "current fishermen:{:?}|sender{:?}", Self::fishermen(), who
             );
 
             let fst_not_existed = <Reported<T>>::get(&fst_header.2).is_none();
@@ -77,7 +77,7 @@ decl_module! {
             ensure_with_errorlog!(
                 fst_not_existed || snd_not_existed,
                 "The double signer at this height has been reported already.",
-                "The double signer at this height has been reported already|fst_sig:{:?}|not existed:{:}|snd_sig:{:?}|not existed:{:}",
+                "fst_sig:{:?}|not existed:{:}|snd_sig:{:?}|not existed:{:}",
                 fst_header.2, fst_not_existed, snd_header.2, snd_not_existed
             );
 

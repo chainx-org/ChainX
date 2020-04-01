@@ -16,7 +16,7 @@ fn test_normal() {
 
         // deposit
         assert_ok!(XRecords::deposit(&a, &btc_token, 100));
-        assert_eq!(XAssets::free_balance(&a, &btc_token), 100);
+        assert_eq!(XAssets::free_balance_of(&a, &btc_token), 100);
 
         // withdraw
         assert_ok!(XRecords::withdrawal(
@@ -29,11 +29,11 @@ fn test_normal() {
 
         let numbers = XRecords::withdrawal_application_numbers(Chain::Bitcoin, 10).unwrap();
         assert_eq!(numbers.len(), 1);
-
+        assert_ok!(XRecords::withdrawal_processing(&numbers));
         for i in numbers {
-            assert_ok!(XRecords::withdrawal_finish(i, true));
+            assert_ok!(XRecords::withdrawal_finish(i));
         }
-        assert_eq!(XAssets::free_balance(&a, &btc_token), 50);
+        assert_eq!(XAssets::free_balance_of(&a, &btc_token), 50);
     })
 }
 
@@ -46,9 +46,9 @@ fn test_normal2() {
 
         // deposit
         assert_ok!(XRecords::deposit(&a, &btc_token, 100));
-        assert_eq!(XAssets::free_balance(&a, &btc_token), 100);
+        assert_eq!(XAssets::free_balance_of(&a, &btc_token), 100);
         assert_ok!(XRecords::deposit(&a, &eth_token, 500));
-        assert_eq!(XAssets::free_balance(&a, &eth_token), 500);
+        assert_eq!(XAssets::free_balance_of(&a, &eth_token), 500);
 
         // withdraw
         assert_ok!(XRecords::withdrawal(
@@ -81,12 +81,12 @@ fn test_normal2() {
         assert_eq!(numbers2.len(), 2);
 
         numbers1.extend(numbers2);
-
+        assert_ok!(XRecords::withdrawal_processing(&numbers1));
         for i in numbers1 {
-            assert_ok!(XRecords::withdrawal_finish(i, true));
+            assert_ok!(XRecords::withdrawal_finish(i));
         }
-        assert_eq!(XAssets::free_balance(&a, &btc_token), 50);
-        assert_eq!(XAssets::free_balance(&a, &eth_token), 500 - 50 - 100);
+        assert_eq!(XAssets::free_balance_of(&a, &btc_token), 50);
+        assert_eq!(XAssets::free_balance_of(&a, &eth_token), 500 - 50 - 100);
     })
 }
 

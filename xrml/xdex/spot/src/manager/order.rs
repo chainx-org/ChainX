@@ -366,7 +366,7 @@ impl<T: Trait> Module<T> {
             maker_order.index(),
             taker_order.index(),
             turnover,
-            <system::Module<T>>::block_number().as_(),
+            <system::Module<T>>::block_number().saturated_into::<u64>(),
         ));
 
         Ok(())

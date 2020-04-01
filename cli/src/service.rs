@@ -19,13 +19,13 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
+use futures::prelude::*;
 use std::sync::Arc;
-use std::time::Duration;
 
 use log::{info, warn};
 
 use client::LongestChain;
-use consensus::{import_queue, start_aura, AuraImportQueue, NothingExtra, SlotDuration};
+use consensus::{import_queue, start_aura, AuraImportQueue, SlotDuration};
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use inherents::InherentDataProviders;
 use network::construct_simple_protocol;
@@ -33,10 +33,9 @@ use sr_primitives::generic::BlockId;
 use sr_primitives::traits::ProvideRuntimeApi;
 use substrate_primitives::{ed25519, Pair as PairT};
 use substrate_service::{
-    construct_service_factory,
-    error::{Error as ServiceError, ErrorKind as ServiceErrorKind},
-    FactoryFullConfiguration, FullBackend, FullClient, FullComponents, FullExecutor, LightBackend,
-    LightClient, LightComponents, LightExecutor, TaskExecutor,
+    construct_service_factory, error::Error as ServiceError, FactoryFullConfiguration, FullBackend,
+    FullClient, FullComponents, FullExecutor, LightBackend, LightClient, LightComponents,
+    LightExecutor, TaskExecutor,
 };
 use transaction_pool::txpool::Pool as TransactionPool;
 
@@ -111,14 +110,13 @@ construct_service_factory! {
                     let proposer = Arc::new(substrate_basic_authorship::ProposerFactory {
                         client: service.client(),
                         transaction_pool: service.transaction_pool(),
-                        inherents_pool: service.inherents_pool(),
                     });
 
                     let client = service.client();
                     let accountid_from_localkey: AccountId = key.public();
                     // use validator name to get accountid and sessionkey from runtime storage
                     let name = get_validator_name().expect("must get validator name is AUTHORITY mode");
-                    let best_hash = client.info()?.chain.best_hash;
+                    let best_hash = client.info().chain.best_hash;
                     let ret = client
                         .runtime_api()
                         .pubkeys_for_validator_name(&BlockId::Hash(best_hash), name.as_bytes().to_vec())
@@ -150,8 +148,9 @@ construct_service_factory! {
 
                     let client = service.client();
                     let select_chain = service.select_chain()
-                        .ok_or_else(|| ServiceError::from(ServiceErrorKind::SelectChainRequired))?;
-                    executor.spawn(start_aura(
+                        .ok_or(ServiceError::SelectChainRequired)?;
+
+                    let aura = start_aura(
                         SlotDuration::get_or_compute(&*client)?,
                         key.clone(),
                         client,
@@ -159,10 +158,10 @@ construct_service_factory! {
                         block_import.clone(),
                         proposer,
                         service.network(),
-                        service.on_exit(),
                         service.config.custom.inherent_data_providers.clone(),
                         service.config.force_authoring,
-                    )?);
+                    )?;
+                    executor.spawn(aura.select(service.on_exit()).then(|_| Ok(())));
 
                     info!("Running Grandpa session as Authority {:?}", key.public());
                 }
@@ -172,6 +171,7 @@ construct_service_factory! {
                 } else {
                     local_key
                 };
+/*
                 let config = grandpa::Config {
                     local_key,
                     // FIXME #1578 make this available through chainspec
@@ -186,7 +186,7 @@ construct_service_factory! {
                     service.network(),
                     service.on_exit(),
                 )?);
-/*
+
                 match config.local_key {
                     None => {
                         executor.spawn(grandpa::run_grandpa_observer(
@@ -232,14 +232,13 @@ construct_service_factory! {
 
                 config.custom.grandpa_import_setup = Some((block_import.clone(), link_half));
 
-                import_queue::<_, _, _, ed25519::Pair>(
+                import_queue::<_, _, ed25519::Pair>(
                     slot_duration,
                     block_import,
                     Some(justification_import),
                     None,
                     None,
                     client,
-                    NothingExtra,
                     config.custom.inherent_data_providers.clone(),
                 ).map_err(Into::into)
             }},
@@ -257,24 +256,20 @@ construct_service_factory! {
                 let finality_proof_import = block_import.clone();
                 let finality_proof_request_builder = finality_proof_import.create_finality_proof_request_builder();
 
-                import_queue::<_, _, _, ed25519::Pair>(
+                import_queue::<_, _, ed25519::Pair>(
                     SlotDuration::get_or_compute(&*client)?,
                     block_import,
                     None,
                     Some(finality_proof_import),
                     Some(finality_proof_request_builder),
                     client,
-                    NothingExtra,
                     config.custom.inherent_data_providers.clone(),
                 ).map_err(Into::into)
             }},
         SelectChain = LongestChain<FullBackend<Self>, Self::Block>
             { |config: &FactoryFullConfiguration<Self>, client: Arc<FullClient<Self>>| {
                 #[allow(deprecated)]
-                Ok(LongestChain::new(
-                    client.backend().clone(),
-                    client.import_lock()
-                ))
+                Ok(LongestChain::new(client.backend().clone()))
             }
         },
         FinalityProofProvider = { |client: Arc<FullClient<Self>>| {
@@ -346,5 +341,4 @@ mod tests {
             extrinsic_factory,
         );
     }
-
 }

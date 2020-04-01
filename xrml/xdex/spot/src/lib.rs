@@ -12,8 +12,15 @@ use chrono::prelude::*;
 use parity_codec::Codec;
 
 // Substrate
-use primitives::traits::{As, MaybeSerializeDebug, Member, SimpleArithmetic, Zero};
-use rstd::{cmp, prelude::*, result};
+use primitives::traits::{
+    MaybeSerializeDebug, Member, SaturatedConversion, SimpleArithmetic, Zero,
+};
+use rstd::{
+    cmp,
+    convert::{TryFrom, TryInto},
+    prelude::*,
+    result,
+};
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, Parameter, StorageMap,
     StorageValue,
@@ -43,13 +50,14 @@ pub trait Trait: xassets::Trait + xbitcoin::Trait + xsdot::Trait {
     type Price: Parameter
         + Member
         + SimpleArithmetic
+        + From<u64>
+        + Into<u64>
+        + TryInto<u64>
+        + TryFrom<u64>
+        + From<Self::Balance>
         + Codec
         + Default
         + Copy
-        + As<u8>
-        + As<u16>
-        + As<u32>
-        + As<u64>
         + MaybeSerializeDebug
         + Zero;
     /// The overarching event type.
@@ -78,7 +86,7 @@ decl_module! {
 
             ensure!(pair.online, "The trading pair must be online");
             ensure!(
-                (price.as_() % 10_u64.pow(pair.tick_precision)).is_zero(),
+                (price.into() % 10_u64.pow(pair.tick_precision)).is_zero(),
                 "Price must be an integer multiple of the tick precision"
             );
 
@@ -300,22 +308,22 @@ impl<T: Trait> Module<T> {
                 // XXX/PCX
                 if pair.base().eq(token) && pair.quote().eq(&pcx) {
                     if let Some((_, aver, _)) = <TradingPairInfoOf<T>>::get(i) {
-                        let price = match (u128::from(aver.as_())).checked_mul(pcx_precision) {
-                            Some(x) => x / pip_precision,
+                        let price = match (u128::from(aver.into())).checked_mul(pcx_precision) {
+                            Some(x) => (x / pip_precision) as u64,
                             None => panic!("aver * pow_pcx_precision overflow"),
                         };
 
-                        return Some(T::Balance::sa(price as u64));
+                        return Some(price.into());
                     }
                 // PCX/XXX
                 } else if pair.base().eq(&pcx) && pair.quote().eq(token) {
                     if let Some((_, aver, _)) = <TradingPairInfoOf<T>>::get(i) {
                         let price = match pip_precision.checked_mul(pcx_precision) {
-                            Some(x) => x / (u128::from(aver.as_())),
+                            Some(x) => (x / (u128::from(aver.into()))) as u64,
                             None => panic!("pow_pcx_precision * pow_pair_precision overflow"),
                         };
 
-                        return Some(T::Balance::sa(price as u64));
+                        return Some(price.into());
                     }
                 }
             }

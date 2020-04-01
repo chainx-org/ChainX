@@ -60,7 +60,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub(super) fn tick_up(v: T::Price, tick: u64) -> T::Price {
-        match v.checked_add(&As::sa(tick)) {
+        match v.checked_add(&tick.into()) {
             Some(x) => x,
             None => panic!("Fail to tick up"),
         }
@@ -68,7 +68,7 @@ impl<T: Trait> Module<T> {
 
     /// This is only used for updating the handicap. Return zero when underflow.
     pub(super) fn tick_down(v: T::Price, tick: u64) -> T::Price {
-        v.checked_sub(&As::sa(tick)).unwrap_or_else(Zero::zero)
+        v.checked_sub(&tick.into()).unwrap_or_else(Zero::zero)
     }
 
     fn update_handicap_of_buyers(pair: &TradingPair, order: &mut OrderInfo<T>) {
@@ -130,7 +130,7 @@ impl<T: Trait> Module<T> {
     fn blocks_per_hour() -> u64 {
         let period = <timestamp::Module<T>>::minimum_period();
         let seconds_per_hour = (60 * 60) as u64;
-        seconds_per_hour / period.as_()
+        seconds_per_hour / period.saturated_into::<u64>()
     }
 
     /// This happens when the maker orders have been full filled.
@@ -176,11 +176,11 @@ impl<T: Trait> Module<T> {
         let current_block = <system::Module<T>>::block_number();
 
         let aver = if let Some((_, aver, last_update)) = <TradingPairInfoOf<T>>::get(pair_index) {
-            let elapsed = (current_block - last_update).as_();
+            let elapsed = (current_block - last_update).saturated_into::<u64>();
             if elapsed < blocks_per_hour {
-                let new_weight = latest.as_() * elapsed;
-                let old_weight = aver.as_() * (blocks_per_hour - elapsed);
-                As::sa((new_weight + old_weight) / blocks_per_hour)
+                let new_weight = latest.into() * elapsed;
+                let old_weight = aver.into() * (blocks_per_hour - elapsed);
+                ((new_weight + old_weight) / blocks_per_hour).into()
             } else {
                 latest
             }

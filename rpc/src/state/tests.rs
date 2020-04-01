@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -14,30 +14,81 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
-use self::error::{Error, ErrorKind};
+use self::error::Error;
 use super::*;
 
 use assert_matches::assert_matches;
-use consensus::BlockOrigin;
-use rustc_hex::FromHex;
-use test_client::{self, keyring::Keyring, runtime, BlockBuilderExt, TestClient};
+use primitives::storage::well_known_keys;
+use sr_io::blake2_256;
+use substrate_executor::NativeExecutionDispatch;
+use test_client::{consensus::BlockOrigin, prelude::*, runtime};
 
 #[test]
 fn should_return_storage() {
-    let core = ::tokio::runtime::Runtime::new().unwrap();
+    let core = tokio::runtime::Runtime::new().unwrap();
     let client = Arc::new(test_client::new());
     let genesis_hash = client.genesis_hash();
     let client = State::new(client, Subscriptions::new(core.executor()));
+    let key = StorageKey(b":code".to_vec());
+
+    assert_eq!(
+        client
+            .storage(key.clone(), Some(genesis_hash).into())
+            .map(|x| x.map(|x| x.0.len()))
+            .unwrap()
+            .unwrap() as usize,
+        LocalExecutor::native_equivalent().len(),
+    );
+    assert_matches!(
+        client
+            .storage_hash(key.clone(), Some(genesis_hash).into())
+            .map(|x| x.is_some()),
+        Ok(true)
+    );
+    assert_eq!(
+        client.storage_size(key.clone(), None).unwrap().unwrap() as usize,
+        LocalExecutor::native_equivalent().len(),
+    );
+}
+
+#[test]
+fn should_return_child_storage() {
+    let core = tokio::runtime::Runtime::new().unwrap();
+    let client = Arc::new(
+        test_client::TestClientBuilder::new()
+            .add_child_storage("test", "key", vec![42_u8])
+            .build(),
+    );
+    let genesis_hash = client.genesis_hash();
+    let client = State::new(client, Subscriptions::new(core.executor()));
+    let child_key = StorageKey(
+        well_known_keys::CHILD_STORAGE_KEY_PREFIX
+            .iter()
+            .chain(b"test")
+            .cloned()
+            .collect(),
+    );
+    let key = StorageKey(b"key".to_vec());
 
     assert_matches!(
-        client.storage(StorageKey(vec![10]), Some(genesis_hash).into()),
-        Ok(None)
-    )
+        client.child_storage(child_key.clone(), key.clone(), Some(genesis_hash).into()),
+        Ok(Some(StorageData(ref d))) if d[0] == 42 && d.len() == 1
+    );
+    assert_matches!(
+        client
+            .child_storage_hash(child_key.clone(), key.clone(), Some(genesis_hash).into())
+            .map(|x| x.is_some()),
+        Ok(true)
+    );
+    assert_matches!(
+        client.child_storage_size(child_key.clone(), key.clone(), None),
+        Ok(Some(1))
+    );
 }
 
 #[test]
 fn should_call_contract() {
-    let core = ::tokio::runtime::Runtime::new().unwrap();
+    let core = tokio::runtime::Runtime::new().unwrap();
     let client = Arc::new(test_client::new());
     let genesis_hash = client.genesis_hash();
     let client = State::new(client, Subscriptions::new(core.executor()));
@@ -48,13 +99,13 @@ fn should_call_contract() {
             Bytes(vec![1, 2, 3]),
             Some(genesis_hash).into()
         ),
-        Err(Error(ErrorKind::Client(client::error::ErrorKind::Execution(_)), _))
+        Err(Error::Client(client::error::Error::Execution(_)))
     )
 }
 
 #[test]
 fn should_notify_about_storage_changes() {
-    let mut core = ::tokio::runtime::Runtime::new().unwrap();
+    let mut core = tokio::runtime::Runtime::new().unwrap();
     let remote = core.executor();
     let (subscriber, id, transport) = Subscriber::new_test("test");
 
@@ -69,8 +120,8 @@ fn should_notify_about_storage_changes() {
         let mut builder = api.client.new_block().unwrap();
         builder
             .push_transfer(runtime::Transfer {
-                from: Keyring::Alice.to_raw_public().into(),
-                to: Keyring::Ferdie.to_raw_public().into(),
+                from: AccountKeyring::Alice.into(),
+                to: AccountKeyring::Ferdie.into(),
                 amount: 42,
                 nonce: 0,
             })
@@ -89,20 +140,21 @@ fn should_notify_about_storage_changes() {
 
 #[test]
 fn should_send_initial_storage_changes_and_notifications() {
-    let mut core = ::tokio::runtime::Runtime::new().unwrap();
+    let mut core = tokio::runtime::Runtime::new().unwrap();
     let remote = core.executor();
     let (subscriber, id, transport) = Subscriber::new_test("test");
 
     {
         let api = State::new(Arc::new(test_client::new()), Subscriptions::new(remote));
 
+        let alice_balance_key = blake2_256(&runtime::system::balance_of_key(
+            AccountKeyring::Alice.into(),
+        ));
+
         api.subscribe_storage(
             Default::default(),
             subscriber,
-            Some(vec![StorageKey(
-                "a52da2b7c269da1366b3ed1cdb7299ce".from_hex().unwrap(),
-            )])
-            .into(),
+            Some(vec![StorageKey(alice_balance_key.to_vec())]).into(),
         );
 
         // assert id assigned
@@ -111,8 +163,8 @@ fn should_send_initial_storage_changes_and_notifications() {
         let mut builder = api.client.new_block().unwrap();
         builder
             .push_transfer(runtime::Transfer {
-                from: Keyring::Alice.to_raw_public().into(),
-                to: Keyring::Ferdie.to_raw_public().into(),
+                from: AccountKeyring::Alice.into(),
+                to: AccountKeyring::Ferdie.into(),
                 amount: 42,
                 nonce: 0,
             })
@@ -134,23 +186,16 @@ fn should_send_initial_storage_changes_and_notifications() {
 
 #[test]
 fn should_query_storage() {
-    type TestClient = test_client::client::Client<
-        test_client::Backend,
-        test_client::Executor,
-        runtime::Block,
-        runtime::RuntimeApi,
-    >;
-
     fn run_tests(client: Arc<TestClient>) {
-        let core = ::tokio::runtime::Runtime::new().unwrap();
+        let core = tokio::runtime::Runtime::new().unwrap();
         let api = State::new(client.clone(), Subscriptions::new(core.executor()));
 
         let add_block = |nonce| {
             let mut builder = client.new_block().unwrap();
             builder
                 .push_transfer(runtime::Transfer {
-                    from: Keyring::Alice.to_raw_public().into(),
-                    to: Keyring::Ferdie.to_raw_public().into(),
+                    from: AccountKeyring::Alice.into(),
+                    to: AccountKeyring::Ferdie.into(),
                     amount: 42,
                     nonce,
                 })
@@ -164,18 +209,22 @@ fn should_query_storage() {
         let block2_hash = add_block(1);
         let genesis_hash = client.genesis_hash();
 
+        let alice_balance_key = blake2_256(&runtime::system::balance_of_key(
+            AccountKeyring::Alice.into(),
+        ));
+
         let mut expected = vec![
             StorageChangeSet {
                 block: genesis_hash,
                 changes: vec![(
-                    StorageKey("a52da2b7c269da1366b3ed1cdb7299ce".from_hex().unwrap()),
+                    StorageKey(alice_balance_key.to_vec()),
                     Some(StorageData(vec![232, 3, 0, 0, 0, 0, 0, 0])),
                 )],
             },
             StorageChangeSet {
                 block: block1_hash,
                 changes: vec![(
-                    StorageKey("a52da2b7c269da1366b3ed1cdb7299ce".from_hex().unwrap()),
+                    StorageKey(alice_balance_key.to_vec()),
                     Some(StorageData(vec![190, 3, 0, 0, 0, 0, 0, 0])),
                 )],
             },
@@ -183,9 +232,7 @@ fn should_query_storage() {
 
         // Query changes only up to block1
         let result = api.query_storage(
-            vec![StorageKey(
-                "a52da2b7c269da1366b3ed1cdb7299ce".from_hex().unwrap(),
-            )],
+            vec![StorageKey(alice_balance_key.to_vec())],
             genesis_hash,
             Some(block1_hash).into(),
         );
@@ -194,9 +241,7 @@ fn should_query_storage() {
 
         // Query all changes
         let result = api.query_storage(
-            vec![StorageKey(
-                "a52da2b7c269da1366b3ed1cdb7299ce".from_hex().unwrap(),
-            )],
+            vec![StorageKey(alice_balance_key.to_vec())],
             genesis_hash,
             None.into(),
         );
@@ -204,7 +249,7 @@ fn should_query_storage() {
         expected.push(StorageChangeSet {
             block: block2_hash,
             changes: vec![(
-                StorageKey("a52da2b7c269da1366b3ed1cdb7299ce".from_hex().unwrap()),
+                StorageKey(alice_balance_key.to_vec()),
                 Some(StorageData(vec![148, 3, 0, 0, 0, 0, 0, 0])),
             )],
         });
@@ -212,7 +257,11 @@ fn should_query_storage() {
     }
 
     run_tests(Arc::new(test_client::new()));
-    run_tests(Arc::new(test_client::new_with_changes_trie()));
+    run_tests(Arc::new(
+        TestClientBuilder::new()
+            .set_support_changes_trie(true)
+            .build(),
+    ));
 }
 
 #[test]
@@ -226,20 +275,20 @@ fn should_split_ranges() {
 
 #[test]
 fn should_return_runtime_version() {
-    let core = ::tokio::runtime::Runtime::new().unwrap();
+    let core = tokio::runtime::Runtime::new().unwrap();
 
     let client = Arc::new(test_client::new());
     let api = State::new(client.clone(), Subscriptions::new(core.executor()));
 
     assert_eq!(
-		::serde_json::to_string(&api.runtime_version(None.into()).unwrap()).unwrap(),
-		r#"{"specName":"test","implName":"parity-test","authoringVersion":1,"specVersion":1,"implVersion":1,"apis":[["0xdf6acb689907609b",1],["0x37e397fc7c91f5e4",1],["0xd2bc9897eed08f15",1],["0x40fe3ad401f8959a",2],["0xc6e9a76309f39b09",1],["0xdd718d5cc53262d4",1]]}"#
-	);
+        serde_json::to_string(&api.runtime_version(None.into()).unwrap()).unwrap(),
+        r#"{"specName":"test","implName":"parity-test","authoringVersion":1,"specVersion":1,"implVersion":1,"apis":[["0xdf6acb689907609b",2],["0x37e397fc7c91f5e4",1],["0xd2bc9897eed08f15",1],["0x40fe3ad401f8959a",3],["0xc6e9a76309f39b09",1],["0xdd718d5cc53262d4",1],["0xcbca25e39f142387",1],["0xf78b278be53f454c",1],["0x7801759919ee83e5",1]]}"#
+    );
 }
 
 #[test]
 fn should_notify_on_runtime_version_initially() {
-    let mut core = ::tokio::runtime::Runtime::new().unwrap();
+    let mut core = tokio::runtime::Runtime::new().unwrap();
     let (subscriber, id, transport) = Subscriber::new_test("test");
 
     {

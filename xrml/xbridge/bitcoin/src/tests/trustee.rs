@@ -35,15 +35,15 @@ pub fn test_check_trustee_entity() {
         Err("not Compressed Public(Zero32)")
     );
 
-    let addr_EC_P = hex!("02fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
+    let addr_ec_p = hex!("02fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
     assert_eq!(
-        XBridgeOfBTC::check_trustee_entity(&addr_EC_P),
+        XBridgeOfBTC::check_trustee_entity(&addr_ec_p),
         Err("not Compressed Public(EC_P)")
     );
 
-    let addr_EC_P_2 = hex!("02fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc3f");
+    let addr_ec_p_2 = hex!("02fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc3f");
     assert_eq!(
-        XBridgeOfBTC::check_trustee_entity(&addr_EC_P_2),
+        XBridgeOfBTC::check_trustee_entity(&addr_ec_p_2),
         Err("not Compressed Public(EC_P)")
     );
 }

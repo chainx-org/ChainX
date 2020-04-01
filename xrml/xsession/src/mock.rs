@@ -43,15 +43,17 @@ impl timestamp::Trait for Test {
 }
 
 impl xaccounts::Trait for Test {
-    type Event = ();
     type DetermineIntentionJackpotAccountId = MockDeterminator;
 }
 
 pub struct MockDeterminator;
 
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for MockDeterminator {
-    fn accountid_for(_: &u64) -> u64 {
+    fn accountid_for_unsafe(_: &u64) -> u64 {
         1000
+    }
+    fn accountid_for_safe(_: &u64) -> Option<u64> {
+        Some(1000)
     }
 }
 
@@ -80,7 +82,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .0,
     );
     t.extend(
-        timestamp::GenesisConfig::<Test> { period: 5 }
+        timestamp::GenesisConfig::<Test> { minimum_period: 5 }
             .build_storage()
             .unwrap()
             .0,

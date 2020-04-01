@@ -24,7 +24,7 @@ use rstd::prelude::*;
 use rstd::result;
 use runtime_io;
 use runtime_primitives::traits::{
-    self, Applyable, As, Block as BlockT, CheckEqual, Checkable, Digest, Header, NumberFor,
+    self, Applyable, Block as BlockT, CheckEqual, Checkable, Digest, Header, NumberFor,
     OffchainWorker, OnFinalize, OnInitialize, One, Zero,
 };
 use runtime_primitives::transaction_validity::{
@@ -196,7 +196,7 @@ impl<
         let xt = uxt.check(&Default::default()).map_err(internal::ApplyError::BadSignature)?;
 
         // Check the size of the block if that extrinsic is applied.
-        if <system::Module<System>>::all_extrinsics_len() + encoded_len as u32 > internal::MAX_TRANSACTIONS_SIZE {
+        if <system::Module<System>>::all_extrinsics_weight() + encoded_len as u32 > internal::MAX_TRANSACTIONS_SIZE {
             return Err(internal::ApplyError::FullBlock);
         }
 
@@ -231,7 +231,7 @@ impl<
             let method_call_weight = <xfee_manager::Module<System>>::method_call_weight();
             if let Some(weight) = f.check_fee(switcher, method_call_weight) {
                 // pay any fees.
-                Payment::make_payment(&s.clone().unwrap(), encoded_len, weight, acc.as_() as u32).map_err(|_| internal::ApplyError::CantPay)?;
+                Payment::make_payment(&s.clone().unwrap(), encoded_len, weight, acc.into()).map_err(|_| internal::ApplyError::CantPay)?;
 
                 // AUDIT: Under no circumstances may this function panic from here onwards.
 
@@ -330,10 +330,11 @@ impl<
             };
 
             TransactionValidity::Valid {
-                priority: acceleration.as_() as TransactionPriority,
+                priority: acceleration.into() as TransactionPriority,
                 requires,
                 provides,
                 longevity: TransactionLongevity::max_value(),
+                propagate: true,
             }
         } else {
             TransactionValidity::Invalid(if xt.sender().is_none() {
@@ -358,7 +359,7 @@ impl<
         let switcher = <xfee_manager::Module<System>>::switcher();
         let method_call_weight = <xfee_manager::Module<System>>::method_call_weight();
         if let Some(fee_power) = f.check_fee(switcher, method_call_weight) {
-            if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.as_() as u32).is_err() {
+            if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.into()).is_err() {
                 return TransactionValidity::Invalid(ApplyError::CantPay as i8);
             } else {
                 return valid;

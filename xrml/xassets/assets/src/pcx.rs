@@ -1,9 +1,9 @@
-use primitives::traits::{CheckedSub, Saturating, Zero};
+use primitives::traits::{CheckedSub, Zero};
 use rstd::{cmp, result};
 use support::dispatch::Result;
 use support::traits::{
-    Currency, ExistenceRequirement, Imbalance, ReservableCurrency, SignedImbalance,
-    UpdateBalanceOutcome, WithdrawReason,
+    Currency, ExistenceRequirement, ReservableCurrency, SignedImbalance, UpdateBalanceOutcome,
+    WithdrawReason,
 };
 
 use crate::traits::ChainT;
@@ -63,47 +63,26 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
     }
 
     fn withdraw(
-        who: &T::AccountId,
-        value: Self::Balance,
-        reason: WithdrawReason,
-        liveness: ExistenceRequirement,
+        _who: &T::AccountId,
+        _value: Self::Balance,
+        _reason: WithdrawReason,
+        _liveness: ExistenceRequirement,
     ) -> result::Result<Self::NegativeImbalance, &'static str> {
-        if let Some(new_balance) = Self::free_balance(who).checked_sub(&value) {
-            if liveness == ExistenceRequirement::KeepAlive {
-                return Err("payment would kill account");
-            }
-            Self::ensure_can_withdraw(who, value, reason, new_balance)?;
-            let (imbalance, _) = Self::make_free_balance_be(who, new_balance);
-
-            let negative = if let SignedImbalance::Negative(n) = imbalance {
-                n
-            } else {
-                // Impossible, but be defensive.
-                NegativeImbalance::<T>::new(Zero::zero(), Self::TOKEN.to_vec(), AssetType::Free)
-            };
-            Ok(negative)
-        } else {
-            Err("too few free funds in account")
-        }
+        unimplemented!()
     }
 
-    fn deposit_creating(who: &T::AccountId, value: Self::Balance) -> Self::PositiveImbalance {
-        Self::inner_issue(&Self::TOKEN.to_vec(), who, AssetType::Free, value)
-            .unwrap_or(PositiveImbalance::<T>::zero())
+    fn deposit_creating(_who: &T::AccountId, _value: Self::Balance) -> Self::PositiveImbalance {
+        unimplemented!()
     }
 
     fn make_free_balance_be(
-        who: &T::AccountId,
-        balance: Self::Balance,
+        _who: &T::AccountId,
+        _balance: Self::Balance,
     ) -> (
         SignedImbalance<Self::Balance, Self::PositiveImbalance>,
         UpdateBalanceOutcome,
     ) {
-        let key = (who.clone(), Self::TOKEN.to_vec());
-        (
-            Self::make_type_balance_be(&key, AssetType::Free, balance),
-            UpdateBalanceOutcome::Updated,
-        )
+        unimplemented!()
     }
 }
 
@@ -117,21 +96,10 @@ impl<T: Trait> ReservableCurrency<T::AccountId> for Module<T> {
     }
 
     fn slash_reserved(
-        who: &T::AccountId,
-        value: Self::Balance,
+        _who: &T::AccountId,
+        _value: Self::Balance,
     ) -> (Self::NegativeImbalance, Self::Balance) {
-        let b = Self::reserved_balance(who);
-        let slash = cmp::min(b, value);
-        // underflow should never happen, but it if does, there's nothing to be done here.
-
-        let key = (who.clone(), Self::TOKEN.to_vec());
-        let type_ = AssetType::ReservedCurrency;
-        Self::make_type_balance_be(&key, type_, b.saturating_sub(slash));
-
-        (
-            NegativeImbalance::new(slash, Self::TOKEN.to_vec(), type_),
-            value - slash,
-        )
+        unimplemented!()
     }
 
     fn reserved_balance(who: &T::AccountId) -> Self::Balance {

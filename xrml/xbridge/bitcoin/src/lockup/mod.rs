@@ -2,7 +2,7 @@ pub mod types;
 
 use parity_codec::Decode;
 // substrate
-use primitives::traits::{As, MaybeDebug};
+use primitives::traits::MaybeDebug;
 use rstd::{prelude::*, result};
 use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap, StorageValue};
 use system::ensure_signed;
@@ -414,7 +414,7 @@ fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>) {
 fn issue_token<T: Trait>(who: &T::AccountId, balance: u64) {
     // notice this `Module` is LockupModule
     let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
-    let _ = xassets::Module::<T>::issue(&token, who, As::sa(balance)).map_err(|e| {
+    let _ = xassets::Module::<T>::issue(&token, who, balance.into()).map_err(|e| {
         error!("{:}", e);
         e
     });
@@ -423,7 +423,7 @@ fn issue_token<T: Trait>(who: &T::AccountId, balance: u64) {
 fn destroy_token<T: Trait>(who: &T::AccountId, balance: u64) {
     // notice this `Module` is LockupModule
     let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
-    let _ = xassets::Module::<T>::destroy_free(&token, who, As::sa(balance)).map_err(|e| {
+    let _ = xassets::Module::<T>::destroy_free(&token, who, balance.into()).map_err(|e| {
         error!("{:}", e);
         e
     });

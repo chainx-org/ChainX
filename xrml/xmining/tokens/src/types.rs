@@ -5,7 +5,7 @@ use parity_codec::{Decode, Encode};
 use serde_derive::{Deserialize, Serialize};
 
 use super::{Token, Trait};
-use primitives::traits::As;
+use primitives::traits::SaturatedConversion;
 use xstaking::{VoteWeight, VoteWeightBase, VoteWeightBaseV1, VoteWeightV1};
 use xsupport::trace;
 
@@ -38,7 +38,7 @@ macro_rules! psedu_intention_vote_weight{
 
             impl<'a, T: Trait> $base_trait<T::BlockNumber> for $struct_wrapper_name<'a, T> {
                 fn amount(&self) -> u64 {
-                    xassets::Module::<T>::all_type_total_asset_balance(&self.token).as_()
+                    xassets::Module::<T>::all_type_total_asset_balance(&self.token).into()
                 }
 
                 fn last_acum_weight(&self) -> $weight_type {
@@ -46,7 +46,7 @@ macro_rules! psedu_intention_vote_weight{
                 }
 
                 fn last_acum_weight_update(&self) -> u64 {
-                    self.staking.last_total_deposit_weight_update.as_()
+                    self.staking.last_total_deposit_weight_update.saturated_into::<u64>()
                 }
 
                 fn set_amount(&mut self, _: u64) {}
@@ -124,7 +124,7 @@ macro_rules! deposit_vote_weight {
 
             impl<'a, T: Trait> $base_trait<T::BlockNumber> for $record_name<'a, T> {
                 fn amount(&self) -> u64 {
-                    xassets::Module::<T>::all_type_asset_balance(&self.depositor, &self.token).as_()
+                    xassets::Module::<T>::all_type_asset_balance(&self.depositor, &self.token).into()
                 }
 
                 fn last_acum_weight(&self) -> $weight_type {
@@ -132,7 +132,7 @@ macro_rules! deposit_vote_weight {
                 }
 
                 fn last_acum_weight_update(&self) -> u64 {
-                    self.staking.last_deposit_weight_update.as_()
+                    self.staking.last_deposit_weight_update.saturated_into::<u64>()
                 }
 
                 fn set_amount(&mut self, _: u64) {}

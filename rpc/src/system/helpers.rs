@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 
 //! Substrate system API helpers.
 
-use serde_derive::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{map::Map, Value};
 use std::fmt;
 
@@ -37,7 +37,7 @@ pub struct SystemInfo {
 }
 
 /// Health struct returned by the RPC
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Health {
     /// Number of connected peers
@@ -51,7 +51,7 @@ pub struct Health {
 }
 
 /// Network Peer information
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PeerInfo<Hash, Number> {
     /// Peer ID

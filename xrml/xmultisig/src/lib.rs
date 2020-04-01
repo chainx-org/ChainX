@@ -38,7 +38,7 @@ pub trait GenesisMultiSig<AccountId> {
     fn gen_genesis_multisig() -> (AccountId, AccountId);
 }
 
-pub trait TrusteeCall<AccountId> {
+pub trait LimitedCall<AccountId> {
     fn allow(&self) -> bool;
     fn exec(&self, exerciser: &AccountId) -> Result;
 }
@@ -46,7 +46,8 @@ pub trait TrusteeCall<AccountId> {
 pub trait Trait: xaccounts::Trait {
     type MultiSig: MultiSigFor<Self::AccountId, Self::Hash>;
     type GenesisMultiSig: GenesisMultiSig<Self::AccountId>;
-    type Proposal: Parameter + Dispatchable<Origin = Self::Origin> + TrusteeCall<Self::AccountId>;
+    type Proposal: Parameter + Dispatchable<Origin = Self::Origin>;
+    type TrusteeCall: LimitedCall<Self::AccountId> + From<Self::Proposal>;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -140,12 +141,35 @@ decl_module! {
             Self::remove_multi_sig_id(&multi_sig_addr, multi_sig_id);
             Ok(())
         }
+
+        /// transition current owners to other group for the multisig addr.
+        /// this call can't be called from user directly, only allow call from `execute` proposal.
+        fn transition(origin, owners: Vec<(T::AccountId, bool)>, required_num: u32) -> Result {
+            let multi_sig_addr = ensure_signed(origin)?;
+            if owners.is_empty() {
+                return Err("owners can't be empty.");
+            }
+
+            let addr_info = Self::multisig_addr_info(&multi_sig_addr).ok_or("multisig address not exist.")?;
+
+            let owners = owners.into_iter().map(|(a, permission)| {
+                let p = if permission {
+                    MultiSigPermission::ConfirmAndPropose
+                } else {
+                    MultiSigPermission::ConfirmOnly
+                };
+                (a, p)
+            }).collect::<Vec<_>>();
+
+            let deploy = owners[0].0.clone();
+            Self::deploy_impl(addr_info.addr_type, &multi_sig_addr, &deploy, owners, required_num)
+        }
     }
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as XMultiSig {
-        pub RootAddrList get(root_addr_list): Vec <T::AccountId>;
+        pub RootAddrList get(root_addr_list): Vec<T::AccountId>;
 
         pub MultiSigAddrInfo get(multisig_addr_info): map T::AccountId => Option<AddrInfo<T::AccountId>>;
 
@@ -260,7 +284,9 @@ impl<T: Trait> Module<T> {
         required_num: u32,
     ) -> Result {
         let mut owner_list = Vec::new();
+        // confirm owners has deployer
         owner_list.push((deployer.clone(), MultiSigPermission::ConfirmAndPropose));
+        // move others people except deployer
         owner_list.extend(owners.into_iter().filter(|info| {
             if info.0 == *deployer {
                 false
@@ -277,13 +303,15 @@ impl<T: Trait> Module<T> {
 
         if owners_len < required_num {
             error!(
-                "[deploy_impl]|the owners count can't be zero|owners_len:{:}|required_num:{:?}",
+                "[deploy_impl]|owners count can't less than required num|owners_len:{:}|required_num:{:?}",
                 owners_len, required_num
             );
             return Err("owners count can't less than required num");
         }
 
-        // 1
+        // 1, set multi_addr for current deployer. notice when transition for same deployer, the
+        // multisiglist would log duplicate multisig addr. removing duplicate is meaningless
+        // for duplicate can imply different session of transition
         let len = Self::multi_sig_list_len_for(deployer);
         <MultiSigListItemFor<T>>::insert(&(deployer.clone(), len), multi_addr.clone());
         <MultiSigListLenFor<T>>::insert(deployer.clone(), len + 1); // length inc
@@ -366,7 +394,9 @@ impl<T: Trait> Module<T> {
     fn check_proposal(addr_info: &AddrInfo<T::AccountId>, proposal: &Box<T::Proposal>) -> Result {
         match addr_info.addr_type {
             AddrType::Trustee => {
-                if proposal.allow() {
+                // it's an useless clone, but do not have other way
+                let p: T::TrusteeCall = (**proposal).clone().into();
+                if p.allow() {
                     Ok(())
                 } else {
                     error!("[check_proposal]|do not allow trustee multisig addr to call this proposal|proposal:{:?}", proposal);
@@ -513,6 +543,7 @@ impl<T: Trait> Module<T> {
             "[exec_tx_bytrustee]|real exec|addr:{:?}|proposal:{:?}",
             addr, proposal
         );
-        proposal.exec(addr)
+        let p: T::TrusteeCall = (*proposal).into();
+        p.exec(addr)
     }
 }

@@ -331,7 +331,7 @@ fn test_error_issue_and_destroy1() {
         // destroy
         assert_err!(
             XAssets::destroy(&btc_token, &a, 25),
-            "reserved balance too low to destroy"
+            "current balance too low to destroy"
         );
 
         assert_err!(
@@ -387,7 +387,7 @@ fn test_error_issue_and_destroy2() {
 
         assert_err!(
             XAssets::issue(&btc_token, &a, i as Balance),
-            "free balance too high to issue"
+            "current balance too high to issue"
         );
     })
 }
@@ -400,7 +400,7 @@ fn test_error_issue_and_destroy3() {
         // lock or destroy without init
         assert_err!(
             XAssets::destroy(&btc_token, &a, 25),
-            "reserved balance too low to destroy"
+            "current balance too low to destroy"
         );
 
         assert_err!(
@@ -418,7 +418,7 @@ fn test_error_issue_and_destroy3() {
         XAssets::issue(&btc_token, &a, 0).unwrap();
         assert_err!(
             XAssets::destroy(&btc_token, &a, 25),
-            "reserved balance too low to destroy"
+            "current balance too low to destroy"
         );
 
         assert_err!(
@@ -446,6 +446,54 @@ fn test_error_issue_and_destroy3() {
         .unwrap();
 
         assert_ok!(XAssets::destroy(&btc_token, &a, 25));
+    })
+}
+
+#[test]
+fn test_balance_btree_map() {
+    with_externalities(&mut new_test_ext(), || {
+        let a: u64 = 100; // accountid
+        let b: u64 = 200;
+        let token = XAssets::TOKEN.to_vec();
+        let key = (a, token.clone());
+        assert_eq!(XAssets::pcx_total_balance(), 2510);
+
+        let _ = XAssets::pcx_issue(&a, 100);
+        let _ = XAssets::pcx_move_balance(&a, AssetType::Free, &a, AssetType::GasPayment, 30);
+        assert_eq!(AssetBalance::<Test>::get(&key).len(), 2);
+        assert_eq!(TotalAssetBalance::<Test>::get(&token).len(), 2);
+
+        let _ = XAssets::pcx_move_balance(&a, AssetType::GasPayment, &a, AssetType::Free, 10);
+        let _ = XAssets::pcx_move_balance(&a, AssetType::GasPayment, &b, AssetType::Free, 20);
+        assert_eq!(AssetBalance::<Test>::get(&key).len(), 1);
+        assert_eq!(TotalAssetBalance::<Test>::get(&token).len(), 1);
+        assert_eq!(XAssets::pcx_free_balance(&a), 80);
+        assert_eq!(XAssets::pcx_free_balance(&b), 20);
+        assert_eq!(XAssets::pcx_total_balance(), 2610); // 2510 + 100
+    })
+}
+
+#[test]
+fn test_compatible_balance_btree_map() {
+    with_externalities(&mut new_test_ext(), || {
+        let a: u64 = 100; // accountid
+        let token = XAssets::TOKEN.to_vec();
+        let key = (a, token.clone());
+        // old version
+        let _ = XAssets::pcx_issue(&a, 100);
+        AssetBalance::<Test>::mutate(&key, |b| {
+            b.insert(AssetType::ReservedDexSpot, Zero::zero());
+        });
+
+        assert_eq!(AssetBalance::<Test>::get(&key).len(), 2);
+
+        // what ever operation to reset it
+        let _ = XAssets::pcx_move_balance(&a, AssetType::Free, &a, AssetType::ReservedDexSpot, 10);
+        // would remove `ReservedDexSpot` Zero item
+        let _ = XAssets::pcx_move_balance(&a, AssetType::ReservedDexSpot, &a, AssetType::Free, 10);
+
+        assert_eq!(AssetBalance::<Test>::get(&key).len(), 1);
+        assert_eq!(TotalAssetBalance::<Test>::get(&token).len(), 1);
     })
 }
 
@@ -653,7 +701,7 @@ fn test_char_valid() {
         );
         assert_err!(
             asset,
-            "Token can only use numbers, capital/lowercase letters or \'-\', \'.\', \'|\', \'~\'."
+            "Token can only use ASCII alphanumeric character or \'-\', \'.\', \'|\', \'~\'."
         );
 
         let asset = Asset::new(b"BTC2".to_vec(), b"Bitcoin".to_vec(), Chain::Ethereum, 1, b"btc token fdsfsdfasfasdfasdfasdfasdfasdfasdfjaskldfjalskdjflk;asjdfklasjkldfjalksdjfklasjflkdasjflkjkladsjfkrtewtewrtwertrjhjwretywertwertwerrtwerrtwerrtwertwelasjdfklsajdflkaj".to_vec());
@@ -667,7 +715,7 @@ fn test_char_valid() {
         );
         assert_err!(
             asset,
-            "Token can only use numbers, capital/lowercase letters or \'-\', \'.\', \'|\', \'~\'."
+            "Token can only use ASCII alphanumeric character or \'-\', \'.\', \'|\', \'~\'."
         )
     })
 }

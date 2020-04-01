@@ -6,7 +6,8 @@ use super::*;
 
 use primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use primitives::traits::{BlakeTwo256, IdentityLookup};
-use primitives::BuildStorage;
+use primitives::{BuildStorage, StorageOverlay};
+use runtime_io::with_externalities;
 use substrate_primitives::{Blake2Hasher, H256};
 use support::impl_outer_origin;
 
@@ -29,16 +30,6 @@ impl system::Trait for Test {
     type Header = Header;
     type Event = ();
     type Log = DigestItem;
-}
-
-impl balances::Trait for Test {
-    type Balance = u64;
-    type OnFreeBalanceZero = ();
-    type OnNewAccount = ();
-    type TransactionPayment = ();
-    type TransferPayment = ();
-    type DustRemoval = ();
-    type Event = ();
 }
 
 impl consensus::Trait for Test {
@@ -66,31 +57,37 @@ impl xsystem::Validator<u64> for MockValidator {
     fn get_validator_by_name(_name: &[u8]) -> Option<u64> {
         Some(0)
     }
-    fn get_validator_name(accountid: &u64) -> Option<Vec<u8>> {
+    fn get_validator_name(_: &u64) -> Option<Vec<u8>> {
         None
     }
 }
 
 impl xaccounts::Trait for Test {
-    type Event = ();
     type DetermineIntentionJackpotAccountId = MockDeterminator;
 }
 
 pub struct MockDeterminator;
 
 impl xaccounts::IntentionJackpotAccountIdFor<u64> for MockDeterminator {
-    fn accountid_for(_: &u64) -> u64 {
+    fn accountid_for_unsafe(_: &u64) -> u64 {
         1000
+    }
+    fn accountid_for_safe(_: &u64) -> Option<u64> {
+        Some(1000)
     }
 }
 
 impl xassets::Trait for Test {
+    type Balance = u64;
+    type OnNewAccount = ();
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
+    type DetermineTokenJackpotAccountId = ();
 }
-
-impl Trait for Test {}
+impl Trait for Test {
+    type Event = ();
+}
 
 pub type XAssets = xassets::Module<Test>;
 pub type XFeeManager = Module<Test>;
@@ -100,31 +97,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .build_storage()
         .unwrap()
         .0;
-    // balance
-    r.extend(
-        balances::GenesisConfig::<Test> {
-            balances: vec![(1, 1000), (2, 510), (3, 1000)],
-            transaction_base_fee: 10,
-            transaction_byte_fee: 1,
-            existential_deposit: 0,
-            transfer_fee: 0,
-            creation_fee: 0,
-            vesting: vec![],
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-    // xsystem
-    r.extend(
-        xsystem::GenesisConfig::<Test> {
-            death_account: 0,
-            burn_account: 100,
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
     // xassets
     r.extend(
         xassets::GenesisConfig::<Test> {
@@ -146,5 +118,23 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .unwrap()
         .0,
     );
-    r.into()
+    let mut init: runtime_io::TestExternalities<Blake2Hasher> = r.into();
+    with_externalities(&mut init, || {
+        let chainx: xassets::Token = <XAssets as xassets::ChainT>::TOKEN.to_vec();
+
+        let pcx = xassets::Asset::new(
+            chainx.clone(),
+            b"PolkadotChainX".to_vec(),
+            xassets::Chain::ChainX,
+            8,
+            b"PCX onchain token".to_vec(),
+        )
+        .unwrap();
+        XAssets::bootstrap_register_asset(pcx, true, false).unwrap();
+        XAssets::pcx_issue(&1, 1000).unwrap();
+        XAssets::pcx_issue(&2, 510).unwrap();
+        XAssets::pcx_issue(&3, 1000).unwrap();
+    });
+    let init: StorageOverlay = init.into();
+    runtime_io::TestExternalities::new(init)
 }

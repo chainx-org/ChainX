@@ -1,7 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 
 // Substrate
-use primitives::traits::As;
 use rstd::prelude::Vec;
 
 // CHainX
@@ -140,7 +139,7 @@ impl<T: Trait> Module<T> {
                                 RecordInfo::<T::AccountId, T::Balance, T::BlockNumber, T::Moment> {
                                     who: account_info.map(|(a, _)| a).unwrap_or_default(),
                                     token: Self::TOKEN.to_vec(),
-                                    balance: As::sa(balance),
+                                    balance: balance.into(),
                                     txid: tx_hash.as_ref().to_vec(),
                                     addr: Self::input_addr_for(tx_hash)
                                         .map(|addr| addr2vecu8(&addr))
@@ -148,7 +147,7 @@ impl<T: Trait> Module<T> {
                                     ext: ext.unwrap_or_default(), // op return
                                     height_or_time:
                                         HeightOrTime::<T::BlockNumber, T::Moment>::Timestamp(
-                                            As::sa(timestamp as u64),
+                                            timestamp.into(),
                                         ),
                                     withdrawal_id: 0, // only for withdrawal
                                     state,

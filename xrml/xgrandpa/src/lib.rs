@@ -33,7 +33,7 @@
 pub use fg_primitives;
 use fg_primitives::ScheduledChange;
 use parity_codec::{Encode, KeyedVec};
-use primitives::traits::{As, Convert, CurrentHeight};
+use primitives::traits::{Convert, CurrentHeight, SaturatedConversion};
 use rstd::prelude::*;
 use substrate_primitives::ed25519::Public as AuthorityId;
 use substrate_primitives::storage::well_known_keys;
@@ -44,8 +44,6 @@ use system::ensure_signed;
 // ChainX
 use xsupport::{debug, warn};
 
-mod mock;
-mod tests;
 pub mod types;
 
 pub use self::types::{Log, OldStoredPendingChange, RawLog, StoredPendingChange};
@@ -226,7 +224,9 @@ impl<T: Trait> Module<T> {
 
                 // only allow the next forced change when twice the window has passed since
                 // this one.
-                <NextForced<T>>::put(scheduled_at + in_blocks * T::BlockNumber::sa(2));
+                <NextForced<T>>::put(
+                    scheduled_at + in_blocks * T::BlockNumber::saturated_from::<u64>(2),
+                );
             }
 
             <PendingChange<T>>::put(StoredPendingChange {
@@ -289,7 +289,7 @@ where
 {
     fn on_session_change() {
         let total_missed = <xsession::SessionTotalMissedBlocksCount<T>>::take();
-        let finalize_threshold = <xsession::Module<T>>::length().as_() / 3;
+        let finalize_threshold = <xsession::Module<T>>::length().saturated_into::<u64>() / 3;
         debug!(
             "[on_session_change of grandpa] total_missed: {:?}, finalize_threshold: {:?}",
             total_missed, finalize_threshold
