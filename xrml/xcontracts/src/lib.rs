@@ -330,7 +330,9 @@ parameter_types! {
     pub const DefaultBlockGasLimit: u32 = 10_000_000;
 }
 
-pub trait Trait: system::Trait + timestamp::Trait + xassets::Trait + xaccounts::Trait + xsystem::Trait {
+pub trait Trait:
+    system::Trait + timestamp::Trait + xassets::Trait + xaccounts::Trait + xsystem::Trait
+{
     /// The outer call dispatch type.
     type Call: Parameter
         + Dispatchable<Origin = <Self as system::Trait>::Origin>
