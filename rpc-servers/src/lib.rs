@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // Copyright 2018-2019 Chainpool.
 // This file is part of Substrate.
 
@@ -17,28 +17,27 @@
 
 //! Substrate RPC servers.
 
-#![warn(missing_docs)]
-
+#[warn(missing_docs)]
 pub use substrate_rpc as apis;
-
-use std::io;
 
 use log::error;
 use sr_primitives::{
     generic::SignedBlock,
     traits::{Block as BlockT, NumberFor},
 };
+use std::io;
 
 use chainx_primitives::{AccountIdForRpc, Balance, BlockNumber};
 
-/// Maximal payload accepted by RPC servers
+/// Maximal payload accepted by RPC servers.
 const MAX_PAYLOAD: usize = 15 * 1024 * 1024;
+
+/// Default maximum number of connections for WS RPC servers.
+const WS_MAX_CONNECTIONS: usize = 100;
 
 type Metadata = apis::metadata::Metadata;
 type RpcHandler = pubsub::PubSubHandler<Metadata>;
-/// HTTP RPC Server.
 pub type HttpServer = http::Server;
-/// WebSocket RPC Server.
 pub type WsServer = ws::Server;
 
 /// Construct rpc `IoHandler`
@@ -81,12 +80,20 @@ where
 }
 
 /// Start HTTP server listening on given address.
-pub fn start_http(addr: &std::net::SocketAddr, io: RpcHandler) -> io::Result<http::Server> {
+pub fn start_http(
+    addr: &std::net::SocketAddr,
+    cors: Option<&Vec<String>>,
+    io: RpcHandler,
+) -> io::Result<http::Server> {
     http::ServerBuilder::new(io)
         .threads(4)
         .health_api(("/health", "system_health"))
-        .rest_api(http::RestApi::Unsecure)
-        .cors(http::DomainsValidation::Disabled)
+        .rest_api(if cors.is_some() {
+            http::RestApi::Secure
+        } else {
+            http::RestApi::Unsecure
+        })
+        .cors(map_cors::<http::AccessControlAllowOrigin>(cors))
         .max_request_body_size(MAX_PAYLOAD)
         .start_http(addr)
 }
@@ -94,21 +101,33 @@ pub fn start_http(addr: &std::net::SocketAddr, io: RpcHandler) -> io::Result<htt
 /// Start WS server listening on given address.
 pub fn start_ws(
     addr: &std::net::SocketAddr,
-    ws_max_connections: usize,
+    max_connections: Option<usize>,
+    cors: Option<&Vec<String>>,
     io: RpcHandler,
 ) -> io::Result<ws::Server> {
     ws::ServerBuilder::with_meta_extractor(io, |context: &ws::RequestContext| {
         Metadata::new(context.sender())
     })
     .max_payload(MAX_PAYLOAD)
-    .max_connections(ws_max_connections)
+    .max_connections(max_connections.unwrap_or(WS_MAX_CONNECTIONS))
+    .allowed_origins(map_cors(cors))
     .start(addr)
     .map_err(|err| match err {
-        ws::Error(ws::ErrorKind::Io(io), _) => io,
-        ws::Error(ws::ErrorKind::ConnectionClosed, _) => io::ErrorKind::BrokenPipe.into(),
-        ws::Error(e, _) => {
+        ws::Error::Io(io) => io,
+        ws::Error::ConnectionClosed => io::ErrorKind::BrokenPipe.into(),
+        e => {
             error!("{}", e);
             io::ErrorKind::Other.into()
         }
     })
+}
+
+fn map_cors<T: for<'a> From<&'a str>>(cors: Option<&Vec<String>>) -> http::DomainsValidation<T> {
+    cors.map(|x| {
+        x.iter()
+            .map(AsRef::as_ref)
+            .map(Into::into)
+            .collect::<Vec<_>>()
+    })
+    .into()
 }

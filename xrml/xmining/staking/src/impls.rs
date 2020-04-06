@@ -69,7 +69,7 @@ impl<T: Trait> Claim<T::AccountId, T::Balance> for Module<T> {
             <Self as ComputeWeight<T::AccountId>>::settle_weight_on_claim(
                 claimer,
                 claimee,
-                current_block.as_(),
+                current_block.saturated_into::<u64>(),
             )?;
 
         let claimee_jackpot = xstaking::Module::<T>::jackpot_accountid_for_unsafe(claimee);

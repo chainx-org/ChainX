@@ -3,9 +3,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod asset_power;
 pub mod cross_mining;
 mod impls;
-mod mock;
+#[cfg(test)]
 mod tests;
 pub mod types;
 mod vote_weight;
@@ -13,19 +14,20 @@ mod vote_weight;
 use crate as xtokens;
 
 // Substrate
-use primitives::traits::{As, Zero};
+use primitives::traits::{SaturatedConversion, Zero};
 use rstd::{prelude::*, result};
 use support::{
-    decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,
+    decl_event, decl_module, decl_storage, dispatch::Result, ensure, EnumerableStorageMap,
+    StorageMap, StorageValue,
 };
 
 // ChainX
 use xassets::{AssetErr, AssetType, ChainT, Token, TokenJackpotAccountIdFor};
 use xassets::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use xstaking::{Claim, ComputeWeight};
+use xsupport::{debug, ensure_with_errorlog, info, warn};
 #[cfg(feature = "std")]
-use xsupport::token;
-use xsupport::{debug, ensure_with_errorlog, warn};
+use xsupport::{token, u8array_to_string};
 
 pub use self::types::*;
 
@@ -169,6 +171,62 @@ decl_module! {
                 return Err("The PseduIntentionVoteWeightV1 must already exist.");
             }
         }
+
+        /// Add/Update airdrop assets distribution ratio.
+        pub fn set_airdrop_distribution_ratio(token: Token, new_shares: u32) {
+            ensure!(xassets::AssetInfo::<T>::exists(&token), "Token does not exist!");
+            ensure!(new_shares > 0, "Shares of AirdropDistributionRatio can not be zero");
+
+            let old_shares = if <AirdropDistributionRatioMap<T>>::exists(&token) {
+                info!("[set_airdrop_distribution_ratio]Try updating airdrop asset {} distribution ratio to {}", u8array_to_string(&token), new_shares);
+                <AirdropDistributionRatioMap<T>>::get(&token)
+            } else {
+                info!("[set_airdrop_distribution_ratio]Try adding new airdrop asset {} with distribution ratio {}", u8array_to_string(&token), new_shares);
+                Default::default()
+            };
+
+            let old_sum: u32 = <AirdropDistributionRatioMap<T>>::enumerate().map(|(_, share)| share).sum();
+            let new_sum = old_sum + new_shares - old_shares;
+            ensure!(new_sum <= u32::max_value(), "sum of new_shares() can not exceed u32::max_value()");
+            <AirdropDistributionRatioMap<T>>::insert(&token, new_shares);
+
+        }
+
+        fn remove_airdrop_asset(token: Token) {
+            ensure!(xassets::AssetInfo::<T>::exists(&token), "Token does not exist!");
+
+            if <AirdropDistributionRatioMap<T>>::exists(&token) {
+                info!("[remove_airdrop_asset]Airdrop asset {} got removed", u8array_to_string(&token));
+                <AirdropDistributionRatioMap<T>>::remove(&token);
+            } else {
+                warn!("[remove_airdrop_asset]Skip removing airdrop asset {} as it does not exist!", u8array_to_string(&token));
+            }
+        }
+
+        /// Add/Update cross chain asset power.
+        pub fn set_fixed_cross_chain_asset_power_map(token: Token, new_power: u32) {
+            ensure!(xassets::AssetInfo::<T>::exists(&token), "Token does not exist!");
+            ensure!(new_power > 0, "Cross chain asset power can not be zero");
+
+            if <FixedCrossChainAssetPowerMap<T>>::exists(&token) {
+                info!("[set_fixed_cross_chain_asset_power_map]Update cross chain asset {} power to {}", u8array_to_string(&token), new_power);
+            } else {
+                info!("[set_fixed_cross_chain_asset_power_map]Add new cross chain asset {} with power {}", u8array_to_string(&token), new_power);
+            }
+
+            <FixedCrossChainAssetPowerMap<T>>::insert(&token, new_power);
+        }
+
+        fn remove_cross_chain_asset(token: Token) {
+            ensure!(xassets::AssetInfo::<T>::exists(&token), "Token does not exist!");
+
+            if <FixedCrossChainAssetPowerMap<T>>::exists(&token) {
+                info!("[remove_cross_chain_asset]Cross chain asset {} got removed", u8array_to_string(&token));
+                <FixedCrossChainAssetPowerMap<T>>::remove(&token);
+            } else {
+                warn!("[remove_cross_chain_asset]Skip removing cross chain asset {} as it does not exist!", u8array_to_string(&token));
+            }
+        }
     }
 }
 
@@ -184,7 +242,7 @@ decl_storage! {
         /// Cross-chain assets that are able to participate in the assets mining.
         pub PseduIntentions get(psedu_intentions) : Vec<Token>;
 
-        pub ClaimRestrictionOf get(claim_restriction_of): map Token => (u32, T::BlockNumber) = (10u32, T::BlockNumber::sa(BLOCKS_PER_WEEK));
+        pub ClaimRestrictionOf get(claim_restriction_of): map Token => (u32, T::BlockNumber) = (10u32, T::BlockNumber::saturated_from::<u64>(BLOCKS_PER_WEEK));
 
         /// Block height of last claim for some cross miner per token.
         pub LastClaimOf get(last_claim_of): map (T::AccountId, Token) => Option<T::BlockNumber>;
@@ -198,7 +256,14 @@ decl_storage! {
         pub DepositRecordsV1 get(deposit_records_v1): map (T::AccountId, Token) => Option<DepositVoteWeightV1<T::BlockNumber>>;
 
         /// when deposit success, reward some pcx to user for claiming. Default is 100000 = 0.001 PCX; 0.001*100000000
-        pub DepositReward get(deposit_reward): T::Balance = As::sa(100_000);
+        pub DepositReward get(deposit_reward): T::Balance = 100_000.into();
+
+        /// (SDOT, 1u32), (LBTC, 1u32) means SDOT:LBTC = 1:1
+        pub AirdropDistributionRatioMap get(airdrop_distribution_ratio_map): linked_map Token => u32;
+
+        /// (XBTC, 400u32)
+        pub FixedCrossChainAssetPowerMap get(fixed_cross_chain_asset_power_map): linked_map Token => u32;
+
     }
 
     add_extra_genesis {
@@ -237,12 +302,13 @@ impl<T: Trait> Module<T> {
     ) -> Result {
         if !staking_requirement.is_zero() {
             let staked = <xassets::Module<T>>::pcx_type_balance(who, AssetType::ReservedStaking);
-            if staked < T::Balance::sa(u64::from(staking_requirement)) * dividend {
+            let staking_requirement: T::Balance = u64::from(staking_requirement).into();
+            if staked < staking_requirement * dividend {
                 warn!(
                     "cannot claim due to the insufficient staking, current dividend: {:?}, current staking: {:?}, required staking: {:?}",
                     dividend,
                     staked,
-                    T::Balance::sa(u64::from(staking_requirement)) * dividend
+                    staking_requirement * dividend
                 );
                 return Err("Cannot claim if what you have staked is too little.");
             }
@@ -331,7 +397,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             Self::psedu_intentions().contains(&token),
             "Cannot issue deposit reward since this token is not a psedu intention.",
-            "Cannot issue deposit reward since this token is not a psedu intention.|token:{:}",
+            "token:{:}",
             token!(token)
         );
 
@@ -385,6 +451,14 @@ impl<T: Trait> Module<T> {
         };
 
         referral.unwrap_or_else(xaccounts::Module::<T>::council_account)
+    }
+
+    pub fn is_airdrop_asset(token: &Token) -> bool {
+        <AirdropDistributionRatioMap<T>>::exists(token)
+    }
+
+    pub fn is_cross_chain_asset(token: &Token) -> bool {
+        <FixedCrossChainAssetPowerMap<T>>::exists(token)
     }
 
     pub fn token_jackpot_accountid_for_unsafe(token: &Token) -> T::AccountId {

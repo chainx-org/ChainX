@@ -5,7 +5,6 @@ pub mod utils;
 pub mod validator;
 
 // Substrate
-use primitives::traits::As;
 use rstd::{prelude::*, result};
 use support::{dispatch::Result, StorageMap};
 
@@ -236,7 +235,7 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
                 // verify btc address would convert a base58 addr to Address
                 let addr: Address = Module::<T>::verify_btc_address(&record.data.addr())
                     .map_err(|_| "Parse addr error")?;
-                appl_withdrawal_list.push((addr, record.data.balance().as_() as u64));
+                appl_withdrawal_list.push((addr, record.data.balance().into()));
             }
             // not allow deposit directly to cold address, only hot address allow
             let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;

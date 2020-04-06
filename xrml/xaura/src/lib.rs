@@ -24,7 +24,7 @@ use parity_codec::{Decode, Encode};
 use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInherent, RuntimeString};
 #[cfg(feature = "std")]
 use inherents::{InherentDataProviders, ProvideInherentData};
-use primitives::traits::{As, Zero};
+use primitives::traits::{SaturatedConversion, Zero};
 use rstd::{prelude::*, result};
 use support::{decl_module, decl_storage, StorageValue};
 pub use timestamp;
@@ -119,7 +119,7 @@ pub trait Trait: timestamp::Trait {
 decl_storage! {
     trait Store for Module<T: Trait> as Aura {
         // The last timestamp.
-        LastTimestamp get(last) build(|_| T::Moment::sa(0)): T::Moment;
+        LastTimestamp get(last) build(|_| T::Moment::saturated_from(0)): T::Moment;
     }
 }
 
@@ -181,7 +181,7 @@ impl<T: Trait> Module<T> {
         // we double the minimum block-period so each author can always propose within
         // the majority of their slot.
         <timestamp::Module<T>>::minimum_period()
-            .as_()
+            .saturated_into::<u64>()
             .saturating_mul(2)
     }
 
@@ -199,7 +199,7 @@ impl<T: Trait> Module<T> {
         );
 
         let last_slot = last / slot_duration.clone();
-        let first_skipped = last_slot.clone() + T::Moment::sa(1);
+        let first_skipped = last_slot.clone() + T::Moment::saturated_from(1);
         let cur_slot = now / slot_duration;
 
         assert!(
@@ -210,9 +210,9 @@ impl<T: Trait> Module<T> {
             return;
         }
 
-        let slot_to_usize = |slot: T::Moment| slot.as_() as usize;
+        let slot_to_usize = |slot: T::Moment| slot.saturated_into::<u64>() as usize;
 
-        let skipped_slots = cur_slot - last_slot - T::Moment::sa(1);
+        let skipped_slots = cur_slot - last_slot - T::Moment::saturated_from(1);
 
         H::handle_report(AuraReport {
             start_slot: slot_to_usize(first_skipped),
@@ -223,7 +223,10 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> OnTimestampSet<T::Moment> for Module<T> {
     fn on_timestamp_set(moment: T::Moment) {
-        Self::on_timestamp_set::<T::HandleReport>(moment, T::Moment::sa(Self::slot_duration()))
+        Self::on_timestamp_set::<T::HandleReport>(
+            moment,
+            T::Moment::saturated_from::<u64>(Self::slot_duration()),
+        )
     }
 }
 
@@ -256,7 +259,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
             _ => return Ok(()),
         };
 
-        let timestamp_based_slot = timestamp.as_() / Self::slot_duration();
+        let timestamp_based_slot = timestamp.saturated_into::<u64>() / Self::slot_duration();
 
         let seal_slot = data.aura_inherent_data()?;
 

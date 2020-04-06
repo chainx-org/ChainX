@@ -12,9 +12,8 @@ use parity_codec::{Decode, Encode};
 use serde_derive::{Deserialize, Serialize};
 
 // Substrate
-use primitives::traits::As;
 use rstd::prelude::Vec;
-use support::{decl_module, decl_storage, dispatch::Result};
+use support::{decl_module, decl_storage, dispatch::Result, StorageValue};
 use system::ensure_signed;
 
 // ChainX
@@ -64,11 +63,24 @@ decl_module! {
             let from = ensure_signed(origin)?;
             xrecords::Module::<T>::withdrawal_revoke(&from, id)
         }
+
+        pub fn modify_token_black_list(token :Token) {
+            TokenBlackList::<T>::mutate(|v| {
+                if v.contains(&token) {
+                    v.retain(|i| *i != token);
+                } else {
+                    v.push(token);
+                }
+            });
+        }
     }
 }
 
+// bugfix:
+// notice the old version is `Withdrawal`, it's a wrong naming.
+// we fix it to `XAssetsProcess`, and it would affect genesis init for `TokenBlackList`
 decl_storage! {
-    trait Store for Module<T: Trait> as Withdrawal {
+    trait Store for Module<T: Trait> as XAssetsProcess {
         TokenBlackList get(token_black_list) config(): Vec<Token>;
     }
 }
@@ -79,7 +91,7 @@ impl<T: Trait> Module<T> {
         ensure_with_errorlog!(
             xassets::Module::<T>::can_do(token, xassets::AssetLimit::CanWithdraw),
             "this asset do not allow withdraw",
-            "this asset do not allow withdraw|token:{:}",
+            "token:{:}",
             token!(token),
         );
         Ok(())
@@ -99,9 +111,9 @@ impl<T: Trait> Module<T> {
     pub fn withdrawal_limit(token: &Token) -> Option<WithdrawalLimit<T::Balance>> {
         match token.as_slice() {
             <xbitcoin::Module<T> as ChainT>::TOKEN => {
-                let fee = As::sa(xbitcoin::Module::<T>::btc_withdrawal_fee());
+                let fee = xbitcoin::Module::<T>::btc_withdrawal_fee().into();
                 let limit = WithdrawalLimit::<T::Balance> {
-                    minimal_withdrawal: fee * As::sa(3) / As::sa(2),
+                    minimal_withdrawal: fee * 3.into() / 2.into(),
                     fee,
                 };
                 Some(limit)

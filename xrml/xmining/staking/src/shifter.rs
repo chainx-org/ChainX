@@ -3,7 +3,7 @@
 
 use super::*;
 
-use primitives::traits::{As, One, Zero};
+use primitives::traits::{One, Zero};
 use xsession::OnSessionChange;
 use xsupport::{debug, info, warn};
 #[cfg(feature = "std")]
@@ -96,7 +96,7 @@ impl<T: Trait> Module<T> {
         // Update to the latest total nomination
         let validators = validators
             .into_iter()
-            .map(|v| (Self::intentions(&v).total_nomination.as_(), v))
+            .map(|v| (Self::intentions(&v).total_nomination.into(), v))
             .map(|(a, b)| (b, a))
             .collect::<Vec<_>>();
         <xsession::Module<T>>::set_validators(validators.as_slice());
@@ -145,7 +145,7 @@ impl<T: Trait> Module<T> {
             .clone()
             .into_iter()
             .take(desired_validator_count)
-            .map(|(stake_weight, account_id)| (account_id, stake_weight.as_()))
+            .map(|(stake_weight, account_id)| (account_id, stake_weight.into()))
             .collect::<Vec<(_, _)>>();
 
         info!("[new_era] new validator set: {:?}", validators!(validators));

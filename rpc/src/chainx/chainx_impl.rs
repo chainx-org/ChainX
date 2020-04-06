@@ -11,7 +11,9 @@ use rustc_hex::FromHex;
 // substrate
 use primitives::{Blake2Hasher, H160, H256};
 use runtime_primitives::generic::SignedBlock;
-use runtime_primitives::traits::{As, Block as BlockT, NumberFor, ProvideRuntimeApi};
+use runtime_primitives::traits::{
+    Block as BlockT, NumberFor, ProvideRuntimeApi, SaturatedConversion,
+};
 
 // chainx
 use chainx_runtime::Call;
@@ -49,57 +51,60 @@ where
         + XSpotApi<Block>
         + XFeeApi<Block>
         + XStakingApi<Block>
-        + XBridgeApi<Block>,
+        + XBridgeApi<Block>
+        + XContractsApi<Block>,
 {
     fn block_info(&self, number: Option<NumberFor<Block>>) -> Result<Option<SignedBlock<Block>>> {
         Ok(self.client.block(&self.block_id_by_number(number)?)?)
     }
 
     fn extrinsics_events(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Value> {
-        let hash = hash.unwrap_or(self.client.info()?.chain.best_hash);
-        let state = self.state_at(Some(hash))?;
-        let number = if let Some(header) = self.client.header(&BlockId::Hash(hash))? {
-            println!("header:{:?}", header);
-            *header.number()
-        } else {
-            return Err(ErrorKind::BlockNumberErr.into());
-        };
+        let hash = hash.unwrap_or(self.client.info().chain.best_hash);
+        let number = self.block_number_by_hash(hash)?;
 
-        let key = "System Events".as_bytes();
-        if let Some(events) = Self::pickout::<
-            Vec<
-                system::EventRecord<
-                    <chainx_runtime::Runtime as system::Trait>::Event,
-                    <chainx_runtime::Runtime as system::Trait>::Hash,
-                >,
-            >,
-        >(&state, &key, Hasher::TWOX128)?
-        {
-            let mut result = BTreeMap::<u32, Vec<String>>::new();
-            for event_record in events {
-                match event_record.phase {
-                    system::Phase::ApplyExtrinsic(index) => {
-                        let event = format!("{:?}", event_record.event);
-                        match result.get_mut(&index) {
-                            Some(v) => v.push(event),
-                            None => {
-                                result.insert(index, vec![event]);
-                            }
+        let state = self.state_at(Some(hash))?;
+        let events = self.get_events(&state)?;
+        let mut result = BTreeMap::<u32, Vec<String>>::new();
+        for event_record in events {
+            match event_record.phase {
+                system::Phase::ApplyExtrinsic(index) => {
+                    let event = format!("{:?}", event_record.event);
+                    match result.get_mut(&index) {
+                        Some(v) => v.push(event),
+                        None => {
+                            result.insert(index, vec![event]);
                         }
                     }
-                    system::Phase::Finalization => {
-                        // do nothing
-                    }
+                }
+                system::Phase::Finalization => {
+                    // do nothing
                 }
             }
-            Ok(json!({
-                "events": result,
-                "blockHash": hash,
-                "number": number,
-            }))
-        } else {
-            Err(ErrorKind::StorageNotExistErr.into())
         }
+        Ok(json!({
+            "events": result,
+            "blockHash": hash,
+            "number": number,
+        }))
+    }
+
+    fn events(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Value> {
+        let hash = hash.unwrap_or(self.client.info().chain.best_hash);
+        let number = self.block_number_by_hash(hash)?;
+
+        let state = self.state_at(Some(hash))?;
+        let events = BTreeMap::<usize, String>::from_iter(
+            self.get_events(&state)?
+                .iter()
+                .enumerate()
+                .map(|(index, event_record)| (index, format!("{:?}", event_record.event))),
+        );
+
+        Ok(json!({
+            "events": events,
+            "blockHash": hash,
+            "number": number,
+        }))
     }
 
     fn next_renominate(
@@ -131,7 +136,8 @@ where
         let state = self.state_at(hash)?;
         let block_id = self.block_id_by_hash(hash)?;
 
-        let block_number = self.client.header(&block_id)?.unwrap().number().as_();
+        let block_number =
+            (*self.client.header(&block_id)?.unwrap().number()).saturated_into::<u64>();
 
         let mut dividends = Vec::new();
 
@@ -164,7 +170,8 @@ where
         let block_id = self.block_id_by_hash(hash)?;
         let who: AccountId = who.unchecked_into();
 
-        let block_number = self.client.header(&block_id)?.unwrap().number().as_();
+        let block_number =
+            (*self.client.header(&block_id)?.unwrap().number()).saturated_into::<u64>();
 
         let mut dividends = Vec::new();
 
@@ -326,7 +333,7 @@ where
             let key = <xbitcoin::BtcMinDeposit<Runtime>>::key();
             Self::pickout::<u64>(&state, &key, Hasher::TWOX128).map(|value| {
                 Some(DepositLimit {
-                    minimal_deposit: value.unwrap_or(As::sa(100000)),
+                    minimal_deposit: value.unwrap_or(100000),
                 })
             })
         } else {
@@ -372,9 +379,7 @@ where
         let mut records = Vec::new();
         for (nominee, record_wrapper) in self.get_nomination_records_wrapper(who, hash)? {
             if record_wrapper.0.is_err() {
-                return Err(
-                    ErrorKind::DeprecatedV0Err("chainx_getNominationRecords".into()).into(),
-                );
+                return Err(Error::DeprecatedV0Err("chainx_getNominationRecords".into()).into());
             }
             records.push((nominee.into(), record_wrapper.into()));
         }
@@ -395,40 +400,6 @@ where
         ))
     }
 
-    fn intention(
-        &self,
-        who: AccountIdForRpc,
-        hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<IntentionInfo>> {
-        let state = self.state_at(hash)?;
-        let block_id = self.block_id_by_hash(hash)?;
-        let who: AccountId = who.unchecked_into();
-
-        let info_wrapper = self.get_intention_info_wrapper(&state, (block_id, hash), who)?;
-        if let Some(ref info) = info_wrapper {
-            if info.intention_profs_wrapper.is_err() {
-                return Err(
-                    ErrorKind::DeprecatedV0Err("chainx_getIntentionByAccount".into()).into(),
-                );
-            }
-        }
-        Ok(info_wrapper.map(Into::into))
-    }
-
-    fn intention_v1(
-        &self,
-        who: AccountIdForRpc,
-        hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<IntentionInfoV1>> {
-        let state = self.state_at(hash)?;
-        let block_id = self.block_id_by_hash(hash)?;
-        let who: AccountId = who.unchecked_into();
-
-        Ok(self
-            .get_intention_info_wrapper(&state, (block_id, hash), who)?
-            .map(Into::into))
-    }
-
     fn intentions(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
@@ -440,7 +411,7 @@ where
         let mut intentions_info = Vec::new();
         for info_wrapper in self.get_intentions_info_wrapper(&state, (block_id, hash))? {
             if info_wrapper.intention_profs_wrapper.is_err() {
-                return Err(ErrorKind::DeprecatedV0Err("chainx_getIntentions".into()).into());
+                return Err(Error::DeprecatedV0Err("chainx_getIntentions".into()).into());
             }
             intentions_info.push(info_wrapper.into());
         }
@@ -468,6 +439,38 @@ where
         Ok(r)
     }
 
+    fn intention(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<IntentionInfo>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+        let who: AccountId = who.unchecked_into();
+
+        let info_wrapper = self.get_intention_info_wrapper(&state, (block_id, hash), who)?;
+        if let Some(ref info) = info_wrapper {
+            if info.intention_profs_wrapper.is_err() {
+                return Err(Error::DeprecatedV0Err("chainx_getIntentionByAccount".into()).into());
+            }
+        }
+        Ok(info_wrapper.map(Into::into))
+    }
+
+    fn intention_v1(
+        &self,
+        who: AccountIdForRpc,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<IntentionInfoV1>> {
+        let state = self.state_at(hash)?;
+        let block_id = self.block_id_by_hash(hash)?;
+        let who: AccountId = who.unchecked_into();
+
+        Ok(self
+            .get_intention_info_wrapper(&state, (block_id, hash), who)?
+            .map(Into::into))
+    }
+
     fn psedu_intentions(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
@@ -478,7 +481,7 @@ where
         let mut psedu_intentions_info = Vec::new();
         for info_wrapper in self.get_psedu_intentions_info_wrapper(&state, block_id)? {
             if info_wrapper.psedu_intention_profs_wrapper.is_err() {
-                return Err(ErrorKind::DeprecatedV0Err("chainx_getPseduIntentions".into()).into());
+                return Err(Error::DeprecatedV0Err("chainx_getPseduIntentions".into()).into());
             }
             psedu_intentions_info.push(info_wrapper.into());
         }
@@ -513,7 +516,7 @@ where
         for record_wrapper in self.get_psedu_nomination_records_wrapper(&state, who)? {
             if record_wrapper.deposit_vote_weight_wrapper.is_err() {
                 return Err(
-                    ErrorKind::DeprecatedV0Err("chainx_getPseduNominationRecords".into()).into(),
+                    Error::DeprecatedV0Err("chainx_getPseduNominationRecords".into()).into(),
                 );
             }
             psedu_records.push(record_wrapper.into());
@@ -541,7 +544,7 @@ where
     fn trading_pairs(
         &self,
         hash: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<Vec<(PairInfo)>>> {
+    ) -> Result<Option<Vec<PairInfo>>> {
         let mut pairs = Vec::new();
         let state = self.state_at(hash)?;
 
@@ -605,7 +608,7 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<QuotationsList>> {
         if piece < 1 || piece > 10 {
-            return Err(ErrorKind::QuotationsPieceErr.into());
+            return Err(Error::QuotationsPieceErr(pair_index).into());
         }
 
         let mut quotationslist = QuotationsList::default();
@@ -689,7 +692,7 @@ where
                 }
             };
         } else {
-            return Err(ErrorKind::TradingPairIndexErr.into());
+            return Err(Error::TradingPairIndexErr(pair_index).into());
         }
 
         Ok(Some(quotationslist))
@@ -703,7 +706,7 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<PageData<OrderDetails>>> {
         if page_size > MAX_PAGE_SIZE || page_size < 1 {
-            return Err(ErrorKind::PageSizeErr.into());
+            return Err(Error::PageSizeErr(page_size).into());
         }
 
         let mut orders = Vec::new();
@@ -733,7 +736,7 @@ where
             page_total = total_page;
 
             if page_index >= total_page && total_page > 0 {
-                return Err(ErrorKind::PageIndexErr.into());
+                return Err(Error::PageIndexErr(page_index).into());
             }
         }
 
@@ -784,7 +787,7 @@ where
                     None => Ok(Some(vec![])),
                 }
             }
-            _ => Err(ErrorKind::RuntimeErr(b"not support for this chain".to_vec()).into()),
+            _ => Err(Error::RuntimeErr(b"not support for this chain".to_vec(), None).into()),
         }
     }
 
@@ -820,17 +823,17 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<u64>> {
         if !call_params.starts_with("0x") {
-            return Err(ErrorKind::BinanryStartErr.into());
+            return Err(Error::BinaryStartErr.into());
         }
         let call_params: Vec<u8> = if let Ok(hex_call) = call_params[2..].from_hex() {
             hex_call
         } else {
-            return Err(ErrorKind::HexDecodeErr.into());
+            return Err(Error::HexDecodeErr.into());
         };
         let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
             call
         } else {
-            return Err(ErrorKind::DecodeErr.into());
+            return Err(Error::DecodeErr.into());
         };
 
         let transaction_fee =
@@ -902,7 +905,7 @@ where
 
         runtime_result
             .map(|all_session_info| parse_trustee_session_info(Chain::Bitcoin, 0, all_session_info))
-            .map_err(|e| ErrorKind::RuntimeErr(e).into())
+            .map_err(|e| Error::RuntimeErr(e, None).into())
     }
 
     fn particular_accounts(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Option<Value>> {
@@ -932,16 +935,198 @@ where
         }
         )))
     }
+
+    fn contract_call(
+        &self,
+        call_request: CallRequest,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Value> {
+        /// A rough estimate of how much gas a decent hardware consumes per second,
+        /// using native execution.
+        /// This value is used to set the upper bound for maximal contract calls to
+        /// prevent blocking the RPC for too long.
+        ///
+        /// Based on W3F research spreadsheet:
+        /// https://docs.google.com/spreadsheets/d/1h0RqncdqiWI4KgxO0z9JIpZEJESXjX_ZCK6LFX6veDo/view
+        const GAS_PER_SECOND: u64 = 1_000_000_000;
+
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().chain.best_hash));
+
+        let CallRequest {
+            origin,
+            dest,
+            gas_limit,
+            input_data,
+        } = call_request;
+        let max_gas_limit = 5 * GAS_PER_SECOND;
+        if gas_limit > max_gas_limit {
+            return Err(Error::InvalidParams(format!(
+                "Requested gas limit is greater than maximum allowed: {} > {}",
+                gas_limit, max_gas_limit
+            )));
+        }
+
+        let exec_result = api
+            .call(
+                &at,
+                origin,
+                dest,
+                Zero::zero(),
+                gas_limit,
+                input_data.to_vec(),
+            )
+            .map_err(|e| {
+                Error::RuntimeErr(
+                    b"Runtime trapped while executing a contract.".to_vec(),
+                    Some(format!("{:?}", e)),
+                )
+            })?;
+
+        match exec_result {
+            ContractExecResult::Success { status, data } => Ok(json!({
+                "status": status,
+                "data": Bytes(data),
+            })),
+            ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
+        }
+    }
+
+    fn contract_get_storage(
+        &self,
+        address: AccountIdForRpc,
+        key: H256,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Option<Bytes>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().chain.best_hash));
+        let address: AccountId = address.unchecked_into();
+
+        let get_storage_result = api
+            .get_storage(&at, address, key.into())
+            .map_err(|e|
+                // Handle general API calling errors.
+                Error::RuntimeErr(
+                    b"Runtime trapped while querying storage.".to_vec(),
+                    Some(format!("{:?}", e)),
+                ))?
+            .map_err(|e| Error::ContractGetStorageError(e))?
+            .map(Bytes);
+
+        Ok(get_storage_result)
+    }
+
+    fn contract_xrc20_call(
+        &self,
+        call_request: XRC20CallRequest,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Value> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().chain.best_hash));
+        let token = call_request.token.as_bytes().to_vec();
+        xassets::is_valid_token(&token).map_err(|e| {
+            Error::RuntimeErr(
+                e.as_bytes().to_vec(),
+                Some("not allow this token for this rpc call".to_string()),
+            )
+        })?;
+        let exec_result = api
+            .xrc20_call(
+                &at,
+                token,
+                call_request.selector,
+                call_request.input_data.to_vec(),
+            )
+            .map_err(|e| {
+                Error::RuntimeErr(
+                    b"Runtime trapped while executing a contract.".to_vec(),
+                    Some(format!("{:?}", e)),
+                )
+            })?;
+
+        match exec_result {
+            ContractExecResult::Success { status, data } => {
+                let result = match call_request.selector {
+                    XRC20Selector::BalanceOf | XRC20Selector::TotalSupply => {
+                        let v: u64 =
+                            Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
+                        json!({
+                            "status": status,
+                            "data": v,
+                        })
+                    }
+                    XRC20Selector::Name | XRC20Selector::Symbol => {
+                        let v: Vec<u8> =
+                            Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
+                        json!({
+                            "status": status,
+                            "data": to_string!(&v),
+                        })
+                    }
+                    XRC20Selector::Decimals => {
+                        let v: u16 =
+                            Decode::decode(&mut data.as_slice()).ok_or(Error::DecodeErr)?;
+                        json!({
+                            "status": status,
+                            "data": v,
+                        })
+                    }
+                    _ => json!({
+                        "status": status,
+                        "data": Bytes(data),
+                    }),
+                };
+
+                Ok(result)
+            }
+            ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
+        }
+    }
+
+    fn contract_xrc_token_info(
+        &self,
+        hash: Option<<Block as BlockT>::Hash>,
+    ) -> Result<BTreeMap<String, Value>> {
+        let state = self.state_at(hash)?;
+
+        let assets = self.all_assets(self.block_id_by_hash(hash)?)?;
+
+        let mut b = BTreeMap::new();
+
+        for (asset, _valid) in assets.into_iter() {
+            let token = asset.token();
+            let key = <xcontracts::XRC20InfoOfToken<Runtime>>::key_for(token.as_ref());
+            if let Some(info) = Self::pickout::<(
+                AccountId,
+                BTreeMap<xcontracts::XRC20Selector, xcontracts::Selector>,
+            )>(&state, &key, Hasher::BLAKE2256)?
+            {
+                b.insert(to_string!(&token), json!({
+                    "XRC20": json!({
+                        "address": info.0,
+                        "selectors": info.1.into_iter().map(|(k, v)| (k, Bytes(v.to_vec()))).collect::<BTreeMap<_, _>>(),
+                    })
+                }));
+            }
+        }
+        Ok(b)
+    }
 }
 
 fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {
     if page_size == 0 {
-        return Err(ErrorKind::PageSizeErr.into());
+        return Err(Error::PageSizeErr(page_size).into());
     }
 
     let page_total = (src.len() as u32 + (page_size - 1)) / page_size;
     if page_index >= page_total && page_total > 0 {
-        return Err(ErrorKind::PageIndexErr.into());
+        return Err(Error::PageIndexErr(page_index).into());
     }
 
     let mut list = vec![];

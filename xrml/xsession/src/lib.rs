@@ -24,7 +24,7 @@ mod mock;
 mod tests;
 
 // Substrate
-use primitives::traits::{As, Convert, One, Zero};
+use primitives::traits::{Convert, One, SaturatedConversion, Zero};
 use rstd::{ops::Mul, prelude::*};
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, for_each_tuple, StorageMap,
@@ -103,9 +103,9 @@ decl_storage! {
         /// The current set of validators.
         pub Validators get(validators) config(): Vec<(T::AccountId, u64)>;
         /// Current length of the session.
-        pub SessionLength get(length) config(session_length): T::BlockNumber = T::BlockNumber::sa(1000);
+        pub SessionLength get(length) config(session_length): T::BlockNumber = T::BlockNumber::saturated_from(1000);
         /// Current index of the session.
-        pub CurrentIndex get(current_index) build(|_| T::BlockNumber::sa(0)): T::BlockNumber;
+        pub CurrentIndex get(current_index) build(|_| T::BlockNumber::saturated_from(0)): T::BlockNumber;
         /// Timestamp when current session started.
         pub CurrentStart get(current_start) build(|_| T::Moment::zero()): T::Moment;
 

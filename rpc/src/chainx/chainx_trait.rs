@@ -10,6 +10,9 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     #[rpc(name = "chainx_getExtrinsicsEventsByBlockHash")]
     fn extrinsics_events(&self, hash: Option<Hash>) -> Result<Value>;
 
+    #[rpc(name = "chainx_getEventsByBlockHash")]
+    fn events(&self, hash: Option<Hash>) -> Result<Value>;
+
     #[rpc(name = "chainx_getNextRenominateByAccount")]
     fn next_renominate(&self, who: AccountId, hash: Option<Hash>) -> Result<Option<BlockNumber>>;
 
@@ -128,7 +131,7 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
     ) -> Result<Option<Vec<PseduNominationRecordV1>>>;
 
     #[rpc(name = "chainx_getTradingPairs")]
-    fn trading_pairs(&self, hash: Option<Hash>) -> Result<Option<Vec<(PairInfo)>>>;
+    fn trading_pairs(&self, hash: Option<Hash>) -> Result<Option<Vec<PairInfo>>>;
 
     #[rpc(name = "chainx_getQuotations")]
     fn quotations(
@@ -188,4 +191,25 @@ pub trait ChainXApi<Number, Hash, AccountId, Balance, BlockNumber, SignedBlock> 
 
     #[rpc(name = "chainx_particularAccounts")]
     fn particular_accounts(&self, hash: Option<Hash>) -> Result<Option<serde_json::Value>>;
+
+    #[rpc(name = "chainx_contractCall")]
+    fn contract_call(&self, call_request: CallRequest, at: Option<Hash>) -> Result<Value>;
+
+    #[rpc(name = "chainx_contractGetStorage")]
+    fn contract_get_storage(
+        &self,
+        address: AccountId,
+        key: H256,
+        at: Option<Hash>,
+    ) -> Result<Option<Bytes>>;
+
+    #[rpc(name = "chainx_contractXRC20Call")]
+    fn contract_xrc20_call(
+        &self,
+        call_request: XRC20CallRequest,
+        at: Option<Hash>,
+    ) -> Result<Value>;
+
+    #[rpc(name = "chainx_contractXRCTokenInfo")]
+    fn contract_xrc_token_info(&self, at: Option<Hash>) -> Result<BTreeMap<String, Value>>;
 }

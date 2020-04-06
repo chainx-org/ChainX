@@ -12,7 +12,7 @@ pub mod utils;
 
 mod trustees;
 
-use primitives::traits::{As, CheckedSub};
+use primitives::traits::CheckedSub;
 use support::{decl_event, decl_module, decl_storage, StorageMap};
 
 use xassets::TokenJackpotAccountIdFor;
@@ -70,7 +70,7 @@ impl<T: Trait> Module<T> {
 
     pub fn reward_relayer(token: &Token, who: &T::AccountId, power: u64, tx_len: u64) {
         // todo may use a storage to adjust `Acceleration`
-        let acc = 1_u64;
+        let acc = 1_u32;
         // version(1) + addr + sig + index(compact) + era(relay usually use `Immortal`) + acc(compact)
         let extrinsic_len = 1 + (1 + 32) + 64 + 1 + 1 + 1;
         // module + call + tx_source
@@ -78,7 +78,7 @@ impl<T: Trait> Module<T> {
 
         let len = extrinsic_len + func_len;
 
-        let value = xfee_manager::Module::<T>::transaction_fee(power, len) * As::sa(acc);
+        let value = xfee_manager::Module::<T>::transaction_fee(power, len) * acc.into();
 
         Self::reward_from_jackpot(token, who, value);
         debug!(

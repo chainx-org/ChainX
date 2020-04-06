@@ -6,9 +6,12 @@ use super::*;
 
 use primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
 use primitives::traits::{BlakeTwo256, IdentityLookup};
-use primitives::BuildStorage;
+use primitives::{BuildStorage, StorageOverlay};
+use runtime_io::with_externalities;
 use substrate_primitives::{Blake2Hasher, H256};
 use support::impl_outer_origin;
+
+use xassets::Asset;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -31,16 +34,6 @@ impl system::Trait for Test {
     type Log = DigestItem;
 }
 
-impl balances::Trait for Test {
-    type Balance = u64;
-    type OnFreeBalanceZero = ();
-    type OnNewAccount = ();
-    type TransactionPayment = ();
-    type TransferPayment = ();
-    type DustRemoval = ();
-    type Event = ();
-}
-
 impl consensus::Trait for Test {
     type Log = DigestItem;
     type SessionKey = UintAuthorityId;
@@ -54,9 +47,12 @@ impl timestamp::Trait for Test {
 
 // assets
 impl xassets::Trait for Test {
+    type Balance = u64;
+    type OnNewAccount = ();
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
+    type DetermineTokenJackpotAccountId = ();
 }
 
 impl Trait for Test {
@@ -71,40 +67,6 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .build_storage()
         .unwrap()
         .0;
-    // balance
-    r.extend(
-        balances::GenesisConfig::<Test> {
-            balances: vec![(1, 1000), (2, 510), (3, 1000)],
-            existential_deposit: 0,
-            transfer_fee: 0,
-            creation_fee: 0,
-            transaction_base_fee: 0,
-
-            transaction_byte_fee: 0,
-            vesting: vec![],
-        }
-        .build_storage()
-        .unwrap()
-        .0,
-    );
-
-    let _btc_asset = xassets::Asset::new(
-        b"BTC".to_vec(),     // token
-        b"Bitcoin".to_vec(), // token
-        Chain::Bitcoin,
-        8, // bitcoin precision
-        b"BTC chainx".to_vec(),
-    )
-    .unwrap();
-
-    let _eth_asset = xassets::Asset::new(
-        b"ETH".to_vec(),      // token
-        b"Ethereum".to_vec(), // token
-        Chain::Ethereum,
-        8, // bitcoin precision
-        b"ETH chainx".to_vec(),
-    )
-    .unwrap();
 
     r.extend(
         xassets::GenesisConfig::<Test> {
@@ -116,5 +78,39 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         .0,
     );
 
-    r.into()
+    let mut init: runtime_io::TestExternalities<Blake2Hasher> = r.into();
+    with_externalities(&mut init, || {
+        let chainx: Token = <XAssets as ChainT>::TOKEN.to_vec();
+
+        let pcx = Asset::new(
+            chainx.clone(),
+            b"PolkadotChainX".to_vec(),
+            Chain::ChainX,
+            8,
+            b"PCX onchain token".to_vec(),
+        )
+        .unwrap();
+        let btc = Asset::new(
+            b"BTC".to_vec(),     // token
+            b"Bitcoin".to_vec(), // token
+            Chain::Bitcoin,
+            8, // bitcoin precision
+            b"BTC chainx".to_vec(),
+        )
+        .unwrap();
+
+        let eth = Asset::new(
+            b"ETH".to_vec(),      // token
+            b"Ethereum".to_vec(), // token
+            Chain::Ethereum,
+            8, // bitcoin precision
+            b"ETH chainx".to_vec(),
+        )
+        .unwrap();
+        XAssets::bootstrap_register_asset(pcx, true, false).unwrap();
+        XAssets::bootstrap_register_asset(btc, true, true).unwrap();
+        XAssets::bootstrap_register_asset(eth, true, true).unwrap();
+    });
+    let init: StorageOverlay = init.into();
+    runtime_io::TestExternalities::new(init)
 }

@@ -7,9 +7,10 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
-primitives = { package = "substrate-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
-runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
+primitives = { package = "substrate-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+parity-codec = { version = "3.3", default-features = false }
+runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 
 [features]
 default = ["std"]
@@ -18,5 +19,6 @@ std = [
     "serde_derive",
     "primitives/std",
     "rstd/std",
+    "parity-codec/std",
     "runtime-primitives/std",
 ]

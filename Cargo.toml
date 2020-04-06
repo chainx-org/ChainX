@@ -1,6 +1,6 @@
 [package]
 name = "chainx"
-version = "1.0.6"
+version = "1.1.0"
 build = "build.rs"
 authors = ["Chainpool <https://www.chainx.org>"]
 edition = "2018"
@@ -13,7 +13,6 @@ path = "src/main.rs"
 ctrlc = { version = "3.0", features = ["termination"] }
 futures = "0.1.17"
 serde_json = "1.0"
-error-chain = "0.12"
 chainx-cli = { path = "./cli" }
 
 [build-dependencies]
@@ -56,4 +55,5 @@ members = [
     "xrml/xbridge/bitcoin",
     "xrml/xbridge/sdot",
     "xrml/xbridge/features",
+    "xrml/xcontracts",
 ]

@@ -38,6 +38,16 @@ impl indices::Trait for Test {
     type Event = ();
 }
 
+pub struct DummyDetermineTokenJackpotAccountId;
+impl TokenJackpotAccountIdFor<u64, u64> for DummyDetermineTokenJackpotAccountId {
+    fn accountid_for_unsafe(_token: &Token) -> u64 {
+        10
+    }
+    fn accountid_for_safe(_token: &Token) -> Option<u64> {
+        Some(10)
+    }
+}
+
 pub type Balance = u64;
 impl Trait for Test {
     /// Event
@@ -46,6 +56,7 @@ impl Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
+    type DetermineTokenJackpotAccountId = DummyDetermineTokenJackpotAccountId;
 }
 
 pub type Indices = indices::Module<Test>;

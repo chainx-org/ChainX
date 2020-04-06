@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Parity Technologies (UK) Ltd.
+// Copyright 2017-2019 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -17,28 +17,25 @@
 use super::*;
 
 use assert_matches::assert_matches;
-use hex_literal::{hex, hex_impl};
 use parity_codec::Encode;
-use primitives::H256;
+use primitives::{blake2_256, hexdisplay::HexDisplay, H256};
 use std::sync::Arc;
-use test_client;
-use test_client::keyring::Keyring;
-use test_client::runtime::{Extrinsic, Transfer};
+use test_client::{
+    self,
+    runtime::{Extrinsic, Transfer},
+    AccountKeyring,
+};
 use tokio::runtime;
 use transaction_pool::{txpool::Pool, ChainApi};
 
-fn uxt(sender: Keyring, nonce: u64) -> Extrinsic {
+fn uxt(sender: AccountKeyring, nonce: u64) -> Extrinsic {
     let tx = Transfer {
         amount: Default::default(),
         nonce,
-        from: sender.to_raw_public().into(),
+        from: sender.into(),
         to: Default::default(),
     };
-    let signature = Keyring::from_raw_public(tx.from.to_fixed_bytes())
-        .unwrap()
-        .sign(&tx.encode())
-        .into();
-    Extrinsic::Transfer(tx, signature)
+    tx.into_signed_tx()
 }
 
 #[test]
@@ -50,13 +47,14 @@ fn submit_transaction_should_not_cause_error() {
         pool: Arc::new(Pool::new(Default::default(), ChainApi::new(client))),
         subscriptions: Subscriptions::new(runtime.executor()),
     };
-    let h: H256 = hex!("81897a4890fb7554e7f77c533a865846a11583a56a8ad5e307543188d55e64f1").into();
+    let xt = uxt(AccountKeyring::Alice, 1).encode();
+    let h: H256 = blake2_256(&xt).into();
 
     assert_matches!(
-        AuthorApi::submit_extrinsic(&p, uxt(Keyring::Alice, 1).encode().into()),
+        AuthorApi::submit_extrinsic(&p, xt.clone().into()),
         Ok(h2) if h == h2
     );
-    assert!(AuthorApi::submit_extrinsic(&p, uxt(Keyring::Alice, 1).encode().into()).is_err());
+    assert!(AuthorApi::submit_extrinsic(&p, xt.into()).is_err());
 }
 
 #[test]
@@ -68,13 +66,14 @@ fn submit_rich_transaction_should_not_cause_error() {
         pool: Arc::new(Pool::new(Default::default(), ChainApi::new(client.clone()))),
         subscriptions: Subscriptions::new(runtime.executor()),
     };
-    let h: H256 = hex!("9ec8469b5dcfe29cc274ac1d07ad73d80be57566ace0fcdbe51ebcf4b51e925b").into();
+    let xt = uxt(AccountKeyring::Alice, 0).encode();
+    let h: H256 = blake2_256(&xt).into();
 
     assert_matches!(
-        AuthorApi::submit_extrinsic(&p, uxt(Keyring::Alice, 0).encode().into()),
+        AuthorApi::submit_extrinsic(&p, xt.clone().into()),
         Ok(h2) if h == h2
     );
-    assert!(AuthorApi::submit_extrinsic(&p, uxt(Keyring::Alice, 0).encode().into()).is_err());
+    assert!(AuthorApi::submit_extrinsic(&p, xt.into()).is_err());
 }
 
 #[test]
@@ -94,7 +93,7 @@ fn should_watch_extrinsic() {
     p.watch_extrinsic(
         Default::default(),
         subscriber,
-        uxt(Keyring::Alice, 0).encode().into(),
+        uxt(AccountKeyring::Alice, 0).encode().into(),
     );
 
     // then
@@ -104,14 +103,10 @@ fn should_watch_extrinsic() {
         let tx = Transfer {
             amount: 5,
             nonce: 0,
-            from: Keyring::Alice.to_raw_public().into(),
+            from: AccountKeyring::Alice.into(),
             to: Default::default(),
         };
-        let signature = Keyring::from_raw_public(tx.from.to_fixed_bytes())
-            .unwrap()
-            .sign(&tx.encode())
-            .into();
-        Extrinsic::Transfer(tx, signature)
+        tx.into_signed_tx()
     };
     AuthorApi::submit_extrinsic(&p, replacement.encode().into()).unwrap();
     let (res, data) = runtime.block_on(data.into_future()).unwrap();
@@ -122,10 +117,14 @@ fn should_watch_extrinsic() {
                 .into()
         )
     );
+    let h = blake2_256(&replacement.encode());
     assert_eq!(
-		runtime.block_on(data.into_future()).unwrap().0,
-		Some(r#"{"jsonrpc":"2.0","method":"test","params":{"result":{"usurped":"0x53daed816610aa6b22dedbcee43aba44a7ca7155cc71f2919c5e79ebbc7de58c"},"subscription":1}}"#.into())
-	);
+        runtime.block_on(data.into_future()).unwrap().0,
+        Some(format!(
+            r#"{{"jsonrpc":"2.0","method":"test","params":{{"result":{{"usurped":"0x{}"}},"subscription":1}}}}"#,
+            HexDisplay::from(&h)
+        ))
+    );
 }
 
 #[test]
@@ -138,10 +137,40 @@ fn should_return_pending_extrinsics() {
         pool: pool.clone(),
         subscriptions: Subscriptions::new(runtime.executor()),
     };
-    let ex = uxt(Keyring::Alice, 0);
+    let ex = uxt(AccountKeyring::Alice, 0);
     AuthorApi::submit_extrinsic(&p, ex.encode().into()).unwrap();
     assert_matches!(
         p.pending_extrinsics(),
         Ok(ref expected) if *expected == vec![Bytes(ex.encode())]
     );
+}
+
+#[test]
+fn should_remove_extrinsics() {
+    let runtime = runtime::Runtime::new().unwrap();
+    let client = Arc::new(test_client::new());
+    let pool = Arc::new(Pool::new(Default::default(), ChainApi::new(client.clone())));
+    let p = Author {
+        client,
+        pool: pool.clone(),
+        subscriptions: Subscriptions::new(runtime.executor()),
+    };
+    let ex1 = uxt(AccountKeyring::Alice, 0);
+    p.submit_extrinsic(ex1.encode().into()).unwrap();
+    let ex2 = uxt(AccountKeyring::Alice, 1);
+    p.submit_extrinsic(ex2.encode().into()).unwrap();
+    let ex3 = uxt(AccountKeyring::Bob, 0);
+    let hash3 = p.submit_extrinsic(ex3.encode().into()).unwrap();
+    assert_eq!(pool.status().ready, 3);
+
+    // now remove all 3
+    let removed = p
+        .remove_extrinsic(vec![
+            hash::ExtrinsicOrHash::Hash(hash3),
+            // Removing this one will also remove ex2
+            hash::ExtrinsicOrHash::Extrinsic(ex1.encode().into()),
+        ])
+        .unwrap();
+
+    assert_eq!(removed.len(), 3);
 }

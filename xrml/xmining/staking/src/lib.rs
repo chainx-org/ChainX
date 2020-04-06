@@ -2,13 +2,13 @@
 //! Staking manager: Periodically determines the best set of validators.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 
 mod impls;
-mod mock;
 mod reward;
 mod shifter;
 pub mod slash;
+#[cfg(test)]
 mod tests;
 pub mod traits;
 pub mod types;
@@ -19,7 +19,7 @@ use crate as xstaking;
 use parity_codec::Compact;
 
 // Substrate
-use primitives::traits::{As, Lookup, StaticLookup, Zero};
+use primitives::traits::{Lookup, SaturatedConversion, StaticLookup, Zero};
 use rstd::prelude::*;
 use rstd::result;
 use support::{
@@ -48,8 +48,11 @@ pub trait Trait: xsystem::Trait + xsession::Trait + xassets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
-    /// Need to calculate the reward for non-intentions.
-    type OnRewardCalculation: OnRewardCalculation<Self::AccountId, Self::Balance>;
+    /// Collect the airdrop asset shares info.
+    type OnDistributeAirdropAsset: OnDistributeAirdropAsset;
+
+    /// Collect the cross chain asset mining power info.
+    type OnDistributeCrossChainAsset: OnDistributeCrossChainAsset;
 
     /// Time to distribute reward
     type OnReward: OnReward<Self::AccountId, Self::Balance>;
@@ -246,9 +249,11 @@ decl_module! {
                 xaccounts::is_valid_about(about)?;
             }
 
-            if let Some(desire_to_run) = desire_to_run.as_ref() {
-                if !desire_to_run && !Self::is_able_to_apply_inactive() {
-                    return Err("Cannot pull out when there are too few active intentions.");
+            if Self::is_active(&who) {
+                if let Some(desire_to_run) = desire_to_run.as_ref() {
+                    if !desire_to_run && !Self::is_able_to_apply_inactive() {
+                        return Err("Cannot pull out when there are too few active intentions.");
+                    }
                 }
             }
 
@@ -436,6 +441,15 @@ decl_module! {
             }
         }
 
+        /// Set global PCX distribution ratio.
+        ///
+        /// Treasury and Airdrop asset ratio can be set to zero for no more rewarding them.
+        pub fn set_global_distribution_ratio(new: (u32, u32, u32)) {
+            // Essentially it's PCXStaking shares that can't be zero.
+            ensure!(new.2 > 0, "CrossMiningAndPCXStaking shares can not be zero");
+            <GlobalDistributionRatio<T>>::put(new);
+        }
+
     }
 }
 
@@ -477,19 +491,22 @@ decl_storage! {
         /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
         pub MinimumCandidateThreshold get(minimum_candidate_threshold) : (T::Balance, T::Balance);
         /// The length of a staking era in sessions.
-        pub SessionsPerEra get(sessions_per_era) config(): T::BlockNumber = T::BlockNumber::sa(1000);
+        pub SessionsPerEra get(sessions_per_era) config(): T::BlockNumber = T::BlockNumber::saturated_from::<u64>(1000);
         /// The length of the bonding duration in blocks.
-        pub BondingDuration get(bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(1000);
+        pub BondingDuration get(bonding_duration) config(): T::BlockNumber = T::BlockNumber::saturated_from::<u64>(1000);
         /// The length of the bonding duration in blocks for intention.
-        pub IntentionBondingDuration get(intention_bonding_duration) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
+        pub IntentionBondingDuration get(intention_bonding_duration) config(): T::BlockNumber = T::BlockNumber::saturated_from::<u64>(10_000);
 
         /// Maximum number of intentions.
         pub MaximumIntentionCount get(maximum_intention_count) config(): u32;
 
-        pub SessionsPerEpoch get(sessions_per_epoch) config(): T::BlockNumber = T::BlockNumber::sa(10_000);
+        pub SessionsPerEpoch get(sessions_per_epoch) config(): T::BlockNumber = T::BlockNumber::saturated_from::<u64>(10_000);
 
         /// The current era index.
         pub CurrentEra get(current_era) config(): T::BlockNumber;
+
+        /// (Treasury, Airdrop, CrossMining+PcxStaking)
+        pub GlobalDistributionRatio get(global_distribution_ratio): (u32, u32, u32) = (12u32, 8u32, 80u32);
 
         /// Allocation ratio of native asset and cross-chain assets.
         pub DistributionRatio get(distribution_ratio): (u32, u32) = (1u32, 1u32);
@@ -584,7 +601,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn upper_bound_of(who: &T::AccountId) -> T::Balance {
-        Self::self_bonded_of(who) * T::Balance::sa(u64::from(Self::upper_bound_factor()))
+        Self::self_bonded_of(who) * u64::from(Self::upper_bound_factor()).into()
     }
 
     /// Try get IntentionProfs, otherwise return Err(IntentionProfsV1).
@@ -701,7 +718,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_nominate(source: &T::AccountId, target: &T::AccountId, value: T::Balance) -> Result {
         Self::staking_reserve(source, value)?;
-        Self::apply_update_vote_weight(source, target, Delta::Add(value.as_()));
+        Self::apply_update_vote_weight(source, target, Delta::Add(value.into()));
         Self::deposit_event(RawEvent::Nominate(source.clone(), target.clone(), value));
         Ok(())
     }
@@ -713,8 +730,8 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
         current_block: T::BlockNumber,
     ) -> Result {
-        Self::apply_update_vote_weight(who, from, Delta::Sub(value.as_()));
-        Self::apply_update_vote_weight(who, to, Delta::Add(value.as_()));
+        Self::apply_update_vote_weight(who, from, Delta::Sub(value.into()));
+        Self::apply_update_vote_weight(who, to, Delta::Add(value.into()));
         <LastRenominationOf<T>>::insert(who, current_block);
         Ok(())
     }
@@ -750,7 +767,7 @@ impl<T: Trait> Module<T> {
             }
         }
 
-        Self::apply_update_vote_weight(source, target, Delta::Sub(value.as_()));
+        Self::apply_update_vote_weight(source, target, Delta::Sub(value.into()));
 
         Self::deposit_event(RawEvent::Unnominate(freeze_until));
 
@@ -881,7 +898,7 @@ impl<T: Trait> Module<T> {
             <Self as ComputeWeight<T::AccountId>>::settle_weight(
                 source,
                 target,
-                current_block.as_(),
+                current_block.saturated_into::<u64>(),
             );
 
         Self::apply_update_staker_vote_weight(
@@ -898,21 +915,6 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     pub fn validators() -> Vec<(T::AccountId, u64)> {
         xsession::Module::<T>::validators()
-    }
-
-    pub fn cross_chain_assets_are_growing_too_fast() -> rstd::result::Result<(u128, u128), ()> {
-        let total_staked = Self::intention_set()
-            .into_iter()
-            .filter(Self::is_active)
-            .map(|id| Self::total_nomination_of(&id).as_())
-            .sum::<u64>();
-
-        let total_cross_chain_assets = T::OnRewardCalculation::psedu_intentions_info()
-            .iter()
-            .map(|(_, x)| x.as_())
-            .sum::<u64>();
-
-        Self::are_growing_too_fast(total_cross_chain_assets, total_staked)
     }
 
     pub fn jackpot_accountid_for_unsafe(who: &T::AccountId) -> T::AccountId {

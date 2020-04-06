@@ -13,7 +13,7 @@ fn test_fee() {
     with_externalities(&mut new_test_ext(), || {
         xsystem::BlockProducer::<Test>::put(99);
 
-        assert_ok!(XFeeManager::make_payment(&1, 10, 10, 0));
+        assert_ok!(XFeeManager::make_payment(&1, 10, 10, 1));
         // base fee = 10, bytes fee = 1
         let fee = 10 * 10 + 1 * 10;
         assert_eq!(XAssets::pcx_free_balance(&1), 1000 - fee);
@@ -29,7 +29,7 @@ fn test_fee() {
 #[test]
 fn test_fee_no_blockproducer() {
     with_externalities(&mut new_test_ext(), || {
-        assert_ok!(XFeeManager::make_payment(&1, 10, 10, 0));
+        assert_ok!(XFeeManager::make_payment(&1, 10, 10, 1));
         // base fee = 10, bytes fee = 1
         let fee = 10 * 10 + 1 * 10;
         assert_eq!(XAssets::pcx_free_balance(&1), 1000 - fee);
@@ -43,7 +43,7 @@ fn test_fee_no_blockproducer() {
 fn test_fee_not_divisible() {
     with_externalities(&mut new_test_ext(), || {
         xsystem::BlockProducer::<Test>::put(99);
-        assert_ok!(XFeeManager::make_payment(&1, 11, 10, 0));
+        assert_ok!(XFeeManager::make_payment(&1, 11, 10, 1));
         // base fee = 10, bytes fee = 1
         let fee = 10 * 10 + 1 * 11; // 111
         assert_eq!(XAssets::pcx_free_balance(&1), 1000 - fee);

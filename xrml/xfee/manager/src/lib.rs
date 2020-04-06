@@ -7,7 +7,7 @@ mod tests;
 pub mod types;
 
 // Substrate
-use primitives::traits::{As, CheckedDiv, CheckedMul, CheckedSub};
+use primitives::traits::{CheckedDiv, CheckedMul, CheckedSub};
 use rstd::collections::btree_map::BTreeMap;
 use rstd::prelude::Vec;
 use rstd::result;
@@ -174,8 +174,8 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn transaction_fee(power: u64, encoded_len: u64) -> T::Balance {
-        Self::transaction_base_fee() * <T::Balance as As<u64>>::sa(power)
-            + Self::transaction_byte_fee() * <T::Balance as As<u64>>::sa(encoded_len)
+        Self::transaction_base_fee() * power.into()
+            + Self::transaction_byte_fee() * encoded_len.into()
     }
 
     fn calc_fee_and_check(
@@ -186,7 +186,7 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<T::Balance, &'static str> {
         let b = xassets::Module::<T>::pcx_free_balance(transactor);
 
-        let transaction_fee = Self::transaction_fee(power, encoded_len as u64) * As::sa(acc as u64);
+        let transaction_fee = Self::transaction_fee(power, encoded_len as u64) * acc.into();
 
         if b < transaction_fee {
             return Err("not enough funds for transaction fee");
@@ -198,8 +198,8 @@ impl<T: Trait> Module<T> {
         let proportion = Self::producer_fee_proportion();
 
         // for_producer = fee * rate.0 / rate.1
-        let for_producer = match fee.checked_mul(&As::sa(proportion.0 as u64)) {
-            Some(r) => match r.checked_div(&As::sa(proportion.1 as u64)) {
+        let for_producer = match fee.checked_mul(&(proportion.0).into()) {
+            Some(r) => match r.checked_div(&(proportion.1).into()) {
                 Some(r) => r,
                 None => return Err("[fee]calc fee proportion dev overflow!"),
             },

@@ -22,7 +22,7 @@ impl<T: Trait> Module<T> {
 
         let pair = Self::trading_pair(pair_index)?;
 
-        let fluctuation = T::Price::sa(pair.fluctuation());
+        let fluctuation = pair.fluctuation().into();
 
         match *side {
             Buy => {
@@ -112,7 +112,7 @@ impl<T: Trait> Module<T> {
                 (false, 10_u128.pow(base_p + pair_p - quote_p))
             };
             // Can overflow
-            let ap = amount.as_() as u128 * price.as_() as u128;
+            let ap = amount.saturated_into::<u128>() * price.saturated_into::<u128>();
             let converted = if mul {
                 match ap.checked_mul(s) {
                     Some(r) => r,
@@ -124,7 +124,7 @@ impl<T: Trait> Module<T> {
 
             if !converted.is_zero() {
                 if converted < u64::max_value() as u128 {
-                    return Ok(T::Balance::sa(converted as u64));
+                    return Ok((converted as u64).into());
                 } else {
                     panic!("converted quote currency value definitely less than u64::max_value()")
                 }

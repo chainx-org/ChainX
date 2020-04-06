@@ -9,11 +9,11 @@ edition = "2018"
 serde = { version = "1.0", default_features = false }
 serde_derive = { version = "1.0", optional = true }
 parity-codec = { version = "3.3", default-features = false, features = ["derive"] }
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", default-features = false }
-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-substrate-primitives = { package = "substrate-primitives", git = "https://github.com/chainpool/substrate", default-features = false }
-support = { package = "srml-support", git = "https://github.com/chainpool/substrate", default-features = false }
-system = { package = "srml-system", git = "https://github.com/chainpool/substrate", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+substrate-primitives = { package = "substrate-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+support = { package = "srml-support", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+system = { package = "srml-system", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 # chainx runtime module
 xr-primitives = { path = "../../../xr-primitives", default-features = false }
 xsupport = { package = "xrml-xsupport", path = "../../xsupport", default-features = false }
@@ -26,7 +26,7 @@ btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoi
 
 [dev-dependencies]
 serde_derive = "1.0"
-substrate-primitives = { git = "https://github.com/chainpool/substrate" }
+substrate-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master" }
 rustc-hex = "2"
 
 [features]

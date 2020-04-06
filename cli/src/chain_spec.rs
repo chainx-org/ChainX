@@ -85,15 +85,15 @@ fn testnet_genesis() -> GenesisConfig {
 pub fn testnet_config() -> ChainSpec {
     let boot_nodes = vec![];
     ChainSpec::from_genesis(
-        "ChainX Testnet",
-        "chainx_testnet",
+        "ChainX Testnet Taoism",
+        "chainx_testnet_taoism",
         testnet_genesis,
         boot_nodes,
-        Some(TelemetryEndpoints::new(vec![
-            (STAGING_TELEMETRY_URL.to_string(), 0),
-            (CHAINX_TELEMETRY_URL.to_string(), 0),
-        ])),
-        Some("ChainX Testnet"),
+        Some(TelemetryEndpoints::new(vec![(
+            CHAINX_TELEMETRY_URL.to_string(),
+            0,
+        )])),
+        Some("ChainX Testnet Taoism"),
         None,
         Some(
             json!({

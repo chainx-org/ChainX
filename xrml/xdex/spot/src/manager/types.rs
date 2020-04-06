@@ -6,7 +6,7 @@ use parity_codec::{Decode, Encode};
 use serde_derive::{Deserialize, Serialize};
 
 // Substrate
-use primitives::traits::{As, SimpleArithmetic, Zero};
+use primitives::traits::{SimpleArithmetic, Zero};
 use rstd::prelude::*;
 
 // ChainX
@@ -72,7 +72,7 @@ pub struct Handicap<Price> {
     pub lowest_offer: Price,
 }
 
-impl<Price: Copy + SimpleArithmetic + As<u64> + As<u32>> Handicap<Price> {
+impl<Price: Copy + SimpleArithmetic + From<u64>> Handicap<Price> {
     pub fn new(highest_bid: Price, lowest_offer: Price) -> Self {
         Handicap {
             highest_bid,
@@ -86,7 +86,7 @@ impl<Price: Copy + SimpleArithmetic + As<u64> + As<u32>> Handicap<Price> {
 
         self.highest_bid = self
             .highest_bid
-            .checked_sub(&As::sa(tick))
+            .checked_sub(&tick.into())
             .unwrap_or(Zero::zero());
 
         self.highest_bid
@@ -96,7 +96,7 @@ impl<Price: Copy + SimpleArithmetic + As<u64> + As<u32>> Handicap<Price> {
     pub fn tick_up_lowest_offer(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
 
-        self.lowest_offer = match self.lowest_offer.checked_add(&As::sa(tick)) {
+        self.lowest_offer = match self.lowest_offer.checked_add(&tick.into()) {
             Some(x) => x,
             None => panic!("Fail to tick up lowest_offer"),
         };

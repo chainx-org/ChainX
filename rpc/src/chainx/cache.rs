@@ -35,10 +35,10 @@ macro_rules! lru_cache {
                 }
                 let mut cache = match CACHE.lock() {
                     Ok(i) => i,
-                    Err(_) => return Err(ErrorKind::CacheErr.into()),
+                    Err(_) => return Err(Error::CacheErr.into()),
                 };
                 // do cache
-                let best_hash = $sel.client.info()?.chain.best_hash;
+                let best_hash = $sel.client.info().chain.best_hash;
                 if let Some(item) = cache.get(&$key) {
                     if item.hash == best_hash {
                         // hit cache

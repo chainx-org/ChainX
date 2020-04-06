@@ -25,7 +25,7 @@ impl<AccountId, Index, Call, Acceleration> Applyable
 where
     AccountId: Member + MaybeDisplay,
     Index: Member + MaybeDisplay + SimpleArithmetic,
-    Acceleration: Member + MaybeDisplay + SimpleArithmetic,
+    Acceleration: Member + MaybeDisplay + SimpleArithmetic + Into<u32> + From<u32>,
     Call: Member,
 {
     type AccountId = AccountId;
@@ -51,7 +51,7 @@ where
     AccountId: Member + MaybeDisplay,
     Index: Member + MaybeDisplay + SimpleArithmetic,
     Call: Member,
-    Acceleration: Member + MaybeDisplay + SimpleArithmetic + Copy,
+    Acceleration: Member + MaybeDisplay + SimpleArithmetic + Copy + Into<u32> + From<u32>,
 {
     type AccountId = AccountId;
     type Index = Index;
