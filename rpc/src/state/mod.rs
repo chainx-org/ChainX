@@ -65,6 +65,13 @@ pub trait StateApi<Hash> {
     #[rpc(name = "state_getStorage", alias("state_getStorageAt"))]
     fn storage(&self, key: StorageKey, hash: Option<Hash>) -> Result<Option<StorageData>>;
 
+    #[rpc(name = "state_batchStorage", alias("state_getStorageAt"))]
+    fn batch_storage(
+        &self,
+        key: Vec<StorageKey>,
+        hash: Option<Hash>,
+    ) -> Result<Vec<Option<StorageData>>>;
+
     /// Returns the hash of a storage entry at a block's state.
     #[rpc(name = "state_getStorageHash", alias("state_getStorageHashAt"))]
     fn storage_hash(&self, key: StorageKey, hash: Option<Hash>) -> Result<Option<Hash>>;
@@ -413,6 +420,20 @@ where
         let block = self.unwrap_or_best(block)?;
         trace!(target: "rpc", "Querying storage at {:?} for key {}", block, HexDisplay::from(&key.0));
         Ok(self.client.storage(&BlockId::Hash(block), &key)?)
+    }
+
+    fn batch_storage(
+        &self,
+        key: Vec<StorageKey>,
+        block: Option<Block::Hash>,
+    ) -> Result<Vec<Option<StorageData>>> {
+        let block = self.unwrap_or_best(block)?;
+        let mut result = vec![];
+        for k in key {
+            let r = self.client.storage(&BlockId::Hash(block), &k)?;
+            result.push(r);
+        }
+        Ok(result)
     }
 
     fn storage_hash(
