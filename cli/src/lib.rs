@@ -45,6 +45,7 @@ use self::service::set_validator_name;
 pub enum ChainSpec {
     Development,
     Testnet,
+    TestnetMohism,
     Mainnet,
 }
 
@@ -54,6 +55,7 @@ impl ChainSpec {
         Ok(match self {
             ChainSpec::Development => chain_spec::development_config(),
             ChainSpec::Testnet => chain_spec::testnet_config(),
+            ChainSpec::TestnetMohism => chain_spec::testnet_mohism_config(),
             ChainSpec::Mainnet => chain_spec::mainnet_config(),
         })
     }
@@ -61,7 +63,7 @@ impl ChainSpec {
     pub(crate) fn from(s: &str) -> Option<Self> {
         match s {
             "mainnet" | "" => Some(ChainSpec::Mainnet),
-            "testnet" => Some(ChainSpec::Testnet),
+            "testnet-mohism" => Some(ChainSpec::TestnetMohism),
             "dev" => Some(ChainSpec::Development),
             _ => None,
         }
@@ -69,10 +71,10 @@ impl ChainSpec {
 }
 
 fn load_spec(id: &str) -> Result<Option<chain_spec::ChainSpec>, String> {
-    Ok(match ChainSpec::from(id) {
-        Some(spec) => Some(spec.load()?),
-        None => None,
-    })
+    match ChainSpec::from(id) {
+        Some(spec) => Ok(Some(spec.load()?)),
+        None => Err(format!("we just allow:{:?}", vec!["mainnet", "testnet-mohism", "dev"])),
+    }
 }
 
 #[derive(Debug)]

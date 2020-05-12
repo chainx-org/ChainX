@@ -25,6 +25,7 @@ use btc_primitives::{h256_from_rev_str, Compact};
 pub enum GenesisSpec {
     Dev,
     Testnet,
+    TestnetMohism,
     Mainnet,
 }
 impl Into<ChainSpec> for GenesisSpec {
@@ -32,6 +33,7 @@ impl Into<ChainSpec> for GenesisSpec {
         match self {
             GenesisSpec::Dev => ChainSpec::Dev,
             GenesisSpec::Testnet => ChainSpec::Testnet,
+            GenesisSpec::TestnetMohism => ChainSpec::Testnet,
             GenesisSpec::Mainnet => ChainSpec::Mainnet,
         }
     }
@@ -46,7 +48,7 @@ fn hex(account: &str) -> [u8; 32] {
 pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     // Load all sdot address and quantity.
     let sdot_claims = load_sdot_info().unwrap();
-    let testnet_bitcoin = (
+    let testnet_taoism_bitcoin = (
         (
             BlockHeader {
                 version: 536870912,
@@ -63,6 +65,25 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             1608246,
         ),
         h256_from_rev_str("00000000000000927abc8c28ddd2c0ee46cc47dadb4c45ee14ff2a0307e1b896"),
+        1, // bitcoin testnet
+    );
+    let testnet_mohism_bitcoin = (
+        (
+            BlockHeader {
+                version: 536870912,
+                previous_header_hash: h256_from_rev_str(
+                    "0000000083ac0924b5d373f1c8556450887fad00e6ac1123cde305a22f476f73",
+                ),
+                merkle_root_hash: h256_from_rev_str(
+                    "51515cd8ac04c3c3ffba211cca634823765e0894fc08cb60efe309fa398459d3",
+                ),
+                time: 1589181165,
+                bits: Compact::new(0x1d00ffff),
+                nonce: 0x88ccce87,
+            },
+            1723666,
+        ),
+        h256_from_rev_str("00000000f22d2c28bf3474f899d7b799e5824807def1bcff085b44c4157aae19"),
         1, // bitcoin testnet
     );
     let mainnet_bitcoin = (
@@ -91,14 +112,21 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             load_genesis_node_info(&include_bytes!("dev_genesis_node.csv")[..]).unwrap(),
             load_team_council_info(&include_bytes!("dev_team_council.csv")[..]).unwrap(),
             (xsystem::NetworkType::Testnet, 42),
-            testnet_bitcoin,
+            testnet_mohism_bitcoin, // dev use a newer bitcoin header
         ),
         GenesisSpec::Testnet => (
-            include_bytes!("chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 6
+            include_bytes!("./chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 6
             load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
             load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
             (xsystem::NetworkType::Testnet, 42),
-            testnet_bitcoin,
+            testnet_taoism_bitcoin,
+        ),
+        GenesisSpec::TestnetMohism => (
+            include_bytes!("./testnet_mohism_chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 6
+            load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
+            load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
+            (xsystem::NetworkType::Testnet, 42),
+            testnet_mohism_bitcoin,
         ),
         GenesisSpec::Mainnet => (
             include_bytes!("./mainnet_chainx_runtime.compact.wasm").to_vec(), // mainnet genesis runtime version is 0
@@ -127,6 +155,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let initial_authorities_len = match genesis_spec {
         GenesisSpec::Dev => 1,
         GenesisSpec::Testnet => genesis_node_info.len(),
+        GenesisSpec::TestnetMohism => genesis_node_info.len(),
         GenesisSpec::Mainnet => genesis_node_info.len(),
     };
 
