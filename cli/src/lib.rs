@@ -73,7 +73,10 @@ impl ChainSpec {
 fn load_spec(id: &str) -> Result<Option<chain_spec::ChainSpec>, String> {
     match ChainSpec::from(id) {
         Some(spec) => Ok(Some(spec.load()?)),
-        None => Err(format!("we just allow:{:?}", vec!["mainnet", "testnet-mohism", "dev"])),
+        None => Err(format!(
+            "we just allow:{:?}",
+            vec!["mainnet", "testnet-mohism", "dev"]
+        )),
     }
 }
 

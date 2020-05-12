@@ -131,9 +131,9 @@ pub fn testnet_mohism_config() -> ChainSpec {
                 "address_type": 42,
                 "bitcoin_type": "testnet"
             })
-                .as_object()
-                .unwrap()
-                .to_owned(),
+            .as_object()
+            .unwrap()
+            .to_owned(),
         ),
     )
 }
