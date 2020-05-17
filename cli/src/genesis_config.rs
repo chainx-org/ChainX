@@ -70,20 +70,20 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let testnet_mohism_bitcoin = (
         (
             BlockHeader {
-                version: 536870912,
+                version: 0x20400000,
                 previous_header_hash: h256_from_rev_str(
-                    "0000000083ac0924b5d373f1c8556450887fad00e6ac1123cde305a22f476f73",
+                    "00000000747224aab97a80577eb3fefcc6e182ccb916a2d9f16b3cdee6ac46bc",
                 ),
                 merkle_root_hash: h256_from_rev_str(
-                    "51515cd8ac04c3c3ffba211cca634823765e0894fc08cb60efe309fa398459d3",
+                    "e3b332dfe87440c2e9c106fa32de1eb63adde90748a7f6e9eff7c23e09926690",
                 ),
-                time: 1589181165,
-                bits: Compact::new(0x1d00ffff),
-                nonce: 0x88ccce87,
+                time: 1589721767,
+                bits: Compact::new(0x1a0ffff0),
+                nonce: 0x6ba03668,
             },
-            1723666,
+            1745290,
         ),
-        h256_from_rev_str("00000000f22d2c28bf3474f899d7b799e5824807def1bcff085b44c4157aae19"),
+        h256_from_rev_str("0000000000000afef24ac300f11b64115335471fa46dd8f8a8b4f9fe575ad38b"),
         1, // bitcoin testnet
     );
     let mainnet_bitcoin = (
