@@ -74,6 +74,12 @@ impl CheckFee for Call {
             Call::XContracts(..) if get_switcher(CallSwitcher::XContracts) => {
                 return None;
             }
+            Call::XStaking(..) if get_switcher(CallSwitcher::XMiningStaking) => {
+                return None;
+            }
+            Call::XTokens(..) if get_switcher(CallSwitcher::XMiningTokens) => {
+                return None;
+            }
             _ => (),
         }
         call_weight_func(&self, &method_weight_map)
