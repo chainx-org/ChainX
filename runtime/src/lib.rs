@@ -639,6 +639,10 @@ impl_runtime_apis! {
             gas_limit: u64,
             input_data: Vec<u8>,
         ) -> ContractExecResult {
+            let tmp_account = AccountId::default();
+            let increase = gas_limit * XContracts::gas_price();
+            let _ = XAssets::pcx_make_free_balance_be(&tmp_account, increase);
+            let _ = XAssets::pcx_move_free_balance(&tmp_account, &origin, increase);
             let exec_result = XContracts::bare_call(
                 origin,
                 dest.into(),
