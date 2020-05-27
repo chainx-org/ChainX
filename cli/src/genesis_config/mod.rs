@@ -1,6 +1,9 @@
 // Copyright 2018-2019 Chainpool.
 
-use hex::FromHex;
+mod bitcoin;
+mod chainx;
+mod sdot;
+
 use serde_derive::Deserialize;
 use substrate_primitives::{crypto::UncheckedInto, ed25519::Public as AuthorityId};
 
@@ -18,8 +21,8 @@ use chainx_runtime::{
     XSystemConfig, XTokensConfig,
 };
 
-use btc_chain::BlockHeader;
-use btc_primitives::{h256_from_rev_str, Compact};
+const PCX_PRECISION: u16 = 8;
+const CONSENSUS_TIME: u64 = 1;
 
 #[derive(Copy, Clone)]
 pub enum GenesisSpec {
@@ -39,101 +42,35 @@ impl Into<ChainSpec> for GenesisSpec {
     }
 }
 
-const PCX_PRECISION: u16 = 8;
-
-fn hex(account: &str) -> [u8; 32] {
-    <[u8; 32] as FromHex>::from_hex(account).unwrap()
-}
-
 pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
-    // Load all sdot address and quantity.
-    let sdot_claims = load_sdot_info().unwrap();
-    let testnet_taoism_bitcoin = (
-        (
-            BlockHeader {
-                version: 536870912,
-                previous_header_hash: h256_from_rev_str(
-                    "00000000000b494dc8ec94e46e2d111c6b9a317e7300494544a147e15371ff58",
-                ),
-                merkle_root_hash: h256_from_rev_str(
-                    "670cd88ba0dd51650a444c744b8088653dba381bf091366ecc41dba0e1b483ff",
-                ),
-                time: 1573628044,
-                bits: Compact::new(436469756),
-                nonce: 3891368516,
-            },
-            1608246,
-        ),
-        h256_from_rev_str("00000000000000927abc8c28ddd2c0ee46cc47dadb4c45ee14ff2a0307e1b896"),
-        1, // bitcoin testnet
-    );
-    let testnet_mohism_bitcoin = (
-        (
-            BlockHeader {
-                version: 0x20400000,
-                previous_header_hash: h256_from_rev_str(
-                    "00000000747224aab97a80577eb3fefcc6e182ccb916a2d9f16b3cdee6ac46bc",
-                ),
-                merkle_root_hash: h256_from_rev_str(
-                    "e3b332dfe87440c2e9c106fa32de1eb63adde90748a7f6e9eff7c23e09926690",
-                ),
-                time: 1589721767,
-                bits: Compact::new(0x1a0ffff0),
-                nonce: 0x6ba03668,
-            },
-            1745290,
-        ),
-        h256_from_rev_str("0000000000000afef24ac300f11b64115335471fa46dd8f8a8b4f9fe575ad38b"),
-        1, // bitcoin testnet
-    );
-    let mainnet_bitcoin = (
-        (
-            BlockHeader {
-                version: 536870912,
-                previous_header_hash: h256_from_rev_str(
-                    "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
-                ),
-                merkle_root_hash: h256_from_rev_str(
-                    "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
-                ),
-                time: 1558168296,
-                bits: Compact::new(388627269),
-                nonce: 1439505020,
-            },
-            576576,
-        ),
-        h256_from_rev_str("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
-        0, // bitcoin mainnet
-    );
-
-    let (code, mut genesis_node_info, team_council, network_props, bitcoin) = match genesis_spec {
+    let (code, mut genesis_node_info, team_and_council, network_props, bitcoin) = match genesis_spec {
         GenesisSpec::Dev => (
-            include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm").to_vec(), // dev genesis runtime version is 6
-            load_genesis_node_info(&include_bytes!("dev_genesis_node.csv")[..]).unwrap(),
-            load_team_council_info(&include_bytes!("dev_team_council.csv")[..]).unwrap(),
+            include_bytes!("../../../runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm").to_vec(), // dev genesis runtime version is 6
+            chainx::load_genesis_node(&include_bytes!("res/dev_genesis_node.csv")[..]).unwrap(),
+            chainx::load_team_council(&include_bytes!("res/dev_team_council.csv")[..]).unwrap(),
             (xsystem::NetworkType::Testnet, 42),
-            testnet_mohism_bitcoin, // dev use a newer bitcoin header
+            bitcoin::testnet_mohism(), // dev use a newer bitcoin header
         ),
         GenesisSpec::Testnet => (
-            include_bytes!("./chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 6
-            load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
-            load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
+            include_bytes!("res/wasm/chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 6
+            chainx::load_genesis_node(&include_bytes!("res/testnet_genesis_node.csv")[..]).unwrap(),
+            chainx::load_team_council(&include_bytes!("res/testnet_team_council.csv")[..]).unwrap(),
             (xsystem::NetworkType::Testnet, 42),
-            testnet_taoism_bitcoin,
+            bitcoin::testnet_taoism(),
         ),
         GenesisSpec::TestnetMohism => (
-            include_bytes!("./testnet_mohism_chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 6
-            load_genesis_node_info(&include_bytes!("testnet_genesis_node.csv")[..]).unwrap(),
-            load_team_council_info(&include_bytes!("testnet_team_council.csv")[..]).unwrap(),
+            include_bytes!("res/wasm/testnet_mohism_chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 6
+            chainx::load_genesis_node(&include_bytes!("res/testnet_genesis_node.csv")[..]).unwrap(),
+            chainx::load_team_council(&include_bytes!("res/testnet_team_council.csv")[..]).unwrap(),
             (xsystem::NetworkType::Testnet, 42),
-            testnet_mohism_bitcoin,
+            bitcoin::testnet_mohism(),
         ),
         GenesisSpec::Mainnet => (
-            include_bytes!("./mainnet_chainx_runtime.compact.wasm").to_vec(), // mainnet genesis runtime version is 0
-            load_genesis_node_info(&include_bytes!("mainnet_genesis_node.csv")[..]).unwrap(),
-            load_team_council_info(&include_bytes!("mainnet_team_council.csv")[..]).unwrap(),
+            include_bytes!("res/wasm/mainnet_chainx_runtime.compact.wasm").to_vec(), // mainnet genesis runtime version is 0
+            chainx::load_genesis_node(&include_bytes!("res/mainnet_genesis_node.csv")[..]).unwrap(),
+            chainx::load_team_council(&include_bytes!("res/mainnet_team_council.csv")[..]).unwrap(),
             (xsystem::NetworkType::Mainnet, 44),
-            mainnet_bitcoin,
+            bitcoin::mainnet(),
         ),
     };
     let contracts_config = match genesis_spec {
@@ -147,10 +84,10 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         _ => None,
     };
 
-    assert_eq!(team_council.len(), 8);
+    assert_eq!(team_and_council.len(), 8);
 
-    let team_account = team_council[..3].to_vec();
-    let council_account = team_council[3..8].to_vec();
+    let team_account = team_and_council[..3].to_vec();
+    let council_account = team_and_council[3..8].to_vec();
 
     let initial_authorities_len = match genesis_spec {
         GenesisSpec::Dev => 1,
@@ -159,26 +96,13 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         GenesisSpec::Mainnet => genesis_node_info.len(),
     };
 
-    const CONSENSUS_TIME: u64 = 1;
-    let btc_asset = Asset::new(
-        <xbitcoin::Module<Runtime> as ChainT>::TOKEN.to_vec(), // token
-        b"X-BTC".to_vec(),
-        Chain::Bitcoin,
-        8, // bitcoin precision
-        b"ChainX's Cross-chain Bitcoin".to_vec(),
-    )
-    .unwrap();
-
-    let sdot_asset = Asset::new(
-        b"SDOT".to_vec(), // token
-        b"Shadow DOT".to_vec(),
-        Chain::Ethereum,
-        3, //  precision
-        b"ChainX's Shadow Polkadot from Ethereum".to_vec(),
-    )
-    .unwrap();
-
     genesis_node_info.truncate(initial_authorities_len);
+
+    // Load all sdot address and quantity.
+    let sdot_claims = sdot::load_genesis().unwrap();
+
+    let btc_asset = bitcoin::create_asset();
+    let sdot_asset = sdot::create_asset();
 
     let blocks_per_session = 150; // 150 blocks per session
     let sessions_per_era = 12; // update validators set per 12 sessions
@@ -236,7 +160,6 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             transaction_base_fee: 10000,
             transaction_byte_fee: 100,
         }),
-
         xassets: Some(XAssetsConfig {
             memo_len: 128,
             _genesis_phantom_data: Default::default(),
@@ -313,32 +236,8 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                 (sdot_asset.clone(), true, true),
             ],
             // xstaking
-            intentions: genesis_node_info
-                .iter()
-                .map(|(account_id, authority_id, value, name, url, memo, _, _)| {
-                    (
-                        account_id.clone(),
-                        authority_id.clone(),
-                        *value,
-                        name.clone(),
-                        url.clone(),
-                        memo.clone(),
-                    )
-                })
-                .collect(),
-            trustee_intentions: genesis_node_info
-                .iter()
-                .filter(|(_, _, _, _, _, _, hot_entity, cold_entity)| {
-                    hot_entity.is_some() && cold_entity.is_some()
-                })
-                .map(|(account_id, _, _, _, _, _, hot_entity, cold_entity)| {
-                    (
-                        account_id.clone().into(),
-                        hot_entity.clone().unwrap().into(),
-                        cold_entity.clone().unwrap().into(),
-                    )
-                })
-                .collect(),
+            intentions: chainx::bootstrap_intentions_config(&genesis_node_info),
+            trustee_intentions: chainx::bootstrap_trustee_intentions_config(&genesis_node_info),
             // xtokens
             endowed_users: vec![(btc_asset.token(), vec![]), (sdot_asset.token(), vec![])],
             // xspot
@@ -372,111 +271,4 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             chain_spec: genesis_spec.into(),
         }),
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RecordOfSDOT {
-    tx_hash: String,
-    block_number: u64,
-    unix_timestamp: u64,
-    date_time: String,
-    from: String,
-    to: String,
-    quantity: f64,
-}
-
-fn load_sdot_info() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> {
-    let mut reader = csv::Reader::from_reader(&include_bytes!("dot_tx.csv")[..]);
-    let mut res = Vec::with_capacity(3052);
-    for result in reader.deserialize() {
-        let record: RecordOfSDOT = result?;
-        let sdot_addr = <[u8; 20] as FromHex>::from_hex(&record.to[2..])?;
-        res.push((sdot_addr, (record.quantity * 1000.0).round() as u64));
-    }
-    Ok(res)
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RecordOfGenesisNode {
-    account_id: String,
-    session_key: String,
-    endowed: f64,
-    name: String,
-    url: String,
-    about: String,
-    hot_entity: String,
-    cold_entity: String,
-}
-
-fn load_genesis_node_info(
-    csv: &[u8],
-) -> Result<
-    Vec<(
-        AccountId,
-        AuthorityId,
-        u64,
-        Vec<u8>,
-        Vec<u8>,
-        Vec<u8>,
-        Option<Vec<u8>>,
-        Option<Vec<u8>>,
-    )>,
-    Box<dyn std::error::Error>,
-> {
-    let mut reader = csv::Reader::from_reader(csv);
-    let mut res = Vec::with_capacity(29);
-    for result in reader.deserialize() {
-        let record: RecordOfGenesisNode = result?;
-
-        let account_id = hex(&record.account_id).unchecked_into();
-        let authority_key = hex(&record.session_key).unchecked_into();
-
-        let endowed = (record.endowed * 10_u64.pow(PCX_PRECISION as u32) as f64) as u64;
-        let node_name = record.name.into_bytes();
-        let node_url = record.url.into_bytes();
-        let memo = record.about.into_bytes();
-        let get_entity = |entity: String| {
-            if entity.is_empty() {
-                None
-            } else {
-                Some(Vec::from_hex(&entity).unwrap())
-            }
-        };
-        let hot_key = get_entity(record.hot_entity);
-        let cold_key = get_entity(record.cold_entity);
-        res.push((
-            account_id,
-            authority_key,
-            endowed,
-            node_name,
-            node_url,
-            memo,
-            hot_key,
-            cold_key,
-        ));
-    }
-    Ok(res)
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RecordOfTeamCouncil {
-    account_id: String,
-}
-
-fn load_team_council_info(csv: &[u8]) -> Result<Vec<AccountId>, Box<dyn std::error::Error>> {
-    let mut reader = csv::Reader::from_reader(csv);
-    let mut res = Vec::with_capacity(7);
-    for result in reader.deserialize() {
-        let record: RecordOfTeamCouncil = result?;
-        let account_id = hex(&record.account_id).unchecked_into();
-        res.push(account_id);
-    }
-    Ok(res)
-}
-
-#[test]
-fn test_quantity_sum() {
-    let res = load_sdot_info().unwrap();
-    let sum: u64 = res.iter().map(|(_, quantity)| *quantity).sum();
-    assert_eq!(sum, 4999466375u64);
 }
