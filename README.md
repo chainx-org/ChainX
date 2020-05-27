@@ -1,6 +1,7 @@
 # ChainX
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
+[![CI](https://github.com/chainpool/ChainX/workflows/ci/badge.svg)](https://github.com/chainpool/ChainX/actions?workflow=ci)
 
 [ChainX](https://github.com/chainx-org/ChainX) is a community-driven project built on the next-generation blockchain framework [substrate](https://github.com/paritytech/substrate), the largest Layer-2 network of Bitcoin using the Light-client protocol with smart contract support, will evolve into the Polkadot network as a secondary relay chain in the future.
 

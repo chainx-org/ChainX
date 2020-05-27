@@ -1119,7 +1119,7 @@ mod tests {
         .unwrap();
     }
 
-    const CODE_DISPATCH_CALL: &str = r#"
+    const _CODE_DISPATCH_CALL: &str = r#"
 (module
     (import "env" "ext_dispatch_call" (func $ext_dispatch_call (param i32 i32)))
     (import "env" "memory" (memory 1 1))

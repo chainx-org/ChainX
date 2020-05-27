@@ -105,10 +105,10 @@ pub trait Trait: system::Trait + consensus::Trait {
 }
 
 decl_event!(
-	pub enum Event<T> where <T as consensus::Trait>::SessionKey {
-		/// New authority set has been applied.
-		NewAuthorities(Vec<(SessionKey, u64)>),
-	}
+    pub enum Event<T> where <T as consensus::Trait>::SessionKey {
+        /// New authority set has been applied.
+        NewAuthorities(Vec<(SessionKey, u64)>),
+    }
 );
 
 decl_storage! {
