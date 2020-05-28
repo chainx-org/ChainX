@@ -1,4 +1,4 @@
-name: ci
+name: wasm
 
 on: [push, pull_request]
 
@@ -26,10 +26,10 @@ jobs:
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: nightly-2020-03-19
+        target: wasm32-unknown-unknown
         profile: minimal
         override: true
-        components: rustfmt, rust-src
 
     - if: matrix.os == 'ubuntu-latest'
       run: sudo chown -R $(whoami):$(id -ng) ~/.cargo/
@@ -52,14 +52,5 @@ jobs:
         path: target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Format
-      run: cargo fmt -- --check
-
-    - name: Compile
-      run: cargo test --no-run
-
-    - name: Test
-      run: cargo test --all --exclude substrate-rpc
-
-    - if: matrix.os == 'ubuntu-latest'
-      run: cargo clippy
+    - name: Compile wasm
+      run: cargo install --git https://github.com/alexcrichton/wasm-gc && cd runtime/wasm && bash build.sh
