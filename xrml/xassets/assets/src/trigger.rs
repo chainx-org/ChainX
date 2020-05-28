@@ -48,9 +48,9 @@ impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRe
     fn on_register(token: &Token, is_psedu_intention: bool) -> Result {
         let r = A::on_register(token, is_psedu_intention);
         let r2 = B::on_register(token, is_psedu_intention);
-        if r.is_ok() == false {
+        if r.is_err() {
             return r;
-        } else if r2.is_ok() == false {
+        } else if r2.is_err() {
             return r2;
         }
         Ok(())
@@ -59,9 +59,9 @@ impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRe
     fn on_revoke(token: &Token) -> Result {
         let r = A::on_revoke(token);
         let r2 = B::on_revoke(token);
-        if r.is_ok() == false {
+        if r.is_err() {
             return r;
-        } else if r2.is_ok() == false {
+        } else if r2.is_err() {
             return r2;
         }
         Ok(())
@@ -90,7 +90,7 @@ impl<T: Trait> AssetTriggerEventAfter<T> {
         value: T::Balance,
     ) -> result::Result<(), AssetErr> {
         Module::<T>::deposit_event(RawEvent::Move(
-            token.clone(),
+            token.to_owned(),
             from.clone(),
             from_type,
             to.clone(),
@@ -104,7 +104,7 @@ impl<T: Trait> AssetTriggerEventAfter<T> {
         T::OnAssetChanged::on_issue_before(token, who);
     }
     pub fn on_issue(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
-        Module::<T>::deposit_event(RawEvent::Issue(token.clone(), who.clone(), value));
+        Module::<T>::deposit_event(RawEvent::Issue(token.to_owned(), who.clone(), value));
         T::OnAssetChanged::on_issue(token, who, value)?;
         Ok(())
     }
@@ -112,7 +112,7 @@ impl<T: Trait> AssetTriggerEventAfter<T> {
         T::OnAssetChanged::on_destroy_before(token, who);
     }
     pub fn on_destroy(token: &Token, who: &T::AccountId, value: T::Balance) -> Result {
-        Module::<T>::deposit_event(RawEvent::Destory(token.clone(), who.clone(), value));
+        Module::<T>::deposit_event(RawEvent::Destory(token.to_owned(), who.clone(), value));
         T::OnAssetChanged::on_destroy(token, who, value)?;
         Ok(())
     }
@@ -122,7 +122,7 @@ impl<T: Trait> AssetTriggerEventAfter<T> {
         type_: AssetType,
         value: T::Balance,
     ) -> Result {
-        Module::<T>::deposit_event(RawEvent::Set(token.clone(), who.clone(), type_, value));
+        Module::<T>::deposit_event(RawEvent::Set(token.to_owned(), who.clone(), type_, value));
         T::OnAssetChanged::on_set_balance(token, who, type_, value)?;
         Ok(())
     }

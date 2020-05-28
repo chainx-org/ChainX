@@ -40,7 +40,7 @@ fn combine_conf(
     let opts_from_cmd = cmd_args
         .iter()
         .filter(|i| i.starts_with("--"))
-        .map(|i| i.split("=").collect::<Vec<&str>>()[0])
+        .map(|i| i.split('=').collect::<Vec<&str>>()[0])
         .collect::<Vec<&str>>();
 
     let mut bytes = Vec::new();
@@ -57,7 +57,7 @@ fn combine_conf(
         match v {
             Value::Bool(b) => {
                 if !opts_from_cmd.contains(&&opt.as_ref()) && b {
-                    opts.push(format!("{}", opt));
+                    opts.push(opt.to_string());
                 }
             }
             Value::Number(b) => {
@@ -66,10 +66,8 @@ fn combine_conf(
                 }
             }
             Value::String(v) => {
-                if !v.is_empty() {
-                    if !opts_from_cmd.contains(&&opt.as_ref()) {
-                        opts.push(format!("{}={}", opt, v));
-                    }
+                if !v.is_empty() && !opts_from_cmd.contains(&&opt.as_ref()) {
+                    opts.push(format!("{}={}", opt, v));
                 }
             }
             Value::Array(arr) => {
@@ -99,14 +97,13 @@ fn try_combine_options_config(cmd_args: Vec<String>) -> Vec<String> {
             );
             options_conf = Some(conf.to_string());
         } else if arg.starts_with("--config=") {
-            options_conf = Some(arg.split("=").collect::<Vec<&str>>()[1].to_string());
+            options_conf = Some(arg.split('=').collect::<Vec<&str>>()[1].to_string());
         }
     }
 
     if let Some(options_conf) = options_conf {
         let path = std::path::Path::new(&options_conf);
-        let combined_args = combine_conf(cmd_args, path).expect("Error processing --config");
-        combined_args
+        combine_conf(cmd_args, path).expect("Error processing --config")
     } else {
         cmd_args
     }

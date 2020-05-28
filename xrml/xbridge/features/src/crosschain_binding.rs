@@ -64,8 +64,7 @@ impl<T: Trait> Module<T> {
             }
         });
 
-        let channel_accountid =
-            channel_name.and_then(|name| xaccounts::Module::<T>::intention_of(name));
+        let channel_accountid = channel_name.and_then(xaccounts::Module::<T>::intention_of);
         debug!(
             "[apply_update_binding]|update binding|addr:{:?}|who:{:?}|channel:{:?}",
             address, who, channel_accountid

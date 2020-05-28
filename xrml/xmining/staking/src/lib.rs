@@ -1,6 +1,8 @@
 // Copyright 2018-2019 Chainpool.
 //! Staking manager: Periodically determines the best set of validators.
 
+#![allow(clippy::type_complexity)]
+#![allow(clippy::ptr_arg)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
 

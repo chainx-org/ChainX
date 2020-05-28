@@ -302,9 +302,9 @@ where
     ) -> Result<()> {
         let mut last_state: HashMap<_, Option<_>> = Default::default();
         for block in range.unfiltered_range.start..range.unfiltered_range.end {
-            let block_hash = range.hashes[block].clone();
+            let block_hash = range.hashes[block];
             let mut block_changes = StorageChangeSet {
-                block: block_hash.clone(),
+                block: block_hash,
                 changes: Vec::new(),
             };
             let id = BlockId::hash(block_hash);
@@ -334,7 +334,7 @@ where
         let (begin, end) = match range.filtered_range {
             Some(ref filtered_range) => (
                 range.first_number + filtered_range.start.saturated_into(),
-                BlockId::Hash(range.hashes[filtered_range.end - 1].clone()),
+                BlockId::Hash(range.hashes[filtered_range.end - 1]),
             ),
             None => return Ok(()),
         };
@@ -347,7 +347,7 @@ where
                     continue;
                 }
                 let block_hash =
-                    range.hashes[(block - range.first_number).saturated_into::<usize>()].clone();
+                    range.hashes[(block - range.first_number).saturated_into::<usize>()];
                 let id = BlockId::Hash(block_hash);
                 let value_at_block = self.client.storage(&id, key)?;
                 changes_map
@@ -553,7 +553,7 @@ where
                 let changes = keys
                     .into_iter()
                     .map(|key| {
-                        self.storage(key.clone(), Some(block.clone()).into())
+                        self.storage(key.clone(), Some(block))
                             .map(|val| (key.clone(), val))
                             .unwrap_or_else(|_| (key, None))
                     })
@@ -620,7 +620,7 @@ where
         };
 
         self.subscriptions.add(subscriber, |sink| {
-            let version = self.runtime_version(None.into()).map_err(Into::into);
+            let version = self.runtime_version(None).map_err(Into::into);
 
             let client = self.client.clone();
             let mut previous_version = version.clone();

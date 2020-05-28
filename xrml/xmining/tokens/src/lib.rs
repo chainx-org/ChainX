@@ -1,6 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 //! Virtual mining for holding tokens.
 
+#![allow(clippy::ptr_arg)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod asset_power;

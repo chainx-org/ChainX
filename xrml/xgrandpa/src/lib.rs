@@ -191,8 +191,7 @@ decl_module! {
 impl<T: Trait> Module<T> {
     /// Get the current set of authorities, along with their respective weights.
     pub fn grandpa_authorities() -> Vec<(T::SessionKey, u64)> {
-        let tmp = <AuthorityStorageVec<T::SessionKey>>::items();
-        tmp
+        <AuthorityStorageVec<T::SessionKey>>::items()
     }
 
     /// Schedule a change in the authorities.
@@ -217,7 +216,7 @@ impl<T: Trait> Module<T> {
         if Self::pending_change().is_none() {
             let scheduled_at = system::ChainContext::<T>::default().current_height();
 
-            if let Some(_) = forced {
+            if forced.is_some() {
                 if Self::next_forced().map_or(false, |next| next > scheduled_at) {
                     return Err("Cannot signal forced change so soon after last.");
                 }

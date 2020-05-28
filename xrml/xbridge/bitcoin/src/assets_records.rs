@@ -14,6 +14,7 @@ use super::types::{TxType, VoteResult};
 use super::{Module, Trait};
 
 impl<T: Trait> Module<T> {
+    #[allow(clippy::type_complexity)]
     pub fn withdrawal_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::BlockNumber, T::Moment>>
     {
         let mut records = xrecords::Module::<T>::withdrawal_applications(Chain::Bitcoin)
@@ -86,7 +87,7 @@ impl<T: Trait> Module<T> {
                         record.state = match proposal.sig_state {
                             VoteResult::Unfinish => TxState::Signing,
                             VoteResult::Finish => {
-                                if tx_hash.len() != 0 {
+                                if !tx_hash.is_empty() {
                                     record.txid = tx_hash.clone();
                                     TxState::Confirming(tx_confirmed, confirmations)
                                 } else {
@@ -102,6 +103,7 @@ impl<T: Trait> Module<T> {
         records
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn deposit_list() -> Vec<RecordInfo<T::AccountId, T::Balance, T::BlockNumber, T::Moment>> {
         let mut records = Vec::new();
 

@@ -212,7 +212,7 @@ impl From<RecordInfo<AccountId, Balance, BlockNumber, Timestamp>> for WithdrawIn
         WithdrawInfo {
             height,
             id: record.withdrawal_id,
-            txid: if record.txid.len() > 0 {
+            txid: if !record.txid.is_empty() {
                 format!("0x{:}", record.txid.to_hex::<String>())
             } else {
                 "".to_string()
@@ -249,11 +249,7 @@ impl WithdrawTxInfo {
         let tx: String = bytes.to_hex();
         WithdrawTxInfo {
             tx: "0x".to_string() + &tx,
-            sign_status: if proposal.sig_state == VoteResult::Finish {
-                true
-            } else {
-                false
-            },
+            sign_status: proposal.sig_state == VoteResult::Finish,
             withdrawal_id_list: proposal.withdrawal_id_list,
             trustee_list: proposal.trustee_list,
         }

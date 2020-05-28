@@ -31,6 +31,7 @@ impl Default for WeightType {
 
 impl WeightType {
     /// Extract the inner value and extend it to u128 if it's u64.
+    #[allow(clippy::wrong_self_convention)]
     pub fn into_inner_safe(&self) -> u128 {
         match *self {
             WeightType::U64(x) => u128::from(x),

@@ -50,7 +50,7 @@ impl CheckFee for Call {
         }
 
         let get_switcher = |call_switcher: CallSwitcher| -> bool {
-            switcher.get(&call_switcher).map(|b| *b).unwrap_or(false)
+            switcher.get(&call_switcher).copied().unwrap_or(false)
         };
 
         // Check if a certain emergency switch is on.

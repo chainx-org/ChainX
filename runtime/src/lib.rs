@@ -2,6 +2,8 @@
 
 //! The ChainX runtime. This can be compiled with ``#[no_std]`, ready for Wasm.
 
+#![allow(clippy::large_enum_variant)]
+#![allow(clippy::identity_op)]
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
 #![recursion_limit = "512"]
@@ -237,10 +239,10 @@ impl finality_tracker::Trait for Runtime {
 
 // due to current contracts has close Rent mode, thus this params are useless
 parameter_types! {
-    pub const TombstoneDeposit: Balance = 1 * 10000000;
-    pub const RentByteFee: Balance = 1 * 10000000;
-    pub const RentDepositOffset: Balance = 1000 * 10000000;
-    pub const SurchargeReward: Balance = 150 * 10000000;
+    pub const TombstoneDeposit: Balance = 1 * 10_000_000;
+    pub const RentByteFee: Balance = 1 * 10_000_000;
+    pub const RentDepositOffset: Balance = 1000 * 10_000_000;
+    pub const SurchargeReward: Balance = 150 * 10_000_000;
 }
 
 pub struct DispatchFeeComputor;
@@ -625,7 +627,7 @@ impl_runtime_apis! {
         }
         fn trustee_session_info_for(chain: xassets::Chain, number: Option<u32>) -> Option<(u32, GenericAllSessionInfo<AccountId>)> {
             XBridgeFeatures::trustee_session_info_for(chain, number).map(|info| {
-                let num = number.unwrap_or(XBridgeFeatures::current_session_number(chain));
+                let num = number.unwrap_or_else(||XBridgeFeatures::current_session_number(chain));
                 (num, info)
             })
         }
@@ -645,14 +647,14 @@ impl_runtime_apis! {
             let _ = XAssets::pcx_move_free_balance(&tmp_account, &origin, increase);
             let exec_result = XContracts::bare_call(
                 origin,
-                dest.into(),
+                dest,
                 value,
                 gas_limit,
                 input_data,
             );
             match exec_result {
                 Ok(v) => ContractExecResult::Success {
-                    status: v.status as u16,
+                    status: u16::from(v.status),
                     data: v.data,
                 },
                 Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
@@ -685,7 +687,7 @@ impl_runtime_apis! {
             let _ = XAssets::pcx_make_free_balance_be(&pay_gas, Zero::zero());
             match exec_result {
                 Ok(v) => ContractExecResult::Success {
-                    status: v.status as u16,
+                    status: u16::from(v.status),
                     data: v.data,
                 },
                 Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),

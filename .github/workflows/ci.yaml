@@ -64,3 +64,6 @@ jobs:
 
     - name: Test
       run: cargo test --all --exclude substrate-rpc
+
+    - if: matrix.os == 'ubuntu-latest'
+      run: cargo clippy

@@ -2,6 +2,7 @@
 
 //! this module is for funds-withdrawal
 
+#![allow(clippy::ptr_arg)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod mock;
@@ -100,7 +101,7 @@ impl<T: Trait> Module<T> {
     fn verify_addr(token: &Token, addr: &[u8], _ext: &[u8]) -> Result {
         match token.as_slice() {
             <xbitcoin::Module<T> as ChainT>::TOKEN => xbitcoin::Module::<T>::check_addr(&addr, b""),
-            _ => return Err("not found match token Token addr checker"),
+            _ => Err("not found match token Token addr checker"),
         }
     }
 

@@ -17,6 +17,7 @@
 
 //! Substrate CLI library.
 
+#![allow(clippy::unreadable_literal)]
 //#![feature(custom_attribute)]
 
 mod chain_spec;
@@ -102,9 +103,10 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
         );
         return (dirs, None);
     }
-    mods.map(|m| {
+
+    if let Some(m) = mods {
         for s in m.split(',') {
-            if s.len() == 0 {
+            if s.is_empty() {
                 continue;
             }
             let mut parts = s.split('=');
@@ -144,14 +146,12 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
                 level: log_level,
             });
         }
-    });
+    }
 
     let mut tmp_filter = LevelFilter::Off;
     for d in dirs.iter() {
-        if d.name == None {
-            if d.level > tmp_filter {
-                tmp_filter = d.level;
-            }
+        if d.name == None && d.level > tmp_filter {
+            tmp_filter = d.level;
         }
     }
 
@@ -161,15 +161,13 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
         } else {
             Some(tmp_filter)
         }
+    } else if tmp_filter == LevelFilter::Off {
+        None
     } else {
-        if tmp_filter == LevelFilter::Off {
-            None
-        } else {
-            Some(tmp_filter)
-        }
+        Some(tmp_filter)
     };
 
-    return (dirs, filter);
+    (dirs, filter)
 }
 
 pub fn run<I, T, E>(args: I, exit: E, version: cli::VersionInfo) -> error::Result<()>
@@ -216,7 +214,7 @@ where
             if config.roles == ServiceRoles::AUTHORITY {
                 let option_name = custom_args.validator_name;
                 let name = if cli_args.shared_params.dev {
-                    option_name.unwrap_or("Alice".to_string())
+                    option_name.unwrap_or_else(|| "Alice".to_string())
                 } else {
                     option_name.ok_or("if in AUTHORITY mode, must point the validator name!")?
                 };

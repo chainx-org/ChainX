@@ -1,6 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 //! Assets: Handles token asset balances.
 
+#![allow(clippy::ptr_arg)]
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -178,9 +179,12 @@ decl_module! {
 
         pub fn modify_asset_info(token: Token, token_name: Option<Token>, desc: Option<Desc>) {
             if let Some(ref mut info) = Self::asset_info(&token) {
-                token_name.map(|name| info.0.set_token_name(name));
-                desc.map(|desc| info.0.set_desc(desc));
-
+                if let Some(name) = token_name {
+                    info.0.set_token_name(name);
+                }
+                if let Some(d) = desc {
+                    info.0.set_desc(d);
+                }
                 AssetInfo::<T>::insert(token, info);
             } else {
                 error!("[modify_asset_info]|asset not exist|token:{:}", token!(token));
@@ -306,7 +310,7 @@ impl<T: Trait> Module<T> {
         is_valid_token(token)?;
 
         if let Some(info) = Self::asset_info(token) {
-            if info.1 == true {
+            if info.1 {
                 return Ok(());
             }
             return Err("not a valid token");
@@ -362,19 +366,19 @@ impl<T: Trait> Module<T> {
 
     pub fn get_asset(token: &Token) -> result::Result<Asset, &'static str> {
         if let Some((asset, valid, _)) = Self::asset_info(token) {
-            if valid == false {
+            if !valid {
                 return Err("this asset is invalid, maybe has been revoked.");
             }
             Ok(asset)
         } else {
-            return Err("this token asset not exist!");
+            Err("this token asset not exist!")
         }
     }
 
     pub fn can_do(token: &Token, limit: AssetLimit) -> bool {
         Self::asset_limit_props(token)
             .get(&limit)
-            .map(|b| *b)
+            .copied()
             .unwrap_or(true)
     }
     // can do wrapper
@@ -542,7 +546,7 @@ impl<T: Trait> Module<T> {
                 *balance = new_balance;
             }
         });
-        let imbalance = if original <= new_balance {
+        if original <= new_balance {
             SignedImbalance::Positive(PositiveImbalance::<T>::new(
                 new_balance - original,
                 who_token.1.clone(),
@@ -554,8 +558,7 @@ impl<T: Trait> Module<T> {
                 who_token.1.clone(),
                 type_,
             ))
-        };
-        imbalance
+        }
     }
 
     fn inner_issue(

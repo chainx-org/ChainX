@@ -3,6 +3,7 @@
 //! define trait and type for
 //! `trustees`, `crosschain binding` and something others
 
+#![allow(clippy::ptr_arg)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod extractor;
@@ -50,7 +51,7 @@ impl<T: Trait> Module<T> {
     pub fn reward_from_jackpot(token: &Token, who: &T::AccountId, value: T::Balance) {
         if let Some(addr) = T::DetermineTokenJackpotAccountId::accountid_for_safe(token) {
             let now = xassets::Module::<T>::pcx_free_balance(&addr);
-            if let None = now.checked_sub(&value) {
+            if now.checked_sub(&value).is_none() {
                 return;
             }
 

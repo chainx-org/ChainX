@@ -211,7 +211,7 @@ pub fn is_valid_token(v: &[u8]) -> Result {
     if v.len() > MAX_TOKEN_LEN || v.is_empty() {
         return Err("Token length is zero or too long.");
     }
-    let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || "-.|~".as_bytes().contains(c) };
+    let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || b"-.|~".contains(c) };
     for c in v.iter() {
         if !is_valid(c) {
             return Err("Token can only use ASCII alphanumeric character or '-', '.', '|', '~'.");
@@ -222,8 +222,8 @@ pub fn is_valid_token(v: &[u8]) -> Result {
 
 #[inline]
 /// Visible ASCII char [0x20, 0x7E]
-fn is_ascii_invisible(c: &u8) -> bool {
-    *c < 0x20 || *c > 0x7E
+fn is_ascii_invisible(c: u8) -> bool {
+    c < 0x20 || c > 0x7E
 }
 
 /// A valid token name should have a legal length and be visible ASCII chars only.
@@ -233,7 +233,7 @@ pub fn is_valid_token_name(name: &[u8]) -> Result {
     }
     xaccounts::is_xss_proof(name)?;
     for c in name.iter() {
-        if is_ascii_invisible(c) {
+        if is_ascii_invisible(*c) {
             return Err("Token name can not use an invisible ASCII char.");
         }
     }
@@ -247,7 +247,7 @@ pub fn is_valid_desc(desc: &[u8]) -> Result {
     }
     xaccounts::is_xss_proof(desc)?;
     for c in desc.iter() {
-        if is_ascii_invisible(c) {
+        if is_ascii_invisible(*c) {
             return Err("Desc can not use an invisiable ASCII char.");
         }
     }
@@ -345,7 +345,7 @@ mod imbalances {
         }
 
         fn peek(&self) -> T::Balance {
-            self.0.clone()
+            self.0
         }
     }
 
@@ -402,7 +402,7 @@ mod imbalances {
         }
 
         fn peek(&self) -> T::Balance {
-            self.0.clone()
+            self.0
         }
     }
 

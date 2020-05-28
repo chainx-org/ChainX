@@ -126,7 +126,7 @@ construct_service_factory! {
                             // check, only print warning log
                             if accountid != accountid_from_localkey {
                                 if let Some(sessionkey) = sessionkey_option {
-                                    let sessionkey: AccountId = sessionkey.into();
+                                    let sessionkey: AccountId = sessionkey;
                                     if sessionkey != accountid_from_localkey {
                                         warn!("the sessionkey is not equal to local_key, sessionkey:[{:?}], local_key:[{:?}]", sessionkey, accountid_from_localkey);
                                     }

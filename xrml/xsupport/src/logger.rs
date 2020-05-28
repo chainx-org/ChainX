@@ -72,7 +72,7 @@ pub fn u8array_to_addr(s: &[u8]) -> String {
             return u8array_to_hex(s); // when any item is not a char, use hex to decode it
         }
     }
-    return u8array_to_string(s);
+    u8array_to_string(s)
 }
 
 #[cfg(feature = "std")]
@@ -87,7 +87,7 @@ pub fn try_hex_or_str(src: &[u8]) -> String {
                 return false;
             }
         }
-        return true;
+        true
     };
     if check_is_str(src) {
         u8array_to_string(src)

@@ -2,6 +2,7 @@
 
 //! this module is for multisig, but now this is just for genesis multisig addr, not open for public.
 
+#![allow(clippy::boxed_local)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod mock;
@@ -287,13 +288,7 @@ impl<T: Trait> Module<T> {
         // confirm owners has deployer
         owner_list.push((deployer.clone(), MultiSigPermission::ConfirmAndPropose));
         // move others people except deployer
-        owner_list.extend(owners.into_iter().filter(|info| {
-            if info.0 == *deployer {
-                false
-            } else {
-                true
-            }
-        }));
+        owner_list.extend(owners.into_iter().filter(|info| info.0 != *deployer));
 
         let owners_len = owner_list.len() as u32;
         if owners_len > MAX_OWNERS {
@@ -353,7 +348,7 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<T::AccountId, &'static str> {
         use support::StorageValue;
 
-        if team.len() < 1 || council.len() < 1 {
+        if team.is_empty() || council.is_empty() {
             error!(
                 "[deploy_in_genesis]|the team:{:?} and council:{:?} count can't be zero",
                 team.len(),
@@ -391,6 +386,7 @@ impl<T: Trait> Module<T> {
         Ok(team_multisig_addr)
     }
 
+    #[allow(clippy::borrowed_box)]
     fn check_proposal(addr_info: &AddrInfo<T::AccountId>, proposal: &Box<T::Proposal>) -> Result {
         match addr_info.addr_type {
             AddrType::Trustee => {
@@ -478,7 +474,7 @@ impl<T: Trait> Module<T> {
 
         debug!("[confirm_impl]|from:{:?}|foraddr:{:?}|multisig id:{:}|ret:{:}|yet_needed:{:?} and owners_down:{:?}", from, multi_sig_addr, multi_sig_id, ret, pending_state.yet_needed, pending_state.owners_done);
 
-        if ret == true {
+        if ret {
             // remove log
             Self::remove_multi_sig_id(&multi_sig_addr, multi_sig_id);
             // real exec

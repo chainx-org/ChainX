@@ -1,5 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 
+#![allow(clippy::too_many_arguments)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use rstd::collections::btree_map::BTreeMap;

@@ -7,6 +7,8 @@ const GENESIS_NODE_COUNT: usize = 29;
 // 3 team + 5 council
 const TEAM_COUNCIL_COUNT: usize = 8;
 
+// (account, session_key, endowed, name, url, memo)
+type IntentionConfig = (AccountId, AuthorityId, u64, Vec<u8>, Vec<u8>, Vec<u8>);
 type GenesisNodeEntry = (
     AccountId,
     AuthorityId,
@@ -43,7 +45,7 @@ pub fn load_genesis_node(csv: &[u8]) -> Result<Vec<GenesisNodeEntry>, Box<dyn st
         let account_id = hex(&record.account_id).unchecked_into();
         let authority_key = hex(&record.session_key).unchecked_into();
 
-        let endowed = (record.endowed * 10_u64.pow(PCX_PRECISION as u32) as f64) as u64;
+        let endowed = (record.endowed * 10_u64.pow(u32::from(PCX_PRECISION)) as f64) as u64;
         let node_name = record.name.into_bytes();
         let node_url = record.url.into_bytes();
         let memo = record.about.into_bytes();
@@ -86,9 +88,7 @@ pub fn load_team_council(csv: &[u8]) -> Result<Vec<AccountId>, Box<dyn std::erro
     Ok(res)
 }
 
-pub fn bootstrap_intentions_config(
-    genesis_node_info: &[GenesisNodeEntry],
-) -> Vec<(AccountId, AuthorityId, u64, Vec<u8>, Vec<u8>, Vec<u8>)> {
+pub fn bootstrap_intentions_config(genesis_node_info: &[GenesisNodeEntry]) -> Vec<IntentionConfig> {
     genesis_node_info
         .iter()
         .map(|(account_id, authority_id, value, name, url, memo, _, _)| {
@@ -114,9 +114,9 @@ pub fn bootstrap_trustee_intentions_config(
         })
         .map(|(account_id, _, _, _, _, _, hot_entity, cold_entity)| {
             (
-                account_id.clone().into(),
-                hot_entity.clone().unwrap().into(),
-                cold_entity.clone().unwrap().into(),
+                account_id.clone(),
+                hot_entity.clone().unwrap(),
+                cold_entity.clone().unwrap(),
             )
         })
         .collect()

@@ -170,7 +170,7 @@ impl<T: Trait> MakePayment<T::AccountId> for Module<T> {
 
 impl<T: Trait> Module<T> {
     pub fn get_switcher(switcher: CallSwitcher) -> bool {
-        Self::switcher().get(&switcher).map(|b| *b).unwrap_or(false)
+        Self::switcher().get(&switcher).copied().unwrap_or(false)
     }
 
     pub fn transaction_fee(power: u64, encoded_len: u64) -> T::Balance {
@@ -225,12 +225,12 @@ impl<T: Trait> Module<T> {
                 p
             );
 
-            let _ = xassets::Module::<T>::pcx_move_free_balance(from, &p, for_producer)
+            xassets::Module::<T>::pcx_move_free_balance(from, &p, for_producer)
                 .map_err(|e| e.info())?;
 
             Self::deposit_event(RawEvent::FeeForProducer(p, for_producer));
 
-            let _ = xassets::Module::<T>::pcx_move_free_balance(from, &jackpot_addr, for_jackpot)
+            xassets::Module::<T>::pcx_move_free_balance(from, &jackpot_addr, for_jackpot)
                 .map_err(|e| e.info())?;
 
             Self::deposit_event(RawEvent::FeeForJackpot(jackpot_addr, for_jackpot));

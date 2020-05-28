@@ -14,7 +14,7 @@ impl<T: Trait> Module<T> {
     /// - buy:  (~, lowest_offer + 10% * lowest_offer]
     pub(crate) fn is_within_quotation_range(
         quote: T::Price,
-        side: &Side,
+        side: Side,
         pair_index: TradingPairIndex,
     ) -> Result {
         let handicap = <HandicapOf<T>>::get(pair_index);
@@ -24,7 +24,7 @@ impl<T: Trait> Module<T> {
 
         let fluctuation = pair.fluctuation().into();
 
-        match *side {
+        match side {
             Buy => {
                 debug!(
                     "[is_within_quotation_range] Buy: quote: {:?}, lowest_offer: {:?}, fluctuation: {:?}",
@@ -102,8 +102,8 @@ impl<T: Trait> Module<T> {
             <xassets::Module<T>>::asset_info(pair.quote_as_ref()),
         ) {
             let (base_p, quote_p, pair_p) = (
-                base.precision() as u32,
-                quote.precision() as u32,
+                u32::from(base.precision()),
+                u32::from(quote.precision()),
                 pair.pip_precision,
             );
             let (mul, s) = if quote_p >= (base_p + pair_p) {
@@ -123,7 +123,7 @@ impl<T: Trait> Module<T> {
             };
 
             if !converted.is_zero() {
-                if converted < u64::max_value() as u128 {
+                if converted < u128::from(u64::max_value()) {
                     return Ok((converted as u64).into());
                 } else {
                     panic!("converted quote currency value definitely less than u64::max_value()")

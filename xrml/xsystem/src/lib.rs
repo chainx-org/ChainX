@@ -48,7 +48,7 @@ decl_module! {
             ensure_none(origin)?;
             info!("height:{:}, blockproducer: {:?}|name:{:}", system::Module::<T>::block_number(), producer, u8array_to_string(&T::Validator::get_validator_name(&producer).unwrap_or_default()));
 
-            if Self::is_validator(&producer) == false {
+            if !Self::is_validator(&producer) {
                 error!("producer:{:?} not in current validators!, validators is:{:?}", producer, T::ValidatorList::validator_list());
                 panic!("producer not in current validators!");
             }

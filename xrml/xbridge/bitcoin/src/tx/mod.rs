@@ -178,10 +178,7 @@ pub fn remove_unused_tx<T: Trait>(txid: &H256) {
     InputAddrFor::<T>::remove(txid);
 }
 
-pub fn create_multi_address<T: Trait>(
-    pubkeys: &Vec<Public>,
-    sig_num: u32,
-) -> Option<TrusteeAddrInfo> {
+pub fn create_multi_address<T: Trait>(pubkeys: &[Public], sig_num: u32) -> Option<TrusteeAddrInfo> {
     let sum = pubkeys.len() as u32;
     if sig_num > sum {
         panic!("required sig num should less than trustee_num; qed")
@@ -266,7 +263,7 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
 
             let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
                 if a.0 == b.0 && a.1 == b.1 {
-                    return true
+                    true
                 }
                 else {
                     error!(
@@ -274,7 +271,7 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
                         a,
                         b
                     );
-                    return false
+                    false
                 }
             }).count();
 

@@ -33,6 +33,7 @@ impl<N: Clone, SessionKey> RawLog<N, SessionKey> {
     }
 
     /// Try to cast the log entry as a contained forced signal.
+    #[allow(clippy::type_complexity)]
     pub fn as_forced_signal(&self) -> Option<(N, N, &[(SessionKey, u64)])> {
         match *self {
             RawLog::ForcedAuthoritiesChangeSignal(ref median, ref delay, ref signal) => {

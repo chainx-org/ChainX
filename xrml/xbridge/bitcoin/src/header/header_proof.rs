@@ -58,7 +58,7 @@ impl<'a> HeaderWork<'a> {
     }
 
     fn check<T: Trait>(&self, p: &Params) -> Result {
-        let previous_header_hash = self.header.previous_header_hash.clone();
+        let previous_header_hash = self.header.previous_header_hash;
         let work = work_required::<T>(previous_header_hash, self.height, p);
         ensure_with_errorlog!(
             work == self.header.bits,
@@ -73,7 +73,7 @@ impl<'a> HeaderWork<'a> {
 }
 
 pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &Params) -> Compact {
-    let max_bits = params.max_bits().into();
+    let max_bits = params.max_bits();
     if height == 0 {
         return max_bits;
     }
@@ -97,6 +97,7 @@ pub fn is_retarget_height(height: u32, p: &Params) -> bool {
 }
 
 /// Algorithm used for retargeting work every 2 weeks
+#[allow(clippy::useless_let_if_seq)]
 pub fn work_required_retarget<T: Trait>(
     parent_header: BlockHeader,
     height: u32,
@@ -105,7 +106,8 @@ pub fn work_required_retarget<T: Trait>(
     let retarget_num = height - params.retargeting_interval();
 
     let (genesis_header, genesis_num) = Module::<T>::genesis_info();
-    let mut retarget_header = parent_header.clone();
+
+    let mut retarget_header = parent_header;
     if retarget_num < genesis_num {
         retarget_header = genesis_header;
     } else {
@@ -113,7 +115,7 @@ pub fn work_required_retarget<T: Trait>(
         for h in hash_list {
             // look up in main chain
             if let Some(info) = Module::<T>::block_header_for(h) {
-                if info.confirmed == true {
+                if info.confirmed {
                     retarget_header = info.header;
                     break;
                 }
@@ -131,13 +133,12 @@ pub fn work_required_retarget<T: Trait>(
     let mut retarget: U256 = last_bits.into();
     let maximum: U256 = params.max_bits().into();
 
-    retarget = retarget
-        * U256::from(retarget_timespan(
-            retarget_timestamp,
-            last_timestamp,
-            params,
-        ));
-    retarget = retarget / U256::from(params.target_timespan_seconds());
+    retarget *= U256::from(retarget_timespan(
+        retarget_timestamp,
+        last_timestamp,
+        params,
+    ));
+    retarget /= U256::from(params.target_timespan_seconds());
 
     debug!(
         "[work_required_retarget]|retarget:{:}|maximum:{:?}",
@@ -156,7 +157,7 @@ pub fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, p: &Param
     // TODO i64??
     // subtract unsigned 32 bit numbers in signed 64 bit space in
     // order to prevent underflow before applying the range constraint.
-    let timespan = last_timestamp as i64 - i64::from(retarget_timestamp);
+    let timespan = i64::from(last_timestamp) - i64::from(retarget_timestamp);
     range_constrain(
         timespan,
         i64::from(p.min_timespan()),

@@ -14,6 +14,7 @@ pub struct RecordOfSDOT {
     quantity: f64,
 }
 
+#[allow(clippy::type_complexity)]
 pub fn load_genesis() -> Result<Vec<([u8; 20], u64)>, Box<dyn std::error::Error>> {
     let mut reader = csv::Reader::from_reader(&include_bytes!("res/dot_tx.csv")[..]);
     let mut res = Vec::with_capacity(3052);

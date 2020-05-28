@@ -111,7 +111,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
     let intention_bonding_duration = bonding_duration * 10; // freeze 150*12*10 blocks for intention
 
     let params_info = Params::new(
-        486604799,            // max_bits
+        486_604_799,          // max_bits
         2 * 60 * 60,          // block_max_future
         2 * 7 * 24 * 60 * 60, // target_timespan_seconds
         10 * 60,              // target_spacing_seconds
@@ -130,7 +130,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             code,
             authorities: active_genesis_nodes
                 .iter()
-                .map(|(_, authority_id, _, _, _, _, _, _)| authority_id.clone().into())
+                .map(|(_, authority_id, _, _, _, _, _, _)| authority_id.clone())
                 .collect(),
         }),
         system: None,
@@ -140,13 +140,13 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         xsession: Some(SessionConfig {
             validators: active_genesis_nodes
                 .iter()
-                .map(|(account, _, balance, _, _, _, _, _)| (account.clone().into(), *balance))
+                .map(|(account, _, balance, _, _, _, _, _)| (account.clone(), *balance))
                 .collect(),
             session_length: blocks_per_session,
             keys: genesis_node_info
                 .iter()
                 .map(|(account, authority_id, _, _, _, _, _, _)| {
-                    (account.clone().into(), authority_id.clone().into())
+                    (account.clone(), authority_id.clone())
                 })
                 .collect(),
         }),
@@ -173,7 +173,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
         //     _genesis_phantom_data: Default::default(),
         // }),
         xstaking: Some(XStakingConfig {
-            initial_reward: ((50 as f64) * 10_u64.pow(PCX_PRECISION as u32) as f64) as u64,
+            initial_reward: ((50_f64) * 10_u64.pow(u32::from(PCX_PRECISION)) as f64) as u64,
             validator_count: 100,
             minimum_validator_count: 4,
             sessions_per_era,
@@ -204,7 +204,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             network_id: bitcoin.2,
             confirmation_number: 4,
             reserved_block: 2100,
-            btc_withdrawal_fee: 100000,
+            btc_withdrawal_fee: 100_000,
             max_withdrawal_count: 100,
             _genesis_phantom_data: Default::default(),
         }),
@@ -247,7 +247,7 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                     xbitcoin::Module::<Runtime>::TOKEN.to_vec(),
                     9,
                     2,
-                    100000,
+                    100_000,
                     true,
                 ),
                 (
@@ -255,16 +255,14 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
                     xassets::Module::<Runtime>::TOKEN.to_vec(),
                     4,
                     2,
-                    100000,
+                    100_000,
                     true,
                 ),
             ],
             // xgrandpa
             authorities: active_genesis_nodes
                 .iter()
-                .map(|(_, authority_id, balance, _, _, _, _, _)| {
-                    (authority_id.clone().into(), *balance)
-                })
+                .map(|(_, authority_id, balance, _, _, _, _, _)| (authority_id.clone(), *balance))
                 .collect(),
             // xmultisig (include trustees)
             multisig_init_info: (team_account, council_account),
