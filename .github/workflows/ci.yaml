@@ -1,10 +1,6 @@
 name: ci
-on:
-  pull_request:
-  push:
-    branches:
-    - master
-    - develop
+
+on: [push, pull_request]
 
 env:
   CARGO_INCREMENTAL: 0
@@ -63,7 +59,7 @@ jobs:
       run: cargo test --no-run
 
     - name: Compile wasm
-      run: cd runtime/wasm && bash build.sh
+      run: rustup toolchain install nightly && cd runtime/wasm && bash build.sh
 
     - name: Test
       run: cargo test --all --exclude substrate-rpc
