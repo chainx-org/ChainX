@@ -62,6 +62,9 @@ jobs:
     - name: Compile
       run: cargo test --no-run
 
+    - name: Compile wasm
+      run: cd runtime/wasm && bash build.sh
+
     - name: Test
       run: cargo test --all --exclude substrate-rpc
 

@@ -32,7 +32,9 @@
 // re-export since this is necessary for `impl_apis` in runtime.
 pub use fg_primitives;
 use fg_primitives::ScheduledChange;
-use parity_codec::{Encode, KeyedVec};
+use parity_codec::Encode;
+#[cfg(feature = "std")]
+use parity_codec::KeyedVec;
 use primitives::traits::{Convert, CurrentHeight, SaturatedConversion};
 use rstd::prelude::*;
 use substrate_primitives::ed25519::Public as AuthorityId;
