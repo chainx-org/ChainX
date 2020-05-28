@@ -48,6 +48,7 @@ pub enum ChainSpec {
     Development,
     Testnet,
     TestnetMohism,
+    TestnetConfucianism,
     Mainnet,
 }
 
@@ -58,6 +59,7 @@ impl ChainSpec {
             ChainSpec::Development => chain_spec::development_config(),
             ChainSpec::Testnet => chain_spec::testnet_config(),
             ChainSpec::TestnetMohism => chain_spec::testnet_mohism_config(),
+            ChainSpec::TestnetConfucianism => chain_spec::testnet_confucianism_config(),
             ChainSpec::Mainnet => chain_spec::mainnet_config(),
         })
     }
@@ -65,7 +67,8 @@ impl ChainSpec {
     pub(crate) fn from(s: &str) -> Option<Self> {
         match s {
             "mainnet" | "" => Some(ChainSpec::Mainnet),
-            "testnet-mohism" => Some(ChainSpec::TestnetMohism),
+            // "testnet-mohism" => Some(ChainSpec::TestnetMohism),
+            "testnet-confucianism" => Some(ChainSpec::TestnetConfucianism),
             "dev" => Some(ChainSpec::Development),
             _ => None,
         }
@@ -77,7 +80,7 @@ fn load_spec(id: &str) -> Result<Option<chain_spec::ChainSpec>, String> {
         Some(spec) => Ok(Some(spec.load()?)),
         None => Err(format!(
             "we just allow:{:?}",
-            vec!["mainnet", "testnet-mohism", "dev"]
+            vec!["mainnet", "testnet-confucianism", "dev"]
         )),
     }
 }

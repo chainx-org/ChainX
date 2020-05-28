@@ -29,6 +29,7 @@ pub enum GenesisSpec {
     Dev,
     Testnet,
     TestnetMohism,
+    TestnetConfucianism,
     Mainnet,
 }
 impl Into<ChainSpec> for GenesisSpec {
@@ -37,6 +38,7 @@ impl Into<ChainSpec> for GenesisSpec {
             GenesisSpec::Dev => ChainSpec::Dev,
             GenesisSpec::Testnet => ChainSpec::Testnet,
             GenesisSpec::TestnetMohism => ChainSpec::Testnet,
+            GenesisSpec::TestnetConfucianism => ChainSpec::Testnet,
             GenesisSpec::Mainnet => ChainSpec::Mainnet,
         }
     }
@@ -65,6 +67,13 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
             (xsystem::NetworkType::Testnet, 42),
             bitcoin::testnet_mohism(),
         ),
+        GenesisSpec::TestnetConfucianism => (
+            include_bytes!("res/wasm/testnet_confucianism_chainx_runtime.compact.wasm").to_vec(), // testnet genesis runtime version is 6
+            chainx::load_genesis_node(&include_bytes!("res/testnet_genesis_node.csv")[..]).unwrap(),
+            chainx::load_team_council(&include_bytes!("res/testnet_team_council.csv")[..]).unwrap(),
+            (xsystem::NetworkType::Testnet, 42),
+            bitcoin::mainnet_confucianism(),
+        ),
         GenesisSpec::Mainnet => (
             include_bytes!("res/wasm/mainnet_chainx_runtime.compact.wasm").to_vec(), // mainnet genesis runtime version is 0
             chainx::load_genesis_node(&include_bytes!("res/mainnet_genesis_node.csv")[..]).unwrap(),
@@ -91,8 +100,9 @@ pub fn genesis(genesis_spec: GenesisSpec) -> GenesisConfig {
 
     let initial_authorities_len = match genesis_spec {
         GenesisSpec::Dev => 1,
-        GenesisSpec::Testnet => genesis_node_info.len(),
-        GenesisSpec::TestnetMohism => genesis_node_info.len(),
+        GenesisSpec::Testnet | GenesisSpec::TestnetMohism | GenesisSpec::TestnetConfucianism => {
+            genesis_node_info.len()
+        }
         GenesisSpec::Mainnet => genesis_node_info.len(),
     };
 

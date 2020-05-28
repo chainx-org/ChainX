@@ -64,6 +64,29 @@ pub fn testnet_mohism() -> BitcoinGenesisInfo {
     )
 }
 
+// bitcoin mainnet for confucianism
+pub fn mainnet_confucianism() -> BitcoinGenesisInfo {
+    (
+        (
+            BlockHeader {
+                version: 0x27ffe000,
+                previous_header_hash: h256_from_rev_str(
+                    "0000000000000000000e87ecbff47d9ab75e78d92328d5951351f9702597dace",
+                ),
+                merkle_root_hash: h256_from_rev_str(
+                    "783ffb1dd4004232a041ad7d1cb3d3dbc1583b9f27ad558d63db873e880383f6",
+                ),
+                time: 1589940416,
+                bits: Compact::new(0x171297f6),
+                nonce: 0x0dc797f9,
+            },
+            631_008,
+        ),
+        h256_from_rev_str("0000000000000000000afe86c660a568a750c603f72dba13b32abb1f31125188"),
+        0,
+    )
+}
+
 // bitcoin mainnet
 pub fn mainnet() -> BitcoinGenesisInfo {
     (
