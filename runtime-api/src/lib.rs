@@ -128,8 +128,9 @@ pub mod xcontracts_api {
                 dest: AccountIdForApi,
                 value: Balance,
                 gas_limit: u64,
+                issue_gas: bool,
                 input_data: Vec<u8>,
-            ) -> ContractExecResult;
+            ) -> (ContractExecResult, Balance);
 
             /// Query a given storage key in a given contract.
             ///

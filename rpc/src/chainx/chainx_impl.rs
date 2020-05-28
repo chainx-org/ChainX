@@ -942,6 +942,7 @@ where
     fn contract_call(
         &self,
         call_request: CallRequest,
+        issue_gas: Option<bool>,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<Value> {
         /// A rough estimate of how much gas a decent hardware consumes per second,
@@ -958,6 +959,8 @@ where
             // If the block hash is not supplied assume the best block.
             self.client.info().chain.best_hash));
 
+        let issue_gas = issue_gas.unwrap_or(true);
+
         let CallRequest {
             origin,
             dest,
@@ -972,13 +975,14 @@ where
             )));
         }
 
-        let exec_result = api
+        let (exec_result, free) = api
             .call(
                 &at,
                 origin,
                 dest,
                 Zero::zero(),
                 gas_limit,
+                issue_gas,
                 input_data.to_vec(),
             )
             .map_err(|e| {
@@ -992,6 +996,7 @@ where
             ContractExecResult::Success { status, data } => Ok(json!({
                 "status": status,
                 "data": Bytes(data),
+                "free": if issue_gas { 0 } else { free },
             })),
             ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
         }

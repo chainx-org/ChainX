@@ -639,26 +639,30 @@ impl_runtime_apis! {
             dest: AccountId,
             value: Balance,
             gas_limit: u64,
+            issue_gas: bool,
             input_data: Vec<u8>,
-        ) -> ContractExecResult {
-            let tmp_account = AccountId::default();
-            let increase = gas_limit * XContracts::gas_price();
-            let _ = XAssets::pcx_make_free_balance_be(&tmp_account, increase);
-            let _ = XAssets::pcx_move_free_balance(&tmp_account, &origin, increase);
+        ) -> (ContractExecResult, Balance){
+            if issue_gas {
+                let tmp_account = AccountId::default();
+                let increase = gas_limit * XContracts::gas_price();
+                let _ = XAssets::pcx_make_free_balance_be(&tmp_account, increase);
+                let _ = XAssets::pcx_move_free_balance(&tmp_account, &origin, increase);
+            }
             let exec_result = XContracts::bare_call(
-                origin,
+                origin.clone(),
                 dest,
                 value,
                 gas_limit,
                 input_data,
             );
-            match exec_result {
+            let r = match exec_result {
                 Ok(v) => ContractExecResult::Success {
                     status: u16::from(v.status),
                     data: v.data,
                 },
                 Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
-            }
+            };
+            (r, XAssets::pcx_free_balance(&origin))
         }
 
         fn get_storage(
