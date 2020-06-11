@@ -308,6 +308,15 @@ decl_module! {
                 }
             })
         }
+
+        /// handle a transaction which is already in chain storage.
+        /// (notice this function would ignore block confirmed state)
+        pub fn handle_transaction(tx_hash: H256) -> Result {
+            handle_tx::<T>(&tx_hash).map_err(|e| {
+                error!("Handle tx by root error: {:}", tx_hash);
+                e
+            })
+        }
     }
 }
 
