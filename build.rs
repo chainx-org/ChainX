@@ -1,8 +1,7 @@
-use vergen::{generate_cargo_keys, ConstantsFlags};
-
-const ERROR_MSG: &'static str = "Failed to generate metadata files";
+use substrate_build_script_utils::{generate_cargo_keys, rerun_if_git_head_changed};
 
 fn main() {
-    generate_cargo_keys(ConstantsFlags::all()).expect(ERROR_MSG);
-    println!("cargo:rerun-if-changed=.git/HEAD");
+    generate_cargo_keys();
+
+    rerun_if_git_head_changed();
 }

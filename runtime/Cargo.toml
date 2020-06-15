@@ -1,132 +1,79 @@
 [package]
 name = "chainx-runtime"
-version = "1.0.0"
+version = "2.0.0"
 authors = ["Chainpool <http://www.chainx.org>"]
 edition = "2018"
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
 [dependencies]
-rustc-hex = { version = "2.0.1", optional = true }
-safe-mix = { version = "1.0", default-features = false }
-serde = { version = "1.0", optional = true }
-parity-codec = { version = "3.3", default-features = false }
+codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0.101", optional = true, features = ["derive"] }
 
-client = { package = "substrate-client", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-substrate-primitives = { git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-consensus_aura = { package = "substrate-consensus-aura-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-consensus_authorities = { package = "substrate-consensus-authorities", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-version = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-inherents = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-offchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-block-builder = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
 
-runtime-primitives = { package = "sr-primitives", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-runtime-io = { package = "sr-io", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-version = { package = "sr-version", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-rstd = { package = "sr-std", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+frame-executive = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
 
-support = { package = "srml-support", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-system = { package = "srml-system", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-consensus = { package = "srml-consensus", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-sudo = { package = "srml-sudo", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-indices = { package = "srml-indices", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
-finality-tracker = { package = "srml-finality-tracker", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+pallet-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
 
-# chainx
 chainx-primitives = { path = "../primitives", default-features = false }
-xr-primitives = { path = "../xr-primitives", default-features = false }
-runtime-api = { path = "../runtime-api", default-features = false }
-# chainx runtime module
-xsupport = { package = "xrml-xsupport", path = "../xrml/xsupport", default-features = false }
-xbootstrap = { package = "xrml-xbootstrap", path = "../xrml/xbootstrap", default-features = false }
-xsystem = { package = "xrml-xsystem", path = "../xrml/xsystem", default-features = false }
-xaccounts = { package = "xrml-xaccounts", path = "../xrml/xaccounts", default-features = false }
-xsession = { package = "xrml-xsession", path = "../xrml/xsession", default-features = false }
-xaura = { package = "xrml-xaura", path = "../xrml/xaura", default-features = false }
-xgrandpa = { package = "xrml-grandpa", path = "../xrml/xgrandpa", default-features = false }
-# fee
-xfee-manager = { package = "xrml-xfee-manager", path = "../xrml/xfee/manager", default-features = false }
-# assets
-xassets = { package = "xrml-xassets-assets", path = "../xrml/xassets/assets", default-features = false }
-xrecords = { package = "xrml-xassets-records", path = "../xrml/xassets/records", default-features = false }
-xprocess = { package = "xrml-xassets-process", path = "../xrml/xassets/process", default-features = false }
-# mining
-xstaking = { package = "xrml-xmining-staking", path = "../xrml/xmining/staking", default-features = false }
-xtokens = { package = "xrml-xmining-tokens", path = "../xrml/xmining/tokens", default-features = false }
-# bridge
-xbridge-common = { package = "xrml-xbridge-common", path = "../xrml/xbridge/common", default-features = false }
-xbitcoin = { package = "xrml-xbridge-bitcoin", path = "../xrml/xbridge/bitcoin", default-features = false }
-xbridge-features = { package = "xrml-xbridge-features", path = "../xrml/xbridge/features", default-features = false }
-xsdot = { package = "xrml-xbridge-sdot", path = "../xrml/xbridge/sdot", default-features = false }
-# dex
-xspot = { package = "xrml-xdex-spot", path = "../xrml/xdex/spot", default-features = false }
-# fisher
-xfisher = { package = "xrml-xfisher", path = "../xrml/xfisher", default-features = false }
-# multisig
-xmultisig = { package = "xrml-xmultisig", path = "../xrml/xmultisig", default-features = false }
-# contracts
-xcontracts = { package = "xrml-xcontracts", path = "../xrml/xcontracts", default-features = false }
 
-[dev-dependencies]
-hex-literal = "0.2.0"
+
+[build-dependencies]
+wasm-builder-runner = { package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
 
 [features]
 default = ["std"]
 std = [
-    "rustc-hex",
-    "safe-mix/std",
+    "codec/std",
     "serde",
-    "parity-codec/std",
 
-    "client/std",
-    "substrate-primitives/std",
-    "consensus_aura/std",
-    "consensus_authorities/std",
-    "offchain-primitives/std",
+    "sp-io/std",
+    "sp-std/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-session/std",
+    "sp-version/std",
+    "sp-api/std",
+    "sp-inherents/std",
+    "sp-offchain/std",
+    "sp-block-builder/std",
+    "sp-consensus-aura/std",
+    "sp-transaction-pool/std",
 
-    # substrate runtime module
-    "runtime-primitives/std",
-    "runtime-io/std",
-    "version/std",
-    "rstd/std",
+    "frame-support/std",
+    "frame-system/std",
+    "frame-system-rpc-runtime-api/std",
+    "frame-executive/std",
 
-    "support/std",
-    "system/std",
-    "timestamp/std",
-    "consensus/std",
-    "sudo/std",
-    "indices/std",
-    "finality-tracker/std",
+    "pallet-aura/std",
+    "pallet-grandpa/std",
+    "pallet-timestamp/std",
+    "pallet-sudo/std",
+    "pallet-transaction-payment/std",
+    "pallet-transaction-payment-rpc-runtime-api/std",
+    "pallet-randomness-collective-flip/std",
 
-    # chainx
     "chainx-primitives/std",
-    # xr-primitives
-    "xr-primitives/std",
-    "runtime-api/std",
-    # chainx runtime
-    "xsession/std",
-    "xgrandpa/std",
-    "xaura/std",
-    "xbootstrap/std",
-    "xsupport/std",
-    "xsystem/std",
-    "xaccounts/std",
-    # fee
-    "xfee-manager/std",
-    # asset
-    "xassets/std",
-    "xrecords/std",
-    "xprocess/std",
-    "xfisher/std",
-    # mining
-    "xstaking/std",
-    "xtokens/std",
-    # bridge
-    "xbridge-common/std",
-    "xbitcoin/std",
-    "xsdot/std",
-    "xbridge-features/std",
-    # dex
-    "xspot/std",
-    # multisig
-    "xmultisig/std",
-    # contracts
-    "xcontracts/std",
 ]
