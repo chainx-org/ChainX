@@ -21,8 +21,8 @@ use chainx_runtime::{
     opaque::Block, AccountId, ArtvenusId, Balance, BlockNumber, Index, UncheckedExtrinsic,
 };
 
-use apis::CiApi;
-use impls::CiRpc;
+use apis::ChainXApi;
+use impls::ChainXRpc;
 
 /// Light client extra dependencies.
 pub struct LightDeps<C, F, P> {

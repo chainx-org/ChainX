@@ -7,4 +7,4 @@ use chainx_runtime as runtime;
 use runtime::AccountId;
 
 #[rpc]
-pub trait CiApi<BlockHash> {}
+pub trait ChainXApi<BlockHash> {}

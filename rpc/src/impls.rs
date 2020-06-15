@@ -16,14 +16,14 @@ use frame_support::StorageMap;
 
 use chainx_runtime::{opaque::Block, AccountId, Runtime};
 
-use crate::apis::CiApi;
-use crate::errors::XRpcErr;
+use crate::apis::ChainXApi;
+use crate::errors::ChainXRpcErr;
 
-pub struct CiRpc<BE, E, RA> {
+pub struct ChainXRpc<BE, E, RA> {
     client: Arc<Client<BE, E, Block, RA>>,
 }
 
-impl<BE, E, RA> CiRpc<BE, E, RA>
+impl<BE, E, RA> ChainXRpc<BE, E, RA>
 where
     BE: Backend<Block>,
     BE::State: sp_state_machine::backend::Backend<sp_runtime::traits::BlakeTwo256>,
@@ -36,9 +36,9 @@ where
         + HeaderBackend<Block>
         + StorageProvider<Block, BE>,
 {
-    /// Create new `CiRpc` with the given reference to the client.
+    /// Create new `ChainXRpc` with the given reference to the client.
     pub fn new(client: Arc<Client<BE, E, Block, RA>>) -> Self {
-        CiRpc { client }
+        ChainXRpc { client }
     }
     /// Returns given block hash or best block hash if None is passed.
     fn block_or_best(&self, hash: Option<<Block as BlockT>::Hash>) -> <Block as BlockT>::Hash {
@@ -77,7 +77,7 @@ where
     }
 }
 
-impl<BE, E, RA> CiApi<<Block as BlockT>::Hash> for CiRpc<BE, E, RA>
+impl<BE, E, RA> ChainXApi<<Block as BlockT>::Hash> for ChainXRpc<BE, E, RA>
 where
     BE: Backend<Block>,
     BE::State: sp_state_machine::backend::Backend<sp_runtime::traits::BlakeTwo256>,
