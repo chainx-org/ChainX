@@ -1,8 +1,9 @@
 [package]
 name = "chainx"
 version = "2.0.0"
-authors = ["Chainpool <https://www.chainx.org>"]
+authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
+description = "Fully Decentralized Interchain Crypto Asset Management on Polkadot"
 
 [dependencies]
 futures = "0.3.4"

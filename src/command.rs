@@ -22,7 +22,7 @@ use sc_cli::SubstrateCli;
 
 impl SubstrateCli for Cli {
     fn impl_name() -> &'static str {
-        "Chainx Node"
+        "ChainX"
     }
 
     fn impl_version() -> &'static str {
@@ -38,7 +38,7 @@ impl SubstrateCli for Cli {
     }
 
     fn support_url() -> &'static str {
-        "support.anonymous.an"
+        "https://github.com/chainx-org/ChainX"
     }
 
     fn copyright_start_year() -> i32 {
