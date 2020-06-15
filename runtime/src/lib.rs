@@ -1,95 +1,122 @@
-// Copyright 2018-2019 Chainpool.
+//! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
-//! The ChainX runtime. This can be compiled with ``#[no_std]`, ready for Wasm.
-
-#![allow(clippy::large_enum_variant)]
-#![allow(clippy::identity_op)]
 #![cfg_attr(not(feature = "std"), no_std)]
-// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
-#![recursion_limit = "512"]
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
+#![recursion_limit = "256"]
 
-#[macro_use]
-mod fee;
-mod tests;
-mod trustee;
-mod xcontracts_fee;
-mod xexecutive;
-
-use parity_codec::{Decode, Encode};
-use rstd::collections::btree_map::BTreeMap;
-use rstd::prelude::*;
-use rstd::result;
-
-// substrate
-use client::{
-    block_builder::api::{self as block_builder_api, CheckInherentsResult, InherentData},
-    impl_runtime_apis, runtime_api as client_api,
-};
-use runtime_primitives::traits::{
-    AuthorityIdFor, BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup, Zero,
-};
-use runtime_primitives::transaction_validity::TransactionValidity;
-pub use runtime_primitives::{create_runtime_str, Perbill, Permill};
-use runtime_primitives::{generic, ApplyResult};
-use substrate_primitives::OpaqueMetadata;
-use substrate_primitives::H512;
-pub use support::{construct_runtime, parameter_types, StorageValue};
-
-pub use timestamp::BlockPeriod;
-pub use timestamp::Call as TimestampCall;
-
-#[cfg(any(feature = "std", test))]
-use version::NativeVersion;
-use version::RuntimeVersion;
-
-// chainx
-use chainx_primitives;
-use runtime_api;
-use xgrandpa::fg_primitives::{self, ScheduledChange};
-pub use xr_primitives::{AddrStr, ContractExecResult, GetStorageError, GetStorageResult};
-
-// chainx
-use chainx_primitives::{
-    Acceleration, AccountId, AccountIndex, AuthorityId, AuthoritySignature, Balance, BlockNumber,
-    Hash, Index, Signature, Timestamp as TimestampU64,
-};
-
-use fee::CheckFee;
-use xcontracts_fee::XContractsCheckFee;
-
-pub use xaccounts;
-pub use xassets;
-pub use xbitcoin;
-pub use xbitcoin::lockup as xbitcoin_lockup;
-pub use xbridge_common;
-pub use xbridge_features;
-pub use xcontracts::{self, XRC20Selector}; // re-export
-pub use xprocess;
-
+// Make the WASM binary available.
 #[cfg(feature = "std")]
-pub use xbootstrap::{self, ChainSpec};
+include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use xsupport::ensure_with_errorlog;
+use pallet_grandpa::fg_primitives;
+use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+use sp_api::impl_runtime_apis;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_runtime::traits::{
+    BlakeTwo256, Block as BlockT, IdentifyAccount, IdentityLookup, NumberFor, Saturating, Verify,
+};
+use sp_runtime::{
+    create_runtime_str, generic, impl_opaque_keys,
+    transaction_validity::{TransactionSource, TransactionValidity},
+    ApplyExtrinsicResult, MultiSignature,
+};
+use sp_std::prelude::*;
 #[cfg(feature = "std")]
-use xsupport::u8array_to_hex;
+use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
 
-use xbridge_common::types::{GenericAllSessionInfo, GenericTrusteeIntentionProps};
+use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
+// A few exports that help ease life for downstream crates.
+pub use frame_support::{
+    construct_runtime, parameter_types,
+    traits::{KeyOwnerProofSystem, Randomness},
+    weights::{
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        IdentityFee, Weight,
+    },
+    StorageValue,
+};
+pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
-pub use runtime_primitives::BuildStorage;
+pub use sp_runtime::BuildStorage;
+pub use sp_runtime::{Perbill, Permill};
 
-/// Runtime version.
+/// An index to a block.
+pub type BlockNumber = u32;
+
+/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
+pub type Signature = MultiSignature;
+
+/// Some way of identifying an account on the chain. We intentionally make it equivalent
+/// to the public key of our transaction signing scheme.
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+
+/// The type for looking up accounts. We don't expect more than 4 billion of them, but you
+/// never know...
+pub type AccountIndex = u32;
+
+/// Balance of an account.
+pub type Balance = u128;
+
+/// Index of a transaction in the chain.
+pub type Index = u32;
+
+/// A hash of some data used by the chain.
+pub type Hash = sp_core::H256;
+
+/// Digest item type.
+pub type DigestItem = generic::DigestItem<Hash>;
+
+pub type ArtvenusId = sp_core::H256;
+
+/// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
+/// the specifics of the runtime. They can then be made to be agnostic over specific formats
+/// of data like extrinsics, allowing for them to continue syncing the network through upgrades
+/// to even the core data structures.
+pub mod opaque {
+    use super::*;
+
+    pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+
+    /// Opaque block header type.
+    pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+    /// Opaque block type.
+    pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+    /// Opaque block identifier type.
+    pub type BlockId = generic::BlockId<Block>;
+
+    impl_opaque_keys! {
+        pub struct SessionKeys {
+            pub aura: Aura,
+            pub grandpa: Grandpa,
+        }
+    }
+}
+
+/// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 7,
-    impl_version: 7,
+    spec_version: 1,
+    impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
+    transaction_version: 1,
 };
 
-/// Native version.
-#[cfg(any(feature = "std", test))]
+pub const MILLISECS_PER_BLOCK: u64 = 6000;
+
+pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
+
+// These time units are defined in number of blocks.
+pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
+pub const HOURS: BlockNumber = MINUTES * 60;
+pub const DAYS: BlockNumber = HOURS * 24;
+
+/// The version information used to identify this runtime when compiled natively.
+#[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
     NativeVersion {
         runtime_version: VERSION,
@@ -97,314 +124,170 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-impl system::Trait for Runtime {
-    type Origin = Origin;
-    type Index = Index;
-    type BlockNumber = BlockNumber;
-    type Hash = Hash;
-    type Hashing = BlakeTwo256;
-    type Digest = generic::Digest<Log>;
-    type AccountId = AccountId;
-    type Lookup = Indices;
-    type Header = Header;
-    type Event = Event;
-    type Log = Log;
-}
-
-impl timestamp::Trait for Runtime {
-    type Moment = TimestampU64;
-    type OnTimestampSet = Aura;
-}
-
-impl consensus::Trait for Runtime {
-    type Log = Log;
-    type SessionKey = AuthorityId;
-    type InherentOfflineReport = ();
-}
-
-impl indices::Trait for Runtime {
-    type AccountIndex = AccountIndex;
-    type IsDeadAccount = XAssets;
-    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
-    type Event = Event;
-}
-
-impl xsession::Trait for Runtime {
-    type ConvertAccountIdToSessionKey = ();
-    type OnSessionChange = (XStaking, xgrandpa::SyncedAuthorities<Runtime>);
-    type Event = Event;
-}
-
-impl xgrandpa::Trait for Runtime {
-    type Log = Log;
-    type Event = Event;
-}
-
-impl xaura::Trait for Runtime {
-    type HandleReport = xaura::StakingSlasher<Runtime>;
-}
-
-impl xbootstrap::Trait for Runtime {}
-
-// xrml trait
-impl xsystem::Trait for Runtime {
-    type ValidatorList = Session;
-    type Validator = XAccounts;
-}
-
-impl xaccounts::Trait for Runtime {
-    type DetermineIntentionJackpotAccountId = xaccounts::SimpleAccountIdDeterminator<Runtime>;
-}
-// fees
-impl xfee_manager::Trait for Runtime {
-    type Event = Event;
-}
-// assets
-impl xassets::Trait for Runtime {
-    type Balance = Balance;
-    type OnNewAccount = Indices;
-    type Event = Event;
-    type OnAssetChanged = XTokens;
-    type OnAssetRegisterOrRevoke = (XTokens, XSpot);
-    type DetermineTokenJackpotAccountId = xassets::SimpleAccountIdDeterminator<Runtime>;
-}
-
-impl xrecords::Trait for Runtime {
-    type Event = Event;
-}
-
-impl xfisher::Trait for Runtime {
-    type Event = Event;
-    type CheckHeader = HeaderChecker;
-}
-
-impl xprocess::Trait for Runtime {}
-
-impl xstaking::Trait for Runtime {
-    type Event = Event;
-    type OnDistributeAirdropAsset = XTokens;
-    type OnDistributeCrossChainAsset = XTokens;
-    type OnReward = XTokens;
-}
-
-impl xtokens::Trait for Runtime {
-    type Event = Event;
-}
-
-impl xspot::Trait for Runtime {
-    type Price = Balance;
-    type Event = Event;
-}
-
-// bridge
-impl xbridge_common::Trait for Runtime {
-    type Event = Event;
-}
-
-impl xbitcoin::Trait for Runtime {
-    type XBitcoinLockup = Self;
-    type AccountExtractor = xbridge_common::extractor::Extractor<AccountId>;
-    type TrusteeSessionProvider = XBridgeFeatures;
-    type TrusteeMultiSigProvider = xbridge_features::trustees::BitcoinTrusteeMultiSig<Runtime>;
-    type CrossChainProvider = XBridgeFeatures;
-    type Event = Event;
-}
-
-impl xbitcoin_lockup::Trait for Runtime {
-    type Event = Event;
-}
-
-impl xsdot::Trait for Runtime {
-    type AccountExtractor = xbridge_common::extractor::Extractor<AccountId>;
-    type CrossChainProvider = XBridgeFeatures;
-    type Event = Event;
-}
-
-impl xbridge_features::Trait for Runtime {
-    type TrusteeMultiSig = xbridge_features::SimpleTrusteeMultiSigIdFor<Runtime>;
-    type Event = Event;
-}
-
-impl xmultisig::Trait for Runtime {
-    type MultiSig = xmultisig::SimpleMultiSigIdFor<Runtime>;
-    type GenesisMultiSig = xmultisig::ChainXGenesisMultisig<Runtime>;
-    type Proposal = Call;
-    type TrusteeCall = trustee::TrusteeCall;
-    type Event = Event;
-}
-
-impl finality_tracker::Trait for Runtime {
-    type OnFinalizationStalled = xgrandpa::SyncedAuthorities<Runtime>;
-}
-
-// due to current contracts has close Rent mode, thus this params are useless
 parameter_types! {
-    pub const TombstoneDeposit: Balance = 1 * 10_000_000;
-    pub const RentByteFee: Balance = 1 * 10_000_000;
-    pub const RentDepositOffset: Balance = 1000 * 10_000_000;
-    pub const SurchargeReward: Balance = 150 * 10_000_000;
+    pub const BlockHashCount: BlockNumber = 2400;
+    /// We allow for 2 seconds of compute with a 6 second average block time.
+    pub const MaximumBlockWeight: Weight = 2 * WEIGHT_PER_SECOND;
+    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+    /// Assume 10% of weight for average on_initialize calls.
+    pub const MaximumExtrinsicWeight: Weight = AvailableBlockRatio::get()
+        .saturating_sub(Perbill::from_percent(10)) * MaximumBlockWeight::get();
+    pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
+    pub const Version: RuntimeVersion = VERSION;
 }
 
-pub struct DispatchFeeComputor;
-impl
-    xcontracts::ComputeDispatchFee<
-        <Runtime as xcontracts::Trait>::Call,
-        <Runtime as xassets::Trait>::Balance,
-    > for DispatchFeeComputor
-{
-    fn compute_dispatch_fee(
-        call: &<Runtime as xcontracts::Trait>::Call,
-    ) -> Option<<Runtime as xassets::Trait>::Balance> {
-        let switch = xfee_manager::Module::<Runtime>::switcher();
-        let method_call_weight = XFeeManager::method_call_weight();
-        let encoded_len = call.using_encoded(|encoded| encoded.len() as u64);
-        (*call)
-            .check_xcontracts_fee(switch, method_call_weight)
-            .map(|weight| XFeeManager::transaction_fee(weight, encoded_len))
-    }
-}
-
-impl xcontracts::Trait for Runtime {
+impl frame_system::Trait for Runtime {
+    /// The identifier used to distinguish between accounts.
+    type AccountId = AccountId;
+    /// The aggregated dispatch type that is available for extrinsics.
     type Call = Call;
+    /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
+    type Lookup = IdentityLookup<AccountId>;
+    /// The index type for storing how many extrinsics an account has signed.
+    type Index = Index;
+    /// The index type for blocks.
+    type BlockNumber = BlockNumber;
+    /// The type for hashing blocks and tries.
+    type Hash = Hash;
+    /// The hashing algorithm used.
+    type Hashing = BlakeTwo256;
+    /// The header type.
+    type Header = generic::Header<BlockNumber, BlakeTwo256>;
+    /// The ubiquitous event type.
     type Event = Event;
-    type DetermineContractAddress = xcontracts::SimpleAddressDeterminer<Runtime>;
-    type ComputeDispatchFee = DispatchFeeComputor;
-    type TrieIdGenerator = xcontracts::TrieIdFromParentCounter<Runtime>;
-    type SignedClaimHandicap = xcontracts::DefaultSignedClaimHandicap;
-    type TombstoneDeposit = TombstoneDeposit;
-    type StorageSizeOffset = xcontracts::DefaultStorageSizeOffset;
-    type RentByteFee = RentByteFee;
-    type RentDepositOffset = RentDepositOffset;
-    type MaxDepth = xcontracts::DefaultMaxDepth;
-    type MaxValueSize = xcontracts::DefaultMaxValueSize;
-    type BlockGasLimit = xcontracts::DefaultBlockGasLimit;
+    /// The ubiquitous origin type.
+    type Origin = Origin;
+    /// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+    type BlockHashCount = BlockHashCount;
+    /// Maximum weight of each block.
+    type MaximumBlockWeight = MaximumBlockWeight;
+    /// The weight of database operations that the runtime can invoke.
+    type DbWeight = RocksDbWeight;
+    /// The weight of the overhead invoked on the block import process, independent of the
+    /// extrinsics included in that block.
+    type BlockExecutionWeight = BlockExecutionWeight;
+    /// The base weight of any extrinsic processed by the runtime, independent of the
+    /// logic of that extrinsic. (Signature verification, nonce increment, fee, etc...)
+    type ExtrinsicBaseWeight = ExtrinsicBaseWeight;
+    /// The maximum weight that a single extrinsic of `Normal` dispatch class can have,
+    /// idependent of the logic of that extrinsics. (Roughly max block weight - average on
+    /// initialize cost).
+    type MaximumExtrinsicWeight = MaximumExtrinsicWeight;
+    /// Maximum size of all encoded transactions (in bytes) that are allowed in one block.
+    type MaximumBlockLength = MaximumBlockLength;
+    /// Portion of the block weight that is available to all normal transactions.
+    type AvailableBlockRatio = AvailableBlockRatio;
+    /// Version of the runtime.
+    type Version = Version;
+    /// Converts a module to the index of the module in `construct_runtime!`.
+    ///
+    /// This type is being generated by `construct_runtime!`.
+    type ModuleToIndex = ModuleToIndex;
+    /// What to do if a new account is created.
+    type OnNewAccount = ();
+    /// What to do if an account is fully reaped from the system.
+    type OnKilledAccount = ();
+    /// The data to be stored in an account.
+    type AccountData = ();
 }
 
-pub struct HeaderChecker;
-impl xfisher::CheckHeader<AuthorityId, BlockNumber> for HeaderChecker {
-    fn check_header(
-        signer: &AuthorityId,
-        first: &(xfisher::RawHeader, u64, H512),
-        second: &(xfisher::RawHeader, u64, H512),
-    ) -> result::Result<(BlockNumber, BlockNumber), &'static str> {
-        if (*first).1 != (*second).1 {
-            return Err("slot number not same");
-        }
-
-        let fst_header = verify_header(first, signer)?;
-        let snd_header = verify_header(second, signer)?;
-        if fst_header.hash() == snd_header.hash() {
-            return Err("same header, do nothing for this");
-        }
-        Ok((fst_header.number, snd_header.number))
-    }
+impl pallet_aura::Trait for Runtime {
+    type AuthorityId = AuraId;
 }
-fn verify_header(
-    header: &(xfisher::RawHeader, u64, H512),
-    expected_author: &AuthorityId,
-) -> result::Result<Header, &'static str> {
-    // hard code, digest with other type can't be decode in runtime, thus just can decode pre header(header without digest)
-    // 3 * hash + vec<u8> + CompactNumber
-    ensure_with_errorlog!(
-        header.0.as_slice().len() <= 3 * 32 + 1 + 16,
-        "should use pre header",
-        "should use pre header|current len:{:?}",
-        header.0.as_slice().len()
-    );
 
-    let pre_header: Header = Decode::decode(&mut header.0.as_slice()).ok_or("decode header err")?;
+impl pallet_grandpa::Trait for Runtime {
+    type Event = Event;
+    type Call = Call;
 
-    // verify sign
-    let to_sign = ((*header).1, pre_header.hash()).encode();
+    type KeyOwnerProofSystem = ();
 
-    ensure_with_errorlog!(
-        runtime_io::ed25519_verify(&(header.2).0, &to_sign[..], expected_author.clone()),
-        "check signature failed",
-        "check signature failed|slot:{:}|pre_hash:{:?}|to_sign:{:}|sig:{:?}|author:{:?}",
-        (*header).1,
-        pre_header.hash(),
-        u8array_to_hex(&to_sign[..]),
-        header.2,
-        expected_author
-    );
+    type KeyOwnerProof =
+        <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
 
-    Ok(pre_header)
+    type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
+        KeyTypeId,
+        GrandpaId,
+    )>>::IdentificationTuple;
+
+    type HandleEquivocation = ();
+}
+
+parameter_types! {
+    pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
+}
+
+impl pallet_timestamp::Trait for Runtime {
+    /// A timestamp: milliseconds since the unix epoch.
+    type Moment = u64;
+    type OnTimestampSet = Aura;
+    type MinimumPeriod = MinimumPeriod;
+}
+
+// impl pallet_transaction_payment::Trait for Runtime {
+//     type Currency = (); // TODO
+//     type OnTransactionPayment = ();
+//     type TransactionByteFee = TransactionByteFee;
+//     type WeightToFee = IdentityFee<Balance>;
+//     type FeeMultiplierUpdate = ();
+// }
+
+impl pallet_sudo::Trait for Runtime {
+    type Event = Event;
+    type Call = Call;
 }
 
 construct_runtime!(
-    pub enum Runtime with Log(InternalLog: DigestItem<Hash, AuthorityId, AuthoritySignature>) where
+    pub enum Runtime where
         Block = Block,
-        NodeBlock = chainx_primitives::Block,
+        NodeBlock = opaque::Block,
         UncheckedExtrinsic = UncheckedExtrinsic
     {
-        System: system::{default, Log(ChangesTrieRoot)},
-        Indices: indices::{Module, Call, Storage, Event<T>},
-        Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
-        Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
-        Session: xsession,
-        FinalityTracker: finality_tracker::{Module, Call, Inherent},
-        Grandpa: xgrandpa::{Module, Call, Storage, Log(), Event<T>},
-        Aura: xaura::{Module, Inherent(Timestamp)},
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+        Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
+        Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
-        // chainx runtime module
-        XSystem: xsystem::{Module, Call, Storage, Inherent, Config<T>},
-        XAccounts: xaccounts::{Module, Strorage},
-        // fee
-        XFeeManager: xfee_manager::{Module, Call, Storage, Config<T>, Event<T>},
-        // assets
-        XAssets: xassets,
-        XAssetsRecords: xrecords::{Module, Call, Storage, Event<T>},
-        XAssetsProcess: xprocess::{Module, Call, Storage},
-        // mining
-        XStaking: xstaking,
-        XTokens: xtokens::{Module, Call, Storage, Event<T>, Config<T>},
-        // dex
-        XSpot: xspot,
-        // bridge
-        XBridgeOfBTC: xbitcoin::{Module, Call, Storage, Config<T>, Event<T>},
-        XBridgeOfSDOT: xsdot::{Module, Call, Storage, Config<T>, Event<T>},
-        XBridgeFeatures: xbridge_features,
-        // multisig
-        XMultiSig: xmultisig::{Module, Call, Storage, Event<T>},
-
-        XBootstrap: xbootstrap::{Config<T>},
-
-        // fisher
-        XFisher: xfisher::{Module, Call, Storage, Event<T>},
-
-        XBridgeCommon: xbridge_common::{Module, Storage, Event<T>},
-        XBridgeOfBTCLockup: xbitcoin_lockup::{Module, Call, Storage, Event<T>},
-
-        XContracts: xcontracts,
+        // TransactionPayment: pallet_transaction_payment::{Module, Storage},
     }
 );
 
 /// The address format for describing accounts.
-pub type Address = <Indices as StaticLookup>::Source;
+pub type Address = AccountId;
 /// Block header type as expected by this runtime.
-pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 /// Block type as expected by this runtime.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-/// BlockId type as expected by this runtime.
-pub type BlockId = generic::BlockId<Block>;
-/// Custom Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = xr_primitives::generic::UncheckedMortalCompactExtrinsic<
-    Address,
-    Index,
-    Call,
-    Signature,
-    Acceleration,
->;
 /// A Block signed with a Justification
 pub type SignedBlock = generic::SignedBlock<Block>;
+/// BlockId type as expected by this runtime.
+pub type BlockId = generic::BlockId<Block>;
+/// The SignedExtension to the basic transaction logic.
+pub type SignedExtra = (
+    frame_system::CheckSpecVersion<Runtime>,
+    frame_system::CheckTxVersion<Runtime>,
+    frame_system::CheckGenesis<Runtime>,
+    frame_system::CheckEra<Runtime>,
+    frame_system::CheckNonce<Runtime>,
+    frame_system::CheckWeight<Runtime>,
+    // pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+);
+/// Unchecked extrinsic type as expected by this runtime.
+pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
-pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
+pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive =
-    xexecutive::Executive<Runtime, Block, system::ChainContext<Runtime>, XFeeManager, AllModules>;
+pub type Executive = frame_executive::Executive<
+    Runtime,
+    Block,
+    frame_system::ChainContext<Runtime>,
+    Runtime,
+    AllModules,
+>;
 
 impl_runtime_apis! {
-    impl client_api::Core<Block> for Runtime {
+    impl sp_api::Core<Block> for Runtime {
         fn version() -> RuntimeVersion {
             VERSION
         }
@@ -416,20 +299,16 @@ impl_runtime_apis! {
         fn initialize_block(header: &<Block as BlockT>::Header) {
             Executive::initialize_block(header)
         }
-
-//        fn authorities() -> Vec<AuthorityId> {
-//            panic!("Deprecated, please use `AuthoritiesApi`.")
-//        }
     }
 
-    impl client_api::Metadata<Block> for Runtime {
+    impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
             Runtime::metadata().into()
         }
     }
 
-    impl block_builder_api::BlockBuilder<Block> for Runtime {
-        fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyResult {
+    impl sp_block_builder::BlockBuilder<Block> for Runtime {
+        fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
             Executive::apply_extrinsic(extrinsic)
         }
 
@@ -437,265 +316,99 @@ impl_runtime_apis! {
             Executive::finalize_block()
         }
 
-        fn inherent_extrinsics(data: InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
+        fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
             data.create_extrinsics()
         }
 
-        fn check_inherents(block: Block, data: InherentData) -> CheckInherentsResult {
+        fn check_inherents(
+            block: Block,
+            data: sp_inherents::InherentData,
+        ) -> sp_inherents::CheckInherentsResult {
             data.check_extrinsics(&block)
         }
 
         fn random_seed() -> <Block as BlockT>::Hash {
-            System::random_seed()
+            RandomnessCollectiveFlip::random_seed()
         }
     }
 
-    impl client_api::TaggedTransactionQueue<Block> for Runtime {
-        fn validate_transaction(tx: <Block as BlockT>::Extrinsic) -> TransactionValidity {
-            Executive::validate_transaction(tx)
+    impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
+        fn validate_transaction(
+            source: TransactionSource,
+            tx: <Block as BlockT>::Extrinsic,
+        ) -> TransactionValidity {
+            Executive::validate_transaction(source, tx)
         }
     }
 
-    impl offchain_primitives::OffchainWorkerApi<Block> for Runtime {
-        fn offchain_worker(number: NumberFor<Block>) {
-            Executive::offchain_worker(number)
+    impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
+        fn offchain_worker(header: &<Block as BlockT>::Header) {
+            Executive::offchain_worker(header)
+        }
+    }
+
+    impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
+        fn slot_duration() -> u64 {
+            Aura::slot_duration()
+        }
+
+        fn authorities() -> Vec<AuraId> {
+            Aura::authorities()
+        }
+    }
+
+    impl sp_session::SessionKeys<Block> for Runtime {
+        fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
+            opaque::SessionKeys::generate(seed)
+        }
+
+        fn decode_session_keys(
+            encoded: Vec<u8>,
+        ) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
+            opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
         }
     }
 
     impl fg_primitives::GrandpaApi<Block> for Runtime {
-        fn grandpa_pending_change(digest: &DigestFor<Block>)
-            -> Option<ScheduledChange<NumberFor<Block>>>
-        {
-            for log in digest.logs.iter().filter_map(|l| match l {
-                Log(InternalLog::xgrandpa(grandpa_signal)) => Some(grandpa_signal),
-                _=> None
-            }) {
-                if let Some(change) = Grandpa::scrape_digest_change(log) {
-                    return Some(change);
-                }
-            }
-            None
-        }
-
-        fn grandpa_forced_change(digest: &DigestFor<Block>)
-            -> Option<(NumberFor<Block>, ScheduledChange<NumberFor<Block>>)>
-        {
-            for log in digest.logs.iter().filter_map(|l| match l {
-                Log(InternalLog::xgrandpa(grandpa_signal)) => Some(grandpa_signal),
-                _ => None
-            }) {
-                if let Some(change) = Grandpa::scrape_digest_forced_change(log) {
-                    return Some(change);
-                }
-            }
-            None
-        }
-
-        fn grandpa_authorities() -> Vec<(AuthorityId, u64)> {
+        fn grandpa_authorities() -> GrandpaAuthorityList {
             Grandpa::grandpa_authorities()
         }
-    }
 
-    impl consensus_aura::AuraApi<Block> for Runtime {
-        fn slot_duration() -> u64 {
-            Aura::slot_duration()
-        }
-    }
-
-    impl consensus_authorities::AuthoritiesApi<Block> for Runtime {
-        fn authorities() -> Vec<AuthorityIdFor<Block>> {
-            Consensus::authorities()
-        }
-    }
-
-    impl runtime_api::xassets_api::XAssetsApi<Block> for Runtime {
-        fn valid_assets() -> Vec<xassets::Token> {
-            XAssets::valid_assets()
+        fn submit_report_equivocation_extrinsic(
+            _equivocation_proof: fg_primitives::EquivocationProof<
+                <Block as BlockT>::Hash,
+                NumberFor<Block>,
+            >,
+            _key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
+        ) -> Option<()> {
+            None
         }
 
-        fn all_assets() -> Vec<(xassets::Asset, bool)> {
-            XAssets::all_assets()
-        }
-
-        fn valid_assets_of(who: AccountId) -> Vec<(xassets::Token, BTreeMap<xassets::AssetType, Balance>)> {
-            XAssets::valid_assets_of(&who)
-        }
-
-        fn withdrawal_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, TimestampU64>> {
-            match chain {
-                xassets::Chain::Bitcoin => XBridgeOfBTC::withdrawal_list(),
-                xassets::Chain::Ethereum => Vec::new(),
-                _ => Vec::new(),
-            }
-        }
-
-        fn deposit_list_of(chain: xassets::Chain) -> Vec<xrecords::RecordInfo<AccountId, Balance, BlockNumber, TimestampU64>> {
-            match chain {
-                xassets::Chain::Bitcoin => XBridgeOfBTC::deposit_list(),
-                xassets::Chain::Ethereum => Vec::new(),
-                _ => Vec::new(),
-            }
-        }
-
-        fn verify_address(token: xassets::Token, addr: AddrStr, ext: xassets::Memo) -> Result<(), Vec<u8>> {
-            XAssetsProcess::verify_address(token, addr, ext).map_err(|e| e.as_bytes().to_vec())
-        }
-
-        fn withdrawal_limit(token: xassets::Token) -> Option<xprocess::WithdrawalLimit<Balance>> {
-            XAssetsProcess::withdrawal_limit(&token)
+        fn generate_key_ownership_proof(
+            _set_id: fg_primitives::SetId,
+            _authority_id: GrandpaId,
+        ) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
+            // NOTE: this is the only implementation possible since we've
+            // defined our key owner proof type as a bottom type (i.e. a type
+            // with no values).
+            None
         }
     }
 
-    impl runtime_api::xmining_api::XMiningApi<Block> for Runtime {
-        fn jackpot_accountid_for_unsafe(who: AccountId) -> AccountId {
-            XStaking::jackpot_accountid_for_unsafe(&who)
-        }
-        fn multi_jackpot_accountid_for_unsafe(whos: Vec<AccountId>) -> Vec<AccountId> {
-            XStaking::multi_jackpot_accountid_for_unsafe(&whos)
-        }
-        fn token_jackpot_accountid_for_unsafe(token: xassets::Token) -> AccountId {
-            XTokens::token_jackpot_accountid_for_unsafe(&token)
-        }
-        fn multi_token_jackpot_accountid_for_unsafe(tokens: Vec<xassets::Token>) -> Vec<AccountId> {
-            XTokens::multi_token_jackpot_accountid_for_unsafe(&tokens)
-        }
-        fn asset_power(token: xassets::Token) -> Option<Balance> {
-            XTokens::asset_power(&token)
+    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
+        fn account_nonce(account: AccountId) -> Index {
+            System::account_nonce(account)
         }
     }
 
-    impl runtime_api::xspot_api::XSpotApi<Block> for Runtime {
-        fn aver_asset_price(token: xassets::Token) -> Option<Balance> {
-            XSpot::aver_asset_price(&token)
-        }
-    }
-
-    impl runtime_api::xfee_api::XFeeApi<Block> for Runtime {
-        fn transaction_fee(call_params: Vec<u8>, encoded_len: u64) -> Option<u64> {
-            let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
-                call
-            } else {
-                return None;
-            };
-
-            let switch = xfee_manager::Module::<Runtime>::switcher();
-            let method_call_weight = XFeeManager::method_call_weight();
-            call.check_fee(switch, method_call_weight).map(|weight|
-                XFeeManager::transaction_fee(weight, encoded_len)
-            )
-        }
-
-        fn fee_weight_map() -> BTreeMap<Vec<u8>, u64> {
-            let method_call_weight = XFeeManager::method_call_weight();
-            fee::call_weight_map(&method_call_weight)
-        }
-    }
-
-    impl runtime_api::xsession_api::XSessionApi<Block> for Runtime {
-        fn pubkeys_for_validator_name(name: Vec<u8>) -> Option<(AccountId, Option<AuthorityId>)> {
-            Session::pubkeys_for_validator_name(name)
-        }
-    }
-
-    impl runtime_api::xstaking_api::XStakingApi<Block> for Runtime {
-        fn intention_set() -> Vec<AccountId> {
-            XStaking::intention_set()
-        }
-        fn intentions_info_common() -> Vec<xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber >> {
-            XStaking::intentions_info_common()
-        }
-        fn intention_info_common_of(who: &AccountId) -> Option<xstaking::IntentionInfoCommon<AccountId, Balance, AuthorityId, BlockNumber>> {
-            XStaking::intention_info_common_of(who)
-        }
-    }
-
-    impl runtime_api::xbridge_api::XBridgeApi<Block> for Runtime {
-        fn mock_new_trustees(chain: xassets::Chain, candidates: Vec<AccountId>) -> Result<GenericAllSessionInfo<AccountId>, Vec<u8>> {
-            XBridgeFeatures::mock_trustee_session_impl(chain, candidates).map_err(|e| e.as_bytes().to_vec())
-        }
-        fn trustee_props_for(who: AccountId) ->  BTreeMap<xassets::Chain, GenericTrusteeIntentionProps> {
-            XBridgeFeatures::trustee_props_for(&who)
-        }
-        fn trustee_session_info() -> BTreeMap<xassets::Chain, GenericAllSessionInfo<AccountId>> {
-            let mut map = BTreeMap::new();
-            for chain in xassets::Chain::iterator() {
-                if let Some((_, info)) = Self::trustee_session_info_for(*chain, None) {
-                    map.insert(*chain, info);
-                }
-            }
-            map
-        }
-        fn trustee_session_info_for(chain: xassets::Chain, number: Option<u32>) -> Option<(u32, GenericAllSessionInfo<AccountId>)> {
-            XBridgeFeatures::trustee_session_info_for(chain, number).map(|info| {
-                let num = number.unwrap_or_else(||XBridgeFeatures::current_session_number(chain));
-                (num, info)
-            })
-        }
-    }
-
-    impl runtime_api::xcontracts_api::XContractsApi<Block> for Runtime {
-        fn call(
-            origin: AccountId,
-            dest: AccountId,
-            value: Balance,
-            gas_limit: u64,
-            issue_gas: bool,
-            input_data: Vec<u8>,
-        ) -> (ContractExecResult, Balance){
-            if issue_gas {
-                let tmp_account = AccountId::default();
-                let increase = gas_limit * XContracts::gas_price();
-                let _ = XAssets::pcx_make_free_balance_be(&tmp_account, increase);
-                let _ = XAssets::pcx_move_free_balance(&tmp_account, &origin, increase);
-            }
-            let exec_result = XContracts::bare_call(
-                origin.clone(),
-                dest,
-                value,
-                gas_limit,
-                input_data,
-            );
-            let r = match exec_result {
-                Ok(v) => ContractExecResult::Success {
-                    status: u16::from(v.status),
-                    data: v.data,
-                },
-                Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
-            };
-            (r, XAssets::pcx_free_balance(&origin))
-        }
-
-        fn get_storage(
-            address: AccountId,
-            key: [u8; 32],
-        ) -> GetStorageResult {
-            XContracts::get_storage(address, key).map_err(|rpc_err| {
-                use GetStorageError as RpcGetStorageError;
-                // Map the contract error into the RPC layer error.
-                match rpc_err {
-                    xcontracts::GetStorageError::ContractDoesntExist => RpcGetStorageError::ContractDoesntExist,
-                    xcontracts::GetStorageError::IsTombstone => RpcGetStorageError::IsTombstone,
-                }
-            })
-        }
-
-        fn xrc20_call(token: xassets::Token, selector: XRC20Selector, data: Vec<u8>) -> ContractExecResult {
-            // this call should not be called in extrinsics
-            let pay_gas = AccountId::default();
-            let gas_limit = 500_0000;
-            let value = gas_limit * XContracts::gas_price();
-            // temp issue some balance for a 0x00...0000 accountid
-            let _ = XAssets::pcx_make_free_balance_be(&pay_gas, value);
-            let exec_result = XContracts::call_xrc20(token, pay_gas.clone(), gas_limit, selector, data);
-            // remove all balance for this accountid
-            let _ = XAssets::pcx_make_free_balance_be(&pay_gas, Zero::zero());
-            match exec_result {
-                Ok(v) => ContractExecResult::Success {
-                    status: u16::from(v.status),
-                    data: v.data,
-                },
-                Err(e) => ContractExecResult::Error(e.reason.as_bytes().to_vec()),
-            }
+    impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
+        Block,
+        Balance,
+        UncheckedExtrinsic,
+    > for Runtime {
+        fn query_info(uxt: UncheckedExtrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
+            // TransactionPayment::query_info(uxt, len)
+            unimplemented!()
         }
     }
 }
