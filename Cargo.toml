@@ -11,30 +11,30 @@ structopt = "0.3.8"
 parking_lot = "0.10.0"
 jsonrpc-core = "14.0.3"
 
-sc-cli = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-rpc = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-executor = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-service = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sp-inherents = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-network = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sp-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-client-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
-sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
+sc-cli = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-rpc = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-executor = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-service = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-inherents = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-network = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-client-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 
 chainx-runtime = { path = "./runtime" }
 chainx-rpc = { path = "./rpc" }
 
 [build-dependencies]
-substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2" }
+substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 
 [workspace]
 members = [

@@ -5,7 +5,7 @@ authors = ["Chainpool <http://www.chainx.org>"]
 edition = "2018"
 
 [dependencies]
-sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc2", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 [features]
 default = ["std"]
