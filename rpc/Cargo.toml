@@ -15,6 +15,7 @@ hex = "0.4"
 sc-service = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", features = ["test-helpers"] }
 sc-client-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }

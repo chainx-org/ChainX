@@ -1,6 +1,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
+use std::sync::Arc;
+use std::time::Duration;
 
-use chainx_runtime::{self, opaque::Block, RuntimeApi};
 use sc_client_api::ExecutorProvider;
 use sc_consensus::LongestChain;
 use sc_executor::native_executor_instance;
@@ -12,8 +13,9 @@ use sc_finality_grandpa::{
 use sc_service::{error::Error as ServiceError, AbstractService, Configuration, ServiceBuilder};
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use sp_inherents::InherentDataProviders;
-use std::sync::Arc;
-use std::time::Duration;
+
+use chainx_primitives::Block;
+use chainx_runtime::{self, RuntimeApi};
 
 // Our native executor instance.
 native_executor_instance!(
@@ -36,7 +38,7 @@ macro_rules! new_full_start {
         let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
         let builder = sc_service::ServiceBuilder::new_full::<
-            chainx_runtime::opaque::Block,
+            chainx_primitives::Block,
             chainx_runtime::RuntimeApi,
             crate::service::Executor,
         >($config)?

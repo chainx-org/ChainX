@@ -14,7 +14,8 @@ use sp_state_machine::Backend as Backend2;
 
 use frame_support::StorageMap;
 
-use chainx_runtime::{opaque::Block, AccountId, Runtime};
+use chainx_primitives::Block;
+use chainx_runtime::{AccountId, Runtime};
 
 use crate::apis::ChainXApi;
 use crate::errors::ChainXRpcErr;

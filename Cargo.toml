@@ -31,6 +31,7 @@ sc-client-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 
+chainx-primitives = { path = "./primitives" }
 chainx-runtime = { path = "./runtime" }
 chainx-rpc = { path = "./rpc" }
 

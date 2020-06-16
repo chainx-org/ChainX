@@ -13,8 +13,7 @@ use codec::{Codec, Encode};
 // Substrate
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::{
-    AtLeast32Bit, CheckedAdd, CheckedSub, Hash, MaybeDisplay, MaybeSerializeDeserialize, Member,
-    Zero,
+    AtLeast32Bit, CheckedAdd, CheckedSub, Hash, MaybeSerializeDeserialize, Member, Zero,
 };
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*, result};
 
@@ -81,7 +80,6 @@ pub trait Trait: system::Trait {
         + Default
         + Copy
         + MaybeSerializeDeserialize
-        + MaybeDisplay
         + Debug;
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -203,7 +201,7 @@ decl_module! {
         #[weight = 0]
         pub fn transfer(origin, dest: T::AccountId, token: Token, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
-            debug!("[transfer]|from:{:?}|to:{:?}|token:{:?}|value:{:}|memo:{:?}", transactor, dest, token!(token), value, str!(memo));
+            debug!("[transfer]|from:{:?}|to:{:?}|token:{:?}|value:{:?}|memo:{:?}", transactor, dest, token!(token), value, str!(memo));
             is_valid_memo::<T>(&memo)?;
 
             Self::can_transfer(&token)?;
@@ -215,7 +213,7 @@ decl_module! {
         #[weight = 0]
         pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, token: Token, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
-            debug!("[force_transfer]|from:{:?}|to:{:?}|token:{:?}|value:{:}|memo:{:?}", transactor, dest, token!(token), value, str!(memo));
+            debug!("[force_transfer]|from:{:?}|to:{:?}|token:{:?}|value:{:?}|memo:{:?}", transactor, dest, token!(token), value, str!(memo));
             is_valid_memo::<T>(&memo)?;
 
             Self::can_transfer(&token)?;
@@ -620,7 +618,7 @@ impl<T: Trait> Module<T> {
         let current = Self::asset_type_balance(&who, token, type_);
 
         debug!(
-            "[issue]|issue to account|token:{:?}|who:{:?}|type:{:?}|current:{:}|value:{:}",
+            "[issue]|issue to account|token:{:?}|who:{:?}|type:{:?}|current:{:?}|value:{:?}",
             token!(token),
             who,
             type_,
@@ -656,7 +654,7 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<NegativeImbalance<T>, DispatchError> {
         let current = Self::asset_type_balance(&who, token, type_);
 
-        debug!("[destroy_directly]|destroy token for account|token:{:?}|who:{:?}|type:{:?}|current:{:}|destroy:{:}",
+        debug!("[destroy_directly]|destroy token for account|token:{:?}|who:{:?}|type:{:?}|current:{:?}|destroy:{:?}",
                token!(token), who, type_, current, value);
         // check
         let new = match current.checked_sub(&value) {
@@ -702,7 +700,7 @@ impl<T: Trait> Module<T> {
         let from_balance = Self::asset_type_balance(from, token, from_type);
         let to_balance = Self::asset_type_balance(to, token, to_type);
 
-        debug!("[move_balance]|token:{:?}|from:{:?}|f_type:{:?}|f_balance:{:}|to:{:?}|t_type:{:?}|t_balance:{:}|value:{:}",
+        debug!("[move_balance]|token:{:?}|from:{:?}|f_type:{:?}|f_balance:{:?}|to:{:?}|t_type:{:?}|t_balance:{:?}|value:{:?}",
                token!(token), from, from_type, from_balance, to, to_type, to_balance, value);
 
         // judge balance is enough and test overflow

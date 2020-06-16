@@ -459,6 +459,7 @@ dependencies = [
 name = "chainx"
 version = "2.0.0"
 dependencies = [
+ "chainx-primitives",
  "chainx-rpc",
  "chainx-runtime",
  "futures 0.3.5",
@@ -517,6 +518,7 @@ dependencies = [
  "serde_json",
  "sp-api",
  "sp-blockchain",
+ "sp-consensus",
  "sp-runtime",
  "sp-state-machine",
  "sp-transaction-pool",
