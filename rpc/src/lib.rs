@@ -17,9 +17,8 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
 
-use chainx_runtime::{
-    opaque::Block, AccountId, ArtvenusId, Balance, BlockNumber, Index, UncheckedExtrinsic,
-};
+use chainx_primitives::Block;
+use chainx_runtime::{AccountId, Balance, BlockNumber, Index, UncheckedExtrinsic};
 
 use apis::ChainXApi;
 use impls::ChainXRpc;
@@ -49,9 +48,9 @@ pub fn create_full<P, M, BE, E, RA>(deps: FullDeps<P, BE, E, RA>) -> jsonrpc_cor
 where
     BE: Backend<Block> + 'static,
     BE::State: sp_state_machine::backend::Backend<sp_runtime::traits::BlakeTwo256>,
-    E: CallExecutor<Block> + Clone + Send + Sync,
+    E: CallExecutor<Block>, //+ Clone + Send + Sync,
     RA: Send + Sync + 'static,
-    // B: BlockT + 'static,
+    Client<BE, E, Block, RA>: Send + Sync + 'static,
     Client<BE, E, Block, RA>: ProvideRuntimeApi<Block>,
     Client<BE, E, Block, RA>: HeaderBackend<Block>
         + HeaderMetadata<Block, Error = BlockChainError>

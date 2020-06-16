@@ -13,13 +13,11 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{
-    BlakeTwo256, Block as BlockT, IdentifyAccount, IdentityLookup, NumberFor, Saturating, Verify,
-};
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT, IdentityLookup, NumberFor, Saturating};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, MultiSignature,
+    ApplyExtrinsicResult,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -33,6 +31,7 @@ pub use chainx_primitives::{
 };
 
 // A few exports that help ease life for downstream crates.
+use chainx_primitives::Token;
 pub use frame_support::{
     construct_runtime, parameter_types,
     traits::{KeyOwnerProofSystem, Randomness},
@@ -182,17 +181,39 @@ impl pallet_timestamp::Trait for Runtime {
     type MinimumPeriod = MinimumPeriod;
 }
 
-// impl pallet_transaction_payment::Trait for Runtime {
-//     type Currency = (); // TODO
-//     type OnTransactionPayment = ();
-//     type TransactionByteFee = TransactionByteFee;
-//     type WeightToFee = IdentityFee<Balance>;
-//     type FeeMultiplierUpdate = ();
-// }
+parameter_types! {
+    pub const TransactionByteFee: Balance = 1;
+}
+
+impl pallet_transaction_payment::Trait for Runtime {
+    type Currency = XAssets;
+    type OnTransactionPayment = ();
+    type TransactionByteFee = TransactionByteFee;
+    type WeightToFee = IdentityFee<Balance>;
+    type FeeMultiplierUpdate = ();
+}
 
 impl pallet_sudo::Trait for Runtime {
     type Event = Event;
     type Call = Call;
+}
+
+pub struct Tmp;
+impl xrml_assets::TokenJackpotAccountIdFor<AccountId, BlockNumber> for Tmp {
+    fn accountid_for_unsafe(_token: &Token) -> AccountId {
+        unimplemented!()
+    }
+
+    fn accountid_for_safe(_token: &Token) -> Option<AccountId> {
+        unimplemented!()
+    }
+}
+impl xrml_assets::Trait for Runtime {
+    type Balance = Balance;
+    type Event = Event;
+    type OnAssetChanged = ();
+    type OnAssetRegisterOrRevoke = ();
+    type DetermineTokenJackpotAccountId = Tmp;
 }
 
 construct_runtime!(
@@ -208,7 +229,8 @@ construct_runtime!(
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
-        // TransactionPayment: pallet_transaction_payment::{Module, Storage},
+        TransactionPayment: pallet_transaction_payment::{Module, Storage},
+        XAssets: xrml_assets::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -230,7 +252,7 @@ pub type SignedExtra = (
     frame_system::CheckEra<Runtime>,
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
-    // pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -366,8 +388,7 @@ impl_runtime_apis! {
         UncheckedExtrinsic,
     > for Runtime {
         fn query_info(uxt: UncheckedExtrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
-            // TransactionPayment::query_info(uxt, len)
-            unimplemented!()
+            TransactionPayment::query_info(uxt, len)
         }
     }
 }

@@ -3,20 +3,22 @@
 pub mod rlog;
 pub use rlog::RUNTIME_TARGET;
 
-use frame_support::dispatch::{DispatchResult, DispatchError};
+use frame_support::dispatch::{DispatchError, DispatchResult};
 pub use frame_support::fail;
 
 /// Although xss is imperceptible on-chain, we merely want to make it look safer off-chain.
 #[inline]
 pub fn xss_check(input: &[u8]) -> DispatchResult {
     if input.contains(&b'<') || input.contains(&b'>') {
-        Err(DispatchError::Other("'<' and '>' are not allowed, which could be abused off-chain."))?;
+        Err(DispatchError::Other(
+            "'<' and '>' are not allowed, which could be abused off-chain.",
+        ))?;
     }
     Ok(())
 }
 
 #[cfg(feature = "std")]
-pub mod _std{
+pub mod _std {
     use std::fmt;
 
     pub struct Str<'a>(pub &'a String);
@@ -57,7 +59,7 @@ macro_rules! str {
     ( $x:ident ) => {{
         use $crate::_std::u8array_to_string;
         $crate::_std::Str(&u8array_to_string(&$x))
-    }}
+    }};
 }
 
 #[cfg(not(feature = "std"))]
@@ -65,17 +67,17 @@ macro_rules! str {
 macro_rules! str {
     ( $x:ident ) => {{
         &$x
-    }}
+    }};
 }
 
 #[macro_export]
 macro_rules! token {
     ( $x:ident ) => {
         $crate::str!($x)
-    }
+    };
 }
 
-// #[cfg(feature = "std")]
+#[cfg(feature = "std")]
 #[macro_export]
 macro_rules! ensure_with_errorlog {
 	( $x:expr, $y:expr, $($arg:tt)*) => {{
@@ -85,12 +87,12 @@ macro_rules! ensure_with_errorlog {
 		}
 	}}
 }
-// #[cfg(not(feature = "std"))]
-// #[macro_export]
-// macro_rules! ensure_with_errorlog {
-// 	( $x:expr, $y:expr, $($arg:tt)*) => {{
-// 		if !$x {
-// 			$crate::fail!($y);
-// 		}
-// 	}}
-// }
+#[cfg(not(feature = "std"))]
+#[macro_export]
+macro_rules! ensure_with_errorlog {
+    ( $x:expr, $y:expr, $($arg:tt)*) => {{
+        if !$x {
+            $crate::fail!($y);
+        }
+    }};
+}
