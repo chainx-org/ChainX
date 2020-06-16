@@ -1,0 +1,18 @@
+[package]
+name = "xrml-support"
+version = "0.1.0"
+authors = ["Rio Team<dev@riodefi.com>"]
+edition = "2018"
+
+[dependencies]
+rustc-hex = { version = "2.0", optional = true }
+
+frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "rustc-hex",
+
+    "frame-support/std",
+]
