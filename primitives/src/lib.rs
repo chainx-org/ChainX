@@ -49,6 +49,10 @@ pub type BlockId = generic::BlockId<Block>;
 // Runtime type
 /// String for Runtime
 pub type Text = Vec<u8>;
+pub type Desc = Vec<u8>;
+pub type Memo = Vec<u8>;
+pub type Token = Vec<u8>;
+pub type Precision = u8;
 
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this

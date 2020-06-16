@@ -554,6 +554,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder-runner",
+ "xrml-assets",
 ]
 
 [[package]]
@@ -6422,6 +6423,34 @@ dependencies = [
  "curve25519-dalek",
  "rand_core 0.5.1",
  "zeroize",
+]
+
+[[package]]
+name = "xrml-assets"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xrml-protocol",
+ "xrml-support",
+]
+
+[[package]]
+name = "xrml-protocol"
+version = "0.1.0"
+
+[[package]]
+name = "xrml-support"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "rustc-hex",
 ]
 
 [[package]]
