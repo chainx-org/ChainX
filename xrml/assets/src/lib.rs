@@ -16,13 +16,7 @@ use sp_runtime::traits::{
     AtLeast32Bit, CheckedAdd, CheckedSub, Hash, MaybeDisplay, MaybeSerializeDeserialize, Member,
     Zero,
 };
-use sp_std::{
-    collections::btree_map::BTreeMap,
-    convert::{TryFrom, TryInto},
-    fmt::Debug,
-    prelude::*,
-    result,
-};
+use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*, result};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -30,10 +24,10 @@ use frame_support::{
     traits::{Imbalance, SignedImbalance},
     Parameter,
 };
-use frame_system::{self as system, ensure_signed};
+use frame_system::{self as system, ensure_root, ensure_signed};
 
 // ChainX
-use chainx_primitives::{Desc, Memo, Precision, Token};
+use chainx_primitives::{Desc, Memo, Token};
 use xrml_support::{debug, ensure_with_errorlog, error, info, str, token};
 
 pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJackpotAccountIdFor};
@@ -87,6 +81,7 @@ pub trait Trait: system::Trait {
         + Default
         + Copy
         + MaybeSerializeDeserialize
+        + MaybeDisplay
         + Debug;
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -163,86 +158,110 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
-        // /// register_asset to module, should allow by root
-        // pub fn register_asset(asset: Asset, is_online: bool, is_psedu_intention: bool) -> DispatchResult {
-        //     asset.is_valid()?;
-        //     info!("[register_asset]|{:?}|is_online:{:}|is_psedu_intention:{:}", asset, is_online, is_psedu_intention);
-        //
-        //     let token = asset.token();
-        //
-        //     Self::add_asset(asset)?;
-        //
-        //     T::OnAssetRegisterOrRevoke::on_register(&token, is_psedu_intention)?;
-        //     Self::deposit_event(RawEvent::Register(token.clone(), is_psedu_intention));
-        //
-        //     if !is_online {
-        //         let _ = Self::revoke_asset(token);
-        //     }
-        //     Ok(())
-        // }
-        //
-        // /// revoke asset, mark this asset is invalid
-        // pub fn revoke_asset(token: Token) -> DispatchResult {
-        //     is_valid_token::<T>(&token)?;
-        //     Self::remove_asset(&token)?;
-        //
-        //     T::OnAssetRegisterOrRevoke::on_revoke(&token)?;
-        //     Self::deposit_event(RawEvent::Revoke(token));
-        //     Ok(())
-        // }
-        //
-        // /// set free token for an account
-        // pub fn set_balance(who: T::AccountId, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> DispatchResult {
-        //     let who = <T as system::Trait>::Lookup::lookup(who)?;
-        //     info!("[set_balance]|set balances by root|who:{:?}|token:{:?}|balances_map:{:?}", who, token!(token), balances);
-        //     Self::set_balance_by_root(&who, &token, balances)?;
-        //     Ok(())
-        // }
-        //
-        // /// transfer between account
-        // pub fn transfer(origin, dest: T::AccountId, token: Token, value: T::Balance, memo: Memo) -> DispatchResult {
-        //     let transactor = ensure_signed(origin)?;
-        //     let dest = <T as system::Trait>::Lookup::lookup(dest)?;
-        //     debug!("[transfer]|from:{:?}|to:{:?}|token:{:?}|value:{:?}|memo:{:?}", transactor, dest, token!(token), value, u8array_to_string(&memo));
-        //     is_valid_memo::<T>(&memo)?;
-        //
-        //     Self::can_transfer(&token)?;
-        //     let _ = Self::move_free_balance(&token, &transactor, &dest, value).map_err(|e| e.info())?;
-        //     Ok(())
-        // }
-        //
-        // pub fn modify_asset_info(token: Token, token_name: Option<Token>, desc: Option<Desc>) {
-        //     if let Some(ref mut info) = Self::asset_info(&token) {
-        //         token_name.map(|name| info.0.set_token_name(name));
-        //         desc.map(|desc| info.0.set_desc(desc));
-        //
-        //         AssetInfo::insert(token, info);
-        //     } else {
-        //         error!("[modify_asset_info]|asset not exist|token:{:?}", token!(token));
-        //     }
-        // }
-        //
-        // pub fn set_asset_limit_props(token: Token, props: BTreeMap<AssetLimit, bool>) {
-        //     if Self::asset_info(&token).is_some() {
-        //         AssetLimitProps::<T>::insert(&token, props)
-        //     } else {
-        //         error!("[set_asset_limit_props]|asset not exist|token:{:?}", token!(token));
-        //     }
-        // }
-        //
-        // pub fn modify_asset_limit(token: Token, limit: AssetLimit, can_do: bool) {
-        //     if Self::asset_info(&token).is_some() {
-        //         AssetLimitProps::<T>::mutate(token, |limit_map| {
-        //             if can_do {
-        //                 limit_map.remove(&limit);
-        //             } else {
-        //                 limit_map.insert(limit, false);
-        //             }
-        //         })
-        //     } else {
-        //         error!("[set_asset_limit_props]|asset not exist|token:{:?}", token!(token));
-        //     }
-        // }
+        /// register_asset to module, should allow by root
+        #[weight = 0]
+        pub fn register_asset(origin, asset: Asset, is_online: bool, is_psedu_intention: bool) -> DispatchResult {
+            ensure_root(origin)?;
+            asset.is_valid::<T>()?;
+            info!("[register_asset]|{:?}|is_online:{:}|is_psedu_intention:{:}", asset, is_online, is_psedu_intention);
+
+            let token = asset.token();
+
+            Self::add_asset(asset)?;
+
+            T::OnAssetRegisterOrRevoke::on_register(&token, is_psedu_intention)?;
+            Self::deposit_event(RawEvent::Register(token.clone(), is_psedu_intention));
+
+            if !is_online {
+                let _ = Self::revoke_asset(frame_system::RawOrigin::Root.into(), token);
+            }
+            Ok(())
+        }
+
+        /// revoke asset, mark this asset is invalid
+        #[weight = 0]
+        pub fn revoke_asset(origin, token: Token) -> DispatchResult {
+            ensure_root(origin)?;
+            is_valid_token::<T>(&token)?;
+            Self::remove_asset(&token)?;
+
+            T::OnAssetRegisterOrRevoke::on_revoke(&token)?;
+            Self::deposit_event(RawEvent::Revoke(token));
+            Ok(())
+        }
+
+        /// set free token for an account
+        #[weight = 0]
+        pub fn set_balance(origin, who: T::AccountId, token: Token, balances: BTreeMap<AssetType, T::Balance>) -> DispatchResult {
+            ensure_root(origin)?;
+            info!("[set_balance]|set balances by root|who:{:?}|token:{:?}|balances_map:{:?}", who, token!(token), balances);
+            Self::set_balance_by_root(&who, &token, balances)?;
+            Ok(())
+        }
+
+        /// transfer between account
+        #[weight = 0]
+        pub fn transfer(origin, dest: T::AccountId, token: Token, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
+            let transactor = ensure_signed(origin)?;
+            debug!("[transfer]|from:{:?}|to:{:?}|token:{:?}|value:{:}|memo:{:?}", transactor, dest, token!(token), value, str!(memo));
+            is_valid_memo::<T>(&memo)?;
+
+            Self::can_transfer(&token)?;
+            let _ = Self::move_free_balance(&token, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+            Ok(())
+        }
+
+        /// for transfer by root
+        #[weight = 0]
+        pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, token: Token, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
+            ensure_root(origin)?;
+            debug!("[force_transfer]|from:{:?}|to:{:?}|token:{:?}|value:{:}|memo:{:?}", transactor, dest, token!(token), value, str!(memo));
+            is_valid_memo::<T>(&memo)?;
+
+            Self::can_transfer(&token)?;
+            let _ = Self::move_free_balance(&token, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+            Ok(())
+        }
+
+        #[weight = 0]
+        pub fn modify_asset_info(origin, token: Token, token_name: Option<Token>, desc: Option<Desc>) -> DispatchResult {
+            ensure_root(origin)?;
+            if let Some(ref mut info) = Self::asset_info(&token) {
+                token_name.map(|name| info.0.set_token_name(name));
+                desc.map(|desc| info.0.set_desc(desc));
+
+                AssetInfo::<T>::insert(token, info);
+            } else {
+                error!("[modify_asset_info]|asset not exist|token:{:?}", token!(token));
+            }
+            Ok(())
+        }
+
+        #[weight = 0]
+        pub fn set_asset_limit_props(origin, token: Token, props: BTreeMap<AssetLimit, bool>) {
+            ensure_root(origin)?;
+            if Self::asset_info(&token).is_some() {
+                AssetLimitProps::insert(&token, props)
+            } else {
+                error!("[set_asset_limit_props]|asset not exist|token:{:?}", token!(token));
+            }
+        }
+
+        #[weight = 0]
+        pub fn modify_asset_limit(origin, token: Token, limit: AssetLimit, can_do: bool) {
+            ensure_root(origin)?;
+            if Self::asset_info(&token).is_some() {
+                AssetLimitProps::mutate(token, |limit_map| {
+                    if can_do {
+                        limit_map.remove(&limit);
+                    } else {
+                        limit_map.insert(limit, false);
+                    }
+                })
+            } else {
+                error!("[set_asset_limit_props]|asset not exist|token:{:?}", token!(token));
+            }
+        }
     }
 }
 
@@ -391,14 +410,14 @@ impl<T: Trait> Module<T> {
         list
     }
 
-    pub fn get_asset(token: &Token) -> result::Result<Asset, &'static str> {
+    pub fn get_asset(token: &Token) -> result::Result<Asset, DispatchError> {
         if let Some((asset, valid, _)) = Self::asset_info(token) {
             if valid == false {
-                return Err("this asset is invalid, maybe has been revoked.");
+                Err(Error::<T>::InvalidToken)?;
             }
             Ok(asset)
         } else {
-            return Err("this token asset not exist!");
+            Err(Error::<T>::NotExistdToken)?
         }
     }
 
@@ -601,7 +620,7 @@ impl<T: Trait> Module<T> {
         let current = Self::asset_type_balance(&who, token, type_);
 
         debug!(
-            "[issue]|issue to account|token:{:?}|who:{:?}|type:{:?}|current:{:?}|value:{:?}",
+            "[issue]|issue to account|token:{:?}|who:{:?}|type:{:?}|current:{:}|value:{:}",
             token!(token),
             who,
             type_,
@@ -637,7 +656,7 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<NegativeImbalance<T>, DispatchError> {
         let current = Self::asset_type_balance(&who, token, type_);
 
-        debug!("[destroy_directly]|destroy token for account|token:{:?}|who:{:?}|type:{:?}|current:{:?}|destroy:{:?}",
+        debug!("[destroy_directly]|destroy token for account|token:{:?}|who:{:?}|type:{:?}|current:{:}|destroy:{:}",
                token!(token), who, type_, current, value);
         // check
         let new = match current.checked_sub(&value) {
@@ -683,7 +702,7 @@ impl<T: Trait> Module<T> {
         let from_balance = Self::asset_type_balance(from, token, from_type);
         let to_balance = Self::asset_type_balance(to, token, to_type);
 
-        debug!("[move_balance]|token:{:?}|from:{:?}|f_type:{:?}|f_balance:{:?}|to:{:?}|t_type:{:?}|t_balance:{:?}|value:{:?}",
+        debug!("[move_balance]|token:{:?}|from:{:?}|f_type:{:?}|f_balance:{:}|to:{:?}|t_type:{:?}|t_balance:{:}|value:{:}",
                token!(token), from, from_type, from_balance, to, to_type, to_balance, value);
 
         // judge balance is enough and test overflow

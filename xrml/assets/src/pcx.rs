@@ -1,6 +1,6 @@
 use frame_support::dispatch::DispatchResult;
 use frame_support::traits::{
-    BalanceStatus, Currency, ExistenceRequirement, ReservableCurrency, SignedImbalance,
+    BalanceStatus, Currency, ExistenceRequirement, Imbalance, ReservableCurrency, SignedImbalance,
     WithdrawReason, WithdrawReasons,
 };
 use sp_runtime::{
@@ -91,12 +91,12 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
         unimplemented!()
     }
 
-    fn burn(amount: Self::Balance) -> Self::PositiveImbalance {
-        unimplemented!()
+    fn burn(_amount: Self::Balance) -> Self::PositiveImbalance {
+        PositiveImbalance::zero()
     }
 
-    fn issue(amount: Self::Balance) -> Self::NegativeImbalance {
-        unimplemented!()
+    fn issue(_amount: Self::Balance) -> Self::NegativeImbalance {
+        NegativeImbalance::zero()
     }
 }
 
