@@ -40,6 +40,7 @@ pallet-randomness-collective-flip = { git = "https://github.com/paritytech/subst
 chainx-primitives = { path = "../primitives", default-features = false }
 
 xrml-assets = { path = "../xrml/assets", default-features = false }
+xrml-bridge-bitcoin = { path = "../xrml/bridge/bitcoin", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
@@ -79,4 +80,5 @@ std = [
     "chainx-primitives/std",
 
     "xrml-assets/std",
+    "xrml-bridge-bitcoin/std",
 ]

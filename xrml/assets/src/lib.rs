@@ -19,8 +19,8 @@ use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*, result};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
-    traits::{Imbalance, SignedImbalance},
+    dispatch::{DispatchResult, DispatchError},
+    traits::{Imbalance, SignedImbalance, OnNewAccount},
     Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
@@ -36,8 +36,6 @@ pub use self::types::{
     is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetLimit, AssetType, Chain,
     NegativeImbalance, PositiveImbalance, SignedBalance, SignedImbalanceT,
 };
-use frame_support::traits::OnNewAccount;
-use sp_runtime::DispatchError;
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::sp_std::marker::PhantomData<T>);
 

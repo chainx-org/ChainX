@@ -1,13 +1,11 @@
-use frame_support::dispatch::DispatchResult;
+use sp_runtime::traits::{CheckedSub, Zero};
+use sp_std::{cmp, result};
+
+use frame_support::dispatch::{DispatchResult, DispatchError};
 use frame_support::traits::{
     BalanceStatus, Currency, ExistenceRequirement, Imbalance, ReservableCurrency, SignedImbalance,
     WithdrawReason, WithdrawReasons,
 };
-use sp_runtime::{
-    traits::{CheckedSub, Zero},
-    DispatchError,
-};
-use sp_std::{cmp, result};
 
 use crate::traits::ChainT;
 use crate::types::{AssetType, NegativeImbalance, PositiveImbalance};
@@ -32,6 +30,14 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
 
     fn minimum_balance() -> Self::Balance {
         Zero::zero()
+    }
+
+    fn burn(_amount: Self::Balance) -> Self::PositiveImbalance {
+        PositiveImbalance::zero()
+    }
+
+    fn issue(_amount: Self::Balance) -> Self::NegativeImbalance {
+        NegativeImbalance::zero()
     }
 
     fn free_balance(who: &T::AccountId) -> Self::Balance {
@@ -71,6 +77,10 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
         Self::inner_issue(&Self::TOKEN.to_vec(), who, AssetType::Free, value)
     }
 
+    fn deposit_creating(_who: &T::AccountId, _value: Self::Balance) -> Self::PositiveImbalance {
+        unimplemented!()
+    }
+
     fn withdraw(
         _who: &T::AccountId,
         _value: Self::Balance,
@@ -80,23 +90,11 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
         unimplemented!()
     }
 
-    fn deposit_creating(_who: &T::AccountId, _value: Self::Balance) -> Self::PositiveImbalance {
-        unimplemented!()
-    }
-
     fn make_free_balance_be(
         _who: &T::AccountId,
         _balance: Self::Balance,
     ) -> SignedImbalance<Self::Balance, Self::PositiveImbalance> {
         unimplemented!()
-    }
-
-    fn burn(_amount: Self::Balance) -> Self::PositiveImbalance {
-        PositiveImbalance::zero()
-    }
-
-    fn issue(_amount: Self::Balance) -> Self::NegativeImbalance {
-        NegativeImbalance::zero()
     }
 }
 
