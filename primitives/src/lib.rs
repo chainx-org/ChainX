@@ -53,6 +53,9 @@ pub type Desc = Vec<u8>;
 pub type Memo = Vec<u8>;
 pub type Token = Vec<u8>;
 pub type Precision = u8;
+pub type Name = Vec<u8>;
+pub type URL = Vec<u8>;
+pub type AddrStr = Vec<u8>;
 
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this

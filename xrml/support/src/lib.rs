@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod rlog;
+pub mod base58;
 pub use rlog::RUNTIME_TARGET;
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
@@ -79,6 +80,23 @@ macro_rules! token {
 
 #[cfg(feature = "std")]
 #[macro_export]
+macro_rules! try_addr {
+    ( $x:ident ) => {{
+        use $crate::_std::u8array_to_addr;
+        $crate::_std::Str(&u8array_to_addr(&$x))
+    }};
+}
+
+#[cfg(not(feature = "std"))]
+#[macro_export]
+macro_rules! try_addr {
+    ( $x:ident ) => {{
+        &$x
+    }};
+}
+
+#[cfg(feature = "std")]
+#[macro_export]
 macro_rules! ensure_with_errorlog {
 	( $x:expr, $y:expr, $($arg:tt)*) => {{
 		if !$x {
@@ -87,6 +105,7 @@ macro_rules! ensure_with_errorlog {
 		}
 	}}
 }
+
 #[cfg(not(feature = "std"))]
 #[macro_export]
 macro_rules! ensure_with_errorlog {

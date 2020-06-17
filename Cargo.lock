@@ -456,6 +456,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "chain"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+dependencies = [
+ "crypto",
+ "parity-scale-codec",
+ "primitives",
+ "rustc-hex",
+ "serde",
+ "serialization",
+]
+
+[[package]]
 name = "chainx"
 version = "2.0.0"
 dependencies = [
@@ -557,6 +570,7 @@ dependencies = [
  "sp-version",
  "substrate-wasm-builder-runner",
  "xrml-assets",
+ "xrml-bridge-bitcoin",
 ]
 
 [[package]]
@@ -727,6 +741,19 @@ name = "crunchy"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
+
+[[package]]
+name = "crypto"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+dependencies = [
+ "digest",
+ "primitives",
+ "ripemd160",
+ "sha-1",
+ "sha2",
+ "siphasher",
+]
 
 [[package]]
 name = "crypto-mac"
@@ -1920,6 +1947,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "keys"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+dependencies = [
+ "bs58",
+ "crypto",
+ "libsecp256k1",
+ "parity-scale-codec",
+ "primitives",
+ "rustc-hex",
+ "serde",
+ "serialization",
+]
+
+[[package]]
 name = "kv-log-macro"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2457,6 +2499,17 @@ name = "memory_units"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
+
+[[package]]
+name = "merkle"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+dependencies = [
+ "chain",
+ "parity-scale-codec",
+ "primitives",
+ "serialization",
+]
 
 [[package]]
 name = "merlin"
@@ -3234,6 +3287,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "primitives"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+dependencies = [
+ "byteorder",
+ "fixed-hash",
+ "hex",
+ "impl-codec",
+ "impl-serde 0.3.1",
+ "primitive-types",
+ "rustc-hex",
+ "serde",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3722,6 +3790,17 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi 0.3.8",
+]
+
+[[package]]
+name = "ripemd160"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad5112e0dbbb87577bfbc56c42450235e3012ce336e29c5befd7807bd626da4a"
+dependencies = [
+ "block-buffer",
+ "digest",
+ "opaque-debug",
 ]
 
 [[package]]
@@ -4582,6 +4661,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
+name = "script"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+dependencies = [
+ "chain",
+ "crypto",
+ "keys",
+ "primitives",
+ "serialization",
+]
+
+[[package]]
 name = "sct"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4667,6 +4758,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "serialization"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+dependencies = [
+ "primitives",
+ "serialization_derive",
+]
+
+[[package]]
+name = "serialization_derive"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.5",
+ "syn 1.0.22",
+]
+
+[[package]]
 name = "sha-1"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4724,6 +4834,12 @@ dependencies = [
  "arc-swap",
  "libc",
 ]
+
+[[package]]
+name = "siphasher"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa8f3741c7372e75519bd9346068370c9cdaabcc1f9599cbcf2a2719352286b7"
 
 [[package]]
 name = "slab"
@@ -6030,7 +6146,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.7.3",
+ "rand 0.3.23",
 ]
 
 [[package]]
@@ -6444,6 +6560,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "xrml-bridge-bitcoin"
+version = "0.1.0"
+dependencies = [
+ "chain",
+ "chainx-primitives",
+ "crypto",
+ "frame-support",
+ "frame-system",
+ "keys",
+ "merkle",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "primitives",
+ "script",
+ "serde",
+ "serialization",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xrml-assets",
+ "xrml-protocol",
+ "xrml-support",
+]
+
+[[package]]
 name = "xrml-protocol"
 version = "0.1.0"
 
@@ -6453,6 +6594,7 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "rustc-hex",
+ "sp-std",
 ]
 
 [[package]]
