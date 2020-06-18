@@ -4,7 +4,7 @@ use super::*;
 fn test() {
     with_externalities(&mut new_test_ext(), || {
         use substrate_primitives::hexdisplay::HexDisplay;
-        let r = <BlockHeaderFor<Test>>::key_for(&h256_from_rev_str(
+        let r = <BTCHeaderFor<Test>>::key_for(&h256_from_rev_str(
             "00000000000025c23a19cc91ad8d3e33c2630ce1df594e1ae0bf0eabe30a9176",
         ));
         let a = substrate_primitives::twox_128(&r);
@@ -127,7 +127,7 @@ fn test_genesis2() {
 #[test]
 fn test_changebit() {
     with_externalities(&mut new_test_ext(), || {
-        let b1 = BlockHeader {
+        let b1 = BTCHeader {
             version: 1,
             previous_header_hash: h256_from_rev_str(
                 "00000000864b744c5025331036aa4a16e9ed1cbb362908c625272150fa059b29",
@@ -145,7 +145,7 @@ fn test_changebit() {
             "0x0000000089d757fd95d79f7fcc2bc25ca7fc16492dca9aa610730ea05d9d3de9"
         );
 
-        let _b2 = BlockHeader {
+        let _b2 = BTCHeader {
             version: 1,
             previous_header_hash: h256_from_rev_str(
                 "00000000864b744c5025331036aa4a16e9ed1cbb362908c625272150fa059b29",

@@ -1,7 +1,7 @@
 use sp_runtime::traits::{CheckedSub, Zero};
 use sp_std::{cmp, result};
 
-use frame_support::dispatch::{DispatchResult, DispatchError};
+use frame_support::dispatch::{DispatchError, DispatchResult};
 use frame_support::traits::{
     BalanceStatus, Currency, ExistenceRequirement, Imbalance, ReservableCurrency, SignedImbalance,
     WithdrawReason, WithdrawReasons,

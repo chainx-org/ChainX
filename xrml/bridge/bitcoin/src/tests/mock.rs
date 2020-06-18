@@ -168,7 +168,7 @@ impl xbridge_common::traits::TrusteeSession<AccountId, TrusteeAddrInfo> for Dumm
 }
 
 pub struct DummyCrossChain;
-impl xbridge_common::traits::CrossChainBinding<AccountId, BitcoinAddress> for DummyCrossChain {
+impl xbridge_common::traits::CrossChainBinding<AccountId, BTCAddress> for DummyCrossChain {
     fn update_binding(_: &AccountId, _: btc_keys::Address, _: Option<Vec<u8>>) {}
 
     fn get_binding_info(_: &btc_keys::Address) -> Option<(AccountId, Option<AccountId>)> {
@@ -201,7 +201,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         GenesisConfig::<Test> {
             // start genesis block: (genesis, blocknumber)
             genesis: (
-                BlockHeader {
+                BTCHeader {
                     version: 980090880,
                     previous_header_hash: h256_from_rev_str(
                         "00000000000000ab706b663326210d03780fea6ecfe0cc59c78f0c7dddba9cc2",
@@ -218,7 +218,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             genesis_hash: h256_from_rev_str(
                 "0000000000000059227e29b86313c99ac908a1d71db97632b402f13a569b4709",
             ),
-            params_info: Params::new(
+            params_info: BTCParams::new(
                 520159231,            // max_bits
                 2 * 60 * 60,          // block_max_future
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
@@ -260,7 +260,7 @@ pub fn new_test_mainnet() -> runtime_io::TestExternalities<Blake2Hasher> {
         GenesisConfig::<Test> {
             // start genesis block: (genesis, blocknumber)
             genesis: (
-                BlockHeader {
+                BTCHeader {
                     version: 545259520,
                     previous_header_hash: h256_from_rev_str(
                         "00000000000000000001b2505c11119fcf29be733ec379f686518bf1090a522a",
@@ -277,7 +277,7 @@ pub fn new_test_mainnet() -> runtime_io::TestExternalities<Blake2Hasher> {
             genesis_hash: h256_from_rev_str(
                 "00000000000000000008c8427670a65dec4360e88bf6c8381541ef26b30bd8fc",
             ),
-            params_info: Params::new(
+            params_info: BTCParams::new(
                 486604799,            // max_bits
                 2 * 60 * 60,          // block_max_future
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
@@ -298,8 +298,8 @@ pub fn new_test_mainnet() -> runtime_io::TestExternalities<Blake2Hasher> {
     r.into()
 }
 
-pub fn generate_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
-    let b0: BlockHeader = BlockHeader {
+pub fn generate_blocks() -> (Vec<BTCHeader>, Vec<BTCHeader>) {
+    let b0: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: Default::default(),
         merkle_root_hash: h256_from_rev_str(
@@ -310,7 +310,7 @@ pub fn generate_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 562223693,
     }; //1451572
 
-    let b1: BlockHeader = BlockHeader {
+    let b1: BTCHeader = BTCHeader {
         version: 536928256,
         previous_header_hash: h256_from_rev_str(
             "00000000000000fd9cea8b846895f507c63b005d20ac56e87d1cdf80effd5c0a",
@@ -323,7 +323,7 @@ pub fn generate_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 2982943095,
     };
 
-    let b2: BlockHeader = BlockHeader {
+    let b2: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: h256_from_rev_str(
             "0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd",
@@ -336,7 +336,7 @@ pub fn generate_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 744509129,
     };
 
-    let b3: BlockHeader = BlockHeader {
+    let b3: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: h256_from_rev_str(
             "00000000000000a6350fbd74c4f75decdc9e49ed3c89a53d5122bc699730c6fe",
@@ -349,7 +349,7 @@ pub fn generate_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 2225829261,
     };
 
-    let b4: BlockHeader = BlockHeader {
+    let b4: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: h256_from_rev_str(
             "000000005239e07019651d0cd871d2f4d663c827202442aff61fbc8b01c4afe8",
@@ -362,7 +362,7 @@ pub fn generate_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 4075542957,
     };
 
-    let b1_fork: BlockHeader = BlockHeader {
+    let b1_fork: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: h256_from_rev_str(
             "00000000000000e83086b78ebc3da4af6d892963fa3fd5e1648c693de623d1b7",
@@ -378,8 +378,8 @@ pub fn generate_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
     (vec![b0.clone(), b1, b2, b3, b4], vec![b0, b1_fork])
 }
 
-pub fn generate_mock_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
-    let b0: BlockHeader = BlockHeader {
+pub fn generate_mock_blocks() -> (Vec<BTCHeader>, Vec<BTCHeader>) {
+    let b0: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: Default::default(),
         merkle_root_hash: h256_from_rev_str(
@@ -390,7 +390,7 @@ pub fn generate_mock_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 562223693,
     }; //1451572
 
-    let b1: BlockHeader = BlockHeader {
+    let b1: BTCHeader = BTCHeader {
         version: 536928256,
         previous_header_hash: h256_from_rev_str(
             "00000000000000fd9cea8b846895f507c63b005d20ac56e87d1cdf80effd5c0a",
@@ -403,7 +403,7 @@ pub fn generate_mock_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 2982943095,
     };
 
-    let b2: BlockHeader = BlockHeader {
+    let b2: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: h256_from_rev_str(
             "0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd",
@@ -416,7 +416,7 @@ pub fn generate_mock_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 744509129,
     };
 
-    let b3: BlockHeader = BlockHeader {
+    let b3: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: h256_from_rev_str(
             "00000000000000a6350fbd74c4f75decdc9e49ed3c89a53d5122bc699730c6fe",
@@ -429,7 +429,7 @@ pub fn generate_mock_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 2225829261,
     };
 
-    let b4: BlockHeader = BlockHeader {
+    let b4: BTCHeader = BTCHeader {
         version: 536870912,
         previous_header_hash: h256_from_rev_str(
             "000000005239e07019651d0cd871d2f4d663c827202442aff61fbc8b01c4afe8",
@@ -442,7 +442,7 @@ pub fn generate_mock_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 4075542957,
     };
 
-    let b1_fork: BlockHeader = BlockHeader {
+    let b1_fork: BTCHeader = BTCHeader {
         version: 1,
         previous_header_hash: h256_from_rev_str(
             "0305b6acb0feee5bd7f5f74606190c35877299b881691db2e56a53452e3929f9",
@@ -455,7 +455,7 @@ pub fn generate_mock_blocks() -> (Vec<BlockHeader>, Vec<BlockHeader>) {
         nonce: 26781,
     };
 
-    let b2_fork: BlockHeader = BlockHeader {
+    let b2_fork: BTCHeader = BTCHeader {
         version: 1,
         previous_header_hash: h256_from_rev_str(
             "0000b7b52e51d3b424d349e9b277e35c69c5ac46856e60a6abe65c052238d429",

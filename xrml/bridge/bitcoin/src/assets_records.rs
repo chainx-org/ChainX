@@ -50,7 +50,7 @@ impl<T: Trait> Module<T> {
                 //                           current 4
                 //                  current 5
                 for confirmed in 1_u32..confirmations {
-                    if let Some(info) = Module::<T>::block_header_for(current_hash) {
+                    if let Some(info) = Module::<T>::btc_header_for(current_hash) {
                         // lookup withdrawal tx in current header
                         for txid in info.txid_list {
                             if let Some(tx_info) = Self::tx_for(&txid) {
@@ -116,7 +116,7 @@ impl<T: Trait> Module<T> {
         //                  current 4
         let mut current_hash = Self::best_index();
         for index in 0..(confirmations - 1) {
-            if let Some(info) = Module::<T>::block_header_for(current_hash) {
+            if let Some(info) = Module::<T>::btc_header_for(current_hash) {
                 for txid in info.txid_list {
                     if let Some(tx_info) = Self::tx_for(&txid) {
                         if tx_info.tx_type == TxType::Deposit {

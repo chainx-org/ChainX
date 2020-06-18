@@ -9,7 +9,7 @@ use system::ensure_signed;
 
 // light-bitcoin
 use btc_chain::Transaction;
-use btc_keys::{Address as BitcoinAddress, Network};
+use btc_keys::{Address as BTCAddress, Network};
 use btc_primitives::H256;
 use btc_script::Script;
 
@@ -83,9 +83,9 @@ decl_storage! {
     trait Store for Module<T: Trait> as XBridgeOfBTCLockup {
         /// locked up btc is UTXO, using (txid, out_index) to represent it
         /// use UTXO => (accountid, balance)
-        pub LockedUpBTC get(locked_up_btc): map (H256, u32) => Option<(T::AccountId, u64, BitcoinAddress)>;
+        pub LockedUpBTC get(locked_up_btc): map (H256, u32) => Option<(T::AccountId, u64, BTCAddress)>;
         /// sum value for single Bitcoin addr
-        pub AddressLockedCoin get(address_locked_coin): map BitcoinAddress => u64;
+        pub AddressLockedCoin get(address_locked_coin): map BTCAddress => u64;
 
         /// single addr and ont output limit coin value, default limit is 0.01 BTC ~ 10 BTC
         pub LockedCoinLimit get(locked_coin_limit): (u64, u64) = (1*1000000, 10*100000000);
@@ -304,7 +304,7 @@ fn parse_lock_info<AccountId, F>(
     chainx_addr_type: u8,
     parse_account_info: F,
     limit: (u64, u64),
-) -> Option<(BitcoinAddress, usize, (AccountId, Option<Name>))>
+) -> Option<(BTCAddress, usize, (AccountId, Option<Name>))>
 where
     AccountId: Default + MaybeDebug,
     F: Fn(&[u8], u8) -> Option<(AccountId, Option<Name>)>,

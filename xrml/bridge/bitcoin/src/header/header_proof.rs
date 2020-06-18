@@ -9,11 +9,12 @@ use sp_std::{cmp, result};
 use xrml_support::{debug, ensure_with_errorlog, error, info};
 
 // light-bitcoin
-use btc_chain::BlockHeader;
+use btc_chain::BlockHeader as BTCHeader;
+use btc_keys::Network;
 use btc_primitives::{Compact, H256, U256};
 
 use super::ChainErr;
-use crate::types::Params;
+use crate::types::BTCParams;
 use crate::{Error, Module, Trait};
 
 pub struct HeaderVerifier<'a> {
@@ -23,7 +24,7 @@ pub struct HeaderVerifier<'a> {
 }
 
 impl<'a> HeaderVerifier<'a> {
-    pub fn new<T: Trait>(header: &'a BlockHeader, height: u32) -> result::Result<Self, ChainErr> {
+    pub fn new<T: Trait>(header: &'a BTCHeader, height: u32) -> result::Result<Self, ChainErr> {
         let now: T::Moment = pallet_timestamp::Module::<T>::now();
         // bitcoin use u32 to log time, we think the timestamp would not more then u32
         let current_time: u32 = now.saturated_into::<u32>();
@@ -36,9 +37,9 @@ impl<'a> HeaderVerifier<'a> {
     }
 
     pub fn check<T: Trait>(&self) -> DispatchResult {
-        let params: Params = Module::<T>::params_info();
-        let network_id: u32 = Module::<T>::network_id();
-        if network_id == 0 {
+        let params: BTCParams = Module::<T>::params_info();
+        let network_id: Network = Module::<T>::network_id();
+        if let Network::Mainnet = network_id {
             self.work.check::<T>(&params)?;
         }
         self.proof_of_work.check::<T>(&params)?;
@@ -48,16 +49,16 @@ impl<'a> HeaderVerifier<'a> {
 }
 
 pub struct HeaderWork<'a> {
-    header: &'a BlockHeader,
+    header: &'a BTCHeader,
     height: u32,
 }
 
 impl<'a> HeaderWork<'a> {
-    fn new(header: &'a BlockHeader, height: u32) -> Self {
+    fn new(header: &'a BTCHeader, height: u32) -> Self {
         HeaderWork { header, height }
     }
 
-    fn check<T: Trait>(&self, p: &Params) -> DispatchResult {
+    fn check<T: Trait>(&self, p: &BTCParams) -> DispatchResult {
         let previous_header_hash = self.header.previous_header_hash.clone();
         let work = work_required::<T>(previous_header_hash, self.height, p);
         ensure_with_errorlog!(
@@ -72,13 +73,13 @@ impl<'a> HeaderWork<'a> {
     }
 }
 
-pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &Params) -> Compact {
+pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BTCParams) -> Compact {
     let max_bits = params.max_bits().into();
     if height == 0 {
         return max_bits;
     }
 
-    let parent_header: BlockHeader = Module::<T>::block_header_for(&parent_hash).unwrap().header;
+    let parent_header: BTCHeader = Module::<T>::btc_header_for(&parent_hash).unwrap().header;
 
     if is_retarget_height(height, params) {
         let new_work = work_required_retarget::<T>(parent_header, height, params);
@@ -92,15 +93,15 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &Params) 
     parent_header.bits
 }
 
-pub fn is_retarget_height(height: u32, p: &Params) -> bool {
+pub fn is_retarget_height(height: u32, p: &BTCParams) -> bool {
     height % p.retargeting_interval() == 0
 }
 
 /// Algorithm used for retargeting work every 2 weeks
 pub fn work_required_retarget<T: Trait>(
-    parent_header: BlockHeader,
+    parent_header: BTCHeader,
     height: u32,
-    params: &Params,
+    params: &BTCParams,
 ) -> Compact {
     let retarget_num = height - params.retargeting_interval();
 
@@ -112,7 +113,7 @@ pub fn work_required_retarget<T: Trait>(
         let hash_list = Module::<T>::block_hash_for(&retarget_num);
         for h in hash_list {
             // look up in main chain
-            if let Some(info) = Module::<T>::block_header_for(h) {
+            if let Some(info) = Module::<T>::btc_header_for(h) {
                 if info.confirmed == true {
                     retarget_header = info.header;
                     break;
@@ -152,7 +153,7 @@ pub fn work_required_retarget<T: Trait>(
 }
 
 /// Returns constrained number of seconds since last retarget
-pub fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, p: &Params) -> u32 {
+pub fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, p: &BTCParams) -> u32 {
     // TODO i64??
     // subtract unsigned 32 bit numbers in signed 64 bit space in
     // order to prevent underflow before applying the range constraint.
@@ -169,15 +170,15 @@ fn range_constrain(value: i64, min: i64, max: i64) -> i64 {
 }
 
 pub struct HeaderProofOfWork<'a> {
-    header: &'a BlockHeader,
+    header: &'a BTCHeader,
 }
 
 impl<'a> HeaderProofOfWork<'a> {
-    fn new(header: &'a BlockHeader) -> Self {
+    fn new(header: &'a BTCHeader) -> Self {
         HeaderProofOfWork { header }
     }
 
-    fn check<T: Trait>(&self, p: &Params) -> DispatchResult {
+    fn check<T: Trait>(&self, p: &BTCParams) -> DispatchResult {
         if is_valid_proof_of_work(p.max_bits(), self.header.bits, &self.header.hash()) {
             Ok(())
         } else {
@@ -209,19 +210,19 @@ pub fn is_valid_proof_of_work(max_work_bits: Compact, bits: Compact, hash: &H256
 }
 
 pub struct HeaderTimestamp<'a> {
-    header: &'a BlockHeader,
+    header: &'a BTCHeader,
     current_time: u32,
 }
 
 impl<'a> HeaderTimestamp<'a> {
-    fn new(header: &'a BlockHeader, current_time: u32) -> Self {
+    fn new(header: &'a BTCHeader, current_time: u32) -> Self {
         HeaderTimestamp {
             header,
             current_time,
         }
     }
 
-    fn check<T: Trait>(&self, p: &Params) -> DispatchResult {
+    fn check<T: Trait>(&self, p: &BTCParams) -> DispatchResult {
         if self.header.time > self.current_time + p.block_max_future() {
             error!("[HeaderTimestamp check]|Futuristic timestamp|header time{:}|current time:{:}|max_future{:?}", self.header.time, self.current_time, p.block_max_future());
             Err(Error::<T>::HeaderFuturisticTimestamp)?

@@ -10,12 +10,12 @@ use sp_std::result;
 use xrml_support::{debug, error, info};
 
 // light-bitcoin
-use btc_chain::BlockHeader;
+use btc_chain::BlockHeader as BTCHeader;
 use btc_primitives::H256;
 
 // use super::tx::{handle_tx, remove_unused_tx};
-use super::types::BlockHeaderInfo;
-use super::{BlockHashFor, BlockHeaderFor, Error, Module, Trait};
+use super::types::BTCHeaderInfo;
+use super::{BTCHeaderFor, BlockHashFor, Error, Module, Trait};
 
 pub use self::header_proof::HeaderVerifier;
 
@@ -46,10 +46,10 @@ impl<T: Trait> From<ChainErr> for Error<T> {
 }
 
 pub fn check_prev_and_convert<T: Trait>(
-    header: BlockHeader,
-) -> result::Result<BlockHeaderInfo, ChainErr> {
+    header: BTCHeader,
+) -> result::Result<BTCHeaderInfo, ChainErr> {
     let prev_hash = &header.previous_header_hash;
-    let prev_info = Module::<T>::block_header_for(prev_hash).ok_or_else(|| {
+    let prev_info = Module::<T>::btc_header_for(prev_hash).ok_or_else(|| {
         error!(
             "[check_prev_and_convert]|not find prev header|current header:{:?}",
             header
@@ -59,7 +59,7 @@ pub fn check_prev_and_convert<T: Trait>(
     let prev_height = prev_info.height;
 
     let best_header_hash = Module::<T>::best_index();
-    let best_info = Module::<T>::block_header_for(&best_header_hash).ok_or_else(|| {
+    let best_info = Module::<T>::btc_header_for(&best_header_hash).ok_or_else(|| {
         error!(
             "[check_prev_and_convert]|not find best|current best hash:{:}",
             best_header_hash
@@ -79,7 +79,7 @@ pub fn check_prev_and_convert<T: Trait>(
                best_info, header, confirmations, this_height, best_height - (confirmations - 1));
         return Err(ChainErr::AncientFork);
     }
-    Ok(BlockHeaderInfo {
+    Ok(BTCHeaderInfo {
         header: header.clone(),
         height: this_height,
         confirmed: false,
@@ -87,7 +87,7 @@ pub fn check_prev_and_convert<T: Trait>(
     })
 }
 
-pub fn remove_unused_headers<T: Trait>(header_info: &BlockHeaderInfo) {
+pub fn remove_unused_headers<T: Trait>(header_info: &BTCHeaderInfo) {
     //delete old header info
     let reserved = Module::<T>::reserved_block();
     if header_info.height > reserved {
@@ -95,7 +95,7 @@ pub fn remove_unused_headers<T: Trait>(header_info: &BlockHeaderInfo) {
         let v = Module::<T>::block_hash_for(&del);
         // remove all block for this height
         for h in v.iter() {
-            if let Some(header_info) = Module::<T>::block_header_for(h) {
+            if let Some(header_info) = Module::<T>::btc_header_for(h) {
                 // remove related tx for this block
                 for txid in header_info.txid_list.iter() {
                     // TODO
@@ -103,7 +103,7 @@ pub fn remove_unused_headers<T: Trait>(header_info: &BlockHeaderInfo) {
                 }
             }
 
-            BlockHeaderFor::remove(h);
+            BTCHeaderFor::remove(h);
             debug!(
                 "[remove_unused_headers]|remove old header|height:{:}|hash:{:?}",
                 del, h
@@ -117,7 +117,7 @@ pub fn remove_unused_headers<T: Trait>(header_info: &BlockHeaderInfo) {
 ///           |--------- confirmations = 6 ------------|
 /// b(prev) - b(confirm) - b - b - b - b - b(best_index)
 /// #issue 501 https://github.com/chainpool/ChainX/issues/501
-pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256, u32) {
+pub fn update_confirmed_header<T: Trait>(header_info: &BTCHeaderInfo) -> (H256, u32) {
     // update confirmd status
     let confirmations = Module::<T>::confirmation_number();
     let mut prev_hash = header_info.header.previous_header_hash.clone();
@@ -129,7 +129,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256
     //                                              prev     current 3
     //                                  prev     current 4
     for _i in 1..(confirmations - 1) {
-        if let Some(current_info) = Module::<T>::block_header_for(&prev_hash) {
+        if let Some(current_info) = Module::<T>::btc_header_for(&prev_hash) {
             prev_hash = current_info.header.previous_header_hash
         } else {
             // if not find current header info, jump out of loop
@@ -141,10 +141,10 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256
         }
     }
 
-    if let Some(mut header) = Module::<T>::block_header_for(&prev_hash) {
+    if let Some(mut header) = Module::<T>::btc_header_for(&prev_hash) {
         handle_confirmed_block::<T>(&header);
         header.confirmed = true;
-        BlockHeaderFor::insert(&prev_hash, header);
+        BTCHeaderFor::insert(&prev_hash, header);
     } else {
         // no not have prev hash in storage, return genesis header info
         info!(
@@ -160,7 +160,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256
     (prev_hash, header_info.height - (confirmations - 1))
 }
 
-fn handle_confirmed_block<T: Trait>(confirmed_header: &BlockHeaderInfo) {
+fn handle_confirmed_block<T: Trait>(confirmed_header: &BTCHeaderInfo) {
     debug!(
         "[handle_confirmed_block]|Confirmed: height:{:}|hash:{:}",
         confirmed_header.height as u64,
@@ -188,11 +188,11 @@ fn handle_confirmed_block<T: Trait>(confirmed_header: &BlockHeaderInfo) {
 ///                                    current 2
 ///                           current 3
 ///       prev        current 4
-pub fn find_confirmed_block<T: Trait>(current: &H256) -> BlockHeaderInfo {
+pub fn find_confirmed_block<T: Trait>(current: &H256) -> BTCHeaderInfo {
     let confirmations = Module::<T>::confirmation_number();
     let mut current_hash = current.clone();
     for _ in 0..(confirmations - 1) {
-        if let Some(info) = Module::<T>::block_header_for(current_hash) {
+        if let Some(info) = Module::<T>::btc_header_for(current_hash) {
             if info.confirmed == true {
                 return info;
             }
@@ -203,10 +203,10 @@ pub fn find_confirmed_block<T: Trait>(current: &H256) -> BlockHeaderInfo {
         }
     }
 
-    if let Some(info) = Module::<T>::block_header_for(current_hash) {
+    if let Some(info) = Module::<T>::btc_header_for(current_hash) {
         info
     } else {
         let (header, _) = Module::<T>::genesis_info();
-        Module::<T>::block_header_for(header.hash()).expect("genesis hash must exist!")
+        Module::<T>::btc_header_for(header.hash()).expect("genesis hash must exist!")
     }
 }

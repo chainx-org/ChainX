@@ -1,5 +1,6 @@
 use chainx_runtime::{
-    AccountId, AuraConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig,
+    h256_conv_endian_from_str, AccountId, AuraConfig, BTCHeader, BTCNetwork, BTCParams, Compact,
+    GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, XBridgeBitcoinConfig,
     WASM_BINARY,
 };
 use sc_service::ChainType;
@@ -124,6 +125,38 @@ fn testnet_genesis(
         }),
         pallet_sudo: Some(SudoConfig {
             key: root_key.clone(),
+        }),
+        xrml_bridge_bitcoin: Some(XBridgeBitcoinConfig {
+            genesis_header_and_height: (
+                BTCHeader {
+                    version: 536870912,
+                    previous_header_hash: h256_conv_endian_from_str(
+                        "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
+                    ),
+                    merkle_root_hash: h256_conv_endian_from_str(
+                        "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
+                    ),
+                    time: 1558168296,
+                    bits: Compact::new(388627269),
+                    nonce: 1439505020,
+                },
+                576576,
+            ),
+            genesis_hash: h256_conv_endian_from_str(
+                "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882",
+            ),
+            params_info: BTCParams::new(
+                486604799,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            network_id: BTCNetwork::Mainnet,
+            confirmation_number: 4,
+            reserved_block: 2100,
+            btc_withdrawal_fee: 500000,
+            max_withdrawal_count: 100,
         }),
     }
 }

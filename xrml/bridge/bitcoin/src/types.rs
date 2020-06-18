@@ -5,21 +5,22 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 // Substrate
+use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
 // chainx
 // use xbridge_common::traits::IntoVecu8;
 
 // light-bitcoin
-use btc_chain::{BlockHeader, Transaction};
+use btc_chain::{BlockHeader as BTCHeader, Transaction};
 use btc_keys::{Address, Error as AddressError};
 use btc_primitives::{Compact, H256};
 use merkle::PartialMerkleTree;
 
 use crate::{traits::RelayTransaction, Error, Trait};
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum TxType {
     Withdrawal,
     Deposit,
@@ -36,8 +37,7 @@ impl Default for TxType {
     }
 }
 
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub struct RelayTx {
     pub block_hash: H256,
     pub raw: Transaction,
@@ -60,8 +60,7 @@ impl RelayTransaction for RelayTx {
     }
 }
 
-#[derive(PartialEq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct WithdrawalProposal<AccountId> {
     pub sig_state: VoteResult,
     pub withdrawal_id_list: Vec<u32>,
@@ -85,24 +84,22 @@ impl<AccountId> WithdrawalProposal<AccountId> {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum VoteResult {
     Unfinish,
     Finish,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct BlockHeaderInfo {
-    pub header: BlockHeader,
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct BTCHeaderInfo {
+    pub header: BTCHeader,
     pub height: u32,
     pub confirmed: bool,
     pub txid_list: Vec<H256>,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
 pub struct TxInfo {
     pub raw_tx: Transaction,
     pub tx_type: TxType,
@@ -120,7 +117,7 @@ pub struct DepositCache {
     pub balance: u64,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TrusteeAddrInfo {
@@ -150,10 +147,10 @@ pub struct TrusteeAddrInfo {
 //     }
 // }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Params {
+pub struct BTCParams {
     max_bits: u32,
     //Compact
     block_max_future: u32,
@@ -167,15 +164,15 @@ pub struct Params {
     max_timespan: u32,
 }
 
-impl Params {
+impl BTCParams {
     pub fn new(
         max_bits: u32,
         block_max_future: u32,
         target_timespan_seconds: u32,
         target_spacing_seconds: u32,
         retargeting_factor: u32,
-    ) -> Params {
-        Params {
+    ) -> BTCParams {
+        BTCParams {
             max_bits,
             block_max_future,
 

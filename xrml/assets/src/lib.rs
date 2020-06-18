@@ -19,8 +19,8 @@ use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*, result};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::{DispatchResult, DispatchError},
-    traits::{Imbalance, SignedImbalance, OnNewAccount},
+    dispatch::{DispatchError, DispatchResult},
+    traits::{Imbalance, OnNewAccount, SignedImbalance},
     Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};

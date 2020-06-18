@@ -45,6 +45,10 @@ pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
+// xrml re-exports
+#[cfg(feature = "std")]
+pub use xrml_bridge_bitcoin::h256_conv_endian_from_str;
+pub use xrml_bridge_bitcoin::{BTCHeader, BTCNetwork, BTCParams, Compact, H256 as BTCHash};
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -216,6 +220,10 @@ impl xrml_assets::Trait for Runtime {
     type DetermineTokenJackpotAccountId = Tmp;
 }
 
+impl xrml_bridge_bitcoin::Trait for Runtime {
+    type Event = Event;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -231,6 +239,7 @@ construct_runtime!(
 
         TransactionPayment: pallet_transaction_payment::{Module, Storage},
         XAssets: xrml_assets::{Module, Call, Storage, Event<T>},
+        XBridgeBitcoin: xrml_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
     }
 );
 
