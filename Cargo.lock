@@ -536,6 +536,7 @@ dependencies = [
  "sp-state-machine",
  "sp-transaction-pool",
  "substrate-frame-rpc-system",
+ "xrml-contracts-rpc-runtime-api",
 ]
 
 [[package]]
@@ -6585,6 +6586,26 @@ dependencies = [
  "xrml-assets",
  "xrml-protocol",
  "xrml-support",
+]
+
+[[package]]
+name = "xrml-contracts-primitives"
+version = "2.0.0-rc3"
+dependencies = [
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "xrml-contracts-rpc-runtime-api"
+version = "0.8.0-rc3"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xrml-contracts-primitives",
 ]
 
 [[package]]

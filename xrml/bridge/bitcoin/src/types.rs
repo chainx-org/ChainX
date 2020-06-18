@@ -13,7 +13,7 @@ use sp_std::prelude::*;
 
 // light-bitcoin
 use btc_chain::{BlockHeader as BTCHeader, Transaction};
-use btc_keys::{Address, Error as AddressError};
+use btc_keys::Address;
 use btc_primitives::{Compact, H256};
 use merkle::PartialMerkleTree;
 
