@@ -458,7 +458,7 @@ dependencies = [
 [[package]]
 name = "chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
 dependencies = [
  "crypto",
  "parity-scale-codec",
@@ -745,7 +745,7 @@ checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 [[package]]
 name = "crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
 dependencies = [
  "digest",
  "primitives",
@@ -1949,7 +1949,7 @@ dependencies = [
 [[package]]
 name = "keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
 dependencies = [
  "bs58",
  "crypto",
@@ -2503,7 +2503,7 @@ checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
 [[package]]
 name = "merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
 dependencies = [
  "chain",
  "parity-scale-codec",
@@ -3289,7 +3289,7 @@ dependencies = [
 [[package]]
 name = "primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
 dependencies = [
  "byteorder",
  "fixed-hash",
@@ -4663,7 +4663,7 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 [[package]]
 name = "script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
 dependencies = [
  "chain",
  "crypto",
@@ -4760,7 +4760,7 @@ dependencies = [
 [[package]]
 name = "serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
 dependencies = [
  "primitives",
  "serialization_derive",
@@ -4769,7 +4769,7 @@ dependencies = [
 [[package]]
 name = "serialization_derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#9a4f23d23070ffec7afcefcae89e0cf0ce4a04e3"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
 dependencies = [
  "proc-macro2",
  "quote 1.0.5",

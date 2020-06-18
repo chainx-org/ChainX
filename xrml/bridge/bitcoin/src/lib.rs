@@ -38,11 +38,15 @@ use xrml_support::{base58, debug, ensure_with_errorlog, error, info, try_addr, w
 // use xsupport::{trustees, u8array_to_addr};
 
 // light-bitcoin
-use btc_chain::{BlockHeader, Transaction};
-use btc_keys::{Address as BitcoinAddress, DisplayLayout, Error as AddressError, Public};
-use btc_primitives::H256;
-pub use btc_primitives::H264;
+use btc_chain::Transaction;
+use btc_keys::{Address as BTCAddress, DisplayLayout, Error as AddressError, Public};
 use btc_ser::{deserialize, Reader};
+// re-export
+pub use btc_chain::BlockHeader as BTCHeader;
+pub use btc_keys::Network as BTCNetwork;
+#[cfg(feature = "std")]
+pub use btc_primitives::h256_conv_endian_from_str;
+pub use btc_primitives::{Compact, H256, H264};
 
 pub use self::traits::RelayTransaction;
 // use self::tx::handler::remove_pending_deposit;
@@ -55,7 +59,7 @@ pub use self::traits::RelayTransaction;
 // };
 use self::types::DepositCache;
 pub use self::types::{
-    BlockHeaderInfo, Params, RelayTx, TrusteeAddrInfo, TxInfo, TxType, VoteResult,
+    BTCHeaderInfo, BTCParams, RelayTx, TrusteeAddrInfo, TxInfo, TxType, VoteResult,
     WithdrawalProposal,
 };
 
@@ -70,7 +74,7 @@ pub trait Trait: frame_system::Trait + pallet_timestamp::Trait + xrml_assets::Tr
     // type AccountExtractor: Extractable<Self::AccountId>;
     // type TrusteeSessionProvider: TrusteeSession<Self::AccountId, TrusteeAddrInfo>;
     // type TrusteeMultiSigProvider: TrusteeMultiSig<Self::AccountId>;
-    // type CrossChainProvider: CrossChainBinding<Self::AccountId, BitcoinAddress>;
+    // type CrossChainProvider: CrossChainBinding<Self::AccountId, BTCAddress>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
@@ -130,84 +134,78 @@ decl_storage! {
         /// block hash list for a height
         pub BlockHashFor get(fn block_hash_for): map hasher(twox_64_concat) u32 => Vec<H256>;
         /// all valid blockheader (include orphan blockheader)
-        pub BlockHeaderFor get(fn block_header_for): map hasher(identity) H256 => Option<BlockHeaderInfo>;
+        pub BTCHeaderFor get(fn btc_header_for): map hasher(identity) H256 => Option<BTCHeaderInfo>;
         /// tx info for txhash
         pub TxFor get(fn tx_for): map hasher(identity) H256 => Option<TxInfo>;
         /// mark tx has been handled, in case re-handle this tx
         /// do not need to remove after this tx is removed from ChainX
         pub TxMarkFor get(fn tx_mark_for): map hasher(identity) H256 => Option<()>;
         /// tx first input addr for this tx
-        pub InputAddrFor get(fn input_addr_for): map hasher(identity) H256 => Option<BitcoinAddress>;
+        pub InputAddrFor get(fn input_addr_for): map hasher(identity) H256 => Option<BTCAddress>;
 
         // /// unclaim deposit info, addr => tx_hash, btc value, blockhash
-        // pub PendingDepositMap get(fn pending_deposit): map hasher(blake2_128_concat) BitcoinAddress => Option<Vec<DepositCache>>;
+        // pub PendingDepositMap get(fn pending_deposit): map hasher(blake2_128_concat) BTCAddress => Option<Vec<DepositCache>>;
         // /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
         // pub CurrentWithdrawalProposal get(fn withdrawal_proposal): Option<WithdrawalProposal<T::AccountId>>;
 
         /// get GenesisInfo (header, height)
-        // pub GenesisInfo get(fn genesis_info) config(genesis): (BlockHeader, u32);
-        pub GenesisInfo get(fn genesis_info) config(genesis): (BlockHeader, u32);
+        pub GenesisInfo get(fn genesis_info) config(genesis_header_and_height): (BTCHeader, u32);
         /// get ParamsInfo from genesis_config
-        pub ParamsInfo get(fn params_info) config(): Params;
+        pub ParamsInfo get(fn params_info) config(): BTCParams;
         ///  NetworkId for testnet or mainnet
-        pub NetworkId get(fn network_id) config(): u32;
+        pub NetworkId get(fn network_id) config(): BTCNetwork;
         /// reserved count for block
         pub ReservedBlock get(fn reserved_block) config(): u32;
         /// get ConfirmationNumber from genesis_config
         pub ConfirmationNumber get(fn confirmation_number) config(): u32;
-        /// get BtcWithdrawalFee from genesis_config
-        pub BtcWithdrawalFee get(fn btc_withdrawal_fee) config(): u64;
+        /// get BTCWithdrawalFee from genesis_config
+        pub BTCWithdrawalFee get(fn btc_withdrawal_fee) config(): u64;
         /// min deposit value limit, default is 10w sotashi(0.001 BTC)
-        pub BtcMinDeposit get(fn btc_min_deposit): u64 = 1 * 100000;
+        pub BTCMinDeposit get(fn btc_min_deposit): u64 = 1 * 100000;
         /// max withdraw account count in bitcoin withdrawal transaction
         pub MaxWithdrawalCount get(fn max_withdrawal_count) config(): u32;
     }
     add_extra_genesis {
         config(genesis_hash): H256;
-        //build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
-            // use runtime_io::with_storage;
-            // use support::{StorageMap, StorageValue};
+        build(|config| {
+            let (genesis_header, number): (BTCHeader, u32) = config.genesis_header_and_height.clone();
+            // would ignore check for bitcoin testnet
+            #[cfg(not(test))] {
+            if let BTCNetwork::Mainnet = config.network_id {
+                if config.params_info.retargeting_interval() != 0 {
+                    panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
+                }
+            }
+            }
 
-            // let (genesis_header, number): (BlockHeader, u32) = config.genesis.clone();
-            // // would jump in test
-            // #[cfg(not(test))] {
-            // if config.network_id == 0 && number % config.params_info.retargeting_interval() != 0 {
-            //     panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
-            // }
-            // }
-            //
-            // let genesis_hash = genesis_header.hash();
-            //
-            // if genesis_hash != config.genesis_hash {
-            //     panic!("the genesis block not much the genesis_hash!|genesis_block's hash:{:?}|config genesis_hash:{:?}", genesis_hash, config.genesis_hash);
-            // }
-            //
-            // let header_info = BlockHeaderInfo {
-            //     header: genesis_header,
-            //     height: number,
-            //     confirmed: true,
-            //     txid_list: [].to_vec(),
-            // };
-            //
-            // with_storage(storage, || {
-            //     BlockHeaderFor::insert(&genesis_hash, header_info.clone());
-            //     BlockHashFor::insert(&header_info.height, vec![genesis_hash.clone()]);
-            //
-            //     BestIndex::<T>::put(genesis_hash);
-            //
-            //     Module::<T>::deposit_event(RawEvent::InsertHeader(
-            //         header_info.header.version,
-            //         header_info.header.hash(),
-            //         header_info.height,
-            //         header_info.header.previous_header_hash,
-            //         header_info.header.merkle_root_hash,
-            //         header_info.header.time,
-            //         header_info.header.nonce,
-            //         header_info.height,
-            //         genesis_hash,
-            //     ));
-            // });
-        //});
+            let genesis_hash = genesis_header.hash();
+            if genesis_hash != config.genesis_hash {
+                panic!("the genesis block not much the genesis_hash!|genesis_block's hash:{:?}|config genesis_hash:{:?}", genesis_hash, config.genesis_hash);
+            }
+
+            let header_info = BTCHeaderInfo {
+                header: genesis_header,
+                height: number,
+                confirmed: true,
+                txid_list: [].to_vec(),
+            };
+            BTCHeaderFor::insert(&genesis_hash, header_info.clone());
+            BlockHashFor::insert(&header_info.height, vec![genesis_hash.clone()]);
+
+            BestIndex::put(genesis_hash);
+
+            Module::<T>::deposit_event(RawEvent::InsertHeader(
+                header_info.header.version,
+                header_info.header.hash(),
+                header_info.height,
+                header_info.header.previous_header_hash,
+                header_info.header.merkle_root_hash,
+                header_info.header.time,
+                header_info.header.nonce,
+                header_info.height,
+                genesis_hash,
+            ));
+        })
     }
 }
 
@@ -215,11 +213,11 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
-        /// if use `BlockHeader` struct would export in metadata, cause complex in front-end
+        /// if use `BTCHeader` struct would export in metadata, cause complex in front-end
         #[weight = 0]
         pub fn push_header(origin, header: Vec<u8>) -> DispatchResult {
             let _from = ensure_signed(origin)?;
-            let header: BlockHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeHeaderErr)?;
+            let header: BTCHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeHeaderErr)?;
             debug!("[push_header]|from:{:?}|header:{:?}", _from, header);
 
             Self::apply_push_header(header)?;
@@ -293,12 +291,12 @@ decl_module! {
         // }
         //
         // pub fn set_btc_withdrawal_fee(fee: T::Balance) -> DispatchResult {
-        //     BtcWithdrawalFee::<T>::put(fee.into());
+        //     BTCWithdrawalFee::<T>::put(fee.into());
         //     Ok(())
         // }
         //
         // pub fn set_btc_deposit_limit(value: T::Balance) {
-        //     BtcMinDeposit::<T>::put(value.into());
+        //     BTCMinDeposit::<T>::put(value.into());
         // }
         //
         // pub fn set_btc_deposit_limit_by_trustees(origin, value: T::Balance) {
@@ -308,7 +306,7 @@ decl_module! {
         //     let _ = Self::set_btc_deposit_limit(value);
         // }
         //
-        // pub fn remove_pending(addr: BitcoinAddress, who: Option<T::AccountId>) -> DispatchResult {
+        // pub fn remove_pending(addr: BTCAddress, who: Option<T::AccountId>) -> DispatchResult {
         //     if let Some(w) = who {
         //         remove_pending_deposit::<T>(&addr, &w);
         //     } else {
@@ -318,7 +316,7 @@ decl_module! {
         //     Ok(())
         // }
         //
-        // pub fn remove_pending_by_trustees(origin, addr: BitcoinAddress, who: Option<T::AccountId>) -> DispatchResult {
+        // pub fn remove_pending_by_trustees(origin, addr: BTCAddress, who: Option<T::AccountId>) -> DispatchResult {
         //     let from = ensure_signed(origin)?;
         //     T::TrusteeMultiSigProvider::check_multisig(&from)?;
         //     Self::remove_pending(addr, who)
@@ -331,7 +329,7 @@ decl_module! {
         // }
         //
         // pub fn set_header_confirmed_state(hash: H256, confirmed: bool) {
-        //     BlockHeaderFor::mutate(hash, |info| {
+        //     BTCHeaderFor::mutate(hash, |info| {
         //         if let Some(info) = info {
         //             warn!("[set_header_confirmed_state]|modify header confirmed state|hash:{:?}|confirmed:{:}", hash, confirmed);
         //             info.confirmed = confirmed;
@@ -483,9 +481,9 @@ impl<T: Trait> TrusteeForChain<T::AccountId, Public, TrusteeAddrInfo> for Module
 }
 */
 impl<T: Trait> Module<T> {
-    pub fn verify_btc_address(data: &[u8]) -> result::Result<BitcoinAddress, DispatchError> {
+    pub fn verify_btc_address(data: &[u8]) -> result::Result<BTCAddress, DispatchError> {
         let r = base58::from(data).map_err(|_| Error::<T>::InvalidBase58)?;
-        let addr = BitcoinAddress::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
+        let addr = BTCAddress::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
         Ok(addr)
     }
 
@@ -501,17 +499,17 @@ impl<T: Trait> Module<T> {
     //     Err("Committer not in the trustee list")
     // }
 
-    fn apply_push_header(header: BlockHeader) -> DispatchResult {
+    fn apply_push_header(header: BTCHeader) -> DispatchResult {
         // current should not exist
         ensure_with_errorlog!(
-            Self::block_header_for(&header.hash()).is_none(),
+            Self::btc_header_for(&header.hash()).is_none(),
             "Header already exists.",
             "hash:{:}",
             header.hash(),
         );
         // current should exist yet
         ensure_with_errorlog!(
-            Self::block_header_for(&header.previous_header_hash).is_some(),
+            Self::btc_header_for(&header.previous_header_hash).is_some(),
             "Can't find previous header",
             "prev hash:{:}|current hash:{:}",
             header.previous_header_hash,
@@ -519,7 +517,7 @@ impl<T: Trait> Module<T> {
         );
 
         // convert btc header to self header info
-        let header_info: BlockHeaderInfo =
+        let header_info: BTCHeaderInfo =
             header::check_prev_and_convert::<T>(header).map_err::<Error<T>, _>(Into::into)?;
         // check
         let c = header::HeaderVerifier::new::<T>(&header_info.header, header_info.height)
@@ -529,7 +527,7 @@ impl<T: Trait> Module<T> {
         // insert into storage
         let hash = header_info.header.hash();
         // insert valid header into storage
-        BlockHeaderFor::insert(&hash, header_info.clone());
+        BTCHeaderFor::insert(&hash, header_info.clone());
         BlockHashFor::mutate(header_info.height, |v| {
             if !v.contains(&hash) {
                 v.push(hash.clone());
@@ -542,7 +540,7 @@ impl<T: Trait> Module<T> {
             Self::block_hash_for(header_info.height)
         );
 
-        let best_header = match Self::block_header_for(Self::best_index()) {
+        let best_header = match Self::btc_header_for(Self::best_index()) {
             Some(info) => info,
             None => Err(Error::<T>::InvalidBestIndex)?,
         };
@@ -585,7 +583,7 @@ impl<T: Trait> Module<T> {
 
     // fn apply_push_transaction<RT: RelayTransaction + Debug>(tx: RT) -> DispatchResult {
     //     let tx_hash = tx.tx_hash();
-    //     let mut header_info = Module::<T>::block_header_for(tx.block_hash()).ok_or_else(|| {
+    //     let mut header_info = Module::<T>::btc_header_for(tx.block_hash()).ok_or_else(|| {
     //         error!(
     //             "[apply_push_transaction]|tx's block header must exist before|block_hash:{:}",
     //             tx.block_hash()
@@ -602,7 +600,7 @@ impl<T: Trait> Module<T> {
     //     if !header_info.txid_list.contains(&tx_hash) {
     //         header_info.txid_list.push(tx_hash.clone());
     //         // modify block info storage
-    //         BlockHeaderFor::insert(tx.block_hash(), header_info);
+    //         BTCHeaderFor::insert(tx.block_hash(), header_info);
     //     } else {
     //         // not pass check! this tx has already been inserted to this block
     //         error!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash(), tx_hash, header_info.txid_list);

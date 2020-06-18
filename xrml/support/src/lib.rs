@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod rlog;
 pub mod base58;
+pub mod rlog;
 pub use rlog::RUNTIME_TARGET;
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
