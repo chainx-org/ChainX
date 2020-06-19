@@ -28,7 +28,8 @@ use codec::{Codec, Decode, Encode};
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
-use xrml_contracts_primitives::GetStorageResult;
+use chainx_primitives::Token;
+pub use xrml_contracts_primitives::{GetStorageResult, XRC20Selector};
 
 /// A result of execution of a contract.
 #[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug)]
@@ -84,5 +85,11 @@ sp_api::decl_runtime_apis! {
         // ///
         // /// Returns `Err` if the contract is in a tombstone state or doesn't exist.
         // fn rent_projection(address: AccountId) -> RentProjectionResult<BlockNumber>;
+
+        fn xrc20_call(
+            token: Token,
+            selector: XRC20Selector,
+            data: Vec<u8>,
+        ) -> ContractExecResult;
     }
 }

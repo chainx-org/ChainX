@@ -536,6 +536,7 @@ dependencies = [
  "sp-state-machine",
  "sp-transaction-pool",
  "substrate-frame-rpc-system",
+ "xrml-contracts-rpc",
  "xrml-contracts-rpc-runtime-api",
 ]
 
@@ -6706,9 +6707,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "xrml-contracts-rpc"
+version = "0.8.0-rc3"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+ "xrml-contracts-primitives",
+ "xrml-contracts-rpc-runtime-api",
+]
+
+[[package]]
 name = "xrml-contracts-rpc-runtime-api"
 version = "0.8.0-rc3"
 dependencies = [
+ "chainx-primitives",
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",

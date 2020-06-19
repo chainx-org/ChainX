@@ -18,6 +18,7 @@ sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc
 sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
+chainx-primitives = { path = "../../../../primitives", default-features = false }
 xrml-contracts-primitives = { path = "../../common", default-features = false }
 
 [features]
@@ -29,5 +30,6 @@ std = [
 	"sp-std/std",
 	"sp-runtime/std",
 
+    "chainx-primitives/std",
 	"xrml-contracts-primitives/std",
 ]

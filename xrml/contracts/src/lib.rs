@@ -742,8 +742,6 @@ impl<T: Trait> Module<T> {
     /// notice this function just allow to be called in runtime api, not allow in an extrinsic
     pub fn call_xrc20(
         token: Token,
-        // pay_gas: T::AccountId,
-        // gas_limit: Gas,
         selector: XRC20Selector,
         data: Vec<u8>,
     ) -> ExecResult {
@@ -824,8 +822,6 @@ impl<T: Trait> Module<T> {
 
     fn call_for_xrc20(
         token: Token,
-        // pay_gas: T::AccountId,
-        // gas_limit: Gas,
         enum_selector: XRC20Selector,
         input_data: Vec<u8>,
     ) -> ExecResult {
