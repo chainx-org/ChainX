@@ -134,7 +134,7 @@ decl_event!(
 );
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XBridgeOfBTC {
+    trait Store for Module<T: Trait> as XBridgeBitcoin {
         /// get bestheader
         pub BestIndex get(fn best_index): H256;
         /// block hash list for a height

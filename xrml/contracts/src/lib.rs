@@ -1100,7 +1100,7 @@ decl_event! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as Contracts {
+    trait Store for Module<T: Trait> as XContracts {
         /// Current cost schedule for contracts.
         CurrentSchedule get(fn current_schedule) config(): Schedule = Schedule::default();
         /// A mapping from an original code hash to the original code, untouched by instrumentation.
