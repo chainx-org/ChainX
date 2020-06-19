@@ -1,7 +1,7 @@
 use chainx_runtime::{
     h256_conv_endian_from_str, AccountId, AuraConfig, BTCHeader, BTCNetwork, BTCParams, Compact,
-    GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, XBridgeBitcoinConfig,
-    WASM_BINARY,
+    ContractsSchedule, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig,
+    XBridgeBitcoinConfig, XContractsConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -107,7 +107,7 @@ fn testnet_genesis(
     initial_authorities: Vec<(AuraId, GrandpaId)>,
     root_key: AccountId,
     endowed_accounts: Vec<AccountId>,
-    _enable_println: bool,
+    enable_println: bool,
 ) -> GenesisConfig {
     GenesisConfig {
         frame_system: Some(SystemConfig {
@@ -157,6 +157,12 @@ fn testnet_genesis(
             reserved_block: 2100,
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
+        }),
+        xrml_contracts: Some(XContractsConfig {
+            current_schedule: ContractsSchedule {
+                enable_println, // this should only be enabled on development chains
+                ..Default::default()
+            },
         }),
     }
 }

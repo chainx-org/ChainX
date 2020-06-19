@@ -29,9 +29,9 @@ use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use chainx_primitives::{
     AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature,
 };
-
+use xrml_contracts_rpc_runtime_api::ContractExecResult;
 // A few exports that help ease life for downstream crates.
-use chainx_primitives::Token;
+pub use chainx_primitives::Token;
 pub use frame_support::{
     construct_runtime, parameter_types,
     traits::{KeyOwnerProofSystem, Randomness},
@@ -49,6 +49,8 @@ pub use sp_runtime::{Perbill, Permill};
 #[cfg(feature = "std")]
 pub use xrml_bridge_bitcoin::h256_conv_endian_from_str;
 pub use xrml_bridge_bitcoin::{BTCHeader, BTCNetwork, BTCParams, Compact, H256 as BTCHash};
+pub use xrml_contracts::Schedule as ContractsSchedule;
+pub use xrml_contracts_primitives::XRC20Selector;
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -226,6 +228,18 @@ impl xrml_bridge_bitcoin::Trait for Runtime {
     type Event = Event;
 }
 
+impl xrml_contracts::Trait for Runtime {
+    type Time = Timestamp;
+    type Randomness = RandomnessCollectiveFlip;
+    type Call = Call;
+    type Event = Event;
+    type DetermineContractAddress = xrml_contracts::SimpleAddressDeterminer<Runtime>;
+    type TrieIdGenerator = xrml_contracts::TrieIdFromParentCounter<Runtime>;
+    type StorageSizeOffset = xrml_contracts::DefaultStorageSizeOffset;
+    type MaxDepth = xrml_contracts::DefaultMaxDepth;
+    type MaxValueSize = xrml_contracts::DefaultMaxValueSize;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -242,6 +256,7 @@ construct_runtime!(
         TransactionPayment: pallet_transaction_payment::{Module, Storage},
         XAssets: xrml_assets::{Module, Call, Storage, Event<T>},
         XBridgeBitcoin: xrml_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
+        XContracts: xrml_contracts::{Module, Call, Config, Storage, Event<T>},
     }
 );
 
@@ -400,6 +415,50 @@ impl_runtime_apis! {
     > for Runtime {
         fn query_info(uxt: UncheckedExtrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
             TransactionPayment::query_info(uxt, len)
+        }
+    }
+
+    impl xrml_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance, BlockNumber>
+        for Runtime
+    {
+        fn call(
+            origin: AccountId,
+            dest: AccountId,
+            value: Balance,
+            gas_limit: u64,
+            input_data: Vec<u8>,
+        ) -> ContractExecResult {
+            let exec_result =
+                XContracts::bare_call(origin, dest.into(), value, gas_limit, input_data);
+            match exec_result {
+                Ok(v) => ContractExecResult::Success {
+                    status: v.status,
+                    data: v.data,
+                },
+                Err(_) => ContractExecResult::Error,
+            }
+        }
+
+        fn get_storage(
+            address: AccountId,
+            key: [u8; 32],
+        ) -> xrml_contracts_primitives::GetStorageResult {
+            XContracts::get_storage(address, key)
+        }
+
+        fn xrc20_call(
+            token: Token,
+            selector: XRC20Selector,
+            data: Vec<u8>,
+        ) -> ContractExecResult {
+            let exec_result = XContracts::call_xrc20(token, selector, data);
+            match exec_result {
+                Ok(v) => ContractExecResult::Success {
+                    status: v.status,
+                    data: v.data,
+                },
+                Err(_) => ContractExecResult::Error,
+            }
         }
     }
 }

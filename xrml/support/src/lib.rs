@@ -52,12 +52,31 @@ pub mod _std {
         let s: String = s.to_hex();
         "0x".to_string() + &s
     }
+    #[inline]
+    pub fn try_hex_or_str(src: &[u8]) -> String {
+        let check_is_str = |src: &[u8]| -> bool {
+            for c in src {
+                // 0x21 = !, 0x71 = ~
+                if 0x21 <= *c && *c <= 0x7E {
+                    continue;
+                } else {
+                    return false;
+                }
+            }
+            return true;
+        };
+        if check_is_str(src) {
+            u8array_to_string(src)
+        } else {
+            u8array_to_hex(src)
+        }
+    }
 }
 
 #[cfg(feature = "std")]
 #[macro_export]
 macro_rules! str {
-    ( $x:ident ) => {{
+    ( $x:expr ) => {{
         use $crate::_std::u8array_to_string;
         $crate::_std::Str(&u8array_to_string(&$x))
     }};
@@ -66,14 +85,14 @@ macro_rules! str {
 #[cfg(not(feature = "std"))]
 #[macro_export]
 macro_rules! str {
-    ( $x:ident ) => {{
+    ( $x:expr ) => {{
         &$x
     }};
 }
 
 #[macro_export]
 macro_rules! token {
-    ( $x:ident ) => {
+    ( $x:expr ) => {
         $crate::str!($x)
     };
 }
@@ -81,7 +100,7 @@ macro_rules! token {
 #[cfg(feature = "std")]
 #[macro_export]
 macro_rules! try_addr {
-    ( $x:ident ) => {{
+    ( $x:expr ) => {{
         use $crate::_std::u8array_to_addr;
         $crate::_std::Str(&u8array_to_addr(&$x))
     }};
@@ -90,7 +109,24 @@ macro_rules! try_addr {
 #[cfg(not(feature = "std"))]
 #[macro_export]
 macro_rules! try_addr {
-    ( $x:ident ) => {{
+    ( $x:expr ) => {{
+        &$x
+    }};
+}
+
+#[cfg(feature = "std")]
+#[macro_export]
+macro_rules! try_hex {
+    ( $x:expr ) => {{
+        use $crate::_std::try_hex_or_str;
+        $crate::_std::Str(&try_hex_or_str(&$x))
+    }};
+}
+
+#[cfg(not(feature = "std"))]
+#[macro_export]
+macro_rules! try_hex {
+    ( $x:expr ) => {{
         &$x
     }};
 }

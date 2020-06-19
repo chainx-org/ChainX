@@ -63,8 +63,8 @@ impl<'a> HeaderWork<'a> {
         let work = work_required::<T>(previous_header_hash, self.height, p);
         ensure_with_errorlog!(
             work == self.header.bits,
-            "nBits do not match difficulty rules",
-            "work{:?}|header bits:{:?}|height:{:}",
+            Error::<T>::HeaderNBitsNotMatch,
+            "nBits do not match difficulty rules|work{:?}|header bits:{:?}|height:{:}",
             work,
             self.header.bits,
             self.height

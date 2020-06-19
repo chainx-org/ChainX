@@ -13,7 +13,7 @@ use btc_keys::{Address as BTCAddress, Network};
 use btc_primitives::H256;
 use btc_script::Script;
 
-use xassets::{Chain, ChainT};
+use xrml_assets::{Chain, ChainT};
 use xbridge_common::traits::{CrossChainBindingV2, Extractable};
 use xr_primitives::Name;
 #[cfg(feature = "std")]
@@ -407,14 +407,14 @@ fn split(data: &[u8]) -> Vec<Vec<u8>> {
 
 /// bind account
 fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>) {
-    let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
+    let token: xrml_assets::Token = <Module<T> as xrml_assets::ChainT>::TOKEN.to_vec();
     xbridge_common::Module::<T>::update_binding(&token, who, channel_name);
 }
 
 fn issue_token<T: Trait>(who: &T::AccountId, balance: u64) {
     // notice this `Module` is LockupModule
-    let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
-    let _ = xassets::Module::<T>::issue(&token, who, balance.into()).map_err(|e| {
+    let token: xrml_assets::Token = <Module<T> as xrml_assets::ChainT>::TOKEN.to_vec();
+    let _ = xrml_assets::Module::<T>::issue(&token, who, balance.into()).map_err(|e| {
         error!("{:}", e);
         e
     });
@@ -422,8 +422,8 @@ fn issue_token<T: Trait>(who: &T::AccountId, balance: u64) {
 
 fn destroy_token<T: Trait>(who: &T::AccountId, balance: u64) {
     // notice this `Module` is LockupModule
-    let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
-    let _ = xassets::Module::<T>::destroy_free(&token, who, balance.into()).map_err(|e| {
+    let token: xrml_assets::Token = <Module<T> as xrml_assets::ChainT>::TOKEN.to_vec();
+    let _ = xrml_assets::Module::<T>::destroy_free(&token, who, balance.into()).map_err(|e| {
         error!("{:}", e);
         e
     });
