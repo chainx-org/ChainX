@@ -1,7 +1,7 @@
 [package]
 name = "xrml-contracts-rpc-runtime-api"
 version = "0.8.0-rc3"
-authors = ["Parity Technologies <admin@parity.io>"]
+authors = ["Parity Technologies <admin@parity.io> and ChainX community <http://www.chainx.org>"]
 edition = "2018"
 license = "Apache-2.0"
 homepage = "https://substrate.dev"

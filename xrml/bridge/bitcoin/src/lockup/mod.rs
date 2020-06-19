@@ -80,7 +80,7 @@ decl_module! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XBridgeOfBTCLockup {
+    trait Store for Module<T: Trait> as XBridgeOfBitcoinLockup {
         /// locked up btc is UTXO, using (txid, out_index) to represent it
         /// use UTXO => (accountid, balance)
         pub LockedUpBTC get(locked_up_btc): map (H256, u32) => Option<(T::AccountId, u64, BTCAddress)>;
