@@ -146,7 +146,7 @@ impl Convert<Weight, BalanceOf<Self>> for Test {
     }
 }
 
-impl pallet_transaction_payment::Trait for Test {
+impl xrml_transaction_payment::Trait for Test {
     type Currency = Balances;
     type OnTransactionPayment = ();
     type TransactionByteFee = TransactionByteFee;

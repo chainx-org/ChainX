@@ -891,8 +891,8 @@ where
     }
 
     fn get_weight_price(&self) -> BalanceOf<Self::T> {
-        use pallet_transaction_payment::Module as Payment;
         use sp_runtime::SaturatedConversion;
+        use xrml_transaction_payment::Module as Payment;
         let price = Payment::<T>::weight_to_fee_with_adjustment::<u128>(1);
         price.saturated_into()
     }

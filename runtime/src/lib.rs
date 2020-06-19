@@ -24,7 +24,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+use xrml_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 pub use chainx_primitives::{
     AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature,
@@ -189,18 +189,6 @@ impl pallet_timestamp::Trait for Runtime {
     type MinimumPeriod = MinimumPeriod;
 }
 
-parameter_types! {
-    pub const TransactionByteFee: Balance = 1;
-}
-
-impl pallet_transaction_payment::Trait for Runtime {
-    type Currency = XAssets;
-    type OnTransactionPayment = ();
-    type TransactionByteFee = TransactionByteFee;
-    type WeightToFee = IdentityFee<Balance>;
-    type FeeMultiplierUpdate = ();
-}
-
 impl pallet_sudo::Trait for Runtime {
     type Event = Event;
     type Call = Call;
@@ -240,6 +228,18 @@ impl xrml_contracts::Trait for Runtime {
     type MaxValueSize = xrml_contracts::DefaultMaxValueSize;
 }
 
+parameter_types! {
+    pub const TransactionByteFee: Balance = 1;
+}
+
+impl xrml_transaction_payment::Trait for Runtime {
+    type Currency = XAssets;
+    type OnTransactionPayment = ();
+    type TransactionByteFee = TransactionByteFee;
+    type WeightToFee = IdentityFee<Balance>;
+    type FeeMultiplierUpdate = ();
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -253,10 +253,10 @@ construct_runtime!(
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
-        TransactionPayment: pallet_transaction_payment::{Module, Storage},
         XAssets: xrml_assets::{Module, Call, Storage, Event<T>},
         XBridgeBitcoin: xrml_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xrml_contracts::{Module, Call, Config, Storage, Event<T>},
+        XTransactionPayment: xrml_transaction_payment::{Module, Storage},
     }
 );
 
@@ -278,7 +278,7 @@ pub type SignedExtra = (
     frame_system::CheckEra<Runtime>,
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    xrml_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -408,13 +408,13 @@ impl_runtime_apis! {
         }
     }
 
-    impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
+    impl xrml_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
         Block,
         Balance,
         UncheckedExtrinsic,
     > for Runtime {
         fn query_info(uxt: UncheckedExtrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
-            TransactionPayment::query_info(uxt, len)
+            XTransactionPayment::query_info(uxt, len)
         }
     }
 

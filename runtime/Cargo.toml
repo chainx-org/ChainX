@@ -33,8 +33,6 @@ pallet-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-pallet-transaction-payment = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 chainx-primitives = { path = "../primitives", default-features = false }
@@ -44,6 +42,8 @@ xrml-bridge-bitcoin = { path = "../xrml/bridge/bitcoin", default-features = fals
 xrml-contracts = { path = "../xrml/contracts", default-features = false }
 xrml-contracts-primitives = { path = "../xrml/contracts/common", default-features = false }
 xrml-contracts-rpc-runtime-api = { path = "../xrml/contracts/rpc/runtime-api", default-features = false }
+xrml-transaction-payment = { path = "../xrml/transaction-payment", default-features = false }
+xrml-transaction-payment-rpc-runtime-api = { path = "../xrml/transaction-payment/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
@@ -76,8 +76,6 @@ std = [
     "pallet-grandpa/std",
     "pallet-timestamp/std",
     "pallet-sudo/std",
-    "pallet-transaction-payment/std",
-    "pallet-transaction-payment-rpc-runtime-api/std",
     "pallet-randomness-collective-flip/std",
 
     "chainx-primitives/std",
@@ -87,4 +85,6 @@ std = [
     "xrml-contracts/std",
     "xrml-contracts-primitives/std",
     "xrml-contracts-rpc-runtime-api/std",
+    "xrml-transaction-payment/std",
+    "xrml-transaction-payment-rpc-runtime-api/std",
 ]

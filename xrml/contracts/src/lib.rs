@@ -294,11 +294,11 @@ where
     }
 }
 
-// pub type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::Currency as Currency<
+// pub type BalanceOf<T> = <<T as xrml_transaction_payment::Trait>::Currency as Currency<
 //     <T as frame_system::Trait>::AccountId,
 // >>::Balance;
 // pub type NegativeImbalanceOf<T> =
-//     <<T as pallet_transaction_payment::Trait>::Currency as Currency<
+//     <<T as xrml_transaction_payment::Trait>::Currency as Currency<
 //         <T as frame_system::Trait>::AccountId,
 //     >>::NegativeImbalance;
 pub type BalanceOf<T> = <T as xrml_assets::Trait>::Balance;
@@ -323,7 +323,7 @@ parameter_types! {
 }
 
 pub trait Trait:
-    frame_system::Trait + pallet_transaction_payment::Trait + xrml_assets::Trait
+    frame_system::Trait + xrml_transaction_payment::Trait + xrml_assets::Trait
 {
     type Time: Time;
     type Randomness: Randomness<Self::Hash>;

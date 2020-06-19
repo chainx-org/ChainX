@@ -60,7 +60,7 @@ where
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<
+        xrml_transaction_payment_rpc::TransactionPaymentRuntimeApi<
             Block,
             Balance,
             UncheckedExtrinsic,
@@ -72,9 +72,9 @@ where
     P: TransactionPool + 'static,
     M: jsonrpc_core::Metadata + Default,
 {
-    use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
     use xrml_contracts_rpc::{Contracts, ContractsApi};
+    use xrml_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
     let FullDeps { client, pool } = deps;
