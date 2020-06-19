@@ -416,31 +416,31 @@ mod tests {
     );
 
     macro_rules! prepare_test {
-		($name:ident, $wat:expr, $($expected:tt)*) => {
-			#[test]
-			fn $name() {
-				let wasm = wabt::Wat2Wasm::new().validate(false).convert($wat).unwrap();
-				let schedule = Schedule::default();
-				let r = prepare_contract::<TestEnv>(wasm.as_ref(), &schedule);
-				assert_matches!(r, $($expected)*);
-			}
-		};
-	}
+        ($name:ident, $wat:expr, $($expected:tt)*) => {
+            #[test]
+            fn $name() {
+                let wasm = wabt::Wat2Wasm::new().validate(false).convert($wat).unwrap();
+                let schedule = Schedule::default();
+                let r = prepare_contract::<TestEnv>(wasm.as_ref(), &schedule);
+                assert_matches!(r, $($expected)*);
+            }
+        };
+    }
 
     prepare_test!(
         no_floats,
         r#"
-		(module
-			(func (export "call")
-				(drop
-					(f32.add
-						(f32.const 0)
-						(f32.const 1)
-					)
-				)
-			)
-			(func (export "deploy"))
-		)"#,
+        (module
+            (func (export "call")
+                (drop
+                    (f32.add
+                        (f32.const 0)
+                        (f32.const 1)
+                    )
+                )
+            )
+            (func (export "deploy"))
+        )"#,
         Err("gas instrumentation failed")
     );
 
@@ -456,129 +456,129 @@ mod tests {
         prepare_test!(
             memory_with_one_page,
             r#"
-			(module
-				(import "env" "memory" (memory 1 1))
+            (module
+                (import "env" "memory" (memory 1 1))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Ok(_)
         );
 
         prepare_test!(
             internal_memory_declaration,
             r#"
-			(module
-				(memory 1 1)
+            (module
+                (memory 1 1)
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("module declares internal memory")
         );
 
         prepare_test!(
             no_memory_import,
             r#"
-			(module
-				;; no memory imported
+            (module
+                ;; no memory imported
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )"#,
             Ok(_)
         );
 
         prepare_test!(
             initial_exceeds_maximum,
             r#"
-			(module
-				(import "env" "memory" (memory 16 1))
+            (module
+                (import "env" "memory" (memory 16 1))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("Module is not valid")
         );
 
         prepare_test!(
             no_maximum,
             r#"
-			(module
-				(import "env" "memory" (memory 1))
+            (module
+                (import "env" "memory" (memory 1))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("Maximum number of pages should be always declared.")
         );
 
         prepare_test!(
             requested_maximum_exceeds_configured_maximum,
             r#"
-			(module
-				(import "env" "memory" (memory 1 17))
+            (module
+                (import "env" "memory" (memory 1 17))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("Maximum number of pages should not exceed the configured maximum.")
         );
 
         prepare_test!(
             field_name_not_memory,
             r#"
-			(module
-				(import "env" "forgetit" (memory 1 1))
+            (module
+                (import "env" "forgetit" (memory 1 1))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("Memory import must have the field name 'memory'")
         );
 
         prepare_test!(
             multiple_memory_imports,
             r#"
-			(module
-				(import "env" "memory" (memory 1 1))
-				(import "env" "memory" (memory 1 1))
+            (module
+                (import "env" "memory" (memory 1 1))
+                (import "env" "memory" (memory 1 1))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("Module is not valid")
         );
 
         prepare_test!(
             table_import,
             r#"
-			(module
-				(import "env" "table" (table 1 anyfunc))
+            (module
+                (import "env" "table" (table 1 anyfunc))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("Cannot import tables")
         );
 
         prepare_test!(
             global_import,
             r#"
-			(module
-				(global $g (import "env" "global") i32)
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+            (module
+                (global $g (import "env" "global") i32)
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("Cannot import globals")
         );
     }
@@ -595,36 +595,36 @@ mod tests {
         prepare_test!(
             no_tables,
             r#"
-			(module
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+            (module
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Ok(_)
         );
 
         prepare_test!(
             table_valid_size,
             r#"
-			(module
-				(table 10000 funcref)
+            (module
+                (table 10000 funcref)
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Ok(_)
         );
 
         prepare_test!(
             table_too_big,
             r#"
-			(module
-				(table 20000 funcref)
+            (module
+                (table 20000 funcref)
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )"#,
             Err("table exceeds maximum size allowed")
         );
     }
@@ -635,13 +635,13 @@ mod tests {
         prepare_test!(
             can_import_legit_function,
             r#"
-			(module
-				(import "env" "nop" (func (param i64)))
+            (module
+                (import "env" "nop" (func (param i64)))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Ok(_)
         );
 
@@ -650,13 +650,13 @@ mod tests {
         prepare_test!(
             can_not_import_gas_function,
             r#"
-			(module
-				(import "env" "gas" (func (param i32)))
+            (module
+                (import "env" "gas" (func (param i32)))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("module imports a non-existent function")
         );
 
@@ -664,13 +664,13 @@ mod tests {
         prepare_test!(
             non_env_import,
             r#"
-			(module
-				(import "another_module" "memory" (memory 1 1))
+            (module
+                (import "another_module" "memory" (memory 1 1))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("module has imports from a non-'env' namespace")
         );
 
@@ -678,39 +678,39 @@ mod tests {
         prepare_test!(
             wrong_signature,
             r#"
-			(module
-				(import "env" "gas" (func (param i64)))
+            (module
+                (import "env" "gas" (func (param i64)))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("module imports a non-existent function")
         );
 
         prepare_test!(
             unknown_func_name,
             r#"
-			(module
-				(import "env" "unknown_func" (func))
+            (module
+                (import "env" "unknown_func" (func))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("module imports a non-existent function")
         );
 
         prepare_test!(
             ext_println_debug_disabled,
             r#"
-			(module
-				(import "env" "ext_println" (func $ext_println (param i32 i32)))
+            (module
+                (import "env" "ext_println" (func $ext_println (param i32 i32)))
 
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("module imports `ext_println` but debug features disabled")
         );
 
@@ -720,13 +720,13 @@ mod tests {
                 .validate(false)
                 .convert(
                     r#"
-				(module
-					(import "env" "ext_println" (func $ext_println (param i32 i32)))
+                (module
+                    (import "env" "ext_println" (func $ext_println (param i32 i32)))
 
-					(func (export "call"))
-					(func (export "deploy"))
-				)
-				"#,
+                    (func (export "call"))
+                    (func (export "deploy"))
+                )
+                "#,
                 )
                 .unwrap();
             let mut schedule = Schedule::default();
@@ -742,31 +742,31 @@ mod tests {
         prepare_test!(
             it_works,
             r#"
-			(module
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+            (module
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Ok(_)
         );
 
         prepare_test!(
             omit_deploy,
             r#"
-			(module
-				(func (export "call"))
-			)
-			"#,
+            (module
+                (func (export "call"))
+            )
+            "#,
             Err("deploy function isn't exported")
         );
 
         prepare_test!(
             omit_call,
             r#"
-			(module
-				(func (export "deploy"))
-			)
-			"#,
+            (module
+                (func (export "deploy"))
+            )
+            "#,
             Err("call function isn't exported")
         );
 
@@ -774,14 +774,14 @@ mod tests {
         prepare_test!(
             try_sneak_export_as_entrypoint,
             r#"
-			(module
-				(import "env" "panic" (func))
+            (module
+                (import "env" "panic" (func))
 
-				(func (export "deploy"))
+                (func (export "deploy"))
 
-				(export "call" (func 0))
-			)
-			"#,
+                (export "call" (func 0))
+            )
+            "#,
             Err("entry point points to an imported function")
         );
 
@@ -789,82 +789,82 @@ mod tests {
         prepare_test!(
             try_sneak_export_as_global,
             r#"
-			(module
-				(func (export "deploy"))
-				(global (export "call") i32 (i32.const 0))
-			)
-			"#,
+            (module
+                (func (export "deploy"))
+                (global (export "call") i32 (i32.const 0))
+            )
+            "#,
             Err("expected a function")
         );
 
         prepare_test!(
             wrong_signature,
             r#"
-			(module
-				(func (export "deploy"))
-				(func (export "call") (param i32))
-			)
-			"#,
+            (module
+                (func (export "deploy"))
+                (func (export "call") (param i32))
+            )
+            "#,
             Err("entry point has wrong signature")
         );
 
         prepare_test!(
             unknown_exports,
             r#"
-			(module
-				(func (export "call"))
-				(func (export "deploy"))
-				(func (export "whatevs"))
-			)
-			"#,
+            (module
+                (func (export "call"))
+                (func (export "deploy"))
+                (func (export "whatevs"))
+            )
+            "#,
             Err("unknown export: expecting only deploy and call functions")
         );
 
         prepare_test!(
             global_float,
             r#"
-			(module
-				(global $x f32 (f32.const 0))
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+            (module
+                (global $x f32 (f32.const 0))
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("use of floating point type in globals is forbidden")
         );
 
         prepare_test!(
             local_float,
             r#"
-			(module
-				(func $foo (local f32))
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+            (module
+                (func $foo (local f32))
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("use of floating point type in locals is forbidden")
         );
 
         prepare_test!(
             param_float,
             r#"
-			(module
-				(func $foo (param f32))
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+            (module
+                (func $foo (param f32))
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("use of floating point type in function types is forbidden")
         );
 
         prepare_test!(
             result_float,
             r#"
-			(module
-				(func $foo (result f32) (f32.const 0))
-				(func (export "call"))
-				(func (export "deploy"))
-			)
-			"#,
+            (module
+                (func $foo (result f32) (f32.const 0))
+                (func (export "call"))
+                (func (export "deploy"))
+            )
+            "#,
             Err("use of floating point type in function types is forbidden")
         );
     }

@@ -917,8 +917,8 @@ fn deduct_blocks() {
 
             // Check result
             let rent = (8 + 4 - 3) // storage size = size_offset + deploy_set_storage - deposit_offset
-				* 4 // rent byte price
-				* 4; // blocks to rent
+                * 4 // rent byte price
+                * 4; // blocks to rent
             let bob_contract = ContractInfoOf::<Test>::get(BOB)
                 .unwrap()
                 .get_alive()
@@ -941,8 +941,8 @@ fn deduct_blocks() {
 
             // Check result
             let rent_2 = (8 + 4 - 2) // storage size = size_offset + deploy_set_storage - deposit_offset
-				* 4 // rent byte price
-				* 7; // blocks to rent
+                * 4 // rent byte price
+                * 7; // blocks to rent
             let bob_contract = ContractInfoOf::<Test>::get(BOB)
                 .unwrap()
                 .get_alive()

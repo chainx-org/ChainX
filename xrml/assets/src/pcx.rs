@@ -1,10 +1,13 @@
 use sp_runtime::traits::{CheckedSub, Zero};
 use sp_std::{cmp, result};
 
-use frame_support::dispatch::{DispatchError, DispatchResult};
-use frame_support::traits::{
-    BalanceStatus, Currency, ExistenceRequirement, Imbalance, ReservableCurrency, SignedImbalance,
-    WithdrawReason, WithdrawReasons,
+use frame_support::{
+    dispatch::{DispatchError, DispatchResult},
+    ensure,
+    traits::{
+        BalanceStatus, Currency, ExistenceRequirement, Imbalance, ReservableCurrency,
+        SignedImbalance, WithdrawReason, WithdrawReasons,
+    },
 };
 
 use crate::traits::ChainT;
@@ -45,11 +48,16 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
     }
 
     fn ensure_can_withdraw(
-        _who: &T::AccountId,
-        _amount: Self::Balance,
+        who: &T::AccountId,
+        amount: Self::Balance,
         _reason: WithdrawReasons,
         _new_balance: Self::Balance,
     ) -> DispatchResult {
+        if amount.is_zero() {
+            return Ok(());
+        }
+        let balance = Self::free_balance(who);
+        ensure!(balance >= amount, Error::<T>::InsufficientBalance);
         Ok(())
     }
 
@@ -91,10 +99,10 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
     }
 
     fn make_free_balance_be(
-        _who: &T::AccountId,
-        _balance: Self::Balance,
+        who: &T::AccountId,
+        balance: Self::Balance,
     ) -> SignedImbalance<Self::Balance, Self::PositiveImbalance> {
-        unimplemented!()
+        Self::pcx_make_free_balance_be(who, balance)
     }
 }
 

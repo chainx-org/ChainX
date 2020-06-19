@@ -708,7 +708,7 @@ fn transfer<'a, T: Trait, V: Vm<T>, L: Loader<T>>(
         _ => ctx.config.existential_deposit,
     };
 
-    T::Currency::ensure_can_withdraw(
+    <xrml_assets::Module<T> as Currency<T::AccountId>>::ensure_can_withdraw(
         transactor,
         value,
         WithdrawReason::Transfer.into(),

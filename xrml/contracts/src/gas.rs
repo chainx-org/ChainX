@@ -215,38 +215,38 @@ impl<T: Trait> GasMeter<T> {
 /// list of tokens.
 #[macro_export]
 macro_rules! match_tokens {
-	($tokens_iter:ident,) => {
-	};
-	($tokens_iter:ident, $x:expr, $($rest:tt)*) => {
-		{
-			let next = ($tokens_iter).next().unwrap();
-			let pattern = $x;
+    ($tokens_iter:ident,) => {
+    };
+    ($tokens_iter:ident, $x:expr, $($rest:tt)*) => {
+        {
+            let next = ($tokens_iter).next().unwrap();
+            let pattern = $x;
 
-			// Note that we don't specify the type name directly in this macro,
-			// we only have some expression $x of some type. At the same time, we
-			// have an iterator of Box<dyn Any> and to downcast we need to specify
-			// the type which we want downcast to.
-			//
-			// So what we do is we assign `_pattern_typed_next_ref` to a variable which has
-			// the required type.
-			//
-			// Then we make `_pattern_typed_next_ref = token.downcast_ref()`. This makes
-			// rustc infer the type `T` (in `downcast_ref<T: Any>`) to be the same as in $x.
+            // Note that we don't specify the type name directly in this macro,
+            // we only have some expression $x of some type. At the same time, we
+            // have an iterator of Box<dyn Any> and to downcast we need to specify
+            // the type which we want downcast to.
+            //
+            // So what we do is we assign `_pattern_typed_next_ref` to a variable which has
+            // the required type.
+            //
+            // Then we make `_pattern_typed_next_ref = token.downcast_ref()`. This makes
+            // rustc infer the type `T` (in `downcast_ref<T: Any>`) to be the same as in $x.
 
-			let mut _pattern_typed_next_ref = &pattern;
-			_pattern_typed_next_ref = match next.token.downcast_ref() {
-				Some(p) => {
-					assert_eq!(p, &pattern);
-					p
-				}
-				None => {
-					panic!("expected type {} got {}", stringify!($x), next.description);
-				}
-			};
-		}
+            let mut _pattern_typed_next_ref = &pattern;
+            _pattern_typed_next_ref = match next.token.downcast_ref() {
+                Some(p) => {
+                    assert_eq!(p, &pattern);
+                    p
+                }
+                None => {
+                    panic!("expected type {} got {}", stringify!($x), next.description);
+                }
+            };
+        }
 
-		match_tokens!($tokens_iter, $($rest)*);
-	};
+        match_tokens!($tokens_iter, $($rest)*);
+    };
 }
 
 #[cfg(test)]

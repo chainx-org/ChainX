@@ -26,10 +26,10 @@ pub type GetStorageResult = Result<Option<Vec<u8>>, ContractAccessError>;
 /// The possible errors that can happen querying the storage of a contract.
 #[derive(Eq, PartialEq, codec::Encode, codec::Decode, sp_runtime::RuntimeDebug)]
 pub enum ContractAccessError {
-	/// The given address doesn't point to a contract.
-	DoesntExist,
-	// /// The specified contract is a tombstone and thus cannot have any storage.
-	// IsTombstone,
+    /// The given address doesn't point to a contract.
+    DoesntExist,
+    // /// The specified contract is a tombstone and thus cannot have any storage.
+    // IsTombstone,
 }
 
 // /// A result type of a `rent_projection` call.

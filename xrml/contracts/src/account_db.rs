@@ -144,20 +144,23 @@ impl<T: Trait> AccountDb<T> for DirectAccountDb {
         <ContractInfoOf<T>>::contains_key(account)
     }
     fn get_balance(&self, account: &T::AccountId) -> BalanceOf<T> {
-        T::Currency::free_balance(account)
+        <xrml_assets::Module<T> as Currency<T::AccountId>>::free_balance(account)
     }
     fn commit(&mut self, s: ChangeSet<T>) {
         let mut total_imbalance = SignedImbalance::zero();
         for (address, changed) in s.into_iter() {
             if let Some(balance) = changed.balance() {
-                let imbalance = T::Currency::make_free_balance_be(&address, balance);
+                let imbalance =
+                    <xrml_assets::Module<T> as Currency<T::AccountId>>::make_free_balance_be(
+                        &address, balance,
+                    );
                 total_imbalance = total_imbalance.merge(imbalance);
             }
 
             if changed.code_hash().is_some()
-				// || changed.rent_allowance().is_some()
-				|| !changed.storage.is_empty()
-				|| changed.reset
+                // || changed.rent_allowance().is_some()
+                || !changed.storage.is_empty()
+                || changed.reset
             {
                 // let old_info = match <ContractInfoOf<T>>::get(&address) {
                 // 	Some(ContractInfo::Alive(alive)) => Some(alive),

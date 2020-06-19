@@ -291,13 +291,14 @@ where
     }
 }
 
-pub type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
->>::Balance;
-pub type NegativeImbalanceOf<T> =
-    <<T as pallet_transaction_payment::Trait>::Currency as Currency<
-        <T as frame_system::Trait>::AccountId,
-    >>::NegativeImbalance;
+// pub type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::Currency as Currency<
+//     <T as frame_system::Trait>::AccountId,
+// >>::Balance;
+// pub type NegativeImbalanceOf<T> =
+//     <<T as pallet_transaction_payment::Trait>::Currency as Currency<
+//         <T as frame_system::Trait>::AccountId,
+//     >>::NegativeImbalance;
+pub type BalanceOf<T> = <T as xrml_assets::Trait>::Balance;
 
 parameter_types! {
     /// A reasonable default value for [`Trait::SignedClaimedHandicap`].
@@ -606,6 +607,12 @@ impl<T: Trait> Module<T> {
         gas_limit: Gas,
         input_data: Vec<u8>,
     ) -> ExecResult {
+        if <ContractInfoOf<T>>::get(&dest).is_none() {
+            return Err(ExecError {
+                reason: Error::<T>::InvalidDestinationContract.into(),
+                buffer: input_data,
+            });
+        }
         let mut gas_meter = GasMeter::new(gas_limit);
         Self::execute_wasm(origin, &mut gas_meter, |ctx, gas_meter| {
             ctx.call(dest, value, gas_meter, input_data)
@@ -871,7 +878,7 @@ impl<T: Trait> Config<T> {
     fn preload() -> Config<T> {
         Config {
             schedule: <Module<T>>::current_schedule(),
-            existential_deposit: T::Currency::minimum_balance(),
+            existential_deposit: Zero::zero(), // T::Currency::minimum_balance(),
             // tombstone_deposit: T::TombstoneDeposit::get(),
             max_depth: T::MaxDepth::get(),
             max_value_size: T::MaxValueSize::get(),
