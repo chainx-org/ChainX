@@ -28,6 +28,8 @@ frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
+chainx-primitives = { path = "../../primitives", default-features = false }
+xrml-support = { path = "../support", default-features = false }
 xrml-assets = { path = "../assets", default-features = false }
 xrml-contracts-primitives = { path = "./common", default-features = false }
 
@@ -57,6 +59,8 @@ std = [
 
 	"pallet-transaction-payment/std",
 
+    "chainx-primitives/std",
+    "xrml-support/std",
     "xrml-assets/std",
 	"xrml-contracts-primitives/std",
 ]

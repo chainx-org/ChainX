@@ -6671,6 +6671,7 @@ name = "xrml-contracts"
 version = "2.0.0-rc3"
 dependencies = [
  "assert_matches",
+ "chainx-primitives",
  "frame-support",
  "frame-system",
  "hex-literal",
@@ -6691,6 +6692,7 @@ dependencies = [
  "wasmi-validation",
  "xrml-assets",
  "xrml-contracts-primitives",
+ "xrml-support",
 ]
 
 [[package]]
@@ -6698,6 +6700,7 @@ name = "xrml-contracts-primitives"
 version = "2.0.0-rc3"
 dependencies = [
  "parity-scale-codec",
+ "serde",
  "sp-runtime",
  "sp-std",
 ]

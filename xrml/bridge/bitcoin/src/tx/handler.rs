@@ -7,7 +7,7 @@ use support::{dispatch::Result, StorageMap, StorageValue};
 // ChainX
 use xr_primitives::Name;
 
-use xassets::{self, ChainT};
+use xrml_assets::{self, ChainT};
 use xbridge_common::traits::{CrossChainBinding, Extractable};
 use xfee_manager;
 
@@ -222,7 +222,7 @@ impl TxHandler {
 
         Module::<T>::deposit_event(RawEvent::Deposit(
             deposit_account,
-            xassets::Chain::Bitcoin,
+            xrml_assets::Chain::Bitcoin,
             Module::<T>::TOKEN.to_vec(),
             deposit_balance.into(),
             original_opreturn,
@@ -295,7 +295,7 @@ fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>, inpu
 }
 
 pub fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
-    let token: xassets::Token = <Module<T> as xassets::ChainT>::TOKEN.to_vec();
+    let token: xrml_assets::Token = <Module<T> as xrml_assets::ChainT>::TOKEN.to_vec();
     let _ = <xrecords::Module<T>>::deposit(&who, &token, balance.into()).map_err(|e| {
         error!(
             "call xrecores to deposit error!, must use root to fix this error. reason:{:?}",
@@ -345,7 +345,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::Accoun
 
             Module::<T>::deposit_event(RawEvent::DepositPending(
                 who.clone(),
-                xassets::Chain::Bitcoin,
+                xrml_assets::Chain::Bitcoin,
                 Module::<T>::TOKEN.to_vec(),
                 r.balance.into(),
                 addr2vecu8(input_address),

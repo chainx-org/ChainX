@@ -90,7 +90,7 @@ impl xrecords::Trait for Test {
     type Event = ();
 }
 
-impl xassets::Trait for Test {
+impl xrml_assets::Trait for Test {
     type Balance = u64;
     type OnNewAccount = ();
     type OnAssetChanged = ();
@@ -186,7 +186,7 @@ impl xbridge_common::traits::TrusteeMultiSig<AccountId> for DummyBitcoinTrusteeM
     }
 }
 
-pub type XAssets = xassets::Module<Test>;
+pub type XAssets = xrml_assets::Module<Test>;
 pub type XBridgeOfBTC = Module<Test>;
 pub type XBridgeOfBTCLockup = lockup::Module<Test>;
 

@@ -4,7 +4,7 @@
 use sp_std::prelude::Vec;
 
 // CHainX
-use xassets::{Chain, ChainT};
+use xrml_assets::{Chain, ChainT};
 use xrecords::{self, HeightOrTime, RecordInfo, TxState};
 use xsupport::error;
 
