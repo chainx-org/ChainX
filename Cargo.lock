@@ -574,6 +574,7 @@ dependencies = [
  "xrml-assets",
  "xrml-bridge-bitcoin",
  "xrml-contracts",
+ "xrml-contracts-primitives",
  "xrml-contracts-rpc-runtime-api",
 ]
 

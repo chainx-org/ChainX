@@ -42,6 +42,7 @@ chainx-primitives = { path = "../primitives", default-features = false }
 xrml-assets = { path = "../xrml/assets", default-features = false }
 xrml-bridge-bitcoin = { path = "../xrml/bridge/bitcoin", default-features = false }
 xrml-contracts = { path = "../xrml/contracts", default-features = false }
+xrml-contracts-primitives = { path = "../xrml/contracts/common", default-features = false }
 xrml-contracts-rpc-runtime-api = { path = "../xrml/contracts/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
@@ -84,5 +85,6 @@ std = [
     "xrml-assets/std",
     "xrml-bridge-bitcoin/std",
     "xrml-contracts/std",
+    "xrml-contracts-primitives/std",
     "xrml-contracts-rpc-runtime-api/std",
 ]

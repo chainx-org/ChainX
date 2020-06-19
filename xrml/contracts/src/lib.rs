@@ -304,10 +304,10 @@ where
 pub type BalanceOf<T> = <T as xrml_assets::Trait>::Balance;
 
 parameter_types! {
-    /// A reasonable default value for [`Trait::SignedClaimedHandicap`].
-    pub const DefaultSignedClaimHandicap: u32 = 2;
-    /// A reasonable default value for [`Trait::TombstoneDeposit`].
-    pub const DefaultTombstoneDeposit: u32 = 16;
+    // /// A reasonable default value for [`Trait::SignedClaimedHandicap`].
+    // pub const DefaultSignedClaimHandicap: u32 = 2;
+    // /// A reasonable default value for [`Trait::TombstoneDeposit`].
+    // pub const DefaultTombstoneDeposit: u32 = 16;
     /// A reasonable default value for [`Trait::StorageSizeOffset`].
     pub const DefaultStorageSizeOffset: u32 = 8;
     // /// A reasonable default value for [`Trait::RentByteFee`].
@@ -346,11 +346,11 @@ pub trait Trait:
     // /// Handler for rent payments.
     // type RentPayment: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-    /// Number of block delay an extrinsic claim surcharge has.
-    ///
-    /// When claim surcharge is called by an extrinsic the rent is checked
-    /// for current_block - delay
-    type SignedClaimHandicap: Get<Self::BlockNumber>;
+    // /// Number of block delay an extrinsic claim surcharge has.
+    // ///
+    // /// When claim surcharge is called by an extrinsic the rent is checked
+    // /// for current_block - delay
+    // type SignedClaimHandicap: Get<Self::BlockNumber>;
 
     // /// The minimum amount required to generate a tombstone.
     // type TombstoneDeposit: Get<BalanceOf<Self>>;
@@ -740,11 +740,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     /// Query a call to a specified xrc20 token.
     /// notice this function just allow to be called in runtime api, not allow in an extrinsic
-    pub fn call_xrc20(
-        token: Token,
-        selector: XRC20Selector,
-        data: Vec<u8>,
-    ) -> ExecResult {
+    pub fn call_xrc20(token: Token, selector: XRC20Selector, data: Vec<u8>) -> ExecResult {
         match selector {
             XRC20Selector::Issue | XRC20Selector::Destroy => {
                 return Err(ExecError {
