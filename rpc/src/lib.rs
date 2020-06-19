@@ -65,6 +65,8 @@ where
             Balance,
             UncheckedExtrinsic,
         >,
+    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
+        xrml_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     <<Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api as sp_api::ApiErrorExt>::Error:
         fmt::Debug,
     P: TransactionPool + 'static,
@@ -72,6 +74,7 @@ where
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
+    use xrml_contracts_rpc::{Contracts, ContractsApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
     let FullDeps { client, pool } = deps;
@@ -83,6 +86,7 @@ where
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
         client.clone(),
     )));
+    io.extend_with(ContractsApi::to_delegate(Contracts::new(client.clone())));
     io
 }
 
