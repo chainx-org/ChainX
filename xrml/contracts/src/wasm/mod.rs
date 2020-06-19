@@ -113,19 +113,17 @@ impl<'a, T: Trait> crate::exec::Vm<T> for WasmVm<'a> {
         input_data: Vec<u8>,
         gas_meter: &mut GasMeter<E::T>,
     ) -> ExecResult {
-        let memory = sp_sandbox::Memory::new(
-            exec.prefab_module.initial,
-            Some(exec.prefab_module.maximum),
-        )
-        .unwrap_or_else(|_| {
-            // unlike `.expect`, explicit panic preserves the source location.
-            // Needed as we can't use `RUST_BACKTRACE` in here.
-            panic!(
+        let memory =
+            sp_sandbox::Memory::new(exec.prefab_module.initial, Some(exec.prefab_module.maximum))
+                .unwrap_or_else(|_| {
+                    // unlike `.expect`, explicit panic preserves the source location.
+                    // Needed as we can't use `RUST_BACKTRACE` in here.
+                    panic!(
                 "exec.prefab_module.initial can't be greater than exec.prefab_module.maximum;
                         thus Memory::new must not fail;
                         qed"
             )
-        });
+                });
 
         let mut imports = sp_sandbox::EnvironmentDefinitionBuilder::new();
         imports.add_memory("env", "memory", memory.clone());

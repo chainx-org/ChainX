@@ -117,12 +117,12 @@ use sp_runtime::{
     traits::{Hash, MaybeSerializeDeserialize, Member, StaticLookup, Zero},
     RuntimeDebug,
 };
-use sp_std::{fmt::Debug, marker::PhantomData, prelude::*, collections::btree_map::BTreeMap};
+use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, marker::PhantomData, prelude::*};
 
 use chainx_primitives::Token;
 use xrml_assets::AssetType;
-use xrml_support::{error, debug, token, try_hex, ensure_with_errorlog};
 use xrml_contracts_primitives::{ContractAccessError, Selector, XRC20Selector};
+use xrml_support::{debug, ensure_with_errorlog, error, token, try_hex};
 
 pub type CodeHash<T> = <T as frame_system::Trait>::Hash;
 pub type TrieId = Vec<u8>;
@@ -760,11 +760,7 @@ impl<T: Trait> Module<T> {
         Self::call_for_xrc20(token, selector, data)
     }
 
-    fn issue_to_xrc20(
-        token: Token,
-        origin: T::AccountId,
-        value: T::Balance,
-    ) -> DispatchResult {
+    fn issue_to_xrc20(token: Token, origin: T::AccountId, value: T::Balance) -> DispatchResult {
         // check
         ensure_with_errorlog!(
             xrml_assets::Module::<T>::free_balance_of(&origin, &token) >= value,
@@ -785,17 +781,17 @@ impl<T: Trait> Module<T> {
             XRC20Selector::Issue,
             params,
         )
-            .and_then(|output| {
-                if output.is_success() {
-                    Ok(output)
-                } else {
-                    Err(ExecError {
-                        reason: Error::<T>::CallContractFailed.into(),
-                        buffer: output.data,
-                    })
-                }
-            })
-            .map_err(|e| e.reason)?;
+        .and_then(|output| {
+            if output.is_success() {
+                Ok(output)
+            } else {
+                Err(ExecError {
+                    reason: Error::<T>::CallContractFailed.into(),
+                    buffer: output.data,
+                })
+            }
+        })
+        .map_err(|e| e.reason)?;
 
         // notice when standard xrc20 return changed, this decode method should also change
         let result: bool = Decode::decode(&mut exec_value.data.as_slice()).map_err(|e| {
@@ -822,7 +818,7 @@ impl<T: Trait> Module<T> {
             AssetType::ReservedXRC20,
             value,
         )
-            .map_err::<xrml_assets::Error<T>, _>(Into::into)?;
+        .map_err::<xrml_assets::Error<T>, _>(Into::into)?;
         Ok(())
     }
 
@@ -856,18 +852,25 @@ impl<T: Trait> Module<T> {
         let mut data = selector.to_vec(); // provide selector
         data.extend_from_slice(input_data.as_slice());
 
-        debug!("[call_for_xrc20]|call xrc20 instance|token:{:?}|xrc20:{:?}|selector:{:?}|data:{:?}",
-               token!(token), xrc20_addr, enum_selector, try_hex!(data));
+        debug!(
+            "[call_for_xrc20]|call xrc20 instance|token:{:?}|xrc20:{:?}|selector:{:?}|data:{:?}",
+            token!(token),
+            xrc20_addr,
+            enum_selector,
+            try_hex!(data)
+        );
 
         let mut gas_meter = GasMeter::new(Gas::max_value());
-        Self::execute_wasm(
-            xrc20_addr.clone(),
-            &mut gas_meter,
-            |ctx, gas_meter| ctx.call(xrc20_addr.clone(), Zero::zero(), gas_meter, data),
-        )
+        Self::execute_wasm(xrc20_addr.clone(), &mut gas_meter, |ctx, gas_meter| {
+            ctx.call(xrc20_addr.clone(), Zero::zero(), gas_meter, data)
+        })
     }
 
-    fn refund_to_asset(contract_addr: T::AccountId, to: T::AccountId, value: T::Balance) -> DispatchResult {
+    fn refund_to_asset(
+        contract_addr: T::AccountId,
+        to: T::AccountId,
+        value: T::Balance,
+    ) -> DispatchResult {
         let token: Token = Self::token_of_addr(&contract_addr).ok_or_else(|| {
             error!(
                 "no token for this xrc20 address|xrc20 addr:{:?}",
@@ -899,7 +902,7 @@ impl<T: Trait> Module<T> {
             AssetType::Free,
             value,
         )
-            .map_err::<xrml_assets::Error<T>, _>(Into::into)?;
+        .map_err::<xrml_assets::Error<T>, _>(Into::into)?;
         Ok(())
     }
 }

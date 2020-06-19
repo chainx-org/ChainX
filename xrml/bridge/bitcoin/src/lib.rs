@@ -91,12 +91,18 @@ decl_error! {
         InvalidPow,
         /// Futuristic timestamp
         HeaderFuturisticTimestamp,
+        /// nBits do not match difficulty rules
+        HeaderNBitsNotMatch,
         /// Unknown parent
         HeaderUnknownParent,
         /// Not Found
         HeaderNotFound,
         /// Ancient fork
         HeaderAncientFork,
+        /// Header already exists
+        ExistedHeader,
+        /// Can't find previous header
+        PrevHeaderNotExisted,
         /// Cannot deserialize the header vec
         DeserializeHeaderErr,
     }
@@ -503,15 +509,15 @@ impl<T: Trait> Module<T> {
         // current should not exist
         ensure_with_errorlog!(
             Self::btc_header_for(&header.hash()).is_none(),
-            "Header already exists.",
-            "hash:{:}",
+            Error::<T>::ExistedHeader,
+            "Header already exists|hash:{:}",
             header.hash(),
         );
         // current should exist yet
         ensure_with_errorlog!(
             Self::btc_header_for(&header.previous_header_hash).is_some(),
-            "Can't find previous header",
-            "prev hash:{:}|current hash:{:}",
+            Error::<T>::PrevHeaderNotExisted,
+            "Can't find previous header|prev hash:{:}|current hash:{:}",
             header.previous_header_hash,
             header.hash(),
         );

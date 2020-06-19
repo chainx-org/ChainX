@@ -32,7 +32,17 @@ pub enum ContractAccessError {
     // IsTombstone,
 }
 
-#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, codec::Encode, codec::Decode, sp_runtime::RuntimeDebug)]
+#[derive(
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Eq,
+    Clone,
+    Copy,
+    codec::Encode,
+    codec::Decode,
+    sp_runtime::RuntimeDebug,
+)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub enum XRC20Selector {
     BalanceOf,
@@ -45,7 +55,6 @@ pub enum XRC20Selector {
 }
 
 pub type Selector = [u8; 4];
-
 
 // /// A result type of a `rent_projection` call.
 // pub type RentProjectionResult<BlockNumber> =
