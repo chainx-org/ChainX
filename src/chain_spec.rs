@@ -1,6 +1,9 @@
+use std::collections::btree_map::BTreeMap;
+
 use chainx_runtime::{
-    h256_conv_endian_from_str, AccountId, AuraConfig, BTCHeader, BTCNetwork, BTCParams, Compact,
-    ContractsSchedule, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig,
+    h256_conv_endian_from_str, AccountId, Asset, AssetRestriction, AssetRestrictions, AuraConfig,
+    BTCHeader, BTCNetwork, BTCParams, Balance, Chain, Compact, ContractsSchedule, GenesisConfig,
+    GrandpaConfig, Runtime, Signature, SudoConfig, SystemConfig, Token, XAssetsConfig,
     XBridgeBitcoinConfig, XContractsConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
@@ -40,21 +43,45 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
     (get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
 }
 
+#[inline]
+fn balance(input: Balance, precision: u8) -> Balance {
+    input * 10_u128.pow(precision as u32)
+}
+
 pub fn development_config() -> ChainSpec {
     ChainSpec::from_genesis(
         "Development",
         "dev",
         ChainType::Development,
         || {
+            let mut endowed = BTreeMap::new();
+            let pcx = pcx().0;
+            endowed.insert(
+                pcx.token(),
+                vec![
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Alice"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Bob"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                ],
+            );
             testnet_genesis(
                 vec![authority_keys_from_seed("Alice")],
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
-                vec![
-                    get_account_id_from_seed::<sr25519::Public>("Alice"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob"),
-                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-                ],
+                testnet_assets(),
+                endowed,
                 true,
             )
         },
@@ -72,26 +99,69 @@ pub fn local_testnet_config() -> ChainSpec {
         "local_testnet",
         ChainType::Local,
         || {
+            let mut endowed = BTreeMap::new();
+            let pcx = pcx().0;
+            endowed.insert(
+                pcx.token(),
+                vec![
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Alice"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Bob"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Dave"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Eve"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+                        balance(100000, PCX_PRECISION),
+                    ),
+                ],
+            );
             testnet_genesis(
                 vec![
                     authority_keys_from_seed("Alice"),
                     authority_keys_from_seed("Bob"),
                 ],
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
-                vec![
-                    get_account_id_from_seed::<sr25519::Public>("Alice"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-                ],
+                testnet_assets(),
+                endowed,
                 true,
             )
         },
@@ -103,10 +173,35 @@ pub fn local_testnet_config() -> ChainSpec {
     )
 }
 
+const PCX_PRECISION: u8 = 8;
+fn pcx() -> (Asset, AssetRestrictions) {
+    (
+        Asset::new::<Runtime>(
+            b"PCX".to_vec(),
+            b"Polkadot ChainX".to_vec(),
+            Chain::ChainX,
+            PCX_PRECISION,
+            b"ChainX's crypto currency in Polkadot ecology".to_vec(),
+        )
+        .unwrap(),
+        AssetRestriction::Deposit
+            | AssetRestriction::Withdraw
+            | AssetRestriction::DestroyWithdrawal
+            | AssetRestriction::DestroyFree,
+    )
+}
+
+fn testnet_assets() -> Vec<(Asset, AssetRestrictions, bool, bool)> {
+    let pcx = pcx();
+    let assets = vec![(pcx.0, pcx.1, true, true)];
+    assets
+}
+
 fn testnet_genesis(
     initial_authorities: Vec<(AuraId, GrandpaId)>,
     root_key: AccountId,
-    endowed_accounts: Vec<AccountId>,
+    assets: Vec<(Asset, AssetRestrictions, bool, bool)>,
+    endowed: BTreeMap<Token, Vec<(AccountId, Balance)>>,
     enable_println: bool,
 ) -> GenesisConfig {
     GenesisConfig {
@@ -125,6 +220,11 @@ fn testnet_genesis(
         }),
         pallet_sudo: Some(SudoConfig {
             key: root_key.clone(),
+        }),
+        xrml_assets: Some(XAssetsConfig {
+            assets,
+            endowed,
+            memo_len: 128,
         }),
         xrml_bridge_bitcoin: Some(XBridgeBitcoinConfig {
             genesis_header_and_height: (

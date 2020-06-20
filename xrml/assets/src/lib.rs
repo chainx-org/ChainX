@@ -33,8 +33,9 @@ pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJac
 use self::trigger::AssetTriggerEventAfter;
 
 pub use self::types::{
-    is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetLimit, AssetType, Chain,
-    NegativeImbalance, PositiveImbalance, SignedBalance, SignedImbalanceT,
+    is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetRestriction,
+    AssetRestrictions, AssetType, Chain, NegativeImbalance, PositiveImbalance, SignedBalance,
+    SignedImbalanceT,
 };
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::sp_std::marker::PhantomData<T>);
@@ -156,7 +157,7 @@ decl_module! {
 
         /// register_asset to module, should allow by root
         #[weight = 0]
-        pub fn register_asset(origin, asset: Asset, is_online: bool, is_psedu_intention: bool) -> DispatchResult {
+        pub fn register_asset(origin, asset: Asset, restrictions: AssetRestrictions, is_online: bool, is_psedu_intention: bool) -> DispatchResult {
             ensure_root(origin)?;
             asset.is_valid::<T>()?;
             info!("[register_asset]|{:?}|is_online:{:}|is_psedu_intention:{:}", asset, is_online, is_psedu_intention);
@@ -164,6 +165,7 @@ decl_module! {
             let token = asset.token();
 
             Self::add_asset(asset)?;
+            AssetRestrictionsOf::insert(&token, restrictions);
 
             T::OnAssetRegisterOrRevoke::on_register(&token, is_psedu_intention)?;
             Self::deposit_event(RawEvent::Register(token.clone(), is_psedu_intention));
@@ -234,24 +236,14 @@ decl_module! {
         }
 
         #[weight = 0]
-        pub fn set_asset_limit_props(origin, token: Token, props: BTreeMap<AssetLimit, bool>) {
+        pub fn modify_asset_limit(origin, token: Token, restriction: AssetRestriction, can_do: bool) {
             ensure_root(origin)?;
             if Self::asset_info(&token).is_some() {
-                AssetLimitProps::insert(&token, props)
-            } else {
-                error!("[set_asset_limit_props]|asset not exist|token:{:?}", token!(token));
-            }
-        }
-
-        #[weight = 0]
-        pub fn modify_asset_limit(origin, token: Token, limit: AssetLimit, can_do: bool) {
-            ensure_root(origin)?;
-            if Self::asset_info(&token).is_some() {
-                AssetLimitProps::mutate(token, |limit_map| {
+                AssetRestrictionsOf::mutate(token, |current| {
                     if can_do {
-                        limit_map.remove(&limit);
+                        current.set(restriction);
                     } else {
-                        limit_map.insert(limit, false);
+                        current.unset(restriction);
                     }
                 })
             } else {
@@ -269,9 +261,9 @@ decl_storage! {
         /// asset info for every token, key is token token
         pub AssetInfo get(fn asset_info): map hasher(twox_64_concat) Token => Option<(Asset, bool, T::BlockNumber)>;
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
-        /// notice if not set AssetLimit, default is true for this limit
+        /// notice if not set AssetRestriction, default is true for this limit
         /// if want let limit make sense, must set false for the limit
-        pub AssetLimitProps get(fn asset_limit_props): map hasher(twox_64_concat) Token => BTreeMap<AssetLimit, bool>;
+        pub AssetRestrictionsOf get(fn asset_restrictions_of): map hasher(twox_64_concat) Token => AssetRestrictions;
 
         /// asset balance for user&token, use btree_map to accept different asset type
         pub AssetBalance get(fn asset_balance):
@@ -282,7 +274,13 @@ decl_storage! {
         /// memo len
         pub MemoLen get(fn memo_len) config(): u32;
     }
-
+    add_extra_genesis {
+        config(assets): Vec<(Asset, AssetRestrictions, bool, bool)>;
+        config(endowed): BTreeMap<Token, Vec<(T::AccountId, T::Balance)>>;
+        build(|config| {
+            Module::<T>::initialize_assets(&config.assets, &config.endowed);
+        })
+    }
 }
 
 impl<T: Trait> ChainT for Module<T> {
@@ -293,16 +291,27 @@ impl<T: Trait> ChainT for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    /*
-    #[cfg(feature = "std")]
-    pub fn bootstrap_register_asset(
-        asset: Asset,
-        is_online: bool,
-        is_psedu_intention: bool,
-    ) -> DispatchResult {
-        Self::register_asset(asset, is_online, is_psedu_intention)
+    fn initialize_assets(
+        assets: &Vec<(Asset, AssetRestrictions, bool, bool)>,
+        endowed_accounts: &BTreeMap<Token, Vec<(T::AccountId, T::Balance)>>,
+    ) {
+        for (asset, restrictions, is_online, is_psedu_intention) in assets {
+            Self::register_asset(
+                frame_system::RawOrigin::Root.into(),
+                asset.clone(),
+                restrictions.clone(),
+                *is_online,
+                *is_psedu_intention,
+            )
+            .unwrap();
+        }
+
+        for (token, endowed) in endowed_accounts.iter() {
+            for (accountid, value) in endowed.iter() {
+                Self::issue(token, accountid, *value).unwrap();
+            }
+        }
     }
-    */
 
     pub fn should_not_free_type(type_: AssetType) -> DispatchResult {
         if type_ == AssetType::Free {
@@ -417,20 +426,17 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    pub fn can_do(token: &Token, limit: AssetLimit) -> bool {
-        Self::asset_limit_props(token)
-            .get(&limit)
-            .map(|b| *b)
-            .unwrap_or(true)
+    pub fn can_do(token: &Token, limit: AssetRestriction) -> bool {
+        Self::asset_restrictions_of(token).contains(limit)
     }
     // can do wrapper
     #[inline]
     pub fn can_move(token: &Token) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(token, AssetLimit::CanMove),
+            Self::can_do(token, AssetRestriction::Move),
             Error::<T>::NotAllowAction,
             "this asset do not allow move|action:{:?}token:{:?}",
-            AssetLimit::CanMove,
+            AssetRestriction::Move,
             token!(token),
         );
         Ok(())
@@ -439,10 +445,10 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_transfer(token: &Token) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(token, AssetLimit::CanTransfer),
+            Self::can_do(token, AssetRestriction::Transfer),
             Error::<T>::NotAllowAction,
             "this asset do not allow transfer|action:{:?}|token:{:?}",
-            AssetLimit::CanTransfer,
+            AssetRestriction::Transfer,
             token!(token),
         );
         Ok(())
@@ -451,10 +457,10 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_withdrawal(token: &Token) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(token, AssetLimit::CanDestroyWithdrawal),
+            Self::can_do(token, AssetRestriction::DestroyWithdrawal),
             Error::<T>::NotAllowAction,
             "this asset do not allow destroy withdrawal|action:{:?}|token:{:?}",
-            AssetLimit::CanDestroyWithdrawal,
+            AssetRestriction::DestroyWithdrawal,
             token!(token),
         );
         Ok(())
@@ -463,10 +469,10 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_free(token: &Token) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(token, AssetLimit::CanDestroyFree),
+            Self::can_do(token, AssetRestriction::DestroyFree),
             Error::<T>::NotAllowAction,
             "this asset do not allow destroy free token|action:{:?}|token:{:?}",
-            AssetLimit::CanDestroyFree,
+            AssetRestriction::DestroyFree,
             token!(token),
         );
         Ok(())

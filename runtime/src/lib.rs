@@ -46,6 +46,7 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 // xrml re-exports
+pub use xrml_assets::{Asset, AssetRestriction, AssetRestrictions, Chain};
 #[cfg(feature = "std")]
 pub use xrml_bridge_bitcoin::h256_conv_endian_from_str;
 pub use xrml_bridge_bitcoin::{BTCHeader, BTCNetwork, BTCParams, Compact, H256 as BTCHash};
@@ -251,7 +252,7 @@ construct_runtime!(
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
-        XAssets: xrml_assets::{Module, Call, Storage, Event<T>},
+        XAssets: xrml_assets::{Module, Call, Storage, Event<T>, Config<T>},
         XBridgeBitcoin: xrml_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xrml_contracts::{Module, Call, Config, Storage, Event<T>},
         XTransactionPayment: xrml_transaction_payment::{Module, Storage},

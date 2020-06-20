@@ -6586,6 +6586,7 @@ dependencies = [
 name = "xrml-assets"
 version = "0.1.0"
 dependencies = [
+ "bitmask",
  "chainx-primitives",
  "frame-support",
  "frame-system",
