@@ -811,6 +811,7 @@ impl<T: Trait> Module<T> {
             &xrc20_addr,
             AssetType::ReservedXRC20,
             value,
+            true,
         )
         .map_err::<xrml_assets::Error<T>, _>(Into::into)?;
         Ok(())
@@ -893,6 +894,7 @@ impl<T: Trait> Module<T> {
             &to,
             AssetType::Free,
             value,
+            true,
         )
         .map_err::<xrml_assets::Error<T>, _>(Into::into)?;
         Ok(())

@@ -6720,6 +6720,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
+ "xrml-assets",
  "xrml-transaction-payment-rpc-runtime-api",
 ]
 

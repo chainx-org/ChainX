@@ -36,7 +36,7 @@ use codec::{Decode, Encode};
 use frame_support::{
     decl_module, decl_storage,
     dispatch::DispatchResult,
-    traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, WithdrawReason},
+    traits::Get,
     weights::{
         DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight, WeightToFeeCoefficient,
         WeightToFeePolynomial,
@@ -59,19 +59,21 @@ use xrml_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 /// Fee multiplier.
 pub type Multiplier = FixedI128;
 
-type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
-type NegativeImbalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
+type BalanceOf<T> = <T as xrml_assets::Trait>::Balance;
+// <<T as xrml_assets::Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+// type BalanceOf<T> =
+//     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+// type NegativeImbalanceOf<T> =
+//     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
 
-pub trait Trait: frame_system::Trait {
-    /// The currency type in which fees will be paid.
-    type Currency: Currency<Self::AccountId> + Send + Sync;
+pub trait Trait: frame_system::Trait + xrml_assets::Trait {
+    // /// The currency type in which fees will be paid.
+    // type Currency: Currency<Self::AccountId> + Send + Sync;
 
-    /// Handler for the unbalanced reduction when taking transaction fees. This is either one or
-    /// two separate imbalances, the first is the transaction fee paid, the second is the tip paid,
-    /// if any.
-    type OnTransactionPayment: OnUnbalanced<NegativeImbalanceOf<Self>>;
+    // /// Handler for the unbalanced reduction when taking transaction fees. This is either one or
+    // /// two separate imbalances, the first is the transaction fee paid, the second is the tip paid,
+    // /// if any.
+    // type OnTransactionPayment: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
     /// The fee to be paid for making a transaction; the per-byte portion.
     type TransactionByteFee: Get<BalanceOf<Self>>;
@@ -258,28 +260,25 @@ where
         who: &T::AccountId,
         info: &DispatchInfoOf<T::Call>,
         len: usize,
-    ) -> Result<(BalanceOf<T>, Option<NegativeImbalanceOf<T>>), TransactionValidityError> {
+    ) -> Result<BalanceOf<T>, TransactionValidityError> {
         let tip = self.0;
         let fee = Module::<T>::compute_fee(len as u32, info, tip);
 
         // Only mess with balances if fee is not zero.
         if fee.is_zero() {
-            return Ok((fee, None));
+            return Ok(Zero::zero());
         }
-
-        match T::Currency::withdraw(
+        let _ = xrml_assets::Module::<T>::move_balance(
+            &<xrml_assets::Module<T> as xrml_assets::ChainT>::TOKEN.to_vec(),
             who,
+            xrml_assets::AssetType::Free,
+            who,
+            xrml_assets::AssetType::LockedFee,
             fee,
-            if tip.is_zero() {
-                WithdrawReason::TransactionPayment.into()
-            } else {
-                WithdrawReason::TransactionPayment | WithdrawReason::Tip
-            },
-            ExistenceRequirement::KeepAlive,
-        ) {
-            Ok(imbalance) => Ok((fee, Some(imbalance))),
-            Err(_) => Err(InvalidTransaction::Payment.into()),
-        }
+            false,
+        )
+        .map_err(|_| InvalidTransaction::Payment)?;
+        Ok(fee)
     }
 }
 
@@ -303,12 +302,13 @@ where
     type AccountId = T::AccountId;
     type Call = T::Call;
     type AdditionalSigned = ();
-    type Pre = (
-        BalanceOf<T>,
-        Self::AccountId,
-        Option<NegativeImbalanceOf<T>>,
-        BalanceOf<T>,
-    );
+    type Pre = (BalanceOf<T>, Self::AccountId, BalanceOf<T>);
+    // type Pre = (
+    //     BalanceOf<T>,
+    //     // Self::AccountId,
+    //     // Option<NegativeImbalanceOf<T>>,
+    //     // BalanceOf<T>,
+    // );
     fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
         Ok(())
     }
@@ -320,7 +320,7 @@ where
         info: &DispatchInfoOf<Self::Call>,
         len: usize,
     ) -> TransactionValidity {
-        let (fee, _) = self.withdraw_fee(who, info, len)?;
+        let fee = self.withdraw_fee(who, info, len)?;
 
         let mut r = ValidTransaction::default();
         // NOTE: we probably want to maximize the _fee (of any type) per weight unit_ here, which
@@ -336,8 +336,9 @@ where
         info: &DispatchInfoOf<Self::Call>,
         len: usize,
     ) -> Result<Self::Pre, TransactionValidityError> {
-        let (fee, imbalance) = self.withdraw_fee(who, info, len)?;
-        Ok((self.0, who.clone(), imbalance, fee))
+        let fee = self.withdraw_fee(who, info, len)?;
+        // Ok((self.0, who.clone(), imbalance, fee))
+        Ok((self.0, who.clone(), fee))
     }
 
     fn post_dispatch(
@@ -347,28 +348,38 @@ where
         len: usize,
         _result: &DispatchResult,
     ) -> Result<(), TransactionValidityError> {
-        let (tip, who, imbalance, fee) = pre;
-        if let Some(payed) = imbalance {
+        let (tip, who, fee) = pre;
+        if !fee.is_zero() {
             let actual_fee = Module::<T>::compute_actual_fee(len as u32, info, post_info, tip);
-            let refund = fee.saturating_sub(actual_fee);
-            let actual_payment = match T::Currency::deposit_into_existing(&who, refund) {
-                Ok(refund_imbalance) => {
-                    // The refund cannot be larger than the up front payed max weight.
-                    // `PostDispatchInfo::calc_unspent` guards against such a case.
-                    match payed.offset(refund_imbalance) {
-                        Ok(actual_payment) => actual_payment,
-                        Err(_) => return Err(InvalidTransaction::Payment.into()),
-                    }
-                }
-                // We do not recreate the account using the refund. The up front payment
-                // is gone in that case.
-                Err(_) => payed,
-            };
-            let imbalances = actual_payment.split(tip);
-            T::OnTransactionPayment::on_unbalanceds(
-                Some(imbalances.0).into_iter().chain(Some(imbalances.1)),
-            );
+            // refund locked fee to free
+            let _ = xrml_assets::Module::<T>::move_balance(
+                &<xrml_assets::Module<T> as xrml_assets::ChainT>::TOKEN.to_vec(),
+                &who,
+                xrml_assets::AssetType::LockedFee,
+                &who,
+                xrml_assets::AssetType::Free,
+                fee,
+                false,
+            )
+            .map_err(|_| InvalidTransaction::Payment)?;
+            // real do deduct fee from free balance
+            let _ = xrml_assets::Module::<T>::move_balance(
+                &<xrml_assets::Module<T> as xrml_assets::ChainT>::TOKEN.to_vec(),
+                &who,
+                xrml_assets::AssetType::Free,
+                &who, // TODO to blockproducer in future
+                xrml_assets::AssetType::Free,
+                actual_fee,
+                true, // and log event
+            )
+            .expect("at now, move fee must success");
         }
+        assert!(xrml_assets::Module::<T>::asset_balance_of(
+            &who,
+            &<xrml_assets::Module<T> as xrml_assets::ChainT>::TOKEN.to_vec(),
+            xrml_assets::AssetType::LockedFee
+        )
+        .is_zero());
         Ok(())
     }
 }

@@ -233,8 +233,6 @@ parameter_types! {
 }
 
 impl xrml_transaction_payment::Trait for Runtime {
-    type Currency = XAssets;
-    type OnTransactionPayment = ();
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();

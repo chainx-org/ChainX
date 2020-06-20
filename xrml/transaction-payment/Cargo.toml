@@ -22,6 +22,7 @@ frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 xrml-transaction-payment-rpc-runtime-api = { path = "./rpc/runtime-api", default-features = false }
+xrml-assets = { path = "../assets", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
@@ -38,5 +39,6 @@ std = [
     "sp-runtime/std",
     "frame-support/std",
     "frame-system/std",
-    "xrml-transaction-payment-rpc-runtime-api/std"
+    "xrml-transaction-payment-rpc-runtime-api/std",
+    "xrml-assets/std",
 ]
