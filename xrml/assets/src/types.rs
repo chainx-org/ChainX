@@ -1,5 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 
+use bitmask::bitmask;
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -184,18 +185,31 @@ impl Default for AssetType {
     }
 }
 
-define_enum!(
-    #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+bitmask! {
+    ///
+    #[derive(Encode, Decode)]
+    #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    AssetLimit {
-        CanMove,
-        CanTransfer,
-        CanDeposit,
-        CanWithdraw,
-        CanDestroyWithdrawal,
-        CanDestroyFree,
+    pub mask AssetRestrictions: u32 where
+    ///
+    #[derive(Encode, Decode)]
+    #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    flags AssetRestriction {
+        Move                = 1 << 0,
+        Transfer            = 1 << 1,
+        Deposit             = 1 << 2,
+        Withdraw            = 1 << 3,
+        DestroyWithdrawal   = 1 << 4,
+        DestroyFree         = 1 << 5,
     }
-);
+}
+
+impl Default for AssetRestrictions {
+    fn default() -> Self {
+        AssetRestrictions::none()
+    }
+}
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

@@ -12,10 +12,16 @@ fn test_detect_tx_type() {
         // normal output addr 1FCaFxCdupMpxYKHpa83rUKGi1BygevJxF
         // opreturn ChainX:5UufyWdcgonrEHoqHb54DDUYJ4vmWg4NDBxWhrpizNcz2ptV@Polkadog:1FCa
         let notmal_output_0_1 = "0200000001336dbf5c2707d7dce56ae38d70ce189a95aa8a058771ac2b924dc657d781e90b010000006b483045022100a07fa7218ff1abb382af71b411464616787ddff068ead170bb8b1a7937f57f5d022028e1f2b498282b13ab8a3ad3f157a509d47e06229dd8a4ab97c8629debc97c100121034054cbf47712cb313eeba19d52941008fdf8460481049985221e0fc5a3e7e889ffffffff0280969800000000001976a9149bc21948187a4c40b5ef36a9266fa69fca5bd6a888ac0000000000000000476a45436861696e583a3555756679576463676f6e7245486f7148623534444455594a34766d5767344e44427857687270697a4e637a3270745640506f6c6b61646f673a3146436100000000".into();
-        assert_eq!(detect_lockup_type::<Test>(&notmal_output_0_1), BTCTxType::Lock);
+        assert_eq!(
+            detect_lockup_type::<Test>(&notmal_output_0_1),
+            BTCTxType::Lock
+        );
 
         let notmal_output_10 = "0200000001336dbf5c2707d7dce56ae38d70ce189a95aa8a058771ac2b924dc657d781e90b010000006a47304402207e5d61039a5aae5b72aa5afcf19f08054aefea75be90298d342a642b7081687d022038db14e2caabd63db941b855d5aa2cada4395228ed272da1bcf147b57693e5a00121034054cbf47712cb313eeba19d52941008fdf8460481049985221e0fc5a3e7e889ffffffff0200ca9a3b000000001976a9149bc21948187a4c40b5ef36a9266fa69fca5bd6a888ac0000000000000000476a45436861696e583a3555756679576463676f6e7245486f7148623534444455594a34766d5767344e44427857687270697a4e637a3270745640506f6c6b61646f673a3146436100000000".into();
-        assert_eq!(detect_lockup_type::<Test>(&notmal_output_10), BTCTxType::Lock);
+        assert_eq!(
+            detect_lockup_type::<Test>(&notmal_output_10),
+            BTCTxType::Lock
+        );
 
         // output is 900000
         let not_match_limit1 = "0200000001336dbf5c2707d7dce56ae38d70ce189a95aa8a058771ac2b924dc657d781e90b010000006a4730440220216cd4f96714b6f5615caaa5e54506280c8b200acd50d6ff933caad20dd1862802207ea23327e83fcaf68f74753ae8f421bbc7043d4808f0566bd03b84d57c163b740121034054cbf47712cb313eeba19d52941008fdf8460481049985221e0fc5a3e7e889ffffffff02a0bb0d00000000001976a9149bc21948187a4c40b5ef36a9266fa69fca5bd6a888ace803000000000000476a45436861696e583a3555756679576463676f6e7245486f7148623534444455594a34766d5767344e44427857687270697a4e637a3270745640506f6c6b61646f673a3146436100000000".into();
@@ -57,11 +63,11 @@ fn test_normal() {
         )
         .unwrap();
         assert_eq!(xrml_assets::register_asset(asset, true, true), Ok(()));
-        let mut props: BTreeMap<xrml_assets::AssetLimit, bool> = BTreeMap::new();
-        props.insert(xrml_assets::AssetLimit::CanMove, false);
-        props.insert(xrml_assets::AssetLimit::CanTransfer, false);
-        props.insert(xrml_assets::AssetLimit::CanWithdraw, false);
-        props.insert(xrml_assets::AssetLimit::CanDestroyWithdrawal, false);
+        let mut props: BTreeMap<xrml_assets::AssetRestriction, bool> = BTreeMap::new();
+        props.insert(xrml_assets::AssetRestriction::Move, false);
+        props.insert(xrml_assets::AssetRestriction::Transfer, false);
+        props.insert(xrml_assets::AssetRestriction::Withdraw, false);
+        props.insert(xrml_assets::AssetRestriction::DestroyWithdrawal, false);
         xrml_assets::set_asset_limit_props(XBridgeOfBTCLockup::TOKEN.to_vec(), props).unwrap();
 
         let public = hex!("fa6efb5db13089b4712305e39d0a16867c6822e3b1f4c4619937ae8a21961030")

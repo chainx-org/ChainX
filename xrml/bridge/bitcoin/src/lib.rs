@@ -59,7 +59,7 @@ pub use self::traits::RelayTransaction;
 // };
 use self::types::DepositCache;
 pub use self::types::{
-    BTCHeaderInfo, BTCParams, RelayTx, TrusteeAddrInfo, BTCTxInfo, BTCTxType, VoteResult,
+    BTCHeaderInfo, BTCParams, BTCTxInfo, BTCTxType, RelayTx, TrusteeAddrInfo, VoteResult,
     WithdrawalProposal,
 };
 
