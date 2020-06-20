@@ -12,7 +12,7 @@ use sp_std::prelude::*;
 // use xbridge_common::traits::IntoVecu8;
 
 // light-bitcoin
-use btc_chain::{BlockHeader as BTCHeader, Transaction};
+use btc_chain::{BlockHeader as BTCHeader, Transaction as BTCTransaction};
 use btc_keys::Address;
 use btc_primitives::{Compact, H256};
 use merkle::PartialMerkleTree;
@@ -21,7 +21,7 @@ use crate::{traits::RelayTransaction, Error, Trait};
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum TxType {
+pub enum BTCTxType {
     Withdrawal,
     Deposit,
     HotAndCold,
@@ -31,31 +31,31 @@ pub enum TxType {
     Irrelevance,
 }
 
-impl Default for TxType {
+impl Default for BTCTxType {
     fn default() -> Self {
-        TxType::Deposit
+        BTCTxType::Deposit
     }
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub struct RelayTx {
     pub block_hash: H256,
-    pub raw: Transaction,
+    pub raw: BTCTransaction,
     pub merkle_proof: PartialMerkleTree,
-    pub previous_raw: Transaction,
+    pub previous_raw: BTCTransaction,
 }
 
 impl RelayTransaction for RelayTx {
     fn block_hash(&self) -> &H256 {
         &self.block_hash
     }
-    fn raw_tx(&self) -> &Transaction {
+    fn raw_tx(&self) -> &BTCTransaction {
         &self.raw
     }
     fn merkle_proof(&self) -> &PartialMerkleTree {
         &self.merkle_proof
     }
-    fn prev_tx(&self) -> Option<&Transaction> {
+    fn prev_tx(&self) -> Option<&BTCTransaction> {
         Some(&self.previous_raw)
     }
 }
@@ -64,7 +64,7 @@ impl RelayTransaction for RelayTx {
 pub struct WithdrawalProposal<AccountId> {
     pub sig_state: VoteResult,
     pub withdrawal_id_list: Vec<u32>,
-    pub tx: Transaction,
+    pub tx: BTCTransaction,
     pub trustee_list: Vec<(AccountId, bool)>,
 }
 
@@ -72,7 +72,7 @@ impl<AccountId> WithdrawalProposal<AccountId> {
     pub fn new(
         sig_state: VoteResult,
         withdrawal_id_list: Vec<u32>,
-        tx: Transaction,
+        tx: BTCTransaction,
         trustee_list: Vec<(AccountId, bool)>,
     ) -> Self {
         WithdrawalProposal {
@@ -100,9 +100,9 @@ pub struct BTCHeaderInfo {
 }
 
 #[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
-pub struct TxInfo {
-    pub raw_tx: Transaction,
-    pub tx_type: TxType,
+pub struct BTCTxInfo {
+    pub raw_tx: BTCTransaction,
+    pub tx_type: BTCTxType,
     pub height: u32,
 }
 

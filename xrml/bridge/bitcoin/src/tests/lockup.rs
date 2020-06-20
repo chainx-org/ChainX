@@ -1,7 +1,7 @@
 use super::*;
 
 use crate::lockup::{detect_lockup_type, handle_lock_tx};
-use crate::types::TxType;
+use crate::types::BTCTxType;
 
 #[test]
 fn test_detect_tx_type() {
@@ -12,30 +12,30 @@ fn test_detect_tx_type() {
         // normal output addr 1FCaFxCdupMpxYKHpa83rUKGi1BygevJxF
         // opreturn ChainX:5UufyWdcgonrEHoqHb54DDUYJ4vmWg4NDBxWhrpizNcz2ptV@Polkadog:1FCa
         let notmal_output_0_1 = "0200000001336dbf5c2707d7dce56ae38d70ce189a95aa8a058771ac2b924dc657d781e90b010000006b483045022100a07fa7218ff1abb382af71b411464616787ddff068ead170bb8b1a7937f57f5d022028e1f2b498282b13ab8a3ad3f157a509d47e06229dd8a4ab97c8629debc97c100121034054cbf47712cb313eeba19d52941008fdf8460481049985221e0fc5a3e7e889ffffffff0280969800000000001976a9149bc21948187a4c40b5ef36a9266fa69fca5bd6a888ac0000000000000000476a45436861696e583a3555756679576463676f6e7245486f7148623534444455594a34766d5767344e44427857687270697a4e637a3270745640506f6c6b61646f673a3146436100000000".into();
-        assert_eq!(detect_lockup_type::<Test>(&notmal_output_0_1), TxType::Lock);
+        assert_eq!(detect_lockup_type::<Test>(&notmal_output_0_1), BTCTxType::Lock);
 
         let notmal_output_10 = "0200000001336dbf5c2707d7dce56ae38d70ce189a95aa8a058771ac2b924dc657d781e90b010000006a47304402207e5d61039a5aae5b72aa5afcf19f08054aefea75be90298d342a642b7081687d022038db14e2caabd63db941b855d5aa2cada4395228ed272da1bcf147b57693e5a00121034054cbf47712cb313eeba19d52941008fdf8460481049985221e0fc5a3e7e889ffffffff0200ca9a3b000000001976a9149bc21948187a4c40b5ef36a9266fa69fca5bd6a888ac0000000000000000476a45436861696e583a3555756679576463676f6e7245486f7148623534444455594a34766d5767344e44427857687270697a4e637a3270745640506f6c6b61646f673a3146436100000000".into();
-        assert_eq!(detect_lockup_type::<Test>(&notmal_output_10), TxType::Lock);
+        assert_eq!(detect_lockup_type::<Test>(&notmal_output_10), BTCTxType::Lock);
 
         // output is 900000
         let not_match_limit1 = "0200000001336dbf5c2707d7dce56ae38d70ce189a95aa8a058771ac2b924dc657d781e90b010000006a4730440220216cd4f96714b6f5615caaa5e54506280c8b200acd50d6ff933caad20dd1862802207ea23327e83fcaf68f74753ae8f421bbc7043d4808f0566bd03b84d57c163b740121034054cbf47712cb313eeba19d52941008fdf8460481049985221e0fc5a3e7e889ffffffff02a0bb0d00000000001976a9149bc21948187a4c40b5ef36a9266fa69fca5bd6a888ace803000000000000476a45436861696e583a3555756679576463676f6e7245486f7148623534444455594a34766d5767344e44427857687270697a4e637a3270745640506f6c6b61646f673a3146436100000000".into();
         assert_eq!(
             detect_lockup_type::<Test>(&not_match_limit1),
-            TxType::Irrelevance
+            BTCTxType::Irrelevance
         );
 
         // output is 1000000001
         let not_match_limit2 = "0200000001336dbf5c2707d7dce56ae38d70ce189a95aa8a058771ac2b924dc657d781e90b010000006a473044022017b6c2c5fe70c1381790fc18a593543c67e95076e60ffe247978cdead3e1a69902205e49425b71291d3ac1d80a7c07d0fa97c9e97ff9363b0803bd132c7fe4ee849a0121034054cbf47712cb313eeba19d52941008fdf8460481049985221e0fc5a3e7e889ffffffff0201ca9a3b000000001976a9149bc21948187a4c40b5ef36a9266fa69fca5bd6a888ac0000000000000000476a45436861696e583a3555756679576463676f6e7245486f7148623534444455594a34766d5767344e44427857687270697a4e637a3270745640506f6c6b61646f673a3146436100000000".into();
         assert_eq!(
             detect_lockup_type::<Test>(&not_match_limit2),
-            TxType::Irrelevance
+            BTCTxType::Irrelevance
         );
 
         // opreturn is ChainX:5UufyWdcgonrEHoqHb54DDUYJ4vmWg4NDBxWhrpizNcz2ptV:1abc
         let err_opreturn = "0200000001336dbf5c2707d7dce56ae38d70ce189a95aa8a058771ac2b924dc657d781e90b010000006a47304402202f21e5302cf3fbb8bb7894c481e0486902b7907d5dd3eb705a29e91450e1ddc9022070fea769f80597a7c069fe7bb9c8b52c3449bfce0bfc7f616234fd48667db60b0121034054cbf47712cb313eeba19d52941008fdf8460481049985221e0fc5a3e7e889ffffffff0200ca9a3b000000001976a9149bc21948187a4c40b5ef36a9266fa69fca5bd6a888ac00000000000000003e6a3c436861696e583a3555756679576463676f6e7245486f7148623534444455594a34766d5767344e44427857687270697a4e637a327074563a3161626300000000".into();
         assert_eq!(
             detect_lockup_type::<Test>(&err_opreturn),
-            TxType::Irrelevance
+            BTCTxType::Irrelevance
         );
     })
 }
@@ -96,9 +96,9 @@ fn test_normal() {
         let fth_lock: Transaction = "02000000000101730a826795953033fc391c1dd42008aa971412b7df2686cbc68938363ba54f1500000000171600141e6ad2476469e29df17d0b29779ec74992011ec4ffffffff0240420f000000000017a9140bab8fa2ea965a0dc34b727c59b5dcfd91bc413f87cfcd24000000000017a9149d0876aa518e9a21be823c598d179498cbcbbb6a8702473044022043db8986c6cb443f3d15bf0d358be87f5314ca241caaca5fd2fc6248ac38b93302206dedf4712d3536866679296aa3897de06bfeb5ad63f6d7dac7190a4ed1b6bc4d012103f165613dfa0ec1cca321423c11b10b8651ce51e4da8d463a7357cf5a5735261600000000".into();
         let fth_hash = fth_lock.hash();
 
-        assert_eq!(detect_lockup_type::<Test>(&fst_lock), TxType::Lock);
-        assert_eq!(detect_lockup_type::<Test>(&snd_lock), TxType::Lock);
-        assert_eq!(detect_lockup_type::<Test>(&trd_lock), TxType::Lock);
+        assert_eq!(detect_lockup_type::<Test>(&fst_lock), BTCTxType::Lock);
+        assert_eq!(detect_lockup_type::<Test>(&snd_lock), BTCTxType::Lock);
+        assert_eq!(detect_lockup_type::<Test>(&trd_lock), BTCTxType::Lock);
 
         // handle first lock
         let r = handle_lock_tx::<Test>(&fst_lock, &fst_hash);
@@ -159,7 +159,7 @@ fn test_normal() {
         );
 
         // unlock
-        assert_eq!(detect_lockup_type::<Test>(&fth_lock), TxType::Unlock);
+        assert_eq!(detect_lockup_type::<Test>(&fth_lock), BTCTxType::Unlock);
         crate::lockup::handle_unlock_tx::<Test>(&fth_lock, &fth_hash);
         let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::TOKEN.to_vec());
         assert_eq!(value, 0);

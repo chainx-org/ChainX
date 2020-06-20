@@ -59,7 +59,7 @@ pub use self::traits::RelayTransaction;
 // };
 use self::types::DepositCache;
 pub use self::types::{
-    BTCHeaderInfo, BTCParams, RelayTx, TrusteeAddrInfo, TxInfo, TxType, VoteResult,
+    BTCHeaderInfo, BTCParams, RelayTx, TrusteeAddrInfo, BTCTxInfo, BTCTxType, VoteResult,
     WithdrawalProposal,
 };
 
@@ -142,7 +142,7 @@ decl_storage! {
         /// all valid blockheader (include orphan blockheader)
         pub BTCHeaderFor get(fn btc_header_for): map hasher(identity) H256 => Option<BTCHeaderInfo>;
         /// tx info for txhash
-        pub TxFor get(fn tx_for): map hasher(identity) H256 => Option<TxInfo>;
+        pub TxFor get(fn tx_for): map hasher(identity) H256 => Option<BTCTxInfo>;
         /// mark tx has been handled, in case re-handle this tx
         /// do not need to remove after this tx is removed from ChainX
         pub TxMarkFor get(fn tx_mark_for): map hasher(identity) H256 => Option<()>;
@@ -639,7 +639,7 @@ impl<T: Trait> Module<T> {
     //             #[allow(deprecated)]
     //             TxFor::<T>::insert(
     //                 &tx_hash,
-    //                 TxInfo {
+    //                 BTCTxInfo {
     //                     raw_tx: tx.raw_tx().clone(),
     //                     tx_type,
     //                     height,

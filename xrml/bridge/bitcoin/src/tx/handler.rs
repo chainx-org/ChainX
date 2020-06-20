@@ -22,7 +22,7 @@ use btc_keys::Address;
 use btc_primitives::H256;
 use btc_script::Script;
 
-use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
+use crate::types::{DepositAccountInfo, DepositCache, BTCTxInfo, TxType};
 use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait, TxMarkFor};
 
 use super::utils::{addr2vecu8, ensure_identical, get_hot_trustee_address, is_key, parse_opreturn};
@@ -31,7 +31,7 @@ use crate::lockup::{handle_lockup_tx, handle_unlock_tx};
 
 pub struct TxHandler {
     pub tx_hash: H256,
-    pub tx_info: TxInfo,
+    pub tx_info: BTCTxInfo,
 }
 
 impl TxHandler {
