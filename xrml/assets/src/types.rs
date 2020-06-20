@@ -148,21 +148,35 @@ impl Asset {
     }
 }
 
-define_enum!(
-    #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
-    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    AssetType {
-        Free,
-        ReservedStaking,
-        ReservedStakingRevocation,
-        ReservedWithdrawal,
-        ReservedDexSpot,
-        ReservedDexFuture,
-        ReservedCurrency,
-        ReservedXRC20,
-        GasPayment,
+#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum AssetType {
+    Free,
+    ReservedStaking,
+    ReservedStakingRevocation,
+    ReservedWithdrawal,
+    ReservedDexSpot,
+    ReservedDexFuture,
+    ReservedCurrency,
+    ReservedXRC20,
+    LockedFee, // LockedFee is special type, normally it must be zero, otherwise there is some error.
+}
+impl AssetType {
+    pub fn iterator() -> Iter<'static, AssetType> {
+        static ENUM_ITEMS: &[AssetType] = &[
+            AssetType::Free,
+            AssetType::ReservedStaking,
+            AssetType::ReservedStakingRevocation,
+            AssetType::ReservedWithdrawal,
+            AssetType::ReservedDexSpot,
+            AssetType::ReservedDexFuture,
+            AssetType::ReservedCurrency,
+            AssetType::ReservedXRC20,
+            // notice except LockedFee
+        ];
+        ENUM_ITEMS.iter()
     }
-);
+}
 
 impl Default for AssetType {
     fn default() -> Self {
@@ -183,15 +197,14 @@ define_enum!(
     }
 );
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetErr {
     NotEnough,
     OverFlow,
     TotalAssetNotEnough,
     TotalAssetOverFlow,
     InvalidToken,
-    // InvalidAccount,
     NotAllow,
 }
 

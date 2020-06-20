@@ -1,0 +1,28 @@
+[package]
+name = "xrml-transaction-payment-rpc"
+version = "2.0.0-rc3"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
+license = "Apache-2.0"
+homepage = "https://substrate.dev"
+repository = "https://github.com/paritytech/substrate/"
+description = "RPC interface for the transaction payment module."
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+serde = { version = "1.0.101", features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "1.3.0" }
+
+jsonrpc-core = "14.2.0"
+jsonrpc-core-client = "14.2.0"
+jsonrpc-derive = "14.2.1"
+
+sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-rpc = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+
+xrml-transaction-payment-rpc-runtime-api = { path = "./runtime-api" }

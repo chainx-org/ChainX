@@ -681,6 +681,7 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         to_type: AssetType,
         value: T::Balance,
+        do_trigger: bool,
     ) -> result::Result<(SignedImbalanceT<T>, SignedImbalanceT<T>), AssetErr> {
         if value == Zero::zero() {
             // value is zero, do not read storage, no event
@@ -714,6 +715,13 @@ impl<T: Trait> Module<T> {
         // finish basic check, start self check
         if from == to && from_type == to_type {
             // same account, same type, return directly
+            // same account also do trigger
+            if do_trigger {
+                AssetTriggerEventAfter::<T>::on_move_before(
+                    token, from, from_type, to, to_type, value,
+                );
+                AssetTriggerEventAfter::<T>::on_move(token, from, from_type, to, to_type, value)?;
+            }
             return Ok((
                 SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
                 SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
@@ -726,13 +734,16 @@ impl<T: Trait> Module<T> {
             Self::try_new_account(to, token);
         }
 
-        AssetTriggerEventAfter::<T>::on_move_before(token, from, from_type, to, to_type, value);
+        if do_trigger {
+            AssetTriggerEventAfter::<T>::on_move_before(token, from, from_type, to, to_type, value);
+        }
 
         let from_imbalance = Self::make_type_balance_be(from, token, from_type, new_from_balance);
         let to_imbalance = Self::make_type_balance_be(to, token, to_type, new_to_balance);
 
-        AssetTriggerEventAfter::<T>::on_move(token, from, from_type, to, to_type, value)?;
-
+        if do_trigger {
+            AssetTriggerEventAfter::<T>::on_move(token, from, from_type, to, to_type, value)?;
+        }
         Ok((from_imbalance, to_imbalance))
     }
 
@@ -742,7 +753,15 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         value: T::Balance,
     ) -> result::Result<(SignedImbalanceT<T>, SignedImbalanceT<T>), AssetErr> {
-        Self::move_balance(token, from, AssetType::Free, to, AssetType::Free, value)
+        Self::move_balance(
+            token,
+            from,
+            AssetType::Free,
+            to,
+            AssetType::Free,
+            value,
+            true,
+        )
     }
 
     pub fn set_balance_by_root(
@@ -800,6 +819,7 @@ impl<T: Trait> Module<T> {
             to,
             to_type,
             value,
+            true,
         )?;
         Ok(())
     }

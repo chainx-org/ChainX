@@ -26,11 +26,11 @@ sp-sandbox = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-pallet-transaction-payment = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 chainx-primitives = { path = "../../primitives", default-features = false }
 xrml-support = { path = "../support", default-features = false }
 xrml-assets = { path = "../assets", default-features = false }
+xrml-transaction-payment = { path = "../transaction-payment", default-features = false }
 xrml-contracts-primitives = { path = "./common", default-features = false }
 
 [dev-dependencies]
@@ -44,23 +44,22 @@ pallet-randomness-collective-flip = { git = "https://github.com/paritytech/subst
 [features]
 default = ["std"]
 std = [
-	"serde",
-	"codec/std",
-	"sp-core/std",
-	"sp-runtime/std",
-	"sp-io/std",
-	"sp-std/std",
-	"sp-sandbox/std",
-	"frame-support/std",
-	"frame-system/std",
-	"parity-wasm/std",
-	"pwasm-utils/std",
-	"wasmi-validation/std",
-
-	"pallet-transaction-payment/std",
+    "serde",
+    "codec/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-io/std",
+    "sp-std/std",
+    "sp-sandbox/std",
+    "frame-support/std",
+    "frame-system/std",
+    "parity-wasm/std",
+    "pwasm-utils/std",
+    "wasmi-validation/std",
 
     "chainx-primitives/std",
     "xrml-support/std",
     "xrml-assets/std",
-	"xrml-contracts-primitives/std",
+    "xrml-contracts-primitives/std",
+    "xrml-transaction-payment/std",
 ]

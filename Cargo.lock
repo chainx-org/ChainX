@@ -524,7 +524,6 @@ dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
- "pallet-transaction-payment-rpc",
  "parity-scale-codec",
  "sc-client-api",
  "sc-service",
@@ -538,6 +537,7 @@ dependencies = [
  "substrate-frame-rpc-system",
  "xrml-contracts-rpc",
  "xrml-contracts-rpc-runtime-api",
+ "xrml-transaction-payment-rpc",
 ]
 
 [[package]]
@@ -554,8 +554,6 @@ dependencies = [
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
  "serde",
  "sp-api",
@@ -576,6 +574,8 @@ dependencies = [
  "xrml-contracts",
  "xrml-contracts-primitives",
  "xrml-contracts-rpc-runtime-api",
+ "xrml-transaction-payment",
+ "xrml-transaction-payment-rpc-runtime-api",
 ]
 
 [[package]]
@@ -2974,51 +2974,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-timestamp",
-]
-
-[[package]]
-name = "pallet-transaction-payment"
-version = "2.0.0-rc3"
-source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc3#34695a85650b58bcd7d7e2a677cafc2921251d68"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-transaction-payment-rpc-runtime-api",
- "parity-scale-codec",
- "smallvec 1.4.0",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-transaction-payment-rpc"
-version = "2.0.0-rc3"
-source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc3#34695a85650b58bcd7d7e2a677cafc2921251d68"
-dependencies = [
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "pallet-transaction-payment-rpc-runtime-api",
- "parity-scale-codec",
- "serde",
- "sp-api",
- "sp-blockchain",
- "sp-core",
- "sp-rpc",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-transaction-payment-rpc-runtime-api"
-version = "2.0.0-rc3"
-source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc3#34695a85650b58bcd7d7e2a677cafc2921251d68"
-dependencies = [
- "frame-support",
- "parity-scale-codec",
- "serde",
- "sp-api",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
@@ -6680,7 +6635,6 @@ dependencies = [
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
- "pallet-transaction-payment",
  "parity-scale-codec",
  "parity-wasm",
  "pwasm-utils",
@@ -6695,6 +6649,7 @@ dependencies = [
  "xrml-assets",
  "xrml-contracts-primitives",
  "xrml-support",
+ "xrml-transaction-payment",
 ]
 
 [[package]]
@@ -6748,6 +6703,54 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "rustc-hex",
+ "sp-std",
+]
+
+[[package]]
+name = "xrml-transaction-payment"
+version = "2.0.0-rc3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "smallvec 1.4.0",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+ "xrml-assets",
+ "xrml-transaction-payment-rpc-runtime-api",
+]
+
+[[package]]
+name = "xrml-transaction-payment-rpc"
+version = "2.0.0-rc3"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+ "xrml-transaction-payment-rpc-runtime-api",
+]
+
+[[package]]
+name = "xrml-transaction-payment-rpc-runtime-api"
+version = "2.0.0-rc3"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-api",
+ "sp-runtime",
  "sp-std",
 ]
 
