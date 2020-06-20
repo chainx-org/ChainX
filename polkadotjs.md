@@ -34,14 +34,15 @@
       "ReservedXRC20"
     ]
   },
-  "AssetLimit": {
+  "AssetRestrictions": "u32",
+  "AssetRestriction": {
     "_enum": [
-      "CanMove",
-      "CanTransfer",
-      "CanDeposit",
-      "CanWithdraw",
-      "CanDestroyWithdrawal",
-      "CanDestroyFree"
+      "Move",
+      "Transfer",
+      "Deposit",
+      "Withdraw",
+      "DestroyWithdrawal",
+      "DestroyFree"
     ]
   },
   "SignedBalance": {
