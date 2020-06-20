@@ -20,3 +20,4 @@ chainx/
 !rpc/src/chainx
 bak/
 .chainx/
+.sub/

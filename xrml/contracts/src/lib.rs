@@ -114,7 +114,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::crypto::UncheckedFrom;
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
-    traits::{Hash, MaybeSerializeDeserialize, Member, StaticLookup, Zero},
+    traits::{Hash, MaybeSerializeDeserialize, Member, Zero},
     RuntimeDebug,
 };
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, marker::PhantomData, prelude::*};
@@ -535,13 +535,12 @@ decl_module! {
         #[weight = *gas_limit]
         pub fn call(
             origin,
-            dest: <T::Lookup as StaticLookup>::Source,
+            dest: T::AccountId,
             #[compact] value: BalanceOf<T>,
             #[compact] gas_limit: Gas,
             data: Vec<u8>
         ) -> DispatchResultWithPostInfo {
             let origin = ensure_signed(origin)?;
-            let dest = T::Lookup::lookup(dest)?;
             let mut gas_meter = GasMeter::new(gas_limit);
 
             let result = Self::execute_wasm(origin, &mut gas_meter, |ctx, gas_meter| {
