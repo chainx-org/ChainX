@@ -178,7 +178,7 @@ decl_storage! {
             // would ignore check for bitcoin testnet
             #[cfg(not(test))] {
             if let BTCNetwork::Mainnet = config.network_id {
-                if config.params_info.retargeting_interval() != 0 {
+                if number % config.params_info.retargeting_interval() != 0 {
                     panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
                 }
             }
