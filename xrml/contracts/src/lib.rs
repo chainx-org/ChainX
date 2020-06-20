@@ -644,9 +644,9 @@ decl_module! {
             for (origin, value)  in issues {
                 let params = (origin.clone(), value).encode();
 
-                // if let Err(_e) = Self::call_for_xrc20(token.clone(), origin.clone(), gas_limit, XRC20Selector::Issue, params.clone()) {
-                //     error!("[force_issue_xrc20]|{:}|who:{:?}|value:{:}|gas_limit:{:}|params:{:}", _e.reason, origin, value, gas_limit, try_hex_or_str(&params))
-                // }
+                if let Err(_e) = Self::call_for_xrc20(token.clone(), XRC20Selector::Issue, params.clone()) {
+                    error!("[force_issue_xrc20]|{:?}|who:{:?}|value:{:?}|params:{:?}", _e.reason, origin, value, try_hex!(&params))
+                }
             }
             Ok(())
         }
