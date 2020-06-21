@@ -57,8 +57,8 @@ jobs:
       run: cargo fmt -- --check
 
     - name: Compile
-      run: cargo build --release
-      # run: cargo test --no-run
+      # run: cargo build --release
+      run: cargo test --no-run
 
     - name: Test
       run: cargo test --all
