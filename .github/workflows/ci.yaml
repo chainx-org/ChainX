@@ -59,7 +59,7 @@ jobs:
     - name: Compile
       run: cargo test --no-run
 
-    - name: Test
+    # - name: Test
       # FIXME
       # run: cargo test --all
 
