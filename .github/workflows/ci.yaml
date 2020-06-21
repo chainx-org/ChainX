@@ -30,7 +30,7 @@ jobs:
         target: wasm32-unknown-unknown
         profile: minimal
         override: true
-        components: rustfmt, rust-src
+        components: rustfmt, rust-src, clippy
 
     - if: matrix.os == 'ubuntu-latest'
       run: sudo chown -R $(whoami):$(id -ng) ~/.cargo/
