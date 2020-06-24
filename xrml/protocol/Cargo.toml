@@ -5,7 +5,10 @@ authors = ["ChainX community <http://www.chainx.org>"]
 edition = "2018"
 
 [dependencies]
+chainx-primitives = { path = "../../primitives", default-features = false }
 
 [features]
 default = ["std"]
-std = []
+std = [
+    "chainx-primitives/std",
+]

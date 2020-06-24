@@ -6697,6 +6697,9 @@ dependencies = [
 [[package]]
 name = "xrml-protocol"
 version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+]
 
 [[package]]
 name = "xrml-support"
