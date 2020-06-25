@@ -60,7 +60,7 @@ decl_module! {
 
             // 50 is trick number for call difficulty power, if change in `runtime/src/fee.rs`,
             // should modify this number.
-            xbridge_common::Module::<T>::reward_relayer(&Self::TOKEN.to_vec(), &from, 50, tx.len() as u64);
+            xbridge_common::Module::<T>::reward_relayer(&Self::ASSET_ID, &from, 50, tx.len() as u64);
             Ok(())
         }
 
@@ -230,7 +230,7 @@ pub(crate) fn handle_lock_tx<T: Trait>(
     })?;
     let output_value = tx.outputs[out_index].value;
 
-    // set storage and issue token
+    // set storage and issue asset
 
     // try to unlock tx before new issue, if any error in it, just print error log
     // it's unlock and lock tx
@@ -248,7 +248,7 @@ pub(crate) fn handle_lock_tx<T: Trait>(
     let key = (*tx_hash, out_index as u32);
     LockedUpBTC::<T>::insert(&key, (accountid.clone(), output_value, addr));
     AddressLockedCoin::<T>::insert(addr, addr_value);
-    // issue lockup token
+    // issue lockup asset
     update_binding::<T>(&accountid, channel);
     issue_token::<T>(&accountid, output_value);
 
@@ -265,7 +265,7 @@ pub(crate) fn handle_lock_tx<T: Trait>(
 
 pub fn handle_unlock_tx<T: Trait>(tx: &Transaction, tx_hash: &H256) {
     debug!("[handle_unlock_tx]|do unlock tx|tx_hash:{:}", tx_hash);
-    // delete utxo storage and destroy token
+    // delete utxo storage and destroy asset
     for (index, input) in tx.inputs.iter().enumerate() {
         if destroy_utxo::<T>(input.previous_output.hash, input.previous_output.index) {
             Module::<T>::deposit_event(RawEvent::Unlock(
@@ -407,14 +407,14 @@ fn split(data: &[u8]) -> Vec<Vec<u8>> {
 
 /// bind account
 fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>) {
-    let token: xrml_assets::Token = <Module<T> as xrml_assets::ChainT>::TOKEN.to_vec();
-    xbridge_common::Module::<T>::update_binding(&token, who, channel_name);
+    let id: xrml_assets::AssetId = <Module<T> as xrml_assets::ChainT>::ASSET_ID;
+    xbridge_common::Module::<T>::update_binding(&id, who, channel_name);
 }
 
 fn issue_token<T: Trait>(who: &T::AccountId, balance: u64) {
     // notice this `Module` is LockupModule
-    let token: xrml_assets::Token = <Module<T> as xrml_assets::ChainT>::TOKEN.to_vec();
-    let _ = xrml_assets::Module::<T>::issue(&token, who, balance.into()).map_err(|e| {
+    let id: xrml_assets::AssetId = <Module<T> as xrml_assets::ChainT>::ASSET_ID;
+    let _ = xrml_assets::Module::<T>::issue(&id, who, balance.into()).map_err(|e| {
         error!("{:}", e);
         e
     });
@@ -422,8 +422,8 @@ fn issue_token<T: Trait>(who: &T::AccountId, balance: u64) {
 
 fn destroy_token<T: Trait>(who: &T::AccountId, balance: u64) {
     // notice this `Module` is LockupModule
-    let token: xrml_assets::Token = <Module<T> as xrml_assets::ChainT>::TOKEN.to_vec();
-    let _ = xrml_assets::Module::<T>::destroy_free(&token, who, balance.into()).map_err(|e| {
+    let id: xrml_assets::AssetId = <Module<T> as xrml_assets::ChainT>::ASSET_ID;
+    let _ = xrml_assets::Module::<T>::destroy_free(&id, who, balance.into()).map_err(|e| {
         error!("{:}", e);
         e
     });

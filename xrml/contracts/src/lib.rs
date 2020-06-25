@@ -119,10 +119,10 @@ use sp_runtime::{
 };
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, marker::PhantomData, prelude::*};
 
-use chainx_primitives::Token;
+use chainx_primitives::AssetId;
 use xrml_assets::AssetType;
 use xrml_contracts_primitives::{ContractAccessError, Selector, XRC20Selector};
-use xrml_support::{debug, ensure_with_errorlog, error, token, try_hex};
+use xrml_support::{debug, ensure_with_errorlog, error, try_hex};
 
 pub type CodeHash<T> = <T as frame_system::Trait>::Hash;
 pub type TrieId = Vec<u8>;
@@ -429,8 +429,10 @@ decl_error! {
         InvalidContractOrigin,
         /// not allow selector 'Issue' or `Destroy` in call_xrc20
         InvaliedXRC20Selector,
-        /// no xrc20 instance for this token
+        /// no xrc20 instance for this asset
         NoXRC20Instance,
+        /// no asset for this xrc20 address
+        NoAssetForXRC20,
         /// no issue selector in xrc20 info for this token
         NoIssueSelector,
         /// fail to call the contract, please check params and xrc20
@@ -441,8 +443,8 @@ decl_error! {
         XRC20IssueFailed,
         /// not enough balance for this xrc20 instance to refund asset
         ReservedXRC20NotEnough,
-        /// not enough balance for this token to convert to xrc20 token
-        SourceTokenNotEnough,
+        /// not enough balance for this asset to convert to xrc20 token
+        SourceAssetNotEnough,
     }
 }
 
@@ -588,37 +590,37 @@ decl_module! {
         }
 
         // xrc20 and runtime assets
-        /// Convert asset balance to xrc20 token. This function would call xrc20 `issue` interface.
+        /// Convert asset balance to xrc20 asset. This function would call xrc20 `issue` interface.
         /// The gas cast would deduct the caller.
         #[weight = 0]
-        pub fn convert_to_xrc20(origin, token: Token, #[compact] value: T::Balance) -> DispatchResult {
+        pub fn convert_to_xrc20(origin, #[compact] id: AssetId, #[compact] value: T::Balance) -> DispatchResult {
             let origin = ensure_signed(origin)?;
-            Self::issue_to_xrc20(token, origin, value)
+            Self::issue_to_xrc20(id, origin, value)
         }
 
-        /// Convert xrc20 token to asset balance. This function could not be called from an extrinsic,
+        /// Convert xrc20 asset to asset balance. This function could not be called from an extrinsic,
         /// just could be called inside the xrc20, XRC777 and etc contract instance.
         #[weight = 0]
         pub fn convert_to_asset(origin, to: T::AccountId, #[compact] value: T::Balance) -> DispatchResult {
             let origin = ensure_signed(origin)?;
-            // check token xrc20 is exist
+            // check asset xrc20 is exist
             Self::refund_to_asset(origin, to, value)
         }
 
-        /// Set the xrc20 addr and selectors for a token name.
+        /// Set the xrc20 addr and selectors for an asset.
         #[weight = 0]
-        pub fn set_token_xrc20(origin, token: Token, xrc20_addr: T::AccountId, selectors: BTreeMap<XRC20Selector, Selector>) -> DispatchResult {
+        pub fn set_token_xrc20(origin, #[compact] id: AssetId, xrc20_addr: T::AccountId, selectors: BTreeMap<XRC20Selector, Selector>) -> DispatchResult {
             ensure_root(origin)?;
-            XRC20InfoOfToken::<T>::insert(token.clone(), (xrc20_addr.clone(), selectors));
-            TokenOfAddr::<T>::insert(xrc20_addr, token);
+            XRC20InfoOfAssetId::<T>::insert(id, (xrc20_addr.clone(), selectors));
+            AssetIdOfAddr::<T>::insert(xrc20_addr, id);
             Ok(())
         }
 
-        /// Set the xrc20 selectors for a token name.
+        /// Set the xrc20 selectors for an asset.
         #[weight = 0]
-        pub fn set_xrc20_selector(origin, token: Token, selectors: BTreeMap<XRC20Selector, Selector>) -> DispatchResult {
+        pub fn set_xrc20_selector(origin, #[compact] id: AssetId, selectors: BTreeMap<XRC20Selector, Selector>) -> DispatchResult {
             ensure_root(origin)?;
-            XRC20InfoOfToken::<T>::mutate(token, |info| {
+            XRC20InfoOfAssetId::<T>::mutate(id, |info| {
                 if let Some(ref mut data) = info {
                     data.1 = selectors;
                 }
@@ -626,24 +628,24 @@ decl_module! {
             Ok(())
         }
 
-        /// Remove xrc20 relationship for a token name.
+        /// Remove xrc20 relationship for an asset.
         #[weight = 0]
-        pub fn remove_token_xrc20(origin, token: Token) -> DispatchResult {
+        pub fn remove_token_xrc20(origin, #[compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
-            if let Some(info) = XRC20InfoOfToken::<T>::take(&token) {
-                let _ = TokenOfAddr::<T>::take(info.0);
+            if let Some(info) = XRC20InfoOfAssetId::<T>::take(&id) {
+                let _ = AssetIdOfAddr::<T>::take(info.0);
             }
             Ok(())
         }
 
         /// Force issue xrc20 token.
         #[weight = 0]
-        pub fn force_issue_xrc20(origin, token: Token, issues: Vec<(T::AccountId, T::Balance)>, gas_limit: Gas) -> DispatchResult {
+        pub fn force_issue_xrc20(origin, #[compact] id: AssetId, issues: Vec<(T::AccountId, T::Balance)>, gas_limit: Gas) -> DispatchResult {
             ensure_root(origin)?;
             for (origin, value)  in issues {
                 let params = (origin.clone(), value).encode();
 
-                if let Err(_e) = Self::call_for_xrc20(token.clone(), XRC20Selector::Issue, params.clone()) {
+                if let Err(_e) = Self::call_for_xrc20(id, XRC20Selector::Issue, params.clone()) {
                     error!("[force_issue_xrc20]|{:?}|who:{:?}|value:{:?}|params:{:?}", _e.reason, origin, value, try_hex!(&params))
                 }
             }
@@ -735,11 +737,11 @@ impl<T: Trait> Module<T> {
     // }
 }
 
-// for chainx runtime token convert
+// for chainx runtime asset convert
 impl<T: Trait> Module<T> {
     /// Query a call to a specified xrc20 token.
     /// notice this function just allow to be called in runtime api, not allow in an extrinsic
-    pub fn call_xrc20(token: Token, selector: XRC20Selector, data: Vec<u8>) -> ExecResult {
+    pub fn call_xrc20(id: AssetId, selector: XRC20Selector, data: Vec<u8>) -> ExecResult {
         match selector {
             XRC20Selector::Issue | XRC20Selector::Destroy => {
                 return Err(ExecError {
@@ -750,16 +752,16 @@ impl<T: Trait> Module<T> {
             _ => {}
         }
 
-        Self::call_for_xrc20(token, selector, data)
+        Self::call_for_xrc20(id, selector, data)
     }
 
-    fn issue_to_xrc20(token: Token, origin: T::AccountId, value: T::Balance) -> DispatchResult {
+    fn issue_to_xrc20(id: AssetId, origin: T::AccountId, value: T::Balance) -> DispatchResult {
         // check
         ensure_with_errorlog!(
-            xrml_assets::Module::<T>::free_balance_of(&origin, &token) >= value,
-            Error::<T>::SourceTokenNotEnough,
-            "not enough balance for this token to convert to xrc20 token|token:{:?}|who:{:?}|value:{:?}",
-            token!(token),
+            xrml_assets::Module::<T>::free_balance_of(&origin, &id) >= value,
+            Error::<T>::SourceAssetNotEnough,
+            "not enough balance for this asset to convert to xrc20 token|id:{:}|who:{:?}|value:{:?}",
+            id,
             origin,
             value
         );
@@ -768,7 +770,7 @@ impl<T: Trait> Module<T> {
 
         // call xrc20 contract to issue xrc20 token
         let exec_value = Self::call_for_xrc20(
-            token.clone(),
+            id,
             // origin.clone(),
             // gas_limit,
             XRC20Selector::Issue,
@@ -799,12 +801,12 @@ impl<T: Trait> Module<T> {
             Err(Error::<T>::XRC20IssueFailed)?;
         }
 
-        let xrc20_addr = Self::xrc20_of_token(&token)
+        let xrc20_addr = Self::xrc20_of_asset_id(&id)
             .expect("xrc20 info must be existed at here")
             .0;
         // success, transfer to the xrc20 contract
         let _ = xrml_assets::Module::<T>::move_balance(
-            &token,
+            &id,
             &origin,
             AssetType::Free,
             &xrc20_addr,
@@ -817,12 +819,12 @@ impl<T: Trait> Module<T> {
     }
 
     fn call_for_xrc20(
-        token: Token,
+        id: AssetId,
         enum_selector: XRC20Selector,
         input_data: Vec<u8>,
     ) -> ExecResult {
-        let info = Self::xrc20_of_token(&token).ok_or_else(|| {
-            error!("no xrc20 instance for this token|token:{:?}", token!(token));
+        let info = Self::xrc20_of_asset_id(&id).ok_or_else(|| {
+            error!("no xrc20 instance for this asset|id:{:}", id);
             ExecError {
                 reason: Error::<T>::NoXRC20Instance.into(),
                 buffer: Vec::new(),
@@ -831,10 +833,7 @@ impl<T: Trait> Module<T> {
         let xrc20_addr = info.0;
         let selectors = info.1;
         let selector = selectors.get(&enum_selector).ok_or_else(|| {
-            error!(
-                "no issue selector in xrc20 info for this token|token:{:?}",
-                token!(token)
-            );
+            error!("no issue selector in xrc20 info for this asset|id:{:}", id);
             ExecError {
                 reason: Error::<T>::NoIssueSelector.into(),
                 buffer: Vec::new(),
@@ -845,8 +844,8 @@ impl<T: Trait> Module<T> {
         data.extend_from_slice(input_data.as_slice());
 
         debug!(
-            "[call_for_xrc20]|call xrc20 instance|token:{:?}|xrc20:{:?}|selector:{:?}|data:{:?}",
-            token!(token),
+            "[call_for_xrc20]|call xrc20 instance|id:{:}|xrc20:{:?}|selector:{:?}|data:{:?}",
+            id,
             xrc20_addr,
             enum_selector,
             try_hex!(data)
@@ -863,23 +862,23 @@ impl<T: Trait> Module<T> {
         to: T::AccountId,
         value: T::Balance,
     ) -> DispatchResult {
-        let token: Token = Self::token_of_addr(&contract_addr).ok_or_else(|| {
+        let id: AssetId = Self::asset_id_of_addr(&contract_addr).ok_or_else(|| {
             error!(
-                "no token for this xrc20 address|xrc20 addr:{:?}",
+                "no asset for this xrc20 address|xrc20 addr:{:?}",
                 contract_addr
             );
-            "no token for this xrc20 address"
+            Error::<T>::NoAssetForXRC20
         })?;
         let current_reserved = xrml_assets::Module::<T>::asset_balance_of(
             &contract_addr,
-            &token,
+            &id,
             AssetType::ReservedXRC20,
         );
         ensure_with_errorlog!(
             current_reserved >= value,
             Error::<T>::ReservedXRC20NotEnough,
-            "not enough balance for this xrc20 instance to refund asset|token:{:?}|xrc20:{:?}|value:{:?}|current:{:?}",
-            token!(token),
+            "not enough balance for this xrc20 instance to refund asset|id:{:}|xrc20:{:?}|value:{:?}|current:{:?}",
+            id,
             contract_addr,
             value,
             current_reserved
@@ -887,7 +886,7 @@ impl<T: Trait> Module<T> {
 
         // success, refund asset to this account
         let _ = xrml_assets::Module::<T>::move_balance(
-            &token,
+            &id,
             &contract_addr,
             AssetType::ReservedXRC20,
             &to,
@@ -1116,16 +1115,16 @@ decl_storage! {
         pub ContractInfoOf: map hasher(twox_64_concat) T::AccountId => Option<ContractInfo<T>>;
 
          // ChainX modify
-        // the map of token and token contract instance
-        // addr <--xrc20--> token
+        // the map of asset_id and token contract instance
+        // addr <--xrc20--> asset
         // addr <---XRC777---^
 
-        /// The Token name of a token contract instance address.
+        /// The AssetId name of a token contract instance address.
         /// notice the address could be xrc20, XRC777, or other type contract
-        pub TokenOfAddr get(fn token_of_addr): map hasher(twox_64_concat) T::AccountId => Option<Token>;
+        pub AssetIdOfAddr get(fn asset_id_of_addr): map hasher(twox_64_concat) T::AccountId => Option<AssetId>;
         // xrc20
-        /// The XRC20 contract of a token name.
-        pub XRC20InfoOfToken get(fn xrc20_of_token): map hasher(twox_64_concat) Token => Option<(T::AccountId, BTreeMap<XRC20Selector, Selector>)>;
+        /// The XRC20 contract of an asset.
+        pub XRC20InfoOfAssetId get(fn xrc20_of_asset_id): map hasher(twox_64_concat) AssetId => Option<(T::AccountId, BTreeMap<XRC20Selector, Selector>)>;
         // XRC777 (in future)
     }
 }

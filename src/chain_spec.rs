@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 
 use chainx_runtime::{
-    h256_conv_endian_from_str, AccountId, Asset, AssetRestriction, AssetRestrictions, AuraConfig,
-    BTCHeader, BTCNetwork, BTCParams, Balance, Chain, Compact, ContractsSchedule, GenesisConfig,
-    GrandpaConfig, Runtime, Signature, SudoConfig, SystemConfig, Token, XAssetsConfig,
+    h256_conv_endian_from_str, AccountId, Asset, AssetId, AssetRestriction, AssetRestrictions,
+    AuraConfig, BTCHeader, BTCNetwork, BTCParams, Balance, Chain, Compact, ContractsSchedule,
+    GenesisConfig, GrandpaConfig, Runtime, Signature, SudoConfig, SystemConfig, XAssetsConfig,
     XBridgeBitcoinConfig, XContractsConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
@@ -50,11 +50,11 @@ macro_rules! endowed_gen {
   ( $( ($seed:expr, $value:expr), )+ ) => {
     {
         let mut endowed = BTreeMap::new();
-        let pcx = pcx().0;
+        let pcx_id = pcx().0;
         let endowed_info = vec![
             $((get_account_id_from_seed::<sr25519::Public>($seed), balance($value, PCX_PRECISION)),)+
         ];
-        endowed.insert(pcx.token(), endowed_info);
+        endowed.insert(pcx_id, endowed_info);
         endowed
     }
   }
@@ -128,8 +128,9 @@ pub fn local_testnet_config() -> ChainSpec {
 }
 
 const PCX_PRECISION: u8 = 8;
-fn pcx() -> (Asset, AssetRestrictions) {
+fn pcx() -> (AssetId, Asset, AssetRestrictions) {
     (
+        xrml_protocol::PCX,
         Asset::new::<Runtime>(
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
@@ -145,17 +146,17 @@ fn pcx() -> (Asset, AssetRestrictions) {
     )
 }
 
-fn testnet_assets() -> Vec<(Asset, AssetRestrictions, bool, bool)> {
+fn testnet_assets() -> Vec<(AssetId, Asset, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
-    let assets = vec![(pcx.0, pcx.1, true, true)];
+    let assets = vec![(pcx.0, pcx.1, pcx.2, true, true)];
     assets
 }
 
 fn testnet_genesis(
     initial_authorities: Vec<(AuraId, GrandpaId)>,
     root_key: AccountId,
-    assets: Vec<(Asset, AssetRestrictions, bool, bool)>,
-    endowed: BTreeMap<Token, Vec<(AccountId, Balance)>>,
+    assets: Vec<(AssetId, Asset, AssetRestrictions, bool, bool)>,
+    endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
     enable_println: bool,
 ) -> GenesisConfig {
     GenesisConfig {

@@ -499,6 +499,7 @@ dependencies = [
  "sp-transaction-pool",
  "structopt",
  "substrate-build-script-utils",
+ "xrml-protocol",
 ]
 
 [[package]]
@@ -6667,6 +6668,7 @@ dependencies = [
 name = "xrml-contracts-rpc"
 version = "0.8.0-rc3"
 dependencies = [
+ "chainx-primitives",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -6697,6 +6699,9 @@ dependencies = [
 [[package]]
 name = "xrml-protocol"
 version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+]
 
 [[package]]
 name = "xrml-support"

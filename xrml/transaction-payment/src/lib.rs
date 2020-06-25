@@ -269,7 +269,7 @@ where
             return Ok(Zero::zero());
         }
         let _ = xrml_assets::Module::<T>::move_balance(
-            &<xrml_assets::Module<T> as xrml_assets::ChainT>::TOKEN.to_vec(),
+            &<xrml_assets::Module<T> as xrml_assets::ChainT>::ASSET_ID,
             who,
             xrml_assets::AssetType::Free,
             who,
@@ -353,7 +353,7 @@ where
             let actual_fee = Module::<T>::compute_actual_fee(len as u32, info, post_info, tip);
             // refund locked fee to free
             let _ = xrml_assets::Module::<T>::move_balance(
-                &<xrml_assets::Module<T> as xrml_assets::ChainT>::TOKEN.to_vec(),
+                &<xrml_assets::Module<T> as xrml_assets::ChainT>::ASSET_ID,
                 &who,
                 xrml_assets::AssetType::LockedFee,
                 &who,
@@ -364,7 +364,7 @@ where
             .map_err(|_| InvalidTransaction::Payment)?;
             // real do deduct fee from free balance
             let _ = xrml_assets::Module::<T>::move_balance(
-                &<xrml_assets::Module<T> as xrml_assets::ChainT>::TOKEN.to_vec(),
+                &<xrml_assets::Module<T> as xrml_assets::ChainT>::ASSET_ID,
                 &who,
                 xrml_assets::AssetType::Free,
                 &who, // TODO to blockproducer in future
@@ -376,7 +376,7 @@ where
         }
         assert!(xrml_assets::Module::<T>::asset_balance_of(
             &who,
-            &<xrml_assets::Module<T> as xrml_assets::ChainT>::TOKEN.to_vec(),
+            &<xrml_assets::Module<T> as xrml_assets::ChainT>::ASSET_ID,
             xrml_assets::AssetType::LockedFee
         )
         .is_zero());

@@ -28,7 +28,7 @@ use codec::{Codec, Decode, Encode};
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
-use chainx_primitives::Token;
+use chainx_primitives::AssetId;
 pub use xrml_contracts_primitives::{GetStorageResult, XRC20Selector};
 
 /// A result of execution of a contract.
@@ -87,7 +87,7 @@ sp_api::decl_runtime_apis! {
         // fn rent_projection(address: AccountId) -> RentProjectionResult<BlockNumber>;
 
         fn xrc20_call(
-            token: Token,
+            id: AssetId,
             selector: XRC20Selector,
             data: Vec<u8>,
         ) -> ContractExecResult;

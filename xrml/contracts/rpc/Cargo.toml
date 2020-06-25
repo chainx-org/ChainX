@@ -25,6 +25,7 @@ sp-rpc = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 
+chainx-primitives = { path = "../../../primitives" }
 xrml-contracts-primitives = { path = "../common" }
 xrml-contracts-rpc-runtime-api = { path = "./runtime-api" }
 

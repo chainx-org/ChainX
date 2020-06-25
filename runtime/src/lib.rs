@@ -31,7 +31,7 @@ pub use chainx_primitives::{
 };
 use xrml_contracts_rpc_runtime_api::ContractExecResult;
 // A few exports that help ease life for downstream crates.
-pub use chainx_primitives::Token;
+pub use chainx_primitives::{AssetId, Token};
 pub use frame_support::{
     construct_runtime, parameter_types,
     traits::{KeyOwnerProofSystem, Randomness},
@@ -197,11 +197,7 @@ impl pallet_sudo::Trait for Runtime {
 
 pub struct Tmp;
 impl xrml_assets::TokenJackpotAccountIdFor<AccountId, BlockNumber> for Tmp {
-    fn accountid_for_unsafe(_token: &Token) -> AccountId {
-        unimplemented!()
-    }
-
-    fn accountid_for_safe(_token: &Token) -> Option<AccountId> {
+    fn accountid_for(_id: &AssetId) -> AccountId {
         unimplemented!()
     }
 }
@@ -446,11 +442,11 @@ impl_runtime_apis! {
         }
 
         fn xrc20_call(
-            token: Token,
+            id: AssetId,
             selector: XRC20Selector,
             data: Vec<u8>,
         ) -> ContractExecResult {
-            let exec_result = XContracts::call_xrc20(token, selector, data);
+            let exec_result = XContracts::call_xrc20(id, selector, data);
             match exec_result {
                 Ok(v) => ContractExecResult::Success {
                     status: v.status,
