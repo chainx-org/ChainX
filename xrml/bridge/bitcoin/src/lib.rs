@@ -25,7 +25,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed};
 
 // ChainX
-use chainx_primitives::{AddrStr, Memo, Token};
+use chainx_primitives::{AddrStr, AssetId, Memo};
 use xrml_assets::{Chain, ChainT};
 // use xbridge_common::{
 //     traits::{CrossChainBinding, Extractable, TrusteeForChain, TrusteeMultiSig, TrusteeSession},
@@ -116,10 +116,10 @@ decl_event!(
         InsertHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
         // /// tx hash, block hash, tx type
         // InsertTx(H256, H256, TxType),
-        // /// who, Chain, Token, balance, memo, Chain Addr, chain txid, chain TxState
-        // Deposit(AccountId, Chain, Token, Balance, Memo, AddrStr, Vec<u8>, TxState),
-        /// who, Chain, Token, balance,  Chain Addr
-        DepositPending(AccountId, Chain, Token, Balance, AddrStr),
+        // /// who, Chain, AssetId, balance, memo, Chain Addr, chain txid, chain TxState
+        // Deposit(AccountId, Chain, AssetId, Balance, Memo, AddrStr, Vec<u8>, TxState),
+        /// who, Chain, AssetId, balance,  Chain Addr
+        DepositPending(AccountId, Chain, AssetId, Balance, AddrStr),
         // /// who, withdrawal id, txid, TxState
         // Withdrawal(u32, Vec<u8>, TxState),
         /// create withdraw tx, who proposal, withdrawal list id
@@ -347,7 +347,7 @@ decl_module! {
 }
 
 impl<T: Trait> ChainT for Module<T> {
-    const ASSET_ID: AssetId = 1;
+    const ASSET_ID: AssetId = xrml_protocol::X_BTC;
 
     fn chain() -> Chain {
         Chain::Bitcoin

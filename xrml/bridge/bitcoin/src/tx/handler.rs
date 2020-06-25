@@ -223,7 +223,7 @@ impl TxHandler {
         Module::<T>::deposit_event(RawEvent::Deposit(
             deposit_account,
             xrml_assets::Chain::Bitcoin,
-            Module::<T>::TOKEN.to_vec(),
+            Module::<T>::ASSET_ID,
             deposit_balance.into(),
             original_opreturn,
             input_addr.map(|addr| addr2vecu8(&addr)).unwrap_or_default(), // unwrap is no input addr
@@ -295,8 +295,8 @@ fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>, inpu
 }
 
 pub fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
-    let token: xrml_assets::Token = <Module<T> as xrml_assets::ChainT>::TOKEN.to_vec();
-    let _ = <xrecords::Module<T>>::deposit(&who, &token, balance.into()).map_err(|e| {
+    let id: xrml_assets::AssetId = <Module<T> as xrml_assets::ChainT>::ASSET_ID;
+    let _ = <xrecords::Module<T>>::deposit(&who, &id, balance.into()).map_err(|e| {
         error!(
             "call xrecores to deposit error!, must use root to fix this error. reason:{:?}",
             e
@@ -346,7 +346,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::Accoun
             Module::<T>::deposit_event(RawEvent::DepositPending(
                 who.clone(),
                 xrml_assets::Chain::Bitcoin,
-                Module::<T>::TOKEN.to_vec(),
+                Module::<T>::ASSET_ID,
                 r.balance.into(),
                 addr2vecu8(input_address),
             ));

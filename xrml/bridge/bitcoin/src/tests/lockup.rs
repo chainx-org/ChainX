@@ -55,7 +55,7 @@ fn test_normal() {
         XBridgeOfBTCLockup::set_locked_coin_limit((1 * 100000, 10 * 100000000)).unwrap();
         // init assets
         let asset = xrml_assets::Asset::new(
-            XBridgeOfBTCLockup::TOKEN.to_vec(),
+            XBridgeOfBTCLockup::ASSET_ID,
             b"Locked Bitcoin".to_vec(),
             xrml_assets::Chain::Bitcoin,
             8,
@@ -68,7 +68,7 @@ fn test_normal() {
         props.insert(xrml_assets::AssetRestriction::Transfer, false);
         props.insert(xrml_assets::AssetRestriction::Withdraw, false);
         props.insert(xrml_assets::AssetRestriction::DestroyWithdrawal, false);
-        xrml_assets::set_asset_limit_props(XBridgeOfBTCLockup::TOKEN.to_vec(), props).unwrap();
+        xrml_assets::set_asset_limit_props(XBridgeOfBTCLockup::ASSET_ID, props).unwrap();
 
         let public = hex!("fa6efb5db13089b4712305e39d0a16867c6822e3b1f4c4619937ae8a21961030")
             .unchecked_into();
@@ -110,7 +110,7 @@ fn test_normal() {
         let r = handle_lock_tx::<Test>(&fst_lock, &fst_hash);
         assert_eq!(r, Ok(()));
 
-        let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::TOKEN.to_vec());
+        let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::ASSET_ID);
         assert_eq!(value, 3000000);
         let r = XBridgeOfBTCLockup::address_locked_coin(&addr1);
         assert_eq!(r, 3000000);
@@ -124,7 +124,7 @@ fn test_normal() {
         let r = handle_lock_tx::<Test>(&snd_lock, &snd_hash);
         assert_eq!(r, Ok(()));
 
-        let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::TOKEN.to_vec());
+        let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::ASSET_ID);
         assert_eq!(value, 3420000);
         let r = XBridgeOfBTCLockup::address_locked_coin(&addr2);
         assert_eq!(r, 420000);
@@ -142,7 +142,7 @@ fn test_normal() {
         let r = handle_lock_tx::<Test>(&trd_lock, &trd_hash);
         assert_eq!(r, Ok(()));
 
-        let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::TOKEN.to_vec());
+        let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::ASSET_ID);
         assert_eq!(value, 3415590);
         let r = crate::lockup::AddressLockedCoin::<Test>::exists(&addr1);
         assert_eq!(r, false);
@@ -167,7 +167,7 @@ fn test_normal() {
         // unlock
         assert_eq!(detect_lockup_type::<Test>(&fth_lock), BTCTxType::Unlock);
         crate::lockup::handle_unlock_tx::<Test>(&fth_lock, &fth_hash);
-        let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::TOKEN.to_vec());
+        let value = xrml_assets::free_balance_of(&public, &XBridgeOfBTCLockup::ASSET_ID);
         assert_eq!(value, 0);
         let r = crate::lockup::AddressLockedCoin::<Test>::exists(&addr3);
         assert_eq!(r, false);
