@@ -138,7 +138,7 @@ impl<T: Trait> Module<T> {
                             let info =
                                 RecordInfo::<T::AccountId, T::Balance, T::BlockNumber, T::Moment> {
                                     who: account_info.map(|(a, _)| a).unwrap_or_default(),
-                                    token: Self::TOKEN.to_vec(),
+                                    token: Self::ASSET_ID,
                                     balance: balance.into(),
                                     txid: tx_hash.as_ref().to_vec(),
                                     addr: Self::input_addr_for(tx_hash)

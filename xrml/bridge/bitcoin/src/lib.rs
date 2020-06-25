@@ -241,7 +241,7 @@ decl_module! {
             //
             // // 50 is trick number for call difficulty power, if change in `runtime/src/fee.rs`,
             // // should modify this number.
-            // xbridge_common::Module::<T>::reward_relayer(&Self::TOKEN.to_vec(), &from, 50, tx.len() as u64);
+            // xbridge_common::Module::<T>::reward_relayer(&Self::ASSET_ID, &from, 50, tx.len() as u64);
             Ok(())
         }
         //
@@ -347,7 +347,7 @@ decl_module! {
 }
 
 impl<T: Trait> ChainT for Module<T> {
-    const TOKEN: &'static [u8] = b"BTC";
+    const ASSET_ID: AssetId = 1;
 
     fn chain() -> Chain {
         Chain::Bitcoin

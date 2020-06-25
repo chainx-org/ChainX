@@ -144,6 +144,9 @@ impl Asset {
     pub fn set_desc(&mut self, desc: Desc) {
         self.desc = desc
     }
+    pub fn set_token(&mut self, token: Token) {
+        self.token = token
+    }
     pub fn set_token_name(&mut self, token_name: Token) {
         self.token_name = token_name
     }
@@ -218,7 +221,7 @@ pub enum AssetErr {
     OverFlow,
     TotalAssetNotEnough,
     TotalAssetOverFlow,
-    InvalidToken,
+    InvalidAsset,
     NotAllow,
 }
 
@@ -235,7 +238,7 @@ impl<T: Trait> From<AssetErr> for Error<T> {
             AssetErr::OverFlow => Error::<T>::Overflow,
             AssetErr::TotalAssetNotEnough => Error::<T>::TotalAssetInsufficientBalance,
             AssetErr::TotalAssetOverFlow => Error::<T>::TotalAssetOverflow,
-            AssetErr::InvalidToken => Error::<T>::InvalidToken,
+            AssetErr::InvalidAsset => Error::<T>::InvalidAsset,
             AssetErr::NotAllow => Error::<T>::NotAllowAction,
         }
     }
@@ -244,7 +247,7 @@ impl<T: Trait> From<AssetErr> for Error<T> {
 /// Token can only use ASCII alphanumeric character or "-.|~".
 pub fn is_valid_token<T: Trait>(v: &[u8]) -> DispatchResult {
     if v.len() > MAX_TOKEN_LEN || v.is_empty() {
-        Err(Error::<T>::InvalidTokenLen)?;
+        Err(Error::<T>::InvalidAssetLen)?;
     }
     let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || "-.|~".as_bytes().contains(c) };
     for c in v.iter() {
@@ -264,7 +267,7 @@ fn is_ascii_invisible(c: &u8) -> bool {
 /// A valid token name should have a legal length and be visible ASCII chars only.
 pub fn is_valid_token_name<T: Trait>(name: &[u8]) -> DispatchResult {
     if name.len() > MAX_TOKEN_LEN || name.is_empty() {
-        Err(Error::<T>::InvalidTokenNameLen)?;
+        Err(Error::<T>::InvalidAssetNameLen)?;
     }
     xrml_support::xss_check(name)?;
     for c in name.iter() {
@@ -301,7 +304,7 @@ mod imbalances {
     use frame_support::{traits::TryDrop, StorageMap};
     use sp_std::mem;
 
-    use chainx_primitives::Token;
+    use chainx_primitives::AssetId;
 
     use super::{result, AssetType, ChainT, Imbalance, Saturating, Zero};
     use crate::{Module, TotalAssetBalance, Trait};
@@ -310,11 +313,11 @@ mod imbalances {
     /// funds have been created without any equal and opposite accounting.
     #[must_use]
     #[cfg_attr(feature = "std", derive(Debug, PartialEq))]
-    pub struct PositiveImbalance<T: Trait>(T::Balance, Token, AssetType);
+    pub struct PositiveImbalance<T: Trait>(T::Balance, AssetId, AssetType);
     impl<T: Trait> PositiveImbalance<T> {
         /// Create a new positive imbalance from a balance.
-        pub fn new(amount: T::Balance, token: Token, type_: AssetType) -> Self {
-            PositiveImbalance(amount, token, type_)
+        pub fn new(amount: T::Balance, id: AssetId, type_: AssetType) -> Self {
+            PositiveImbalance(amount, id, type_)
         }
     }
 
@@ -322,11 +325,11 @@ mod imbalances {
     /// funds have been destroyed without any equal and opposite accounting.
     #[must_use]
     #[cfg_attr(feature = "std", derive(Debug, PartialEq))]
-    pub struct NegativeImbalance<T: Trait>(T::Balance, Token, AssetType);
+    pub struct NegativeImbalance<T: Trait>(T::Balance, AssetId, AssetType);
     impl<T: Trait> NegativeImbalance<T> {
         /// Create a new negative imbalance from a balance.
-        pub fn new(amount: T::Balance, token: Token, type_: AssetType) -> Self {
-            NegativeImbalance(amount, token, type_)
+        pub fn new(amount: T::Balance, id: AssetId, type_: AssetType) -> Self {
+            NegativeImbalance(amount, id, type_)
         }
     }
 
@@ -340,7 +343,7 @@ mod imbalances {
         type Opposite = NegativeImbalance<T>;
 
         fn zero() -> Self {
-            PositiveImbalance::new(Zero::zero(), Module::<T>::TOKEN.to_vec(), AssetType::Free)
+            PositiveImbalance::new(Zero::zero(), Module::<T>::ASSET_ID, AssetType::Free)
         }
 
         fn drop_zero(self) -> result::Result<(), Self> {
@@ -404,7 +407,7 @@ mod imbalances {
         type Opposite = PositiveImbalance<T>;
 
         fn zero() -> Self {
-            NegativeImbalance::new(Zero::zero(), Module::<T>::TOKEN.to_vec(), AssetType::Free)
+            NegativeImbalance::new(Zero::zero(), Module::<T>::ASSET_ID, AssetType::Free)
         }
 
         fn drop_zero(self) -> result::Result<(), Self> {

@@ -82,7 +82,7 @@ impl<T: Trait> Currency<T::AccountId> for Module<T> {
         who: &T::AccountId,
         value: Self::Balance,
     ) -> result::Result<Self::PositiveImbalance, DispatchError> {
-        Self::inner_issue(&Self::TOKEN.to_vec(), who, AssetType::Free, value)
+        Self::inner_issue(&Self::ASSET_ID, who, AssetType::Free, value)
     }
 
     fn deposit_creating(_who: &T::AccountId, _value: Self::Balance) -> Self::PositiveImbalance {
