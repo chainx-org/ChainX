@@ -506,8 +506,10 @@ dependencies = [
 name = "chainx-primitives"
 version = "2.0.0"
 dependencies = [
+ "anyhow",
  "frame-system",
  "parity-scale-codec",
+ "serde",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
