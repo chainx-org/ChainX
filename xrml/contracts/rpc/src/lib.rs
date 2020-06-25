@@ -22,8 +22,8 @@ use std::sync::Arc;
 use codec::{Codec, Decode};
 use jsonrpc_core::{Error, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-// use xrml_contracts_primitives::RentProjection;
 use serde::{Deserialize, Serialize};
+
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::{Bytes, H256};
@@ -34,6 +34,8 @@ use sp_runtime::{
 };
 
 pub use self::gen_client::Client as ContractsClient;
+
+use chainx_primitives::AssetId;
 pub use xrml_contracts_rpc_runtime_api::{
     self as runtime_api, ContractExecResult, ContractsApi as ContractsRuntimeApi, XRC20Selector,
 };
@@ -90,7 +92,7 @@ pub struct CallRequest<AccountId, Balance> {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct XRC20CallRequest {
-    pub token: String,
+    pub asset_id: AssetId,
     pub selector: XRC20Selector,
     pub input_data: Bytes,
 }
@@ -308,15 +310,13 @@ where
             self.client.info().best_hash));
 
         let XRC20CallRequest {
-            token,
+            asset_id,
             selector,
             input_data,
         } = call_request;
 
-        let token = token.as_bytes().to_vec();
-
         let exec_result = api
-            .xrc20_call(&at, token, selector, input_data.0)
+            .xrc20_call(&at, asset_id, selector, input_data.0)
             .map_err(|e| runtime_error_into_rpc_err(e))?;
         match exec_result {
             ContractExecResult::Success { status: _, data } => {
