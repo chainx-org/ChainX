@@ -50,11 +50,8 @@ pub type BlockId = generic::BlockId<Block>;
 /// String for Runtime
 pub type Text = Vec<u8>;
 pub type Desc = Vec<u8>;
-// pub type Memo = Vec<u8>;
 pub type Token = Vec<u8>;
 pub type Precision = u8;
-pub type Name = Vec<u8>;
-pub type URL = Vec<u8>;
 pub type AddrStr = Vec<u8>;
 pub type AssetId = u32;
 
