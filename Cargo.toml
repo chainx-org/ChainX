@@ -19,10 +19,11 @@ members = [
     "xrml/assets/rpc",
     "xrml/assets/runtime-api",
     "xrml/bridge/bitcoin",
-    "xrml/support",
     "xrml/contracts",
     "xrml/contracts/common",
     "xrml/contracts/rpc",
+    "xrml/protocol",
+    "xrml/support",
     "xrml/transaction-payment",
     "xrml/transaction-payment/rpc",
 ]
