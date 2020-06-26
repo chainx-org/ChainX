@@ -12,4 +12,17 @@ cli = { package = "chainx-cli", path = "cli" }
 members = [
     "cli",
     "runtime",
+    "primitives",
+    "rpc",
+
+    "xrml/assets",
+    "xrml/assets/rpc",
+    "xrml/assets/runtime-api",
+    "xrml/bridge/bitcoin",
+    "xrml/support",
+    "xrml/contracts",
+    "xrml/contracts/common",
+    "xrml/contracts/rpc",
+    "xrml/transaction-payment",
+    "xrml/transaction-payment/rpc",
 ]
