@@ -1,15 +1,15 @@
 [package]
 name = "chainx-cli"
 version = "2.0.0"
-authors = ["Liu-Cheng Xu <xuliuchengxlc@gmail.com>"]
+authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
 
 [dependencies]
 futures = "0.3.4"
-log = "0.4.8"
-structopt = "0.3.8"
-parking_lot = "0.10.0"
 jsonrpc-core = "14.0.3"
+log = "0.4.8"
+parking_lot = "0.10.0"
+structopt = "0.3.8"
 
 # Substrate client
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
