@@ -513,6 +513,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "xrml-support",
 ]
 
 [[package]]

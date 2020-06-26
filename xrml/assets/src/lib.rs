@@ -200,7 +200,7 @@ decl_module! {
         pub fn transfer(origin, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
-            memo.check_validity().map_err(|_| Error::<T>::InvalidMemoLen)?;
+            memo.check_validity()?;
 
             Self::can_transfer(&id)?;
             let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
@@ -212,7 +212,7 @@ decl_module! {
         pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
             debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
-            memo.check_validity().map_err(|_| Error::<T>::InvalidMemoLen)?;
+            memo.check_validity()?;
 
             Self::can_transfer(&id)?;
             let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
