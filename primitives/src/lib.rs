@@ -92,7 +92,7 @@ impl core::fmt::Display for Memo {
 const MAXIMUM_MEMO_LEN: u8 = 128;
 
 impl Memo {
-    /// Returns true if the byte length is in the range of [0, 128].
+    /// Returns true if the inner byte length is in the range of [0, 128] and passes the xss check.
     pub fn check_validity(&self) -> DispatchResult {
         if self.0.len() > MAXIMUM_MEMO_LEN as usize {
             Err(DispatchError::Other(
