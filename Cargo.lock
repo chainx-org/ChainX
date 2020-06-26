@@ -536,6 +536,8 @@ dependencies = [
  "sp-state-machine",
  "sp-transaction-pool",
  "substrate-frame-rpc-system",
+ "xrml-assets-rpc",
+ "xrml-assets-runtime-api",
  "xrml-contracts-rpc",
  "xrml-contracts-rpc-runtime-api",
  "xrml-transaction-payment-rpc",
@@ -571,6 +573,7 @@ dependencies = [
  "sp-version",
  "substrate-wasm-builder-runner",
  "xrml-assets",
+ "xrml-assets-runtime-api",
  "xrml-bridge-bitcoin",
  "xrml-contracts",
  "xrml-contracts-primitives",
@@ -6598,6 +6601,34 @@ dependencies = [
  "sp-std",
  "xrml-protocol",
  "xrml-support",
+]
+
+[[package]]
+name = "xrml-assets-rpc"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xrml-assets-runtime-api",
+]
+
+[[package]]
+name = "xrml-assets-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xrml-assets",
 ]
 
 [[package]]
