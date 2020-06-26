@@ -34,9 +34,9 @@ pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJac
 use self::trigger::AssetTriggerEventAfter;
 
 pub use self::types::{
-    is_valid_desc, is_valid_memo, is_valid_token, AssetErr, AssetInfo, AssetRestriction,
-    AssetRestrictions, AssetType, Chain, NegativeImbalance, PositiveImbalance, SignedBalance,
-    SignedImbalanceT, TotalAssetInfo,
+    is_valid_desc, is_valid_token, AssetErr, AssetInfo, AssetRestriction, AssetRestrictions,
+    AssetType, Chain, NegativeImbalance, PositiveImbalance, SignedBalance, SignedImbalanceT,
+    TotalAssetInfo,
 };
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::sp_std::marker::PhantomData<T>);
@@ -200,8 +200,8 @@ decl_module! {
         #[weight = 0]
         pub fn transfer(origin, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
-            debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{:?}", transactor, dest, id, value, str!(memo));
-            is_valid_memo::<T>(&memo)?;
+            debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
+            memo.check_validity()?;
 
             Self::can_transfer(&id)?;
             let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
@@ -212,8 +212,8 @@ decl_module! {
         #[weight = 0]
         pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
-            debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{:?}", transactor, dest, id, value, str!(memo));
-            is_valid_memo::<T>(&memo)?;
+            debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
+            memo.check_validity()?;
 
             Self::can_transfer(&id)?;
             let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;

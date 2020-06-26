@@ -2,7 +2,6 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 [![CI](https://github.com/chainx-org/ChainX/workflows/ci/badge.svg)](https://github.com/chainx-org/ChainX/actions?workflow=ci)
-[![WASM](https://github.com/chainx-org/ChainX/workflows/wasm/badge.svg)](https://github.com/chainx-org/ChainX/actions?workflow=wasm)
 
 [ChainX](https://github.com/chainx-org/ChainX) is a community-driven project built on the next-generation blockchain framework [substrate](https://github.com/paritytech/substrate), the largest Layer-2 network of Bitcoin using the Light-client protocol with smart contract support, will evolve into the Polkadot network as a secondary relay chain in the future.
 

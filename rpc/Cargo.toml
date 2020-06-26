@@ -12,27 +12,32 @@ jsonrpc-derive = "14.0.3"
 serde_json = "1.0"
 hex = "0.4"
 
+# Substrate client
 sc-service = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", features = ["test-helpers"] }
 sc-client-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+
+# Substrate utils
+substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+
+# Substrate primitives
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 sp-state-machine = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+
+# Substrate pallets
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
 
-substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-
-xrml-transaction-payment-rpc = { path = "../xrml/transaction-payment/rpc" }
-
-xrml-assets-rpc = { path = "../xrml/assets/rpc" }
-xrml-assets-runtime-api = { path = "../xrml/assets/runtime-api" }
-
-xrml-contracts-rpc = { path = "../xrml/contracts/rpc" }
-xrml-contracts-rpc-runtime-api = { path = "../xrml/contracts/rpc/runtime-api" }
-
-chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
 
+# ChainX primitives
+chainx-primitives = { path = "../primitives" }
 
+# ChainX pallets
+xrml-assets-rpc = { path = "../xrml/assets/rpc" }
+xrml-assets-runtime-api = { path = "../xrml/assets/runtime-api" }
+xrml-contracts-rpc = { path = "../xrml/contracts/rpc" }
+xrml-contracts-rpc-runtime-api = { path = "../xrml/contracts/rpc/runtime-api" }
+xrml-transaction-payment-rpc = { path = "../xrml/transaction-payment/rpc" }

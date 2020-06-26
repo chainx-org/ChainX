@@ -302,14 +302,6 @@ pub fn is_valid_desc<T: Trait>(desc: &[u8]) -> DispatchResult {
     Ok(())
 }
 
-/// A valid memo should have a legal length and be xss proof.
-pub fn is_valid_memo<T: Trait>(memo: &Memo) -> DispatchResult {
-    if memo.len() as u32 > Module::<T>::memo_len() {
-        Err(Error::<T>::InvalidMemoLen)?;
-    }
-    xrml_support::xss_check(memo)
-}
-
 mod imbalances {
     use frame_support::{traits::TryDrop, StorageMap};
     use sp_std::mem;

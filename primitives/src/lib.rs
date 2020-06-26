@@ -3,7 +3,7 @@
 use sp_runtime::{
     generic,
     traits::{BlakeTwo256, IdentifyAccount, Verify},
-    MultiSignature, OpaqueExtrinsic,
+    DispatchError, DispatchResult, MultiSignature, OpaqueExtrinsic,
 };
 use sp_std::prelude::Vec;
 
@@ -39,10 +39,13 @@ pub type Timestamp = u64;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;
+
 /// Header type.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+
 /// Block type.
 pub type Block = generic::Block<Header, OpaqueExtrinsic>;
+
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
@@ -50,13 +53,57 @@ pub type BlockId = generic::BlockId<Block>;
 /// String for Runtime
 pub type Text = Vec<u8>;
 pub type Desc = Vec<u8>;
-pub type Memo = Vec<u8>;
 pub type Token = Vec<u8>;
 pub type Precision = u8;
-pub type Name = Vec<u8>;
-pub type URL = Vec<u8>;
 pub type AddrStr = Vec<u8>;
 pub type AssetId = u32;
+
+/// Type for leaving a note when sending a transaction.
+#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, codec::Encode, codec::Decode)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub struct Memo(Vec<u8>);
+
+impl From<Vec<u8>> for Memo {
+    fn from(raw: Vec<u8>) -> Self {
+        Self(raw)
+    }
+}
+
+impl From<&[u8]> for Memo {
+    fn from(raw: &[u8]) -> Self {
+        Self(raw.to_vec())
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Display for Memo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from_utf8_lossy(&self.0))
+    }
+}
+
+#[cfg(not(feature = "std"))]
+impl core::fmt::Display for Memo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+const MAXIMUM_MEMO_LEN: u8 = 128;
+
+impl Memo {
+    /// Returns true if the inner byte length is in the range of [0, 128] and passes the xss check.
+    pub fn check_validity(&self) -> DispatchResult {
+        if self.0.len() > MAXIMUM_MEMO_LEN as usize {
+            Err(DispatchError::Other(
+                "transaction memo too long, the range of valid byte length: [0, 128]",
+            ))
+        } else {
+            xrml_support::xss_check(&self.0)
+        }
+    }
+}
+
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
 /// account.
