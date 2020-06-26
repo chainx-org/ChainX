@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use chainx_runtime::{
-    h256_conv_endian_from_str, AccountId, Asset, AssetId, AssetRestriction, AssetRestrictions,
+    h256_conv_endian_from_str, AccountId, AssetId, AssetInfo, AssetRestriction, AssetRestrictions,
     AuraConfig, BTCHeader, BTCNetwork, BTCParams, Balance, Chain, Compact, ContractsSchedule,
     GenesisConfig, GrandpaConfig, Runtime, Signature, SudoConfig, SystemConfig, XAssetsConfig,
     XBridgeBitcoinConfig, XContractsConfig, WASM_BINARY,
@@ -128,10 +128,10 @@ pub fn local_testnet_config() -> ChainSpec {
 }
 
 const PCX_PRECISION: u8 = 8;
-fn pcx() -> (AssetId, Asset, AssetRestrictions) {
+fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
         xrml_protocol::PCX,
-        Asset::new::<Runtime>(
+        AssetInfo::new::<Runtime>(
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
             Chain::ChainX,
@@ -146,7 +146,7 @@ fn pcx() -> (AssetId, Asset, AssetRestrictions) {
     )
 }
 
-fn testnet_assets() -> Vec<(AssetId, Asset, AssetRestrictions, bool, bool)> {
+fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
     let assets = vec![(pcx.0, pcx.1, pcx.2, true, true)];
     assets
@@ -155,7 +155,7 @@ fn testnet_assets() -> Vec<(AssetId, Asset, AssetRestrictions, bool, bool)> {
 fn testnet_genesis(
     initial_authorities: Vec<(AuraId, GrandpaId)>,
     root_key: AccountId,
-    assets: Vec<(AssetId, Asset, AssetRestrictions, bool, bool)>,
+    assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
     enable_println: bool,
 ) -> GenesisConfig {

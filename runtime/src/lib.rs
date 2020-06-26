@@ -19,7 +19,7 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
-use sp_std::prelude::*;
+use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -46,7 +46,9 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 // xrml re-exports
-pub use xrml_assets::{Asset, AssetRestriction, AssetRestrictions, Chain};
+pub use xrml_assets::{
+    AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
+};
 #[cfg(feature = "std")]
 pub use xrml_bridge_bitcoin::h256_conv_endian_from_str;
 pub use xrml_bridge_bitcoin::{BTCHeader, BTCNetwork, BTCParams, Compact, H256 as BTCHash};
@@ -410,6 +412,16 @@ impl_runtime_apis! {
     > for Runtime {
         fn query_info(uxt: UncheckedExtrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
             XTransactionPayment::query_info(uxt, len)
+        }
+    }
+
+    impl xrml_assets_runtime_api::AssetsApi<Block, AccountId, Balance> for Runtime {
+        fn assets_for_account(who: AccountId) -> BTreeMap<AssetId, BTreeMap<AssetType, Balance>> {
+            XAssets::valid_assets_of(&who)
+        }
+
+        fn assets() -> BTreeMap<AssetId, TotalAssetInfo<Balance>> {
+            XAssets::total_asset_infos()
         }
     }
 

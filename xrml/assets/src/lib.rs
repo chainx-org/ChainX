@@ -34,9 +34,9 @@ pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJac
 use self::trigger::AssetTriggerEventAfter;
 
 pub use self::types::{
-    is_valid_desc, is_valid_memo, is_valid_token, Asset, AssetErr, AssetRestriction,
+    is_valid_desc, is_valid_memo, is_valid_token, AssetErr, AssetInfo, AssetRestriction,
     AssetRestrictions, AssetType, Chain, NegativeImbalance, PositiveImbalance, SignedBalance,
-    SignedImbalanceT,
+    SignedImbalanceT, TotalAssetInfo,
 };
 
 pub struct SimpleAccountIdDeterminator<T: Trait>(::sp_std::marker::PhantomData<T>);
@@ -155,7 +155,7 @@ decl_module! {
         pub fn register_asset(
             origin,
             #[compact] asset_id: AssetId,
-            asset: Asset,
+            asset: AssetInfo,
             restrictions: AssetRestrictions,
             is_online: bool,
             is_psedu_intention: bool
@@ -223,21 +223,21 @@ decl_module! {
         #[weight = 0]
         pub fn modify_asset_info(origin, #[compact] id: AssetId, token: Option<Token>, token_name: Option<Token>, desc: Option<Desc>) -> DispatchResult {
             ensure_root(origin)?;
-            let mut info = Self::asset_info(&id).ok_or(Error::<T>::InvalidAsset)?;
+            let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::InvalidAsset)?;
 
             token.map(|t| info.set_token(t));
             token_name.map(|name| info.set_token_name(name));
             desc.map(|desc| info.set_desc(desc));
 
-            AssetInfo::insert(id, info);
+            AssetInfoOf::insert(id, info);
             Ok(())
         }
 
         #[weight = 0]
         pub fn modify_asset_limit(origin, #[compact] id: AssetId, restriction: AssetRestriction, can_do: bool) -> DispatchResult {
             ensure_root(origin)?;
-            // notice use `asset_info`, not `asset_online`
-            ensure!(Self::asset_info(id).is_some(), Error::<T>::InvalidAsset);
+            // notice use `asset_info_of`, not `asset_online`
+            ensure!(Self::asset_info_of(id).is_some(), Error::<T>::InvalidAsset);
 
             AssetRestrictionsOf::mutate(id, |current| {
                 if can_do {
@@ -257,7 +257,7 @@ decl_storage! {
         pub AssetIdsOf get(fn asset_ids_of): map hasher(twox_64_concat) Chain => Vec<AssetId>;
 
         /// asset info for every asset, key is asset id
-        pub AssetInfo get(fn asset_info): map hasher(twox_64_concat) AssetId => Option<Asset>;
+        pub AssetInfoOf get(fn asset_info_of): map hasher(twox_64_concat) AssetId => Option<AssetInfo>;
         pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => Option<()>;
         pub AssetRegisteredBlock get(fn asset_registered_block): map hasher(twox_64_concat) AssetId => T::BlockNumber;
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
@@ -275,7 +275,7 @@ decl_storage! {
         pub MemoLen get(fn memo_len) config(): u32;
     }
     add_extra_genesis {
-        config(assets): Vec<(AssetId, Asset, AssetRestrictions, bool, bool)>;
+        config(assets): Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>;
         config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>;
         build(|config| {
             Module::<T>::initialize_assets(&config.assets, &config.endowed);
@@ -292,7 +292,7 @@ impl<T: Trait> ChainT for Module<T> {
 
 impl<T: Trait> Module<T> {
     fn initialize_assets(
-        assets: &Vec<(AssetId, Asset, AssetRestrictions, bool, bool)>,
+        assets: &Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
         endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>,
     ) {
         for (id, asset, restrictions, is_online, is_psedu_intention) in assets {
@@ -332,13 +332,13 @@ impl<T: Trait> Module<T> {
 // asset related
 impl<T: Trait> Module<T> {
     /// add an asset into the storage, notice the asset must be valid
-    fn add_asset(id: AssetId, asset: Asset, restrictions: AssetRestrictions) -> DispatchResult {
+    fn add_asset(id: AssetId, asset: AssetInfo, restrictions: AssetRestrictions) -> DispatchResult {
         let chain = asset.chain();
-        if Self::asset_info(&id).is_some() {
+        if Self::asset_info_of(&id).is_some() {
             Err(Error::<T>::AlreadyExistedToken)?;
         }
 
-        AssetInfo::insert(&id, asset);
+        AssetInfoOf::insert(&id, asset);
         AssetRestrictionsOf::insert(&id, restrictions);
         AssetOnline::insert(&id, ());
         AssetRegisteredBlock::<T>::insert(&id, system::Module::<T>::block_number());
@@ -364,11 +364,19 @@ impl<T: Trait> Module<T> {
         v
     }
 
-    pub fn all_assets() -> Vec<(Asset, bool)> {
-        let list = Self::asset_ids();
-        list.into_iter()
-            .filter_map(|id| {
-                Self::asset_info(id).map(|asset| (asset, Self::asset_online(id).is_some()))
+    pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<T::Balance>> {
+        use frame_support::IterableStorageMap;
+        AssetInfoOf::iter()
+            .map(|(id, info)| {
+                (
+                    id,
+                    TotalAssetInfo {
+                        info,
+                        balance: Self::total_asset_balance(id),
+                        is_online: Self::asset_online(id).is_some(),
+                        restrictions: Self::asset_restrictions_of(id),
+                    },
+                )
             })
             .collect()
     }
@@ -380,15 +388,17 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-    pub fn valid_assets_of(who: &T::AccountId) -> Vec<(AssetId, BTreeMap<AssetType, T::Balance>)> {
+    pub fn valid_assets_of(
+        who: &T::AccountId,
+    ) -> BTreeMap<AssetId, BTreeMap<AssetType, T::Balance>> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
             .filter_map(|(id, map)| Self::asset_online(id).map(|_| (id, map)))
             .collect()
     }
 
-    pub fn get_asset(id: &AssetId) -> result::Result<Asset, DispatchError> {
-        if let Some(asset) = Self::asset_info(id) {
+    pub fn get_asset(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
+        if let Some(asset) = Self::asset_info_of(id) {
             if Self::asset_online(id).is_some() {
                 Ok(asset)
             } else {
