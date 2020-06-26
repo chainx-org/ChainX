@@ -3,7 +3,7 @@
 use sp_runtime::{
     generic,
     traits::{BlakeTwo256, IdentifyAccount, Verify},
-    MultiSignature, OpaqueExtrinsic,
+    DispatchError, DispatchResult, MultiSignature, OpaqueExtrinsic,
 };
 use sp_std::prelude::Vec;
 
@@ -85,10 +85,10 @@ const MAXIMUM_MEMO_LEN: u8 = 128;
 
 impl Memo {
     /// Returns true if the byte length is in the range of [0, 128].
-    pub fn check_validity(&self) -> anyhow::Result<()> {
+    pub fn check_validity(&self) -> DispatchResult {
         if self.0.len() > MAXIMUM_MEMO_LEN as usize {
-            Err(anyhow::anyhow!(
-                "transaction memo too long, the range of valid byte length: [0, 128]"
+            Err(DispatchError::Other(
+                "transaction memo too long, the range of valid byte length: [0, 128]",
             ))
         } else {
             Ok(())
