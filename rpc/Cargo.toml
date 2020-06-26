@@ -36,6 +36,8 @@ chainx-runtime = { path = "../runtime" }
 chainx-primitives = { path = "../primitives" }
 
 # ChainX pallets
+xrml-assets-rpc = { path = "../xrml/assets/rpc" }
+xrml-assets-runtime-api = { path = "../xrml/assets/runtime-api" }
 xrml-contracts-rpc = { path = "../xrml/contracts/rpc" }
 xrml-contracts-rpc-runtime-api = { path = "../xrml/contracts/rpc/runtime-api" }
 xrml-transaction-payment-rpc = { path = "../xrml/transaction-payment/rpc" }

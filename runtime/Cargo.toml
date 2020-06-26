@@ -41,6 +41,7 @@ chainx-primitives = { path = "../primitives", default-features = false }
 
 # ChainX pallets
 xrml-assets = { path = "../xrml/assets", default-features = false }
+xrml-assets-runtime-api = { path = "../xrml/assets/runtime-api", default-features = false }
 xrml-bridge-bitcoin = { path = "../xrml/bridge/bitcoin", default-features = false }
 xrml-contracts = { path = "../xrml/contracts", default-features = false }
 xrml-contracts-primitives = { path = "../xrml/contracts/common", default-features = false }
@@ -84,6 +85,7 @@ std = [
     "chainx-primitives/std",
 
     "xrml-assets/std",
+    "xrml-assets-runtime-api/std",
     "xrml-bridge-bitcoin/std",
     "xrml-contracts/std",
     "xrml-contracts-primitives/std",

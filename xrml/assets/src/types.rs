@@ -10,7 +10,7 @@ use sp_runtime::{
     traits::{Saturating, Zero},
     RuntimeDebug,
 };
-use sp_std::{prelude::*, result, slice::Iter};
+use sp_std::{collections::btree_map::BTreeMap, prelude::*, result, slice::Iter};
 
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
@@ -75,7 +75,7 @@ impl Default for Chain {
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Asset {
+pub struct AssetInfo {
     token: Token,
     token_name: Token,
     chain: Chain,
@@ -83,12 +83,12 @@ pub struct Asset {
     desc: Desc,
 }
 
-impl sp_std::fmt::Debug for Asset {
+impl sp_std::fmt::Debug for AssetInfo {
     #[cfg(feature = "std")]
     fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
         write!(
             f,
-            "Asset: {{token: {}, token_name: {}, chain: {:?}, precision: {}, desc: {}}}",
+            "AssetInfo: {{token: {}, token_name: {}, chain: {:?}, precision: {}, desc: {}}}",
             String::from_utf8_lossy(&self.token).into_owned(),
             String::from_utf8_lossy(&self.token_name).into_owned(),
             self.chain,
@@ -102,7 +102,7 @@ impl sp_std::fmt::Debug for Asset {
     }
 }
 
-impl Asset {
+impl AssetInfo {
     pub fn new<T: Trait>(
         token: Token,
         token_name: Token,
@@ -110,7 +110,7 @@ impl Asset {
         precision: Precision,
         desc: Desc,
     ) -> result::Result<Self, DispatchError> {
-        let a = Asset {
+        let a = AssetInfo {
             token,
             token_name,
             chain,
@@ -126,17 +126,17 @@ impl Asset {
         is_valid_desc::<T>(&self.desc)
     }
 
-    pub fn token(&self) -> Token {
-        self.token.clone()
+    pub fn token(&self) -> &Token {
+        &self.token
     }
-    pub fn token_name(&self) -> Token {
-        self.token_name.clone()
+    pub fn token_name(&self) -> &Token {
+        &self.token_name
     }
     pub fn chain(&self) -> Chain {
         self.chain
     }
-    pub fn desc(&self) -> Desc {
-        self.desc.clone()
+    pub fn desc(&self) -> &Desc {
+        &self.desc
     }
     pub fn precision(&self) -> Precision {
         self.precision
@@ -212,6 +212,16 @@ impl Default for AssetRestrictions {
     fn default() -> Self {
         AssetRestrictions::none()
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct TotalAssetInfo<Balance> {
+    pub info: AssetInfo,
+    pub balance: BTreeMap<AssetType, Balance>,
+    pub is_online: bool,
+    pub restrictions: AssetRestrictions,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]

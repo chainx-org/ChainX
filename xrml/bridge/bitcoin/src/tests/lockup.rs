@@ -54,7 +54,7 @@ fn test_normal() {
         // 0.001 ~ 10 BTC
         XBridgeOfBTCLockup::set_locked_coin_limit((1 * 100000, 10 * 100000000)).unwrap();
         // init assets
-        let asset = xrml_assets::Asset::new(
+        let asset = xrml_assets::AssetInfo::new(
             XBridgeOfBTCLockup::ASSET_ID,
             b"Locked Bitcoin".to_vec(),
             xrml_assets::Chain::Bitcoin,
