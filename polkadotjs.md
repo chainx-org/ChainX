@@ -1,4 +1,5 @@
 # json type for inject into polkadot.js
+## type support
 ```json
 {
   "Address": "AccountId",
@@ -15,7 +16,8 @@
       ]
   },
   "Precision": "u8",
-  "Asset": {
+  "AssetId": "u32",
+  "AssetInfo": {
     "token": "Token",
     "token_name": "Token",
     "chain": "Chain",
@@ -130,6 +132,65 @@
     "min_timespan": "u32",
     "max_timespan": "u32"
   },
-  "ContractInfo": "RawAliveContractInfo"
+  "ContractInfo": "RawAliveContractInfo",
+  "XRC20Selector": {
+    "_enum": [
+      "BalanceOf",
+      "TotalSupply",
+      "Name",
+      "Symbol",
+      "Decimals",
+      "Issue",
+      "Destroy"
+    ]
+  },
+  "Selector": "[u8; 4]",
+  "AssetInfoForRpc": {
+      "token": "String",
+      "token_name": "String",
+      "chain": "Chain",
+      "precision": "Precision",
+      "desc": "String"
+  },
+  "TotalAssetInfoForRpc": {
+    "info": "AssetInfoForRpc",
+    "balance": "BTreeMap<AssetType, String>",
+    "isOnline": "bool",
+    "restrictions": "AssetRestrictions"
+  }
+}
+```
+
+## Rpc
+```ts
+rpc: {
+  xassets: {
+    getAssetsByAccount: {
+      description: 'get all assets balance for an account',
+      params: [
+        {
+            name: 'who',
+            type: 'AccountId'
+        },
+        {
+          name: 'at',
+          type: 'Hash',
+          isOptional: true
+        }
+      ],
+      type: 'BTreeMap<AssetId, BTreeMap<AssetType, String>>'
+    },
+    getAssets: {
+      description: 'get all assets balance and infos',
+      params: [
+        {
+          name: 'at',
+          type: 'Hash',
+          isOptional: true
+        }
+      ],
+      type: 'BTreeMap<AssetId, TotalAssetInfoForRpc>'
+    }
+  }
 }
 ```
