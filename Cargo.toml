@@ -26,3 +26,6 @@ members = [
     "xrml/transaction-payment",
     "xrml/transaction-payment/rpc",
 ]
+
+[profile.release]
+panic = "unwind"
