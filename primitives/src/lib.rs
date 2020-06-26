@@ -75,6 +75,14 @@ impl From<&[u8]> for Memo {
     }
 }
 
+#[cfg(feature = "std")]
+impl std::fmt::Display for Memo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from_utf8_lossy(&self.0))
+    }
+}
+
+#[cfg(not(feature = "std"))]
 impl core::fmt::Display for Memo {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:?}", self.0)
