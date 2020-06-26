@@ -472,6 +472,13 @@ dependencies = [
 name = "chainx"
 version = "2.0.0"
 dependencies = [
+ "chainx-cli",
+]
+
+[[package]]
+name = "chainx-cli"
+version = "2.0.0"
+dependencies = [
  "chainx-primitives",
  "chainx-rpc",
  "chainx-runtime",
