@@ -295,7 +295,7 @@ fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>, inpu
 }
 
 pub fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
-    let id: xpallet_assets::AssetId = <Module<T> as xrml_assets::ChainT>::ASSET_ID;
+    let id: xpallet_assets::AssetId = <Module<T> as xpallet_assets::ChainT>::ASSET_ID;
     let _ = <xrecords::Module<T>>::deposit(&who, &id, balance.into()).map_err(|e| {
         error!(
             "call xrecores to deposit error!, must use root to fix this error. reason:{:?}",

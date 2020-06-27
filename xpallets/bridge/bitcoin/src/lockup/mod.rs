@@ -407,14 +407,14 @@ fn split(data: &[u8]) -> Vec<Vec<u8>> {
 
 /// bind account
 fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>) {
-    let id: xrml_assets::AssetId = <Module<T> as xrml_assets::ChainT>::ASSET_ID;
+    let id: xpallet_assets::AssetId = <Module<T> as xpallet_assets::ChainT>::ASSET_ID;
     xbridge_common::Module::<T>::update_binding(&id, who, channel_name);
 }
 
 fn issue_token<T: Trait>(who: &T::AccountId, balance: u64) {
     // notice this `Module` is LockupModule
-    let id: xrml_assets::AssetId = <Module<T> as xrml_assets::ChainT>::ASSET_ID;
-    let _ = xrml_assets::Module::<T>::issue(&id, who, balance.into()).map_err(|e| {
+    let id: xpallet_assets::AssetId = <Module<T> as xpallet_assets::ChainT>::ASSET_ID;
+    let _ = xpallet_assets::Module::<T>::issue(&id, who, balance.into()).map_err(|e| {
         error!("{:}", e);
         e
     });
@@ -422,8 +422,8 @@ fn issue_token<T: Trait>(who: &T::AccountId, balance: u64) {
 
 fn destroy_token<T: Trait>(who: &T::AccountId, balance: u64) {
     // notice this `Module` is LockupModule
-    let id: xrml_assets::AssetId = <Module<T> as xrml_assets::ChainT>::ASSET_ID;
-    let _ = xrml_assets::Module::<T>::destroy_free(&id, who, balance.into()).map_err(|e| {
+    let id: xpallet_assets::AssetId = <Module<T> as xpallet_assets::ChainT>::ASSET_ID;
+    let _ = xpallet_assets::Module::<T>::destroy_free(&id, who, balance.into()).map_err(|e| {
         error!("{:}", e);
         e
     });

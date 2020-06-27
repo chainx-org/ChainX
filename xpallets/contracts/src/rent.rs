@@ -23,8 +23,8 @@ use crate::{
 use frame_support::storage::child;
 use frame_support::traits::{Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReason};
 use frame_support::StorageMap;
-use xrml_contracts_primitives::{ContractAccessError, RentProjection, RentProjectionResult};
 use sp_runtime::traits::{Bounded, CheckedDiv, CheckedMul, SaturatedConversion, Saturating, Zero};
+use xpallet_contracts_primitives::{ContractAccessError, RentProjection, RentProjectionResult};
 
 /// The amount to charge.
 ///
@@ -227,9 +227,7 @@ fn enact_verdict<T: Trait>(
         Verdict::Exempt => return Some(ContractInfo::Alive(alive_contract_info)),
         Verdict::Kill => {
             <ContractInfoOf<T>>::remove(account);
-            child::kill_storage(
-                &alive_contract_info.child_trie_info(),
-            );
+            child::kill_storage(&alive_contract_info.child_trie_info());
             <Module<T>>::deposit_event(RawEvent::Evicted(account.clone(), false));
             None
         }
@@ -239,9 +237,7 @@ fn enact_verdict<T: Trait>(
             }
 
             // Note: this operation is heavy.
-            let child_storage_root = child::root(
-                &alive_contract_info.child_trie_info(),
-            );
+            let child_storage_root = child::root(&alive_contract_info.child_trie_info());
 
             let tombstone = <TombstoneContractInfo<T>>::new(
                 &child_storage_root[..],
@@ -250,9 +246,7 @@ fn enact_verdict<T: Trait>(
             let tombstone_info = ContractInfo::Tombstone(tombstone);
             <ContractInfoOf<T>>::insert(account, &tombstone_info);
 
-            child::kill_storage(
-                &alive_contract_info.child_trie_info(),
-            );
+            child::kill_storage(&alive_contract_info.child_trie_info());
 
             <Module<T>>::deposit_event(RawEvent::Evicted(account.clone(), true));
             Some(tombstone_info)
