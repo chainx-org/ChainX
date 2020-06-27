@@ -2,8 +2,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod types;
+
 use chainx_primitives::Memo;
-use codec::{Decode, Encode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
@@ -22,6 +23,7 @@ use sp_runtime::{
     FixedI128, FixedPointNumber, FixedPointOperand,
 };
 use sp_std::prelude::*;
+use xp_staking::UnbondedIndex;
 
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {}
 
@@ -101,7 +103,7 @@ decl_module! {
 
         /// Frees up the unbonded balances that are due.
         #[weight = 10]
-        fn withdraw_unbonded(origin, target: T::AccountId, unbonded_index: u32) {
+        fn withdraw_unbonded(origin, target: T::AccountId, unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
         }
 

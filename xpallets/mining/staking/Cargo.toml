@@ -1,5 +1,5 @@
 [package]
-name = "staking"
+name = "xpallet-staking"
 version = "0.1.0"
 authors = ["Liu-Cheng Xu <xuliuchengxlc@gmail.com>"]
 edition = "2018"
@@ -17,6 +17,7 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
+xp-staking = { path  = "../../../primitives/staking", default-features = false }
 
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
