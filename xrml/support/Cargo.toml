@@ -19,5 +19,6 @@ std = [
     "rustc-hex",
 
     "sp-std/std",
+
     "frame-support/std",
 ]

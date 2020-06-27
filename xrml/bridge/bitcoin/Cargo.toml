@@ -5,13 +5,13 @@ authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
 
 [dependencies]
-serde = { version = "1.0", optional = true }
 codec = { package = "parity-scale-codec", version = "1.3.0", features = ["derive"], default-features = false }
+serde = { version = "1.0", optional = true }
 
 # Substrate primitives
-sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 # Substrate pallets
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
@@ -22,44 +22,45 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = 
 chainx-primitives = { path = "../../../primitives", default-features = false }
 
 # ChainX pallets
+xrml-assets = { path = "../../assets", default-features = false }
 xrml-protocol = { path = "../../protocol", default-features = false }
 xrml-support = { path = "../../support", default-features = false }
-xrml-assets = { path = "../../assets", default-features = false }
 
 # light-bitcoin
-btc-primitives = { package = "primitives", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
-btc-ser = { package = "serialization", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
-btc-crypto = { package = "crypto", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
 btc-chain = { package = "chain", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
+btc-crypto = { package = "crypto", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
 btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
+btc-primitives = { package = "primitives", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
 btc-script = { package = "script", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
+btc-ser = { package = "serialization", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
 merkle = { git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
 
 [features]
 default = ["std"]
 std = [
-    "serde",
     "codec/std",
+    "serde",
 
-    "sp-std/std",
     "sp-core/std",
     "sp-runtime/std",
+    "sp-std/std",
 
     "frame-support/std",
     "frame-system/std",
     "pallet-timestamp/std",
 
     "chainx-primitives/std",
+
+    "xrml-assets/std",
     "xrml-protocol/std",
     "xrml-support/std",
-    "xrml-assets/std",
 
     # light-bitcoin
-    "btc-primitives/std",
-    "btc-ser/std",
-    "btc-crypto/std",
     "btc-chain/std",
+    "btc-crypto/std",
     "btc-keys/std",
+    "btc-primitives/std",
     "btc-script/std",
+    "btc-ser/std",
     "merkle/std",
 ]
