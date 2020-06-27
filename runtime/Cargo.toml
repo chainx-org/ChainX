@@ -10,6 +10,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
+static_assertions = "1.1.0"
 
 # Substrate primitives
 sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
@@ -35,6 +36,7 @@ pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../primitives", default-features = false }
@@ -81,6 +83,7 @@ std = [
     "pallet-randomness-collective-flip/std",
     "pallet-sudo/std",
     "pallet-timestamp/std",
+    "pallet-utility/std",
 
     "chainx-primitives/std",
 

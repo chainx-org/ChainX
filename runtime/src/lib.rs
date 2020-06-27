@@ -8,8 +8,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use pallet_grandpa::fg_primitives;
-use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+use static_assertions::const_assert;
+
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -24,27 +24,29 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
-
-pub use chainx_primitives::{
-    AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature,
-};
-use xpallet_contracts_rpc_runtime_api::ContractExecResult;
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
+pub use sp_runtime::{Perbill, Permill};
 // A few exports that help ease life for downstream crates.
-pub use chainx_primitives::{AssetId, Token};
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{KeyOwnerProofSystem, Randomness},
+    traits::{Filter, InstanceFilter, KeyOwnerProofSystem, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
     },
     StorageValue,
 };
+use pallet_grandpa::fg_primitives;
+use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 pub use pallet_timestamp::Call as TimestampCall;
-#[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
-pub use sp_runtime::{Perbill, Permill};
+
+pub use chainx_primitives::{
+    AccountId, AccountIndex, AssetId, Balance, BlockNumber, Hash, Index, Moment, Signature, Token,
+};
+use xpallet_contracts_rpc_runtime_api::ContractExecResult;
+use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+
 // xpallet re-exports
 pub use xpallet_assets::{
     AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
@@ -91,6 +93,16 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
+pub struct BaseFilter;
+impl Filter<Call> for BaseFilter {
+    fn filter(_call: &Call) -> bool {
+        // TODO
+        true
+    }
+}
+pub struct IsCallable;
+frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
+
 const AVERAGE_ON_INITIALIZE_WEIGHT: Perbill = Perbill::from_percent(10);
 parameter_types! {
     pub const BlockHashCount: BlockNumber = 2400;
@@ -104,6 +116,10 @@ parameter_types! {
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
 }
+
+const_assert!(
+    AvailableBlockRatio::get().deconstruct() >= AVERAGE_ON_INITIALIZE_WEIGHT.deconstruct()
+);
 
 impl frame_system::Trait for Runtime {
     /// The ubiquitous origin type.
@@ -192,6 +208,12 @@ impl pallet_timestamp::Trait for Runtime {
     type MinimumPeriod = MinimumPeriod;
 }
 
+impl pallet_utility::Trait for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type IsCallable = IsCallable;
+}
+
 impl pallet_sudo::Trait for Runtime {
     type Event = Event;
     type Call = Call;
@@ -248,6 +270,7 @@ construct_runtime!(
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
         Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+        Utility: pallet_utility::{Module, Call, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
