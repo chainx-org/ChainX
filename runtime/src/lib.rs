@@ -415,7 +415,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl xrml_assets_runtime_api::AssetsApi<Block, AccountId, Balance> for Runtime {
+    impl xrml_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance> for Runtime {
         fn assets_for_account(who: AccountId) -> BTreeMap<AssetId, BTreeMap<AssetType, Balance>> {
             XAssets::valid_assets_of(&who)
         }

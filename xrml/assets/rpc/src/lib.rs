@@ -10,7 +10,7 @@ use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 use chainx_primitives::AssetId;
-use xrml_assets_runtime_api::{
+use xrml_assets_rpc_runtime_api::{
     AssetRestrictions, AssetType, AssetsApi as AssetsRuntimeApi, Chain, Precision,
 };
 
@@ -107,8 +107,8 @@ pub struct AssetInfo {
     desc: String,
 }
 
-impl From<xrml_assets_runtime_api::AssetInfo> for AssetInfo {
-    fn from(info: xrml_assets_runtime_api::AssetInfo) -> Self {
+impl From<xrml_assets_rpc_runtime_api::AssetInfo> for AssetInfo {
+    fn from(info: xrml_assets_rpc_runtime_api::AssetInfo) -> Self {
         AssetInfo {
             token: String::from_utf8_lossy(&info.token()).into_owned(),
             token_name: String::from_utf8_lossy(&info.token_name()).into_owned(),
@@ -128,8 +128,10 @@ pub struct TotalAssetInfo {
     pub restrictions: AssetRestrictions,
 }
 
-impl<Balance: ToString> From<xrml_assets_runtime_api::TotalAssetInfo<Balance>> for TotalAssetInfo {
-    fn from(info: xrml_assets_runtime_api::TotalAssetInfo<Balance>) -> Self {
+impl<Balance: ToString> From<xrml_assets_rpc_runtime_api::TotalAssetInfo<Balance>>
+    for TotalAssetInfo
+{
+    fn from(info: xrml_assets_rpc_runtime_api::TotalAssetInfo<Balance>) -> Self {
         let mut r = BTreeMap::new();
         AssetType::iterator().for_each(|type_| {
             let balance = if let Some(b) = info.balance.get(type_) {

@@ -1,7 +1,7 @@
 [package]
 name = "chainx-runtime"
 version = "2.0.0"
-authors = ["ChainX community <http://www.chainx.org>"]
+authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
 
 [package.metadata.docs.rs]
@@ -12,36 +12,36 @@ codec = { package = "parity-scale-codec", version = "1.3.0", default-features = 
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 
 # Substrate primitives
-sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-version = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-inherents = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-offchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-inherents = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-offchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-version = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 # Substrate pallets
+frame-executive = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-frame-executive = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../primitives", default-features = false }
 
 # ChainX pallets
 xrml-assets = { path = "../xrml/assets", default-features = false }
-xrml-assets-runtime-api = { path = "../xrml/assets/runtime-api", default-features = false }
+xrml-assets-rpc-runtime-api = { path = "../xrml/assets/rpc/runtime-api", default-features = false }
 xrml-bridge-bitcoin = { path = "../xrml/bridge/bitcoin", default-features = false }
 xrml-contracts = { path = "../xrml/contracts", default-features = false }
 xrml-contracts-primitives = { path = "../xrml/contracts/common", default-features = false }
@@ -58,34 +58,34 @@ std = [
     "codec/std",
     "serde",
 
-    "sp-io/std",
-    "sp-std/std",
-    "sp-core/std",
-    "sp-runtime/std",
-    "sp-session/std",
-    "sp-version/std",
     "sp-api/std",
-    "sp-inherents/std",
-    "sp-offchain/std",
     "sp-block-builder/std",
     "sp-consensus-aura/std",
+    "sp-core/std",
+    "sp-inherents/std",
+    "sp-io/std",
+    "sp-offchain/std",
+    "sp-runtime/std",
+    "sp-session/std",
+    "sp-std/std",
     "sp-transaction-pool/std",
+    "sp-version/std",
 
+    "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
-    "frame-executive/std",
 
     "pallet-aura/std",
     "pallet-grandpa/std",
-    "pallet-timestamp/std",
-    "pallet-sudo/std",
     "pallet-randomness-collective-flip/std",
+    "pallet-sudo/std",
+    "pallet-timestamp/std",
 
     "chainx-primitives/std",
 
     "xrml-assets/std",
-    "xrml-assets-runtime-api/std",
+    "xrml-assets-rpc-runtime-api/std",
     "xrml-bridge-bitcoin/std",
     "xrml-contracts/std",
     "xrml-contracts-primitives/std",
