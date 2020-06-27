@@ -30,32 +30,32 @@ pub use sp_runtime::{Perbill, Permill};
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{KeyOwnerProofSystem, Randomness, Filter, InstanceFilter},
+    traits::{Filter, InstanceFilter, KeyOwnerProofSystem, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
     },
     StorageValue,
 };
-pub use pallet_timestamp::Call as TimestampCall;
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+pub use pallet_timestamp::Call as TimestampCall;
 
 pub use chainx_primitives::{
-    AssetId, Token,AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature,
+    AccountId, AccountIndex, AssetId, Balance, BlockNumber, Hash, Index, Moment, Signature, Token,
 };
-use xrml_contracts_rpc_runtime_api::ContractExecResult;
-use xrml_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+use xpallet_contracts_rpc_runtime_api::ContractExecResult;
+use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-// xrml re-exports
-pub use xrml_assets::{
+// xpallet re-exports
+pub use xpallet_assets::{
     AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
 };
 #[cfg(feature = "std")]
-pub use xrml_bridge_bitcoin::h256_conv_endian_from_str;
-pub use xrml_bridge_bitcoin::{BTCHeader, BTCNetwork, BTCParams, Compact, H256 as BTCHash};
-pub use xrml_contracts::Schedule as ContractsSchedule;
-pub use xrml_contracts_primitives::XRC20Selector;
+pub use xpallet_bridge_bitcoin::h256_conv_endian_from_str;
+pub use xpallet_bridge_bitcoin::{BTCHeader, BTCNetwork, BTCParams, Compact, H256 as BTCHash};
+pub use xpallet_contracts::Schedule as ContractsSchedule;
+pub use xpallet_contracts_primitives::XRC20Selector;
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -117,7 +117,9 @@ parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
 }
 
-const_assert!(AvailableBlockRatio::get().deconstruct() >= AVERAGE_ON_INITIALIZE_WEIGHT.deconstruct());
+const_assert!(
+    AvailableBlockRatio::get().deconstruct() >= AVERAGE_ON_INITIALIZE_WEIGHT.deconstruct()
+);
 
 impl frame_system::Trait for Runtime {
     /// The ubiquitous origin type.
@@ -218,12 +220,12 @@ impl pallet_sudo::Trait for Runtime {
 }
 
 pub struct Tmp;
-impl xrml_assets::TokenJackpotAccountIdFor<AccountId, BlockNumber> for Tmp {
+impl xpallet_assets::TokenJackpotAccountIdFor<AccountId, BlockNumber> for Tmp {
     fn accountid_for(_id: &AssetId) -> AccountId {
         unimplemented!()
     }
 }
-impl xrml_assets::Trait for Runtime {
+impl xpallet_assets::Trait for Runtime {
     type Balance = Balance;
     type Event = Event;
     type OnAssetChanged = ();
@@ -231,27 +233,27 @@ impl xrml_assets::Trait for Runtime {
     type DetermineTokenJackpotAccountId = Tmp;
 }
 
-impl xrml_bridge_bitcoin::Trait for Runtime {
+impl xpallet_bridge_bitcoin::Trait for Runtime {
     type Event = Event;
 }
 
-impl xrml_contracts::Trait for Runtime {
+impl xpallet_contracts::Trait for Runtime {
     type Time = Timestamp;
     type Randomness = RandomnessCollectiveFlip;
     type Call = Call;
     type Event = Event;
-    type DetermineContractAddress = xrml_contracts::SimpleAddressDeterminer<Runtime>;
-    type TrieIdGenerator = xrml_contracts::TrieIdFromParentCounter<Runtime>;
-    type StorageSizeOffset = xrml_contracts::DefaultStorageSizeOffset;
-    type MaxDepth = xrml_contracts::DefaultMaxDepth;
-    type MaxValueSize = xrml_contracts::DefaultMaxValueSize;
+    type DetermineContractAddress = xpallet_contracts::SimpleAddressDeterminer<Runtime>;
+    type TrieIdGenerator = xpallet_contracts::TrieIdFromParentCounter<Runtime>;
+    type StorageSizeOffset = xpallet_contracts::DefaultStorageSizeOffset;
+    type MaxDepth = xpallet_contracts::DefaultMaxDepth;
+    type MaxValueSize = xpallet_contracts::DefaultMaxValueSize;
 }
 
 parameter_types! {
     pub const TransactionByteFee: Balance = 1;
 }
 
-impl xrml_transaction_payment::Trait for Runtime {
+impl xpallet_transaction_payment::Trait for Runtime {
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();
@@ -271,10 +273,10 @@ construct_runtime!(
         Utility: pallet_utility::{Module, Call, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
-        XAssets: xrml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-        XBridgeBitcoin: xrml_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
-        XContracts: xrml_contracts::{Module, Call, Config, Storage, Event<T>},
-        XTransactionPayment: xrml_transaction_payment::{Module, Storage},
+        XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
+        XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
+        XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
+        XTransactionPayment: xpallet_transaction_payment::{Module, Storage},
     }
 );
 
@@ -296,7 +298,7 @@ pub type SignedExtra = (
     frame_system::CheckEra<Runtime>,
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
-    xrml_transaction_payment::ChargeTransactionPayment<Runtime>,
+    xpallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -426,7 +428,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl xrml_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
+    impl xpallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
         Block,
         Balance,
         UncheckedExtrinsic,
@@ -436,7 +438,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl xrml_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance> for Runtime {
+    impl xpallet_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance> for Runtime {
         fn assets_for_account(who: AccountId) -> BTreeMap<AssetId, BTreeMap<AssetType, Balance>> {
             XAssets::valid_assets_of(&who)
         }
@@ -446,7 +448,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl xrml_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance, BlockNumber>
+    impl xpallet_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance, BlockNumber>
         for Runtime
     {
         fn call(
@@ -470,7 +472,7 @@ impl_runtime_apis! {
         fn get_storage(
             address: AccountId,
             key: [u8; 32],
-        ) -> xrml_contracts_primitives::GetStorageResult {
+        ) -> xpallet_contracts_primitives::GetStorageResult {
             XContracts::get_storage(address, key)
         }
 

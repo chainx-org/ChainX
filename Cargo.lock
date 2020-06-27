@@ -506,7 +506,7 @@ dependencies = [
  "sp-transaction-pool",
  "structopt",
  "substrate-build-script-utils",
- "xrml-protocol",
+ "xpallet-protocol",
 ]
 
 [[package]]
@@ -520,7 +520,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xrml-support",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -545,11 +545,11 @@ dependencies = [
  "sp-state-machine",
  "sp-transaction-pool",
  "substrate-frame-rpc-system",
- "xrml-assets-rpc",
- "xrml-assets-rpc-runtime-api",
- "xrml-contracts-rpc",
- "xrml-contracts-rpc-runtime-api",
- "xrml-transaction-payment-rpc",
+ "xpallet-assets-rpc",
+ "xpallet-assets-rpc-runtime-api",
+ "xpallet-contracts-rpc",
+ "xpallet-contracts-rpc-runtime-api",
+ "xpallet-transaction-payment-rpc",
 ]
 
 [[package]]
@@ -583,14 +583,14 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder-runner",
- "xrml-assets",
- "xrml-assets-rpc-runtime-api",
- "xrml-bridge-bitcoin",
- "xrml-contracts",
- "xrml-contracts-primitives",
- "xrml-contracts-rpc-runtime-api",
- "xrml-transaction-payment",
- "xrml-transaction-payment-rpc-runtime-api",
+ "xpallet-assets",
+ "xpallet-assets-rpc-runtime-api",
+ "xpallet-bridge-bitcoin",
+ "xpallet-contracts",
+ "xpallet-contracts-primitives",
+ "xpallet-contracts-rpc-runtime-api",
+ "xpallet-transaction-payment",
+ "xpallet-transaction-payment-rpc-runtime-api",
 ]
 
 [[package]]
@@ -6613,7 +6613,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xrml-assets"
+name = "xpallet-assets"
 version = "0.1.0"
 dependencies = [
  "bitmask",
@@ -6625,12 +6625,12 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xrml-protocol",
- "xrml-support",
+ "xpallet-protocol",
+ "xpallet-support",
 ]
 
 [[package]]
-name = "xrml-assets-rpc"
+name = "xpallet-assets-rpc"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
@@ -6642,11 +6642,11 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "xrml-assets-rpc-runtime-api",
+ "xpallet-assets-rpc-runtime-api",
 ]
 
 [[package]]
-name = "xrml-assets-rpc-runtime-api"
+name = "xpallet-assets-rpc-runtime-api"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
@@ -6654,11 +6654,11 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "xrml-assets",
+ "xpallet-assets",
 ]
 
 [[package]]
-name = "xrml-bridge-bitcoin"
+name = "xpallet-bridge-bitcoin"
 version = "0.1.0"
 dependencies = [
  "chain",
@@ -6677,13 +6677,13 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xrml-assets",
- "xrml-protocol",
- "xrml-support",
+ "xpallet-assets",
+ "xpallet-protocol",
+ "xpallet-support",
 ]
 
 [[package]]
-name = "xrml-contracts"
+name = "xpallet-contracts"
 version = "2.0.0-rc3"
 dependencies = [
  "assert_matches",
@@ -6705,14 +6705,14 @@ dependencies = [
  "sp-std",
  "wabt",
  "wasmi-validation",
- "xrml-assets",
- "xrml-contracts-primitives",
- "xrml-support",
- "xrml-transaction-payment",
+ "xpallet-assets",
+ "xpallet-contracts-primitives",
+ "xpallet-support",
+ "xpallet-transaction-payment",
 ]
 
 [[package]]
-name = "xrml-contracts-primitives"
+name = "xpallet-contracts-primitives"
 version = "2.0.0-rc3"
 dependencies = [
  "parity-scale-codec",
@@ -6722,7 +6722,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xrml-contracts-rpc"
+name = "xpallet-contracts-rpc"
 version = "0.8.0-rc3"
 dependencies = [
  "chainx-primitives",
@@ -6737,12 +6737,12 @@ dependencies = [
  "sp-core",
  "sp-rpc",
  "sp-runtime",
- "xrml-contracts-primitives",
- "xrml-contracts-rpc-runtime-api",
+ "xpallet-contracts-primitives",
+ "xpallet-contracts-rpc-runtime-api",
 ]
 
 [[package]]
-name = "xrml-contracts-rpc-runtime-api"
+name = "xpallet-contracts-rpc-runtime-api"
 version = "0.8.0-rc3"
 dependencies = [
  "chainx-primitives",
@@ -6750,18 +6750,18 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "xrml-contracts-primitives",
+ "xpallet-contracts-primitives",
 ]
 
 [[package]]
-name = "xrml-protocol"
+name = "xpallet-protocol"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
 ]
 
 [[package]]
-name = "xrml-support"
+name = "xpallet-support"
 version = "0.1.0"
 dependencies = [
  "frame-support",
@@ -6770,7 +6770,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xrml-transaction-payment"
+name = "xpallet-transaction-payment"
 version = "2.0.0-rc3"
 dependencies = [
  "frame-support",
@@ -6783,12 +6783,12 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
- "xrml-assets",
- "xrml-transaction-payment-rpc-runtime-api",
+ "xpallet-assets",
+ "xpallet-transaction-payment-rpc-runtime-api",
 ]
 
 [[package]]
-name = "xrml-transaction-payment-rpc"
+name = "xpallet-transaction-payment-rpc"
 version = "2.0.0-rc3"
 dependencies = [
  "jsonrpc-core",
@@ -6801,11 +6801,11 @@ dependencies = [
  "sp-core",
  "sp-rpc",
  "sp-runtime",
- "xrml-transaction-payment-rpc-runtime-api",
+ "xpallet-transaction-payment-rpc-runtime-api",
 ]
 
 [[package]]
-name = "xrml-transaction-payment-rpc-runtime-api"
+name = "xpallet-transaction-payment-rpc-runtime-api"
 version = "2.0.0-rc3"
 dependencies = [
  "frame-support",

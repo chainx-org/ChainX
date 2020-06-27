@@ -1,0 +1,35 @@
+[package]
+name = "xpallet-contracts-rpc-runtime-api"
+version = "0.8.0-rc3"
+authors = ["Parity Technologies <admin@parity.io> and ChainX community <https://www.chainx.org>"]
+edition = "2018"
+license = "Apache-2.0"
+homepage = "https://substrate.dev"
+repository = "https://github.com/paritytech/substrate/"
+description = "Runtime API definition required by Contracts RPC extensions."
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
+
+sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+
+chainx-primitives = { path = "../../../../primitives", default-features = false }
+xpallet-contracts-primitives = { path = "../../common", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+
+    "sp-api/std",
+    "sp-std/std",
+    "sp-runtime/std",
+
+    "chainx-primitives/std",
+    "xpallet-contracts-primitives/std",
+]

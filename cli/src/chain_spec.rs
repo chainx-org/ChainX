@@ -130,7 +130,7 @@ pub fn local_testnet_config() -> ChainSpec {
 const PCX_PRECISION: u8 = 8;
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        xrml_protocol::PCX,
+        xpallet_protocol::PCX,
         AssetInfo::new::<Runtime>(
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
@@ -176,12 +176,12 @@ fn testnet_genesis(
         pallet_sudo: Some(SudoConfig {
             key: root_key.clone(),
         }),
-        xrml_assets: Some(XAssetsConfig {
+        xpallet_assets: Some(XAssetsConfig {
             assets,
             endowed,
             memo_len: 128,
         }),
-        xrml_bridge_bitcoin: Some(XBridgeBitcoinConfig {
+        xpallet_bridge_bitcoin: Some(XBridgeBitcoinConfig {
             genesis_header_and_height: (
                 BTCHeader {
                     version: 536870912,
@@ -213,7 +213,7 @@ fn testnet_genesis(
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
         }),
-        xrml_contracts: Some(XContractsConfig {
+        xpallet_contracts: Some(XContractsConfig {
             current_schedule: ContractsSchedule {
                 enable_println, // this should only be enabled on development chains
                 ..Default::default()

@@ -99,7 +99,7 @@ impl Memo {
                 "transaction memo too long, the range of valid byte length: [0, 128]",
             ))
         } else {
-            xrml_support::xss_check(&self.0)
+            xpallet_support::xss_check(&self.0)
         }
     }
 }

@@ -37,7 +37,7 @@ chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
 chainx-rpc = { path = "../rpc" }
 
-xrml-protocol = { path = "../xrml/protocol" }
+xpallet-protocol = { path = "../xpallets/protocol" }
 
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
