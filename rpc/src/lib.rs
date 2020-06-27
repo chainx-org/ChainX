@@ -60,24 +60,24 @@ where
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xrml_transaction_payment_rpc::TransactionPaymentRuntimeApi<
+        xpallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<
             Block,
             Balance,
             UncheckedExtrinsic,
         >,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xrml_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance>,
+        xpallet_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xrml_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
+        xpallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     <<Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api as sp_api::ApiErrorExt>::Error:
         fmt::Debug,
     P: TransactionPool + 'static,
     M: jsonrpc_core::Metadata + Default,
 {
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
-    use xrml_assets_rpc::{Assets, AssetsApi};
-    use xrml_contracts_rpc::{Contracts, ContractsApi};
-    use xrml_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+    use xpallet_assets_rpc::{Assets, AssetsApi};
+    use xpallet_contracts_rpc::{Contracts, ContractsApi};
+    use xpallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
     let FullDeps { client, pool } = deps;

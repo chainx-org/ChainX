@@ -1,0 +1,24 @@
+[package]
+name = "xpallet-support"
+version = "0.1.0"
+authors = ["ChainX community <https://www.chainx.org>"]
+edition = "2018"
+
+[dependencies]
+rustc-hex = { version = "2.0", optional = true }
+
+# Substrate primitives
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+
+# Substrate pallets
+frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "rustc-hex",
+
+    "sp-std/std",
+
+    "frame-support/std",
+]

@@ -18,7 +18,7 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 # ChainX pallets
-xrml-support = { path = "../xrml/support", default-features = false }
+xpallet-support = { path = "../xpallets/support", default-features = false }
 
 [features]
 default = ["std"]
@@ -33,5 +33,5 @@ std = [
 
     "frame-system/std",
 
-    "xrml-support/std",
+    "xpallet-support/std",
 ]
