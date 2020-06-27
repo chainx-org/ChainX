@@ -23,6 +23,7 @@ members = [
     "xpallets/contracts/common",
     "xpallets/contracts/rpc",
     "xpallets/contracts/rpc/runtime-api",
+    "xpallets/mining/staking",
     "xpallets/protocol",
     "xpallets/support",
     "xpallets/transaction-payment",
