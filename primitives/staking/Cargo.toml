@@ -1,0 +1,18 @@
+[package]
+name = "xp-staking"
+version = "0.1.0"
+authors = ["ChainX community <https://www.chainx.org>"]
+edition = "2018"
+
+[dependencies]
+# Substrate primitives
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+
+# ChainX primitives
+chainx-primitives = { path = "../../primitives", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "chainx-primitives/std",
+]

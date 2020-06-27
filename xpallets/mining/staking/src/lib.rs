@@ -4,6 +4,7 @@
 
 mod types;
 
+use chainx_primitives::AssetId;
 use chainx_primitives::Memo;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -23,9 +24,12 @@ use sp_runtime::{
     FixedI128, FixedPointNumber, FixedPointOperand,
 };
 use sp_std::prelude::*;
-use xp_staking::UnbondedIndex;
+use xp_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
 
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {}
+pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+    type CollectAssetMiningInfo: CollectAssetMiningInfo;
+    type OnMinting: OnMinting<AssetId, Self::Balance>;
+}
 
 decl_storage! {
     trait Store for Module<T: Trait> as XStaking {
