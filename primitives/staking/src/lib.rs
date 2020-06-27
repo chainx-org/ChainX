@@ -3,6 +3,10 @@
 //! A crate which contains primitives that are useful for implementation that uses staking
 //! approaches in general. Definitions related to sessions, slashing, etc go here.
 
+mod vote_weight;
+
+pub use vote_weight::*;
+
 use chainx_primitives::AssetId;
 use sp_std::prelude::Vec;
 

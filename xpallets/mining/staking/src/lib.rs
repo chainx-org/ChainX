@@ -27,7 +27,11 @@ use sp_std::prelude::*;
 use xp_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
 
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+    /// The overarching event type.
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    ///
     type CollectAssetMiningInfo: CollectAssetMiningInfo;
+    ///
     type OnMinting: OnMinting<AssetId, Self::Balance>;
 }
 
