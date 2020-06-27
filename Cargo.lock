@@ -546,7 +546,7 @@ dependencies = [
  "sp-transaction-pool",
  "substrate-frame-rpc-system",
  "xrml-assets-rpc",
- "xrml-assets-runtime-api",
+ "xrml-assets-rpc-runtime-api",
  "xrml-contracts-rpc",
  "xrml-contracts-rpc-runtime-api",
  "xrml-transaction-payment-rpc",
@@ -582,7 +582,7 @@ dependencies = [
  "sp-version",
  "substrate-wasm-builder-runner",
  "xrml-assets",
- "xrml-assets-runtime-api",
+ "xrml-assets-rpc-runtime-api",
  "xrml-bridge-bitcoin",
  "xrml-contracts",
  "xrml-contracts-primitives",
@@ -6625,11 +6625,11 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "xrml-assets-runtime-api",
+ "xrml-assets-rpc-runtime-api",
 ]
 
 [[package]]
-name = "xrml-assets-runtime-api"
+name = "xrml-assets-rpc-runtime-api"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",

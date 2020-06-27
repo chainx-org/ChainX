@@ -1,5 +1,5 @@
 [package]
-name = "xrml-assets-runtime-api"
+name = "xrml-assets-rpc-runtime-api"
 version = "0.1.0"
 authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
@@ -11,8 +11,8 @@ sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc
 sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
-chainx-primitives = { path = "../../../primitives", default-features = false }
-xrml-assets = { path = "../", default-features = false }
+chainx-primitives = { path = "../../../../primitives", default-features = false }
+xrml-assets = { path = "../../", default-features = false }
 
 [features]
 default = ["std"]

@@ -66,7 +66,7 @@ where
             UncheckedExtrinsic,
         >,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xrml_assets_runtime_api::AssetsApi<Block, AccountId, Balance>,
+        xrml_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         xrml_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     <<Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api as sp_api::ApiErrorExt>::Error:

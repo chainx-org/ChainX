@@ -17,15 +17,17 @@ members = [
 
     "xrml/assets",
     "xrml/assets/rpc",
-    "xrml/assets/runtime-api",
+    "xrml/assets/rpc/runtime-api",
     "xrml/bridge/bitcoin",
     "xrml/contracts",
     "xrml/contracts/common",
     "xrml/contracts/rpc",
+    "xrml/contracts/rpc/runtime-api",
     "xrml/protocol",
     "xrml/support",
     "xrml/transaction-payment",
     "xrml/transaction-payment/rpc",
+    "xrml/transaction-payment/rpc/runtime-api",
 ]
 
 [profile.release]
