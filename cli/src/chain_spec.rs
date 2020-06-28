@@ -1,11 +1,15 @@
 use std::collections::BTreeMap;
 
 use chainx_runtime::{
-    h256_conv_endian_from_str, AccountId, AssetId, AssetInfo, AssetRestriction, AssetRestrictions,
-    AuraConfig, BTCHeader, BTCNetwork, BTCParams, Balance, Chain, Compact, ContractsSchedule,
-    GenesisConfig, GrandpaConfig, Runtime, Signature, SudoConfig, SystemConfig, XAssetsConfig,
-    XBridgeBitcoinConfig, XContractsConfig, WASM_BINARY,
+    h256_conv_endian_from_str, AssetInfo, AssetRestriction, AssetRestrictions, BTCCompact,
+    BTCHeader, BTCNetwork, BTCParams, Chain, ContractsSchedule, NetworkType,
 };
+use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
+use chainx_runtime::{
+    AuraConfig, GenesisConfig, GrandpaConfig, SudoConfig, SystemConfig, XAssetsConfig,
+    XBridgeBitcoinConfig, XContractsConfig, XSystemConfig,
+};
+
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
@@ -176,6 +180,9 @@ fn testnet_genesis(
         pallet_sudo: Some(SudoConfig {
             key: root_key.clone(),
         }),
+        xpallet_system: Some(XSystemConfig {
+            network_props: NetworkType::Testnet,
+        }),
         xpallet_assets: Some(XAssetsConfig {
             assets,
             endowed,
@@ -192,7 +199,7 @@ fn testnet_genesis(
                         "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
                     ),
                     time: 1558168296,
-                    bits: Compact::new(388627269),
+                    bits: BTCCompact::new(388627269),
                     nonce: 1439505020,
                 },
                 576576,

@@ -13,7 +13,10 @@ use static_assertions::const_assert;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{BlakeTwo256, Block as BlockT, IdentityLookup, NumberFor, Saturating};
+use sp_runtime::traits::{
+    BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, PostDispatchInfoOf,
+    Saturating, SignedExtension,
+};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     transaction_validity::{TransactionSource, TransactionValidity},
@@ -48,14 +51,21 @@ use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 // xpallet re-exports
+use frame_support::dispatch::DispatchResult;
+use sp_runtime::transaction_validity::{
+    InvalidTransaction, TransactionValidityError, ValidTransaction,
+};
 pub use xpallet_assets::{
     AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
 };
 #[cfg(feature = "std")]
 pub use xpallet_bridge_bitcoin::h256_conv_endian_from_str;
-pub use xpallet_bridge_bitcoin::{BTCHeader, BTCNetwork, BTCParams, Compact, H256 as BTCHash};
+pub use xpallet_bridge_bitcoin::{
+    BTCHeader, BTCNetwork, BTCParams, Compact as BTCCompact, H256 as BTCHash,
+};
 pub use xpallet_contracts::Schedule as ContractsSchedule;
 pub use xpallet_contracts_primitives::XRC20Selector;
+pub use xpallet_system::{AddressType, NetworkType};
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -93,6 +103,7 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode)]
 pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
@@ -103,6 +114,41 @@ impl Filter<Call> for BaseFilter {
 }
 pub struct IsCallable;
 frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
+
+pub const FORBIDDEN_CALL: u8 = 255;
+pub const FORBIDDEN_ACCOUNT: u8 = 254;
+
+impl SignedExtension for BaseFilter {
+    const IDENTIFIER: &'static str = "BaseFilter";
+    type AccountId = AccountId;
+    type Call = Call;
+    type AdditionalSigned = ();
+    type Pre = ();
+    fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
+        Ok(())
+    }
+
+    fn validate(
+        &self,
+        who: &Self::AccountId,
+        call: &Self::Call,
+        _info: &DispatchInfoOf<Self::Call>,
+        _len: usize,
+    ) -> TransactionValidity {
+        if !Self::filter(&call) {
+            return Err(TransactionValidityError::from(InvalidTransaction::Custom(
+                FORBIDDEN_CALL,
+            )));
+        }
+
+        if XSystem::blocked_accounts(who).is_some() {
+            return Err(TransactionValidityError::from(InvalidTransaction::Custom(
+                FORBIDDEN_ACCOUNT,
+            )));
+        }
+        Ok(ValidTransaction::default())
+    }
+}
 
 const AVERAGE_ON_INITIALIZE_WEIGHT: Perbill = Perbill::from_percent(10);
 parameter_types! {
@@ -278,7 +324,7 @@ construct_runtime!(
         Utility: pallet_utility::{Module, Call, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
-        XSystem: xpallet_system::{Module, Call, Storage, Event<T>},
+        XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
         XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
@@ -305,6 +351,7 @@ pub type SignedExtra = (
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
     xpallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    BaseFilter,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;

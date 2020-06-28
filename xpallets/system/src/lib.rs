@@ -1,5 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use frame_support::{
@@ -24,7 +28,8 @@ decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId
     {
-        Tmp(AccountId),
+        BlockAccount(AccountId),
+        RevokeBlockedAccounts(AccountId),
     }
 );
 
@@ -58,12 +63,54 @@ decl_module! {
             }
             Ok(())
         }
+
+        #[weight = 0]
+        fn modify_blocked_list(origin, who: T::AccountId, block: bool) -> DispatchResult {
+            ensure_root(origin)?;
+            if block {
+                BlockedAccounts::<T>::insert(who.clone(), ());
+                Self::deposit_event(RawEvent::BlockAccount(who))
+            } else {
+                BlockedAccounts::<T>::remove(&who);
+                Self::deposit_event(RawEvent::RevokeBlockedAccounts(who));
+            }
+            Ok(())
+        }
+    }
+}
+
+/// 44 for Mainnet, 42 for Testnet
+pub type AddressType = u32;
+
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+pub enum NetworkType {
+    Mainnet,
+    Testnet,
+}
+
+impl Default for NetworkType {
+    fn default() -> Self {
+        NetworkType::Testnet
+    }
+}
+
+impl NetworkType {
+    pub fn address_type(&self) -> AddressType {
+        match self {
+            NetworkType::Mainnet => 44,
+            NetworkType::Testnet => 42,
+        }
     }
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as XSystem {
-        pub Paused get(fn paused): map hasher(twox_64_concat) Vec<u8> => BTreeMap<Vec<u8>, ()>
+        pub NetworkProps get(fn network_props) config(): NetworkType;
+
+        pub Paused get(fn paused): map hasher(twox_64_concat) Vec<u8> => BTreeMap<Vec<u8>, ()>;
+
+        pub BlockedAccounts get(fn blocked_accounts): map hasher(blake2_128_concat) T::AccountId => Option<()>;
     }
 }
 
@@ -86,5 +133,10 @@ impl<T: Trait> Module<T> {
         }
         // no pause
         false
+    }
+
+    pub fn blocked_list() -> Vec<T::AccountId> {
+        use frame_support::IterableStorageMap;
+        BlockedAccounts::<T>::iter().map(|(a, _)| a).collect()
     }
 }
