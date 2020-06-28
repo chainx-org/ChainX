@@ -1,6 +1,6 @@
 use crate::VoteWeight;
 
-/// Define the get and set methods for the vote weight operations.
+/// The getter and setter methods for the further vote weight processing.
 pub trait BaseVoteWeight<BlockNumber> {
     fn amount(&self) -> u64;
     fn set_amount(&mut self, new: u64);

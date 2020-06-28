@@ -9,6 +9,8 @@ use chainx_primitives::Memo;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
+    ensure,
+    storage::IterableStorageMap,
     traits::Get,
     weights::{
         DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight, WeightToFeeCoefficient,
@@ -23,8 +25,13 @@ use sp_runtime::{
     },
     FixedI128, FixedPointNumber, FixedPointOperand,
 };
+#[cfg(feature = "std")]
+use sp_runtime::{Deserialize, Serialize};
 use sp_std::prelude::*;
+use types::*;
 use xp_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
+
+const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
@@ -37,6 +44,38 @@ pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XStaking {
+        /// The ideal number of staking participants.
+        pub ValidatorCount get(fn validator_count) config(): u32;
+
+        /// Minimum number of staking participants before emergency conditions are imposed.
+        pub MinimumValidatorCount get(fn minimum_validator_count) config():
+            u32 = DEFAULT_MINIMUM_VALIDATOR_COUNT;
+
+        /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
+        pub ValidatorCandidateRequirement get(fn minimum_candidate_requirement):
+            CandidateRequirement<T::Balance>;
+
+        /// The length of a staking era in sessions.
+        pub SessionsPerEra get(fn sessions_per_era) config():
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(1000);
+
+        /// The length of the bonding duration in blocks.
+        pub BondingDuration get(fn bonding_duration) config():
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(1000);
+
+        /// The length of the bonding duration in blocks for intention.
+        pub ValidatorBondingDuration get(fn validator_bonding_duration) config():
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(10_000);
+
+        /// The map from (wannabe) validator key to the profile of that validator.
+        pub Validators get(fn validators):
+            map hasher(twox_64_concat) T::AccountId => ValidatorProfile<T::BlockNumber>;
+
+        /// The map from nominator key to the set of keys of all validators to nominate.
+        pub Nominators get(fn nominators):
+            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
+            => NominatorProfile<T::BlockNumber>;
+
     }
 }
 
@@ -65,6 +104,10 @@ decl_event!(
 decl_error! {
     /// Error for the staking module.
     pub enum Error for Module<T: Trait> {
+        /// Zero amount
+        ZeroBalance,
+        /// Invalid validator target.
+        InvalidValidator,
         /// Stash is already bonded.
         AlreadyBonded,
         /// Controller is already paired.
@@ -73,6 +116,8 @@ decl_error! {
         DuplicateIndex,
         /// Slash record index out of bounds.
         InvalidSlashIndex,
+        /// Can not force validator to be chilled.
+        CannotForceChilled,
         /// Can not bond with value less than minimum balance.
         InsufficientValue,
         /// Can not schedule more unlock chunks.
@@ -95,6 +140,10 @@ decl_module! {
         #[weight = 10]
         fn bond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
+            memo.check_validity()?;
+
+            ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
+
         }
 
         /// Switchs the nomination of `value` from one validator to another.
@@ -131,6 +180,8 @@ decl_module! {
         #[weight = 10]
         fn chill(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
+            memo.check_validity()?;
+            for validator in Validators::<T>::iter(){}
         }
 
         /// TODO: figure out whether this should be kept.
@@ -138,5 +189,50 @@ decl_module! {
         fn register(origin) {
             let sender = ensure_signed(origin)?;
         }
+    }
+}
+
+impl<T: Trait> Module<T> {
+    #[inline]
+    pub fn is_validator(who: &T::AccountId) -> bool {
+        Validators::<T>::contains_key(who)
+    }
+
+    #[inline]
+    pub fn is_chilled(who: &T::AccountId) -> bool {
+        Validators::<T>::get(who).is_chilled
+    }
+
+    #[inline]
+    pub fn is_active(who: &T::AccountId) -> bool {
+        !Validators::<T>::get(who).is_chilled
+    }
+
+    pub fn validator_set() -> Vec<T::AccountId> {
+        Validators::<T>::iter()
+            .map(|(v, _)| v)
+            .filter(Self::is_active)
+            .collect()
+    }
+
+    fn can_force_chilled() -> bool {
+        // TODO: optimize using try_for_each?
+        let active = Validators::<T>::iter()
+            .map(|(v, _)| v)
+            .filter(Self::is_active)
+            .collect::<Vec<_>>();
+        active.len() > Self::minimum_validator_count() as usize
+    }
+
+    fn try_fore_chilled(who: &T::AccountId) -> Result<(), Error<T>> {
+        if Self::can_force_chilled() {
+            return Err(Error::<T>::CannotForceChilled);
+        }
+        // TODO: apply_force_chilled()
+        Ok(())
+    }
+
+    fn is_bonding_validator_self(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
+        Self::is_validator(nominator) && *nominator == *nominee
     }
 }

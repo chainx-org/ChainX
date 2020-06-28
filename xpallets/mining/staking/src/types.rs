@@ -10,10 +10,25 @@ pub enum MintedDestination<AccountId> {
     Asset(AssetId),
 }
 
+/// The requirement of a qualified staking candidate.
+///
+/// If the (potential) validator failed to meet this requirement, force it to be chilled on new election round.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct CandidateRequirement<Balance: Default> {
+    /// The minimal amount of self-bonded balance to be a qualified validator candidate.
+    pub self_bonded: Balance,
+    /// The minimal amount of total-bonded balance to be a qualified validator candidate.
+    ///
+    /// total-bonded = self-bonded + all the other nominators' nominations.
+    pub total: Balance,
+}
+
 /// Status of (potential) validator in staking module.
+///
+/// For RPC usage.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum ValidatorStatus {
-    /// Declared no desire to be a validator.
+    /// Declared no desire to be a validator or forced to be chilled due to `MinimumCandidateThreshold`.
     Chilled,
     /// Declared desire to be a validator but haven't won one place.
     Candidate,
@@ -43,7 +58,7 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
     pub total: Balance,
     /// Last calculated total vote weight of current validator.
     pub last_total_vote_weight: VoteWeight,
-    ///
+    /// Block number at which point `last_total_vote_weight` just updated.
     pub last_total_vote_weight_update: BlockNumber,
 }
 
@@ -59,16 +74,20 @@ pub struct NominatorLedger<Balance, BlockNumber> {
 }
 
 /// Profile of staking validator.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct ValidatorProfile<BlockNumber> {
+///
+/// These fields are static or updated less frequently.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct ValidatorProfile<BlockNumber: Default> {
     /// Block number at which point it's registered on chain.
     pub registered_at: BlockNumber,
+    ///
+    pub is_chilled: bool,
     /// Block number of last performed `chilled` operation.
     pub last_chilled: Option<BlockNumber>,
 }
 
-///
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct NominatorProfile<BlockNumber> {
+/// Profile of staking nominator.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct NominatorProfile<BlockNumber: Default> {
     pub unbonded: Vec<BlockNumber>,
 }
