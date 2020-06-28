@@ -65,7 +65,7 @@ pub use xpallet_bridge_bitcoin::{
 };
 pub use xpallet_contracts::Schedule as ContractsSchedule;
 pub use xpallet_contracts_primitives::XRC20Selector;
-pub use xpallet_system::{AddressType, NetworkType};
+pub use xpallet_protocol::*;
 
 impl_opaque_keys! {
     pub struct SessionKeys {

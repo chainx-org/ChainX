@@ -1,9 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use frame_support::{
@@ -11,6 +7,8 @@ use frame_support::{
     dispatch::{CallMetadata, DispatchResult},
 };
 use frame_system::{self as system, ensure_root};
+
+use xpallet_protocol::NetworkType;
 
 pub trait Trait: system::Trait {
     /// Event
@@ -75,31 +73,6 @@ decl_module! {
                 Self::deposit_event(RawEvent::RevokeBlockedAccounts(who));
             }
             Ok(())
-        }
-    }
-}
-
-/// 44 for Mainnet, 42 for Testnet
-pub type AddressType = u32;
-
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-pub enum NetworkType {
-    Mainnet,
-    Testnet,
-}
-
-impl Default for NetworkType {
-    fn default() -> Self {
-        NetworkType::Testnet
-    }
-}
-
-impl NetworkType {
-    pub fn address_type(&self) -> AddressType {
-        match self {
-            NetworkType::Mainnet => 44,
-            NetworkType::Testnet => 42,
         }
     }
 }

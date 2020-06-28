@@ -589,6 +589,7 @@ dependencies = [
  "xpallet-contracts",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-protocol",
  "xpallet-system",
  "xpallet-transaction-payment",
  "xpallet-transaction-payment-rpc-runtime-api",
@@ -6759,6 +6760,8 @@ name = "xpallet-protocol"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
+ "parity-scale-codec",
+ "serde",
 ]
 
 [[package]]
@@ -6781,6 +6784,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "xpallet-protocol",
 ]
 
 [[package]]
