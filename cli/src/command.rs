@@ -59,9 +59,14 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         "dev" => Box::new(chain_spec::development_config()),
         "" | "local" => Box::new(chain_spec::local_testnet_config()),
-        path => Box::new(chain_spec::ChainSpec::from_json_file(
-            std::path::PathBuf::from(path),
-        )?),
+        path => {
+            let p = std::path::PathBuf::from(path);
+            if !p.exists() {
+                // TODO more better hint
+                return Err(format!("not a valid path or just allow [\"dev\", \"local\"]"))
+            }
+            Box::new(chain_spec::ChainSpec::from_json_file(p)?)
+        },
     })
 }
 
@@ -95,9 +100,12 @@ fn set_default_ss58_version(spec: &Box<dyn sc_service::ChainSpec>) {
     use chainx_runtime::NetworkType;
     use sp_core::crypto::Ss58AddressFormat;
     // this `id()` is from `ChainSpec::from_genesis()` second parameter
-    // spec.id()
-    // TODO network type from id()
-    let type_: NetworkType = NetworkType::default();
+    // todo may use a better way
+    let type_: NetworkType = if spec.id().contains("mainnet") {
+        NetworkType::Mainnet
+    } else {
+        NetworkType::Testnet
+    };
     let ss58_version = Ss58AddressFormat::Custom(type_.addr_version());
     sp_core::crypto::set_default_ss58_version(ss58_version);
 }

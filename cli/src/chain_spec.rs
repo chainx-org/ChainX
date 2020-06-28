@@ -51,17 +51,17 @@ fn balance(input: Balance, precision: u8) -> Balance {
 
 /// A small macro for generating the info of PCX endowed accounts.
 macro_rules! endowed_gen {
-  ( $( ($seed:expr, $value:expr), )+ ) => {
-    {
-        let mut endowed = BTreeMap::new();
-        let pcx_id = pcx().0;
-        let endowed_info = vec![
-            $((get_account_id_from_seed::<sr25519::Public>($seed), balance($value, PCX_PRECISION)),)+
-        ];
-        endowed.insert(pcx_id, endowed_info);
-        endowed
+    ( $( ($seed:expr, $value:expr), )+ ) => {
+        {
+            let mut endowed = BTreeMap::new();
+            let pcx_id = pcx().0;
+            let endowed_info = vec![
+                $((get_account_id_from_seed::<sr25519::Public>($seed), balance($value, PCX_PRECISION)),)+
+            ];
+            endowed.insert(pcx_id, endowed_info);
+            endowed
+        }
     }
-  }
 }
 
 pub fn development_config() -> ChainSpec {
