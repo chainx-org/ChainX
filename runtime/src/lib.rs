@@ -95,9 +95,10 @@ pub fn native_version() -> NativeVersion {
 
 pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
-    fn filter(_call: &Call) -> bool {
-        // TODO
-        true
+    fn filter(call: &Call) -> bool {
+        use frame_support::dispatch::GetCallMetadata;
+        let metadata = call.get_call_metadata();
+        !XSystem::is_paused(metadata)
     }
 }
 pub struct IsCallable;
@@ -219,6 +220,10 @@ impl pallet_sudo::Trait for Runtime {
     type Call = Call;
 }
 
+impl xpallet_system::Trait for Runtime {
+    type Event = Event;
+}
+
 pub struct Tmp;
 impl xpallet_assets::TokenJackpotAccountIdFor<AccountId, BlockNumber> for Tmp {
     fn accountid_for(_id: &AssetId) -> AccountId {
@@ -273,6 +278,7 @@ construct_runtime!(
         Utility: pallet_utility::{Module, Call, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
+        XSystem: xpallet_system::{Module, Call, Storage, Event<T>},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
         XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},

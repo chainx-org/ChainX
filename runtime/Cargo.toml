@@ -42,6 +42,7 @@ pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v
 chainx-primitives = { path = "../primitives", default-features = false }
 
 # ChainX pallets
+xpallet-system = { path = "../xpallets/system", default-features = false }
 xpallet-assets = { path = "../xpallets/assets", default-features = false }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api", default-features = false }
 xpallet-bridge-bitcoin = { path = "../xpallets/bridge/bitcoin", default-features = false }
@@ -87,6 +88,7 @@ std = [
 
     "chainx-primitives/std",
 
+    "xpallet-system/std",
     "xpallet-assets/std",
     "xpallet-assets-rpc-runtime-api/std",
     "xpallet-bridge-bitcoin/std",
