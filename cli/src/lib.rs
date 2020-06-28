@@ -8,6 +8,7 @@ mod chain_spec;
 mod service;
 mod cli;
 mod command;
+mod logger;
 
 pub use command::*;
 pub use sc_cli::Result;

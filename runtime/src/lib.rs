@@ -19,7 +19,10 @@ use sp_runtime::traits::{
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    transaction_validity::{TransactionSource, TransactionValidity},
+    transaction_validity::{
+        InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
+        ValidTransaction,
+    },
     ApplyExtrinsicResult,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
@@ -51,10 +54,6 @@ use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 // xpallet re-exports
-use frame_support::dispatch::DispatchResult;
-use sp_runtime::transaction_validity::{
-    InvalidTransaction, TransactionValidityError, ValidTransaction,
-};
 pub use xpallet_assets::{
     AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
 };

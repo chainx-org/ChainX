@@ -18,7 +18,7 @@
 use crate::chain_spec;
 use crate::cli::Cli;
 use crate::service;
-use sc_cli::SubstrateCli;
+use sc_cli::{CliConfiguration, SubstrateCli};
 
 impl SubstrateCli for Cli {
     fn impl_name() -> &'static str {
@@ -63,16 +63,23 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
             let p = std::path::PathBuf::from(path);
             if !p.exists() {
                 // TODO more better hint
-                return Err(format!("not a valid path or just allow [\"dev\", \"local\"]"))
+                return Err(format!(
+                    "not a valid path or just allow [\"dev\", \"local\"]"
+                ));
             }
             Box::new(chain_spec::ChainSpec::from_json_file(p)?)
-        },
+        }
     })
 }
 
 /// Parse and run command line arguments
 pub fn run() -> sc_cli::Result<()> {
     let cli = Cli::from_args();
+
+    if cli.log4rs {
+        let s = cli.run.log_filters()?;
+        crate::logger::init_logger_log4rs(&s, &cli)?;
+    }
 
     match &cli.subcommand {
         Some(subcommand) => {
