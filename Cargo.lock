@@ -3861,14 +3861,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "runtime-api"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
-]
-
-[[package]]
 name = "rust-argon2"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6789,14 +6781,6 @@ dependencies = [
  "sp-std",
  "xp-staking",
  "xpallet-assets",
-]
-
-[[package]]
-name = "xpallet-staking-rpc"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
 ]
 
 [[package]]
