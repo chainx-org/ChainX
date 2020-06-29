@@ -234,7 +234,7 @@ decl_module! {
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
             ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondValue);
             ensure!(
-                Self::unbonded_chunk_of(&sender).len() < Self::maximum_unbonded_chunk_size() as usize,
+                Self::unbonded_chunks_of(&sender).len() < Self::maximum_unbonded_chunk_size() as usize,
                 Error::<T>::NoMoreUnbondChunks
             );
 
@@ -247,7 +247,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             // ensure!( nomination record exists)
-            let mut unbonded = Self::unbonded_chunk_of(&sender);
+            let mut unbonded = Self::unbonded_chunks_of(&sender);
 
             ensure!(!unbonded.is_empty(), Error::<T>::NoUnbondedChunk);
             ensure!(unbonded_index < unbonded.len() as u32, Error::<T>::InvalidUnbondedIndex);
@@ -310,8 +310,8 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn unbonded_chunk_of(nominator: &T::AccountId) -> Vec<Unbonded<T::Balance, T::BlockNumber>> {
-        Nominators::<T>::get(nominator).unbonded
+    fn unbonded_chunks_of(nominator: &T::AccountId) -> Vec<Unbonded<T::Balance, T::BlockNumber>> {
+        Nominators::<T>::get(nominator).unbonded_chunks
     }
 
     #[inline]
@@ -453,16 +453,13 @@ impl<T: Trait> Module<T> {
 
         let locked_until = <frame_system::Module<T>>::block_number() + bonding_duration;
 
-        let mut unbonded_chunks = Self::unbonded_chunk_of(who);
+        let mut unbonded_chunks = Self::unbonded_chunks_of(who);
 
         if let Some(idx) = unbonded_chunks
             .iter()
             .position(|x| x.locked_until == locked_until)
         {
-            unbonded_chunks[idx] = Unbonded {
-                value: unbonded_chunks[idx].value + value,
-                locked_until,
-            };
+            unbonded_chunks[idx].value += value;
         } else {
             unbonded_chunks.push(Unbonded {
                 value,
@@ -471,13 +468,14 @@ impl<T: Trait> Module<T> {
         }
 
         Nominators::<T>::mutate(who, |nominator_profile| {
-            nominator_profile.unbonded = unbonded_chunks;
+            nominator_profile.unbonded_chunks = unbonded_chunks;
         });
 
         // TODO:
         // Self::update_vote_weight
 
         Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
+
         Ok(())
     }
 }

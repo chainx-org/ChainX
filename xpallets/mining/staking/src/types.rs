@@ -83,7 +83,7 @@ pub struct NominatorProfile<Balance: Default, BlockNumber: Default> {
     /// Block number of last `rebond` operation.
     pub last_rebond: Option<BlockNumber>,
     ///
-    pub unbonded: Vec<Unbonded<Balance, BlockNumber>>,
+    pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
 /// Status of (potential) validator in staking module.
