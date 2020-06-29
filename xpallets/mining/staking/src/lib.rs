@@ -25,13 +25,13 @@ use sp_runtime::{
     },
     FixedI128, FixedPointNumber, FixedPointOperand,
 };
-#[cfg(feature = "std")]
-use sp_runtime::{Deserialize, Serialize};
 use sp_std::prelude::*;
 use types::*;
 use xp_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
+const DEFAULT_MAXIMUM_VALIDATOR_COUNT: u32 = 100;
+const DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE: u32 = 10;
 
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
@@ -51,21 +51,43 @@ decl_storage! {
         pub MinimumValidatorCount get(fn minimum_validator_count) config():
             u32 = DEFAULT_MINIMUM_VALIDATOR_COUNT;
 
+        /// Maximum number of staking participants before emergency conditions are imposed.
+        pub MaximumValidatorCount get(fn maximum_validator_count) config():
+            u32 = DEFAULT_MAXIMUM_VALIDATOR_COUNT;
+
         /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
         pub ValidatorCandidateRequirement get(fn minimum_candidate_requirement):
             CandidateRequirement<T::Balance>;
 
+        /// The length of a session in blocks.
+        pub BlocksPerSession get(fn blocks_per_session) config():
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(50);
+
         /// The length of a staking era in sessions.
         pub SessionsPerEra get(fn sessions_per_era) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(1000);
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(12);
 
         /// The length of the bonding duration in blocks.
         pub BondingDuration get(fn bonding_duration) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(1000);
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(50 * 12 * 24 * 3);
 
-        /// The length of the bonding duration in blocks for intention.
+        /// The length of the bonding duration in blocks for validator.
         pub ValidatorBondingDuration get(fn validator_bonding_duration) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(10_000);
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(50 * 12 * 24 * 3 * 10);
+
+        /// Maximum number of on-going unbonded chunk.
+        pub MaximumUnbondedChunkSize get(fn maximum_unbonded_chunk_size) config():
+            u32 = DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE;
+
+        /// Maximum value of total_bonded/self_bonded.
+        pub UpperBoundFactorOfAcceptableVotes get(fn upper_bound_factor) config():
+            u32 = 10u32;
+
+        /// (Treasury, Staking)
+        pub GlobalDistributionRatio get(fn globaldistribution_ratio): (u32, u32) = (1u32, 1u32);
+
+        /// (Staker, External Miners)
+        pub DistributionRatio get(fn distribution_ratio): (u32, u32) = (1u32, 1u32);
 
         /// The map from (wannabe) validator key to the profile of that validator.
         pub Validators get(fn validators):
@@ -73,9 +95,16 @@ decl_storage! {
 
         /// The map from nominator key to the set of keys of all validators to nominate.
         pub Nominators get(fn nominators):
-            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
-            => NominatorProfile<T::BlockNumber>;
+            map hasher(twox_64_concat) T::AccountId => NominatorProfile<T::Balance, T::BlockNumber>;
 
+        /// The map from validator key to the vote weight ledger of that validator.
+        pub ValidatorLedgers get(fn validator_ledgers):
+            map hasher(twox_64_concat) T::AccountId => ValidatorLedger<T::Balance, T::BlockNumber>;
+
+        /// The map from nominator to the vote weight ledger of all nominees.
+        pub Nominations get(fn nominations):
+            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
+            => NominatorLedger<T::Balance, T::BlockNumber>;
     }
 }
 
@@ -97,7 +126,7 @@ decl_event!(
         Unbonded(AccountId, Balance),
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
         /// from the unlocking queue.
-        Withdrawn(AccountId, Balance),
+        WithdrawUnbonded(AccountId, Balance),
     }
 );
 
@@ -108,24 +137,18 @@ decl_error! {
         ZeroBalance,
         /// Invalid validator target.
         InvalidValidator,
-        /// Stash is already bonded.
-        AlreadyBonded,
-        /// Controller is already paired.
-        AlreadyPaired,
-        /// Duplicate index.
-        DuplicateIndex,
-        /// Slash record index out of bounds.
-        InvalidSlashIndex,
         /// Can not force validator to be chilled.
-        CannotForceChilled,
+        InsufficientValidators,
+        /// Free balance can not cover this bond operation.
+        InsufficientBalance,
         /// Can not bond with value less than minimum balance.
         InsufficientValue,
-        /// Can not schedule more unlock chunks.
-        NoMoreChunks,
-        /// Can not rebond without unlocking chunks.
-        NoUnlockChunk,
-        /// Rewards for this era have already been claimed for this validator.
-        AlreadyClaimed,
+        /// Can not schedule more unbond chunks.
+        NoMoreUnbondChunks,
+        /// Validators can not accept more votes from other voters.
+        NoMoreAcceptableVotes,
+        /// Can not rebond due to the restriction of rebond frequency limit.
+        RebondNotAllowed,
         /// The call is not allowed at the given time due to restrictions of election period.
         CallNotAllowed,
     }
@@ -143,7 +166,13 @@ decl_module! {
             memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
+            ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
+            ensure!(value <= Self::free_balance_of(&sender), Error::<T>::InsufficientBalance);
+            if !Self::is_validator_self_bonding(&sender, &target) {
+                Self::check_validator_acceptable_votes_limit(&sender, value)?;
+            }
 
+            Self::apply_bond(&sender, &target, value);
         }
 
         /// Switchs the nomination of `value` from one validator to another.
@@ -205,7 +234,26 @@ impl<T: Trait> Module<T> {
 
     #[inline]
     pub fn is_active(who: &T::AccountId) -> bool {
-        !Validators::<T>::get(who).is_chilled
+        !Self::is_chilled(who)
+    }
+
+    #[inline]
+    fn unbonded_chunk_of(nominator: &T::AccountId) -> Vec<Unbonded<T::Balance, T::BlockNumber>> {
+        Nominators::<T>::get(nominator).unbonded
+    }
+
+    #[inline]
+    fn last_rebond_of(nominator: &T::AccountId) -> Option<T::BlockNumber> {
+        Nominators::<T>::get(nominator).last_rebond
+    }
+
+    #[inline]
+    fn free_balance_of(who: &T::AccountId) -> T::Balance {
+        <xpallet_assets::Module<T>>::pcx_free_balance(who)
+    }
+
+    fn is_validator_self_bonding(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
+        Self::is_validator(nominator) && *nominator == *nominee
     }
 
     pub fn validator_set() -> Vec<T::AccountId> {
@@ -224,15 +272,38 @@ impl<T: Trait> Module<T> {
         active.len() > Self::minimum_validator_count() as usize
     }
 
-    fn try_fore_chilled(who: &T::AccountId) -> Result<(), Error<T>> {
-        if Self::can_force_chilled() {
-            return Err(Error::<T>::CannotForceChilled);
+    fn try_force_chilled(who: &T::AccountId) -> Result<(), Error<T>> {
+        if !Self::can_force_chilled() {
+            return Err(Error::<T>::InsufficientValidators);
         }
         // TODO: apply_force_chilled()
         Ok(())
     }
 
-    fn is_bonding_validator_self(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
-        Self::is_validator(nominator) && *nominator == *nominee
+    fn total_votes_of(validator: &T::AccountId) -> T::Balance {
+        ValidatorLedgers::<T>::get(validator).total
     }
+
+    fn validator_self_bonded(validator: &T::AccountId) -> T::Balance {
+        Nominations::<T>::get(validator, validator).value
+    }
+
+    fn acceptable_votes_limit_of(validator: &T::AccountId) -> T::Balance {
+        Self::validator_self_bonded(validator) * T::Balance::from(Self::upper_bound_factor())
+    }
+
+    fn check_validator_acceptable_votes_limit(
+        validator: &T::AccountId,
+        value: T::Balance,
+    ) -> Result<(), Error<T>> {
+        let cur_total = Self::total_votes_of(validator);
+        let upper_limit = Self::acceptable_votes_limit_of(validator);
+        if cur_total + value <= upper_limit {
+            Ok(())
+        } else {
+            Err(Error::<T>::NoMoreAcceptableVotes)
+        }
+    }
+
+    fn apply_bond(nominator: &T::AccountId, nominee: &T::AccountId, value: T::Balance) {}
 }
