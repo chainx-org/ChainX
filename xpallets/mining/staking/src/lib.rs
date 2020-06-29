@@ -12,22 +12,17 @@ use frame_support::{
     ensure,
     storage::IterableStorageMap,
     traits::Get,
-    weights::{
-        DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight, WeightToFeeCoefficient,
-        WeightToFeePolynomial,
-    },
+    weights::{DispatchInfo, GetDispatchInfo, PostDispatchInfo, Weight},
 };
-use frame_system::ensure_signed;
-use sp_runtime::{
-    traits::{
-        Convert, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SaturatedConversion, Saturating,
-        SignedExtension, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
-    },
-    FixedI128, FixedPointNumber, FixedPointOperand,
+use frame_system::{self as system, ensure_signed};
+use sp_runtime::traits::{
+    Convert, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SaturatedConversion, Saturating,
+    SignedExtension, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
 };
 use sp_std::prelude::*;
 use types::*;
 use xp_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
+use xpallet_assets::{AssetErr, AssetType};
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const DEFAULT_MAXIMUM_VALIDATOR_COUNT: u32 = 100;
@@ -36,8 +31,10 @@ const DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE: u32 = 10;
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
     ///
     type CollectAssetMiningInfo: CollectAssetMiningInfo;
+
     ///
     type OnMinting: OnMinting<AssetId, Self::Balance>;
 }
@@ -118,12 +115,10 @@ decl_event!(
         Reward(AccountId, Balance),
         /// One validator (and its nominators) has been slashed by the given amount.
         Slash(AccountId, Balance),
-        ///
-        /// NOTE: This event is only emitted when funds are bonded via a dispatchable. Notably,
-        /// it will not be emitted for staking rewards when they are added to stake.
-        Bonded(AccountId, Balance),
+        /// Nominator has bonded to the validator this amount.
+        Bond(AccountId, AccountId, Balance),
         /// An account has unbonded this amount.
-        Unbonded(AccountId, Balance),
+        Unbond(AccountId, AccountId, Balance),
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
         /// from the unlocking queue.
         WithdrawUnbonded(AccountId, Balance),
@@ -155,15 +150,34 @@ decl_error! {
         ///
         /// Due to the validator and regular nominator have different bonding duration.
         RebondSelfBondedNotAllowed,
+        ///
+        NoUnbondedChunk,
+        ///
+        InvalidUnbondedIndex,
+        ///
+        UnbondedEntryNotYetDue,
         /// Can not rebond due to the restriction of rebond frequency limit.
         NoMoreRebond,
         /// The call is not allowed at the given time due to restrictions of election period.
         CallNotAllowed,
+        ///
+        AssetError,
+    }
+}
+
+impl<T: Trait> From<AssetErr> for Error<T> {
+    fn from(asset_err: AssetErr) -> Self {
+        Self::AssetError
     }
 }
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+
+        type Error = Error<T>;
+
+        fn deposit_event() = default;
+
         fn on_finalize() {
         }
 
@@ -231,12 +245,30 @@ decl_module! {
         #[weight = 10]
         fn withdraw_unbonded(origin, target: T::AccountId, unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
+
+            // ensure!( nomination record exists)
+            let mut unbonded = Self::unbonded_chunk_of(&sender);
+
+            ensure!(!unbonded.is_empty(), Error::<T>::NoUnbondedChunk);
+            ensure!(unbonded_index < unbonded.len() as u32, Error::<T>::InvalidUnbondedIndex);
+
+            let Unbonded { value, locked_until } = unbonded[unbonded_index as usize];
+            let current_block = <frame_system::Module<T>>::block_number();
+            ensure!(current_block < locked_until, Error::<T>::UnbondedEntryNotYetDue);
+
+            // apply withdraw_unbonded
         }
 
         /// Claims the staking reward given the `target` validator.
         #[weight = 10]
         fn claim(origin, target: T::AccountId) {
             let sender = ensure_signed(origin)?;
+
+            ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
+            // ensure nominator record exists
+            // ensure!()
+
+            // apply_claim()
         }
 
         /// Declare the desire to validate for the origin account.
@@ -247,10 +279,10 @@ decl_module! {
 
         /// Declare no desire to validate for the origin account.
         #[weight = 10]
-        fn chill(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
+        fn chill(origin) {
             let sender = ensure_signed(origin)?;
-            memo.check_validity()?;
-            for validator in Validators::<T>::iter(){}
+
+            // for validator in Validators::<T>::iter(){}
         }
 
         /// TODO: figure out whether this should be kept.
@@ -350,7 +382,47 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn apply_bond(nominator: &T::AccountId, nominee: &T::AccountId, value: T::Balance) {}
+    fn bond_reserve(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
+        <xpallet_assets::Module<T>>::pcx_move_balance(
+            who,
+            AssetType::Free,
+            who,
+            AssetType::ReservedStaking,
+            value,
+        )
+    }
+
+    fn unbond_reserve(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
+        <xpallet_assets::Module<T>>::pcx_move_balance(
+            who,
+            AssetType::ReservedStaking,
+            who,
+            AssetType::ReservedStakingRevocation,
+            value,
+        )
+    }
+
+    fn unlock_unbonded_reservation(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
+        <xpallet_assets::Module<T>>::pcx_move_balance(
+            who,
+            AssetType::ReservedStakingRevocation,
+            who,
+            AssetType::Free,
+            value,
+        )
+    }
+
+    fn apply_bond(
+        nominator: &T::AccountId,
+        nominee: &T::AccountId,
+        value: T::Balance,
+    ) -> Result<(), Error<T>> {
+        Self::bond_reserve(nominator, value)?;
+        // TODO
+        // Self::update_vote_weight()
+        Self::deposit_event(RawEvent::Bond(nominator.clone(), nominee.clone(), value));
+        Ok(())
+    }
 
     fn apply_rebond(
         who: &T::AccountId,
@@ -359,7 +431,53 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
         current_block: T::BlockNumber,
     ) {
+        // Self::update_vote_weight(who, from);
+        // Self::update_vote_weight()
+        Nominators::<T>::mutate(who, |nominator_profile| {
+            nominator_profile.last_rebond = Some(current_block);
+        });
     }
 
-    fn apply_unbond(sender: &T::AccountId, target: &T::AccountId, value: T::Balance) {}
+    fn apply_unbond(
+        who: &T::AccountId,
+        target: &T::AccountId,
+        value: T::Balance,
+    ) -> Result<(), Error<T>> {
+        Self::unbond_reserve(who, value)?;
+
+        let bonding_duration = if Self::is_validator(who) && *who == *target {
+            Self::validator_bonding_duration()
+        } else {
+            Self::bonding_duration()
+        };
+
+        let locked_until = <frame_system::Module<T>>::block_number() + bonding_duration;
+
+        let mut unbonded_chunks = Self::unbonded_chunk_of(who);
+
+        if let Some(idx) = unbonded_chunks
+            .iter()
+            .position(|x| x.locked_until == locked_until)
+        {
+            unbonded_chunks[idx] = Unbonded {
+                value: unbonded_chunks[idx].value + value,
+                locked_until,
+            };
+        } else {
+            unbonded_chunks.push(Unbonded {
+                value,
+                locked_until,
+            });
+        }
+
+        Nominators::<T>::mutate(who, |nominator_profile| {
+            nominator_profile.unbonded = unbonded_chunks;
+        });
+
+        // TODO:
+        // Self::update_vote_weight
+
+        Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
+        Ok(())
+    }
 }
