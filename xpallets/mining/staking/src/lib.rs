@@ -143,12 +143,20 @@ decl_error! {
         InsufficientBalance,
         /// Can not bond with value less than minimum balance.
         InsufficientValue,
+        /// Invalid rebondable value.
+        InvalidRebondValue,
+        ///
+        InvalidUnbondValue,
         /// Can not schedule more unbond chunks.
         NoMoreUnbondChunks,
         /// Validators can not accept more votes from other voters.
         NoMoreAcceptableVotes,
+        /// Can not rebond the validator self-bonded.
+        ///
+        /// Due to the validator and regular nominator have different bonding duration.
+        RebondSelfBondedNotAllowed,
         /// Can not rebond due to the restriction of rebond frequency limit.
-        RebondNotAllowed,
+        NoMoreRebond,
         /// The call is not allowed at the given time due to restrictions of election period.
         CallNotAllowed,
     }
@@ -179,12 +187,44 @@ decl_module! {
         #[weight = 10]
         fn rebond(origin, from: T::AccountId, to: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
+            memo.check_validity()?;
+
+            ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
+            ensure!(Self::is_validator(&from) && Self::is_validator(&to), Error::<T>::InvalidValidator);
+            ensure!(sender != from, Error::<T>::RebondSelfBondedNotAllowed);
+
+            ensure!(value <= Self::bonded_to(&sender, &from), Error::<T>::InvalidRebondValue);
+
+            if !Self::is_validator_self_bonding(&sender, &to) {
+                Self::check_validator_acceptable_votes_limit(&to, value)?;
+            }
+
+            let current_block = <frame_system::Module<T>>::block_number();
+            if let Some(last_rebond) = Self::last_rebond_of(&sender) {
+                ensure!(
+                    current_block > last_rebond + Self::bonding_duration(),
+                    Error::<T>::NoMoreRebond
+                );
+            }
+
+            Self::apply_rebond(&sender,  &from, &to, value, current_block);
         }
 
         ///
         #[weight = 10]
-        fn unbond(origin, target: T::AccountId, memo: Memo) {
+        fn unbond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
+            memo.check_validity()?;
+
+            ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
+            ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
+            ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondValue);
+            ensure!(
+                Self::unbonded_chunk_of(&sender).len() < Self::maximum_unbonded_chunk_size() as usize,
+                Error::<T>::NoMoreUnbondChunks
+            );
+
+            Self::apply_unbond(&sender, &target, value);
         }
 
         /// Frees up the unbonded balances that are due.
@@ -285,7 +325,12 @@ impl<T: Trait> Module<T> {
     }
 
     fn validator_self_bonded(validator: &T::AccountId) -> T::Balance {
-        Nominations::<T>::get(validator, validator).value
+        Self::bonded_to(validator, validator)
+    }
+
+    #[inline]
+    fn bonded_to(nominator: &T::AccountId, nominee: &T::AccountId) -> T::Balance {
+        Nominations::<T>::get(nominator, nominee).value
     }
 
     fn acceptable_votes_limit_of(validator: &T::AccountId) -> T::Balance {
@@ -306,4 +351,15 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_bond(nominator: &T::AccountId, nominee: &T::AccountId, value: T::Balance) {}
+
+    fn apply_rebond(
+        who: &T::AccountId,
+        from: &T::AccountId,
+        to: &T::AccountId,
+        value: T::Balance,
+        current_block: T::BlockNumber,
+    ) {
+    }
+
+    fn apply_unbond(sender: &T::AccountId, target: &T::AccountId, value: T::Balance) {}
 }
