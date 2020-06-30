@@ -1,4 +1,5 @@
 use crate::VoteWeight;
+use sp_std::result::Result;
 
 /// The getter and setter methods for the further vote weight processing.
 pub trait BaseVoteWeight<BlockNumber> {
@@ -55,9 +56,12 @@ impl<BlockNumber, T: BaseVoteWeight<BlockNumber>> VoteWightTrait<BlockNumber> fo
 /// Formula: Latest Vote Weight = last_acum_weight(VoteWeight) + amount(u64) * duration(u64)
 pub type WeightFactors = (VoteWeight, u64, u64);
 
+pub struct ZeroVoteWeightError;
+
 pub trait ComputeVoteWeight<AccountId> {
     /// The entity that holds the funds of claimers.
     type Claimee;
+    type Error: From<ZeroVoteWeightError>;
 
     fn claimer_weight_factors(_: &AccountId, _: &Self::Claimee, _: u64) -> WeightFactors;
     fn claimee_weight_factors(_: &Self::Claimee, _: u64) -> WeightFactors;
@@ -74,8 +78,31 @@ pub trait ComputeVoteWeight<AccountId> {
         Self::calc_latest_vote_weight(Self::claimee_weight_factors(target, current_block))
     }
 
+    fn settle_weight_on_claim(
+        who: &AccountId,
+        target: &Self::Claimee,
+        current_block: u64,
+    ) -> Result<(VoteWeight, VoteWeight), Self::Error> {
+        let claimer_weight = Self::settle_claimer_weight(who, target, current_block);
+
+        if claimer_weight == 0 {
+            return Err(ZeroVoteWeightError.into());
+        }
+
+        let claimee_weight = Self::settle_claimee_weight(target, current_block);
+
+        Ok((claimer_weight, claimee_weight))
+    }
+
     fn calc_latest_vote_weight(weight_factors: WeightFactors) -> VoteWeight {
         let (last_acum_weight, amount, duration) = weight_factors;
         last_acum_weight + VoteWeight::from(amount) * VoteWeight::from(duration)
     }
+}
+
+pub trait Claim<AccountId> {
+    type Claimee;
+    type Error;
+
+    fn claim(claimer: &AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error>;
 }

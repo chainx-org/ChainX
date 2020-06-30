@@ -2,7 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// mod impls;
+mod impls;
 mod types;
 
 use chainx_primitives::AssetId;
@@ -120,6 +120,8 @@ decl_event!(
         Bond(AccountId, AccountId, Balance),
         /// An account has unbonded this amount.
         Unbond(AccountId, AccountId, Balance),
+        ///
+        Claim(AccountId, AccountId, Balance),
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
         /// from the unlocking queue.
         WithdrawUnbonded(AccountId, Balance),
@@ -131,6 +133,8 @@ decl_error! {
     pub enum Error for Module<T: Trait> {
         /// Zero amount
         ZeroBalance,
+        ///
+        ZeroVoteWeight,
         /// Invalid validator target.
         InvalidValidator,
         /// Can not force validator to be chilled.
@@ -169,6 +173,12 @@ decl_error! {
 impl<T: Trait> From<AssetErr> for Error<T> {
     fn from(asset_err: AssetErr) -> Self {
         Self::AssetError
+    }
+}
+
+impl<T: Trait> From<xp_staking::ZeroVoteWeightError> for Error<T> {
+    fn from(e: xp_staking::ZeroVoteWeightError) -> Self {
+        Self::ZeroVoteWeight
     }
 }
 
@@ -266,10 +276,9 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
-            // ensure nominator record exists
-            // ensure!()
+            todo!("ensure nominator record exists");
 
-            // apply_claim()
+            <Self as xp_staking::Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
         /// Declare the desire to validate for the origin account.

@@ -40,7 +40,7 @@ pub struct Unbonded<Balance: Default, BlockNumber: Default> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorLedger<Balance: Default, BlockNumber: Default> {
+pub struct ValidatorLedger<Balance, BlockNumber> {
     /// The total amount of all the nominators' vote balances.
     pub total: Balance,
     /// Last calculated total vote weight of current validator.
@@ -51,7 +51,7 @@ pub struct ValidatorLedger<Balance: Default, BlockNumber: Default> {
 
 /// Vote weight properties of nominator.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-pub struct NominatorLedger<Balance: Default, BlockNumber: Default> {
+pub struct NominatorLedger<Balance, BlockNumber> {
     /// The amount of
     pub value: Balance,
     ///
