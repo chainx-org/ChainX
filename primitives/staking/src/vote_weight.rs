@@ -19,7 +19,7 @@ pub enum Delta {
 }
 
 /// General logic for stage changes of the vote weight operations.
-pub trait ComputeVoteWight<BlockNumber>: BaseVoteWeight<BlockNumber> {
+pub trait VoteWightTrait<BlockNumber>: BaseVoteWeight<BlockNumber> {
     /// Set the new amount after settling the change of nomination.
     fn settle_and_set_amount(&mut self, delta: &Delta) {
         let new = match *delta {
@@ -47,5 +47,35 @@ pub trait ComputeVoteWight<BlockNumber>: BaseVoteWeight<BlockNumber> {
     ) {
         self.set_state_weight(latest_acum_weight, current_block);
         self.settle_and_set_amount(delta);
+    }
+}
+
+impl<BlockNumber, T: BaseVoteWeight<BlockNumber>> VoteWightTrait<BlockNumber> for T {}
+
+/// Formula: Latest Vote Weight = last_acum_weight(VoteWeight) + amount(u64) * duration(u64)
+pub type WeightFactors = (VoteWeight, u64, u64);
+
+pub trait ComputeVoteWeight<AccountId> {
+    /// The entity that holds the funds of claimers.
+    type Claimee;
+
+    fn claimer_weight_factors(_: &AccountId, _: &Self::Claimee, _: u64) -> WeightFactors;
+    fn claimee_weight_factors(_: &Self::Claimee, _: u64) -> WeightFactors;
+
+    fn settle_claimer_weight(
+        who: &AccountId,
+        target: &Self::Claimee,
+        current_block: u64,
+    ) -> VoteWeight {
+        Self::calc_latest_vote_weight(Self::claimer_weight_factors(who, target, current_block))
+    }
+
+    fn settle_claimee_weight(target: &Self::Claimee, current_block: u64) -> VoteWeight {
+        Self::calc_latest_vote_weight(Self::claimee_weight_factors(target, current_block))
+    }
+
+    fn calc_latest_vote_weight(weight_factors: WeightFactors) -> VoteWeight {
+        let (last_acum_weight, amount, duration) = weight_factors;
+        last_acum_weight + VoteWeight::from(amount) * VoteWeight::from(duration)
     }
 }

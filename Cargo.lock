@@ -6777,6 +6777,7 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "serde",
+ "sp-arithmetic",
  "sp-runtime",
  "sp-std",
  "xp-staking",
