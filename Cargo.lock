@@ -589,6 +589,7 @@ dependencies = [
  "xpallet-contracts",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-mining-staking",
  "xpallet-transaction-payment",
  "xpallet-transaction-payment-rpc-runtime-api",
 ]
@@ -6762,14 +6763,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xpallet-protocol"
-version = "0.1.0"
-dependencies = [
- "chainx-primitives",
-]
-
-[[package]]
-name = "xpallet-staking"
+name = "xpallet-mining-staking"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
@@ -6782,6 +6776,13 @@ dependencies = [
  "sp-std",
  "xp-staking",
  "xpallet-assets",
+]
+
+[[package]]
+name = "xpallet-protocol"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
 ]
 
 [[package]]

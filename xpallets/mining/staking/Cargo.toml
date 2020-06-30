@@ -1,5 +1,5 @@
 [package]
-name = "xpallet-staking"
+name = "xpallet-mining-staking"
 version = "0.1.0"
 authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"

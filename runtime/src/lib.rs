@@ -249,6 +249,12 @@ impl xpallet_contracts::Trait for Runtime {
     type MaxValueSize = xpallet_contracts::DefaultMaxValueSize;
 }
 
+impl xpallet_mining_staking::Trait for Runtime {
+    type Event = Event;
+    type CollectAssetMiningInfo = ();
+    type OnMinting = ();
+}
+
 parameter_types! {
     pub const TransactionByteFee: Balance = 1;
 }
@@ -276,6 +282,7 @@ construct_runtime!(
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
         XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
+        XMiningStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
         XTransactionPayment: xpallet_transaction_payment::{Module, Storage},
     }
 );

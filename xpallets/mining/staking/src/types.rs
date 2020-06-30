@@ -1,3 +1,4 @@
+use super::*;
 use chainx_primitives::AssetId;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;

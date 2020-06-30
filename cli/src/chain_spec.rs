@@ -4,7 +4,7 @@ use chainx_runtime::{
     h256_conv_endian_from_str, AccountId, AssetId, AssetInfo, AssetRestriction, AssetRestrictions,
     AuraConfig, BTCHeader, BTCNetwork, BTCParams, Balance, Chain, Compact, ContractsSchedule,
     GenesisConfig, GrandpaConfig, Runtime, Signature, SudoConfig, SystemConfig, XAssetsConfig,
-    XBridgeBitcoinConfig, XContractsConfig, WASM_BINARY,
+    XBridgeBitcoinConfig, XContractsConfig, XMiningStakingConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -213,6 +213,7 @@ fn testnet_genesis(
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
         }),
+        xpallet_mining_staking: Some(Default::default()),
         xpallet_contracts: Some(XContractsConfig {
             current_schedule: ContractsSchedule {
                 enable_println, // this should only be enabled on development chains
