@@ -237,7 +237,7 @@ impl ExtBuilder {
 
         let mut endowed = BTreeMap::new();
         let pcx_id = pcx().0;
-        let endowed_info = vec![(1, 10), (2, 20), (3, 300), (4, 400)];
+        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
         endowed.insert(pcx_id, endowed_info);
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets,
@@ -289,6 +289,14 @@ impl ExtBuilder {
         ext.execute_with(|| {
             System::set_block_number(1);
             // Timestamp::set_timestamp(INIT_TIMESTAMP);
+            XStaking::register(Origin::signed(1)).unwrap();
+            XStaking::register(Origin::signed(2)).unwrap();
+            XStaking::register(Origin::signed(3)).unwrap();
+            XStaking::register(Origin::signed(4)).unwrap();
+            XStaking::bond(Origin::signed(1), 1, 10, b"memo".to_vec().into()).unwrap();
+            XStaking::bond(Origin::signed(2), 2, 20, b"memo".to_vec().into()).unwrap();
+            XStaking::bond(Origin::signed(3), 3, 30, b"memo".to_vec().into()).unwrap();
+            XStaking::bond(Origin::signed(4), 4, 40, b"memo".to_vec().into()).unwrap();
         });
 
         ext
@@ -301,7 +309,7 @@ impl ExtBuilder {
 }
 
 pub type System = frame_system::Module<Test>;
-// pub type Balances = pallet_balances::Module<Test>;
+pub type XAssets = xpallet_assets::Module<Test>;
 // pub type Session = pallet_session::Module<Test>;
 // pub type Timestamp = pallet_timestamp::Module<Test>;
 pub type XStaking = Module<Test>;

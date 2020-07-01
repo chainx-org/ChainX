@@ -259,6 +259,7 @@ decl_storage! {
         /// asset info for every asset, key is asset id
         pub AssetInfoOf get(fn asset_info_of): map hasher(twox_64_concat) AssetId => Option<AssetInfo>;
         pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => Option<()>;
+        pub AssetOnlineTest get(fn asset_online_test): map hasher(twox_64_concat) AssetId => Option<bool>;
         pub AssetRegisteredBlock get(fn asset_registered_block): map hasher(twox_64_concat) AssetId => T::BlockNumber;
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
         /// notice if not set AssetRestriction, default is true for this limit
@@ -278,6 +279,7 @@ decl_storage! {
         config(assets): Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>;
         config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>;
         build(|config| {
+            println!("--------------- initialize assets");
             Module::<T>::initialize_assets(&config.assets, &config.endowed);
         })
     }
@@ -295,6 +297,7 @@ impl<T: Trait> Module<T> {
         assets: &Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
         endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>,
     ) {
+        println!("----------- assets: {:?}", assets);
         for (id, asset, restrictions, is_online, is_psedu_intention) in assets {
             Self::register_asset(
                 frame_system::RawOrigin::Root.into(),
@@ -309,6 +312,7 @@ impl<T: Trait> Module<T> {
 
         for (id, endowed) in endowed_accounts.iter() {
             for (accountid, value) in endowed.iter() {
+                println!("--------- issue: {:?}, {:?} {:?}", id, accountid, value);
                 Self::issue(id, accountid, *value).unwrap();
             }
         }
@@ -341,6 +345,13 @@ impl<T: Trait> Module<T> {
         AssetInfoOf::insert(&id, asset);
         AssetRestrictionsOf::insert(&id, restrictions);
         AssetOnline::insert(&id, ());
+        AssetOnlineTest::insert(&id, true);
+        println!(
+            "[add_asset] AssetOnline: {:?}, id: {:?}",
+            Self::asset_online(&id),
+            id
+        );
+
         AssetRegisteredBlock::<T>::insert(&id, system::Module::<T>::block_number());
 
         AssetIdsOf::mutate(chain, |v| {
@@ -352,6 +363,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn remove_asset(id: &AssetId) -> DispatchResult {
+        println!("xxxxxxxxxxxxxxxxxxxxx remove_asset :{:?}", id);
         AssetOnline::remove(id);
         Ok(())
     }
@@ -665,6 +677,11 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
         do_trigger: bool,
     ) -> result::Result<(SignedImbalanceT<T>, SignedImbalanceT<T>), AssetErr> {
+        println!(
+            "[move_balance]-------- asset_online :{:?}, id: {:?}",
+            Self::asset_online(id),
+            id
+        );
         // check
         ensure!(Self::asset_online(id).is_some(), AssetErr::InvalidAsset);
         Self::can_move(id).map_err(|_| AssetErr::NotAllow)?;
@@ -684,14 +701,10 @@ impl<T: Trait> Module<T> {
                id, from, from_type, from_balance, to, to_type, to_balance, value);
 
         // judge balance is enough and test overflow
-        let new_from_balance = match from_balance.checked_sub(&value) {
-            Some(b) => b,
-            None => return Err(AssetErr::NotEnough),
-        };
-        let new_to_balance = match to_balance.checked_add(&value) {
-            Some(b) => b,
-            None => return Err(AssetErr::OverFlow),
-        };
+        let new_from_balance = from_balance
+            .checked_sub(&value)
+            .ok_or(AssetErr::NotEnough)?;
+        let new_to_balance = to_balance.checked_add(&value).ok_or(AssetErr::OverFlow)?;
 
         // finish basic check, start self check
         if from == to && from_type == to_type {
@@ -785,6 +798,11 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: T::Balance,
     ) -> result::Result<(), AssetErr> {
+        println!(
+            "[pcx_move_balance]-------- asset_online :{:?}, id: {:?}",
+            Self::asset_online(&<Self as ChainT>::ASSET_ID),
+            &<Self as ChainT>::ASSET_ID,
+        );
         let _ = Self::move_balance(
             &<Self as ChainT>::ASSET_ID,
             from,

@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 # Substrate primitives
 sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
@@ -14,5 +15,8 @@ chainx-primitives = { path = "../../primitives", default-features = false }
 [features]
 default = ["std"]
 std = [
+    "sp-std/std",
+    "sp-runtime/std",
+
     "chainx-primitives/std",
 ]

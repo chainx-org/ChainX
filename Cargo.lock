@@ -6618,6 +6618,7 @@ name = "xp-staking"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
+ "sp-runtime",
  "sp-std",
 ]
 

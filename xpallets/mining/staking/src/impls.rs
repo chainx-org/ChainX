@@ -148,6 +148,7 @@ impl<T: Trait> Module<T> {
         current_block: T::BlockNumber,
         delta: Delta,
     ) {
+        println!("set_validator_vote_weight: validator: {:?}, new_weight: {:?}, current_block: {:?}, delta: {:?}", validator, new_weight, current_block, delta);
         ValidatorLedgers::<T>::mutate(validator, |validator_ledger| {
             validator_ledger.total = Self::apply_delta(validator_ledger.total, delta);
             validator_ledger.last_total_vote_weight = new_weight;

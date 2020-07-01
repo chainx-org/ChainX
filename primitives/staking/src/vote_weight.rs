@@ -13,7 +13,7 @@ pub trait BaseVoteWeight<BlockNumber> {
     fn set_last_acum_weight_update(&mut self, num: BlockNumber);
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, sp_runtime::RuntimeDebug)]
 pub enum Delta {
     Add(u64),
     Sub(u64),
