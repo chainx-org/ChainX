@@ -218,17 +218,15 @@ decl_module! {
         #[weight = 10]
         fn bond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
-            memo.check_validity()?;
+            // memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
             ensure!(value <= Self::free_balance_of(&sender), Error::<T>::InsufficientBalance);
             if !Self::is_validator_self_bonding(&sender, &target) {
-                println!("---------- check validator acceptable_votes_limit_of");
                 Self::check_validator_acceptable_votes_limit(&sender, value)?;
             }
 
-            println!("apply_bond: {:?}, target:{:?}, value:{:?}", sender, target, value);
             Self::apply_bond(&sender, &target, value);
         }
 
@@ -236,7 +234,7 @@ decl_module! {
         #[weight = 10]
         fn rebond(origin, from: T::AccountId, to: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
-            memo.check_validity()?;
+            // memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&from) && Self::is_validator(&to), Error::<T>::InvalidValidator);
@@ -263,7 +261,7 @@ decl_module! {
         #[weight = 10]
         fn unbond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
-            memo.check_validity()?;
+            // memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
@@ -365,12 +363,6 @@ impl<T: Trait> Module<T> {
     }
 
     fn is_validator_self_bonding(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
-        println!(
-            "[is_validator_self_bonding] nominator: {:?}, nominee: {:?}, Self::is_validator: {:?}",
-            nominator,
-            nominee,
-            Self::is_validator(nominator)
-        );
         Self::is_validator(nominator) && *nominator == *nominee
     }
 
@@ -399,10 +391,6 @@ impl<T: Trait> Module<T> {
     }
 
     fn total_votes_of(validator: &T::AccountId) -> T::Balance {
-        println!(
-            "validator_ledger: {:?}",
-            ValidatorLedgers::<T>::get(validator)
-        );
         ValidatorLedgers::<T>::get(validator).total
     }
 
@@ -424,9 +412,7 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
     ) -> Result<(), Error<T>> {
         let cur_total = Self::total_votes_of(validator);
-        println!("validator: {:?}, cur_total:{:?}", validator, cur_total);
         let upper_limit = Self::acceptable_votes_limit_of(validator);
-        println!("upper_limit:{:?}", upper_limit);
         if cur_total + value <= upper_limit {
             Ok(())
         } else {
@@ -491,11 +477,6 @@ impl<T: Trait> Module<T> {
         nominee: &T::AccountId,
         value: T::Balance,
     ) -> Result<(), Error<T>> {
-        println!(
-            "apply_bond reverse: {:?}",
-            Self::bond_reserve(nominator, value)
-        );
-        println!("-----[apply_bond] before update_vote_weight");
         Self::update_vote_weight(
             nominator,
             nominee,

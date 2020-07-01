@@ -38,7 +38,7 @@ parameter_types! {
 }
 
 impl system::Trait for Test {
-    // type BaseCallFilter = ();
+    type BaseCallFilter = ();
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -148,7 +148,8 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
         AssetRestriction::Deposit
             | AssetRestriction::Withdraw
             | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyFree,
+            | AssetRestriction::DestroyFree
+            | AssetRestriction::Move,
     )
 }
 

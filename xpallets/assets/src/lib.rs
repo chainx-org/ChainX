@@ -13,7 +13,7 @@ use codec::{Codec, Encode};
 // Substrate
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::{
-    AtLeast32Bit, CheckedAdd, CheckedSub, Hash, MaybeSerializeDeserialize, Member, Zero,
+    AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Hash, MaybeSerializeDeserialize, Member, Zero,
 };
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*, result};
 
@@ -68,7 +68,7 @@ where
 pub trait Trait: system::Trait {
     type Balance: Parameter
         + Member
-        + AtLeast32Bit
+        + AtLeast32BitUnsigned
         + Codec
         + Default
         + Copy
@@ -201,7 +201,7 @@ decl_module! {
         pub fn transfer(origin, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
-            memo.check_validity()?;
+            // memo.check_validity()?;
 
             Self::can_transfer(&id)?;
             let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
@@ -213,7 +213,7 @@ decl_module! {
         pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
             debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
-            memo.check_validity()?;
+            // memo.check_validity()?;
 
             Self::can_transfer(&id)?;
             let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
@@ -279,7 +279,6 @@ decl_storage! {
         config(assets): Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>;
         config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>;
         build(|config| {
-            println!("--------------- initialize assets");
             Module::<T>::initialize_assets(&config.assets, &config.endowed);
         })
     }
@@ -297,7 +296,6 @@ impl<T: Trait> Module<T> {
         assets: &Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
         endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>,
     ) {
-        println!("----------- assets: {:?}", assets);
         for (id, asset, restrictions, is_online, is_psedu_intention) in assets {
             Self::register_asset(
                 frame_system::RawOrigin::Root.into(),
@@ -312,7 +310,6 @@ impl<T: Trait> Module<T> {
 
         for (id, endowed) in endowed_accounts.iter() {
             for (accountid, value) in endowed.iter() {
-                println!("--------- issue: {:?}, {:?} {:?}", id, accountid, value);
                 Self::issue(id, accountid, *value).unwrap();
             }
         }
@@ -346,11 +343,6 @@ impl<T: Trait> Module<T> {
         AssetRestrictionsOf::insert(&id, restrictions);
         AssetOnline::insert(&id, ());
         AssetOnlineTest::insert(&id, true);
-        println!(
-            "[add_asset] AssetOnline: {:?}, id: {:?}",
-            Self::asset_online(&id),
-            id
-        );
 
         AssetRegisteredBlock::<T>::insert(&id, system::Module::<T>::block_number());
 
@@ -363,7 +355,6 @@ impl<T: Trait> Module<T> {
     }
 
     fn remove_asset(id: &AssetId) -> DispatchResult {
-        println!("xxxxxxxxxxxxxxxxxxxxx remove_asset :{:?}", id);
         AssetOnline::remove(id);
         Ok(())
     }
@@ -677,11 +668,6 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
         do_trigger: bool,
     ) -> result::Result<(SignedImbalanceT<T>, SignedImbalanceT<T>), AssetErr> {
-        println!(
-            "[move_balance]-------- asset_online :{:?}, id: {:?}",
-            Self::asset_online(id),
-            id
-        );
         // check
         ensure!(Self::asset_online(id).is_some(), AssetErr::InvalidAsset);
         Self::can_move(id).map_err(|_| AssetErr::NotAllow)?;
@@ -798,11 +784,6 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: T::Balance,
     ) -> result::Result<(), AssetErr> {
-        println!(
-            "[pcx_move_balance]-------- asset_online :{:?}, id: {:?}",
-            Self::asset_online(&<Self as ChainT>::ASSET_ID),
-            &<Self as ChainT>::ASSET_ID,
-        );
         let _ = Self::move_balance(
             &<Self as ChainT>::ASSET_ID,
             from,
