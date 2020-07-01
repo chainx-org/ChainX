@@ -24,6 +24,12 @@ xp-staking = { path  = "../../../primitives/staking", default-features = false }
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
 
+[dev-dependencies]
+xpallet-protocol = { path = "../../protocol" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+env_logger = "0.7.1"
+
 [features]
 default = ["std"]
 std = [

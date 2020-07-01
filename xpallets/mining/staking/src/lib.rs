@@ -5,6 +5,11 @@
 mod impls;
 mod types;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 use chainx_primitives::AssetId;
 use chainx_primitives::Memo;
 use frame_support::{
@@ -103,6 +108,21 @@ decl_storage! {
         pub Nominations get(fn nominations):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
             => NominatorLedger<T::Balance, T::BlockNumber>;
+    }
+
+    add_extra_genesis {
+        config(validators):
+            Vec<T::AccountId>;
+            // Vec<(T::AccountId, T::Balance)>;
+        build(|config: &GenesisConfig<T>| {
+            // for &(ref v, balance) in &config.validators {
+            for v in &config.validators {
+                // assert!(
+                    // T::Currency::free_balance(&stash) >= balance,
+                    // "Stash does not have enough balance to bond."
+                // );
+            }
+        });
     }
 }
 
