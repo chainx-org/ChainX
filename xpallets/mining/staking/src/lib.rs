@@ -35,6 +35,11 @@ const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const DEFAULT_MAXIMUM_VALIDATOR_COUNT: u32 = 100;
 const DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE: u32 = 10;
 
+/// ChainX 2.0 block time is targeted at 6s, i.e., 5 minute per session by default.
+const DEFAULT_BLOCKS_PER_SESSION: u64 = 50;
+const DEFAULT_BONDING_DURATION: u64 = DEFAULT_BLOCKS_PER_SESSION * 12 * 24 * 3;
+const DEFAULT_VALIDATOR_BONDING_DURATION: u64 = DEFAULT_BONDING_DURATION * 10;
+
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -65,7 +70,7 @@ decl_storage! {
 
         /// The length of a session in blocks.
         pub BlocksPerSession get(fn blocks_per_session) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(50);
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(DEFAULT_BLOCKS_PER_SESSION);
 
         /// The length of a staking era in sessions.
         pub SessionsPerEra get(fn sessions_per_era) config():
@@ -73,11 +78,11 @@ decl_storage! {
 
         /// The length of the bonding duration in blocks.
         pub BondingDuration get(fn bonding_duration) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(50 * 12 * 24 * 3);
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(DEFAULT_BONDING_DURATION);
 
         /// The length of the bonding duration in blocks for validator.
         pub ValidatorBondingDuration get(fn validator_bonding_duration) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(50 * 12 * 24 * 3 * 10);
+            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(DEFAULT_VALIDATOR_BONDING_DURATION);
 
         /// Maximum number of on-going unbonded chunk.
         pub MaximumUnbondedChunkSize get(fn maximum_unbonded_chunk_size) config():
@@ -176,6 +181,8 @@ decl_error! {
         ///
         /// Due to the validator and regular nominator have different bonding duration.
         RebondSelfBondedNotAllowed,
+        /// Nominator did not nominate that validator before.
+        NonexistentNomination,
         ///
         RegisteredAlready,
         ///
@@ -183,7 +190,7 @@ decl_error! {
         ///
         InvalidUnbondedIndex,
         ///
-        UnbondedEntryNotYetDue,
+        UnbondRequestNotYetDue,
         /// Can not rebond due to the restriction of rebond frequency limit.
         NoMoreRebond,
         /// The call is not allowed at the given time due to restrictions of election period.
@@ -266,6 +273,8 @@ decl_module! {
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
+            // TODO: is this unneccessary?
+            // ensure!(Self::nomination_exists(&sender, &target), Error::<T>::NonexistentNomination);
             ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondValue);
             ensure!(
                 Self::unbonded_chunks_of(&sender).len() < Self::maximum_unbonded_chunk_size() as usize,
@@ -277,20 +286,27 @@ decl_module! {
 
         /// Frees up the unbonded balances that are due.
         #[weight = 10]
-        fn withdraw_unbonded(origin, target: T::AccountId, unbonded_index: UnbondedIndex) {
+        fn withdraw_unbonded(origin, unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
 
-            // ensure!( nomination record exists)
-            let unbonded = Self::unbonded_chunks_of(&sender);
+            let mut unbonded_chunks = Self::unbonded_chunks_of(&sender);
+            ensure!(!unbonded_chunks.is_empty(), Error::<T>::NoUnbondedChunk);
+            ensure!(unbonded_index < unbonded_chunks.len() as u32, Error::<T>::InvalidUnbondedIndex);
 
-            ensure!(!unbonded.is_empty(), Error::<T>::NoUnbondedChunk);
-            ensure!(unbonded_index < unbonded.len() as u32, Error::<T>::InvalidUnbondedIndex);
-
-            let Unbonded { value, locked_until } = unbonded[unbonded_index as usize];
+            let Unbonded { value, locked_until } = unbonded_chunks[unbonded_index as usize];
             let current_block = <frame_system::Module<T>>::block_number();
-            ensure!(current_block < locked_until, Error::<T>::UnbondedEntryNotYetDue);
+
+            ensure!(current_block > locked_until, Error::<T>::UnbondRequestNotYetDue);
 
             // apply withdraw_unbonded
+            Self::unlock_unbonded_reservation(&sender, value).map_err(|_| Error::<T>::AssetError)?;
+            unbonded_chunks.swap_remove(unbonded_index as usize);
+
+            Nominators::<T>::mutate(&sender, |nominator_profile| {
+                nominator_profile.unbonded_chunks = unbonded_chunks;
+            });
+
+            Self::deposit_event(RawEvent::WithdrawUnbonded(sender, value));
         }
 
         /// Claims the staking reward given the `target` validator.
@@ -367,6 +383,10 @@ impl<T: Trait> Module<T> {
         Self::is_validator(nominator) && *nominator == *nominee
     }
 
+    fn nomination_exists(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
+        Nominations::<T>::contains_key(nominator, nominee)
+    }
+
     pub fn validator_set() -> Vec<T::AccountId> {
         Validators::<T>::iter()
             .map(|(v, _)| v)
@@ -421,6 +441,8 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    // Staking specific assets operation
+    //
     fn bond_reserve(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
         <xpallet_assets::Module<T>>::pcx_move_balance(
             who,
