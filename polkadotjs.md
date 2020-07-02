@@ -7,6 +7,12 @@
   "Desc": "Text",
   "Memo": "Text",
   "AddrStr": "Text",
+  "NetworkType": {
+    "_enum": [
+      "Mainnet",
+      "Testnet"
+    ]
+  },
   "Chain": {
       "_enum": [
         "ChainX",
