@@ -226,7 +226,7 @@ decl_module! {
         #[weight = 10]
         fn bond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
-            // memo.check_validity()?;
+            memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
@@ -242,7 +242,7 @@ decl_module! {
         #[weight = 10]
         fn rebond(origin, from: T::AccountId, to: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
-            // memo.check_validity()?;
+            memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&from) && Self::is_validator(&to), Error::<T>::InvalidValidator);
@@ -269,7 +269,7 @@ decl_module! {
         #[weight = 10]
         fn unbond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
-            // memo.check_validity()?;
+            memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);

@@ -1,29 +1,13 @@
 use std::collections::BTreeMap;
 
 use chainx_runtime::{
-    // <<<<<<< HEAD
-    // h256_conv_endian_from_str, AccountId, AssetId, AssetInfo, AssetRestriction, AssetRestrictions,
-    // AuraConfig, BTCHeader, BTCNetwork, BTCParams, Balance, Chain, Compact, ContractsSchedule,
-    // GenesisConfig, GrandpaConfig, Runtime, Signature, SudoConfig, SystemConfig, XAssetsConfig,
-    // XBridgeBitcoinConfig, XContractsConfig, XMiningStakingConfig, WASM_BINARY,
-    // =======
-    h256_conv_endian_from_str,
-    AssetInfo,
-    AssetRestriction,
-    AssetRestrictions,
-    BTCCompact,
-    BTCHeader,
-    BTCNetwork,
-    BTCParams,
-    Chain,
-    ContractsSchedule,
-    NetworkType,
-    // >>>>>>> 71481dad2ac60a2dd5be6aaa37da50ce34f6cea1
+    h256_conv_endian_from_str, AssetInfo, AssetRestriction, AssetRestrictions, BTCCompact,
+    BTCHeader, BTCNetwork, BTCParams, Chain, ContractsSchedule, NetworkType,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, GenesisConfig, GrandpaConfig, SudoConfig, SystemConfig, XAssetsConfig,
-    XBridgeBitcoinConfig, XContractsConfig, XSystemConfig,
+    XBridgeBitcoinConfig, XContractsConfig, XMiningStakingConfig, XSystemConfig,
 };
 
 use sc_service::ChainType;
@@ -162,7 +146,8 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
         AssetRestriction::Deposit
             | AssetRestriction::Withdraw
             | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyFree,
+            | AssetRestriction::DestroyFree
+            | AssetRestriction::Move,
     )
 }
 

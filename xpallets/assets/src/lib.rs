@@ -201,7 +201,7 @@ decl_module! {
         pub fn transfer(origin, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
-            // memo.check_validity()?;
+            memo.check_validity()?;
 
             Self::can_transfer(&id)?;
             let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
@@ -213,10 +213,10 @@ decl_module! {
         pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
             debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
-            // memo.check_validity()?;
+            memo.check_validity()?;
 
             Self::can_transfer(&id)?;
-            let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+            Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
             Ok(())
         }
 
@@ -259,7 +259,6 @@ decl_storage! {
         /// asset info for every asset, key is asset id
         pub AssetInfoOf get(fn asset_info_of): map hasher(twox_64_concat) AssetId => Option<AssetInfo>;
         pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => Option<()>;
-        pub AssetOnlineTest get(fn asset_online_test): map hasher(twox_64_concat) AssetId => Option<bool>;
         pub AssetRegisteredBlock get(fn asset_registered_block): map hasher(twox_64_concat) AssetId => T::BlockNumber;
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
         /// notice if not set AssetRestriction, default is true for this limit
@@ -342,7 +341,6 @@ impl<T: Trait> Module<T> {
         AssetInfoOf::insert(&id, asset);
         AssetRestrictionsOf::insert(&id, restrictions);
         AssetOnline::insert(&id, ());
-        AssetOnlineTest::insert(&id, true);
 
         AssetRegisteredBlock::<T>::insert(&id, system::Module::<T>::block_number());
 
