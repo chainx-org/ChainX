@@ -249,7 +249,7 @@ impl<T: Trait> From<AssetErr> for Error<T> {
             AssetErr::TotalAssetNotEnough => Error::<T>::TotalAssetInsufficientBalance,
             AssetErr::TotalAssetOverFlow => Error::<T>::TotalAssetOverflow,
             AssetErr::InvalidAsset => Error::<T>::InvalidAsset,
-            AssetErr::NotAllow => Error::<T>::NotAllowAction,
+            AssetErr::NotAllow => Error::<T>::ActionNotAllowed,
         }
     }
 }
