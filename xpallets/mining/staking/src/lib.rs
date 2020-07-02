@@ -476,7 +476,7 @@ impl<T: Trait> Module<T> {
     /// Settles and update the vote weight state of the nominator `source` and validator `target` given the delta amount.
     fn update_vote_weight(source: &T::AccountId, target: &T::AccountId, delta: Delta) {
         let current_block = <frame_system::Module<T>>::block_number();
-        let saturated_current_block = current_block.saturated_into::<u64>();
+        let saturated_current_block = current_block.saturated_into::<u32>();
 
         let source_weight =
             <Self as xp_staking::ComputeVoteWeight<T::AccountId>>::settle_claimer_weight(
@@ -504,7 +504,7 @@ impl<T: Trait> Module<T> {
         Self::update_vote_weight(
             nominator,
             nominee,
-            Delta::Add(value.saturated_into::<u64>()),
+            Delta::Add(value.saturated_into::<u128>()),
         );
         Self::deposit_event(RawEvent::Bond(nominator.clone(), nominee.clone(), value));
         Ok(())
@@ -517,7 +517,7 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
         current_block: T::BlockNumber,
     ) {
-        let v = value.saturated_into::<u64>();
+        let v = value.saturated_into::<u128>();
         // TODO: reduce one block_number read?
         Self::update_vote_weight(who, from, Delta::Sub(v));
         Self::update_vote_weight(who, to, Delta::Add(v));
@@ -563,7 +563,7 @@ impl<T: Trait> Module<T> {
             nominator_profile.unbonded_chunks = unbonded_chunks;
         });
 
-        Self::update_vote_weight(who, target, Delta::Sub(value.saturated_into::<u64>()));
+        Self::update_vote_weight(who, target, Delta::Sub(value.saturated_into::<u128>()));
 
         Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
 

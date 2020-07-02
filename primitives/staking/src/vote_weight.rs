@@ -3,20 +3,20 @@ use sp_std::result::Result;
 
 /// The getter and setter methods for the further vote weight processing.
 pub trait BaseVoteWeight<BlockNumber> {
-    fn amount(&self) -> u64;
-    fn set_amount(&mut self, new: u64);
+    fn amount(&self) -> u128;
+    fn set_amount(&mut self, new: u128);
 
     fn last_acum_weight(&self) -> VoteWeight;
     fn set_last_acum_weight(&mut self, s: VoteWeight);
 
-    fn last_acum_weight_update(&self) -> u64;
+    fn last_acum_weight_update(&self) -> u32;
     fn set_last_acum_weight_update(&mut self, num: BlockNumber);
 }
 
 #[derive(Clone, Copy, sp_runtime::RuntimeDebug)]
 pub enum Delta {
-    Add(u64),
-    Sub(u64),
+    Add(u128),
+    Sub(u128),
     Zero,
 }
 
@@ -55,7 +55,7 @@ pub trait VoteWightTrait<BlockNumber>: BaseVoteWeight<BlockNumber> {
 impl<BlockNumber, T: BaseVoteWeight<BlockNumber>> VoteWightTrait<BlockNumber> for T {}
 
 /// Formula: Latest Vote Weight = last_acum_weight(VoteWeight) + amount(u64) * duration(u64)
-pub type WeightFactors = (VoteWeight, u64, u64);
+pub type WeightFactors = (VoteWeight, u128, u32);
 
 pub struct ZeroVoteWeightError;
 
@@ -64,25 +64,25 @@ pub trait ComputeVoteWeight<AccountId> {
     type Claimee;
     type Error: From<ZeroVoteWeightError>;
 
-    fn claimer_weight_factors(_: &AccountId, _: &Self::Claimee, _: u64) -> WeightFactors;
-    fn claimee_weight_factors(_: &Self::Claimee, _: u64) -> WeightFactors;
+    fn claimer_weight_factors(_: &AccountId, _: &Self::Claimee, _: u32) -> WeightFactors;
+    fn claimee_weight_factors(_: &Self::Claimee, _: u32) -> WeightFactors;
 
     fn settle_claimer_weight(
         who: &AccountId,
         target: &Self::Claimee,
-        current_block: u64,
+        current_block: u32,
     ) -> VoteWeight {
         Self::calc_latest_vote_weight(Self::claimer_weight_factors(who, target, current_block))
     }
 
-    fn settle_claimee_weight(target: &Self::Claimee, current_block: u64) -> VoteWeight {
+    fn settle_claimee_weight(target: &Self::Claimee, current_block: u32) -> VoteWeight {
         Self::calc_latest_vote_weight(Self::claimee_weight_factors(target, current_block))
     }
 
     fn settle_weight_on_claim(
         who: &AccountId,
         target: &Self::Claimee,
-        current_block: u64,
+        current_block: u32,
     ) -> Result<(VoteWeight, VoteWeight), Self::Error> {
         let claimer_weight = Self::settle_claimer_weight(who, target, current_block);
 

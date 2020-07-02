@@ -7,11 +7,11 @@ where
     Balance: Default + BaseArithmetic + Copy,
     BlockNumber: Default + BaseArithmetic + Copy,
 {
-    fn amount(&self) -> u64 {
+    fn amount(&self) -> u128 {
         self.total.saturated_into()
     }
 
-    fn set_amount(&mut self, new: u64) {
+    fn set_amount(&mut self, new: u128) {
         self.total = new.saturated_into();
     }
 
@@ -23,8 +23,8 @@ where
         self.last_total_vote_weight = latest_vote_weight;
     }
 
-    fn last_acum_weight_update(&self) -> u64 {
-        self.last_total_vote_weight_update.saturated_into::<u64>()
+    fn last_acum_weight_update(&self) -> u32 {
+        self.last_total_vote_weight_update.saturated_into::<u32>()
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
@@ -37,11 +37,11 @@ where
     Balance: Default + BaseArithmetic + Copy,
     BlockNumber: Default + BaseArithmetic + Copy,
 {
-    fn amount(&self) -> u64 {
+    fn amount(&self) -> u128 {
         self.nomination.saturated_into()
     }
 
-    fn set_amount(&mut self, new: u64) {
+    fn set_amount(&mut self, new: u128) {
         self.nomination = new.saturated_into();
     }
 
@@ -53,8 +53,8 @@ where
         self.last_vote_weight = latest_vote_weight;
     }
 
-    fn last_acum_weight_update(&self) -> u64 {
-        self.last_vote_weight_update.saturated_into::<u64>()
+    fn last_acum_weight_update(&self) -> u32 {
+        self.last_vote_weight_update.saturated_into::<u32>()
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
@@ -69,7 +69,7 @@ impl<T: Trait> ComputeVoteWeight<T::AccountId> for Module<T> {
     fn claimer_weight_factors(
         who: &T::AccountId,
         target: &Self::Claimee,
-        current_block: u64,
+        current_block: u32,
     ) -> WeightFactors {
         let claimer_ledger = Nominations::<T>::get(who, target);
         (
@@ -79,7 +79,7 @@ impl<T: Trait> ComputeVoteWeight<T::AccountId> for Module<T> {
         )
     }
 
-    fn claimee_weight_factors(target: &Self::Claimee, current_block: u64) -> WeightFactors {
+    fn claimee_weight_factors(target: &Self::Claimee, current_block: u32) -> WeightFactors {
         let claimee_ledger = ValidatorLedgers::<T>::get(target);
         (
             claimee_ledger.last_total_vote_weight,
@@ -183,7 +183,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
             <Self as ComputeVoteWeight<T::AccountId>>::settle_weight_on_claim(
                 claimer,
                 claimee,
-                current_block.saturated_into::<u64>(),
+                current_block.saturated_into::<u32>(),
             )?;
 
         let claimee_pot = Self::jackpot_account_for(claimee);
