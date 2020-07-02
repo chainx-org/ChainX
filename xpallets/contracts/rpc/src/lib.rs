@@ -17,8 +17,8 @@
 
 //! Node-specific RPC methods for interaction with contracts.
 
-use std::sync::Arc;
 use std::convert::TryInto;
+use std::sync::Arc;
 
 use codec::{Codec, Decode};
 use jsonrpc_core::{Error, ErrorCode, Result};
@@ -40,7 +40,6 @@ use chainx_primitives::AssetId;
 pub use xpallet_contracts_rpc_runtime_api::{
     self as runtime_api, ContractExecResult, ContractsApi as ContractsRuntimeApi, XRC20Selector,
 };
-
 
 const RUNTIME_ERROR: i64 = 1;
 const CONTRACT_DOESNT_EXIST: i64 = 2;

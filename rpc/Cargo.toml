@@ -15,10 +15,12 @@ serde_json = "1.0"
 # Substrate client
 sc-client-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sc-service = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", features = ["test-helpers"] }
+sc-rpc-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 
 # Substrate primitives
 sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sp-block-builder = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-state-machine = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }

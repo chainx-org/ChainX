@@ -12,13 +12,15 @@ use std::fmt;
 use std::sync::Arc;
 
 use sc_client_api::{backend::Backend, CallExecutor, StorageProvider};
+use sc_rpc_api::DenyUnsafe;
 use sc_service::client::Client;
 use sp_api::ProvideRuntimeApi;
+use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
 
 use chainx_primitives::Block;
-use chainx_runtime::{AccountId, Balance, BlockNumber, Index, UncheckedExtrinsic};
+use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index, UncheckedExtrinsic};
 
 use apis::ChainXApi;
 use impls::ChainXRpc;
@@ -41,6 +43,8 @@ pub struct FullDeps<P, BE, E, RA> {
     pub client: Arc<Client<BE, E, Block, RA>>,
     /// Transaction pool instance.
     pub pool: Arc<P>,
+    /// Whether to deny unsafe calls
+    pub deny_unsafe: DenyUnsafe,
 }
 
 /// Instantiate all Full RPC extensions.
@@ -57,6 +61,7 @@ where
         + StorageProvider<Block, BE>
         + 'static,
     Client<BE, E, Block, RA>: Send + Sync + 'static,
+    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api: BlockBuilder<Block>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
@@ -80,11 +85,16 @@ where
     use xpallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
-    let FullDeps { client, pool } = deps;
+    let FullDeps {
+        client,
+        pool,
+        deny_unsafe,
+    } = deps;
 
     io.extend_with(SystemApi::to_delegate(FullSystem::new(
         client.clone(),
         pool,
+        deny_unsafe,
     )));
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
         client.clone(),
@@ -112,7 +122,7 @@ where
         fetcher,
     } = deps;
     let mut io = jsonrpc_core::IoHandler::default();
-    io.extend_with(SystemApi::<AccountId, Index>::to_delegate(
+    io.extend_with(SystemApi::<Hash, AccountId, Index>::to_delegate(
         LightSystem::new(client, remote_blockchain, fetcher, pool),
     ));
 

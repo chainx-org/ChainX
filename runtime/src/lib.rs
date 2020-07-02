@@ -14,8 +14,8 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::traits::{
-    BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, PostDispatchInfoOf,
-    Saturating, SignedExtension,
+    BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, Saturating,
+    SignedExtension,
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
@@ -168,6 +168,7 @@ const_assert!(
 );
 
 impl frame_system::Trait for Runtime {
+    type BaseCallFilter = BaseFilter;
     /// The ubiquitous origin type.
     type Origin = Origin;
     /// The aggregated dispatch type that is available for extrinsics.
@@ -257,7 +258,6 @@ impl pallet_timestamp::Trait for Runtime {
 impl pallet_utility::Trait for Runtime {
     type Event = Event;
     type Call = Call;
-    type IsCallable = IsCallable;
 }
 
 impl pallet_sudo::Trait for Runtime {
@@ -290,13 +290,13 @@ impl xpallet_bridge_bitcoin::Trait for Runtime {
 impl xpallet_contracts::Trait for Runtime {
     type Time = Timestamp;
     type Randomness = RandomnessCollectiveFlip;
-    type Call = Call;
     type Event = Event;
     type DetermineContractAddress = xpallet_contracts::SimpleAddressDeterminer<Runtime>;
     type TrieIdGenerator = xpallet_contracts::TrieIdFromParentCounter<Runtime>;
     type StorageSizeOffset = xpallet_contracts::DefaultStorageSizeOffset;
     type MaxDepth = xpallet_contracts::DefaultMaxDepth;
     type MaxValueSize = xpallet_contracts::DefaultMaxValueSize;
+    type WeightPrice = xpallet_transaction_payment::Module<Self>;
 }
 
 parameter_types! {

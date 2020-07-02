@@ -55,4 +55,3 @@ pub enum XRC20Selector {
 }
 
 pub type Selector = [u8; 4];
-

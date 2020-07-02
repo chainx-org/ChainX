@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.4"
-jsonrpc-core = "14.2.0"
 log = "0.4.8"
 parking_lot = "0.10.0"
 structopt = "0.3.8"
