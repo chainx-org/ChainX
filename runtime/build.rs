@@ -5,7 +5,7 @@ fn main() {
         .with_current_project()
         .with_wasm_builder_from_git(
             "https://github.com/paritytech/substrate.git",
-            "34695a85650b58bcd7d7e2a677cafc2921251d68",
+            "00768a1f21a579c478fe5d4f51e1fa71f7db9fd4",
         )
         .export_heap_base()
         .import_memory()

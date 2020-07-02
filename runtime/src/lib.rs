@@ -13,11 +13,17 @@ use static_assertions::const_assert;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{BlakeTwo256, Block as BlockT, IdentityLookup, NumberFor, Saturating};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult,
+    traits::{
+        BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, Saturating,
+        SignedExtension,
+    },
+    transaction_validity::{
+        InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
+        ValidTransaction,
+    },
+    ApplyExtrinsicResult, FixedPointNumber, Perbill, Permill, Perquintill,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
@@ -26,7 +32,7 @@ use sp_version::RuntimeVersion;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
-pub use sp_runtime::{Perbill, Permill};
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
@@ -53,9 +59,13 @@ pub use xpallet_assets::{
 };
 #[cfg(feature = "std")]
 pub use xpallet_bridge_bitcoin::h256_conv_endian_from_str;
-pub use xpallet_bridge_bitcoin::{BTCHeader, BTCNetwork, BTCParams, Compact, H256 as BTCHash};
+pub use xpallet_bridge_bitcoin::{
+    BTCHeader, BTCNetwork, BTCParams, Compact as BTCCompact, H256 as BTCHash,
+};
 pub use xpallet_contracts::Schedule as ContractsSchedule;
 pub use xpallet_contracts_primitives::XRC20Selector;
+pub use xpallet_protocol::*;
+pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -93,15 +103,52 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode)]
 pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
-    fn filter(_call: &Call) -> bool {
-        // TODO
-        true
+    fn filter(call: &Call) -> bool {
+        use frame_support::dispatch::GetCallMetadata;
+        let metadata = call.get_call_metadata();
+        !XSystem::is_paused(metadata)
     }
 }
 pub struct IsCallable;
 frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
+
+pub const FORBIDDEN_CALL: u8 = 255;
+pub const FORBIDDEN_ACCOUNT: u8 = 254;
+
+impl SignedExtension for BaseFilter {
+    const IDENTIFIER: &'static str = "BaseFilter";
+    type AccountId = AccountId;
+    type Call = Call;
+    type AdditionalSigned = ();
+    type Pre = ();
+    fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
+        Ok(())
+    }
+
+    fn validate(
+        &self,
+        who: &Self::AccountId,
+        call: &Self::Call,
+        _info: &DispatchInfoOf<Self::Call>,
+        _len: usize,
+    ) -> TransactionValidity {
+        if !Self::filter(&call) {
+            return Err(TransactionValidityError::from(InvalidTransaction::Custom(
+                FORBIDDEN_CALL,
+            )));
+        }
+
+        if XSystem::blocked_accounts(who).is_some() {
+            return Err(TransactionValidityError::from(InvalidTransaction::Custom(
+                FORBIDDEN_ACCOUNT,
+            )));
+        }
+        Ok(ValidTransaction::default())
+    }
+}
 
 const AVERAGE_ON_INITIALIZE_WEIGHT: Perbill = Perbill::from_percent(10);
 parameter_types! {
@@ -122,6 +169,7 @@ const_assert!(
 );
 
 impl frame_system::Trait for Runtime {
+    type BaseCallFilter = BaseFilter;
     /// The ubiquitous origin type.
     type Origin = Origin;
     /// The aggregated dispatch type that is available for extrinsics.
@@ -211,12 +259,15 @@ impl pallet_timestamp::Trait for Runtime {
 impl pallet_utility::Trait for Runtime {
     type Event = Event;
     type Call = Call;
-    type IsCallable = IsCallable;
 }
 
 impl pallet_sudo::Trait for Runtime {
     type Event = Event;
     type Call = Call;
+}
+
+impl xpallet_system::Trait for Runtime {
+    type Event = Event;
 }
 
 pub struct Tmp;
@@ -240,13 +291,13 @@ impl xpallet_bridge_bitcoin::Trait for Runtime {
 impl xpallet_contracts::Trait for Runtime {
     type Time = Timestamp;
     type Randomness = RandomnessCollectiveFlip;
-    type Call = Call;
     type Event = Event;
     type DetermineContractAddress = xpallet_contracts::SimpleAddressDeterminer<Runtime>;
     type TrieIdGenerator = xpallet_contracts::TrieIdFromParentCounter<Runtime>;
     type StorageSizeOffset = xpallet_contracts::DefaultStorageSizeOffset;
     type MaxDepth = xpallet_contracts::DefaultMaxDepth;
     type MaxValueSize = xpallet_contracts::DefaultMaxValueSize;
+    type WeightPrice = xpallet_transaction_payment::Module<Self>;
 }
 
 impl xpallet_mining_staking::Trait for Runtime {
@@ -256,13 +307,17 @@ impl xpallet_mining_staking::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const TransactionByteFee: Balance = 1;
+    pub const TransactionByteFee: Balance = 1; // TODO change in future
+    pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
+    pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
+    pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
 }
 
 impl xpallet_transaction_payment::Trait for Runtime {
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
-    type FeeMultiplierUpdate = ();
+    type FeeMultiplierUpdate =
+        TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
 }
 
 construct_runtime!(
@@ -279,6 +334,7 @@ construct_runtime!(
         Utility: pallet_utility::{Module, Call, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
+        XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
         XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
@@ -306,6 +362,7 @@ pub type SignedExtra = (
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
     xpallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    BaseFilter,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;

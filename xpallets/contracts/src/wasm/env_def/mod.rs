@@ -17,8 +17,9 @@
 use super::Runtime;
 use crate::exec::Ext;
 
-use parity_wasm::elements::{FunctionType, ValueType};
 use sp_sandbox::Value;
+
+use parity_wasm::elements::{FunctionType, ValueType};
 
 #[macro_use]
 pub(crate) mod macros;

@@ -6,32 +6,32 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.4"
-jsonrpc-core = "14.2.0"
 log = "0.4.8"
 parking_lot = "0.10.0"
 structopt = "0.3.8"
+log4rs = { version = "0.12", features = ["rolling_file_appender", "compound_policy", "size_trigger", "fixed_window_roller"] }
 
 # Substrate client
-sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-cli = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-client-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-executor = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-network = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-rpc = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-service = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sc-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-cli = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-client-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-executor = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-network = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-rpc = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-service = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 
 # Substrate primitives
-sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sp-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sp-inherents = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
-sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sp-consensus = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sp-inherents = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 
 chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
@@ -40,4 +40,4 @@ chainx-rpc = { path = "../rpc" }
 xpallet-protocol = { path = "../xpallets/protocol" }
 
 [build-dependencies]
-substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3" }
+substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }

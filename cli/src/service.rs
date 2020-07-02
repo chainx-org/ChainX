@@ -32,7 +32,6 @@ macro_rules! new_full_start {
     ($config:expr) => {{
         use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
         use std::sync::Arc;
-        type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 
         let mut import_setup = None;
         let inherent_data_providers = sp_inherents::InherentDataProviders::new();
@@ -85,12 +84,25 @@ macro_rules! new_full_start {
                 Ok(import_queue)
             },
         )?
-        .with_rpc_extensions(|builder| -> std::result::Result<RpcExtension, _> {
-            let deps = chainx_rpc::FullDeps {
-                client: builder.client().clone(),
-                pool: builder.pool(),
-            };
-            Ok(chainx_rpc::create_full(deps))
+        .with_rpc_extensions_builder(|builder| {
+            // let grandpa_link = import_setup
+            //     .as_ref()
+            //     .map(|s| &s.1)
+            //     .expect("GRANDPA LinkHalf is present for full services or set up failed; qed.");
+            // let shared_authority_set = grandpa_link.shared_authority_set().clone();
+            // let shared_voter_state = grandpa::SharedVoterState::empty();
+            //
+            // rpc_setup = Some((shared_voter_state.clone()));
+            let client = builder.client().clone();
+            let pool = builder.pool().clone();
+            Ok(move |deny_unsafe| {
+                let deps = chainx_rpc::FullDeps {
+                    client: client.clone(),
+                    pool: pool.clone(),
+                    deny_unsafe,
+                };
+                chainx_rpc::create_full(deps)
+            })
         })?;
 
         (builder, import_setup, inherent_data_providers)
@@ -116,7 +128,7 @@ pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceEr
             let provider = client as Arc<dyn StorageAndProofProvider<_, _>>;
             Ok(Arc::new(GrandpaFinalityProofProvider::new(backend, provider)) as _)
         })?
-        .build()?;
+        .build_full()?;
 
     if role.is_authority() {
         let proposer = sc_basic_authorship::ProposerFactory::new(
@@ -148,13 +160,15 @@ pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceEr
 
         // the AURA authoring task is considered essential, i.e. if it
         // fails we take down the service with it.
-        service.spawn_essential_task("aura", aura);
+        service
+            .spawn_essential_task_handle()
+            .spawn_blocking("aura", aura);
     }
 
     // if the node isn't actively participating in consensus then it doesn't
     // need a keystore, regardless of which protocol we use below.
     let keystore = if role.is_authority() {
-        Some(service.keystore())
+        Some(service.keystore() as sp_core::traits::BareCryptoStorePtr)
     } else {
         None
     };
@@ -190,7 +204,7 @@ pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceEr
 
         // the GRANDPA voter task is considered infallible, i.e.
         // if it fails we take down the service with it.
-        service.spawn_essential_task(
+        service.spawn_essential_task_handle().spawn_blocking(
             "grandpa-voter",
             sc_finality_grandpa::run_grandpa_voter(grandpa_config)?,
         );
@@ -207,7 +221,6 @@ pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceEr
 
 /// Builds a new service for a light client.
 pub fn new_light(config: Configuration) -> Result<impl AbstractService, ServiceError> {
-    type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
     let inherent_data_providers = InherentDataProviders::new();
 
     ServiceBuilder::new_light::<Block, RuntimeApi, Executor>(config)?
@@ -270,7 +283,7 @@ pub fn new_light(config: Configuration) -> Result<impl AbstractService, ServiceE
             let provider = client as Arc<dyn StorageAndProofProvider<_, _>>;
             Ok(Arc::new(GrandpaFinalityProofProvider::new(backend, provider)) as _)
         })?
-        .with_rpc_extensions(|builder| -> Result<RpcExtension, _> {
+        .with_rpc_extensions(|builder| {
             let fetcher = builder
                 .fetcher()
                 .ok_or_else(|| "Trying to start node RPC without active fetcher")?;
@@ -286,5 +299,5 @@ pub fn new_light(config: Configuration) -> Result<impl AbstractService, ServiceE
             };
             Ok(chainx_rpc::create_light(light_deps))
         })?
-        .build()
+        .build_light()
 }

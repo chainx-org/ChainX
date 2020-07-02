@@ -1,5 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 use chainx_primitives::AssetId;
 
 pub mod assets_def {
@@ -54,3 +58,33 @@ pub const ASSET_NAME_LEN: usize = 48;
 pub const ASSET_DESC_LEN: usize = 128;
 
 pub const MEMO_BYTES_LEN: usize = 80;
+
+pub mod network {
+    use super::*;
+    pub type AddrVersion = u8;
+
+    #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+    pub enum NetworkType {
+        Mainnet,
+        Testnet,
+    }
+
+    impl Default for NetworkType {
+        fn default() -> Self {
+            NetworkType::Testnet
+        }
+    }
+
+    impl NetworkType {
+        pub fn addr_version(&self) -> AddrVersion {
+            match self {
+                NetworkType::Mainnet => MAINNET_ADDR_VER,
+                NetworkType::Testnet => TESTNET_ADDR_VER,
+            }
+        }
+    }
+    pub const MAINNET_ADDR_VER: AddrVersion = 44;
+    pub const TESTNET_ADDR_VER: AddrVersion = 42;
+}
+pub use network::*;

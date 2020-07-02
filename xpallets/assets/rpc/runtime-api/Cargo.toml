@@ -5,11 +5,11 @@ authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "1.3.1", default-features = false, features = ["derive"] }
 
-sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 chainx-primitives = { path = "../../../../primitives", default-features = false }
 xpallet-assets = { path = "../../", default-features = false }
