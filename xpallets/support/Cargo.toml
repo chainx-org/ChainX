@@ -8,10 +8,10 @@ edition = "2018"
 rustc-hex = { version = "2.0", optional = true }
 
 # Substrate primitives
-sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 # Substrate pallets
-frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc3", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 [features]
 default = ["std"]
