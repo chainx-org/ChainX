@@ -310,7 +310,8 @@ impl<T: Trait> Module<T> {
 
         for (id, endowed) in endowed_accounts.iter() {
             for (accountid, value) in endowed.iter() {
-                Self::issue(id, accountid, *value).expect("asset issuance can not fail");
+                Self::issue(id, accountid, *value)
+                    .expect("asset issuance during the genesis can not fail");
             }
         }
     }
@@ -494,39 +495,28 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn issue(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
-        {
-            ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
 
-            // may set storage inner
-            Self::try_new_account(&who, id);
+        // may set storage inner
+        Self::try_new_account(&who, id);
 
-            let type_ = AssetType::Free;
-            let _imbalance = Self::inner_issue(id, who, type_, value)?;
-        }
+        let _imbalance = Self::inner_issue(id, who, AssetType::Free, value)?;
         Ok(())
     }
 
     pub fn destroy(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
-        {
-            ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
-            Self::can_destroy_withdrawal(id)?;
+        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        Self::can_destroy_withdrawal(id)?;
 
-            let type_ = AssetType::ReservedWithdrawal;
-
-            let _imbalance = Self::inner_destroy(id, who, type_, value)?;
-        }
+        let _imbalance = Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
         Ok(())
     }
 
     pub fn destroy_free(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
-        {
-            ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
-            Self::can_destroy_free(id)?;
+        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        Self::can_destroy_free(id)?;
 
-            let type_ = AssetType::Free;
-
-            let _imbalance = Self::inner_destroy(id, who, type_, value)?;
-        }
+        let _imbalance = Self::inner_destroy(id, who, AssetType::Free, value)?;
         Ok(())
     }
 
