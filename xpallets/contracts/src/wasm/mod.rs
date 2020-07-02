@@ -200,7 +200,7 @@ mod tests {
         terminations: Vec<TerminationEntry>,
         transfers: Vec<TransferEntry>,
         dispatches: Vec<DispatchEntry>,
-        restores: Vec<RestoreEntry>,
+        // restores: Vec<RestoreEntry>,
         // (topics, data)
         events: Vec<(Vec<H256>, Vec<u8>)>,
         next_account_id: u64,
@@ -223,8 +223,13 @@ mod tests {
         fn get_storage(&self, key: &StorageKey) -> Option<Vec<u8>> {
             self.storage.get(key).cloned()
         }
-        fn set_storage(&mut self, key: StorageKey, value: Option<Vec<u8>>) {
+        fn set_storage(
+            &mut self,
+            key: StorageKey,
+            value: Option<Vec<u8>>,
+        ) -> Result<(), &'static str> {
             *self.storage.entry(key).or_insert(Vec::new()) = value.unwrap_or(Vec::new());
+            Ok(())
         }
         fn instantiate(
             &mut self,

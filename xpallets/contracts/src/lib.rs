@@ -81,14 +81,16 @@
 
 #[macro_use]
 mod gas;
+
+mod account_db;
 mod exec;
-mod storage;
 mod wasm;
 // mod rent;
 
 #[cfg(test)]
 mod tests;
 
+use crate::account_db::{AccountDb, DirectAccountDb};
 use crate::exec::ExecutionContext;
 use crate::wasm::{WasmLoader, WasmVm};
 
@@ -96,21 +98,18 @@ pub use crate::exec::{ExecError, ExecResult, ExecReturnValue, StatusCode};
 pub use crate::gas::{Gas, GasMeter};
 
 use codec::{Decode, Encode};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::{
-        DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo, PostDispatchInfo,
-    },
+    dispatch::{DispatchResult, DispatchResultWithPostInfo, Dispatchable, PostDispatchInfo},
     parameter_types,
     storage::child::ChildInfo,
     traits::{Get, Randomness, Time},
-    weights::Weight,
+    weights::{GetDispatchInfo, Weight},
     IsSubType, Parameter,
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{self as system, ensure_root, ensure_signed, RawOrigin};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{
     traits::{Convert, Hash, Zero},
@@ -129,6 +128,11 @@ pub type TrieId = Vec<u8>;
 /// A function that generates an `AccountId` for a contract upon instantiation.
 pub trait ContractAddressFor<CodeHash, AccountId> {
     fn contract_address_for(code_hash: &CodeHash, data: &[u8], origin: &AccountId) -> AccountId;
+}
+
+/// A function that returns the fee for dispatching a `Call`.
+pub trait ComputeDispatchFee<Call, Balance> {
+    fn compute_dispatch_fee(call: &Call) -> Balance;
 }
 
 // /// Information for managing an account and its sub trie abstraction.
@@ -316,9 +320,7 @@ parameter_types! {
     pub const DefaultMaxValueSize: u32 = 16_384;
 }
 
-pub trait Trait:
-    frame_system::Trait + xpallet_transaction_payment::Trait + xpallet_assets::Trait
-{
+pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     type Time: Time;
     type Randomness: Randomness<Self::Hash>;
 
@@ -327,6 +329,7 @@ pub trait Trait:
         + Dispatchable<PostInfo = PostDispatchInfo, Origin = <Self as frame_system::Trait>::Origin>
         + IsSubType<Module<Self>, Self>
         + GetDispatchInfo;
+
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -648,6 +651,38 @@ decl_module! {
             }
             Ok(())
         }
+        // /// Allows block producers to claim a small reward for evicting a contract. If a block producer
+        // /// fails to do so, a regular users will be allowed to claim the reward.
+        // ///
+        // /// If contract is not evicted as a result of this call, no actions are taken and
+        // /// the sender is not eligible for the reward.
+        // #[weight = 0]
+        // fn claim_surcharge(origin, dest: T::AccountId, aux_sender: Option<T::AccountId>) {
+        // 	let origin = origin.into();
+        // 	let (signed, rewarded) = match (origin, aux_sender) {
+        // 		(Ok(frame_system::RawOrigin::Signed(account)), None) => {
+        // 			(true, account)
+        // 		},
+        // 		(Ok(frame_system::RawOrigin::None), Some(aux_sender)) => {
+        // 			(false, aux_sender)
+        // 		},
+        // 		_ => Err(Error::<T>::InvalidSurchargeClaim)?,
+        // 	};
+        //
+        // 	// Add some advantage for block producers (who send unsigned extrinsics) by
+        // 	// adding a handicap: for signed extrinsics we use a slightly older block number
+        // 	// for the eviction check. This can be viewed as if we pushed regular users back in past.
+        // 	let handicap = if signed {
+        // 		T::SignedClaimHandicap::get()
+        // 	} else {
+        // 		Zero::zero()
+        // 	};
+        //
+        // 	// If poking the contract has lead to eviction of the contract, give out the rewards.
+        // 	if rent::snitch_contract_should_be_evicted::<T>(&dest, handicap) {
+        // 		T::Currency::deposit_into_existing(&rewarded, T::SurchargeReward::get())?;
+        // 	}
+        // }
     }
 }
 
@@ -686,9 +721,20 @@ impl<T: Trait> Module<T> {
         // .get_alive()
         // .ok_or(ContractAccessError::IsTombstone)?;
 
-        let maybe_value = storage::read_contract_storage(&contract_info.trie_id, &key);
+        let maybe_value = AccountDb::<T>::get_storage(
+            &DirectAccountDb,
+            &address,
+            Some(&contract_info.trie_id),
+            &key,
+        );
         Ok(maybe_value)
     }
+
+    // pub fn rent_projection(
+    // 	address: T::AccountId,
+    // ) -> sp_std::result::Result<RentProjection<T::BlockNumber>, ContractAccessError> {
+    // 	rent::compute_rent_projection::<T>(&address)
+    // }
 }
 
 // for chainx runtime asset convert
@@ -872,12 +918,24 @@ impl<T: Trait> Module<T> {
 
         let result = func(&mut ctx, gas_meter);
 
+        if result
+            .as_ref()
+            .map(|output| output.is_success())
+            .unwrap_or(false)
+        {
+            // Commit all changes that made it thus far into the persistent storage.
+            DirectAccountDb.commit(ctx.overlay.into_change_set());
+        }
+
         // Execute deferred actions.
         ctx.deferred.into_iter().for_each(|deferred| {
             use self::exec::DeferredAction::*;
             match deferred {
+                DepositEvent { topics, event } => <frame_system::Module<T>>::deposit_event_indexed(
+                    &*topics,
+                    <T as Trait>::Event::from(event).into(),
+                ),
                 DispatchRuntimeCall { origin: who, call } => {
-                    use frame_system::RawOrigin;
                     let info = call.get_dispatch_info();
                     let result = call.dispatch(RawOrigin::Signed(who.clone()).into());
                     let post_info = match result {
@@ -886,20 +944,124 @@ impl<T: Trait> Module<T> {
                     };
                     gas_meter.refund(post_info.calc_unspent(&info));
                     Self::deposit_event(RawEvent::Dispatched(who, result.is_ok()));
-                }
+                } // RestoreTo {
+                  // 	donor,
+                  // 	dest,
+                  // 	code_hash,
+                  // 	rent_allowance,
+                  // 	delta,
+                  // } => {
+                  // 	let result = Self::restore_to(
+                  // 		donor.clone(), dest.clone(), code_hash.clone(), rent_allowance.clone(), delta
+                  // 	);
+                  // 	Self::deposit_event(
+                  // 		RawEvent::Restored(donor, dest, code_hash, rent_allowance, result.is_ok())
+                  // 	);
+                  // }
             }
         });
 
         result
     }
+
+    // fn restore_to(
+    // 	origin: T::AccountId,
+    // 	dest: T::AccountId,
+    // 	code_hash: CodeHash<T>,
+    // 	rent_allowance: BalanceOf<T>,
+    // 	delta: Vec<exec::StorageKey>,
+    // ) -> DispatchResult {
+    // 	let mut origin_contract = <ContractInfoOf<T>>::get(&origin)
+    // 		.and_then(|c| c.get_alive())
+    // 		.ok_or(Error::<T>::InvalidSourceContract)?;
+    //
+    // 	let current_block = <frame_system::Module<T>>::block_number();
+    //
+    // 	if origin_contract.last_write == Some(current_block) {
+    // 		Err(Error::<T>::InvalidContractOrigin)?
+    // 	}
+    //
+    // 	let dest_tombstone = <ContractInfoOf<T>>::get(&dest)
+    // 		.and_then(|c| c.get_tombstone())
+    // 		.ok_or(Error::<T>::InvalidDestinationContract)?;
+    //
+    // 	let last_write = if !delta.is_empty() {
+    // 		Some(current_block)
+    // 	} else {
+    // 		origin_contract.last_write
+    // 	};
+    //
+    // 	let key_values_taken = delta.iter()
+    // 		.filter_map(|key| {
+    // 			child::get_raw(
+    // 				&origin_contract.child_trie_info(),
+    // 				&blake2_256(key),
+    // 			).map(|value| {
+    // 				child::kill(
+    // 					&origin_contract.child_trie_info(),
+    // 					&blake2_256(key),
+    // 				);
+    //
+    // 				(key, value)
+    // 			})
+    // 		})
+    // 		.collect::<Vec<_>>();
+    //
+    // 	let tombstone = <TombstoneContractInfo<T>>::new(
+    // 		// This operation is cheap enough because last_write (delta not included)
+    // 		// is not this block as it has been checked earlier.
+    // 		&child::root(
+    // 			&origin_contract.child_trie_info(),
+    // 		)[..],
+    // 		code_hash,
+    // 	);
+    //
+    // 	if tombstone != dest_tombstone {
+    // 		for (key, value) in key_values_taken {
+    // 			child::put_raw(
+    // 				&origin_contract.child_trie_info(),
+    // 				&blake2_256(key),
+    // 				&value,
+    // 			);
+    // 		}
+    //
+    // 		return Err(Error::<T>::InvalidTombstone.into());
+    // 	}
+    //
+    // 	origin_contract.storage_size -= key_values_taken.iter()
+    // 		.map(|(_, value)| value.len() as u32)
+    // 		.sum::<u32>();
+    //
+    // 	<ContractInfoOf<T>>::remove(&origin);
+    // 	<ContractInfoOf<T>>::insert(&dest, ContractInfo::Alive(RawAliveContractInfo {
+    // 		trie_id: origin_contract.trie_id,
+    // 		storage_size: origin_contract.storage_size,
+    // 		empty_pair_count: origin_contract.empty_pair_count,
+    // 		total_pair_count: origin_contract.total_pair_count,
+    // 		code_hash,
+    // 		rent_allowance,
+    // 		deduct_block: current_block,
+    // 		last_write,
+    // 	}));
+    //
+    // 	let origin_free_balance = T::Currency::free_balance(&origin);
+    // 	T::Currency::make_free_balance_be(&origin, <BalanceOf<T>>::zero());
+    // 	T::Currency::deposit_creating(&dest, origin_free_balance);
+    //
+    // 	Ok(())
+    // }
 }
 
 decl_event! {
     pub enum Event<T>
     where
+        Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
         <T as frame_system::Trait>::Hash
     {
+        /// Transfer happened `from` to `to` with given `value` as part of a `call` or `instantiate`.
+        Transfer(AccountId, AccountId, Balance),
+
         /// Contract deployed by address at the specified address.
         Instantiated(AccountId, AccountId),
 
