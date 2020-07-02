@@ -101,11 +101,14 @@ use serde::{Deserialize, Serialize};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::{DispatchResult, DispatchResultWithPostInfo},
+    dispatch::{
+        DispatchResult, DispatchResultWithPostInfo, Dispatchable, GetDispatchInfo, PostDispatchInfo,
+    },
     parameter_types,
     storage::child::ChildInfo,
     traits::{Get, Randomness, Time},
     weights::Weight,
+    IsSubType, Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use sp_core::crypto::UncheckedFrom;
@@ -319,6 +322,11 @@ pub trait Trait:
     type Time: Time;
     type Randomness: Randomness<Self::Hash>;
 
+    /// The outer call dispatch type.
+    type Call: Parameter
+        + Dispatchable<PostInfo = PostDispatchInfo, Origin = <Self as frame_system::Trait>::Origin>
+        + IsSubType<Module<Self>, Self>
+        + GetDispatchInfo;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -861,7 +869,28 @@ impl<T: Trait> Module<T> {
         let vm = WasmVm::new(&cfg.schedule);
         let loader = WasmLoader::new(&cfg.schedule);
         let mut ctx = ExecutionContext::top_level(origin.clone(), &cfg, &vm, &loader);
-        func(&mut ctx, gas_meter)
+
+        let result = func(&mut ctx, gas_meter);
+
+        // Execute deferred actions.
+        ctx.deferred.into_iter().for_each(|deferred| {
+            use self::exec::DeferredAction::*;
+            match deferred {
+                DispatchRuntimeCall { origin: who, call } => {
+                    use frame_system::RawOrigin;
+                    let info = call.get_dispatch_info();
+                    let result = call.dispatch(RawOrigin::Signed(who.clone()).into());
+                    let post_info = match result {
+                        Ok(post_info) => post_info,
+                        Err(err) => err.post_info,
+                    };
+                    gas_meter.refund(post_info.calc_unspent(&info));
+                    Self::deposit_event(RawEvent::Dispatched(who, result.is_ok()));
+                }
+            }
+        });
+
+        result
     }
 }
 
