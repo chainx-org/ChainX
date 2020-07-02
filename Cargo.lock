@@ -7048,6 +7048,7 @@ dependencies = [
  "frame-system",
  "pallet-balances",
  "parity-scale-codec",
+ "serde",
  "smallvec 1.4.0",
  "sp-core",
  "sp-io",
