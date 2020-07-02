@@ -13,6 +13,7 @@ members = [
     "cli",
     "runtime",
     "primitives",
+    "primitives/staking",
     "rpc",
 
     "xpallets/assets",
@@ -23,6 +24,7 @@ members = [
     "xpallets/contracts/common",
     "xpallets/contracts/rpc",
     "xpallets/contracts/rpc/runtime-api",
+    "xpallets/mining/staking",
     "xpallets/protocol",
     "xpallets/support",
     "xpallets/transaction-payment",

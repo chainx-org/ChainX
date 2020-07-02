@@ -28,11 +28,11 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 
 // ChainX
 use chainx_primitives::{AssetId, Desc, Memo, Token};
-use xpallet_support::{debug, ensure_with_errorlog, info, str};
+use xpallet_support::{debug, ensure_with_errorlog, info};
 
-pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJackpotAccountIdFor};
 use self::trigger::AssetTriggerEventAfter;
 
+pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJackpotAccountIdFor};
 pub use self::types::{
     is_valid_desc, is_valid_token, AssetErr, AssetInfo, AssetRestriction, AssetRestrictions,
     AssetType, Chain, NegativeImbalance, PositiveImbalance, SignedBalance, SignedImbalanceT,
@@ -104,9 +104,9 @@ decl_error! {
         /// only allow ASCII alphanumeric character
         InvalidAsscii,
         ///
-        AlreadyExistedToken,
+        AlreadyExistentToken,
         ///
-        NotExistdAsset,
+        NonexistentAsset,
         ///
         InvalidAsset,
         /// Got an overflow after adding
@@ -118,12 +118,12 @@ decl_error! {
         /// Balance too low to send value
         TotalAssetInsufficientBalance,
 
-
-        /// should not be free type here
-        NotAllowFreeType,
-        /// should not use chainx token here
-        NotAllowPcx,
-        NotAllowAction,
+        /// Free asset type is not allowed.
+        FreeTypeNotAllowed,
+        /// ChainX token is not allowed.
+        PcxNotAllowed,
+        /// Action is not allowed.
+        ActionNotAllowed,
     }
 }
 
@@ -202,9 +202,10 @@ decl_module! {
             let transactor = ensure_signed(origin)?;
             debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
             memo.check_validity()?;
-
             Self::can_transfer(&id)?;
-            let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+
+            Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+
             Ok(())
         }
 
@@ -214,9 +215,9 @@ decl_module! {
             ensure_root(origin)?;
             debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
             memo.check_validity()?;
-
             Self::can_transfer(&id)?;
-            let _ = Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+
+            Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
             Ok(())
         }
 
@@ -304,26 +305,27 @@ impl<T: Trait> Module<T> {
                 *is_online,
                 *is_psedu_intention,
             )
-            .expect("genesis for asset must success");
+            .expect("asset registeration during the genesis can not fail");
         }
 
         for (id, endowed) in endowed_accounts.iter() {
             for (accountid, value) in endowed.iter() {
-                Self::issue(id, accountid, *value).unwrap();
+                Self::issue(id, accountid, *value)
+                    .expect("asset issuance during the genesis can not fail");
             }
         }
     }
 
     pub fn should_not_free_type(type_: AssetType) -> DispatchResult {
         if type_ == AssetType::Free {
-            Err(Error::<T>::NotAllowFreeType)?;
+            Err(Error::<T>::FreeTypeNotAllowed)?;
         }
         Ok(())
     }
 
     pub fn should_not_chainx(id: &AssetId) -> DispatchResult {
         if *id == <Self as ChainT>::ASSET_ID {
-            Err(Error::<T>::NotAllowPcx)?;
+            Err(Error::<T>::PcxNotAllowed)?;
         }
         Ok(())
     }
@@ -335,12 +337,13 @@ impl<T: Trait> Module<T> {
     fn add_asset(id: AssetId, asset: AssetInfo, restrictions: AssetRestrictions) -> DispatchResult {
         let chain = asset.chain();
         if Self::asset_info_of(&id).is_some() {
-            Err(Error::<T>::AlreadyExistedToken)?;
+            Err(Error::<T>::AlreadyExistentToken)?;
         }
 
         AssetInfoOf::insert(&id, asset);
         AssetRestrictionsOf::insert(&id, restrictions);
         AssetOnline::insert(&id, ());
+
         AssetRegisteredBlock::<T>::insert(&id, system::Module::<T>::block_number());
 
         AssetIdsOf::mutate(chain, |v| {
@@ -405,19 +408,20 @@ impl<T: Trait> Module<T> {
                 Err(Error::<T>::InvalidAsset)?
             }
         } else {
-            Err(Error::<T>::NotExistdAsset)?
+            Err(Error::<T>::NonexistentAsset)?
         }
     }
 
     pub fn can_do(id: &AssetId, limit: AssetRestriction) -> bool {
         Self::asset_restrictions_of(id).contains(limit)
     }
+
     // can do wrapper
     #[inline]
     pub fn can_move(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
             Self::can_do(id, AssetRestriction::Move),
-            Error::<T>::NotAllowAction,
+            Error::<T>::ActionNotAllowed,
             "this asset do not allow move|id:{:}|action:{:?}",
             id,
             AssetRestriction::Move,
@@ -429,7 +433,7 @@ impl<T: Trait> Module<T> {
     pub fn can_transfer(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
             Self::can_do(id, AssetRestriction::Transfer),
-            Error::<T>::NotAllowAction,
+            Error::<T>::ActionNotAllowed,
             "this asset do not allow transfer|id:{:}|action:{:?}",
             id,
             AssetRestriction::Transfer,
@@ -441,7 +445,7 @@ impl<T: Trait> Module<T> {
     pub fn can_destroy_withdrawal(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
             Self::can_do(id, AssetRestriction::DestroyWithdrawal),
-            Error::<T>::NotAllowAction,
+            Error::<T>::ActionNotAllowed,
             "this asset do not allow destroy withdrawal|id:{:}|action:{:?}",
             id,
             AssetRestriction::DestroyWithdrawal,
@@ -453,7 +457,7 @@ impl<T: Trait> Module<T> {
     pub fn can_destroy_free(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
             Self::can_do(id, AssetRestriction::DestroyFree),
-            Error::<T>::NotAllowAction,
+            Error::<T>::ActionNotAllowed,
             "this asset do not allow destroy free|id:{:}|action:{:?}",
             id,
             AssetRestriction::DestroyFree,
@@ -491,39 +495,28 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn issue(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
-        {
-            ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
 
-            // may set storage inner
-            Self::try_new_account(&who, id);
+        // may set storage inner
+        Self::try_new_account(&who, id);
 
-            let type_ = AssetType::Free;
-            let _imbalance = Self::inner_issue(id, who, type_, value)?;
-        }
+        let _imbalance = Self::inner_issue(id, who, AssetType::Free, value)?;
         Ok(())
     }
 
     pub fn destroy(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
-        {
-            ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
-            Self::can_destroy_withdrawal(id)?;
+        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        Self::can_destroy_withdrawal(id)?;
 
-            let type_ = AssetType::ReservedWithdrawal;
-
-            let _imbalance = Self::inner_destroy(id, who, type_, value)?;
-        }
+        let _imbalance = Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
         Ok(())
     }
 
     pub fn destroy_free(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
-        {
-            ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
-            Self::can_destroy_free(id)?;
+        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        Self::can_destroy_free(id)?;
 
-            let type_ = AssetType::Free;
-
-            let _imbalance = Self::inner_destroy(id, who, type_, value)?;
-        }
+        let _imbalance = Self::inner_destroy(id, who, AssetType::Free, value)?;
         Ok(())
     }
 
@@ -606,10 +599,7 @@ impl<T: Trait> Module<T> {
             id, who, type_, current, value
         );
         // check
-        let new = match current.checked_add(&value) {
-            Some(b) => b,
-            None => Err(Error::<T>::Overflow)?,
-        };
+        let new = current.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 
         AssetTriggerEventAfter::<T>::on_issue_before(id, who);
 
@@ -637,10 +627,9 @@ impl<T: Trait> Module<T> {
         debug!("[destroy_directly]|destroy asset for account|id:{:}|who:{:?}|type:{:?}|current:{:?}|destroy:{:?}",
                id, who, type_, current, value);
         // check
-        let new = match current.checked_sub(&value) {
-            Some(b) => b,
-            None => Err(Error::<T>::InsufficientBalance)?,
-        };
+        let new = current
+            .checked_sub(&value)
+            .ok_or(Error::<T>::InsufficientBalance)?;
 
         AssetTriggerEventAfter::<T>::on_destroy_before(id, who);
 
@@ -684,14 +673,10 @@ impl<T: Trait> Module<T> {
                id, from, from_type, from_balance, to, to_type, to_balance, value);
 
         // judge balance is enough and test overflow
-        let new_from_balance = match from_balance.checked_sub(&value) {
-            Some(b) => b,
-            None => return Err(AssetErr::NotEnough),
-        };
-        let new_to_balance = match to_balance.checked_add(&value) {
-            Some(b) => b,
-            None => return Err(AssetErr::OverFlow),
-        };
+        let new_from_balance = from_balance
+            .checked_sub(&value)
+            .ok_or(AssetErr::NotEnough)?;
+        let new_to_balance = to_balance.checked_add(&value).ok_or(AssetErr::OverFlow)?;
 
         // finish basic check, start self check
         if from == to && from_type == to_type {
