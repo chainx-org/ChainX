@@ -23,6 +23,7 @@ xp-staking = { path  = "../../../primitives/staking", default-features = false }
 
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
+xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
 xpallet-protocol = { path = "../../protocol" }
@@ -47,4 +48,5 @@ std = [
     "xp-staking/std",
 
     "xpallet-assets/std",
+    "xpallet-support/std",
 ]

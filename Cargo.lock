@@ -7185,6 +7185,7 @@ dependencies = [
  "xp-staking",
  "xpallet-assets",
  "xpallet-protocol",
+ "xpallet-support",
 ]
 
 [[package]]

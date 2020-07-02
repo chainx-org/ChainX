@@ -29,6 +29,7 @@ use sp_std::prelude::*;
 use types::*;
 use xp_staking::{CollectAssetMiningInfo, Delta, OnMinting, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
+use xpallet_support::debug;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const DEFAULT_MAXIMUM_VALIDATOR_COUNT: u32 = 100;
@@ -227,7 +228,7 @@ decl_module! {
                 Self::check_validator_acceptable_votes_limit(&sender, value)?;
             }
 
-            Self::apply_bond(&sender, &target, value);
+            Self::apply_bond(&sender, &target, value)?;
         }
 
         /// Switchs the nomination of `value` from one validator to another.
@@ -271,7 +272,7 @@ decl_module! {
                 Error::<T>::NoMoreUnbondChunks
             );
 
-            Self::apply_unbond(&sender, &target, value);
+            Self::apply_unbond(&sender, &target, value)?;
         }
 
         /// Frees up the unbonded balances that are due.
@@ -280,7 +281,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             // ensure!( nomination record exists)
-            let mut unbonded = Self::unbonded_chunks_of(&sender);
+            let unbonded = Self::unbonded_chunks_of(&sender);
 
             ensure!(!unbonded.is_empty(), Error::<T>::NoUnbondedChunk);
             ensure!(unbonded_index < unbonded.len() as u32, Error::<T>::InvalidUnbondedIndex);
@@ -400,7 +401,7 @@ impl<T: Trait> Module<T> {
 
     #[inline]
     fn bonded_to(nominator: &T::AccountId, nominee: &T::AccountId) -> T::Balance {
-        Nominations::<T>::get(nominator, nominee).value
+        Nominations::<T>::get(nominator, nominee).nomination
     }
 
     fn acceptable_votes_limit_of(validator: &T::AccountId) -> T::Balance {
@@ -477,6 +478,7 @@ impl<T: Trait> Module<T> {
         nominee: &T::AccountId,
         value: T::Balance,
     ) -> Result<(), Error<T>> {
+        Self::bond_reserve(nominator, value)?;
         Self::update_vote_weight(
             nominator,
             nominee,
@@ -507,6 +509,10 @@ impl<T: Trait> Module<T> {
         target: &T::AccountId,
         value: T::Balance,
     ) -> Result<(), Error<T>> {
+        debug!(
+            "[apply_unbond] who:{:?}, target: {:?}, value: {:?}",
+            who, target, value
+        );
         Self::unbond_reserve(who, value)?;
 
         let bonding_duration = if Self::is_validator(who) && *who == *target {

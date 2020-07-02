@@ -54,7 +54,7 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct NominatorLedger<Balance, BlockNumber> {
     /// The amount of
-    pub value: Balance,
+    pub nomination: Balance,
     ///
     pub last_vote_weight: VoteWeight,
     ///

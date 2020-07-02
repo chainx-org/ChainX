@@ -38,11 +38,11 @@ where
     BlockNumber: Default + BaseArithmetic + Copy,
 {
     fn amount(&self) -> u64 {
-        self.value.saturated_into()
+        self.nomination.saturated_into()
     }
 
     fn set_amount(&mut self, new: u64) {
-        self.value = new.saturated_into();
+        self.nomination = new.saturated_into();
     }
 
     fn last_acum_weight(&self) -> VoteWeight {
@@ -135,7 +135,7 @@ impl<T: Trait> Module<T> {
         delta: Delta,
     ) {
         Nominations::<T>::mutate(nominator, validator, |claimer_ledger| {
-            claimer_ledger.value = Self::apply_delta(claimer_ledger.value, delta);
+            claimer_ledger.nomination = Self::apply_delta(claimer_ledger.nomination, delta);
             claimer_ledger.last_vote_weight = new_weight;
             claimer_ledger.last_vote_weight_update = current_block;
         });
@@ -148,7 +148,6 @@ impl<T: Trait> Module<T> {
         current_block: T::BlockNumber,
         delta: Delta,
     ) {
-        println!("set_validator_vote_weight: validator: {:?}, new_weight: {:?}, current_block: {:?}, delta: {:?}", validator, new_weight, current_block, delta);
         ValidatorLedgers::<T>::mutate(validator, |validator_ledger| {
             validator_ledger.total = Self::apply_delta(validator_ledger.total, delta);
             validator_ledger.last_total_vote_weight = new_weight;
