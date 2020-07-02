@@ -23,6 +23,8 @@ use sp_runtime::traits::{Bounded, SaturatedConversion};
 use sp_sandbox;
 use sp_std::{convert::TryInto, mem, prelude::*};
 
+use frame_support::weights::GetDispatchInfo;
+
 use crate::exec::{
     ExecError, ExecResult, ExecReturnValue, Ext, StorageKey, TopicOf, STATUS_SUCCESS,
 };
@@ -171,6 +173,8 @@ pub enum RuntimeToken {
     /// The given number of bytes is read from the sandbox memory and
     /// is returned as the return data buffer of the call.
     ReturnData(u32),
+    /// Dispatched a call with the given weight.
+    DispatchWithWeight(Gas),
     /// (topic_count, data_bytes): A buffer of the given size is posted as an event indexed with the
     /// given number of topics.
     DepositEvent(u32, u32),
@@ -209,6 +213,7 @@ impl<T: Trait> Token<T> for RuntimeToken {
                         data_and_topics_cost.checked_add(metadata.event_base_cost)
                     })
             }
+            DispatchWithWeight(gas) => gas.checked_add(metadata.dispatch_base_cost),
         };
 
         value.unwrap_or_else(|| Bounded::max_value())
@@ -793,6 +798,30 @@ define_env!(Env, <E: Ext>,
         Ok(())
     },
 
+    // Decodes the given buffer as a `T::Call` and adds it to the list
+    // of to-be-dispatched calls.
+    //
+    // All calls made it to the top-level context will be dispatched before
+    // finishing the execution of the calling extrinsic.
+    ext_dispatch_call(ctx, call_ptr: u32, call_len: u32) => {
+        let call: <<E as Ext>::T as Trait>::Call =
+            read_sandbox_memory_as(ctx, call_ptr, call_len)?;
+
+        // We already deducted the len costs when reading from the sandbox.
+        // Bill on the actual weight of the dispatched call.
+        let info = call.get_dispatch_info();
+        charge_gas(
+            &mut ctx.gas_meter,
+            ctx.schedule,
+            &mut ctx.special_trap,
+            RuntimeToken::DispatchWithWeight(info.weight)
+        )?;
+
+        ctx.ext.note_dispatch_call(call);
+
+        Ok(())
+    },
+
     // Try to restore the given destination contract sacrificing the caller.
     //
     // This function will compute a tombstone hash from the caller's storage and the given code hash
@@ -987,6 +1016,32 @@ define_env!(Env, <E: Ext>,
         ctx.scratch_buf.clear();
         ctx.ext.block_number().encode_to(&mut ctx.scratch_buf);
         Ok(())
+    },
+
+    // Retrieve the value under the given key from the **runtime** storage and return 0.
+    // If there is no entry under the given key then this function will return 1 and
+    // clear the scratch buffer.
+    //
+    // - key_ptr: the pointer into the linear memory where the requested value is placed.
+    // - key_len: the length of the key in bytes.
+    ext_get_runtime_storage(ctx, key_ptr: u32, key_len: u32) -> u32 => {
+        // Steal the scratch buffer so that we hopefully save an allocation for the `key_buf`.
+        read_sandbox_memory_into_scratch(ctx, key_ptr, key_len)?;
+        let key_buf = mem::replace(&mut ctx.scratch_buf, Vec::new());
+
+        match ctx.ext.get_runtime_storage(&key_buf) {
+            Some(value_buf) => {
+                // The given value exists.
+                ctx.scratch_buf = value_buf;
+                Ok(0)
+            }
+            None => {
+                // Put back the `key_buf` and allow its allocation to be reused.
+                ctx.scratch_buf = key_buf;
+                ctx.scratch_buf.clear();
+                Ok(1)
+            }
+        }
     },
 
     // Computes the SHA2 256-bit hash on the given input buffer.

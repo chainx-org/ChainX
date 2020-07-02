@@ -291,6 +291,7 @@ impl xpallet_bridge_bitcoin::Trait for Runtime {
 impl xpallet_contracts::Trait for Runtime {
     type Time = Timestamp;
     type Randomness = RandomnessCollectiveFlip;
+    type Call = Call;
     type Event = Event;
     type DetermineContractAddress = xpallet_contracts::SimpleAddressDeterminer<Runtime>;
     type TrieIdGenerator = xpallet_contracts::TrieIdFromParentCounter<Runtime>;
