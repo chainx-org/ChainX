@@ -193,14 +193,15 @@ macro_rules! define_env {
 
 #[cfg(test)]
 mod tests {
-    use crate::exec::Ext;
-    use crate::gas::Gas;
-    use crate::wasm::tests::MockExt;
-    use crate::wasm::Runtime;
     use parity_wasm::elements::FunctionType;
     use parity_wasm::elements::ValueType;
     use sp_runtime::traits::Zero;
     use sp_sandbox::{ReturnValue, Value};
+
+    use crate::exec::Ext;
+    use crate::gas::Gas;
+    use crate::wasm::tests::MockExt;
+    use crate::wasm::Runtime;
 
     #[test]
     fn macro_unmarshall_then_body_then_marshall_value_or_trap() {

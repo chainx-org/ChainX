@@ -78,14 +78,6 @@ sp_api::decl_runtime_apis! {
             key: [u8; 32],
         ) -> GetStorageResult;
 
-        // /// Returns the projected time a given contract will be able to sustain paying its rent.
-        // ///
-        // /// The returned projection is relevant for the current block, i.e. it is as if the contract
-        // /// was accessed at the current block.
-        // ///
-        // /// Returns `Err` if the contract is in a tombstone state or doesn't exist.
-        // fn rent_projection(address: AccountId) -> RentProjectionResult<BlockNumber>;
-
         fn xrc20_call(
             id: AssetId,
             selector: XRC20Selector,

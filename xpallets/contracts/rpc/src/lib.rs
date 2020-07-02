@@ -18,6 +18,7 @@
 //! Node-specific RPC methods for interaction with contracts.
 
 use std::sync::Arc;
+use std::convert::TryInto;
 
 use codec::{Codec, Decode};
 use jsonrpc_core::{Error, ErrorCode, Result};
@@ -39,6 +40,7 @@ use chainx_primitives::AssetId;
 pub use xpallet_contracts_rpc_runtime_api::{
     self as runtime_api, ContractExecResult, ContractsApi as ContractsRuntimeApi, XRC20Selector,
 };
+
 
 const RUNTIME_ERROR: i64 = 1;
 const CONTRACT_DOESNT_EXIST: i64 = 2;
@@ -84,7 +86,7 @@ pub struct CallRequest<AccountId, Balance> {
     origin: AccountId,
     dest: AccountId,
     value: Balance,
-    gas_limit: number::NumberOrHex<u64>,
+    gas_limit: number::NumberOrHex,
     input_data: Bytes,
 }
 
@@ -165,19 +167,6 @@ pub trait ContractsApi<BlockHash, BlockNumber, AccountId, Balance> {
         call_request: XRC20CallRequest,
         at: Option<BlockHash>,
     ) -> Result<RpcXRC20Result>;
-
-    // /// Returns the projected time a given contract will be able to sustain paying its rent.
-    // ///
-    // /// The returned projection is relevant for the given block, i.e. it is as if the contract was
-    // /// accessed at the beginning of that block.
-    // ///
-    // /// Returns `None` if the contract is exempted from rent.
-    // #[rpc(name = "contracts_rentProjection")]
-    // fn rent_projection(
-    // 	&self,
-    // 	address: AccountId,
-    // 	at: Option<BlockHash>,
-    // ) -> Result<Option<BlockNumber>>;
 }
 
 /// An implementation of contract specific RPC methods.
@@ -233,9 +222,9 @@ where
         } = call_request;
 
         // Make sure that gas_limit fits into 64 bits.
-        let gas_limit = gas_limit.to_number().map_err(|e| Error {
+        let gas_limit: u64 = gas_limit.try_into().map_err(|_| Error {
             code: ErrorCode::InvalidParams,
-            message: e,
+            message: format!("{:?} doesn't fit in 64 bit unsigned value", gas_limit),
             data: None,
         })?;
 

@@ -13,7 +13,7 @@ use codec::{Codec, Encode};
 // Substrate
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::{
-    AtLeast32Bit, CheckedAdd, CheckedSub, Hash, MaybeSerializeDeserialize, Member, Zero,
+    AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Hash, MaybeSerializeDeserialize, Member, Zero,
 };
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*, result};
 
@@ -68,7 +68,7 @@ where
 pub trait Trait: system::Trait {
     type Balance: Parameter
         + Member
-        + AtLeast32Bit
+        + AtLeast32BitUnsigned
         + Codec
         + Default
         + Copy

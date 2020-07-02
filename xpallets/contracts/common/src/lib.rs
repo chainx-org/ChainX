@@ -56,16 +56,3 @@ pub enum XRC20Selector {
 
 pub type Selector = [u8; 4];
 
-// /// A result type of a `rent_projection` call.
-// pub type RentProjectionResult<BlockNumber> =
-// 	Result<RentProjection<BlockNumber>, ContractAccessError>;
-//
-// #[derive(Eq, PartialEq, codec::Encode, codec::Decode, sp_runtime::RuntimeDebug)]
-// pub enum RentProjection<BlockNumber> {
-// 	/// Eviction is projected to happen at the specified block number.
-// 	EvictionAt(BlockNumber),
-// 	/// No eviction is scheduled.
-// 	///
-// 	/// E.g. because the contract accumulated enough funds to offset the rent storage costs.
-// 	NoEviction,
-// }

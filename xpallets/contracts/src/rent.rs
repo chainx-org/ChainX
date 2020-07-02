@@ -18,13 +18,15 @@
 
 use crate::{
     AliveContractInfo, BalanceOf, ContractInfo, ContractInfoOf, Module, RawEvent,
-    TombstoneContractInfo, Trait,
+    TombstoneContractInfo, Trait, CodeHash,
 };
+use sp_std::prelude::*;
+use sp_io::hashing::blake2_256;
 use frame_support::storage::child;
 use frame_support::traits::{Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReason};
 use frame_support::StorageMap;
+use pallet_contracts_primitives::{ContractAccessError, RentProjection, RentProjectionResult};
 use sp_runtime::traits::{Bounded, CheckedDiv, CheckedMul, SaturatedConversion, Saturating, Zero};
-use xpallet_contracts_primitives::{ContractAccessError, RentProjection, RentProjectionResult};
 
 /// The amount to charge.
 ///
@@ -227,7 +229,9 @@ fn enact_verdict<T: Trait>(
         Verdict::Exempt => return Some(ContractInfo::Alive(alive_contract_info)),
         Verdict::Kill => {
             <ContractInfoOf<T>>::remove(account);
-            child::kill_storage(&alive_contract_info.child_trie_info());
+            child::kill_storage(
+                &alive_contract_info.child_trie_info(),
+            );
             <Module<T>>::deposit_event(RawEvent::Evicted(account.clone(), false));
             None
         }
@@ -237,7 +241,9 @@ fn enact_verdict<T: Trait>(
             }
 
             // Note: this operation is heavy.
-            let child_storage_root = child::root(&alive_contract_info.child_trie_info());
+            let child_storage_root = child::root(
+                &alive_contract_info.child_trie_info(),
+            );
 
             let tombstone = <TombstoneContractInfo<T>>::new(
                 &child_storage_root[..],
@@ -246,7 +252,9 @@ fn enact_verdict<T: Trait>(
             let tombstone_info = ContractInfo::Tombstone(tombstone);
             <ContractInfoOf<T>>::insert(account, &tombstone_info);
 
-            child::kill_storage(&alive_contract_info.child_trie_info());
+            child::kill_storage(
+                &alive_contract_info.child_trie_info(),
+            );
 
             <Module<T>>::deposit_event(RawEvent::Evicted(account.clone(), true));
             Some(tombstone_info)
@@ -389,4 +397,91 @@ pub fn compute_rent_projection<T: Trait>(
     Ok(RentProjection::EvictionAt(
         current_block_number + blocks_left,
     ))
+}
+
+/// Restores the destination account using the origin as prototype.
+///
+/// The restoration will be performed iff:
+/// - origin exists and is alive,
+/// - the origin's storage is not written in the current block
+/// - the restored account has tombstone
+/// - the tombstone matches the hash of the origin storage root, and code hash.
+///
+/// Upon succesful restoration, `origin` will be destroyed, all its funds are transferred to
+/// the restored account. The restored account will inherit the last write block and its last
+/// deduct block will be set to the current block.
+pub fn restore_to<T: Trait>(
+    origin: T::AccountId,
+    dest: T::AccountId,
+    code_hash: CodeHash<T>,
+    rent_allowance: BalanceOf<T>,
+    delta: Vec<crate::exec::StorageKey>,
+) -> Result<(), &'static str> {
+    let mut origin_contract = <ContractInfoOf<T>>::get(&origin)
+        .and_then(|c| c.get_alive())
+        .ok_or("Cannot restore from inexisting or tombstone contract")?;
+
+    let child_trie_info = origin_contract.child_trie_info();
+
+    let current_block = <frame_system::Module<T>>::block_number();
+
+    if origin_contract.last_write == Some(current_block) {
+        return Err("Origin TrieId written in the current block");
+    }
+
+    let dest_tombstone = <ContractInfoOf<T>>::get(&dest)
+        .and_then(|c| c.get_tombstone())
+        .ok_or("Cannot restore to inexisting or alive contract")?;
+
+    let last_write = if !delta.is_empty() {
+        Some(current_block)
+    } else {
+        origin_contract.last_write
+    };
+
+    let key_values_taken = delta.iter()
+        .filter_map(|key| {
+            child::get_raw(&child_trie_info, &blake2_256(key)).map(|value| {
+                child::kill(&child_trie_info, &blake2_256(key));
+                (key, value)
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let tombstone = <TombstoneContractInfo<T>>::new(
+        // This operation is cheap enough because last_write (delta not included)
+        // is not this block as it has been checked earlier.
+        &child::root(&child_trie_info)[..],
+        code_hash,
+    );
+
+    if tombstone != dest_tombstone {
+        for (key, value) in key_values_taken {
+            child::put_raw(&child_trie_info, &blake2_256(key), &value);
+        }
+
+        return Err("Tombstones don't match");
+    }
+
+    origin_contract.storage_size -= key_values_taken.iter()
+        .map(|(_, value)| value.len() as u32)
+        .sum::<u32>();
+
+    <ContractInfoOf<T>>::remove(&origin);
+    <ContractInfoOf<T>>::insert(&dest, ContractInfo::Alive(AliveContractInfo::<T> {
+        trie_id: origin_contract.trie_id,
+        storage_size: origin_contract.storage_size,
+        empty_pair_count: origin_contract.empty_pair_count,
+        total_pair_count: origin_contract.total_pair_count,
+        code_hash,
+        rent_allowance,
+        deduct_block: current_block,
+        last_write,
+    }));
+
+    let origin_free_balance = T::Currency::free_balance(&origin);
+    T::Currency::make_free_balance_be(&origin, <BalanceOf<T>>::zero());
+    T::Currency::deposit_creating(&dest, origin_free_balance);
+
+    Ok(())
 }
