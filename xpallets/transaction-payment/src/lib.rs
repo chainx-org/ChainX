@@ -51,7 +51,7 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionValidity, TransactionValidityError,
         ValidTransaction,
     },
-    FixedPointNumber, FixedPointOperand, FixedU128, Perquintill, RuntimeDebug,
+    FixedPointNumber, FixedPointOperand, FixedU128, Perquintill,
 };
 use sp_std::prelude::*;
 use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
@@ -169,21 +169,6 @@ where
     }
 }
 
-/// Storage releases of the module.
-#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
-enum Releases {
-    /// Original version of the module.
-    V1Ancient,
-    /// One that bumps the usage to FixedU128 from FixedI128.
-    V2,
-}
-
-impl Default for Releases {
-    fn default() -> Self {
-        Releases::V1Ancient
-    }
-}
-
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     // /// The currency type in which fees will be paid.
     // type Currency: Currency<Self::AccountId> + Send + Sync;
@@ -206,8 +191,6 @@ pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
 decl_storage! {
     trait Store for Module<T: Trait> as TransactionPayment {
         pub NextFeeMultiplier get(fn next_fee_multiplier): Multiplier = Multiplier::saturating_from_integer(1);
-
-        StorageVersion build(|_: &GenesisConfig| Releases::V2): Releases;
     }
 }
 

@@ -13,17 +13,17 @@ use static_assertions::const_assert;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{
-    BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, Saturating,
-    SignedExtension,
-};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
+    traits::{
+        BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, Saturating,
+        SignedExtension,
+    },
     transaction_validity::{
         InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
         ValidTransaction,
     },
-    ApplyExtrinsicResult,
+    ApplyExtrinsicResult, FixedPointNumber, Perbill, Permill, Perquintill,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
@@ -32,7 +32,7 @@ use sp_version::RuntimeVersion;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
-pub use sp_runtime::{Perbill, Permill};
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
@@ -65,6 +65,7 @@ pub use xpallet_bridge_bitcoin::{
 pub use xpallet_contracts::Schedule as ContractsSchedule;
 pub use xpallet_contracts_primitives::XRC20Selector;
 pub use xpallet_protocol::*;
+pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -300,13 +301,17 @@ impl xpallet_contracts::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const TransactionByteFee: Balance = 1;
+    pub const TransactionByteFee: Balance = 1; // TODO change in future
+    pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
+    pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
+    pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
 }
 
 impl xpallet_transaction_payment::Trait for Runtime {
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
-    type FeeMultiplierUpdate = ();
+    type FeeMultiplierUpdate =
+        TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
 }
 
 construct_runtime!(
