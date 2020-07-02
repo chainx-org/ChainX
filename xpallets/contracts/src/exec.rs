@@ -15,8 +15,7 @@
 // along with Substrate. If not, see <http://www.gnu.org/licenses/>.
 
 use super::{
-    BalanceOf, CodeHash, Config, ContractAddressFor, ContractInfo, ContractInfoOf, Event, RawEvent,
-    Trait, TrieId,
+    BalanceOf, CodeHash, Config, ContractAddressFor, ContractInfoOf, Event, RawEvent, Trait, TrieId,
 };
 use crate::account_db::{AccountDb, DirectAccountDb, OverlayAccountDb};
 use crate::gas::{Gas, GasMeter, Token};

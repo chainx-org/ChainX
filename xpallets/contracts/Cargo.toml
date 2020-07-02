@@ -36,7 +36,6 @@ xpallet-contracts-primitives = { path = "./common", default-features = false }
 # ChainX pallets
 xpallet-support = { path = "../support", default-features = false }
 xpallet-assets = { path = "../assets", default-features = false }
-xpallet-transaction-payment = { path = "../transaction-payment", default-features = false }
 
 [dev-dependencies]
 wabt = "0.9.2"
@@ -66,5 +65,4 @@ std = [
     "xpallet-support/std",
     "xpallet-assets/std",
     "xpallet-contracts-primitives/std",
-    "xpallet-transaction-payment/std",
 ]

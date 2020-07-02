@@ -97,13 +97,13 @@ use crate::wasm::{WasmLoader, WasmVm};
 pub use crate::exec::{ExecError, ExecResult, ExecReturnValue, StatusCode};
 pub use crate::gas::{Gas, GasMeter};
 
-use codec::{Codec, Decode, Encode};
+use codec::{Decode, Encode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchResult, DispatchResultWithPostInfo, Dispatchable, PostDispatchInfo},
     parameter_types,
-    storage::child::{self, ChildInfo},
-    traits::{Currency, Get, OnUnbalanced, Randomness, Time},
+    storage::child::ChildInfo,
+    traits::{Get, Randomness, Time},
     weights::{GetDispatchInfo, Weight},
     IsSubType, Parameter,
 };
@@ -111,12 +111,11 @@ use frame_system::{self as system, ensure_root, ensure_signed, RawOrigin};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_core::crypto::UncheckedFrom;
-use sp_io::hashing::blake2_256;
 use sp_runtime::{
-    traits::{Convert, Hash, MaybeSerializeDeserialize, Member, Zero},
+    traits::{Convert, Hash, Zero},
     RuntimeDebug,
 };
-use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, marker::PhantomData, prelude::*};
+use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData, prelude::*};
 
 use chainx_primitives::AssetId;
 use xpallet_assets::AssetType;
@@ -321,9 +320,7 @@ parameter_types! {
     pub const DefaultMaxValueSize: u32 = 16_384;
 }
 
-pub trait Trait:
-    frame_system::Trait + xpallet_transaction_payment::Trait + xpallet_assets::Trait
-{
+pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     type Time: Time;
     type Randomness: Randomness<Self::Hash>;
 

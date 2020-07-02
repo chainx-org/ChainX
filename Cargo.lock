@@ -6974,7 +6974,6 @@ dependencies = [
  "xpallet-assets",
  "xpallet-contracts-primitives",
  "xpallet-support",
- "xpallet-transaction-payment",
 ]
 
 [[package]]
