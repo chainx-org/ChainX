@@ -51,6 +51,7 @@ xpallet-contracts = { path = "../xpallets/contracts", default-features = false }
 xpallet-contracts-primitives = { path = "../xpallets/contracts/common", default-features = false }
 xpallet-contracts-rpc-runtime-api = { path = "../xpallets/contracts/rpc/runtime-api", default-features = false }
 xpallet-mining-staking = { path  = "../xpallets/mining/staking", default-features = false }
+xpallet-mining-asset = { path  = "../xpallets/mining/asset", default-features = false }
 xpallet-transaction-payment = { path = "../xpallets/transaction-payment", default-features = false }
 xpallet-transaction-payment-rpc-runtime-api = { path = "../xpallets/transaction-payment/rpc/runtime-api", default-features = false }
 
@@ -99,6 +100,7 @@ std = [
     "xpallet-contracts-primitives/std",
     "xpallet-contracts-rpc-runtime-api/std",
     "xpallet-mining-staking/std",
+    "xpallet-mining-asset/std",
     "xpallet-transaction-payment/std",
     "xpallet-transaction-payment-rpc-runtime-api/std",
 ]

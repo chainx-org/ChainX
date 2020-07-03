@@ -30,6 +30,9 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use pallet_grandpa::fg_primitives;
+use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
@@ -43,8 +46,6 @@ pub use frame_support::{
     },
     StorageValue,
 };
-use pallet_grandpa::fg_primitives;
-use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 pub use pallet_timestamp::Call as TimestampCall;
 
 pub use chainx_primitives::{
@@ -279,8 +280,8 @@ impl xpallet_assets::TokenJackpotAccountIdFor<AccountId, BlockNumber> for Tmp {
 impl xpallet_assets::Trait for Runtime {
     type Balance = Balance;
     type Event = Event;
-    type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = ();
+    type OnAssetChanged = XMiningAsset;
+    type OnAssetRegisterOrRevoke = XMiningAsset;
     type DetermineTokenJackpotAccountId = Tmp;
 }
 
@@ -305,6 +306,10 @@ impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
     type CollectAssetMiningInfo = ();
     type OnMinting = ();
+}
+
+impl xpallet_mining_asset::Trait for Runtime {
+    type Event = Event;
 }
 
 parameter_types! {
@@ -340,6 +345,7 @@ construct_runtime!(
         XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
         XMiningStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
+        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>},
         XTransactionPayment: xpallet_transaction_payment::{Module, Storage},
     }
 );

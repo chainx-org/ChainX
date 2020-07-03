@@ -153,3 +153,27 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
         Ok(())
     }
 }
+
+impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
+    fn on_register(asset_id: &AssetId, has_mining_rights: bool) -> DispatchResult {
+        if !has_mining_rights {
+            return Ok(());
+        }
+        MiningPrevilegedAssets::mutate(|i| i.push(*asset_id));
+        AssetLedgers::<T>::insert(
+            asset_id,
+            AssetLedger {
+                last_total_mining_weight_update: <frame_system::Module<T>>::block_number(),
+                ..Default::default()
+            },
+        );
+        Ok(())
+    }
+
+    fn on_revoke(asset_id: &AssetId) -> DispatchResult {
+        MiningPrevilegedAssets::mutate(|v| {
+            v.retain(|i| i != asset_id);
+        });
+        Ok(())
+    }
+}

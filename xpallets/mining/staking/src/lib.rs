@@ -224,7 +224,7 @@ decl_module! {
 
         /// Nominates the `target` with `value` of the origin account's balance locked.
         #[weight = 10]
-        fn bond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
+        pub fn bond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
@@ -336,7 +336,7 @@ decl_module! {
 
         /// TODO: figure out whether this should be kept.
         #[weight = 100_000]
-        fn register(origin) {
+        pub fn register(origin) {
             let sender = ensure_signed(origin)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::RegisteredAlready);
             let current_block = <frame_system::Module<T>>::block_number();

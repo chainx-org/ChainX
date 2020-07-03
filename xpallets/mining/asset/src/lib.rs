@@ -3,6 +3,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod impls;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 mod types;
 
 use chainx_primitives::{AssetId, Memo};
@@ -110,7 +114,7 @@ decl_module! {
                 Error::<T>::UnprevilegedAsset
             );
 
-            // <Self as xp_staking::Claim<T::AccountId>>::claim(&sender, &target)?;
+            <Self as xp_staking::Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
     }

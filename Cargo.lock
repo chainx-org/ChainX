@@ -591,6 +591,7 @@ dependencies = [
  "xpallet-contracts",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-mining-asset",
  "xpallet-mining-staking",
  "xpallet-protocol",
  "xpallet-system",
@@ -7035,6 +7036,7 @@ dependencies = [
  "sp-std",
  "xp-staking",
  "xpallet-assets",
+ "xpallet-mining-staking",
  "xpallet-protocol",
  "xpallet-support",
 ]
