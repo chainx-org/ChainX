@@ -21,6 +21,7 @@ use sp_runtime::traits::{
 };
 use sp_std::prelude::*;
 use types::*;
+use xp_staking::{ComputeVoteWeight, VoteWeight, VoteWightTrait};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -115,4 +116,100 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+    fn can_claim(
+        claimer: &T::AccountId,
+        claimee: &AssetId,
+        dividend: T::Balance,
+        current_block: T::BlockNumber,
+    ) -> Result<(), Error<T>> {
+        Ok(())
+    }
+
+    fn init_receiver_mining_ledger(
+        who: &T::AccountId,
+        asset_id: &AssetId,
+        current_block: T::BlockNumber,
+    ) {
+        if !MinerLedgers::<T>::contains_key(who, asset_id) {
+            MinerLedgers::<T>::insert(
+                who,
+                asset_id,
+                MinerLedger::<T::BlockNumber> {
+                    last_mining_weight_update: current_block,
+                    ..Default::default()
+                },
+            );
+        }
+    }
+
+    fn update_miner_mining_weight(
+        from: &T::AccountId,
+        target: &AssetId,
+        current_block: T::BlockNumber,
+    ) {
+        let new_weight = <Self as ComputeVoteWeight<T::AccountId>>::settle_claimer_weight(
+            from,
+            target,
+            current_block.saturated_into::<u32>(),
+        );
+        Self::apply_update_miner_mining_weight(from, target, new_weight, current_block);
+    }
+
+    fn apply_update_miner_mining_weight(
+        from: &T::AccountId,
+        target: &AssetId,
+        new_weight: VoteWeight,
+        current_block: T::BlockNumber,
+    ) {
+        // TODO: use mutate?
+        let mut inner = MinerLedgers::<T>::get(from, target);
+        let mut wrapper = MinerLedgerWrapper::<T>::new(from, target, &mut inner);
+        wrapper.set_state_weight(new_weight, current_block);
+        MinerLedgers::<T>::insert(from, target, inner);
+    }
+
+    fn update_asset_mining_weight(target: &AssetId, current_block: T::BlockNumber) {
+        let new_weight = <Self as ComputeVoteWeight<T::AccountId>>::settle_claimee_weight(
+            target,
+            current_block.saturated_into::<u32>(),
+        );
+        Self::apply_update_asset_mining_weight(target, new_weight, current_block);
+    }
+
+    fn apply_update_asset_mining_weight(
+        target: &AssetId,
+        new_weight: VoteWeight,
+        current_block: T::BlockNumber,
+    ) {
+        let mut inner = AssetLedgers::<T>::get(target);
+        let mut wrapper = AssetLedgerWrapper::<T>::new(target, &mut inner);
+        wrapper.set_state_weight(new_weight, current_block);
+        AssetLedgers::<T>::insert(target, inner);
+    }
+
+    fn update_mining_weights(
+        source: &T::AccountId,
+        target: &AssetId,
+        current_block: T::BlockNumber,
+    ) {
+        Self::update_miner_mining_weight(source, target, current_block);
+        Self::update_asset_mining_weight(target, current_block);
+    }
+
+    fn issue_reward(who: &T::AccountId, asset_id: &AssetId) {
+        let reward = Self::deposit_reward();
+    }
+
+    fn compute_dividend(
+        source_weight: VoteWeight,
+        target_weight: VoteWeight,
+        claimee_jackpot: &T::AccountId,
+    ) -> T::Balance {
+        todo!()
+    }
+
+    fn asset_jackpot_of(asset_id: &AssetId) -> T::AccountId {
+        todo!()
+    }
+}

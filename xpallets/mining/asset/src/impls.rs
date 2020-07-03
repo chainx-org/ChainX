@@ -1,5 +1,5 @@
 use super::*;
-use xp_staking::{BaseVoteWeight, ComputeVoteWeight, VoteWeight, WeightFactors};
+use xp_staking::{BaseVoteWeight, Claim, ComputeVoteWeight, VoteWeight, WeightFactors};
 
 impl<'a, T: Trait> BaseVoteWeight<T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> u128 {
@@ -52,7 +52,7 @@ impl<'a, T: Trait> BaseVoteWeight<T::BlockNumber> for MinerLedgerWrapper<'a, T> 
     }
 }
 
-fn prepare_weight_factors<T: Trait, V: BaseVoteWeight<T::BlockNumber>>(
+fn generic_weight_factors<T: Trait, V: BaseVoteWeight<T::BlockNumber>>(
     wrapper: V,
     current_block: u32,
 ) -> WeightFactors {
@@ -74,12 +74,82 @@ impl<T: Trait> ComputeVoteWeight<T::AccountId> for Module<T> {
     ) -> WeightFactors {
         let mut inner = MinerLedgers::<T>::get(who, target);
         let wrapper = MinerLedgerWrapper::<T>::new(who, target, &mut inner);
-        prepare_weight_factors::<T, _>(wrapper, current_block)
+        generic_weight_factors::<T, _>(wrapper, current_block)
     }
 
     fn claimee_weight_factors(target: &Self::Claimee, current_block: u32) -> WeightFactors {
         let mut inner = AssetLedgers::<T>::get(target);
         let wrapper = AssetLedgerWrapper::<T>::new(target, &mut inner);
-        prepare_weight_factors::<T, _>(wrapper, current_block)
+        generic_weight_factors::<T, _>(wrapper, current_block)
+    }
+}
+
+impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
+    fn on_issue_pre(target: &AssetId, source: &T::AccountId) {
+        let current_block = <frame_system::Module<T>>::block_number();
+        Self::init_receiver_mining_ledger(source, target, current_block);
+
+        Self::update_mining_weights(source, target, current_block);
+    }
+
+    fn on_issue_post(target: &AssetId, source: &T::AccountId, value: T::Balance) -> DispatchResult {
+        Self::issue_reward(source, target);
+        Ok(())
+    }
+
+    fn on_move_pre(
+        asset_id: &AssetId,
+        from: &T::AccountId,
+        _: AssetType,
+        to: &T::AccountId,
+        _: AssetType,
+        _: T::Balance,
+    ) {
+        let current_block = <frame_system::Module<T>>::block_number();
+        Self::init_receiver_mining_ledger(to, asset_id, current_block);
+
+        Self::update_miner_mining_weight(from, asset_id, current_block);
+        Self::update_miner_mining_weight(to, asset_id, current_block);
+    }
+
+    fn on_destroy_pre(target: &AssetId, source: &T::AccountId) {
+        let current_block = <frame_system::Module<T>>::block_number();
+        Self::update_mining_weights(source, target, current_block);
+    }
+}
+
+impl<T: Trait> Claim<T::AccountId> for Module<T> {
+    type Claimee = AssetId;
+    type Error = Error<T>;
+
+    fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Error<T>> {
+        let current_block = <frame_system::Module<T>>::block_number();
+
+        let (source_weight, target_weight) =
+            <Self as ComputeVoteWeight<T::AccountId>>::settle_weight_on_claim(
+                claimer,
+                claimee,
+                current_block.saturated_into::<u32>(),
+            )?;
+
+        let claimee_jackpot = Self::asset_jackpot_of(claimee);
+        let dividend = Self::compute_dividend(source_weight, target_weight, &claimee_jackpot);
+
+        Self::can_claim(claimer, claimee, dividend, current_block)?;
+
+        // Self::allocate_dividend(claimer, claimee, &claimee_jackpot, dividend)?;
+
+        Self::apply_update_miner_mining_weight(claimer, claimee, 0, current_block);
+        Self::apply_update_asset_mining_weight(
+            claimee,
+            target_weight - source_weight,
+            current_block,
+        );
+
+        MinerLedgers::<T>::mutate(claimer, claimee, |miner_ledger| {
+            miner_ledger.last_claim = Some(current_block);
+        });
+
+        Ok(())
     }
 }
