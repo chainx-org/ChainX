@@ -35,9 +35,9 @@ impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRe
     }
 }
 
-pub struct AssetTriggerEventAfter<T: Trait>(::sp_std::marker::PhantomData<T>);
+pub struct AssetChangedTrigger<T: Trait>(::sp_std::marker::PhantomData<T>);
 
-impl<T: Trait> AssetTriggerEventAfter<T> {
+impl<T: Trait> AssetChangedTrigger<T> {
     pub fn on_move_pre(
         id: &AssetId,
         from: &T::AccountId,

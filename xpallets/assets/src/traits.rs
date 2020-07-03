@@ -23,8 +23,16 @@ pub trait ChainT {
     }
 }
 
-/// Hooks for performing operations when the asset changes.
+/// Hooks for doing stuff when the assets are minted/moved/destroied..
 pub trait OnAssetChanged<AccountId, Balance> {
+    /// Triggered before issuing the fresh assets.
+    fn on_issue_pre(_id: &AssetId, _who: &AccountId) {}
+
+    /// Triggered after issuing the fresh assets.
+    fn on_issue_post(_id: &AssetId, _who: &AccountId, _value: Balance) -> DispatchResult {
+        Ok(())
+    }
+
     /// Triggered before moving the assets.
     fn on_move_pre(
         _id: &AssetId,
@@ -48,18 +56,10 @@ pub trait OnAssetChanged<AccountId, Balance> {
         Ok(())
     }
 
-    /// Triggered before issuing the fresh assets.
-    fn on_issue_pre(_id: &AssetId, _who: &AccountId) {}
-
-    /// Triggered after issuing the fresh assets.
-    fn on_issue_post(_id: &AssetId, _who: &AccountId, _value: Balance) -> DispatchResult {
-        Ok(())
-    }
-
-    /// Triggered before destorying the assets.
+    /// Triggered before destroying the assets.
     fn on_destroy_pre(_id: &AssetId, _who: &AccountId) {}
 
-    /// Triggered after destorying the assets.
+    /// Triggered after the assets has been destroied.
     fn on_destroy_post(_id: &AssetId, _who: &AccountId, _value: Balance) -> DispatchResult {
         Ok(())
     }
