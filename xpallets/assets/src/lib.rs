@@ -601,7 +601,7 @@ impl<T: Trait> Module<T> {
         // check
         let new = current.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 
-        AssetTriggerEventAfter::<T>::on_issue_before(id, who);
+        AssetTriggerEventAfter::<T>::on_issue_pre(id, who);
 
         // set to storage
         let imbalance = Self::make_type_balance_be(who, id, type_, new);
@@ -612,7 +612,7 @@ impl<T: Trait> Module<T> {
             PositiveImbalance::<T>::new(Zero::zero(), *id, type_)
         };
 
-        AssetTriggerEventAfter::<T>::on_issue(id, who, value)?;
+        AssetTriggerEventAfter::<T>::on_issue_post(id, who, value)?;
         Ok(positive)
     }
 
@@ -631,7 +631,7 @@ impl<T: Trait> Module<T> {
             .checked_sub(&value)
             .ok_or(Error::<T>::InsufficientBalance)?;
 
-        AssetTriggerEventAfter::<T>::on_destroy_before(id, who);
+        AssetTriggerEventAfter::<T>::on_destroy_pre(id, who);
 
         let imbalance = Self::make_type_balance_be(who, id, type_, new);
         let negative = if let SignedImbalance::Negative(n) = imbalance {
@@ -641,7 +641,7 @@ impl<T: Trait> Module<T> {
             NegativeImbalance::<T>::new(Zero::zero(), *id, type_)
         };
 
-        AssetTriggerEventAfter::<T>::on_destroy(id, who, value)?;
+        AssetTriggerEventAfter::<T>::on_destroy_post(id, who, value)?;
         Ok(negative)
     }
 
@@ -683,10 +683,8 @@ impl<T: Trait> Module<T> {
             // same account, same type, return directly
             // same account also do trigger
             if do_trigger {
-                AssetTriggerEventAfter::<T>::on_move_before(
-                    id, from, from_type, to, to_type, value,
-                );
-                AssetTriggerEventAfter::<T>::on_move(id, from, from_type, to, to_type, value)?;
+                AssetTriggerEventAfter::<T>::on_move_pre(id, from, from_type, to, to_type, value);
+                AssetTriggerEventAfter::<T>::on_move_post(id, from, from_type, to, to_type, value)?;
             }
             return Ok((
                 SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
@@ -701,14 +699,14 @@ impl<T: Trait> Module<T> {
         }
 
         if do_trigger {
-            AssetTriggerEventAfter::<T>::on_move_before(id, from, from_type, to, to_type, value);
+            AssetTriggerEventAfter::<T>::on_move_pre(id, from, from_type, to, to_type, value);
         }
 
         let from_imbalance = Self::make_type_balance_be(from, id, from_type, new_from_balance);
         let to_imbalance = Self::make_type_balance_be(to, id, to_type, new_to_balance);
 
         if do_trigger {
-            AssetTriggerEventAfter::<T>::on_move(id, from, from_type, to, to_type, value)?;
+            AssetTriggerEventAfter::<T>::on_move_post(id, from, from_type, to, to_type, value)?;
         }
         Ok((from_imbalance, to_imbalance))
     }

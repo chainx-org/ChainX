@@ -23,27 +23,47 @@ pub trait ChainT {
     }
 }
 
+/// Hooks for performing operations when the asset changes.
 pub trait OnAssetChanged<AccountId, Balance> {
-    fn on_move_before(
-        id: &AssetId,
-        from: &AccountId,
-        from_type: AssetType,
-        to: &AccountId,
-        to_type: AssetType,
-        value: Balance,
-    );
-    fn on_move(
-        id: &AssetId,
-        from: &AccountId,
-        from_type: AssetType,
-        to: &AccountId,
-        to_type: AssetType,
-        value: Balance,
-    ) -> result::Result<(), AssetErr>;
-    fn on_issue_before(id: &AssetId, who: &AccountId);
-    fn on_issue(id: &AssetId, who: &AccountId, value: Balance) -> DispatchResult;
-    fn on_destroy_before(id: &AssetId, who: &AccountId);
-    fn on_destroy(id: &AssetId, who: &AccountId, value: Balance) -> DispatchResult;
+    /// Triggered before moving the assets.
+    fn on_move_pre(
+        _id: &AssetId,
+        _from: &AccountId,
+        _from_type: AssetType,
+        _to: &AccountId,
+        _to_type: AssetType,
+        _value: Balance,
+    ) {
+    }
+
+    /// Triggered after moving the assets.
+    fn on_move_post(
+        _id: &AssetId,
+        _from: &AccountId,
+        _from_type: AssetType,
+        _to: &AccountId,
+        _to_type: AssetType,
+        _value: Balance,
+    ) -> result::Result<(), AssetErr> {
+        Ok(())
+    }
+
+    /// Triggered before issuing the fresh assets.
+    fn on_issue_pre(_id: &AssetId, _who: &AccountId) {}
+
+    /// Triggered after issuing the fresh assets.
+    fn on_issue_post(_id: &AssetId, _who: &AccountId, _value: Balance) -> DispatchResult {
+        Ok(())
+    }
+
+    /// Triggered before destorying the assets.
+    fn on_destroy_pre(_id: &AssetId, _who: &AccountId) {}
+
+    /// Triggered after destorying the assets.
+    fn on_destroy_post(_id: &AssetId, _who: &AccountId, _value: Balance) -> DispatchResult {
+        Ok(())
+    }
+
     fn on_set_balance(
         _id: &AssetId,
         _who: &AccountId,
@@ -55,6 +75,10 @@ pub trait OnAssetChanged<AccountId, Balance> {
 }
 
 pub trait OnAssetRegisterOrRevoke {
-    fn on_register(_: &AssetId, _: bool) -> DispatchResult;
-    fn on_revoke(_: &AssetId) -> DispatchResult;
+    fn on_register(_: &AssetId, _: bool) -> DispatchResult {
+        Ok(())
+    }
+    fn on_revoke(_: &AssetId) -> DispatchResult {
+        Ok(())
+    }
 }
