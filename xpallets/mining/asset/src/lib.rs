@@ -33,18 +33,23 @@ decl_storage! {
     trait Store for Module<T: Trait> as XStaking {
         ///
         pub DepositReward get(fn deposit_reward): T::Balance = 100_000.into();
+
         ///
         pub ClaimRestrictionOf get(fn claim_restriction_of):
             map hasher(twox_64_concat) AssetId => ClaimRestriction<T::BlockNumber>;
+
         /// External Assets that have the mining rights.
         pub MiningPrevilegedAssets get(fn mining_previleged_assets): Vec<AssetId>;
+
         /// Mining weight information of the asset.
         pub AssetLedgers get(fn asset_ledgers):
             map hasher(twox_64_concat) AssetId => AssetLedger<T::BlockNumber>;
+
         /// The map from nominator to the vote weight ledger of all nominees.
         pub MinerLedgers get(fn miner_ledgers):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) AssetId
             => MinerLedger<T::BlockNumber>;
+
         /// Mining power map of X-type assets.
         pub XTypeAssetPowerMap get(fn x_type_asset_power_map):
             map hasher(twox_64_concat) AssetId => FixedAssetPower;
