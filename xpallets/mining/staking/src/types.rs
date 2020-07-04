@@ -4,7 +4,7 @@ use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
-use xp_mining_common::VoteWeight;
+use xp_mining_common::WeightType;
 
 /// Destination for minted fresh PCX on each new session.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -45,7 +45,7 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
     /// The total amount of all the nominators' vote balances.
     pub total: Balance,
     /// Last calculated total vote weight of current validator.
-    pub last_total_vote_weight: VoteWeight,
+    pub last_total_vote_weight: WeightType,
     /// Block number at which point `last_total_vote_weight` just updated.
     pub last_total_vote_weight_update: BlockNumber,
 }
@@ -56,7 +56,7 @@ pub struct NominatorLedger<Balance, BlockNumber> {
     /// The amount of
     pub nomination: Balance,
     ///
-    pub last_vote_weight: VoteWeight,
+    pub last_vote_weight: WeightType,
     ///
     pub last_vote_weight_update: BlockNumber,
 }

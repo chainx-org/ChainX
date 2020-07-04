@@ -3,15 +3,15 @@
 use sp_std::result::Result;
 
 /// Type for calculating staker's vote weight.
-pub type VoteWeight = u128;
+pub type WeightType = u128;
 
 /// The getter and setter methods for the further vote weight processing.
-pub trait BaseVoteWeight<BlockNumber> {
+pub trait BaseMiningWeight<BlockNumber> {
     fn amount(&self) -> u128;
     fn set_amount(&mut self, new: u128);
 
-    fn last_acum_weight(&self) -> VoteWeight;
-    fn set_last_acum_weight(&mut self, s: VoteWeight);
+    fn last_acum_weight(&self) -> WeightType;
+    fn set_last_acum_weight(&mut self, s: WeightType);
 
     fn last_acum_weight_update(&self) -> u32;
     fn set_last_acum_weight_update(&mut self, num: BlockNumber);
@@ -25,7 +25,7 @@ pub enum Delta {
 }
 
 /// General logic for stage changes of the vote weight operations.
-pub trait VoteWightTrait<BlockNumber>: BaseVoteWeight<BlockNumber> {
+pub trait MiningWeight<BlockNumber>: BaseMiningWeight<BlockNumber> {
     /// Set the new amount after settling the change of nomination.
     fn settle_and_set_amount(&mut self, delta: &Delta) {
         let new = match *delta {
@@ -37,7 +37,7 @@ pub trait VoteWightTrait<BlockNumber>: BaseVoteWeight<BlockNumber> {
     }
 
     /// This action doesn't involve in a change of amount, used for tokens module only.
-    fn set_state_weight(&mut self, latest_acum_weight: VoteWeight, current_block: BlockNumber) {
+    fn set_state_weight(&mut self, latest_acum_weight: WeightType, current_block: BlockNumber) {
         self.set_last_acum_weight(latest_acum_weight);
         self.set_last_acum_weight_update(current_block);
     }
@@ -47,7 +47,7 @@ pub trait VoteWightTrait<BlockNumber>: BaseVoteWeight<BlockNumber> {
     /// This is similar to set_state_on_claim with the settlement of amount added.
     fn set_state(
         &mut self,
-        latest_acum_weight: VoteWeight,
+        latest_acum_weight: WeightType,
         current_block: BlockNumber,
         delta: &Delta,
     ) {
@@ -56,17 +56,17 @@ pub trait VoteWightTrait<BlockNumber>: BaseVoteWeight<BlockNumber> {
     }
 }
 
-impl<BlockNumber, T: BaseVoteWeight<BlockNumber>> VoteWightTrait<BlockNumber> for T {}
+impl<BlockNumber, T: BaseMiningWeight<BlockNumber>> MiningWeight<BlockNumber> for T {}
 
-/// Formula: Latest Vote Weight = last_acum_weight(VoteWeight) + amount(u64) * duration(u64)
-pub type WeightFactors = (VoteWeight, u128, u32);
+/// Formula: Latest Vote Weight = last_acum_weight(WeightType) + amount(u64) * duration(u64)
+pub type WeightFactors = (WeightType, u128, u32);
 
-pub struct ZeroVoteWeightError;
+pub struct ZeroMiningWeightError;
 
-pub trait ComputeVoteWeight<AccountId> {
+pub trait ComputeMiningWeight<AccountId> {
     /// The entity that holds the funds of claimers.
     type Claimee;
-    type Error: From<ZeroVoteWeightError>;
+    type Error: From<ZeroMiningWeightError>;
 
     fn claimer_weight_factors(_: &AccountId, _: &Self::Claimee, _: u32) -> WeightFactors;
     fn claimee_weight_factors(_: &Self::Claimee, _: u32) -> WeightFactors;
@@ -75,11 +75,11 @@ pub trait ComputeVoteWeight<AccountId> {
         who: &AccountId,
         target: &Self::Claimee,
         current_block: u32,
-    ) -> VoteWeight {
+    ) -> WeightType {
         Self::calc_latest_vote_weight(Self::claimer_weight_factors(who, target, current_block))
     }
 
-    fn settle_claimee_weight(target: &Self::Claimee, current_block: u32) -> VoteWeight {
+    fn settle_claimee_weight(target: &Self::Claimee, current_block: u32) -> WeightType {
         Self::calc_latest_vote_weight(Self::claimee_weight_factors(target, current_block))
     }
 
@@ -87,11 +87,11 @@ pub trait ComputeVoteWeight<AccountId> {
         who: &AccountId,
         target: &Self::Claimee,
         current_block: u32,
-    ) -> Result<(VoteWeight, VoteWeight), Self::Error> {
+    ) -> Result<(WeightType, WeightType), Self::Error> {
         let claimer_weight = Self::settle_claimer_weight(who, target, current_block);
 
         if claimer_weight == 0 {
-            return Err(ZeroVoteWeightError.into());
+            return Err(ZeroMiningWeightError.into());
         }
 
         let claimee_weight = Self::settle_claimee_weight(target, current_block);
@@ -99,9 +99,9 @@ pub trait ComputeVoteWeight<AccountId> {
         Ok((claimer_weight, claimee_weight))
     }
 
-    fn calc_latest_vote_weight(weight_factors: WeightFactors) -> VoteWeight {
+    fn calc_latest_vote_weight(weight_factors: WeightFactors) -> WeightType {
         let (last_acum_weight, amount, duration) = weight_factors;
-        last_acum_weight + VoteWeight::from(amount) * VoteWeight::from(duration)
+        last_acum_weight + WeightType::from(amount) * WeightType::from(duration)
     }
 }
 

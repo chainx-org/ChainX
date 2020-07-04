@@ -1,18 +1,18 @@
 use super::*;
-use xp_mining_common::{BaseVoteWeight, Claim, ComputeVoteWeight, VoteWeight, WeightFactors};
+use xp_mining_common::{BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType};
 
-impl<'a, T: Trait> BaseVoteWeight<T::BlockNumber> for AssetLedgerWrapper<'a, T> {
+impl<'a, T: Trait> BaseMiningWeight<T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> u128 {
         xpallet_assets::Module::<T>::all_type_total_asset_balance(&self.asset_id).saturated_into()
     }
 
     fn set_amount(&mut self, _new: u128) {}
 
-    fn last_acum_weight(&self) -> VoteWeight {
+    fn last_acum_weight(&self) -> WeightType {
         self.inner.last_total_mining_weight
     }
 
-    fn set_last_acum_weight(&mut self, latest_mining_weight: VoteWeight) {
+    fn set_last_acum_weight(&mut self, latest_mining_weight: WeightType) {
         self.inner.last_total_mining_weight = latest_mining_weight;
     }
 
@@ -27,7 +27,7 @@ impl<'a, T: Trait> BaseVoteWeight<T::BlockNumber> for AssetLedgerWrapper<'a, T> 
     }
 }
 
-impl<'a, T: Trait> BaseVoteWeight<T::BlockNumber> for MinerLedgerWrapper<'a, T> {
+impl<'a, T: Trait> BaseMiningWeight<T::BlockNumber> for MinerLedgerWrapper<'a, T> {
     fn amount(&self) -> u128 {
         xpallet_assets::Module::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
             .saturated_into()
@@ -35,11 +35,11 @@ impl<'a, T: Trait> BaseVoteWeight<T::BlockNumber> for MinerLedgerWrapper<'a, T> 
 
     fn set_amount(&mut self, _new: u128) {}
 
-    fn last_acum_weight(&self) -> VoteWeight {
+    fn last_acum_weight(&self) -> WeightType {
         self.inner.last_mining_weight
     }
 
-    fn set_last_acum_weight(&mut self, latest_mining_weight: VoteWeight) {
+    fn set_last_acum_weight(&mut self, latest_mining_weight: WeightType) {
         self.inner.last_mining_weight = latest_mining_weight;
     }
 
@@ -52,7 +52,7 @@ impl<'a, T: Trait> BaseVoteWeight<T::BlockNumber> for MinerLedgerWrapper<'a, T> 
     }
 }
 
-fn generic_weight_factors<T: Trait, V: BaseVoteWeight<T::BlockNumber>>(
+fn generic_weight_factors<T: Trait, V: BaseMiningWeight<T::BlockNumber>>(
     wrapper: V,
     current_block: u32,
 ) -> WeightFactors {
@@ -63,7 +63,7 @@ fn generic_weight_factors<T: Trait, V: BaseVoteWeight<T::BlockNumber>>(
     )
 }
 
-impl<T: Trait> ComputeVoteWeight<T::AccountId> for Module<T> {
+impl<T: Trait> ComputeMiningWeight<T::AccountId> for Module<T> {
     type Claimee = AssetId;
     type Error = Error<T>;
 
@@ -137,7 +137,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
         let current_block = <frame_system::Module<T>>::block_number();
 
         let (source_weight, target_weight) =
-            <Self as ComputeVoteWeight<T::AccountId>>::settle_weight_on_claim(
+            <Self as ComputeMiningWeight<T::AccountId>>::settle_weight_on_claim(
                 claimer,
                 claimee,
                 current_block.saturated_into::<u32>(),

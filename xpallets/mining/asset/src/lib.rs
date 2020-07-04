@@ -26,7 +26,9 @@ use sp_runtime::traits::{
 };
 use sp_std::prelude::*;
 use types::*;
-use xp_mining_common::{Claim, ComputeVoteWeight, VoteWeight, VoteWightTrait, ZeroVoteWeightError};
+use xp_mining_common::{
+    Claim, ComputeMiningWeight, MiningWeight, WeightType, ZeroMiningWeightError,
+};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -89,8 +91,8 @@ decl_error! {
     }
 }
 
-impl<T: Trait> From<ZeroVoteWeightError> for Error<T> {
-    fn from(e: ZeroVoteWeightError) -> Self {
+impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
+    fn from(e: ZeroMiningWeightError) -> Self {
         Self::ZeroVoteWeight
     }
 }
@@ -153,7 +155,7 @@ impl<T: Trait> Module<T> {
         target: &AssetId,
         current_block: T::BlockNumber,
     ) {
-        let new_weight = <Self as ComputeVoteWeight<T::AccountId>>::settle_claimer_weight(
+        let new_weight = <Self as ComputeMiningWeight<T::AccountId>>::settle_claimer_weight(
             from,
             target,
             current_block.saturated_into::<u32>(),
@@ -164,7 +166,7 @@ impl<T: Trait> Module<T> {
     fn apply_update_miner_mining_weight(
         from: &T::AccountId,
         target: &AssetId,
-        new_weight: VoteWeight,
+        new_weight: WeightType,
         current_block: T::BlockNumber,
     ) {
         // TODO: use mutate?
@@ -175,7 +177,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn update_asset_mining_weight(target: &AssetId, current_block: T::BlockNumber) {
-        let new_weight = <Self as ComputeVoteWeight<T::AccountId>>::settle_claimee_weight(
+        let new_weight = <Self as ComputeMiningWeight<T::AccountId>>::settle_claimee_weight(
             target,
             current_block.saturated_into::<u32>(),
         );
@@ -184,7 +186,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_update_asset_mining_weight(
         target: &AssetId,
-        new_weight: VoteWeight,
+        new_weight: WeightType,
         current_block: T::BlockNumber,
     ) {
         let mut inner = AssetLedgers::<T>::get(target);
@@ -207,8 +209,8 @@ impl<T: Trait> Module<T> {
     }
 
     fn compute_dividend(
-        source_weight: VoteWeight,
-        target_weight: VoteWeight,
+        source_weight: WeightType,
+        target_weight: WeightType,
         claimee_jackpot: &T::AccountId,
     ) -> T::Balance {
         todo!()

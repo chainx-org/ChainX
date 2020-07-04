@@ -27,7 +27,7 @@ use sp_runtime::traits::{
 };
 use sp_std::prelude::*;
 use types::*;
-use xp_mining_common::{Claim, ComputeVoteWeight, Delta, ZeroVoteWeightError};
+use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
 use xp_mining_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
@@ -207,8 +207,8 @@ impl<T: Trait> From<AssetErr> for Error<T> {
     }
 }
 
-impl<T: Trait> From<ZeroVoteWeightError> for Error<T> {
-    fn from(e: ZeroVoteWeightError) -> Self {
+impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
+    fn from(e: ZeroMiningWeightError) -> Self {
         Self::ZeroVoteWeight
     }
 }
@@ -479,13 +479,13 @@ impl<T: Trait> Module<T> {
         let current_block = <frame_system::Module<T>>::block_number();
         let saturated_current_block = current_block.saturated_into::<u32>();
 
-        let source_weight = <Self as ComputeVoteWeight<T::AccountId>>::settle_claimer_weight(
+        let source_weight = <Self as ComputeMiningWeight<T::AccountId>>::settle_claimer_weight(
             source,
             target,
             saturated_current_block,
         );
 
-        let target_weight = <Self as ComputeVoteWeight<T::AccountId>>::settle_claimee_weight(
+        let target_weight = <Self as ComputeMiningWeight<T::AccountId>>::settle_claimee_weight(
             target,
             saturated_current_block,
         );
