@@ -1,5 +1,5 @@
 [package]
-name = "xp-staking"
+name = "xp-mining-staking"
 version = "0.1.0"
 authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
@@ -10,7 +10,7 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 # ChainX primitives
-chainx-primitives = { path = "../../primitives", default-features = false }
+chainx-primitives = { path = "../../../primitives", default-features = false }
 
 [features]
 default = ["std"]

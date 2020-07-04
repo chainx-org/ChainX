@@ -6871,7 +6871,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xp-mining"
+name = "xp-mining-common"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
@@ -6880,7 +6880,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xp-staking"
+name = "xp-mining-staking"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
@@ -7043,8 +7043,8 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xp-mining",
- "xp-staking",
+ "xp-mining-common",
+ "xp-mining-staking",
  "xpallet-assets",
  "xpallet-mining-staking",
  "xpallet-protocol",
@@ -7066,8 +7066,8 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xp-mining",
- "xp-staking",
+ "xp-mining-common",
+ "xp-mining-staking",
  "xpallet-assets",
  "xpallet-protocol",
  "xpallet-support",

@@ -13,8 +13,8 @@ members = [
     "cli",
     "runtime",
     "primitives",
-    "primitives/staking",
-    "primitives/mining",
+    "primitives/mining/common",
+    "primitives/mining/staking",
     "rpc",
 
     "xpallets/assets",

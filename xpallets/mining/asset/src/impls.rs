@@ -1,5 +1,5 @@
 use super::*;
-use xp_mining::{BaseVoteWeight, Claim, ComputeVoteWeight, VoteWeight, WeightFactors};
+use xp_mining_common::{BaseVoteWeight, Claim, ComputeVoteWeight, VoteWeight, WeightFactors};
 
 impl<'a, T: Trait> BaseVoteWeight<T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> u128 {

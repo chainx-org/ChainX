@@ -26,7 +26,7 @@ use sp_runtime::traits::{
 };
 use sp_std::prelude::*;
 use types::*;
-use xp_mining::{Claim, ComputeVoteWeight, VoteWeight, VoteWightTrait, ZeroVoteWeightError};
+use xp_mining_common::{Claim, ComputeVoteWeight, VoteWeight, VoteWightTrait, ZeroVoteWeightError};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 

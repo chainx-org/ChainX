@@ -19,8 +19,8 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
-xp-staking = { path  = "../../../primitives/staking", default-features = false }
-xp-mining = { path  = "../../../primitives/mining", default-features = false }
+xp-mining-common = { path  = "../../../primitives/mining/common", default-features = false }
+xp-mining-staking = { path  = "../../../primitives/mining/staking", default-features = false }
 
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
@@ -47,8 +47,8 @@ std = [
     "frame-system/std",
 
     "chainx-primitives/std",
-    "xp-staking/std",
-    "xp-mining/std",
+    "xp-mining-common/std",
+    "xp-mining-staking/std",
 
     "xpallet-assets/std",
     "xpallet-support/std",
