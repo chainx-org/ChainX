@@ -1,5 +1,9 @@
-use crate::VoteWeight;
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use sp_std::result::Result;
+
+/// Type for calculating staker's vote weight.
+pub type VoteWeight = u128;
 
 /// The getter and setter methods for the further vote weight processing.
 pub trait BaseVoteWeight<BlockNumber> {

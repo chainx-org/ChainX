@@ -4,7 +4,7 @@ use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
-use xp_staking::VoteWeight;
+use xp_mining::VoteWeight;
 
 /// Destination for minted fresh PCX on each new session.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]

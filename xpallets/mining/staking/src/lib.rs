@@ -27,7 +27,8 @@ use sp_runtime::traits::{
 };
 use sp_std::prelude::*;
 use types::*;
-use xp_staking::{CollectAssetMiningInfo, Delta, OnMinting, UnbondedIndex};
+use xp_mining::Delta;
+use xp_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -206,8 +207,8 @@ impl<T: Trait> From<AssetErr> for Error<T> {
     }
 }
 
-impl<T: Trait> From<xp_staking::ZeroVoteWeightError> for Error<T> {
-    fn from(e: xp_staking::ZeroVoteWeightError) -> Self {
+impl<T: Trait> From<xp_mining::ZeroVoteWeightError> for Error<T> {
+    fn from(e: xp_mining::ZeroVoteWeightError) -> Self {
         Self::ZeroVoteWeight
     }
 }
@@ -317,7 +318,7 @@ decl_module! {
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
             todo!("ensure nominator record exists");
 
-            <Self as xp_staking::Claim<T::AccountId>>::claim(&sender, &target)?;
+            <Self as xp_mining::Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
         /// Declare the desire to validate for the origin account.
@@ -479,14 +480,14 @@ impl<T: Trait> Module<T> {
         let saturated_current_block = current_block.saturated_into::<u32>();
 
         let source_weight =
-            <Self as xp_staking::ComputeVoteWeight<T::AccountId>>::settle_claimer_weight(
+            <Self as xp_mining::ComputeVoteWeight<T::AccountId>>::settle_claimer_weight(
                 source,
                 target,
                 saturated_current_block,
             );
 
         let target_weight =
-            <Self as xp_staking::ComputeVoteWeight<T::AccountId>>::settle_claimee_weight(
+            <Self as xp_mining::ComputeVoteWeight<T::AccountId>>::settle_claimee_weight(
                 target,
                 saturated_current_block,
             );

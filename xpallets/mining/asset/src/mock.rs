@@ -177,88 +177,15 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
     )
 }
 
-fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
-    let pcx = pcx();
-    let assets = vec![(pcx.0, pcx.1, pcx.2, true, true)];
-    assets
-}
-
 impl ExtBuilder {
-    pub fn existential_deposit(mut self, existential_deposit: Balance) -> Self {
-        self.existential_deposit = existential_deposit;
-        self
-    }
-    pub fn validator_pool(mut self, validator_pool: bool) -> Self {
-        self.validator_pool = validator_pool;
-        self
-    }
-    pub fn nominate(mut self, nominate: bool) -> Self {
-        self.nominate = nominate;
-        self
-    }
-    pub fn validator_count(mut self, count: u32) -> Self {
-        self.validator_count = count;
-        self
-    }
-    pub fn minimum_validator_count(mut self, count: u32) -> Self {
-        self.minimum_validator_count = count;
-        self
-    }
-    pub fn fair(mut self, is_fair: bool) -> Self {
-        self.fair = is_fair;
-        self
-    }
-    pub fn num_validators(mut self, num_validators: u32) -> Self {
-        self.num_validators = Some(num_validators);
-        self
-    }
-    pub fn session_per_era(mut self, length: SessionIndex) -> Self {
-        self.session_per_era = length;
-        self
-    }
-    pub fn election_lookahead(mut self, look: BlockNumber) -> Self {
-        self.election_lookahead = look;
-        self
-    }
-    pub fn session_length(mut self, length: BlockNumber) -> Self {
-        self.session_length = length;
-        self
-    }
-    pub fn has_stakers(mut self, has: bool) -> Self {
-        self.has_stakers = has;
-        self
-    }
-    pub fn max_offchain_iterations(mut self, iterations: u32) -> Self {
-        self.max_offchain_iterations = iterations;
-        self
-    }
-    pub fn offchain_phragmen_ext(self) -> Self {
-        self.session_per_era(4)
-            .session_length(5)
-            .election_lookahead(3)
-    }
-    pub fn set_associated_constants(&self) {
-        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow_mut() = self.existential_deposit);
-        SESSION_PER_ERA.with(|v| *v.borrow_mut() = self.session_per_era);
-        ELECTION_LOOKAHEAD.with(|v| *v.borrow_mut() = self.election_lookahead);
-        PERIOD.with(|v| *v.borrow_mut() = self.session_length);
-        MAX_ITERATIONS.with(|v| *v.borrow_mut() = self.max_offchain_iterations);
-    }
     pub fn build(self) -> sp_io::TestExternalities {
         let _ = env_logger::try_init();
-        self.set_associated_constants();
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
         let balance_factor = if self.existential_deposit > 1 { 256 } else { 1 };
 
-        let num_validators = self.num_validators.unwrap_or(self.validator_count);
-        let validators = (0..num_validators)
-            .map(|x| ((x + 1) * 10 + 1) as AccountId)
-            .collect::<Vec<_>>();
-
         let pcx_asset = pcx();
-        let btc_asset = btc();
         let assets = vec![(pcx_asset.0, pcx_asset.1, pcx_asset.2, true, false)];
 
         let mut endowed = BTreeMap::new();
@@ -271,16 +198,6 @@ impl ExtBuilder {
             memo_len: 128,
         }
         .assimilate_storage(&mut storage);
-
-        if self.has_stakers {
-            let stake_21 = if self.fair { 1000 } else { 2000 };
-            let stake_31 = if self.validator_pool {
-                balance_factor * 1000
-            } else {
-                1
-            };
-            let nominated = if self.nominate { vec![11, 21] } else { vec![] };
-        }
 
         let mut ext = sp_io::TestExternalities::from(storage);
         // ext.execute_with(|| {
@@ -309,7 +226,6 @@ impl ExtBuilder {
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
         let mut ext = self.build();
         ext.execute_with(test);
-        // ext.execute_with(post_conditions);
     }
 }
 

@@ -1,6 +1,6 @@
 use super::*;
 use sp_arithmetic::traits::BaseArithmetic;
-use xp_staking::{BaseVoteWeight, Claim, ComputeVoteWeight, Delta, VoteWeight, WeightFactors};
+use xp_mining::{BaseVoteWeight, Claim, ComputeVoteWeight, Delta, VoteWeight, WeightFactors};
 
 impl<Balance, BlockNumber> BaseVoteWeight<BlockNumber> for ValidatorLedger<Balance, BlockNumber>
 where

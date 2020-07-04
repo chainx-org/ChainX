@@ -1,13 +1,14 @@
-//! # Staking Module
+//! # Asset Mining Module
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod impls;
+mod types;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
-mod types;
 
 use chainx_primitives::{AssetId, Memo};
 use frame_support::{
@@ -25,7 +26,7 @@ use sp_runtime::traits::{
 };
 use sp_std::prelude::*;
 use types::*;
-use xp_staking::{ComputeVoteWeight, VoteWeight, VoteWightTrait};
+use xp_mining::{Claim, ComputeVoteWeight, VoteWeight, VoteWightTrait, ZeroVoteWeightError};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -88,8 +89,8 @@ decl_error! {
     }
 }
 
-impl<T: Trait> From<xp_staking::ZeroVoteWeightError> for Error<T> {
-    fn from(e: xp_staking::ZeroVoteWeightError) -> Self {
+impl<T: Trait> From<ZeroVoteWeightError> for Error<T> {
+    fn from(e: ZeroVoteWeightError) -> Self {
         Self::ZeroVoteWeight
     }
 }
@@ -114,7 +115,7 @@ decl_module! {
                 Error::<T>::UnprevilegedAsset
             );
 
-            <Self as xp_staking::Claim<T::AccountId>>::claim(&sender, &target)?;
+            <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
     }
