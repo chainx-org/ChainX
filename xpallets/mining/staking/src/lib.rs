@@ -477,18 +477,19 @@ impl<T: Trait> Module<T> {
     /// Settles and update the vote weight state of the nominator `source` and validator `target` given the delta amount.
     fn update_vote_weight(source: &T::AccountId, target: &T::AccountId, delta: Delta<T::Balance>) {
         let current_block = <frame_system::Module<T>>::block_number();
-        let saturated_current_block = current_block.saturated_into::<u32>();
 
-        let source_weight = <Self as ComputeMiningWeight<T::AccountId>>::settle_claimer_weight(
-            source,
-            target,
-            saturated_current_block,
-        );
+        let source_weight =
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::settle_claimer_weight(
+                source,
+                target,
+                current_block,
+            );
 
-        let target_weight = <Self as ComputeMiningWeight<T::AccountId>>::settle_claimee_weight(
-            target,
-            saturated_current_block,
-        );
+        let target_weight =
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::settle_claimee_weight(
+                target,
+                current_block,
+            );
 
         Self::set_nominator_vote_weight(source, target, source_weight, current_block, delta);
         Self::set_validator_vote_weight(target, target_weight, current_block, delta);

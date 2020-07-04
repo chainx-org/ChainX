@@ -24,8 +24,8 @@ where
         self.last_total_vote_weight = latest_vote_weight;
     }
 
-    fn last_acum_weight_update(&self) -> u32 {
-        self.last_total_vote_weight_update.saturated_into::<u32>()
+    fn last_acum_weight_update(&self) -> BlockNumber {
+        self.last_total_vote_weight_update
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
@@ -55,8 +55,8 @@ where
         self.last_vote_weight = latest_vote_weight;
     }
 
-    fn last_acum_weight_update(&self) -> u32 {
-        self.last_vote_weight_update.saturated_into::<u32>()
+    fn last_acum_weight_update(&self) -> BlockNumber {
+        self.last_vote_weight_update
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
@@ -64,29 +64,32 @@ where
     }
 }
 
-impl<T: Trait> ComputeMiningWeight<T::AccountId> for Module<T> {
+impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     type Claimee = T::AccountId;
     type Error = Error<T>;
 
     fn claimer_weight_factors(
         who: &T::AccountId,
         target: &Self::Claimee,
-        current_block: u32,
+        current_block: T::BlockNumber,
     ) -> WeightFactors {
         let claimer_ledger = Nominations::<T>::get(who, target);
         (
             claimer_ledger.last_vote_weight,
             claimer_ledger.amount().saturated_into(),
-            current_block - claimer_ledger.last_acum_weight_update(),
+            (current_block - claimer_ledger.last_acum_weight_update()).saturated_into(),
         )
     }
 
-    fn claimee_weight_factors(target: &Self::Claimee, current_block: u32) -> WeightFactors {
+    fn claimee_weight_factors(
+        target: &Self::Claimee,
+        current_block: T::BlockNumber,
+    ) -> WeightFactors {
         let claimee_ledger = ValidatorLedgers::<T>::get(target);
         (
             claimee_ledger.last_total_vote_weight,
             claimee_ledger.amount().saturated_into(),
-            current_block - claimee_ledger.last_acum_weight_update(),
+            (current_block - claimee_ledger.last_acum_weight_update()).saturated_into(),
         )
     }
 }
@@ -181,12 +184,12 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error> {
         let current_block = <frame_system::Module<T>>::block_number();
 
-        let (source_weight, target_weight) =
-            <Self as ComputeMiningWeight<T::AccountId>>::settle_weight_on_claim(
-                claimer,
-                claimee,
-                current_block.saturated_into::<u32>(),
-            )?;
+        let (source_weight, target_weight) = <Self as ComputeMiningWeight<
+            T::AccountId,
+            T::BlockNumber,
+        >>::settle_weight_on_claim(
+            claimer, claimee, current_block
+        )?;
 
         let claimee_pot = Self::jackpot_account_for(claimee);
 

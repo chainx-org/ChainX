@@ -16,10 +16,8 @@ impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for AssetLedgerW
         self.inner.last_total_mining_weight = latest_mining_weight;
     }
 
-    fn last_acum_weight_update(&self) -> u32 {
-        self.inner
-            .last_total_mining_weight_update
-            .saturated_into::<u32>()
+    fn last_acum_weight_update(&self) -> T::BlockNumber {
+        self.inner.last_total_mining_weight_update
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: T::BlockNumber) {
@@ -42,8 +40,8 @@ impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for MinerLedgerW
         self.inner.last_mining_weight = latest_mining_weight;
     }
 
-    fn last_acum_weight_update(&self) -> u32 {
-        self.inner.last_mining_weight_update.saturated_into::<u32>()
+    fn last_acum_weight_update(&self) -> T::BlockNumber {
+        self.inner.last_mining_weight_update
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: T::BlockNumber) {
@@ -53,30 +51,33 @@ impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for MinerLedgerW
 
 fn generic_weight_factors<T: Trait, V: BaseMiningWeight<T::Balance, T::BlockNumber>>(
     wrapper: V,
-    current_block: u32,
+    current_block: T::BlockNumber,
 ) -> WeightFactors {
     (
         wrapper.last_acum_weight(),
         wrapper.amount().saturated_into(),
-        current_block - wrapper.last_acum_weight_update(),
+        (current_block - wrapper.last_acum_weight_update()).saturated_into(),
     )
 }
 
-impl<T: Trait> ComputeMiningWeight<T::AccountId> for Module<T> {
+impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     type Claimee = AssetId;
     type Error = Error<T>;
 
     fn claimer_weight_factors(
         who: &T::AccountId,
         target: &Self::Claimee,
-        current_block: u32,
+        current_block: T::BlockNumber,
     ) -> WeightFactors {
         let mut inner = MinerLedgers::<T>::get(who, target);
         let wrapper = MinerLedgerWrapper::<T>::new(who, target, &mut inner);
         generic_weight_factors::<T, _>(wrapper, current_block)
     }
 
-    fn claimee_weight_factors(target: &Self::Claimee, current_block: u32) -> WeightFactors {
+    fn claimee_weight_factors(
+        target: &Self::Claimee,
+        current_block: T::BlockNumber,
+    ) -> WeightFactors {
         let mut inner = AssetLedgers::<T>::get(target);
         let wrapper = AssetLedgerWrapper::<T>::new(target, &mut inner);
         generic_weight_factors::<T, _>(wrapper, current_block)
@@ -135,12 +136,12 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Error<T>> {
         let current_block = <frame_system::Module<T>>::block_number();
 
-        let (source_weight, target_weight) =
-            <Self as ComputeMiningWeight<T::AccountId>>::settle_weight_on_claim(
-                claimer,
-                claimee,
-                current_block.saturated_into::<u32>(),
-            )?;
+        let (source_weight, target_weight) = <Self as ComputeMiningWeight<
+            T::AccountId,
+            T::BlockNumber,
+        >>::settle_weight_on_claim(
+            claimer, claimee, current_block
+        )?;
 
         let claimee_jackpot = Self::asset_jackpot_of(claimee);
         let dividend = Self::compute_dividend(source_weight, target_weight, &claimee_jackpot);

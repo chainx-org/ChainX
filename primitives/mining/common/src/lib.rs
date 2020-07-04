@@ -51,7 +51,7 @@ pub trait BaseMiningWeight<Balance, BlockNumber> {
     fn last_acum_weight(&self) -> WeightType;
     fn set_last_acum_weight(&mut self, s: WeightType);
 
-    fn last_acum_weight_update(&self) -> u32;
+    fn last_acum_weight_update(&self) -> BlockNumber;
     fn set_last_acum_weight_update(&mut self, num: BlockNumber);
 }
 
@@ -104,35 +104,35 @@ impl<Balance: BaseArithmetic + Copy, BlockNumber, T: BaseMiningWeight<Balance, B
 }
 
 /// Formula: Latest Vote Weight = last_acum_weight(WeightType) + amount(u64) * duration(u64)
-pub type WeightFactors = (WeightType, u128, u32);
+pub type WeightFactors = (WeightType, u128, u128);
 
 pub struct ZeroMiningWeightError;
 
 /// General logic for calculating the latest mining weight.
-pub trait ComputeMiningWeight<AccountId> {
+pub trait ComputeMiningWeight<AccountId, BlockNumber: Copy> {
     /// The entity that holds the funds of claimers.
     type Claimee;
     type Error: From<ZeroMiningWeightError>;
 
-    fn claimer_weight_factors(_: &AccountId, _: &Self::Claimee, _: u32) -> WeightFactors;
-    fn claimee_weight_factors(_: &Self::Claimee, _: u32) -> WeightFactors;
+    fn claimer_weight_factors(_: &AccountId, _: &Self::Claimee, _: BlockNumber) -> WeightFactors;
+    fn claimee_weight_factors(_: &Self::Claimee, _: BlockNumber) -> WeightFactors;
 
     fn settle_claimer_weight(
         who: &AccountId,
         target: &Self::Claimee,
-        current_block: u32,
+        current_block: BlockNumber,
     ) -> WeightType {
-        Self::calc_latest_vote_weight(Self::claimer_weight_factors(who, target, current_block))
+        Self::_calc_latest_vote_weight(Self::claimer_weight_factors(who, target, current_block))
     }
 
-    fn settle_claimee_weight(target: &Self::Claimee, current_block: u32) -> WeightType {
-        Self::calc_latest_vote_weight(Self::claimee_weight_factors(target, current_block))
+    fn settle_claimee_weight(target: &Self::Claimee, current_block: BlockNumber) -> WeightType {
+        Self::_calc_latest_vote_weight(Self::claimee_weight_factors(target, current_block))
     }
 
     fn settle_weight_on_claim(
         who: &AccountId,
         target: &Self::Claimee,
-        current_block: u32,
+        current_block: BlockNumber,
     ) -> Result<(WeightType, WeightType), Self::Error> {
         let claimer_weight = Self::settle_claimer_weight(who, target, current_block);
 
@@ -145,7 +145,7 @@ pub trait ComputeMiningWeight<AccountId> {
         Ok((claimer_weight, claimee_weight))
     }
 
-    fn calc_latest_vote_weight(weight_factors: WeightFactors) -> WeightType {
+    fn _calc_latest_vote_weight(weight_factors: WeightFactors) -> WeightType {
         let (last_acum_weight, amount, duration) = weight_factors;
         last_acum_weight + WeightType::from(amount) * WeightType::from(duration)
     }

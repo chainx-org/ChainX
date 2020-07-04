@@ -155,11 +155,12 @@ impl<T: Trait> Module<T> {
         target: &AssetId,
         current_block: T::BlockNumber,
     ) {
-        let new_weight = <Self as ComputeMiningWeight<T::AccountId>>::settle_claimer_weight(
-            from,
-            target,
-            current_block.saturated_into::<u32>(),
-        );
+        let new_weight =
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::settle_claimer_weight(
+                from,
+                target,
+                current_block,
+            );
         Self::apply_update_miner_mining_weight(from, target, new_weight, current_block);
     }
 
@@ -177,10 +178,11 @@ impl<T: Trait> Module<T> {
     }
 
     fn update_asset_mining_weight(target: &AssetId, current_block: T::BlockNumber) {
-        let new_weight = <Self as ComputeMiningWeight<T::AccountId>>::settle_claimee_weight(
-            target,
-            current_block.saturated_into::<u32>(),
-        );
+        let new_weight =
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::settle_claimee_weight(
+                target,
+                current_block,
+            );
         Self::apply_update_asset_mining_weight(target, new_weight, current_block);
     }
 
