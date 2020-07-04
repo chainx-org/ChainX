@@ -138,6 +138,7 @@ use chainx_primitives::AssetId;
 use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
 
 const PCX_PRECISION: u8 = 8;
+
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
         xpallet_protocol::PCX,
@@ -147,6 +148,25 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             Chain::ChainX,
             PCX_PRECISION,
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
+        )
+        .unwrap(),
+        AssetRestriction::Deposit
+            | AssetRestriction::Withdraw
+            | AssetRestriction::DestroyWithdrawal
+            | AssetRestriction::DestroyFree
+            | AssetRestriction::Move,
+    )
+}
+
+pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        xpallet_protocol::X_BTC,
+        AssetInfo::new::<Test>(
+            b"X-BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8,
+            b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
         AssetRestriction::Deposit
@@ -238,7 +258,8 @@ impl ExtBuilder {
             .collect::<Vec<_>>();
 
         let pcx_asset = pcx();
-        let assets = vec![(pcx_asset.0, pcx_asset.1, pcx_asset.2, true, true)];
+        let btc_asset = btc();
+        let assets = vec![(pcx_asset.0, pcx_asset.1, pcx_asset.2, true, false)];
 
         let mut endowed = BTreeMap::new();
         let pcx_id = pcx().0;

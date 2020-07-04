@@ -118,6 +118,17 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
     }
 }
 
+impl<T: Trait> Module<T> {
+    fn allocate_dividend(
+        claimer: &T::AccountId,
+        claimee: &AssetId,
+        claimee_jackpot: &T::AccountId,
+        dividend: T::Balance,
+    ) -> Result<(), Error<T>> {
+        todo!("")
+    }
+}
+
 impl<T: Trait> Claim<T::AccountId> for Module<T> {
     type Claimee = AssetId;
     type Error = Error<T>;
@@ -137,7 +148,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 
         Self::can_claim(claimer, claimee, dividend, current_block)?;
 
-        // Self::allocate_dividend(claimer, claimee, &claimee_jackpot, dividend)?;
+        Self::allocate_dividend(claimer, claimee, &claimee_jackpot, dividend)?;
 
         Self::apply_update_miner_mining_weight(claimer, claimee, 0, current_block);
         Self::apply_update_asset_mining_weight(
