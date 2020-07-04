@@ -1,11 +1,49 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+//! Common concepts with regard to the ChainX Mining system, particularly the user-level ones.
+//!
+//! There are two approaches of mining in ChainX:
+//!
+//! 1. As a PoS-based blockchain, **Staking** is inherently the fundamental way of mining.
+//! In this way, users(stakers) nominate some validators with some balances locked, earning
+//! the staking reward.
+//!
+//! 2. One goal of ChainX is to embrace more the eixsting cryptocurrencies into one ecosystem,
+//! therefore **Asset Mining** is introduced for winning more external assets like BTC, ETH, etc.
+//! For example, Bitcoin users can deposit their BTC into ChainX, then they'll get the X_BTC
+//! in 1:1 and the mining rights in ChainX system accordingly, earning the new minted PCX
+//! like the stakers in Staking.
+//!
+//! Both of these two approaches share one same rule when calculating the individual reward, i.e.,
+//! **time-sensitive weight calculation**.
+//!
+//! ```
+//! Amount(Balance) * Duration(BlockNumber) = Weight
+//! ```
+//!
+//! For Staking:
+//!
+//! ```
+//! staked_balance(Balance) * time(BlockNumber) = vote_weight
+//! ```
+//!
+//! All the nominators split the reward of the validator's jackpot according to the proportion of vote weight.
+//!
+//! For Asset Mining:
+//!
+//! ```
+//! ext_asset_balance(Balance) * time(BlockNumber) = ext_mining_weight
+//! ```
+//!
+//! All asset miners split the reward of asset's jackpot according to the proportion of asset mining weight.
+//!
+
 use sp_std::result::Result;
 
-/// Type for calculating staker's vote weight.
+/// Type for calculating the mining weight.
 pub type WeightType = u128;
 
-/// The getter and setter methods for the further vote weight processing.
+/// The getter and setter methods for the further mining weight processing.
 pub trait BaseMiningWeight<BlockNumber> {
     fn amount(&self) -> u128;
     fn set_amount(&mut self, new: u128);
@@ -24,7 +62,7 @@ pub enum Delta {
     Zero,
 }
 
-/// General logic for stage changes of the vote weight operations.
+/// General logic for state changes of the mining weight operations.
 pub trait MiningWeight<BlockNumber>: BaseMiningWeight<BlockNumber> {
     /// Set the new amount after settling the change of nomination.
     fn settle_and_set_amount(&mut self, delta: &Delta) {
@@ -36,15 +74,15 @@ pub trait MiningWeight<BlockNumber>: BaseMiningWeight<BlockNumber> {
         self.set_amount(new);
     }
 
-    /// This action doesn't involve in a change of amount, used for tokens module only.
+    /// This action doesn't involve in the change of amount.
+    ///
+    /// Used for asset mining module.
     fn set_state_weight(&mut self, latest_acum_weight: WeightType, current_block: BlockNumber) {
         self.set_last_acum_weight(latest_acum_weight);
         self.set_last_acum_weight_update(current_block);
     }
 
-    /// Set new state on nominate, unnominate and renominate.
-    ///
-    /// This is similar to set_state_on_claim with the settlement of amount added.
+    /// Set new state on bond, unbond and rebond in Staking.
     fn set_state(
         &mut self,
         latest_acum_weight: WeightType,
@@ -63,6 +101,7 @@ pub type WeightFactors = (WeightType, u128, u32);
 
 pub struct ZeroMiningWeightError;
 
+/// General logic for calculating the latest mining weight.
 pub trait ComputeMiningWeight<AccountId> {
     /// The entity that holds the funds of claimers.
     type Claimee;
@@ -105,7 +144,11 @@ pub trait ComputeMiningWeight<AccountId> {
     }
 }
 
+/// Claims the reward for participating in the mining.
 pub trait Claim<AccountId> {
+    /// Entity of holder of individual miners.
+    ///
+    /// Validator for Staking, Asset for Asset Mining.
     type Claimee;
     type Error;
 
