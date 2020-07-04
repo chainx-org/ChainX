@@ -27,10 +27,10 @@ fn t_xbtc_total() -> Balance {
     XAssets::all_type_total_asset_balance(&X_BTC).saturated_into()
 }
 
-fn t_xbtc_latest_total_weights() -> VoteWeight {
-    <XMiningAsset as ComputeVoteWeight<AccountId>>::settle_claimee_weight(
+fn t_xbtc_latest_total_weights() -> WeightType {
+    <XMiningAsset as ComputeMiningWeight<AccountId, BlockNumber>>::settle_claimee_weight(
         &X_BTC,
-        System::block_number().saturated_into(),
+        System::block_number(),
     )
 }
 
@@ -47,8 +47,8 @@ fn t_xbtc_move(from: AccountId, to: AccountId, value: Balance) {
     .unwrap();
 }
 
-fn t_xbtc_latest_weight_of(who: AccountId) -> VoteWeight {
-    <XMiningAsset as ComputeVoteWeight<AccountId>>::settle_claimer_weight(
+fn t_xbtc_latest_weight_of(who: AccountId) -> WeightType {
+    <XMiningAsset as ComputeMiningWeight<AccountId, BlockNumber>>::settle_claimer_weight(
         &who,
         &X_BTC,
         System::block_number().saturated_into(),

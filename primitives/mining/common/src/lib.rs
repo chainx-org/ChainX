@@ -47,7 +47,11 @@ pub type WeightType = u128;
 /// The getter and setter methods for the further mining weight processing.
 pub trait BaseMiningWeight<Balance, BlockNumber> {
     fn amount(&self) -> Balance;
-    fn set_amount(&mut self, new: Balance);
+    /// Set the new amount.
+    ///
+    /// Amount management of asset miners is handled by assets module,
+    /// hence the default implementation is provided here.
+    fn set_amount(&mut self, _new: Balance) {}
 
     fn last_acum_weight(&self) -> WeightType;
     fn set_last_acum_weight(&mut self, s: WeightType);
@@ -56,6 +60,11 @@ pub trait BaseMiningWeight<Balance, BlockNumber> {
     fn set_last_acum_weight_update(&mut self, num: BlockNumber);
 }
 
+/// Amount changes of miner's state.
+///
+/// `Zero` happens:
+/// 1. stakers performs the `rebond` operation.
+/// 2. claim the reward.
 #[derive(Clone, Copy, sp_runtime::RuntimeDebug)]
 pub enum Delta<Balance> {
     Add(Balance),
@@ -102,9 +111,7 @@ impl<Balance: BaseArithmetic + Copy, BlockNumber, T: BaseMiningWeight<Balance, B
 {
 }
 
-/// Formula: Latest Vote Weight = last_acum_weight(WeightType) + amount(u64) * duration(u64)
-pub type WeightFactors = (WeightType, u128, u128);
-
+/// Skips the next processing when the latest mining weight is zero.
 pub struct ZeroMiningWeightError;
 
 /// General logic for calculating the latest mining weight.
@@ -150,6 +157,14 @@ pub trait ComputeMiningWeight<AccountId, BlockNumber: Copy> {
     }
 }
 
+/// Weight Formula:
+///
+/// LatestVoteWeight(WeightType) = last_acum_weight(WeightType) + amount(Balance) * duration(BlockNumber)
+///
+/// Using u128 for calculating the weights won't run into the overflow issue practically.
+pub type WeightFactors = (WeightType, u128, u128);
+
+/// Prepares the factors for calculating the latest mining weight.
 pub fn generic_weight_factors<
     Balance: BaseArithmetic,
     BlockNumber: BaseArithmetic,
@@ -171,6 +186,7 @@ pub trait Claim<AccountId> {
     ///
     /// Validator for Staking, Asset for Asset Mining.
     type Claimee;
+    /// Claim error type.
     type Error;
 
     fn claim(claimer: &AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error>;

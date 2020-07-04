@@ -8,8 +8,6 @@ impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for AssetLedgerW
         xpallet_assets::Module::<T>::all_type_total_asset_balance(&self.asset_id)
     }
 
-    fn set_amount(&mut self, _new: T::Balance) {}
-
     fn last_acum_weight(&self) -> WeightType {
         self.inner.last_total_mining_weight
     }
@@ -31,8 +29,6 @@ impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for MinerLedgerW
     fn amount(&self) -> T::Balance {
         xpallet_assets::Module::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
     }
-
-    fn set_amount(&mut self, _new: T::Balance) {}
 
     fn last_acum_weight(&self) -> WeightType {
         self.inner.last_mining_weight

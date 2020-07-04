@@ -12,7 +12,7 @@ use std::{
     cell::RefCell,
     collections::{BTreeMap, HashSet},
 };
-use xp_staking::SessionIndex;
+use xp_mining_staking::SessionIndex;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
