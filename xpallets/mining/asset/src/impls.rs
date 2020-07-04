@@ -1,5 +1,7 @@
 use super::*;
-use xp_mining_common::{BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType};
+use xp_mining_common::{
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
+};
 
 impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> T::Balance {
@@ -49,17 +51,6 @@ impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for MinerLedgerW
     }
 }
 
-fn generic_weight_factors<T: Trait, V: BaseMiningWeight<T::Balance, T::BlockNumber>>(
-    wrapper: V,
-    current_block: T::BlockNumber,
-) -> WeightFactors {
-    (
-        wrapper.last_acum_weight(),
-        wrapper.amount().saturated_into(),
-        (current_block - wrapper.last_acum_weight_update()).saturated_into(),
-    )
-}
-
 impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     type Claimee = AssetId;
     type Error = Error<T>;
@@ -71,7 +62,7 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     ) -> WeightFactors {
         let mut inner = MinerLedgers::<T>::get(who, target);
         let wrapper = MinerLedgerWrapper::<T>::new(who, target, &mut inner);
-        generic_weight_factors::<T, _>(wrapper, current_block)
+        generic_weight_factors::<T::Balance, T::BlockNumber, _>(wrapper, current_block)
     }
 
     fn claimee_weight_factors(
@@ -80,7 +71,7 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     ) -> WeightFactors {
         let mut inner = AssetLedgers::<T>::get(target);
         let wrapper = AssetLedgerWrapper::<T>::new(target, &mut inner);
-        generic_weight_factors::<T, _>(wrapper, current_block)
+        generic_weight_factors::<T::Balance, T::BlockNumber, _>(wrapper, current_block)
     }
 }
 

@@ -1,6 +1,8 @@
 use super::*;
 use sp_arithmetic::traits::BaseArithmetic;
-use xp_mining_common::{BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType};
+use xp_mining_common::{
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
+};
 
 impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
     for ValidatorLedger<Balance, BlockNumber>
@@ -74,11 +76,7 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
         current_block: T::BlockNumber,
     ) -> WeightFactors {
         let claimer_ledger = Nominations::<T>::get(who, target);
-        (
-            claimer_ledger.last_vote_weight,
-            claimer_ledger.amount().saturated_into(),
-            (current_block - claimer_ledger.last_acum_weight_update()).saturated_into(),
-        )
+        generic_weight_factors::<T::Balance, T::BlockNumber, _>(claimer_ledger, current_block)
     }
 
     fn claimee_weight_factors(
@@ -86,11 +84,7 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
         current_block: T::BlockNumber,
     ) -> WeightFactors {
         let claimee_ledger = ValidatorLedgers::<T>::get(target);
-        (
-            claimee_ledger.last_total_vote_weight,
-            claimee_ledger.amount().saturated_into(),
-            (current_block - claimee_ledger.last_acum_weight_update()).saturated_into(),
-        )
+        generic_weight_factors::<T::Balance, T::BlockNumber, _>(claimee_ledger, current_block)
     }
 }
 

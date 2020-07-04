@@ -38,6 +38,7 @@
 //! All asset miners split the reward of asset's jackpot according to the proportion of asset mining weight.
 //!
 
+use sp_arithmetic::traits::{BaseArithmetic, SaturatedConversion};
 use sp_std::result::Result;
 
 /// Type for calculating the mining weight.
@@ -61,8 +62,6 @@ pub enum Delta<Balance> {
     Sub(Balance),
     Zero,
 }
-
-use sp_arithmetic::traits::BaseArithmetic;
 
 /// General logic for state changes of the mining weight operations.
 pub trait MiningWeight<Balance: BaseArithmetic + Copy, BlockNumber>:
@@ -149,6 +148,21 @@ pub trait ComputeMiningWeight<AccountId, BlockNumber: Copy> {
         let (last_acum_weight, amount, duration) = weight_factors;
         last_acum_weight + WeightType::from(amount) * WeightType::from(duration)
     }
+}
+
+pub fn generic_weight_factors<
+    Balance: BaseArithmetic,
+    BlockNumber: BaseArithmetic,
+    W: BaseMiningWeight<Balance, BlockNumber>,
+>(
+    w: W,
+    current_block: BlockNumber,
+) -> WeightFactors {
+    (
+        w.last_acum_weight(),
+        w.amount().saturated_into(),
+        (current_block - w.last_acum_weight_update()).saturated_into(),
+    )
 }
 
 /// Claims the reward for participating in the mining.
