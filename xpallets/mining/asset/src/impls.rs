@@ -1,12 +1,12 @@
 use super::*;
 use xp_mining_common::{BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType};
 
-impl<'a, T: Trait> BaseMiningWeight<T::BlockNumber> for AssetLedgerWrapper<'a, T> {
-    fn amount(&self) -> u128 {
-        xpallet_assets::Module::<T>::all_type_total_asset_balance(&self.asset_id).saturated_into()
+impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
+    fn amount(&self) -> T::Balance {
+        xpallet_assets::Module::<T>::all_type_total_asset_balance(&self.asset_id)
     }
 
-    fn set_amount(&mut self, _new: u128) {}
+    fn set_amount(&mut self, _new: T::Balance) {}
 
     fn last_acum_weight(&self) -> WeightType {
         self.inner.last_total_mining_weight
@@ -27,13 +27,12 @@ impl<'a, T: Trait> BaseMiningWeight<T::BlockNumber> for AssetLedgerWrapper<'a, T
     }
 }
 
-impl<'a, T: Trait> BaseMiningWeight<T::BlockNumber> for MinerLedgerWrapper<'a, T> {
-    fn amount(&self) -> u128 {
+impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for MinerLedgerWrapper<'a, T> {
+    fn amount(&self) -> T::Balance {
         xpallet_assets::Module::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
-            .saturated_into()
     }
 
-    fn set_amount(&mut self, _new: u128) {}
+    fn set_amount(&mut self, _new: T::Balance) {}
 
     fn last_acum_weight(&self) -> WeightType {
         self.inner.last_mining_weight
@@ -52,13 +51,13 @@ impl<'a, T: Trait> BaseMiningWeight<T::BlockNumber> for MinerLedgerWrapper<'a, T
     }
 }
 
-fn generic_weight_factors<T: Trait, V: BaseMiningWeight<T::BlockNumber>>(
+fn generic_weight_factors<T: Trait, V: BaseMiningWeight<T::Balance, T::BlockNumber>>(
     wrapper: V,
     current_block: u32,
 ) -> WeightFactors {
     (
         wrapper.last_acum_weight(),
-        wrapper.amount(),
+        wrapper.amount().saturated_into(),
         current_block - wrapper.last_acum_weight_update(),
     )
 }

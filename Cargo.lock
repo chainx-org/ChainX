@@ -6875,6 +6875,7 @@ name = "xp-mining-common"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
+ "sp-arithmetic",
  "sp-runtime",
  "sp-std",
 ]

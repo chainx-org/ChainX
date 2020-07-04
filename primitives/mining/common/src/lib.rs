@@ -44,9 +44,9 @@ use sp_std::result::Result;
 pub type WeightType = u128;
 
 /// The getter and setter methods for the further mining weight processing.
-pub trait BaseMiningWeight<BlockNumber> {
-    fn amount(&self) -> u128;
-    fn set_amount(&mut self, new: u128);
+pub trait BaseMiningWeight<Balance, BlockNumber> {
+    fn amount(&self) -> Balance;
+    fn set_amount(&mut self, new: Balance);
 
     fn last_acum_weight(&self) -> WeightType;
     fn set_last_acum_weight(&mut self, s: WeightType);
@@ -56,16 +56,20 @@ pub trait BaseMiningWeight<BlockNumber> {
 }
 
 #[derive(Clone, Copy, sp_runtime::RuntimeDebug)]
-pub enum Delta {
-    Add(u128),
-    Sub(u128),
+pub enum Delta<Balance> {
+    Add(Balance),
+    Sub(Balance),
     Zero,
 }
 
+use sp_arithmetic::traits::BaseArithmetic;
+
 /// General logic for state changes of the mining weight operations.
-pub trait MiningWeight<BlockNumber>: BaseMiningWeight<BlockNumber> {
+pub trait MiningWeight<Balance: BaseArithmetic + Copy, BlockNumber>:
+    BaseMiningWeight<Balance, BlockNumber>
+{
     /// Set the new amount after settling the change of nomination.
-    fn settle_and_set_amount(&mut self, delta: &Delta) {
+    fn settle_and_set_amount(&mut self, delta: &Delta<Balance>) {
         let new = match *delta {
             Delta::Add(x) => self.amount() + x,
             Delta::Sub(x) => self.amount() - x,
@@ -87,14 +91,17 @@ pub trait MiningWeight<BlockNumber>: BaseMiningWeight<BlockNumber> {
         &mut self,
         latest_acum_weight: WeightType,
         current_block: BlockNumber,
-        delta: &Delta,
+        delta: &Delta<Balance>,
     ) {
         self.set_state_weight(latest_acum_weight, current_block);
         self.settle_and_set_amount(delta);
     }
 }
 
-impl<BlockNumber, T: BaseMiningWeight<BlockNumber>> MiningWeight<BlockNumber> for T {}
+impl<Balance: BaseArithmetic + Copy, BlockNumber, T: BaseMiningWeight<Balance, BlockNumber>>
+    MiningWeight<Balance, BlockNumber> for T
+{
+}
 
 /// Formula: Latest Vote Weight = last_acum_weight(WeightType) + amount(u64) * duration(u64)
 pub type WeightFactors = (WeightType, u128, u32);
