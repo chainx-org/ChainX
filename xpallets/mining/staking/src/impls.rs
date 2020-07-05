@@ -1,30 +1,33 @@
 use super::*;
 use sp_arithmetic::traits::BaseArithmetic;
-use xp_staking::{BaseVoteWeight, Claim, ComputeVoteWeight, Delta, VoteWeight, WeightFactors};
+use xp_mining_common::{
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
+};
 
-impl<Balance, BlockNumber> BaseVoteWeight<BlockNumber> for ValidatorLedger<Balance, BlockNumber>
+impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
+    for ValidatorLedger<Balance, BlockNumber>
 where
     Balance: Default + BaseArithmetic + Copy,
     BlockNumber: Default + BaseArithmetic + Copy,
 {
-    fn amount(&self) -> u128 {
-        self.total.saturated_into()
+    fn amount(&self) -> Balance {
+        self.total
     }
 
-    fn set_amount(&mut self, new: u128) {
-        self.total = new.saturated_into();
+    fn set_amount(&mut self, new: Balance) {
+        self.total = new;
     }
 
-    fn last_acum_weight(&self) -> VoteWeight {
+    fn last_acum_weight(&self) -> WeightType {
         self.last_total_vote_weight
     }
 
-    fn set_last_acum_weight(&mut self, latest_vote_weight: VoteWeight) {
+    fn set_last_acum_weight(&mut self, latest_vote_weight: WeightType) {
         self.last_total_vote_weight = latest_vote_weight;
     }
 
-    fn last_acum_weight_update(&self) -> u32 {
-        self.last_total_vote_weight_update.saturated_into::<u32>()
+    fn last_acum_weight_update(&self) -> BlockNumber {
+        self.last_total_vote_weight_update
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
@@ -32,29 +35,30 @@ where
     }
 }
 
-impl<Balance, BlockNumber> BaseVoteWeight<BlockNumber> for NominatorLedger<Balance, BlockNumber>
+impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
+    for NominatorLedger<Balance, BlockNumber>
 where
     Balance: Default + BaseArithmetic + Copy,
     BlockNumber: Default + BaseArithmetic + Copy,
 {
-    fn amount(&self) -> u128 {
-        self.nomination.saturated_into()
+    fn amount(&self) -> Balance {
+        self.nomination
     }
 
-    fn set_amount(&mut self, new: u128) {
-        self.nomination = new.saturated_into();
+    fn set_amount(&mut self, new: Balance) {
+        self.nomination = new;
     }
 
-    fn last_acum_weight(&self) -> VoteWeight {
+    fn last_acum_weight(&self) -> WeightType {
         self.last_vote_weight
     }
 
-    fn set_last_acum_weight(&mut self, latest_vote_weight: VoteWeight) {
+    fn set_last_acum_weight(&mut self, latest_vote_weight: WeightType) {
         self.last_vote_weight = latest_vote_weight;
     }
 
-    fn last_acum_weight_update(&self) -> u32 {
-        self.last_vote_weight_update.saturated_into::<u32>()
+    fn last_acum_weight_update(&self) -> BlockNumber {
+        self.last_vote_weight_update
     }
 
     fn set_last_acum_weight_update(&mut self, current_block: BlockNumber) {
@@ -62,30 +66,25 @@ where
     }
 }
 
-impl<T: Trait> ComputeVoteWeight<T::AccountId> for Module<T> {
+impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     type Claimee = T::AccountId;
     type Error = Error<T>;
 
     fn claimer_weight_factors(
         who: &T::AccountId,
         target: &Self::Claimee,
-        current_block: u32,
+        current_block: T::BlockNumber,
     ) -> WeightFactors {
         let claimer_ledger = Nominations::<T>::get(who, target);
-        (
-            claimer_ledger.last_vote_weight,
-            claimer_ledger.amount(),
-            current_block - claimer_ledger.last_acum_weight_update(),
-        )
+        generic_weight_factors::<T::Balance, T::BlockNumber, _>(claimer_ledger, current_block)
     }
 
-    fn claimee_weight_factors(target: &Self::Claimee, current_block: u32) -> WeightFactors {
+    fn claimee_weight_factors(
+        target: &Self::Claimee,
+        current_block: T::BlockNumber,
+    ) -> WeightFactors {
         let claimee_ledger = ValidatorLedgers::<T>::get(target);
-        (
-            claimee_ledger.last_total_vote_weight,
-            claimee_ledger.amount(),
-            current_block - claimee_ledger.last_acum_weight_update(),
-        )
+        generic_weight_factors::<T::Balance, T::BlockNumber, _>(claimee_ledger, current_block)
     }
 }
 
@@ -93,8 +92,8 @@ impl<T: Trait> ComputeVoteWeight<T::AccountId> for Module<T> {
 ///
 /// dividend = source_vote_weight/target_vote_weight * balance_of(claimee_jackpot)
 pub fn compute_dividend<T: Trait>(
-    source_vote_weight: VoteWeight,
-    target_vote_weight: VoteWeight,
+    source_vote_weight: WeightType,
+    target_vote_weight: WeightType,
     claimee_jackpot: &T::AccountId,
 ) -> T::Balance {
     let total_jackpot = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_jackpot);
@@ -118,10 +117,10 @@ impl<T: Trait> Module<T> {
     }
 
     /// Calculates the new amount given the origin amount and delta
-    fn apply_delta(origin: T::Balance, delta: Delta) -> T::Balance {
+    fn apply_delta(origin: T::Balance, delta: Delta<T::Balance>) -> T::Balance {
         match delta {
-            Delta::Add(v) => origin + v.saturated_into(),
-            Delta::Sub(v) => origin - v.saturated_into(),
+            Delta::Add(v) => origin + v,
+            Delta::Sub(v) => origin - v,
             Delta::Zero => origin,
         }
     }
@@ -130,9 +129,9 @@ impl<T: Trait> Module<T> {
     pub(crate) fn set_nominator_vote_weight(
         nominator: &T::AccountId,
         validator: &T::AccountId,
-        new_weight: VoteWeight,
+        new_weight: WeightType,
         current_block: T::BlockNumber,
-        delta: Delta,
+        delta: Delta<T::Balance>,
     ) {
         Nominations::<T>::mutate(nominator, validator, |claimer_ledger| {
             claimer_ledger.nomination = Self::apply_delta(claimer_ledger.nomination, delta);
@@ -144,9 +143,9 @@ impl<T: Trait> Module<T> {
     ///
     pub(crate) fn set_validator_vote_weight(
         validator: &T::AccountId,
-        new_weight: VoteWeight,
+        new_weight: WeightType,
         current_block: T::BlockNumber,
-        delta: Delta,
+        delta: Delta<T::Balance>,
     ) {
         ValidatorLedgers::<T>::mutate(validator, |validator_ledger| {
             validator_ledger.total = Self::apply_delta(validator_ledger.total, delta);
@@ -165,7 +164,7 @@ impl<T: Trait> Module<T> {
 
     fn update_claimee_vote_weight_on_claim(
         claimee: &T::AccountId,
-        new_vote_weight: VoteWeight,
+        new_vote_weight: WeightType,
         current_block: T::BlockNumber,
     ) {
         Self::set_validator_vote_weight(claimee, new_vote_weight, current_block, Delta::Zero);
@@ -179,12 +178,12 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error> {
         let current_block = <frame_system::Module<T>>::block_number();
 
-        let (source_weight, target_weight) =
-            <Self as ComputeVoteWeight<T::AccountId>>::settle_weight_on_claim(
-                claimer,
-                claimee,
-                current_block.saturated_into::<u32>(),
-            )?;
+        let (source_weight, target_weight) = <Self as ComputeMiningWeight<
+            T::AccountId,
+            T::BlockNumber,
+        >>::settle_weight_on_claim(
+            claimer, claimee, current_block
+        )?;
 
         let claimee_pot = Self::jackpot_account_for(claimee);
 

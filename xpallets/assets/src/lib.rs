@@ -158,16 +158,16 @@ decl_module! {
             asset: AssetInfo,
             restrictions: AssetRestrictions,
             is_online: bool,
-            is_psedu_intention: bool
+            has_mining_rights: bool
         ) -> DispatchResult {
             ensure_root(origin)?;
             asset.is_valid::<T>()?;
-            info!("[register_asset]|id:{:}|{:?}|is_online:{:}|is_psedu_intention:{:}", asset_id, asset, is_online, is_psedu_intention);
+            info!("[register_asset]|id:{:}|{:?}|is_online:{:}|has_mining_rights:{:}", asset_id, asset, is_online, has_mining_rights);
 
             Self::add_asset(asset_id, asset, restrictions)?;
 
-            T::OnAssetRegisterOrRevoke::on_register(&asset_id, is_psedu_intention)?;
-            Self::deposit_event(RawEvent::Register(asset_id, is_psedu_intention));
+            T::OnAssetRegisterOrRevoke::on_register(&asset_id, has_mining_rights)?;
+            Self::deposit_event(RawEvent::Register(asset_id, has_mining_rights));
 
             if !is_online {
                 let _ = Self::revoke_asset(frame_system::RawOrigin::Root.into(), asset_id.into());
@@ -296,14 +296,14 @@ impl<T: Trait> Module<T> {
         assets: &Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
         endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>,
     ) {
-        for (id, asset, restrictions, is_online, is_psedu_intention) in assets {
+        for (id, asset, restrictions, is_online, has_mining_rights) in assets {
             Self::register_asset(
                 frame_system::RawOrigin::Root.into(),
                 (*id).into(),
                 asset.clone(),
                 restrictions.clone(),
                 *is_online,
-                *is_psedu_intention,
+                *has_mining_rights,
             )
             .expect("asset registeration during the genesis can not fail");
         }
@@ -768,7 +768,7 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: T::Balance,
     ) -> result::Result<(), AssetErr> {
-        let _ = Self::move_balance(
+        Self::move_balance(
             &<Self as ChainT>::ASSET_ID,
             from,
             from_type,

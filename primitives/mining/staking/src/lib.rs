@@ -3,10 +3,6 @@
 //! A crate which contains primitives that are useful for implementation that uses staking
 //! approaches in general. Definitions related to sessions, slashing, etc go here.
 
-mod vote_weight;
-
-pub use vote_weight::*;
-
 use chainx_primitives::AssetId;
 use sp_std::prelude::Vec;
 
@@ -15,9 +11,6 @@ pub type SessionIndex = u32;
 
 /// Simple index type with which we can count unbonded entries.
 pub type UnbondedIndex = u32;
-
-/// Type for calculating staker's vote weight.
-pub type VoteWeight = u128;
 
 /// Type for measuring the non-validator entity's mining power.
 pub type MiningPower = u128;

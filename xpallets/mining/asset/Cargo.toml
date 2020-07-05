@@ -1,5 +1,5 @@
 [package]
-name = "xpallet-mining-staking"
+name = "xpallet-mining-asset"
 version = "0.1.0"
 authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
@@ -25,6 +25,7 @@ xp-mining-staking = { path  = "../../../primitives/mining/staking", default-feat
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
+xpallet-mining-staking = { path = "../../mining/staking", default-features = false }
 
 [dev-dependencies]
 xpallet-protocol = { path = "../../protocol" }
@@ -51,4 +52,5 @@ std = [
 
     "xpallet-assets/std",
     "xpallet-support/std",
+    "xpallet-mining-staking/std",
 ]

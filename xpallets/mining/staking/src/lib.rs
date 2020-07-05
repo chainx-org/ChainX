@@ -27,7 +27,8 @@ use sp_runtime::traits::{
 };
 use sp_std::prelude::*;
 use types::*;
-use xp_staking::{CollectAssetMiningInfo, Delta, OnMinting, UnbondedIndex};
+use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
+use xp_mining_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -206,8 +207,8 @@ impl<T: Trait> From<AssetErr> for Error<T> {
     }
 }
 
-impl<T: Trait> From<xp_staking::ZeroVoteWeightError> for Error<T> {
-    fn from(e: xp_staking::ZeroVoteWeightError) -> Self {
+impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
+    fn from(e: ZeroMiningWeightError) -> Self {
         Self::ZeroVoteWeight
     }
 }
@@ -224,7 +225,7 @@ decl_module! {
 
         /// Nominates the `target` with `value` of the origin account's balance locked.
         #[weight = 10]
-        fn bond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
+        pub fn bond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
@@ -317,7 +318,7 @@ decl_module! {
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
             todo!("ensure nominator record exists");
 
-            <Self as xp_staking::Claim<T::AccountId>>::claim(&sender, &target)?;
+            <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
         /// Declare the desire to validate for the origin account.
@@ -336,7 +337,7 @@ decl_module! {
 
         /// TODO: figure out whether this should be kept.
         #[weight = 100_000]
-        fn register(origin) {
+        pub fn register(origin) {
             let sender = ensure_signed(origin)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::RegisteredAlready);
             let current_block = <frame_system::Module<T>>::block_number();
@@ -474,21 +475,20 @@ impl<T: Trait> Module<T> {
     }
 
     /// Settles and update the vote weight state of the nominator `source` and validator `target` given the delta amount.
-    fn update_vote_weight(source: &T::AccountId, target: &T::AccountId, delta: Delta) {
+    fn update_vote_weight(source: &T::AccountId, target: &T::AccountId, delta: Delta<T::Balance>) {
         let current_block = <frame_system::Module<T>>::block_number();
-        let saturated_current_block = current_block.saturated_into::<u32>();
 
         let source_weight =
-            <Self as xp_staking::ComputeVoteWeight<T::AccountId>>::settle_claimer_weight(
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::settle_claimer_weight(
                 source,
                 target,
-                saturated_current_block,
+                current_block,
             );
 
         let target_weight =
-            <Self as xp_staking::ComputeVoteWeight<T::AccountId>>::settle_claimee_weight(
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::settle_claimee_weight(
                 target,
-                saturated_current_block,
+                current_block,
             );
 
         Self::set_nominator_vote_weight(source, target, source_weight, current_block, delta);
@@ -501,11 +501,7 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
     ) -> Result<(), Error<T>> {
         Self::bond_reserve(nominator, value)?;
-        Self::update_vote_weight(
-            nominator,
-            nominee,
-            Delta::Add(value.saturated_into::<u128>()),
-        );
+        Self::update_vote_weight(nominator, nominee, Delta::Add(value));
         Self::deposit_event(RawEvent::Bond(nominator.clone(), nominee.clone(), value));
         Ok(())
     }
@@ -517,10 +513,9 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
         current_block: T::BlockNumber,
     ) {
-        let v = value.saturated_into::<u128>();
         // TODO: reduce one block_number read?
-        Self::update_vote_weight(who, from, Delta::Sub(v));
-        Self::update_vote_weight(who, to, Delta::Add(v));
+        Self::update_vote_weight(who, from, Delta::Sub(value));
+        Self::update_vote_weight(who, to, Delta::Add(value));
         Nominators::<T>::mutate(who, |nominator_profile| {
             nominator_profile.last_rebond = Some(current_block);
         });
@@ -563,7 +558,7 @@ impl<T: Trait> Module<T> {
             nominator_profile.unbonded_chunks = unbonded_chunks;
         });
 
-        Self::update_vote_weight(who, target, Delta::Sub(value.saturated_into::<u128>()));
+        Self::update_vote_weight(who, target, Delta::Sub(value));
 
         Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
 
