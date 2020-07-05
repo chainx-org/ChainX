@@ -59,9 +59,14 @@ jobs:
     - name: Compile
       run: cargo test --no-run
 
-    # - name: Test
-      # FIXME
-      # run: cargo test --all
+    - name: Test
+      # FIXME: test all
+      run: |
+          cd xpallet/mining/asset
+          cargo test -- --nocapture
+          cd -
+          cd xpallet/mining/staking
+          cargo test -- --nocapture
 
     - if: matrix.os == 'ubuntu-latest'
       run: cargo clippy
