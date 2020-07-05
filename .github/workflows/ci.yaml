@@ -62,10 +62,10 @@ jobs:
     - name: Test
       # FIXME: test all
       run: |
-          cd xpallet/mining/asset
+          cd xpallets/mining/asset
           cargo test -- --nocapture
           cd -
-          cd xpallet/mining/staking
+          cd xpallets/mining/staking
           cargo test -- --nocapture
 
     - if: matrix.os == 'ubuntu-latest'
