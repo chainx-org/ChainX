@@ -70,7 +70,8 @@ impl<T: Trait> Module<T> {
     ) -> Result<T> {
         let quotations = <QuotationsOf<T>>::get(&(pair_index, price));
         if quotations.len() >= MAX_BACKLOG_ORDER {
-            if let Some(order) = <OrderInfoOf<T>>::get(&quotations[0]) {
+            let (who, order_index) = &quotations[0];
+            if let Some(order) = <OrderInfoOf<T>>::get(who, order_index) {
                 if order.side() == side {
                     return Err(Error::<T>::TooManyBacklogOrders);
                 }

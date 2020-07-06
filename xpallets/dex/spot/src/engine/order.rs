@@ -75,7 +75,7 @@ impl<T: Trait> Module<T> {
         );
 
         debug!("[inject_order] {:?}", order);
-        <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), &order);
+        <OrderInfoOf<T>>::insert(order.submitter(), order.index(), &order);
 
         // Self::deposit_event(RawEvent::PutOrder(
         // order.submitter(),
@@ -145,7 +145,7 @@ impl<T: Trait> Module<T> {
         // should be updated.
         if order.is_fulfilled() {
             order.status = OrderStatus::Filled;
-            <OrderInfoOf<T>>::remove(&(order.submitter(), order.index()));
+            <OrderInfoOf<T>>::remove(order.submitter(), order.index());
         } else {
             <QuotationsOf<T>>::mutate(&(order.pair_index(), order.price()), |quotations| {
                 quotations.push((order.submitter(), order.index()))
@@ -156,7 +156,7 @@ impl<T: Trait> Module<T> {
                 order.status = OrderStatus::ParitialFill;
             }
 
-            <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), order.clone());
+            <OrderInfoOf<T>>::insert(order.submitter(), order.index(), order.clone());
 
             Self::update_handicap_after_matching_order(pair, order);
         }
@@ -171,12 +171,12 @@ impl<T: Trait> Module<T> {
         let quotations = <QuotationsOf<T>>::get(&(pair.index, counterparty_price));
         let mut fulfilled_orders = Vec::new();
 
-        for quotation in quotations.iter() {
+        for (who, order_index) in quotations.iter() {
             if taker_order.is_fulfilled() {
                 break;
             }
             // Find the matched order.
-            if let Some(mut maker_order) = <OrderInfoOf<T>>::get(quotation) {
+            if let Some(mut maker_order) = <OrderInfoOf<T>>::get(who, order_index) {
                 assert!(
                     counterparty_side == maker_order.side(),
                     "Opponent side should match the side of maker order."
@@ -272,9 +272,9 @@ impl<T: Trait> Module<T> {
         pair: TradingPairProfile,
         order_side: Side,
     ) {
-        let order_key = (who, order_index);
+        <OrderInfoOf<T>>::remove(&who, order_index);
 
-        <OrderInfoOf<T>>::remove(&order_key);
+        let order_key = (who, order_index);
         Self::remove_quotation(pair_index, price, order_key);
 
         Self::update_handicap(&pair, price, order_side);
@@ -306,7 +306,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn insert_refreshed_order(order: &OrderInfo<T>) {
-        <OrderInfoOf<T>>::insert(&(order.submitter(), order.index()), order);
+        <OrderInfoOf<T>>::insert(order.submitter(), order.index(), order);
     }
 
     /// Due to the loss of precision in Self::convert_base_to_quote(),
@@ -396,7 +396,7 @@ impl<T: Trait> Module<T> {
         order.last_update_at = <system::Module<T>>::block_number();
 
         Self::update_order_event(&order);
-        OrderInfoOf::<T>::insert(&(order.submitter(), order.index()), order);
+        OrderInfoOf::<T>::insert(order.submitter(), order.index(), order);
 
         Ok(())
     }

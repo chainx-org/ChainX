@@ -137,8 +137,8 @@ impl<T: Trait> Module<T> {
             "[remove_orders_and_quotations] These fulfilled orders will be removed: {:?}",
             fulfilled_orders
         );
-        for order_key in fulfilled_orders.iter() {
-            <OrderInfoOf<T>>::remove(order_key);
+        for (who, order_idx) in fulfilled_orders.iter() {
+            <OrderInfoOf<T>>::remove(who, order_idx);
         }
 
         <QuotationsOf<T>>::mutate(&(pair_index, price), |quotations| {

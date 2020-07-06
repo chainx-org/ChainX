@@ -126,14 +126,14 @@ fn inject_order_should_work() {
         assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
 
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100,));
-        let order = XSpot::order_info_of(&(1, 0)).unwrap();
+        let order = XSpot::order_info_of(1, 0).unwrap();
         assert_eq!(order.submitter(), 1);
         assert_eq!(order.pair_index(), 0);
         assert_eq!(order.amount(), 1_000);
         assert_eq!(order.price(), 1_000_100);
 
         assert_ok!(t_put_order_buy(1, 0, 2000, 1_000_000,));
-        let order = XSpot::order_info_of(&(1, 1)).unwrap();
+        let order = XSpot::order_info_of(1, 1).unwrap();
         assert_eq!(order.submitter(), 1);
         assert_eq!(order.pair_index(), 0);
         assert_eq!(order.amount(), 2_000);
@@ -218,9 +218,9 @@ fn match_order_should_work() {
 
         assert_ok!(t_put_order_sell(2, 0, 500, 1_000_100));
 
-        assert_eq!(XSpot::order_info_of((2, 0)), None);
+        assert_eq!(XSpot::order_info_of(2, 0), None);
 
-        let order_1_1 = XSpot::order_info_of((1, 1)).unwrap();
+        let order_1_1 = XSpot::order_info_of(1, 1).unwrap();
 
         assert_eq!(order_1_1.already_filled, 500);
         assert_eq!(order_1_1.status, OrderStatus::ParitialFill);
@@ -228,8 +228,8 @@ fn match_order_should_work() {
 
         assert_ok!(t_put_order_sell(2, 0, 700, 1_000_100));
 
-        assert_eq!(XSpot::order_info_of((1, 1)), None);
-        let order_2_1 = XSpot::order_info_of((2, 1)).unwrap();
+        assert_eq!(XSpot::order_info_of(1, 1), None);
+        let order_2_1 = XSpot::order_info_of(2, 1).unwrap();
         assert_eq!(order_2_1.status, OrderStatus::ParitialFill);
         assert_eq!(order_2_1.already_filled, 500);
         assert_eq!(order_2_1.remaining, 200);
@@ -258,7 +258,7 @@ fn cancel_order_should_work() {
         assert_ok!(XSpot::cancel_order(Origin::signed(1), 0, 1));
 
         assert_eq!(XSpot::quotations_of((0, 1_200_000)), vec![]);
-        assert_eq!(XSpot::order_info_of((1, 1)), None);
+        assert_eq!(XSpot::order_info_of(1, 1), None);
     })
 }
 
@@ -288,7 +288,7 @@ fn reap_orders_should_work() {
         assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
         assert_eq!(XAssets::free_balance_of(&2, &trading_pair.quote()), 6);
         assert_eq!(XAssets::free_balance_of(&3, &trading_pair.quote()), 6);
-        assert_eq!(XSpot::order_info_of((4, 0)).unwrap().already_filled, 1_000);
+        assert_eq!(XSpot::order_info_of(4, 0).unwrap().already_filled, 1_000);
     })
 }
 

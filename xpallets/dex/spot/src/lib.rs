@@ -81,7 +81,7 @@ decl_storage! {
 
         /// Details of the order given account and his order ID
         pub OrderInfoOf get(fn order_info_of):
-            map hasher(twox_64_concat) (T::AccountId, OrderIndex) => Option<OrderInfo<T>>;
+            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) OrderIndex => Option<OrderInfo<T>>;
 
         /// All the account and his order number given a certain trading pair and price.
         pub QuotationsOf get(fn quotations_of):
@@ -381,6 +381,13 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    fn get_order(
+        who: &T::AccountId,
+        order_index: OrderIndex,
+    ) -> result::Result<OrderInfo<T>, Error<T>> {
+        Self::order_info_of(who, order_index).ok_or(Error::<T>::InvalidOrderIndex)
+    }
+
     fn check_cancel_order(
         who: &T::AccountId,
         pair_index: TradingPairIndex,
@@ -389,12 +396,10 @@ impl<T: Trait> Module<T> {
         let pair = Self::trading_pair(pair_index)?;
         ensure!(pair.online, Error::<T>::TradingPairOffline);
 
-        let order_status = match Self::order_info_of(&(who.clone(), order_index)) {
-            Some(x) => x.status,
-            None => return Err(Error::<T>::InvalidOrderIndex),
-        };
+        let order = Self::get_order(who, order_index)?;
+
         ensure!(
-            order_status == OrderStatus::ZeroFill || order_status == OrderStatus::ParitialFill,
+            order.status == OrderStatus::ZeroFill || order.status == OrderStatus::ParitialFill,
             Error::<T>::CancelOrderNotAllowed
         );
 
@@ -412,8 +417,7 @@ impl<T: Trait> Module<T> {
         );
 
         let pair = Self::trading_pair(pair_index)?;
-        let mut order = Self::order_info_of(&(who.clone(), order_index))
-            .expect("We have ensured the order exists.");
+        let mut order = Self::get_order(who, order_index)?;
 
         Self::update_order_and_unreserve_on_cancel(&mut order, &pair, who)?;
 
@@ -429,17 +433,13 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// In order to get trading pair easier.
+    #[inline]
     fn trading_pair(pair_index: TradingPairIndex) -> result::Result<TradingPairProfile, Error<T>> {
         TradingPairOf::get(pair_index).ok_or(Error::<T>::InvalidOrderPair)
     }
 }
 
 impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
-    fn on_register(_token: &AssetId, _is_psedu_intention: bool) -> DispatchResult {
-        Ok(())
-    }
-
     fn on_revoke(token: &AssetId) -> DispatchResult {
         let pair_len = TradingPairCount::get();
         for i in 0..pair_len {
