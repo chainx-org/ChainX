@@ -29,7 +29,10 @@ use xpallet_support::info;
 
 use types::*;
 
+///
 const MAX_BACKLOG_ORDER: usize = 1000;
+/// TODO: doc this properly.
+const FLUCTUATION: u32 = 100;
 
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait + pallet_timestamp::Trait {
     /// The overarching event type.
@@ -191,7 +194,6 @@ decl_module! {
             let pair = Self::trading_pair(pair_index)?;
 
             ensure!(pair.online, Error::<T>::TradingPairOffline);
-
             ensure!(
                 (price.saturated_into() % u128::from(10_u64.pow(pair.tick_precision))).is_zero(),
                 Error::<T>::InvalidPrice
@@ -342,7 +344,10 @@ impl<T: Trait> Module<T> {
             "[set_price_volatility] price_volatility: {:}",
             price_volatility
         );
-        ensure!(price_volatility < 100, Error::<T>::InvalidPriceVolatility);
+        ensure!(
+            price_volatility < FLUCTUATION,
+            Error::<T>::InvalidPriceVolatility
+        );
         PriceVolatility::put(price_volatility);
         // Self::deposit_event(RawEvent::PriceVolatility(price_volatility));
         Ok(())

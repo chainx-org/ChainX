@@ -184,7 +184,7 @@ impl TradingPairProfile {
     }
 
     pub fn fluctuation(&self) -> u64 {
-        100 * self.tick()
+        FLUCTUATION.saturated_into::<u64>() * self.tick()
     }
 }
 
@@ -203,7 +203,7 @@ pub struct OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber>(
     BlockNumber,
 );
 
-impl<PairIndex: Clone, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber: Clone>
+impl<PairIndex: Copy, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber: Clone>
     OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber>
 {
     #[allow(clippy::too_many_arguments)]
@@ -227,7 +227,7 @@ impl<PairIndex: Clone, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber:
     }
 
     pub fn pair_index(&self) -> PairIndex {
-        self.1.clone()
+        self.1
     }
 
     pub fn side(&self) -> Side {
@@ -282,7 +282,7 @@ pub struct Order<PairIndex, AccountId, Balance, Price, BlockNumber> {
 
 #[cfg(feature = "std")]
 impl<
-        PI: Clone + std::fmt::Debug,
+        PI: Copy + std::fmt::Debug,
         AI: Clone + std::fmt::Debug,
         A: Copy + Ord + BaseArithmetic + std::fmt::Debug,
         P: Copy + std::fmt::Debug,
@@ -329,7 +329,7 @@ impl<
 impl<PairIndex, AccountId, Balance, Price, BlockNumber>
     Order<PairIndex, AccountId, Balance, Price, BlockNumber>
 where
-    PairIndex: Clone,
+    PairIndex: Copy,
     AccountId: Clone,
     Balance: Copy + Ord + BaseArithmetic,
     Price: Copy,
