@@ -98,8 +98,8 @@ impl<T: Trait> Module<T> {
         pair: &TradingPairProfile,
     ) -> result::Result<T::Balance, Error<T>> {
         if let (Some(base), Some(quote)) = (
-            <xpallet_assets::Module<T>>::asset_info_of(pair.base_as_ref()),
-            <xpallet_assets::Module<T>>::asset_info_of(pair.quote_as_ref()),
+            <xpallet_assets::Module<T>>::asset_info_of(pair.base()),
+            <xpallet_assets::Module<T>>::asset_info_of(pair.quote()),
         ) {
             let (base_p, quote_p, pair_p) = (
                 u32::from(base.precision()),

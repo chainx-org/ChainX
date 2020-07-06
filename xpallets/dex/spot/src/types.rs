@@ -14,7 +14,7 @@ pub type TradeHistoryIndex = u64;
 ///
 pub type TradingPairIndex = u32;
 
-///
+/// Currently only Limit Order is supported.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum OrderType {
@@ -28,7 +28,7 @@ impl Default for OrderType {
     }
 }
 
-///
+/// Direction of an order.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum Side {
@@ -42,20 +42,25 @@ impl Default for Side {
     }
 }
 
-///
+/// Status of an order.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum OrderStatus {
-    ZeroFill,
+    /// Order just got created, zero filled.
+    Created,
+    /// Order has been filled partially.
     ParitialFill,
+    /// Order has been filled completely.
     Filled,
+    /// Order has been canceled with partial fill.
     ParitialFillAndCanceled,
+    /// Order has been canceled with zero fill.
     Canceled,
 }
 
 impl Default for OrderStatus {
     fn default() -> Self {
-        OrderStatus::ZeroFill
+        OrderStatus::Created
     }
 }
 
@@ -76,13 +81,13 @@ pub struct Handicap<Price> {
 
 impl<Price: Copy + BaseArithmetic> Handicap<Price> {
     pub fn new(highest_bid: Price, lowest_offer: Price) -> Self {
-        Handicap {
+        Self {
             highest_bid,
             lowest_offer,
         }
     }
 
-    /// Decrease the highest_bid by one tick.
+    /// Decreases the highest_bid by one tick.
     pub fn tick_down_highest_bid(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
 
@@ -94,7 +99,7 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
         self.highest_bid
     }
 
-    /// Increase the lowest_offer by one tick.
+    /// Increases the lowest_offer by one tick.
     pub fn tick_up_lowest_offer(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
 
@@ -115,22 +120,15 @@ pub struct CurrencyPair(AssetId, AssetId);
 
 impl CurrencyPair {
     pub fn new(base: AssetId, quote: AssetId) -> Self {
-        CurrencyPair(base, quote)
-    }
-    pub fn base(&self) -> AssetId {
-        self.0.clone()
+        Self(base, quote)
     }
 
-    pub fn base_as_ref(&self) -> &AssetId {
-        &self.0
+    pub fn base(&self) -> AssetId {
+        self.0
     }
 
     pub fn quote(&self) -> AssetId {
-        self.1.clone()
-    }
-
-    pub fn quote_as_ref(&self) -> &AssetId {
-        &self.1
+        self.1
     }
 }
 
@@ -141,6 +139,8 @@ impl std::fmt::Debug for CurrencyPair {
     }
 }
 
+/// Profile of a trading pair.
+///
 /// PCX/BTC = pip, a.k.a, percentage in point. Also called exchange rate.
 /// tick precision for BTC
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
@@ -175,16 +175,8 @@ impl TradingPairProfile {
         self.currency_pair.base()
     }
 
-    pub fn base_as_ref(&self) -> &AssetId {
-        self.currency_pair.base_as_ref()
-    }
-
     pub fn quote(&self) -> AssetId {
         self.currency_pair.quote()
-    }
-
-    pub fn quote_as_ref(&self) -> &AssetId {
-        self.currency_pair.quote_as_ref()
     }
 
     pub fn tick(&self) -> u64 {
@@ -351,7 +343,7 @@ where
         executed_indices: Vec<TradeHistoryIndex>,
         remaining: Balance,
     ) -> Self {
-        Order {
+        Self {
             props,
             already_filled,
             last_update_at,

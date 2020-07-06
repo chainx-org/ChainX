@@ -119,7 +119,7 @@ impl<T: Trait> Module<T> {
             props,
             Zero::zero(),
             current_block,
-            OrderStatus::ZeroFill,
+            OrderStatus::Created,
             Default::default(),
             remaining,
         )

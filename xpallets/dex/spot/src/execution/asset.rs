@@ -17,8 +17,8 @@ impl<T: Trait> Module<T> {
         let maker = &maker_order.submitter();
         let taker = &taker_order.submitter();
 
-        let base = pair.base_as_ref();
-        let quote = pair.quote_as_ref();
+        let base = pair.base();
+        let quote = pair.quote();
 
         let (maker_turnover_amount, taker_turnover_amount) = match maker_order_side {
             Side::Sell => {
@@ -28,8 +28,8 @@ impl<T: Trait> Module<T> {
                 let taker_turnover_amount = Self::convert_base_to_quote(turnover, price, pair)
                     .unwrap_or_else(|_| Zero::zero());
 
-                Self::apply_delivery(base, maker_turnover_amount, maker, taker)?;
-                Self::apply_delivery(quote, taker_turnover_amount, taker, maker)?;
+                Self::apply_delivery(&base, maker_turnover_amount, maker, taker)?;
+                Self::apply_delivery(&quote, taker_turnover_amount, taker, maker)?;
 
                 (maker_turnover_amount, taker_turnover_amount)
             }
@@ -40,8 +40,8 @@ impl<T: Trait> Module<T> {
                     .unwrap_or_else(|_| Zero::zero());
                 let taker_turnover_amount = turnover;
 
-                Self::apply_delivery(quote, maker_turnover_amount, maker, taker)?;
-                Self::apply_delivery(base, taker_turnover_amount, taker, maker)?;
+                Self::apply_delivery(&quote, maker_turnover_amount, maker, taker)?;
+                Self::apply_delivery(&base, taker_turnover_amount, taker, maker)?;
 
                 (maker_turnover_amount, taker_turnover_amount)
             }

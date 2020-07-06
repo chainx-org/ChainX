@@ -2,7 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod engine;
+mod execution;
 mod types;
 
 #[cfg(test)]
@@ -121,7 +121,7 @@ decl_event!(
 );
 
 decl_error! {
-    /// Error for the staking module.
+    /// Error for the spot module.
     pub enum Error for Module<T: Trait> {
         /// Price can not be zero, and must be an integer multiple of the tick precision.
         InvalidPrice,
@@ -173,9 +173,6 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        fn on_finalize() {
-        }
-
         #[weight = 10]
         pub fn put_order(
             origin,
@@ -206,14 +203,14 @@ decl_module! {
             // Reserve the token according to the order side.
             let (reserve_token, reserve_amount) = match side {
                 Side::Buy => {
-                    (pair.quote_as_ref(), Self::convert_base_to_quote(amount, price, &pair)?)
+                    (pair.quote(), Self::convert_base_to_quote(amount, price, &pair)?)
                 }
                 Side::Sell => {
-                    (pair.base_as_ref(), amount)
+                    (pair.base(), amount)
                 }
             };
 
-            Self::put_order_reserve(&who, reserve_token, reserve_amount)?;
+            Self::put_order_reserve(&who, &reserve_token, reserve_amount)?;
 
             Self::apply_put_order(who, pair_index, order_type, side, amount, price, reserve_amount)?;
         }
@@ -401,7 +398,7 @@ impl<T: Trait> Module<T> {
         let order = Self::get_order(who, order_index)?;
 
         ensure!(
-            order.status == OrderStatus::ZeroFill || order.status == OrderStatus::ParitialFill,
+            order.status == OrderStatus::Created || order.status == OrderStatus::ParitialFill,
             Error::<T>::CancelOrderNotAllowed
         );
 
