@@ -448,6 +448,5 @@ where
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TradingPairInfo<Price, BlockNumber> {
     pub latest_price: Price,
-    pub average_price: Price,
     pub last_updated: BlockNumber,
 }

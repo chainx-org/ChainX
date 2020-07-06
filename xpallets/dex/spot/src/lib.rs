@@ -2,7 +2,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// mod impls;
 mod engine;
 mod types;
 
@@ -74,13 +73,13 @@ decl_storage! {
         /// How many trading pairs so far.
         pub TradingPairCount get(fn trading_pair_count): TradingPairIndex;
 
-        /// Essential info of the trading pair.
+        /// The map from trading pair index to its static profile.
         pub TradingPairOf get(fn trading_pair_of):
             map hasher(twox_64_concat) TradingPairIndex => Option<TradingPair>;
 
         /// (latest price, average price, last last update height) of trading pair
         pub TradingPairInfoOf get(fn trading_pair_info_of):
-            map hasher(twox_64_concat) TradingPairIndex => Option<(T::Price, T::Price, T::BlockNumber)>;
+            map hasher(twox_64_concat) TradingPairIndex => Option<TradingPairInfo<T::Price, T::BlockNumber>>;
 
         /// Total transactions has been made for a trading pair.
         pub TradeHistoryIndexOf get(fn trade_history_index_of):
@@ -295,7 +294,10 @@ impl<T: Trait> Module<T> {
         TradingPairOf::insert(index, &pair);
         TradingPairInfoOf::<T>::insert(
             index,
-            (price, price, <frame_system::Module<T>>::block_number()),
+            TradingPairInfo {
+                latest_price: price,
+                last_updated: <frame_system::Module<T>>::block_number(),
+            },
         );
         TradingPairCount::put(index + 1);
 

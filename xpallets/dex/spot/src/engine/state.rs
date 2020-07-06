@@ -127,14 +127,6 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn blocks_per_hour() -> u64 {
-        // FIXME
-        // let period = <pallet_timestamp::Module<T>>::minimum_period();
-        let period = 888;
-        let seconds_per_hour = (60 * 60) as u64;
-        seconds_per_hour / period.saturated_into::<u64>()
-    }
-
     /// This happens when the maker orders have been full filled.
     pub(super) fn remove_orders_and_quotations(
         pair_index: TradingPairIndex,
@@ -173,30 +165,15 @@ impl<T: Trait> Module<T> {
     }
 
     /// This happens after an order has been executed.
-    pub(crate) fn update_latest_and_average_price(pair_index: TradingPairIndex, latest: T::Price) {
-        let blocks_per_hour = Self::blocks_per_hour();
+    pub(crate) fn update_latest_price(pair_index: TradingPairIndex, latest: T::Price) {
         let current_block = <system::Module<T>>::block_number();
 
-        // FIXME remove average price
-        let aver = if let Some((_, aver, last_update)) = <TradingPairInfoOf<T>>::get(pair_index) {
-            let elapsed = (current_block - last_update).saturated_into::<u64>();
-            if elapsed < blocks_per_hour {
-                let new_weight: u128 = latest.saturated_into() * u128::from(elapsed);
-                let old_weight: u128 =
-                    aver.saturated_into() * u128::from(blocks_per_hour - elapsed);
-                ((new_weight + old_weight) / u128::from(blocks_per_hour)).saturated_into()
-            } else {
-                latest
-            }
-        } else {
-            latest
-        };
-
-        debug!(
-            "[update_latest_and_average_price] latest: {:?}, average: {:?}, current_block: {:?}",
-            latest, aver, current_block
+        <TradingPairInfoOf<T>>::insert(
+            pair_index,
+            TradingPairInfo {
+                latest_price: latest,
+                last_updated: current_block,
+            },
         );
-
-        <TradingPairInfoOf<T>>::insert(pair_index, (latest, aver, current_block));
     }
 }
