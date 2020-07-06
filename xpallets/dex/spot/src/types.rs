@@ -177,6 +177,10 @@ impl TradingPairProfile {
     pub fn fluctuation(&self) -> u64 {
         FLUCTUATION.saturated_into::<u64>() * self.tick()
     }
+
+    pub fn is_valid_price<Price: BaseArithmetic>(&self, price: Price) -> bool {
+        (price.saturated_into::<u128>() % u128::from(10_u64.pow(self.tick_precision))).is_zero()
+    }
 }
 
 /// Immutable information of an order.

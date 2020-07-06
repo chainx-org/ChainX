@@ -194,25 +194,18 @@ decl_module! {
             let pair = Self::trading_pair(pair_id)?;
 
             ensure!(pair.online, Error::<T>::TradingPairOffline);
-            ensure!(
-                (price.saturated_into() % u128::from(10_u64.pow(pair.tick_precision))).is_zero(),
-                Error::<T>::InvalidPrice
-            );
+            ensure!(pair.is_valid_price(price), Error::<T>::InvalidPrice);
 
             Self::is_within_quotation_range(price, side, pair_id)?;
             Self::has_too_many_backlog_orders(pair_id, price, side)?;
 
             // Reserve the token according to the order side.
-            let (reserve_token, reserve_amount) = match side {
-                Side::Buy => {
-                    (pair.quote(), Self::convert_base_to_quote(amount, price, &pair)?)
-                }
-                Side::Sell => {
-                    (pair.base(), amount)
-                }
+            let (reserve_asset, reserve_amount) = match side {
+                Side::Buy => (pair.quote(), Self::convert_base_to_quote(amount, price, &pair)?),
+                Side::Sell => (pair.base(), amount)
             };
 
-            Self::put_order_reserve(&who, &reserve_token, reserve_amount)?;
+            Self::put_order_reserve(&who, &reserve_asset, reserve_amount)?;
 
             Self::apply_put_order(who, pair_id, order_type, side, amount, price, reserve_amount)?;
         }
@@ -234,8 +227,8 @@ decl_module! {
         #[weight = 10]
         fn set_handicap(origin, pair_id: TradingPairId, highest_bid: T::Price, lowest_offer: T::Price) {
             ensure_root(origin)?;
-            HandicapOf::<T>::insert(pair_id, HandicapInfo::<T>::new(highest_bid, lowest_offer));
             info!("[set_handicap]pair_id:{:?},highest_bid:{:?},lowest_offer:{:?}", pair_id, highest_bid, lowest_offer,);
+            HandicapOf::<T>::insert(pair_id, HandicapInfo::<T>::new(highest_bid, lowest_offer));
         }
 
 
