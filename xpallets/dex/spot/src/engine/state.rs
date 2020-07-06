@@ -18,7 +18,7 @@ impl<T: Trait> Module<T> {
         if <QuotationsOf<T>>::get(&(pair.index, price)).is_empty() {
             let mut handicap = <HandicapOf<T>>::get(pair.index);
             match side {
-                Sell => {
+                Side::Sell => {
                     if !handicap.lowest_offer.is_zero()
                         && <QuotationsOf<T>>::get(&(pair.index, handicap.lowest_offer)).is_empty()
                     {
@@ -31,7 +31,7 @@ impl<T: Trait> Module<T> {
                         );
                     }
                 }
-                Buy => {
+                Side::Buy => {
                     if !handicap.highest_bid.is_zero()
                         && <QuotationsOf<T>>::get((pair.index, handicap.highest_bid)).is_empty()
                     {
@@ -53,8 +53,8 @@ impl<T: Trait> Module<T> {
         order: &mut OrderInfo<T>,
     ) {
         match order.side() {
-            Buy => Self::update_handicap_of_buyers(pair, order),
-            Sell => Self::update_handicap_of_sellers(pair, order),
+            Side::Buy => Self::update_handicap_of_buyers(pair, order),
+            Side::Sell => Self::update_handicap_of_sellers(pair, order),
         }
     }
 
@@ -83,7 +83,7 @@ impl<T: Trait> Module<T> {
                     "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
                     order.pair_index(),
                     handicap.lowest_offer,
-                    Sell,
+                    Side::Sell,
                 );
             }
 
@@ -94,7 +94,7 @@ impl<T: Trait> Module<T> {
                 "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
                 order.pair_index(),
                 highest_bid,
-                Buy
+                Side::Buy
             );
         }
     }
@@ -111,7 +111,7 @@ impl<T: Trait> Module<T> {
                     "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
                     order.pair_index(),
                     handicap.highest_bid,
-                    Buy
+                    Side::Buy
                 );
             }
 
@@ -122,7 +122,7 @@ impl<T: Trait> Module<T> {
                 "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
                 order.pair_index(),
                 lowest_offer,
-                Sell,
+                Side::Sell,
             );
         }
     }

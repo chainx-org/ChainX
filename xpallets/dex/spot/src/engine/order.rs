@@ -24,8 +24,8 @@ impl<T: Trait> Module<T> {
         // If the price is too low or too high, we only need to check if the handicap should be updated,
         // otherwise we should match this order.
         let skip_match_order = match side {
-            Buy => lowest_offer.is_zero() || price < lowest_offer,
-            Sell => highest_bid.is_zero() || price > highest_bid,
+            Side::Buy => lowest_offer.is_zero() || price < lowest_offer,
+            Side::Sell => highest_bid.is_zero() || price > highest_bid,
         };
 
         // If there is no chance to match order, we only have to insert this quote and update handicap.
@@ -35,10 +35,10 @@ impl<T: Trait> Module<T> {
             });
 
             match side {
-                Buy if price > highest_bid => {
+                Side::Buy if price > highest_bid => {
                     <HandicapOf<T>>::mutate(pair_index, |handicap| handicap.highest_bid = price);
                 }
-                Sell if lowest_offer.is_zero() || price < lowest_offer => {
+                Side::Sell if lowest_offer.is_zero() || price < lowest_offer => {
                     <HandicapOf<T>>::mutate(pair_index, |handicap| handicap.lowest_offer = price);
                 }
                 _ => (),
@@ -185,7 +185,7 @@ impl<T: Trait> Module<T> {
                 );
 
                 // Execute the order at the opponent price when they match.
-                let _ = Self::execute_order(
+                let _execution_result = Self::execute_order(
                     pair.index,
                     &mut maker_order,
                     taker_order,
@@ -221,8 +221,8 @@ impl<T: Trait> Module<T> {
         // Sell: [ my_quote , highest_bid   ]
         // FIXME refine later
         match taker_order.side() {
-            Buy => {
-                let (counterparty_side, floor, ceiling) = (Sell, lowest_offer, my_quote);
+            Side::Buy => {
+                let (counterparty_side, floor, ceiling) = (Side::Sell, lowest_offer, my_quote);
 
                 let mut counterparty_price = floor;
 
@@ -239,8 +239,8 @@ impl<T: Trait> Module<T> {
                     counterparty_price = Self::tick_up(counterparty_price, tick);
                 }
             }
-            Sell => {
-                let (counterparty_side, floor, ceiling) = (Buy, my_quote, highest_bid);
+            Side::Sell => {
+                let (counterparty_side, floor, ceiling) = (Side::Buy, my_quote, highest_bid);
 
                 let mut counterparty_price = ceiling;
 
@@ -347,8 +347,8 @@ impl<T: Trait> Module<T> {
         taker_order.decrease_remaining_on_execute(taker_turnover_amount);
 
         let refunding_token_type = |order: &OrderInfo<T>| match order.side() {
-            Buy => pair.quote(),
-            Sell => pair.base(),
+            Side::Buy => pair.quote(),
+            Side::Sell => pair.base(),
         };
 
         Self::try_refund_remaining(maker_order, &refunding_token_type(maker_order));
@@ -382,8 +382,8 @@ impl<T: Trait> Module<T> {
     ) -> Result<T> {
         // Unreserve the remaining asset.
         let (refund_token, refund_amount) = match order.side() {
-            Sell => (pair.base(), order.remaining_in_base()),
-            Buy => (pair.quote(), order.remaining),
+            Side::Sell => (pair.base(), order.remaining_in_base()),
+            Side::Buy => (pair.quote(), order.remaining),
         };
 
         Self::cancel_order_unreserve(who, &refund_token, refund_amount)?;

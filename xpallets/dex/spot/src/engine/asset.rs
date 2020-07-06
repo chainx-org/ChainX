@@ -21,7 +21,7 @@ impl<T: Trait> Module<T> {
         let quote = pair.quote_as_ref();
 
         let (maker_turnover_amount, taker_turnover_amount) = match maker_order_side {
-            Sell => {
+            Side::Sell => {
                 // maker(seller): unserve the base currency and move to the taker.
                 // taker(buyer): unserve the quote currency and move to the maker.
                 let maker_turnover_amount = turnover;
@@ -33,7 +33,7 @@ impl<T: Trait> Module<T> {
 
                 (maker_turnover_amount, taker_turnover_amount)
             }
-            Buy => {
+            Side::Buy => {
                 // maker(buyer): unserve the quote currency and move to the taker.
                 // taker(seller): unserve the base currency and move to the maker.
                 let maker_turnover_amount = Self::convert_base_to_quote(turnover, price, pair)

@@ -26,7 +26,7 @@ impl<T: Trait> Module<T> {
         let fluctuation = pair.fluctuation().saturated_into();
 
         match side {
-            Buy => {
+            Side::Buy => {
                 debug!(
                     "[is_within_quotation_range] Buy: quote: {:?}, lowest_offer: {:?}, fluctuation: {:?}",
                     quote,
@@ -42,7 +42,7 @@ impl<T: Trait> Module<T> {
                     return Err(Error::<T>::TooHighBidPrice);
                 }
             }
-            Sell => {
+            Side::Sell => {
                 debug!(
                     "[is_within_quotation_range] Sell: quote: {:?}, highest_bid: {:?}, fluctuation: {:?}",
                     quote,
@@ -105,13 +105,16 @@ impl<T: Trait> Module<T> {
                 u32::from(quote.precision()),
                 pair.pip_precision,
             );
+
             let (mul, s) = if quote_p >= (base_p + pair_p) {
                 (true, 10_u128.pow(quote_p - base_p - pair_p))
             } else {
                 (false, 10_u128.pow(base_p + pair_p - quote_p))
             };
+
             // Can overflow
             let ap = amount.saturated_into::<u128>() * price.saturated_into::<u128>();
+
             let converted = if mul {
                 match ap.checked_mul(s) {
                     Some(r) => r,
@@ -130,7 +133,7 @@ impl<T: Trait> Module<T> {
             }
         }
 
-        Err(Error::<T>::InvalidQuote)
+        Err(Error::<T>::VolumeTooSmall)
     }
 
     pub(crate) fn update_order_event(order: &OrderInfo<T>) {

@@ -201,7 +201,8 @@ impl ExtBuilder {
 
         let mut endowed = BTreeMap::new();
         let pcx_id = pcx().0;
-        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
+        // let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
+        let endowed_info = vec![];
         endowed.insert(pcx_id, endowed_info);
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets,

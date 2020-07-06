@@ -57,6 +57,10 @@ fn t_set_handicap(pair_idx: TradingPairIndex, highest_bid: Price, lowest_offer: 
     ));
 }
 
+fn t_convert_base_to_quote(amount: Balance, price: Price, pair: &TradingPair) -> Balance {
+    XSpot::convert_base_to_quote(amount, price, pair).unwrap()
+}
+
 #[test]
 fn add_trading_pair_should_work() {
     ExtBuilder::default().build_and_execute(|| {
@@ -94,10 +98,7 @@ fn convert_base_to_quote_should_work() {
         let amount = 1_000u128;
         let price = 1_210_000u64;
 
-        assert_eq!(
-            XSpot::convert_base_to_quote(amount, price, &trading_pair).unwrap(),
-            1
-        );
+        assert_eq!(t_convert_base_to_quote(amount, price, &trading_pair), 1);
     })
 }
 
@@ -124,28 +125,14 @@ fn inject_order_should_work() {
         t_set_handicap(0, 1_000_000, 1_100_000);
         assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(1),
-            0,
-            OrderType::Limit,
-            Side::Buy,
-            1000,
-            1_000_100,
-        ));
+        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100,));
         let order = XSpot::order_info_of(&(1, 0)).unwrap();
         assert_eq!(order.submitter(), 1);
         assert_eq!(order.pair_index(), 0);
         assert_eq!(order.amount(), 1_000);
         assert_eq!(order.price(), 1_000_100);
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(1),
-            0,
-            OrderType::Limit,
-            Side::Buy,
-            2000,
-            1_000_000,
-        ));
+        assert_ok!(t_put_order_buy(1, 0, 2000, 1_000_000,));
         let order = XSpot::order_info_of(&(1, 1)).unwrap();
         assert_eq!(order.submitter(), 1);
         assert_eq!(order.pair_index(), 0);
@@ -178,7 +165,7 @@ fn price_too_high_or_too_low_should_not_work() {
         t_set_handicap(0, 1_000_000, 1_100_000);
         assert_ok!(XAssets::pcx_issue(&1, 1000));
 
-        assert_ok!(t_put_order_sell(1, 0, 1000, 1_210_000,));
+        assert_ok!(t_put_order_sell(1, 0, 1000, 1_210_000));
 
         assert_noop!(
             t_put_order_sell(1, 0, 1000, 890_000,),
@@ -196,47 +183,19 @@ fn update_handicap_should_work() {
         assert_ok!(XAssets::pcx_issue(&2, 2000));
         assert_ok!(XAssets::pcx_issue(&3, 2000));
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(1),
-            0,
-            OrderType::Limit,
-            Side::Buy,
-            1000,
-            1_210_000,
-        ));
+        assert_ok!(t_put_order_buy(1, 0, 1000, 1_210_000,));
 
         assert_eq!(XSpot::handicap_of(0).highest_bid, 1_210_000);
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(1),
-            0,
-            OrderType::Limit,
-            Side::Buy,
-            1000,
-            1_310_000,
-        ));
+        assert_ok!(t_put_order_buy(1, 0, 1000, 1_310_000,));
 
         assert_eq!(XSpot::handicap_of(0).highest_bid, 1_310_000);
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(2),
-            0,
-            OrderType::Limit,
-            Side::Sell,
-            500,
-            1_310_000 - 100
-        ));
+        assert_ok!(t_put_order_sell(2, 0, 500, 1_310_000 - 100));
 
         assert_eq!(XSpot::handicap_of(0).lowest_offer, 0);
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(2),
-            0,
-            OrderType::Limit,
-            Side::Sell,
-            800,
-            1_3200_000
-        ));
+        assert_ok!(t_put_order_sell(2, 0, 800, 1_3200_000));
 
         assert_eq!(XSpot::handicap_of(0).lowest_offer, 1_3200_000);
     })
@@ -253,9 +212,9 @@ fn match_order_should_work() {
         assert_ok!(XAssets::pcx_issue(&2, 2000));
         assert_ok!(XAssets::pcx_issue(&3, 2000));
 
-        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000,));
+        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000));
 
-        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100,));
+        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100));
 
         assert_ok!(t_put_order_sell(2, 0, 500, 1_000_100));
 
@@ -290,9 +249,8 @@ fn cancel_order_should_work() {
         assert_ok!(XAssets::pcx_issue(&2, 2000));
         assert_ok!(XAssets::pcx_issue(&3, 2000));
 
-        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000,));
-
-        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100,));
+        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000));
+        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100));
 
         assert_ok!(t_put_order_sell(2, 0, 500, 1_000_200));
 
@@ -318,14 +276,10 @@ fn reap_orders_should_work() {
 
         assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
 
-        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000,));
-
-        assert_ok!(t_put_order_buy(1, 0, 5000, 1_200_000,));
-
+        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000));
+        assert_ok!(t_put_order_buy(1, 0, 5000, 1_200_000));
         assert_ok!(t_put_order_buy(2, 0, 2000, 2_000_000));
-
         assert_ok!(t_put_order_buy(3, 0, 1000, 2_100_000));
-
         assert_ok!(t_put_order_buy(3, 0, 3000, 900_000));
 
         assert_ok!(t_put_order_sell(4, 0, 20_000, 2_100_000 - 100));
@@ -353,19 +307,16 @@ fn refund_remaining_of_taker_order_should_work() {
 
         assert_ok!(t_put_order_sell(1, 0, 1000000, 2058800,));
         // 2058
-        let btc_for_seller1 =
-            XSpot::convert_base_to_quote(1_000_000, 2058800, &trading_pair).unwrap();
+        let btc_for_seller1 = t_convert_base_to_quote(1_000_000, 2058800, &trading_pair);
 
         assert_ok!(t_put_order_sell(2, 0, 237000000, 2058800,));
         // 487935
-        let btc_for_seller2 =
-            XSpot::convert_base_to_quote(237000000, 2058800, &trading_pair).unwrap();
+        let btc_for_seller2 = t_convert_base_to_quote(237000000, 2058800, &trading_pair);
 
         assert_ok!(t_put_order_buy(3, 0, 238000000, 2058800));
 
         // 489994
-        let btc_reserved_for_buyer =
-            XSpot::convert_base_to_quote(238000000, 2058800, &trading_pair).unwrap();
+        let btc_reserved_for_buyer = t_convert_base_to_quote(238000000, 2058800, &trading_pair);
 
         // remaining is 1
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
@@ -407,42 +358,18 @@ fn refund_remaining_of_maker_order_should_work() {
 
         assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 489994));
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(3),
-            0,
-            OrderType::Limit,
-            Side::Buy,
-            238000000,
-            2058800
-        ));
+        assert_ok!(t_put_order_buy(3, 0, 238000000, 2058800));
 
         // 489994
-        let btc_reserved_for_buyer =
-            XSpot::convert_base_to_quote(238000000, 2058800, &trading_pair).unwrap();
+        let btc_reserved_for_buyer = t_convert_base_to_quote(238000000, 2058800, &trading_pair);
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(1),
-            0,
-            OrderType::Limit,
-            Side::Sell,
-            1000000,
-            2058800,
-        ));
+        assert_ok!(t_put_order_sell(1, 0, 1000000, 2058800));
         // 2058
-        let btc_for_seller1 =
-            XSpot::convert_base_to_quote(1_000_000, 2058800, &trading_pair).unwrap();
+        let btc_for_seller1 = t_convert_base_to_quote(1_000_000, 2058800, &trading_pair);
 
-        assert_ok!(XSpot::put_order(
-            Origin::signed(2),
-            0,
-            OrderType::Limit,
-            Side::Sell,
-            237_000_000,
-            2_058_800,
-        ));
+        assert_ok!(t_put_order_sell(2, 0, 237_000_000, 2_058_800));
         // 487935
-        let btc_for_seller2 =
-            XSpot::convert_base_to_quote(237_000_000, 2_058_800, &trading_pair).unwrap();
+        let btc_for_seller2 = t_convert_base_to_quote(237_000_000, 2_058_800, &trading_pair);
 
         // remaining is 1
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
@@ -479,6 +406,7 @@ fn quotations_order_should_be_preserved_when_removing_orders_and_quotations() {
         assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 100));
         assert_ok!(XAssets::issue(&trading_pair.quote(), &2, 100));
         assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 100));
+
         assert_ok!(XAssets::pcx_issue(&2, 20000));
         assert_ok!(XAssets::pcx_issue(&3, 20000));
         assert_ok!(XAssets::pcx_issue(&4, 20000));
@@ -487,18 +415,13 @@ fn quotations_order_should_be_preserved_when_removing_orders_and_quotations() {
 
         assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
 
-        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000,));
-
-        assert_ok!(t_put_order_buy(2, 0, 5000, 1_100_000,));
-
-        assert_ok!(t_put_order_buy(3, 0, 2000, 2_000_000));
+        assert_ok!(t_put_order_buy(1, 0, 1_000, 1_000_000));
+        assert_ok!(t_put_order_buy(2, 0, 5_000, 1_100_000));
+        assert_ok!(t_put_order_buy(3, 0, 2_000, 2_000_000));
 
         assert_ok!(t_put_order_sell(4, 0, 4_000, 2_000_000));
-
         assert_ok!(t_put_order_sell(2, 0, 2_000, 2_000_000));
-
         assert_ok!(t_put_order_sell(5, 0, 500, 2_000_000));
-
         assert_ok!(t_put_order_sell(6, 0, 600, 2_000_000));
 
         assert_ok!(t_put_order_buy(3, 0, 3_500, 2_000_000));

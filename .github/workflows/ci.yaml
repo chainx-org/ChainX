@@ -67,6 +67,9 @@ jobs:
           cd -
           cd xpallets/mining/staking
           cargo test -- --nocapture
+          cd -
+          cd xpallets/dex/spot
+          cargo test -- --nocapture
 
     - if: matrix.os == 'ubuntu-latest'
       run: cargo clippy

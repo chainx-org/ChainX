@@ -138,8 +138,8 @@ decl_error! {
         TooHighBidPrice,
         /// The ask price can not lower than the PriceVolatility of current highest_bid.
         TooLowAskPrice,
-        /// Fail to convert_base_to_quote since amount*price too small.
-        InvalidQuote,
+        /// Failed to convert_base_to_quote since amount*price too small.
+        VolumeTooSmall,
         /// Amount can not be zero.
         ZeroAmount,
         /// Can not put order if transactor's free token too low.
@@ -198,19 +198,22 @@ decl_module! {
 
             ensure!(pair.online, Error::<T>::TradingPairOffline);
 
-            // FIXME
-            // ensure!(
-                // (price.into() % 10_u64.pow(pair.tick_precision)).is_zero(),
-                // Error::<T>::InvalidPrice
-            // );
+            ensure!(
+                (price.saturated_into() % u128::from(10_u64.pow(pair.tick_precision))).is_zero(),
+                Error::<T>::InvalidPrice
+            );
 
             Self::is_within_quotation_range(price, side, pair_index)?;
             Self::has_too_many_backlog_orders(pair_index, price, side)?;
 
             // Reserve the token according to the order side.
             let (reserve_token, reserve_amount) = match side {
-                Buy => (pair.quote_as_ref(), Self::convert_base_to_quote(amount, price, &pair)?),
-                Sell => (pair.base_as_ref(), amount),
+                Side::Buy => {
+                    (pair.quote_as_ref(), Self::convert_base_to_quote(amount, price, &pair)?)
+                }
+                Side::Sell => {
+                    (pair.base_as_ref(), amount)
+                }
             };
 
             Self::put_order_reserve(&who, reserve_token, reserve_amount)?;
