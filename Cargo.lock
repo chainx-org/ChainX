@@ -7031,6 +7031,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "xpallet-dex-spot"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "env_logger",
+ "frame-support",
+ "frame-system",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-protocol",
+ "xpallet-support",
+]
+
+[[package]]
 name = "xpallet-mining-asset"
 version = "0.1.0"
 dependencies = [
