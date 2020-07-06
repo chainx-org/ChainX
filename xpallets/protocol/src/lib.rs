@@ -24,7 +24,7 @@ pub mod assets_def {
     //      e.g. USDT not int SLIP44, thus we use `0x01000000 | id` to extend AssetId for containing
     //      there assets. The AssetId in this part is decided by ChainX.
     //      For example, we agree on pointing 0x01 as the USDT, thus USDT AssetId is `0x01000000|0x01`
-    // 2. derived token on ChainX for the cross chain token.
+    // 3. derived token on ChainX for the cross chain token.
     //      ChainX would derived some special token which just on ChainX and it is not real cross
     //      assets but also have some relationship to source chain assets. Thus we use some
     //      particular prefix to distinguish with base token.

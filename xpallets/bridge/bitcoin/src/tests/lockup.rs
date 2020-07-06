@@ -63,12 +63,12 @@ fn test_normal() {
         )
         .unwrap();
         assert_eq!(xpallet_assets::register_asset(asset, true, true), Ok(()));
-        let mut props: BTreeMap<xpallet_assets::AssetRestriction, bool> = BTreeMap::new();
-        props.insert(xpallet_assets::AssetRestriction::Move, false);
-        props.insert(xpallet_assets::AssetRestriction::Transfer, false);
-        props.insert(xpallet_assets::AssetRestriction::Withdraw, false);
-        props.insert(xpallet_assets::AssetRestriction::DestroyWithdrawal, false);
-        xpallet_assets::set_asset_limit_props(XBridgeOfBTCLockup::ASSET_ID, props).unwrap();
+        // let mut props: BTreeMap<xpallet_assets::AssetRestriction, bool> = BTreeMap::new();
+        // props.insert(xpallet_assets::AssetRestriction::Move, false);
+        // props.insert(xpallet_assets::AssetRestriction::Transfer, false);
+        // props.insert(xpallet_assets::AssetRestriction::Withdraw, false);
+        // props.insert(xpallet_assets::AssetRestriction::DestroyWithdrawal, false);
+        // xpallet_assets::set_asset_limit_props(XBridgeOfBTCLockup::ASSET_ID, props).unwrap();
 
         let public = hex!("fa6efb5db13089b4712305e39d0a16867c6822e3b1f4c4619937ae8a21961030")
             .unchecked_into();
