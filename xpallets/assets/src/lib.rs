@@ -413,7 +413,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn can_do(id: &AssetId, limit: AssetRestriction) -> bool {
-        Self::asset_restrictions_of(id).contains(limit)
+        !Self::asset_restrictions_of(id).contains(limit)
     }
 
     // can do wrapper
