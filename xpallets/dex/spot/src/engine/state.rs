@@ -12,7 +12,7 @@ impl<T: Trait> Module<T> {
     ///
     /// When there is no quotions at a certain price given the trading pair, we should check out
     /// whether the current handicap is true. If it's not true, adjust a tick accordingly.
-    pub(super) fn update_handicap(pair: &TradingPair, price: T::Price, side: Side) {
+    pub(super) fn update_handicap(pair: &TradingPairProfile, price: T::Price, side: Side) {
         let tick_precision = pair.tick_precision;
 
         if <QuotationsOf<T>>::get(&(pair.index, price)).is_empty() {
@@ -49,7 +49,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub(super) fn update_handicap_after_matching_order(
-        pair: &TradingPair,
+        pair: &TradingPairProfile,
         order: &mut OrderInfo<T>,
     ) {
         match order.side() {
@@ -71,7 +71,7 @@ impl<T: Trait> Module<T> {
             .unwrap_or_else(Zero::zero)
     }
 
-    fn update_handicap_of_buyers(pair: &TradingPair, order: &mut OrderInfo<T>) {
+    fn update_handicap_of_buyers(pair: &TradingPairProfile, order: &mut OrderInfo<T>) {
         let mut handicap = <HandicapOf<T>>::get(pair.index);
         if order.price() > handicap.highest_bid || handicap.highest_bid == Default::default() {
             let highest_bid = order.price();
@@ -99,7 +99,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn update_handicap_of_sellers(pair: &TradingPair, order: &mut OrderInfo<T>) {
+    fn update_handicap_of_sellers(pair: &TradingPairProfile, order: &mut OrderInfo<T>) {
         let mut handicap = <HandicapOf<T>>::get(pair.index);
         if order.price() < handicap.lowest_offer || handicap.lowest_offer == Default::default() {
             let lowest_offer = order.price();

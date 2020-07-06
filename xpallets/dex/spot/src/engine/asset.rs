@@ -8,7 +8,7 @@ impl<T: Trait> Module<T> {
     /// Delivery asset to maker and taker respectively when execute the order.
     pub(super) fn delivery_asset_to_each_other(
         maker_order_side: Side,
-        pair: &TradingPair,
+        pair: &TradingPairProfile,
         turnover: T::Balance,
         price: T::Price,
         maker_order: &mut OrderInfo<T>,

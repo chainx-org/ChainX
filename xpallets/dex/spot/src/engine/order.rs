@@ -2,7 +2,6 @@
 //! This module takes care of the order processing.
 
 use super::*;
-use crate::types::Side::{Buy, Sell};
 use sp_runtime::traits::CheckedAdd;
 
 impl<T: Trait> Module<T> {
@@ -12,7 +11,7 @@ impl<T: Trait> Module<T> {
     /// what we only need to do is to check if the handicap should be updated.
     /// Or else we should match the order.
     pub(crate) fn try_match_order(
-        pair: &TradingPair,
+        pair: &TradingPairProfile,
         order: &mut OrderInfo<T>,
         pair_index: TradingPairIndex,
         side: Side,
@@ -128,7 +127,11 @@ impl<T: Trait> Module<T> {
 
     /// Match the new putted order. When the matching is complete, we should check
     /// if the order has been fulfilled and update the handicap.
-    fn match_order(pair: &TradingPair, order: &mut OrderInfo<T>, handicap: &HandicapInfo<T>) {
+    fn match_order(
+        pair: &TradingPairProfile,
+        order: &mut OrderInfo<T>,
+        handicap: &HandicapInfo<T>,
+    ) {
         // #[cfg(feature = "std")]
         // let begin = Local::now().timestamp_millis();
 
@@ -161,7 +164,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_match_order_given_counterparty(
         taker_order: &mut OrderInfo<T>,
-        pair: &TradingPair,
+        pair: &TradingPairProfile,
         counterparty_price: T::Price,
         counterparty_side: Side,
     ) {
@@ -209,7 +212,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_match_order(
         taker_order: &mut OrderInfo<T>,
-        pair: &TradingPair,
+        pair: &TradingPairProfile,
         handicap: &HandicapInfo<T>,
     ) {
         let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
@@ -266,7 +269,7 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         who: T::AccountId,
         order_index: OrderIndex,
-        pair: TradingPair,
+        pair: TradingPairProfile,
         order_side: Side,
     ) {
         let order_key = (who, order_index);
@@ -377,7 +380,7 @@ impl<T: Trait> Module<T> {
 
     pub(crate) fn update_order_and_unreserve_on_cancel(
         order: &mut OrderInfo<T>,
-        pair: &TradingPair,
+        pair: &TradingPairProfile,
         who: &T::AccountId,
     ) -> Result<T> {
         // Unreserve the remaining asset.

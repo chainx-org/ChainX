@@ -94,7 +94,7 @@ impl<T: Trait> Module<T> {
     pub(crate) fn convert_base_to_quote(
         amount: T::Balance,
         price: T::Price,
-        pair: &TradingPair,
+        pair: &TradingPairProfile,
     ) -> result::Result<T::Balance, Error<T>> {
         if let (Some(base), Some(quote)) = (
             <xpallet_assets::Module<T>>::asset_info_of(pair.base_as_ref()),
@@ -148,7 +148,7 @@ impl<T: Trait> Module<T> {
         // ));
     }
 
-    pub(crate) fn update_order_pair_event(pair: &TradingPair) {
+    pub(crate) fn update_order_pair_event(pair: &TradingPairProfile) {
         // Self::deposit_event(RawEvent::UpdateOrderPair(
         // pair.index,
         // pair.currency_pair.clone(),

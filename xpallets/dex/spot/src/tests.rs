@@ -12,7 +12,7 @@ use xpallet_assets::AssetType;
 const EOS: AssetId = 8888;
 const ETH: AssetId = 9999;
 
-fn t_trading_pair_of(idx: TradingPairIndex) -> TradingPair {
+fn t_trading_pair_of(idx: TradingPairIndex) -> TradingPairProfile {
     XSpot::trading_pair_of(idx).unwrap()
 }
 
@@ -57,7 +57,7 @@ fn t_set_handicap(pair_idx: TradingPairIndex, highest_bid: Price, lowest_offer: 
     ));
 }
 
-fn t_convert_base_to_quote(amount: Balance, price: Price, pair: &TradingPair) -> Balance {
+fn t_convert_base_to_quote(amount: Balance, price: Price, pair: &TradingPairProfile) -> Balance {
     XSpot::convert_base_to_quote(amount, price, pair).unwrap()
 }
 

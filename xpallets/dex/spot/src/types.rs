@@ -146,7 +146,7 @@ impl std::fmt::Debug for CurrencyPair {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TradingPair {
+pub struct TradingPairProfile {
     pub index: TradingPairIndex,
     pub currency_pair: CurrencyPair,
     pub pip_precision: u32,
@@ -154,7 +154,7 @@ pub struct TradingPair {
     pub online: bool,
 }
 
-impl TradingPair {
+impl TradingPairProfile {
     pub fn new(
         index: TradingPairIndex,
         currency_pair: CurrencyPair,
@@ -162,7 +162,7 @@ impl TradingPair {
         tick_precision: u32,
         online: bool,
     ) -> Self {
-        TradingPair {
+        Self {
             index,
             currency_pair,
             pip_precision,

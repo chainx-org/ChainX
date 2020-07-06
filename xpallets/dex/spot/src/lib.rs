@@ -10,32 +10,22 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use codec::{Codec, Decode, Encode};
+use codec::Codec;
 
 use sp_runtime::traits::{
-    AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, DispatchInfoOf, Dispatchable,
-    MaybeSerializeDeserialize, Member, PostDispatchInfoOf, SaturatedConversion, Saturating,
-    SignedExtension, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+    AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, SaturatedConversion, Zero,
 };
 use sp_std::prelude::*;
-use sp_std::{cmp, convert::Infallible, fmt::Debug, mem, ops::BitOr, result};
+use sp_std::{cmp, fmt::Debug, result};
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
-    ensure,
-    storage::IterableStorageMap,
-    traits::Get,
-    weights::{DispatchInfo, GetDispatchInfo, PostDispatchInfo, Weight},
-    Parameter,
+    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
 use chainx_primitives::AssetId;
-use chainx_primitives::Memo;
-
-use xpallet_assets::{AssetErr, AssetType};
-use xpallet_support::{debug, info};
+use xpallet_assets::AssetErr;
+use xpallet_support::info;
 
 use types::*;
 
@@ -75,7 +65,7 @@ decl_storage! {
 
         /// The map from trading pair index to its static profile.
         pub TradingPairOf get(fn trading_pair_of):
-            map hasher(twox_64_concat) TradingPairIndex => Option<TradingPair>;
+            map hasher(twox_64_concat) TradingPairIndex => Option<TradingPairProfile>;
 
         /// (latest price, average price, last last update height) of trading pair
         pub TradingPairInfoOf get(fn trading_pair_info_of):
@@ -283,7 +273,7 @@ impl<T: Trait> Module<T> {
 
         let index = TradingPairCount::get();
 
-        let pair = TradingPair {
+        let pair = TradingPairProfile {
             index,
             currency_pair,
             pip_precision,
@@ -334,7 +324,9 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn get_trading_pair_by_currency_pair(currency_pair: &CurrencyPair) -> Option<TradingPair> {
+    pub fn get_trading_pair_by_currency_pair(
+        currency_pair: &CurrencyPair,
+    ) -> Option<TradingPairProfile> {
         let pair_count = TradingPairCount::get();
         for i in 0..pair_count {
             if let Some(pair) = TradingPairOf::get(i) {
@@ -438,7 +430,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// In order to get trading pair easier.
-    fn trading_pair(pair_index: TradingPairIndex) -> result::Result<TradingPair, Error<T>> {
+    fn trading_pair(pair_index: TradingPairIndex) -> result::Result<TradingPairProfile, Error<T>> {
         TradingPairOf::get(pair_index).ok_or(Error::<T>::InvalidOrderPair)
     }
 }
