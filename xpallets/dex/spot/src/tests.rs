@@ -71,7 +71,7 @@ fn add_trading_pair_should_work() {
             XSpot::get_trading_pair_by_currency_pair(&pair)
                 .unwrap()
                 .base(),
-            pair.base()
+            pair.base
         );
     })
 }

@@ -326,7 +326,7 @@ impl<T: Trait> Module<T> {
         let pair_count = TradingPairCount::get();
         for i in 0..pair_count {
             if let Some(pair) = TradingPairOf::get(i) {
-                if pair.base() == currency_pair.base() && pair.quote() == currency_pair.quote() {
+                if pair.base() == currency_pair.base && pair.quote() == currency_pair.quote {
                     return Some(pair);
                 }
             }

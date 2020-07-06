@@ -72,8 +72,8 @@ impl Default for OrderStatus {
 ///      bid
 /// ----------------- Highest Bid
 ///     Buyer
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Handicap<Price> {
     pub highest_bid: Price,
@@ -114,29 +114,19 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
 }
 
 /// PCX/BTC, base currency / quote currency
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct CurrencyPair(AssetId, AssetId);
+pub struct CurrencyPair {
+    /// The former currency of pair, e.g., PCX for PCX/BTC.
+    pub base: AssetId,
+    /// The latter currency of pair, e.g., BTC for PCX/BTC.
+    pub quote: AssetId,
+}
 
 impl CurrencyPair {
     pub fn new(base: AssetId, quote: AssetId) -> Self {
-        Self(base, quote)
-    }
-
-    pub fn base(&self) -> AssetId {
-        self.0
-    }
-
-    pub fn quote(&self) -> AssetId {
-        self.1
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::fmt::Debug for CurrencyPair {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "CurrencyPair: {}/{}", self.0, self.1)
+        Self { base, quote }
     }
 }
 
@@ -173,11 +163,11 @@ impl TradingPairProfile {
     }
 
     pub fn base(&self) -> AssetId {
-        self.currency_pair.base()
+        self.currency_pair.base
     }
 
     pub fn quote(&self) -> AssetId {
-        self.currency_pair.quote()
+        self.currency_pair.quote
     }
 
     pub fn tick(&self) -> u64 {
