@@ -179,7 +179,7 @@ decl_module! {
         #[weight = 10]
         pub fn put_order(
             origin,
-            pair_index: TradingPairId,
+            pair_id: TradingPairId,
             order_type: OrderType,
             side: Side,
             amount: T::Balance,
@@ -191,7 +191,7 @@ decl_module! {
             ensure!(!amount.is_zero(), Error::<T>::ZeroAmount);
             ensure!(order_type == OrderType::Limit, Error::<T>::InvalidOrderType);
 
-            let pair = Self::trading_pair(pair_index)?;
+            let pair = Self::trading_pair(pair_id)?;
 
             ensure!(pair.online, Error::<T>::TradingPairOffline);
             ensure!(
@@ -199,8 +199,8 @@ decl_module! {
                 Error::<T>::InvalidPrice
             );
 
-            Self::is_within_quotation_range(price, side, pair_index)?;
-            Self::has_too_many_backlog_orders(pair_index, price, side)?;
+            Self::is_within_quotation_range(price, side, pair_id)?;
+            Self::has_too_many_backlog_orders(pair_id, price, side)?;
 
             // Reserve the token according to the order side.
             let (reserve_token, reserve_amount) = match side {
@@ -214,30 +214,28 @@ decl_module! {
 
             Self::put_order_reserve(&who, &reserve_token, reserve_amount)?;
 
-            Self::apply_put_order(who, pair_index, order_type, side, amount, price, reserve_amount)?;
+            Self::apply_put_order(who, pair_id, order_type, side, amount, price, reserve_amount)?;
         }
 
         #[weight = 10]
-        pub fn cancel_order(origin, pair_index: TradingPairId, order_index: OrderId) {
+        pub fn cancel_order(origin, pair_id: TradingPairId, order_id: OrderId) {
             let who = ensure_signed(origin)?;
 
-            Self::check_cancel_order(&who, pair_index, order_index)?;
-            Self::apply_cancel_order(&who, pair_index, order_index)?;
+            Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
         #[weight = 10]
-        fn set_cancel_order(origin, who: T::AccountId, pair_index: TradingPairId, order_index: OrderId) {
+        fn set_cancel_order(origin, who: T::AccountId, pair_id: TradingPairId, order_id: OrderId) {
             ensure_root(origin)?;
 
-            Self::check_cancel_order(&who, pair_index, order_index)?;
-            Self::apply_cancel_order(&who, pair_index, order_index)?;
+            Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
         #[weight = 10]
-        fn set_handicap(origin, pair_index: TradingPairId, highest_bid: T::Price, lowest_offer: T::Price) {
+        fn set_handicap(origin, pair_id: TradingPairId, highest_bid: T::Price, lowest_offer: T::Price) {
             ensure_root(origin)?;
-            HandicapOf::<T>::insert(pair_index, HandicapInfo::<T>::new(highest_bid, lowest_offer));
-            info!("[set_handicap]pair_index:{:?},highest_bid:{:?},lowest_offer:{:?}", pair_index, highest_bid, lowest_offer,);
+            HandicapOf::<T>::insert(pair_id, HandicapInfo::<T>::new(highest_bid, lowest_offer));
+            info!("[set_handicap]pair_id:{:?},highest_bid:{:?},lowest_offer:{:?}", pair_id, highest_bid, lowest_offer,);
         }
 
 
@@ -293,22 +291,23 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn update_trading_pair(
-        pair_index: TradingPairId,
+        pair_id: TradingPairId,
         tick_precision: u32,
         online: bool,
     ) -> Result<T> {
         info!(
-            "[update_trading_pair] pair_index: {:}, tick_precision: {:}, online:{:}",
-            pair_index, tick_precision, online
+            "[update_trading_pair] pair_id: {:}, tick_precision: {:}, online:{:}",
+            pair_id, tick_precision, online
         );
 
-        let pair = Self::trading_pair(pair_index)?;
+        let pair = Self::trading_pair(pair_id)?;
 
-        if tick_precision < pair.tick_precision {
-            return Err(Error::<T>::InvalidTickPrecision);
-        }
+        ensure!(
+            tick_precision >= pair.tick_precision,
+            Error::<T>::InvalidTickPrecision
+        );
 
-        TradingPairOf::mutate(pair_index, |pair| {
+        TradingPairOf::mutate(pair_id, |pair| {
             if let Some(pair) = pair {
                 pair.tick_precision = tick_precision;
                 pair.online = online;
@@ -351,7 +350,7 @@ impl<T: Trait> Module<T> {
     /// Internal mutables
     fn apply_put_order(
         who: T::AccountId,
-        pair_index: TradingPairId,
+        pair_id: TradingPairId,
         order_type: OrderType,
         side: Side,
         amount: T::Balance,
@@ -359,15 +358,15 @@ impl<T: Trait> Module<T> {
         reserve_amount: T::Balance,
     ) -> Result<T> {
         info!(
-            "transactor:{:?}, pair_index:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
-            who, pair_index, order_type, side, amount, price
+            "transactor:{:?}, pair_id:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
+            who, pair_id, order_type, side, amount, price
         );
 
-        let pair = Self::trading_pair(pair_index)?;
+        let pair = Self::trading_pair(pair_id)?;
 
         let mut order = Self::inject_order(
             who,
-            pair_index,
+            pair_id,
             price,
             order_type,
             side,
@@ -375,56 +374,50 @@ impl<T: Trait> Module<T> {
             reserve_amount,
         );
 
-        Self::try_match_order(&pair, &mut order, pair_index, side, price);
+        Self::try_match_order(&pair, &mut order, pair_id, side, price);
 
         Ok(())
     }
 
-    fn get_order(
-        who: &T::AccountId,
-        order_index: OrderId,
-    ) -> result::Result<OrderInfo<T>, Error<T>> {
-        Self::order_info_of(who, order_index).ok_or(Error::<T>::InvalidOrderId)
+    fn get_order(who: &T::AccountId, order_id: OrderId) -> result::Result<OrderInfo<T>, Error<T>> {
+        Self::order_info_of(who, order_id).ok_or(Error::<T>::InvalidOrderId)
     }
 
-    fn check_cancel_order(
-        who: &T::AccountId,
-        pair_index: TradingPairId,
-        order_index: OrderId,
-    ) -> Result<T> {
-        let pair = Self::trading_pair(pair_index)?;
+    fn do_cancel_order(who: &T::AccountId, pair_id: TradingPairId, order_id: OrderId) -> Result<T> {
+        let pair = Self::trading_pair(pair_id)?;
         ensure!(pair.online, Error::<T>::TradingPairOffline);
 
-        let order = Self::get_order(who, order_index)?;
-
+        let order = Self::get_order(who, order_id)?;
         ensure!(
             order.status == OrderStatus::Created || order.status == OrderStatus::ParitialFill,
             Error::<T>::CancelOrderNotAllowed
         );
+
+        Self::apply_cancel_order(&who, pair_id, order_id)?;
 
         Ok(())
     }
 
     fn apply_cancel_order(
         who: &T::AccountId,
-        pair_index: TradingPairId,
-        order_index: OrderId,
+        pair_id: TradingPairId,
+        order_id: OrderId,
     ) -> Result<T> {
         info!(
-            "[cancel_order] transactor: {:?}, pair_index:{:}, order_index:{:}",
-            who, pair_index, order_index
+            "[apply_cancel_order] transactor: {:?}, pair_id:{:}, order_id:{:}",
+            who, pair_id, order_id
         );
 
-        let pair = Self::trading_pair(pair_index)?;
-        let mut order = Self::get_order(who, order_index)?;
+        let pair = Self::trading_pair(pair_id)?;
+        let mut order = Self::get_order(who, order_id)?;
 
         Self::update_order_and_unreserve_on_cancel(&mut order, &pair, who)?;
 
         Self::kill_order(
-            pair_index,
+            pair_id,
             order.price(),
             who.clone(),
-            order_index,
+            order_id,
             pair,
             order.side(),
         );
@@ -433,8 +426,8 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn trading_pair(pair_index: TradingPairId) -> result::Result<TradingPairProfile, Error<T>> {
-        TradingPairOf::get(pair_index).ok_or(Error::<T>::InvalidOrderPair)
+    fn trading_pair(pair_id: TradingPairId) -> result::Result<TradingPairProfile, Error<T>> {
+        TradingPairOf::get(pair_id).ok_or(Error::<T>::InvalidOrderPair)
     }
 }
 

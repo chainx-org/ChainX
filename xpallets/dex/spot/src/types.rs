@@ -184,12 +184,12 @@ impl TradingPairProfile {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct OrderProperty<PairId, AccountId, Amount, Price, BlockNumber> {
-    pub submitter: AccountId,
-    pub pair_id: PairId,
-    pub side: Side,
-    pub amount: Amount,
-    pub price: Price,
     pub id: OrderId,
+    pub side: Side,
+    pub price: Price,
+    pub amount: Amount,
+    pub pair_id: PairId,
+    pub submitter: AccountId,
     pub order_type: OrderType,
     pub created_at: BlockNumber,
 }
@@ -201,11 +201,10 @@ pub struct OrderProperty<PairId, AccountId, Amount, Price, BlockNumber> {
 /// Sell: PCX -> BTC
 ///
 /// Notes:
+/// - `amount` and `already_filled` are measured by the base currency.
 ///
-/// The field `amount` and `already_filled` are measured according to the base currency.
-/// the remaining field means the `remaining` part, which is measured by the quote currency.
-///
-/// While (props.amount() - already_filled) is also the remaining but measuredy by the base currency.
+/// - `remaining` is measured by the quote currency.
+///    While (props.amount() - already_filled) is also the remaining amount, but it's measured by the base currency.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
@@ -327,11 +326,13 @@ where
     }
 }
 
-/// (latest price, average price, last last update height) of trading pair
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+/// Latest price of a trading pair.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TradingPairInfo<Price, BlockNumber> {
+    /// Price of Latest executed order.
     pub latest_price: Price,
+    /// Block number at which `TradingPairInfo` updated.
     pub last_updated: BlockNumber,
 }

@@ -10,6 +10,44 @@ use crate::types::*;
 use xpallet_support::debug;
 
 impl<T: Trait> Module<T> {
+    fn check_bid_price(
+        quote: T::Price,
+        lowest_offer: T::Price,
+        fluctuation: T::Price,
+    ) -> Result<T> {
+        debug!(
+            "[check_bid_price]quote: {:?}, lowest_offer: {:?}, fluctuation: {:?}",
+            quote, lowest_offer, fluctuation
+        );
+
+        if lowest_offer.is_zero() {
+            return Ok(());
+        }
+
+        if quote > lowest_offer && quote - lowest_offer > fluctuation {
+            return Err(Error::<T>::TooHighBidPrice);
+        }
+
+        Ok(())
+    }
+
+    fn check_ask_price(quote: T::Price, highest_bid: T::Price, fluctuation: T::Price) -> Result<T> {
+        debug!(
+            "[check_ask_price] Sell: quote: {:?}, highest_bid: {:?}, fluctuation: {:?}",
+            quote, highest_bid, fluctuation
+        );
+
+        if highest_bid.is_zero() {
+            return Ok(());
+        }
+
+        if quote < highest_bid && highest_bid - quote > fluctuation {
+            return Err(Error::<T>::TooLowAskPrice);
+        }
+
+        Ok(())
+    }
+
     /// Given the price volatility is 10%, a valid quote range should be:
     /// - sell: [highest_bid - 10% * highest_bid, ~)
     /// - buy:  (~, lowest_offer + 10% * lowest_offer]
@@ -22,45 +60,12 @@ impl<T: Trait> Module<T> {
         let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
         let pair = Self::trading_pair(pair_id)?;
-
         let fluctuation = pair.fluctuation().saturated_into();
 
         match side {
-            Side::Buy => {
-                debug!(
-                    "[is_within_quotation_range] Buy: quote: {:?}, lowest_offer: {:?}, fluctuation: {:?}",
-                    quote,
-                    lowest_offer,
-                    fluctuation
-                );
-
-                if lowest_offer.is_zero() {
-                    return Ok(());
-                }
-
-                if quote > lowest_offer && quote - lowest_offer > fluctuation {
-                    return Err(Error::<T>::TooHighBidPrice);
-                }
-            }
-            Side::Sell => {
-                debug!(
-                    "[is_within_quotation_range] Sell: quote: {:?}, highest_bid: {:?}, fluctuation: {:?}",
-                    quote,
-                    highest_bid,
-                    fluctuation
-                );
-
-                if highest_bid.is_zero() {
-                    return Ok(());
-                }
-
-                if quote < highest_bid && highest_bid - quote > fluctuation {
-                    return Err(Error::<T>::TooLowAskPrice);
-                }
-            }
+            Side::Buy => Self::check_bid_price(quote, lowest_offer, fluctuation),
+            Side::Sell => Self::check_ask_price(quote, highest_bid, fluctuation),
         }
-
-        Ok(())
     }
 
     pub(crate) fn has_too_many_backlog_orders(
