@@ -6,6 +6,7 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_arithmetic::traits::BaseArithmetic;
+use sp_runtime::RuntimeDebug;
 
 /// Index for the trading pair or users' order.
 pub type OrderIndex = u64;
@@ -188,71 +189,19 @@ impl TradingPairProfile {
     }
 }
 
-/// We use property to express these immutable information of an order.
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+/// Immutable information of an order.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber>(
-    AccountId,
-    PairIndex,
-    Side,
-    Amount,
-    Price,
-    OrderIndex,
-    OrderType,
-    BlockNumber,
-);
-
-impl<PairIndex: Copy, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber: Clone>
-    OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber>
-{
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        pair_index: PairIndex,
-        index: OrderIndex,
-        class: OrderType,
-        side: Side,
-        submitter: AccountId,
-        amount: Amount,
-        price: Price,
-        created_at: BlockNumber,
-    ) -> Self {
-        Self(
-            submitter, pair_index, side, amount, price, index, class, created_at,
-        )
-    }
-
-    pub fn submitter(&self) -> AccountId {
-        self.0.clone()
-    }
-
-    pub fn pair_index(&self) -> PairIndex {
-        self.1
-    }
-
-    pub fn side(&self) -> Side {
-        self.2
-    }
-
-    pub fn amount(&self) -> Amount {
-        self.3
-    }
-
-    pub fn price(&self) -> Price {
-        self.4
-    }
-
-    pub fn index(&self) -> OrderIndex {
-        self.5
-    }
-
-    pub fn order_type(&self) -> OrderType {
-        self.6
-    }
-
-    pub fn created_at(&self) -> BlockNumber {
-        self.7.clone()
-    }
+pub struct OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber> {
+    pub submitter: AccountId,
+    pub pair_index: PairIndex,
+    pub side: Side,
+    pub amount: Amount,
+    pub price: Price,
+    pub index: OrderIndex,
+    pub order_type: OrderType,
+    pub created_at: BlockNumber,
 }
 
 /// PCX/BTC
@@ -267,7 +216,7 @@ impl<PairIndex: Copy, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber: 
 /// the remaining field means the `remaining` part, which is measured by the quote currency.
 ///
 /// While (props.amount() - already_filled) is also the remaining but measuredy by the base currency.
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Order<PairIndex, AccountId, Balance, Price, BlockNumber> {
@@ -280,52 +229,6 @@ pub struct Order<PairIndex, AccountId, Balance, Price, BlockNumber> {
     pub last_update_at: BlockNumber,
 }
 
-#[cfg(feature = "std")]
-impl<
-        PI: Copy + std::fmt::Debug,
-        AI: Clone + std::fmt::Debug,
-        A: Copy + Ord + BaseArithmetic + std::fmt::Debug,
-        P: Copy + std::fmt::Debug,
-        B: Clone + std::fmt::Debug,
-    > std::fmt::Debug for Order<PI, AI, A, P, B>
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "
-            Order {{
-                submitter: {:?},
-                pair_index: {:?},
-                side: {:?},
-                amount: {:?},
-                price: {:?},
-                order_index: {:?},
-                type: {:?},
-                created_at: {:?},
-
-                status: {:?},
-                remaining: {:?},
-                executed_indices: {:?}
-                already_filled: {:?},
-                last_update_at: {:?}
-            }}",
-            self.submitter(),
-            self.pair_index(),
-            self.side(),
-            self.amount(),
-            self.price(),
-            self.index(),
-            self.order_type(),
-            self.created_at(),
-            self.status,
-            self.remaining,
-            self.executed_indices,
-            self.already_filled,
-            self.last_update_at
-        )
-    }
-}
-
 impl<PairIndex, AccountId, Balance, Price, BlockNumber>
     Order<PairIndex, AccountId, Balance, Price, BlockNumber>
 where
@@ -333,7 +236,7 @@ where
     AccountId: Clone,
     Balance: Copy + Ord + BaseArithmetic,
     Price: Copy,
-    BlockNumber: Clone,
+    BlockNumber: Copy,
 {
     pub fn new(
         props: OrderProperty<PairIndex, AccountId, Balance, Price, BlockNumber>,
@@ -355,35 +258,35 @@ where
 
     // Wrapper for the innner OrderProperty.
     pub fn submitter(&self) -> AccountId {
-        self.props.submitter()
+        self.props.submitter.clone()
     }
 
     pub fn pair_index(&self) -> PairIndex {
-        self.props.pair_index()
+        self.props.pair_index
     }
 
     pub fn side(&self) -> Side {
-        self.props.side()
+        self.props.side
     }
 
     pub fn amount(&self) -> Balance {
-        self.props.amount()
+        self.props.amount
     }
 
     pub fn price(&self) -> Price {
-        self.props.price()
+        self.props.price
     }
 
     pub fn index(&self) -> OrderIndex {
-        self.props.index()
+        self.props.index
     }
 
     pub fn order_type(&self) -> OrderType {
-        self.props.order_type()
+        self.props.order_type
     }
 
     pub fn created_at(&self) -> BlockNumber {
-        self.props.created_at()
+        self.props.created_at
     }
 
     /// The `remaining` field is measured by the quote currency.
@@ -395,17 +298,17 @@ where
         }
     }
 
-    /// If the order has been completely filled.
+    /// Returns true if the order has been completely filled.
     pub fn is_fulfilled(&self) -> bool {
         self.already_filled >= self.amount()
     }
 
-    /// If the `status` of order is Canceled or ParitialExecutedAndCanceled.
+    /// Returns true if the `status` of order is `Canceled` or `ParitialFillAndCanceled`.
     pub fn is_canceled(&self) -> bool {
         self.status == OrderStatus::Canceled || self.status == OrderStatus::ParitialFillAndCanceled
     }
 
-    fn sub_remaining(&mut self, value: Balance) {
+    fn _sub_remaining(&mut self, value: Balance) {
         self.remaining = match self.remaining.checked_sub(&value) {
             Some(x) => x,
             None => panic!("Fail to sub turnover when set remaining"),
@@ -416,11 +319,11 @@ where
     /// The turnover is measured in the quote currency.
     /// So (remaining - turnover) is what we need.
     pub fn decrease_remaining_on_execute(&mut self, turnover: Balance) {
-        self.sub_remaining(turnover)
+        self._sub_remaining(turnover)
     }
 
     pub fn decrease_remaining_on_cancel(&mut self, refund: Balance) {
-        self.sub_remaining(refund)
+        self._sub_remaining(refund)
     }
 
     /// If the already_filled is not zero, then the status of order become

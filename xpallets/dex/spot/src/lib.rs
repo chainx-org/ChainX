@@ -237,12 +237,7 @@ decl_module! {
         fn set_handicap(origin, pair_index: TradingPairIndex, highest_bid: T::Price, lowest_offer: T::Price) {
             ensure_root(origin)?;
             HandicapOf::<T>::insert(pair_index, HandicapInfo::<T>::new(highest_bid, lowest_offer));
-            info!(
-                    "[set_handicap] pair_index: {:?}, highest_bid: {:?}, lowest_offer: {:?}",
-                    pair_index,
-                    highest_bid,
-                    lowest_offer,
-                );
+            info!("[set_handicap]pair_index:{:?},highest_bid:{:?},lowest_offer:{:?}", pair_index, highest_bid, lowest_offer,);
         }
 
 

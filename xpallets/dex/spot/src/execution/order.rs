@@ -104,16 +104,16 @@ impl<T: Trait> Module<T> {
         remaining: T::Balance,
     ) -> Order<TradingPairIndex, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
         let current_block = <system::Module<T>>::block_number();
-        let props = OrderProperty::new(
+        let props = OrderProperty {
             pair_index,
-            order_index,
-            class,
             side,
             submitter,
             amount,
             price,
-            current_block,
-        );
+            index: order_index,
+            order_type: class,
+            created_at: current_block,
+        };
 
         Order::new(
             props,
