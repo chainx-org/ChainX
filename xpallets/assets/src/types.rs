@@ -20,7 +20,7 @@ use frame_support::{
 pub use chainx_primitives::{Desc, Memo, Precision, Token};
 
 use super::traits::ChainT;
-use super::{Error, Module, Trait};
+use super::{Error, Trait};
 
 pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
 
