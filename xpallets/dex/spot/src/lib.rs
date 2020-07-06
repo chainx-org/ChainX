@@ -81,11 +81,13 @@ decl_storage! {
 
         /// Details of the order given account and his order ID
         pub OrderInfoOf get(fn order_info_of):
-            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) OrderIndex => Option<OrderInfo<T>>;
+            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) OrderIndex
+            => Option<OrderInfo<T>>;
 
         /// All the account and his order number given a certain trading pair and price.
         pub QuotationsOf get(fn quotations_of):
-            map hasher(twox_64_concat) (TradingPairIndex, T::Price) => Vec<(T::AccountId, OrderIndex)>;
+            double_map hasher(twox_64_concat) TradingPairIndex, hasher(twox_64_concat) T::Price
+            => Vec<(T::AccountId, OrderIndex)>;
 
         /// TradingPairIndex => (highest_bid, lowest_offer)
         pub HandicapOf get(fn handicap_of):

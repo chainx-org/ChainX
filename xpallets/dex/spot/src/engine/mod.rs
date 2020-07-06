@@ -68,7 +68,7 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         side: Side,
     ) -> Result<T> {
-        let quotations = <QuotationsOf<T>>::get(&(pair_index, price));
+        let quotations = <QuotationsOf<T>>::get(pair_index, price);
         if quotations.len() >= MAX_BACKLOG_ORDER {
             let (who, order_index) = &quotations[0];
             if let Some(order) = <OrderInfoOf<T>>::get(who, order_index) {

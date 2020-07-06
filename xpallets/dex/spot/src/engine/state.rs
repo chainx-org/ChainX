@@ -15,12 +15,12 @@ impl<T: Trait> Module<T> {
     pub(super) fn update_handicap(pair: &TradingPairProfile, price: T::Price, side: Side) {
         let tick_precision = pair.tick_precision;
 
-        if <QuotationsOf<T>>::get(&(pair.index, price)).is_empty() {
+        if <QuotationsOf<T>>::get(pair.index, price).is_empty() {
             let mut handicap = <HandicapOf<T>>::get(pair.index);
             match side {
                 Side::Sell => {
                     if !handicap.lowest_offer.is_zero()
-                        && <QuotationsOf<T>>::get(&(pair.index, handicap.lowest_offer)).is_empty()
+                        && <QuotationsOf<T>>::get(pair.index, handicap.lowest_offer).is_empty()
                     {
                         handicap.tick_up_lowest_offer(tick_precision);
                         <HandicapOf<T>>::insert(pair.index, &handicap);
@@ -33,7 +33,7 @@ impl<T: Trait> Module<T> {
                 }
                 Side::Buy => {
                     if !handicap.highest_bid.is_zero()
-                        && <QuotationsOf<T>>::get((pair.index, handicap.highest_bid)).is_empty()
+                        && <QuotationsOf<T>>::get(pair.index, handicap.highest_bid).is_empty()
                     {
                         handicap.tick_down_highest_bid(tick_precision);
                         <HandicapOf<T>>::insert(pair.index, &handicap);
@@ -141,7 +141,7 @@ impl<T: Trait> Module<T> {
             <OrderInfoOf<T>>::remove(who, order_idx);
         }
 
-        <QuotationsOf<T>>::mutate(&(pair_index, price), |quotations| {
+        <QuotationsOf<T>>::mutate(pair_index, price, |quotations| {
             quotations.retain(|i| !fulfilled_orders.contains(i));
         });
     }
@@ -152,7 +152,7 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         order_key: (T::AccountId, OrderIndex),
     ) {
-        <QuotationsOf<T>>::mutate(&(pair_index, price), |quotations| {
+        <QuotationsOf<T>>::mutate(pair_index, price, |quotations| {
             if let Some(idx) = quotations.iter().position(|i| i == &order_key) {
                 // NOTE: Can't use swap_remove since the original order must be preserved.
                 let _removed = quotations.remove(idx);

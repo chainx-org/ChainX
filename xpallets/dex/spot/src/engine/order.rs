@@ -29,7 +29,7 @@ impl<T: Trait> Module<T> {
 
         // If there is no chance to match order, we only have to insert this quote and update handicap.
         if skip_match_order {
-            <QuotationsOf<T>>::mutate(&(order.pair_index(), order.price()), |quotations| {
+            <QuotationsOf<T>>::mutate(order.pair_index(), order.price(), |quotations| {
                 quotations.push((order.submitter(), order.index()))
             });
 
@@ -147,7 +147,7 @@ impl<T: Trait> Module<T> {
             order.status = OrderStatus::Filled;
             <OrderInfoOf<T>>::remove(order.submitter(), order.index());
         } else {
-            <QuotationsOf<T>>::mutate(&(order.pair_index(), order.price()), |quotations| {
+            <QuotationsOf<T>>::mutate(order.pair_index(), order.price(), |quotations| {
                 quotations.push((order.submitter(), order.index()))
             });
 
@@ -168,7 +168,7 @@ impl<T: Trait> Module<T> {
         counterparty_price: T::Price,
         counterparty_side: Side,
     ) {
-        let quotations = <QuotationsOf<T>>::get(&(pair.index, counterparty_price));
+        let quotations = <QuotationsOf<T>>::get(pair.index, counterparty_price);
         let mut fulfilled_orders = Vec::new();
 
         for (who, order_index) in quotations.iter() {

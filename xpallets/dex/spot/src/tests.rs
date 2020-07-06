@@ -254,10 +254,10 @@ fn cancel_order_should_work() {
 
         assert_ok!(t_put_order_sell(2, 0, 500, 1_000_200));
 
-        assert_eq!(XSpot::quotations_of((0, 1_000_100)), vec![(1, 1)]);
+        assert_eq!(XSpot::quotations_of(0, 1_000_100), vec![(1, 1)]);
         assert_ok!(XSpot::cancel_order(Origin::signed(1), 0, 1));
 
-        assert_eq!(XSpot::quotations_of((0, 1_200_000)), vec![]);
+        assert_eq!(XSpot::quotations_of(0, 1_200_000), vec![]);
         assert_eq!(XSpot::order_info_of(1, 1), None);
     })
 }
@@ -426,9 +426,6 @@ fn quotations_order_should_be_preserved_when_removing_orders_and_quotations() {
 
         assert_ok!(t_put_order_buy(3, 0, 3_500, 2_000_000));
 
-        assert_eq!(
-            XSpot::quotations_of((0, 2_000_000)),
-            [(2, 1), (5, 0), (6, 0)]
-        );
+        assert_eq!(XSpot::quotations_of(0, 2_000_000), [(2, 1), (5, 0), (6, 0)]);
     })
 }
