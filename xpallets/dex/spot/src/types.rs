@@ -9,7 +9,7 @@ use sp_arithmetic::traits::BaseArithmetic;
 use sp_runtime::RuntimeDebug;
 
 /// Index for the trading pair or users' order.
-pub type OrderIndex = u64;
+pub type OrderId = u64;
 ///
 pub type TradeHistoryIndex = u64;
 ///
@@ -189,7 +189,7 @@ pub struct OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber> {
     pub side: Side,
     pub amount: Amount,
     pub price: Price,
-    pub index: OrderIndex,
+    pub index: OrderId,
     pub order_type: OrderType,
     pub created_at: BlockNumber,
 }
@@ -267,7 +267,7 @@ where
         self.props.price
     }
 
-    pub fn index(&self) -> OrderIndex {
+    pub fn index(&self) -> OrderId {
         self.props.index
     }
 

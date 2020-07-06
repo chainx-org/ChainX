@@ -131,7 +131,7 @@ impl<T: Trait> Module<T> {
     pub(super) fn remove_orders_and_quotations(
         pair_index: TradingPairIndex,
         price: T::Price,
-        fulfilled_orders: Vec<(T::AccountId, OrderIndex)>,
+        fulfilled_orders: Vec<(T::AccountId, OrderId)>,
     ) {
         debug!(
             "[remove_orders_and_quotations] These fulfilled orders will be removed: {:?}",
@@ -150,7 +150,7 @@ impl<T: Trait> Module<T> {
     pub(super) fn remove_quotation(
         pair_index: TradingPairIndex,
         price: T::Price,
-        order_key: (T::AccountId, OrderIndex),
+        order_key: (T::AccountId, OrderId),
     ) {
         <QuotationsOf<T>>::mutate(pair_index, price, |quotations| {
             if let Some(idx) = quotations.iter().position(|i| i == &order_key) {

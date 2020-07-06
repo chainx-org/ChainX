@@ -96,7 +96,7 @@ impl<T: Trait> Module<T> {
     fn new_fresh_order(
         pair_index: TradingPairIndex,
         price: T::Price,
-        order_index: OrderIndex,
+        order_index: OrderId,
         submitter: T::AccountId,
         class: OrderType,
         side: Side,
@@ -268,7 +268,7 @@ impl<T: Trait> Module<T> {
         pair_index: TradingPairIndex,
         price: T::Price,
         who: T::AccountId,
-        order_index: OrderIndex,
+        order_index: OrderId,
         pair: TradingPairProfile,
         order_side: Side,
     ) {

@@ -80,17 +80,17 @@ decl_storage! {
 
         /// Total orders has made by an account.
         pub OrderCountOf get(fn order_count_of):
-            map hasher(twox_64_concat) T::AccountId => OrderIndex;
+            map hasher(twox_64_concat) T::AccountId => OrderId;
 
         /// Details of the order given account and his order ID
         pub OrderInfoOf get(fn order_info_of):
-            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) OrderIndex
+            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) OrderId
             => Option<OrderInfo<T>>;
 
         /// All the account and his order number given a certain trading pair and price.
         pub QuotationsOf get(fn quotations_of):
             double_map hasher(twox_64_concat) TradingPairIndex, hasher(twox_64_concat) T::Price
-            => Vec<(T::AccountId, OrderIndex)>;
+            => Vec<(T::AccountId, OrderId)>;
 
         /// TradingPairIndex => (highest_bid, lowest_offer)
         pub HandicapOf get(fn handicap_of):
@@ -157,7 +157,7 @@ decl_error! {
         /// Only the orders with ZeroFill or PartialFill can be canceled.
         CancelOrderNotAllowed,
         /// Can not find the order given the order index.
-        InvalidOrderIndex,
+        InvalidOrderId,
         /// Error from assets module.
         AssetError,
     }
@@ -218,7 +218,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        pub fn cancel_order(origin, pair_index: TradingPairIndex, order_index: OrderIndex) {
+        pub fn cancel_order(origin, pair_index: TradingPairIndex, order_index: OrderId) {
             let who = ensure_signed(origin)?;
 
             Self::check_cancel_order(&who, pair_index, order_index)?;
@@ -226,7 +226,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_cancel_order(origin, who: T::AccountId, pair_index: TradingPairIndex, order_index: OrderIndex) {
+        fn set_cancel_order(origin, who: T::AccountId, pair_index: TradingPairIndex, order_index: OrderId) {
             ensure_root(origin)?;
 
             Self::check_cancel_order(&who, pair_index, order_index)?;
@@ -382,15 +382,15 @@ impl<T: Trait> Module<T> {
 
     fn get_order(
         who: &T::AccountId,
-        order_index: OrderIndex,
+        order_index: OrderId,
     ) -> result::Result<OrderInfo<T>, Error<T>> {
-        Self::order_info_of(who, order_index).ok_or(Error::<T>::InvalidOrderIndex)
+        Self::order_info_of(who, order_index).ok_or(Error::<T>::InvalidOrderId)
     }
 
     fn check_cancel_order(
         who: &T::AccountId,
         pair_index: TradingPairIndex,
-        order_index: OrderIndex,
+        order_index: OrderId,
     ) -> Result<T> {
         let pair = Self::trading_pair(pair_index)?;
         ensure!(pair.online, Error::<T>::TradingPairOffline);
@@ -408,7 +408,7 @@ impl<T: Trait> Module<T> {
     fn apply_cancel_order(
         who: &T::AccountId,
         pair_index: TradingPairIndex,
-        order_index: OrderIndex,
+        order_index: OrderId,
     ) -> Result<T> {
         info!(
             "[cancel_order] transactor: {:?}, pair_index:{:}, order_index:{:}",
