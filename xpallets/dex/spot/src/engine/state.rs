@@ -177,6 +177,7 @@ impl<T: Trait> Module<T> {
         let blocks_per_hour = Self::blocks_per_hour();
         let current_block = <system::Module<T>>::block_number();
 
+        // FIXME remove average price
         let aver = if let Some((_, aver, last_update)) = <TradingPairInfoOf<T>>::get(pair_index) {
             let elapsed = (current_block - last_update).saturated_into::<u64>();
             if elapsed < blocks_per_hour {
@@ -195,6 +196,7 @@ impl<T: Trait> Module<T> {
             "[update_latest_and_average_price] latest: {:?}, average: {:?}, current_block: {:?}",
             latest, aver, current_block
         );
+
         <TradingPairInfoOf<T>>::insert(pair_index, (latest, aver, current_block));
     }
 }

@@ -198,8 +198,6 @@ impl<T: Trait> Module<T> {
                     fulfilled_orders.push((maker_order.submitter(), maker_order.index()));
                     Self::update_handicap(&pair, counterparty_price, maker_order.side());
                 }
-
-                Self::update_latest_and_average_price(pair.index, counterparty_price);
             }
         }
 

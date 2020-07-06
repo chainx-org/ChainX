@@ -152,6 +152,12 @@ decl_error! {
         TradingPairOffline,
         /// The trading pair does not exist.
         NonexistentTradingPair,
+        /// tick_precision can not less than the one of pair.
+        InvalidTickPrecision,
+        /// Price volatility must be less 100.
+        InvalidPriceVolatility,
+        /// The trading pair already exists.
+        TradingPairAlreadyExists,
         /// Too many orders for the same price.
         TooManyBacklogOrders,
         /// Only the orders with ZeroFill or PartialFill can be canceled.
@@ -271,11 +277,10 @@ impl<T: Trait> Module<T> {
             online
         );
 
-        // FIXME
-        // ensure!(
-        // Self::get_trading_pair_by_currency_pair(&currency_pair).is_none(),
-        // "The trading pair already exists."
-        // );
+        ensure!(
+            Self::get_trading_pair_by_currency_pair(&currency_pair).is_none(),
+            Error::<T>::TradingPairAlreadyExists
+        );
 
         let index = TradingPairCount::get();
 
@@ -311,10 +316,9 @@ impl<T: Trait> Module<T> {
 
         let pair = Self::trading_pair(pair_index)?;
 
-        // FIXME
-        // if tick_precision < pair.tick_precision {
-        // return Err("tick_precision can not less than the one of pair!");
-        // }
+        if tick_precision < pair.tick_precision {
+            return Err(Error::<T>::InvalidTickPrecision);
+        }
 
         TradingPairOf::mutate(pair_index, |pair| {
             if let Some(pair) = pair {
@@ -345,59 +349,11 @@ impl<T: Trait> Module<T> {
             "[set_price_volatility] price_volatility: {:}",
             price_volatility
         );
-        // FIXME
-        // ensure!(price_volatility < 100, "Price volatility must be less 100!");
+        ensure!(price_volatility < 100, Error::<T>::InvalidPriceVolatility);
         PriceVolatility::put(price_volatility);
         // Self::deposit_event(RawEvent::PriceVolatility(price_volatility));
         Ok(())
     }
-
-    /*
-    /// Return the price of unit token measured by PCX, including the precision of PCX.
-    /// For example, 1 BTC = 10000 PCX, shoule return 10000 * 10^pcx_precision
-    ///
-    /// if the trading pair is XXX/PCX, return:
-    ///     trading_pair.aver_asset_price * 10^pcx_precision / 10^trading_pair.pip_precision
-    ///
-    /// if the trading pair is PCX/XXX:, return:
-    ///     trading_pair.pip_precision * 10^pcx_precision / trading_pair.aver_asset_price
-    pub fn aver_asset_price(token: &AssetId) -> Option<T::Balance> {
-        let pcx = <xpallet_assets::Module<T> as ChainT>::TOKEN.to_vec();
-        let pcx_asset = <xassets::Module<T>>::get_asset(&pcx).expect("PCX definitely exist.");
-        let pcx_precision = 10_u128.pow(u32::from(pcx_asset.precision()));
-
-        let pair_len = <TradingPairCount<T>>::get();
-        for i in 0..pair_len {
-            if let Some(pair) = <TradingPairOf<T>>::get(i) {
-                let pip_precision = 10_u128.pow(pair.pip_precision);
-
-                // XXX/PCX
-                if pair.base().eq(token) && pair.quote().eq(&pcx) {
-                    if let Some((_, aver, _)) = <TradingPairInfoOf<T>>::get(i) {
-                        let price = match (u128::from(aver.into())).checked_mul(pcx_precision) {
-                            Some(x) => (x / pip_precision) as u64,
-                            None => panic!("aver * pow_pcx_precision overflow"),
-                        };
-
-                        return Some(price.into());
-                    }
-                // PCX/XXX
-                } else if pair.base().eq(&pcx) && pair.quote().eq(token) {
-                    if let Some((_, aver, _)) = <TradingPairInfoOf<T>>::get(i) {
-                        let price = match pip_precision.checked_mul(pcx_precision) {
-                            Some(x) => (x / (u128::from(aver.into()))) as u64,
-                            None => panic!("pow_pcx_precision * pow_pair_precision overflow"),
-                        };
-
-                        return Some(price.into());
-                    }
-                }
-            }
-        }
-
-        None
-    }
-    */
 
     /// Internal mutables
     fn apply_put_order(
