@@ -13,7 +13,7 @@ pub type OrderId = u64;
 ///
 pub type TradeHistoryIndex = u64;
 ///
-pub type TradingPairIndex = u32;
+pub type TradingPairId = u32;
 
 /// Currently only Limit Order is supported.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
@@ -138,7 +138,7 @@ impl CurrencyPair {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TradingPairProfile {
-    pub index: TradingPairIndex,
+    pub id: TradingPairId,
     pub currency_pair: CurrencyPair,
     pub pip_precision: u32,
     pub tick_precision: u32,
@@ -147,14 +147,14 @@ pub struct TradingPairProfile {
 
 impl TradingPairProfile {
     pub fn new(
-        index: TradingPairIndex,
+        id: TradingPairId,
         currency_pair: CurrencyPair,
         pip_precision: u32,
         tick_precision: u32,
         online: bool,
     ) -> Self {
         Self {
-            index,
+            id,
             currency_pair,
             pip_precision,
             tick_precision,
@@ -183,13 +183,13 @@ impl TradingPairProfile {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber> {
+pub struct OrderProperty<PairId, AccountId, Amount, Price, BlockNumber> {
     pub submitter: AccountId,
-    pub pair_index: PairIndex,
+    pub pair_id: PairId,
     pub side: Side,
     pub amount: Amount,
     pub price: Price,
-    pub index: OrderId,
+    pub id: OrderId,
     pub order_type: OrderType,
     pub created_at: BlockNumber,
 }
@@ -209,8 +209,8 @@ pub struct OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Order<PairIndex, AccountId, Balance, Price, BlockNumber> {
-    pub props: OrderProperty<PairIndex, AccountId, Balance, Price, BlockNumber>,
+pub struct Order<PairId, AccountId, Balance, Price, BlockNumber> {
+    pub props: OrderProperty<PairId, AccountId, Balance, Price, BlockNumber>,
 
     pub status: OrderStatus,
     pub remaining: Balance,
@@ -219,17 +219,17 @@ pub struct Order<PairIndex, AccountId, Balance, Price, BlockNumber> {
     pub last_update_at: BlockNumber,
 }
 
-impl<PairIndex, AccountId, Balance, Price, BlockNumber>
-    Order<PairIndex, AccountId, Balance, Price, BlockNumber>
+impl<PairId, AccountId, Balance, Price, BlockNumber>
+    Order<PairId, AccountId, Balance, Price, BlockNumber>
 where
-    PairIndex: Copy,
+    PairId: Copy,
     AccountId: Clone,
     Balance: Copy + Ord + BaseArithmetic,
     Price: Copy,
     BlockNumber: Copy,
 {
     pub fn new(
-        props: OrderProperty<PairIndex, AccountId, Balance, Price, BlockNumber>,
+        props: OrderProperty<PairId, AccountId, Balance, Price, BlockNumber>,
         already_filled: Balance,
         last_update_at: BlockNumber,
         status: OrderStatus,
@@ -251,8 +251,8 @@ where
         self.props.submitter.clone()
     }
 
-    pub fn pair_index(&self) -> PairIndex {
-        self.props.pair_index
+    pub fn pair_id(&self) -> PairId {
+        self.props.pair_id
     }
 
     pub fn side(&self) -> Side {
@@ -267,8 +267,8 @@ where
         self.props.price
     }
 
-    pub fn index(&self) -> OrderId {
-        self.props.index
+    pub fn id(&self) -> OrderId {
+        self.props.id
     }
 
     pub fn order_type(&self) -> OrderType {

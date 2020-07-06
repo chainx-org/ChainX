@@ -12,13 +12,13 @@ use xpallet_assets::AssetType;
 const EOS: AssetId = 8888;
 const ETH: AssetId = 9999;
 
-fn t_trading_pair_of(idx: TradingPairIndex) -> TradingPairProfile {
+fn t_trading_pair_of(idx: TradingPairId) -> TradingPairProfile {
     XSpot::trading_pair_of(idx).unwrap()
 }
 
 fn t_put_order_buy(
     who: AccountId,
-    pair_idx: TradingPairIndex,
+    pair_idx: TradingPairId,
     amount: Balance,
     price: Price,
 ) -> DispatchResult {
@@ -34,7 +34,7 @@ fn t_put_order_buy(
 
 fn t_put_order_sell(
     who: AccountId,
-    pair_idx: TradingPairIndex,
+    pair_idx: TradingPairId,
     amount: Balance,
     price: Price,
 ) -> DispatchResult {
@@ -48,7 +48,7 @@ fn t_put_order_sell(
     )
 }
 
-fn t_set_handicap(pair_idx: TradingPairIndex, highest_bid: Price, lowest_offer: Price) {
+fn t_set_handicap(pair_idx: TradingPairId, highest_bid: Price, lowest_offer: Price) {
     assert_ok!(XSpot::set_handicap(
         Origin::root(),
         pair_idx,
@@ -128,14 +128,14 @@ fn inject_order_should_work() {
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100,));
         let order = XSpot::order_info_of(1, 0).unwrap();
         assert_eq!(order.submitter(), 1);
-        assert_eq!(order.pair_index(), 0);
+        assert_eq!(order.pair_id(), 0);
         assert_eq!(order.amount(), 1_000);
         assert_eq!(order.price(), 1_000_100);
 
         assert_ok!(t_put_order_buy(1, 0, 2000, 1_000_000,));
         let order = XSpot::order_info_of(1, 1).unwrap();
         assert_eq!(order.submitter(), 1);
-        assert_eq!(order.pair_index(), 0);
+        assert_eq!(order.pair_id(), 0);
         assert_eq!(order.amount(), 2_000);
         assert_eq!(order.price(), 1_000_000);
     })

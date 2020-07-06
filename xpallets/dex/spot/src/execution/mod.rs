@@ -16,12 +16,12 @@ impl<T: Trait> Module<T> {
     pub(crate) fn is_within_quotation_range(
         quote: T::Price,
         side: Side,
-        pair_index: TradingPairIndex,
+        pair_id: TradingPairId,
     ) -> Result<T> {
-        let handicap = <HandicapOf<T>>::get(pair_index);
+        let handicap = <HandicapOf<T>>::get(pair_id);
         let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
-        let pair = Self::trading_pair(pair_index)?;
+        let pair = Self::trading_pair(pair_id)?;
 
         let fluctuation = pair.fluctuation().saturated_into();
 
@@ -64,11 +64,11 @@ impl<T: Trait> Module<T> {
     }
 
     pub(crate) fn has_too_many_backlog_orders(
-        pair_index: TradingPairIndex,
+        pair_id: TradingPairId,
         price: T::Price,
         side: Side,
     ) -> Result<T> {
-        let quotations = <QuotationsOf<T>>::get(pair_index, price);
+        let quotations = <QuotationsOf<T>>::get(pair_id, price);
         if quotations.len() >= MAX_BACKLOG_ORDER {
             let (who, order_index) = &quotations[0];
             if let Some(order) = <OrderInfoOf<T>>::get(who, order_index) {

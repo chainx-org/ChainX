@@ -13,7 +13,7 @@ impl<T: Trait> Module<T> {
     pub(crate) fn try_match_order(
         pair: &TradingPairProfile,
         order: &mut OrderInfo<T>,
-        pair_index: TradingPairIndex,
+        pair_index: TradingPairId,
         side: Side,
         price: T::Price,
     ) {
@@ -29,8 +29,8 @@ impl<T: Trait> Module<T> {
 
         // If there is no chance to match order, we only have to insert this quote and update handicap.
         if skip_match_order {
-            <QuotationsOf<T>>::mutate(order.pair_index(), order.price(), |quotations| {
-                quotations.push((order.submitter(), order.index()))
+            <QuotationsOf<T>>::mutate(order.pair_id(), order.price(), |quotations| {
+                quotations.push((order.submitter(), order.id()))
             });
 
             match side {
@@ -52,19 +52,19 @@ impl<T: Trait> Module<T> {
     /// Insert a fresh order and return the inserted result.
     pub(crate) fn inject_order(
         who: T::AccountId,
-        pair_index: TradingPairIndex,
+        pair_id: TradingPairId,
         price: T::Price,
         order_type: OrderType,
         side: Side,
         amount: T::Balance,
         remaining: T::Balance,
-    ) -> Order<TradingPairIndex, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
+    ) -> Order<TradingPairId, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
         // The order count of user should be increased as well.
         let order_index = Self::order_count_of(&who);
         <OrderCountOf<T>>::insert(&who, order_index + 1);
 
         let order = Self::new_fresh_order(
-            pair_index,
+            pair_id,
             price,
             order_index,
             who,
@@ -75,7 +75,7 @@ impl<T: Trait> Module<T> {
         );
 
         debug!("[inject_order] {:?}", order);
-        <OrderInfoOf<T>>::insert(order.submitter(), order.index(), &order);
+        <OrderInfoOf<T>>::insert(order.submitter(), order.id(), &order);
 
         // Self::deposit_event(RawEvent::PutOrder(
         // order.submitter(),
@@ -94,23 +94,23 @@ impl<T: Trait> Module<T> {
     /// Create a brand new order with some defaults.
     #[allow(clippy::too_many_arguments)]
     fn new_fresh_order(
-        pair_index: TradingPairIndex,
+        pair_id: TradingPairId,
         price: T::Price,
-        order_index: OrderId,
+        order_id: OrderId,
         submitter: T::AccountId,
         class: OrderType,
         side: Side,
         amount: T::Balance,
         remaining: T::Balance,
-    ) -> Order<TradingPairIndex, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
+    ) -> Order<TradingPairId, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
         let current_block = <system::Module<T>>::block_number();
         let props = OrderProperty {
-            pair_index,
+            pair_id,
             side,
             submitter,
             amount,
             price,
-            index: order_index,
+            id: order_id,
             order_type: class,
             created_at: current_block,
         };
@@ -145,10 +145,10 @@ impl<T: Trait> Module<T> {
         // should be updated.
         if order.is_fulfilled() {
             order.status = OrderStatus::Filled;
-            <OrderInfoOf<T>>::remove(order.submitter(), order.index());
+            <OrderInfoOf<T>>::remove(order.submitter(), order.id());
         } else {
-            <QuotationsOf<T>>::mutate(order.pair_index(), order.price(), |quotations| {
-                quotations.push((order.submitter(), order.index()))
+            <QuotationsOf<T>>::mutate(order.pair_id(), order.price(), |quotations| {
+                quotations.push((order.submitter(), order.id()))
             });
 
             // Since the handicap is not always related to a real order, this guard statement is neccessary!
@@ -156,7 +156,7 @@ impl<T: Trait> Module<T> {
                 order.status = OrderStatus::ParitialFill;
             }
 
-            <OrderInfoOf<T>>::insert(order.submitter(), order.index(), order.clone());
+            <OrderInfoOf<T>>::insert(order.submitter(), order.id(), order.clone());
 
             Self::update_handicap_after_matching_order(pair, order);
         }
@@ -168,7 +168,7 @@ impl<T: Trait> Module<T> {
         counterparty_price: T::Price,
         counterparty_side: Side,
     ) {
-        let quotations = <QuotationsOf<T>>::get(pair.index, counterparty_price);
+        let quotations = <QuotationsOf<T>>::get(pair.id, counterparty_price);
         let mut fulfilled_orders = Vec::new();
 
         for (who, order_index) in quotations.iter() {
@@ -189,7 +189,7 @@ impl<T: Trait> Module<T> {
 
                 // Execute the order at the opponent price when they match.
                 let _execution_result = Self::execute_order(
-                    pair.index,
+                    pair.id,
                     &mut maker_order,
                     taker_order,
                     counterparty_price,
@@ -198,16 +198,16 @@ impl<T: Trait> Module<T> {
 
                 // Remove maker_order if it has been full filled.
                 if maker_order.is_fulfilled() {
-                    fulfilled_orders.push((maker_order.submitter(), maker_order.index()));
+                    fulfilled_orders.push((maker_order.submitter(), maker_order.id()));
                     Self::update_handicap(&pair, counterparty_price, maker_order.side());
                 }
 
-                Self::update_latest_price(pair.index, counterparty_price);
+                Self::update_latest_price(pair.id, counterparty_price);
             }
         }
 
         // Remove the fulfilled orders as well as the quotations.
-        Self::remove_orders_and_quotations(pair.index, counterparty_price, fulfilled_orders);
+        Self::remove_orders_and_quotations(pair.id, counterparty_price, fulfilled_orders);
     }
 
     fn apply_match_order(
@@ -265,7 +265,7 @@ impl<T: Trait> Module<T> {
 
     /// Remove the order from quotations and clear the order info when it's canceled.
     pub(crate) fn kill_order(
-        pair_index: TradingPairIndex,
+        pair_id: TradingPairId,
         price: T::Price,
         who: T::AccountId,
         order_index: OrderId,
@@ -275,7 +275,7 @@ impl<T: Trait> Module<T> {
         <OrderInfoOf<T>>::remove(&who, order_index);
 
         let order_key = (who, order_index);
-        Self::remove_quotation(pair_index, price, order_key);
+        Self::remove_quotation(pair_id, price, order_key);
 
         Self::update_handicap(&pair, price, order_side);
     }
@@ -306,7 +306,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn insert_refreshed_order(order: &OrderInfo<T>) {
-        <OrderInfoOf<T>>::insert(order.submitter(), order.index(), order);
+        <OrderInfoOf<T>>::insert(order.submitter(), order.id(), order);
     }
 
     /// Due to the loss of precision in Self::convert_base_to_quote(),
@@ -323,16 +323,16 @@ impl<T: Trait> Module<T> {
     /// 3. update the remaining field of orders
     /// 4. try refunding the non-zero remaining asset if order is fulfilled
     fn execute_order(
-        pair_index: TradingPairIndex,
+        pair_id: TradingPairId,
         maker_order: &mut OrderInfo<T>,
         taker_order: &mut OrderInfo<T>,
         price: T::Price,
         turnover: T::Balance,
     ) -> Result<T> {
-        let pair = Self::trading_pair(pair_index)?;
+        let pair = Self::trading_pair(pair_id)?;
 
-        let trade_history_index = Self::trade_history_index_of(pair_index);
-        TradeHistoryIndexOf::insert(pair_index, trade_history_index + 1);
+        let trade_history_index = Self::trade_history_index_of(pair_id);
+        TradeHistoryIndexOf::insert(pair_id, trade_history_index + 1);
 
         Self::update_order_on_execute(maker_order, &turnover, trade_history_index);
         Self::update_order_on_execute(taker_order, &turnover, trade_history_index);
@@ -396,7 +396,7 @@ impl<T: Trait> Module<T> {
         order.last_update_at = <system::Module<T>>::block_number();
 
         Self::update_order_event(&order);
-        OrderInfoOf::<T>::insert(order.submitter(), order.index(), order);
+        OrderInfoOf::<T>::insert(order.submitter(), order.id(), order);
 
         Ok(())
     }

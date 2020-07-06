@@ -52,7 +52,7 @@ pub trait Trait: frame_system::Trait + xpallet_assets::Trait + pallet_timestamp:
 type Result<T> = result::Result<(), Error<T>>;
 
 pub type OrderInfo<T> = Order<
-    TradingPairIndex,
+    TradingPairId,
     <T as frame_system::Trait>::AccountId,
     <T as xpallet_assets::Trait>::Balance,
     <T as Trait>::Price,
@@ -64,19 +64,19 @@ pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
 decl_storage! {
     trait Store for Module<T: Trait> as XSpot {
         /// How many trading pairs so far.
-        pub TradingPairCount get(fn trading_pair_count): TradingPairIndex;
+        pub TradingPairCount get(fn trading_pair_count): TradingPairId;
 
         /// The map from trading pair index to its static profile.
         pub TradingPairOf get(fn trading_pair_of):
-            map hasher(twox_64_concat) TradingPairIndex => Option<TradingPairProfile>;
+            map hasher(twox_64_concat) TradingPairId => Option<TradingPairProfile>;
 
         /// (latest price, average price, last last update height) of trading pair
         pub TradingPairInfoOf get(fn trading_pair_info_of):
-            map hasher(twox_64_concat) TradingPairIndex => Option<TradingPairInfo<T::Price, T::BlockNumber>>;
+            map hasher(twox_64_concat) TradingPairId => Option<TradingPairInfo<T::Price, T::BlockNumber>>;
 
         /// Total transactions has been made for a trading pair.
         pub TradeHistoryIndexOf get(fn trade_history_index_of):
-            map hasher(twox_64_concat) TradingPairIndex => TradeHistoryIndex;
+            map hasher(twox_64_concat) TradingPairId => TradeHistoryIndex;
 
         /// Total orders has made by an account.
         pub OrderCountOf get(fn order_count_of):
@@ -89,12 +89,12 @@ decl_storage! {
 
         /// All the account and his order number given a certain trading pair and price.
         pub QuotationsOf get(fn quotations_of):
-            double_map hasher(twox_64_concat) TradingPairIndex, hasher(twox_64_concat) T::Price
+            double_map hasher(twox_64_concat) TradingPairId, hasher(twox_64_concat) T::Price
             => Vec<(T::AccountId, OrderId)>;
 
-        /// TradingPairIndex => (highest_bid, lowest_offer)
+        /// TradingPairId => (highest_bid, lowest_offer)
         pub HandicapOf get(fn handicap_of):
-            map hasher(twox_64_concat) TradingPairIndex => HandicapInfo<T>;
+            map hasher(twox_64_concat) TradingPairId => HandicapInfo<T>;
 
         /// Price volatility
         pub PriceVolatility get(fn price_volatility) config(): u32;
@@ -179,7 +179,7 @@ decl_module! {
         #[weight = 10]
         pub fn put_order(
             origin,
-            pair_index: TradingPairIndex,
+            pair_index: TradingPairId,
             order_type: OrderType,
             side: Side,
             amount: T::Balance,
@@ -218,7 +218,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        pub fn cancel_order(origin, pair_index: TradingPairIndex, order_index: OrderId) {
+        pub fn cancel_order(origin, pair_index: TradingPairId, order_index: OrderId) {
             let who = ensure_signed(origin)?;
 
             Self::check_cancel_order(&who, pair_index, order_index)?;
@@ -226,7 +226,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_cancel_order(origin, who: T::AccountId, pair_index: TradingPairIndex, order_index: OrderId) {
+        fn set_cancel_order(origin, who: T::AccountId, pair_index: TradingPairId, order_index: OrderId) {
             ensure_root(origin)?;
 
             Self::check_cancel_order(&who, pair_index, order_index)?;
@@ -234,7 +234,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_handicap(origin, pair_index: TradingPairIndex, highest_bid: T::Price, lowest_offer: T::Price) {
+        fn set_handicap(origin, pair_index: TradingPairId, highest_bid: T::Price, lowest_offer: T::Price) {
             ensure_root(origin)?;
             HandicapOf::<T>::insert(pair_index, HandicapInfo::<T>::new(highest_bid, lowest_offer));
             info!("[set_handicap]pair_index:{:?},highest_bid:{:?},lowest_offer:{:?}", pair_index, highest_bid, lowest_offer,);
@@ -267,25 +267,25 @@ impl<T: Trait> Module<T> {
             Error::<T>::TradingPairAlreadyExists
         );
 
-        let index = TradingPairCount::get();
+        let pair_id = TradingPairCount::get();
 
         let pair = TradingPairProfile {
-            index,
+            id: pair_id,
             currency_pair,
             pip_precision,
             tick_precision,
             online,
         };
 
-        TradingPairOf::insert(index, &pair);
+        TradingPairOf::insert(pair_id, &pair);
         TradingPairInfoOf::<T>::insert(
-            index,
+            pair_id,
             TradingPairInfo {
                 latest_price: price,
                 last_updated: <frame_system::Module<T>>::block_number(),
             },
         );
-        TradingPairCount::put(index + 1);
+        TradingPairCount::put(pair_id + 1);
 
         Self::update_order_pair_event(&pair);
 
@@ -293,7 +293,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn update_trading_pair(
-        pair_index: TradingPairIndex,
+        pair_index: TradingPairId,
         tick_precision: u32,
         online: bool,
     ) -> Result<T> {
@@ -351,7 +351,7 @@ impl<T: Trait> Module<T> {
     /// Internal mutables
     fn apply_put_order(
         who: T::AccountId,
-        pair_index: TradingPairIndex,
+        pair_index: TradingPairId,
         order_type: OrderType,
         side: Side,
         amount: T::Balance,
@@ -389,7 +389,7 @@ impl<T: Trait> Module<T> {
 
     fn check_cancel_order(
         who: &T::AccountId,
-        pair_index: TradingPairIndex,
+        pair_index: TradingPairId,
         order_index: OrderId,
     ) -> Result<T> {
         let pair = Self::trading_pair(pair_index)?;
@@ -407,7 +407,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_cancel_order(
         who: &T::AccountId,
-        pair_index: TradingPairIndex,
+        pair_index: TradingPairId,
         order_index: OrderId,
     ) -> Result<T> {
         info!(
@@ -433,7 +433,7 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn trading_pair(pair_index: TradingPairIndex) -> result::Result<TradingPairProfile, Error<T>> {
+    fn trading_pair(pair_index: TradingPairId) -> result::Result<TradingPairProfile, Error<T>> {
         TradingPairOf::get(pair_index).ok_or(Error::<T>::InvalidOrderPair)
     }
 }
