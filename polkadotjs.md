@@ -59,13 +59,13 @@
       "Negative": "Balance"
     }
   },
-  "Compact": "u32",
+  "BTCCompact": "u32",
   "BTCHeader": {
     "version": "u32",
     "previous_header_hash": "H256",
     "merkle_root_hash": "H256",
     "time": "u32",
-    "bits": "Compact",
+    "bits": "BTCCompact",
     "once": "u32"
   },
   "BTCHeaderInfo": {

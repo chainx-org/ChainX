@@ -148,8 +148,7 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
         AssetRestriction::Deposit
             | AssetRestriction::Withdraw
             | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyFree
-            | AssetRestriction::Move,
+            | AssetRestriction::DestroyFree,
     )
 }
 
