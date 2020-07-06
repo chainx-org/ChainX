@@ -34,7 +34,7 @@ const MAX_BACKLOG_ORDER: usize = 1000;
 /// TODO: doc this properly.
 const FLUCTUATION: u32 = 100;
 
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait + pallet_timestamp::Trait {
+pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -66,7 +66,7 @@ decl_storage! {
         /// How many trading pairs so far.
         pub TradingPairCount get(fn trading_pair_count): TradingPairId;
 
-        /// The map from trading pair index to its static profile.
+        /// The map from trading pair id to its static profile.
         pub TradingPairOf get(fn trading_pair_of):
             map hasher(twox_64_concat) TradingPairId => Option<TradingPairProfile>;
 
@@ -75,19 +75,19 @@ decl_storage! {
             map hasher(twox_64_concat) TradingPairId => Option<TradingPairInfo<T::Price, T::BlockNumber>>;
 
         /// Total transactions has been made for a trading pair.
-        pub TradeHistoryIndexOf get(fn trade_history_index_of):
-            map hasher(twox_64_concat) TradingPairId => TradeHistoryIndex;
+        pub TradingHistoryIndexOf get(fn trading_history_index_of):
+            map hasher(twox_64_concat) TradingPairId => TradingHistoryIndex;
 
-        /// Total orders has made by an account.
+        /// Total orders made by an account.
         pub OrderCountOf get(fn order_count_of):
             map hasher(twox_64_concat) T::AccountId => OrderId;
 
-        /// Details of the order given account and his order ID
+        /// Details of an user order given the account ID and order ID.
         pub OrderInfoOf get(fn order_info_of):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) OrderId
             => Option<OrderInfo<T>>;
 
-        /// All the account and his order number given a certain trading pair and price.
+        /// All the accounts and the order number given the trading pair ID and price.
         pub QuotationsOf get(fn quotations_of):
             double_map hasher(twox_64_concat) TradingPairId, hasher(twox_64_concat) T::Price
             => Vec<(T::AccountId, OrderId)>;
@@ -154,6 +154,8 @@ decl_error! {
         TradingPairAlreadyExists,
         /// Too many orders for the same price.
         TooManyBacklogOrders,
+        /// Can not retrieve the asset info given the trading pair.
+        InvalidTradingPairAsset,
         /// Only the orders with ZeroFill or PartialFill can be canceled.
         CancelOrderNotAllowed,
         /// Can not find the order given the order index.

@@ -284,7 +284,7 @@ impl<T: Trait> Module<T> {
     fn update_order_on_execute(
         order: &mut OrderInfo<T>,
         turnover: &T::Balance,
-        trade_history_index: TradeHistoryIndex,
+        trade_history_index: TradingHistoryIndex,
     ) {
         order.executed_indices.push(trade_history_index);
 
@@ -331,11 +331,11 @@ impl<T: Trait> Module<T> {
     ) -> Result<T> {
         let pair = Self::trading_pair(pair_id)?;
 
-        let trade_history_index = Self::trade_history_index_of(pair_id);
-        TradeHistoryIndexOf::insert(pair_id, trade_history_index + 1);
+        let trading_history_idx = Self::trading_history_index_of(pair_id);
+        TradingHistoryIndexOf::insert(pair_id, trading_history_idx + 1);
 
-        Self::update_order_on_execute(maker_order, &turnover, trade_history_index);
-        Self::update_order_on_execute(taker_order, &turnover, trade_history_index);
+        Self::update_order_on_execute(maker_order, &turnover, trading_history_idx);
+        Self::update_order_on_execute(taker_order, &turnover, trading_history_idx);
 
         let (maker_turnover_amount, taker_turnover_amount) = Self::delivery_asset_to_each_other(
             maker_order.side(),

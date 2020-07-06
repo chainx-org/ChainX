@@ -8,13 +8,20 @@ use serde::{Deserialize, Serialize};
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_runtime::RuntimeDebug;
 
-/// Index for the trading pair or users' order.
+/// Type for counting the number of user orders.
 pub type OrderId = u64;
-///
-pub type TradeHistoryIndex = u64;
-///
+
+/// Type for counting the number of trading pairs.
 pub type TradingPairId = u32;
 
+/// Type for counting the number of executed orders given a trading pair.
+pub type TradingHistoryIndex = u64;
+
+/// A tick is a measure the minimum upward/downward movement in the price.
+pub type Tick = u64;
+
+/// Type of an order.
+///
 /// Currently only Limit Order is supported.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
@@ -25,7 +32,7 @@ pub enum OrderType {
 
 impl Default for OrderType {
     fn default() -> Self {
-        OrderType::Limit
+        Self::Limit
     }
 }
 
@@ -39,7 +46,7 @@ pub enum Side {
 
 impl Default for Side {
     fn default() -> Self {
-        Side::Buy
+        Self::Buy
     }
 }
 
@@ -47,7 +54,7 @@ impl Default for Side {
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 pub enum OrderStatus {
-    /// Order just got created, zero filled.
+    /// Order just got created.
     Created,
     /// Order has been filled partially.
     ParitialFill,
@@ -55,23 +62,23 @@ pub enum OrderStatus {
     Filled,
     /// Order has been canceled with partial fill.
     ParitialFillAndCanceled,
-    /// Order has been canceled with zero fill.
+    /// Order has been canceled without any deal.
     Canceled,
 }
 
 impl Default for OrderStatus {
     fn default() -> Self {
-        OrderStatus::Created
+        Self::Created
     }
 }
 
-///     Seller
-/// ----------------- Lowest Offer
-///      ask
-/// ----------------- MID
-///      bid
-/// ----------------- Highest Bid
-///     Buyer
+/// The best prices of a trading pair.
+///
+/// ------------------- Lowest Offer
+///   ask(sell price)
+/// -------------------
+///   bid(buy price)
+/// ------------------- Highest Bid
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
@@ -88,7 +95,7 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
         }
     }
 
-    /// Decreases the highest_bid by one tick.
+    /// Decreases the `highest_bid` by one tick.
     pub fn tick_down_highest_bid(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
 
@@ -100,7 +107,7 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
         self.highest_bid
     }
 
-    /// Increases the lowest_offer by one tick.
+    /// Increases the `lowest_offer` by one tick.
     pub fn tick_up_lowest_offer(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
 
@@ -113,14 +120,31 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
     }
 }
 
-/// PCX/BTC, base currency / quote currency
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
+/// A currency pair is the quotation of two different currencies,
+/// with the value of one currency being quoted against the other.
+///
+/// PCX/BTC: PCX(base)/BTC(quote)
+///
+/// It indicates how much of the quote currency is needed to purchase
+/// one unit of the base currency.
+///
+/// The first listed currency of a currency pair is called the `base` currency,
+/// and the second currency is called the `quote` currency.
+///
+/// If you buy a currency pair, you buy the base currency and implicitly
+/// sell the quoted currency. The bid (buy price) represents how much of
+/// the quote currency you need to get one unit of the base currency.
+///
+/// Conversely, when you sell the currency pair, you sell the base currency
+/// and receive the quote currency. The ask (sell price) for the currency pair
+/// represents how much you will get in the quote currency for selling one unit of base currency.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct CurrencyPair {
-    /// The former currency of pair, e.g., PCX for PCX/BTC.
+    /// The first currency of a currency pair.
     pub base: AssetId,
-    /// The latter currency of pair, e.g., BTC for PCX/BTC.
+    /// The second currency of a currency pair.
     pub quote: AssetId,
 }
 
@@ -138,10 +162,15 @@ impl CurrencyPair {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TradingPairProfile {
+    /// The trading pair identifier.
     pub id: TradingPairId,
+    /// The currency pair of trading pair.
     pub currency_pair: CurrencyPair,
+    /// How many decimal places of the currency pair.
     pub pip_precision: u32,
+    ///
     pub tick_precision: u32,
+    /// Is the trading pair still tradable.
     pub online: bool,
 }
 
@@ -162,24 +191,31 @@ impl TradingPairProfile {
         }
     }
 
+    /// Returns the base currency of trading pair.
     pub fn base(&self) -> AssetId {
         self.currency_pair.base
     }
 
+    /// Returns the quote currency of trading pair.
     pub fn quote(&self) -> AssetId {
         self.currency_pair.quote
     }
 
-    pub fn tick(&self) -> u64 {
+    /// Returns the tick size of trading pair.
+    pub fn tick(&self) -> Tick {
         10_u64.pow(self.tick_precision)
     }
 
-    pub fn fluctuation(&self) -> u64 {
-        FLUCTUATION.saturated_into::<u64>() * self.tick()
+    /// The maximum ticks that the price can deviate from the handicap.
+    pub fn fluctuation(&self) -> Tick {
+        FLUCTUATION
+            .saturated_into::<Tick>()
+            .saturating_mul(self.tick())
     }
 
+    /// Returns true if the price is divisible by tick.
     pub fn is_valid_price<Price: BaseArithmetic>(&self, price: Price) -> bool {
-        (price.saturated_into::<u128>() % u128::from(10_u64.pow(self.tick_precision))).is_zero()
+        (price.saturated_into::<u128>() % u128::from(self.tick())).is_zero()
     }
 }
 
@@ -188,37 +224,43 @@ impl TradingPairProfile {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct OrderProperty<PairId, AccountId, Amount, Price, BlockNumber> {
+    /// The order identifier.
     pub id: OrderId,
+    /// The direction of order.
     pub side: Side,
+    /// The price of order.
     pub price: Price,
+    /// The amount of order, measured in the base currency.
     pub amount: Amount,
+    /// The trading pair identifier.
     pub pair_id: PairId,
+    /// The account that submitted the order.
     pub submitter: AccountId,
+    /// The type of order.
     pub order_type: OrderType,
+    /// Block number at which the order is created.
     pub created_at: BlockNumber,
 }
 
-/// PCX/BTC
-/// The first one is called the base currency, the latter is called the quote currency.
-///
-/// Buy:  BTC -> PCX
-/// Sell: PCX -> BTC
-///
-/// Notes:
-/// - `amount` and `already_filled` are measured by the base currency.
-///
-/// - `remaining` is measured by the quote currency.
-///    While (props.amount() - already_filled) is also the remaining amount, but it's measured by the base currency.
+/// Details of an order.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Order<PairId, AccountId, Balance, Price, BlockNumber> {
+    /// Immutable details of the order.
     pub props: OrderProperty<PairId, AccountId, Balance, Price, BlockNumber>,
-
+    /// Status of the order.
     pub status: OrderStatus,
+    /// The amount of unexecuted, measured by the **quote** currency.
+    ///
+    /// While (props.amount() - already_filled) can be expressed as
+    /// the remaining amount as well, it's measured by the base currency.
     pub remaining: Balance,
-    pub executed_indices: Vec<TradeHistoryIndex>, // indices of transaction record
+    /// Indices of all executed transaction records.
+    pub executed_indices: Vec<TradingHistoryIndex>,
+    /// The amount of executed, measured by the **base** currency.
     pub already_filled: Balance,
+    /// Block number at which the order details updated.
     pub last_update_at: BlockNumber,
 }
 
@@ -236,7 +278,7 @@ where
         already_filled: Balance,
         last_update_at: BlockNumber,
         status: OrderStatus,
-        executed_indices: Vec<TradeHistoryIndex>,
+        executed_indices: Vec<TradingHistoryIndex>,
         remaining: Balance,
     ) -> Self {
         Self {
@@ -249,35 +291,42 @@ where
         }
     }
 
-    // Wrapper for the innner OrderProperty.
+    /// Returns the submitter of the order.
     pub fn submitter(&self) -> AccountId {
         self.props.submitter.clone()
     }
 
+    /// Returns the pair ID of the order.
     pub fn pair_id(&self) -> PairId {
         self.props.pair_id
     }
 
+    /// Returns the side of the order.
     pub fn side(&self) -> Side {
         self.props.side
     }
 
+    /// Returns the amount of the order.
     pub fn amount(&self) -> Balance {
         self.props.amount
     }
 
+    /// Returns the price of the order.
     pub fn price(&self) -> Price {
         self.props.price
     }
 
+    /// Returns the id of the order.
     pub fn id(&self) -> OrderId {
         self.props.id
     }
 
+    /// Returns the type of the order.
     pub fn order_type(&self) -> OrderType {
         self.props.order_type
     }
 
+    /// Returns the block number of the order created.
     pub fn created_at(&self) -> BlockNumber {
         self.props.created_at
     }
@@ -309,6 +358,7 @@ where
     }
 
     /// Minus the `remaining` of the order when it has been executed successfully.
+    ///
     /// The turnover is measured in the quote currency.
     /// So (remaining - turnover) is what we need.
     pub fn decrease_remaining_on_execute(&mut self, turnover: Balance) {
@@ -319,8 +369,10 @@ where
         self._sub_remaining(refund)
     }
 
-    /// If the already_filled is not zero, then the status of order become
-    /// ParitialExecutedAndCanceled, or else Canceled.
+    /// Updates the status of an order when it's being canceled.
+    ///
+    /// If the `already_filled` is not zero, then the status of order become
+    /// `ParitialFillAndCanceled`, otherwise it's `Canceled`.
     pub fn update_status_on_cancel(&mut self) {
         self.status = if !self.already_filled.is_zero() {
             OrderStatus::ParitialFillAndCanceled
@@ -331,12 +383,21 @@ where
 }
 
 /// Latest price of a trading pair.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TradingPairInfo<Price, BlockNumber> {
     /// Price of Latest executed order.
     pub latest_price: Price,
-    /// Block number at which `TradingPairInfo` updated.
+    /// Block number at which point `TradingPairInfo` is updated.
     pub last_updated: BlockNumber,
+}
+
+/// The order of the quotation at some price.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct Quotation<AccountId> {
+    pub trader: AccountId,
+    pub order_id: OrderId,
 }

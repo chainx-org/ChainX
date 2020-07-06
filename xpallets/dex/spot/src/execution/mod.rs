@@ -86,15 +86,15 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// Convert the base currency to the quote currency given the trading pair.
+    /// Converts the base currency to the quote currency given the trading pair.
     ///
-    /// NOTE: There is a loss of accuracy here.
+    /// NOTE: There is possibly a loss of accuracy here.
     ///
     /// PCX/BTC
     /// amount: measured by the base currency, e.g., PCX.
     /// price: measured by the quote currency, e.g., BTC.
     ///
-    /// converted
+    /// volume
     /// = amount * price * 10^(quote.precision) / 10^(base.precision) * 10^(price.precision)
     /// = amount * price * 10^(quote.precision - base.precision - price.precision)
     pub(crate) fn convert_base_to_quote(
@@ -121,7 +121,7 @@ impl<T: Trait> Module<T> {
             // Can overflow
             let ap = amount.saturated_into::<u128>() * price.saturated_into::<u128>();
 
-            let converted = if mul {
+            let volume = if mul {
                 match ap.checked_mul(s) {
                     Some(r) => r,
                     None => panic!("amount * price * precision overflow"),
@@ -130,13 +130,15 @@ impl<T: Trait> Module<T> {
                 ap / s
             };
 
-            if !converted.is_zero() {
-                if converted < u128::from(u64::max_value()) {
-                    return Ok((converted as u64).saturated_into());
+            if !volume.is_zero() {
+                if volume < u128::from(u64::max_value()) {
+                    return Ok((volume as u64).saturated_into());
                 } else {
-                    panic!("converted quote currency value definitely less than u64::max_value()")
+                    panic!("the value of converted quote currency definitely less than u64::max_value()")
                 }
             }
+        } else {
+            return Err(Error::<T>::InvalidTradingPairAsset);
         }
 
         Err(Error::<T>::VolumeTooSmall)

@@ -20,7 +20,7 @@ use frame_support::{
 pub use chainx_primitives::{Desc, Memo, Precision, Token};
 
 use super::traits::ChainT;
-use super::{Error, Module, Trait};
+use super::{Error, Trait};
 
 pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
 
@@ -233,12 +233,6 @@ pub enum AssetErr {
     TotalAssetOverFlow,
     InvalidAsset,
     NotAllow,
-}
-
-impl AssetErr {
-    pub fn to_err<T: Trait>(self) -> Error<T> {
-        self.into()
-    }
 }
 
 impl<T: Trait> From<AssetErr> for Error<T> {
