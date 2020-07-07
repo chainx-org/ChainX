@@ -19,6 +19,9 @@ pub type TradingHistoryIndex = u64;
 /// A tick is a measure the minimum upward/downward movement in the price.
 pub type Tick = u64;
 
+/// The number of ticks the price fluctuation.
+pub type PriceFluctuation = u32;
+
 /// Type of an order.
 ///
 /// Currently only Limit Order is supported.
@@ -206,8 +209,8 @@ impl TradingPairProfile {
     }
 
     /// The maximum ticks that the price can deviate from the handicap.
-    pub fn fluctuation(&self) -> Tick {
-        FLUCTUATION
+    pub fn calc_fluctuation(&self, price_fluctuation: PriceFluctuation) -> Tick {
+        price_fluctuation
             .saturated_into::<Tick>()
             .saturating_mul(self.tick())
     }
@@ -390,15 +393,6 @@ pub struct TradingPairInfo<Price, BlockNumber> {
     pub latest_price: Price,
     /// Block number at which point `TradingPairInfo` is updated.
     pub last_updated: BlockNumber,
-}
-
-/// The order of the quotation at some price.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Quotation<AccountId> {
-    pub trader: AccountId,
-    pub order_id: OrderId,
 }
 
 /// Information about the executed orders.

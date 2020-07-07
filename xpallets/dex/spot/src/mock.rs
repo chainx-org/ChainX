@@ -14,17 +14,13 @@ use sp_runtime::{
     Perbill,
 };
 
-use chainx_primitives::AssetId;
+use chainx_primitives::{AssetId, BlockNumber};
 use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
-pub(crate) type AccountIndex = u64;
-pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 pub(crate) type Price = u64;
-
-pub(crate) type SessionIndex = u64;
 
 impl_outer_origin! {
     pub enum Origin for Test {}

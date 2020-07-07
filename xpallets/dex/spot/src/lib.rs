@@ -31,15 +31,18 @@ use types::*;
 
 /// Maximum of backlog orders.
 const MAX_BACKLOG_ORDER: usize = 1000;
+
 /// The maximum ticks that a price can deviated from the handicap.
 ///
 /// NOTE:
-/// In case of endless loop when matching the orders.
+/// In the veryinitial design, this limit is 10% of the handicap,
+/// which resulted in the endless loop when matching the orders.
+/// Now we use the fixed size of ticks to restrict the quote.
 ///
 /// Currently we match the order by trying one tick at a time, if the
 /// order prices have a large gap, the matching logic can take much
 /// more time than the Block time to finish.
-const FLUCTUATION: u32 = 100;
+const DEFAULT_FLUCTUATION: u32 = 100;
 
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
@@ -102,6 +105,10 @@ decl_storage! {
         /// TradingPairId => (highest_bid, lowest_offer)
         pub HandicapOf get(fn handicap_of):
             map hasher(twox_64_concat) TradingPairId => HandicapInfo<T>;
+
+        /// The map of trading pair ID to the price fluctuation. Use with caution!
+        pub PriceFluctuationOf get(fn price_fluctuation_of):
+            map hasher(twox_64_concat) TradingPairId => PriceFluctuation = DEFAULT_FLUCTUATION;
     }
 
     add_extra_genesis {
@@ -136,6 +143,8 @@ decl_event!(
         OrderExecuted(OrderExecutedInfo<AccountId, Balance, BlockNumber, Price>),
         /// Trading pair profile has been updated.
         TradingPairUpdated(TradingPairProfile),
+        /// Price fluctuation of trading pair has been updated.
+        PriceFluctuationUpdated(TradingPairId, PriceFluctuation),
     }
 );
 
@@ -245,6 +254,13 @@ decl_module! {
             ensure_root(origin)?;
             info!("[set_handicap]pair_id:{:?},highest_bid:{:?},lowest_offer:{:?}", pair_id, highest_bid, lowest_offer,);
             HandicapOf::<T>::insert(pair_id, HandicapInfo::<T>::new(highest_bid, lowest_offer));
+        }
+
+        #[weight = 10]
+        fn set_price_fluctuation(origin, pair_id: TradingPairId, new: PriceFluctuation) {
+            ensure_root(origin)?;
+            PriceFluctuationOf::insert(pair_id, new);
+            Self::deposit_event(RawEvent::PriceFluctuationUpdated(pair_id, new));
         }
     }
 }
@@ -397,7 +413,7 @@ impl<T: Trait> Module<T> {
         order_id: OrderId,
     ) -> Result<T> {
         info!(
-            "[apply_cancel_order] transactor: {:?}, pair_id:{:}, order_id:{:}",
+            "[apply_cancel_order]who:{:?}, pair_id:{}, order_id:{}",
             who, pair_id, order_id
         );
 

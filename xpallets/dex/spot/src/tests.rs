@@ -57,6 +57,10 @@ fn t_set_handicap(pair_idx: TradingPairId, highest_bid: Price, lowest_offer: Pri
     ));
 }
 
+fn t_set_price_fluctution(pair_idx: TradingPairId, new: PriceFluctuation) {
+    assert_ok!(XSpot::set_price_fluctuation(Origin::root(), pair_idx, new));
+}
+
 fn t_convert_base_to_quote(amount: Balance, price: Price, pair: &TradingPairProfile) -> Balance {
     XSpot::convert_base_to_quote(amount, price, pair).unwrap()
 }
@@ -171,6 +175,10 @@ fn price_too_high_or_too_low_should_not_work() {
             t_put_order_sell(1, 0, 1000, 890_000,),
             Error::<Test>::TooLowAskPrice
         );
+
+        assert_eq!(XSpot::price_fluctuation_of(0), 100);
+        t_set_price_fluctution(0, 200);
+        assert_eq!(XSpot::price_fluctuation_of(0), 200);
     })
 }
 
