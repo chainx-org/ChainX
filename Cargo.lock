@@ -591,6 +591,7 @@ dependencies = [
  "xpallet-contracts",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-dex-spot",
  "xpallet-mining-asset",
  "xpallet-mining-staking",
  "xpallet-protocol",
@@ -7028,6 +7029,27 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xpallet-contracts-primitives",
+]
+
+[[package]]
+name = "xpallet-dex-spot"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "chrono",
+ "env_logger",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-protocol",
+ "xpallet-support",
 ]
 
 [[package]]

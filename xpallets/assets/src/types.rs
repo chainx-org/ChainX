@@ -235,12 +235,6 @@ pub enum AssetErr {
     NotAllow,
 }
 
-impl AssetErr {
-    pub fn to_err<T: Trait>(self) -> Error<T> {
-        self.into()
-    }
-}
-
 impl<T: Trait> From<AssetErr> for Error<T> {
     fn from(err: AssetErr) -> Self {
         match err {

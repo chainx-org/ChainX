@@ -7,7 +7,7 @@ use chainx_runtime::{
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, GenesisConfig, GrandpaConfig, SudoConfig, SystemConfig, XAssetsConfig,
-    XBridgeBitcoinConfig, XContractsConfig, XMiningStakingConfig, XSystemConfig,
+    XBridgeBitcoinConfig, XContractsConfig, XMiningStakingConfig, XSpotConfig, XSystemConfig,
 };
 
 use sc_service::ChainType;
@@ -221,6 +221,17 @@ fn testnet_genesis(
             max_withdrawal_count: 100,
         }),
         xpallet_mining_staking: Some(Default::default()),
+        xpallet_dex_spot: Some(XSpotConfig {
+            trading_pairs: vec![(
+                xpallet_protocol::PCX,
+                xpallet_protocol::X_BTC,
+                9,
+                2,
+                100000,
+                true,
+            )],
+            ..Default::default()
+        }),
         xpallet_contracts: Some(XContractsConfig {
             current_schedule: ContractsSchedule {
                 enable_println, // this should only be enabled on development chains
