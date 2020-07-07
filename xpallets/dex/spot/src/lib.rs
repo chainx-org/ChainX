@@ -105,21 +105,16 @@ decl_event!(
     pub enum Event<T>
     where
         <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Trait>::BlockNumber,
         <T as xpallet_assets::Trait>::Balance,
+        <T as Trait>::Price,
     {
-        /// The staker has been rewarded by this amount. `AccountId` is the stash account.
-        PutOrder(AccountId, Balance),
-        /// One validator (and its nominators) has been slashed by the given amount.
-        Slash(AccountId, Balance),
-        /// Nominator has bonded to the validator this amount.
-        Bond(AccountId, AccountId, Balance),
-        /// An account has unbonded this amount.
-        Unbond(AccountId, AccountId, Balance),
-        ///
-        Claim(AccountId, AccountId, Balance),
-        /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
-        /// from the unlocking queue.
-        WithdrawUnbonded(AccountId, Balance),
+        /// A new order is created.
+        PutOrder(AccountId, OrderId, TradingPairId, OrderType, Price, Side, Balance, BlockNumber),
+        /// There is an update to the order due to it's canceled or get executed.
+        UpdateOrder(AccountId, OrderId, Balance, BlockNumber, OrderStatus, Balance, Vec<TradingHistoryIndex>),
+        /// The order gets executed.
+        OrderExecuted(TradingHistoryIndex, TradingPairId, Price, AccountId, AccountId, OrderId, OrderId, Balance, BlockNumber),
     }
 );
 
@@ -198,7 +193,7 @@ decl_module! {
             ensure!(pair.online, Error::<T>::TradingPairOffline);
             ensure!(pair.is_valid_price(price), Error::<T>::InvalidPrice);
 
-            Self::is_within_quotation_range(price, side, pair_id)?;
+            Self::is_valid_quote(price, side, pair_id)?;
             Self::has_too_many_backlog_orders(pair_id, price, side)?;
 
             // Reserve the token according to the order side.

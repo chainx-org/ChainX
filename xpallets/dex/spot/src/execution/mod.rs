@@ -1,9 +1,8 @@
-// Copyright 2019 Chainpool.
+// Copyright 2020 Chainpool.
 
 mod asset;
 mod order;
 mod state;
-// pub mod types;
 
 use super::*;
 use crate::types::*;
@@ -20,6 +19,7 @@ impl<T: Trait> Module<T> {
             quote, lowest_offer, fluctuation
         );
 
+        // There is no offer yet, this is the first one.
         if lowest_offer.is_zero() {
             return Ok(());
         }
@@ -37,6 +37,7 @@ impl<T: Trait> Module<T> {
             quote, highest_bid, fluctuation
         );
 
+        // There is no bid yet, this is the first one.
         if highest_bid.is_zero() {
             return Ok(());
         }
@@ -49,13 +50,10 @@ impl<T: Trait> Module<T> {
     }
 
     /// Given the price volatility is 10%, a valid quote range should be:
+    ///
     /// - sell: [highest_bid - 10% * highest_bid, ~)
     /// - buy:  (~, lowest_offer + 10% * lowest_offer]
-    pub(crate) fn is_within_quotation_range(
-        quote: T::Price,
-        side: Side,
-        pair_id: TradingPairId,
-    ) -> Result<T> {
+    pub(crate) fn is_valid_quote(quote: T::Price, side: Side, pair_id: TradingPairId) -> Result<T> {
         let handicap = <HandicapOf<T>>::get(pair_id);
         let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
@@ -144,16 +142,16 @@ impl<T: Trait> Module<T> {
         Err(Error::<T>::VolumeTooSmall)
     }
 
-    pub(crate) fn update_order_event(order: &OrderInfo<T>) {
-        // Self::deposit_event(RawEvent::UpdateOrder(
-        // order.submitter(),
-        // order.index(),
-        // order.already_filled,
-        // order.last_update_at,
-        // order.status,
-        // order.remaining,
-        // order.executed_indices.clone(),
-        // ));
+    pub(crate) fn deposit_event_update_order(order: &OrderInfo<T>) {
+        Self::deposit_event(RawEvent::UpdateOrder(
+            order.submitter(),
+            order.id(),
+            order.already_filled,
+            order.last_update_at,
+            order.status,
+            order.remaining,
+            order.executed_indices.clone(),
+        ));
     }
 
     pub(crate) fn update_order_pair_event(pair: &TradingPairProfile) {

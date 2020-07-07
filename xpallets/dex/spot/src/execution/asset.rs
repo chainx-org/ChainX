@@ -1,5 +1,6 @@
-// Copyright 2019 Chainpool.
-//! This module handles all the asset related operations.
+//! This module handles all the asset related operations in Spot.
+//!
+//! Copyright 2020 Chainpool.
 
 use super::*;
 use xpallet_assets::AssetType::{self, Free, ReservedDexSpot};

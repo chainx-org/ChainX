@@ -58,7 +58,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    pub(super) fn tick_up(v: T::Price, tick: u64) -> T::Price {
+    pub(super) fn tick_up(v: T::Price, tick: Tick) -> T::Price {
         match v.checked_add(&tick.saturated_into()) {
             Some(x) => x,
             None => panic!("Fail to tick up"),
@@ -66,7 +66,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// This is only used for updating the handicap. Return zero when underflow.
-    pub(super) fn tick_down(v: T::Price, tick: u64) -> T::Price {
+    pub(super) fn tick_down(v: T::Price, tick: Tick) -> T::Price {
         v.checked_sub(&tick.saturated_into())
             .unwrap_or_else(Zero::zero)
     }
@@ -127,7 +127,9 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    /// This happens when the maker orders have been full filled.
+    /// Removes the order as well as the quotations from the order list.
+    ///
+    /// This happens when the maker orders have been completely filled.
     pub(super) fn remove_orders_and_quotations(
         pair_id: TradingPairId,
         price: T::Price,
@@ -146,6 +148,8 @@ impl<T: Trait> Module<T> {
         });
     }
 
+    /// Removes the quotation only.
+    ///
     /// This happens when the order is killed.
     pub(super) fn remove_quotation(
         pair_id: TradingPairId,
@@ -164,7 +168,9 @@ impl<T: Trait> Module<T> {
         });
     }
 
-    /// This happens after an order has been executed.
+    /// Updates the latest price of a trading pair.
+    ///
+    /// This happens after an order is executed every time.
     pub(crate) fn update_latest_price(pair_index: TradingPairId, latest: T::Price) {
         let current_block = <system::Module<T>>::block_number();
 
