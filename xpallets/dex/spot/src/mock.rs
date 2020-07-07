@@ -1,5 +1,4 @@
 use crate::*;
-// use crate::{Module, Trait};
 
 use std::{
     cell::RefCell,
@@ -76,31 +75,12 @@ impl Trait for Test {
     type Price = Price;
 }
 
-parameter_types! {
-    pub const MinimumPeriod: u64 = 5;
-}
-
-impl pallet_timestamp::Trait for Test {
-    type Moment = u64;
-    type OnTimestampSet = ();
-    type MinimumPeriod = MinimumPeriod;
-}
-
 impl xpallet_assets::Trait for Test {
     type Balance = Balance;
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = XSpot;
     type DetermineTokenJackpotAccountId = ();
-}
-
-// This function basically just builds a genesis storage key/value store according to
-// our desired mockup.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-    system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap()
-        .into()
 }
 
 thread_local! {
@@ -111,39 +91,8 @@ thread_local! {
     static MAX_ITERATIONS: RefCell<u32> = RefCell::new(0);
 }
 
-pub struct ExtBuilder {
-    session_length: BlockNumber,
-    election_lookahead: BlockNumber,
-    session_per_era: SessionIndex,
-    existential_deposit: Balance,
-    validator_pool: bool,
-    nominate: bool,
-    validator_count: u32,
-    minimum_validator_count: u32,
-    fair: bool,
-    num_validators: Option<u32>,
-    has_stakers: bool,
-    max_offchain_iterations: u32,
-}
-
-impl Default for ExtBuilder {
-    fn default() -> Self {
-        Self {
-            session_length: 1,
-            election_lookahead: 0,
-            session_per_era: 3,
-            existential_deposit: 1,
-            validator_pool: false,
-            nominate: true,
-            validator_count: 2,
-            minimum_validator_count: 0,
-            fair: true,
-            num_validators: None,
-            has_stakers: true,
-            max_offchain_iterations: 0,
-        }
-    }
-}
+#[derive(Default)]
+pub struct ExtBuilder;
 
 const PCX_PRECISION: u8 = 8;
 
@@ -199,7 +148,6 @@ impl ExtBuilder {
 
         let mut endowed = BTreeMap::new();
         let pcx_id = pcx().0;
-        // let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
         let endowed_info = vec![];
         endowed.insert(pcx_id, endowed_info);
         let _ = xpallet_assets::GenesisConfig::<Test> {
@@ -241,7 +189,6 @@ impl ExtBuilder {
         // `staking::on_initialize`
         ext.execute_with(|| {
             System::set_block_number(1);
-            // Timestamp::set_timestamp(INIT_TIMESTAMP);
         });
 
         ext
@@ -254,6 +201,4 @@ impl ExtBuilder {
 
 pub type System = frame_system::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
-// pub type Session = pallet_session::Module<Test>;
-pub type Timestamp = pallet_timestamp::Module<Test>;
 pub type XSpot = Module<Test>;

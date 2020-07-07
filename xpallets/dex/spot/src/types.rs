@@ -1,5 +1,4 @@
-// Copyright 2019 Chainpool.
-//! This module defines all the enum and structs.
+//! This module defines all the types used in Spot Module.
 
 use super::*;
 use codec::{Decode, Encode};
@@ -402,6 +401,7 @@ pub struct Quotation<AccountId> {
     pub order_id: OrderId,
 }
 
+/// Information about the executed orders.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct OrderExecutedInfo<AccountId, Balance, BlockNumber, Price> {
     trading_history_idx: TradingHistoryIndex,

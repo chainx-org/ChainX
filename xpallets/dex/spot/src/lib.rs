@@ -1,4 +1,4 @@
-//! # Staking Module
+//! # Spot Module
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -29,9 +29,16 @@ use xpallet_support::info;
 
 use types::*;
 
-///
+/// Maximum of backlog orders.
 const MAX_BACKLOG_ORDER: usize = 1000;
-/// TODO: doc this properly.
+/// The maximum ticks that a price can deviated from the handicap.
+///
+/// NOTE:
+/// In case of endless loop when matching the orders.
+///
+/// Currently we match the order by trying one tick at a time, if the
+/// order prices have a large gap, the matching logic can take much
+/// more time than the Block time to finish.
 const FLUCTUATION: u32 = 100;
 
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
@@ -95,9 +102,6 @@ decl_storage! {
         /// TradingPairId => (highest_bid, lowest_offer)
         pub HandicapOf get(fn handicap_of):
             map hasher(twox_64_concat) TradingPairId => HandicapInfo<T>;
-
-        /// Price volatility
-        pub PriceVolatility get(fn price_volatility) config(): u32 = 10u32;
     }
 
     add_extra_genesis {
@@ -334,20 +338,6 @@ impl<T: Trait> Module<T> {
             }
         }
         None
-    }
-
-    pub fn set_price_volatility(price_volatility: u32) -> Result<T> {
-        info!(
-            "[set_price_volatility] price_volatility: {:}",
-            price_volatility
-        );
-        ensure!(
-            price_volatility < FLUCTUATION,
-            Error::<T>::InvalidPriceVolatility
-        );
-        PriceVolatility::put(price_volatility);
-        // Self::deposit_event(RawEvent::PriceVolatility(price_volatility));
-        Ok(())
     }
 
     /// Internal mutables
