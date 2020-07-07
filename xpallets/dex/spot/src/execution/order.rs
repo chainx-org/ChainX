@@ -49,7 +49,7 @@ impl<T: Trait> Module<T> {
             Self::match_order(&pair, order, &handicap);
         }
 
-        Self::deposit_event_update_order(&order);
+        Self::deposit_event(RawEvent::UpdateOrder(order.clone()));
     }
 
     /// Insert a fresh order and return the inserted result.
@@ -62,34 +62,20 @@ impl<T: Trait> Module<T> {
         amount: T::Balance,
         remaining: T::Balance,
     ) -> Order<TradingPairId, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
-        // The order count of user should be increased as well.
-        let order_index = Self::order_count_of(&who);
-        <OrderCountOf<T>>::insert(&who, order_index + 1);
+        let order_id = Self::order_count_of(&who);
 
+        let submitter = who.clone();
         let order = Self::new_fresh_order(
-            pair_id,
-            price,
-            order_index,
-            who,
-            order_type,
-            side,
-            amount,
-            remaining,
+            pair_id, price, order_id, submitter, order_type, side, amount, remaining,
         );
 
         debug!("[inject_order]a new order injected:{:?}", order);
-        <OrderInfoOf<T>>::insert(order.submitter(), order.id(), &order);
+        <OrderInfoOf<T>>::insert(&who, order_id, &order);
 
-        Self::deposit_event(RawEvent::PutOrder(
-            order.submitter(),
-            order.id(),
-            order.pair_id(),
-            order.order_type(),
-            order.price(),
-            order.side(),
-            order.amount(),
-            order.created_at(),
-        ));
+        // The order count of user should be increased after a new order is created.
+        <OrderCountOf<T>>::insert(&who, order_id + 1);
+
+        Self::deposit_event(RawEvent::PutOrder(order.clone()));
 
         order
     }
@@ -384,20 +370,17 @@ impl<T: Trait> Module<T> {
         Self::insert_executed_order(maker_order);
         Self::insert_executed_order(taker_order);
 
-        Self::deposit_event_update_order(&maker_order);
-        Self::deposit_event_update_order(&taker_order);
-
-        Self::deposit_event(RawEvent::OrderExecuted(
+        Self::deposit_event(RawEvent::UpdateOrder(maker_order.clone()));
+        Self::deposit_event(RawEvent::UpdateOrder(taker_order.clone()));
+        Self::deposit_event(RawEvent::OrderExecuted(OrderExecutedInfo::new(
             trading_history_idx,
             pair_id,
             price,
-            maker_order.submitter(),
-            taker_order.submitter(),
-            maker_order.id(),
-            taker_order.id(),
             turnover,
+            maker_order,
+            taker_order,
             <frame_system::Module<T>>::block_number(),
-        ));
+        )));
 
         Ok(())
     }
@@ -419,10 +402,9 @@ impl<T: Trait> Module<T> {
         order.decrease_remaining_on_cancel(refund_amount);
         order.last_update_at = <system::Module<T>>::block_number();
 
-        // Deposit the event earlier so that it does have to be cloned.
-        Self::deposit_event_update_order(&order);
+        OrderInfoOf::<T>::insert(order.submitter(), order.id(), order.clone());
 
-        OrderInfoOf::<T>::insert(order.submitter(), order.id(), order);
+        Self::deposit_event(RawEvent::UpdateOrder(order.clone()));
 
         Ok(())
     }

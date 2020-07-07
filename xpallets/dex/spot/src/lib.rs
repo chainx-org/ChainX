@@ -110,11 +110,13 @@ decl_event!(
         <T as Trait>::Price,
     {
         /// A new order is created.
-        PutOrder(AccountId, OrderId, TradingPairId, OrderType, Price, Side, Balance, BlockNumber),
+        PutOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// There is an update to the order due to it's canceled or get executed.
-        UpdateOrder(AccountId, OrderId, Balance, BlockNumber, OrderStatus, Balance, Vec<TradingHistoryIndex>),
+        UpdateOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// The order gets executed.
-        OrderExecuted(TradingHistoryIndex, TradingPairId, Price, AccountId, AccountId, OrderId, OrderId, Balance, BlockNumber),
+        OrderExecuted(OrderExecutedInfo<AccountId, Balance, BlockNumber, Price>),
+        /// Trading pair profile has been updated.
+        TradingPairUpdated(TradingPairProfile),
     }
 );
 
@@ -275,7 +277,7 @@ impl<T: Trait> Module<T> {
         );
         TradingPairCount::put(pair_id + 1);
 
-        Self::update_order_pair_event(&pair);
+        Self::deposit_event(RawEvent::TradingPairUpdated(pair));
 
         Ok(())
     }
@@ -304,7 +306,7 @@ impl<T: Trait> Module<T> {
             }
         });
 
-        Self::update_order_pair_event(&pair);
+        Self::deposit_event(RawEvent::TradingPairUpdated(pair));
 
         Ok(())
     }
@@ -429,7 +431,7 @@ impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
                 if pair.base().eq(token) || pair.quote().eq(token) {
                     pair.online = false;
                     TradingPairOf::insert(i, &pair);
-                    Self::update_order_pair_event(&pair);
+                    Self::deposit_event(RawEvent::TradingPairUpdated(pair));
                 }
             }
         }

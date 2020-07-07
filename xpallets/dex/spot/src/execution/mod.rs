@@ -141,26 +141,4 @@ impl<T: Trait> Module<T> {
 
         Err(Error::<T>::VolumeTooSmall)
     }
-
-    pub(crate) fn deposit_event_update_order(order: &OrderInfo<T>) {
-        Self::deposit_event(RawEvent::UpdateOrder(
-            order.submitter(),
-            order.id(),
-            order.already_filled,
-            order.last_update_at,
-            order.status,
-            order.remaining,
-            order.executed_indices.clone(),
-        ));
-    }
-
-    pub(crate) fn update_order_pair_event(pair: &TradingPairProfile) {
-        // Self::deposit_event(RawEvent::UpdateOrderPair(
-        // pair.index,
-        // pair.currency_pair.clone(),
-        // pair.pip_precision,
-        // pair.tick_precision,
-        // pair.online,
-        // ));
-    }
 }

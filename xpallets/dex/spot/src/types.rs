@@ -401,3 +401,42 @@ pub struct Quotation<AccountId> {
     pub trader: AccountId,
     pub order_id: OrderId,
 }
+
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct OrderExecutedInfo<AccountId, Balance, BlockNumber, Price> {
+    trading_history_idx: TradingHistoryIndex,
+    pair_id: TradingPairId,
+    price: Price,
+    maker: AccountId,
+    taker: AccountId,
+    maker_order_id: OrderId,
+    taker_order_id: OrderId,
+    turnover: Balance,
+    executed_at: BlockNumber,
+}
+
+impl<AccountId: Clone, Balance: Copy + Ord + BaseArithmetic, BlockNumber: Copy, Price: Copy>
+    OrderExecutedInfo<AccountId, Balance, BlockNumber, Price>
+{
+    pub fn new(
+        trading_history_idx: TradingHistoryIndex,
+        pair_id: TradingPairId,
+        price: Price,
+        turnover: Balance,
+        maker_order: &Order<TradingPairId, AccountId, Balance, Price, BlockNumber>,
+        taker_order: &Order<TradingPairId, AccountId, Balance, Price, BlockNumber>,
+        executed_at: BlockNumber,
+    ) -> Self {
+        Self {
+            trading_history_idx,
+            pair_id,
+            price,
+            turnover,
+            executed_at,
+            maker: maker_order.submitter(),
+            taker: taker_order.submitter(),
+            maker_order_id: maker_order.id(),
+            taker_order_id: taker_order.id(),
+        }
+    }
+}
