@@ -23,8 +23,8 @@ pub type Tick = u64;
 /// Type of an order.
 ///
 /// Currently only Limit Order is supported.
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum OrderType {
     Limit,
     Market,
@@ -37,8 +37,8 @@ impl Default for OrderType {
 }
 
 /// Direction of an order.
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum Side {
     Buy,
     Sell,
@@ -51,8 +51,8 @@ impl Default for Side {
 }
 
 /// Status of an order.
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum OrderStatus {
     /// Order just got created.
     Created,

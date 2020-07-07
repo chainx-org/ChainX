@@ -209,13 +209,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let mut ext = sp_io::TestExternalities::from(storage);
-        // ext.execute_with(|| {
-        // let validators = Session::validators();
-        // SESSION.with(|x| *x.borrow_mut() = (validators.clone(), HashSet::new()));
-        // });
-
-        let pair_list = vec![
+        let trading_pairs = vec![
             (
                 xpallet_protocol::PCX,
                 xpallet_protocol::X_BTC,
@@ -234,23 +228,20 @@ impl ExtBuilder {
             ),
         ];
 
+        let _ = GenesisConfig::<Test> {
+            trading_pairs,
+            ..Default::default()
+        }
+        .assimilate_storage(&mut storage);
+
+        let mut ext = sp_io::TestExternalities::from(storage);
+
         // We consider all test to start after timestamp is initialized
         // This must be ensured by having `timestamp::on_initialize` called before
         // `staking::on_initialize`
         ext.execute_with(|| {
             System::set_block_number(1);
             // Timestamp::set_timestamp(INIT_TIMESTAMP);
-
-            for (base, quote, pip_precision, tick_precision, price, status) in pair_list.iter() {
-                XSpot::add_trading_pair(
-                    CurrencyPair::new(base.clone(), quote.clone()),
-                    *pip_precision,
-                    *tick_precision,
-                    *price,
-                    *status,
-                )
-                .unwrap();
-            }
         });
 
         ext

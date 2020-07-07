@@ -271,6 +271,11 @@ impl xpallet_system::Trait for Runtime {
     type Event = Event;
 }
 
+impl xpallet_dex_spot::Trait for Runtime {
+    type Event = Event;
+    type Price = Balance;
+}
+
 pub struct Tmp;
 impl xpallet_assets::TokenJackpotAccountIdFor<AccountId, BlockNumber> for Tmp {
     fn accountid_for(_id: &AssetId) -> AccountId {
@@ -347,6 +352,7 @@ construct_runtime!(
         XMiningStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
         XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>},
         XTransactionPayment: xpallet_transaction_payment::{Module, Storage},
+        XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
     }
 );
 

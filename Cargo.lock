@@ -591,6 +591,7 @@ dependencies = [
  "xpallet-contracts",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-dex-spot",
  "xpallet-mining-asset",
  "xpallet-mining-staking",
  "xpallet-protocol",

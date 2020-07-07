@@ -97,7 +97,22 @@ decl_storage! {
             map hasher(twox_64_concat) TradingPairId => HandicapInfo<T>;
 
         /// Price volatility
-        pub PriceVolatility get(fn price_volatility) config(): u32;
+        pub PriceVolatility get(fn price_volatility) config(): u32 = 10u32;
+    }
+
+    add_extra_genesis {
+        config(trading_pairs): Vec<(AssetId, AssetId, u32, u32, T::Price, bool)>;
+        build(|config| {
+            for (base, quote, pip_precision, tick_precision, price, online) in config.trading_pairs.iter() {
+                Module::<T>::add_trading_pair(
+                    CurrencyPair::new(*base, *quote),
+                    *pip_precision,
+                    *tick_precision,
+                    *price,
+                    *online
+                ).expect("genesis initialization can not fail");
+            }
+        })
     }
 }
 
@@ -212,14 +227,12 @@ decl_module! {
         #[weight = 10]
         pub fn cancel_order(origin, pair_id: TradingPairId, order_id: OrderId) {
             let who = ensure_signed(origin)?;
-
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
         #[weight = 10]
         fn set_cancel_order(origin, who: T::AccountId, pair_id: TradingPairId, order_id: OrderId) {
             ensure_root(origin)?;
-
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
@@ -229,8 +242,6 @@ decl_module! {
             info!("[set_handicap]pair_id:{:?},highest_bid:{:?},lowest_offer:{:?}", pair_id, highest_bid, lowest_offer,);
             HandicapOf::<T>::insert(pair_id, HandicapInfo::<T>::new(highest_bid, lowest_offer));
         }
-
-
     }
 }
 
