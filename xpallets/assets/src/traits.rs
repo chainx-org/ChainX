@@ -6,10 +6,6 @@ use chainx_primitives::AssetId;
 
 use crate::types::{AssetErr, AssetType, Chain};
 
-pub trait TokenJackpotAccountIdFor<AccountId: Sized, BlockNumber> {
-    fn accountid_for(id: &AssetId) -> AccountId;
-}
-
 pub trait ChainT {
     /// ASSET should be the native Asset for this chain.
     /// e.g.

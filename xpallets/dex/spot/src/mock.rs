@@ -76,7 +76,6 @@ impl xpallet_assets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = XSpot;
-    type DetermineTokenJackpotAccountId = ();
 }
 
 thread_local! {

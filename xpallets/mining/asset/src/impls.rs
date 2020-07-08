@@ -1,4 +1,7 @@
 use super::*;
+use codec::Encode;
+use sp_core::crypto::UncheckedFrom;
+use sp_runtime::traits::Hash;
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
@@ -109,7 +112,7 @@ impl<T: Trait> Module<T> {
     fn allocate_dividend(
         claimer: &T::AccountId,
         claimee: &AssetId,
-        claimee_jackpot: &T::AccountId,
+        claimee_reward_pot: &T::AccountId,
         dividend: T::Balance,
     ) -> Result<(), Error<T>> {
         todo!("")
@@ -130,12 +133,12 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
             claimer, claimee, current_block
         )?;
 
-        let claimee_jackpot = Self::asset_jackpot_of(claimee);
-        let dividend = Self::compute_dividend(source_weight, target_weight, &claimee_jackpot);
+        let claimee_reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
+        let dividend = Self::compute_dividend(source_weight, target_weight, &claimee_reward_pot);
 
         Self::can_claim(claimer, claimee, dividend, current_block)?;
 
-        Self::allocate_dividend(claimer, claimee, &claimee_jackpot, dividend)?;
+        Self::allocate_dividend(claimer, claimee, &claimee_reward_pot, dividend)?;
 
         Self::apply_update_miner_mining_weight(claimer, claimee, 0, current_block);
         Self::apply_update_asset_mining_weight(
@@ -173,5 +176,29 @@ impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
             v.retain(|i| i != asset_id);
         });
         Ok(())
+    }
+}
+
+/// Simple Asset reward pot account determiner.
+///
+/// Formula: `blake2_256(blake2_256(asset_id) + blake2_256(registered_block_number))`
+pub struct SimpleAssetRewardPotAccountDeterminer<T: Trait>(sp_std::marker::PhantomData<T>);
+
+impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId, AssetId>
+    for SimpleAssetRewardPotAccountDeterminer<T>
+where
+    T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
+{
+    fn reward_pot_account_for(asset_id: &AssetId) -> T::AccountId {
+        let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
+        let registered_time = <xpallet_assets::Module<T>>::asset_registered_block(asset_id);
+        let block_num_hash =
+            <T as frame_system::Trait>::Hashing::hash(registered_time.encode().as_ref());
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(id_hash.as_ref());
+        buf.extend_from_slice(block_num_hash.as_ref());
+
+        UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }
 }

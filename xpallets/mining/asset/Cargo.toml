@@ -10,6 +10,7 @@ serde = { version = "1.0.101", optional = true }
 
 # Substrate primitives
 sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
@@ -40,6 +41,7 @@ std = [
     "serde",
 
     "sp-std/std",
+    "sp-core/std",
     "sp-runtime/std",
     "sp-arithmetic/std",
 

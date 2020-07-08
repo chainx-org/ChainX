@@ -276,18 +276,11 @@ impl xpallet_dex_spot::Trait for Runtime {
     type Price = Balance;
 }
 
-pub struct Tmp;
-impl xpallet_assets::TokenJackpotAccountIdFor<AccountId, BlockNumber> for Tmp {
-    fn accountid_for(_id: &AssetId) -> AccountId {
-        unimplemented!()
-    }
-}
 impl xpallet_assets::Trait for Runtime {
     type Balance = Balance;
     type Event = Event;
     type OnAssetChanged = XMiningAsset;
     type OnAssetRegisterOrRevoke = XMiningAsset;
-    type DetermineTokenJackpotAccountId = Tmp;
 }
 
 impl xpallet_bridge_bitcoin::Trait for Runtime {
@@ -311,10 +304,14 @@ impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
     type CollectAssetMiningInfo = ();
     type OnMinting = ();
+    type DetermineRewardPotAccount =
+        xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
 }
 
 impl xpallet_mining_asset::Trait for Runtime {
     type Event = Event;
+    type DetermineRewardPotAccount =
+        xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
 }
 
 parameter_types! {

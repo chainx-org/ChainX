@@ -7083,6 +7083,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
+ "pallet-session",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",

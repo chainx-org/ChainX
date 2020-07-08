@@ -1,8 +1,13 @@
 use super::*;
+use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
+use sp_core::crypto::UncheckedFrom;
+use sp_runtime::traits::Hash;
 use xp_mining_common::{
-    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, RewardPotAccountFor,
+    WeightFactors, WeightType,
 };
+use xp_mining_staking::SessionIndex;
 
 impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
     for ValidatorLedger<Balance, BlockNumber>
@@ -90,24 +95,20 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
 
 /// Computes the dividend according to the ratio of source_vote_weight/target_vote_weight.
 ///
-/// dividend = source_vote_weight/target_vote_weight * balance_of(claimee_jackpot)
+/// dividend = source_vote_weight/target_vote_weight * balance_of(claimee_reward_pot)
 pub fn compute_dividend<T: Trait>(
     source_vote_weight: WeightType,
     target_vote_weight: WeightType,
-    claimee_jackpot: &T::AccountId,
+    claimee_reward_pot: &T::AccountId,
 ) -> T::Balance {
-    let total_jackpot = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_jackpot);
-    match source_vote_weight.checked_mul(total_jackpot.saturated_into()) {
+    let total_reward_pot = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_reward_pot);
+    match source_vote_weight.checked_mul(total_reward_pot.saturated_into()) {
         Some(x) => ((x / target_vote_weight) as u64).saturated_into(),
-        None => panic!("source_vote_weight * total_jackpot overflow, this should not happen"),
+        None => panic!("source_vote_weight * total_reward_pot overflow, this should not happen"),
     }
 }
 
 impl<T: Trait> Module<T> {
-    fn jackpot_account_for(validator: &T::AccountId) -> T::AccountId {
-        todo!()
-    }
-
     fn allocate_dividend(
         claimer: &T::AccountId,
         pot_account: &T::AccountId,
@@ -185,7 +186,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
             claimer, claimee, current_block
         )?;
 
-        let claimee_pot = Self::jackpot_account_for(claimee);
+        let claimee_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
 
         let dividend = compute_dividend::<T>(source_weight, target_weight, &claimee_pot);
 
@@ -199,5 +200,60 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
         Self::update_claimee_vote_weight_on_claim(claimee, new_target_weight, current_block);
 
         Ok(())
+    }
+}
+
+impl<T: Trait> Module<T> {
+    fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        todo!()
+    }
+
+    fn start_session(start_index: SessionIndex) {
+        todo!()
+    }
+
+    fn end_session(end_index: SessionIndex) {
+        todo!()
+    }
+}
+
+/// In this implementation `new_session(session)` must be called before `end_session(session-1)`
+/// i.e. the new session must be planned before the ending of the previous session.
+///
+/// Once the first new_session is planned, all session must start and then end in order, though
+/// some session can lag in between the newest session planned and the latest session started.
+impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
+    fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        Self::new_session(new_index)
+    }
+    fn start_session(start_index: SessionIndex) {
+        Self::start_session(start_index)
+    }
+    fn end_session(end_index: SessionIndex) {
+        Self::end_session(end_index)
+    }
+}
+
+/// Simple validator reward pot account determiner.
+///
+/// Formula: `blake2_256(blake2_256(validator_pubkey) + blake2_256(registered_at))`
+pub struct SimpleValidatorRewardPotAccountDeterminer<T: Trait>(sp_std::marker::PhantomData<T>);
+
+impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId, T::AccountId>
+    for SimpleValidatorRewardPotAccountDeterminer<T>
+where
+    T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
+{
+    fn reward_pot_account_for(validator: &T::AccountId) -> T::AccountId {
+        let validator_hash = <T as frame_system::Trait>::Hashing::hash(validator.as_ref());
+        let registered_at: T::BlockNumber = Validators::<T>::get(validator).registered_at;
+        let registered_at_hash =
+            <T as frame_system::Trait>::Hashing::hash(registered_at.encode().as_ref());
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(validator_hash.as_ref());
+        buf.extend_from_slice(registered_at_hash.as_ref());
+
+        UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }
 }

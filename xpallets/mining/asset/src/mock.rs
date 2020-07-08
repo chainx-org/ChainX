@@ -66,6 +66,7 @@ impl system::Trait for Test {
 
 impl Trait for Test {
     type Event = ();
+    type DetermineRewardPotAccount = ();
 }
 
 impl xpallet_assets::Trait for Test {
@@ -73,13 +74,13 @@ impl xpallet_assets::Trait for Test {
     type Event = ();
     type OnAssetChanged = XMiningAsset;
     type OnAssetRegisterOrRevoke = XMiningAsset;
-    type DetermineTokenJackpotAccountId = ();
 }
 
 impl xpallet_mining_staking::Trait for Test {
     type Event = ();
     type OnMinting = ();
     type CollectAssetMiningInfo = ();
+    type DetermineRewardPotAccount = ();
 }
 
 // This function basically just builds a genesis storage key/value store according to
