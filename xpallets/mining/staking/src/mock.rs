@@ -68,6 +68,7 @@ impl Trait for Test {
     type Event = ();
     type OnMinting = ();
     type CollectAssetMiningInfo = ();
+    type DetermineRewardPotAccount = ();
 }
 
 impl xpallet_assets::Trait for Test {
