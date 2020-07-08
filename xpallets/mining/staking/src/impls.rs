@@ -1,4 +1,5 @@
 use super::*;
+use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::Hash;
@@ -236,14 +237,22 @@ impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
     }
 }
 
+/// Formula: `blake2_256(blake2_256(validator_pubkey) + blake2_256(registered_at))`
 impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId> for Module<T>
 where
     T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
 {
     type MiningEntity = T::AccountId;
     fn reward_pot_account_for(validator: &Self::MiningEntity) -> T::AccountId {
-        UncheckedFrom::unchecked_from(<T as frame_system::Trait>::Hashing::hash(
-            validator.as_ref(),
-        ))
+        let validator_hash = <T as frame_system::Trait>::Hashing::hash(validator.as_ref());
+        let registered_at: T::BlockNumber = Validators::<T>::get(validator).registered_at;
+        let registered_at_hash =
+            <T as frame_system::Trait>::Hashing::hash(registered_at.encode().as_ref());
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(validator_hash.as_ref());
+        buf.extend_from_slice(registered_at_hash.as_ref());
+
+        UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }
 }

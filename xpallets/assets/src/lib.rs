@@ -39,32 +39,6 @@ pub use self::types::{
     TotalAssetInfo,
 };
 
-pub struct SimpleAccountIdDeterminator<T: Trait>(::sp_std::marker::PhantomData<T>);
-
-impl<AccountId: Default, BlockNumber> TokenJackpotAccountIdFor<AccountId, BlockNumber> for () {
-    fn accountid_for(_: &AssetId) -> AccountId {
-        AccountId::default()
-    }
-}
-
-impl<T: Trait> TokenJackpotAccountIdFor<T::AccountId, T::BlockNumber>
-    for SimpleAccountIdDeterminator<T>
-where
-    T::AccountId: UncheckedFrom<T::Hash>,
-    T::BlockNumber: codec::Codec,
-{
-    fn accountid_for(id: &AssetId) -> T::AccountId {
-        let id_hash = T::Hashing::hash(&id.to_le_bytes()[..]);
-        let registered_time = Module::<T>::asset_registered_block(id);
-        let block_num_hash = T::Hashing::hash(registered_time.encode().as_ref());
-
-        let mut buf = Vec::new();
-        buf.extend_from_slice(id_hash.as_ref());
-        buf.extend_from_slice(block_num_hash.as_ref());
-        UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
-    }
-}
-
 pub trait Trait: system::Trait {
     type Balance: Parameter
         + Member
@@ -80,12 +54,6 @@ pub trait Trait: system::Trait {
     type OnAssetChanged: OnAssetChanged<Self::AccountId, Self::Balance>;
 
     type OnAssetRegisterOrRevoke: OnAssetRegisterOrRevoke;
-
-    /// Generate virtual AccountId for each (psedu) token
-    type DetermineTokenJackpotAccountId: TokenJackpotAccountIdFor<
-        Self::AccountId,
-        Self::BlockNumber,
-    >;
 }
 
 decl_error! {

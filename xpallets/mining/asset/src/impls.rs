@@ -1,4 +1,7 @@
 use super::*;
+use codec::Encode;
+use sp_core::crypto::UncheckedFrom;
+use sp_runtime::traits::Hash;
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
@@ -173,5 +176,26 @@ impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
             v.retain(|i| i != asset_id);
         });
         Ok(())
+    }
+}
+
+/// Formula: `blake2_256(blake2_256(asset_id) + blake2_256(registered_block_number))`
+impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId> for Module<T>
+where
+    T::AccountId: UncheckedFrom<T::Hash>,
+    T::BlockNumber: codec::Codec,
+{
+    type MiningEntity = AssetId;
+    fn reward_pot_account_for(asset_id: &Self::MiningEntity) -> T::AccountId {
+        let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
+        let registered_time = <xpallet_assets::Module<T>>::asset_registered_block(asset_id);
+        let block_num_hash =
+            <T as frame_system::Trait>::Hashing::hash(registered_time.encode().as_ref());
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(id_hash.as_ref());
+        buf.extend_from_slice(block_num_hash.as_ref());
+
+        UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }
 }
