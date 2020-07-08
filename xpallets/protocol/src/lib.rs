@@ -57,13 +57,13 @@ mod assets_registration {
     ///
     /// Notice index 1 stands for mainnet Bitcoin, not testnet Bitcoin asset.
     pub const X_BTC: AssetId = 1;
-    /// Reserved since this symbol has been used in legacy ChainX 1.0.
+    /// Reserved since this symbol had been used in legacy ChainX 1.0.
     pub const L_BTC: AssetId = 0x90000000 | X_BTC;
     ///
     pub const X_ETH: AssetId = 60;
     ///
     pub const X_DOT: AssetId = 354;
-    /// Reserved since this symbol has been used in legacy ChainX 1.0.
+    /// Reserved since this symbol had been used in legacy ChainX 1.0.
     pub const S_DOT: AssetId = 0xa0000000 | X_DOT;
 
     const EXTEND: AssetId = 0x01000000;

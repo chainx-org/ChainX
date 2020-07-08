@@ -244,7 +244,6 @@ impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId, T::AccountId>
 where
     T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
 {
-    // type MiningEntity = T::AccountId;
     fn reward_pot_account_for(validator: &T::AccountId) -> T::AccountId {
         let validator_hash = <T as frame_system::Trait>::Hashing::hash(validator.as_ref());
         let registered_at: T::BlockNumber = Validators::<T>::get(validator).registered_at;
