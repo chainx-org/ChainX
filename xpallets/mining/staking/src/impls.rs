@@ -1,8 +1,11 @@
 use super::*;
 use sp_arithmetic::traits::BaseArithmetic;
+use sp_core::crypto::UncheckedFrom;
+use sp_runtime::traits::Hash;
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
+use xp_mining_staking::SessionIndex;
 
 impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
     for ValidatorLedger<Balance, BlockNumber>
@@ -199,5 +202,48 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
         Self::update_claimee_vote_weight_on_claim(claimee, new_target_weight, current_block);
 
         Ok(())
+    }
+}
+
+impl<T: Trait> Module<T> {
+    fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        todo!()
+    }
+
+    fn start_session(start_index: SessionIndex) {
+        todo!()
+    }
+
+    fn end_session(end_index: SessionIndex) {
+        todo!()
+    }
+}
+
+/// In this implementation `new_session(session)` must be called before `end_session(session-1)`
+/// i.e. the new session must be planned before the ending of the previous session.
+///
+/// Once the first new_session is planned, all session must start and then end in order, though
+/// some session can lag in between the newest session planned and the latest session started.
+impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
+    fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        Self::new_session(new_index)
+    }
+    fn start_session(start_index: SessionIndex) {
+        Self::start_session(start_index)
+    }
+    fn end_session(end_index: SessionIndex) {
+        Self::end_session(end_index)
+    }
+}
+
+impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId> for Module<T>
+where
+    T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
+{
+    type MiningEntity = T::AccountId;
+    fn reward_pot_account_for(validator: &Self::MiningEntity) -> T::AccountId {
+        UncheckedFrom::unchecked_from(<T as frame_system::Trait>::Hashing::hash(
+            validator.as_ref(),
+        ))
     }
 }

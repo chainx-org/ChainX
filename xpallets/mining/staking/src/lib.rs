@@ -3,6 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod impls;
+// mod reward;
 mod types;
 
 #[cfg(test)]
@@ -31,6 +32,14 @@ use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError}
 use xp_mining_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
+
+/// Session reward of the first 210_000 sessions.
+const INITIAL_REWARD: u64 = 50;
+/// Every 210_000 sessions, the session reward is cut in half.
+///
+/// ChainX follows the issuance rule of Bitcoin. The `Session` in ChainX
+/// is equivalent to `Block` in Bitcoin with regard to minting new coins.
+const SESSIONS_PER_ROUND: u32 = 210_000;
 
 const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
 const DEFAULT_MAXIMUM_VALIDATOR_COUNT: u32 = 100;
@@ -88,6 +97,9 @@ decl_storage! {
         /// Maximum number of on-going unbonded chunk.
         pub MaximumUnbondedChunkSize get(fn maximum_unbonded_chunk_size) config():
             u32 = DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE;
+
+        /// The beneficiary account of vesting schedule.
+        pub VestingAccount get(fn vesting_account) config(): T::AccountId;
 
         /// Maximum value of total_bonded/self_bonded.
         pub UpperBoundFactorOfAcceptableVotes get(fn upper_bound_factor) config():

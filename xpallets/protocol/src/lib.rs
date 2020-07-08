@@ -35,15 +35,19 @@ pub mod assets_def {
     //      L_: use 0x90000000
     //      S_: use 0xa0000000
 
-    // notic index 0 strands for ChainX PCX, not Bitcoin(BTC)
+    /// notic index 0 strands for ChainX PCX, not Bitcoin(BTC)
     pub const PCX: AssetId = 0;
-    // notice index 1 stands for mainnet Bitcoin, not testnet Bitcoin asset
+    /// Bitcoin
+    ///
+    /// notice index 1 stands for mainnet Bitcoin, not testnet Bitcoin asset
     pub const X_BTC: AssetId = 1;
+    /// Reserved for legacy ChainX 1.0.
     pub const L_BTC: AssetId = 0x90000000 | X_BTC;
 
     pub const X_ETH: AssetId = 60;
 
     pub const X_DOT: AssetId = 354;
+    /// Reserved for legacy ChainX 1.0.
     pub const S_DOT: AssetId = 0xa0000000 | X_DOT;
 
     const EXTEND: AssetId = 0x01000000;

@@ -117,8 +117,8 @@ pub struct ValidatorInfo<AccountId: Default, Balance: Default, BlockNumber: Defa
     pub profile: ValidatorProfile<BlockNumber>,
     #[cfg_attr(feature = "std", serde(flatten))]
     pub ledger: ValidatorLedger<Balance, BlockNumber>,
-    pub jackpot_account: AccountId,
-    pub jackpot_balance: Balance,
+    pub status: ValidatorStatus,
     pub self_bonded: Balance,
-    pub status: bool,
+    pub reward_pot_account: AccountId,
+    pub reward_pot_balance: Balance,
 }

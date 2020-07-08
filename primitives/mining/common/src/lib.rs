@@ -191,3 +191,23 @@ pub trait Claim<AccountId> {
 
     fn claim(claimer: &AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error>;
 }
+
+/// A function that generates an `AccountId` for the reward pot of a mining entity.
+///
+/// The reward of all individual miners will be staged in the reward pot, the individual
+/// reward can be claimed manually at any time.
+pub trait RewardPotAccountFor<AccountId> {
+    /// Entity of the mining participant.
+    ///
+    /// The entity can be a Staking Validator or a Mining Asset.
+    type MiningEntity;
+
+    fn reward_pot_account_for(_entity: &Self::MiningEntity) -> AccountId;
+}
+
+impl<AccountId: Default> RewardPotAccountFor<AccountId> for () {
+    type MiningEntity = ();
+    fn reward_pot_account_for(_entity: &Self::MiningEntity) -> AccountId {
+        Default::default()
+    }
+}
