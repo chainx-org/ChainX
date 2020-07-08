@@ -304,10 +304,14 @@ impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
     type CollectAssetMiningInfo = ();
     type OnMinting = ();
+    type DetermineRewardPotAccount =
+        xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
 }
 
 impl xpallet_mining_asset::Trait for Runtime {
     type Event = Event;
+    type DetermineRewardPotAccount =
+        xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
 }
 
 parameter_types! {

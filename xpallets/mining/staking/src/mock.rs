@@ -75,7 +75,6 @@ impl xpallet_assets::Trait for Test {
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
-    type DetermineTokenJackpotAccountId = ();
 }
 
 // This function basically just builds a genesis storage key/value store according to

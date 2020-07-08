@@ -27,7 +27,7 @@
 //! staked_balance(Balance) * time(BlockNumber) = vote_weight
 //! ```
 //!
-//! All the nominators split the reward of the validator's jackpot according to the proportion of vote weight.
+//! All the nominators split the reward of the validator's reward pot according to the proportion of vote weight.
 //!
 //! For Asset Mining:
 //!
@@ -35,7 +35,7 @@
 //! ext_asset_balance(Balance) * time(BlockNumber) = ext_mining_weight
 //! ```
 //!
-//! All asset miners split the reward of asset's jackpot according to the proportion of asset mining weight.
+//! All asset miners split the reward of asset's reward pot according to the proportion of asset mining weight.
 //!
 
 use sp_arithmetic::traits::{BaseArithmetic, SaturatedConversion};
@@ -196,18 +196,15 @@ pub trait Claim<AccountId> {
 ///
 /// The reward of all individual miners will be staged in the reward pot, the individual
 /// reward can be claimed manually at any time.
-pub trait RewardPotAccountFor<AccountId> {
+pub trait RewardPotAccountFor<AccountId, MiningEntity> {
     /// Entity of the mining participant.
     ///
     /// The entity can be a Staking Validator or a Mining Asset.
-    type MiningEntity;
-
-    fn reward_pot_account_for(_entity: &Self::MiningEntity) -> AccountId;
+    fn reward_pot_account_for(_entity: &MiningEntity) -> AccountId;
 }
 
-impl<AccountId: Default> RewardPotAccountFor<AccountId> for () {
-    type MiningEntity = ();
-    fn reward_pot_account_for(_entity: &Self::MiningEntity) -> AccountId {
+impl<AccountId: Default, MiningEntity> RewardPotAccountFor<AccountId, MiningEntity> for () {
+    fn reward_pot_account_for(_entity: &MiningEntity) -> AccountId {
         Default::default()
     }
 }

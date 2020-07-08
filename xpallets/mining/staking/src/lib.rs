@@ -28,10 +28,14 @@ use sp_runtime::traits::{
 };
 use sp_std::prelude::*;
 use types::*;
-use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
+use xp_mining_common::{
+    Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
+};
 use xp_mining_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
+
+pub use impls::SimpleValidatorRewardPotAccountDeterminer;
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 50;
@@ -59,6 +63,9 @@ pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
 
     ///
     type OnMinting: OnMinting<AssetId, Self::Balance>;
+
+    ///
+    type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, Self::AccountId>;
 }
 
 decl_storage! {

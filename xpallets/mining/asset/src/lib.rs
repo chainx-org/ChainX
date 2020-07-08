@@ -27,14 +27,20 @@ use sp_runtime::traits::{
 use sp_std::prelude::*;
 use types::*;
 use xp_mining_common::{
-    Claim, ComputeMiningWeight, MiningWeight, WeightType, ZeroMiningWeightError,
+    Claim, ComputeMiningWeight, MiningWeight, RewardPotAccountFor, WeightType,
+    ZeroMiningWeightError,
 };
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
+pub use impls::SimpleAssetRewardPotAccountDeterminer;
+
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    ///
+    type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;
 }
 
 decl_storage! {
@@ -213,12 +219,12 @@ impl<T: Trait> Module<T> {
     fn compute_dividend(
         source_weight: WeightType,
         target_weight: WeightType,
-        claimee_jackpot: &T::AccountId,
+        claimee_reward_pot: &T::AccountId,
     ) -> T::Balance {
         todo!()
     }
 
-    fn asset_jackpot_of(asset_id: &AssetId) -> T::AccountId {
+    fn asset_reward_pot_of(asset_id: &AssetId) -> T::AccountId {
         todo!()
     }
 }

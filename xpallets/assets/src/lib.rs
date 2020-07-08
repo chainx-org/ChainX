@@ -32,7 +32,7 @@ use xpallet_support::{debug, ensure_with_errorlog, info};
 
 use self::trigger::AssetChangedTrigger;
 
-pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke, TokenJackpotAccountIdFor};
+pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke};
 pub use self::types::{
     is_valid_desc, is_valid_token, AssetErr, AssetInfo, AssetRestriction, AssetRestrictions,
     AssetType, Chain, NegativeImbalance, PositiveImbalance, SignedBalance, SignedImbalanceT,

@@ -73,7 +73,6 @@ impl xpallet_assets::Trait for Test {
     type Event = ();
     type OnAssetChanged = XMiningAsset;
     type OnAssetRegisterOrRevoke = XMiningAsset;
-    type DetermineTokenJackpotAccountId = ();
 }
 
 impl xpallet_mining_staking::Trait for Test {

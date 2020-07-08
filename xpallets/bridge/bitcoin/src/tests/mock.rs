@@ -95,7 +95,6 @@ impl xpallet_assets::Trait for Test {
     type OnNewAccount = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
-    type DetermineTokenJackpotAccountId = ();
     type Event = ();
 }
 
