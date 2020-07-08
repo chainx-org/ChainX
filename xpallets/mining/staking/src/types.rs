@@ -17,7 +17,7 @@ pub enum MintedDestination<AccountId> {
 ///
 /// If the (potential) validator failed to meet this requirement, force it to be chilled on new election round.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-pub struct CandidateRequirement<Balance: Default> {
+pub struct BondRequirement<Balance: Default> {
     /// The minimal amount of self-bonded balance to be a qualified validator candidate.
     pub self_bonded: Balance,
     /// The minimal amount of total-bonded balance to be a qualified validator candidate.

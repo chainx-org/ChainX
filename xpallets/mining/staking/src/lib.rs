@@ -86,8 +86,8 @@ decl_storage! {
             u32 = DEFAULT_MAXIMUM_VALIDATOR_COUNT;
 
         /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
-        pub ValidatorCandidateRequirement get(fn minimum_candidate_requirement):
-            CandidateRequirement<T::Balance>;
+        pub ValidatorCandidateRequirement get(fn validator_bond_requirement):
+            BondRequirement<T::Balance>;
 
         /// The length of a session in blocks.
         pub BlocksPerSession get(fn blocks_per_session) config():
@@ -412,6 +412,10 @@ impl<T: Trait> Module<T> {
         !Self::is_chilled(who)
     }
 
+    pub fn potential_validator_set() -> impl Iterator<Item = T::AccountId> {
+        Validators::<T>::iter().map(|(v, _)| v)
+    }
+
     #[inline]
     fn unbonded_chunks_of(nominator: &T::AccountId) -> Vec<Unbonded<T::Balance, T::BlockNumber>> {
         Nominators::<T>::get(nominator).unbonded_chunks
@@ -435,13 +439,6 @@ impl<T: Trait> Module<T> {
         Nominations::<T>::contains_key(nominator, nominee)
     }
 
-    pub fn validator_set() -> Vec<T::AccountId> {
-        Validators::<T>::iter()
-            .map(|(v, _)| v)
-            .filter(Self::is_active)
-            .collect()
-    }
-
     fn can_force_chilled() -> bool {
         // TODO: optimize using try_for_each?
         let active = Validators::<T>::iter()
@@ -455,7 +452,11 @@ impl<T: Trait> Module<T> {
         if !Self::can_force_chilled() {
             return Err(Error::<T>::InsufficientValidators);
         }
-        // TODO: apply_force_chilled()
+        // Force the validator to be chilled
+        Validators::<T>::mutate(who, |validator_profile| {
+            validator_profile.is_chilled = true;
+            validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
+        });
         Ok(())
     }
 
