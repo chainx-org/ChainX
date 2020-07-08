@@ -204,8 +204,46 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-        todo!()
+    fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        if let Some(current_era) = Self::current_era() {
+            // Initial era has been set.
+
+            let current_era_start_session_index = Self::eras_start_session_index(current_era)
+                .unwrap_or_else(|| {
+                    frame_support::print("Error: start_session_index must be set for current_era");
+                    0
+                });
+
+            let era_length = session_index
+                .checked_sub(current_era_start_session_index)
+                .unwrap_or(0); // Must never happen.
+
+            let ideal_era_length = Self::sessions_per_era().saturated_into::<SessionIndex>();
+
+            match ForceEra::get() {
+                Forcing::ForceNew => ForceEra::kill(),
+                Forcing::ForceAlways => (),
+                Forcing::NotForcing if era_length >= ideal_era_length => (),
+                _ => {
+                    // Either `ForceNone`, or `NotForcing && era_length < T::SessionsPerEra::get()`.
+                    if era_length + 1 == ideal_era_length {
+                        IsCurrentSessionFinal::put(true);
+                    } else if era_length >= ideal_era_length {
+                        // Should only happen when we are ready to trigger an era but we have ForceNone,
+                        // otherwise previous arm would short circuit.
+                        // FIXME: figure out this
+                        // Self::close_election_window();
+                    }
+                    return None;
+                }
+            }
+
+            // new era.
+            Self::new_era(session_index)
+        } else {
+            // Set initial era
+            Self::new_era(session_index)
+        }
     }
 
     fn start_session(start_index: SessionIndex) {

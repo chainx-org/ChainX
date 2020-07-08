@@ -2,8 +2,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod election;
 mod impls;
-// mod reward;
+mod reward;
 mod types;
 
 #[cfg(test)]
@@ -31,7 +32,7 @@ use types::*;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
-use xp_mining_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
+use xp_mining_staking::{CollectAssetMiningInfo, OnMinting, SessionIndex, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -53,6 +54,9 @@ const DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE: u32 = 10;
 const DEFAULT_BLOCKS_PER_SESSION: u64 = 50;
 const DEFAULT_BONDING_DURATION: u64 = DEFAULT_BLOCKS_PER_SESSION * 12 * 24 * 3;
 const DEFAULT_VALIDATOR_BONDING_DURATION: u64 = DEFAULT_BONDING_DURATION * 10;
+
+/// Counter for the number of eras that have passed.
+pub type EraIndex = u32;
 
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
@@ -134,6 +138,30 @@ decl_storage! {
         pub Nominations get(fn nominations):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
             => NominatorLedger<T::Balance, T::BlockNumber>;
+
+        /// Mode of era forcing.
+        pub ForceEra get(fn force_era) config(): Forcing;
+
+        /// The current era index.
+        ///
+        /// This is the latest planned era, depending on how the Session pallet queues the validator
+        /// set, it might be active or not.
+        pub CurrentEra get(fn current_era): Option<EraIndex>;
+
+        /// The active era information, it holds index and start.
+        ///
+        /// The active era is the era currently rewarded.
+        /// Validator set of this era must be equal to `SessionInterface::validators`.
+        pub ActiveEra get(fn active_era): Option<ActiveEraInfo>;
+
+        /// The session index at which the era start for the last `HISTORY_DEPTH` eras.
+        pub ErasStartSessionIndex get(fn eras_start_session_index):
+            map hasher(twox_64_concat) EraIndex => Option<SessionIndex>;
+
+        /// True if the current **planned** session is final. Note that this does not take era
+        /// forcing into account.
+        pub IsCurrentSessionFinal get(fn is_current_session_final): bool = false;
+
     }
 
     add_extra_genesis {
