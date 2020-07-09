@@ -1,10 +1,10 @@
 use crate::*;
 use crate::{Module, Trait};
+use chainx_primitives::AssetId;
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
-use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
-    testing::{Header, TestXt, UintAuthorityId},
+    testing::{Header, UintAuthorityId},
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
@@ -13,6 +13,9 @@ use std::{
     collections::{BTreeMap, HashSet},
 };
 use xp_mining_staking::SessionIndex;
+use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
+
+pub const INIT_TIMESTAMP: u64 = 30_000;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -29,6 +32,7 @@ mod staking {
     pub use super::super::*;
 }
 
+use frame_system as system;
 use pallet_session as session;
 use xpallet_assets as assets;
 
@@ -79,6 +83,16 @@ impl system::Trait for Test {
     type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
+}
+
+parameter_types! {
+    pub const MinimumPeriod: u64 = 5;
+}
+
+impl pallet_timestamp::Trait for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
 }
 
 impl xpallet_assets::Trait for Test {
@@ -222,9 +236,6 @@ impl Default for ExtBuilder {
     }
 }
 
-use chainx_primitives::AssetId;
-use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
-
 const PCX_PRECISION: u8 = 8;
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
@@ -338,49 +349,42 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        if self.has_stakers {
-            let stake_21 = if self.fair { 1000 } else { 2000 };
-            let stake_31 = if self.validator_pool {
-                balance_factor * 1000
-            } else {
-                1
-            };
-            let nominated = if self.nominate { vec![11, 21] } else { vec![] };
-        }
+        let validators = vec![1, 2, 3, 4];
+
         let _ = GenesisConfig::<Test> {
             validators: vec![1, 2, 3, 4],
             ..Default::default()
         }
         .assimilate_storage(&mut storage);
 
-        // let _ = pallet_session::GenesisConfig::<Test> {
-        // keys: validators
-        // .iter()
-        // .map(|x| {
-        // (
-        // *x,
-        // *x,
-        // SessionKeys {
-        // other: UintAuthorityId(*x as u64),
-        // },
-        // )
-        // })
-        // .collect(),
-        // }
-        // .assimilate_storage(&mut storage);
+        let _ = pallet_session::GenesisConfig::<Test> {
+            keys: validators
+                .iter()
+                .map(|x| {
+                    (
+                        *x,
+                        *x,
+                        SessionKeys {
+                            other: UintAuthorityId(*x as u64),
+                        },
+                    )
+                })
+                .collect(),
+        }
+        .assimilate_storage(&mut storage);
 
         let mut ext = sp_io::TestExternalities::from(storage);
-        // ext.execute_with(|| {
-        // let validators = Session::validators();
-        // SESSION.with(|x| *x.borrow_mut() = (validators.clone(), HashSet::new()));
-        // });
+        ext.execute_with(|| {
+            let validators = Session::validators();
+            SESSION.with(|x| *x.borrow_mut() = (validators.clone(), HashSet::new()));
+        });
 
         // We consider all test to start after timestamp is initialized
         // This must be ensured by having `timestamp::on_initialize` called before
         // `staking::on_initialize`
         ext.execute_with(|| {
             System::set_block_number(1);
-            // Timestamp::set_timestamp(INIT_TIMESTAMP);
+            Timestamp::set_timestamp(INIT_TIMESTAMP);
             XStaking::register(Origin::signed(1)).unwrap();
             XStaking::register(Origin::signed(2)).unwrap();
             XStaking::register(Origin::signed(3)).unwrap();
@@ -403,5 +407,5 @@ impl ExtBuilder {
 pub type System = frame_system::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
 pub type Session = pallet_session::Module<Test>;
-// pub type Timestamp = pallet_timestamp::Module<Test>;
+pub type Timestamp = pallet_timestamp::Module<Test>;
 pub type XStaking = Module<Test>;

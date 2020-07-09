@@ -7085,6 +7085,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-session",
+ "pallet-timestamp",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",

@@ -145,20 +145,18 @@ impl<T: Trait> Module<T> {
     /// Distribute the session reward to all the receivers.
     pub(crate) fn distribute_session_reward(session_index: SessionIndex) {
         let this_session_reward = Self::this_session_reward(session_index);
+        println!(
+            "[distribute_session_reward] session_index: {}, this_session_reward: {:?}",
+            session_index, this_session_reward
+        );
 
         let session_reward = Self::try_apply_vesting(session_index, this_session_reward);
 
-        Self::distribute_session_reward_impl_09(session_reward);
-    }
+        println!(
+            "[distribute_session_reward] session_reward: {:?}",
+            session_reward
+        );
 
-    /// Calculates the individual reward according to the proportion and total reward.
-    fn calc_reward_by_stake(
-        total_reward: T::Balance,
-        my_stake: T::Balance,
-        total_stake: T::Balance,
-    ) -> T::Balance {
-        let mine = my_stake.saturated_into::<u128>();
-        let total = total_stake.saturated_into::<u128>();
-        Self::generic_calculate_by_proportion(total_reward, mine, total)
+        Self::distribute_session_reward_impl_09(session_reward);
     }
 }

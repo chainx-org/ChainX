@@ -27,6 +27,17 @@ impl<T: Trait> Module<T> {
         */
     }
 
+    /// Calculates the individual reward according to the proportion and total reward.
+    fn calc_reward_by_stake(
+        total_reward: T::Balance,
+        my_stake: T::Balance,
+        total_stake: T::Balance,
+    ) -> T::Balance {
+        let mine = my_stake.saturated_into::<u128>();
+        let total = total_stake.saturated_into::<u128>();
+        Self::generic_calculate_by_proportion(total_reward, mine, total)
+    }
+
     #[inline]
     fn multiply_by_shares(total_reward: T::Balance, share: u32, total_shares: u32) -> T::Balance {
         let reward =
@@ -206,7 +217,8 @@ impl<T: Trait> Module<T> {
     fn distribute_to_cross_mining_and_staking(total: T::Balance) {
         Self::distribute_to_active_validators(total);
 
-        todo!("distribution_ratio")
+        // todo!("distribution_ratio")
+
         // let (cross_mining_shares, staking_shares) = Self::distribution_ratio();
         /*
         // The amount of new minted PCX for the staking intentions is fixed and
@@ -239,18 +251,20 @@ impl<T: Trait> Module<T> {
     }
 
     pub(super) fn distribute_session_reward_impl_09(session_reward: T::Balance) {
-        let (for_treasury, for_airdrop, for_cross_mining_and_staking) =
-            Self::calc_global_distribution(session_reward);
+        // let (for_treasury, for_airdrop, for_cross_mining_and_staking) =
+        // Self::calc_global_distribution(session_reward);
 
+        let for_treasury: T::Balance = 100.saturated_into();
+        let for_asset_mining_and_staking: T::Balance = 100.saturated_into();
         // -> treasury
         let treasury_account = T::GetTreasuryAccount::treasury_account();
         if !for_treasury.is_zero() {
             Self::mint(&treasury_account, for_treasury);
         }
 
-        // cross_mining_and_staking -> XBTC, PCX
-        if !for_cross_mining_and_staking.is_zero() {
-            Self::distribute_to_cross_mining_and_staking(for_cross_mining_and_staking);
+        // -> XBTC(Asset Mining), PCX(Staking)
+        if !for_asset_mining_and_staking.is_zero() {
+            Self::distribute_to_cross_mining_and_staking(for_asset_mining_and_staking);
         }
     }
 }

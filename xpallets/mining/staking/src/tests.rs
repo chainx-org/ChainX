@@ -1,6 +1,6 @@
 use super::*;
 use crate::mock::*;
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_err, assert_noop, assert_ok, traits::OnInitialize};
 
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
     XStaking::bond(Origin::signed(who), target, value, b"memo".as_ref().into())
@@ -26,6 +26,23 @@ fn t_withdraw_unbonded(who: AccountId, unbonded_index: UnbondedIndex) -> Dispatc
 
 fn t_system_block_number_inc(number: BlockNumber) {
     System::set_block_number((System::block_number() + number).into());
+}
+
+fn t_start_session(session_index: SessionIndex) {
+    assert_eq!(
+        <Period as Get<BlockNumber>>::get(),
+        1,
+        "start_session can only be used with session length 1."
+    );
+    for i in Session::current_index()..session_index {
+        // XStaking::on_finalize(System::block_number());
+        System::set_block_number((i + 1).into());
+        Timestamp::set_timestamp(System::block_number() * 1000 + INIT_TIMESTAMP);
+        Session::on_initialize(System::block_number());
+        // XStaking::on_initialize(System::block_number());
+    }
+
+    assert_eq!(Session::current_index(), session_index);
 }
 
 #[test]
@@ -203,5 +220,12 @@ fn withdraw_unbond_should_work() {
 
         assert_ok!(t_withdraw_unbonded(1, 0),);
         assert_eq!(XAssets::pcx_free_balance(&1), 85);
+    });
+}
+
+#[test]
+fn reward_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        t_start_session(1);
     });
 }

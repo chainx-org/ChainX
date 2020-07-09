@@ -286,6 +286,7 @@ impl<T: Trait> Module<T> {
     /// * reset `active_era.start`,
     /// * update `BondedEras` and apply slashes.
     fn start_era(start_session: SessionIndex) {
+        println!("[start_era]");
         let active_era = ActiveEra::mutate(|active_era| {
             let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(0);
             *active_era = Some(ActiveEraInfo {
@@ -295,12 +296,13 @@ impl<T: Trait> Module<T> {
             });
             new_index
         });
-        todo!()
+        // todo!()
     }
 
     /// Compute payout for era.
     fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
-        todo!("Seems unrelated to ChainX Staking")
+        println!("[end_era]")
+        // todo!("Seems unrelated to ChainX Staking")
     }
 }
 
@@ -311,12 +313,15 @@ impl<T: Trait> Module<T> {
 /// some session can lag in between the newest session planned and the latest session started.
 impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
     fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        println!("new_session");
         Self::new_session(new_index)
     }
     fn start_session(start_index: SessionIndex) {
+        println!("start_session");
         Self::start_session(start_index)
     }
     fn end_session(end_index: SessionIndex) {
+        println!("end_session");
         Self::end_session(end_index)
     }
 }
