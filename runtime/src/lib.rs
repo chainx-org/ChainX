@@ -300,8 +300,16 @@ impl xpallet_contracts::Trait for Runtime {
     type WeightPrice = xpallet_transaction_payment::Module<Self>;
 }
 
+pub struct SimpleTreasuryAccount;
+impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
+    fn treasury_account() -> AccountId {
+        todo!("Treasury::account_id()")
+    }
+}
+
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
+    type GetTreasuryAccount = SimpleTreasuryAccount;
     type CollectAssetMiningInfo = ();
     type OnMinting = ();
     type DetermineRewardPotAccount =

@@ -40,6 +40,7 @@ pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v
 
 # ChainX primitives
 chainx-primitives = { path = "../primitives", default-features = false }
+xp-mining-staking = { path = "../primitives/mining/staking", default-features = false }
 
 # ChainX pallets
 xpallet-assets = { path = "../xpallets/assets", default-features = false }
@@ -91,6 +92,7 @@ std = [
     "pallet-utility/std",
 
     "chainx-primitives/std",
+    "xp-mining-staking/std",
 
     "xpallet-assets/std",
     "xpallet-assets-rpc-runtime-api/std",
