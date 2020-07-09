@@ -1,10 +1,10 @@
 use crate::*;
 use crate::{Module, Trait};
-use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
+use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
+    testing::{Header, TestXt, UintAuthorityId},
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
@@ -24,10 +24,27 @@ impl_outer_origin! {
     pub enum Origin for Test {}
 }
 
+mod staking {
+    // Re-export needed for `impl_outer_event!`.
+    pub use super::super::*;
+}
+
+use pallet_session as session;
+use xpallet_assets as assets;
+
+impl_outer_event! {
+    pub enum MetaEvent for Test {
+        system<T>,
+        assets<T>,
+        session,
+        staking<T>,
+    }
+}
+
 // For testing the pallet, we construct most of a mock runtime. This means
 // first constructing a configuration type (`Test`) which `impl`s each of the
 // configuration traits of pallets we want to use.
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Test;
 
 parameter_types! {
@@ -48,7 +65,7 @@ impl system::Trait for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = ();
+    type Event = MetaEvent;
     type BlockHashCount = BlockHashCount;
     type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
@@ -64,18 +81,84 @@ impl system::Trait for Test {
     type OnKilledAccount = ();
 }
 
+impl xpallet_assets::Trait for Test {
+    type Balance = Balance;
+    type Event = MetaEvent;
+    type OnAssetChanged = ();
+    type OnAssetRegisterOrRevoke = ();
+}
+
+/// Another session handler struct to test on_disabled.
+pub struct OtherSessionHandler;
+impl pallet_session::OneSessionHandler<AccountId> for OtherSessionHandler {
+    type Key = UintAuthorityId;
+
+    fn on_genesis_session<'a, I: 'a>(_: I)
+    where
+        I: Iterator<Item = (&'a AccountId, Self::Key)>,
+        AccountId: 'a,
+    {
+    }
+
+    fn on_new_session<'a, I: 'a>(_: bool, validators: I, _: I)
+    where
+        I: Iterator<Item = (&'a AccountId, Self::Key)>,
+        AccountId: 'a,
+    {
+        SESSION.with(|x| {
+            *x.borrow_mut() = (validators.map(|x| x.0.clone()).collect(), HashSet::new())
+        });
+    }
+
+    fn on_disabled(validator_index: usize) {
+        SESSION.with(|d| {
+            let mut d = d.borrow_mut();
+            let value = d.0[validator_index];
+            d.1.insert(value);
+        })
+    }
+}
+
+impl sp_runtime::BoundToRuntimeAppPublic for OtherSessionHandler {
+    type Public = UintAuthorityId;
+}
+
+pub struct Period;
+impl Get<BlockNumber> for Period {
+    fn get() -> BlockNumber {
+        PERIOD.with(|v| *v.borrow())
+    }
+}
+
+parameter_types! {
+    pub const Offset: BlockNumber = 0;
+    pub const UncleGenerations: u64 = 0;
+    pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(25);
+}
+
+sp_runtime::impl_opaque_keys! {
+    pub struct SessionKeys {
+        pub other: OtherSessionHandler,
+    }
+}
+
+impl pallet_session::Trait for Test {
+    type SessionManager = XStaking;
+    type Keys = SessionKeys;
+    type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+    type SessionHandler = (OtherSessionHandler,);
+    type Event = MetaEvent;
+    type ValidatorId = AccountId;
+    type ValidatorIdOf = ();
+    type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
+    type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+}
+
 impl Trait for Test {
-    type Event = ();
+    type Event = MetaEvent;
     type OnMinting = ();
     type CollectAssetMiningInfo = ();
     type DetermineRewardPotAccount = ();
-}
-
-impl xpallet_assets::Trait for Test {
-    type Balance = Balance;
-    type Event = ();
-    type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = ();
 }
 
 // This function basically just builds a genesis storage key/value store according to
@@ -310,6 +393,6 @@ impl ExtBuilder {
 
 pub type System = frame_system::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
-// pub type Session = pallet_session::Module<Test>;
+pub type Session = pallet_session::Module<Test>;
 // pub type Timestamp = pallet_timestamp::Module<Test>;
 pub type XStaking = Module<Test>;

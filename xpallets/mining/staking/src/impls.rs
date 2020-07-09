@@ -205,6 +205,12 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 
 impl<T: Trait> Module<T> {
     fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        // No reward but only slash for these offline validators that are inactive atm.
+        // Self::slash_inactive_offline_validators();
+
+        // TODO: the whole flow of session changes?
+        Self::distribute_session_reward(session_index);
+
         if let Some(current_era) = Self::current_era() {
             // Initial era has been set.
 
@@ -246,12 +252,55 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn start_session(start_index: SessionIndex) {
+    /// Start a session potentially starting an era.
+    fn start_session(start_session: SessionIndex) {
+        let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
+        if let Some(next_active_era_start_session_index) =
+            Self::eras_start_session_index(next_active_era)
+        {
+            if next_active_era_start_session_index == start_session {
+                Self::start_era(start_session);
+            } else if next_active_era_start_session_index < start_session {
+                // This arm should never happen, but better handle it than to stall the
+                // staking pallet.
+                frame_support::print("Warning: A session appears to have been skipped.");
+                Self::start_era(start_session);
+            }
+        }
+    }
+
+    /// End a session potentially ending an era.
+    fn end_session(session_index: SessionIndex) {
+        if let Some(active_era) = Self::active_era() {
+            if let Some(next_active_era_start_session_index) =
+                Self::eras_start_session_index(active_era.index + 1)
+            {
+                if next_active_era_start_session_index == session_index + 1 {
+                    Self::end_era(active_era, session_index);
+                }
+            }
+        }
+    }
+
+    /// * Increment `active_era.index`,
+    /// * reset `active_era.start`,
+    /// * update `BondedEras` and apply slashes.
+    fn start_era(start_session: SessionIndex) {
+        let active_era = ActiveEra::mutate(|active_era| {
+            let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(0);
+            *active_era = Some(ActiveEraInfo {
+                index: new_index,
+                // Set new active era start in next `on_finalize`. To guarantee usage of `Time`
+                start: None,
+            });
+            new_index
+        });
         todo!()
     }
 
-    fn end_session(end_index: SessionIndex) {
-        todo!()
+    /// Compute payout for era.
+    fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
+        todo!("Seems unrelated to ChainX Staking")
     }
 }
 

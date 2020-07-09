@@ -1,10 +1,11 @@
 use super::*;
 use xp_mining_staking::SessionIndex;
+use xpallet_support::debug;
 
-// mod proposal09;
+mod proposal09;
 
 impl<T: Trait> Module<T> {
-    /// Get the reward for the session, assuming it ends with this block.
+    /// Returns the total reward for the session, assuming it ends with this block.
     ///
     /// Due to the migration of ChainX 1.0 to ChainX 2.0,
     fn this_session_reward(current_index: SessionIndex) -> T::Balance {
@@ -28,19 +29,16 @@ impl<T: Trait> Module<T> {
         // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
         let off_the_table = (reward.saturated_into() / 10).saturated_into();
         Self::mint(who, off_the_table);
-        // debug!("[reward]issue to {:?}: {:?}", who!(who), off_the_table);
+        debug!("[reward_validator]issue to {:?}: {:?}", who, off_the_table);
 
         // Issue the rest 90% to validator's reward pot.
         let to_reward_pot = reward - off_the_table;
-
-        todo!()
-        // let reward_pot_account = T::DetermineIntentionJackpotAccountId::accountid_for_unsafe(who);
-        // Self::mint(&reward_pot_account, to_reward_pot);
-        // debug!(
-        // "[reward] issue to {:?}'s reward pot: {:?}",
-        // who!(who),
-        // to_reward_pot
-        // );
+        let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(who);
+        Self::mint(&reward_pot, to_reward_pot);
+        debug!(
+            "[reward_validator] issue to the reward pot{:?}: {:?}",
+            reward_pot, to_reward_pot
+        );
     }
 
     /// Reward the intention and slash the validators that went offline in last session.
@@ -76,24 +74,11 @@ impl<T: Trait> Module<T> {
                     r < u128::from(u64::max_value()),
                     "reward of per intention definitely less than u64::max_value()"
                 );
-                (r as u64).saturated_into()
+                r.saturated_into::<T::Balance>()
             }
             None => panic!("stake * session_reward overflow!"),
         }
     }
-
-    /*
-    /// Calculate the individual reward according to the proportion and total reward.
-    fn calculate_reward_by_stake(
-        total_reward: T::Balance,
-        my_stake: T::Balance,
-        total_stake: T::Balance,
-    ) -> T::Balance {
-        let mine: u64 = my_stake.saturated_into();
-        let total: u64 = total_stake.saturated_into();
-        Self::generic_calculate_by_proportion(total_reward, mine, total)
-    }
-    */
 
     /// Calculate the individual reward according to the mining power of cross chain assets.
     fn multiply_by_mining_power(
@@ -127,46 +112,53 @@ impl<T: Trait> Module<T> {
         result_divisor_part + result_remainder_part
     }
 
-    /*
-    /// Collect all the active intentions as well as their total nomination.
+    /// Returns all the active validators as well as their total votes.
     ///
-    /// Only these active intentions are able to be rewarded on each new session,
-    /// the inactive ones earns nothing.
-    fn get_active_intentions_info() -> impl Iterator<Item = (T::AccountId, T::Balance)> {
-        todo!()
-        // Self::intention_set()
-        // .into_iter()
-        // .filter(Self::is_active)
-        // .map(|id| {
-        // let total_nomination = Self::total_nomination_of(&id);
-        // (id, total_nomination)
-        // })
-    }
-    */
-
-    /// In the first round, 20% reward of each session goes to the team.
-    fn try_fund_team(this_session_reward: T::Balance) -> T::Balance {
-        todo!()
-        // let current_index = <pallet_session::Module<T>>::current_index().saturated_into::<u64>();
-
-        // if current_index < SESSIONS_PER_ROUND {
-        // let to_team = (this_session_reward.into() / 5).into();
-        // debug!("[try_fund_team] issue to the team: {:?}", to_team);
-        // Self::mint(&xaccounts::Module::<T>::team_account(), to_team);
-        // this_session_reward - to_team
-        // } else {
-        // this_session_reward
-        // }
+    /// Only these active validators are able to be rewarded on each new session,
+    /// the inactive ones earn nothing.
+    fn get_active_validator_set() -> impl Iterator<Item = (T::AccountId, T::Balance)> {
+        Self::potential_validator_set()
+            .filter(Self::is_active)
+            .map(|who| {
+                let total_votes = Self::total_votes_of(&who);
+                (who, total_votes)
+            })
     }
 
-    /*
-    /// Distribute the session reward for (psedu-)intentions.
-    pub(super) fn distribute_session_reward(validators: &mut Vec<T::AccountId>) {
-        let this_session_reward = Self::this_session_reward();
-        let session_reward = Self::try_fund_team(this_session_reward);
-
-        // FIXME
-        // Self::distribute_session_reward_impl_09(session_reward, validators);
+    /// 20% reward of each session is for the vesting schedule in the first halving epoch.
+    fn try_apply_vesting(
+        current_index: SessionIndex,
+        this_session_reward: T::Balance,
+    ) -> T::Balance {
+        // FIXME: consider the offset due to the migration.
+        // SESSIONS_PER_ROUND --> offset
+        if current_index < SESSIONS_PER_ROUND {
+            let to_vesting = this_session_reward / 5.saturated_into();
+            debug!("[try_apply_vesting] issue to the team: {:?}", to_vesting);
+            Self::mint(&Self::vesting_account(), to_vesting);
+            this_session_reward - to_vesting
+        } else {
+            this_session_reward
+        }
     }
-    */
+
+    /// Distribute the session reward to all the receivers.
+    pub(crate) fn distribute_session_reward(session_index: SessionIndex) {
+        let this_session_reward = Self::this_session_reward(session_index);
+
+        let session_reward = Self::try_apply_vesting(session_index, this_session_reward);
+
+        Self::distribute_session_reward_impl_09(session_reward);
+    }
+
+    /// Calculates the individual reward according to the proportion and total reward.
+    fn calc_reward_by_stake(
+        total_reward: T::Balance,
+        my_stake: T::Balance,
+        total_stake: T::Balance,
+    ) -> T::Balance {
+        let mine = my_stake.saturated_into::<u128>();
+        let total = total_stake.saturated_into::<u128>();
+        Self::generic_calculate_by_proportion(total_reward, mine, total)
+    }
 }

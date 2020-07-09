@@ -15,7 +15,7 @@ impl<T: Trait> Module<T> {
         maybe_new_validators
     }
 
-    /// Returns true if the (potential) validator:
+    /// Returns true if the (potential) validator can join in the election:
     /// 1. has the desire to win the election
     /// 2. meets the threshold of a valid candidate.
     fn is_qualified_candidate(who: &T::AccountId) -> bool {
@@ -24,7 +24,7 @@ impl<T: Trait> Module<T> {
 
     /// Returns true if the candidate meets the minimum candidate threshold.
     ///
-    /// **Otherwise the candidate will be forced to be chilled**.
+    /// Otherwise the candidate will be **forced to be chilled**.
     fn meet_candidate_threshold(who: &T::AccountId) -> bool {
         let BondRequirement { self_bonded, total } = Self::validator_bond_requirement();
         let threshold_satisfied =
