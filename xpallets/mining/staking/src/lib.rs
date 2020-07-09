@@ -32,7 +32,9 @@ use types::*;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
-use xp_mining_staking::{CollectAssetMiningInfo, OnMinting, SessionIndex, UnbondedIndex};
+use xp_mining_staking::{
+    CollectAssetMiningInfo, OnMinting, SessionIndex, TreasuryAccount, UnbondedIndex,
+};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -58,9 +60,12 @@ const DEFAULT_VALIDATOR_BONDING_DURATION: u64 = DEFAULT_BONDING_DURATION * 10;
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    ///
+    type GetTreasuryAccount: TreasuryAccount<Self::AccountId>;
 
     ///
     type CollectAssetMiningInfo: CollectAssetMiningInfo;

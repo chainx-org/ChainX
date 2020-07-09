@@ -154,10 +154,19 @@ impl pallet_session::Trait for Test {
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
 }
 
+pub struct DummyTreasuryAccount;
+
+impl TreasuryAccount<AccountId> for DummyTreasuryAccount {
+    fn treasury_account() -> AccountId {
+        100_000
+    }
+}
+
 impl Trait for Test {
     type Event = MetaEvent;
     type OnMinting = ();
     type CollectAssetMiningInfo = ();
+    type GetTreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = ();
 }
 

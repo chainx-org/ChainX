@@ -238,32 +238,14 @@ impl<T: Trait> Module<T> {
             */
     }
 
-    /// Issue new PCX given the amount to the council account.
-    #[inline]
-    fn distribute_to_treasury(value: T::Balance) {
-        todo!("treasury")
-    }
-
     pub(super) fn distribute_session_reward_impl_09(session_reward: T::Balance) {
         let (for_treasury, for_airdrop, for_cross_mining_and_staking) =
             Self::calc_global_distribution(session_reward);
 
-        // treasury -> CouncilAccount
+        // -> treasury
+        let treasury_account = T::GetTreasuryAccount::treasury_account();
         if !for_treasury.is_zero() {
-            Self::distribute_to_treasury(for_treasury);
-        }
-
-        // airdrop -> SDOT, LBTC
-        // The unpaid airdrop reward happens when there is no airdrop asset.
-        if !for_airdrop.is_zero() {
-            let unpaid_airdrop_reward = Self::distribute_to_airdrop_assets(for_airdrop);
-            if !unpaid_airdrop_reward.is_zero() {
-                debug!(
-                    "[distribute_session_reward_impl_09]unpaid_airdrop_reward:{:?}",
-                    unpaid_airdrop_reward
-                );
-                Self::distribute_to_treasury(unpaid_airdrop_reward);
-            }
+            Self::mint(&treasury_account, for_treasury);
         }
 
         // cross_mining_and_staking -> XBTC, PCX
