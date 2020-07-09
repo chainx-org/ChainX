@@ -21,7 +21,7 @@ pub trait CollectAssetMiningInfo {
     fn collect_asset_mining_info() -> Vec<(AssetId, MiningPower)>;
 
     ///
-    fn total_mining_power() -> MiningPower {
+    fn total_asset_mining_power() -> MiningPower {
         Self::collect_asset_mining_info()
             .iter()
             .map(|(_, power)| power)

@@ -154,3 +154,106 @@ impl Default for Forcing {
         Forcing::NotForcing
     }
 }
+
+// Shares of various reward destinations.
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct GlobalDistribution {
+    pub treasury: u32,
+    pub mining: u32,
+}
+
+impl Default for GlobalDistribution {
+    /// According to the ChainX 1.0 referendum proposal09:
+    /// (Treasury, Airdrop Asset, X-type Asset and Staking) = (12, 8, 80)
+    ///
+    /// Airdrop Assets have been retired in ChainX 2.0, now only treasury and mining destinations.
+    /// (Treasury, X-type Asset and Staking) = (12, 88)
+    fn default() -> Self {
+        Self {
+            treasury: 12u32,
+            mining: 88u32,
+        }
+    }
+}
+
+impl GlobalDistribution {
+    pub fn calc_rewards<T: Trait>(&self, reward: T::Balance) -> (T::Balance, T::Balance) {
+        let treasury_reward = reward * self.treasury.saturated_into()
+            / (self.treasury + self.mining).saturated_into();
+        (treasury_reward, reward - treasury_reward)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct MiningDistribution {
+    pub asset: u32,
+    pub staking: u32,
+}
+
+impl Default for MiningDistribution {
+    /// According to the ChainX 1.0 referendum proposal09,
+    /// (Asset Mining, Staking) = (10, 90)
+    fn default() -> Self {
+        Self {
+            asset: 10u32,
+            staking: 90u32,
+        }
+    }
+}
+
+impl MiningDistribution {
+    /// Returns the reward for Staking given the total reward according to the Staking proportion.
+    pub fn calc_staking_reward<T: Trait>(&self, reward: T::Balance) -> T::Balance {
+        reward.saturating_mul(self.staking.saturated_into())
+            / (self.asset + self.staking).saturated_into()
+    }
+
+    /// Return a tuple (m1, m2) for comparing whether asset_mining_power are reaching the upper limit.
+    ///
+    /// If m1 >= m2, the asset mining cap has reached, all the reward calculated by the shares go to
+    /// the mining assets, but its unit mining power starts to decrease compared to the inital FixedPower.
+    fn asset_mining_vs_staking<T: Trait>(&self) -> (u128, u128) {
+        let total_staking_power =
+            crate::Module::<T>::total_staked().saturated_into::<xp_mining_staking::MiningPower>();
+        let total_asset_mining_power = T::CollectAssetMiningInfo::total_asset_mining_power();
+
+        // When:
+        //
+        //  total_asset_mining_power     1(asset_mining_shares)
+        //  ------------------------ >= -----------------------
+        //     total_staking_power         9(staking_shares)
+        //
+        //  i.e., m1 >= m2,
+        //
+        // there is no extra treasury split, otherwise the difference will
+        // be distruted to the treasury account again.
+        let m1 = total_asset_mining_power * u128::from(self.staking);
+        let m2 = total_staking_power * u128::from(self.asset);
+
+        (m1, m2)
+    }
+
+    pub fn has_treasury_extra<T: Trait>(
+        &self,
+        asset_mining_reward_cap: T::Balance,
+    ) -> Option<T::Balance> {
+        let (m1, m2) = self.asset_mining_vs_staking::<T>();
+        if m1 >= m2 {
+            debug!(
+                "[try_split_extra_treasury] m1({}) >= m2({}), no extra treasury split.",
+                m1, m2
+            );
+            None
+        } else {
+            assert!(
+                m2 > 0,
+                "cross_mining_shares is ensured to be positive in set_distribution_ratio()"
+            );
+            // There could be some computation loss here, but it's ok.
+            let treasury_extra = (m2 - m1) * asset_mining_reward_cap.saturated_into::<u128>() / m2;
+            Some(treasury_extra.saturated_into::<T::Balance>())
+        }
+    }
+}

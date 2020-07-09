@@ -126,15 +126,12 @@ impl<T: Trait> Module<T> {
     }
 
     /// 20% reward of each session is for the vesting schedule in the first halving epoch.
-    fn try_apply_vesting(
-        current_index: SessionIndex,
-        this_session_reward: T::Balance,
-    ) -> T::Balance {
+    fn try_vesting(current_index: SessionIndex, this_session_reward: T::Balance) -> T::Balance {
         // FIXME: consider the offset due to the migration.
         // SESSIONS_PER_ROUND --> offset
         if current_index < SESSIONS_PER_ROUND {
             let to_vesting = this_session_reward / 5.saturated_into();
-            debug!("[try_apply_vesting] issue to the team: {:?}", to_vesting);
+            debug!("[try_vesting] issue to the team: {:?}", to_vesting);
             Self::mint(&Self::vesting_account(), to_vesting);
             this_session_reward - to_vesting
         } else {
@@ -150,7 +147,7 @@ impl<T: Trait> Module<T> {
             session_index, this_session_reward
         );
 
-        let session_reward = Self::try_apply_vesting(session_index, this_session_reward);
+        let session_reward = Self::try_vesting(session_index, this_session_reward);
 
         println!(
             "[distribute_session_reward] session_reward: {:?}",

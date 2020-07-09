@@ -122,10 +122,10 @@ decl_storage! {
             u32 = 10u32;
 
         /// (Treasury, Staking)
-        pub GlobalDistributionRatio get(fn globaldistribution_ratio): (u32, u32) = (1u32, 1u32);
+        pub GlobalDistributionRatio get(fn global_distribution_ratio) config(): GlobalDistribution;
 
-        /// (Staker, External Miners)
-        pub DistributionRatio get(fn distribution_ratio): (u32, u32) = (1u32, 1u32);
+        /// (Staker, Asset Miners)
+        pub MiningDistributionRatio get(fn mining_distribution_ratio) config(): MiningDistribution;
 
         /// The map from (wannabe) validator key to the profile of that validator.
         pub Validators get(fn validators):
@@ -419,6 +419,16 @@ impl<T: Trait> Module<T> {
 
     pub fn potential_validator_set() -> impl Iterator<Item = T::AccountId> {
         Validators::<T>::iter().map(|(v, _)| v)
+    }
+
+    pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, T::Balance)> {
+        Validators::<T>::iter()
+            .map(|(v, _)| v)
+            .filter(|v| Self::is_active(&v))
+            .map(|v| {
+                let total_votes = Self::total_votes_of(&v);
+                (v, total_votes)
+            })
     }
 
     #[inline]

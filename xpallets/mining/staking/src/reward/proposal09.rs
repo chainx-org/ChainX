@@ -7,26 +7,6 @@ use sp_arithmetic::traits::BaseArithmetic;
 use xpallet_support::debug;
 
 impl<T: Trait> Module<T> {
-    /// Calculate the top level distribution of each session reward
-    /// without the potential team funding.
-    pub fn calc_global_distribution(
-        session_reward: T::Balance,
-    ) -> (T::Balance, T::Balance, T::Balance) {
-        todo!()
-        /*
-        let (t_shares, a_shares, cs_shares) = Self::global_distribution_ratio();
-        let total_shares = t_shares + a_shares + cs_shares;
-        // [PASS] Division by zero check.
-        //        total_shares > 0 is ensured set_global_distribution_ratio().
-        let for_treasury =
-            Self::multiply_by_rational(session_reward.into(), t_shares, total_shares).into();
-        let for_airdrop =
-            Self::multiply_by_rational(session_reward.into(), a_shares, total_shares).into();
-        let for_cross_mining_and_staking = session_reward - for_treasury - for_airdrop;
-        (for_treasury, for_airdrop, for_cross_mining_and_staking)
-        */
-    }
-
     /// Calculates the individual reward according to the proportion and total reward.
     fn calc_reward_by_stake(
         total_reward: T::Balance,
@@ -72,31 +52,7 @@ impl<T: Trait> Module<T> {
         total_reward
     }
 
-    /// Distribution for airdrop assets are fixed and dependent on AirdropDistributionRatioMap only.
-    fn distribute_to_airdrop_assets(total_reward: T::Balance) -> T::Balance {
-        todo!("remove airdrop assets")
-        /*
-        let airdrop_assets_info = T::OnDistributeAirdropAsset::collect_airdrop_assets_info();
-        // [PASS] airdrop_assets_info.sum() overflow check.
-        //        sum of airdrop asset shares won't exceed u32::max_value(), ensured in tokens::set_airdrop_distribution_ratio().
-        //
-        // [PASS] Division by zero check.
-        //        total_shares > 0 is ensured in tokens::set_airdrop_distribution_ratio().
-        let total_shares = airdrop_assets_info.iter().map(|(_, share)| share).sum();
-        let logger = |_airdrop_asset: &AssetId, _reward: T::Balance| {};
-
-        Self::token_proportional_allocation(
-            airdrop_assets_info.into_iter(),
-            total_shares,
-            total_reward,
-            &Self::multiply_by_shares,
-            &T::OnReward::reward,
-            &logger,
-        )
-        */
-    }
-
-    fn distribute_to_cross_chain_assets(total_reward: T::Balance) -> T::Balance {
+    fn distribute_to_mining_assets(total_reward: T::Balance) -> T::Balance {
         todo!("reward x-type assets")
         /*
         let cross_chain_assets_info =
@@ -143,128 +99,54 @@ impl<T: Trait> Module<T> {
     /// One (indivisible) PCX one power.
     #[inline]
     pub fn total_staked() -> T::Balance {
-        todo!("Remove?")
-        // Self::get_active_intentions_info().fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + x)
-    }
-
-    /// Return a tuple (m1, m2) for comparing whether cross_mining_power are reaching the upper limit.
-    ///
-    /// If m1 >= m2, the cross mining cap has reached, all the reward calculated by the shares go to
-    /// the cross chain assets, but its unit mining power starts to decrease.
-    pub fn collect_cross_mining_vs_staking(
-        cross_mining_shares: u32,
-        staking_shares: u32,
-    ) -> (u128, u128) {
-        todo!("collect cross mining vs staking")
-        /*
-        let total_staking_power = Self::total_staked();
-        let total_cross_mining_power =
-            T::OnDistributeCrossChainAsset::total_cross_chain_mining_power();
-        // When:
-        //
-        //  total_cross_mining_power     1(cross_mining_shares)
-        //  ------------------------ >= -----------------------
-        //        total_stake            9(staking_shares)
-        //
-        // there is no extra treasury split.
-        //
-        // Otherwise the difference will be distruted to the council_account again.
-        let m1 = total_cross_mining_power * u128::from(staking_shares);
-        let m2 = u128::from(total_staking_power.into()) * u128::from(cross_mining_shares);
-        debug!("[collect_cross_mining_vs_staking]m1=total_cross_mining_power({})*staking_shares({}), m2=total_staking_power({})*cross_mining_shares({})", total_cross_mining_power, staking_shares, total_staking_power, cross_mining_shares);
-        (m1, m2)
-        */
-    }
-
-    /// Split out an extra treasury reward from cross chain mining's
-    /// if the mining power of cross chain assets is less than the threshold.
-    fn try_split_extra_treasury(
-        cross_mining_reward_cap: T::Balance,
-        cross_mining_shares: u32,
-        staking_shares: u32,
-    ) -> T::Balance {
-        todo!("split extra treasury")
-        /*
-        let (m1, m2) = Self::collect_cross_mining_vs_staking(cross_mining_shares, staking_shares);
-        if m1 >= m2 {
-            debug!(
-                "[try_split_extra_treasury] m1({}) >= m2({}), no extra treasury split.",
-                m1, m2
-            );
-            cross_mining_reward_cap
-        } else {
-            assert!(
-                m2 > 0,
-                "cross_mining_shares is ensured to be positive in set_distribution_ratio()"
-            );
-            // There could be some computation loss here, but it's ok.
-            let extra_treasury = (m2 - m1) * u128::from(cross_mining_reward_cap.into()) / m2;
-            let extra_treasury: T::Balance = (extra_treasury as u64).into();
-            if !extra_treasury.is_zero() {
-                Self::distribute_to_treasury(extra_treasury);
-            }
-            debug!(
-                "[try_split_extra_treasury](m2({}) - m1({})) * {} / {} = extra_treasury({})",
-                m2, m1, cross_mining_reward_cap, m2, extra_treasury
-            );
-            cross_mining_reward_cap - extra_treasury
-        }
-        */
+        Self::active_validator_votes().fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + x)
     }
 
     /// Issue new PCX to the action intentions and cross mining asset entities
     /// accroding to DistributionRatio.
-    fn distribute_to_cross_mining_and_staking(total: T::Balance) {
-        Self::distribute_to_active_validators(total);
+    fn distribute_mining_rewards(total: T::Balance, treasury_account: &T::AccountId) {
+        let mining_distribution = Self::mining_distribution_ratio();
+        let staking_reward = mining_distribution.calc_staking_reward::<T>(total);
+        let max_asset_mining_reward = total - staking_reward;
 
-        // todo!("distribution_ratio")
+        Self::distribute_to_active_validators(staking_reward);
 
-        // let (cross_mining_shares, staking_shares) = Self::distribution_ratio();
-        /*
-        // The amount of new minted PCX for the staking intentions is fixed and
-        // only determined by DistributionRatio.
-        let for_staking = Self::multiply_by_rational(
-            total.into(),
-            staking_shares,
-            cross_mining_shares + staking_shares,
-        )
-        .into();
-        */
+        let real_asset_mining_reward = if let Some(treasury_extra) =
+            mining_distribution.has_treasury_extra::<T>(max_asset_mining_reward)
+        {
+            Self::mint(treasury_account, treasury_extra);
+            max_asset_mining_reward - treasury_extra
+        } else {
+            max_asset_mining_reward
+        };
 
-        /*
-        // Cross chain assets with possible extra treasury.
-        let for_cross_mining_cap = total - for_staking;
-        let for_cross_mining = Self::try_split_extra_treasury(
-            for_cross_mining_cap,
-            cross_mining_shares,
-            staking_shares,
-        );
-        let unpaid_cross_mining_reward = Self::distribute_to_cross_chain_assets(for_cross_mining);
-        if !unpaid_cross_mining_reward.is_zero() {
+        let unpaid_asset_mining_reward =
+            Self::distribute_to_mining_assets(real_asset_mining_reward);
+        if !unpaid_asset_mining_reward.is_zero() {
             debug!(
                 "[distribute_to_cross_mining_and_staking]unpaid_cross_mining_reward:{:?}",
-                unpaid_cross_mining_reward
+                unpaid_asset_mining_reward
             );
-            Self::distribute_to_treasury(unpaid_cross_mining_reward);
+            Self::mint(treasury_account, unpaid_asset_mining_reward);
         }
-            */
     }
 
     pub(super) fn distribute_session_reward_impl_09(session_reward: T::Balance) {
-        // let (for_treasury, for_airdrop, for_cross_mining_and_staking) =
-        // Self::calc_global_distribution(session_reward);
+        let global_distribution = Self::global_distribution_ratio();
+        let (treasury_reward, mining_reward) =
+            global_distribution.calc_rewards::<T>(session_reward);
 
-        let for_treasury: T::Balance = 100.saturated_into();
-        let for_asset_mining_and_staking: T::Balance = 100.saturated_into();
-        // -> treasury
+        // -> Treasury
         let treasury_account = T::GetTreasuryAccount::treasury_account();
-        if !for_treasury.is_zero() {
-            Self::mint(&treasury_account, for_treasury);
+        if !treasury_reward.is_zero() {
+            Self::mint(&treasury_account, treasury_reward);
         }
 
-        // -> XBTC(Asset Mining), PCX(Staking)
-        if !for_asset_mining_and_staking.is_zero() {
-            Self::distribute_to_cross_mining_and_staking(for_asset_mining_and_staking);
+        // -> Mining
+        //      |-> XBTC(Asset Mining)
+        //      |-> PCX(Staking)
+        if !mining_reward.is_zero() {
+            Self::distribute_mining_rewards(mining_reward, &treasury_account);
         }
     }
 }
