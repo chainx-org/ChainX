@@ -566,6 +566,7 @@ dependencies = [
  "pallet-aura",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
+ "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-utility",

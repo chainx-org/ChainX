@@ -35,6 +35,7 @@ pallet-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
@@ -89,6 +90,7 @@ std = [
     "pallet-randomness-collective-flip/std",
     "pallet-sudo/std",
     "pallet-timestamp/std",
+    "pallet-session/std",
     "pallet-utility/std",
 
     "chainx-primitives/std",
