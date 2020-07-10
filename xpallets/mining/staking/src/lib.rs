@@ -166,15 +166,15 @@ decl_storage! {
 
     add_extra_genesis {
         config(validators):
-            Vec<T::AccountId>;
-            // Vec<(T::AccountId, T::Balance)>;
+            Vec<(T::AccountId, T::Balance)>;
         build(|config: &GenesisConfig<T>| {
-            // for &(ref v, balance) in &config.validators {
-            for v in &config.validators {
-                // assert!(
-                    // T::Currency::free_balance(&stash) >= balance,
-                    // "Stash does not have enough balance to bond."
-                // );
+            for &(ref v, balance) in &config.validators {
+                assert!(
+                    <xpallet_assets::Module<T>>::pcx_free_balance(v) >= balance,
+                    "Validator does not have enough balance to bond."
+                );
+                Module::<T>::apply_register(v);
+                Module::<T>::apply_bond(v, v, balance).expect("Staking genesis initialization can not fail");
             }
         });
     }
@@ -313,7 +313,7 @@ decl_module! {
             Self::apply_rebond(&sender,  &from, &to, value, current_block);
         }
 
-        ///
+        /// Unnominates balance `value` from validator `target`.
         #[weight = 10]
         fn unbond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
@@ -321,8 +321,6 @@ decl_module! {
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
-            // TODO: is this unneccessary?
-            // ensure!(Self::nomination_exists(&sender, &target), Error::<T>::NonexistentNomination);
             ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondValue);
             ensure!(
                 Self::unbonded_chunks_of(&sender).len() < Self::maximum_unbonded_chunk_size() as usize,
@@ -363,7 +361,6 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
-            todo!("ensure nominator record exists");
 
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
@@ -372,14 +369,23 @@ decl_module! {
         #[weight = 10]
         fn validate(origin) {
             let sender = ensure_signed(origin)?;
+            ensure!(Self::is_validator(&sender), Error::<T>::InvalidValidator);
+            Validators::<T>::mutate(sender, |validator_profile| {
+                    validator_profile.is_chilled = false;
+                }
+            );
         }
 
         /// Declare no desire to validate for the origin account.
         #[weight = 10]
         fn chill(origin) {
             let sender = ensure_signed(origin)?;
-
-            // for validator in Validators::<T>::iter(){}
+            ensure!(Self::is_validator(&sender), Error::<T>::InvalidValidator);
+            Validators::<T>::mutate(sender, |validator_profile| {
+                    validator_profile.is_chilled = true;
+                    validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
+                }
+            );
         }
 
         /// TODO: figure out whether this should be kept.
@@ -387,11 +393,7 @@ decl_module! {
         pub fn register(origin) {
             let sender = ensure_signed(origin)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::RegisteredAlready);
-            let current_block = <frame_system::Module<T>>::block_number();
-            Validators::<T>::insert(sender, ValidatorProfile {
-                registered_at: current_block,
-                ..Default::default()
-            });
+            Self::apply_register(&sender);
         }
     }
 }
@@ -453,10 +455,6 @@ impl<T: Trait> Module<T> {
         Self::is_validator(nominator) && *nominator == *nominee
     }
 
-    fn nomination_exists(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
-        Nominations::<T>::contains_key(nominator, nominee)
-    }
-
     fn can_force_chilled() -> bool {
         // TODO: optimize using try_for_each?
         let active = Validators::<T>::iter()
@@ -508,8 +506,6 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    // Staking specific assets operation
-    //
     fn bond_reserve(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
         <xpallet_assets::Module<T>>::pcx_move_balance(
             who,
@@ -559,6 +555,17 @@ impl<T: Trait> Module<T> {
 
         Self::set_nominator_vote_weight(source, target, source_weight, current_block, delta);
         Self::set_validator_vote_weight(target, target_weight, current_block, delta);
+    }
+
+    fn apply_register(who: &T::AccountId) {
+        let current_block = <frame_system::Module<T>>::block_number();
+        Validators::<T>::insert(
+            who,
+            ValidatorProfile {
+                registered_at: current_block,
+                ..Default::default()
+            },
+        );
     }
 
     fn apply_bond(

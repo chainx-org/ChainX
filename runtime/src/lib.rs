@@ -309,9 +309,8 @@ impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
 
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
-    type GetTreasuryAccount = SimpleTreasuryAccount;
-    type CollectAssetMiningInfo = ();
-    type OnMinting = ();
+    type TreasuryAccount = SimpleTreasuryAccount;
+    type AssetMining = ();
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
 }

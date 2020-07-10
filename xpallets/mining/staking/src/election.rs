@@ -1,6 +1,7 @@
 use super::*;
 
 impl<T: Trait> Module<T> {
+    /// Returns a new validator set for the new era.
     pub(crate) fn new_era(start_session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         // Increment or set current era.
         let current_era = CurrentEra::mutate(|s| {
@@ -11,12 +12,18 @@ impl<T: Trait> Module<T> {
 
         // Set staking information for new era.
         let maybe_new_validators = Self::select_and_update_validators(current_era);
+        debug!(
+            "[new_era]start_session_index:{:?}, maybe_new_validators:{:?}",
+            start_session_index, maybe_new_validators
+        );
 
         maybe_new_validators
     }
 
-    /// Returns true if the (potential) validator can join in the election:
-    /// 1. has the desire to win the election
+    /// Returns true if the (potential) validator is able to join in the election.
+    ///
+    /// Two requirements:
+    /// 1. has the desire to win the election.
     /// 2. meets the threshold of a valid candidate.
     fn is_qualified_candidate(who: &T::AccountId) -> bool {
         Self::is_active(who) && Self::meet_candidate_threshold(who)
@@ -53,10 +60,11 @@ impl<T: Trait> Module<T> {
     /// choose the top-most ValidatorCount::get() of them.
     ///
     /// This should only be called at the end of an era.
-    fn select_and_update_validators(current_era: EraIndex) -> Option<Vec<T::AccountId>> {
+    fn select_and_update_validators(_current_era: EraIndex) -> Option<Vec<T::AccountId>> {
         // TODO: move to offchain worker solution.
         // Currently there is no performance issue practically.
         let candidates = Self::filter_out_candidates();
+        debug!("[select_and_update_validators]candidates:{:?}", candidates);
 
         // Avoid reevaluate validator set if it would leave us with fewer than the minimum
         // needed validators.
@@ -72,6 +80,7 @@ impl<T: Trait> Module<T> {
             .map(|(_, v)| v)
             .collect::<Vec<_>>();
 
+        // Always return Some(new_validators) for ChainX.
         Some(validators)
     }
 }

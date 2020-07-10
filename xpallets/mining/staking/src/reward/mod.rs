@@ -88,17 +88,8 @@ impl<T: Trait> Module<T> {
     /// Distribute the session reward to all the receivers.
     pub(crate) fn distribute_session_reward(session_index: SessionIndex) {
         let this_session_reward = Self::this_session_reward(session_index);
-        println!(
-            "[distribute_session_reward] session_index: {}, this_session_reward: {:?}",
-            session_index, this_session_reward
-        );
 
         let session_reward = Self::try_vesting(session_index, this_session_reward);
-
-        println!(
-            "[distribute_session_reward] session_reward: {:?}",
-            session_reward
-        );
 
         Self::distribute_session_reward_impl_09(session_reward);
     }

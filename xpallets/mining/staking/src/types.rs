@@ -242,7 +242,7 @@ impl MiningDistribution {
         let (m1, m2) = self.asset_mining_vs_staking::<T>();
         if m1 >= m2 {
             debug!(
-                "[try_split_extra_treasury] m1({}) >= m2({}), no extra treasury split.",
+                "[has_treasury_extra] m1({}) >= m2({}), no extra treasury split.",
                 m1, m2
             );
             None

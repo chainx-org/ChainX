@@ -211,6 +211,13 @@ impl<T: Trait> Module<T> {
         // TODO: the whole flow of session changes?
         Self::distribute_session_reward(session_index);
 
+        debug!(
+            "[new_session]session_index:{:?}, current_era:{:?}",
+            session_index,
+            Self::current_era()
+        );
+
+        // FIXME: force new era when some validator's reward pot has been all slashed.
         if let Some(current_era) = Self::current_era() {
             // Initial era has been set.
 
@@ -255,6 +262,10 @@ impl<T: Trait> Module<T> {
     /// Start a session potentially starting an era.
     fn start_session(start_session: SessionIndex) {
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
+        debug!(
+            "[start_session]:start_session:{:?}, next_active_era:{:?}",
+            start_session, next_active_era
+        );
         if let Some(next_active_era_start_session_index) =
             Self::eras_start_session_index(next_active_era)
         {
@@ -286,7 +297,6 @@ impl<T: Trait> Module<T> {
     /// * reset `active_era.start`,
     /// * update `BondedEras` and apply slashes.
     fn start_era(start_session: SessionIndex) {
-        println!("[start_era]");
         let active_era = ActiveEra::mutate(|active_era| {
             let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(0);
             *active_era = Some(ActiveEraInfo {
@@ -296,13 +306,14 @@ impl<T: Trait> Module<T> {
             });
             new_index
         });
-        // todo!()
     }
 
     /// Compute payout for era.
-    fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
-        println!("[end_era]")
-        // todo!("Seems unrelated to ChainX Staking")
+    fn end_era(active_era: ActiveEraInfo, session_index: SessionIndex) {
+        debug!(
+            "[end_era]active_era:{:?}, session_index:{:?}",
+            active_era, session_index
+        );
     }
 }
 
@@ -313,15 +324,12 @@ impl<T: Trait> Module<T> {
 /// some session can lag in between the newest session planned and the latest session started.
 impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
     fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-        println!("new_session");
         Self::new_session(new_index)
     }
     fn start_session(start_index: SessionIndex) {
-        println!("start_session");
         Self::start_session(start_index)
     }
     fn end_session(end_index: SessionIndex) {
-        println!("end_session");
         Self::end_session(end_index)
     }
 }
@@ -342,9 +350,12 @@ where
         let registered_at_hash =
             <T as frame_system::Trait>::Hashing::hash(registered_at.encode().as_ref());
 
-        let mut buf = Vec::new();
-        buf.extend_from_slice(validator_hash.as_ref());
-        buf.extend_from_slice(registered_at_hash.as_ref());
+        let validator_slice = validator_hash.as_ref();
+        let registered_at_slice = registered_at_hash.as_ref();
+
+        let mut buf = Vec::with_capacity(validator_slice.len() + registered_at_slice.len());
+        buf.extend_from_slice(validator_slice);
+        buf.extend_from_slice(registered_at_slice);
 
         UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }
