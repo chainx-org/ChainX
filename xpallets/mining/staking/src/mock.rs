@@ -270,7 +270,7 @@ impl ExtBuilder {
         let validators = vec![1, 2, 3, 4];
 
         let _ = GenesisConfig::<Test> {
-            validators: endowed_info,
+            validators: vec![(1, 10), (2, 20), (3, 30), (4, 40)],
             validator_count: 6,
             sessions_per_era: 3,
             ..Default::default()

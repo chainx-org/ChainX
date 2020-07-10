@@ -42,7 +42,6 @@ fn t_start_session(session_index: SessionIndex) {
         1,
         "start_session can only be used with session length 1."
     );
-    println!("t_start_session:{:?}", session_index);
     for i in Session::current_index()..session_index {
         // XStaking::on_finalize(System::block_number());
         System::set_block_number((i + 1).into());
@@ -63,9 +62,11 @@ fn bond_should_work() {
             ValidatorLedger {
                 total: 20,
                 last_total_vote_weight: 0,
-                last_total_vote_weight_update: 1,
+                last_total_vote_weight_update: 0,
             }
         );
+        assert_eq!(System::block_number(), 1);
+
         t_system_block_number_inc(1);
         assert_ok!(t_bond(1, 2, 10));
 
@@ -74,7 +75,7 @@ fn bond_should_work() {
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total: 30,
-                last_total_vote_weight: 20,
+                last_total_vote_weight: 40,
                 last_total_vote_weight_update: 2,
             }
         );
@@ -106,7 +107,7 @@ fn unbond_should_work() {
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total: 25,
-                last_total_vote_weight: 30 + 20,
+                last_total_vote_weight: 30 + 20 * 2,
                 last_total_vote_weight_update: 3,
             }
         );
@@ -141,10 +142,12 @@ fn rebond_should_work() {
             Error::<Test>::InvalidUnbondValue
         );
 
+        // Block 2
         t_system_block_number_inc(1);
 
         assert_ok!(t_bond(1, 2, 10));
 
+        // Block 3
         t_system_block_number_inc(1);
 
         assert_ok!(t_rebond(1, 2, 3, 5));
@@ -153,7 +156,7 @@ fn rebond_should_work() {
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total: 25,
-                last_total_vote_weight: 30 + 20,
+                last_total_vote_weight: 30 + 40,
                 last_total_vote_weight_update: 3,
             }
         );
@@ -162,7 +165,7 @@ fn rebond_should_work() {
             <ValidatorLedgers<Test>>::get(3),
             ValidatorLedger {
                 total: 30 + 5,
-                last_total_vote_weight: 30 * 2,
+                last_total_vote_weight: 30 * 3,
                 last_total_vote_weight_update: 3,
             }
         );
