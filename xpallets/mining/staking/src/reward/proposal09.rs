@@ -8,7 +8,7 @@ use xpallet_support::debug;
 
 impl<T: Trait> Module<T> {
     /// Calculates the individual reward according to the proportion and total reward.
-    fn calc_reward_by_stake(
+    fn calc_individual_staking_reward(
         total_reward: T::Balance,
         my_stake: T::Balance,
         total_stake: T::Balance,
@@ -18,6 +18,14 @@ impl<T: Trait> Module<T> {
         Self::generic_calculate_by_proportion(total_reward, mine, total)
     }
 
+    fn calc_invididual_asset_mining_reward(
+        total_reward: T::Balance,
+        my_power: u128,
+        total_power: u128,
+    ) -> T::Balance {
+        Self::generic_calculate_by_proportion(total_reward, my_power, total_power)
+    }
+
     #[inline]
     fn multiply_by_shares(total_reward: T::Balance, share: u32, total_shares: u32) -> T::Balance {
         let reward =
@@ -25,55 +33,30 @@ impl<T: Trait> Module<T> {
         reward.saturated_into()
     }
 
-    /// Proportional PCX allocation for the token assets.
-    ///
-    /// Return the value of unpaid reward.
-    fn token_proportional_allocation<Entity, P: BaseArithmetic + Copy>(
-        items: impl Iterator<Item = (Entity, P)>,
-        total_shares: P,
-        total_reward: T::Balance,
-        reward_calculator: &dyn Fn(T::Balance, P, P) -> T::Balance,
-        apply_reward: &dyn Fn(&Entity, T::Balance),
-        log: &dyn Fn(&Entity, T::Balance),
-    ) -> T::Balance {
-        let mut total_reward = total_reward;
-        let mut total_shares = total_shares;
+    /// Distributes the invididual asset mining reward, returns the unpaid asset mining rewards.
+    fn distribute_to_mining_assets(total_reward: T::Balance) -> T::Balance {
+        let asset_mining_info = T::AssetMining::asset_mining_power();
 
-        for (entity, share) in items {
-            if !total_shares.is_zero() {
-                let reward = reward_calculator(total_reward, share, total_shares);
-                log(&entity, reward);
-                apply_reward(&entity, reward);
+        // [PASS*] No risk of sum overflow practically.
+        //        u128::max_value() / u128::from(u64::max_value()) / u128::from(u32::max_value())
+        //      = 4294967297 > u32::max_value() = 4294967295
+        //        which means even we have u32::max_value() mining assets and each power of them
+        //        is u32::max_value(), the computation of sum() here won't overflow.
+        let mut total_power: u128 = asset_mining_info.iter().map(|(_, power)| power).sum();
+
+        let mut total_reward = total_reward;
+
+        for (asset_id, power) in asset_mining_info.into_iter() {
+            if !total_power.is_zero() {
+                let reward =
+                    Self::calc_invididual_asset_mining_reward(total_reward, power, total_power);
+                T::AssetMining::reward(asset_id, reward);
                 total_reward -= reward;
-                total_shares -= share;
+                total_power -= power;
             }
         }
 
         total_reward
-    }
-
-    fn distribute_to_mining_assets(total_reward: T::Balance) -> T::Balance {
-        todo!("reward x-type assets")
-        /*
-        let cross_chain_assets_info =
-            T::OnDistributeCrossChainAsset::collect_cross_chain_assets_info();
-        // [PASS*] No risk of sum overflow practically.
-        //        u128::max_value() / u128::from(u64::max_value()) / u128::from(u32::max_value())
-        //      = 4294967297 > u32::max_value() = 4294967295
-        //        which means even we have u32::max_value() cross chain assets and each power of them
-        //        is u32::max_value(), the computation of sum() here won't overflow.
-        let total_mining_power: u128 = cross_chain_assets_info.iter().map(|(_, power)| power).sum();
-        let logger = |_cross_mining_asset: &AssetId, _reward: T::Balance| {};
-
-        Self::token_proportional_allocation(
-            cross_chain_assets_info.into_iter(),
-            total_mining_power,
-            total_reward,
-            &Self::multiply_by_mining_power,
-            &T::OnReward::reward,
-            &logger,
-        )
-        */
     }
 
     /// Reward to all the active validators pro rata.
@@ -86,20 +69,12 @@ impl<T: Trait> Module<T> {
         for (validator, stake) in active_validators.into_iter() {
             // May become zero after meeting the last one.
             if !total_stake.is_zero() {
-                let reward = Self::calc_reward_by_stake(total_reward, stake, total_stake);
-                // Self::reward_active_intention_and_try_slash(&intention, reward);
+                let reward = Self::calc_individual_staking_reward(total_reward, stake, total_stake);
+                Self::reward_active_validator(&validator, reward);
                 total_stake -= stake;
                 total_reward -= reward;
             }
         }
-    }
-
-    /// Calculate the total staked PCX, i.e., total staking power.
-    ///
-    /// One (indivisible) PCX one power.
-    #[inline]
-    pub fn total_staked() -> T::Balance {
-        Self::active_validator_votes().fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + x)
     }
 
     /// Issue new PCX to the action intentions and cross mining asset entities
@@ -124,7 +99,7 @@ impl<T: Trait> Module<T> {
             Self::distribute_to_mining_assets(real_asset_mining_reward);
         if !unpaid_asset_mining_reward.is_zero() {
             debug!(
-                "[distribute_to_cross_mining_and_staking]unpaid_cross_mining_reward:{:?}",
+                "[distribute_mining_rewards]unpaid_asset_mining_reward:{:?}",
                 unpaid_asset_mining_reward
             );
             Self::mint(treasury_account, unpaid_asset_mining_reward);
@@ -137,7 +112,7 @@ impl<T: Trait> Module<T> {
             global_distribution.calc_rewards::<T>(session_reward);
 
         // -> Treasury
-        let treasury_account = T::GetTreasuryAccount::treasury_account();
+        let treasury_account = T::TreasuryAccount::treasury_account();
         if !treasury_reward.is_zero() {
             Self::mint(&treasury_account, treasury_reward);
         }

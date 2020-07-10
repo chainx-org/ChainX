@@ -178,9 +178,8 @@ impl TreasuryAccount<AccountId> for DummyTreasuryAccount {
 
 impl Trait for Test {
     type Event = MetaEvent;
-    type OnMinting = ();
-    type CollectAssetMiningInfo = ();
-    type GetTreasuryAccount = DummyTreasuryAccount;
+    type AssetMining = ();
+    type TreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = ();
 }
 

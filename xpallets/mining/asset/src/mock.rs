@@ -78,8 +78,8 @@ impl xpallet_assets::Trait for Test {
 
 impl xpallet_mining_staking::Trait for Test {
     type Event = ();
-    type OnMinting = ();
-    type CollectAssetMiningInfo = ();
+    type AssetMining = ();
+    type TreasuryAccount = ();
     type DetermineRewardPotAccount = ();
 }
 

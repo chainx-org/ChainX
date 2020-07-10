@@ -32,9 +32,7 @@ use types::*;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
-use xp_mining_staking::{
-    CollectAssetMiningInfo, OnMinting, SessionIndex, TreasuryAccount, UnbondedIndex,
-};
+use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -65,13 +63,10 @@ pub trait Trait: xpallet_assets::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     ///
-    type GetTreasuryAccount: TreasuryAccount<Self::AccountId>;
+    type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
     ///
-    type CollectAssetMiningInfo: CollectAssetMiningInfo;
-
-    ///
-    type OnMinting: OnMinting<AssetId, Self::Balance>;
+    type AssetMining: AssetMining<Self::Balance>;
 
     ///
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, Self::AccountId>;
@@ -429,6 +424,14 @@ impl<T: Trait> Module<T> {
                 let total_votes = Self::total_votes_of(&v);
                 (v, total_votes)
             })
+    }
+
+    /// Calculate the total staked PCX, i.e., total staking power.
+    ///
+    /// One (indivisible) PCX one power.
+    #[inline]
+    pub fn total_staked() -> T::Balance {
+        Self::active_validator_votes().fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + x)
     }
 
     #[inline]

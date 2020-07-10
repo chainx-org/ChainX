@@ -5,14 +5,19 @@ use xpallet_support::debug;
 mod proposal09;
 
 impl<T: Trait> Module<T> {
+    /// Simple u32 power of 2 function - simply uses a bit shift
+    #[inline]
+    fn pow2(n: u32) -> T::Balance {
+        (1_u32 << n).saturated_into()
+    }
+
     /// Returns the total reward for the session, assuming it ends with this block.
     ///
     /// Due to the migration of ChainX 1.0 to ChainX 2.0,
     fn this_session_reward(current_index: SessionIndex) -> T::Balance {
         let halving_epoch = current_index / SESSIONS_PER_ROUND;
         // FIXME: migration_offset
-        let reward = INITIAL_REWARD.saturated_into::<T::Balance>()
-            / u32::pow(2, halving_epoch).saturated_into();
+        let reward = INITIAL_REWARD.saturated_into::<T::Balance>() / Self::pow2(halving_epoch);
         reward
     }
 
@@ -25,7 +30,7 @@ impl<T: Trait> Module<T> {
     /// Reward a (potential) validator by a specific amount.
     ///
     /// Add the reward to their balance, and their reward pot, pro-rata.
-    fn reward_validator(who: &T::AccountId, reward: T::Balance) {
+    fn apply_reward_validator(who: &T::AccountId, reward: T::Balance) {
         // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
         let off_the_table = (reward.saturated_into() / 10).saturated_into();
         Self::mint(who, off_the_table);
@@ -36,7 +41,7 @@ impl<T: Trait> Module<T> {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(who);
         Self::mint(&reward_pot, to_reward_pot);
         debug!(
-            "[reward_validator] issue to the reward pot{:?}: {:?}",
+            "[reward_validator]issue to the reward pot{:?}: {:?}",
             reward_pot, to_reward_pot
         );
     }
@@ -46,12 +51,9 @@ impl<T: Trait> Module<T> {
     /// If the slashed validator can't afford that penalty, it will be
     /// removed from the validator list.
     #[inline]
-    fn reward_active_intention_and_try_slash(
-        intention: &T::AccountId,
-        reward: T::Balance,
-        validators: &mut Vec<T::AccountId>,
-    ) {
-        Self::reward_validator(intention, reward);
+    fn reward_active_validator(validator: &T::AccountId, reward: T::Balance) {
+        Self::apply_reward_validator(validator, reward);
+        // FIXME: slash?
         // It the intention was an offline validator, we should enforce a slash.
         // if <MissedOfPerSession<T>>::exists(intention) {
         // Self::slash_active_offline_validator(intention, reward, validators);

@@ -217,7 +217,7 @@ impl MiningDistribution {
     fn asset_mining_vs_staking<T: Trait>(&self) -> (u128, u128) {
         let total_staking_power =
             crate::Module::<T>::total_staked().saturated_into::<xp_mining_staking::MiningPower>();
-        let total_asset_mining_power = T::CollectAssetMiningInfo::total_asset_mining_power();
+        let total_asset_mining_power = T::AssetMining::total_asset_mining_power();
 
         // When:
         //
