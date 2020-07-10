@@ -44,7 +44,7 @@ where
 pub fn authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, AuraId, GrandpaId) {
     (
         get_account_id_from_seed::<sr25519::Public>(&format!("{}//validator", seed)),
-        get_account_id_from_seed::<sr25519::Public>(seed),
+        get_account_id_from_seed::<sr25519::Public>(&format!("{}//blockauthor", seed)),
         get_from_seed::<AuraId>(seed),
         get_from_seed::<GrandpaId>(seed),
     )
