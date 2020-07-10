@@ -2,6 +2,14 @@ use super::*;
 use crate::mock::*;
 use frame_support::{assert_err, assert_noop, assert_ok, traits::OnInitialize};
 
+fn t_issue_pcx(to: AccountId, value: Balance) -> DispatchResult {
+    XAssets::pcx_issue(&to, value)
+}
+
+fn t_register(who: AccountId) -> DispatchResult {
+    XStaking::register(Origin::signed(who))
+}
+
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
     XStaking::bond(Origin::signed(who), target, value, b"memo".as_ref().into())
 }
@@ -223,9 +231,45 @@ fn withdraw_unbond_should_work() {
     });
 }
 
+fn t_staking_validator_set() -> Vec<AccountId> {
+    XStaking::validator_set().collect()
+}
+
 #[test]
 fn reward_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         t_start_session(1);
-    });
+
+        println!("Staking Validators: {:?}", t_staking_validator_set());
+        println!("Session Validators: {:?}", Session::validators());
+
+        assert_ok!(t_issue_pcx(5, 500));
+        assert_ok!(t_issue_pcx(6, 600));
+        assert_ok!(t_issue_pcx(7, 700));
+        assert_ok!(t_issue_pcx(8, 800));
+
+        assert_ok!(t_register(5));
+        assert_ok!(t_register(6));
+        assert_ok!(t_register(7));
+        assert_ok!(t_register(8));
+
+        assert_ok!(t_bond(5, 5, 50));
+        assert_ok!(t_bond(6, 6, 60));
+        assert_ok!(t_bond(7, 7, 70));
+        assert_ok!(t_bond(8, 8, 80));
+
+        t_start_session(2);
+
+        println!("Staking Validators: {:?}", t_staking_validator_set());
+        println!("Session Validators: {:?}", Session::validators());
+
+        t_start_session(3);
+
+        println!("Staking Validators: {:?}", t_staking_validator_set());
+        println!("Session Validators: {:?}", Session::validators());
+
+        t_start_session(4);
+        println!("Staking Validators: {:?}", t_staking_validator_set());
+        println!("Session Validators: {:?}", Session::validators());
+    })
 }

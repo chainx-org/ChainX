@@ -412,7 +412,7 @@ impl<T: Trait> Module<T> {
         !Self::is_chilled(who)
     }
 
-    pub fn potential_validator_set() -> impl Iterator<Item = T::AccountId> {
+    pub fn validator_set() -> impl Iterator<Item = T::AccountId> {
         Validators::<T>::iter().map(|(v, _)| v)
     }
 

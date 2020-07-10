@@ -3,10 +3,31 @@
 //! New minted PCX distribution logic for ChainX Proposal 09.
 
 use super::*;
-use sp_arithmetic::traits::BaseArithmetic;
 use xpallet_support::debug;
 
 impl<T: Trait> Module<T> {
+    #[inline]
+    fn generic_calculate_by_proportion<S: Into<u128>>(
+        total_reward: T::Balance,
+        mine: S,
+        total: S,
+    ) -> T::Balance {
+        let mine: u128 = mine.saturated_into();
+        let total: u128 = total.saturated_into();
+
+        match mine.checked_mul(u128::from(total_reward.saturated_into())) {
+            Some(x) => {
+                let r = x / total;
+                assert!(
+                    r < u128::from(u64::max_value()),
+                    "reward of per validator definitely less than u64::max_value()"
+                );
+                r.saturated_into::<T::Balance>()
+            }
+            None => panic!("stake * session_reward overflow!"),
+        }
+    }
+
     /// Calculates the individual reward according to the proportion and total reward.
     fn calc_individual_staking_reward(
         total_reward: T::Balance,
@@ -24,13 +45,6 @@ impl<T: Trait> Module<T> {
         total_power: u128,
     ) -> T::Balance {
         Self::generic_calculate_by_proportion(total_reward, my_power, total_power)
-    }
-
-    #[inline]
-    fn multiply_by_shares(total_reward: T::Balance, share: u32, total_shares: u32) -> T::Balance {
-        let reward =
-            Self::multiply_by_rational(total_reward.saturated_into::<u64>(), share, total_shares);
-        reward.saturated_into()
     }
 
     /// Distributes the invididual asset mining reward, returns the unpaid asset mining rewards.
@@ -51,8 +65,8 @@ impl<T: Trait> Module<T> {
                 let reward =
                     Self::calc_invididual_asset_mining_reward(total_reward, power, total_power);
                 T::AssetMining::reward(asset_id, reward);
-                total_reward -= reward;
                 total_power -= power;
+                total_reward -= reward;
             }
         }
 

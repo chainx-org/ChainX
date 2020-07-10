@@ -60,71 +60,15 @@ impl<T: Trait> Module<T> {
         // }
     }
 
-    #[inline]
-    fn generic_calculate_by_proportion<S: Into<u128>>(
-        total_reward: T::Balance,
-        mine: S,
-        total: S,
-    ) -> T::Balance {
-        let mine: u128 = mine.saturated_into();
-        let total: u128 = total.saturated_into();
-
-        match mine.checked_mul(u128::from(total_reward.saturated_into())) {
-            Some(x) => {
-                let r = x / total;
-                assert!(
-                    r < u128::from(u64::max_value()),
-                    "reward of per intention definitely less than u64::max_value()"
-                );
-                r.saturated_into::<T::Balance>()
-            }
-            None => panic!("stake * session_reward overflow!"),
-        }
-    }
-
-    /// Calculate the individual reward according to the mining power of cross chain assets.
-    fn multiply_by_mining_power(
-        total_reward: T::Balance,
-        my_power: u128,
-        total_mining_power: u128,
-    ) -> T::Balance {
-        Self::generic_calculate_by_proportion(total_reward, my_power, total_mining_power)
-    }
-
-    // This is guarantee not to overflow on whatever values.
-    // `num` must be inferior to `den` otherwise it will be reduce to `den`.
-    pub fn multiply_by_rational(value: u64, num: u32, den: u32) -> u64 {
-        let num = num.min(den);
-
-        let result_divisor_part: u64 = value / u64::from(den) * u64::from(num);
-
-        let result_remainder_part: u64 = {
-            let rem: u64 = value % u64::from(den);
-
-            // Fits into u32 because den is u32 and remainder < den
-            let rem_u32 = rem.saturated_into::<u32>();
-
-            // Multiplication fits into u64 as both term are u32
-            let rem_part = u64::from(rem_u32) * u64::from(num) / u64::from(den);
-
-            // Result fits into u32 as num < total_points
-            (rem_part as u32).saturated_into()
-        };
-
-        result_divisor_part + result_remainder_part
-    }
-
     /// Returns all the active validators as well as their total votes.
     ///
     /// Only these active validators are able to be rewarded on each new session,
     /// the inactive ones earn nothing.
     fn get_active_validator_set() -> impl Iterator<Item = (T::AccountId, T::Balance)> {
-        Self::potential_validator_set()
-            .filter(Self::is_active)
-            .map(|who| {
-                let total_votes = Self::total_votes_of(&who);
-                (who, total_votes)
-            })
+        Self::validator_set().filter(Self::is_active).map(|who| {
+            let total_votes = Self::total_votes_of(&who);
+            (who, total_votes)
+        })
     }
 
     /// 20% reward of each session is for the vesting schedule in the first halving epoch.

@@ -352,6 +352,8 @@ impl ExtBuilder {
 
         let _ = GenesisConfig::<Test> {
             validators: vec![1, 2, 3, 4],
+            validator_count: 6,
+            sessions_per_era: 2,
             ..Default::default()
         }
         .assimilate_storage(&mut storage);
