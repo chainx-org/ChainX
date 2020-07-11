@@ -15,31 +15,38 @@ pub type UnbondedIndex = u32;
 /// Type for measuring the non-validator entity's mining power.
 pub type MiningPower = u128;
 
-///
-pub trait CollectAssetMiningInfo {
-    ///
-    fn collect_asset_mining_info() -> Vec<(AssetId, MiningPower)>;
+/// Trait to retrieve and operate on Asset Mining participants in Staking.
+pub trait AssetMining<Balance> {
+    /// Collects the mining power of all mining assets.
+    fn asset_mining_power() -> Vec<(AssetId, MiningPower)>;
 
-    ///
-    fn total_mining_power() -> MiningPower {
-        Self::collect_asset_mining_info()
+    /// Issues reward to the reward pot of an Asset.
+    fn reward(_asset_id: AssetId, _reward_value: Balance);
+
+    /// Returns the mining power of all mining assets.
+    fn total_asset_mining_power() -> MiningPower {
+        Self::asset_mining_power()
             .iter()
             .map(|(_, power)| power)
             .sum()
     }
 }
 
-impl CollectAssetMiningInfo for () {
-    fn collect_asset_mining_info() -> Vec<(AssetId, MiningPower)> {
+impl<Balance> AssetMining<Balance> for () {
+    fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
         Vec::new()
     }
+
+    fn reward(_: AssetId, _: Balance) {}
 }
 
-/// Issue the fresh PCX to the non-validator mining entities.
-pub trait OnMinting<MiningEntity, Balance> {
-    fn mint(_: &MiningEntity, _: Balance);
+/// This trait provides a simple way to get the treasury account.
+pub trait TreasuryAccount<AccountId> {
+    fn treasury_account() -> AccountId;
 }
 
-impl<MiningEntity, Balance> OnMinting<MiningEntity, Balance> for () {
-    fn mint(_: &MiningEntity, _: Balance) {}
+impl<AccountId: Default> TreasuryAccount<AccountId> for () {
+    fn treasury_account() -> AccountId {
+        Default::default()
+    }
 }

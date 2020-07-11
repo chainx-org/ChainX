@@ -110,12 +110,12 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
 
 impl<T: Trait> Module<T> {
     fn allocate_dividend(
-        claimer: &T::AccountId,
-        claimee: &AssetId,
-        claimee_reward_pot: &T::AccountId,
-        dividend: T::Balance,
+        _claimer: &T::AccountId,
+        _claimee: &AssetId,
+        _claimee_reward_pot: &T::AccountId,
+        _dividend: T::Balance,
     ) -> Result<(), Error<T>> {
-        todo!("")
+        todo!("referral_or_treasury 10%, claimer 90%")
     }
 }
 
@@ -191,13 +191,16 @@ where
 {
     fn reward_pot_account_for(asset_id: &AssetId) -> T::AccountId {
         let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
-        let registered_time = <xpallet_assets::Module<T>>::asset_registered_block(asset_id);
-        let block_num_hash =
-            <T as frame_system::Trait>::Hashing::hash(registered_time.encode().as_ref());
+        let registered_block = <xpallet_assets::Module<T>>::asset_registered_block(asset_id);
+        let registered_block_hash =
+            <T as frame_system::Trait>::Hashing::hash(registered_block.encode().as_ref());
 
-        let mut buf = Vec::new();
-        buf.extend_from_slice(id_hash.as_ref());
-        buf.extend_from_slice(block_num_hash.as_ref());
+        let id_slice = id_hash.as_ref();
+        let registered_slice = registered_block_hash.as_ref();
+
+        let mut buf = Vec::with_capacity(id_slice.len() + registered_slice.len());
+        buf.extend_from_slice(id_slice);
+        buf.extend_from_slice(registered_slice);
 
         UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
     }

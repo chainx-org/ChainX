@@ -16,8 +16,8 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
-        BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, Saturating,
-        SignedExtension,
+        BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, OpaqueKeys,
+        Saturating, SignedExtension,
     },
     transaction_validity::{
         InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
@@ -300,10 +300,17 @@ impl xpallet_contracts::Trait for Runtime {
     type WeightPrice = xpallet_transaction_payment::Module<Self>;
 }
 
+pub struct SimpleTreasuryAccount;
+impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
+    fn treasury_account() -> AccountId {
+        todo!("Treasury::account_id()")
+    }
+}
+
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
-    type CollectAssetMiningInfo = ();
-    type OnMinting = ();
+    type TreasuryAccount = SimpleTreasuryAccount;
+    type AssetMining = ();
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
 }
@@ -328,6 +335,24 @@ impl xpallet_transaction_payment::Trait for Runtime {
         TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
 }
 
+parameter_types! {
+    pub const Offset: BlockNumber = 0;
+    pub const Period: BlockNumber = 50;
+    pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
+}
+
+impl pallet_session::Trait for Runtime {
+    type Event = Event;
+    type ValidatorId = <Self as frame_system::Trait>::AccountId;
+    type ValidatorIdOf = ();
+    type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+    type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+    type SessionManager = XStaking;
+    type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
+    type Keys = SessionKeys;
+    type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -340,13 +365,14 @@ construct_runtime!(
         Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         Utility: pallet_utility::{Module, Call, Event},
+        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
         XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
-        XMiningStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
+        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
         XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>},
         XTransactionPayment: xpallet_transaction_payment::{Module, Storage},
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},

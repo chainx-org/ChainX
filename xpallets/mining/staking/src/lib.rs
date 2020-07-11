@@ -2,8 +2,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod election;
 mod impls;
-// mod reward;
+mod reward;
 mod types;
 
 #[cfg(test)]
@@ -31,7 +32,7 @@ use types::*;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
-use xp_mining_staking::{CollectAssetMiningInfo, OnMinting, UnbondedIndex};
+use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedIndex};
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
@@ -54,15 +55,18 @@ const DEFAULT_BLOCKS_PER_SESSION: u64 = 50;
 const DEFAULT_BONDING_DURATION: u64 = DEFAULT_BLOCKS_PER_SESSION * 12 * 24 * 3;
 const DEFAULT_VALIDATOR_BONDING_DURATION: u64 = DEFAULT_BONDING_DURATION * 10;
 
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+/// Counter for the number of eras that have passed.
+pub type EraIndex = u32;
+
+pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     ///
-    type CollectAssetMiningInfo: CollectAssetMiningInfo;
+    type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
     ///
-    type OnMinting: OnMinting<AssetId, Self::Balance>;
+    type AssetMining: AssetMining<Self::Balance>;
 
     ///
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, Self::AccountId>;
@@ -82,8 +86,8 @@ decl_storage! {
             u32 = DEFAULT_MAXIMUM_VALIDATOR_COUNT;
 
         /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
-        pub ValidatorCandidateRequirement get(fn minimum_candidate_requirement):
-            CandidateRequirement<T::Balance>;
+        pub ValidatorCandidateRequirement get(fn validator_bond_requirement):
+            BondRequirement<T::Balance>;
 
         /// The length of a session in blocks.
         pub BlocksPerSession get(fn blocks_per_session) config():
@@ -113,10 +117,10 @@ decl_storage! {
             u32 = 10u32;
 
         /// (Treasury, Staking)
-        pub GlobalDistributionRatio get(fn globaldistribution_ratio): (u32, u32) = (1u32, 1u32);
+        pub GlobalDistributionRatio get(fn global_distribution_ratio) config(): GlobalDistribution;
 
-        /// (Staker, External Miners)
-        pub DistributionRatio get(fn distribution_ratio): (u32, u32) = (1u32, 1u32);
+        /// (Staker, Asset Miners)
+        pub MiningDistributionRatio get(fn mining_distribution_ratio) config(): MiningDistribution;
 
         /// The map from (wannabe) validator key to the profile of that validator.
         pub Validators get(fn validators):
@@ -134,19 +138,43 @@ decl_storage! {
         pub Nominations get(fn nominations):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
             => NominatorLedger<T::Balance, T::BlockNumber>;
+
+        /// Mode of era forcing.
+        pub ForceEra get(fn force_era) config(): Forcing;
+
+        /// The current era index.
+        ///
+        /// This is the latest planned era, depending on how the Session pallet queues the validator
+        /// set, it might be active or not.
+        pub CurrentEra get(fn current_era): Option<EraIndex>;
+
+        /// The active era information, it holds index and start.
+        ///
+        /// The active era is the era currently rewarded.
+        /// Validator set of this era must be equal to `SessionInterface::validators`.
+        pub ActiveEra get(fn active_era): Option<ActiveEraInfo>;
+
+        /// The session index at which the era start for the last `HISTORY_DEPTH` eras.
+        pub ErasStartSessionIndex get(fn eras_start_session_index):
+            map hasher(twox_64_concat) EraIndex => Option<SessionIndex>;
+
+        /// True if the current **planned** session is final. Note that this does not take era
+        /// forcing into account.
+        pub IsCurrentSessionFinal get(fn is_current_session_final): bool = false;
+
     }
 
     add_extra_genesis {
         config(validators):
-            Vec<T::AccountId>;
-            // Vec<(T::AccountId, T::Balance)>;
+            Vec<(T::AccountId, T::Balance)>;
         build(|config: &GenesisConfig<T>| {
-            // for &(ref v, balance) in &config.validators {
-            for v in &config.validators {
-                // assert!(
-                    // T::Currency::free_balance(&stash) >= balance,
-                    // "Stash does not have enough balance to bond."
-                // );
+            for &(ref v, balance) in &config.validators {
+                assert!(
+                    <xpallet_assets::Module<T>>::pcx_free_balance(v) >= balance,
+                    "Validator does not have enough balance to bond."
+                );
+                Module::<T>::apply_register(v);
+                Module::<T>::apply_bond(v, v, balance).expect("Staking genesis initialization can not fail");
             }
         });
     }
@@ -285,7 +313,7 @@ decl_module! {
             Self::apply_rebond(&sender,  &from, &to, value, current_block);
         }
 
-        ///
+        /// Unnominates balance `value` from validator `target`.
         #[weight = 10]
         fn unbond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
             let sender = ensure_signed(origin)?;
@@ -293,8 +321,6 @@ decl_module! {
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
-            // TODO: is this unneccessary?
-            // ensure!(Self::nomination_exists(&sender, &target), Error::<T>::NonexistentNomination);
             ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondValue);
             ensure!(
                 Self::unbonded_chunks_of(&sender).len() < Self::maximum_unbonded_chunk_size() as usize,
@@ -335,7 +361,6 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
-            todo!("ensure nominator record exists");
 
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
@@ -344,14 +369,23 @@ decl_module! {
         #[weight = 10]
         fn validate(origin) {
             let sender = ensure_signed(origin)?;
+            ensure!(Self::is_validator(&sender), Error::<T>::InvalidValidator);
+            Validators::<T>::mutate(sender, |validator_profile| {
+                    validator_profile.is_chilled = false;
+                }
+            );
         }
 
         /// Declare no desire to validate for the origin account.
         #[weight = 10]
         fn chill(origin) {
             let sender = ensure_signed(origin)?;
-
-            // for validator in Validators::<T>::iter(){}
+            ensure!(Self::is_validator(&sender), Error::<T>::InvalidValidator);
+            Validators::<T>::mutate(sender, |validator_profile| {
+                    validator_profile.is_chilled = true;
+                    validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
+                }
+            );
         }
 
         /// TODO: figure out whether this should be kept.
@@ -359,11 +393,7 @@ decl_module! {
         pub fn register(origin) {
             let sender = ensure_signed(origin)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::RegisteredAlready);
-            let current_block = <frame_system::Module<T>>::block_number();
-            Validators::<T>::insert(sender, ValidatorProfile {
-                registered_at: current_block,
-                ..Default::default()
-            });
+            Self::apply_register(&sender);
         }
     }
 }
@@ -382,6 +412,28 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn is_active(who: &T::AccountId) -> bool {
         !Self::is_chilled(who)
+    }
+
+    pub fn validator_set() -> impl Iterator<Item = T::AccountId> {
+        Validators::<T>::iter().map(|(v, _)| v)
+    }
+
+    pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, T::Balance)> {
+        Validators::<T>::iter()
+            .map(|(v, _)| v)
+            .filter(|v| Self::is_active(&v))
+            .map(|v| {
+                let total_votes = Self::total_votes_of(&v);
+                (v, total_votes)
+            })
+    }
+
+    /// Calculate the total staked PCX, i.e., total staking power.
+    ///
+    /// One (indivisible) PCX one power.
+    #[inline]
+    pub fn total_staked() -> T::Balance {
+        Self::active_validator_votes().fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + x)
     }
 
     #[inline]
@@ -403,17 +455,6 @@ impl<T: Trait> Module<T> {
         Self::is_validator(nominator) && *nominator == *nominee
     }
 
-    fn nomination_exists(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
-        Nominations::<T>::contains_key(nominator, nominee)
-    }
-
-    pub fn validator_set() -> Vec<T::AccountId> {
-        Validators::<T>::iter()
-            .map(|(v, _)| v)
-            .filter(Self::is_active)
-            .collect()
-    }
-
     fn can_force_chilled() -> bool {
         // TODO: optimize using try_for_each?
         let active = Validators::<T>::iter()
@@ -427,7 +468,11 @@ impl<T: Trait> Module<T> {
         if !Self::can_force_chilled() {
             return Err(Error::<T>::InsufficientValidators);
         }
-        // TODO: apply_force_chilled()
+        // Force the validator to be chilled
+        Validators::<T>::mutate(who, |validator_profile| {
+            validator_profile.is_chilled = true;
+            validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
+        });
         Ok(())
     }
 
@@ -461,8 +506,6 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    // Staking specific assets operation
-    //
     fn bond_reserve(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
         <xpallet_assets::Module<T>>::pcx_move_balance(
             who,
@@ -512,6 +555,17 @@ impl<T: Trait> Module<T> {
 
         Self::set_nominator_vote_weight(source, target, source_weight, current_block, delta);
         Self::set_validator_vote_weight(target, target_weight, current_block, delta);
+    }
+
+    fn apply_register(who: &T::AccountId) {
+        let current_block = <frame_system::Module<T>>::block_number();
+        Validators::<T>::insert(
+            who,
+            ValidatorProfile {
+                registered_at: current_block,
+                ..Default::default()
+            },
+        );
     }
 
     fn apply_bond(

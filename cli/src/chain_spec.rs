@@ -6,8 +6,9 @@ use chainx_runtime::{
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
-    AuraConfig, GenesisConfig, GrandpaConfig, SudoConfig, SystemConfig, XAssetsConfig,
-    XBridgeBitcoinConfig, XContractsConfig, XMiningStakingConfig, XSpotConfig, XSystemConfig,
+    AuraConfig, GenesisConfig, GrandpaConfig, SessionConfig, SessionKeys, SudoConfig, SystemConfig,
+    XAssetsConfig, XBridgeBitcoinConfig, XContractsConfig, XSpotConfig, XStakingConfig,
+    XSystemConfig,
 };
 
 use sc_service::ChainType;
@@ -40,8 +41,13 @@ where
 }
 
 /// Helper function to generate an authority key for Aura
-pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
-    (get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
+pub fn authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, AuraId, GrandpaId) {
+    (
+        get_account_id_from_seed::<sr25519::Public>(&format!("{}//validator", seed)),
+        get_account_id_from_seed::<sr25519::Public>(&format!("{}//blockauthor", seed)),
+        get_from_seed::<AuraId>(seed),
+        get_from_seed::<GrandpaId>(seed),
+    )
 }
 
 #[inline]
@@ -156,8 +162,12 @@ fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> 
     assets
 }
 
+fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
+    SessionKeys { grandpa, aura }
+}
+
 fn testnet_genesis(
-    initial_authorities: Vec<(AuraId, GrandpaId)>,
+    initial_authorities: Vec<(AccountId, AccountId, AuraId, GrandpaId)>,
     root_key: AccountId,
     assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
@@ -169,13 +179,25 @@ fn testnet_genesis(
             changes_trie_config: Default::default(),
         }),
         pallet_aura: Some(AuraConfig {
-            authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+            authorities: initial_authorities.iter().map(|x| (x.2.clone())).collect(),
         }),
         pallet_grandpa: Some(GrandpaConfig {
             authorities: initial_authorities
                 .iter()
-                .map(|x| (x.1.clone(), 1))
+                .map(|x| (x.3.clone(), 1))
                 .collect(),
+        }),
+        pallet_session: Some(SessionConfig {
+            keys: initial_authorities
+                .iter()
+                .map(|x| {
+                    (
+                        x.0.clone(),
+                        x.1.clone(),
+                        session_keys(x.2.clone(), x.3.clone()),
+                    )
+                })
+                .collect::<Vec<_>>(),
         }),
         pallet_sudo: Some(SudoConfig {
             key: root_key.clone(),

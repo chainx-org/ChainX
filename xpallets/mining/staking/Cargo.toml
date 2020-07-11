@@ -32,6 +32,7 @@ xpallet-support = { path = "../../support", default-features = false }
 xpallet-protocol = { path = "../../protocol" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 env_logger = "0.7.1"
 
 [features]
