@@ -110,12 +110,12 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
 
 impl<T: Trait> Module<T> {
     fn allocate_dividend(
-        claimer: &T::AccountId,
-        claimee: &AssetId,
-        claimee_reward_pot: &T::AccountId,
-        dividend: T::Balance,
+        _claimer: &T::AccountId,
+        _claimee: &AssetId,
+        _claimee_reward_pot: &T::AccountId,
+        _dividend: T::Balance,
     ) -> Result<(), Error<T>> {
-        todo!("")
+        todo!("referral_or_treasury 10%, claimer 90%")
     }
 }
 
@@ -197,6 +197,7 @@ where
 
         let id_slice = id_hash.as_ref();
         let registered_slice = registered_block_hash.as_ref();
+
         let mut buf = Vec::with_capacity(id_slice.len() + registered_slice.len());
         buf.extend_from_slice(id_slice);
         buf.extend_from_slice(registered_slice);

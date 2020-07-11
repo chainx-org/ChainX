@@ -83,15 +83,6 @@ impl xpallet_mining_staking::Trait for Test {
     type DetermineRewardPotAccount = ();
 }
 
-// This function basically just builds a genesis storage key/value store according to
-// our desired mockup.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-    system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap()
-        .into()
-}
-
 thread_local! {
     static SESSION: RefCell<(Vec<AccountId>, HashSet<AccountId>)> = RefCell::new(Default::default());
     static SESSION_PER_ERA: RefCell<SessionIndex> = RefCell::new(3);
