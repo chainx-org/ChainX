@@ -20,8 +20,8 @@ use sp_runtime::{
         Saturating, SignedExtension,
     },
     transaction_validity::{
-        InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
-        ValidTransaction,
+        InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
+        TransactionValidityError, ValidTransaction,
     },
     ApplyExtrinsicResult, FixedPointNumber, Perbill, Permill, Perquintill,
 };
@@ -32,6 +32,7 @@ use sp_version::RuntimeVersion;
 
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -67,6 +68,10 @@ pub use xpallet_contracts::Schedule as ContractsSchedule;
 pub use xpallet_contracts_primitives::XRC20Selector;
 pub use xpallet_protocol::*;
 pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
+
+/// Constant values used within the runtime.
+pub mod constants;
+use constants::{currency::*, time::*};
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -353,6 +358,46 @@ impl pallet_session::Trait for Runtime {
     type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 }
 
+parameter_types! {
+    pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
+    pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
+    /// We prioritize im-online heartbeats over election solution submission.
+    pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+}
+
+impl pallet_im_online::Trait for Runtime {
+    type AuthorityId = ImOnlineId;
+    type Event = Event;
+    type SessionDuration = SessionDuration;
+    // type ReportUnresponsiveness = Offences;
+    type ReportUnresponsiveness = ();
+    type UnsignedPriority = ImOnlineUnsignedPriority;
+}
+
+impl pallet_session::historical::Trait for Runtime {
+    type FullIdentification = AccountId;
+    type FullIdentificationOf = ();
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+    Call: From<C>,
+{
+    type Extrinsic = UncheckedExtrinsic;
+    type OverarchingCall = Call;
+}
+
+parameter_types! {
+    pub OffencesWeightSoftLimit: Weight = Perbill::from_percent(60) * MaximumBlockWeight::get();
+}
+
+impl pallet_offences::Trait for Runtime {
+    type Event = Event;
+    type IdentificationTuple = AccountId;
+    type OnOffenceHandler = XStaking;
+    type WeightSoftLimit = OffencesWeightSoftLimit;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -366,6 +411,8 @@ construct_runtime!(
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         Utility: pallet_utility::{Module, Call, Event},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
+        ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+        Offences: pallet_offences::{Module, Call, Storage, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},

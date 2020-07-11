@@ -6,9 +6,9 @@ use chainx_runtime::{
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
-    AuraConfig, GenesisConfig, GrandpaConfig, SessionConfig, SessionKeys, SudoConfig, SystemConfig,
-    XAssetsConfig, XBridgeBitcoinConfig, XContractsConfig, XSpotConfig, XStakingConfig,
-    XSystemConfig,
+    AuraConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys,
+    SudoConfig, SystemConfig, XAssetsConfig, XBridgeBitcoinConfig, XContractsConfig, XSpotConfig,
+    XStakingConfig, XSystemConfig,
 };
 
 use sc_service::ChainType;
@@ -187,6 +187,7 @@ fn testnet_genesis(
                 .map(|x| (x.3.clone(), 1))
                 .collect(),
         }),
+        pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
         pallet_session: Some(SessionConfig {
             keys: initial_authorities
                 .iter()

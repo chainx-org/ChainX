@@ -2,7 +2,8 @@ use super::*;
 use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
-use sp_runtime::traits::Hash;
+use sp_runtime::{traits::Hash, Perbill};
+use sp_staking::offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence};
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, RewardPotAccountFor,
     WeightFactors, WeightType,
@@ -331,6 +332,34 @@ impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
     }
     fn end_session(end_index: SessionIndex) {
         Self::end_session(end_index)
+    }
+}
+
+type OffenceResponse = u64;
+
+/// This is intended to be used with `FilterHistoricalOffences`.
+/// Reporter, Offender
+impl<T: Trait> OnOffenceHandler<T::AccountId, T::AccountId, OffenceResponse> for Module<T>
+where
+    T: pallet_session::Trait<ValidatorId = <T as frame_system::Trait>::AccountId>,
+    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Trait>::AccountId>,
+    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Trait>::AccountId>,
+    T::ValidatorIdOf: Convert<
+        <T as frame_system::Trait>::AccountId,
+        Option<<T as frame_system::Trait>::AccountId>,
+    >,
+{
+    fn on_offence(
+        offenders: &[OffenceDetails<T::AccountId, T::AccountId>],
+        slash_fraction: &[Perbill],
+        slash_session: SessionIndex,
+    ) -> Result<OffenceResponse, ()> {
+        todo!()
+    }
+
+    fn can_report() -> bool {
+        todo!()
+        // Self::era_election_status().is_closed()
     }
 }
 
