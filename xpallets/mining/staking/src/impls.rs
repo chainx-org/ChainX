@@ -335,11 +335,26 @@ impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
     }
 }
 
-type OffenceResponse = u64;
+type OnOffenceRes = u64;
+/// Validator ID that reported this offence.
+type Reporter<T> = <T as frame_system::Trait>::AccountId;
 
-/// This is intended to be used with `FilterHistoricalOffences`.
-/// Reporter, Offender
-impl<T: Trait> OnOffenceHandler<T::AccountId, T::AccountId, OffenceResponse> for Module<T>
+/// Substrate:
+/// A tuple of the validator's ID and their full identification.
+/// pub type IdentificationTuple<T> = (<T as crate::Trait>::ValidatorId, <T as Trait>::FullIdentification);
+/// ChainX:
+/// We do not have the FullIdentification info, but the reward pot.
+pub type IdentificationTuple<T> = (
+    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Trait>::AccountId,
+);
+
+/// Stable ID of a validator.
+type Offender<T> = IdentificationTuple<T>;
+
+/// This is intended to be used with `FilterHistoricalOffences` in Substrate/Staking.
+/// In ChainX, we always apply the slash immediately, no deferred slash.
+impl<T: Trait> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, OnOffenceRes> for Module<T>
 where
     T: pallet_session::Trait<ValidatorId = <T as frame_system::Trait>::AccountId>,
     T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Trait>::AccountId>,
@@ -350,16 +365,16 @@ where
     >,
 {
     fn on_offence(
-        offenders: &[OffenceDetails<T::AccountId, T::AccountId>],
+        offenders: &[OffenceDetails<Reporter<T>, Offender<T>>],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
-    ) -> Result<OffenceResponse, ()> {
-        todo!()
+    ) -> Result<OnOffenceRes, ()> {
+        for (details, slash_fraction) in offenders.iter().zip(slash_fraction) {}
+        Ok(0)
     }
 
     fn can_report() -> bool {
-        todo!()
-        // Self::era_election_status().is_closed()
+        true
     }
 }
 

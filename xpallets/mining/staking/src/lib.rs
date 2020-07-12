@@ -12,7 +12,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use chainx_primitives::AssetId;
 use chainx_primitives::Memo;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -36,7 +35,7 @@ use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedInde
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
-pub use impls::SimpleValidatorRewardPotAccountDeterminer;
+pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 50;

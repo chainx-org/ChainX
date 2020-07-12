@@ -16,8 +16,8 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
-        BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, OpaqueKeys,
-        Saturating, SignedExtension,
+        BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, IdentityLookup, NumberFor,
+        OpaqueKeys, Saturating, SignedExtension,
     },
     transaction_validity::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
@@ -346,10 +346,21 @@ parameter_types! {
     pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
 
+/// Substrate has the controller/stash concept, the according `Convert` implementation
+/// is used to find the stash of the given controller account.
+/// There is no such concepts in the context of ChainX, the stash account is also the controller account.
+pub struct SimpleValidatorIdConverter;
+
+impl Convert<AccountId, Option<AccountId>> for SimpleValidatorIdConverter {
+    fn convert(controller: AccountId) -> Option<AccountId> {
+        Some(controller)
+    }
+}
+
 impl pallet_session::Trait for Runtime {
     type Event = Event;
     type ValidatorId = <Self as frame_system::Trait>::AccountId;
-    type ValidatorIdOf = ();
+    type ValidatorIdOf = SimpleValidatorIdConverter;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionManager = XStaking;
@@ -359,7 +370,8 @@ impl pallet_session::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
+    /// Babe use EPOCH_DURATION_IN_SLOTS here, we use Aura.
+    pub const SessionDuration: BlockNumber = Period::get();
     pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
     /// We prioritize im-online heartbeats over election solution submission.
     pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
@@ -369,13 +381,16 @@ impl pallet_im_online::Trait for Runtime {
     type AuthorityId = ImOnlineId;
     type Event = Event;
     type SessionDuration = SessionDuration;
-    // type ReportUnresponsiveness = Offences;
-    type ReportUnresponsiveness = ();
+    type ReportUnresponsiveness = Offences;
     type UnsignedPriority = ImOnlineUnsignedPriority;
 }
 
+/// Dummy implementation for the trait bound of pallet_im_online.
+/// We actually make no use of the historical feature of pallet_session.
 impl pallet_session::historical::Trait for Runtime {
     type FullIdentification = AccountId;
+    /// Substrate: given the stash account ID, find the active exposure of nominators on that account.
+    /// ChainX: we don't need such info due to the reward pot.
     type FullIdentificationOf = ();
 }
 
@@ -393,7 +408,7 @@ parameter_types! {
 
 impl pallet_offences::Trait for Runtime {
     type Event = Event;
-    type IdentificationTuple = AccountId;
+    type IdentificationTuple = xpallet_mining_staking::IdentificationTuple<Runtime>;
     type OnOffenceHandler = XStaking;
     type WeightSoftLimit = OffencesWeightSoftLimit;
 }
