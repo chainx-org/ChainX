@@ -33,6 +33,15 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    fn expected_slash_of(offender: &T::AccountId, reward_per_block: u128) -> T::Balance {
+        let offence_cnt = OffenceCountInSession::<T>::take(offender);
+        let ideal_slash =
+            reward_per_block * u128::from(offence_cnt) * u128::from(Self::offence_severity());
+        let min_slash = Self::minimum_penalty().saturated_into::<u128>() * u128::from(offence_cnt);
+        let expected_slash = sp_std::cmp::max(ideal_slash, min_slash);
+        expected_slash.saturated_into()
+    }
+
     pub(crate) fn slash_offenders_in_session(staking_reward: T::Balance) -> u64 {
         // Find the offenders that are in the current validator set.
         let validators = T::SessionInterface::validators();
@@ -55,15 +64,8 @@ impl<T: Trait> Module<T> {
         let minimum_validator_count = Self::minimum_validator_count() as usize;
 
         for offender in valid_offenders.iter() {
-            let offence_cnt = OffenceCountInSession::<T>::take(offender);
-            let ideal_slash =
-                reward_per_block * u128::from(offence_cnt) * u128::from(Self::offence_severity());
-            let min_slash =
-                Self::minimum_penalty().saturated_into::<u128>() * u128::from(offence_cnt);
-            let expected_slash = sp_std::cmp::max(ideal_slash, min_slash);
-
-            if let Err(actual_slashed) = Self::try_slash(offender, expected_slash.saturated_into())
-            {
+            let expected_slash = Self::expected_slash_of(offender, reward_per_block);
+            if let Err(actual_slashed) = Self::try_slash(offender, expected_slash) {
                 debug!(
                     "[slash_offenders_in_session]expected_slash:{:?}, actual_slashed:{:?}",
                     expected_slash, actual_slashed
