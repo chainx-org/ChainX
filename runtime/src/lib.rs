@@ -314,6 +314,8 @@ impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
 
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
+    type SessionDuration = SessionDuration;
+    type SessionInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;
     type AssetMining = ();
     type DetermineRewardPotAccount =

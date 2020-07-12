@@ -93,7 +93,7 @@ impl<T: Trait> Module<T> {
 
     /// Issue new PCX to the action intentions and cross mining asset entities
     /// accroding to DistributionRatio.
-    fn distribute_mining_rewards(total: T::Balance, treasury_account: &T::AccountId) {
+    fn distribute_mining_rewards(total: T::Balance, treasury_account: &T::AccountId) -> T::Balance {
         let mining_distribution = Self::mining_distribution_ratio();
         let staking_reward = mining_distribution.calc_staking_reward::<T>(total);
         let max_asset_mining_reward = total - staking_reward;
@@ -118,9 +118,11 @@ impl<T: Trait> Module<T> {
             );
             Self::mint(treasury_account, unpaid_asset_mining_reward);
         }
+
+        staking_reward
     }
 
-    pub(super) fn distribute_session_reward_impl_09(session_reward: T::Balance) {
+    pub(super) fn distribute_session_reward_impl_09(session_reward: T::Balance) -> T::Balance {
         let global_distribution = Self::global_distribution_ratio();
         let (treasury_reward, mining_reward) =
             global_distribution.calc_rewards::<T>(session_reward);
@@ -135,7 +137,9 @@ impl<T: Trait> Module<T> {
         //      |-> XBTC(Asset Mining)
         //      |-> PCX(Staking)
         if !mining_reward.is_zero() {
-            Self::distribute_mining_rewards(mining_reward, &treasury_account);
+            return Self::distribute_mining_rewards(mining_reward, &treasury_account);
         }
+
+        Default::default()
     }
 }

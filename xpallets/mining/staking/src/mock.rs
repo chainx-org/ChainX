@@ -176,9 +176,15 @@ impl TreasuryAccount<AccountId> for DummyTreasuryAccount {
     }
 }
 
+parameter_types! {
+    pub const SessionDuration: BlockNumber = 50;
+}
+
 impl Trait for Test {
     type Event = MetaEvent;
     type AssetMining = ();
+    type SessionDuration = SessionDuration;
+    type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = ();
 }
