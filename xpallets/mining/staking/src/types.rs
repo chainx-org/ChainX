@@ -123,20 +123,6 @@ pub struct ValidatorInfo<AccountId: Default, Balance: Default, BlockNumber: Defa
     pub reward_pot_balance: Balance,
 }
 
-/// A pending slash record. The value of the slash has been computed but not applied yet,
-/// rather deferred for several eras.
-#[derive(Encode, Decode, Default, RuntimeDebug)]
-pub struct Slash<AccountId, Balance> {
-    /// The stash ID of the offending validator.
-    validator: AccountId,
-    /// The slash of validator's reward pot.
-    value: Balance,
-    /// Reporters of the offence; bounty payout recipients.
-    reporters: Vec<AccountId>,
-    /// The amount of payout.
-    payout: Balance,
-}
-
 /// Information regarding the active era (era in used in session).
 #[derive(Encode, Decode, RuntimeDebug)]
 pub struct ActiveEraInfo {

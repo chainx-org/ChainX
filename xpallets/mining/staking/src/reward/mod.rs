@@ -85,7 +85,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    /// Distribute the session reward to all the receivers.
+    /// Distribute the session reward to all the receivers, returns the total reward for validators.
     pub(crate) fn distribute_session_reward(session_index: SessionIndex) -> T::Balance {
         let this_session_reward = Self::this_session_reward(session_index);
 

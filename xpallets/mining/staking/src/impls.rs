@@ -375,6 +375,8 @@ where
         _slash_session: SessionIndex,
     ) -> Result<OnOffenceRes, ()> {
         for (details, _slash_fraction) in offenders.iter().zip(slash_fraction) {
+            // TODO: reward reporters?
+
             let (offender, _) = &details.offender;
 
             // FIXME: record the offenders by session_index?
