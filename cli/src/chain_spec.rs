@@ -208,7 +208,7 @@ fn testnet_genesis(
         }),
         xpallet_assets: Some(XAssetsConfig {
             assets,
-            endowed,
+            endowed: endowed.clone(),
             memo_len: 128,
         }),
         xpallet_bridge_bitcoin: Some(XBridgeBitcoinConfig {
@@ -243,7 +243,31 @@ fn testnet_genesis(
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
         }),
-        xpallet_mining_staking: Some(Default::default()),
+        xpallet_mining_staking: Some(XStakingConfig {
+            validators: {
+                let pcx_endowed: std::collections::HashMap<AccountId, Balance> = endowed
+                    .get(&xpallet_protocol::PCX)
+                    .expect("PCX endowed; qed")
+                    .iter()
+                    .cloned()
+                    .collect();
+                initial_authorities
+                    .iter()
+                    .map(|x| {
+                        (
+                            x.0.clone(),
+                            pcx_endowed
+                                .get(&x.0)
+                                .expect("initial validators must have some balances; qed")
+                                .clone(),
+                        )
+                    })
+                    .collect()
+            },
+            validator_count: 100,
+            minimum_validator_count: initial_authorities.len() as u32,
+            ..Default::default()
+        }),
         xpallet_dex_spot: Some(XSpotConfig {
             trading_pairs: vec![(
                 xpallet_protocol::PCX,
