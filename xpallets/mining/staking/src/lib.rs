@@ -5,6 +5,7 @@
 mod election;
 mod impls;
 mod reward;
+mod slashing;
 mod types;
 
 #[cfg(test)]
@@ -12,23 +13,15 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use chainx_primitives::AssetId;
-use chainx_primitives::Memo;
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
-    ensure,
-    storage::IterableStorageMap,
+    decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap,
     traits::Get,
-    weights::{DispatchInfo, GetDispatchInfo, PostDispatchInfo, Weight},
 };
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{
-    Convert, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SaturatedConversion, Saturating,
-    SignedExtension, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
-};
+use sp_runtime::traits::{Convert, SaturatedConversion, Saturating, Zero};
 use sp_std::prelude::*;
-use types::*;
+
+use chainx_primitives::Memo;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
@@ -36,7 +29,9 @@ use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedInde
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
-pub use impls::SimpleValidatorRewardPotAccountDeterminer;
+use types::*;
+
+pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 50;
@@ -70,6 +65,17 @@ pub trait Trait: xpallet_assets::Trait {
 
     ///
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, Self::AccountId>;
+
+    /// Interface for interacting with a session module.
+    type SessionInterface: self::SessionInterface<Self::AccountId>;
+
+    /// An expected duration of the session.
+    ///
+    /// This parameter is used to determine the longevity of `heartbeat` transaction
+    /// and a rough time when we should start considering sending heartbeats,
+    /// since the workers avoids sending them at the very beginning of the session, assuming
+    /// there is a chance the authority will produce a block and they won't be necessary.
+    type SessionDuration: Get<Self::BlockNumber>;
 }
 
 decl_storage! {
@@ -162,6 +168,18 @@ decl_storage! {
         /// forcing into account.
         pub IsCurrentSessionFinal get(fn is_current_session_final): bool = false;
 
+        /// Offenders reported in current session.
+        OffendersInSession get(fn offenders_in_session): Vec<T::AccountId>;
+
+        /// The map of offender to the count of offences of that offender reported in current session.
+        OffenceCountInSession get(fn offence_count_in_session):
+            map hasher(twox_64_concat) T::AccountId => u32;
+
+        /// Minimum penalty for each slash.
+        pub MinimumPenalty get(fn minimum_penalty) config(): T::Balance;
+
+        /// The higher the severity, the more slash for the offences.
+        pub OffenceSeverity get(fn offence_severity) config(): u32;
     }
 
     add_extra_genesis {
@@ -249,13 +267,13 @@ decl_error! {
 }
 
 impl<T: Trait> From<AssetErr> for Error<T> {
-    fn from(asset_err: AssetErr) -> Self {
+    fn from(_: AssetErr) -> Self {
         Self::AssetError
     }
 }
 
 impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
-    fn from(e: ZeroMiningWeightError) -> Self {
+    fn from(_: ZeroMiningWeightError) -> Self {
         Self::ZeroVoteWeight
     }
 }
@@ -398,6 +416,40 @@ decl_module! {
     }
 }
 
+/// Means for interacting with a specialized version of the `session` trait.
+///
+/// This is needed because `Staking` sets the `ValidatorIdOf` of the `pallet_session::Trait`
+pub trait SessionInterface<AccountId>: frame_system::Trait {
+    /// Disable a given validator by stash ID.
+    ///
+    /// Returns `true` if new era should be forced at the end of this session.
+    /// This allows preventing a situation where there is too many validators
+    /// disabled and block production stalls.
+    fn disable_validator(validator: &AccountId) -> Result<bool, ()>;
+
+    /// Get the validators from session.
+    fn validators() -> Vec<AccountId>;
+}
+
+impl<T: Trait> SessionInterface<<T as frame_system::Trait>::AccountId> for T
+where
+    T: pallet_session::Trait<ValidatorId = <T as frame_system::Trait>::AccountId>,
+    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Trait>::AccountId>,
+    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Trait>::AccountId>,
+    T::ValidatorIdOf: Convert<
+        <T as frame_system::Trait>::AccountId,
+        Option<<T as frame_system::Trait>::AccountId>,
+    >,
+{
+    fn disable_validator(validator: &<T as frame_system::Trait>::AccountId) -> Result<bool, ()> {
+        <pallet_session::Module<T>>::disable(validator)
+    }
+
+    fn validators() -> Vec<<T as frame_system::Trait>::AccountId> {
+        <pallet_session::Module<T>>::validators()
+    }
+}
+
 impl<T: Trait> Module<T> {
     #[inline]
     pub fn is_validator(who: &T::AccountId) -> bool {
@@ -428,12 +480,17 @@ impl<T: Trait> Module<T> {
             })
     }
 
-    /// Calculate the total staked PCX, i.e., total staking power.
+    /// Calculates the total staked PCX, i.e., total staking power.
     ///
-    /// One (indivisible) PCX one power.
+    /// One (indivisible) PCX one power, only the votes of active validators are counted.
     #[inline]
     pub fn total_staked() -> T::Balance {
         Self::active_validator_votes().fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + x)
+    }
+
+    #[inline]
+    pub fn reward_pot_for(validator: &T::AccountId) -> T::AccountId {
+        T::DetermineRewardPotAccount::reward_pot_account_for(validator)
     }
 
     #[inline]
@@ -455,6 +512,14 @@ impl<T: Trait> Module<T> {
         Self::is_validator(nominator) && *nominator == *nominee
     }
 
+    /// Ensures that at the end of the current session there will be a new era.
+    fn ensure_new_era() {
+        match ForceEra::get() {
+            Forcing::ForceAlways | Forcing::ForceNew => (),
+            _ => ForceEra::put(Forcing::ForceNew),
+        }
+    }
+
     fn can_force_chilled() -> bool {
         // TODO: optimize using try_for_each?
         let active = Validators::<T>::iter()
@@ -468,12 +533,16 @@ impl<T: Trait> Module<T> {
         if !Self::can_force_chilled() {
             return Err(Error::<T>::InsufficientValidators);
         }
+        Self::apply_force_chilled(who);
+        Ok(())
+    }
+
+    fn apply_force_chilled(who: &T::AccountId) {
         // Force the validator to be chilled
         Validators::<T>::mutate(who, |validator_profile| {
             validator_profile.is_chilled = true;
             validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
         });
-        Ok(())
     }
 
     fn total_votes_of(validator: &T::AccountId) -> T::Balance {

@@ -16,12 +16,12 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
-        BlakeTwo256, Block as BlockT, DispatchInfoOf, IdentityLookup, NumberFor, OpaqueKeys,
-        Saturating, SignedExtension,
+        BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, IdentityLookup, NumberFor,
+        OpaqueKeys, Saturating, SignedExtension,
     },
     transaction_validity::{
-        InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
-        ValidTransaction,
+        InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
+        TransactionValidityError, ValidTransaction,
     },
     ApplyExtrinsicResult, FixedPointNumber, Perbill, Permill, Perquintill,
 };
@@ -32,6 +32,7 @@ use sp_version::RuntimeVersion;
 
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -67,6 +68,10 @@ pub use xpallet_contracts::Schedule as ContractsSchedule;
 pub use xpallet_contracts_primitives::XRC20Selector;
 pub use xpallet_protocol::*;
 pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
+
+/// Constant values used within the runtime.
+pub mod constants;
+use constants::{currency::*, time::*};
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -309,6 +314,8 @@ impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
 
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
+    type SessionDuration = SessionDuration;
+    type SessionInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;
     type AssetMining = ();
     type DetermineRewardPotAccount =
@@ -341,16 +348,71 @@ parameter_types! {
     pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
 
+/// Substrate has the controller/stash concept, the according `Convert` implementation
+/// is used to find the stash of the given controller account.
+/// There is no such concepts in the context of ChainX, the stash account is also the controller account.
+pub struct SimpleValidatorIdConverter;
+
+impl Convert<AccountId, Option<AccountId>> for SimpleValidatorIdConverter {
+    fn convert(controller: AccountId) -> Option<AccountId> {
+        Some(controller)
+    }
+}
+
 impl pallet_session::Trait for Runtime {
     type Event = Event;
     type ValidatorId = <Self as frame_system::Trait>::AccountId;
-    type ValidatorIdOf = ();
+    type ValidatorIdOf = SimpleValidatorIdConverter;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionManager = XStaking;
     type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
     type Keys = SessionKeys;
     type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
+}
+
+parameter_types! {
+    /// Babe use EPOCH_DURATION_IN_SLOTS here, we use Aura.
+    pub const SessionDuration: BlockNumber = Period::get();
+    pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
+    /// We prioritize im-online heartbeats over election solution submission.
+    pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+}
+
+impl pallet_im_online::Trait for Runtime {
+    type AuthorityId = ImOnlineId;
+    type Event = Event;
+    type SessionDuration = SessionDuration;
+    type ReportUnresponsiveness = Offences;
+    type UnsignedPriority = ImOnlineUnsignedPriority;
+}
+
+/// Dummy implementation for the trait bound of pallet_im_online.
+/// We actually make no use of the historical feature of pallet_session.
+impl pallet_session::historical::Trait for Runtime {
+    type FullIdentification = AccountId;
+    /// Substrate: given the stash account ID, find the active exposure of nominators on that account.
+    /// ChainX: we don't need such info due to the reward pot.
+    type FullIdentificationOf = ();
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+    Call: From<C>,
+{
+    type Extrinsic = UncheckedExtrinsic;
+    type OverarchingCall = Call;
+}
+
+parameter_types! {
+    pub OffencesWeightSoftLimit: Weight = Perbill::from_percent(60) * MaximumBlockWeight::get();
+}
+
+impl pallet_offences::Trait for Runtime {
+    type Event = Event;
+    type IdentificationTuple = xpallet_mining_staking::IdentificationTuple<Runtime>;
+    type OnOffenceHandler = XStaking;
+    type WeightSoftLimit = OffencesWeightSoftLimit;
 }
 
 construct_runtime!(
@@ -366,6 +428,8 @@ construct_runtime!(
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         Utility: pallet_utility::{Module, Call, Event},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
+        ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+        Offences: pallet_offences::{Module, Call, Storage, Event},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},

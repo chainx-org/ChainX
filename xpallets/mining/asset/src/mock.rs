@@ -76,8 +76,23 @@ impl xpallet_assets::Trait for Test {
     type OnAssetRegisterOrRevoke = XMiningAsset;
 }
 
+parameter_types! {
+    pub const SessionDuration: BlockNumber = 50;
+}
+
+impl<AccountId> xpallet_mining_staking::SessionInterface<AccountId> for Test {
+    fn disable_validator(_: &AccountId) -> Result<bool, ()> {
+        Ok(true)
+    }
+    fn validators() -> Vec<AccountId> {
+        Vec::new()
+    }
+}
+
 impl xpallet_mining_staking::Trait for Test {
     type Event = ();
+    type SessionDuration = SessionDuration;
+    type SessionInterface = Self;
     type AssetMining = ();
     type TreasuryAccount = ();
     type DetermineRewardPotAccount = ();

@@ -1,6 +1,7 @@
 use super::*;
 use crate::mock::*;
 use frame_support::{assert_err, assert_ok, traits::OnInitialize};
+use sp_runtime::DispatchResult;
 
 fn t_issue_pcx(to: AccountId, value: Balance) -> DispatchResult {
     XAssets::pcx_issue(&to, value)

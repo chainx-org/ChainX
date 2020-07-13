@@ -33,9 +33,11 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-im-online = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
-pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-offences = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false, features = ["historical"] }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
@@ -62,7 +64,7 @@ xpallet-transaction-payment-rpc-runtime-api = { path = "../xpallets/transaction-
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 [features]
-default = ["std"]
+default = ["std", "pallet-session/historical"]
 std = [
     "codec/std",
     "serde",
@@ -87,10 +89,12 @@ std = [
 
     "pallet-aura/std",
     "pallet-grandpa/std",
+    "pallet-im-online/std",
     "pallet-randomness-collective-flip/std",
     "pallet-sudo/std",
-    "pallet-timestamp/std",
     "pallet-session/std",
+    "pallet-offences/std",
+    "pallet-timestamp/std",
     "pallet-utility/std",
 
     "chainx-primitives/std",

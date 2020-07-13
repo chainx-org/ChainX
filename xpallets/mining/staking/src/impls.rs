@@ -2,10 +2,10 @@ use super::*;
 use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
-use sp_runtime::traits::Hash;
+use sp_runtime::{traits::Hash, Perbill};
+use sp_staking::offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence};
 use xp_mining_common::{
-    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, RewardPotAccountFor,
-    WeightFactors, WeightType,
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
 use xp_mining_staking::SessionIndex;
 
@@ -186,7 +186,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
             claimer, claimee, current_block
         )?;
 
-        let claimee_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
+        let claimee_pot = Self::reward_pot_for(claimee);
 
         let dividend = compute_dividend::<T>(source_weight, target_weight, &claimee_pot);
 
@@ -205,11 +205,17 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 
 impl<T: Trait> Module<T> {
     fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-        // No reward but only slash for these offline validators that are inactive atm.
-        // Self::slash_inactive_offline_validators();
-
         // TODO: the whole flow of session changes?
-        Self::distribute_session_reward(session_index);
+        //
+        // Only the active validators can be rewarded.
+        let staking_reward = Self::distribute_session_reward(session_index);
+
+        let force_chilled = Self::slash_offenders_in_session(staking_reward);
+
+        if force_chilled > 0 {
+            // Force a new era if some offender's reward pot has been wholly slashed.
+            Self::ensure_new_era();
+        }
 
         debug!(
             "[new_session]session_index:{:?}, current_era:{:?}",
@@ -296,7 +302,7 @@ impl<T: Trait> Module<T> {
     /// * Increment `active_era.index`,
     /// * reset `active_era.start`,
     /// * update `BondedEras` and apply slashes.
-    fn start_era(start_session: SessionIndex) {
+    fn start_era(_start_session: SessionIndex) {
         let active_era = ActiveEra::mutate(|active_era| {
             let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(0);
             *active_era = Some(ActiveEraInfo {
@@ -331,6 +337,64 @@ impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
     }
     fn end_session(end_index: SessionIndex) {
         Self::end_session(end_index)
+    }
+}
+
+type OnOffenceRes = u64;
+/// Validator ID that reported this offence.
+type Reporter<T> = <T as frame_system::Trait>::AccountId;
+
+/// Substrate:
+/// A tuple of the validator's ID and their full identification.
+/// pub type IdentificationTuple<T> = (<T as crate::Trait>::ValidatorId, <T as Trait>::FullIdentification);
+/// ChainX:
+/// We do not have the FullIdentification info, but the reward pot.
+pub type IdentificationTuple<T> = (
+    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Trait>::AccountId,
+);
+
+/// Stable ID of a validator.
+type Offender<T> = IdentificationTuple<T>;
+
+/// This is intended to be used with `FilterHistoricalOffences` in Substrate/Staking.
+/// In ChainX, we always apply the slash immediately, no deferred slash.
+impl<T: Trait> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, OnOffenceRes> for Module<T>
+where
+    T: pallet_session::Trait<ValidatorId = <T as frame_system::Trait>::AccountId>,
+    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Trait>::AccountId>,
+    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Trait>::AccountId>,
+    T::ValidatorIdOf: Convert<
+        <T as frame_system::Trait>::AccountId,
+        Option<<T as frame_system::Trait>::AccountId>,
+    >,
+{
+    fn on_offence(
+        offenders: &[OffenceDetails<Reporter<T>, Offender<T>>],
+        slash_fraction: &[Perbill],
+        _slash_session: SessionIndex,
+    ) -> Result<OnOffenceRes, ()> {
+        for (details, _slash_fraction) in offenders.iter().zip(slash_fraction) {
+            // TODO: reward reporters?
+
+            let (offender, _) = &details.offender;
+
+            // FIXME: record the offenders by session_index?
+            <OffendersInSession<T>>::mutate(|offenders| {
+                if !offenders.contains(offender) {
+                    offenders.push(offender.clone())
+                }
+            });
+
+            <OffenceCountInSession<T>>::mutate(offender, |cnt| {
+                *cnt += 1;
+            });
+        }
+        Ok(0)
+    }
+
+    fn can_report() -> bool {
+        true
     }
 }
 
