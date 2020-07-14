@@ -6936,6 +6936,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-io"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+ "sp-runtime-interface",
+]
+
+[[package]]
 name = "xp-mining-common"
 version = "0.1.0"
 dependencies = [
@@ -7020,6 +7031,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "xp-io",
  "xpallet-assets",
  "xpallet-protocol",
  "xpallet-support",

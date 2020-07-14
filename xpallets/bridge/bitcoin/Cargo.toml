@@ -20,6 +20,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = 
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
+xp-io = { path = "../../../primitives/io", default-features = false }
 
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
@@ -50,6 +51,7 @@ std = [
     "pallet-timestamp/std",
 
     "chainx-primitives/std",
+    "xp-io/std",
 
     "xpallet-assets/std",
     "xpallet-protocol/std",
