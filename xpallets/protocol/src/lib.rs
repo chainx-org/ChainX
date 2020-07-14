@@ -98,5 +98,5 @@ mod network {
     }
 
     pub const MAINNET_ADDR_VER: AddrVersion = 44;
-    pub const TESTNET_ADDR_VER: AddrVersion = 45;
+    pub const TESTNET_ADDR_VER: AddrVersion = 42; // 42 is Ss58AddressFormat::SubstrateAccount
 }
