@@ -7068,6 +7068,7 @@ name = "xpallet-contracts-rpc"
 version = "0.8.0-rc4"
 dependencies = [
  "chainx-primitives",
+ "hex",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",

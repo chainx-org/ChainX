@@ -126,14 +126,6 @@ impl From<ContractExecResult> for RpcContractExecResult {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum RpcXRC20Result {
-    Hex(Bytes),
-    Str(String),
-    Num(u8),
-}
-
 /// Contracts RPC methods.
 #[rpc]
 pub trait ContractsApi<BlockHash, BlockNumber, AccountId, Balance> {
@@ -165,7 +157,7 @@ pub trait ContractsApi<BlockHash, BlockNumber, AccountId, Balance> {
         &self,
         call_request: XRC20CallRequest,
         at: Option<BlockHash>,
-    ) -> Result<RpcXRC20Result>;
+    ) -> Result<String>;
 }
 
 /// An implementation of contract specific RPC methods.
@@ -291,7 +283,7 @@ where
         &self,
         call_request: XRC20CallRequest,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<RpcXRC20Result> {
+    ) -> Result<String> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
@@ -312,18 +304,18 @@ where
                     XRC20Selector::BalanceOf | XRC20Selector::TotalSupply => {
                         let v: Balance =
                             Decode::decode(&mut data.as_slice()).map_err(decode_err)?;
-                        RpcXRC20Result::Str(v.to_string())
+                        v.to_string()
                     }
                     XRC20Selector::Name | XRC20Selector::Symbol => {
                         let v: Vec<u8> =
                             Decode::decode(&mut data.as_slice()).map_err(decode_err)?;
-                        RpcXRC20Result::Str(String::from_utf8_lossy(&v).into_owned())
+                        String::from_utf8_lossy(&v).into_owned()
                     }
                     XRC20Selector::Decimals => {
                         let v: u8 = Decode::decode(&mut data.as_slice()).map_err(decode_err)?;
-                        RpcXRC20Result::Num(v)
+                        v.to_string()
                     }
-                    _ => RpcXRC20Result::Hex(Bytes(data)),
+                    _ => hex::encode(data),
                 };
                 Ok(result)
             }
