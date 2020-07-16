@@ -10,7 +10,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use chainx_primitives::{AssetId, Memo};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
@@ -19,19 +18,19 @@ use frame_support::{
     traits::Get,
     weights::{DispatchInfo, GetDispatchInfo, PostDispatchInfo, Weight},
 };
-use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{
-    Convert, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SaturatedConversion, Saturating,
-    SignedExtension, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
-};
+use frame_system::{self as system, ensure_root, ensure_signed};
+use sp_runtime::traits::{SaturatedConversion, Zero};
 use sp_std::prelude::*;
-use types::*;
+
+use chainx_primitives::AssetId;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, MiningWeight, RewardPotAccountFor, WeightType,
     ZeroMiningWeightError,
 };
-use xpallet_assets::{AssetErr, AssetType};
-use xpallet_support::{debug, warn};
+use xpallet_assets::AssetType;
+use xpallet_support::warn;
+
+use types::*;
 
 pub use impls::SimpleAssetRewardPotAccountDeterminer;
 
@@ -68,6 +67,21 @@ decl_storage! {
         pub XTypeAssetPowerMap get(fn x_type_asset_power_map):
             map hasher(twox_64_concat) AssetId => FixedAssetPower;
     }
+    add_extra_genesis {
+        config(claim_restrictions): Vec<(AssetId, (StakingRequirement, T::BlockNumber))>;
+        config(mining_power_map): Vec<(AssetId, FixedAssetPower)>;
+        build(|config| {
+            for (asset_id, (staking_requirement, frequency_limit)) in &config.claim_restrictions {
+                ClaimRestrictionOf::<T>::insert(asset_id, ClaimRestriction {
+                    staking_requirement: *staking_requirement,
+                    frequency_limit: *frequency_limit
+                });
+            }
+            for(asset_id, fixed_power) in &config.mining_power_map {
+                XTypeAssetPowerMap::insert(asset_id, fixed_power);
+            }
+        });
+    }
 }
 
 decl_event!(
@@ -93,13 +107,13 @@ decl_error! {
         ///
         AssetError,
         ///
-        ZeroVoteWeight
+        ZeroMiningWeight
     }
 }
 
 impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
-    fn from(e: ZeroMiningWeightError) -> Self {
-        Self::ZeroVoteWeight
+    fn from(_: ZeroMiningWeightError) -> Self {
+        Self::ZeroMiningWeight
     }
 }
 
@@ -126,6 +140,21 @@ decl_module! {
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
+        #[weight = 10]
+        fn set_claim_staking_requirement(origin, asset_id: AssetId, new: StakingRequirement) {
+            ensure_root(origin)?;
+            ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
+                restriction.staking_requirement = new;
+            });
+        }
+
+        #[weight = 10]
+        fn set_claim_frequency_limit(origin, asset_id: AssetId, new: T::BlockNumber) {
+            ensure_root(origin)?;
+            ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
+                restriction.frequency_limit = new;
+            });
+        }
     }
 }
 
@@ -185,6 +214,10 @@ impl<T: Trait> Module<T> {
         if !staking_requirement.is_zero() {
             let staking_locked =
                 <xpallet_assets::Module<T>>::pcx_type_balance(who, AssetType::ReservedStaking);
+            println!(
+                "total_dividend: {:?}, staking_locked:{:?}",
+                total_dividend, staking_locked
+            );
             if staking_locked < staking_requirement.saturated_into::<T::Balance>() * total_dividend
             {
                 warn!(

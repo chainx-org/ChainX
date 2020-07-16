@@ -1,6 +1,7 @@
 use super::*;
 use crate::mock::*;
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_err, assert_ok, traits::OnInitialize};
+use xp_mining_staking::SessionIndex;
 use xpallet_protocol::X_BTC;
 
 fn t_system_block_number_inc(number: BlockNumber) {
@@ -53,6 +54,23 @@ fn t_xbtc_latest_weight_of(who: AccountId) -> WeightType {
         &X_BTC,
         System::block_number().saturated_into(),
     )
+}
+
+fn t_start_session(session_index: SessionIndex) {
+    assert_eq!(
+        <Period as Get<BlockNumber>>::get(),
+        1,
+        "start_session can only be used with session length 1."
+    );
+    for i in Session::current_index()..session_index {
+        // XStaking::on_finalize(System::block_number());
+        System::set_block_number((i + 1).into());
+        Timestamp::set_timestamp(System::block_number() * 1000 + INIT_TIMESTAMP);
+        Session::on_initialize(System::block_number());
+        // XStaking::on_initialize(System::block_number());
+    }
+
+    assert_eq!(Session::current_index(), session_index);
 }
 
 #[test]
@@ -219,6 +237,70 @@ fn sum_of_miner_weights_and_asset_total_weights_should_equal() {
                 .into_iter()
                 .map(|who| t_xbtc_latest_weight_of(who))
                 .sum()
+        );
+    });
+}
+
+#[test]
+fn claim_frequency_limit_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(t_register_xbtc());
+        // Block 1
+        t_start_session(1);
+
+        let t_1 = 777;
+        assert_ok!(t_issue_xbtc(t_1, 100));
+        // Block 2
+        t_start_session(2);
+        assert_ok!(XMiningAsset::set_claim_frequency_limit(
+            frame_system::RawOrigin::Root.into(),
+            X_BTC,
+            3
+        ));
+
+        println!(
+            "claim result: {:?}",
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        );
+        println!("previliged assets : {:?}", MiningPrevilegedAssets::get());
+        println!(
+            "restriction of : {:?}",
+            <ClaimRestrictionOf<Test>>::get(X_BTC)
+        );
+        println!("claimed: {:?}", <MinerLedgers<Test>>::get(t_1, X_BTC));
+        // Block 3
+        t_start_session(3);
+        println!(
+            "claim result: {:?}",
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        );
+        // Block 4
+        t_start_session(4);
+
+        println!(
+            "claim result: {:?}",
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        );
+        // Block 5
+        t_start_session(5);
+
+        println!(
+            "claim result: {:?}",
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        );
+        // Block 6
+        t_start_session(6);
+
+        println!(
+            "claim result: {:?}",
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        );
+        // Block 7
+        t_start_session(7);
+
+        println!(
+            "claim result: {:?}",
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
         );
     });
 }
