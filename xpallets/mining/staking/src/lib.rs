@@ -298,7 +298,7 @@ decl_module! {
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
             ensure!(value <= Self::free_balance_of(&sender), Error::<T>::InsufficientBalance);
             if !Self::is_validator_self_bonding(&sender, &target) {
-                Self::check_validator_acceptable_votes_limit(&sender, value)?;
+                Self::check_validator_acceptable_votes_limit(&target, value)?;
             }
 
             Self::apply_bond(&sender, &target, value)?;

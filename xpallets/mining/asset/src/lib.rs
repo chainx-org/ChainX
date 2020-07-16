@@ -214,10 +214,6 @@ impl<T: Trait> Module<T> {
         if !staking_requirement.is_zero() {
             let staking_locked =
                 <xpallet_assets::Module<T>>::pcx_type_balance(who, AssetType::ReservedStaking);
-            println!(
-                "total_dividend: {:?}, staking_locked:{:?}",
-                total_dividend, staking_locked
-            );
             if staking_locked < staking_requirement.saturated_into::<T::Balance>() * total_dividend
             {
                 warn!(

@@ -123,7 +123,6 @@ impl<T: Trait> Module<T> {
         _dividend: T::Balance,
     ) -> Result<(), Error<T>> {
         // todo!("referral_or_treasury 10%, claimer 90%")
-        println!("allocate_dividend");
         Ok(())
     }
 }

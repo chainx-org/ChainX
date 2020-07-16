@@ -8,6 +8,10 @@ fn t_system_block_number_inc(number: BlockNumber) {
     System::set_block_number((System::block_number() + number).into());
 }
 
+fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
+    XStaking::bond(Origin::signed(who), target, value, b"memo".as_ref().into())
+}
+
 fn t_issue_xbtc(to: AccountId, value: Balance) -> DispatchResult {
     XAssets::issue(&X_BTC, &to, value)
 }
@@ -54,6 +58,22 @@ fn t_xbtc_latest_weight_of(who: AccountId) -> WeightType {
         &X_BTC,
         System::block_number().saturated_into(),
     )
+}
+
+fn t_xbtc_set_claim_frequency_limit(new: BlockNumber) {
+    assert_ok!(XMiningAsset::set_claim_frequency_limit(
+        frame_system::RawOrigin::Root.into(),
+        X_BTC,
+        new
+    ));
+}
+
+fn t_xbtc_set_claim_staking_requirement(new: StakingRequirement) {
+    assert_ok!(XMiningAsset::set_claim_staking_requirement(
+        frame_system::RawOrigin::Root.into(),
+        X_BTC,
+        new
+    ));
 }
 
 fn t_start_session(session_index: SessionIndex) {
@@ -242,65 +262,61 @@ fn sum_of_miner_weights_and_asset_total_weights_should_equal() {
 }
 
 #[test]
-fn claim_frequency_limit_should_work() {
+fn claim_restriction_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         assert_ok!(t_register_xbtc());
-        // Block 1
-        t_start_session(1);
-
         let t_1 = 777;
         assert_ok!(t_issue_xbtc(t_1, 100));
+
+        // Block 1
+        t_start_session(1);
+        t_xbtc_set_claim_frequency_limit(2);
+        t_xbtc_set_claim_staking_requirement(0);
+
         // Block 2
         t_start_session(2);
-        assert_ok!(XMiningAsset::set_claim_frequency_limit(
-            frame_system::RawOrigin::Root.into(),
-            X_BTC,
-            3
-        ));
+        assert_ok!(XMiningAsset::claim(Origin::signed(t_1), X_BTC));
 
-        println!(
-            "claim result: {:?}",
-            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
-        );
-        println!("previliged assets : {:?}", MiningPrevilegedAssets::get());
-        println!(
-            "restriction of : {:?}",
-            <ClaimRestrictionOf<Test>>::get(X_BTC)
-        );
-        println!("claimed: {:?}", <MinerLedgers<Test>>::get(t_1, X_BTC));
         // Block 3
         t_start_session(3);
-        println!(
-            "claim result: {:?}",
-            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        assert_err!(
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC),
+            Error::<Test>::UnexpiredFrequencyLimit
         );
+
         // Block 4
         t_start_session(4);
-
-        println!(
-            "claim result: {:?}",
-            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        assert_err!(
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC),
+            Error::<Test>::UnexpiredFrequencyLimit
         );
+
         // Block 5
         t_start_session(5);
+        assert_ok!(XMiningAsset::claim(Origin::signed(t_1), X_BTC));
 
-        println!(
-            "claim result: {:?}",
-            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
-        );
         // Block 6
         t_start_session(6);
-
-        println!(
-            "claim result: {:?}",
-            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        t_xbtc_set_claim_frequency_limit(0);
+        t_xbtc_set_claim_staking_requirement(10);
+        assert_err!(
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC),
+            Error::<Test>::InsufficientStaking
         );
+
         // Block 7
         t_start_session(7);
-
-        println!(
-            "claim result: {:?}",
-            XMiningAsset::claim(Origin::signed(t_1), X_BTC)
+        assert_ok!(XAssets::pcx_issue(&1, 100_000));
+        assert_ok!(XAssets::pcx_issue(&t_1, 100_000));
+        assert_ok!(t_bond(1, 1, 10_000));
+        // total dividend: 28
+        assert_ok!(t_bond(t_1, 1, 280 - 1));
+        assert_err!(
+            XMiningAsset::claim(Origin::signed(t_1), X_BTC),
+            Error::<Test>::InsufficientStaking
         );
+
+        assert_ok!(t_bond(t_1, 1, 1));
+        assert_ok!(XMiningAsset::claim(Origin::signed(t_1), X_BTC));
     });
 }
