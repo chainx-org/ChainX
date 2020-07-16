@@ -117,12 +117,13 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
 
 impl<T: Trait> Module<T> {
     fn allocate_dividend(
-        _claimer: &T::AccountId,
+        claimer: &T::AccountId,
         _claimee: &AssetId,
         _claimee_reward_pot: &T::AccountId,
-        _dividend: T::Balance,
+        dividend: T::Balance,
     ) -> Result<(), Error<T>> {
         // todo!("referral_or_treasury 10%, claimer 90%")
+        let _ = xpallet_assets::Module::<T>::pcx_issue(claimer, dividend);
         Ok(())
     }
 }

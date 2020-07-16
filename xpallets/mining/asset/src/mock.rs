@@ -187,14 +187,27 @@ impl pallet_session::Trait for Test {
 
 pub struct DummyTreasuryAccount;
 
+pub(crate) const VESTING_ACCOUNT: AccountId = 10_000;
+pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
+
 impl xp_mining_staking::TreasuryAccount<AccountId> for DummyTreasuryAccount {
     fn treasury_account() -> AccountId {
-        100_000
+        TREASURY_ACCOUNT
     }
 }
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = 50;
+}
+
+pub struct DummyStakingRewardPotAccountDeterminer;
+
+impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
+    for DummyStakingRewardPotAccountDeterminer
+{
+    fn reward_pot_account_for(validator: &AccountId) -> AccountId {
+        10_000_000 + u64::from(*validator)
+    }
 }
 
 impl xpallet_mining_staking::Trait for Test {
@@ -203,7 +216,7 @@ impl xpallet_mining_staking::Trait for Test {
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
-    type DetermineRewardPotAccount = ();
+    type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;
 }
 
 pub struct DummyAssetRewardPotAccountDeterminer;
@@ -212,7 +225,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AssetId>
     for DummyAssetRewardPotAccountDeterminer
 {
     fn reward_pot_account_for(asset_id: &AssetId) -> AccountId {
-        100_000 + u64::from(*asset_id)
+        1_000_000 + u64::from(*asset_id)
     }
 }
 
@@ -311,6 +324,7 @@ impl ExtBuilder {
             validators: vec![(1, 10), (2, 20), (3, 30), (4, 40)],
             validator_count: 6,
             sessions_per_era: 3,
+            vesting_account: VESTING_ACCOUNT,
             ..Default::default()
         }
         .assimilate_storage(&mut storage);

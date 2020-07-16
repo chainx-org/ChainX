@@ -100,13 +100,13 @@ decl_error! {
     pub enum Error for Module<T: Trait> {
         /// The asset does not have the mining rights.
         UnprevilegedAsset,
-        ///
+        /// Claimer does not have enough Staking locked balance.
         InsufficientStaking,
-        ///
+        /// Claimer just did a claim recently, the next frequency limit is not expired.
         UnexpiredFrequencyLimit,
-        ///
+        /// Asset error.
         AssetError,
-        ///
+        /// Zero mining weight.
         ZeroMiningWeight
     }
 }
@@ -119,13 +119,9 @@ impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-
         type Error = Error<T>;
 
         fn deposit_event() = default;
-
-        fn on_finalize() {
-        }
 
         /// Claims the staking reward given the `target` validator.
         #[weight = 10]
@@ -265,7 +261,6 @@ impl<T: Trait> Module<T> {
         new_weight: WeightType,
         current_block: T::BlockNumber,
     ) {
-        // TODO: use mutate?
         let mut inner = MinerLedgers::<T>::get(from, target);
         let mut wrapper = MinerLedgerWrapper::<T>::new(from, target, &mut inner);
         wrapper.set_state_weight(new_weight, current_block);

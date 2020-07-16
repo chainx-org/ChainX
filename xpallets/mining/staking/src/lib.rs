@@ -34,7 +34,7 @@ use types::*;
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 
 /// Session reward of the first 210_000 sessions.
-const INITIAL_REWARD: u64 = 50;
+const INITIAL_REWARD: u64 = 5_000_000_000;
 /// Every 210_000 sessions, the session reward is cut in half.
 ///
 /// ChainX follows the issuance rule of Bitcoin. The `Session` in ChainX

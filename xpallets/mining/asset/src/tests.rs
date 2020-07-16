@@ -320,3 +320,37 @@ fn claim_restriction_should_work() {
         assert_ok!(XMiningAsset::claim(Origin::signed(t_1), X_BTC));
     });
 }
+
+#[test]
+fn total_issuance_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        let validators = vec![1, 2, 3, 4];
+        let validators_reward_pot = validators
+            .iter()
+            .map(DummyStakingRewardPotAccountDeterminer::reward_pot_account_for)
+            .collect::<Vec<_>>();
+
+        let mut all = Vec::new();
+        all.extend_from_slice(&validators);
+        all.extend_from_slice(&validators_reward_pot);
+        all.push(VESTING_ACCOUNT);
+        all.push(TREASURY_ACCOUNT);
+        all.push(DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&X_BTC));
+
+        let total_issuance = || {
+            all.iter()
+                .map(|x| XAssets::pcx_free_balance(x))
+                .sum::<u128>()
+        };
+
+        let initial = total_issuance();
+        t_start_session(1);
+        assert_eq!(total_issuance() - initial, 5_000_000_000);
+
+        t_start_session(2);
+        assert_eq!(total_issuance() - initial, 5_000_000_000 * 2);
+
+        t_start_session(3);
+        assert_eq!(total_issuance() - initial, 5_000_000_000 * 3);
+    });
+}
