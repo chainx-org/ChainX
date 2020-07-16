@@ -551,6 +551,7 @@ dependencies = [
  "xpallet-assets-rpc-runtime-api",
  "xpallet-contracts-rpc",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-gateway-records-rpc",
  "xpallet-transaction-payment-rpc",
 ]
 
@@ -596,6 +597,8 @@ dependencies = [
  "xpallet-contracts-rpc-runtime-api",
  "xpallet-dex-spot",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-records",
+ "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-mining-asset",
  "xpallet-mining-staking",
  "xpallet-protocol",
@@ -7139,10 +7142,42 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "serde",
+ "sp-runtime",
  "sp-std",
  "xpallet-assets",
  "xpallet-protocol",
  "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-records-rpc"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xpallet-assets",
+ "xpallet-gateway-records-rpc-runtime-api",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-records-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-gateway-records",
 ]
 
 [[package]]

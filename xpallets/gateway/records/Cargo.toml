@@ -10,6 +10,7 @@ serde = { version = "1.0", optional = true }
 
 # Substrate
 sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
@@ -31,6 +32,7 @@ std = [
 
     # Substrate
     "sp-std/std",
+    "sp-runtime/std",
     "frame-support/std",
     "frame-system/std",
 

@@ -48,6 +48,8 @@ xp-mining-staking = { path = "../primitives/mining/staking", default-features = 
 # ChainX pallets
 xpallet-assets = { path = "../xpallets/assets", default-features = false }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api", default-features = false }
+xpallet-gateway-records = { path = "../xpallets/gateway/records", default-features = false }
+xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api", default-features = false }
 xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin", default-features = false }
 xpallet-contracts = { path = "../xpallets/contracts", default-features = false }
 xpallet-contracts-primitives = { path = "../xpallets/contracts/common", default-features = false }
@@ -102,6 +104,8 @@ std = [
 
     "xpallet-assets/std",
     "xpallet-assets-rpc-runtime-api/std",
+    "xpallet-gateway-records/std",
+    "xpallet-gateway-records-rpc-runtime-api/std",
     "xpallet-gateway-bitcoin/std",
     "xpallet-contracts/std",
     "xpallet-contracts-primitives/std",
