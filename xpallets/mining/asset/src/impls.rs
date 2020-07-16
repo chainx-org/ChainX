@@ -3,7 +3,8 @@ use codec::Encode;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::Hash;
 use xp_mining_common::{
-    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
+    compute_dividend, generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight,
+    WeightFactors, WeightType,
 };
 
 impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
@@ -82,7 +83,11 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
         Self::update_mining_weights(source, target, current_block);
     }
 
-    fn on_issue_post(target: &AssetId, source: &T::AccountId, value: T::Balance) -> DispatchResult {
+    fn on_issue_post(
+        target: &AssetId,
+        source: &T::AccountId,
+        _value: T::Balance,
+    ) -> DispatchResult {
         Self::issue_reward(source, target);
         Ok(())
     }
@@ -134,7 +139,12 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
         )?;
 
         let claimee_reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
-        let dividend = Self::compute_dividend(source_weight, target_weight, &claimee_reward_pot);
+        let dividend = compute_dividend::<T::AccountId, T::Balance, _>(
+            source_weight,
+            target_weight,
+            &claimee_reward_pot,
+            xpallet_assets::Module::<T>::pcx_free_balance,
+        );
 
         Self::can_claim(claimer, claimee, dividend, current_block)?;
 

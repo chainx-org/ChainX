@@ -31,7 +31,7 @@ use xp_mining_common::{
     ZeroMiningWeightError,
 };
 use xpallet_assets::{AssetErr, AssetType};
-use xpallet_support::debug;
+use xpallet_support::{debug, warn};
 
 pub use impls::SimpleAssetRewardPotAccountDeterminer;
 
@@ -87,9 +87,9 @@ decl_error! {
         /// The asset does not have the mining rights.
         UnprevilegedAsset,
         ///
-        InvalidUnbondedIndex,
+        InsufficientStaking,
         ///
-        UnbondRequestNotYetDue,
+        UnexpiredFrequencyLimit,
         ///
         AssetError,
         ///
@@ -133,9 +133,69 @@ impl<T: Trait> Module<T> {
     fn can_claim(
         claimer: &T::AccountId,
         claimee: &AssetId,
-        dividend: T::Balance,
+        total_dividend: T::Balance,
         current_block: T::BlockNumber,
     ) -> Result<(), Error<T>> {
+        let ClaimRestriction {
+            staking_requirement,
+            frequency_limit,
+        } = ClaimRestrictionOf::<T>::get(claimee);
+
+        Self::passed_enough_interval(claimer, claimee, frequency_limit, current_block)?;
+        Self::has_enough_staking(claimer, total_dividend, staking_requirement)?;
+
+        Ok(())
+    }
+
+    #[inline]
+    fn last_claim(who: &T::AccountId, asset_id: &AssetId) -> Option<T::BlockNumber> {
+        MinerLedgers::<T>::get(who, asset_id).last_claim
+    }
+
+    /// This rule doesn't take effect if the interval is zero.
+    fn passed_enough_interval(
+        who: &T::AccountId,
+        asset_id: &AssetId,
+        frequency_limit: T::BlockNumber,
+        current_block: T::BlockNumber,
+    ) -> Result<(), Error<T>> {
+        if !frequency_limit.is_zero() {
+            if let Some(last_claim) = Self::last_claim(who, asset_id) {
+                if current_block <= last_claim + frequency_limit {
+                    warn!(
+                        "{:?} can not claim until block {:?}",
+                        who,
+                        last_claim + frequency_limit
+                    );
+                    return Err(Error::<T>::UnexpiredFrequencyLimit);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Returns Ok(_) if the claimer has enough staking locked balance regarding the `total_dividend`.
+    ///
+    /// This rule doesn't take effect if the staking requirement is zero.
+    fn has_enough_staking(
+        who: &T::AccountId,
+        total_dividend: T::Balance,
+        staking_requirement: StakingRequirement,
+    ) -> Result<(), Error<T>> {
+        if !staking_requirement.is_zero() {
+            let staking_locked =
+                <xpallet_assets::Module<T>>::pcx_type_balance(who, AssetType::ReservedStaking);
+            if staking_locked < staking_requirement.saturated_into::<T::Balance>() * total_dividend
+            {
+                warn!(
+                    "cannot claim due to the insufficient staking, total dividend: {:?}, staking locked: {:?}, required staking: {:?}",
+                    total_dividend,
+                    staking_locked,
+                    staking_requirement.saturated_into::<T::Balance>() * total_dividend
+                );
+                return Err(Error::<T>::InsufficientStaking);
+            }
+        }
         Ok(())
     }
 
@@ -214,17 +274,5 @@ impl<T: Trait> Module<T> {
 
     fn issue_reward(who: &T::AccountId, asset_id: &AssetId) {
         let reward = Self::deposit_reward();
-    }
-
-    fn compute_dividend(
-        source_weight: WeightType,
-        target_weight: WeightType,
-        claimee_reward_pot: &T::AccountId,
-    ) -> T::Balance {
-        todo!()
-    }
-
-    fn asset_reward_pot_of(asset_id: &AssetId) -> T::AccountId {
-        todo!()
     }
 }
