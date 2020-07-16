@@ -7,14 +7,12 @@ use support::{dispatch::Result, StorageMap, StorageValue};
 // ChainX
 use xr_primitives::Name;
 
-use xbridge_common::traits::{CrossChainBinding, Extractable};
-use xfee_manager;
+// use xbridge_common::traits::{CrossChainBinding, Extractable};
+// use xfee_manager;
 use xpallet_assets::{self, ChainT};
 
+use xpallet_support::{debug, error, info, warn};
 use xrecords;
-#[cfg(feature = "std")]
-use xsupport::try_hex_or_str;
-use xsupport::{debug, error, info, warn};
 
 // light-bitcoin
 use btc_chain::Transaction;
@@ -26,8 +24,6 @@ use crate::types::{BTCTxInfo, DepositAccountInfo, DepositCache, TxType};
 use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait, TxMarkFor};
 
 use super::utils::{addr2vecu8, ensure_identical, get_hot_trustee_address, is_key, parse_opreturn};
-
-use crate::lockup::{handle_lockup_tx, handle_unlock_tx};
 
 pub struct TxHandler {
     pub tx_hash: H256,
@@ -63,9 +59,6 @@ impl TxHandler {
             }
             TxType::Deposit => {
                 self.deposit::<T>()?;
-            }
-            TxType::Lock | TxType::Unlock => {
-                handle_lockup_tx::<T::XBitcoinLockup>(self)?;
             }
             _ => {
                 info!(
@@ -116,10 +109,10 @@ impl TxHandler {
                         tx_hash.as_bytes().to_vec(),
                     ));
 
-                    let _ = xfee_manager::Module::<T>::modify_switcher(
-                        xfee_manager::CallSwitcher::XBTC,
-                        true,
-                    );
+                    // let _ = xfee_manager::Module::<T>::modify_switcher(
+                    //     xfee_manager::CallSwitcher::XBTC,
+                    //     true,
+                    // );
 
                     return Err(e);
                 }
@@ -185,9 +178,6 @@ impl TxHandler {
             }
         };
         // deposit
-
-        // handle locked utxo, if any error in it, just print error log
-        handle_unlock_tx::<T::XBitcoinLockup>(&self.tx_info.raw_tx, &self.tx_hash);
 
         // deposit for this account or store this deposit cache
         let deposit_account = match deposit_account_info {

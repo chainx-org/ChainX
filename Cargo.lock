@@ -591,11 +591,11 @@ dependencies = [
  "xp-mining-staking",
  "xpallet-assets",
  "xpallet-assets-rpc-runtime-api",
- "xpallet-bridge-bitcoin",
  "xpallet-contracts",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
  "xpallet-dex-spot",
+ "xpallet-gateway-bitcoin",
  "xpallet-mining-asset",
  "xpallet-mining-staking",
  "xpallet-protocol",
@@ -7012,32 +7012,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xpallet-bridge-bitcoin"
-version = "0.1.0"
-dependencies = [
- "chain",
- "chainx-primitives",
- "crypto",
- "frame-support",
- "frame-system",
- "keys",
- "merkle",
- "pallet-timestamp",
- "parity-scale-codec",
- "primitives",
- "script",
- "serde",
- "serialization",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "xp-io",
- "xpallet-assets",
- "xpallet-protocol",
- "xpallet-support",
-]
-
-[[package]]
 name = "xpallet-contracts"
 version = "2.0.0-rc4"
 dependencies = [
@@ -7123,6 +7097,48 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-protocol",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin"
+version = "0.1.0"
+dependencies = [
+ "chain",
+ "chainx-primitives",
+ "crypto",
+ "frame-support",
+ "frame-system",
+ "keys",
+ "merkle",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "primitives",
+ "script",
+ "serde",
+ "serialization",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xp-io",
+ "xpallet-assets",
+ "xpallet-gateway-records",
+ "xpallet-protocol",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-records"
+version = "1.0.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
  "sp-std",
  "xpallet-assets",
  "xpallet-protocol",

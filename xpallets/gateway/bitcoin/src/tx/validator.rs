@@ -1,31 +1,24 @@
 // Copyright 2018-2019 Chainpool.
 
 // Substrate
-use primitives::traits::MaybeDebug;
-use sp_std::{prelude::Vec, result};
-use support::dispatch::Result;
+use frame_support::dispatch::{DispatchError, DispatchResult};
+use sp_core::ecdsa::{Public, Signature as EcdsaSign};
+use sp_std::{convert::TryFrom, prelude::Vec, result};
 // light-bitcoin
 use btc_chain::Transaction;
-use btc_keys::Public;
+// use btc_keys::Public;
 use btc_primitives::{Bytes, H256};
-use btc_script::{
-    Script, SignatureChecker, SignatureVersion, TransactionInputSigner, TransactionSignatureChecker,
-};
+use btc_script::{Script, SignatureChecker, SignatureVersion, TransactionInputSigner};
 
-use crate::traits::RelayTransaction;
 use crate::tx::utils::get_hot_trustee_redeem_script;
+use crate::types::RelayedTx;
 use crate::Trait;
 
 // ChainX
-#[cfg(feature = "std")]
-use xsupport::u8array_to_hex;
-use xsupport::{debug, error};
+use xpallet_support::{debug, error};
 
-pub fn validate_transaction<T: Trait, RT: RelayTransaction + MaybeDebug>(
-    tx: &RT,
-    merkle_root: H256,
-) -> Result {
-    let tx_hash = tx.tx_hash();
+pub fn validate_transaction<T: Trait>(tx: &RelayedTx, merkle_root: H256) -> DispatchResult {
+    let tx_hash = tx.raw.hash();
     debug!(
         "[validate_transaction]|txhash:{:}|relay tx:{:?}",
         tx_hash, tx
@@ -61,6 +54,37 @@ pub fn validate_transaction<T: Trait, RT: RelayTransaction + MaybeDebug>(
     Ok(())
 }
 
+pub struct TransactionSignatureChecker {
+    pub signer: TransactionInputSigner,
+    pub input_index: usize,
+    pub input_amount: u64,
+}
+
+impl TransactionSignatureChecker {
+    // fn verify_signature(&self, signature: &EcdsaSign, public: &Public, hash: &Message) -> bool {
+    //     // public.verify(hash, signature).unwrap_or(false)
+    //     bool
+    // }
+
+    fn check_signature(
+        &self,
+        signature: &EcdsaSign,
+        public: &Public,
+        script_code: &Script,
+        sighashtype: u32,
+        version: SignatureVersion,
+    ) -> bool {
+        let hash = self.signer.signature_hash(
+            self.input_index,
+            self.input_amount,
+            script_code,
+            version,
+            sighashtype,
+        );
+        verify_signature(signature, public, &hash)
+    }
+}
+
 fn verify_sig(
     sig: &Bytes,
     pubkey: &Bytes,
@@ -76,26 +100,30 @@ fn verify_sig(
         signer: tx_signer,
     };
     let sighashtype = 1; // Sighsh all
-    let signature = sig.clone().take().into();
-    let public = if let Ok(public) = Public::from_slice(pubkey.as_slice()) {
-        public
-    } else {
-        return false;
-    };
+                         // let signature = sig.clone().take().into();
+    let signature = EcdsaSign::try_from(sig)?;
+    let pubkey = Public::from_full(pubkey)?;
+    // let public = if let Ok(public) = Public::from_slice(pubkey.as_slice()) {
+    //     public
+    // } else {
+    //     return false;
+    // };
 
     //privous tx's output script_pubkey
     let script_code: Script = script_pubkey.clone().into();
-    return checker.check_signature(
+    checker.check_signature(
         &signature,
-        &public,
+        &pubkey,
         &script_code,
         sighashtype,
         SignatureVersion::Base,
-    );
+    )
+    // // TODO
+    // true
 }
 
 /// Check signed transactions
-pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, &'static str> {
+pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, DispatchError> {
     let redeem_script = get_hot_trustee_redeem_script::<T>()?;
     parse_and_check_signed_tx_impl(tx, redeem_script)
 }
@@ -105,7 +133,7 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u
 pub fn parse_and_check_signed_tx_impl(
     tx: &Transaction,
     script: Script,
-) -> result::Result<u32, &'static str> {
+) -> result::Result<u32, DispatchError> {
     let (pubkeys, _, _) = script
         .parse_redeem_script()
         .ok_or("Parse redeem script failed")?;

@@ -1,5 +1,5 @@
 [package]
-name = "xpallet-bridge-bitcoin"
+name = "xpallet-gateway-bitcoin"
 version = "0.1.0"
 authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
@@ -26,6 +26,7 @@ xp-io = { path = "../../../primitives/io", default-features = false }
 xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
+xpallet-gateway-records = { path = "../records", default-features = false }
 
 # light-bitcoin
 btc-chain = { package = "chain", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
@@ -56,6 +57,7 @@ std = [
     "xpallet-assets/std",
     "xpallet-protocol/std",
     "xpallet-support/std",
+    "xpallet-gateway-records/std",
 
     # light-bitcoin
     "btc-chain/std",

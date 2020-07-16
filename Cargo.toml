@@ -20,7 +20,7 @@ members = [
     "xpallets/assets",
     "xpallets/assets/rpc",
     "xpallets/assets/rpc/runtime-api",
-    "xpallets/bridge/bitcoin",
+    "xpallets/gateway/bitcoin",
     "xpallets/contracts",
     "xpallets/contracts/common",
     "xpallets/contracts/rpc",

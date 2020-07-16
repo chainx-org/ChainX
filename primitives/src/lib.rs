@@ -59,7 +59,7 @@ pub type AddrStr = Vec<u8>;
 pub type AssetId = u32;
 
 /// Type for leaving a note when sending a transaction.
-#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, codec::Encode, codec::Decode)]
+#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, codec::Encode, codec::Decode, Default)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct Memo(Vec<u8>);
 

@@ -9,7 +9,7 @@ mod header;
 // pub mod lockup;
 mod tests;
 mod traits;
-// mod tx;
+mod tx;
 mod types;
 
 use codec::Decode;
@@ -32,7 +32,7 @@ use xpallet_assets::{Chain, ChainT};
 //     types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
 //     utils::two_thirds_unsafe,
 // };
-// use xrecords::{ApplicationState, TxState};
+// use xrecords::{WithdrawalState, TxState};
 use xpallet_support::{base58, debug, ensure_with_errorlog, error, info, try_addr, warn};
 // #[cfg(feature = "std")]
 // use xsupport::{trustees, u8array_to_addr};
@@ -48,7 +48,7 @@ pub use btc_keys::Network as BTCNetwork;
 pub use btc_primitives::h256_conv_endian_from_str;
 pub use btc_primitives::{Compact, H256, H264};
 
-pub use self::traits::RelayTransaction;
+// pub use self::traits::RelayTransaction;
 // use self::tx::handler::remove_pending_deposit;
 // #[cfg(feature = "std")]
 // use self::tx::utils::addr2vecu8;
@@ -59,7 +59,7 @@ pub use self::traits::RelayTransaction;
 // };
 use self::types::DepositCache;
 pub use self::types::{
-    BTCHeaderInfo, BTCParams, BTCTxInfo, BTCTxType, RelayTx, TrusteeAddrInfo, VoteResult,
+    BTCHeaderInfo, BTCParams, BTCTxInfo, BTCTxType, RelayedTx, TrusteeAddrInfo, VoteResult,
     WithdrawalProposal,
 };
 
@@ -141,13 +141,13 @@ decl_storage! {
         pub BlockHashFor get(fn block_hash_for): map hasher(twox_64_concat) u32 => Vec<H256>;
         /// all valid blockheader (include orphan blockheader)
         pub BTCHeaderFor get(fn btc_header_for): map hasher(identity) H256 => Option<BTCHeaderInfo>;
-        /// tx info for txhash
-        pub TxFor get(fn tx_for): map hasher(identity) H256 => Option<BTCTxInfo>;
+        // /// tx info for txhash
+        // pub TxFor get(fn tx_for): map hasher(identity) H256 => Option<BTCTxInfo>;
         /// mark tx has been handled, in case re-handle this tx
         /// do not need to remove after this tx is removed from ChainX
         pub TxMarkFor get(fn tx_mark_for): map hasher(identity) H256 => Option<()>;
-        /// tx first input addr for this tx
-        pub InputAddrFor get(fn input_addr_for): map hasher(identity) H256 => Option<BTCAddress>;
+        // /// tx first input addr for this tx
+        // pub InputAddrFor get(fn input_addr_for): map hasher(identity) H256 => Option<BTCAddress>;
 
         // /// unclaim deposit info, addr => tx_hash, btc value, blockhash
         // pub PendingDepositMap get(fn pending_deposit): map hasher(blake2_128_concat) BTCAddress => Option<Vec<DepositCache>>;
@@ -273,7 +273,7 @@ decl_module! {
         //     Ok(())
         // }
         //
-        // pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: ApplicationState) -> DispatchResult {
+        // pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
         //     let from = ensure_signed(origin)?;
         //     T::TrusteeMultiSigProvider::check_multisig(&from)?;
         //     xrecords::Module::<T>::fix_withdrawal_state_by_trustees(Chain::Bitcoin, withdrawal_id, state)
@@ -588,88 +588,88 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    // fn apply_push_transaction<RT: RelayTransaction + Debug>(tx: RT) -> DispatchResult {
-    //     let tx_hash = tx.tx_hash();
-    //     let mut header_info = Module::<T>::btc_header_for(tx.block_hash()).ok_or_else(|| {
-    //         error!(
-    //             "[apply_push_transaction]|tx's block header must exist before|block_hash:{:}",
-    //             tx.block_hash()
-    //         );
-    //         "tx's block header must exist before"
-    //     })?;
-    //     let merkle_root = header_info.header.merkle_root_hash;
-    //     // verify, check merkle proof
-    //     validate_transaction::<T, RT>(&tx, merkle_root)?;
-    //
-    //     let height = header_info.height;
-    //     let confirmed = header_info.confirmed;
-    //     // notice same tx may belong to different forked block, after check merkle proof, it's all valid
-    //     if !header_info.txid_list.contains(&tx_hash) {
-    //         header_info.txid_list.push(tx_hash.clone());
-    //         // modify block info storage
-    //         BTCHeaderFor::insert(tx.block_hash(), header_info);
-    //     } else {
-    //         // not pass check! this tx has already been inserted to this block
-    //         error!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash(), tx_hash, header_info.txid_list);
-    //         return Err("this block already has this tx");
-    //     }
-    //
-    //     // same tx may in different forked block, thus, just modify different forked block txlist, and the tx only insert once
-    //     // so when the tx is existed, return tx_type, else set `TxFor` and `InputAddrFor` storage, return tx_type
-    //     // get tx_type
-    //     let (tx_type, _existed) = match Self::tx_for(&tx_hash) {
-    //         Some(tx_info) => (tx_info.tx_type, true),
-    //         None => {
-    //             let (tx_type, input_addr) = detect_transaction_type::<T, _>(&tx)?;
-    //             if tx_type == TxType::Irrelevance {
-    //                 warn!("[apply_push_transaction]|this tx is not related to any important addr, maybe an irrelevance tx, drop it|relay_tx:{:?}|block_height:{:}", tx, height);
-    //                 return Err("this tx is not related to any important addr, maybe an irrelevance tx, drop it");
-    //             }
-    //             // parse first input addr, may delete when only use opreturn to get accountid
-    //             // only deposit tx store prev input tx's addr, for deposit to lookup related accountid
-    //             if let Some(addr) = input_addr {
-    //                 debug!(
-    //                     "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
-    //                     tx_hash,
-    //                     u8array_to_addr(&addr2vecu8(&addr)),
-    //                 );
-    //                 InputAddrFor::<T>::insert(&tx_hash, addr)
-    //             }
-    //             // set tx into storage
-    //             #[allow(deprecated)]
-    //             TxFor::<T>::insert(
-    //                 &tx_hash,
-    //                 BTCTxInfo {
-    //                     raw_tx: tx.raw_tx().clone(),
-    //                     tx_type,
-    //                     height,
-    //                     done: false,
-    //                 },
-    //             );
-    //             (tx_type, false)
-    //         }
-    //     };
-    //
-    //     debug!("[apply_push_transaction]|verify pass|txhash:{:}|is existed:{:}|tx type:{:?}|block_hash:{:}|height:{:}|confirmed:{:}",
-    //         tx_hash, _existed, tx_type, tx.block_hash(), height, confirmed);
-    //
-    //     // log event
-    //     Self::deposit_event(RawEvent::InsertTx(
-    //         tx_hash.clone(),
-    //         tx.block_hash().clone(),
-    //         tx_type,
-    //     ));
-    //
-    //     // if confirmed, handle this tx for deposit or withdrawal
-    //     if confirmed {
-    //         handle_tx::<T>(&tx_hash).map_err(|e| {
-    //             error!("Handle tx error: {:}", tx_hash);
-    //             e
-    //         })?;
-    //     }
-    //
-    //     Ok(())
-    // }
+    fn apply_push_transaction(tx: RelayedTx) -> DispatchResult {
+        let tx_hash = tx.raw.hash();
+        let mut header_info = Module::<T>::btc_header_for(&tx.block_hash).ok_or_else(|| {
+            error!(
+                "[apply_push_transaction]|tx's block header must exist before|block_hash:{:}",
+                tx.block_hash()
+            );
+            "tx's block header must exist before"
+        })?;
+        let merkle_root = header_info.header.merkle_root_hash;
+        // verify, check merkle proof
+        validate_transaction::<T, RT>(&tx, merkle_root)?;
+
+        let height = header_info.height;
+        let confirmed = header_info.confirmed;
+        // notice same tx may belong to different forked block, after check merkle proof, it's all valid
+        if !header_info.txid_list.contains(&tx_hash) {
+            header_info.txid_list.push(tx_hash.clone());
+            // modify block info storage
+            BTCHeaderFor::insert(tx.block_hash(), header_info);
+        } else {
+            // not pass check! this tx has already been inserted to this block
+            error!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash(), tx_hash, header_info.txid_list);
+            return Err("this block already has this tx");
+        }
+
+        // same tx may in different forked block, thus, just modify different forked block txlist, and the tx only insert once
+        // so when the tx is existed, return tx_type, else set `TxFor` and `InputAddrFor` storage, return tx_type
+        // get tx_type
+        let (tx_type, _existed) = match Self::tx_for(&tx_hash) {
+            Some(tx_info) => (tx_info.tx_type, true),
+            None => {
+                let (tx_type, input_addr) = detect_transaction_type::<T, _>(&tx)?;
+                if tx_type == TxType::Irrelevance {
+                    warn!("[apply_push_transaction]|this tx is not related to any important addr, maybe an irrelevance tx, drop it|relay_tx:{:?}|block_height:{:}", tx, height);
+                    return Err("this tx is not related to any important addr, maybe an irrelevance tx, drop it");
+                }
+                // parse first input addr, may delete when only use opreturn to get accountid
+                // only deposit tx store prev input tx's addr, for deposit to lookup related accountid
+                if let Some(addr) = input_addr {
+                    debug!(
+                        "[apply_push_transaction]|deposit input addr|txhash:{:}|addr:{:}",
+                        tx_hash,
+                        u8array_to_addr(&addr2vecu8(&addr)),
+                    );
+                    InputAddrFor::<T>::insert(&tx_hash, addr)
+                }
+                // set tx into storage
+                #[allow(deprecated)]
+                TxFor::<T>::insert(
+                    &tx_hash,
+                    BTCTxInfo {
+                        raw_tx: tx.raw_tx().clone(),
+                        tx_type,
+                        height,
+                        done: false,
+                    },
+                );
+                (tx_type, false)
+            }
+        };
+
+        debug!("[apply_push_transaction]|verify pass|txhash:{:}|is existed:{:}|tx type:{:?}|block_hash:{:}|height:{:}|confirmed:{:}",
+            tx_hash, _existed, tx_type, tx.block_hash(), height, confirmed);
+
+        // log event
+        Self::deposit_event(RawEvent::InsertTx(
+            tx_hash.clone(),
+            tx.block_hash().clone(),
+            tx_type,
+        ));
+
+        // if confirmed, handle this tx for deposit or withdrawal
+        if confirmed {
+            handle_tx::<T>(&tx_hash).map_err(|e| {
+                error!("Handle tx error: {:}", tx_hash);
+                e
+            })?;
+        }
+
+        Ok(())
+    }
 
     // fn apply_create_withdraw(
     //     who: T::AccountId,

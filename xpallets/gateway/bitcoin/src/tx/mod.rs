@@ -6,10 +6,10 @@ pub mod validator;
 
 // Substrate
 use sp_std::{prelude::*, result};
-use support::{dispatch::Result, StorageMap};
+use suppoRelayedTx::{dispatch::Result, StorageMap};
 
 // ChainX
-use xsupport::{debug, error, warn};
+use xpallet_suppoRelayedTx::{debug, error, warn};
 
 // light-bitcoin
 use btc_chain::Transaction;
@@ -19,7 +19,7 @@ use btc_primitives::{Bytes, H256};
 use btc_script::{Builder, Opcode, Script};
 
 use crate::traits::RelayTransaction;
-use crate::types::{TrusteeAddrInfo, TxType};
+use crate::types::{RelayedTx, TrusteeAddrInfo, TxType};
 use crate::{InputAddrFor, Module, RawEvent, Trait, TxFor};
 
 use crate::lockup::detect_lockup_type;
@@ -32,8 +32,8 @@ use self::utils::{
 };
 pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
 
-pub fn detect_transaction_type<T: Trait, RT: RelayTransaction>(
-    relay_tx: &RT,
+pub fn detect_transaction_type<T: Trait>(
+    relay_tx: &RelayedTx,
 ) -> result::Result<(TxType, Option<Address>), &'static str> {
     let addr_pair = get_trustee_address_pair::<T>()?;
     let last_addr_pair = get_last_trustee_address_pair::<T>()
@@ -48,7 +48,7 @@ pub fn detect_transaction_type<T: Trait, RT: RelayTransaction>(
     let network = get_networkid::<T>();
     let min_deposit = Module::<T>::btc_min_deposit();
 
-    detect_transaction_type_impl::<_, _>(
+    detect_transaction_type_impl::<_>(
         relay_tx,
         network,
         min_deposit,
@@ -68,8 +68,8 @@ pub fn detect_transaction_type<T: Trait, RT: RelayTransaction>(
 /// then judge type
 /// when type is deposit, would return Option<Addr> for this deposit input_addr
 #[inline]
-pub fn detect_transaction_type_impl<RT: RelayTransaction, F: Fn(&Transaction) -> TxType>(
-    relay_tx: &RT,
+pub fn detect_transaction_type_impl<F: Fn(&Transaction) -> TxType>(
+    relay_tx: &RelayedTx,
     network: Network,
     min_deposit: u64,
     trustee_addr_pair: (Address, Address),
@@ -230,9 +230,9 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
             let mut appl_withdrawal_list = Vec::new();
             for withdraw_index in withdrawal_id_list.iter() {
                 let record = xrecords::Module::<T>::application_map(withdraw_index)
-                    .ok_or("Withdraw id not in withdrawal ApplicationMap record")?;
+                    .ok_or("Withdraw id not in withdrawal PendingWithdrawal record")?;
                 // record.data.addr() is base58
-                // verify btc address would convert a base58 addr to Address
+                // verify btc address would conveRelayedTx a base58 addr to Address
                 let addr: Address = Module::<T>::verify_btc_address(&record.data.addr())
                     .map_err(|_| "Parse addr error")?;
                 appl_withdrawal_list.push((addr, record.data.balance().into()));
@@ -251,8 +251,8 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
                 }
             }
 
-            tx_withdraw_list.sort();
-            appl_withdrawal_list.sort();
+            tx_withdraw_list.soRelayedTx();
+            appl_withdrawal_list.soRelayedTx();
 
             // appl_withdrawal_list must match to tx_withdraw_list
             if appl_withdrawal_list.len() != tx_withdraw_list.len() {
@@ -289,8 +289,8 @@ pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32])
 
 /// Update the signature status of trustee
 /// state: false -> Veto signature, true -> Consent signature
-/// only allow insert once
-pub fn insert_trustee_vote_state<T: Trait>(
+/// only allow inseRelayedTx once
+pub fn inseRelayedTx_trustee_vote_state<T: Trait>(
     state: bool,
     who: &T::AccountId,
     trustee_list: &mut Vec<(T::AccountId, bool)>,
@@ -298,13 +298,13 @@ pub fn insert_trustee_vote_state<T: Trait>(
     match trustee_list.iter_mut().find(|ref info| info.0 == *who) {
         Some(_) => {
             // if account is exist, override state
-            error!("[insert_trustee_vote_state]|already vote for this withdrawal proposal|who:{:?}|old vote:{:}", who, state);
+            error!("[inseRelayedTx_trustee_vote_state]|already vote for this withdrawal proposal|who:{:?}|old vote:{:}", who, state);
             return Err("already vote for this withdrawal proposal");
         }
         None => {
             trustee_list.push((who.clone(), state));
             debug!(
-                "[insert_trustee_vote_state]|insert new vote|who:{:?}|state:{:}",
+                "[inseRelayedTx_trustee_vote_state]|inseRelayedTx new vote|who:{:?}|state:{:}",
                 who, state
             );
         }
