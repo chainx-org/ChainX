@@ -123,10 +123,10 @@ decl_storage! {
             u32 = 10u32;
 
         /// (Treasury, Staking)
-        pub GlobalDistributionRatio get(fn global_distribution_ratio) config(): GlobalDistribution;
+        pub GlobalDistributionRatio get(fn global_distribution_ratio): GlobalDistribution;
 
         /// (Staker, Asset Miners)
-        pub MiningDistributionRatio get(fn mining_distribution_ratio) config(): MiningDistribution;
+        pub MiningDistributionRatio get(fn mining_distribution_ratio): MiningDistribution;
 
         /// The map from (wannabe) validator key to the profile of that validator.
         pub Validators get(fn validators):
@@ -185,6 +185,8 @@ decl_storage! {
     add_extra_genesis {
         config(validators):
             Vec<(T::AccountId, T::Balance)>;
+        config(glob_dist_ratio): (u32, u32);
+        config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
             for &(ref v, balance) in &config.validators {
                 assert!(
@@ -194,6 +196,16 @@ decl_storage! {
                 Module::<T>::apply_register(v);
                 Module::<T>::apply_bond(v, v, balance).expect("Staking genesis initialization can not fail");
             }
+            assert!(config.glob_dist_ratio.0 + config.glob_dist_ratio.1 > 0);
+            assert!(config.mining_ratio.0 + config.mining_ratio.1 > 0);
+            GlobalDistributionRatio::put(GlobalDistribution {
+                treasury: config.glob_dist_ratio.0,
+                mining: config.glob_dist_ratio.1,
+            });
+            MiningDistributionRatio::put(MiningDistribution {
+                asset: config.mining_ratio.0,
+                staking: config.mining_ratio.1,
+            });
         });
     }
 }

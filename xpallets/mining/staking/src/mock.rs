@@ -17,6 +17,9 @@ use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 
+pub(crate) const VESTING_ACCOUNT: AccountId = 10_000;
+pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
+
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
 pub(crate) type AccountIndex = u64;
@@ -172,7 +175,17 @@ pub struct DummyTreasuryAccount;
 
 impl TreasuryAccount<AccountId> for DummyTreasuryAccount {
     fn treasury_account() -> AccountId {
-        100_000
+        TREASURY_ACCOUNT
+    }
+}
+
+pub struct DummyStakingRewardPotAccountDeterminer;
+
+impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
+    for DummyStakingRewardPotAccountDeterminer
+{
+    fn reward_pot_account_for(validator: &AccountId) -> AccountId {
+        10_000_000 + u64::from(*validator)
     }
 }
 
@@ -186,7 +199,7 @@ impl Trait for Test {
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
-    type DetermineRewardPotAccount = ();
+    type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;
 }
 
 // This function basically just builds a genesis storage key/value store according to
@@ -260,7 +273,7 @@ impl ExtBuilder {
             .unwrap();
 
         let pcx_asset = pcx();
-        let assets = vec![(pcx_asset.0, pcx_asset.1, pcx_asset.2, true, true)];
+        let assets = vec![(pcx_asset.0, pcx_asset.1, pcx_asset.2, true, false)];
 
         let mut endowed = BTreeMap::new();
         let pcx_id = pcx().0;
@@ -279,6 +292,9 @@ impl ExtBuilder {
             validators: vec![(1, 10), (2, 20), (3, 30), (4, 40)],
             validator_count: 6,
             sessions_per_era: 3,
+            vesting_account: VESTING_ACCOUNT,
+            glob_dist_ratio: (12, 88),
+            mining_ratio: (10, 90),
             ..Default::default()
         }
         .assimilate_storage(&mut storage);
