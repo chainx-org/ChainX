@@ -5,7 +5,8 @@ use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
 use sp_staking::offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence};
 use xp_mining_common::{
-    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
+    compute_dividend, generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight,
+    WeightFactors, WeightType,
 };
 use xp_mining_staking::SessionIndex;
 
@@ -93,21 +94,6 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     }
 }
 
-/// Computes the dividend according to the ratio of source_vote_weight/target_vote_weight.
-///
-/// dividend = source_vote_weight/target_vote_weight * balance_of(claimee_reward_pot)
-pub fn compute_dividend<T: Trait>(
-    source_vote_weight: WeightType,
-    target_vote_weight: WeightType,
-    claimee_reward_pot: &T::AccountId,
-) -> T::Balance {
-    let total_reward_pot = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_reward_pot);
-    match source_vote_weight.checked_mul(total_reward_pot.saturated_into()) {
-        Some(x) => ((x / target_vote_weight) as u64).saturated_into(),
-        None => panic!("source_vote_weight * total_reward_pot overflow, this should not happen"),
-    }
-}
-
 impl<T: Trait> Module<T> {
     fn allocate_dividend(
         claimer: &T::AccountId,
@@ -188,7 +174,12 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 
         let claimee_pot = Self::reward_pot_for(claimee);
 
-        let dividend = compute_dividend::<T>(source_weight, target_weight, &claimee_pot);
+        let dividend = compute_dividend::<T::AccountId, T::Balance, _>(
+            source_weight,
+            target_weight,
+            &claimee_pot,
+            xpallet_assets::Module::<T>::pcx_free_balance,
+        );
 
         Self::allocate_dividend(claimer, &claimee_pot, dividend)?;
 
@@ -303,7 +294,7 @@ impl<T: Trait> Module<T> {
     /// * reset `active_era.start`,
     /// * update `BondedEras` and apply slashes.
     fn start_era(_start_session: SessionIndex) {
-        let active_era = ActiveEra::mutate(|active_era| {
+        let _active_era = ActiveEra::mutate(|active_era| {
             let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(0);
             *active_era = Some(ActiveEraInfo {
                 index: new_index,

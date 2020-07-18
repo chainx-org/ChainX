@@ -180,6 +180,22 @@ pub fn generic_weight_factors<
     )
 }
 
+/// Computes the dividend according to the ratio of source_vote_weight/target_vote_weight.
+///
+/// dividend = source_vote_weight/target_vote_weight * balance_of(claimee_reward_pot)
+pub fn compute_dividend<AccountId, Balance: BaseArithmetic, F: FnOnce(&AccountId) -> Balance>(
+    source_vote_weight: WeightType,
+    target_vote_weight: WeightType,
+    claimee_reward_pot: &AccountId,
+    reward_pot_balance: F,
+) -> Balance {
+    let total_reward_pot = reward_pot_balance(&claimee_reward_pot);
+    match source_vote_weight.checked_mul(total_reward_pot.saturated_into()) {
+        Some(x) => (x / target_vote_weight).saturated_into(),
+        None => panic!("source_vote_weight * total_reward_pot overflow, this should not happen"),
+    }
+}
+
 /// Claims the reward for participating in the mining.
 pub trait Claim<AccountId> {
     /// Entity of holder of individual miners.

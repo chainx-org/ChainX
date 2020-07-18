@@ -32,6 +32,8 @@ xpallet-mining-staking = { path = "../../mining/staking", default-features = fal
 xpallet-protocol = { path = "../../protocol" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 env_logger = "0.7.1"
 
 [features]
