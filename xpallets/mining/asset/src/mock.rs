@@ -325,6 +325,8 @@ impl ExtBuilder {
             validator_count: 6,
             sessions_per_era: 3,
             vesting_account: VESTING_ACCOUNT,
+            glob_dist_ratio: (12, 88),
+            mining_ratio: (10, 90),
             ..Default::default()
         }
         .assimilate_storage(&mut storage);
