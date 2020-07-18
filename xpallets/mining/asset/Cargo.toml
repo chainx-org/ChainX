@@ -25,11 +25,11 @@ xp-mining-staking = { path  = "../../../primitives/mining/staking", default-feat
 
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
+xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 xpallet-mining-staking = { path = "../../mining/staking", default-features = false }
 
 [dev-dependencies]
-xpallet-protocol = { path = "../../protocol" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
@@ -55,6 +55,7 @@ std = [
     "xp-mining-staking/std",
 
     "xpallet-assets/std",
+    "xpallet-protocol/std",
     "xpallet-support/std",
     "xpallet-mining-staking/std",
 ]

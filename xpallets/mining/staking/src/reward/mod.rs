@@ -77,8 +77,12 @@ impl<T: Trait> Module<T> {
         // SESSIONS_PER_ROUND --> offset
         if current_index < SESSIONS_PER_ROUND {
             let to_vesting = this_session_reward / 5.saturated_into();
-            debug!("[try_vesting] issue to the team: {:?}", to_vesting);
-            Self::mint(&Self::vesting_account(), to_vesting);
+            let vesting_account = Self::vesting_account();
+            debug!(
+                "[try_vesting]issue to the vesting account {:?}: {:?}",
+                vesting_account, to_vesting
+            );
+            Self::mint(&vesting_account, to_vesting);
             this_session_reward - to_vesting
         } else {
             this_session_reward

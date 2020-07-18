@@ -4,8 +4,7 @@ use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::Hash;
 use sp_runtime::traits::Saturating;
 use xp_mining_common::{
-    compute_dividend, generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight,
-    WeightFactors, WeightType,
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
 use xp_mining_staking::MiningPower;
 
@@ -79,6 +78,9 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
 
 impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
     fn on_issue_pre(target: &AssetId, source: &T::AccountId) {
+        if xpallet_protocol::PCX == *target {
+            return;
+        }
         let current_block = <frame_system::Module<T>>::block_number();
         Self::init_receiver_mining_ledger(source, target, current_block);
 
@@ -90,6 +92,9 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
         source: &T::AccountId,
         _value: T::Balance,
     ) -> DispatchResult {
+        if xpallet_protocol::PCX == *target {
+            return Ok(());
+        }
         Self::issue_deposit_reward(source, target)
     }
 
@@ -101,6 +106,9 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
         _: AssetType,
         _: T::Balance,
     ) {
+        if xpallet_protocol::PCX == *asset_id || from == to {
+            return;
+        }
         let current_block = <frame_system::Module<T>>::block_number();
         Self::init_receiver_mining_ledger(to, asset_id, current_block);
 
