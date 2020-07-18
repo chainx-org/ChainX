@@ -26,14 +26,12 @@ pub enum BTCTxType {
     Deposit,
     HotAndCold,
     TrusteeTransition,
-    // Lock,
-    // Unlock,
     Irrelevance,
 }
 
 impl Default for BTCTxType {
     fn default() -> Self {
-        BTCTxType::Deposit
+        BTCTxType::Irrelevance
     }
 }
 
@@ -75,15 +73,20 @@ pub enum VoteResult {
     Finish,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct BTCHeaderInfo {
     pub header: BTCHeader,
     pub height: u32,
-    pub confirmed: bool,
-    pub txid_list: Vec<H256>,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[derive(PartialEq, Clone, Copy, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct BTCHeaderIndex {
+    pub hash: H256,
+    pub height: u32,
+}
+
+#[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct BTCTxInfo {
     pub raw_tx: BTCTransaction,
     pub tx_type: BTCTxType,

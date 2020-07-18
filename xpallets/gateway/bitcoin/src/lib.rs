@@ -19,6 +19,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::{fmt::Debug, prelude::*, result};
 
 use frame_support::{
+    debug::native,
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
 };
@@ -33,7 +34,9 @@ use xpallet_assets::{Chain, ChainT};
 //     utils::two_thirds_unsafe,
 // };
 // use xrecords::{WithdrawalState, TxState};
-use xpallet_support::{base58, debug, ensure_with_errorlog, error, info, try_addr, warn};
+use xpallet_support::{
+    base58, debug, ensure_with_errorlog, error, info, try_addr, warn, RUNTIME_TARGET,
+};
 // #[cfg(feature = "std")]
 // use xsupport::{trustees, u8array_to_addr};
 
@@ -59,8 +62,8 @@ pub use btc_primitives::{Compact, H256, H264};
 // };
 use self::types::DepositCache;
 pub use self::types::{
-    BTCHeaderInfo, BTCParams, BTCTxInfo, BTCTxType, RelayedTx, TrusteeAddrInfo, VerifierMode,
-    VoteResult, WithdrawalProposal,
+    BTCHeaderIndex, BTCHeaderInfo, BTCParams, BTCTxInfo, BTCTxType, RelayedTx, TrusteeAddrInfo,
+    VerifierMode, VoteResult, WithdrawalProposal,
 };
 use crate::tx::validate_transaction;
 
@@ -133,8 +136,8 @@ decl_event!(
     pub enum Event<T> where
         <T as frame_system::Trait>::AccountId,
         <T as xpallet_assets::Trait>::Balance {
-        /// version, block hash, block height, prev block hash, merkle root, timestamp, nonce, wait confirmed block height, wait confirmed block hash
-        InsertHeader(u32, H256, u32, H256, H256, u32, u32, u32, H256),
+        /// block hash
+        InsertHeader(H256),
         // /// tx hash, block hash, tx type
         // InsertTx(H256, H256, TxType),
         // /// who, Chain, AssetId, balance, memo, Chain Addr, chain txid, chain TxState
@@ -155,13 +158,18 @@ decl_event!(
 );
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XBridgeBitcoin {
-        /// get bestheader
-        pub BestIndex get(fn best_index): H256;
-        /// block hash list for a height
+    trait Store for Module<T: Trait> as XGatewayBitcoin {
+        /// best header info
+        pub BestIndex get(fn best_index): BTCHeaderIndex;
+        /// confirmed header info
+        pub ConfirmedHeader get(fn confirmed_header): BTCHeaderIndex;
+        /// block hash list for a height, include forked header hash
         pub BlockHashFor get(fn block_hash_for): map hasher(twox_64_concat) u32 => Vec<H256>;
-        /// all valid blockheader (include orphan blockheader)
+        /// mark this blockhash is in mainchain
+        pub MainChain get(fn main_chain): map hasher(identity) H256 => Option<()>;
+        /// all valid blockheader (include forked blockheader)
         pub BTCHeaderFor get(fn btc_header_for): map hasher(identity) H256 => Option<BTCHeaderInfo>;
+
         // /// tx info for txhash
         // pub TxFor get(fn tx_for): map hasher(identity) H256 => Option<BTCTxInfo>;
         /// mark tx has been handled, in case re-handle this tx
@@ -176,7 +184,7 @@ decl_storage! {
         // pub CurrentWithdrawalProposal get(fn withdrawal_proposal): Option<WithdrawalProposal<T::AccountId>>;
 
         /// get GenesisInfo (header, height)
-        pub GenesisInfo get(fn genesis_info) config(genesis_header_and_height): (BTCHeader, u32);
+        pub GenesisInfo get(fn genesis_info) config(): (BTCHeader, u32);
         /// get ParamsInfo from genesis_config
         pub ParamsInfo get(fn params_info) config(): BTCParams;
         ///  NetworkId for testnet or mainnet
@@ -197,41 +205,38 @@ decl_storage! {
     add_extra_genesis {
         config(genesis_hash): H256;
         build(|config| {
-            let (genesis_header, number): (BTCHeader, u32) = config.genesis_header_and_height.clone();
+            let genesis_header = config.genesis_info.0.clone();
+            let genesis_hash = genesis_header.hash();
+            let genesis_index = BTCHeaderIndex {
+                hash: genesis_hash,
+                height: config.genesis_info.1
+            };
+            let header_info = BTCHeaderInfo {
+                header: genesis_header,
+                height: config.genesis_info.1
+            };
             // would ignore check for bitcoin testnet
             #[cfg(not(test))] {
             if let BTCNetwork::Mainnet = config.network_id {
-                if number % config.params_info.retargeting_interval() != 0 {
-                    panic!("the blocknumber[{:}] should start from a changed difficulty block", number);
+                if genesis_index.height % config.params_info.retargeting_interval() != 0 {
+                    panic!("the blocknumber[{:}] should start from a changed difficulty block", genesis_index.height);
                 }
             }
             }
 
-            let genesis_hash = genesis_header.hash();
             if genesis_hash != config.genesis_hash {
                 panic!("the genesis block not much the genesis_hash!|genesis_block's hash:{:?}|config genesis_hash:{:?}", genesis_hash, config.genesis_hash);
             }
 
-            let header_info = BTCHeaderInfo {
-                header: genesis_header,
-                height: number,
-                confirmed: true,
-                txid_list: [].to_vec(),
-            };
-            BTCHeaderFor::insert(&genesis_hash, header_info.clone());
-            BlockHashFor::insert(&header_info.height, vec![genesis_hash.clone()]);
 
-            BestIndex::put(genesis_hash);
+            BTCHeaderFor::insert(&genesis_hash, header_info);
+            BlockHashFor::insert(&genesis_index.height, vec![genesis_hash.clone()]);
+            MainChain::insert(&genesis_hash, ());
+
+            BestIndex::put(genesis_index);
+            ConfirmedHeader::put(genesis_index);
 
             Module::<T>::deposit_event(RawEvent::InsertHeader(
-                header_info.header.version,
-                header_info.header.hash(),
-                header_info.height,
-                header_info.header.previous_header_hash,
-                header_info.header.merkle_root_hash,
-                header_info.header.time,
-                header_info.header.nonce,
-                header_info.height,
                 genesis_hash,
             ));
         })
@@ -537,27 +542,31 @@ impl<T: Trait> Module<T> {
             "Header already exists|hash:{:}",
             header.hash(),
         );
-        // current should exist yet
-        ensure_with_errorlog!(
-            Self::btc_header_for(&header.previous_header_hash).is_some(),
-            Error::<T>::PrevHeaderNotExisted,
-            "Can't find previous header|prev hash:{:}|current hash:{:}",
-            header.previous_header_hash,
-            header.hash(),
-        );
+        // prev header should exist, thus we reject orphan block
+        let prev_info = Self::btc_header_for(header.previous_header_hash).ok_or_else(|| {
+            native::error!(
+                target: RUNTIME_TARGET,
+                "[check_prev_and_convert]|not find prev header|current header:{:?}",
+                header
+            );
+            Error::<T>::PrevHeaderNotExisted
+        })?;
 
         // convert btc header to self header info
-        let header_info: BTCHeaderInfo =
-            header::check_prev_and_convert::<T>(header).map_err::<Error<T>, _>(Into::into)?;
+        let header_info: BTCHeaderInfo = BTCHeaderInfo {
+            header,
+            height: prev_info.height + 1,
+        };
         // check
-        let c = header::HeaderVerifier::new::<T>(&header_info.header, header_info.height)
-            .map_err::<Error<T>, _>(Into::into)?;
+        let c =
+            header::HeaderVerifier::new::<T>(&header_info).map_err::<Error<T>, _>(Into::into)?;
         c.check::<T>()?;
 
         // insert into storage
         let hash = header_info.header.hash();
         // insert valid header into storage
         BTCHeaderFor::insert(&hash, header_info.clone());
+        // storage height => block list (contains forked header hash)
         BlockHashFor::mutate(header_info.height, |v| {
             if !v.contains(&hash) {
                 v.push(hash.clone());
@@ -570,43 +579,28 @@ impl<T: Trait> Module<T> {
             Self::block_hash_for(header_info.height)
         );
 
-        let best_header = match Self::btc_header_for(Self::best_index()) {
-            Some(info) => info,
-            None => Err(Error::<T>::InvalidBestIndex)?,
-        };
+        let best_index = Self::best_index();
 
-        let (confirmed_hash, confirmed_height) = if header_info.height > best_header.height {
-            header::remove_unused_headers::<T>(&header_info);
+        if header_info.height > best_index.height {
+            // new best index
+            let new_best_index = BTCHeaderIndex {
+                hash,
+                height: header_info.height,
+            };
 
-            let (confirmed_hash, confirmed_height) =
-                header::update_confirmed_header::<T>(&header_info);
+            let confirmed_index = header::update_confirmed_header::<T>(&header_info);
             info!(
                 "[apply_push_header]|update to new height|height:{:}|hash:{:?}",
                 header_info.height, hash,
             );
             // change new best index
-            BestIndex::put(hash);
-            (confirmed_hash, confirmed_height)
+            BestIndex::put(new_best_index);
         } else {
-            info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}",
-                best_header.height,
-                header_info.height
-            );
-            let info = header::find_confirmed_block::<T>(&hash);
-
-            (info.header.hash(), info.height)
+            info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}", best_index.height, header_info.height);
+            // let info = header::find_confirmed_block::<T>(&hash);
+            // (info.header.hash(), info.height)
         };
-        Self::deposit_event(RawEvent::InsertHeader(
-            header_info.header.version,
-            header_info.header.hash(),
-            header_info.height,
-            header_info.header.previous_header_hash,
-            header_info.header.merkle_root_hash,
-            header_info.header.time,
-            header_info.header.nonce,
-            confirmed_height,
-            confirmed_hash,
-        ));
+        Self::deposit_event(RawEvent::InsertHeader(hash));
 
         Ok(())
     }

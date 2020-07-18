@@ -14,7 +14,7 @@ use btc_keys::Network;
 use btc_primitives::{Compact, H256, U256};
 
 use super::ChainErr;
-use crate::types::BTCParams;
+use crate::types::{BTCHeaderInfo, BTCParams};
 use crate::{Error, Module, Trait};
 
 pub struct HeaderVerifier<'a> {
@@ -24,15 +24,15 @@ pub struct HeaderVerifier<'a> {
 }
 
 impl<'a> HeaderVerifier<'a> {
-    pub fn new<T: Trait>(header: &'a BTCHeader, height: u32) -> result::Result<Self, ChainErr> {
+    pub fn new<T: Trait>(header_info: &'a BTCHeaderInfo) -> result::Result<Self, ChainErr> {
         let now: T::Moment = pallet_timestamp::Module::<T>::now();
         // bitcoin use u32 to log time, we think the timestamp would not more then u32
         let current_time: u32 = now.saturated_into::<u32>();
 
         Ok(HeaderVerifier {
-            work: HeaderWork::new(header, height),
-            proof_of_work: HeaderProofOfWork::new(header),
-            timestamp: HeaderTimestamp::new(header, current_time),
+            work: HeaderWork::new(header_info),
+            proof_of_work: HeaderProofOfWork::new(&header_info.header),
+            timestamp: HeaderTimestamp::new(&header_info.header, current_time),
         })
     }
 
@@ -49,25 +49,24 @@ impl<'a> HeaderVerifier<'a> {
 }
 
 pub struct HeaderWork<'a> {
-    header: &'a BTCHeader,
-    height: u32,
+    info: &'a BTCHeaderInfo,
 }
 
 impl<'a> HeaderWork<'a> {
-    fn new(header: &'a BTCHeader, height: u32) -> Self {
-        HeaderWork { header, height }
+    fn new(info: &'a BTCHeaderInfo) -> Self {
+        HeaderWork { info }
     }
 
     fn check<T: Trait>(&self, p: &BTCParams) -> DispatchResult {
-        let previous_header_hash = self.header.previous_header_hash.clone();
-        let work = work_required::<T>(previous_header_hash, self.height, p);
+        let previous_header_hash = self.info.header.previous_header_hash.clone();
+        let work = work_required::<T>(previous_header_hash, self.info.height, p);
         ensure_with_errorlog!(
-            work == self.header.bits,
+            work == self.info.header.bits,
             Error::<T>::HeaderNBitsNotMatch,
             "nBits do not match difficulty rules|work{:?}|header bits:{:?}|height:{:}",
             work,
-            self.header.bits,
-            self.height
+            self.info.header.bits,
+            self.info.height
         );
         Ok(())
     }
@@ -105,29 +104,30 @@ pub fn work_required_retarget<T: Trait>(
 ) -> Compact {
     let retarget_num = height - params.retargeting_interval();
 
-    let (genesis_header, genesis_num) = Module::<T>::genesis_info();
-    let mut retarget_header = parent_header.clone();
-    if retarget_num < genesis_num {
-        retarget_header = genesis_header;
+    // timestamp of parent block
+    let last_timestamp = parent_header.time;
+    // bits of last block
+    let last_bits = parent_header.bits;
+
+    let genesis = Module::<T>::genesis_info();
+    let mut retarget_header = parent_header;
+    if retarget_num < genesis.1 {
+        retarget_header = genesis.0;
     } else {
         let hash_list = Module::<T>::block_hash_for(&retarget_num);
         for h in hash_list {
             // look up in main chain
-            if let Some(info) = Module::<T>::btc_header_for(h) {
-                if info.confirmed == true {
-                    retarget_header = info.header;
-                    break;
-                }
+            if Module::<T>::main_chain(h).is_some() {
+                let info =
+                    Module::<T>::btc_header_for(h).expect("block header must exist at here.");
+                retarget_header = info.header;
+                break;
             };
         }
     }
 
     // timestamp of block(height - RETARGETING_INTERVAL)
     let retarget_timestamp = retarget_header.time;
-    // timestamp of parent block
-    let last_timestamp = parent_header.time;
-    // bits of last block
-    let last_bits = parent_header.bits;
 
     let mut retarget: U256 = last_bits.into();
     let maximum: U256 = params.max_bits().into();
