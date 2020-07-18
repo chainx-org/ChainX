@@ -23,6 +23,7 @@ use xp_mining_common::{
     Claim, ComputeMiningWeight, MiningWeight, RewardPotAccountFor, WeightType,
     ZeroMiningWeightError,
 };
+use xp_mining_staking::TreasuryAccount;
 use xpallet_assets::AssetType;
 use xpallet_support::warn;
 
@@ -33,6 +34,9 @@ pub use impls::SimpleAssetRewardPotAccountDeterminer;
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    ///
+    type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
     ///
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;

@@ -232,6 +232,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AssetId>
 
 impl Trait for Test {
     type Event = MetaEvent;
+    type TreasuryAccount = ();
     type DetermineRewardPotAccount = DummyAssetRewardPotAccountDeterminer;
 }
 
