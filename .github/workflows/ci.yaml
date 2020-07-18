@@ -62,6 +62,7 @@ jobs:
     - name: Test
       # FIXME: test all
       run: |
+          rustup override set stable
           cd xpallets/mining/asset
           cargo test -- --nocapture
           cd -
