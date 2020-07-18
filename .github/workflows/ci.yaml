@@ -57,7 +57,7 @@ jobs:
       run: cargo fmt -- --check
 
     - name: Compile
-      run: cargo build
+      run: cargo +stable build
 
     - name: Test
       # FIXME: test all
