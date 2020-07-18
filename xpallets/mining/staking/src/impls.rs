@@ -3,10 +3,9 @@ use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
-use sp_staking::offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence};
+use sp_staking::offence::{Offence, OffenceDetails, OnOffenceHandler};
 use xp_mining_common::{
-    compute_dividend, generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight,
-    WeightFactors, WeightType,
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
 use xp_mining_staking::SessionIndex;
 
@@ -165,21 +164,16 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error> {
         let current_block = <frame_system::Module<T>>::block_number();
 
-        let (source_weight, target_weight) = <Self as ComputeMiningWeight<
-            T::AccountId,
-            T::BlockNumber,
-        >>::settle_weight_on_claim(
-            claimer, claimee, current_block
-        )?;
+        let claimee_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
+        let reward_pot_balance = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_pot);
 
-        let claimee_pot = Self::reward_pot_for(claimee);
-
-        let dividend = compute_dividend::<T::AccountId, T::Balance, _>(
-            source_weight,
-            target_weight,
-            &claimee_pot,
-            xpallet_assets::Module::<T>::pcx_free_balance,
-        );
+        let (dividend, source_weight, target_weight) =
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::compute_dividend(
+                claimer,
+                claimee,
+                current_block,
+                reward_pot_balance,
+            )?;
 
         Self::allocate_dividend(claimer, &claimee_pot, dividend)?;
 

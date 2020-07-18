@@ -1,6 +1,9 @@
 use super::*;
 use crate::mock::*;
-use frame_support::{assert_err, assert_ok, traits::OnInitialize};
+use frame_support::{
+    assert_err, assert_ok,
+    traits::{Get, OnInitialize},
+};
 use xp_mining_staking::SessionIndex;
 use xpallet_protocol::X_BTC;
 

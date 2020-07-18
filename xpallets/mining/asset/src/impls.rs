@@ -90,8 +90,7 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
         source: &T::AccountId,
         _value: T::Balance,
     ) -> DispatchResult {
-        Self::issue_reward(source, target);
-        Ok(())
+        Self::issue_deposit_reward(source, target)
     }
 
     fn on_move_pre(
@@ -135,22 +134,25 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Error<T>> {
         let current_block = <frame_system::Module<T>>::block_number();
 
-        let (source_weight, target_weight) = <Self as ComputeMiningWeight<
-            T::AccountId,
-            T::BlockNumber,
-        >>::settle_weight_on_claim(
-            claimer, claimee, current_block
-        )?;
+        let ClaimRestriction {
+            staking_requirement,
+            frequency_limit,
+        } = ClaimRestrictionOf::<T>::get(claimee);
+
+        Self::passed_enough_interval(claimer, claimee, frequency_limit, current_block)?;
 
         let claimee_reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
-        let dividend = compute_dividend::<T::AccountId, T::Balance, _>(
-            source_weight,
-            target_weight,
-            &claimee_reward_pot,
-            xpallet_assets::Module::<T>::pcx_free_balance,
-        );
+        let reward_pot_balance = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_reward_pot);
 
-        Self::can_claim(claimer, claimee, dividend, current_block)?;
+        let (dividend, source_weight, target_weight) =
+            <Self as ComputeMiningWeight<T::AccountId, _>>::compute_dividend(
+                claimer,
+                claimee,
+                current_block,
+                reward_pot_balance,
+            )?;
+
+        Self::has_enough_staking(claimer, dividend, staking_requirement)?;
 
         Self::allocate_dividend(claimer, claimee, &claimee_reward_pot, dividend)?;
 

@@ -11,12 +11,8 @@ mod mock;
 mod tests;
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
-    ensure,
+    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
     storage::IterableStorageMap,
-    traits::Get,
-    weights::{DispatchInfo, GetDispatchInfo, PostDispatchInfo, Weight},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
@@ -155,23 +151,6 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    fn can_claim(
-        claimer: &T::AccountId,
-        claimee: &AssetId,
-        total_dividend: T::Balance,
-        current_block: T::BlockNumber,
-    ) -> Result<(), Error<T>> {
-        let ClaimRestriction {
-            staking_requirement,
-            frequency_limit,
-        } = ClaimRestrictionOf::<T>::get(claimee);
-
-        Self::passed_enough_interval(claimer, claimee, frequency_limit, current_block)?;
-        Self::has_enough_staking(claimer, total_dividend, staking_requirement)?;
-
-        Ok(())
-    }
-
     #[inline]
     fn last_claim(who: &T::AccountId, asset_id: &AssetId) -> Option<T::BlockNumber> {
         MinerLedgers::<T>::get(who, asset_id).last_claim
@@ -296,7 +275,20 @@ impl<T: Trait> Module<T> {
         Self::update_asset_mining_weight(target, current_block);
     }
 
-    fn issue_reward(who: &T::AccountId, asset_id: &AssetId) {
-        let reward = Self::deposit_reward();
+    fn issue_deposit_reward(depositor: &T::AccountId, target: &AssetId) -> DispatchResult {
+        let deposit_reward = Self::deposit_reward();
+        let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(target);
+        let reward_pot_balance = xpallet_assets::Module::<T>::pcx_free_balance(&reward_pot);
+        if reward_pot_balance >= deposit_reward {
+            xpallet_assets::Module::<T>::pcx_move_free_balance(
+                &reward_pot,
+                depositor,
+                deposit_reward,
+            )
+            .map_err(|_| Error::<T>::AssetError)?;
+        } else {
+            warn!("asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}", target, reward_pot_balance, depositor);
+        }
+        Ok(())
     }
 }
