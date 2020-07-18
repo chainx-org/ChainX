@@ -43,7 +43,7 @@ where
 /// Helper function to generate an authority key for Aura
 pub fn authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, AuraId, GrandpaId) {
     (
-        get_account_id_from_seed::<sr25519::Public>(&format!("{}//validator", seed)),
+        get_account_id_from_seed::<sr25519::Public>(&format!("{}", seed)),
         get_account_id_from_seed::<sr25519::Public>(&format!("{}//blockauthor", seed)),
         get_from_seed::<AuraId>(seed),
         get_from_seed::<GrandpaId>(seed),
@@ -179,13 +179,10 @@ fn testnet_genesis(
             changes_trie_config: Default::default(),
         }),
         pallet_aura: Some(AuraConfig {
-            authorities: initial_authorities.iter().map(|x| (x.2.clone())).collect(),
+            authorities: vec![],
         }),
         pallet_grandpa: Some(GrandpaConfig {
-            authorities: initial_authorities
-                .iter()
-                .map(|x| (x.3.clone(), 1))
-                .collect(),
+            authorities: vec![],
         }),
         pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
         pallet_session: Some(SessionConfig {
@@ -200,9 +197,7 @@ fn testnet_genesis(
                 })
                 .collect::<Vec<_>>(),
         }),
-        pallet_sudo: Some(SudoConfig {
-            key: root_key.clone(),
-        }),
+        pallet_sudo: Some(SudoConfig { key: root_key }),
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
         }),
