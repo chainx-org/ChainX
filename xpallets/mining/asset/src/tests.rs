@@ -342,20 +342,16 @@ fn total_issuance_should_work() {
         all.push(TREASURY_ACCOUNT);
         all.push(DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&X_BTC));
 
-        let total_issuance = || {
-            all.iter()
-                .map(|x| XAssets::pcx_free_balance(x))
-                .sum::<u128>()
-        };
+        let total_issuance = || all.iter().map(XAssets::pcx_all_type_balance).sum::<u128>();
 
-        let initial = total_issuance();
+        let initial = 100 + 200 + 300 + 400;
         t_start_session(1);
-        assert_eq!(total_issuance() - initial, 5_000_000_000);
+        assert_eq!(total_issuance(), 5_000_000_000 + initial);
 
         t_start_session(2);
-        assert_eq!(total_issuance() - initial, 5_000_000_000 * 2);
+        assert_eq!(total_issuance(), 5_000_000_000 * 2 + initial);
 
         t_start_session(3);
-        assert_eq!(total_issuance() - initial, 5_000_000_000 * 3);
+        assert_eq!(total_issuance(), 5_000_000_000 * 3 + initial);
     });
 }

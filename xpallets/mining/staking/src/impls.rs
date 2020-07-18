@@ -3,7 +3,7 @@ use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
-use sp_staking::offence::{Offence, OffenceDetails, OnOffenceHandler};
+use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
@@ -189,7 +189,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+    fn mint_and_slash(session_index: SessionIndex) {
         // TODO: the whole flow of session changes?
         //
         // Only the active validators can be rewarded.
@@ -201,7 +201,11 @@ impl<T: Trait> Module<T> {
             // Force a new era if some offender's reward pot has been wholly slashed.
             Self::ensure_new_era();
         }
+    }
+}
 
+impl<T: Trait> Module<T> {
+    fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         debug!(
             "[new_session]session_index:{:?}, current_era:{:?}",
             session_index,
@@ -252,6 +256,12 @@ impl<T: Trait> Module<T> {
 
     /// Start a session potentially starting an era.
     fn start_session(start_session: SessionIndex) {
+        // Skip the reward minting for the genesis initialization.
+        // Actually start from session index 1.
+        if start_session > 0 {
+            Self::mint_and_slash(start_session);
+        }
+
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
         debug!(
             "[start_session]:start_session:{:?}, next_active_era:{:?}",
