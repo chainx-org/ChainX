@@ -1,21 +1,23 @@
 // Copyright 2018-2019 Chainpool.
 
 // Substrate
-use frame_support::dispatch::{DispatchError, DispatchResult};
-use sp_core::ecdsa::{Public, Signature as EcdsaSign};
+use frame_support::{
+    dispatch::{DispatchError, DispatchResult},
+    ensure,
+};
+
 use sp_std::{convert::TryFrom, prelude::Vec, result};
 // light-bitcoin
 use btc_chain::Transaction;
-// use btc_keys::Public;
 use btc_primitives::{Bytes, H256};
-use btc_script::{Script, SignatureChecker, SignatureVersion, TransactionInputSigner};
+use btc_script::Script;
 
-use crate::tx::utils::get_hot_trustee_redeem_script;
+// use crate::tx::utils::get_hot_trustee_redeem_script;
 use crate::types::RelayedTx;
-use crate::Trait;
+use crate::{Error, Trait};
 
 // ChainX
-use xpallet_support::{debug, error};
+use xpallet_support::{debug, error, try_hex};
 
 pub fn validate_transaction<T: Trait>(tx: &RelayedTx, merkle_root: H256) -> DispatchResult {
     let tx_hash = tx.raw.hash();
@@ -27,161 +29,85 @@ pub fn validate_transaction<T: Trait>(tx: &RelayedTx, merkle_root: H256) -> Disp
     // verify merkle proof
     let mut matches = Vec::new();
     let mut _indexes = Vec::new();
-    match tx
-        .merkle_proof()
+    let hash = tx
+        .merkle_proof
         .extract_matches(&mut matches, &mut _indexes)
-    {
-        Ok(hash) => {
-            if merkle_root != hash {
-                return Err("Check failed for merkle tree proof");
-            }
-            if !matches.iter().any(|h| *h == tx_hash) {
-                return Err("Tx hash should in matches of partial merkle tree");
-            }
-        }
-        Err(_) => return Err("Parse partial merkle tree failed"),
+        .map_err(|_| Error::<T>::BadMerkleProof)?;
+    if merkle_root != hash {
+        error!(
+            "[validate_transaction]|Check failed for merkle tree proof|merkle_root:{:?}|hash:{:?}",
+            merkle_root, hash
+        );
+        Err(Error::<T>::BadMerkleProof)?;
+    }
+    if !matches.iter().any(|h| *h == tx_hash) {
+        error!("[validate_transaction]|Tx hash should in matches of partial merkle tree");
+        Err(Error::<T>::BadMerkleProof)?;
     }
 
-    if let Some(prev) = tx.prev_tx() {
-        // verify prev tx for input
-        // only check the first(0) input in transaction
-        let previous_txid = prev.hash();
-        if previous_txid != tx.raw_tx().inputs[0].previous_output.hash {
-            error!("[validate_transaction]|relay previou tx's hash not equail to relay tx first input|relaytx:{:?}", tx);
-            return Err("Previous tx id not equal input point hash");
-        }
-    }
+    // if let Some(prev) = tx.prev_tx() {
+    //     // verify prev tx for input
+    //     // only check the first(0) input in transaction
+    //     let previous_txid = prev.hash();
+    //     if previous_txid != tx.raw_tx().inputs[0].previous_output.hash {
+    //         error!("[validate_transaction]|relay previou tx's hash not equail to relay tx first input|relaytx:{:?}", tx);
+    //         return Err("Previous tx id not equal input point hash");
+    //     }
+    // }
     Ok(())
 }
 
-pub struct TransactionSignatureChecker {
-    pub signer: TransactionInputSigner,
-    pub input_index: usize,
-    pub input_amount: u64,
-}
-
-impl TransactionSignatureChecker {
-    // fn verify_signature(&self, signature: &EcdsaSign, public: &Public, hash: &Message) -> bool {
-    //     // public.verify(hash, signature).unwrap_or(false)
-    //     bool
-    // }
-
-    fn check_signature(
-        &self,
-        signature: &EcdsaSign,
-        public: &Public,
-        script_code: &Script,
-        sighashtype: u32,
-        version: SignatureVersion,
-    ) -> bool {
-        let hash = self.signer.signature_hash(
-            self.input_index,
-            self.input_amount,
-            script_code,
-            version,
-            sighashtype,
-        );
-        verify_signature(signature, public, &hash)
-    }
-}
-
-fn verify_sig(
-    sig: &Bytes,
-    pubkey: &Bytes,
-    tx: &Transaction,
-    script_pubkey: &Bytes,
-    index: usize,
-) -> bool {
-    let tx_signer: TransactionInputSigner = tx.clone().into();
-    // TODO WARNNING!!! when support WitnessV0, the `input_amount` must set value
-    let checker = TransactionSignatureChecker {
-        input_index: index,
-        input_amount: 0,
-        signer: tx_signer,
-    };
-    let sighashtype = 1; // Sighsh all
-                         // let signature = sig.clone().take().into();
-    let signature = EcdsaSign::try_from(sig)?;
-    let pubkey = Public::from_full(pubkey)?;
-    // let public = if let Ok(public) = Public::from_slice(pubkey.as_slice()) {
-    //     public
-    // } else {
-    //     return false;
-    // };
-
-    //privous tx's output script_pubkey
-    let script_code: Script = script_pubkey.clone().into();
-    checker.check_signature(
-        &signature,
-        &pubkey,
-        &script_code,
-        sighashtype,
-        SignatureVersion::Base,
-    )
-    // // TODO
-    // true
-}
-
 /// Check signed transactions
-pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, DispatchError> {
-    let redeem_script = get_hot_trustee_redeem_script::<T>()?;
-    parse_and_check_signed_tx_impl(tx, redeem_script)
-}
+// pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, DispatchError> {
+//     let redeem_script = get_hot_trustee_redeem_script::<T>()?;
+//     parse_and_check_signed_tx_impl::<T>(tx, redeem_script)
+// }
 
 /// for test convenient
 #[inline]
-pub fn parse_and_check_signed_tx_impl(
+pub fn parse_and_check_signed_tx_impl<T: Trait>(
     tx: &Transaction,
     script: Script,
 ) -> result::Result<u32, DispatchError> {
     let (pubkeys, _, _) = script
         .parse_redeem_script()
-        .ok_or("Parse redeem script failed")?;
+        .ok_or(Error::<T>::BadRedeemScript)?;
     let bytes_redeem_script = script.to_bytes();
 
-    let mut v = Vec::new();
+    let mut input_signs = Vec::new();
     // any input check meet error would return
     for i in 0..tx.inputs.len() {
         // parse sigs from transaction inputs
         let script: Script = tx.inputs[i].script_sig.clone().into();
         if script.len() < 2 {
             // if script length less than 2, it must has no sig in input, use 0 to represent it
-            v.push(0);
-            continue;
+            Err(Error::<T>::InvalidSignCount)?;
         }
         let (sigs, _) = script
             .extract_multi_scriptsig()
-            .map_err(|_| "Invalid signature")?;
+            .map_err(|_| Error::<T>::BadSignature)?;
 
         for sig in sigs.iter() {
-            let mut verify = false;
-            for pubkey in pubkeys.iter() {
-                if verify_sig(sig, pubkey, tx, &bytes_redeem_script, i) {
-                    verify = true;
-                    break;
-                }
-            }
+            let verify = pubkeys.iter().any(|pubkey| {
+                super::secp256k1_verifier::verify_sig::<T>(sig, pubkey, tx, &bytes_redeem_script, i)
+                    .is_ok()
+            });
             if !verify {
-                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, u8array_to_hex(&bytes_redeem_script));
-                return Err("Verify sign failed");
+                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, try_hex!(&bytes_redeem_script));
+                Err(Error::<T>::VerifySignFailed)?
             }
         }
-        v.push(sigs.len());
+        input_signs.push(sigs.len());
     }
-    assert!(
-        v.len() > 0,
-        "the list length must more than one, due to must have inputs; qed"
-    );
+    // the list length must more than one, due to must have inputs; qed
+    ensure!(input_signs.len() > 0, Error::<T>::InvalidSignCount);
 
-    assert!(
-        v.len() == tx.inputs.len(),
-        "the list length must equal to inputs counts; qed"
-    );
-
-    let first = v.get(0).unwrap();
-    if v[1..].iter().all(|item| item == first) {
+    let first = &input_signs[0];
+    // if just one element, `iter().all()` would return true
+    if input_signs[1..].iter().all(|item| item == first) {
         Ok(*first as u32)
     } else {
-        Err("all inputs sigs count should be same, otherwise it's an invalid tx")
+        // all inputs sigs count should be same, otherwise it's an invalid tx
+        Err(Error::<T>::InvalidSignCount)?
     }
 }

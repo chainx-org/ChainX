@@ -7124,6 +7124,7 @@ dependencies = [
  "serde",
  "serialization",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
  "xp-io",

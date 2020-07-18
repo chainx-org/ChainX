@@ -1,15 +1,16 @@
 // Copyright 2018-2019 Chainpool.
 
 pub mod handler;
+mod secp256k1_verifier;
 pub mod utils;
 pub mod validator;
 
 // Substrate
+use frame_support::dispatch::DispatchResult;
 use sp_std::{prelude::*, result};
-use suppoRelayedTx::{dispatch::Result, StorageMap};
 
 // ChainX
-use xpallet_suppoRelayedTx::{debug, error, warn};
+use xpallet_support::{debug, error, warn};
 
 // light-bitcoin
 use btc_chain::Transaction;
@@ -18,20 +19,19 @@ use btc_keys::{Address, Network, Public, Type};
 use btc_primitives::{Bytes, H256};
 use btc_script::{Builder, Opcode, Script};
 
-use crate::traits::RelayTransaction;
-use crate::types::{RelayedTx, TrusteeAddrInfo, TxType};
-use crate::{InputAddrFor, Module, RawEvent, Trait, TxFor};
+// use crate::traits::RelayTransaction;
+use crate::types::{RelayedTx, TrusteeAddrInfo};
+use crate::{Module, RawEvent, Trait};
 
-use crate::lockup::detect_lockup_type;
+// use crate::lockup::detect_lockup_type;
 
 use self::handler::TxHandler;
 use self::utils::{
-    equal_addr, get_hot_trustee_address, get_last_trustee_address_pair, get_networkid,
-    get_trustee_address_pair, inspect_address_from_transaction, parse_output_addr,
+    equal_addr, inspect_address_from_transaction, parse_output_addr,
     parse_output_addr_with_networkid,
 };
-pub use self::validator::{parse_and_check_signed_tx, validate_transaction};
-
+pub use self::validator::validate_transaction;
+/*
 pub fn detect_transaction_type<T: Trait>(
     relay_tx: &RelayedTx,
 ) -> result::Result<(TxType, Option<Address>), &'static str> {
@@ -45,7 +45,7 @@ pub fn detect_transaction_type<T: Trait>(
             _e
         })
         .ok();
-    let network = get_networkid::<T>();
+    let network = Module::<T>::network_id();
     let min_deposit = Module::<T>::btc_min_deposit();
 
     detect_transaction_type_impl::<_>(
@@ -165,18 +165,18 @@ pub fn detect_transaction_type_impl<F: Fn(&Transaction) -> TxType>(
         }
     }
 }
+*/
+// pub fn handle_tx<T: Trait>(txid: &H256) -> Dispatch {
+//     let tx_handler = TxHandler::new::<T>(txid)?;
+//     tx_handler.handle::<T>()?;
+//     Ok(())
+// }
 
-pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
-    let tx_handler = TxHandler::new::<T>(txid)?;
-    tx_handler.handle::<T>()?;
-    Ok(())
-}
-
-pub fn remove_unused_tx<T: Trait>(txid: &H256) {
-    debug!("[remove_unused_tx]|remove old tx|tx_hash:{:}", txid);
-    TxFor::<T>::remove(txid);
-    InputAddrFor::<T>::remove(txid);
-}
+// pub fn remove_unused_tx<T: Trait>(txid: &H256) {
+//     debug!("[remove_unused_tx]|remove old tx|tx_hash:{:}", txid);
+//     TxFor::<T>::remove(txid);
+//     InputAddrFor::<T>::remove(txid);
+// }
 
 pub fn create_multi_address<T: Trait>(
     pubkeys: &Vec<Public>,
@@ -211,7 +211,7 @@ pub fn create_multi_address<T: Trait>(
 
     let addr = Address {
         kind: Type::P2SH,
-        network: get_networkid::<T>(),
+        network: Module::<T>::network_id(),
         hash: dhash160(&redeem_script),
     };
     let script_bytes: Bytes = redeem_script.into();
@@ -221,80 +221,80 @@ pub fn create_multi_address<T: Trait>(
     })
 }
 
-/// Check that the cash withdrawal transaction is correct
-pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> Result {
-    match Module::<T>::withdrawal_proposal() {
-        Some(_) => Err("Unfinished withdrawal transaction"),
-        None => {
-            // withdrawal addr list for account withdrawal application
-            let mut appl_withdrawal_list = Vec::new();
-            for withdraw_index in withdrawal_id_list.iter() {
-                let record = xrecords::Module::<T>::application_map(withdraw_index)
-                    .ok_or("Withdraw id not in withdrawal PendingWithdrawal record")?;
-                // record.data.addr() is base58
-                // verify btc address would conveRelayedTx a base58 addr to Address
-                let addr: Address = Module::<T>::verify_btc_address(&record.data.addr())
-                    .map_err(|_| "Parse addr error")?;
-                appl_withdrawal_list.push((addr, record.data.balance().into()));
-            }
-            // not allow deposit directly to cold address, only hot address allow
-            let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
-            // withdrawal addr list for tx outputs
-            let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
-            let mut tx_withdraw_list = Vec::new();
-            for output in tx.outputs.iter() {
-                let script: Script = output.script_pubkey.clone().into();
-                let addr = parse_output_addr::<T>(&script).ok_or("not found addr in this out")?;
-                if addr.hash != hot_trustee_address.hash {
-                    // expect change to trustee_addr output
-                    tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));
-                }
-            }
-
-            tx_withdraw_list.soRelayedTx();
-            appl_withdrawal_list.soRelayedTx();
-
-            // appl_withdrawal_list must match to tx_withdraw_list
-            if appl_withdrawal_list.len() != tx_withdraw_list.len() {
-                error!("withdrawal tx's outputs not equal to withdrawal application list, withdrawal application len:{:}, withdrawal tx's outputs len:{:}|withdrawal application list:{:?}, tx withdrawal outputs:{:?}",
-                       appl_withdrawal_list.len(), tx_withdraw_list.len(),
-                       withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(),
-                       tx_withdraw_list
-                );
-                return Err("withdrawal tx's outputs not equal to withdrawal application list");
-            }
-
-            let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
-                if a.0 == b.0 && a.1 == b.1 {
-                    return true
-                }
-                else {
-                    error!(
-                        "withdrawal tx's output not match to withdrawal application. withdrawal application :{:?}, tx withdrawal output:{:?}",
-                        a,
-                        b
-                    );
-                    return false
-                }
-            }).count();
-
-            if count != appl_withdrawal_list.len() {
-                return Err("withdrawal tx's output list not match to withdrawal application list");
-            }
-
-            Ok(())
-        }
-    }
-}
-
+// /// Check that the cash withdrawal transaction is correct
+// pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
+//     match Module::<T>::withdrawal_proposal() {
+//         Some(_) => Err("Unfinished withdrawal transaction"),
+//         None => {
+//             // withdrawal addr list for account withdrawal application
+//             let mut appl_withdrawal_list = Vec::new();
+//             for withdraw_index in withdrawal_id_list.iter() {
+//                 let record = xrecords::Module::<T>::application_map(withdraw_index)
+//                     .ok_or("Withdraw id not in withdrawal PendingWithdrawal record")?;
+//                 // record.data.addr() is base58
+//                 // verify btc address would conveRelayedTx a base58 addr to Address
+//                 let addr: Address = Module::<T>::verify_btc_address(&record.data.addr())
+//                     .map_err(|_| "Parse addr error")?;
+//                 appl_withdrawal_list.push((addr, record.data.balance().into()));
+//             }
+//             // not allow deposit directly to cold address, only hot address allow
+//             let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
+//             // withdrawal addr list for tx outputs
+//             let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
+//             let mut tx_withdraw_list = Vec::new();
+//             for output in tx.outputs.iter() {
+//                 let script: Script = output.script_pubkey.clone().into();
+//                 let addr = parse_output_addr::<T>(&script).ok_or("not found addr in this out")?;
+//                 if addr.hash != hot_trustee_address.hash {
+//                     // expect change to trustee_addr output
+//                     tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));
+//                 }
+//             }
+//
+//             tx_withdraw_list.soRelayedTx();
+//             appl_withdrawal_list.soRelayedTx();
+//
+//             // appl_withdrawal_list must match to tx_withdraw_list
+//             if appl_withdrawal_list.len() != tx_withdraw_list.len() {
+//                 error!("withdrawal tx's outputs not equal to withdrawal application list, withdrawal application len:{:}, withdrawal tx's outputs len:{:}|withdrawal application list:{:?}, tx withdrawal outputs:{:?}",
+//                        appl_withdrawal_list.len(), tx_withdraw_list.len(),
+//                        withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(),
+//                        tx_withdraw_list
+//                 );
+//                 return Err("withdrawal tx's outputs not equal to withdrawal application list");
+//             }
+//
+//             let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
+//                 if a.0 == b.0 && a.1 == b.1 {
+//                     return true
+//                 }
+//                 else {
+//                     error!(
+//                         "withdrawal tx's output not match to withdrawal application. withdrawal application :{:?}, tx withdrawal output:{:?}",
+//                         a,
+//                         b
+//                     );
+//                     return false
+//                 }
+//             }).count();
+//
+//             if count != appl_withdrawal_list.len() {
+//                 return Err("withdrawal tx's output list not match to withdrawal application list");
+//             }
+//
+//             Ok(())
+//         }
+//     }
+// }
+/*
 /// Update the signature status of trustee
 /// state: false -> Veto signature, true -> Consent signature
 /// only allow inseRelayedTx once
-pub fn inseRelayedTx_trustee_vote_state<T: Trait>(
+pub fn insertTx_trustee_vote_state<T: Trait>(
     state: bool,
     who: &T::AccountId,
     trustee_list: &mut Vec<(T::AccountId, bool)>,
-) -> Result {
+) -> DispatchResult {
     match trustee_list.iter_mut().find(|ref info| info.0 == *who) {
         Some(_) => {
             // if account is exist, override state
@@ -312,3 +312,4 @@ pub fn inseRelayedTx_trustee_vote_state<T: Trait>(
     Module::<T>::deposit_event(RawEvent::SignWithdrawalProposal(who.clone(), state));
     Ok(())
 }
+*/

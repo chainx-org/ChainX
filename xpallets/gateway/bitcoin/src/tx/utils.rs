@@ -1,15 +1,14 @@
 // Copyright 2018-2019 Chainpool.
 // Substrate
-use sp_std::prelude::Vec;
-use sp_std::result::Result;
+use frame_support::{
+    debug::native,
+    dispatch::{DispatchError, DispatchResult},
+};
+use sp_std::{prelude::Vec, result::Result};
 
 // ChainX
-use xr_primitives::generic::b58;
-
-use xbridge_common::{traits::TrusteeSession, types::TrusteeSessionInfo, utils::two_thirds_unsafe};
-#[cfg(feature = "std")]
-use xsupport::u8array_to_hex;
-use xsupport::{error, warn};
+// use xbridge_common::{traits::TrusteeSession, types::TrusteeSessionInfo, utils::two_thirds_unsafe};
+use xpallet_support::{base58::to_base58, error, try_hex, warn, RUNTIME_TARGET};
 
 // light-bitcoin
 use btc_chain::{OutPoint, Transaction};
@@ -17,19 +16,10 @@ use btc_keys::{Address, DisplayLayout, Network};
 use btc_script::{Opcode, Script, ScriptAddress};
 
 use crate::types::TrusteeAddrInfo;
-use crate::{Module, Trait};
-
-#[inline]
-pub fn get_networkid<T: Trait>() -> Network {
-    if Module::<T>::network_id() == 0 {
-        Network::Mainnet
-    } else {
-        Network::Testnet
-    }
-}
+use crate::{Error, Module, Trait};
 
 pub fn parse_output_addr<T: Trait>(script: &Script) -> Option<Address> {
-    let network = get_networkid::<T>();
+    let network = Module::<T>::network_id();
     parse_output_addr_with_networkid(script, network)
 }
 
@@ -37,9 +27,9 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
     // only `p2pk`, `p2pkh`, `p2sh` could parse
     script.extract_destinations().map_err(|_e|{
         error!(
-            "[parse_output_addr]|parse output script error|e:{:?}|script:{:?}",
+            "[parse_output_addr]|parse output script error|e:{:}|script:{:?}",
             _e,
-            u8array_to_hex(&script)
+            try_hex!(&script)
         );
         _e
     }).ok().and_then(|script_addresses| {
@@ -54,7 +44,7 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
             return Some(addr);
         }
         // the type is `NonStandard`, `Multisig`, `NullData`, `WitnessScript`, `WitnessKey`
-        warn!("[parse_output_addr]|can't parse addr from output script|type:{:?}|addr:{:?}|script:{:}", script.script_type(), script_addresses, u8array_to_hex(&script));
+        warn!("[parse_output_addr]|can't parse addr from output script|type:{:?}|addr:{:?}|script:{:?}", script.script_type(), script_addresses, try_hex!(&script));
         None
     })
 }
@@ -132,25 +122,25 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
         None
     }
 }
-
+/*
 pub fn trustee_session<T: Trait>(
-) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddrInfo>, &'static str> {
+) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddrInfo>, DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
 }
 
 #[inline]
-fn trustee_addr_info_pair<T: Trait>() -> Result<(TrusteeAddrInfo, TrusteeAddrInfo), &'static str> {
+fn trustee_addr_info_pair<T: Trait>() -> Result<(TrusteeAddrInfo, TrusteeAddrInfo), DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
         .map(|session_info| (session_info.hot_address, session_info.cold_address))
 }
 
 #[inline]
-pub fn get_trustee_address_pair<T: Trait>() -> Result<(Address, Address), &'static str> {
+pub fn get_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
     trustee_addr_info_pair::<T>().map(|(hot_info, cold_info)| (hot_info.addr, cold_info.addr))
 }
 
 #[inline]
-pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), &'static str> {
+pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
     T::TrusteeSessionProvider::last_trustee_session().map(|session_info| {
         (
             session_info.hot_address.addr,
@@ -159,27 +149,27 @@ pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), &
     })
 }
 
-pub fn get_hot_trustee_address<T: Trait>() -> Result<Address, &'static str> {
+pub fn get_hot_trustee_address<T: Trait>() -> Result<Address, DispatchError> {
     trustee_addr_info_pair::<T>().map(|(addr_info, _)| addr_info.addr)
 }
 
-pub fn get_hot_trustee_redeem_script<T: Trait>() -> Result<Script, &'static str> {
+pub fn get_hot_trustee_redeem_script<T: Trait>() -> Result<Script, DispatchError> {
     trustee_addr_info_pair::<T>().map(|(addr_info, _)| addr_info.redeem_script.into())
 }
+*/
+// /// Get the required number of signatures
+// /// sig_num: Number of signatures required
+// /// trustee_num: Total number of multiple signatures
+// /// NOTE: Signature ratio greater than 2/3
+// pub fn get_sig_num<T: Trait>() -> (u32, u32) {
+//     let trustee_list = T::TrusteeSessionProvider::current_trustee_session()
+//         .map(|session_info| session_info.trustee_list)
+//         .expect("the trustee_list must exist; qed");
+//     let trustee_num = trustee_list.len() as u32;
+//     (two_thirds_unsafe(trustee_num), trustee_num)
+// }
 
-/// Get the required number of signatures
-/// sig_num: Number of signatures required
-/// trustee_num: Total number of multiple signatures
-/// NOTE: Signature ratio greater than 2/3
-pub fn get_sig_num<T: Trait>() -> (u32, u32) {
-    let trustee_list = T::TrusteeSessionProvider::current_trustee_session()
-        .map(|session_info| session_info.trustee_list)
-        .expect("the trustee_list must exist; qed");
-    let trustee_num = trustee_list.len() as u32;
-    (two_thirds_unsafe(trustee_num), trustee_num)
-}
-
-pub fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result<(), &'static str> {
+pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs
         && tx1.lock_time == tx2.lock_time
@@ -189,19 +179,25 @@ pub fn ensure_identical(tx1: &Transaction, tx2: &Transaction) -> Result<(), &'st
             if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
                 || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
-                error!(
+                native::error!(
+                    target: RUNTIME_TARGET,
                     "[ensure_identical]|tx1 not equal to tx2|tx1:{:?}|tx2:{:?}",
-                    tx1, tx2
+                    tx1,
+                    tx2
                 );
-                return Err("The inputs of these two transactions mismatch.");
+                Err(Error::<T>::MismatchedTx)?;
             }
         }
         return Ok(());
     }
-    Err("The transaction text does not match the original text to be signed.")
+    native::error!(
+        target: RUNTIME_TARGET,
+        "The transaction text does not match the original text to be signed",
+    );
+    Err(Error::<T>::MismatchedTx)?
 }
 
 #[inline]
 pub fn addr2vecu8(addr: &Address) -> Vec<u8> {
-    b58::to_base58(addr.layout().to_vec())
+    to_base58(addr.layout().to_vec())
 }

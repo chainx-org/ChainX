@@ -182,7 +182,7 @@ impl<'a> HeaderProofOfWork<'a> {
         if is_valid_proof_of_work(p.max_bits(), self.header.bits, &self.header.hash()) {
             Ok(())
         } else {
-            Err(Error::<T>::InvalidPow)?
+            Err(Error::<T>::InvalidPoW)?
         }
     }
 }

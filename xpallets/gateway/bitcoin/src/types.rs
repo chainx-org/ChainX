@@ -17,7 +17,7 @@ use btc_keys::Address;
 use btc_primitives::{Compact, H256};
 use merkle::PartialMerkleTree;
 
-use crate::{traits::RelayTransaction, Error, Trait};
+use crate::{Error, Trait};
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -26,8 +26,8 @@ pub enum BTCTxType {
     Deposit,
     HotAndCold,
     TrusteeTransition,
-    Lock,
-    Unlock,
+    // Lock,
+    // Unlock,
     Irrelevance,
 }
 
@@ -42,23 +42,7 @@ pub struct RelayedTx {
     pub block_hash: H256,
     pub raw: BTCTransaction,
     pub merkle_proof: PartialMerkleTree,
-    // pub previous_raw: BTCTransaction,
 }
-
-// impl RelayTransaction for RelayTx {
-//     fn block_hash(&self) -> &H256 {
-//         &self.block_hash
-//     }
-//     fn raw_tx(&self) -> &BTCTransaction {
-//         &self.raw
-//     }
-//     fn merkle_proof(&self) -> &PartialMerkleTree {
-//         &self.merkle_proof
-//     }
-//     fn prev_tx(&self) -> Option<&BTCTransaction> {
-//         Some(&self.previous_raw)
-//     }
-// }
 
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct WithdrawalProposal<AccountId> {
@@ -206,5 +190,18 @@ impl BTCParams {
     }
     pub fn target_timespan_seconds(&self) -> u32 {
         self.target_timespan_seconds
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum VerifierMode {
+    Recover,
+    RuntimeInterface,
+}
+
+impl Default for VerifierMode {
+    fn default() -> Self {
+        VerifierMode::Recover
     }
 }
