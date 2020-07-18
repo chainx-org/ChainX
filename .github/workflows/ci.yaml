@@ -56,21 +56,20 @@ jobs:
     - name: Format
       run: cargo fmt -- --check
 
-    - name: Compile
-      run: cargo +stable build
+    - if: matrix.os == 'ubuntu-latest'
+      run: cargo clippy
 
     - name: Test
       # FIXME: test all
       run: |
-          rustup override set stable
           cd xpallets/mining/asset
-          cargo test -- --nocapture
+          cargo +stable test -- --nocapture
           cd -
           cd xpallets/mining/staking
-          cargo test -- --nocapture
+          cargo +stable test -- --nocapture
           cd -
           cd xpallets/dex/spot
-          cargo test -- --nocapture
+          cargo +stable test -- --nocapture
 
-    - if: matrix.os == 'ubuntu-latest'
-      run: cargo clippy
+    - name: Compile
+      run: cargo +stable build
