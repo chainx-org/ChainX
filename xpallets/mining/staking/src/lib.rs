@@ -732,3 +732,9 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 }
+
+impl<T: Trait> Module<T> {
+    pub fn validators_info() -> Vec<T::AccountId> {
+        Self::validator_set().collect()
+    }
+}
