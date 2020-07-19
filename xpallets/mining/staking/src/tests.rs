@@ -55,6 +55,21 @@ fn t_start_session(session_index: SessionIndex) {
 }
 
 #[test]
+fn cannot_force_chill_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        t_make_a_validator_candidate(123, 100);
+        assert_eq!(XStaking::can_force_chilled(), true);
+        assert_ok!(XStaking::chill(Origin::signed(123)));
+        assert_err!(
+            XStaking::chill(Origin::signed(1)),
+            <Error<Test>>::InsufficientActiveValidators
+        );
+        t_make_a_validator_candidate(1234, 100);
+        assert_ok!(XStaking::chill(Origin::signed(1)));
+    });
+}
+
+#[test]
 fn bond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         assert_eq!(

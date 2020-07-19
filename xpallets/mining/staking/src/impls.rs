@@ -197,7 +197,8 @@ impl<T: Trait> Module<T> {
 
         let force_chilled = Self::slash_offenders_in_session(staking_reward);
 
-        if force_chilled > 0 {
+        if !force_chilled.is_empty() {
+            Self::deposit_event(RawEvent::ForceChilled(session_index, force_chilled));
             // Force a new era if some offender's reward pot has been wholly slashed.
             Self::ensure_new_era();
         }
@@ -209,10 +210,9 @@ impl<T: Trait> Module<T> {
         debug!(
             "[new_session]session_index:{:?}, current_era:{:?}",
             session_index,
-            Self::current_era()
+            Self::current_era(),
         );
 
-        // FIXME: force new era when some validator's reward pot has been all slashed.
         if let Some(current_era) = Self::current_era() {
             // Initial era has been set.
 
@@ -264,7 +264,7 @@ impl<T: Trait> Module<T> {
 
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
         debug!(
-            "[start_session]:start_session:{:?}, next_active_era:{:?}",
+            "[start_session]start_session:{:?}, next_active_era:{:?}",
             start_session, next_active_era
         );
         if let Some(next_active_era_start_session_index) =
@@ -311,10 +311,7 @@ impl<T: Trait> Module<T> {
 
     /// Compute payout for era.
     fn end_era(active_era: ActiveEraInfo, session_index: SessionIndex) {
-        debug!(
-            "[end_era]active_era:{:?}, session_index:{:?}",
-            active_era, session_index
-        );
+        // Ignore, ChainX has nothing to do in end_era().
     }
 }
 
@@ -369,20 +366,16 @@ where
         slash_fraction: &[Perbill],
         _slash_session: SessionIndex,
     ) -> Result<OnOffenceRes, ()> {
+        // TODO: make use of slash_fraction
         for (details, _slash_fraction) in offenders.iter().zip(slash_fraction) {
-            // TODO: reward reporters?
-
-            let (offender, _) = &details.offender;
+            // reporters are actually always empty.
+            let (offender, _reporters) = &details.offender;
 
             // FIXME: record the offenders by session_index?
             <OffendersInSession<T>>::mutate(|offenders| {
                 if !offenders.contains(offender) {
                     offenders.push(offender.clone())
                 }
-            });
-
-            <OffenceCountInSession<T>>::mutate(offender, |cnt| {
-                *cnt += 1;
             });
         }
         Ok(0)
