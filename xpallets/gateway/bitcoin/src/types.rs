@@ -19,6 +19,33 @@ use merkle::PartialMerkleTree;
 
 use crate::{Error, Trait};
 
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
+pub struct RelayedTx {
+    pub block_hash: H256,
+    pub raw: BTCTransaction,
+    pub merkle_proof: PartialMerkleTree,
+}
+
+#[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct BTCHeaderInfo {
+    pub header: BTCHeader,
+    pub height: u32,
+}
+
+#[derive(PartialEq, Clone, Copy, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct BTCHeaderIndex {
+    pub hash: H256,
+    pub height: u32,
+}
+
+// #[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
+// pub struct BTCTxInfo {
+//     pub raw_tx: BTCTransaction,
+//     pub tx_type: BTCTxType,
+//     pub height: u32,
+// }
+
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum BTCTxType {
@@ -35,11 +62,35 @@ impl Default for BTCTxType {
     }
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub struct RelayedTx {
-    pub block_hash: H256,
-    pub raw: BTCTransaction,
-    pub merkle_proof: PartialMerkleTree,
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+pub enum BTCTxResult {
+    Success,
+    Failed
+}
+
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+pub struct BTCTxState {
+    pub result: BTCTxResult,
+    pub tx_type: BTCTxType,
+}
+
+pub enum DepositAccountInfo<AccountId> {
+    AccountId(AccountId),
+    Address(Address),
+}
+
+// #[derive(PartialEq, Clone, Encode, Decode, Default)]
+// pub struct DepositCache {
+//     pub txid: H256,
+//     pub balance: u64,
+// }
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct TrusteeAddrInfo {
+    pub addr: Address,
+    pub redeem_script: Vec<u8>,
 }
 
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
@@ -72,46 +123,6 @@ pub enum VoteResult {
     Unfinish,
     Finish,
 }
-
-#[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
-pub struct BTCHeaderInfo {
-    pub header: BTCHeader,
-    pub height: u32,
-}
-
-#[derive(PartialEq, Clone, Copy, Default, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct BTCHeaderIndex {
-    pub hash: H256,
-    pub height: u32,
-}
-
-#[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
-pub struct BTCTxInfo {
-    pub raw_tx: BTCTransaction,
-    pub tx_type: BTCTxType,
-    pub height: u32,
-}
-
-pub enum DepositAccountInfo<AccountId> {
-    AccountId(AccountId),
-    Address(Address),
-}
-
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
-pub struct DepositCache {
-    pub txid: H256,
-    pub balance: u64,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeAddrInfo {
-    pub addr: Address,
-    pub redeem_script: Vec<u8>,
-}
-
 // impl IntoVecu8 for TrusteeAddrInfo {
 //     fn into_vecu8(self) -> Vec<u8> {
 //         self.encode()
@@ -198,13 +209,13 @@ impl BTCParams {
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum VerifierMode {
+pub enum BTCTxVerifier {
     Recover,
     RuntimeInterface,
 }
 
-impl Default for VerifierMode {
+impl Default for BTCTxVerifier {
     fn default() -> Self {
-        VerifierMode::Recover
+        BTCTxVerifier::Recover
     }
 }

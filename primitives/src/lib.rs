@@ -54,6 +54,7 @@ pub type BlockId = generic::BlockId<Block>;
 pub type Text = Vec<u8>;
 pub type Desc = Vec<u8>;
 pub type Token = Vec<u8>;
+pub type Name = Vec<u8>;
 pub type Precision = u8;
 pub type AddrStr = Vec<u8>;
 pub type AssetId = u32;

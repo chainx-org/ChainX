@@ -7129,8 +7129,27 @@ dependencies = [
  "sp-std",
  "xp-io",
  "xpallet-assets",
+ "xpallet-gateway-common",
  "xpallet-gateway-records",
  "xpallet-protocol",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-common"
+version = "1.0.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xp-io",
+ "xpallet-assets",
  "xpallet-support",
 ]
 

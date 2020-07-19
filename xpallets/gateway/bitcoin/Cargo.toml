@@ -26,6 +26,7 @@ xp-io = { path = "../../../primitives/io", default-features = false }
 xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
+xpallet-gateway-common = { path = "../common", default-features = false }
 xpallet-gateway-records = { path = "../records", default-features = false }
 
 # light-bitcoin
@@ -58,6 +59,7 @@ std = [
     "xpallet-assets/std",
     "xpallet-protocol/std",
     "xpallet-support/std",
+    "xpallet-gateway-common/std",
     "xpallet-gateway-records/std",
 
     # light-bitcoin

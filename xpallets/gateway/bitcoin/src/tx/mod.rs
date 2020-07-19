@@ -6,7 +6,7 @@ pub mod utils;
 pub mod validator;
 
 // Substrate
-use frame_support::dispatch::DispatchResult;
+use frame_support::dispatch::{DispatchResult, DispatchError};
 use sp_std::{prelude::*, result};
 
 // ChainX
@@ -20,7 +20,7 @@ use btc_primitives::{Bytes, H256};
 use btc_script::{Builder, Opcode, Script};
 
 // use crate::traits::RelayTransaction;
-use crate::types::{RelayedTx, TrusteeAddrInfo};
+use crate::types::{RelayedTx, TrusteeAddrInfo, BTCTxState, BTCTxType,BTCTxResult};
 use crate::{Module, RawEvent, Trait};
 
 // use crate::lockup::detect_lockup_type;
@@ -31,10 +31,17 @@ use self::utils::{
     parse_output_addr_with_networkid,
 };
 pub use self::validator::validate_transaction;
-/*
+
+pub fn process_tx<T: Trait>(tx: Transaction) ->  result::Result<BTCTxState, DispatchError>{
+
+    let state = BTCTxState { result: BTCTxResult::Success, tx_type: Default::default() }
+    Ok(state)
+}
+
+
 pub fn detect_transaction_type<T: Trait>(
-    relay_tx: &RelayedTx,
-) -> result::Result<(TxType, Option<Address>), &'static str> {
+    tx: &Transaction,
+) -> result::Result<(BTCTxType, Option<Address>), &'static str> {
     let addr_pair = get_trustee_address_pair::<T>()?;
     let last_addr_pair = get_last_trustee_address_pair::<T>()
         .map_err(|_e| {
@@ -49,7 +56,7 @@ pub fn detect_transaction_type<T: Trait>(
     let min_deposit = Module::<T>::btc_min_deposit();
 
     detect_transaction_type_impl::<_>(
-        relay_tx,
+        tx,
         network,
         min_deposit,
         addr_pair,
@@ -57,7 +64,7 @@ pub fn detect_transaction_type<T: Trait>(
         detect_lockup_type::<T::XBitcoinLockup>,
     )
 }
-
+/*
 /// parse tx's inputs/outputs into Option<Address>
 /// e.g
 /// notice the relay tx only has first input
