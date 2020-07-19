@@ -310,7 +310,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Compute payout for era.
-    fn end_era(active_era: ActiveEraInfo, session_index: SessionIndex) {
+    fn end_era(_active_era: ActiveEraInfo, _session_index: SessionIndex) {
         // Ignore, ChainX has nothing to do in end_era().
     }
 }
