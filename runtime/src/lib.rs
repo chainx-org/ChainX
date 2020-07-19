@@ -328,7 +328,7 @@ impl xpallet_mining_staking::Trait for Runtime {
 
 impl xpallet_mining_asset::Trait for Runtime {
     type Event = Event;
-    type TreasuryAccount = ();
+    type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
 }

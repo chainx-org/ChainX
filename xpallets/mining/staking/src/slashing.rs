@@ -54,31 +54,33 @@ impl<T: Trait> Module<T> {
 
         let reward_per_block = Self::reward_per_block(staking_reward, validators.len());
 
-        let active_potential_validators = Validators::<T>::iter()
-            .map(|(v, _)| v)
-            .filter(Self::is_active)
-            .collect::<Vec<_>>();
-
-        let mut active_count = active_potential_validators.len();
-
-        let mut force_chilled = Vec::new();
-
         let minimum_validator_count = Self::minimum_validator_count() as usize;
 
-        for offender in valid_offenders.iter() {
-            let expected_slash = Self::expected_slash_of(reward_per_block);
-            if let Err(actual_slashed) = Self::try_slash(offender, expected_slash) {
-                debug!(
-                    "[slash_offenders_in_session]expected_slash:{:?}, actual_slashed:{:?}",
-                    expected_slash, actual_slashed
-                );
-                if active_count > minimum_validator_count {
-                    Self::apply_force_chilled(offender);
-                    active_count -= 1;
-                    force_chilled.push(offender.clone());
+        let active_validators = Self::active_validator_set().collect::<Vec<_>>();
+        let mut active_count = active_validators.len();
+
+        let force_chilled = valid_offenders
+            .into_iter()
+            .flat_map(|offender| {
+                let expected_slash = Self::expected_slash_of(reward_per_block);
+                match Self::try_slash(&offender, expected_slash) {
+                    Ok(_) => None,
+                    Err(actual_slashed) => {
+                        debug!(
+                            "[slash_offenders_in_session]expected_slash:{:?}, actual_slashed:{:?}",
+                            expected_slash, actual_slashed
+                        );
+                        if active_count > minimum_validator_count {
+                            Self::apply_force_chilled(&offender);
+                            active_count -= 1;
+                            Some(offender)
+                        } else {
+                            None
+                        }
+                    }
                 }
-            }
-        }
+            })
+            .collect::<Vec<_>>();
 
         force_chilled
     }
