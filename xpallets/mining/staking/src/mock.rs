@@ -22,7 +22,6 @@ pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
-pub(crate) type AccountIndex = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 
@@ -202,15 +201,6 @@ impl Trait for Test {
     type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;
 }
 
-// This function basically just builds a genesis storage key/value store according to
-// our desired mockup.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-    system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap()
-        .into()
-}
-
 thread_local! {
     static SESSION: RefCell<(Vec<AccountId>, HashSet<AccountId>)> = RefCell::new(Default::default());
     static SESSION_PER_ERA: RefCell<SessionIndex> = RefCell::new(3);
@@ -224,8 +214,6 @@ pub struct ExtBuilder {
     session_length: BlockNumber,
     election_lookahead: BlockNumber,
     session_per_era: SessionIndex,
-    validator_count: u32,
-    minimum_validator_count: u32,
 }
 
 impl Default for ExtBuilder {
@@ -234,8 +222,6 @@ impl Default for ExtBuilder {
             session_length: 1,
             election_lookahead: 0,
             session_per_era: 3,
-            validator_count: 2,
-            minimum_validator_count: 0,
         }
     }
 }

@@ -73,6 +73,8 @@ where
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         xpallet_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
+        xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId>,
+    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         xpallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     <<Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api as sp_api::ApiErrorExt>::Error:
         fmt::Debug,
@@ -82,6 +84,7 @@ where
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
     use xpallet_assets_rpc::{Assets, AssetsApi};
     use xpallet_contracts_rpc::{Contracts, ContractsApi};
+    use xpallet_mining_staking_rpc::{XStaking, XStakingApi};
     use xpallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
@@ -101,6 +104,7 @@ where
     )));
     io.extend_with(AssetsApi::to_delegate(Assets::new(client.clone())));
     io.extend_with(ContractsApi::to_delegate(Contracts::new(client.clone())));
+    io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));
     io
 }
 

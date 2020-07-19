@@ -485,6 +485,7 @@ dependencies = [
  "futures 0.3.5",
  "log",
  "log4rs",
+ "pallet-im-online",
  "parking_lot 0.10.2",
  "sc-basic-authorship",
  "sc-cli",
@@ -551,6 +552,8 @@ dependencies = [
  "xpallet-assets-rpc-runtime-api",
  "xpallet-contracts-rpc",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-mining-staking-rpc",
+ "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-transaction-payment-rpc",
 ]
 
@@ -598,6 +601,7 @@ dependencies = [
  "xpallet-dex-spot",
  "xpallet-mining-asset",
  "xpallet-mining-staking",
+ "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-protocol",
  "xpallet-system",
  "xpallet-transaction-payment",
@@ -7165,6 +7169,29 @@ dependencies = [
  "xpallet-assets",
  "xpallet-protocol",
  "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-mining-staking-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xpallet-mining-staking-rpc-runtime-api",
+]
+
+[[package]]
+name = "xpallet-mining-staking-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
 ]
 
 [[package]]

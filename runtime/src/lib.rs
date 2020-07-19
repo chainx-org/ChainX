@@ -16,14 +16,14 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
-        BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, IdentityLookup, NumberFor,
-        OpaqueKeys, Saturating, SignedExtension,
+        AccountIdConversion, BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, IdentityLookup,
+        NumberFor, OpaqueKeys, Saturating, SignedExtension,
     },
     transaction_validity::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         TransactionValidityError, ValidTransaction,
     },
-    ApplyExtrinsicResult, FixedPointNumber, Perbill, Permill, Perquintill,
+    ApplyExtrinsicResult, FixedPointNumber, ModuleId, Perbill, Permill, Perquintill,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
@@ -77,6 +77,7 @@ impl_opaque_keys! {
     pub struct SessionKeys {
         pub aura: Aura,
         pub grandpa: Grandpa,
+        pub im_online: ImOnline,
     }
 }
 
@@ -305,10 +306,14 @@ impl xpallet_contracts::Trait for Runtime {
     type WeightPrice = xpallet_transaction_payment::Module<Self>;
 }
 
+parameter_types! {
+    pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+}
+
 pub struct SimpleTreasuryAccount;
 impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
     fn treasury_account() -> AccountId {
-        todo!("Treasury::account_id()")
+        TreasuryModuleId::get().into_account()
     }
 }
 
@@ -324,6 +329,7 @@ impl xpallet_mining_staking::Trait for Runtime {
 
 impl xpallet_mining_asset::Trait for Runtime {
     type Event = Event;
+    type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
 }
@@ -609,6 +615,12 @@ impl_runtime_apis! {
 
         fn assets() -> BTreeMap<AssetId, TotalAssetInfo<Balance>> {
             XAssets::total_asset_infos()
+        }
+    }
+
+    impl xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId> for Runtime {
+        fn validators() -> Vec<AccountId> {
+            XStaking::validators_info()
         }
     }
 

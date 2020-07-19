@@ -55,6 +55,21 @@ fn t_start_session(session_index: SessionIndex) {
 }
 
 #[test]
+fn cannot_force_chill_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        t_make_a_validator_candidate(123, 100);
+        assert_eq!(XStaking::can_force_chilled(), true);
+        assert_ok!(XStaking::chill(Origin::signed(123)));
+        assert_err!(
+            XStaking::chill(Origin::signed(1)),
+            <Error<Test>>::InsufficientActiveValidators
+        );
+        t_make_a_validator_candidate(1234, 100);
+        assert_ok!(XStaking::chill(Origin::signed(1)));
+    });
+}
+
+#[test]
 fn bond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         assert_eq!(
@@ -356,13 +371,13 @@ fn staking_reward_should_work() {
                 // 90% -> validator's reward pot
                 assert_eq!(
                     XAssets::pcx_free_balance(&validator),
-                    initial_free + val_total_reward * (2 + session_index as u128) / 10 // 2 is genesis + session 1
+                    initial_free + val_total_reward * session_index as u128 / 10
                 );
                 assert_eq!(
                     XAssets::pcx_free_balance(
                         &DummyStakingRewardPotAccountDeterminer::reward_pot_account_for(&validator)
                     ),
-                    0 + (val_total_reward - val_total_reward / 10) * (2 + session_index as u128)
+                    0 + (val_total_reward - val_total_reward / 10) * session_index as u128
                 );
             };
 
@@ -373,7 +388,7 @@ fn staking_reward_should_work() {
 
         assert_eq!(
             XAssets::pcx_free_balance(&TREASURY_ACCOUNT),
-            (treasury_reward + asset_mining_reward) * 3
+            (treasury_reward + asset_mining_reward) * 1
         );
 
         let validators_reward_pot = validators
@@ -385,7 +400,7 @@ fn staking_reward_should_work() {
         let endowed = 100 + 200 + 300 + 400;
         assert_eq!(
             XAssets::pcx_total_balance(),
-            5_000_000_000u128 * 3 + issued_manually + endowed
+            5_000_000_000u128 + issued_manually + endowed
         );
 
         let mut all = Vec::new();
@@ -402,6 +417,12 @@ fn staking_reward_should_work() {
         };
 
         assert_eq!(XAssets::pcx_total_balance(), total_issuance());
+
+        t_start_session(2);
+        assert_eq!(
+            XAssets::pcx_total_balance(),
+            5_000_000_000u128 * 2 + issued_manually + endowed
+        );
     });
 }
 

@@ -1,7 +1,9 @@
 use crate::*;
 use crate::{Module, Trait};
 use chainx_primitives::AssetId;
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
+use frame_support::{
+    impl_outer_event, impl_outer_origin, parameter_types, traits::Get, weights::Weight,
+};
 use sp_core::H256;
 use sp_runtime::{
     testing::{Header, UintAuthorityId},
@@ -230,6 +232,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AssetId>
 
 impl Trait for Test {
     type Event = MetaEvent;
+    type TreasuryAccount = ();
     type DetermineRewardPotAccount = DummyAssetRewardPotAccountDeterminer;
 }
 

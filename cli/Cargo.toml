@@ -33,6 +33,9 @@ sp-inherents = { git = "https://github.com/paritytech/substrate.git", tag = "v2.
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 
+# Substrate pallets
+pallet-im-online = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+
 chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
 chainx-rpc = { path = "../rpc" }

@@ -3,10 +3,9 @@ use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
-use sp_staking::offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence};
+use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 use xp_mining_common::{
-    compute_dividend, generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight,
-    WeightFactors, WeightType,
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
 use xp_mining_staking::SessionIndex;
 
@@ -165,21 +164,16 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error> {
         let current_block = <frame_system::Module<T>>::block_number();
 
-        let (source_weight, target_weight) = <Self as ComputeMiningWeight<
-            T::AccountId,
-            T::BlockNumber,
-        >>::settle_weight_on_claim(
-            claimer, claimee, current_block
-        )?;
+        let claimee_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
+        let reward_pot_balance = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_pot);
 
-        let claimee_pot = Self::reward_pot_for(claimee);
-
-        let dividend = compute_dividend::<T::AccountId, T::Balance, _>(
-            source_weight,
-            target_weight,
-            &claimee_pot,
-            xpallet_assets::Module::<T>::pcx_free_balance,
-        );
+        let (dividend, source_weight, target_weight) =
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::compute_dividend(
+                claimer,
+                claimee,
+                current_block,
+                reward_pot_balance,
+            )?;
 
         Self::allocate_dividend(claimer, &claimee_pot, dividend)?;
 
@@ -195,7 +189,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+    fn mint_and_slash(session_index: SessionIndex) {
         // TODO: the whole flow of session changes?
         //
         // Only the active validators can be rewarded.
@@ -203,18 +197,22 @@ impl<T: Trait> Module<T> {
 
         let force_chilled = Self::slash_offenders_in_session(staking_reward);
 
-        if force_chilled > 0 {
+        if !force_chilled.is_empty() {
+            Self::deposit_event(RawEvent::ForceChilled(session_index, force_chilled));
             // Force a new era if some offender's reward pot has been wholly slashed.
             Self::ensure_new_era();
         }
+    }
+}
 
+impl<T: Trait> Module<T> {
+    fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         debug!(
             "[new_session]session_index:{:?}, current_era:{:?}",
             session_index,
-            Self::current_era()
+            Self::current_era(),
         );
 
-        // FIXME: force new era when some validator's reward pot has been all slashed.
         if let Some(current_era) = Self::current_era() {
             // Initial era has been set.
 
@@ -258,9 +256,15 @@ impl<T: Trait> Module<T> {
 
     /// Start a session potentially starting an era.
     fn start_session(start_session: SessionIndex) {
+        // Skip the reward minting for the genesis initialization.
+        // Actually start from session index 1.
+        if start_session > 0 {
+            Self::mint_and_slash(start_session);
+        }
+
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
         debug!(
-            "[start_session]:start_session:{:?}, next_active_era:{:?}",
+            "[start_session]start_session:{:?}, next_active_era:{:?}",
             start_session, next_active_era
         );
         if let Some(next_active_era_start_session_index) =
@@ -306,11 +310,8 @@ impl<T: Trait> Module<T> {
     }
 
     /// Compute payout for era.
-    fn end_era(active_era: ActiveEraInfo, session_index: SessionIndex) {
-        debug!(
-            "[end_era]active_era:{:?}, session_index:{:?}",
-            active_era, session_index
-        );
+    fn end_era(_active_era: ActiveEraInfo, _session_index: SessionIndex) {
+        // Ignore, ChainX has nothing to do in end_era().
     }
 }
 
@@ -365,20 +366,16 @@ where
         slash_fraction: &[Perbill],
         _slash_session: SessionIndex,
     ) -> Result<OnOffenceRes, ()> {
+        // TODO: make use of slash_fraction
         for (details, _slash_fraction) in offenders.iter().zip(slash_fraction) {
-            // TODO: reward reporters?
-
-            let (offender, _) = &details.offender;
+            // reporters are actually always empty.
+            let (offender, _reporters) = &details.offender;
 
             // FIXME: record the offenders by session_index?
             <OffendersInSession<T>>::mutate(|offenders| {
                 if !offenders.contains(offender) {
                     offenders.push(offender.clone())
                 }
-            });
-
-            <OffenceCountInSession<T>>::mutate(offender, |cnt| {
-                *cnt += 1;
             });
         }
         Ok(0)
