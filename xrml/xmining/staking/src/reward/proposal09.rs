@@ -244,6 +244,26 @@ impl<T: Trait> Module<T> {
         Self::mint(&council_account, value);
     }
 
+    /// Superseded by Proposal 12.
+    #[allow(unused)]
+    fn airdrop_proposal09(for_airdrop: T::Balance) {
+        let unpaid_airdrop_reward = Self::distribute_to_airdrop_assets(for_airdrop);
+        if !unpaid_airdrop_reward.is_zero() {
+            debug!(
+                "[distribute_session_reward_impl_09]unpaid_airdrop_reward:{}",
+                unpaid_airdrop_reward
+            );
+            Self::distribute_to_treasury(unpaid_airdrop_reward);
+        }
+    }
+
+    /// SDOT, LBTC's reward will be distributed to the treasury according to ChainX Proposal 12.
+    /// At this time, SDOT+LBTC = all airdrop assets, therefore all the airdrop reward
+    /// goes to the treasury.
+    fn airdrop_proposal12(for_airdrop: T::Balance) {
+        Self::distribute_to_treasury(for_airdrop);
+    }
+
     pub(super) fn distribute_session_reward_impl_09(
         session_reward: T::Balance,
         validators: &mut Vec<T::AccountId>,
@@ -259,14 +279,7 @@ impl<T: Trait> Module<T> {
         // airdrop -> SDOT, LBTC
         // The unpaid airdrop reward happens when there is no airdrop asset.
         if !for_airdrop.is_zero() {
-            let unpaid_airdrop_reward = Self::distribute_to_airdrop_assets(for_airdrop);
-            if !unpaid_airdrop_reward.is_zero() {
-                debug!(
-                    "[distribute_session_reward_impl_09]unpaid_airdrop_reward:{}",
-                    unpaid_airdrop_reward
-                );
-                Self::distribute_to_treasury(unpaid_airdrop_reward);
-            }
+            Self::airdrop_proposal12(for_airdrop);
         }
 
         // cross_mining_and_staking -> XBTC, PCX
