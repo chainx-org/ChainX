@@ -212,6 +212,15 @@ decl_module! {
                 error!("[set_asset_limit_props]|asset not exist|token:{:}", token!(token));
             }
         }
+
+        pub fn force_transfer(from: T::AccountId, dest: T::AccountId, token: Token, value: T::Balance, memo: Memo) -> Result {
+            debug!("[force_transfer]|from:{:?}|to:{:?}|token:{:}|value:{:}|memo:{:}", from, dest, token!(token), value, u8array_to_string(&memo));
+            is_valid_memo::<T>(&memo)?;
+
+            Self::can_transfer(&token)?;
+            let _ = Self::move_free_balance(&token, &from, &dest, value).map_err(|e| e.info())?;
+            Ok(())
+        }
     }
 }
 
