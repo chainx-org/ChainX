@@ -20,6 +20,9 @@ xp-io = { path = "../../../primitives/io", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 xpallet-assets = { path = "../../assets", default-features = false }
 
+#chain
+btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
+
 [dev-dependencies]
 hex = "0.4"
 sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
@@ -30,8 +33,8 @@ std=[
     "codec/std",
     "serde",
 
-    "sp-runtime/std",
     "sp-std/std",
+    "sp-runtime/std",
 
     "frame-support/std",
     "frame-system/std",
@@ -40,4 +43,7 @@ std=[
     "xp-io/std",
     "xpallet-assets/std",
     "xpallet-support/std",
+
+    # chain
+    "btc-keys/std",
 ]

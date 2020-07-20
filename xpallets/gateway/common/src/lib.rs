@@ -7,17 +7,18 @@
 
 pub mod extractor;
 pub mod traits;
+pub mod trustees;
 pub mod types;
 pub mod utils;
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult};
 use frame_system::{self as system, ensure_root};
 
-// use xassets::AssetIdJackpotAccountIdFor;
-// use xr_primitives::{Name, AssetId};
 use chainx_primitives::{AssetId, Name};
+use xpallet_assets::Chain;
 
 use crate::traits::ChannelBinding;
+use crate::types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig};
 
 pub trait Trait: system::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -25,7 +26,10 @@ pub trait Trait: system::Trait {
 
 decl_event!(
     pub enum Event<T> where
-        <T as system::Trait>::AccountId {
+        <T as system::Trait>::AccountId,
+        GenericTrusteeSessionInfo = GenericTrusteeSessionInfo<<T as system::Trait>::AccountId> {
+        SetTrusteeProps(AccountId, Chain, GenericTrusteeSessionInfo),
+        NewTrustees(Chain, u32, GenericTrusteeSessionInfo),
         ChannelBinding(AssetId, AccountId, AccountId),
     }
 );
@@ -51,6 +55,20 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XGatewayCommon {
+        // for trustee
+        pub TrusteeMultiSigAddr get(fn trustee_multisig_addr): map hasher(twox_64_concat) Chain => T::AccountId;
+
+        /// trustee basal info config
+        pub TrusteeInfoConfigOf get(fn trustee_info_config) config(): map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
+        /// when generate trustee, auto generate a new session number, increase the newest trustee addr, can't modify by user
+        pub TrusteeSessionInfoLen get(fn trustee_session_info_len): map hasher(twox_64_concat) Chain => u32 = 0;
+
+        pub TrusteeSessionInfoOf get(fn trustee_session_info_of):
+            double_map hasher(twox_64_concat) Chain, hasher(twox_64_concat) u32 => Option<GenericTrusteeSessionInfo<T::AccountId>>;
+
+        pub TrusteeIntentionPropertiesOf get(fn trustee_intention_props_of):
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Option<GenericTrusteeIntentionProps>;
+
         pub ChannelBindingOf get(fn channel_binding_of):
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => Option<T::AccountId>;
     }

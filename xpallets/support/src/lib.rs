@@ -48,9 +48,7 @@ pub mod _std {
     }
     #[inline]
     pub fn u8array_to_hex(s: &[u8]) -> String {
-        use rustc_hex::ToHex;
-        let s: String = s.to_hex();
-        "0x".to_string() + &s
+        format!("0x{:}", hex::encode(s))
     }
     #[inline]
     pub fn try_hex_or_str(src: &[u8]) -> String {

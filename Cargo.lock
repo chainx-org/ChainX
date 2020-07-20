@@ -7143,6 +7143,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex",
+ "keys",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -7262,7 +7263,7 @@ name = "xpallet-support"
 version = "0.1.0"
 dependencies = [
  "frame-support",
- "rustc-hex",
+ "hex",
  "sp-std",
 ]
 

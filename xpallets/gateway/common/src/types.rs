@@ -1,7 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
 use sp_runtime::RuntimeDebug;
-use sp_std::prelude::Vec;
+use sp_std::{convert::TryFrom, prelude::Vec};
 
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 // ChainX
 use chainx_primitives::Text;
 
+use crate::traits::BytesLike;
 use crate::utils::two_thirds_unsafe;
 
 #[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
@@ -23,7 +24,7 @@ pub struct TrusteeInfoConfig {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeIntentionProps<TrusteeEntity: Into<Vec<u8>>> {
+pub struct TrusteeIntentionProps<TrusteeEntity: BytesLike> {
     pub about: Text,
     pub hot_entity: TrusteeEntity,
     pub cold_entity: TrusteeEntity,
@@ -32,7 +33,7 @@ pub struct TrusteeIntentionProps<TrusteeEntity: Into<Vec<u8>>> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeSessionInfo<AccountId, TrusteeAddress: Into<Vec<u8>>> {
+pub struct TrusteeSessionInfo<AccountId, TrusteeAddress: BytesLike> {
     pub trustee_list: Vec<AccountId>,
     pub hot_address: TrusteeAddress,
     pub cold_address: TrusteeAddress,
@@ -67,7 +68,7 @@ pub struct Counts {
     pub total: u32,
 }
 
-impl<TrusteeEntity: Into<Vec<u8>>> Into<GenericTrusteeIntentionProps>
+impl<TrusteeEntity: BytesLike> Into<GenericTrusteeIntentionProps>
     for TrusteeIntentionProps<TrusteeEntity>
 {
     fn into(self) -> GenericTrusteeIntentionProps {
@@ -79,7 +80,24 @@ impl<TrusteeEntity: Into<Vec<u8>>> Into<GenericTrusteeIntentionProps>
     }
 }
 
-impl<AccountId, TrusteeAddress: Into<Vec<u8>>> Into<GenericTrusteeSessionInfo<AccountId>>
+impl<TrusteeEntity: BytesLike> TryFrom<GenericTrusteeIntentionProps>
+    for TrusteeIntentionProps<TrusteeEntity>
+{
+    // TODO, may use a better error
+    type Error = ();
+
+    fn try_from(value: GenericTrusteeIntentionProps) -> Result<Self, Self::Error> {
+        let hot = TrusteeEntity::try_from(value.0.hot_entity).map_err(|_| ())?;
+        let cold = TrusteeEntity::try_from(value.0.cold_entity).map_err(|_| ())?;
+        Ok(TrusteeIntentionProps::<TrusteeEntity> {
+            about: value.0.about,
+            hot_entity: hot,
+            cold_entity: cold,
+        })
+    }
+}
+
+impl<AccountId, TrusteeAddress: BytesLike> Into<GenericTrusteeSessionInfo<AccountId>>
     for TrusteeSessionInfo<AccountId, TrusteeAddress>
 {
     fn into(self) -> GenericTrusteeSessionInfo<AccountId> {
@@ -91,10 +109,27 @@ impl<AccountId, TrusteeAddress: Into<Vec<u8>>> Into<GenericTrusteeSessionInfo<Ac
     }
 }
 
+impl<AccountId, TrusteeAddress: BytesLike> TryFrom<GenericTrusteeSessionInfo<AccountId>>
+    for TrusteeSessionInfo<AccountId, TrusteeAddress>
+{
+    // TODO, may use a better error
+    type Error = ();
+
+    fn try_from(value: GenericTrusteeSessionInfo<AccountId>) -> Result<Self, Self::Error> {
+        let hot = TrusteeAddress::try_from(value.0.hot_address).map_err(|_| ())?;
+        let cold = TrusteeAddress::try_from(value.0.cold_address).map_err(|_| ())?;
+        Ok(TrusteeSessionInfo::<AccountId, TrusteeAddress> {
+            trustee_list: value.0.trustee_list,
+            hot_address: hot,
+            cold_address: cold,
+        })
+    }
+}
+
 pub fn into_generic_all_info<
     AccountId: Clone,
-    TrusteeEntity: Into<Vec<u8>>,
-    TrusteeAddress: Into<Vec<u8>>,
+    TrusteeEntity: BytesLike,
+    TrusteeAddress: BytesLike,
     F,
 >(
     session_info: TrusteeSessionInfo<AccountId, TrusteeAddress>,

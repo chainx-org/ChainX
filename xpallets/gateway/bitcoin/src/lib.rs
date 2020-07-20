@@ -93,8 +93,8 @@ decl_error! {
         ExistedHeader,
         /// Can't find previous header
         PrevHeaderNotExisted,
-        /// Cannot deserialize the header vec
-        DeserializeHeaderErr,
+        /// Cannot deserialize the header or tx vec
+        DeserializeErr,
         ///
         BadMerkleProof,
         /// reject unconfirmed transaction
@@ -161,8 +161,6 @@ decl_storage! {
         /// mark tx has been handled, in case re-handle this tx, and log handle result
         pub TxState get(fn tx_state): map hash(identity) H256 => Option<BTCTxState>;
 
-        // /// unclaim deposit info, addr => tx_hash, btc value, blockhash
-        // pub PendingDepositMap get(fn pending_deposit): map hasher(blake2_128_concat) BTCAddress => Option<Vec<DepositCache>>;
         // /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
         // pub CurrentWithdrawalProposal get(fn withdrawal_proposal): Option<WithdrawalProposal<T::AccountId>>;
 
@@ -211,7 +209,6 @@ decl_storage! {
                 panic!("the genesis block not much the genesis_hash!|genesis_block's hash:{:?}|config genesis_hash:{:?}", genesis_hash, config.genesis_hash);
             }
 
-
             BTCHeaderFor::insert(&genesis_hash, header_info);
             BlockHashFor::insert(&genesis_index.height, vec![genesis_hash.clone()]);
             MainChain::insert(&genesis_hash, ());
@@ -234,7 +231,7 @@ decl_module! {
         #[weight = 0]
         pub fn push_header(origin, header: Vec<u8>) -> DispatchResult {
             let _from = ensure_signed(origin)?;
-            let header: BTCHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeHeaderErr)?;
+            let header: BTCHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
             debug!("[push_header]|from:{:?}|header:{:?}", _from, header);
 
             Self::apply_push_header(header)?;
@@ -245,7 +242,7 @@ decl_module! {
         #[weight = 0]
         pub fn push_transaction(origin, tx: Vec<u8>) -> DispatchResultWithPostInfo {
             let from = ensure_signed(origin)?;
-            let relay_tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or("Parse RelayTx err")?;
+            let relay_tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or(Error::<T>::DeserializeErr)?;
             debug!("[push_transaction]|from:{:?}|relay_tx:{:?}", from, relay_tx);
 
             Self::apply_push_transaction(relay_tx)?;
