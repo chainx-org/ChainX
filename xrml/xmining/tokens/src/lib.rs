@@ -57,6 +57,12 @@ decl_module! {
                 <xassets::Module<T> as ChainT>::TOKEN.to_vec() != token,
                 "Cannot claim from native asset via tokens module."
             );
+            let lbtc = <xbitcoin::lockup::Module<T> as ChainT>::TOKEN.to_vec();
+            let sdot = <xsdot::Module<T> as ChainT>::TOKEN.to_vec();
+            ensure!(
+                token != lbtc && token != sdot,
+                "Cannot claim from LBTC and SDOT since Proposal 12"
+            );
             ensure!(
                 Self::psedu_intentions().contains(&token),
                 "Cannot claim from unsupport token."
