@@ -258,8 +258,12 @@ impl<T: Trait> Module<T> {
     }
 
     /// SDOT, LBTC's reward will be distributed to the treasury according to ChainX Proposal 12.
-    /// At this time, SDOT+LBTC = all airdrop assets, therefore all the airdrop reward
-    /// goes to the treasury.
+    ///
+    /// * At this time, SDOT+LBTC = all airdrop assets, therefore all the airdrop reward
+    ///   goes to the treasury.
+    ///
+    /// * ChainX 1.0 will be deprecated once ChainX 2.0 is ready and all the airdrop assets now
+    ///   will be removed, thus the logic of Proposal 12 is merely hard coded here.
     fn airdrop_proposal12(for_airdrop: T::Balance) {
         Self::distribute_to_treasury(for_airdrop);
     }
