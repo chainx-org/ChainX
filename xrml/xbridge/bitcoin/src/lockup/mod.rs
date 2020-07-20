@@ -64,6 +64,7 @@ decl_module! {
             Ok(())
         }
 
+        /// release locked btc directly from a list of UXTO.
         pub fn release_lock(utxos: Vec<(H256, u32)>) {
             for utxo in utxos {
                 if destroy_utxo::<T>(utxo.0, utxo.1) {
@@ -75,6 +76,14 @@ decl_module! {
         pub fn set_locked_coin_limit(limit: (u64, u64)) {
             LockedCoinLimit::<T>::put(&limit);
             info!("[set_locked_coin_limit]|set new lockup bitoin limit to:{:?}", limit);
+        }
+
+        /// create a lock btc from a bitcoin transaction directly. `tx: Vec<u8>` must be a bitcoin
+        /// tx bytes string, otherwise would be dropped.
+        pub fn create_lock(tx: Vec<u8>) -> Result {
+            let tx: Transaction = Decode::decode(&mut tx.as_slice()).ok_or("parse btc tx err")?;
+            let hash = tx.hash();
+            handle_lock_tx::<T>(&tx, &hash)
         }
     }
 }

@@ -166,6 +166,7 @@ pub fn detect_transaction_type_impl<RT: RelayTransaction, F: Fn(&Transaction) ->
     }
 }
 
+/// main enter for handle a transaction
 pub fn handle_tx<T: Trait>(txid: &H256) -> Result {
     let tx_handler = TxHandler::new::<T>(txid)?;
     tx_handler.handle::<T>()?;

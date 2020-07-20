@@ -308,6 +308,15 @@ decl_module! {
                 }
             })
         }
+
+        /// handle a transaction which is already in chain storage.
+        /// (notice this function would ignore block confirmed state)
+        pub fn handle_transaction(tx_hash: H256) -> Result {
+            handle_tx::<T>(&tx_hash).map_err(|e| {
+                error!("Handle tx by root error: {:}", tx_hash);
+                e
+            })
+        }
     }
 }
 
@@ -576,8 +585,20 @@ impl<T: Trait> Module<T> {
             BlockHeaderFor::<T>::insert(tx.block_hash(), header_info);
         } else {
             // not pass check! this tx has already been inserted to this block
-            error!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash(), tx_hash, header_info.txid_list);
-            return Err("this block already has this tx");
+            warn!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash(), tx_hash, header_info.txid_list);
+            if Self::tx_mark_for(&tx_hash).is_some() {
+                // when tx is already existed, would judge whether the tx is handled,
+                // if this tx is already handled, `TxMarkFor` would mark this txid, and return
+                // directly, due to this tx has done once.
+                // notice `TxMarkFor` check would do again in `TxHandle`
+                error!(
+                    "[TxHandler]|this tx has already been handled|tx_hash:{:?}",
+                    tx_hash
+                );
+                return Err("this block already has this tx and been handled");
+            } else {
+                warn!("[apply_push_transaction]|tx is existed but not handled, if current block is confirmed, would handle it. tx_hash:{:?}", tx_hash);
+            }
         }
 
         // same tx may in different forked block, thus, just modify different forked block txlist, and the tx only insert once
