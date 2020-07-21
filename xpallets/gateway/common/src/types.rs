@@ -1,7 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
 use sp_runtime::RuntimeDebug;
-use sp_std::{convert::TryFrom, prelude::Vec};
+use sp_std::{convert::TryFrom, ops::Deref, prelude::Vec};
 
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
@@ -35,6 +35,7 @@ pub struct TrusteeIntentionProps<TrusteeEntity: BytesLike> {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TrusteeSessionInfo<AccountId, TrusteeAddress: BytesLike> {
     pub trustee_list: Vec<AccountId>,
+    pub threshold: u16,
     pub hot_address: TrusteeAddress,
     pub cold_address: TrusteeAddress,
 }
@@ -49,6 +50,14 @@ pub struct GenericTrusteeIntentionProps(pub TrusteeIntentionProps<Vec<u8>>);
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct GenericTrusteeSessionInfo<AccountId>(pub TrusteeSessionInfo<AccountId, Vec<u8>>);
+
+impl<AccountId> Deref for GenericTrusteeSessionInfo<AccountId> {
+    type Target = TrusteeSessionInfo<AccountId, Vec<u8>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -103,6 +112,7 @@ impl<AccountId, TrusteeAddress: BytesLike> Into<GenericTrusteeSessionInfo<Accoun
     fn into(self) -> GenericTrusteeSessionInfo<AccountId> {
         GenericTrusteeSessionInfo(TrusteeSessionInfo {
             trustee_list: self.trustee_list,
+            threshold: self.threshold,
             hot_address: self.hot_address.into(),
             cold_address: self.cold_address.into(),
         })
@@ -120,6 +130,7 @@ impl<AccountId, TrusteeAddress: BytesLike> TryFrom<GenericTrusteeSessionInfo<Acc
         let cold = TrusteeAddress::try_from(value.0.cold_address).map_err(|_| ())?;
         Ok(TrusteeSessionInfo::<AccountId, TrusteeAddress> {
             trustee_list: value.0.trustee_list,
+            threshold: value.0.threshold,
             hot_address: hot,
             cold_address: cold,
         })

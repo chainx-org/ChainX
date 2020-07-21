@@ -14,6 +14,8 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-multisig = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+
 # chainx runtime module
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-io = { path = "../../../primitives/io", default-features = false }
@@ -38,6 +40,8 @@ std=[
 
     "frame-support/std",
     "frame-system/std",
+    "pallet-multisig/std",
+
     # chainx runtime module
     "chainx-primitives/std",
     "xp-io/std",

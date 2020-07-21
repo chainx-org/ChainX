@@ -29,7 +29,7 @@ use crate::types::{
     TrusteeIntentionProps,
 };
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + pallet_multisig::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     // for chain
     type BitcoinTrustee: TrusteeForChain<
@@ -216,7 +216,11 @@ impl<T: Trait> Module<T> {
                         )
                     })
                     .collect();
-                let session_info = T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
+                let mut session_info =
+                    T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
+
+                // sort account list to make sure generate a stable multisig addr(addr is related with accounts sequence)
+                session_info.trustee_list.sort();
                 session_info.into()
             }
             _ => Err(Error::<T>::NotSupportedForTrustee)?,
@@ -235,12 +239,14 @@ impl<T: Trait> Module<T> {
             Some(n) => n,
             None => 0_u32,
         };
+
+        let multi_addr =
+            pallet_multisig::Module::<T>::multi_account_id(&info.trustee_list, info.threshold);
+
         TrusteeSessionInfoLen::insert(chain, next_number);
         TrusteeSessionInfoOf::<T>::insert(chain, session_number, info);
 
-        // TODO generic new multisig addr
-        // Self::deploy_trustee_addr_unsafe(chain, trustees);
-        // TrusteeMultiSigAddr::<T>::insert(chain, addr)
+        TrusteeMultiSigAddr::<T>::insert(chain, multi_addr);
         Ok(())
     }
 
