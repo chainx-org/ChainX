@@ -236,3 +236,40 @@ impl MiningDistribution {
         }
     }
 }
+
+/// Struct for performing the slash.
+///
+/// Abstracted for caching the treasury account.
+#[derive(Copy, Clone, PartialEq, Eq, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct Slasher<T: Trait>(T::AccountId);
+
+impl<T: Trait> Slasher<T> {
+    pub fn new(treasury_account: T::AccountId) -> Self {
+        Self(treasury_account)
+    }
+
+    /// Returns Ok(_) if the reward pot of offender has enough balance to cover the slashing,
+    /// otherwise slash the reward pot as much as possible and returns the value actually slashed.
+    pub fn try_slash(
+        &self,
+        offender: &T::AccountId,
+        expected_slash: T::Balance,
+    ) -> Result<(), T::Balance> {
+        let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
+        let reward_pot_balance = <xpallet_assets::Module<T>>::pcx_free_balance(&reward_pot);
+
+        if expected_slash <= reward_pot_balance {
+            self.apply_slash(&reward_pot, expected_slash);
+            Ok(())
+        } else {
+            self.apply_slash(&reward_pot, reward_pot_balance);
+            Err(reward_pot_balance)
+        }
+    }
+
+    /// Actually slash the account being punished, all slashed balance will go to the treasury.
+    fn apply_slash(&self, reward_pot: &T::AccountId, value: T::Balance) {
+        let _ = <xpallet_assets::Module<T>>::pcx_move_free_balance(reward_pot, &self.0, value);
+    }
+}

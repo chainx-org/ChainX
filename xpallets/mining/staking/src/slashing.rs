@@ -1,17 +1,6 @@
 use super::*;
 
 impl<T: Trait> Module<T> {
-    /// Actually slash the account being punished, all slashed balance will go to the treasury.
-    fn apply_slash(reward_pot: &T::AccountId, value: T::Balance) {
-        // FIXME: cache the treasury_account?
-        let treasury_account = T::TreasuryAccount::treasury_account();
-        let _ = <xpallet_assets::Module<T>>::pcx_move_free_balance(
-            reward_pot,
-            &treasury_account,
-            value,
-        );
-    }
-
     /// Average reward for validator per block.
     fn reward_per_block(staking_reward: T::Balance, validator_count: usize) -> u128 {
         let session_length = T::SessionDuration::get();
@@ -19,21 +8,6 @@ impl<T: Trait> Module<T> {
             * validator_count.saturated_into::<u128>()
             / session_length.saturated_into::<u128>();
         per_reward
-    }
-
-    /// Returns Ok(_) if the reward pot of offender has enough balance to cover the slashing,
-    /// otherwise slash the reward pot as much as possible and returns the value actually slashed.
-    fn try_slash(offender: &T::AccountId, expected_slash: T::Balance) -> Result<(), T::Balance> {
-        let reward_pot = Self::reward_pot_for(offender);
-        let reward_pot_balance = <xpallet_assets::Module<T>>::pcx_free_balance(&reward_pot);
-
-        if expected_slash <= reward_pot_balance {
-            Self::apply_slash(&reward_pot, expected_slash);
-            Ok(())
-        } else {
-            Self::apply_slash(&reward_pot, reward_pot_balance);
-            Err(reward_pot_balance)
-        }
     }
 
     /// TODO: flexiable slash according to slash fraction?
@@ -54,6 +28,9 @@ impl<T: Trait> Module<T> {
 
         let reward_per_block = Self::reward_per_block(staking_reward, validators.len());
 
+        let treasury_account = T::TreasuryAccount::treasury_account();
+        let slasher = Slasher::<T>::new(treasury_account);
+
         let minimum_validator_count = Self::minimum_validator_count() as usize;
 
         let active_validators = Self::active_validator_set().collect::<Vec<_>>();
@@ -63,7 +40,7 @@ impl<T: Trait> Module<T> {
             .into_iter()
             .flat_map(|offender| {
                 let expected_slash = Self::expected_slash_of(reward_per_block);
-                match Self::try_slash(&offender, expected_slash) {
+                match slasher.try_slash(&offender, expected_slash) {
                     Ok(_) => None, // Slash the offender successfuly.
                     Err(actual_slashed) => {
                         debug!(
