@@ -27,7 +27,7 @@ macro_rules! token {
 #[macro_export]
 macro_rules! try_addr {
     ( $x:expr ) => {{
-        $crate::x_std::Str(&$crate::x_std::u8array_to_addr(&$x))
+        $crate::x_std::Str(&$crate::x_std::as_addr(&$x))
     }};
 }
 
