@@ -23,7 +23,7 @@ pub fn as_string_hex(s: &[u8]) -> String {
 
 #[inline]
 pub fn u8array_to_addr(s: &[u8]) -> String {
-    let to_string = s.iter().try_for_each(|i| {
+    let should_as_string = s.iter().try_for_each(|i| {
         if (b'0' <= *i && *i <= b'9') || (b'A' <= *i && *i <= b'z') {
             Ok(())
         } else {
@@ -32,7 +32,7 @@ pub fn u8array_to_addr(s: &[u8]) -> String {
         }
     });
 
-    if to_string.is_ok() {
+    if should_as_string.is_ok() {
         as_string(s)
     } else {
         as_string_hex(s)
