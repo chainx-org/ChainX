@@ -91,84 +91,51 @@ pub struct NominatorProfile<Balance, BlockNumber> {
 }
 
 #[derive(Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
-// #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-// #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct RpcBalance<Balance> {
-    // #[cfg_attr(
-    // feature = "std",
-    // serde(
-    // bound(serialize = "Balance: std::fmt::Display"),
-    // serialize_with = "serialize_as_string",
-    // bound(deserialize = "Balance: std::str::FromStr"),
-    // deserialize_with = "deserialize_from_string"
-    // )
-    // )]
-    pub inner: Balance,
-}
+pub struct U128<Balance>(Balance);
 
 #[cfg(feature = "std")]
-impl<Balance: std::fmt::Display> std::fmt::Display for RpcBalance<Balance> {
+impl<Balance: std::fmt::Display> std::fmt::Display for U128<Balance> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner)
+        write!(f, "{}", self.0)
     }
 }
 
 #[cfg(feature = "std")]
-impl<Balance: std::str::FromStr> std::str::FromStr for RpcBalance<Balance> {
+impl<Balance: std::str::FromStr> std::str::FromStr for U128<Balance> {
     type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let inner = s.parse::<Balance>().map_err(|_| "Parse Balance failed")?;
-        Ok(Self { inner })
+        Ok(Self(inner))
     }
 }
 
-impl<Balance> From<Balance> for RpcBalance<Balance> {
+impl<Balance> From<Balance> for U128<Balance> {
     fn from(inner: Balance) -> Self {
-        Self { inner }
+        Self(inner)
     }
 }
-
-// #[cfg(feature = "std")]
-// fn serialize_as_string<S: serde::Serializer, T: std::fmt::Display>(
-// t: &T,
-// serializer: S,
-// ) -> Result<S::Ok, S::Error> {
-// serializer.serialize_str(&t.to_string())
-// }
-
-// #[cfg(feature = "std")]
-// fn deserialize_from_string<'de, D: serde::Deserializer<'de>, T: std::str::FromStr>(
-// deserializer: D,
-// ) -> Result<T, D::Error> {
-// let s = String::deserialize(deserializer)?;
-// s.parse::<T>()
-// .map_err(|_| serde::de::Error::custom("Parse from String failed"))
-// }
 
 #[cfg(feature = "std")]
-impl<Balance: std::fmt::Display> serde::ser::Serialize for RpcBalance<Balance> {
+impl<Balance: std::fmt::Display> serde::ser::Serialize for U128<Balance> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::ser::Serializer,
     {
-        self.inner.to_string().serialize(serializer)
+        self.0.to_string().serialize(serializer)
     }
 }
 
 #[cfg(feature = "std")]
-impl<'de, Balance: std::str::FromStr> serde::de::Deserialize<'de> for RpcBalance<Balance> {
+impl<'de, Balance: std::str::FromStr> serde::de::Deserialize<'de> for U128<Balance> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
-        // Balance: std::str::FromStr,
-        // <Balance as std::str::FromStr>::Err: std::fmt::Display,
     {
-        let a = String::deserialize(deserializer)?;
-        // let inner = a.parse::<Balance>().map_err(serde::de::Error::custom)?;
-        let inner = a
+        let s = String::deserialize(deserializer)?;
+        let inner = s
             .parse::<Balance>()
             .map_err(|_| serde::de::Error::custom("Parse Balance from String failed"))?;
-        Ok(Self { inner })
+        Ok(Self(inner))
     }
 }
 

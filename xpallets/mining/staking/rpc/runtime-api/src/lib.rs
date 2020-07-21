@@ -5,7 +5,7 @@
 use codec::Codec;
 use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
 use sp_std::prelude::*;
-use xpallet_mining_staking::{RpcBalance, ValidatorInfo};
+use xpallet_mining_staking::{ValidatorInfo, U128};
 
 sp_api::decl_runtime_apis! {
     /// The API to query account nonce (aka transaction index).
@@ -15,6 +15,6 @@ sp_api::decl_runtime_apis! {
         BlockNumber: Codec,
     {
         /// Get overall information about all potential validators.
-        fn validators() -> Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>;
+        fn validators() -> Vec<ValidatorInfo<AccountId, U128<Balance>, BlockNumber>>;
     }
 }

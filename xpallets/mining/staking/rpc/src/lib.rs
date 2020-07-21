@@ -9,7 +9,7 @@ use sp_runtime::{
     generic::BlockId, traits::Block as BlockT, traits::MaybeDisplay, traits::MaybeFromStr,
 };
 use std::sync::Arc;
-use xpallet_mining_staking::{RpcBalance, ValidatorInfo};
+use xpallet_mining_staking::{ValidatorInfo, U128};
 use xpallet_mining_staking_rpc_runtime_api::XStakingApi as XStakingRuntimeApi;
 
 /// XStaking RPC methods.
@@ -40,7 +40,7 @@ impl<C, B> XStaking<C, B> {
 }
 
 impl<C, Block, AccountId, Balance, BlockNumber>
-    XStakingApi<<Block as BlockT>::Hash, AccountId, RpcBalance<Balance>, BlockNumber>
+    XStakingApi<<Block as BlockT>::Hash, AccountId, U128<Balance>, BlockNumber>
     for XStaking<C, Block>
 where
     Block: BlockT,
@@ -53,7 +53,7 @@ where
     fn validators(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>> {
+    ) -> Result<Vec<ValidatorInfo<AccountId, U128<Balance>, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
                 // If the block hash is not supplied assume the best block.
