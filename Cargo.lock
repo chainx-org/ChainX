@@ -7182,6 +7182,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "xpallet-mining-staking",
  "xpallet-mining-staking-rpc-runtime-api",
 ]
 
@@ -7192,6 +7193,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
+ "xpallet-mining-staking",
 ]
 
 [[package]]

@@ -7,19 +7,18 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
+use xpallet_mining_staking::ValidatorInfo;
 use xpallet_mining_staking_rpc_runtime_api::XStakingApi as XStakingRuntimeApi;
 
 /// XStaking RPC methods.
 #[rpc]
-pub trait XStakingApi<BlockHash, AccountId> {
-    /// Executes a call to a contract.
-    ///
-    /// This call is performed locally without submitting any transactions. Thus executing this
-    /// won't change any state. Nonetheless, the calling state-changing contracts is still possible.
-    ///
-    /// This method is useful for calling getter-like methods on contracts.
+pub trait XStakingApi<BlockHash, AccountId, Balance, BlockNumber> {
+    /// Get overall information about all potential validators
     #[rpc(name = "xstaking_getValidators")]
-    fn validators(&self, at: Option<BlockHash>) -> Result<Vec<AccountId>>;
+    fn validators(
+        &self,
+        at: Option<BlockHash>,
+    ) -> Result<Vec<ValidatorInfo<AccountId, Balance, BlockNumber>>>;
 }
 
 /// A struct that implements the [`XStakingApi`].
@@ -38,14 +37,20 @@ impl<C, B> XStaking<C, B> {
     }
 }
 
-impl<C, Block, AccountId> XStakingApi<<Block as BlockT>::Hash, AccountId> for XStaking<C, Block>
+impl<C, Block, AccountId, Balance, BlockNumber>
+    XStakingApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber> for XStaking<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-    C::Api: XStakingRuntimeApi<Block, AccountId>,
+    C::Api: XStakingRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     AccountId: Codec,
+    Balance: Codec,
+    BlockNumber: Codec,
 {
-    fn validators(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<AccountId>> {
+    fn validators(
+        &self,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Vec<ValidatorInfo<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
                 // If the block hash is not supplied assume the best block.

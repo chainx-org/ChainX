@@ -618,8 +618,8 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId> for Runtime {
-        fn validators() -> Vec<AccountId> {
+    impl xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, BlockNumber> for Runtime {
+        fn validators() -> Vec<xpallet_mining_staking::ValidatorInfo<AccountId, Balance, BlockNumber>> {
             XStaking::validators_info()
         }
     }

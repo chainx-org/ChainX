@@ -29,9 +29,8 @@ use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedInde
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
-use types::*;
-
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
+pub use types::*;
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 5_000_000_000;
@@ -734,17 +733,13 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn validators_info() -> Vec<T::AccountId> {
-        Self::validator_set().collect()
-    }
-
-    pub fn validators_info_rpc() -> Vec<ValidatorInfo<T::AccountId, T::Balance, T::BlockNumber>> {
+    pub fn validators_info() -> Vec<ValidatorInfo<T::AccountId, T::Balance, T::BlockNumber>> {
         Self::validator_set()
             .map(|v| {
                 let profile = Validators::<T>::get(&v);
                 let ledger = ValidatorLedgers::<T>::get(&v);
-                let status = ValidatorStatus::Candidate;
                 let self_bonded = Nominations::<T>::get(&v, &v).nomination;
+                let is_validating = T::SessionInterface::validators().contains(&v);
                 let reward_pot_account = T::DetermineRewardPotAccount::reward_pot_account_for(&v);
                 let reward_pot_balance =
                     xpallet_assets::Module::<T>::pcx_free_balance(&reward_pot_account);
@@ -752,7 +747,7 @@ impl<T: Trait> Module<T> {
                     account: v,
                     profile,
                     ledger,
-                    status,
+                    is_validating,
                     self_bonded,
                     reward_pot_account,
                     reward_pot_balance,

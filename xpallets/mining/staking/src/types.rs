@@ -18,7 +18,7 @@ pub enum MintedDestination<AccountId> {
 ///
 /// If the (potential) validator failed to meet this requirement, force it to be chilled on new election round.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-pub struct BondRequirement<Balance: Default> {
+pub struct BondRequirement<Balance> {
     /// The minimal amount of self-bonded balance to be a qualified validator candidate.
     pub self_bonded: Balance,
     /// The minimal amount of total-bonded balance to be a qualified validator candidate.
@@ -31,7 +31,7 @@ pub struct BondRequirement<Balance: Default> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Unbonded<Balance: Default, BlockNumber: Default> {
+pub struct Unbonded<Balance, BlockNumber> {
     /// Amount of funds to be unlocked.
     pub value: Balance,
     /// Block number at which point it'll be unlocked.
@@ -68,10 +68,12 @@ pub struct NominatorLedger<Balance, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorProfile<BlockNumber: Default> {
+pub struct ValidatorProfile<BlockNumber> {
     /// Block number at which point it's registered on chain.
     pub registered_at: BlockNumber,
     /// Validator is chilled right now.
+    ///
+    /// Declared no desire to be a validator or forced to be chilled due to `MinimumCandidateThreshold`.
     pub is_chilled: bool,
     /// Block number of last performed `chill` operation.
     pub last_chilled: Option<BlockNumber>,
@@ -81,47 +83,31 @@ pub struct ValidatorProfile<BlockNumber: Default> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct NominatorProfile<Balance: Default, BlockNumber: Default> {
+pub struct NominatorProfile<Balance, BlockNumber> {
     /// Block number of last `rebond` operation.
     pub last_rebond: Option<BlockNumber>,
     /// Total unbonded entries.
     pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
-/// Status of (potential) validator in staking module.
-///
-/// For RPC usage.
+/// Total information about a validator.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub enum ValidatorStatus {
-    /// Declared no desire to be a validator or forced to be chilled due to `MinimumCandidateThreshold`.
-    Chilled,
-    /// Declared desire to be a validator but haven't won one place.
-    Candidate,
-    /// Being a validator, responsible for authoring the new blocks.
-    Validating,
-}
-
-impl Default for ValidatorStatus {
-    fn default() -> Self {
-        Self::Candidate
-    }
-}
-
-/// Total information about a validator.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorInfo<AccountId: Default, Balance: Default, BlockNumber: Default> {
+pub struct ValidatorInfo<AccountId, Balance, BlockNumber> {
+    /// AccountId of this (potential) validator.
     pub account: AccountId,
     #[cfg_attr(feature = "std", serde(flatten))]
     pub profile: ValidatorProfile<BlockNumber>,
     #[cfg_attr(feature = "std", serde(flatten))]
     pub ledger: ValidatorLedger<Balance, BlockNumber>,
-    pub status: ValidatorStatus,
+    /// Being a validator, responsible for authoring the new blocks.
+    pub is_validating: bool,
+    /// How much balances the validator has bonded itself.
     pub self_bonded: Balance,
+    /// AccountId for the reward pot of this validator.
     pub reward_pot_account: AccountId,
+    /// Balance of the reward pot account.
     pub reward_pot_balance: Balance,
 }
 
