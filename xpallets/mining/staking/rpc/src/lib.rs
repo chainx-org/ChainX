@@ -5,20 +5,22 @@ use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+use sp_runtime::{
+    generic::BlockId, traits::Block as BlockT, traits::MaybeDisplay, traits::MaybeFromStr,
+};
 use std::sync::Arc;
-use xpallet_mining_staking::ValidatorInfo;
+use xpallet_mining_staking::{RpcBalance, ValidatorInfo};
 use xpallet_mining_staking_rpc_runtime_api::XStakingApi as XStakingRuntimeApi;
 
 /// XStaking RPC methods.
 #[rpc]
-pub trait XStakingApi<BlockHash, AccountId, Balance, BlockNumber> {
+pub trait XStakingApi<BlockHash, AccountId, RpcBalance, BlockNumber> {
     /// Get overall information about all potential validators
     #[rpc(name = "xstaking_getValidators")]
     fn validators(
         &self,
         at: Option<BlockHash>,
-    ) -> Result<Vec<ValidatorInfo<AccountId, Balance, BlockNumber>>>;
+    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>>;
 }
 
 /// A struct that implements the [`XStakingApi`].
@@ -38,19 +40,20 @@ impl<C, B> XStaking<C, B> {
 }
 
 impl<C, Block, AccountId, Balance, BlockNumber>
-    XStakingApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber> for XStaking<C, Block>
+    XStakingApi<<Block as BlockT>::Hash, AccountId, RpcBalance<Balance>, BlockNumber>
+    for XStaking<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XStakingRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     AccountId: Codec,
-    Balance: Codec,
+    Balance: Codec + MaybeDisplay + MaybeFromStr,
     BlockNumber: Codec,
 {
     fn validators(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<ValidatorInfo<AccountId, Balance, BlockNumber>>> {
+    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
                 // If the block hash is not supplied assume the best block.

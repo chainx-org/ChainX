@@ -90,25 +90,108 @@ pub struct NominatorProfile<Balance, BlockNumber> {
     pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
+#[derive(Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
+// #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+// #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct RpcBalance<Balance> {
+    // #[cfg_attr(
+    // feature = "std",
+    // serde(
+    // bound(serialize = "Balance: std::fmt::Display"),
+    // serialize_with = "serialize_as_string",
+    // bound(deserialize = "Balance: std::str::FromStr"),
+    // deserialize_with = "deserialize_from_string"
+    // )
+    // )]
+    pub inner: Balance,
+}
+
+#[cfg(feature = "std")]
+impl<Balance: std::fmt::Display> std::fmt::Display for RpcBalance<Balance> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<Balance: std::str::FromStr> std::str::FromStr for RpcBalance<Balance> {
+    type Err = &'static str;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = s.parse::<Balance>().map_err(|_| "Parse Balance failed")?;
+        Ok(Self { inner })
+    }
+}
+
+impl<Balance> From<Balance> for RpcBalance<Balance> {
+    fn from(inner: Balance) -> Self {
+        Self { inner }
+    }
+}
+
+// #[cfg(feature = "std")]
+// fn serialize_as_string<S: serde::Serializer, T: std::fmt::Display>(
+// t: &T,
+// serializer: S,
+// ) -> Result<S::Ok, S::Error> {
+// serializer.serialize_str(&t.to_string())
+// }
+
+// #[cfg(feature = "std")]
+// fn deserialize_from_string<'de, D: serde::Deserializer<'de>, T: std::str::FromStr>(
+// deserializer: D,
+// ) -> Result<T, D::Error> {
+// let s = String::deserialize(deserializer)?;
+// s.parse::<T>()
+// .map_err(|_| serde::de::Error::custom("Parse from String failed"))
+// }
+
+#[cfg(feature = "std")]
+impl<Balance: std::fmt::Display> serde::ser::Serialize for RpcBalance<Balance> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        self.inner.to_string().serialize(serializer)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'de, Balance: std::str::FromStr> serde::de::Deserialize<'de> for RpcBalance<Balance> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+        // Balance: std::str::FromStr,
+        // <Balance as std::str::FromStr>::Err: std::fmt::Display,
+    {
+        let a = String::deserialize(deserializer)?;
+        // let inner = a.parse::<Balance>().map_err(serde::de::Error::custom)?;
+        let inner = a
+            .parse::<Balance>()
+            .map_err(|_| serde::de::Error::custom("Parse Balance from String failed"))?;
+        Ok(Self { inner })
+    }
+}
+
 /// Total information about a validator.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorInfo<AccountId, Balance, BlockNumber> {
+pub struct ValidatorInfo<AccountId, RpcBalance, BlockNumber> {
     /// AccountId of this (potential) validator.
     pub account: AccountId,
-    #[cfg_attr(feature = "std", serde(flatten))]
-    pub profile: ValidatorProfile<BlockNumber>,
-    #[cfg_attr(feature = "std", serde(flatten))]
-    pub ledger: ValidatorLedger<Balance, BlockNumber>,
+    pub dummy: BlockNumber,
+    // #[cfg_attr(feature = "std", serde(flatten))]
+    // pub profile: ValidatorProfile<BlockNumber>,
+    // #[cfg_attr(feature = "std", serde(flatten))]
+    // pub ledger: ValidatorLedger<Balance, BlockNumber>,
     /// Being a validator, responsible for authoring the new blocks.
     pub is_validating: bool,
     /// How much balances the validator has bonded itself.
-    pub self_bonded: Balance,
+    pub self_bonded: RpcBalance,
     /// AccountId for the reward pot of this validator.
     pub reward_pot_account: AccountId,
     /// Balance of the reward pot account.
-    pub reward_pot_balance: Balance,
+    pub reward_pot_balance: RpcBalance,
 }
 
 /// Information regarding the active era (era in used in session).
