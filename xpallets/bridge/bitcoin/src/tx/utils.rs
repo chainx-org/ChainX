@@ -8,7 +8,7 @@ use xr_primitives::generic::b58;
 
 use xbridge_common::{traits::TrusteeSession, types::TrusteeSessionInfo, utils::two_thirds_unsafe};
 #[cfg(feature = "std")]
-use xsupport::u8array_to_hex;
+use xsupport::as_string_hex;
 use xsupport::{error, warn};
 
 // light-bitcoin
@@ -39,7 +39,7 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
         error!(
             "[parse_output_addr]|parse output script error|e:{:?}|script:{:?}",
             _e,
-            u8array_to_hex(&script)
+            as_string_hex(&script)
         );
         _e
     }).ok().and_then(|script_addresses| {
@@ -54,7 +54,7 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
             return Some(addr);
         }
         // the type is `NonStandard`, `Multisig`, `NullData`, `WitnessScript`, `WitnessKey`
-        warn!("[parse_output_addr]|can't parse addr from output script|type:{:?}|addr:{:?}|script:{:}", script.script_type(), script_addresses, u8array_to_hex(&script));
+        warn!("[parse_output_addr]|can't parse addr from output script|type:{:?}|addr:{:?}|script:{:}", script.script_type(), script_addresses, as_string_hex(&script));
         None
     })
 }

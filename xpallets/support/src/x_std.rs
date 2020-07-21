@@ -9,9 +9,16 @@ impl<'a> fmt::Debug for Str<'a> {
     }
 }
 
+/// Converts a slice of bytes to a string.
 #[inline]
-pub fn u8array_to_string(s: &[u8]) -> String {
+pub fn as_string(s: &[u8]) -> String {
     String::from_utf8_lossy(s).into_owned()
+}
+
+/// Converts a slice of bytes to a hex value, and then converts to a string with 0x prefix added.
+#[inline]
+pub fn as_string_hex(s: &[u8]) -> String {
+    format!("0x{}", s.to_hex::<String>())
 }
 
 #[inline]
@@ -26,29 +33,24 @@ pub fn u8array_to_addr(s: &[u8]) -> String {
     });
 
     if to_string.is_ok() {
-        u8array_to_string(s)
+        as_string(s)
     } else {
-        u8array_to_hex(s)
+        as_string_hex(s)
     }
 }
 
 #[inline]
-pub fn u8array_to_hex(s: &[u8]) -> String {
-    format!("0x{}", s.to_hex::<String>())
-}
-
-#[inline]
 pub fn try_hex_or_str(src: &[u8]) -> String {
-    let to_string = src.iter().try_for_each(|c| {
+    let should_as_string = src.iter().try_for_each(|c| {
         if b'!' <= *c && *c <= b'~' {
             Ok(())
         } else {
             Err(())
         }
     });
-    if to_string.is_ok() {
-        u8array_to_string(src)
+    if should_as_string.is_ok() {
+        as_string(src)
     } else {
-        u8array_to_hex(src)
+        as_string_hex(src)
     }
 }

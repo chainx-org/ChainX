@@ -4,7 +4,7 @@ pub use log::*;
 #[macro_export]
 macro_rules! str {
     ( $x:expr ) => {
-        $crate::x_std::Str(&$crate::x_std::u8array_to_string(&$x))
+        $crate::x_std::Str(&$crate::x_std::as_string(&$x))
     };
 }
 
