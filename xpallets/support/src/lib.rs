@@ -2,6 +2,7 @@
 
 pub mod base58;
 pub mod rlog;
+pub mod traits;
 pub use rlog::RUNTIME_TARGET;
 
 use frame_support::dispatch::{DispatchError, DispatchResult};

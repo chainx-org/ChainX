@@ -4,7 +4,7 @@ use frame_support::dispatch::DispatchError;
 use sp_std::{convert::TryFrom, fmt::Debug, prelude::Vec, result};
 
 use chainx_primitives::{AssetId, Name};
-use xpallet_support::error;
+use xpallet_assets::Chain;
 
 use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
@@ -15,6 +15,10 @@ pub trait Extractable<AccountId> {
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
 
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
+
+pub trait ChainProvider {
+    fn chain() -> Chain;
+}
 
 pub trait TrusteeForChain<AccountId, TrusteeEntity: BytesLike, TrusteeAddress: BytesLike> {
     fn check_trustee_entity(raw_addr: &[u8]) -> result::Result<TrusteeEntity, DispatchError>;
@@ -35,20 +39,6 @@ pub trait TrusteeSession<AccountId, TrusteeAddress: BytesLike> {
 
     fn last_trustee_session(
     ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
-}
-
-pub trait TrusteeMultiSig<AccountId: PartialEq + Debug> {
-    fn multisig_for_trustees() -> AccountId;
-
-    fn check_multisig(who: &AccountId) -> bool {
-        let current_multisig_addr = Self::multisig_for_trustees();
-        if current_multisig_addr != *who {
-            error!("[check_multisig]|the account not match current trustee multisig addr for this chain|current:{:?}|who:{:?}", current_multisig_addr, who);
-            false
-        } else {
-            true
-        }
-    }
 }
 
 pub trait ChannelBinding<AccountId> {

@@ -40,17 +40,17 @@ pub struct TrusteeSessionInfo<AccountId, TrusteeAddress: BytesLike> {
 }
 
 // generic
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct GenericTrusteeIntentionProps(pub TrusteeIntentionProps<Vec<u8>>);
 
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct GenericTrusteeSessionInfo<AccountId>(pub TrusteeSessionInfo<AccountId, Vec<u8>>);
 
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct GenericAllSessionInfo<AccountId> {
@@ -60,7 +60,7 @@ pub struct GenericAllSessionInfo<AccountId> {
     pub trustees_info: Vec<(AccountId, GenericTrusteeIntentionProps)>,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Counts {
