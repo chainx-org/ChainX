@@ -3,18 +3,17 @@ pub use log::*;
 #[cfg(feature = "std")]
 #[macro_export]
 macro_rules! str {
-    ( $x:expr ) => {{
-        use $crate::x_std::u8array_to_string;
-        $crate::x_std::Str(&u8array_to_string(&$x))
-    }};
+    ( $x:expr ) => {
+        $crate::x_std::Str(&$crate::x_std::u8array_to_string(&$x))
+    };
 }
 
 #[cfg(not(feature = "std"))]
 #[macro_export]
 macro_rules! str {
-    ( $x:expr ) => {{
-        &$x
-    }};
+    ( $x:expr ) => {
+        &x
+    };
 }
 
 #[macro_export]
@@ -28,8 +27,7 @@ macro_rules! token {
 #[macro_export]
 macro_rules! try_addr {
     ( $x:expr ) => {{
-        use $crate::x_std::u8array_to_addr;
-        $crate::x_std::Str(&u8array_to_addr(&$x))
+        $crate::x_std::Str(&$crate::x_std::u8array_to_addr(&$x))
     }};
 }
 
@@ -45,8 +43,7 @@ macro_rules! try_addr {
 #[macro_export]
 macro_rules! try_hex {
     ( $x:expr ) => {{
-        use $crate::x_std::try_hex_or_str;
-        $crate::x_std::Str(&try_hex_or_str(&$x))
+        $crate::x_std::Str(&$crate::x_std::try_hex_or_str(&$x))
     }};
 }
 
@@ -61,13 +58,13 @@ macro_rules! try_hex {
 #[cfg(feature = "std")]
 #[macro_export]
 macro_rules! ensure_with_errorlog {
-	( $x:expr, $y:expr, $($arg:tt)*) => {{
-		if !$x {
-		    $crate::error!("{:?}|{}", $y, format!($($arg)*));
-			$crate::fail!($y);
-		}
-	}}
-}
+    ( $x:expr, $y:expr, $($arg:tt)*) => {{
+        if !$x {
+            $crate::error!("{:?}|{}", $y, format!($($arg)*));
+            $crate::fail!($y);
+        }
+    }}
+    }
 
 #[cfg(not(feature = "std"))]
 #[macro_export]
@@ -80,7 +77,7 @@ macro_rules! ensure_with_errorlog {
 }
 
 mod log {
-    pub const RUNTIME_TARGET: &'static str = "runtime";
+    pub const RUNTIME_TARGET: &str = "runtime";
 
     #[macro_export]
     macro_rules! error {
@@ -88,7 +85,7 @@ mod log {
             frame_support::debug::error!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
-            frame_support::debug::error!(target: "runtime", $($arg)+);
+            $crate::error!(target: "runtime", $($arg)+);
         )
     }
 
@@ -98,7 +95,7 @@ mod log {
             frame_support::debug::warn!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
-            frame_support::debug::warn!(target: "runtime", $($arg)+);
+            $crate::warn!(target: "runtime", $($arg)+);
         )
     }
 
@@ -109,7 +106,6 @@ mod log {
         );
         ($($arg:tt)+) => (
             $crate::info!(target: "runtime", $($arg)+);
-            // frame_support::debug::info!(target: "runtime", $($arg)+);
         )
     }
 
@@ -119,7 +115,7 @@ mod log {
             frame_support::debug::debug!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
-            frame_support::debug::debug!(target: "runtime", $($arg)+);
+            $crate::debug!(target: "runtime", $($arg)+);
         )
     }
 
@@ -129,7 +125,7 @@ mod log {
             frame_support::debug::trace!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
-            frame_support::debug::trace!(target: "runtime", $($arg)+);
+            $crate::trace!(target: "runtime", $($arg)+);
         )
     }
 }
