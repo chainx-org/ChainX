@@ -49,7 +49,7 @@ impl<T: Trait> Module<T> {
         let validators = T::SessionInterface::validators();
         let valid_offenders = Self::offenders_in_session()
             .into_iter()
-            .filter(|o| validators.contains(o))
+            .filter(|offender| validators.contains(offender))
             .collect::<Vec<_>>();
 
         let reward_per_block = Self::reward_per_block(staking_reward, validators.len());
@@ -64,7 +64,7 @@ impl<T: Trait> Module<T> {
             .flat_map(|offender| {
                 let expected_slash = Self::expected_slash_of(reward_per_block);
                 match Self::try_slash(&offender, expected_slash) {
-                    Ok(_) => None,
+                    Ok(_) => None, // Slash the offender successfuly.
                     Err(actual_slashed) => {
                         debug!(
                             "[slash_offenders_in_session]expected_slash:{:?}, actual_slashed:{:?}",
@@ -73,7 +73,7 @@ impl<T: Trait> Module<T> {
                         if active_count > minimum_validator_count {
                             Self::apply_force_chilled(&offender);
                             active_count -= 1;
-                            Some(offender)
+                            Some(offender) // The offender does not have enough balance for the slashing.
                         } else {
                             None
                         }

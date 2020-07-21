@@ -5,6 +5,7 @@ use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 use xp_mining_common::WeightType;
+use xp_mining_staking::MiningPower;
 
 /// Destination for minted fresh PCX on each new session.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -55,9 +56,9 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
 pub struct NominatorLedger<Balance, BlockNumber> {
     /// The amount of
     pub nomination: Balance,
-    ///
+    /// Last calculated total vote weight of current nominator.
     pub last_vote_weight: WeightType,
-    ///
+    /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,
 }
 
@@ -83,7 +84,7 @@ pub struct ValidatorProfile<BlockNumber: Default> {
 pub struct NominatorProfile<Balance: Default, BlockNumber: Default> {
     /// Block number of last `rebond` operation.
     pub last_rebond: Option<BlockNumber>,
-    ///
+    /// Total unbonded entries.
     pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
@@ -108,6 +109,7 @@ impl Default for ValidatorStatus {
     }
 }
 
+/// Total information about a validator.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
@@ -155,52 +157,29 @@ impl Default for Forcing {
     }
 }
 
-// Shares of various reward destinations.
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+/// Top level shares of various reward destinations.
+#[derive(Copy, Clone, PartialEq, Eq, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct GlobalDistribution {
     pub treasury: u32,
     pub mining: u32,
 }
 
-impl Default for GlobalDistribution {
-    /// According to the ChainX 1.0 referendum proposal09:
-    /// (Treasury, Airdrop Asset, X-type Asset and Staking) = (12, 8, 80)
-    ///
-    /// Airdrop Assets have been retired in ChainX 2.0, now only treasury and mining destinations.
-    /// (Treasury, X-type Asset and Staking) = (12, 88)
-    fn default() -> Self {
-        Self {
-            treasury: 12u32,
-            mining: 88u32,
-        }
-    }
-}
-
 impl GlobalDistribution {
+    /// Calculates the rewards for treasury and mining accordingly.
     pub fn calc_rewards<T: Trait>(&self, reward: T::Balance) -> (T::Balance, T::Balance) {
+        assert!(self.treasury + self.mining > 0);
         let treasury_reward = reward * self.treasury.saturated_into()
             / (self.treasury + self.mining).saturated_into();
         (treasury_reward, reward - treasury_reward)
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(Copy, Clone, PartialEq, Eq, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct MiningDistribution {
     pub asset: u32,
     pub staking: u32,
-}
-
-impl Default for MiningDistribution {
-    /// According to the ChainX 1.0 referendum proposal09,
-    /// (Asset Mining, Staking) = (10, 90)
-    fn default() -> Self {
-        Self {
-            asset: 10u32,
-            staking: 90u32,
-        }
-    }
 }
 
 impl MiningDistribution {
@@ -216,7 +195,7 @@ impl MiningDistribution {
     /// the mining assets, but its unit mining power starts to decrease compared to the inital FixedPower.
     fn asset_mining_vs_staking<T: Trait>(&self) -> (u128, u128) {
         let total_staking_power =
-            crate::Module::<T>::total_staked().saturated_into::<xp_mining_staking::MiningPower>();
+            crate::Module::<T>::total_staked().saturated_into::<MiningPower>();
         let total_asset_mining_power = T::AssetMining::total_asset_mining_power();
 
         // When:
@@ -249,7 +228,7 @@ impl MiningDistribution {
         } else {
             assert!(
                 m2 > 0,
-                "cross_mining_shares is ensured to be positive in set_distribution_ratio()"
+                "asset_mining_shares is ensured to be positive in set_distribution_ratio()"
             );
             // There could be some computation loss here, but it's ok.
             let treasury_extra = (m2 - m1) * asset_mining_reward_cap.saturated_into::<u128>() / m2;
