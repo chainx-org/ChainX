@@ -41,7 +41,7 @@ impl<T: Trait> Module<T> {
             .flat_map(|offender| {
                 let expected_slash = Self::expected_slash_of(reward_per_block);
                 match slasher.try_slash(&offender, expected_slash) {
-                    Ok(_) => None, // Slash the offender successfuly.
+                    Ok(_) => None, // Slash the offender successfully.
                     Err(actual_slashed) => {
                         debug!(
                             "[slash_offenders_in_session]expected_slash:{:?}, actual_slashed:{:?}",

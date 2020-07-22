@@ -7,7 +7,6 @@ pub type RpcBalance<Balance> = U128<Balance>;
 /// ```no_run
 /// use xpallet_support::RpcBalance;
 ///
-/// // You can
 /// sp_api::decl_runtime_apis! {
 ///     pub trait PalletApi<Balance> where
 ///         Balance: Codec,
