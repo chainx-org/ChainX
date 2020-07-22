@@ -199,7 +199,7 @@ fn testnet_genesis(
                 .map(|x| {
                     (
                         x.0.clone(),
-                        x.1.clone(),
+                        x.0.clone(),
                         session_keys(x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })

@@ -6,6 +6,7 @@ use sp_runtime::RuntimeDebug;
 use sp_runtime::{Deserialize, Serialize};
 use xp_mining_common::WeightType;
 use xp_mining_staking::MiningPower;
+use xpallet_support::RpcWeightType;
 
 /// Destination for minted fresh PCX on each new session.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -51,6 +52,33 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
     pub last_total_vote_weight_update: BlockNumber,
 }
 
+/// Vote weight properties of validator.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct RpcValidatorLedger<RpcBalance, BlockNumber> {
+    /// The total amount of all the nominators' vote balances.
+    pub total: RpcBalance,
+    /// Last calculated total vote weight of current validator.
+    pub last_total_vote_weight: RpcWeightType,
+    /// Block number at which point `last_total_vote_weight` just updated.
+    pub last_total_vote_weight_update: BlockNumber,
+}
+
+impl<Balance, BlockNumber> From<ValidatorLedger<Balance, BlockNumber>>
+    for RpcValidatorLedger<RpcBalance<Balance>, BlockNumber>
+{
+    fn from(ledger: ValidatorLedger<Balance, BlockNumber>) -> Self {
+        let last_total_vote_weight: RpcWeightType = ledger.last_total_vote_weight.into();
+        let total: RpcBalance<Balance> = ledger.total.into();
+        Self {
+            total,
+            last_total_vote_weight,
+            last_total_vote_weight_update: ledger.last_total_vote_weight_update,
+        }
+    }
+}
+
 /// Vote weight properties of nominator.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct NominatorLedger<Balance, BlockNumber> {
@@ -58,6 +86,17 @@ pub struct NominatorLedger<Balance, BlockNumber> {
     pub nomination: Balance,
     /// Last calculated total vote weight of current nominator.
     pub last_vote_weight: WeightType,
+    /// Block number at which point `last_vote_weight` just updated.
+    pub last_vote_weight_update: BlockNumber,
+}
+
+/// Vote weight properties of nominator.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct RpcNominatorLedger<Balance, BlockNumber> {
+    /// The amount of
+    pub nomination: Balance,
+    /// Last calculated total vote weight of current nominator.
+    pub last_vote_weight: RpcWeightType,
     /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,
 }
@@ -90,24 +129,25 @@ pub struct NominatorProfile<Balance, BlockNumber> {
     pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+/// Total information about a validator.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorInfo<AccountId, Balance, BlockNumber> {
+pub struct ValidatorInfo<AccountId, RpcBalance, BlockNumber> {
     /// AccountId of this (potential) validator.
     pub account: AccountId,
     #[cfg_attr(feature = "std", serde(flatten))]
     pub profile: ValidatorProfile<BlockNumber>,
     #[cfg_attr(feature = "std", serde(flatten))]
-    pub ledger: ValidatorLedger<Balance, BlockNumber>,
-    /// Being a validator, reponsible for authoring the new blocks.
+    pub ledger: RpcValidatorLedger<RpcBalance, BlockNumber>,
+    /// Being a validator, responsible for authoring the new blocks.
     pub is_validating: bool,
     /// How much balances the validator has bonded itself.
-    pub self_bonded: Balance,
+    pub self_bonded: RpcBalance,
     /// AccountId of the reward pot of this validator.
     pub reward_pot_account: AccountId,
     /// Balance of the reward pot account.
-    pub reward_pot_balance: Balance,
+    pub reward_pot_balance: RpcBalance,
 }
 
 /// Information regarding the active era (era in used in session).
@@ -142,7 +182,7 @@ impl Default for Forcing {
     }
 }
 
-// Top level shares of various reward destinations.
+/// Top level shares of various reward destinations.
 #[derive(Copy, Clone, PartialEq, Eq, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct GlobalDistribution {
@@ -153,6 +193,7 @@ pub struct GlobalDistribution {
 impl GlobalDistribution {
     /// Calculates the rewards for treasury and mining accordingly.
     pub fn calc_rewards<T: Trait>(&self, reward: T::Balance) -> (T::Balance, T::Balance) {
+        assert!(self.treasury + self.mining > 0);
         let treasury_reward = reward * self.treasury.saturated_into()
             / (self.treasury + self.mining).saturated_into();
         (treasury_reward, reward - treasury_reward)
@@ -212,7 +253,7 @@ impl MiningDistribution {
         } else {
             assert!(
                 m2 > 0,
-                "cross_mining_shares is ensured to be positive in set_distribution_ratio()"
+                "asset_mining_shares is ensured to be positive in set_distribution_ratio()"
             );
             // There could be some computation loss here, but it's ok.
             let treasury_extra = (m2 - m1) * asset_mining_reward_cap.saturated_into::<u128>() / m2;
