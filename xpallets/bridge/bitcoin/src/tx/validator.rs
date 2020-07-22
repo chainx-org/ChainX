@@ -18,7 +18,7 @@ use crate::Trait;
 
 // ChainX
 #[cfg(feature = "std")]
-use xsupport::u8array_to_hex;
+use xsupport::as_string_hex;
 use xsupport::{debug, error};
 
 pub fn validate_transaction<T: Trait, RT: RelayTransaction + MaybeDebug>(
@@ -134,7 +134,7 @@ pub fn parse_and_check_signed_tx_impl(
                 }
             }
             if !verify {
-                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, u8array_to_hex(&bytes_redeem_script));
+                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, as_string_hex(&bytes_redeem_script));
                 return Err("Verify sign failed");
             }
         }
