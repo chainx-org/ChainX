@@ -9,15 +9,15 @@ pub mod header;
 // pub mod lockup;
 mod tests;
 mod traits;
+pub mod trustee;
 pub mod tx;
 mod types;
-pub mod trustee;
 
 use codec::Decode;
 
 // Substrate
-use sp_runtime::{traits::Zero, RuntimeDebug};
-use sp_std::{fmt::Debug, prelude::*, result};
+use sp_runtime::traits::Zero;
+use sp_std::{prelude::*, result};
 
 use frame_support::{
     debug::native,
@@ -27,22 +27,21 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed};
 
 // ChainX
-use chainx_primitives::{AddrStr, AssetId, Memo};
+use chainx_primitives::{AddrStr, AssetId};
 use xpallet_assets::{Chain, ChainT};
-// use xbridge_common::{
-//     traits::{CrossChainBinding, Extractable, TrusteeForChain, TrusteeMultiSig, TrusteeSession},
-//     types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
-//     utils::two_thirds_unsafe,
-// };
-// use xrecords::{WithdrawalState, TxState};
+use xpallet_gateway_common::{
+    traits::{ChannelBinding, Extractable, TrusteeSession},
+    trustees::bitcoin::BTCTrusteeAddrInfo,
+};
 use xpallet_support::{
-    base58, debug, ensure_with_errorlog, error, info, try_addr, warn, RUNTIME_TARGET,
+    base58, debug, ensure_with_errorlog, error, info, traits::MultiSig, try_addr, warn,
+    RUNTIME_TARGET,
 };
 
 // light-bitcoin
 use btc_chain::Transaction;
 use btc_keys::{Address as BTCAddress, DisplayLayout, Error as AddressError, Public};
-use btc_ser::{deserialize, Reader};
+use btc_ser::deserialize;
 // re-export
 pub use btc_chain::BlockHeader as BTCHeader;
 pub use btc_keys::Network as BTCNetwork;
@@ -51,8 +50,8 @@ pub use btc_primitives::h256_conv_endian_from_str;
 pub use btc_primitives::{Compact, H256, H264};
 
 use self::types::{
-    BTCHeaderIndex, BTCHeaderInfo, BTCParams, BTCTxInfo, BTCTxType, RelayedTx, TrusteeAddrInfo,
-    BTCTxVerifier, VoteResult, WithdrawalProposal, BTCTxState, BTCTxResult
+    BTCHeaderIndex, BTCHeaderInfo, BTCParams, BTCRelayedTx, BTCTxResult, BTCTxState, BTCTxType,
+    BTCTxVerifier, VoteResult, WithdrawalProposal,
 };
 
 pub trait Trait:
@@ -61,11 +60,11 @@ pub trait Trait:
     + xpallet_assets::Trait
     + xpallet_gateway_records::Trait // xsystem::Trait + xrecords::Trait + xbridge_common::Trait
 {
-    // type AccountExtractor: Extractable<Self::AccountId>;
-    type TrusteeSessionProvider: TrusteeSession<Self::AccountId, TrusteeAddrInfo>;
-    type TrusteeMultiSigProvider: TrusteeMultiSig<Self::AccountId>;
-    // type CrossChainProvider: CrossChainBinding<Self::AccountId, BTCAddress>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type AccountExtractor: Extractable<Self::AccountId>;
+    type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BTCTrusteeAddrInfo>;
+    type TrusteeMultiSigProvider: MultiSig<Self::AccountId>;
+    type CrossChainProvider: ChannelBinding<Self::AccountId>;
 }
 
 decl_error! {
@@ -79,6 +78,8 @@ decl_error! {
         InvalidBestIndex,
         /// Invalid proof-of-work (Block hash does not satisfy nBits)
         InvalidPoW,
+        /// Previous tx id not equal input point hash
+        InvalidPrevTx,
         /// Futuristic timestamp
         HeaderFuturisticTimestamp,
         /// nBits do not match difficulty rules
@@ -115,14 +116,14 @@ decl_error! {
         BadSignature,
         /// Parse redeem script failed
         BadRedeemScript,
-
     }
 }
 
 decl_event!(
     pub enum Event<T> where
         <T as frame_system::Trait>::AccountId,
-        <T as xpallet_assets::Trait>::Balance {
+        <T as xpallet_assets::Trait>::Balance
+        {
         /// block hash
         InsertHeader(H256),
         // /// tx hash, block hash, tx type
@@ -131,7 +132,7 @@ decl_event!(
         // /// who, Chain, AssetId, balance, memo, Chain Addr, chain txid, chain TxState
         // Deposit(AccountId, Chain, AssetId, Balance, Memo, AddrStr, Vec<u8>, TxState),
         // /// who, Chain, AssetId, balance,  Chain Addr
-        // DepositPending(AccountId, Chain, AssetId, Balance, AddrStr),
+        DepositPending(AccountId, Chain, AssetId, Balance, AddrStr),
         // /// who, withdrawal id, txid, TxState
         // Withdrawal(u32, Vec<u8>, TxState),
         /// create withdraw tx, who proposal, withdrawal list id
@@ -159,7 +160,7 @@ decl_storage! {
         pub BTCHeaderFor get(fn btc_header_for): map hasher(identity) H256 => Option<BTCHeaderInfo>;
 
         /// mark tx has been handled, in case re-handle this tx, and log handle result
-        pub TxState get(fn tx_state): map hash(identity) H256 => Option<BTCTxState>;
+        pub TxState get(fn tx_state): map hasher(identity) H256 => Option<BTCTxState>;
 
         // /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
         // pub CurrentWithdrawalProposal get(fn withdrawal_proposal): Option<WithdrawalProposal<T::AccountId>>;
@@ -240,12 +241,21 @@ decl_module! {
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
         #[weight = 0]
-        pub fn push_transaction(origin, tx: Vec<u8>) -> DispatchResultWithPostInfo {
+        pub fn push_transaction(origin, tx: Vec<u8>, prev_tx: Option<Vec<u8>>) -> DispatchResultWithPostInfo {
             let from = ensure_signed(origin)?;
-            let relay_tx: RelayTx = Decode::decode(&mut tx.as_slice()).ok_or(Error::<T>::DeserializeErr)?;
-            debug!("[push_transaction]|from:{:?}|relay_tx:{:?}", from, relay_tx);
+            let relay_tx: BTCRelayedTx = Decode::decode(&mut tx.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
+            let prev = if let Some(prev) = prev_tx {
+                let prev: Transaction = Decode::decode(&mut prev.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
+                Some(prev)
+            } else {
+                None
+            };
+            native::debug!(
+                target: RUNTIME_TARGET,
+                "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", from, relay_tx, prev
+            );
 
-            Self::apply_push_transaction(relay_tx)?;
+            Self::apply_push_transaction(relay_tx, prev)?;
 
             let post_info = PostDispatchInfo {
                 actual_weight: Some(Zero::zero()),
@@ -570,8 +580,8 @@ impl<T: Trait> Module<T> {
 
             let confirmed_index = header::update_confirmed_header::<T>(&header_info);
             info!(
-                "[apply_push_header]|update to new height|height:{:}|hash:{:?}",
-                header_info.height, hash,
+                "[apply_push_header]|update to new height|height:{:}|hash:{:?}|confirm:{:?}",
+                header_info.height, hash, confirmed_index
             );
             // change new best index
             BestIndex::put(new_best_index);
@@ -585,10 +595,10 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn apply_push_transaction(tx: RelayedTx) -> DispatchResult {
+    fn apply_push_transaction(tx: BTCRelayedTx, prev: Option<Transaction>) -> DispatchResult {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
-        let mut header_info = Module::<T>::btc_header_for(&tx.block_hash).ok_or_else(|| {
+        let header_info = Module::<T>::btc_header_for(&tx.block_hash).ok_or_else(|| {
             error!(
                 "[apply_push_transaction]|tx's block header must exist before|block_hash:{:}",
                 block_hash
@@ -597,7 +607,7 @@ impl<T: Trait> Module<T> {
         })?;
         let merkle_root = header_info.header.merkle_root_hash;
         // verify, check merkle proof
-        tx::validate_transaction::<T>(&tx, merkle_root)?;
+        tx::validate_transaction::<T>(&tx, merkle_root, prev.as_ref())?;
 
         let confirmed = Self::confirmed_header();
         let height = header_info.height;
@@ -607,16 +617,16 @@ impl<T: Trait> Module<T> {
         }
         // protect replayed tx, just process failed and not processed tx;
         match Self::tx_state(&tx_hash) {
-            None => { /* do nothing */ },
+            None => { /* do nothing */ }
             Some(state) => {
-                if state == BTCTxResult::Success {
+                if state.result == BTCTxResult::Success {
                     error!("[apply_push_transaction]|reject processed tx|tx hash:{:}|type:{:?}|result:{:?}", tx_hash, state.tx_type, state.result);
                     Err(Error::<T>::ReplayedTx)?;
                 }
             }
         }
 
-        let state = tx::process_tx::<T>(tx.raw)?;
+        let state = tx::process_tx::<T>(tx.raw, prev)?;
         // set storage
         TxState::insert(&tx_hash, state);
         Self::deposit_event(RawEvent::ProcessTx(tx_hash, block_hash, state));

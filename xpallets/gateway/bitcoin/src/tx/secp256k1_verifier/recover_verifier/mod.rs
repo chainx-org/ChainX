@@ -10,7 +10,7 @@ use sp_std::{convert::TryFrom, result};
 use btc_chain::Transaction;
 use btc_keys::Message;
 use btc_primitives::Bytes;
-use btc_script::{Script, SignatureChecker, SignatureVersion, TransactionInputSigner};
+use btc_script::{Script, SignatureVersion, TransactionInputSigner};
 
 pub use error::Secp256k1Error;
 use scalar::Scalar;

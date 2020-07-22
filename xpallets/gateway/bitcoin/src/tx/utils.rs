@@ -1,10 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 // Substrate
-use frame_support::{
-    debug::native,
-    dispatch::{DispatchError, DispatchResult},
-};
-use sp_std::{prelude::Vec, result::Result};
+use frame_support::{debug::native, dispatch::DispatchResult};
+use sp_std::prelude::Vec;
 
 // ChainX
 // use xbridge_common::{traits::TrusteeSession, types::TrusteeSessionInfo, utils::two_thirds_unsafe};
@@ -15,7 +12,6 @@ use btc_chain::{OutPoint, Transaction};
 use btc_keys::{Address, DisplayLayout, Network};
 use btc_script::{Opcode, Script, ScriptAddress};
 
-use crate::types::TrusteeAddrInfo;
 use crate::{Error, Module, Trait};
 
 pub fn parse_output_addr<T: Trait>(script: &Script) -> Option<Address> {
@@ -67,8 +63,8 @@ pub fn inspect_address_from_transaction(
 }
 
 /// judge a script's addr is equal to second param
-pub fn is_key<T: Trait>(script: &Script, trustee_address: &Address) -> bool {
-    if let Some(addr) = parse_output_addr::<T>(script) {
+pub fn is_key(script: &Script, trustee_address: &Address, network: Network) -> bool {
+    if let Some(addr) = parse_output_addr_with_networkid(script, network) {
         if addr.hash == trustee_address.hash {
             return true;
         }
@@ -122,7 +118,6 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
         None
     }
 }
-
 
 pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version

@@ -9,10 +9,11 @@ use sp_runtime::traits::SaturatedConversion;
 use sp_std::{prelude::Vec, result};
 
 // ChainX
-use chainx_primitives::AssetId;
+use chainx_primitives::{AssetId, Name};
 // use xbridge_common::traits::{CrossChainBinding, Extractable};
 // use xfee_manager;
 use xpallet_assets::{self, ChainT};
+use xpallet_gateway_common::traits::Extractable;
 use xpallet_support::{debug, error, info, try_hex, warn, RUNTIME_TARGET};
 
 // light-bitcoin
@@ -21,10 +22,11 @@ use btc_keys::Address;
 use btc_primitives::H256;
 use btc_script::Script;
 
-use crate::types::{BTCTxInfo, DepositAccountInfo, DepositCache};
+use crate::types::{DepositAccountInfo, };
 use crate::{Module, RawEvent, Trait, TxMarkFor};
 
 use super::utils::{addr2vecu8, ensure_identical, is_key, parse_opreturn};
+use crate::trustee::get_hot_trustee_address;
 
 pub struct TxHandler {
     pub tx_hash: H256,
@@ -225,13 +227,8 @@ impl TxHandler {
 
 /// Try updating the binding address, remove pending deposit if the updating goes well.
 /// return validator name and this accountid
-fn handle_opreturn<T: Trait>(
-    script: &[u8],
-    addr_type: u8,
-) -> Option<(T::AccountId, Option<Vec<u8>>)> {
-    // T::AccountExtractor::account_info(script, addr_type)
-    // TODO
-    None
+fn handle_opreturn<T: Trait>(script: &[u8]) -> Option<(T::AccountId, Option<Name>)> {
+    T::AccountExtractor::account_info(script)
 }
 
 // pub fn parse_deposit_outputs<T: Trait>(
@@ -240,72 +237,9 @@ fn handle_opreturn<T: Trait>(
 //     let trustee_address = get_hot_trustee_address::<T>()?;
 //     parse_deposit_outputs_impl::<T>(tx, &trustee_address)
 // }
+/*
 
-// just for test easy
-#[inline]
-pub fn parse_deposit_outputs_impl<T: Trait>(
-    tx: &Transaction,
-    hot_addr: &Address,
-) -> Option<(T::AccountId, Option<Vec<u8>>, u64, Script)> {
-    // let mut deposit_balance = 0;
-    // let mut account_info = None;
-    // let mut has_opreturn = false;
-    // let mut original = None;
-
-    // parse
-    // just find first matched opreturn
-    // let account_info = tx.outputs.iter().find_map(|output| {
-    //     let script: Script = output.script_pubkey.to_vec().into();
-    //     if let Some(v) = parse_opreturn(&script) {
-    //         let addr_type = xsystem::Module::<T>::address_type();
-    //         handle_opreturn::<T>(&v, addr_type).map(|(accountid, name)| (accountid, name, script))
-    //     } else {
-    //         None
-    //     }
-    // });
-    //
-    // account_info.map(| (accountid, name, script)| {
-    //     let deposit_value = tx.outputs.iter().filter_map(|output| {
-    //         if is_key::<T>(&script, hot_addr) && output.value > 0 {
-    //             Some(output.value)
-    //         } else {
-    //             None
-    //         }
-    //     }).sum();
-    //     (accountid, name, deposit_value, script)
-    // })
-    // for output in tx.outputs.iter() {
-    //     // out script
-    //     let script: Script = output.script_pubkey.to_vec().into();
-    //     // bind address [btc address --> chainx AccountId]
-    //     // is_null_data_script is not null
-    //     if script.is_null_data_script() {
-    //         // only handle first valid account info opreturn, other opreturn would drop
-    //         if has_opreturn == false {
-    //             if let Some(v) = parse_opreturn(&script) {
-    //                 let addr_type = xsystem::Module::<T>::address_type();
-    //                 let info = handle_opreturn::<T>(&v, addr_type);
-    //                 if info.is_some() {
-    //                     // only set first valid account info
-    //                     original = Some(script.to_vec());
-    //                     account_info = info;
-    //                     has_opreturn = true;
-    //                 }
-    //             }
-    //         }
-    //         continue;
-    //     }
-    //
-    //     // not a opreturn out, do follow
-    //     // get deposit money
-    //     if is_key::<T>(&script, hot_addr) && output.value > 0 {
-    //         deposit_balance += output.value;
-    //     }
-    // }
-    // Ok((account_info, deposit_balance, original))
-    None
-}
-
+*/
 /// bind account
 // fn update_binding<T: Trait>(who: &T::AccountId, channel_name: Option<Name>, input_addr: Address) {
 //     T::CrossChainProvider::update_binding(who, input_addr, channel_name)

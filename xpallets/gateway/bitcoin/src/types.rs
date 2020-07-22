@@ -8,8 +8,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
-// chainx
-// use xbridge_common::traits::IntoVecu8;
+use chainx_primitives::Name;
 
 // light-bitcoin
 use btc_chain::{BlockHeader as BTCHeader, Transaction as BTCTransaction};
@@ -17,10 +16,8 @@ use btc_keys::Address;
 use btc_primitives::{Compact, H256};
 use merkle::PartialMerkleTree;
 
-use crate::{Error, Trait};
-
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub struct RelayedTx {
+pub struct BTCRelayedTx {
     pub block_hash: H256,
     pub raw: BTCTransaction,
     pub merkle_proof: PartialMerkleTree,
@@ -62,10 +59,41 @@ impl Default for BTCTxType {
     }
 }
 
+pub enum AccountInfo<AccountId> {
+    /// A value of type `L`.
+    OpReturn((AccountId, Option<Name>)),
+    /// A value of type `R`.
+    InputAddr(Address),
+}
+
+pub struct DepositInfo<AccountId> {
+    pub deposit_value: u64,
+    pub account_info: AccountInfo<AccountId>,
+}
+pub enum MetaTxType<AccountId> {
+    Withdrawal,
+    Deposit(DepositInfo<AccountId>),
+    HotAndCold,
+    TrusteeTransition,
+    Irrelevance,
+}
+
+impl<AccountId> Into<BTCTxType> for MetaTxType<AccountId> {
+    fn into(self) -> BTCTxType {
+        match self {
+            Self::Withdrawal => BTCTxType::Withdrawal,
+            Self::Deposit(_) => BTCTxType::Deposit,
+            Self::HotAndCold => BTCTxType::HotAndCold,
+            Self::TrusteeTransition => BTCTxType::TrusteeTransition,
+            Self::Irrelevance => BTCTxType::Irrelevance,
+        }
+    }
+}
+
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
 pub enum BTCTxResult {
     Success,
-    Failed
+    Failed,
 }
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
@@ -74,24 +102,16 @@ pub struct BTCTxState {
     pub tx_type: BTCTxType,
 }
 
-pub enum DepositAccountInfo<AccountId> {
-    AccountId(AccountId),
-    Address(Address),
-}
+// pub enum DepositAccountInfo<AccountId> {
+//     AccountId(AccountId),
+//     Address(Address),
+// }
 
 // #[derive(PartialEq, Clone, Encode, Decode, Default)]
 // pub struct DepositCache {
 //     pub txid: H256,
 //     pub balance: u64,
 // }
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeAddrInfo {
-    pub addr: Address,
-    pub redeem_script: Vec<u8>,
-}
 
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct WithdrawalProposal<AccountId> {

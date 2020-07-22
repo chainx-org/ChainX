@@ -11,12 +11,13 @@ pub mod trustees;
 pub mod types;
 pub mod utils;
 
+use sp_std::{convert::TryFrom, prelude::*, result};
+
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
-use sp_std::{convert::TryFrom, prelude::*, result};
 
 use chainx_primitives::{AssetId, Name, Text};
 use xpallet_assets::Chain;
