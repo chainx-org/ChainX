@@ -144,7 +144,7 @@ pub struct ValidatorInfo<AccountId, RpcBalance, BlockNumber> {
     pub is_validating: bool,
     /// How much balances the validator has bonded itself.
     pub self_bonded: RpcBalance,
-    /// AccountId for the reward pot of this validator.
+    /// AccountId of the reward pot of this validator.
     pub reward_pot_account: AccountId,
     /// Balance of the reward pot account.
     pub reward_pot_balance: RpcBalance,
