@@ -29,9 +29,8 @@ use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedInde
 use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::debug;
 
-use types::*;
-
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
+pub use types::*;
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 5_000_000_000;

@@ -271,8 +271,8 @@ fn testnet_genesis(
             minimum_validator_count: 4,
             sessions_per_era: 12,
             vesting_account: get_account_id_from_seed::<sr25519::Public>("vesting"),
-            glob_dist_ratio: (12, 88),
-            mining_ratio: (10, 90),
+            glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
+            mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             ..Default::default()
         }),
         xpallet_dex_spot: Some(XSpotConfig {
