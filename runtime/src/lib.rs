@@ -622,6 +622,9 @@ impl_runtime_apis! {
         fn validators() -> Vec<xpallet_mining_staking::ValidatorInfo<AccountId, xpallet_support::RpcBalance<Balance>, BlockNumber>> {
             XStaking::validators_info()
         }
+        fn validator_info_of(who: AccountId) -> xpallet_mining_staking::ValidatorInfo<AccountId, xpallet_support::RpcBalance<Balance>, BlockNumber> {
+            XStaking::validator_info_of(who)
+        }
     }
 
     impl xpallet_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance, BlockNumber>

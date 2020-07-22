@@ -20,6 +20,14 @@ pub trait XStakingApi<BlockHash, AccountId, RpcBalance, BlockNumber> {
         &self,
         at: Option<BlockHash>,
     ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>>;
+
+    /// Get overall information given the validator AccountId.
+    #[rpc(name = "xstaking_getValidatorByAccount")]
+    fn validator_info_of(
+        &self,
+        who: AccountId,
+        at: Option<BlockHash>,
+    ) -> Result<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>;
 }
 
 /// A struct that implements the [`XStakingApi`].
@@ -58,11 +66,22 @@ where
                 // If the block hash is not supplied assume the best block.
                 self.client.info().best_hash));
 
-        let result = api
-            .validators(&at)
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+        Ok(api.validators(&at).map_err(runtime_error_into_rpc_err)?)
+    }
 
-        Ok(result)
+    fn validator_info_of(
+        &self,
+        who: AccountId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+                // If the block hash is not supplied assume the best block.
+                self.client.info().best_hash));
+
+        Ok(api
+            .validator_info_of(&at, who)
+            .map_err(runtime_error_into_rpc_err)?)
     }
 }
 

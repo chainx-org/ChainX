@@ -16,5 +16,8 @@ sp_api::decl_runtime_apis! {
     {
         /// Get overall information about all potential validators.
         fn validators() -> Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>;
+
+        /// Get overall information given the validator AccountId.
+        fn validator_info_of(who: AccountId) -> ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>;
     }
 }
