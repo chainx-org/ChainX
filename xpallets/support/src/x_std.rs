@@ -1,13 +1,4 @@
 use rustc_hex::ToHex;
-use std::fmt;
-
-pub struct Str<'a>(pub &'a String);
-
-impl<'a> fmt::Debug for Str<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 /// Converts a slice of bytes to a string.
 #[inline]
