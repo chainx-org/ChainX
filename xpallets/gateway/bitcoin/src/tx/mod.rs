@@ -38,8 +38,7 @@ use crate::types::{
     AccountInfo, BTCDepositCache, BTCTxResult, BTCTxState, DepositInfo, MetaTxType,
 };
 use crate::{
-    AddressBinding, BoundAddressOf, CurrentWithdrawalProposal, Module, PendingDeposits, RawEvent,
-    Trait,
+    AddressBinding, BoundAddressOf, Module, PendingDeposits, RawEvent, Trait, WithdrawalProposal,
 };
 
 pub fn process_tx<T: Trait>(
@@ -429,7 +428,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
 }
 
 fn withdraw<T: Trait>(tx: Transaction) -> BTCTxResult {
-    if let Some(proposal) = CurrentWithdrawalProposal::<T>::take() {
+    if let Some(proposal) = WithdrawalProposal::<T>::take() {
         native::debug!(
             target: RUNTIME_TARGET,
             "[withdraw]|withdraw handle|proposal:{:?}|tx:{:?}",
@@ -454,7 +453,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BTCTxResult {
                 let tx_hash = proposal.tx.hash();
                 error!("[withdraw]|Withdrawal failed, reason:{:?}, please use root to fix it|withdrawal idlist:{:?}|proposal id:{:?}|tx hash:{:}",
                        e, proposal.withdrawal_id_list, proposal.tx.hash(), tx.hash());
-                CurrentWithdrawalProposal::<T>::put(proposal);
+                WithdrawalProposal::<T>::put(proposal);
 
                 Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(tx.hash(), tx_hash));
                 // let _ = xfee_manager::Module::<T>::modify_switcher(
@@ -477,69 +476,3 @@ fn withdraw<T: Trait>(tx: Transaction) -> BTCTxResult {
         BTCTxResult::Failed
     }
 }
-
-// /// Check that the cash withdrawal transaction is correct
-// pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
-//     match Module::<T>::withdrawal_proposal() {
-//         Some(_) => Err("Unfinished withdrawal transaction"),
-//         None => {
-//             // withdrawal addr list for account withdrawal application
-//             let mut appl_withdrawal_list = Vec::new();
-//             for withdraw_index in withdrawal_id_list.iter() {
-//                 let record = xrecords::Module::<T>::application_map(withdraw_index)
-//                     .ok_or("Withdraw id not in withdrawal PendingWithdrawal record")?;
-//                 // record.data.addr() is base58
-//                 // verify btc address would conveRelayedTx a base58 addr to Address
-//                 let addr: Address = Module::<T>::verify_btc_address(&record.data.addr())
-//                     .map_err(|_| "Parse addr error")?;
-//                 appl_withdrawal_list.push((addr, record.data.balance().into()));
-//             }
-//             // not allow deposit directly to cold address, only hot address allow
-//             let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
-//             // withdrawal addr list for tx outputs
-//             let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
-//             let mut tx_withdraw_list = Vec::new();
-//             for output in tx.outputs.iter() {
-//                 let script: Script = output.script_pubkey.clone().into();
-//                 let addr = parse_output_addr::<T>(&script).ok_or("not found addr in this out")?;
-//                 if addr.hash != hot_trustee_address.hash {
-//                     // expect change to trustee_addr output
-//                     tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));
-//                 }
-//             }
-//
-//             tx_withdraw_list.soRelayedTx();
-//             appl_withdrawal_list.soRelayedTx();
-//
-//             // appl_withdrawal_list must match to tx_withdraw_list
-//             if appl_withdrawal_list.len() != tx_withdraw_list.len() {
-//                 error!("withdrawal tx's outputs not equal to withdrawal application list, withdrawal application len:{:}, withdrawal tx's outputs len:{:}|withdrawal application list:{:?}, tx withdrawal outputs:{:?}",
-//                        appl_withdrawal_list.len(), tx_withdraw_list.len(),
-//                        withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(),
-//                        tx_withdraw_list
-//                 );
-//                 return Err("withdrawal tx's outputs not equal to withdrawal application list");
-//             }
-//
-//             let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
-//                 if a.0 == b.0 && a.1 == b.1 {
-//                     return true
-//                 }
-//                 else {
-//                     error!(
-//                         "withdrawal tx's output not match to withdrawal application. withdrawal application :{:?}, tx withdrawal output:{:?}",
-//                         a,
-//                         b
-//                     );
-//                     return false
-//                 }
-//             }).count();
-//
-//             if count != appl_withdrawal_list.len() {
-//                 return Err("withdrawal tx's output list not match to withdrawal application list");
-//             }
-//
-//             Ok(())
-//         }
-//     }
-// }

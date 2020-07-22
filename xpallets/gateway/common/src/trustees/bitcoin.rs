@@ -1,7 +1,7 @@
 use super::*;
 use btc_keys::{Address, Public as BTCPublic};
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct BTCTrusteeAddrInfo {

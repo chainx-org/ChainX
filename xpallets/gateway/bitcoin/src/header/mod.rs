@@ -12,7 +12,7 @@ use xpallet_support::info;
 use btc_primitives::H256;
 
 use crate::types::{BTCHeaderIndex, BTCHeaderInfo};
-use crate::{BlockHashFor, ConfirmedHeader, Error, Headers, MainChain, Module, Trait};
+use crate::{ConfirmedHeader, Error, MainChain, Module, Trait};
 
 pub use self::header_proof::HeaderVerifier;
 

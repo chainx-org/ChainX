@@ -1,7 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
 use frame_support::dispatch::DispatchError;
-use sp_std::{convert::TryFrom, fmt::Debug, prelude::Vec, result};
+use sp_std::{convert::TryFrom, prelude::Vec, result};
 
 use chainx_primitives::{AssetId, Name};
 use xpallet_assets::Chain;

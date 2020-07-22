@@ -16,6 +16,7 @@ use btc_script::Script;
 use xpallet_support::{debug, error, try_hex};
 
 // use crate::tx::utils::get_hot_trustee_redeem_script;
+use crate::trustee::get_hot_trustee_redeem_script;
 use crate::types::BTCRelayedTx;
 use crate::{Error, Trait};
 
@@ -63,10 +64,10 @@ pub fn validate_transaction<T: Trait>(
 }
 
 /// Check signed transactions
-// pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, DispatchError> {
-//     let redeem_script = get_hot_trustee_redeem_script::<T>()?;
-//     parse_and_check_signed_tx_impl::<T>(tx, redeem_script)
-// }
+pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, DispatchError> {
+    let redeem_script = get_hot_trustee_redeem_script::<T>()?;
+    parse_and_check_signed_tx_impl::<T>(tx, redeem_script)
+}
 
 /// for test convenient
 #[inline]

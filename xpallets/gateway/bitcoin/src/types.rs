@@ -111,21 +111,21 @@ pub struct BTCDepositCache {
 }
 
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct WithdrawalProposal<AccountId> {
+pub struct BTCWithdrawalProposal<AccountId> {
     pub sig_state: VoteResult,
     pub withdrawal_id_list: Vec<u32>,
     pub tx: BTCTransaction,
     pub trustee_list: Vec<(AccountId, bool)>,
 }
 
-impl<AccountId> WithdrawalProposal<AccountId> {
+impl<AccountId> BTCWithdrawalProposal<AccountId> {
     pub fn new(
         sig_state: VoteResult,
         withdrawal_id_list: Vec<u32>,
         tx: BTCTransaction,
         trustee_list: Vec<(AccountId, bool)>,
     ) -> Self {
-        WithdrawalProposal {
+        BTCWithdrawalProposal {
             sig_state,
             withdrawal_id_list,
             tx,
