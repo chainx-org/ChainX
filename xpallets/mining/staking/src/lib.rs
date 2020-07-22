@@ -737,23 +737,28 @@ impl<T: Trait> Module<T> {
     ) -> Vec<ValidatorInfo<T::AccountId, RpcBalance<T::Balance>, T::BlockNumber>> {
         Self::validator_set()
             .map(|v| {
-                // let profile = Validators::<T>::get(&v);
-                // let ledger = ValidatorLedgers::<T>::get(&v);
+                let profile = Validators::<T>::get(&v);
+                let ledger: RpcValidatorLedger<RpcBalance<T::Balance>, T::BlockNumber> =
+                    ValidatorLedgers::<T>::get(&v).into();
                 let self_bonded: RpcBalance<T::Balance> =
                     Nominations::<T>::get(&v, &v).nomination.into();
+                debug!(
+                    "session validators: {:?}",
+                    T::SessionInterface::validators()
+                );
+                debug!("validator: {:?}", v);
                 let is_validating = T::SessionInterface::validators().contains(&v);
                 let reward_pot_account = T::DetermineRewardPotAccount::reward_pot_account_for(&v);
                 let reward_pot_balance: RpcBalance<T::Balance> =
                     xpallet_assets::Module::<T>::pcx_free_balance(&reward_pot_account).into();
                 ValidatorInfo {
                     account: v,
-                    // profile,
-                    // ledger,
+                    profile,
+                    ledger,
                     is_validating,
                     self_bonded,
                     reward_pot_account,
                     reward_pot_balance,
-                    dummy: T::BlockNumber::from(0),
                 }
             })
             .collect()

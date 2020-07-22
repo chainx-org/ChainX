@@ -1,4 +1,8 @@
+/// Balance type when interacting with RPC.
 pub type RpcBalance<Balance> = U128<Balance>;
+
+/// WeightType when interacting with RPC.
+pub type RpcWeightType = U128<u128>;
 
 /// This struct provides a wrapper of Balance in runtime due to the u128 serde issue.
 ///
@@ -28,7 +32,7 @@ pub type RpcBalance<Balance> = U128<Balance>;
 /// ```
 ///
 /// TODO: remove this workaround once https://github.com/paritytech/substrate/issues/4641 is resolved.
-#[derive(Eq, PartialEq, codec::Encode, codec::Decode, Default)]
+#[derive(Eq, PartialEq, Clone, codec::Encode, codec::Decode, Default)]
 #[cfg_attr(feature = "std", derive(std::fmt::Debug))]
 pub struct U128<Balance>(Balance);
 
