@@ -151,3 +151,14 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
 pub fn addr2vecu8(addr: &Address) -> Vec<u8> {
     to_base58(addr.layout().to_vec())
 }
+
+#[cfg(feature = "std")]
+#[inline]
+pub fn trick_format_opreturn(opreturn: &[u8]) -> String {
+    if opreturn.len() > 2 {
+        // trick, just for print log
+        format!("{:?}|{:?}", &opreturn[..2], try_hex!(&opreturn[2..]))
+    } else {
+        format!("{:?}", opreturn)
+    }
+}

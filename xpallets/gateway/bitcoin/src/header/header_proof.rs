@@ -78,7 +78,7 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BTCParam
         return max_bits;
     }
 
-    let parent_header: BTCHeader = Module::<T>::btc_header_for(&parent_hash).unwrap().header;
+    let parent_header: BTCHeader = Module::<T>::headers(&parent_hash).unwrap().header;
 
     if is_retarget_height(height, params) {
         let new_work = work_required_retarget::<T>(parent_header, height, params);
@@ -118,8 +118,7 @@ pub fn work_required_retarget<T: Trait>(
         for h in hash_list {
             // look up in main chain
             if Module::<T>::main_chain(h).is_some() {
-                let info =
-                    Module::<T>::btc_header_for(h).expect("block header must exist at here.");
+                let info = Module::<T>::headers(h).expect("block header must exist at here.");
                 retarget_header = info.header;
                 break;
             };

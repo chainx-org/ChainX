@@ -61,14 +61,16 @@ impl Default for BTCTxType {
 
 pub enum AccountInfo<AccountId> {
     /// A value of type `L`.
-    OpReturn((AccountId, Option<Name>)),
+    Account((AccountId, Option<Name>)),
     /// A value of type `R`.
-    InputAddr(Address),
+    Address(Address),
 }
 
 pub struct DepositInfo<AccountId> {
     pub deposit_value: u64,
-    pub account_info: AccountInfo<AccountId>,
+    // pub account_info: AccountInfo<AccountId>,
+    pub op_return: Option<(AccountId, Option<Name>)>,
+    pub input_addr: Option<Address>,
 }
 pub enum MetaTxType<AccountId> {
     Withdrawal,
@@ -78,8 +80,8 @@ pub enum MetaTxType<AccountId> {
     Irrelevance,
 }
 
-impl<AccountId> Into<BTCTxType> for MetaTxType<AccountId> {
-    fn into(self) -> BTCTxType {
+impl<AccountId> MetaTxType<AccountId> {
+    pub fn ref_into(&self) -> BTCTxType {
         match self {
             Self::Withdrawal => BTCTxType::Withdrawal,
             Self::Deposit(_) => BTCTxType::Deposit,
@@ -102,16 +104,11 @@ pub struct BTCTxState {
     pub tx_type: BTCTxType,
 }
 
-// pub enum DepositAccountInfo<AccountId> {
-//     AccountId(AccountId),
-//     Address(Address),
-// }
-
-// #[derive(PartialEq, Clone, Encode, Decode, Default)]
-// pub struct DepositCache {
-//     pub txid: H256,
-//     pub balance: u64,
-// }
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+pub struct BTCDepositCache {
+    pub txid: H256,
+    pub balance: u64,
+}
 
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct WithdrawalProposal<AccountId> {

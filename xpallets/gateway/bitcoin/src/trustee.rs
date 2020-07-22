@@ -101,3 +101,31 @@ pub fn create_multi_address<T: Trait>(
         redeem_script: script_bytes.into(),
     })
 }
+
+/*
+/// Update the signature status of trustee
+/// state: false -> Veto signature, true -> Consent signature
+/// only allow inseRelayedTx once
+pub fn insertTx_trustee_vote_state<T: Trait>(
+    state: bool,
+    who: &T::AccountId,
+    trustee_list: &mut Vec<(T::AccountId, bool)>,
+) -> DispatchResult {
+    match trustee_list.iter_mut().find(|ref info| info.0 == *who) {
+        Some(_) => {
+            // if account is exist, override state
+            error!("[inseRelayedTx_trustee_vote_state]|already vote for this withdrawal proposal|who:{:?}|old vote:{:}", who, state);
+            return Err("already vote for this withdrawal proposal");
+        }
+        None => {
+            trustee_list.push((who.clone(), state));
+            debug!(
+                "[inseRelayedTx_trustee_vote_state]|inseRelayedTx new vote|who:{:?}|state:{:}",
+                who, state
+            );
+        }
+    }
+    Module::<T>::deposit_event(RawEvent::SignWithdrawalProposal(who.clone(), state));
+    Ok(())
+}
+*/

@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod der;
 mod error;
 mod scalar;

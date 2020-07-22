@@ -1,33 +1,46 @@
 // Copyright 2018-2019 Chainpool.
 
-// pub mod handler;
 mod secp256k1_verifier;
 pub mod utils;
 pub mod validator;
 
 // Substrate
-use frame_support::dispatch::DispatchError;
-use sp_std::{prelude::*, result};
-
+use frame_support::{
+    debug::native,
+    dispatch::{DispatchError, DispatchResult},
+    StorageMap, StorageValue,
+};
+use sp_runtime::SaturatedConversion;
+use sp_std::{fmt::Debug, prelude::*, result};
 // ChainX
-use chainx_primitives::Name;
-use xpallet_gateway_common::traits::Extractable;
-use xpallet_support::{debug, error, warn};
+use chainx_primitives::{AssetId, Name};
+use xpallet_assets::ChainT;
+use xpallet_gateway_common::traits::{ChannelBinding, Extractable};
+use xpallet_support::{debug, error, info, str, warn, RUNTIME_TARGET};
 
 // light-bitcoin
 use btc_chain::Transaction;
 use btc_keys::{Address, Network};
+use btc_primitives::H256;
 use btc_script::Script;
 
 // use crate::traits::RelayTransaction;
+#[cfg(feature = "std")]
+use self::utils::trick_format_opreturn;
 use self::utils::{
     equal_addr, inspect_address_from_transaction, is_key, parse_opreturn,
     parse_output_addr_with_networkid,
 };
 pub use self::validator::validate_transaction;
 use crate::trustee::{get_last_trustee_address_pair, get_trustee_address_pair};
-use crate::types::{AccountInfo, BTCTxResult, BTCTxState, DepositInfo, MetaTxType};
-use crate::{Module, RawEvent, Trait};
+use crate::tx::utils::{addr2vecu8, ensure_identical};
+use crate::types::{
+    AccountInfo, BTCDepositCache, BTCTxResult, BTCTxState, DepositInfo, MetaTxType,
+};
+use crate::{
+    AddressBinding, BoundAddressOf, CurrentWithdrawalProposal, Module, PendingDeposits, RawEvent,
+    Trait,
+};
 
 pub fn process_tx<T: Trait>(
     tx: Transaction,
@@ -35,11 +48,8 @@ pub fn process_tx<T: Trait>(
 ) -> result::Result<BTCTxState, DispatchError> {
     let meta_type = detect_transaction_type::<T>(&tx, prev.as_ref())?;
     // process
+    let state = handle_tx::<T>(tx, meta_type);
 
-    let state = BTCTxState {
-        result: BTCTxResult::Success,
-        tx_type: Default::default(),
-    };
     Ok(state)
 }
 
@@ -72,6 +82,14 @@ pub fn detect_transaction_type<T: Trait>(
 /// notice we use `AccountId, F` etc... generic type otherwise `<T: Trait>` type, is convenient for
 /// bitcoin transaction relay program to reuse this part that could detect bitcoin transaction and
 /// filter them before relaying to chain.
+///
+/// when meet in `prev`, we would parse tx's inputs/outputs into Option<Address>
+/// e.g
+/// notice the relay tx only has first input
+///        _________
+///  addr |        | Some(addr)
+///       |   tx   | Some(addr)
+///       |________| None (OP_RETURN or something unknown)
 #[inline]
 pub fn detect_transaction_type_impl<AccountId, F>(
     tx: &Transaction,
@@ -83,6 +101,7 @@ pub fn detect_transaction_type_impl<AccountId, F>(
     handle_opreturn: F,
 ) -> MetaTxType<AccountId>
 where
+    AccountId: Debug,
     F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
 {
     let input_addr = prev.and_then(|prev_tx| {
@@ -93,13 +112,6 @@ where
 
     // Withdrawal|TrusteeTransition|HotAndCold need input_addr to parse prev address
     if let Some(ref input_addr) = input_addr {
-        /// parse tx's inputs/outputs into Option<Address>
-        /// e.g
-        /// notice the relay tx only has first input
-        ///        _________
-        ///  addr |        | Some(addr)
-        ///       |   tx   | Some(addr)
-        ///       |________| None (OP_RETURN or something unknown)
         // parse output addr
         let outputs: Vec<(Option<Address>, u64)> = tx
             .outputs
@@ -152,27 +164,20 @@ fn detect_deposit_type<AccountId, F>(
     handle_opreturn: F,
 ) -> MetaTxType<AccountId>
 where
+    AccountId: Debug,
     F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
 {
     let (opreturn, deposit_value) =
         parse_deposit_outputs_impl(tx, hot_addr, network, handle_opreturn);
     if deposit_value >= min_deposit {
-        let account_info = match opreturn {
-            // if has a valid opreturn, would just use opreturn info
-            Some(opreturn) => AccountInfo::OpReturn(opreturn),
-            None => {
-                if let Some(input) = input_addr {
-                    AccountInfo::InputAddr(input.clone())
-                } else {
-                    warn!("[detect_deposit_type]|receive a deposit tx but do not have valid opreturn & not have input addr|tx:{:?}", tx.hash());
-                    return MetaTxType::Irrelevance;
-                }
-            }
-        };
-
+        if opreturn.is_none() && input_addr.is_none() {
+            warn!("[detect_deposit_type]|receive a deposit tx but do not have valid opreturn & not have input addr|tx:{:?}", tx.hash());
+            return MetaTxType::Irrelevance;
+        }
         let info = DepositInfo {
             deposit_value,
-            account_info,
+            op_return: opreturn,
+            input_addr: input_addr.map(Clone::clone),
         };
         MetaTxType::Deposit(info)
     } else {
@@ -229,12 +234,13 @@ pub fn parse_deposit_outputs_impl<AccountId, F>(
     handle_opreturn: F,
 ) -> (Option<(AccountId, Option<Name>)>, u64)
 where
+    AccountId: Debug,
     F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
 {
     let mut deposit_balance = 0;
     let mut account_info = None;
     let mut has_opreturn = false;
-    // let mut original = None;
+    let mut original: Vec<u8> = Default::default();
     // parse
     for output in tx.outputs.iter() {
         // out script
@@ -248,7 +254,7 @@ where
                     let info = handle_opreturn(&v);
                     if info.is_some() {
                         // only set first valid account info
-                        // original = Some(script.to_vec());
+                        original = script.to_vec();
                         account_info = info;
                         has_opreturn = true;
                     }
@@ -263,19 +269,214 @@ where
             deposit_balance += output.value;
         }
     }
+
+    native::debug!(
+        target: RUNTIME_TARGET,
+        "[parse_deposit_outputs_impl]|parse outputs|account_info:{:?}|balance:{:}|opreturn:{:}|",
+        account_info,
+        deposit_balance,
+        trick_format_opreturn(&original)
+    );
     (account_info, deposit_balance)
 }
-// pub fn handle_tx<T: Trait>(txid: &H256) -> Dispatch {
-//     let tx_handler = TxHandler::new::<T>(txid)?;
-//     tx_handler.handle::<T>()?;
-//     Ok(())
-// }
 
-// pub fn remove_unused_tx<T: Trait>(txid: &H256) {
-//     debug!("[remove_unused_tx]|remove old tx|tx_hash:{:}", txid);
-//     TxFor::<T>::remove(txid);
-//     InputAddrFor::<T>::remove(txid);
-// }
+fn handle_tx<T: Trait>(tx: Transaction, meta_type: MetaTxType<T::AccountId>) -> BTCTxState {
+    let tx_type = meta_type.ref_into();
+    let result = match meta_type {
+        MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
+        MetaTxType::<_>::Withdrawal => withdraw::<T>(tx),
+        _ => BTCTxResult::Success,
+    };
+    let state = BTCTxState { result, tx_type };
+    state
+}
+
+fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BTCTxResult {
+    let account_info = match deposit_info.op_return {
+        Some((accountid, channel_name)) => {
+            if let Some(addr) = deposit_info.input_addr {
+                // remove old unbinding deposit info
+                remove_pending_deposit::<T>(&addr, &accountid);
+                // update or override binding info
+                update_binding::<T>(&addr, &accountid);
+            } else {
+                // no input addr
+                debug!("[deposit]|no input addr for this deposit tx, but has opreturn to get accountid|tx_hash:{:?}|who:{:?}", hash, accountid);
+            }
+            AccountInfo::<T::AccountId>::Account((accountid, channel_name))
+        }
+        None => {
+            if let Some(addr) = deposit_info.input_addr {
+                // no opreturn, use addr to get accountid
+                match Module::<T>::address_binding(&addr) {
+                    Some(accountid) => AccountInfo::Account((accountid, None)),
+                    None => AccountInfo::Address(addr.clone()),
+                }
+            } else {
+                error!("[deposit]|no input addr for this deposit tx, neither has opreturn to get accountid!|tx_hash:{:?}", hash);
+                return BTCTxResult::Failed;
+            }
+        }
+    };
+
+    match account_info {
+        AccountInfo::<_>::Account((accountid, channel_name)) => {
+            T::Channel::update_binding(&<Module<T> as ChainT>::ASSET_ID, &accountid, channel_name);
+
+            if let Err(_) = deposit_token::<T>(&accountid, deposit_info.deposit_value) {
+                return BTCTxResult::Failed;
+            }
+            info!(
+                "[deposit]|deposit success|who:{:?}|balance:{:}|tx_hash:{:}",
+                accountid, deposit_info.deposit_value, hash
+            );
+        }
+        AccountInfo::<_>::Address(addr) => {
+            insert_pending_deposit::<T>(&addr, &hash, deposit_info.deposit_value);
+            info!(
+                "[deposit]|deposit into pending|addr:{:?}|balance:{:}|tx_hash:{:}",
+                str!(addr2vecu8(&addr)),
+                deposit_info.deposit_value,
+                hash
+            );
+        }
+    };
+    BTCTxResult::Success
+}
+
+fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) -> DispatchResult {
+    let id: AssetId = <Module<T> as ChainT>::ASSET_ID;
+
+    let b: T::Balance = balance.saturated_into();
+    let _ = <xpallet_gateway_records::Module<T>>::deposit(&who, &id, b).map_err(|e| {
+        error!(
+            "deposit error!, must use root to fix this error. reason:{:?}",
+            e
+        );
+        e
+    })?;
+    Ok(())
+}
+
+fn update_binding<T: Trait>(address: &Address, who: &T::AccountId) {
+    if let Some(accountid) = AddressBinding::<T>::get(&address) {
+        if &accountid != who {
+            debug!(
+                "[apply_update_binding]|current binding need change|old:{:?}|new:{:?}",
+                accountid, who
+            );
+            // old accountid is not equal to new accountid, means should change this addr bind to new account
+            // remove this addr for old accounid's CrossChainBindOf
+            BoundAddressOf::<T>::mutate(accountid, |addr_list| {
+                addr_list.retain(|addr| addr != address);
+            });
+        }
+    }
+    // insert or override binding relationship
+    BoundAddressOf::<T>::mutate(who, |addr_list| {
+        let list = addr_list;
+        if !list.contains(address) {
+            list.push(address.clone());
+        }
+    });
+
+    info!(
+        "[apply_update_binding]|update binding|addr:{:?}|who:{:?}",
+        str!(addr2vecu8(address)),
+        who,
+    );
+    AddressBinding::<T>::insert(address, who.clone());
+}
+
+fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::AccountId) {
+    // notice this would delete this cache
+    let records = PendingDeposits::take(input_address);
+    for r in records {
+        // ignore error
+        let _ = deposit_token::<T>(who, r.balance);
+        info!(
+            "[remove_pending_deposit]|use pending info to re-deposit|who:{:?}|balance:{:}",
+            who, r.balance
+        );
+
+        Module::<T>::deposit_event(RawEvent::DepositPending(
+            who.clone(),
+            r.balance.saturated_into(),
+            r.txid,
+            addr2vecu8(input_address),
+        ));
+    }
+}
+
+fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balance: u64) {
+    let cache = BTCDepositCache {
+        txid: txid.clone(),
+        balance,
+    };
+
+    PendingDeposits::mutate(input_address, |list| {
+        if !list.contains(&cache) {
+            native::debug!(
+                target: RUNTIME_TARGET,
+                "[insert_pending_deposit]|Add pending deposit|address:{:?}|txhash:{:}|balance:{:}",
+                str!(addr2vecu8(input_address)),
+                txid,
+                balance
+            );
+            list.push(cache);
+        }
+    });
+}
+
+fn withdraw<T: Trait>(tx: Transaction) -> BTCTxResult {
+    if let Some(proposal) = CurrentWithdrawalProposal::<T>::take() {
+        native::debug!(
+            target: RUNTIME_TARGET,
+            "[withdraw]|withdraw handle|proposal:{:?}|tx:{:?}",
+            proposal,
+            tx
+        );
+        match ensure_identical::<T>(&tx, &proposal.tx) {
+            Ok(()) => {
+                for number in proposal.withdrawal_id_list.iter() {
+                    match xpallet_gateway_records::Module::<T>::finish_withdrawal(*number) {
+                        Ok(_) => {
+                            info!("[withdraw]|ID of withdrawal completion: {:}", *number);
+                        }
+                        Err(_e) => {
+                            error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:?}, please use root to fix it", *number, _e);
+                        }
+                    }
+                }
+                BTCTxResult::Success
+            }
+            Err(e) => {
+                let tx_hash = proposal.tx.hash();
+                error!("[withdraw]|Withdrawal failed, reason:{:?}, please use root to fix it|withdrawal idlist:{:?}|proposal id:{:?}|tx hash:{:}",
+                       e, proposal.withdrawal_id_list, proposal.tx.hash(), tx.hash());
+                CurrentWithdrawalProposal::<T>::put(proposal);
+
+                Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(tx.hash(), tx_hash));
+                // let _ = xfee_manager::Module::<T>::modify_switcher(
+                //     xfee_manager::CallSwitcher::XBTC,
+                //     true,
+                // );
+                BTCTxResult::Failed
+            }
+        }
+    } else {
+        error!("[withdraw]|Withdrawal failed, the proposal is EMPTY, but receive a withdrawal tx, please use root to fix it|tx hash:{:}", tx.hash());
+
+        // no proposal, but find a withdraw tx, it's a fatal error in withdrawal
+        Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(tx.hash(), Default::default()));
+
+        // TODO use trait
+        // let _ =
+        //     xfee_manager::Module::<T>::modify_switcher(xfee_manager::CallSwitcher::XBTC, true);
+        // do not return Err, mark this tx has been handled
+        BTCTxResult::Failed
+    }
+}
 
 // /// Check that the cash withdrawal transaction is correct
 // pub fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
@@ -342,30 +543,3 @@ where
 //         }
 //     }
 // }
-/*
-/// Update the signature status of trustee
-/// state: false -> Veto signature, true -> Consent signature
-/// only allow inseRelayedTx once
-pub fn insertTx_trustee_vote_state<T: Trait>(
-    state: bool,
-    who: &T::AccountId,
-    trustee_list: &mut Vec<(T::AccountId, bool)>,
-) -> DispatchResult {
-    match trustee_list.iter_mut().find(|ref info| info.0 == *who) {
-        Some(_) => {
-            // if account is exist, override state
-            error!("[inseRelayedTx_trustee_vote_state]|already vote for this withdrawal proposal|who:{:?}|old vote:{:}", who, state);
-            return Err("already vote for this withdrawal proposal");
-        }
-        None => {
-            trustee_list.push((who.clone(), state));
-            debug!(
-                "[inseRelayedTx_trustee_vote_state]|inseRelayedTx new vote|who:{:?}|state:{:}",
-                who, state
-            );
-        }
-    }
-    Module::<T>::deposit_event(RawEvent::SignWithdrawalProposal(who.clone(), state));
-    Ok(())
-}
-*/

@@ -12,7 +12,7 @@ use xpallet_support::info;
 use btc_primitives::H256;
 
 use crate::types::{BTCHeaderIndex, BTCHeaderInfo};
-use crate::{BTCHeaderFor, BlockHashFor, ConfirmedHeader, Error, MainChain, Module, Trait};
+use crate::{BlockHashFor, ConfirmedHeader, Error, Headers, MainChain, Module, Trait};
 
 pub use self::header_proof::HeaderVerifier;
 
@@ -56,7 +56,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BTCHeaderInfo) -> BTCHead
     //                                  prev     current 4
     set_main_chain::<T>(header_info.height, &header_info.header.hash());
     for _i in 1..(confirmations - 1) {
-        if let Some(current_info) = Module::<T>::btc_header_for(&prev_hash) {
+        if let Some(current_info) = Module::<T>::headers(&prev_hash) {
             set_main_chain::<T>(current_info.height, &prev_hash);
             prev_hash = current_info.header.previous_header_hash;
         } else {
@@ -69,7 +69,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BTCHeaderInfo) -> BTCHead
         }
     }
 
-    if let Some(info) = Module::<T>::btc_header_for(&prev_hash) {
+    if let Some(info) = Module::<T>::headers(&prev_hash) {
         let index = BTCHeaderIndex {
             hash: prev_hash,
             height: info.height,
