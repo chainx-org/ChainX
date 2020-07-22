@@ -1,15 +1,37 @@
 pub type RpcBalance<Balance> = U128<Balance>;
 
+/// This struct provides a wrapper of Balance in runtime due to the u128 serde issue.
+///
+/// # Example
+///
+/// ```no_run
+/// use xpallet_support::RpcBalance;
+///
+/// // You can
+/// sp_api::decl_runtime_apis! {
+///     pub trait PalletApi<Balance> where
+///         Balance: Codec,
+///     {
+///         /// Get total asset balance.
+///         ///
+///         /// Ideally:
+///         ///     fn asset_balance() -> Balance;
+///         ///
+///         /// Workaround for the u128 serde issue:
+///         ///     fn asset_balance() -> RpcBalance<Balance>;
+///         ///
+///         /// What you need to do is to replace Balance with RpcBalance<Balance>
+///         /// in returned value when interacting with RPC API.
+///         /// For the other u128 cases, just U128<Balance> directly.
+///         fn total_asset_balance() -> RpcBalance<Balance>;
+///     }
+/// }
+/// ```
+///
+/// TODO: remove this workaround once https://github.com/paritytech/substrate/issues/4641 is resolved.
 #[derive(Eq, PartialEq, codec::Encode, codec::Decode, Default)]
 #[cfg_attr(feature = "std", derive(std::fmt::Debug))]
 pub struct U128<Balance>(Balance);
-
-#[cfg(feature = "std")]
-impl<Balance: std::fmt::Display> std::fmt::Display for U128<Balance> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 impl<Balance> From<Balance> for U128<Balance> {
     fn from(inner: Balance) -> Self {
@@ -18,10 +40,19 @@ impl<Balance> From<Balance> for U128<Balance> {
 }
 
 #[cfg(feature = "std")]
+impl<Balance: std::fmt::Display> std::fmt::Display for U128<Balance> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[cfg(feature = "std")]
 impl<Balance: std::str::FromStr> std::str::FromStr for U128<Balance> {
     type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let inner = s.parse::<Balance>().map_err(|_| "Parse Balance failed")?;
+        let inner = s
+            .parse::<Balance>()
+            .map_err(|_| "Parse Balance from String failed")?;
         Ok(Self(inner))
     }
 }
@@ -43,9 +74,6 @@ impl<'de, Balance: std::str::FromStr> serde::de::Deserialize<'de> for U128<Balan
         D: serde::de::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let inner = s
-            .parse::<Balance>()
-            .map_err(|_| serde::de::Error::custom("Parse Balance from String failed"))?;
-        Ok(Self(inner))
+        s.parse::<Self>().map_err(serde::de::Error::custom)
     }
 }

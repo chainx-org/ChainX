@@ -5,9 +5,7 @@ use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_runtime::{
-    generic::BlockId, traits::Block as BlockT, traits::MaybeDisplay, traits::MaybeFromStr,
-};
+use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 use xpallet_mining_staking::ValidatorInfo;
 use xpallet_mining_staking_rpc_runtime_api::XStakingApi as XStakingRuntimeApi;
@@ -48,7 +46,7 @@ where
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XStakingRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     AccountId: Codec,
-    Balance: Codec + MaybeDisplay + MaybeFromStr,
+    Balance: Codec,
     BlockNumber: Codec,
 {
     fn validators(
