@@ -2,11 +2,13 @@
 
 pub mod base58;
 mod macros;
+mod u128;
 #[cfg(feature = "std")]
 pub mod x_std;
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
 
+pub use crate::u128::*;
 pub use frame_support::fail;
 pub use macros::*;
 
