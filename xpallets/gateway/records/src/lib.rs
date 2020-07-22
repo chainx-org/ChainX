@@ -319,7 +319,7 @@ impl<T: Trait> Module<T> {
         match state {
             WithdrawalState::RootFinish | WithdrawalState::RootCancel => { /*do nothing*/ }
             _ => {
-                error!("[fix_withdrawal_state_by_trustees]|state only allow `RootFinish` and `RootCancel`|state:{:?}", state);
+                error!("[set_withdrawal_state_by_trustees]|state only allow `RootFinish` and `RootCancel`|state:{:?}", state);
                 Err(Error::<T>::InvalidState)?;
             }
         }
@@ -327,7 +327,7 @@ impl<T: Trait> Module<T> {
             Self::check_chain(&withdrawal_id, chain)?;
 
             if state != WithdrawalState::Processing {
-                error!("[fix_withdrawal_state_by_trustees]only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", withdrawal_id, state);
+                error!("[set_withdrawal_state_by_trustees]only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", withdrawal_id, state);
                 Err(Error::<T>::NotProcessingState)?;
             }
         }

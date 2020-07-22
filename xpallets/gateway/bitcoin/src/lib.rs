@@ -21,7 +21,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
 };
-use frame_system::{self as system, ensure_signed};
+use frame_system::{self as system, ensure_root, ensure_signed};
 
 // ChainX
 use chainx_primitives::{AddrStr, AssetId};
@@ -30,8 +30,10 @@ use xpallet_gateway_common::{
     traits::{ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BTCTrusteeAddrInfo,
 };
+use xpallet_gateway_records::WithdrawalState;
 use xpallet_support::{
-    base58, debug, ensure_with_errorlog, error, info, traits::MultiSig, try_addr, RUNTIME_TARGET,
+    base58, debug, ensure_with_errorlog, error, info, str, traits::MultiSig, try_addr,
+    RUNTIME_TARGET,
 };
 
 // light-bitcoin
@@ -50,12 +52,13 @@ use self::types::{
     BTCTxState, BTCTxVerifier, BTCWithdrawalProposal,
 };
 use crate::trustee::get_trustee_address_pair;
+use crate::tx::{remove_pending_deposit, utils::addr2vecu8};
 
 pub trait Trait:
     frame_system::Trait
     + pallet_timestamp::Trait
     + xpallet_assets::Trait
-    + xpallet_gateway_records::Trait // xsystem::Trait + xrecords::Trait + xbridge_common::Trait
+    + xpallet_gateway_records::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     type AccountExtractor: Extractable<Self::AccountId>;
@@ -318,77 +321,92 @@ decl_module! {
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
         }
-        //
-        // pub fn fix_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
-        //     let from = ensure_signed(origin)?;
-        //     T::TrusteeMultiSigProvider::check_multisig(&from)?;
-        //     xrecords::Module::<T>::fix_withdrawal_state_by_trustees(Chain::Bitcoin, withdrawal_id, state)
-        // }
-        //
-        // pub fn set_btc_withdrawal_fee_by_trustees(origin, fee: T::Balance) -> DispatchResult {
-        //     let from = ensure_signed(origin)?;
-        //     T::TrusteeMultiSigProvider::check_multisig(&from)?;
-        //
-        //     Self::set_btc_withdrawal_fee(fee)
-        // }
-        //
-        // pub fn remove_tx_and_proposal(txhash: Option<H256>, drop_proposal: bool) -> DispatchResult {
-        //     if let Some(hash) = txhash {
-        //         TxFor::<T>::remove(&hash);
-        //         InputAddrFor::<T>::remove(&hash);
-        //     }
-        //     if drop_proposal {
-        //         WithdrawalProposal::<T>::kill();
-        //     }
-        //     Ok(())
-        // }
-        //
-        // pub fn set_btc_withdrawal_fee(fee: T::Balance) -> DispatchResult {
-        //     BTCWithdrawalFee::<T>::put(fee.into());
-        //     Ok(())
-        // }
-        //
-        // pub fn set_btc_deposit_limit(value: T::Balance) {
-        //     BTCMinDeposit::<T>::put(value.into());
-        // }
-        //
-        // pub fn set_btc_deposit_limit_by_trustees(origin, value: T::Balance) {
-        //     let from = ensure_signed(origin)?;
-        //     T::TrusteeMultiSigProvider::check_multisig(&from)?;
-        //
-        //     let _ = Self::set_btc_deposit_limit(value);
-        // }
-        //
-        // pub fn remove_pending(addr: BTCAddress, who: Option<T::AccountId>) -> DispatchResult {
-        //     if let Some(w) = who {
-        //         remove_pending_deposit::<T>(&addr, &w);
-        //     } else {
-        //         info!("[remove_pending]|release pending deposit directly, not deposit to someone|addr:{:?}", addr);
-        //         PendingDepositMap::<T>::remove(&addr);
-        //     }
-        //     Ok(())
-        // }
-        //
-        // pub fn remove_pending_by_trustees(origin, addr: BTCAddress, who: Option<T::AccountId>) -> DispatchResult {
-        //     let from = ensure_signed(origin)?;
-        //     T::TrusteeMultiSigProvider::check_multisig(&from)?;
-        //     Self::remove_pending(addr, who)
-        // }
-        //
-        // /// Dangerous! Be careful to set BestIndex
-        // pub fn set_best_index(hash: H256) {
-        //     warn!("[set_best_index]|Dangerous! set new best index|hash:{:?}", hash);
-        //     BestIndex::<T>::put(hash);
-        // }
-        //
-        // pub fn set_header_confirmed_state(hash: H256, confirmed: bool) {
-        //     Headers::mutate(hash, |info| {
-        //         if let Some(info) = info {
-        //             warn!("[set_header_confirmed_state]|modify header confirmed state|hash:{:?}|confirmed:{:}", hash, confirmed);
-        //             info.confirmed = confirmed;
-        //         }
-        //     })
-        // }
+
+        /// Dangerous! Be careful to set BestIndex
+        #[weight = 0]
+        pub fn set_best_index(origin, index: BTCHeaderIndex) -> DispatchResult {
+            ensure_root(origin)?;
+            BestIndex::put(index);
+            Ok(())
+        }
+        /// Dangerous! Be careful to set ConfirmedIndex
+        #[weight = 0]
+        pub fn set_confirmed_index(origin, index: BTCHeaderIndex) -> DispatchResult {
+            ensure_root(origin)?;
+            ConfirmedHeader::put(index);
+            Ok(())
+        }
+
+        #[weight = 0]
+        pub fn remove_pending(origin, addr: BTCAddress, who: Option<T::AccountId>) -> DispatchResult {
+            ensure_root(origin)?;
+            if let Some(w) = who {
+                remove_pending_deposit::<T>(&addr, &w);
+            } else {
+                info!("[remove_pending]|release pending deposit directly, not deposit to someone|addr:{:?}", str!(addr2vecu8(&addr)));
+                PendingDeposits::remove(&addr);
+            }
+            Ok(())
+        }
+
+        #[weight = 0]
+        pub fn remove_proposal(origin) -> DispatchResult {
+            ensure_root(origin)?;
+            WithdrawalProposal::<T>::kill();
+            Ok(())
+        }
+
+        #[weight = 0]
+        pub fn set_btc_withdrawal_fee(origin, fee: u64) -> DispatchResult {
+            ensure_root(origin)?;
+            BTCWithdrawalFee::put(fee);
+            Ok(())
+        }
+
+        #[weight = 0]
+        pub fn set_btc_deposit_limit(origin, value: u64) -> DispatchResult {
+            ensure_root(origin)?;
+            BTCMinDeposit::put(value);
+            Ok(())
+        }
+
+        #[weight = 0]
+        pub fn set_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
+            let from = ensure_signed(origin)?;
+            if !T::TrusteeMultiSigProvider::check_multisig(&from) {
+                Err(Error::<T>::NotTrustee)?
+            }
+            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(Chain::Bitcoin, withdrawal_id, state)
+        }
+
+        #[weight = 0]
+        pub fn remove_pending_by_trustees(origin, addr: BTCAddress, who: Option<T::AccountId>) -> DispatchResult {
+            let from = ensure_signed(origin)?;
+            if !T::TrusteeMultiSigProvider::check_multisig(&from) {
+                Err(Error::<T>::NotTrustee)?
+            }
+            Self::remove_pending(frame_system::RawOrigin::Root.into(), addr, who)
+        }
+
+        #[weight = 0]
+        pub fn set_btc_withdrawal_fee_by_trustees(origin, fee: u64) -> DispatchResult {
+            let from = ensure_signed(origin)?;
+            if !T::TrusteeMultiSigProvider::check_multisig(&from) {
+                Err(Error::<T>::NotTrustee)?
+            }
+
+            Self::set_btc_withdrawal_fee(frame_system::RawOrigin::Root.into(), fee)
+        }
+
+        #[weight = 0]
+        pub fn set_btc_deposit_limit_by_trustees(origin, value: u64) -> DispatchResult {
+            let from = ensure_signed(origin)?;
+            if !T::TrusteeMultiSigProvider::check_multisig(&from) {
+                Err(Error::<T>::NotTrustee)?
+            }
+
+            Self::set_btc_deposit_limit(frame_system::RawOrigin::Root.into(), value)
+        }
     }
 }
 

@@ -387,7 +387,7 @@ fn update_binding<T: Trait>(address: &Address, who: &T::AccountId) {
     AddressBinding::<T>::insert(address, who.clone());
 }
 
-fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::AccountId) {
+pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::AccountId) {
     // notice this would delete this cache
     let records = PendingDeposits::take(input_address);
     for r in records {
