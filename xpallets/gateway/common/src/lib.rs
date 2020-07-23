@@ -16,12 +16,16 @@ use sp_std::{convert::TryFrom, prelude::*, result};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
+    ensure,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
 use chainx_primitives::{AssetId, Name, Text};
 use xpallet_assets::Chain;
-use xpallet_support::{error, info, traits::MultiSig};
+use xpallet_support::{
+    error, info,
+    traits::{MultiSig, Validator},
+};
 
 use crate::traits::{ChannelBinding, TrusteeForChain};
 use crate::trustees::{ChainContext, TrusteeMultisigProvider};
@@ -32,6 +36,8 @@ use crate::types::{
 
 pub trait Trait: system::Trait + pallet_multisig::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+    type Validator: Validator<Self::AccountId>;
     // for chain
     type BitcoinTrustee: TrusteeForChain<
         Self::AccountId,
@@ -67,6 +73,8 @@ decl_error! {
         DuplicatedAccountId,
         /// not registered as trustee
         NotRegistered,
+        /// just alloow validator to register trustee
+        NotValidator,
     }
 }
 
@@ -156,11 +164,7 @@ impl<T: Trait> Module<T> {
         hot_entity: Vec<u8>,
         cold_entity: Vec<u8>,
     ) -> DispatchResult {
-        // todo validate is intention
-        // ensure!(
-        //     xaccounts::Module::<T>::is_intention(&who),
-        //     "Transactor is not an intention."
-        // );
+        ensure!(T::Validator::is_validator(&who), Error::<T>::NotValidator);
         is_valid_about::<T>(&about)?;
 
         let (hot, cold) = match chain {

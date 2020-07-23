@@ -14,3 +14,7 @@ pub trait MultiSig<AccountId: PartialEq + Debug> {
         }
     }
 }
+
+pub trait Validator<AccountId> {
+    fn is_validator(who: &AccountId) -> bool;
+}

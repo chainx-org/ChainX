@@ -73,6 +73,7 @@ pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
+use frame_system::Trait;
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -308,6 +309,7 @@ impl xpallet_gateway_records::Trait for Runtime {
 
 impl xpallet_gateway_common::Trait for Runtime {
     type Event = Event;
+    type Validator = XStaking;
     type BitcoinTrustee = XGatewayBitcoin;
 }
 
