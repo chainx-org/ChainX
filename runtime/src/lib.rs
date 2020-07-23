@@ -443,7 +443,7 @@ construct_runtime!(
         XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
         XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
-        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>},
+        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>},
         XTransactionPayment: xpallet_transaction_payment::{Module, Storage},
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
     }

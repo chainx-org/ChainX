@@ -1,0 +1,239 @@
+{
+    "AddrStr": "Text",
+    "AssetInfo": {
+        "chain": "Chain",
+        "desc": "Desc",
+        "precision": "Precision",
+        "token": "Token",
+        "token_name": "Token"
+    },
+    "AssetInfoForRpc": {
+        "chain": "Chain",
+        "desc": "String",
+        "precision": "Precision",
+        "token": "String",
+        "token_name": "String"
+    },
+    "AssetLedger": {
+        "last_total_mining_weight": "MiningWeight",
+        "last_total_mining_weight_update": "BlockNumber"
+    },
+    "AssetRestriction": {
+        "_enum": [
+            "Move",
+            "Transfer",
+            "Deposit",
+            "Withdraw",
+            "DestroyWithdrawal",
+            "DestroyFree"
+        ]
+    },
+    "AssetRestrictions": "u32",
+    "AssetType": {
+        "_enum": [
+            "Free",
+            "ReservedStaking",
+            "ReservedStakingRevocation",
+            "ReservedWithdrawal",
+            "ReservedDexSpot",
+            "ReservedDexFuture",
+            "ReservedCurrency",
+            "ReservedXRC20",
+            "LockedFee"
+        ]
+    },
+    "BTCAddress": {
+        "hash": "AddressHash",
+        "kind": "Type",
+        "network": "Network"
+    },
+    "BTCHeader": {
+        "bits": "BTCCompact",
+        "merkle_root_hash": "H256",
+        "once": "u32",
+        "previous_header_hash": "H256",
+        "time": "u32",
+        "version": "u32"
+    },
+    "BTCHeaderInfo": {
+        "confirmed": "bool",
+        "header": "BTCHeader",
+        "height": "u32",
+        "txid_list": "Vec<H256>"
+    },
+    "BTCNetwork": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
+    },
+    "BTCParams": {
+        "block_max_future": "u32",
+        "max_bits": "u32",
+        "max_timespan": "u32",
+        "min_timespan": "u32",
+        "retargeting_factor": "u32",
+        "retargeting_interval": "u32",
+        "target_spacing_seconds": "u32",
+        "target_timespan_seconds": "u32"
+    },
+    "BTCTxInfo": {
+        "height": "u32",
+        "raw_tx": "BTCTransaction",
+        "tx_type": "BTCTxType"
+    },
+    "BondRequirement": {
+        "self_bonded": "Balance",
+        "total": "Balance"
+    },
+    "Chain": {
+        "_enum": [
+            "ChainX",
+            "Bitcoin",
+            "Ethereum",
+            "Polkadot"
+        ]
+    },
+    "ClaimRestriction": {
+        "frequency_limit": "BlockNumber",
+        "staking_requirement": "StakingRequirement"
+    },
+    "Desc": "Text",
+    "FixedAssetPower": "u32",
+    "GlobalDistribution": {
+        "mining": "u32",
+        "treasury": "u32"
+    },
+    "Handicap": {
+        "highest_bid": "Price",
+        "lowest_offer": "Price"
+    },
+    "HandicapInfo": "Handicap",
+    "Memo": "Text",
+    "MinerLedger": {
+        "last_claim": "Option<BlockNumber>",
+        "last_mining_weight": "MiningWeight",
+        "last_mining_weight_update": "BlockNumber"
+    },
+    "MiningDistribution": {
+        "asset": "u32",
+        "staking": "u32"
+    },
+    "MiningPower": "u128",
+    "MiningWeight": "u128",
+    "NetworkType": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
+    },
+    "NominatorLedger": {
+        "last_vote_weight": "WeightType",
+        "last_vote_weight_update": "BlockNumber",
+        "nomination": "Balance"
+    },
+    "NominatorProfile": {
+        "last_rebond": "Option<BlockNumber>",
+        "unbonded_chunks": "Vec<Unbonded>"
+    },
+    "Order": {
+        "already_filled": "Balance",
+        "executed_indices": "Vec<TradingHistoryIndex>",
+        "last_update_at": "BlockNumber",
+        "props": "OrderProperty",
+        "remaining": "Balance",
+        "status": "OrderStatus"
+    },
+    "OrderExecutedInfo": {
+        "executed_at": "BlockNumber",
+        "maker": "AccountId",
+        "maker_order_id": "OrderId",
+        "pair_id": "TradingPairId",
+        "price": "Price",
+        "taker": "AccountId",
+        "taker_order_id": "OrderId",
+        "trading_history_idx": "TradingHistoryIndex",
+        "turnover": "Balance"
+    },
+    "OrderId": "u64",
+    "OrderInfo": "Order",
+    "OrderProperty": {
+        "amount": "Amount",
+        "created_at": "BlockNumber",
+        "id": "OrderId",
+        "order_type": "OrderType",
+        "pair_id": "TradingPairId",
+        "price": "Price",
+        "side": "Side",
+        "submitter": "AccountId"
+    },
+    "OrderType": {
+        "_enum": [
+            "Limit",
+            "Market"
+        ]
+    },
+    "Price": "u64",
+    "PriceFluctuation": "u32",
+    "Selector": "[u8; 4]",
+    "Side": {
+        "_enum": [
+            "Buy",
+            "Sell"
+        ]
+    },
+    "SignedBalance": {
+        "_enum": {
+            "Negative": "Balance",
+            "Positive": "Balance"
+        }
+    },
+    "StakingRequirement": "u32",
+    "Token": "Text",
+    "TotalAssetInfoForRpc": {
+        "balance": "BTreeMap<AssetType, String>",
+        "info": "AssetInfoForRpc",
+        "isOnline": "bool",
+        "restrictions": "AssetRestrictions"
+    },
+    "TradingHistoryIndex": "u64",
+    "TradingPairId": "u32",
+    "TradingPairInfo": {
+        "last_updated": "BlockNumber",
+        "latest_price": "Price"
+    },
+    "TradingPairProfile": {
+        "currency_pair": "CurrencyPair",
+        "id": "TradingPairId",
+        "online": "bool",
+        "pip_precision": "u32",
+        "tick_precision": "u32"
+    },
+    "Unbonded": {
+        "locked_until": "BlockNumber",
+        "value": "Balance"
+    },
+    "UnbondedIndex": "u32",
+    "ValidatorLedger": {
+        "last_total_vote_weight": "WeightType",
+        "last_total_vote_weight_update": "BlockNumber",
+        "total": "Balance"
+    },
+    "ValidatorProfile": {
+        "is_chilled": "bool",
+        "last_chilled": "Option<BlockNumber>",
+        "registered_at": "BlockNumber"
+    },
+    "WeightType": "u128",
+    "XRC20Selector": {
+        "_enum": [
+            "BalanceOf",
+            "TotalSupply",
+            "Name",
+            "Symbol",
+            "Decimals",
+            "Issue",
+            "Destroy"
+        ]
+    }
+}

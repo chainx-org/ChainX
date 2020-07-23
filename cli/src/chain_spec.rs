@@ -7,8 +7,8 @@ use chainx_runtime::{
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys,
-    SudoConfig, SystemConfig, XAssetsConfig, XBridgeBitcoinConfig, XContractsConfig, XSpotConfig,
-    XStakingConfig, XSystemConfig,
+    SudoConfig, SystemConfig, XAssetsConfig, XBridgeBitcoinConfig, XContractsConfig,
+    XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -160,9 +160,28 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     )
 }
 
+fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        xpallet_protocol::X_BTC,
+        AssetInfo::new::<Runtime>(
+            b"XBTC".to_vec(),
+            b"Bitcoin".to_vec(),
+            Chain::Bitcoin,
+            8,
+            b"Interchain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        Default::default(),
+    )
+}
+
 fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
-    let assets = vec![(pcx.0, pcx.1, pcx.2, true, true)];
+    let xbtc = xbtc();
+    let assets = vec![
+        (pcx.0, pcx.1, pcx.2, true, false),
+        (xbtc.0, xbtc.1, xbtc.2, true, true),
+    ];
     assets
 }
 
@@ -274,6 +293,10 @@ fn testnet_genesis(
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             ..Default::default()
+        }),
+        xpallet_mining_asset: Some(XMiningAssetConfig {
+            claim_restrictions: vec![(xpallet_protocol::X_BTC, (10, chainx_runtime::DAYS * 7))],
+            mining_power_map: vec![(xpallet_protocol::X_BTC, 400)],
         }),
         xpallet_dex_spot: Some(XSpotConfig {
             trading_pairs: vec![(
