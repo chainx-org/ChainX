@@ -80,7 +80,8 @@ TARGET_KINDS = ['typedef', 'enum', 'struct']
 
 ALIAS = {'Vec<u8>': 'Text'}
 
-MANUAL = json.load('chainx_types_manual.json')
+with open('./scripts/chainx_types_manual.json') as json_file:
+    MANUAL = json.load(json_file)
 
 BASE_CTAGS_CMD = [
     'ctags', '--format=2', '--excmd=pattern', '--fields=nksSaf', '--extras=+F',
@@ -381,6 +382,11 @@ def main():
     build_types()
 
     build_rpc()
+
+    #  Inject the manual types, even it does not yet show up.
+    for k in MANUAL:
+        if k not in output:
+            output[k] = MANUAL[k]
 
     os.chdir("./scripts")
     write_json(output, 'res/chainx_types.json')

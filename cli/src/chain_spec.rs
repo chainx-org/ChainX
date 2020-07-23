@@ -160,9 +160,28 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     )
 }
 
+fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        xpallet_protocol::X_BTC,
+        AssetInfo::new::<Runtime>(
+            b"XBTC".to_vec(),
+            b"Bitcoin".to_vec(),
+            Chain::Bitcoin,
+            8,
+            b"Interchain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        Default::default(),
+    )
+}
+
 fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
-    let assets = vec![(pcx.0, pcx.1, pcx.2, true, true)];
+    let xbtc = xbtc();
+    let assets = vec![
+        (pcx.0, pcx.1, pcx.2, true, false),
+        (xbtc.0, xbtc.1, xbtc.2, true, true),
+    ];
     assets
 }
 

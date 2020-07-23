@@ -191,6 +191,7 @@
         "last_chilled": "Option<BlockNumber>",
         "registered_at": "BlockNumber"
     },
+    "WeightType": "u128",
     "XRC20Selector": {
         "_enum": [
             "BalanceOf",
