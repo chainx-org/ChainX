@@ -31,6 +31,33 @@ impl Into<Vec<u8>> for BTCTrusteeType {
     }
 }
 
+#[cfg(feature = "std")]
+mod serde_impl {
+    use super::*;
+    use serde::{de::Error, Deserializer, Serializer};
+
+    // use serde::{Deserialize, Serialize};
+    impl Serialize for BTCTrusteeType {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_bytes(&self.0)
+        }
+    }
+    impl<'de> Deserialize<'de> for BTCTrusteeType {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let data: Vec<u8> = Deserialize::deserialize(deserializer)?;
+            let pubkey = BTCPublic::from_slice(&data)
+                .map_err(|e| Error::custom(format!("not valid pubkey hex:{:?}", e)))?;
+            Ok(BTCTrusteeType(pubkey))
+        }
+    }
+}
+
 impl TryFrom<Vec<u8>> for BTCTrusteeType {
     type Error = ();
 
