@@ -55,9 +55,23 @@ fn t_start_session(session_index: SessionIndex) {
 }
 
 #[test]
+fn cannot_force_chill_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        t_make_a_validator_candidate(123, 100);
+        assert_eq!(XStaking::can_force_chilled(), true);
+        assert_ok!(XStaking::chill(Origin::signed(123)));
+        assert_err!(
+            XStaking::chill(Origin::signed(1)),
+            <Error<Test>>::InsufficientActiveValidators
+        );
+        t_make_a_validator_candidate(1234, 100);
+        assert_ok!(XStaking::chill(Origin::signed(1)));
+    });
+}
+
+#[test]
 fn bond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(XAssets::pcx_free_balance(&1), 90);
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
@@ -69,9 +83,11 @@ fn bond_should_work() {
         assert_eq!(System::block_number(), 1);
 
         t_system_block_number_inc(1);
+
+        let before_bond = XAssets::pcx_free_balance(&1);
         assert_ok!(t_bond(1, 2, 10));
 
-        assert_eq!(XAssets::pcx_free_balance(&1), 80);
+        assert_eq!(XAssets::pcx_free_balance(&1), before_bond - 10);
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
@@ -204,13 +220,15 @@ fn withdraw_unbond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         t_system_block_number_inc(1);
 
+        let before_bond = XAssets::pcx_free_balance(&1);
         assert_ok!(t_bond(1, 2, 10));
-        assert_eq!(XAssets::pcx_free_balance(&1), 80);
+        assert_eq!(XAssets::pcx_free_balance(&1), before_bond - 10);
 
         t_system_block_number_inc(1);
 
         assert_ok!(t_unbond(1, 2, 5));
-        assert_eq!(XAssets::pcx_free_balance(&1), 80);
+        let before_unbond = XAssets::pcx_free_balance(&1);
+        assert_eq!(XAssets::pcx_free_balance(&1), before_unbond);
 
         assert_eq!(
             <Nominators<Test>>::get(1),
@@ -231,8 +249,9 @@ fn withdraw_unbond_should_work() {
 
         t_system_block_number_inc(1);
 
+        let before_withdraw_unbonded = XAssets::pcx_free_balance(&1);
         assert_ok!(t_withdraw_unbonded(1, 0),);
-        assert_eq!(XAssets::pcx_free_balance(&1), 85);
+        assert_eq!(XAssets::pcx_free_balance(&1), before_withdraw_unbonded + 5);
     });
 }
 
@@ -304,7 +323,119 @@ fn regular_staking_should_work() {
     })
 }
 
-// TODO:
-// claim_test
-// slash_test
-// force_new_era_test
+#[test]
+fn staking_reward_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        let t_1 = 67;
+        let t_2 = 68;
+        let t_3 = 69;
+
+        assert_ok!(t_issue_pcx(t_1, 100));
+        assert_ok!(t_issue_pcx(t_2, 100));
+        assert_ok!(t_issue_pcx(t_3, 100));
+
+        // 5_000_000_000
+        //
+        // |_vesting_account: 1_000_000_000
+        // |_treasury_reward: 480_000_000   12%
+        // |_mining_reward:   3_520_000_000 88%
+        //   |__ Staking        90%
+        //   |__ Asset Mining   10%
+        //
+        // When you start session 1, actually there are 3 session rounds.
+        // the session reward has been minted 3 times.
+        t_start_session(1);
+
+        let sub_total = 4_000_000_000u128;
+
+        let treasury_reward = sub_total * 12 / 100;
+        let mining_reward = sub_total * 88 / 100;
+
+        let staking_mining_reward = mining_reward * 90 / 100;
+        let asset_mining_reward = mining_reward * 10 / 100;
+
+        // (1, 10) => 10 / 100
+        // (2, 20) => 20 / 100
+        // (3, 30) => 30 / 100
+        // (4, 40) => 40 / 100
+        let total_staked = 100;
+        let validators = vec![1, 2, 3, 4];
+
+        let test_validator_reward =
+            |validator: AccountId,
+             initial_free: Balance,
+             staked: Balance,
+             session_index: SessionIndex| {
+                let val_total_reward = staking_mining_reward * staked / total_staked;
+                // 10% -> validator
+                // 90% -> validator's reward pot
+                assert_eq!(
+                    XAssets::pcx_free_balance(&validator),
+                    initial_free + val_total_reward * session_index as u128 / 10
+                );
+                assert_eq!(
+                    XAssets::pcx_free_balance(
+                        &DummyStakingRewardPotAccountDeterminer::reward_pot_account_for(&validator)
+                    ),
+                    0 + (val_total_reward - val_total_reward / 10) * session_index as u128
+                );
+            };
+
+        test_validator_reward(1, 100 - 10, 10, 1);
+        test_validator_reward(2, 200 - 20, 20, 1);
+        test_validator_reward(3, 300 - 30, 30, 1);
+        test_validator_reward(4, 400 - 40, 40, 1);
+
+        assert_eq!(
+            XAssets::pcx_free_balance(&TREASURY_ACCOUNT),
+            (treasury_reward + asset_mining_reward) * 1
+        );
+
+        let validators_reward_pot = validators
+            .iter()
+            .map(DummyStakingRewardPotAccountDeterminer::reward_pot_account_for)
+            .collect::<Vec<_>>();
+
+        let issued_manually = 100 * 3;
+        let endowed = 100 + 200 + 300 + 400;
+        assert_eq!(
+            XAssets::pcx_total_balance(),
+            5_000_000_000u128 + issued_manually + endowed
+        );
+
+        let mut all = Vec::new();
+        all.push(VESTING_ACCOUNT);
+        all.push(TREASURY_ACCOUNT);
+        all.extend_from_slice(&[t_1, t_2, t_3]);
+        all.extend_from_slice(&validators);
+        all.extend_from_slice(&validators_reward_pot);
+
+        let total_issuance = || {
+            all.iter()
+                .map(|x| XAssets::all_type_asset_balance(x, &xpallet_protocol::PCX))
+                .sum::<u128>()
+        };
+
+        assert_eq!(XAssets::pcx_total_balance(), total_issuance());
+
+        t_start_session(2);
+        assert_eq!(
+            XAssets::pcx_total_balance(),
+            5_000_000_000u128 * 2 + issued_manually + endowed
+        );
+    });
+}
+
+#[test]
+fn staker_reward_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        // todo!("");
+    });
+}
+
+#[test]
+fn slash_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        // todo!("force_new_era_test");
+    });
+}

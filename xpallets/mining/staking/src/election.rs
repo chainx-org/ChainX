@@ -80,7 +80,7 @@ impl<T: Trait> Module<T> {
             .map(|(_, v)| v)
             .collect::<Vec<_>>();
 
-        // Always return Some(new_validators) for ChainX.
+        // Always return Some(new_validators).
         Some(validators)
     }
 }

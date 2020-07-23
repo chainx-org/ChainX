@@ -11,6 +11,7 @@ use chainx_runtime::{
     XStakingConfig, XSystemConfig,
 };
 
+use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
@@ -41,12 +42,15 @@ where
 }
 
 /// Helper function to generate an authority key for Aura
-pub fn authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, AuraId, GrandpaId) {
+pub fn authority_keys_from_seed(
+    seed: &str,
+) -> (AccountId, AccountId, AuraId, GrandpaId, ImOnlineId) {
     (
-        get_account_id_from_seed::<sr25519::Public>(&format!("{}//validator", seed)),
+        get_account_id_from_seed::<sr25519::Public>(seed),
         get_account_id_from_seed::<sr25519::Public>(&format!("{}//blockauthor", seed)),
         get_from_seed::<AuraId>(seed),
         get_from_seed::<GrandpaId>(seed),
+        get_from_seed::<ImOnlineId>(seed),
     )
 }
 
@@ -162,12 +166,16 @@ fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> 
     assets
 }
 
-fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
-    SessionKeys { grandpa, aura }
+fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> SessionKeys {
+    SessionKeys {
+        grandpa,
+        aura,
+        im_online,
+    }
 }
 
 fn testnet_genesis(
-    initial_authorities: Vec<(AccountId, AccountId, AuraId, GrandpaId)>,
+    initial_authorities: Vec<(AccountId, AccountId, AuraId, GrandpaId, ImOnlineId)>,
     root_key: AccountId,
     assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
@@ -179,13 +187,10 @@ fn testnet_genesis(
             changes_trie_config: Default::default(),
         }),
         pallet_aura: Some(AuraConfig {
-            authorities: initial_authorities.iter().map(|x| (x.2.clone())).collect(),
+            authorities: vec![],
         }),
         pallet_grandpa: Some(GrandpaConfig {
-            authorities: initial_authorities
-                .iter()
-                .map(|x| (x.3.clone(), 1))
-                .collect(),
+            authorities: vec![],
         }),
         pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
         pallet_session: Some(SessionConfig {
@@ -195,14 +200,12 @@ fn testnet_genesis(
                     (
                         x.0.clone(),
                         x.1.clone(),
-                        session_keys(x.2.clone(), x.3.clone()),
+                        session_keys(x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })
                 .collect::<Vec<_>>(),
         }),
-        pallet_sudo: Some(SudoConfig {
-            key: root_key.clone(),
-        }),
+        pallet_sudo: Some(SudoConfig { key: root_key }),
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
         }),
@@ -264,8 +267,12 @@ fn testnet_genesis(
                     })
                     .collect()
             },
-            validator_count: 100,
-            minimum_validator_count: initial_authorities.len() as u32,
+            validator_count: 1000,
+            minimum_validator_count: 4,
+            sessions_per_era: 12,
+            vesting_account: get_account_id_from_seed::<sr25519::Public>("vesting"),
+            glob_dist_ratio: (12, 88),
+            mining_ratio: (10, 90),
             ..Default::default()
         }),
         xpallet_dex_spot: Some(XSpotConfig {

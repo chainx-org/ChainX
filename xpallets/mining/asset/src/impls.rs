@@ -2,9 +2,11 @@ use super::*;
 use codec::Encode;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::Hash;
+use sp_runtime::traits::Saturating;
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
+use xp_mining_staking::MiningPower;
 
 impl<'a, T: Trait> BaseMiningWeight<T::Balance, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> T::Balance {
@@ -76,15 +78,24 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
 
 impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Module<T> {
     fn on_issue_pre(target: &AssetId, source: &T::AccountId) {
+        if xpallet_protocol::PCX == *target {
+            return;
+        }
         let current_block = <frame_system::Module<T>>::block_number();
         Self::init_receiver_mining_ledger(source, target, current_block);
 
         Self::update_mining_weights(source, target, current_block);
     }
 
-    fn on_issue_post(target: &AssetId, source: &T::AccountId, value: T::Balance) -> DispatchResult {
-        Self::issue_reward(source, target);
-        Ok(())
+    fn on_issue_post(
+        target: &AssetId,
+        source: &T::AccountId,
+        _value: T::Balance,
+    ) -> DispatchResult {
+        if xpallet_protocol::PCX == *target {
+            return Ok(());
+        }
+        Self::issue_deposit_reward(source, target)
     }
 
     fn on_move_pre(
@@ -95,6 +106,9 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
         _: AssetType,
         _: T::Balance,
     ) {
+        if xpallet_protocol::PCX == *asset_id || from == to {
+            return;
+        }
         let current_block = <frame_system::Module<T>>::block_number();
         Self::init_receiver_mining_ledger(to, asset_id, current_block);
 
@@ -110,12 +124,14 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, T::Balance> for Modu
 
 impl<T: Trait> Module<T> {
     fn allocate_dividend(
-        _claimer: &T::AccountId,
+        claimer: &T::AccountId,
         _claimee: &AssetId,
         _claimee_reward_pot: &T::AccountId,
-        _dividend: T::Balance,
+        dividend: T::Balance,
     ) -> Result<(), Error<T>> {
-        todo!("referral_or_treasury 10%, claimer 90%")
+        // todo!("referral_or_treasury 10%, claimer 90%")
+        let _ = xpallet_assets::Module::<T>::pcx_issue(claimer, dividend);
+        Ok(())
     }
 }
 
@@ -126,17 +142,25 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Error<T>> {
         let current_block = <frame_system::Module<T>>::block_number();
 
-        let (source_weight, target_weight) = <Self as ComputeMiningWeight<
-            T::AccountId,
-            T::BlockNumber,
-        >>::settle_weight_on_claim(
-            claimer, claimee, current_block
-        )?;
+        let ClaimRestriction {
+            staking_requirement,
+            frequency_limit,
+        } = ClaimRestrictionOf::<T>::get(claimee);
+
+        Self::passed_enough_interval(claimer, claimee, frequency_limit, current_block)?;
 
         let claimee_reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
-        let dividend = Self::compute_dividend(source_weight, target_weight, &claimee_reward_pot);
+        let reward_pot_balance = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_reward_pot);
 
-        Self::can_claim(claimer, claimee, dividend, current_block)?;
+        let (dividend, source_weight, target_weight) =
+            <Self as ComputeMiningWeight<T::AccountId, _>>::compute_dividend(
+                claimer,
+                claimee,
+                current_block,
+                reward_pot_balance,
+            )?;
+
+        Self::has_enough_staking(claimer, dividend, staking_requirement)?;
 
         Self::allocate_dividend(claimer, claimee, &claimee_reward_pot, dividend)?;
 
@@ -203,5 +227,30 @@ where
         buf.extend_from_slice(registered_slice);
 
         UncheckedFrom::unchecked_from(T::Hashing::hash(&buf[..]))
+    }
+}
+
+impl<T: Trait> xp_mining_staking::AssetMining<T::Balance> for Module<T> {
+    /// Collects the mining power of all mining assets.
+    fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
+        // Currently only X-BTC asset.
+        XTypeAssetPowerMap::iter()
+            .map(|(asset_id, fixed_power)| {
+                let total_balance =
+                    <xpallet_assets::Module<T>>::all_type_total_asset_balance(&asset_id);
+                (
+                    asset_id,
+                    total_balance
+                        .saturating_mul(fixed_power.saturated_into())
+                        .saturated_into::<MiningPower>(),
+                )
+            })
+            .collect()
+    }
+
+    /// Issues reward to the reward pot of an Asset.
+    fn reward(asset_id: AssetId, value: T::Balance) {
+        let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&asset_id);
+        let _ = xpallet_assets::Module::<T>::pcx_issue(&reward_pot, value);
     }
 }

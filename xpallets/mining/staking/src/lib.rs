@@ -34,7 +34,7 @@ use types::*;
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 
 /// Session reward of the first 210_000 sessions.
-const INITIAL_REWARD: u64 = 50;
+const INITIAL_REWARD: u64 = 5_000_000_000;
 /// Every 210_000 sessions, the session reward is cut in half.
 ///
 /// ChainX follows the issuance rule of Bitcoin. The `Session` in ChainX
@@ -123,10 +123,10 @@ decl_storage! {
             u32 = 10u32;
 
         /// (Treasury, Staking)
-        pub GlobalDistributionRatio get(fn global_distribution_ratio) config(): GlobalDistribution;
+        pub GlobalDistributionRatio get(fn global_distribution_ratio): GlobalDistribution;
 
         /// (Staker, Asset Miners)
-        pub MiningDistributionRatio get(fn mining_distribution_ratio) config(): MiningDistribution;
+        pub MiningDistributionRatio get(fn mining_distribution_ratio): MiningDistribution;
 
         /// The map from (wannabe) validator key to the profile of that validator.
         pub Validators get(fn validators):
@@ -171,10 +171,6 @@ decl_storage! {
         /// Offenders reported in current session.
         OffendersInSession get(fn offenders_in_session): Vec<T::AccountId>;
 
-        /// The map of offender to the count of offences of that offender reported in current session.
-        OffenceCountInSession get(fn offence_count_in_session):
-            map hasher(twox_64_concat) T::AccountId => u32;
-
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(fn minimum_penalty) config(): T::Balance;
 
@@ -185,6 +181,8 @@ decl_storage! {
     add_extra_genesis {
         config(validators):
             Vec<(T::AccountId, T::Balance)>;
+        config(glob_dist_ratio): (u32, u32);
+        config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
             for &(ref v, balance) in &config.validators {
                 assert!(
@@ -194,6 +192,16 @@ decl_storage! {
                 Module::<T>::apply_register(v);
                 Module::<T>::apply_bond(v, v, balance).expect("Staking genesis initialization can not fail");
             }
+            assert!(config.glob_dist_ratio.0 + config.glob_dist_ratio.1 > 0);
+            assert!(config.mining_ratio.0 + config.mining_ratio.1 > 0);
+            GlobalDistributionRatio::put(GlobalDistribution {
+                treasury: config.glob_dist_ratio.0,
+                mining: config.glob_dist_ratio.1,
+            });
+            MiningDistributionRatio::put(MiningDistribution {
+                asset: config.mining_ratio.0,
+                staking: config.mining_ratio.1,
+            });
         });
     }
 }
@@ -217,6 +225,8 @@ decl_event!(
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
         /// from the unlocking queue.
         WithdrawUnbonded(AccountId, Balance),
+        /// Offenders are forcibly to be chilled due to insufficient reward pot balance.
+        ForceChilled(SessionIndex, Vec<AccountId>),
     }
 );
 
@@ -230,7 +240,7 @@ decl_error! {
         /// Invalid validator target.
         InvalidValidator,
         /// Can not force validator to be chilled.
-        InsufficientValidators,
+        InsufficientActiveValidators,
         /// Free balance can not cover this bond operation.
         InsufficientBalance,
         /// Can not bond with value less than minimum balance.
@@ -252,14 +262,14 @@ decl_error! {
         ///
         RegisteredAlready,
         ///
-        NoUnbondedChunk,
+        EmptyUnbondedChunk,
         ///
         InvalidUnbondedIndex,
         ///
         UnbondRequestNotYetDue,
         /// Can not rebond due to the restriction of rebond frequency limit.
         NoMoreRebond,
-        /// The call is not allowed at the given time due to restrictions of election period.
+        /// The call is not allowed at the given time due to the restriction of election period.
         CallNotAllowed,
         ///
         AssetError,
@@ -298,7 +308,7 @@ decl_module! {
             ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
             ensure!(value <= Self::free_balance_of(&sender), Error::<T>::InsufficientBalance);
             if !Self::is_validator_self_bonding(&sender, &target) {
-                Self::check_validator_acceptable_votes_limit(&sender, value)?;
+                Self::check_validator_acceptable_votes_limit(&target, value)?;
             }
 
             Self::apply_bond(&sender, &target, value)?;
@@ -348,13 +358,13 @@ decl_module! {
             Self::apply_unbond(&sender, &target, value)?;
         }
 
-        /// Frees up the unbonded balances that are due.
+        /// Frees the unbonded balances that are due.
         #[weight = 10]
         fn withdraw_unbonded(origin, unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
 
             let mut unbonded_chunks = Self::unbonded_chunks_of(&sender);
-            ensure!(!unbonded_chunks.is_empty(), Error::<T>::NoUnbondedChunk);
+            ensure!(!unbonded_chunks.is_empty(), Error::<T>::EmptyUnbondedChunk);
             ensure!(unbonded_index < unbonded_chunks.len() as u32, Error::<T>::InvalidUnbondedIndex);
 
             let Unbonded { value, locked_until } = unbonded_chunks[unbonded_index as usize];
@@ -399,6 +409,9 @@ decl_module! {
         fn chill(origin) {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_validator(&sender), Error::<T>::InvalidValidator);
+            if Self::is_active(&sender) {
+                ensure!(Self::can_force_chilled(), Error::<T>::InsufficientActiveValidators);
+            }
             Validators::<T>::mutate(sender, |validator_profile| {
                     validator_profile.is_chilled = true;
                     validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
@@ -466,18 +479,21 @@ impl<T: Trait> Module<T> {
         !Self::is_chilled(who)
     }
 
+    #[inline]
     pub fn validator_set() -> impl Iterator<Item = T::AccountId> {
         Validators::<T>::iter().map(|(v, _)| v)
     }
 
+    #[inline]
+    pub fn active_validator_set() -> impl Iterator<Item = T::AccountId> {
+        Self::validator_set().filter(Self::is_active)
+    }
+
     pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, T::Balance)> {
-        Validators::<T>::iter()
-            .map(|(v, _)| v)
-            .filter(|v| Self::is_active(&v))
-            .map(|v| {
-                let total_votes = Self::total_votes_of(&v);
-                (v, total_votes)
-            })
+        Self::active_validator_set().map(|v| {
+            let total_votes = Self::total_votes_of(&v);
+            (v, total_votes)
+        })
     }
 
     /// Calculates the total staked PCX, i.e., total staking power.
@@ -520,18 +536,27 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    /// Returns true if the number of active validators are more than the minimum validator count.
     fn can_force_chilled() -> bool {
-        // TODO: optimize using try_for_each?
-        let active = Validators::<T>::iter()
-            .map(|(v, _)| v)
-            .filter(Self::is_active)
-            .collect::<Vec<_>>();
-        active.len() > Self::minimum_validator_count() as usize
+        let mut active_cnt = 0u32;
+        let minimum_validator_cnt = Self::minimum_validator_count();
+        Self::validator_set()
+            .try_for_each(|v| {
+                if Self::is_active(&v) {
+                    active_cnt += 1;
+                }
+                if active_cnt > minimum_validator_cnt {
+                    Err(())
+                } else {
+                    Ok(())
+                }
+            })
+            .is_err()
     }
 
     fn try_force_chilled(who: &T::AccountId) -> Result<(), Error<T>> {
         if !Self::can_force_chilled() {
-            return Err(Error::<T>::InsufficientValidators);
+            return Err(Error::<T>::InsufficientActiveValidators);
         }
         Self::apply_force_chilled(who);
         Ok(())
@@ -705,5 +730,11 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
 
         Ok(())
+    }
+}
+
+impl<T: Trait> Module<T> {
+    pub fn validators_info() -> Vec<T::AccountId> {
+        Self::validator_set().collect()
     }
 }

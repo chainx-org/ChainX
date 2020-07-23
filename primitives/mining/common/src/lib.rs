@@ -153,7 +153,28 @@ pub trait ComputeMiningWeight<AccountId, BlockNumber: Copy> {
 
     fn _calc_latest_vote_weight(weight_factors: WeightFactors) -> WeightType {
         let (last_acum_weight, amount, duration) = weight_factors;
-        last_acum_weight + WeightType::from(amount) * WeightType::from(duration)
+        last_acum_weight + amount * duration
+    }
+
+    /// Computes the dividend according to the latest mining weight proportion.
+    fn compute_dividend<Balance: BaseArithmetic>(
+        claimer: &AccountId,
+        claimee: &Self::Claimee,
+        current_block: BlockNumber,
+        reward_pot_balance: Balance,
+    ) -> Result<(Balance, WeightType, WeightType), Self::Error> {
+        // 1. calculates the latest mining weight.
+        let (source_weight, target_weight) =
+            Self::settle_weight_on_claim(claimer, claimee, current_block)?;
+
+        // 2. calculates the dividend by the mining weight proportion.
+        let dividend = compute_dividend::<AccountId, Balance>(
+            source_weight,
+            target_weight,
+            reward_pot_balance,
+        );
+
+        Ok((dividend, source_weight, target_weight))
     }
 }
 
@@ -178,6 +199,20 @@ pub fn generic_weight_factors<
         w.amount().saturated_into(),
         (current_block - w.last_acum_weight_update()).saturated_into(),
     )
+}
+
+/// Computes the dividend according to the ratio of source_vote_weight/target_vote_weight.
+///
+/// dividend = source_vote_weight/target_vote_weight * balance_of(claimee_reward_pot)
+pub fn compute_dividend<AccountId, Balance: BaseArithmetic>(
+    source_vote_weight: WeightType,
+    target_vote_weight: WeightType,
+    reward_pot_balance: Balance,
+) -> Balance {
+    match source_vote_weight.checked_mul(reward_pot_balance.saturated_into()) {
+        Some(x) => (x / target_vote_weight).saturated_into(),
+        None => panic!("source_vote_weight * total_reward_pot overflow, this should not happen"),
+    }
 }
 
 /// Claims the reward for participating in the mining.
