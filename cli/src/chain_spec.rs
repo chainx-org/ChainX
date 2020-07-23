@@ -10,7 +10,7 @@ use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINAR
 use chainx_runtime::{
     AuraConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys,
     SudoConfig, SystemConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
-    XGatewayCommonConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -165,11 +165,11 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     )
 }
 
-fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
+fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
         xpallet_protocol::X_BTC,
         AssetInfo::new::<Runtime>(
-            b"BTC".to_vec(),
+            b"XBTC".to_vec(),
             b"ChainX Bitcoin".to_vec(),
             Chain::Bitcoin,
             BTC_PRECISION,
@@ -183,9 +183,9 @@ fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
 // asset_id, asset_info, asset_restrictions, is_online, has_mining_rights
 fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
-    let btc = btc();
+    let btc = xbtc();
     let assets = vec![
-        (pcx.0, pcx.1, pcx.2, true, true),
+        (pcx.0, pcx.1, pcx.2, true, false),
         (btc.0, btc.1, btc.2, true, true),
     ];
     assets
@@ -287,7 +287,7 @@ fn testnet_genesis(
                 .map(|x| {
                     (
                         x.0.clone(),
-                        x.1.clone(),
+                        x.0.clone(),
                         session_keys(x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })
@@ -361,9 +361,13 @@ fn testnet_genesis(
             minimum_validator_count: 4,
             sessions_per_era: 12,
             vesting_account: get_account_id_from_seed::<sr25519::Public>("vesting"),
-            glob_dist_ratio: (12, 88),
-            mining_ratio: (10, 90),
+            glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
+            mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             ..Default::default()
+        }),
+        xpallet_mining_asset: Some(XMiningAssetConfig {
+            claim_restrictions: vec![(xpallet_protocol::X_BTC, (10, chainx_runtime::DAYS * 7))],
+            mining_power_map: vec![(xpallet_protocol::X_BTC, 400)],
         }),
         xpallet_dex_spot: Some(XSpotConfig {
             trading_pairs: vec![(

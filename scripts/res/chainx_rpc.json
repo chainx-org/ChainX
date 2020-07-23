@@ -1,0 +1,60 @@
+{
+    "rpc": {
+        "xassets": {
+            "getAssets": {
+                "description": "get all assets balance and infos",
+                "params": [
+                    {
+                        "isOptional": true,
+                        "name": "at",
+                        "type": "Hash"
+                    }
+                ],
+                "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
+            },
+            "getAssetsByAccount": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "isOptional": true,
+                        "name": "at",
+                        "type": "Hash"
+                    }
+                ],
+                "type": "BTreeMap<AssetId, BTreeMap<AssetType, String>>"
+            }
+        },
+        "xstaking": {
+            "getValidatorByAccount": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "isOptional": true,
+                        "name": "at",
+                        "type": "Hash"
+                    }
+                ],
+                "type": "ValidatorInfo<AccountId, RpcBalance, BlockNumber>"
+            },
+            "getValidators": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "isOptional": true,
+                        "name": "at",
+                        "type": "Hash"
+                    }
+                ],
+                "type": "Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>"
+            }
+        }
+    }
+}

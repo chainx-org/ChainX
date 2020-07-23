@@ -5,6 +5,8 @@ use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 use xp_mining_common::WeightType;
+use xp_mining_staking::MiningPower;
+use xpallet_support::RpcWeightType;
 
 /// Destination for minted fresh PCX on each new session.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -17,7 +19,7 @@ pub enum MintedDestination<AccountId> {
 ///
 /// If the (potential) validator failed to meet this requirement, force it to be chilled on new election round.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-pub struct BondRequirement<Balance: Default> {
+pub struct BondRequirement<Balance> {
     /// The minimal amount of self-bonded balance to be a qualified validator candidate.
     pub self_bonded: Balance,
     /// The minimal amount of total-bonded balance to be a qualified validator candidate.
@@ -30,7 +32,7 @@ pub struct BondRequirement<Balance: Default> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Unbonded<Balance: Default, BlockNumber: Default> {
+pub struct Unbonded<Balance, BlockNumber> {
     /// Amount of funds to be unlocked.
     pub value: Balance,
     /// Block number at which point it'll be unlocked.
@@ -50,14 +52,52 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
     pub last_total_vote_weight_update: BlockNumber,
 }
 
+/// Vote weight properties of validator.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct RpcValidatorLedger<RpcBalance, BlockNumber> {
+    /// The total amount of all the nominators' vote balances.
+    pub total: RpcBalance,
+    /// Last calculated total vote weight of current validator.
+    pub last_total_vote_weight: RpcWeightType,
+    /// Block number at which point `last_total_vote_weight` just updated.
+    pub last_total_vote_weight_update: BlockNumber,
+}
+
+impl<Balance, BlockNumber> From<ValidatorLedger<Balance, BlockNumber>>
+    for RpcValidatorLedger<RpcBalance<Balance>, BlockNumber>
+{
+    fn from(ledger: ValidatorLedger<Balance, BlockNumber>) -> Self {
+        let last_total_vote_weight: RpcWeightType = ledger.last_total_vote_weight.into();
+        let total: RpcBalance<Balance> = ledger.total.into();
+        Self {
+            total,
+            last_total_vote_weight,
+            last_total_vote_weight_update: ledger.last_total_vote_weight_update,
+        }
+    }
+}
+
 /// Vote weight properties of nominator.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct NominatorLedger<Balance, BlockNumber> {
     /// The amount of
     pub nomination: Balance,
-    ///
+    /// Last calculated total vote weight of current nominator.
     pub last_vote_weight: WeightType,
-    ///
+    /// Block number at which point `last_vote_weight` just updated.
+    pub last_vote_weight_update: BlockNumber,
+}
+
+/// Vote weight properties of nominator.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct RpcNominatorLedger<Balance, BlockNumber> {
+    /// The amount of
+    pub nomination: Balance,
+    /// Last calculated total vote weight of current nominator.
+    pub last_vote_weight: RpcWeightType,
+    /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,
 }
 
@@ -67,10 +107,12 @@ pub struct NominatorLedger<Balance, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorProfile<BlockNumber: Default> {
+pub struct ValidatorProfile<BlockNumber> {
     /// Block number at which point it's registered on chain.
     pub registered_at: BlockNumber,
     /// Validator is chilled right now.
+    ///
+    /// Declared no desire to be a validator or forced to be chilled due to `MinimumCandidateThreshold`.
     pub is_chilled: bool,
     /// Block number of last performed `chill` operation.
     pub last_chilled: Option<BlockNumber>,
@@ -80,47 +122,32 @@ pub struct ValidatorProfile<BlockNumber: Default> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct NominatorProfile<Balance: Default, BlockNumber: Default> {
+pub struct NominatorProfile<Balance, BlockNumber> {
     /// Block number of last `rebond` operation.
     pub last_rebond: Option<BlockNumber>,
-    ///
+    /// Total unbonded entries.
     pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
-/// Status of (potential) validator in staking module.
-///
-/// For RPC usage.
+/// Total information about a validator.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub enum ValidatorStatus {
-    /// Declared no desire to be a validator or forced to be chilled due to `MinimumCandidateThreshold`.
-    Chilled,
-    /// Declared desire to be a validator but haven't won one place.
-    Candidate,
-    /// Being a validator, responsible for authoring the new blocks.
-    Validating,
-}
-
-impl Default for ValidatorStatus {
-    fn default() -> Self {
-        Self::Candidate
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorInfo<AccountId: Default, Balance: Default, BlockNumber: Default> {
+pub struct ValidatorInfo<AccountId, RpcBalance, BlockNumber> {
+    /// AccountId of this (potential) validator.
     pub account: AccountId,
     #[cfg_attr(feature = "std", serde(flatten))]
     pub profile: ValidatorProfile<BlockNumber>,
     #[cfg_attr(feature = "std", serde(flatten))]
-    pub ledger: ValidatorLedger<Balance, BlockNumber>,
-    pub status: ValidatorStatus,
-    pub self_bonded: Balance,
+    pub ledger: RpcValidatorLedger<RpcBalance, BlockNumber>,
+    /// Being a validator, responsible for authoring the new blocks.
+    pub is_validating: bool,
+    /// How much balances the validator has bonded itself.
+    pub self_bonded: RpcBalance,
+    /// AccountId of the reward pot of this validator.
     pub reward_pot_account: AccountId,
-    pub reward_pot_balance: Balance,
+    /// Balance of the reward pot account.
+    pub reward_pot_balance: RpcBalance,
 }
 
 /// Information regarding the active era (era in used in session).
@@ -155,52 +182,29 @@ impl Default for Forcing {
     }
 }
 
-// Shares of various reward destinations.
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+/// Top level shares of various reward destinations.
+#[derive(Copy, Clone, PartialEq, Eq, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct GlobalDistribution {
     pub treasury: u32,
     pub mining: u32,
 }
 
-impl Default for GlobalDistribution {
-    /// According to the ChainX 1.0 referendum proposal09:
-    /// (Treasury, Airdrop Asset, X-type Asset and Staking) = (12, 8, 80)
-    ///
-    /// Airdrop Assets have been retired in ChainX 2.0, now only treasury and mining destinations.
-    /// (Treasury, X-type Asset and Staking) = (12, 88)
-    fn default() -> Self {
-        Self {
-            treasury: 12u32,
-            mining: 88u32,
-        }
-    }
-}
-
 impl GlobalDistribution {
+    /// Calculates the rewards for treasury and mining accordingly.
     pub fn calc_rewards<T: Trait>(&self, reward: T::Balance) -> (T::Balance, T::Balance) {
+        assert!(self.treasury + self.mining > 0);
         let treasury_reward = reward * self.treasury.saturated_into()
             / (self.treasury + self.mining).saturated_into();
         (treasury_reward, reward - treasury_reward)
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(Copy, Clone, PartialEq, Eq, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct MiningDistribution {
     pub asset: u32,
     pub staking: u32,
-}
-
-impl Default for MiningDistribution {
-    /// According to the ChainX 1.0 referendum proposal09,
-    /// (Asset Mining, Staking) = (10, 90)
-    fn default() -> Self {
-        Self {
-            asset: 10u32,
-            staking: 90u32,
-        }
-    }
 }
 
 impl MiningDistribution {
@@ -216,7 +220,7 @@ impl MiningDistribution {
     /// the mining assets, but its unit mining power starts to decrease compared to the inital FixedPower.
     fn asset_mining_vs_staking<T: Trait>(&self) -> (u128, u128) {
         let total_staking_power =
-            crate::Module::<T>::total_staked().saturated_into::<xp_mining_staking::MiningPower>();
+            crate::Module::<T>::total_staked().saturated_into::<MiningPower>();
         let total_asset_mining_power = T::AssetMining::total_asset_mining_power();
 
         // When:
@@ -249,11 +253,48 @@ impl MiningDistribution {
         } else {
             assert!(
                 m2 > 0,
-                "cross_mining_shares is ensured to be positive in set_distribution_ratio()"
+                "asset_mining_shares is ensured to be positive in set_distribution_ratio()"
             );
             // There could be some computation loss here, but it's ok.
             let treasury_extra = (m2 - m1) * asset_mining_reward_cap.saturated_into::<u128>() / m2;
             Some(treasury_extra.saturated_into::<T::Balance>())
         }
+    }
+}
+
+/// Struct for performing the slash.
+///
+/// Abstracted for caching the treasury account.
+#[derive(Copy, Clone, PartialEq, Eq, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct Slasher<T: Trait>(T::AccountId);
+
+impl<T: Trait> Slasher<T> {
+    pub fn new(treasury_account: T::AccountId) -> Self {
+        Self(treasury_account)
+    }
+
+    /// Returns Ok(_) if the reward pot of offender has enough balance to cover the slashing,
+    /// otherwise slash the reward pot as much as possible and returns the value actually slashed.
+    pub fn try_slash(
+        &self,
+        offender: &T::AccountId,
+        expected_slash: T::Balance,
+    ) -> Result<(), T::Balance> {
+        let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
+        let reward_pot_balance = <xpallet_assets::Module<T>>::pcx_free_balance(&reward_pot);
+
+        if expected_slash <= reward_pot_balance {
+            self.apply_slash(&reward_pot, expected_slash);
+            Ok(())
+        } else {
+            self.apply_slash(&reward_pot, reward_pot_balance);
+            Err(reward_pot_balance)
+        }
+    }
+
+    /// Actually slash the account being punished, all slashed balance will go to the treasury.
+    fn apply_slash(&self, reward_pot: &T::AccountId, value: T::Balance) {
+        let _ = <xpallet_assets::Module<T>>::pcx_move_free_balance(reward_pot, &self.0, value);
     }
 }

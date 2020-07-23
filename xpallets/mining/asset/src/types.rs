@@ -1,4 +1,4 @@
-use crate::{Error, Trait};
+use crate::Trait;
 use chainx_primitives::AssetId;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;

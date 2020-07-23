@@ -15,4 +15,6 @@ sp-blockchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2
 jsonrpc-core = "14.2.0"
 jsonrpc-derive = "14.2.1"
 jsonrpc-core-client = "14.2.0"
+xpallet-mining-staking = { path = "../" }
 xpallet-mining-staking-rpc-runtime-api = { path = "./runtime-api" }
+xpallet-support = { path = "../../../support" }

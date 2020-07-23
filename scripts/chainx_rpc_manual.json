@@ -1,0 +1,15 @@
+{
+    "xassets": {
+        "getAssets": {
+            "description": "get all assets balance and infos",
+            "params": [
+                {
+                    "name": "at",
+                    "type": "Hash",
+                    "isOptional": true
+                }
+            ],
+            "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
+        }
+    }
+}
