@@ -1,0 +1,48 @@
+{
+    "AssetRestriction": {
+        "_enum": [
+            "Move",
+            "Transfer",
+            "Deposit",
+            "Withdraw",
+            "DestroyWithdrawal",
+            "DestroyFree"
+        ]
+    },
+    "AssetRestrictions": "u32",
+    "BTCAddress": {
+        "hash": "AddressHash",
+        "kind": "Type",
+        "network": "Network"
+    },
+    "BTCHeader": {
+        "bits": "BTCCompact",
+        "merkle_root_hash": "H256",
+        "once": "u32",
+        "previous_header_hash": "H256",
+        "time": "u32",
+        "version": "u32"
+    },
+    "BTCNetwork": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
+    },
+    "Chain": {
+        "_enum": [
+            "ChainX",
+            "Bitcoin",
+            "Ethereum",
+            "Polkadot"
+        ]
+    },
+    "NetworkType": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
+    },
+    "OrderInfo": "Order",
+    "WeightType": "u128"
+}
