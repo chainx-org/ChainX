@@ -16,6 +16,7 @@ The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown t
 
 - Can not handle the type generated from marcos due to the limination of ctags.
 - Can not handle the unknown type that does not reported on JS side.
+- Can not handle the type defined in the imported libraries.
 
 ### Run
 

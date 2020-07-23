@@ -4,6 +4,7 @@
 import subprocess
 import json
 import os
+import pprint
 
 wd = os.getcwd()
 os.chdir("..")
@@ -265,6 +266,19 @@ def write_json():
         json.dump(output, outfile, indent=4, sort_keys=True)
 
 
+def check_missing_types():
+    pp = pprint.PrettyPrinter(indent=4)
+    print('suspicious types:')
+    pp.pprint(suspicious)
+    print()
+    missing = []
+    for key in NEW_TYPES:
+        if key not in output:
+            missing.append(key)
+    print('missing types:')
+    pp.pprint(missing)
+
+
 def main():
     triage()
 
@@ -274,8 +288,7 @@ def main():
 
     write_json()
 
+    check_missing_types()
+
 
 main()
-
-print(json.dumps(output, indent=4, sort_keys=True))
-print(suspicious)
