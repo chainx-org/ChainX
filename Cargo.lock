@@ -603,6 +603,7 @@ dependencies = [
  "xpallet-mining-staking",
  "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-protocol",
+ "xpallet-support",
  "xpallet-system",
  "xpallet-transaction-payment",
  "xpallet-transaction-payment-rpc-runtime-api",
@@ -7182,7 +7183,9 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "xpallet-mining-staking",
  "xpallet-mining-staking-rpc-runtime-api",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -7192,6 +7195,8 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
+ "xpallet-mining-staking",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -7208,7 +7213,9 @@ name = "xpallet-support"
 version = "0.1.0"
 dependencies = [
  "frame-support",
+ "parity-scale-codec",
  "rustc-hex",
+ "serde",
  "sp-std",
 ]
 

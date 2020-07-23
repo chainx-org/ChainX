@@ -7,19 +7,27 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
+use xpallet_mining_staking::ValidatorInfo;
 use xpallet_mining_staking_rpc_runtime_api::XStakingApi as XStakingRuntimeApi;
+use xpallet_support::RpcBalance;
 
 /// XStaking RPC methods.
 #[rpc]
-pub trait XStakingApi<BlockHash, AccountId> {
-    /// Executes a call to a contract.
-    ///
-    /// This call is performed locally without submitting any transactions. Thus executing this
-    /// won't change any state. Nonetheless, the calling state-changing contracts is still possible.
-    ///
-    /// This method is useful for calling getter-like methods on contracts.
+pub trait XStakingApi<BlockHash, AccountId, RpcBalance, BlockNumber> {
+    /// Get overall information about all potential validators
     #[rpc(name = "xstaking_getValidators")]
-    fn validators(&self, at: Option<BlockHash>) -> Result<Vec<AccountId>>;
+    fn validators(
+        &self,
+        at: Option<BlockHash>,
+    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>>;
+
+    /// Get overall information given the validator AccountId.
+    #[rpc(name = "xstaking_getValidatorByAccount")]
+    fn validator_info_of(
+        &self,
+        who: AccountId,
+        at: Option<BlockHash>,
+    ) -> Result<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>;
 }
 
 /// A struct that implements the [`XStakingApi`].
@@ -38,24 +46,42 @@ impl<C, B> XStaking<C, B> {
     }
 }
 
-impl<C, Block, AccountId> XStakingApi<<Block as BlockT>::Hash, AccountId> for XStaking<C, Block>
+impl<C, Block, AccountId, Balance, BlockNumber>
+    XStakingApi<<Block as BlockT>::Hash, AccountId, RpcBalance<Balance>, BlockNumber>
+    for XStaking<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-    C::Api: XStakingRuntimeApi<Block, AccountId>,
+    C::Api: XStakingRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     AccountId: Codec,
+    Balance: Codec,
+    BlockNumber: Codec,
 {
-    fn validators(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<AccountId>> {
+    fn validators(
+        &self,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
                 // If the block hash is not supplied assume the best block.
                 self.client.info().best_hash));
 
-        let result = api
-            .validators(&at)
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+        Ok(api.validators(&at).map_err(runtime_error_into_rpc_err)?)
+    }
 
-        Ok(result)
+    fn validator_info_of(
+        &self,
+        who: AccountId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+                // If the block hash is not supplied assume the best block.
+                self.client.info().best_hash));
+
+        Ok(api
+            .validator_info_of(&at, who)
+            .map_err(runtime_error_into_rpc_err)?)
     }
 }
 

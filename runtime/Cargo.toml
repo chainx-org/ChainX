@@ -58,6 +58,7 @@ xpallet-mining-staking-rpc-runtime-api = { path  = "../xpallets/mining/staking/r
 xpallet-mining-asset = { path  = "../xpallets/mining/asset", default-features = false }
 xpallet-protocol = { path = "../xpallets/protocol", default-features = false }
 xpallet-system = { path = "../xpallets/system", default-features = false }
+xpallet-support = { path = "../xpallets/support", default-features = false }
 xpallet-transaction-payment = { path = "../xpallets/transaction-payment", default-features = false }
 xpallet-transaction-payment-rpc-runtime-api = { path = "../xpallets/transaction-payment/rpc/runtime-api", default-features = false }
 
@@ -113,6 +114,7 @@ std = [
     "xpallet-mining-asset/std",
     "xpallet-protocol/std",
     "xpallet-system/std",
+    "xpallet-support/std",
     "xpallet-transaction-payment/std",
     "xpallet-transaction-payment-rpc-runtime-api/std",
 ]
