@@ -143,6 +143,7 @@
         "turnover": "Balance"
     },
     "OrderId": "u64",
+    "OrderInfo": "Order",
     "OrderType": {
         "_enum": [
             "Limit",

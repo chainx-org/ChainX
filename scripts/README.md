@@ -9,13 +9,14 @@ The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown t
 ### Requirement
 
 - Linux
+- Python 3.6+
 - https://github.com/universal-ctags/ctags
 - https://github.com/sharkdp/fd
 
 ### Limitations
 
 - Can not handle the type generated from marcos due to the limination of ctags.
-- Can not handle the unknown type that does not reported on JS side.
+- Can not handle the unknown type that does not reported on JS side, e.g., nested `Struct`.
 - Can not handle the type defined in the imported libraries.
 
 ### Run
@@ -23,7 +24,10 @@ The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown t
 ```bash
 $ cd scripts
 $ ./types_gen.py
-# See the generated chainx_types.json
+# See the generated files:
+# res
+# ├── chainx_rpc.json
+# └── chainx_types.json
 ```
 
-The auto generated `chainx_types.json` needs a review to handle the corner cases because this approach unevitably has some liminations.
+The auto generated `chainx_types.json` and `chainx_rpc.json` **need a review** to handle the corner cases because the script unevitably has some liminations.

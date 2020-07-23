@@ -5,53 +5,24 @@ import json
 import os
 import pprint
 import re
+import shutil
 import subprocess
 
-wd = os.getcwd()
-os.chdir("..")
+#  You need to install ctags and fd to run this script.
+if not shutil.which('ctags'):
+    print(
+        'Please install https://github.com/universal-ctags/ctags to continue')
+    os._exit(1)
 
-TARGET_KINDS = ['typedef', 'enum', 'struct']
-
-ALIAS = {'Vec<u8>': 'Text'}
-
-MANUAL = {
-    "Chain": {
-        "_enum": ["ChainX", "Bitcoin", "Ethereum", "Polkadot"]
-    },
-    "AssetRestrictions": "u32",
-    "AssetRestriction": {
-        "_enum": [
-            "Move", "Transfer", "Deposit", "Withdraw", "DestroyWithdrawal",
-            "DestroyFree"
-        ]
-    },
-    "BTCAddress": {
-        "kind": "Type",
-        "network": "Network",
-        "hash": "AddressHash"
-    },
-    "BTCHeader": {
-        "version": "u32",
-        "previous_header_hash": "H256",
-        "merkle_root_hash": "H256",
-        "time": "u32",
-        "bits": "BTCCompact",
-        "once": "u32"
-    },
-    "BTCNetwork": {
-        "_enum": ["Mainnet", "Testnet"]
-    },
-    "NetworkType": {
-        "_enum": ["Mainnet", "Testnet"]
-    },
-}
+if not shutil.which('fd'):
+    print('Please install https://github.com/sharkdp/fd to continue')
+    os._exit(1)
 
 NEW_TYPES = [
     "AssetType",
     "SignedBalance",
     "Chain",
     "AddrStr",
-    "Order",
     "OrderExecutedInfo",
     "TradingPairProfile",
     "TradingPairId",
@@ -102,7 +73,16 @@ NEW_TYPES = [
     "XRC20Selector",
 ]
 
-base_ctags_cmd = [
+# Change the working directory to project root directory.
+os.chdir("..")
+
+TARGET_KINDS = ['typedef', 'enum', 'struct']
+
+ALIAS = {'Vec<u8>': 'Text'}
+
+MANUAL = json.load('chainx_types_manual.json')
+
+BASE_CTAGS_CMD = [
     'ctags', '--format=2', '--excmd=pattern', '--fields=nksSaf', '--extras=+F',
     '--sort=no', '--append=no', '--extras=', '--language-force=rust',
     '--rust-kinds=cPstvfgieMnm', '--output-format=json', '--fields=-PF', '-f-'
@@ -161,7 +141,7 @@ def triage():
         if not rs_file:
             continue
 
-        cmd = base_ctags_cmd + [rs_file]
+        cmd = BASE_CTAGS_CMD + [rs_file]
 
         for line in execute(cmd):
             if not line:
@@ -294,7 +274,7 @@ def parse_typedef():
 
 def check_missing_types():
     pp = pprint.PrettyPrinter(indent=4)
-    print('suspicious types:')
+    print('These types might be problematic:')
     pp.pprint(suspicious)
     print()
     missing = []
@@ -305,7 +285,7 @@ def check_missing_types():
                 output[key] = MANUAL[key]
             else:
                 missing.append(key)
-    print('missing types:')
+    print('These types are still missing:')
     pp.pprint(missing)
 
 
@@ -403,12 +383,14 @@ def main():
     build_rpc()
 
     os.chdir("./scripts")
-    write_json(output, 'chainx_types.json')
+    write_json(output, 'res/chainx_types.json')
 
     rpc_output = {}
     #  Inject rpc decoration
     rpc_output['rpc'] = rpc_dict
-    write_json(rpc_output, 'chainx_rpc.json')
+    write_json(rpc_output, 'res/chainx_rpc.json')
+
+    write_json(MANUAL, 'chainx_types_manual.json')
 
 
 main()
