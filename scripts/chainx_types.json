@@ -11,6 +11,17 @@
         "last_total_mining_weight": "MiningWeight",
         "last_total_mining_weight_update": "BlockNumber"
     },
+    "AssetRestriction": {
+        "_enum": [
+            "Move",
+            "Transfer",
+            "Deposit",
+            "Withdraw",
+            "DestroyWithdrawal",
+            "DestroyFree"
+        ]
+    },
+    "AssetRestrictions": "u32",
     "AssetType": {
         "_enum": [
             "Free",
@@ -24,11 +35,30 @@
             "LockedFee"
         ]
     },
+    "BTCAddress": {
+        "hash": "AddressHash",
+        "kind": "Type",
+        "network": "Network"
+    },
+    "BTCHeader": {
+        "bits": "BTCCompact",
+        "merkle_root_hash": "H256",
+        "once": "u32",
+        "previous_header_hash": "H256",
+        "time": "u32",
+        "version": "u32"
+    },
     "BTCHeaderInfo": {
         "confirmed": "bool",
         "header": "BTCHeader",
         "height": "u32",
         "txid_list": "Vec<H256>"
+    },
+    "BTCNetwork": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
     },
     "BTCParams": {
         "block_max_future": "u32",
@@ -48,6 +78,14 @@
     "BondRequirement": {
         "self_bonded": "Balance",
         "total": "Balance"
+    },
+    "Chain": {
+        "_enum": [
+            "ChainX",
+            "Bitcoin",
+            "Ethereum",
+            "Polkadot"
+        ]
     },
     "ClaimRestriction": {
         "frequency_limit": "BlockNumber",
@@ -69,6 +107,12 @@
     "MiningDistribution": {
         "asset": "u32",
         "staking": "u32"
+    },
+    "NetworkType": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
     },
     "NominatorLedger": {
         "last_vote_weight": "WeightType",

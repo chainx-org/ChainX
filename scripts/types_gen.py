@@ -13,6 +13,38 @@ TARGET_KINDS = ['typedef', 'enum', 'struct']
 
 ALIAS = {'Vec<u8>': 'Text'}
 
+MANUAL = {
+    "Chain": {
+        "_enum": ["ChainX", "Bitcoin", "Ethereum", "Polkadot"]
+    },
+    "AssetRestrictions": "u32",
+    "AssetRestriction": {
+        "_enum": [
+            "Move", "Transfer", "Deposit", "Withdraw", "DestroyWithdrawal",
+            "DestroyFree"
+        ]
+    },
+    "BTCAddress": {
+        "kind": "Type",
+        "network": "Network",
+        "hash": "AddressHash"
+    },
+    "BTCHeader": {
+        "version": "u32",
+        "previous_header_hash": "H256",
+        "merkle_root_hash": "H256",
+        "time": "u32",
+        "bits": "BTCCompact",
+        "once": "u32"
+    },
+    "BTCNetwork": {
+        "_enum": ["Mainnet", "Testnet"]
+    },
+    "NetworkType": {
+        "_enum": ["Mainnet", "Testnet"]
+    },
+}
+
 NEW_TYPES = [
     "AssetType",
     "SignedBalance",
@@ -36,7 +68,6 @@ NEW_TYPES = [
     "BTCParams",
     "BTCTxInfo",
     "BondRequirement",
-    "Chain",
     "ClaimRestriction",
     "Desc",
     "FixedAssetPower",
@@ -274,7 +305,11 @@ def check_missing_types():
     missing = []
     for key in NEW_TYPES:
         if key not in output:
-            missing.append(key)
+            #  Inject the hard coded type
+            if key in MANUAL:
+                output[key] = MANUAL[key]
+            else:
+                missing.append(key)
     print('missing types:')
     pp.pprint(missing)
 
@@ -286,9 +321,9 @@ def main():
     parse_struct()
     parse_typedef()
 
-    write_json()
-
     check_missing_types()
+
+    write_json()
 
 
 main()
