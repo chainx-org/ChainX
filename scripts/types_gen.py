@@ -107,6 +107,7 @@ def read_struct_or_enum(fname, lnum):
     with open(fname, 'r') as reader:
         lines = reader.readlines()
         type_lines = []
+        #  TODO: include the nested Struct
         for i in range(lnum - 1, len(lines)):
             line = lines[i].strip()
             if not line:
@@ -378,25 +379,36 @@ def write_json(output_json, output_fname):
         json.dump(output_json, outfile, indent=4, sort_keys=True)
 
 
-def main():
-    build_types()
-
-    build_rpc()
-
-    #  Inject the manual types, even it does not yet show up.
+def write_types_and_rpc():
     for k in MANUAL:
-        if k not in output:
-            output[k] = MANUAL[k]
+        #  Always override with types created manually.
+        output[k] = MANUAL[k]
+
+    with open('./scripts/chainx_rpc_manual.json') as json_file:
+        RPC_MANUAL = json.load(json_file)
 
     os.chdir("./scripts")
     write_json(output, 'res/chainx_types.json')
+
+    for xmodule, fns in rpc_dict.items():
+        if xmodule in RPC_MANUAL:
+            manual_fns = RPC_MANUAL[xmodule]
+            for k in fns:
+                if k in manual_fns:
+                    fns[k] = manual_fns[k]
 
     rpc_output = {}
     #  Inject rpc decoration
     rpc_output['rpc'] = rpc_dict
     write_json(rpc_output, 'res/chainx_rpc.json')
 
-    write_json(MANUAL, 'chainx_types_manual.json')
+
+def main():
+    build_types()
+
+    build_rpc()
+
+    write_types_and_rpc()
 
 
 main()

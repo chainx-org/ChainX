@@ -2,14 +2,15 @@
     "rpc": {
         "xassets": {
             "getAssets": {
-                "description": "Some description",
+                "description": "get all assets balance and infos",
                 "params": [
                     {
+                        "isOptional": true,
                         "name": "at",
-                        "type": "Option<BlockHash>)"
+                        "type": "Hash"
                     }
                 ],
-                "type": "BTreeMap<AssetId, TotalAssetInfo>"
+                "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
             },
             "getAssetsByAccount": {
                 "description": "Some description",

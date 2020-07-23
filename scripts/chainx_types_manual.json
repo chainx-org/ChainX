@@ -43,6 +43,58 @@
             "Testnet"
         ]
     },
+    "SignedBalance": {
+        "_enum": {
+            "Positive": "Balance",
+            "Negative": "Balance"
+        }
+    },
+    "NominatorProfile": {
+        "last_rebond": "Option<BlockNumber>",
+        "unbonded_chunks": "Vec<Unbonded>"
+    },
+    "Unbonded": {
+        "value": "Balance",
+        "locked_until": "BlockNumber"
+    },
+    "Order": {
+        "already_filled": "Balance",
+        "executed_indices": "Vec<TradingHistoryIndex>",
+        "last_update_at": "BlockNumber",
+        "props": "OrderProperty",
+        "remaining": "Balance",
+        "status": "OrderStatus"
+    },
+    "OrderProperty": {
+        "id": "OrderId",
+        "side": "Side",
+        "price": "Price",
+        "amount": "Amount",
+        "pair_id": "TradingPairId",
+        "submitter": "AccountId",
+        "order_type": "OrderType",
+        "created_at": "BlockNumber"
+    },
+    "AssetInfoForRpc": {
+        "token": "String",
+        "token_name": "String",
+        "chain": "Chain",
+        "precision": "Precision",
+        "desc": "String"
+    },
+    "TotalAssetInfoForRpc": {
+        "info": "AssetInfoForRpc",
+        "balance": "BTreeMap<AssetType, String>",
+        "isOnline": "bool",
+        "restrictions": "AssetRestrictions"
+    },
+    "HandicapInfo": "Handicap",
+    "Handicap": {
+        "highest_bid": "Price",
+        "lowest_offer": "Price"
+    },
     "OrderInfo": "Order",
-    "WeightType": "u128"
+    "WeightType": "u128",
+    "MiningPower": "u128",
+    "MiningWeight": "u128"
 }

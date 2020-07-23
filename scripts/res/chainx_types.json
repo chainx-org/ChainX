@@ -7,6 +7,13 @@
         "token": "Token",
         "token_name": "Token"
     },
+    "AssetInfoForRpc": {
+        "chain": "Chain",
+        "desc": "String",
+        "precision": "Precision",
+        "token": "String",
+        "token_name": "String"
+    },
     "AssetLedger": {
         "last_total_mining_weight": "MiningWeight",
         "last_total_mining_weight_update": "BlockNumber"
@@ -97,7 +104,11 @@
         "mining": "u32",
         "treasury": "u32"
     },
-    "HandicapInfo": "Handicap<<T as Trait>::Price>",
+    "Handicap": {
+        "highest_bid": "Price",
+        "lowest_offer": "Price"
+    },
+    "HandicapInfo": "Handicap",
     "Memo": "Text",
     "MinerLedger": {
         "last_claim": "Option<BlockNumber>",
@@ -108,6 +119,8 @@
         "asset": "u32",
         "staking": "u32"
     },
+    "MiningPower": "u128",
+    "MiningWeight": "u128",
     "NetworkType": {
         "_enum": [
             "Mainnet",
@@ -121,13 +134,13 @@
     },
     "NominatorProfile": {
         "last_rebond": "Option<BlockNumber>",
-        "unbonded_chunks": "BlockNumber>>"
+        "unbonded_chunks": "Vec<Unbonded>"
     },
     "Order": {
         "already_filled": "Balance",
         "executed_indices": "Vec<TradingHistoryIndex>",
         "last_update_at": "BlockNumber",
-        "props": "BlockNumber>",
+        "props": "OrderProperty",
         "remaining": "Balance",
         "status": "OrderStatus"
     },
@@ -144,6 +157,16 @@
     },
     "OrderId": "u64",
     "OrderInfo": "Order",
+    "OrderProperty": {
+        "amount": "Amount",
+        "created_at": "BlockNumber",
+        "id": "OrderId",
+        "order_type": "OrderType",
+        "pair_id": "TradingPairId",
+        "price": "Price",
+        "side": "Side",
+        "submitter": "AccountId"
+    },
     "OrderType": {
         "_enum": [
             "Limit",
@@ -160,13 +183,19 @@
         ]
     },
     "SignedBalance": {
-        "_enum": [
-            "Positive(T::Balance)",
-            "Negative(T::Balance)"
-        ]
+        "_enum": {
+            "Negative": "Balance",
+            "Positive": "Balance"
+        }
     },
     "StakingRequirement": "u32",
     "Token": "Text",
+    "TotalAssetInfoForRpc": {
+        "balance": "BTreeMap<AssetType, String>",
+        "info": "AssetInfoForRpc",
+        "isOnline": "bool",
+        "restrictions": "AssetRestrictions"
+    },
     "TradingHistoryIndex": "u64",
     "TradingPairId": "u32",
     "TradingPairInfo": {
@@ -179,6 +208,10 @@
         "online": "bool",
         "pip_precision": "u32",
         "tick_precision": "u32"
+    },
+    "Unbonded": {
+        "locked_until": "BlockNumber",
+        "value": "Balance"
     },
     "UnbondedIndex": "u32",
     "ValidatorLedger": {
