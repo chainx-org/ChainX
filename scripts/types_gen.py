@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import subprocess
 import json
-import re
 import os
 import pprint
+import re
+import subprocess
 
 wd = os.getcwd()
 os.chdir("..")
@@ -292,12 +292,6 @@ def parse_typedef():
                 output[key] = value
 
 
-def write_json():
-    os.chdir("./scripts")
-    with open('chainx_types.json', 'w') as outfile:
-        json.dump(output, outfile, indent=4, sort_keys=True)
-
-
 def check_missing_types():
     pp = pprint.PrettyPrinter(indent=4)
     print('suspicious types:')
@@ -398,15 +392,23 @@ def build_rpc():
                         parse_rpc_api(xmodule, inner_fn, line_fn)
 
 
+def write_json(output_json, output_fname):
+    with open(output_fname, 'w') as outfile:
+        json.dump(output_json, outfile, indent=4, sort_keys=True)
+
+
 def main():
     build_types()
 
     build_rpc()
 
-    #  Inject rpc decoration
-    output['rpc'] = rpc_dict
+    os.chdir("./scripts")
+    write_json(output, 'chainx_types.json')
 
-    write_json()
+    rpc_output = {}
+    #  Inject rpc decoration
+    rpc_output['rpc'] = rpc_dict
+    write_json(rpc_output, 'chainx_rpc.json')
 
 
 main()
