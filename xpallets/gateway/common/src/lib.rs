@@ -73,7 +73,7 @@ decl_error! {
         DuplicatedAccountId,
         /// not registered as trustee
         NotRegistered,
-        /// just alloow validator to register trustee
+        /// just allow validator to register trustee
         NotValidator,
     }
 }
@@ -86,6 +86,7 @@ decl_module! {
         #[weight = 0]
         pub fn setup_trustee(origin, chain: Chain, about: Text, hot_entity: Vec<u8>, cold_entity: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(T::Validator::is_validator(&who), Error::<T>::NotValidator);
             Self::setup_trustee_impl(who, chain, about, hot_entity, cold_entity)
         }
 
@@ -130,7 +131,7 @@ decl_storage! {
         pub TrusteeMultiSigAddr get(fn trustee_multisig_addr): map hasher(twox_64_concat) Chain => T::AccountId;
 
         /// trustee basal info config
-        pub TrusteeInfoConfigOf get(fn trustee_info_config) config(): map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
+        pub TrusteeInfoConfigOf get(fn trustee_info_config): map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
         /// when generate trustee, auto generate a new session number, increase the newest trustee addr, can't modify by user
         pub TrusteeSessionInfoLen get(fn trustee_session_info_len): map hasher(twox_64_concat) Chain => u32 = 0;
 
@@ -144,6 +145,21 @@ decl_storage! {
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => Option<T::AccountId>;
 
         TmpChain get(fn tmp_chain): Chain;
+    }
+    add_extra_genesis {
+        config(trustees): Vec<(Chain, TrusteeInfoConfig, Vec<(T::AccountId, Text, Vec<u8>, Vec<u8>)>)>;
+        build(|config| {
+            for (chain, info_config, trustee_infos) in config.trustees.iter() {
+                let mut trustees = vec![];
+                for (who, about, hot, cold) in trustee_infos.iter() {
+                    Module::<T>::setup_trustee_impl(who.clone(), *chain, about.clone(), hot.clone(), cold.clone()).expect("must success");
+                    trustees.push(who.clone());
+                }
+                // config set should before transitino
+                TrusteeInfoConfigOf::insert(chain, info_config.clone());
+                Module::<T>::transition_trustee_session_impl(*chain, trustees).expect("must success in genesis");
+            }
+        })
     }
 }
 
@@ -164,7 +180,6 @@ impl<T: Trait> Module<T> {
         hot_entity: Vec<u8>,
         cold_entity: Vec<u8>,
     ) -> DispatchResult {
-        ensure!(T::Validator::is_validator(&who), Error::<T>::NotValidator);
         is_valid_about::<T>(&about)?;
 
         let (hot, cold) = match chain {

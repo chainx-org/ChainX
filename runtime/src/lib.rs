@@ -65,15 +65,15 @@ pub use xpallet_contracts_primitives::XRC20Selector;
 #[cfg(feature = "std")]
 pub use xpallet_gateway_bitcoin::h256_conv_endian_from_str;
 pub use xpallet_gateway_bitcoin::{
-    BTCHeader, BTCNetwork, BTCParams, Compact as BTCCompact, H256 as BTCHash,
+    BTCHeader, BTCNetwork, BTCParams, BTCTxVerifier, Compact as BTCCompact, H256 as BTCHash,
 };
+pub use xpallet_gateway_common::{trustees, types::TrusteeInfoConfig};
 pub use xpallet_protocol::*;
 pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use frame_system::Trait;
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -323,10 +323,8 @@ impl xpallet_gateway_common::Trait for Runtime {
 impl xpallet_gateway_bitcoin::Trait for Runtime {
     type Event = Event;
     type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
-    type TrusteeSessionProvider =
-        xpallet_gateway_common::trustees::bitcoin::BTCTrusteeSessionManager<Runtime>;
-    type TrusteeMultiSigProvider =
-        xpallet_gateway_common::trustees::bitcoin::BTCTrusteeMultisig<Runtime>;
+    type TrusteeSessionProvider = trustees::bitcoin::BTCTrusteeSessionManager<Runtime>;
+    type TrusteeMultiSigProvider = trustees::bitcoin::BTCTrusteeMultisig<Runtime>;
     type Channel = XGatewayCommon;
 }
 
@@ -484,7 +482,7 @@ construct_runtime!(
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
-        XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>},
+        XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
         XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},

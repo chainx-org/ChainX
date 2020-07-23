@@ -47,11 +47,11 @@ pub use btc_keys::Network as BTCNetwork;
 pub use btc_primitives::h256_conv_endian_from_str;
 pub use btc_primitives::{Compact, H256, H264};
 
-pub use self::types::BTCParams;
 use self::types::{
     BTCDepositCache, BTCHeaderIndex, BTCHeaderInfo, BTCRelayedTx, BTCTxResult, BTCTxState,
-    BTCTxVerifier, BTCWithdrawalProposal,
+    BTCWithdrawalProposal,
 };
+pub use self::types::{BTCParams, BTCTxVerifier};
 use crate::trustee::get_trustee_address_pair;
 use crate::tx::{remove_pending_deposit, utils::addr2vecu8};
 

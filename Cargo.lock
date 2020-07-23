@@ -483,6 +483,7 @@ dependencies = [
  "chainx-rpc",
  "chainx-runtime",
  "futures 0.3.5",
+ "hex",
  "log",
  "log4rs",
  "pallet-im-online",

@@ -4,7 +4,7 @@ use frame_support::{
     StorageValue,
 };
 use sp_runtime::SaturatedConversion;
-use sp_std::{prelude::*, result};
+use sp_std::{convert::TryFrom, prelude::*, result};
 
 use btc_chain::Transaction;
 use btc_crypto::dhash160;
@@ -89,7 +89,9 @@ const ZERO_P: [u8; 32] = [0; 32];
 
 impl<T: Trait> TrusteeForChain<T::AccountId, BTCTrusteeType, BTCTrusteeAddrInfo> for Module<T> {
     fn check_trustee_entity(raw_addr: &[u8]) -> result::Result<BTCTrusteeType, DispatchError> {
-        let public = Public::from_slice(raw_addr).map_err(|_| "Invalid Public")?;
+        let trustee_type = BTCTrusteeType::try_from(raw_addr.to_vec())
+            .map_err(|_| Error::<T>::InvalidPublicKey)?;
+        let public = trustee_type.0;
         if let Public::Normal(_) = public {
             error!("not allow Normal Public for bitcoin now");
             Err(Error::<T>::InvalidPublicKey)?
