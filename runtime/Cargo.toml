@@ -32,6 +32,7 @@ frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-authorship = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-im-online = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
@@ -90,6 +91,7 @@ std = [
     "frame-system-rpc-runtime-api/std",
 
     "pallet-aura/std",
+    "pallet-authorship/std",
     "pallet-grandpa/std",
     "pallet-im-online/std",
     "pallet-randomness-collective-flip/std",

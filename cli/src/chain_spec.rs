@@ -200,6 +200,7 @@ fn testnet_genesis(
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
     enable_println: bool,
 ) -> GenesisConfig {
+    println!("--- initial_authorities:{:?}", initial_authorities);
     GenesisConfig {
         frame_system: Some(SystemConfig {
             code: WASM_BINARY.to_vec(),
