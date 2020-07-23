@@ -250,9 +250,10 @@ impl<T: Trait> Module<T> {
             info!("[apply_create_withdraw]apply sign after create proposal");
             // due to `SignWithdrawalProposal` event should after `CreateWithdrawalProposal`, thus this function should after proposal
             // but this function would have an error return, this error return should not meet.
-            if let Err(s) = insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list) {
+            if let Err(_) = insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list) {
                 // should not be error in this function, if hit this branch, panic to clear all modification
-                panic!(s)
+                // TODO change to revoke in future
+                panic!("insert_trustee_vote_state should not be error")
             }
         }
 

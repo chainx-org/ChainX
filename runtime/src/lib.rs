@@ -50,7 +50,8 @@ pub use frame_support::{
 pub use pallet_timestamp::Call as TimestampCall;
 
 pub use chainx_primitives::{
-    AccountId, AccountIndex, AssetId, Balance, BlockNumber, Hash, Index, Moment, Signature, Token,
+    AccountId, AccountIndex, AssetId, Balance, BlockNumber, Hash, Index, Moment, Name, Signature,
+    Token,
 };
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
@@ -59,13 +60,13 @@ use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use xpallet_assets::{
     AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
 };
-#[cfg(feature = "std")]
-pub use xpallet_bridge_bitcoin::h256_conv_endian_from_str;
-pub use xpallet_bridge_bitcoin::{
-    BTCHeader, BTCNetwork, BTCParams, Compact as BTCCompact, H256 as BTCHash,
-};
 pub use xpallet_contracts::Schedule as ContractsSchedule;
 pub use xpallet_contracts_primitives::XRC20Selector;
+#[cfg(feature = "std")]
+pub use xpallet_gateway_bitcoin::h256_conv_endian_from_str;
+pub use xpallet_gateway_bitcoin::{
+    BTCHeader, BTCNetwork, BTCParams, Compact as BTCCompact, H256 as BTCHash,
+};
 pub use xpallet_protocol::*;
 pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
@@ -268,6 +269,23 @@ impl pallet_utility::Trait for Runtime {
     type Call = Call;
 }
 
+parameter_types! {
+    // One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+    pub const DepositBase: Balance = deposit(1, 88);
+    // Additional storage item size of 32 bytes.
+    pub const DepositFactor: Balance = deposit(0, 32);
+    pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_multisig::Trait for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = XAssets;
+    type DepositBase = DepositBase;
+    type DepositFactor = DepositFactor;
+    type MaxSignatories = MaxSignatories;
+}
+
 impl pallet_sudo::Trait for Runtime {
     type Event = Event;
     type Call = Call;
@@ -277,11 +295,6 @@ impl xpallet_system::Trait for Runtime {
     type Event = Event;
 }
 
-impl xpallet_dex_spot::Trait for Runtime {
-    type Event = Event;
-    type Price = Balance;
-}
-
 impl xpallet_assets::Trait for Runtime {
     type Balance = Balance;
     type Event = Event;
@@ -289,8 +302,35 @@ impl xpallet_assets::Trait for Runtime {
     type OnAssetRegisterOrRevoke = XMiningAsset;
 }
 
-impl xpallet_bridge_bitcoin::Trait for Runtime {
+impl xpallet_gateway_records::Trait for Runtime {
     type Event = Event;
+}
+
+impl xpallet_gateway_common::Trait for Runtime {
+    type Event = Event;
+    type BitcoinTrustee = XGatewayBitcoin;
+}
+
+// pub struct Extractor;
+// impl xpallet_gateway_common::traits::Extractable<AccountId> for Extractor {
+//     fn account_info(data: &[u8]) -> Option<(AccountId, Option<Name>)> {
+//         xpallet_gateway_common::extractor::Extractor::account_info(data)
+//     }
+// }
+
+impl xpallet_gateway_bitcoin::Trait for Runtime {
+    type Event = Event;
+    type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
+    type TrusteeSessionProvider =
+        xpallet_gateway_common::trustees::bitcoin::BTCTrusteeSessionManager<Runtime>;
+    type TrusteeMultiSigProvider =
+        xpallet_gateway_common::trustees::bitcoin::BTCTrusteeMultisig<Runtime>;
+    type Channel = XGatewayCommon;
+}
+
+impl xpallet_dex_spot::Trait for Runtime {
+    type Event = Event;
+    type Price = Balance;
 }
 
 impl xpallet_contracts::Trait for Runtime {
@@ -436,11 +476,14 @@ construct_runtime!(
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
         Offences: pallet_offences::{Module, Call, Storage, Event},
+        Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
-        XBridgeBitcoin: xpallet_bridge_bitcoin::{Module, Call, Storage, Event<T>, Config},
+        XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
+        XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>},
+        XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config},
         XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
         XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
         XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>},

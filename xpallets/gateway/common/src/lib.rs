@@ -86,8 +86,8 @@ decl_module! {
         pub fn transition_trustee_session(origin, chain: Chain, new_trustees: Vec<T::AccountId>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             // judge current addr
-            let _c = ChainContext::<T>::new(chain);
-            if !TrusteeMultisigProvider::<T, ChainContext::<T>>::check_multisig(&who) {
+            let _c = ChainContext::new(chain);
+            if !TrusteeMultisigProvider::<T, ChainContext>::check_multisig(&who) {
                 Err(Error::<T>::InvalidMultisig)?;
             }
             Self::transition_trustee_session_impl(chain, new_trustees)

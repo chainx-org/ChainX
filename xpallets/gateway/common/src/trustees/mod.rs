@@ -67,24 +67,25 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
     }
 }
 
-pub struct ChainContext<T: Trait>(PhantomData<T>);
-impl<T: Trait> ChainContext<T> {
+pub struct ChainContext;
+impl ChainContext {
     pub fn new(chain: Chain) -> Self {
         use frame_support::StorageValue;
         crate::TmpChain::put(chain);
-        ChainContext(Default::default())
+        ChainContext
     }
 }
 
-impl<T: Trait> Drop for ChainContext<T> {
+impl Drop for ChainContext {
     fn drop(&mut self) {
         use frame_support::StorageValue;
         crate::TmpChain::kill();
     }
 }
-impl<T: Trait> ChainProvider for ChainContext<T> {
+impl ChainProvider for ChainContext {
     fn chain() -> Chain {
-        Module::<T>::tmp_chain()
+        use frame_support::StorageValue;
+        crate::TmpChain::get()
     }
 }
 

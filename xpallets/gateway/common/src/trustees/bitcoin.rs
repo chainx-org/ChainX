@@ -41,7 +41,7 @@ impl TryFrom<Vec<u8>> for BTCTrusteeType {
     }
 }
 
-impl ChainProvider for BTCPublic {
+impl ChainProvider for BTCTrusteeType {
     fn chain() -> Chain {
         Chain::Bitcoin
     }
@@ -55,5 +55,5 @@ impl ChainProvider for BTCTrusteeAddrInfo {
 
 pub type BTCTrusteeIntentionProps = TrusteeIntentionProps<BTCTrusteeType>;
 pub type BTCTrusteeSessionInfo<AccountId> = TrusteeSessionInfo<AccountId, BTCTrusteeAddrInfo>;
-pub type BTCTrusteeSessionManager<AccountId> = TrusteeSessionManager<AccountId, BTCTrusteeType>;
+pub type BTCTrusteeSessionManager<T> = TrusteeSessionManager<T, BTCTrusteeAddrInfo>;
 pub type BTCTrusteeMultisig<T> = TrusteeMultisigProvider<T, BTCTrusteeType>;

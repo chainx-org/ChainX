@@ -1,5 +1,5 @@
-use sp_std::fmt::Debug;
 use crate::error;
+use sp_std::fmt::Debug;
 
 pub trait MultiSig<AccountId: PartialEq + Debug> {
     fn multisig() -> AccountId;

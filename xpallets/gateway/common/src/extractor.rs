@@ -13,7 +13,7 @@ use crate::traits::Extractable;
 /// existence implies that it has been checked and is good, particularly with
 /// regards to the signature.
 #[derive(PartialEq, Eq, Clone)]
-pub struct Extractor(Vec<u8>);
+pub struct Extractor;
 
 fn split(data: &[u8]) -> Vec<Vec<u8>> {
     data.split(|x| *x == b'@').map(|d| d.to_vec()).collect()
