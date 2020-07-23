@@ -3,6 +3,7 @@
 
 import subprocess
 import json
+import re
 import os
 import pprint
 
@@ -314,7 +315,8 @@ def check_missing_types():
     pp.pprint(missing)
 
 
-def main():
+#  typdef, enum, struct
+def build_types():
     triage()
 
     parse_enum()
@@ -322,6 +324,87 @@ def main():
     parse_typedef()
 
     check_missing_types()
+
+
+rpc_dict = {}
+
+
+def parse_rpc_params(fn):
+    params = []
+    for item in fn.split(','):
+        if item.endswith('self'):
+            continue
+        if ':' in item:
+            [name, ty] = item.split(':')
+            name = name.strip()
+            ty = ty.strip()
+            #  Special case
+            if ty == 'Option<BlockHash>':
+                params.append({
+                    'name': name,
+                    'type': 'Hash',
+                    'isOptional': True
+                })
+            else:
+                params.append({'name': name, 'type': ty})
+
+    return params
+
+
+def parse_rpc_api(xmodule, inner_fn, line_fn):
+    [fn, result] = line_fn.split('->')
+
+    if xmodule not in rpc_dict:
+        rpc_dict[xmodule] = {}
+
+    params = parse_rpc_params(fn)
+
+    #  Result<BTreeMap<AssetId, TotalAssetInfo>>;
+    # len('Result<') = 7
+    # >; = 2
+    ok_result = result[8:-2]
+    rpc_dict[xmodule][inner_fn] = {
+        'description': 'Some description',
+        'params': params,
+        'type': ok_result
+    }
+
+
+def build_rpc():
+    #  Assume all the API definition is in foo/rpc/src/lib.rs
+    rpc_rs_files = list(filter(lambda x: '/rpc/src/lib.rs' in x, rs_files))
+
+    for fname in rpc_rs_files:
+        with open(fname, 'r') as reader:
+            lines = reader.readlines()
+            idx = 0
+            for line in lines:
+                idx += 1
+                if '[rpc(name =' in line:
+                    #  [rpc(name = "xassets_getAssets")] --> xassets_getAssets
+                    matches = re.findall(r'\"(.+?)\"', line)
+                    name = matches[0]
+                    [xmodule, inner_fn] = name.split('_')
+
+                    #  Only handle the ChainX specific RPC, starting with x
+                    if xmodule.startswith('x'):
+                        fn_lines = []
+                        #  Normally the fn defintion won't more than 10 lines
+                        for i in range(idx, idx + 10):
+                            fn_lines.append(lines[i].strip())
+                            if lines[i].strip().endswith(';'):
+                                break
+                        line_fn = ''.join(fn_lines)
+                        parse_rpc_api(xmodule, inner_fn, line_fn)
+
+
+def main():
+    build_types()
+
+    build_rpc()
+
+    #  Inject rpc decoration
+    output['rpc'] = rpc_dict
 
     write_json()
 
