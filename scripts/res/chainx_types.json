@@ -1,5 +1,6 @@
 {
     "AddrStr": "Text",
+    "AssetId": "u32",
     "AssetInfo": {
         "chain": "Chain",
         "desc": "Desc",
@@ -82,6 +83,17 @@
         "raw_tx": "BTCTransaction",
         "tx_type": "BTCTxType"
     },
+    "BTCTxType": {
+        "_enum": [
+            "Withdrawal",
+            "Deposit",
+            "HotAndCold",
+            "TrusteeTransition",
+            "Lock",
+            "Unlock",
+            "Irrelevance"
+        ]
+    },
     "BondRequirement": {
         "self_bonded": "Balance",
         "total": "Balance"
@@ -97,6 +109,10 @@
     "ClaimRestriction": {
         "frequency_limit": "BlockNumber",
         "staking_requirement": "StakingRequirement"
+    },
+    "CurrencyPair": {
+        "base": "AssetId",
+        "quote": "AssetId"
     },
     "Desc": "Text",
     "FixedAssetPower": "u32",
@@ -167,12 +183,22 @@
         "side": "Side",
         "submitter": "AccountId"
     },
+    "OrderStatus": {
+        "_enum": [
+            "Created",
+            "ParitialFill",
+            "Filled",
+            "ParitialFillAndCanceled",
+            "Canceled"
+        ]
+    },
     "OrderType": {
         "_enum": [
             "Limit",
             "Market"
         ]
     },
+    "Precision": "u8",
     "Price": "u64",
     "PriceFluctuation": "u32",
     "Selector": "[u8; 4]",

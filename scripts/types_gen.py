@@ -125,15 +125,18 @@ def read_struct_or_enum(fname, lnum):
             #  If the starting line ends with {,
             #  stop at the first } then.
             if line.endswith('}'):
-                #  print(type_lines)
                 return type_lines
 
+
+WELL_KNOWN_TYPES = ['AccountId', 'Balance', 'BlockNumber']
 
 rs_files = execute(['fd', '-e', 'rs'])
 
 enum_list = []
 struct_list = []
 typedef_list = []
+
+maybe_new_types = {}
 
 
 #  Triage all the new types using ctags
@@ -155,6 +158,18 @@ def triage():
             tag_name = tag_info['name']
 
             if 'kind' in tag_info and 'scopeKind' not in tag_info:
+                #  Some new types exists in the fields
+                if tag_kind in TARGET_KINDS and tag_name not in NEW_TYPES:
+                    if tag_kind in ('typedef', 'struct', 'enum'):
+                        # Ignore types in irrelevant files
+                        if ('mock' not in rs_file
+                                and tag_name not in WELL_KNOWN_TYPES):
+                            maybe_new_types[tag_name] = {
+                                'fname': rs_file,
+                                'tag': tag_info
+                            }
+
+                #  Explicit new types
                 if tag_kind in TARGET_KINDS and tag_name in NEW_TYPES:
                     item = {'fname': rs_file, 'tag': tag_info}
                     if tag_kind == 'typedef':
@@ -178,18 +193,25 @@ def is_suspicious(s):
     return ':' in s or '<' in s
 
 
+def parse_enum_impl(enum):
+    rs_file = enum['fname']
+    tag_lnum = enum['tag']['line']
+    key = enum['tag']['name']
+    lines = read_struct_or_enum(rs_file, tag_lnum)
+    enum['lines'] = lines
+    fields = lines[1:-1]
+    fields = list(map(lambda x: x.split(',')[0], fields))
+    s = list(filter(is_suspicious, fields.copy()))
+    suspicious.extend(s)
+    output[key] = {"_enum": fields}
+
+
 def parse_enum():
     for enum in enum_list:
-        rs_file = enum['fname']
-        tag_lnum = enum['tag']['line']
-        key = enum['tag']['name']
-        lines = read_struct_or_enum(rs_file, tag_lnum)
-        enum['lines'] = lines
-        fields = lines[1:-1]
-        fields = list(map(lambda x: x.split(',')[0], fields))
-        s = list(filter(is_suspicious, fields.copy()))
-        suspicious.extend(s)
-        output[key] = {"_enum": fields}
+        parse_enum_impl(enum)
+
+
+should_be_new_types = []
 
 
 def parse_non_tuple_struct(lines, key):
@@ -203,6 +225,8 @@ def parse_non_tuple_struct(lines, key):
                 var = item[:-1]
             if item.endswith(','):
                 ty = item[:-1]
+                if ty in maybe_new_types:
+                    should_be_new_types.append(maybe_new_types[ty])
         fields_dict[var] = ty
     output[key] = fields_dict
 
@@ -235,43 +259,51 @@ def parse_tuple_struct(line, key):
         output[key] = value
 
 
+def parse_struct_impl(struct):
+    rs_file = struct['fname']
+    tag_lnum = struct['tag']['line']
+    key = struct['tag']['name']
+    lines = read_struct_or_enum(rs_file, tag_lnum)
+    struct['lines'] = lines
+    if len(lines) == 1:
+        parse_tuple_struct(lines[0], key)
+    if len(lines) > 1:
+        parse_non_tuple_struct(lines, key)
+
+
 def parse_struct():
     for struct in struct_list:
-        rs_file = struct['fname']
-        tag_lnum = struct['tag']['line']
-        key = struct['tag']['name']
-        lines = read_struct_or_enum(rs_file, tag_lnum)
-        struct['lines'] = lines
-        if len(lines) == 1:
-            parse_tuple_struct(lines[0], key)
-        if len(lines) > 1:
-            parse_non_tuple_struct(lines, key)
+        parse_struct_impl(struct)
+
+
+def parse_typedef_impl(typedef):
+    rs_file = typedef['fname']
+    tag_lnum = typedef['tag']['line']
+    key = typedef['tag']['name']
+    line = read_line_at(rs_file, tag_lnum)
+    line = line.strip()
+    typedef['line'] = line
+    #  Parse rule:
+    #  1. split the line by '='
+    #  2. find the item ending with ';'
+    #  3. strip the last `;`
+    items = line.split('=')
+    filtered = list(filter(lambda x: x.endswith(';'), items))
+    if len(filtered) > 0:
+        #  = u32;
+        #  = [u8; 4];
+        value = filtered[0].strip()[:-1]
+        if value in ALIAS:
+            output[key] = ALIAS[value]
+        else:
+            if is_suspicious(value):
+                suspicious.append(value)
+            output[key] = value
 
 
 def parse_typedef():
     for typedef in typedef_list:
-        rs_file = typedef['fname']
-        tag_lnum = typedef['tag']['line']
-        key = typedef['tag']['name']
-        line = read_line_at(rs_file, tag_lnum)
-        line = line.strip()
-        typedef['line'] = line
-        #  Parse rule:
-        #  1. split the line by '='
-        #  2. find the item ending with ';'
-        #  3. strip the last `;`
-        items = line.split('=')
-        filtered = list(filter(lambda x: x.endswith(';'), items))
-        if len(filtered) > 0:
-            #  = u32;
-            #  = [u8; 4];
-            value = filtered[0].strip()[:-1]
-            if value in ALIAS:
-                output[key] = ALIAS[value]
-            else:
-                if is_suspicious(value):
-                    suspicious.append(value)
-                output[key] = value
+        parse_typedef_impl(typedef)
 
 
 def check_missing_types():
@@ -291,6 +323,19 @@ def check_missing_types():
     pp.pprint(missing)
 
 
+def parse_nested_elements():
+    for new_type in should_be_new_types:
+        kind = new_type['tag']['kind']
+        if kind == 'typedef':
+            parse_typedef_impl(new_type)
+        elif kind == 'struct':
+            parse_struct_impl(new_type)
+        elif kind == 'enum':
+            parse_enum_impl(new_type)
+        else:
+            pass
+
+
 #  typdef, enum, struct
 def build_types():
     triage()
@@ -298,6 +343,8 @@ def build_types():
     parse_enum()
     parse_struct()
     parse_typedef()
+
+    parse_nested_elements()
 
     check_missing_types()
 
