@@ -4,7 +4,7 @@ pub use log::*;
 #[macro_export]
 macro_rules! str {
     ( $x:expr ) => {
-        $crate::x_std::as_string(&$x)
+        $crate::x_std::Str(&$crate::x_std::as_string(&$x))
     };
 }
 
@@ -27,7 +27,7 @@ macro_rules! token {
 #[macro_export]
 macro_rules! try_addr {
     ( $x:expr ) => {{
-        $crate::x_std::as_addr(&$x)
+        $crate::x_std::Str(&$crate::x_std::as_addr(&$x))
     }};
 }
 
@@ -43,7 +43,7 @@ macro_rules! try_addr {
 #[macro_export]
 macro_rules! try_hex {
     ( $x:expr ) => {{
-        $crate::x_std::try_hex_or_str(&$x)
+        $crate::x_std::Str(&$crate::x_std::try_hex_or_str(&$x))
     }};
 }
 

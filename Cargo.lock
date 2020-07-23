@@ -7318,7 +7318,6 @@ dependencies = [
  "frame-support",
  "hex",
  "parity-scale-codec",
- "rustc-hex",
  "serde",
  "sp-std",
 ]

@@ -1,4 +1,14 @@
-use rustc_hex::ToHex;
+use sp_std::fmt;
+
+/// trick struct to wrap a string and just impl `Debug`.
+/// for runtime not support convert &[u8] to string, so that when print &[u8]
+/// in wasm just could use `{:?}`, thus we use `Str` to adapt it.
+pub struct Str<'a>(pub &'a String);
+impl<'a> fmt::Debug for Str<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// Converts a slice of bytes to a string.
 #[inline]
@@ -9,7 +19,7 @@ pub fn as_string(s: &[u8]) -> String {
 /// Converts a slice of bytes to a hex value, and then converts to a string with 0x prefix added.
 #[inline]
 pub fn as_string_hex(s: &[u8]) -> String {
-    format!("0x{}", s.to_hex::<String>())
+    format!("0x{}", hex::encode(s))
 }
 
 #[inline]
