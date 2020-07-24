@@ -78,12 +78,12 @@
         "online": "bool"
     },
     "Order": {
-        "already_filled": "Balance",
-        "executed_indices": "Vec<TradingHistoryIndex>",
-        "last_update_at": "BlockNumber",
         "props": "OrderProperty",
+        "status": "OrderStatus",
         "remaining": "Balance",
-        "status": "OrderStatus"
+        "executed_indices": "Vec<TradingHistoryIndex>",
+        "already_filled": "Balance",
+        "last_update_at": "BlockNumber"
     },
     "TradingPairInfo": {
         "latest_price": "Price",
@@ -205,17 +205,17 @@
     },
     "AssetRestrictions": "u32",
     "BTCAddress": {
-        "hash": "AddressHash",
         "kind": "Type",
-        "network": "Network"
+        "network": "Network",
+        "hash": "AddressHash"
     },
     "BTCHeader": {
-        "bits": "BTCCompact",
-        "merkle_root_hash": "H256",
-        "once": "u32",
+        "version": "u32",
         "previous_header_hash": "H256",
+        "merkle_root_hash": "H256",
         "time": "u32",
-        "version": "u32"
+        "bits": "BTCCompact",
+        "nonce": "u32"
     },
     "BTCNetwork": {
         "_enum": [
@@ -241,16 +241,15 @@
         "highest_bid": "Price",
         "lowest_offer": "Price"
     },
-    "MiningPower": "u128",
     "OrderProperty": {
-        "amount": "Amount",
-        "created_at": "BlockNumber",
         "id": "OrderId",
-        "order_type": "OrderType",
-        "pair_id": "TradingPairId",
-        "price": "Price",
         "side": "Side",
-        "submitter": "AccountId"
+        "price": "Price",
+        "amount": "Amount",
+        "pair_id": "TradingPairId",
+        "submitter": "AccountId",
+        "order_type": "OrderType",
+        "created_at": "BlockNumber"
     },
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",
@@ -261,5 +260,33 @@
     "Unbonded": {
         "locked_until": "BlockNumber",
         "value": "Balance"
-    }
+    },
+    "OutPoint": {
+        "hash": "H256",
+        "index": "u32"
+    },
+    "TransactionInput": {
+        "previous_output": "OutPoint",
+        "script_sig": "Bytes",
+        "sequence": "u32",
+        "script_witness": "Vec<Bytes>"
+    },
+    "TransactionOutput": {
+        "value": "u64",
+        "script_pubkey": "Bytes"
+    },
+    "BTCTransaction": {
+        "version": "i32",
+        "inputs": "Vec<TransactionInput>",
+        "outputs": "Vec<TransactionOutput>",
+        "lock_time": "u32"
+    },
+    "BTCAddrType": {
+        "_enum": [
+            "P2PKH",
+            "P2SH"
+        ]
+    },
+    "MiningPower": "u128",
+    "AddressHash": "H160"
 }
