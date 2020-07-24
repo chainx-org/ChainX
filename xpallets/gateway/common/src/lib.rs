@@ -11,12 +11,12 @@ pub mod trustees;
 pub mod types;
 pub mod utils;
 
-use sp_std::{convert::TryFrom, prelude::*, result};
+use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*, result};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
-    ensure,
+    ensure, IterableStorageMap,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -311,5 +311,11 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
     }
     fn get_binding_info(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
         Self::channel_binding_of(who, assert_id)
+    }
+}
+
+impl<T: Trait> Module<T> {
+    pub fn trustee_multisigs() -> BTreeMap<Chain, T::AccountId> {
+        TrusteeMultiSigAddr::<T>::iter().collect()
     }
 }

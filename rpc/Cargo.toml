@@ -45,4 +45,3 @@ xpallet-contracts-rpc-runtime-api = { path = "../xpallets/contracts/rpc/runtime-
 xpallet-transaction-payment-rpc = { path = "../xpallets/transaction-payment/rpc" }
 xpallet-gateway-records-rpc = { path = "../xpallets/gateway/records/rpc" }
 xpallet-gateway-common-rpc = { path = "../xpallets/gateway/common/rpc" }
-xpallet-gateway-bitcoin-rpc = { path = "../xpallets/gateway/bitcoin/rpc" }

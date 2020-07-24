@@ -2,7 +2,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::collections::btree_map::BTreeMap;
+use sp_runtime::DispatchError;
+use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 pub use xpallet_assets::Chain;
 pub use xpallet_gateway_common::{
@@ -21,5 +22,7 @@ sp_api::decl_runtime_apis! {
         fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps>;
 
         fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>>;
+
+        fn generate_trustee_session_info(chain: Chain, Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError>;
     }
 }

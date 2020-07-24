@@ -102,6 +102,23 @@ where
 
         Ok(result)
     }
+
+    fn generate_generic_trustee_session_info(
+        &self,
+        chain: Chain,
+        candidates: Vec<AccountId>,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<GenericTrusteeSessionInfo<AccountId>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+        let result = api
+            .generate_trustee_session_info(&at, chain, candidates)
+            .map_err(|e| runtime_error_into_rpc_err(e))?;
+        let result = result.map_err(runtime_error_into_rpc_err)?;
+
+        Ok(result)
+    }
 }
 
 impl<C, Block, AccountId> XGatewayCommonApi<<Block as BlockT>::Hash, AccountId>

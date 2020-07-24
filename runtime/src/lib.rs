@@ -23,7 +23,7 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         TransactionValidityError, ValidTransaction,
     },
-    ApplyExtrinsicResult, FixedPointNumber, ModuleId, Perbill, Permill, Perquintill,
+    ApplyExtrinsicResult, DispatchError, FixedPointNumber, ModuleId, Perbill, Permill, Perquintill,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
@@ -67,7 +67,11 @@ pub use xpallet_gateway_bitcoin::h256_conv_endian_from_str;
 pub use xpallet_gateway_bitcoin::{
     BTCHeader, BTCNetwork, BTCParams, BTCTxVerifier, Compact as BTCCompact, H256 as BTCHash,
 };
-pub use xpallet_gateway_common::{trustees, types::TrusteeInfoConfig};
+pub use xpallet_gateway_common::{
+    trustees,
+    types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig},
+};
+pub use xpallet_gateway_records::Withdrawal;
 pub use xpallet_protocol::*;
 pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
@@ -667,6 +671,38 @@ impl_runtime_apis! {
         }
         fn validator_info_of(who: AccountId) -> xpallet_mining_staking::ValidatorInfo<AccountId, xpallet_support::RpcBalance<Balance>, BlockNumber> {
             XStaking::validator_info_of(who)
+        }
+    }
+
+    impl xpallet_gateway_records_rpc_runtime_api::GatewayRecordsApi<Block, AccountId, Balance, BlockNumber> for Runtime {
+        fn withdrawal_list() -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>> {
+            XGatewayRecords::withdrawal_list()
+        }
+
+        fn withdrawal_list_by_chain(chain: Chain) -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>> {
+            XGatewayRecords::withdrawals_list_by_chain(chain)
+        }
+    }
+
+    impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId> for Runtime {
+        fn trustee_multisigs() -> BTreeMap<Chain, AccountId> {
+            XGatewayCommon::trustee_multisigs()
+        }
+
+        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps> {
+            XGatewayCommon::trustee_intention_props_of(who, chain)
+        }
+
+        fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>> {
+            let number = match XGatewayCommon::trustee_session_info_len(chain).checked_sub(1) {
+                Some(r) => r,
+                None => u32::max_value(),
+            };
+            XGatewayCommon::trustee_session_info_of(chain, number)
+        }
+
+        fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError> {
+            XGatewayCommon::try_generate_session_info(chain, candidates)
         }
     }
 

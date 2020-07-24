@@ -50,7 +50,7 @@ pub use btc_primitives::{Compact, H256, H264};
 use self::types::{
     BTCDepositCache, BTCHeaderIndex, BTCHeaderInfo, BTCRelayedTx, BTCTxResult, BTCTxState,
 };
-pub use self::types::{BTCParams, BTCTxVerifier,     BTCWithdrawalProposal };
+pub use self::types::{BTCParams, BTCTxVerifier, BTCWithdrawalProposal};
 use crate::trustee::get_trustee_address_pair;
 use crate::tx::{remove_pending_deposit, utils::addr2vecu8};
 
