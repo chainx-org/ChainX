@@ -674,7 +674,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_gateway_records_rpc_runtime_api::GatewayRecordsApi<Block, AccountId, Balance, BlockNumber> for Runtime {
+    impl xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<Block, AccountId, Balance, BlockNumber> for Runtime {
         fn withdrawal_list() -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>> {
             XGatewayRecords::withdrawal_list()
         }

@@ -12,19 +12,19 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use chainx_primitives::AssetId;
 use xpallet_assets::Chain;
 use xpallet_gateway_records_rpc_runtime_api::{
-    GatewayRecordsApi as GatewayRecordsRuntimeApi, Withdrawal, WithdrawalState,
+    Withdrawal, WithdrawalState, XGatewayRecordsApi as GatewayRecordsRuntimeApi,
 };
 use xpallet_support::try_addr;
 
-pub struct GatewayRecords<C, B> {
+pub struct XGatewayRecords<C, B> {
     client: Arc<C>,
     _marker: std::marker::PhantomData<B>,
 }
 
-impl<C, B> GatewayRecords<C, B> {
+impl<C, B> XGatewayRecords<C, B> {
     /// Create new `Contracts` with the given reference to the client.
     pub fn new(client: Arc<C>) -> Self {
-        GatewayRecords {
+        XGatewayRecords {
             client,
             _marker: Default::default(),
         }
@@ -32,7 +32,7 @@ impl<C, B> GatewayRecords<C, B> {
 }
 
 #[rpc]
-pub trait GatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
+pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
     #[rpc(name = "xgatewayrecords_withdrawalList")]
     fn withdrawal_list(
         &self,
@@ -55,8 +55,8 @@ pub trait GatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
 }
 
 impl<C, Block, AccountId, Balance, BlockNumber>
-    GatewayRecordsApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber>
-    for GatewayRecords<C, Block>
+    XGatewayRecordsApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber>
+    for XGatewayRecords<C, Block>
 where
     C: sp_api::ProvideRuntimeApi<Block>,
     C: HeaderBackend<Block>,

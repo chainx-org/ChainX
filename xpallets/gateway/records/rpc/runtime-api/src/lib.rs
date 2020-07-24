@@ -9,7 +9,7 @@ pub use xpallet_assets::Chain;
 pub use xpallet_gateway_records::{Withdrawal, WithdrawalState};
 
 sp_api::decl_runtime_apis! {
-    pub trait GatewayRecordsApi<AccountId, Balance, BlockNumber> where
+    pub trait XGatewayRecordsApi<AccountId, Balance, BlockNumber> where
         AccountId: Codec,
         Balance: Codec,
         BlockNumber: Codec,
