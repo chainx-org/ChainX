@@ -39,6 +39,7 @@ pallet-im-online = { git = "https://github.com/paritytech/substrate.git", tag = 
 
 chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
+xp-io = { path = "../primitives/io" }
 chainx-rpc = { path = "../rpc" }
 
 xpallet-protocol = { path = "../xpallets/protocol" }

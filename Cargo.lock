@@ -508,6 +508,7 @@ dependencies = [
  "sp-transaction-pool",
  "structopt",
  "substrate-build-script-utils",
+ "xp-io",
  "xpallet-protocol",
 ]
 
