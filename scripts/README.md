@@ -22,7 +22,7 @@ The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown t
 
 ### Run
 
-Firstly, modify `NEW_TYPES` in `types_gen.py`, JS is unable to comprehend these types if you define them explicitly.
+Firstly, modify `NEW_TYPES` in `types_gen.py` if you find JS reports new unknown types.
 
 ```bash
 $ cd scripts
