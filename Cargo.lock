@@ -572,6 +572,7 @@ dependencies = [
  "frame-system",
  "frame-system-rpc-runtime-api",
  "pallet-aura",
+ "pallet-authorship",
  "pallet-grandpa",
  "pallet-im-online",
  "pallet-multisig",

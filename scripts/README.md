@@ -12,6 +12,7 @@ The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown t
 - Python 3.6+
 - https://github.com/universal-ctags/ctags
 - https://github.com/sharkdp/fd
+- The rust source files have been formatted using `rustfmt`.
 
 ### Limitations
 
@@ -20,6 +21,8 @@ The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown t
 - Can not handle the type defined in the imported libraries.
 
 ### Run
+
+Firstly, modify `NEW_TYPES` in `types_gen.py` if you find JS reports new unknown types.
 
 ```bash
 $ cd scripts
