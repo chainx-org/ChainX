@@ -35,6 +35,13 @@ pub trait XGatewayCommonApi<BlockHash, AccountId> {
         &self,
         at: Option<BlockHash>,
     ) -> Result<trustees::bitcoin::BTCTrusteeSessionInfo<AccountId>>;
+
+    #[rpc(name = "xgatewaycommon_bitcoinGenerateTrusteeSessionInfo")]
+    fn btc_generate_trustee_session_info(
+        &self,
+        candidates: Vec<AccountId>,
+        at: Option<BlockHash>,
+    ) -> Result<trustees::bitcoin::BTCTrusteeSessionInfo<AccountId>>;
 }
 
 /// A struct that implements the [`XStakingApi`].
@@ -160,6 +167,19 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<trustees::bitcoin::BTCTrusteeSessionInfo<AccountId>> {
         let info = self.generic_trustee_session_info(Chain::Bitcoin, at)?;
+        trustees::bitcoin::BTCTrusteeSessionInfo::<_>::try_from(info).map_err(|_| RpcError {
+            code: ErrorCode::ServerError(RUNTIME_ERROR + 2),
+            message: "Decode generic data error, should not happen".into(),
+            data: None,
+        })
+    }
+
+    fn btc_generate_trustee_session_info(
+        &self,
+        candidates: Vec<AccountId>,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<trustees::bitcoin::BTCTrusteeSessionInfo<AccountId>> {
+        let info = self.generate_generic_trustee_session_info(Chain::Bitcoin, candidates, at)?;
         trustees::bitcoin::BTCTrusteeSessionInfo::<_>::try_from(info).map_err(|_| RpcError {
             code: ErrorCode::ServerError(RUNTIME_ERROR + 2),
             message: "Decode generic data error, should not happen".into(),
