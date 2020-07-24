@@ -231,11 +231,11 @@
     },
     "OrderInfo": "Order",
     "AssetInfoForRpc": {
-        "chain": "Chain",
-        "desc": "String",
-        "precision": "Precision",
         "token": "String",
-        "token_name": "String"
+        "token_name": "String",
+        "chain": "Chain",
+        "precision": "Precision",
+        "desc": "String"
     },
     "Handicap": {
         "highest_bid": "Price",
@@ -253,8 +253,8 @@
         "submitter": "AccountId"
     },
     "TotalAssetInfoForRpc": {
-        "balance": "BTreeMap<AssetType, String>",
         "info": "AssetInfoForRpc",
+        "balance": "BTreeMap<AssetType, String>",
         "isOnline": "bool",
         "restrictions": "AssetRestrictions"
     },
