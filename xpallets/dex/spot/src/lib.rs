@@ -80,7 +80,7 @@ decl_storage! {
         pub TradingPairOf get(fn trading_pair_of):
             map hasher(twox_64_concat) TradingPairId => Option<TradingPairProfile>;
 
-        /// (latest price, average price, last last update height) of trading pair
+        /// (latest price, last update height) of trading pair
         pub TradingPairInfoOf get(fn trading_pair_info_of):
             map hasher(twox_64_concat) TradingPairId => Option<TradingPairInfo<T::Price, T::BlockNumber>>;
 

@@ -421,6 +421,17 @@ impl pallet_offences::Trait for Runtime {
     type WeightSoftLimit = OffencesWeightSoftLimit;
 }
 
+parameter_types! {
+    pub const UncleGenerations: BlockNumber = 5;
+}
+
+impl pallet_authorship::Trait for Runtime {
+    type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
+    type UncleGenerations = UncleGenerations;
+    type FilterUncle = ();
+    type EventHandler = (ImOnline);
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -430,6 +441,7 @@ construct_runtime!(
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+        Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
         Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         Utility: pallet_utility::{Module, Call, Event},
