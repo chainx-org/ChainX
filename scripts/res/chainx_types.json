@@ -1,35 +1,10 @@
 {
-    "AddrStr": "Text",
-    "AssetId": "u32",
-    "AssetInfo": {
-        "chain": "Chain",
-        "desc": "Desc",
-        "precision": "Precision",
-        "token": "Token",
-        "token_name": "Token"
+    "SignedBalance": {
+        "_enum": {
+            "Negative": "Balance",
+            "Positive": "Balance"
+        }
     },
-    "AssetInfoForRpc": {
-        "chain": "Chain",
-        "desc": "String",
-        "precision": "Precision",
-        "token": "String",
-        "token_name": "String"
-    },
-    "AssetLedger": {
-        "last_total_mining_weight": "MiningWeight",
-        "last_total_mining_weight_update": "BlockNumber"
-    },
-    "AssetRestriction": {
-        "_enum": [
-            "Move",
-            "Transfer",
-            "Deposit",
-            "Withdraw",
-            "DestroyWithdrawal",
-            "DestroyFree"
-        ]
-    },
-    "AssetRestrictions": "u32",
     "AssetType": {
         "_enum": [
             "Free",
@@ -43,6 +18,192 @@
             "LockedFee"
         ]
     },
+    "XRC20Selector": {
+        "_enum": [
+            "BalanceOf",
+            "TotalSupply",
+            "Name",
+            "Symbol",
+            "Decimals",
+            "Issue",
+            "Destroy"
+        ]
+    },
+    "OrderType": {
+        "_enum": [
+            "Limit",
+            "Market"
+        ]
+    },
+    "Side": {
+        "_enum": [
+            "Buy",
+            "Sell"
+        ]
+    },
+    "Memo": "Text",
+    "AssetInfo": {
+        "token": "Token",
+        "token_name": "Token",
+        "chain": "Chain",
+        "precision": "Precision",
+        "desc": "Desc"
+    },
+    "BTCHeaderInfo": {
+        "header": "BTCHeader",
+        "height": "u32",
+        "confirmed": "bool",
+        "txid_list": "Vec<H256>"
+    },
+    "BTCTxInfo": {
+        "raw_tx": "BTCTransaction",
+        "tx_type": "BTCTxType",
+        "height": "u32"
+    },
+    "BTCParams": {
+        "max_bits": "u32",
+        "block_max_future": "u32",
+        "target_timespan_seconds": "u32",
+        "target_spacing_seconds": "u32",
+        "retargeting_factor": "u32",
+        "retargeting_interval": "u32",
+        "min_timespan": "u32",
+        "max_timespan": "u32"
+    },
+    "TradingPairProfile": {
+        "id": "TradingPairId",
+        "currency_pair": "CurrencyPair",
+        "pip_precision": "u32",
+        "tick_precision": "u32",
+        "online": "bool"
+    },
+    "Order": {
+        "already_filled": "Balance",
+        "executed_indices": "Vec<TradingHistoryIndex>",
+        "last_update_at": "BlockNumber",
+        "props": "OrderProperty",
+        "remaining": "Balance",
+        "status": "OrderStatus"
+    },
+    "TradingPairInfo": {
+        "latest_price": "Price",
+        "last_updated": "BlockNumber"
+    },
+    "OrderExecutedInfo": {
+        "trading_history_idx": "TradingHistoryIndex",
+        "pair_id": "TradingPairId",
+        "price": "Price",
+        "maker": "AccountId",
+        "taker": "AccountId",
+        "maker_order_id": "OrderId",
+        "taker_order_id": "OrderId",
+        "turnover": "Balance",
+        "executed_at": "BlockNumber"
+    },
+    "AssetLedger": {
+        "last_total_mining_weight": "MiningWeight",
+        "last_total_mining_weight_update": "BlockNumber"
+    },
+    "MinerLedger": {
+        "last_mining_weight": "MiningWeight",
+        "last_mining_weight_update": "BlockNumber",
+        "last_claim": "Option<BlockNumber>"
+    },
+    "ClaimRestriction": {
+        "staking_requirement": "StakingRequirement",
+        "frequency_limit": "BlockNumber"
+    },
+    "BondRequirement": {
+        "self_bonded": "Balance",
+        "total": "Balance"
+    },
+    "ValidatorLedger": {
+        "total": "Balance",
+        "last_total_vote_weight": "WeightType",
+        "last_total_vote_weight_update": "BlockNumber"
+    },
+    "NominatorLedger": {
+        "nomination": "Balance",
+        "last_vote_weight": "WeightType",
+        "last_vote_weight_update": "BlockNumber"
+    },
+    "ValidatorProfile": {
+        "registered_at": "BlockNumber",
+        "is_chilled": "bool",
+        "last_chilled": "Option<BlockNumber>"
+    },
+    "NominatorProfile": {
+        "last_rebond": "Option<BlockNumber>",
+        "unbonded_chunks": "Vec<Unbonded>"
+    },
+    "GlobalDistribution": {
+        "treasury": "u32",
+        "mining": "u32"
+    },
+    "MiningDistribution": {
+        "asset": "u32",
+        "staking": "u32"
+    },
+    "UnbondedIndex": "u32",
+    "Desc": "Text",
+    "Token": "Text",
+    "AddrStr": "Text",
+    "Selector": "[u8; 4]",
+    "HandicapInfo": "Handicap",
+    "Price": "Balance",
+    "OrderId": "u64",
+    "TradingPairId": "u32",
+    "TradingHistoryIndex": "u64",
+    "PriceFluctuation": "u32",
+    "FixedAssetPower": "u32",
+    "StakingRequirement": "u32",
+    "Precision": "u8",
+    "BTCTxType": {
+        "_enum": [
+            "Withdrawal",
+            "Deposit",
+            "HotAndCold",
+            "TrusteeTransition",
+            "Lock",
+            "Unlock",
+            "Irrelevance"
+        ]
+    },
+    "CurrencyPair": {
+        "base": "AssetId",
+        "quote": "AssetId"
+    },
+    "OrderStatus": {
+        "_enum": [
+            "Created",
+            "ParitialFill",
+            "Filled",
+            "ParitialFillAndCanceled",
+            "Canceled"
+        ]
+    },
+    "MiningWeight": "u128",
+    "WeightType": "u128",
+    "AssetId": "u32",
+    "Chain": {
+        "_enum": [
+            "ChainX",
+            "Bitcoin",
+            "Ethereum",
+            "Polkadot"
+        ]
+    },
+    "AssetRestriction": {
+        "_enum": [
+            "Move",
+            "Transfer",
+            "Deposit",
+            "Withdraw",
+            "DestroyWithdrawal",
+            "DestroyFree"
+        ]
+    },
+    "AssetRestrictions": "u32",
     "BTCAddress": {
         "hash": "AddressHash",
         "kind": "Type",
@@ -56,123 +217,31 @@
         "time": "u32",
         "version": "u32"
     },
-    "BTCHeaderInfo": {
-        "confirmed": "bool",
-        "header": "BTCHeader",
-        "height": "u32",
-        "txid_list": "Vec<H256>"
-    },
     "BTCNetwork": {
         "_enum": [
             "Mainnet",
             "Testnet"
         ]
     },
-    "BTCParams": {
-        "block_max_future": "u32",
-        "max_bits": "u32",
-        "max_timespan": "u32",
-        "min_timespan": "u32",
-        "retargeting_factor": "u32",
-        "retargeting_interval": "u32",
-        "target_spacing_seconds": "u32",
-        "target_timespan_seconds": "u32"
-    },
-    "BTCTxInfo": {
-        "height": "u32",
-        "raw_tx": "BTCTransaction",
-        "tx_type": "BTCTxType"
-    },
-    "BTCTxType": {
-        "_enum": [
-            "Withdrawal",
-            "Deposit",
-            "HotAndCold",
-            "TrusteeTransition",
-            "Lock",
-            "Unlock",
-            "Irrelevance"
-        ]
-    },
-    "BondRequirement": {
-        "self_bonded": "Balance",
-        "total": "Balance"
-    },
-    "Chain": {
-        "_enum": [
-            "ChainX",
-            "Bitcoin",
-            "Ethereum",
-            "Polkadot"
-        ]
-    },
-    "ClaimRestriction": {
-        "frequency_limit": "BlockNumber",
-        "staking_requirement": "StakingRequirement"
-    },
-    "CurrencyPair": {
-        "base": "AssetId",
-        "quote": "AssetId"
-    },
-    "Desc": "Text",
-    "FixedAssetPower": "u32",
-    "GlobalDistribution": {
-        "mining": "u32",
-        "treasury": "u32"
-    },
-    "Handicap": {
-        "highest_bid": "Price",
-        "lowest_offer": "Price"
-    },
-    "HandicapInfo": "Handicap",
-    "Memo": "Text",
-    "MinerLedger": {
-        "last_claim": "Option<BlockNumber>",
-        "last_mining_weight": "MiningWeight",
-        "last_mining_weight_update": "BlockNumber"
-    },
-    "MiningDistribution": {
-        "asset": "u32",
-        "staking": "u32"
-    },
-    "MiningPower": "u128",
-    "MiningWeight": "u128",
     "NetworkType": {
         "_enum": [
             "Mainnet",
             "Testnet"
         ]
     },
-    "NominatorLedger": {
-        "last_vote_weight": "WeightType",
-        "last_vote_weight_update": "BlockNumber",
-        "nomination": "Balance"
-    },
-    "NominatorProfile": {
-        "last_rebond": "Option<BlockNumber>",
-        "unbonded_chunks": "Vec<Unbonded>"
-    },
-    "Order": {
-        "already_filled": "Balance",
-        "executed_indices": "Vec<TradingHistoryIndex>",
-        "last_update_at": "BlockNumber",
-        "props": "OrderProperty",
-        "remaining": "Balance",
-        "status": "OrderStatus"
-    },
-    "OrderExecutedInfo": {
-        "executed_at": "BlockNumber",
-        "maker": "AccountId",
-        "maker_order_id": "OrderId",
-        "pair_id": "TradingPairId",
-        "price": "Price",
-        "taker": "AccountId",
-        "taker_order_id": "OrderId",
-        "trading_history_idx": "TradingHistoryIndex",
-        "turnover": "Balance"
-    },
-    "OrderId": "u64",
     "OrderInfo": "Order",
+    "AssetInfoForRpc": {
+        "chain": "Chain",
+        "desc": "String",
+        "precision": "Precision",
+        "token": "String",
+        "token_name": "String"
+    },
+    "Handicap": {
+        "highest_bid": "Price",
+        "lowest_offer": "Price"
+    },
+    "MiningPower": "u128",
     "OrderProperty": {
         "amount": "Amount",
         "created_at": "BlockNumber",
@@ -183,83 +252,14 @@
         "side": "Side",
         "submitter": "AccountId"
     },
-    "OrderStatus": {
-        "_enum": [
-            "Created",
-            "ParitialFill",
-            "Filled",
-            "ParitialFillAndCanceled",
-            "Canceled"
-        ]
-    },
-    "OrderType": {
-        "_enum": [
-            "Limit",
-            "Market"
-        ]
-    },
-    "Precision": "u8",
-    "Price": "Balance",
-    "PriceFluctuation": "u32",
-    "Selector": "[u8; 4]",
-    "Side": {
-        "_enum": [
-            "Buy",
-            "Sell"
-        ]
-    },
-    "SignedBalance": {
-        "_enum": {
-            "Negative": "Balance",
-            "Positive": "Balance"
-        }
-    },
-    "StakingRequirement": "u32",
-    "Token": "Text",
     "TotalAssetInfoForRpc": {
         "balance": "BTreeMap<AssetType, String>",
         "info": "AssetInfoForRpc",
         "isOnline": "bool",
         "restrictions": "AssetRestrictions"
     },
-    "TradingHistoryIndex": "u64",
-    "TradingPairId": "u32",
-    "TradingPairInfo": {
-        "last_updated": "BlockNumber",
-        "latest_price": "Price"
-    },
-    "TradingPairProfile": {
-        "currency_pair": "CurrencyPair",
-        "id": "TradingPairId",
-        "online": "bool",
-        "pip_precision": "u32",
-        "tick_precision": "u32"
-    },
     "Unbonded": {
         "locked_until": "BlockNumber",
         "value": "Balance"
-    },
-    "UnbondedIndex": "u32",
-    "ValidatorLedger": {
-        "last_total_vote_weight": "WeightType",
-        "last_total_vote_weight_update": "BlockNumber",
-        "total": "Balance"
-    },
-    "ValidatorProfile": {
-        "is_chilled": "bool",
-        "last_chilled": "Option<BlockNumber>",
-        "registered_at": "BlockNumber"
-    },
-    "WeightType": "u128",
-    "XRC20Selector": {
-        "_enum": [
-            "BalanceOf",
-            "TotalSupply",
-            "Name",
-            "Symbol",
-            "Decimals",
-            "Issue",
-            "Destroy"
-        ]
     }
 }

@@ -426,7 +426,9 @@ def build_rpc():
 
 def write_json(output_json, output_fname):
     with open(output_fname, 'w') as outfile:
-        json.dump(output_json, outfile, indent=4, sort_keys=True)
+        #  NOTE: Do not enable sort_keys as the fields are order sensitive
+        #  regarding the encode/decode.
+        json.dump(output_json, outfile, indent=4, sort_keys=False)
 
 
 def write_types_and_rpc():

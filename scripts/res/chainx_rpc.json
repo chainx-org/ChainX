@@ -1,17 +1,6 @@
 {
     "rpc": {
         "xassets": {
-            "getAssets": {
-                "description": "get all assets balance and infos",
-                "params": [
-                    {
-                        "isOptional": true,
-                        "name": "at",
-                        "type": "Hash"
-                    }
-                ],
-                "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
-            },
             "getAssetsByAccount": {
                 "description": "Some description",
                 "params": [
@@ -20,15 +9,37 @@
                         "type": "AccountId"
                     },
                     {
-                        "isOptional": true,
                         "name": "at",
-                        "type": "Hash"
+                        "type": "Hash",
+                        "isOptional": true
                     }
                 ],
                 "type": "BTreeMap<AssetId, BTreeMap<AssetType, String>>"
+            },
+            "getAssets": {
+                "description": "get all assets balance and infos",
+                "params": [
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
             }
         },
         "xstaking": {
+            "getValidators": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>"
+            },
             "getValidatorByAccount": {
                 "description": "Some description",
                 "params": [
@@ -37,23 +48,12 @@
                         "type": "AccountId"
                     },
                     {
-                        "isOptional": true,
                         "name": "at",
-                        "type": "Hash"
+                        "type": "Hash",
+                        "isOptional": true
                     }
                 ],
                 "type": "ValidatorInfo<AccountId, RpcBalance, BlockNumber>"
-            },
-            "getValidators": {
-                "description": "Some description",
-                "params": [
-                    {
-                        "isOptional": true,
-                        "name": "at",
-                        "type": "Hash"
-                    }
-                ],
-                "type": "Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>"
             }
         }
     }

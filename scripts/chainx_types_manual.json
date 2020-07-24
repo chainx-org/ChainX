@@ -1,10 +1,10 @@
 {
     "AssetInfoForRpc": {
-        "chain": "Chain",
-        "desc": "String",
-        "precision": "Precision",
         "token": "String",
-        "token_name": "String"
+        "token_name": "String",
+        "chain": "Chain",
+        "precision": "Precision",
+        "desc": "String"
     },
     "AssetRestriction": {
         "_enum": [
@@ -88,8 +88,8 @@
         }
     },
     "TotalAssetInfoForRpc": {
-        "balance": "BTreeMap<AssetType, String>",
         "info": "AssetInfoForRpc",
+        "balance": "BTreeMap<AssetType, String>",
         "isOnline": "bool",
         "restrictions": "AssetRestrictions"
     },
