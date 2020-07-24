@@ -2,6 +2,8 @@
 
 pub mod base58;
 mod macros;
+#[cfg(feature = "std")]
+pub mod serde_impl;
 pub mod traits;
 mod u128;
 #[cfg(feature = "std")]
