@@ -199,7 +199,7 @@
         ]
     },
     "Precision": "u8",
-    "Price": "u64",
+    "Price": "Balance",
     "PriceFluctuation": "u32",
     "Selector": "[u8; 4]",
     "Side": {

@@ -107,7 +107,6 @@ def read_struct_or_enum(fname, lnum):
     with open(fname, 'r') as reader:
         lines = reader.readlines()
         type_lines = []
-        #  TODO: include the nested Struct
         for i in range(lnum - 1, len(lines)):
             line = lines[i].strip()
             if not line:
@@ -130,13 +129,23 @@ def read_struct_or_enum(fname, lnum):
 
 WELL_KNOWN_TYPES = ['AccountId', 'Balance', 'BlockNumber']
 
+# Find all *.rs in ChainX project, following the gitignore rule.
 rs_files = execute(['fd', '-e', 'rs'])
 
 enum_list = []
 struct_list = []
 typedef_list = []
 
+output = {}
+
+# The generated content for this item might be problematic.
+suspicious = []
+
 maybe_new_types = {}
+
+# New types discovered positively in the processing, a subset of
+# maybe_new_types.
+positive_new_types = []
 
 
 #  Triage all the new types using ctags
@@ -180,11 +189,6 @@ def triage():
                         enum_list.append(item)
 
 
-output = {}
-
-suspicious = []
-
-
 #  The parser may not work in such cases:
 #  ..: 'Positive(T::Balance)',
 #  ..: 'Negative(T::Balance)',
@@ -206,14 +210,6 @@ def parse_enum_impl(enum):
     output[key] = {"_enum": fields}
 
 
-def parse_enum():
-    for enum in enum_list:
-        parse_enum_impl(enum)
-
-
-should_be_new_types = []
-
-
 def parse_non_tuple_struct(lines, key):
     fields = lines[1:-1]
     fields_dict = {}
@@ -225,8 +221,10 @@ def parse_non_tuple_struct(lines, key):
                 var = item[:-1]
             if item.endswith(','):
                 ty = item[:-1]
-                if ty in maybe_new_types:
-                    should_be_new_types.append(maybe_new_types[ty])
+                # Try finding the nested structs/enums/typedefs
+                if (ty in maybe_new_types
+                        and maybe_new_types[ty] not in positive_new_types):
+                    positive_new_types.append(maybe_new_types[ty])
         fields_dict[var] = ty
     output[key] = fields_dict
 
@@ -271,11 +269,6 @@ def parse_struct_impl(struct):
         parse_non_tuple_struct(lines, key)
 
 
-def parse_struct():
-    for struct in struct_list:
-        parse_struct_impl(struct)
-
-
 def parse_typedef_impl(typedef):
     rs_file = typedef['fname']
     tag_lnum = typedef['tag']['line']
@@ -301,6 +294,16 @@ def parse_typedef_impl(typedef):
             output[key] = value
 
 
+def parse_enum():
+    for enum in enum_list:
+        parse_enum_impl(enum)
+
+
+def parse_struct():
+    for struct in struct_list:
+        parse_struct_impl(struct)
+
+
 def parse_typedef():
     for typedef in typedef_list:
         parse_typedef_impl(typedef)
@@ -324,7 +327,7 @@ def check_missing_types():
 
 
 def parse_nested_elements():
-    for new_type in should_be_new_types:
+    for new_type in positive_new_types:
         kind = new_type['tag']['kind']
         if kind == 'typedef':
             parse_typedef_impl(new_type)
@@ -448,6 +451,9 @@ def write_types_and_rpc():
     #  Inject rpc decoration
     rpc_output['rpc'] = rpc_dict
     write_json(rpc_output, 'res/chainx_rpc.json')
+
+    # Write back the manual json to make it sorted.
+    write_json(MANUAL, 'chainx_types_manual.json')
 
 
 def main():

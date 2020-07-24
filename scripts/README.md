@@ -12,6 +12,7 @@ The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown t
 - Python 3.6+
 - https://github.com/universal-ctags/ctags
 - https://github.com/sharkdp/fd
+- The rust source files have been formatted using `rustfmt`.
 
 ### Limitations
 
