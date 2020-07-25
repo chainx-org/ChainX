@@ -72,7 +72,6 @@
         "locked_until": "BlockNumber",
         "value": "Balance"
     },
-
     "WithdrawalState": {
         "_enum": [
             "Applying",
@@ -90,6 +89,10 @@
         "addr": "AddrStr",
         "ext": "Memo",
         "height": "BlockNumber"
+    },
+    "WithdrawalLimit": {
+        "minimal_withdrawal": "Balance",
+        "fee": "Balance"
     },
     "TrusteeInfoConfig": {
         "min_trustee_count": "u32",

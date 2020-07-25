@@ -261,6 +261,10 @@
         "ext": "Memo",
         "height": "BlockNumber"
     },
+    "WithdrawalLimit": {
+        "minimalWithdrawal": "Balance",
+        "fee": "Balance"
+    },
     "TrusteeInfoConfig": {
         "minTrusteeCount": "u32",
         "maxTrusteeCount": "u32"
