@@ -184,6 +184,7 @@ decl_storage! {
         pub TxState get(fn tx_state): map hasher(identity) H256 => Option<BtcTxState>;
         /// unclaimed deposit info, addr => tx_hash, btc value,
         pub PendingDeposits get(fn pending_deposits): map hasher(blake2_128_concat) BtcAddress => Vec<BtcDepositCache>;
+        // todo may move binding to common
         ///
         pub AddressBinding get(fn address_binding): map hasher(blake2_128_concat) BtcAddress => Option<T::AccountId>;
         ///
