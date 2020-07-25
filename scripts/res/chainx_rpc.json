@@ -28,6 +28,102 @@
                 "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
             }
         },
+        "xgatewaycommon": {
+            "trusteeMultisigs": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "at",
+                        "type": "Option<BlockHash>)"
+                    }
+                ],
+                "type": "BTreeMap<Chain, AccountId>"
+            },
+            "bitcoinTrusteeProperties": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BtcTrusteeIntentionProps"
+            },
+            "bitcoinTrusteeSessionInfo": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BtcTrusteeSessionInfo<AccountId>"
+            },
+            "bitcoinGenerateTrusteeSessionInfo": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "candidates",
+                        "type": "Vec<AccountId>"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BtcTrusteeSessionInfo<AccountId>"
+            }
+        },
+        "xgatewayrecords": {
+            "withdrawalList": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>"
+            },
+            "withdrawalListByChain": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "chain",
+                        "type": "Chain"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>"
+            },
+            "pendingWithdrawalList": {
+                "description": "Some description",
+                "params": [
+                    {
+                        "name": "chain",
+                        "type": "Chain"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>"
+            }
+        },
         "xstaking": {
             "getValidators": {
                 "description": "Some description",

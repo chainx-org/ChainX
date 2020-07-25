@@ -49,27 +49,6 @@
         "precision": "Precision",
         "desc": "Desc"
     },
-    "BTCHeaderInfo": {
-        "header": "BTCHeader",
-        "height": "u32",
-        "confirmed": "bool",
-        "txidList": "Vec<H256>"
-    },
-    "BTCTxInfo": {
-        "rawTx": "BTCTransaction",
-        "txType": "BTCTxType",
-        "height": "u32"
-    },
-    "BTCParams": {
-        "maxBits": "u32",
-        "blockMaxFuture": "u32",
-        "targetTimespanSeconds": "u32",
-        "targetSpacingSeconds": "u32",
-        "retargetingFactor": "u32",
-        "retargetingInterval": "u32",
-        "minTimespan": "u32",
-        "maxTimespan": "u32"
-    },
     "TradingPairProfile": {
         "id": "TradingPairId",
         "currencyPair": "CurrencyPair",
@@ -99,6 +78,20 @@
         "takerOrderId": "OrderId",
         "turnover": "Balance",
         "executedAt": "BlockNumber"
+    },
+    "BtcHeaderInfo": {
+        "header": "BtcHeader",
+        "height": "u32"
+    },
+    "BtcParams": {
+        "maxBits": "u32",
+        "blockMaxFuture": "u32",
+        "targetTimespanSeconds": "u32",
+        "targetSpacingSeconds": "u32",
+        "retargetingFactor": "u32",
+        "retargetingInterval": "u32",
+        "minTimespan": "u32",
+        "maxTimespan": "u32"
     },
     "AssetLedger": {
         "lastTotalMiningWeight": "MiningWeight",
@@ -158,17 +151,6 @@
     "FixedAssetPower": "u32",
     "StakingRequirement": "u32",
     "Precision": "u8",
-    "BTCTxType": {
-        "_enum": [
-            "Withdrawal",
-            "Deposit",
-            "HotAndCold",
-            "TrusteeTransition",
-            "Lock",
-            "Unlock",
-            "Irrelevance"
-        ]
-    },
     "CurrencyPair": {
         "base": "AssetId",
         "quote": "AssetId"
@@ -204,20 +186,20 @@
         ]
     },
     "AssetRestrictions": "u32",
-    "BTCAddress": {
+    "BtcAddress": {
         "kind": "Type",
-        "network": "Network",
+        "network": "BtcNetwork",
         "hash": "AddressHash"
     },
-    "BTCHeader": {
+    "BtcHeader": {
         "version": "u32",
         "previousHeaderHash": "H256",
         "merkleRootHash": "H256",
         "time": "u32",
-        "bits": "BTCCompact",
+        "bits": "BtcCompact",
         "nonce": "u32"
     },
-    "BTCNetwork": {
+    "BtcNetwork": {
         "_enum": [
             "Mainnet",
             "Testnet"
@@ -275,13 +257,13 @@
         "value": "u64",
         "scriptPubkey": "Bytes"
     },
-    "BTCTransaction": {
+    "BtcTransaction": {
         "version": "i32",
         "inputs": "Vec<TransactionInput>",
         "outputs": "Vec<TransactionOutput>",
         "lockTime": "u32"
     },
-    "BTCAddrType": {
+    "BtcAddrType": {
         "_enum": [
             "P2PKH",
             "P2SH"

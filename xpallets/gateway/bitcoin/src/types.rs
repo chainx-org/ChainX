@@ -36,13 +36,6 @@ pub struct BtcHeaderIndex {
     pub height: u32,
 }
 
-// #[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
-// pub struct BtcTxInfo {
-//     pub raw_tx: BtcTransaction,
-//     pub tx_type: BtcTxType,
-//     pub height: u32,
-// }
-
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum BtcTxType {

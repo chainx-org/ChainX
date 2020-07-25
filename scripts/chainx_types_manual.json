@@ -16,20 +16,20 @@
             "DestroyFree"
         ]
     },
-    "BTCAddress": {
+    "BtcAddress": {
         "kind": "Type",
-        "network": "Network",
+        "network": "BtcNetwork",
         "hash": "AddressHash"
     },
-    "BTCHeader": {
+    "BtcHeader": {
         "version": "u32",
         "previous_header_hash": "H256",
         "merkle_root_hash": "H256",
         "time": "u32",
-        "bits": "BTCCompact",
+        "bits": "BtcCompact",
         "nonce": "u32"
     },
-    "BTCNetwork": {
+    "BtcNetwork": {
         "_enum": [
             "Mainnet",
             "Testnet"
@@ -105,13 +105,13 @@
         "value": "u64",
         "script_pubkey": "Bytes"
     },
-    "BTCTransaction": {
+    "BtcTransaction": {
         "version": "i32",
         "inputs": "Vec<TransactionInput>",
         "outputs": "Vec<TransactionOutput>",
         "lock_time": "u32"
     },
-    "BTCAddrType": {
+    "BtcAddrType": {
         "_enum": [
             "P2PKH",
             "P2SH"
