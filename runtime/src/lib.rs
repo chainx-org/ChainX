@@ -50,8 +50,8 @@ pub use frame_support::{
 pub use pallet_timestamp::Call as TimestampCall;
 
 pub use chainx_primitives::{
-    AccountId, AccountIndex, AssetId, Balance, BlockNumber, Hash, Index, Moment, Name, Signature,
-    Token,
+    AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, Hash, Index, Memo, Moment,
+    Name, Signature, Token,
 };
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
@@ -59,6 +59,7 @@ use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 // xpallet re-exports
 pub use xpallet_assets::{
     AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
+    WithdrawalLimit,
 };
 pub use xpallet_contracts::Schedule as ContractsSchedule;
 pub use xpallet_contracts_primitives::XRC20Selector;
@@ -697,7 +698,15 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId> for Runtime {
+    impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance> for Runtime {
+        fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
+            XGatewayCommon::withdrawal_limit(&asset_id)
+        }
+
+        fn verify_withdrawal(asset_id: AssetId, value: Balance, addr: AddrStr, memo: Memo) -> Result<(), DispatchError> {
+            XGatewayCommon::verify_withdrawal(asset_id, value, &addr, &memo)
+        }
+
         fn trustee_multisigs() -> BTreeMap<Chain, AccountId> {
             XGatewayCommon::trustee_multisigs()
         }

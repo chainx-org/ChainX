@@ -82,7 +82,7 @@ where
             BlockNumber,
         >,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId>,
+        xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         xpallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     <<Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api as sp_api::ApiErrorExt>::Error:

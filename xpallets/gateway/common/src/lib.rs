@@ -202,7 +202,7 @@ impl<T: Trait> Module<T> {
             xpallet_assets::Error::<T>::ActionNotAllowed,
         );
 
-        Self::verify_withdrawal(asset_id, value, &addr, ext.as_ref())?;
+        Self::verify_withdrawal(asset_id, value, &addr, &ext)?;
 
         xpallet_gateway_records::Module::<T>::withdrawal(&who, &asset_id, value, addr, ext)?;
         Ok(())
@@ -224,8 +224,10 @@ impl<T: Trait> Module<T> {
         asset_id: AssetId,
         value: T::Balance,
         addr: &[u8],
-        _ext: &[u8],
+        ext: &Memo,
     ) -> DispatchResult {
+        ext.check_validity()?;
+
         let info = xpallet_assets::Module::<T>::asset_info_of(&asset_id)
             .ok_or(xpallet_assets::Error::<T>::InvalidAsset)?;
         let chain = info.chain();

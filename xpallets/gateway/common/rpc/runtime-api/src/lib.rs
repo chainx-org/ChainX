@@ -5,7 +5,8 @@
 use sp_runtime::DispatchError;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-pub use xpallet_assets::Chain;
+pub use chainx_primitives::{AddrStr, AssetId, Memo};
+pub use xpallet_assets::{Chain, WithdrawalLimit};
 pub use xpallet_gateway_common::{
     trustees,
     types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo},
@@ -13,9 +14,14 @@ pub use xpallet_gateway_common::{
 
 sp_api::decl_runtime_apis! {
     /// The API to query account nonce (aka transaction index).
-    pub trait XGatewayCommonApi<AccountId> where
+    pub trait XGatewayCommonApi<AccountId, Balance> where
         AccountId: codec::Codec,
+        Balance: codec::Codec,
     {
+        fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError>;
+
+        fn verify_withdrawal(asset_id: AssetId, value: Balance, addr: AddrStr, memo: Memo) -> Result<(), DispatchError>;
+
         /// Get all trustee multisig.
         fn trustee_multisigs() -> BTreeMap<Chain, AccountId>;
 

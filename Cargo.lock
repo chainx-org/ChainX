@@ -7205,6 +7205,7 @@ dependencies = [
 name = "xpallet-gateway-common-rpc"
 version = "0.1.0"
 dependencies = [
+ "hex 0.4.2",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -7213,12 +7214,14 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-support",
 ]
 
 [[package]]
 name = "xpallet-gateway-common-rpc-runtime-api"
 version = "0.1.0"
 dependencies = [
+ "chainx-primitives",
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",

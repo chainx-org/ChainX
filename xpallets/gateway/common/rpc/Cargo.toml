@@ -11,6 +11,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 jsonrpc-core = "14.2.0"
 jsonrpc-derive = "14.2.1"
 jsonrpc-core-client = "14.2.0"
+hex = "0.4"
 
 codec = { package = "parity-scale-codec", version = "1.3.1" }
 
@@ -18,4 +19,5 @@ sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 
+xpallet-support = { path = "../../../support" }
 xpallet-gateway-common-rpc-runtime-api = { path = "./runtime-api" }

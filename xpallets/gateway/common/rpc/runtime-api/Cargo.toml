@@ -13,6 +13,7 @@ sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc
 sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
+chainx-primitives = { path = "../../../../../primitives", default-features = false }
 xpallet-assets = { path = "../../../../assets", default-features = false }
 xpallet-gateway-common = { path = "../../", default-features = false }
 
@@ -24,6 +25,7 @@ std = [
     "sp-std/std",
     "sp-runtime/std",
 
+    "chainx-primitives/std",
     "xpallet-assets/std",
     "xpallet-gateway-common/std",
 ]
