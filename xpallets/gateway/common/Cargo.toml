@@ -21,6 +21,7 @@ chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-io = { path = "../../../primitives/io", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 xpallet-assets = { path = "../../assets", default-features = false }
+xpallet-gateway-records = { path = "../records", default-features = false }
 
 #chain
 btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
@@ -45,8 +46,9 @@ std=[
     # chainx runtime module
     "chainx-primitives/std",
     "xp-io/std",
-    "xpallet-assets/std",
     "xpallet-support/std",
+    "xpallet-assets/std",
+    "xpallet-gateway-records/std",
 
     # chain
     "btc-keys/std",

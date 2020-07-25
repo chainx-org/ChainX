@@ -37,7 +37,6 @@ impl Into<Vec<u8>> for BtcTrusteeType {
 mod serde_impl {
     use super::*;
     use serde::{de::Error, Deserializer, Serializer};
-    use sp_std::ops::Deref;
     use xpallet_support::serde_impl::hex;
 
     impl Serialize for BtcTrusteeType {

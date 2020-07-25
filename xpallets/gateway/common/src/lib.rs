@@ -20,8 +20,9 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
-use chainx_primitives::{AssetId, Name, Text};
-use xpallet_assets::Chain;
+use chainx_primitives::{AddrStr, AssetId, Memo, Name, Text};
+use xpallet_assets::{AssetRestriction, Chain, ChainT, WithdrawalLimit};
+use xpallet_gateway_records::WithdrawalState;
 use xpallet_support::{
     error, info,
     traits::{MultiSig, Validator},
@@ -34,11 +35,12 @@ use crate::types::{
     TrusteeIntentionProps,
 };
 
-pub trait Trait: system::Trait + pallet_multisig::Trait {
+pub trait Trait: system::Trait + pallet_multisig::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     type Validator: Validator<Self::AccountId>;
     // for chain
+    type Bitcoin: ChainT<Self::Balance>;
     type BitcoinTrustee: TrusteeForChain<
         Self::AccountId,
         trustees::bitcoin::BtcTrusteeType,
@@ -60,6 +62,8 @@ decl_error! {
     /// Error for the This Module
     pub enum Error for Module<T: Trait> {
         ///
+        InvalidWithdrawal,
+        ///
         InvalidGenericData,
         ///
         InvalidTrusteeSession,
@@ -68,7 +72,7 @@ decl_error! {
         ///
         InvalidMultisig,
         ///
-        NotSupportedForTrustee,
+        NotSupportedChain,
         /// existing duplicate account
         DuplicatedAccountId,
         /// not registered as trustee
@@ -81,7 +85,12 @@ decl_error! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
-        // todo add user withdrawal
+
+        #[weight = 0]
+        fn withdraw(origin, #[compact] asset_id: AssetId, #[compact] value: T::Balance, addr: AddrStr, ext: Memo) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::apply_withdraw(who, asset_id, value, addr, ext)
+        }
 
         // trustees
         #[weight = 0]
@@ -97,10 +106,25 @@ decl_module! {
             let who = ensure_signed(origin)?;
             // judge current addr
             let _c = ChainContext::new(chain);
-            if !TrusteeMultisigProvider::<T, ChainContext>::check_multisig(&who) {
-                Err(Error::<T>::InvalidMultisig)?;
-            }
+            ensure!(
+                TrusteeMultisigProvider::<T, ChainContext>::check_multisig(&who),
+                Error::<T>::InvalidMultisig
+            );
+
             Self::transition_trustee_session_impl(chain, new_trustees)
+        }
+
+        #[weight = 0]
+        pub fn set_withdrawal_state_by_trustees(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
+            let from = ensure_signed(origin)?;
+
+            let map = Self::trustee_multisigs();
+            let chain = map
+                .into_iter()
+                .find_map(|(chain, multisig)| if from == multisig { Some(chain) } else { None })
+                .ok_or(Error::<T>::InvalidMultisig)?;
+
+            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(chain, withdrawal_id, state)
         }
 
         #[weight = 0]
@@ -164,6 +188,65 @@ decl_storage! {
     }
 }
 
+// withdraw
+impl<T: Trait> Module<T> {
+    fn apply_withdraw(
+        who: T::AccountId,
+        asset_id: AssetId,
+        value: T::Balance,
+        addr: AddrStr,
+        ext: Memo,
+    ) -> DispatchResult {
+        ensure!(
+            xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestriction::Withdraw),
+            xpallet_assets::Error::<T>::ActionNotAllowed,
+        );
+
+        Self::verify_withdrawal(asset_id, value, &addr, ext.as_ref())?;
+
+        xpallet_gateway_records::Module::<T>::withdrawal(&who, &asset_id, value, addr, ext)?;
+        Ok(())
+    }
+
+    pub fn withdrawal_limit(
+        asset_id: &AssetId,
+    ) -> result::Result<WithdrawalLimit<T::Balance>, DispatchError> {
+        let info = xpallet_assets::Module::<T>::asset_info_of(&asset_id)
+            .ok_or(xpallet_assets::Error::<T>::InvalidAsset)?;
+        let chain = info.chain();
+        match chain {
+            Chain::Bitcoin => T::Bitcoin::withdrawal_limit(&asset_id),
+            _ => Err(Error::<T>::NotSupportedChain)?,
+        }
+    }
+
+    pub fn verify_withdrawal(
+        asset_id: AssetId,
+        value: T::Balance,
+        addr: &[u8],
+        _ext: &[u8],
+    ) -> DispatchResult {
+        let info = xpallet_assets::Module::<T>::asset_info_of(&asset_id)
+            .ok_or(xpallet_assets::Error::<T>::InvalidAsset)?;
+        let chain = info.chain();
+        match chain {
+            Chain::Bitcoin => {
+                // bitcoin do not need memo
+                T::Bitcoin::check_addr(&addr, b"")?;
+            }
+            _ => Err(Error::<T>::NotSupportedChain)?,
+        };
+        // we could only split withdrawal limit due to a runtime-api would call `withdrawal_limit`
+        // to export `WithdrawalLimit` for an asset.
+        let limit = Self::withdrawal_limit(&asset_id)?;
+        // withdrawal value should larger than minimal_withdrawal, allow equal
+        if value < limit.minimal_withdrawal {
+            Err(Error::<T>::InvalidWithdrawal)?
+        }
+        Ok(())
+    }
+}
+
 pub fn is_valid_about<T: Trait>(about: &[u8]) -> DispatchResult {
     // TODO
     if about.len() > 128 {
@@ -173,6 +256,7 @@ pub fn is_valid_about<T: Trait>(about: &[u8]) -> DispatchResult {
     xpallet_support::xss_check(about)
 }
 
+// trustees
 impl<T: Trait> Module<T> {
     pub fn setup_trustee_impl(
         who: T::AccountId,
@@ -189,7 +273,7 @@ impl<T: Trait> Module<T> {
                 let cold = T::BitcoinTrustee::check_trustee_entity(&cold_entity)?;
                 (hot.into(), cold.into())
             }
-            _ => Err(Error::<T>::NotSupportedForTrustee)?,
+            _ => Err(Error::<T>::NotSupportedChain)?,
         };
 
         let props = GenericTrusteeIntentionProps(TrusteeIntentionProps::<Vec<u8>> {
@@ -244,7 +328,7 @@ impl<T: Trait> Module<T> {
                 session_info.trustee_list.sort();
                 session_info.into()
             }
-            _ => Err(Error::<T>::NotSupportedForTrustee)?,
+            _ => Err(Error::<T>::NotSupportedChain)?,
         };
         Ok(info)
     }

@@ -320,7 +320,11 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
 
     match account_info {
         AccountInfo::<_>::Account((accountid, channel_name)) => {
-            T::Channel::update_binding(&<Module<T> as ChainT>::ASSET_ID, &accountid, channel_name);
+            T::Channel::update_binding(
+                &<Module<T> as ChainT<_>>::ASSET_ID,
+                &accountid,
+                channel_name,
+            );
 
             if let Err(_) = deposit_token::<T>(&accountid, deposit_info.deposit_value) {
                 return BtcTxResult::Failed;
@@ -344,7 +348,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
 }
 
 fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) -> DispatchResult {
-    let id: AssetId = <Module<T> as ChainT>::ASSET_ID;
+    let id: AssetId = <Module<T> as ChainT<_>>::ASSET_ID;
 
     let b: T::Balance = balance.saturated_into();
     let _ = <xpallet_gateway_records::Module<T>>::deposit(&who, &id, b).map_err(|e| {

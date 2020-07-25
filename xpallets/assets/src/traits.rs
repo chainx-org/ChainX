@@ -1,12 +1,12 @@
 use sp_std::result;
 
-use frame_support::dispatch::DispatchResult;
+use frame_support::dispatch::{DispatchError, DispatchResult};
 
 use chainx_primitives::AssetId;
 
-use crate::types::{AssetErr, AssetType, Chain};
+use crate::types::{AssetErr, AssetType, Chain, WithdrawalLimit};
 
-pub trait ChainT {
+pub trait ChainT<Balance: Default> {
     /// ASSET should be the native Asset for this chain.
     /// e.g.
     ///     if ChainT for Bitcoin, then ASSET is X_BTC
@@ -16,6 +16,11 @@ pub trait ChainT {
     fn chain() -> Chain;
     fn check_addr(_addr: &[u8], _ext: &[u8]) -> DispatchResult {
         Ok(())
+    }
+    fn withdrawal_limit(
+        _asset_id: &AssetId,
+    ) -> result::Result<WithdrawalLimit<Balance>, DispatchError> {
+        Ok(WithdrawalLimit::default())
     }
 }
 

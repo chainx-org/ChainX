@@ -116,7 +116,7 @@ decl_storage! {
 impl<T: Trait> Module<T> {
     /// deposit/withdrawal pre-process
     fn check_asset(_: &T::AccountId, asset_id: &AssetId) -> DispatchResult {
-        if *asset_id == <xpallet_assets::Module<T> as ChainT>::ASSET_ID {
+        if *asset_id == <xpallet_assets::Module<T> as ChainT<_>>::ASSET_ID {
             Err(Error::<T>::DenyNativeAsset)?;
         }
         // other check

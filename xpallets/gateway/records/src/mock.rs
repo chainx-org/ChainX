@@ -80,7 +80,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
     let mut init: runtime_io::TestExternalities<Blake2Hasher> = r.into();
     with_externalities(&mut init, || {
-        let chainx: Token = <XAssets as ChainT>::ASSET_ID.to_vec();
+        let chainx: Token = <XAssets as ChainT<_>>::ASSET_ID.to_vec();
 
         let pcx = Asset::new(
             chainx.clone(),

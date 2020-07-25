@@ -76,6 +76,12 @@ impl From<&[u8]> for Memo {
     }
 }
 
+impl AsRef<[u8]> for Memo {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+}
+
 #[cfg(feature = "std")]
 impl std::fmt::Display for Memo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

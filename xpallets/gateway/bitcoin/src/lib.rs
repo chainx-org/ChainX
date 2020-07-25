@@ -13,24 +13,24 @@ mod types;
 use codec::Decode;
 
 // Substrate
-use sp_runtime::traits::Zero;
+use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{prelude::*, result};
 
 use frame_support::{
     debug::native,
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
+    ensure,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
 // ChainX
 use chainx_primitives::{AddrStr, AssetId};
-use xpallet_assets::{Chain, ChainT};
+use xpallet_assets::{Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
     traits::{ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use xpallet_gateway_records::WithdrawalState;
 use xpallet_support::{
     base58, debug, ensure_with_errorlog, error, info, str, traits::MultiSig, try_addr,
     RUNTIME_TARGET,
@@ -370,22 +370,13 @@ decl_module! {
             Ok(())
         }
 
-        // todo, move to gateway_common or records
-        #[weight = 0]
-        pub fn set_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
-            let from = ensure_signed(origin)?;
-            if !T::TrusteeMultiSigProvider::check_multisig(&from) {
-                Err(Error::<T>::NotTrustee)?
-            }
-            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(Chain::Bitcoin, withdrawal_id, state)
-        }
-
         #[weight = 0]
         pub fn remove_pending_by_trustees(origin, addr: BtcAddress, who: Option<T::AccountId>) -> DispatchResult {
             let from = ensure_signed(origin)?;
-            if !T::TrusteeMultiSigProvider::check_multisig(&from) {
-                Err(Error::<T>::NotTrustee)?
-            }
+            ensure!(
+                T::TrusteeMultiSigProvider::check_multisig(&from),
+                Error::<T>::NotTrustee
+            );
             Self::remove_pending(frame_system::RawOrigin::Root.into(), addr, who)
         }
 
@@ -411,7 +402,7 @@ decl_module! {
     }
 }
 
-impl<T: Trait> ChainT for Module<T> {
+impl<T: Trait> ChainT<T::Balance> for Module<T> {
     const ASSET_ID: AssetId = xpallet_protocol::X_BTC;
 
     fn chain() -> Chain {
@@ -436,6 +427,20 @@ impl<T: Trait> ChainT for Module<T> {
         }
 
         Ok(())
+    }
+
+    fn withdrawal_limit(
+        asset_id: &AssetId,
+    ) -> result::Result<WithdrawalLimit<T::Balance>, DispatchError> {
+        if *asset_id != Self::ASSET_ID {
+            Err(xpallet_assets::Error::<T>::ActionNotAllowed)?
+        }
+        let fee = Self::btc_withdrawal_fee().saturated_into();
+        let limit = WithdrawalLimit::<T::Balance> {
+            minimal_withdrawal: fee * 3.saturated_into() / 2.saturated_into(),
+            fee,
+        };
+        Ok(limit)
     }
 }
 

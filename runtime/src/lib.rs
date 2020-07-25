@@ -314,6 +314,7 @@ impl xpallet_gateway_records::Trait for Runtime {
 impl xpallet_gateway_common::Trait for Runtime {
     type Event = Event;
     type Validator = XStaking;
+    type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
 }
 
