@@ -3,7 +3,6 @@
 #![cfg(test)]
 
 mod header;
-mod lockup;
 mod mock;
 mod opreturn;
 mod trustee;
@@ -28,7 +27,7 @@ fn reverse_h256(mut hash: btc_primitives::H256) -> btc_primitives::H256 {
 
 #[test]
 pub fn test_address() {
-    XBridgeOfBTC::verify_btc_address(&b"mqVznxoxdeSNYgDCg6ZVE5pc6476BY6zHK".to_vec()).unwrap();
+    XBridgeOfBtc::verify_btc_address(&b"mqVznxoxdeSNYgDCg6ZVE5pc6476BY6zHK".to_vec()).unwrap();
 }
 
 #[test]

@@ -11,7 +11,7 @@ use xpallet_support::info;
 // light-bitcoin
 use btc_primitives::H256;
 
-use crate::types::{BTCHeaderIndex, BTCHeaderInfo};
+use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
 use crate::{ConfirmedHeader, Error, MainChain, Module, Trait};
 
 pub use self::header_proof::HeaderVerifier;
@@ -43,7 +43,7 @@ impl<T: Trait> From<ChainErr> for Error<T> {
 ///           |--------- confirmations = 6 ------------|
 /// b(prev) - b(confirm) - b - b - b - b - b(best_index)
 /// #issue 501 https://github.com/chainpool/ChainX/issues/501
-pub fn update_confirmed_header<T: Trait>(header_info: &BTCHeaderInfo) -> BTCHeaderIndex {
+pub fn update_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> BtcHeaderIndex {
     // update confirmd status
     let confirmations = Module::<T>::confirmation_number();
     let mut prev_hash = header_info.header.previous_header_hash.clone();
@@ -70,7 +70,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BTCHeaderInfo) -> BTCHead
     }
 
     if let Some(info) = Module::<T>::headers(&prev_hash) {
-        let index = BTCHeaderIndex {
+        let index = BtcHeaderIndex {
             hash: prev_hash,
             height: info.height,
         };
@@ -84,7 +84,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BTCHeaderInfo) -> BTCHead
             prev_hash
         );
         let info = Module::<T>::genesis_info();
-        BTCHeaderIndex {
+        BtcHeaderIndex {
             hash: info.0.hash(),
             height: info.1,
         }

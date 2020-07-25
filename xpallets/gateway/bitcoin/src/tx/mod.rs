@@ -35,7 +35,7 @@ pub use self::validator::validate_transaction;
 use crate::trustee::{get_last_trustee_address_pair, get_trustee_address_pair};
 use crate::tx::utils::{addr2vecu8, ensure_identical};
 use crate::types::{
-    AccountInfo, BTCDepositCache, BTCTxResult, BTCTxState, DepositInfo, MetaTxType,
+    AccountInfo, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
 };
 use crate::{
     AddressBinding, BoundAddressOf, Module, PendingDeposits, RawEvent, Trait, WithdrawalProposal,
@@ -44,7 +44,7 @@ use crate::{
 pub fn process_tx<T: Trait>(
     tx: Transaction,
     prev: Option<Transaction>,
-) -> result::Result<BTCTxState, DispatchError> {
+) -> result::Result<BtcTxState, DispatchError> {
     let meta_type = detect_transaction_type::<T>(&tx, prev.as_ref())?;
     // process
     let state = handle_tx::<T>(tx, meta_type);
@@ -279,18 +279,18 @@ where
     (account_info, deposit_balance)
 }
 
-fn handle_tx<T: Trait>(tx: Transaction, meta_type: MetaTxType<T::AccountId>) -> BTCTxState {
+fn handle_tx<T: Trait>(tx: Transaction, meta_type: MetaTxType<T::AccountId>) -> BtcTxState {
     let tx_type = meta_type.ref_into();
     let result = match meta_type {
         MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
         MetaTxType::<_>::Withdrawal => withdraw::<T>(tx),
-        _ => BTCTxResult::Success,
+        _ => BtcTxResult::Success,
     };
-    let state = BTCTxState { result, tx_type };
+    let state = BtcTxState { result, tx_type };
     state
 }
 
-fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BTCTxResult {
+fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
     let account_info = match deposit_info.op_return {
         Some((accountid, channel_name)) => {
             if let Some(addr) = deposit_info.input_addr {
@@ -313,7 +313,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BTC
                 }
             } else {
                 error!("[deposit]|no input addr for this deposit tx, neither has opreturn to get accountid!|tx_hash:{:?}", hash);
-                return BTCTxResult::Failed;
+                return BtcTxResult::Failed;
             }
         }
     };
@@ -323,7 +323,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BTC
             T::Channel::update_binding(&<Module<T> as ChainT>::ASSET_ID, &accountid, channel_name);
 
             if let Err(_) = deposit_token::<T>(&accountid, deposit_info.deposit_value) {
-                return BTCTxResult::Failed;
+                return BtcTxResult::Failed;
             }
             info!(
                 "[deposit]|deposit success|who:{:?}|balance:{:}|tx_hash:{:}",
@@ -340,7 +340,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BTC
             );
         }
     };
-    BTCTxResult::Success
+    BtcTxResult::Success
 }
 
 fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) -> DispatchResult {
@@ -408,7 +408,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::Accoun
 }
 
 fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balance: u64) {
-    let cache = BTCDepositCache {
+    let cache = BtcDepositCache {
         txid: txid.clone(),
         balance,
     };
@@ -427,7 +427,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
     });
 }
 
-fn withdraw<T: Trait>(tx: Transaction) -> BTCTxResult {
+fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
         native::debug!(
             target: RUNTIME_TARGET,
@@ -447,7 +447,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BTCTxResult {
                         }
                     }
                 }
-                BTCTxResult::Success
+                BtcTxResult::Success
             }
             Err(e) => {
                 let tx_hash = proposal.tx.hash();
@@ -457,10 +457,10 @@ fn withdraw<T: Trait>(tx: Transaction) -> BTCTxResult {
 
                 Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(tx.hash(), tx_hash));
                 // let _ = xfee_manager::Module::<T>::modify_switcher(
-                //     xfee_manager::CallSwitcher::XBTC,
+                //     xfee_manager::CallSwitcher::XBtc,
                 //     true,
                 // );
-                BTCTxResult::Failed
+                BtcTxResult::Failed
             }
         }
     } else {
@@ -471,8 +471,8 @@ fn withdraw<T: Trait>(tx: Transaction) -> BTCTxResult {
 
         // TODO use trait
         // let _ =
-        //     xfee_manager::Module::<T>::modify_switcher(xfee_manager::CallSwitcher::XBTC, true);
+        //     xfee_manager::Module::<T>::modify_switcher(xfee_manager::CallSwitcher::XBtc, true);
         // do not return Err, mark this tx has been handled
-        BTCTxResult::Failed
+        BtcTxResult::Failed
     }
 }

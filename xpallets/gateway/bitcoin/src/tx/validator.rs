@@ -17,11 +17,11 @@ use xpallet_support::{debug, error, try_hex};
 
 // use crate::tx::utils::get_hot_trustee_redeem_script;
 use crate::trustee::get_hot_trustee_redeem_script;
-use crate::types::BTCRelayedTx;
+use crate::types::BtcRelayedTx;
 use crate::{Error, Trait};
 
 pub fn validate_transaction<T: Trait>(
-    tx: &BTCRelayedTx,
+    tx: &BtcRelayedTx,
     merkle_root: H256,
     prev_tx: Option<&Transaction>,
 ) -> DispatchResult {

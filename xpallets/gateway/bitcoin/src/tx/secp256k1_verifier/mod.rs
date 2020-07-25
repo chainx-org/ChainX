@@ -2,7 +2,7 @@ use btc_chain::Transaction;
 use btc_primitives::Bytes;
 use frame_support::dispatch::DispatchResult;
 
-use crate::types::BTCTxVerifier;
+use crate::types::BtcTxVerifier;
 use crate::{Error, Module, Trait};
 
 mod recover_verifier;
@@ -28,10 +28,10 @@ pub fn verify_sig<T: Trait>(
     index: usize,
 ) -> DispatchResult {
     match Module::<T>::verifier() {
-        BTCTxVerifier::Recover => {
+        BtcTxVerifier::Recover => {
             recover_verifier::verify_sig_impl::<T>(sig, pubkey, tx, script_pubkey, index)
         }
-        BTCTxVerifier::RuntimeInterface => {
+        BtcTxVerifier::RuntimeInterface => {
             runtime_interface::verify_sig_impl::<T>(sig, pubkey, tx, script_pubkey, index)
         }
     }

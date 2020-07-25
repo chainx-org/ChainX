@@ -47,7 +47,7 @@ fn test_opreturn() {
         use tx::handler::parse_deposit_outputs_impl;
 
         let hot_addr =
-            XBridgeOfBTC::verify_btc_address(b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF").unwrap();
+            XBridgeOfBtc::verify_btc_address(b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF").unwrap();
         println!("{:?}", hot_addr);
 
         let r = parse_deposit_outputs_impl::<Test>(&t1, &hot_addr).unwrap();

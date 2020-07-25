@@ -65,7 +65,7 @@ pub use xpallet_contracts_primitives::XRC20Selector;
 #[cfg(feature = "std")]
 pub use xpallet_gateway_bitcoin::h256_conv_endian_from_str;
 pub use xpallet_gateway_bitcoin::{
-    BTCHeader, BTCNetwork, BTCParams, BTCTxVerifier, Compact as BTCCompact, H256 as BTCHash,
+    BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Compact as BtcCompact, H256 as BtcHash,
 };
 pub use xpallet_gateway_common::{
     trustees,
@@ -327,8 +327,8 @@ impl xpallet_gateway_common::Trait for Runtime {
 impl xpallet_gateway_bitcoin::Trait for Runtime {
     type Event = Event;
     type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
-    type TrusteeSessionProvider = trustees::bitcoin::BTCTrusteeSessionManager<Runtime>;
-    type TrusteeMultiSigProvider = trustees::bitcoin::BTCTrusteeMultisig<Runtime>;
+    type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
+    type TrusteeMultiSigProvider = trustees::bitcoin::BtcTrusteeMultisig<Runtime>;
     type Channel = XGatewayCommon;
 }
 

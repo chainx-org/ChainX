@@ -15,7 +15,7 @@ use btc_script::{Builder, Opcode, Script};
 use xpallet_assets::Chain;
 use xpallet_gateway_common::{
     traits::{TrusteeForChain, TrusteeSession},
-    trustees::bitcoin::{BTCTrusteeAddrInfo, BTCTrusteeType},
+    trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeType},
     types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
     utils::two_thirds_unsafe,
 };
@@ -23,17 +23,17 @@ use xpallet_support::{debug, error, info, RUNTIME_TARGET};
 
 use crate::tx::utils::{ensure_identical, parse_output_addr};
 use crate::tx::validator::parse_and_check_signed_tx;
-use crate::types::{BTCWithdrawalProposal, VoteResult};
+use crate::types::{BtcWithdrawalProposal, VoteResult};
 use crate::{Error, Module, RawEvent, Trait, WithdrawalProposal};
 
 pub fn trustee_session<T: Trait>(
-) -> Result<TrusteeSessionInfo<T::AccountId, BTCTrusteeAddrInfo>, DispatchError> {
+) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
 }
 
 #[inline]
 fn trustee_addr_info_pair<T: Trait>(
-) -> Result<(BTCTrusteeAddrInfo, BTCTrusteeAddrInfo), DispatchError> {
+) -> Result<(BtcTrusteeAddrInfo, BtcTrusteeAddrInfo), DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
         .map(|session_info| (session_info.hot_address, session_info.cold_address))
 }
@@ -87,9 +87,9 @@ const EC_P: [u8; 32] = [
 
 const ZERO_P: [u8; 32] = [0; 32];
 
-impl<T: Trait> TrusteeForChain<T::AccountId, BTCTrusteeType, BTCTrusteeAddrInfo> for Module<T> {
-    fn check_trustee_entity(raw_addr: &[u8]) -> result::Result<BTCTrusteeType, DispatchError> {
-        let trustee_type = BTCTrusteeType::try_from(raw_addr.to_vec())
+impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Module<T> {
+    fn check_trustee_entity(raw_addr: &[u8]) -> result::Result<BtcTrusteeType, DispatchError> {
+        let trustee_type = BtcTrusteeType::try_from(raw_addr.to_vec())
             .map_err(|_| Error::<T>::InvalidPublicKey)?;
         let public = trustee_type.0;
         if let Public::Normal(_) = public {
@@ -112,18 +112,18 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BTCTrusteeType, BTCTrusteeAddrInfo>
             Err(Error::<T>::InvalidPublicKey)?
         }
 
-        Ok(BTCTrusteeType(public))
+        Ok(BtcTrusteeType(public))
     }
 
     fn generate_trustee_session_info(
-        props: Vec<(T::AccountId, TrusteeIntentionProps<BTCTrusteeType>)>,
+        props: Vec<(T::AccountId, TrusteeIntentionProps<BtcTrusteeType>)>,
         config: TrusteeInfoConfig,
-    ) -> result::Result<TrusteeSessionInfo<T::AccountId, BTCTrusteeAddrInfo>, DispatchError> {
+    ) -> result::Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
         // judge all props has different pubkey
         // check
         let (trustees, props_info): (
             Vec<T::AccountId>,
-            Vec<TrusteeIntentionProps<BTCTrusteeType>>,
+            Vec<TrusteeIntentionProps<BtcTrusteeType>>,
         ) = props.into_iter().unzip();
 
         let (hot_keys, cold_keys): (Vec<Public>, Vec<Public>) = props_info
@@ -149,7 +149,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BTCTrusteeType, BTCTrusteeAddrInfo>
 
         let sig_num = two_thirds_unsafe(trustees.len() as u32);
 
-        let hot_trustee_addr_info: BTCTrusteeAddrInfo =
+        let hot_trustee_addr_info: BtcTrusteeAddrInfo =
             create_multi_address::<T>(&hot_keys, sig_num).ok_or_else(|| {
                 error!(
                     "[generate_trustee_session_info]|create hot_addr err!|hot_keys:{:?}",
@@ -158,7 +158,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BTCTrusteeType, BTCTrusteeAddrInfo>
                 Error::<T>::GenerateMultisigFailed
             })?;
 
-        let cold_trustee_addr_info: BTCTrusteeAddrInfo =
+        let cold_trustee_addr_info: BtcTrusteeAddrInfo =
             create_multi_address::<T>(&cold_keys, sig_num).ok_or_else(|| {
                 error!(
                     "[generate_trustee_session_info]|create cold_addr err!|cold_keys:{:?}",
@@ -234,7 +234,7 @@ impl<T: Trait> Module<T> {
             &withdrawal_id_list,
         )?;
 
-        let mut proposal = BTCWithdrawalProposal::new(
+        let mut proposal = BtcWithdrawalProposal::new(
             VoteResult::Unfinish,
             withdrawal_id_list.clone(),
             tx,
@@ -265,7 +265,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn apply_sig_withdraw(who: T::AccountId, tx: Option<Transaction>) -> DispatchResult {
-        let mut proposal: BTCWithdrawalProposal<T::AccountId> =
+        let mut proposal: BtcWithdrawalProposal<T::AccountId> =
             Self::withdrawal_proposal().ok_or(Error::<T>::NoProposal)?;
 
         if proposal.sig_state == VoteResult::Finish {
@@ -383,7 +383,7 @@ pub fn get_sig_num<T: Trait>() -> (u32, u32) {
 fn create_multi_address<T: Trait>(
     pubkeys: &Vec<Public>,
     sig_num: u32,
-) -> Option<BTCTrusteeAddrInfo> {
+) -> Option<BtcTrusteeAddrInfo> {
     let sum = pubkeys.len() as u32;
     if sig_num > sum {
         panic!("required sig num should less than trustee_num; qed")
@@ -417,7 +417,7 @@ fn create_multi_address<T: Trait>(
         hash: dhash160(&redeem_script),
     };
     let script_bytes: Bytes = redeem_script.into();
-    Some(BTCTrusteeAddrInfo {
+    Some(BtcTrusteeAddrInfo {
         addr,
         redeem_script: script_bytes.into(),
     })

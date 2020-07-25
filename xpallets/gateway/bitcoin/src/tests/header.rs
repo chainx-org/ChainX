@@ -67,7 +67,7 @@ fn test_init_mock_blocks() {
 //#[test]
 //fn test_genesis() {
 //    with_externalities(&mut new_test_mock_ext(), || {
-//        let (header, num) = XBridgeOfBTC::genesis_info();
+//        let (header, num) = XBridgeOfBtc::genesis_info();
 //        let _r = <GenesisInfo<Test>>::get();
 //        assert_eq!(
 //            format!("{:?}", reverse_h256(header.hash())),
@@ -75,7 +75,7 @@ fn test_init_mock_blocks() {
 //        );
 //        assert_eq!(num, 1457525);
 //
-//        let best_hash = XBridgeOfBTC::best_index();
+//        let best_hash = XBridgeOfBtc::best_index();
 //        assert_eq!(best_hash, header.hash());
 //    })
 //}
@@ -86,13 +86,13 @@ fn test_normal() {
         Timestamp::set_timestamp(current_time());
         let (c1, _) = generate_blocks();
 //        assert_err!(
-//            XBridgeOfBTC::apply_push_header(c1.get(0).unwrap().clone()),
+//            XBridgeOfBtc::apply_push_header(c1.get(0).unwrap().clone()),
 //            "Can\'t find previous header"
 //        );
-        assert_ok!(XBridgeOfBTC::apply_push_header(c1.get(1).unwrap().clone()));
-//        assert_ok!(XBridgeOfBTC::apply_push_header(c1.get(2).unwrap().clone()));
+        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(1).unwrap().clone()));
+//        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(2).unwrap().clone()));
 
-//        let best_hash = XBridgeOfBTC::best_index();
+//        let best_hash = XBridgeOfBtc::best_index();
 //        assert_eq!(best_hash, c1.get(2).unwrap().hash());
     })
 }
@@ -105,7 +105,7 @@ fn test_call() {
         let origin = system::RawOrigin::Signed(99).into();
         let v = btc_ser::serialize(c1.get(1).unwrap());
         let v = v.take();
-        assert_ok!(XBridgeOfBTC::push_header(origin, v));
+        assert_ok!(XBridgeOfBtc::push_header(origin, v));
     })
 }
 
@@ -115,19 +115,19 @@ fn test_genesis2() {
         Timestamp::set_timestamp(current_time());
         let (c1, _) = generate_blocks();
         assert_err!(
-            XBridgeOfBTC::apply_push_header(c1.get(0).unwrap().clone()),
+            XBridgeOfBtc::apply_push_header(c1.get(0).unwrap().clone()),
             "Block parent is unknown"
         );
-        assert_ok!(XBridgeOfBTC::apply_push_header(c1.get(1).unwrap().clone()));
-        assert_ok!(XBridgeOfBTC::apply_push_header(c1.get(2).unwrap().clone()));
-        assert_ok!(XBridgeOfBTC::apply_push_header(c1.get(3).unwrap().clone()));
+        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(1).unwrap().clone()));
+        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(2).unwrap().clone()));
+        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(3).unwrap().clone()));
     })
 }
 
 #[test]
 fn test_changebit() {
     with_externalities(&mut new_test_ext(), || {
-        let b1 = BTCHeader {
+        let b1 = BtcHeader {
             version: 1,
             previous_header_hash: h256_from_rev_str(
                 "00000000864b744c5025331036aa4a16e9ed1cbb362908c625272150fa059b29",
@@ -145,7 +145,7 @@ fn test_changebit() {
             "0x0000000089d757fd95d79f7fcc2bc25ca7fc16492dca9aa610730ea05d9d3de9"
         );
 
-        let _b2 = BTCHeader {
+        let _b2 = BtcHeader {
             version: 1,
             previous_header_hash: h256_from_rev_str(
                 "00000000864b744c5025331036aa4a16e9ed1cbb362908c625272150fa059b29",

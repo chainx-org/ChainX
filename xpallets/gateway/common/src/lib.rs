@@ -41,8 +41,8 @@ pub trait Trait: system::Trait + pallet_multisig::Trait {
     // for chain
     type BitcoinTrustee: TrusteeForChain<
         Self::AccountId,
-        trustees::bitcoin::BTCTrusteeType,
-        trustees::bitcoin::BTCTrusteeAddrInfo,
+        trustees::bitcoin::BtcTrusteeType,
+        trustees::bitcoin::BtcTrusteeAddrInfo,
     >;
 }
 
