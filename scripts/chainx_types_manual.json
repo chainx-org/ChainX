@@ -117,12 +117,12 @@
             "P2SH"
         ]
     },
-    "ValidatorInfo<AccountId, RpcBalance, BlockNumber>": {
+    "ValidatorInfo": {
         "account": "AccountId",
         "registered_at": "BlockNumber",
         "is_chilled": "bool",
         "last_chilled": "Option<BlockNumber>",
-        "total": "Balance",
+        "total": "RpcBalance",
         "last_total_vote_weight": "RpcWeightType",
         "last_total_vote_weight_update": "BlockNumber",
         "is_validating": "bool",

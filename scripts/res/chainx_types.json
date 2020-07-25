@@ -254,7 +254,7 @@
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",
         "balance": "BTreeMap<AssetType, String>",
-        "isonline": "bool",
+        "isOnline": "bool",
         "restrictions": "AssetRestrictions"
     },
     "Unbonded": {
@@ -287,12 +287,12 @@
             "P2SH"
         ]
     },
-    "ValidatorInfo<AccountId, RpcBalance, BlockNumber>": {
+    "ValidatorInfo": {
         "account": "AccountId",
         "registeredAt": "BlockNumber",
         "isChilled": "bool",
         "lastChilled": "Option<BlockNumber>",
-        "total": "Balance",
+        "total": "RpcBalance",
         "lastTotalVoteWeight": "RpcWeightType",
         "lastTotalVoteWeightUpdate": "BlockNumber",
         "isValidating": "bool",
