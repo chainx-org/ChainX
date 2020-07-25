@@ -1,7 +1,7 @@
 {
     "AssetInfoForRpc": {
         "token": "String",
-        "tokenName": "String",
+        "token_name": "String",
         "chain": "Chain",
         "precision": "Precision",
         "desc": "String"
@@ -23,8 +23,8 @@
     },
     "BTCHeader": {
         "version": "u32",
-        "previousHeaderHash": "H256",
-        "merkleRootHash": "H256",
+        "previous_header_hash": "H256",
+        "merkle_root_hash": "H256",
         "time": "u32",
         "bits": "BTCCompact",
         "nonce": "u32"
@@ -44,8 +44,8 @@
         ]
     },
     "Handicap": {
-        "highestBid": "Price",
-        "lowestOffer": "Price"
+        "highest_bid": "Price",
+        "lowest_offer": "Price"
     },
     "NetworkType": {
         "_enum": [
@@ -54,26 +54,26 @@
         ]
     },
     "NominatorProfile": {
-        "lastRebond": "Option<BlockNumber>",
-        "unbondedChunks": "Vec<Unbonded>"
+        "last_rebond": "Option<BlockNumber>",
+        "unbonded_chunks": "Vec<Unbonded>"
     },
     "Order": {
         "props": "OrderProperty",
         "status": "OrderStatus",
         "remaining": "Balance",
-        "executedIndices": "Vec<TradingHistoryIndex>",
-        "alreadyFilled": "Balance",
-        "lastUpdateAt": "BlockNumber"
+        "executed_indices": "Vec<TradingHistoryIndex>",
+        "already_filled": "Balance",
+        "last_update_at": "BlockNumber"
     },
     "OrderProperty": {
         "id": "OrderId",
         "side": "Side",
         "price": "Price",
         "amount": "Amount",
-        "pairId": "TradingPairId",
+        "pair_id": "TradingPairId",
         "submitter": "AccountId",
-        "orderType": "OrderType",
-        "createdAt": "BlockNumber"
+        "order_type": "OrderType",
+        "created_at": "BlockNumber"
     },
     "SignedBalance": {
         "_enum": {
@@ -84,11 +84,11 @@
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",
         "balance": "BTreeMap<AssetType, String>",
-        "isonline": "bool",
+        "is_online": "bool",
         "restrictions": "AssetRestrictions"
     },
     "Unbonded": {
-        "lockedUntil": "BlockNumber",
+        "locked_until": "BlockNumber",
         "value": "Balance"
     },
     "OutPoint": {
@@ -96,20 +96,20 @@
         "index": "u32"
     },
     "TransactionInput": {
-        "previousOutput": "OutPoint",
-        "scriptSig": "Bytes",
+        "previous_output": "OutPoint",
+        "script_sig": "Bytes",
         "sequence": "u32",
-        "scriptWitness": "Vec<Bytes>"
+        "script_witness": "Vec<Bytes>"
     },
     "TransactionOutput": {
         "value": "u64",
-        "scriptPubkey": "Bytes"
+        "script_pubkey": "Bytes"
     },
     "BTCTransaction": {
         "version": "i32",
         "inputs": "Vec<TransactionInput>",
         "outputs": "Vec<TransactionOutput>",
-        "lockTime": "u32"
+        "lock_time": "u32"
     },
     "BTCAddrType": {
         "_enum": [
@@ -117,6 +117,22 @@
             "P2SH"
         ]
     },
+    "ValidatorInfo<AccountId, RpcBalance, BlockNumber>": {
+        "account": "AccountId",
+        "registered_at": "BlockNumber",
+        "is_chilled": "bool",
+        "last_chilled": "Option<BlockNumber>",
+        "total": "Balance",
+        "last_total_vote_weight": "RpcWeightType",
+        "last_total_vote_weight_update": "BlockNumber",
+        "is_validating": "bool",
+        "self_bonded": "RpcBalance",
+        "reward_pot_account": "AccountId",
+        "reward_pot_balance": "RpcBalance"
+    },
+    "String": "Text",
+    "RpcBalance": "String",
+    "RpcWeightType": "String",
     "HandicapInfo": "Handicap",
     "MiningPower": "u128",
     "MiningWeight": "u128",

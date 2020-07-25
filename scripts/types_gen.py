@@ -473,9 +473,6 @@ def write_types_and_rpc():
     rpc_output['rpc'] = rpc_dict
     write_json(rpc_output, 'res/chainx_rpc.json')
 
-    # Write back the manual json to make it sorted.
-    write_json(MANUAL, 'chainx_types_manual.json')
-
 
 def main():
     build_types()

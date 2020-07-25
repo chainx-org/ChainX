@@ -287,6 +287,22 @@
             "P2SH"
         ]
     },
+    "ValidatorInfo<AccountId, RpcBalance, BlockNumber>": {
+        "account": "AccountId",
+        "registeredAt": "BlockNumber",
+        "isChilled": "bool",
+        "lastChilled": "Option<BlockNumber>",
+        "total": "Balance",
+        "lastTotalVoteWeight": "RpcWeightType",
+        "lastTotalVoteWeightUpdate": "BlockNumber",
+        "isValidating": "bool",
+        "selfBonded": "RpcBalance",
+        "rewardPotAccount": "AccountId",
+        "rewardPotBalance": "RpcBalance"
+    },
+    "String": "Text",
+    "RpcBalance": "String",
+    "RpcWeightType": "String",
     "MiningPower": "u128",
     "AddressHash": "H160"
 }
