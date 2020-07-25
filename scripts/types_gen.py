@@ -80,14 +80,33 @@ TARGET_KINDS = ['typedef', 'enum', 'struct']
 
 ALIAS = {'Vec<u8>': 'Text'}
 
-with open('./scripts/chainx_types_manual.json') as json_file:
-    MANUAL = json.load(json_file)
-
 BASE_CTAGS_CMD = [
     'ctags', '--format=2', '--excmd=pattern', '--fields=nksSaf', '--extras=+F',
     '--sort=no', '--append=no', '--extras=', '--language-force=rust',
     '--rust-kinds=cPstvfgieMnm', '--output-format=json', '--fields=-PF', '-f-'
 ]
+
+
+#  total_balance => totalBalance
+def snake_to_camel(word):
+    s = ''.join(x.capitalize() or '_' for x in word.split('_'))
+    # Lowercase first character of String
+    return s[0].lower() + s[1:]
+
+
+MANUAL = {}
+# Read the types crated manually and convert the under_score_case to camelCase.
+with open('./scripts/chainx_types_manual.json') as json_file:
+    raw_manual = json.load(json_file)
+    for k1, v1 in raw_manual.items():
+        if isinstance(v1, dict) and '_enum' not in v1:
+            vv = {}
+            for k2, v2 in v1.items():
+                kk = snake_to_camel(k2)
+                vv[kk] = v2
+            MANUAL[k1] = vv
+        else:
+            MANUAL[k1] = v1
 
 
 #  Execute the system command and returns the lines of stdout.
@@ -218,7 +237,7 @@ def parse_non_tuple_struct(lines, key):
         ty = ''
         for item in field.split():
             if item.endswith(':'):
-                var = item[:-1]
+                var = snake_to_camel(item[:-1])
             if item.endswith(','):
                 ty = item[:-1]
                 # Try finding the nested structs/enums/typedefs
@@ -460,9 +479,7 @@ def write_types_and_rpc():
 
 def main():
     build_types()
-
     build_rpc()
-
     write_types_and_rpc()
 
 

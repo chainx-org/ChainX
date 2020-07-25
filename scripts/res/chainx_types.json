@@ -44,7 +44,7 @@
     "Memo": "Text",
     "AssetInfo": {
         "token": "Token",
-        "token_name": "Token",
+        "tokenName": "Token",
         "chain": "Chain",
         "precision": "Precision",
         "desc": "Desc"
@@ -53,88 +53,88 @@
         "header": "BTCHeader",
         "height": "u32",
         "confirmed": "bool",
-        "txid_list": "Vec<H256>"
+        "txidList": "Vec<H256>"
     },
     "BTCTxInfo": {
-        "raw_tx": "BTCTransaction",
-        "tx_type": "BTCTxType",
+        "rawTx": "BTCTransaction",
+        "txType": "BTCTxType",
         "height": "u32"
     },
     "BTCParams": {
-        "max_bits": "u32",
-        "block_max_future": "u32",
-        "target_timespan_seconds": "u32",
-        "target_spacing_seconds": "u32",
-        "retargeting_factor": "u32",
-        "retargeting_interval": "u32",
-        "min_timespan": "u32",
-        "max_timespan": "u32"
+        "maxBits": "u32",
+        "blockMaxFuture": "u32",
+        "targetTimespanSeconds": "u32",
+        "targetSpacingSeconds": "u32",
+        "retargetingFactor": "u32",
+        "retargetingInterval": "u32",
+        "minTimespan": "u32",
+        "maxTimespan": "u32"
     },
     "TradingPairProfile": {
         "id": "TradingPairId",
-        "currency_pair": "CurrencyPair",
-        "pip_precision": "u32",
-        "tick_precision": "u32",
+        "currencyPair": "CurrencyPair",
+        "pipPrecision": "u32",
+        "tickPrecision": "u32",
         "online": "bool"
     },
     "Order": {
         "props": "OrderProperty",
         "status": "OrderStatus",
         "remaining": "Balance",
-        "executed_indices": "Vec<TradingHistoryIndex>",
-        "already_filled": "Balance",
-        "last_update_at": "BlockNumber"
+        "executedIndices": "Vec<TradingHistoryIndex>",
+        "alreadyFilled": "Balance",
+        "lastUpdateAt": "BlockNumber"
     },
     "TradingPairInfo": {
-        "latest_price": "Price",
-        "last_updated": "BlockNumber"
+        "latestPrice": "Price",
+        "lastUpdated": "BlockNumber"
     },
     "OrderExecutedInfo": {
-        "trading_history_idx": "TradingHistoryIndex",
-        "pair_id": "TradingPairId",
+        "tradingHistoryIdx": "TradingHistoryIndex",
+        "pairId": "TradingPairId",
         "price": "Price",
         "maker": "AccountId",
         "taker": "AccountId",
-        "maker_order_id": "OrderId",
-        "taker_order_id": "OrderId",
+        "makerOrderId": "OrderId",
+        "takerOrderId": "OrderId",
         "turnover": "Balance",
-        "executed_at": "BlockNumber"
+        "executedAt": "BlockNumber"
     },
     "AssetLedger": {
-        "last_total_mining_weight": "MiningWeight",
-        "last_total_mining_weight_update": "BlockNumber"
+        "lastTotalMiningWeight": "MiningWeight",
+        "lastTotalMiningWeightUpdate": "BlockNumber"
     },
     "MinerLedger": {
-        "last_mining_weight": "MiningWeight",
-        "last_mining_weight_update": "BlockNumber",
-        "last_claim": "Option<BlockNumber>"
+        "lastMiningWeight": "MiningWeight",
+        "lastMiningWeightUpdate": "BlockNumber",
+        "lastClaim": "Option<BlockNumber>"
     },
     "ClaimRestriction": {
-        "staking_requirement": "StakingRequirement",
-        "frequency_limit": "BlockNumber"
+        "stakingRequirement": "StakingRequirement",
+        "frequencyLimit": "BlockNumber"
     },
     "BondRequirement": {
-        "self_bonded": "Balance",
+        "selfBonded": "Balance",
         "total": "Balance"
     },
     "ValidatorLedger": {
         "total": "Balance",
-        "last_total_vote_weight": "WeightType",
-        "last_total_vote_weight_update": "BlockNumber"
+        "lastTotalVoteWeight": "WeightType",
+        "lastTotalVoteWeightUpdate": "BlockNumber"
     },
     "NominatorLedger": {
         "nomination": "Balance",
-        "last_vote_weight": "WeightType",
-        "last_vote_weight_update": "BlockNumber"
+        "lastVoteWeight": "WeightType",
+        "lastVoteWeightUpdate": "BlockNumber"
     },
     "ValidatorProfile": {
-        "registered_at": "BlockNumber",
-        "is_chilled": "bool",
-        "last_chilled": "Option<BlockNumber>"
+        "registeredAt": "BlockNumber",
+        "isChilled": "bool",
+        "lastChilled": "Option<BlockNumber>"
     },
     "NominatorProfile": {
-        "last_rebond": "Option<BlockNumber>",
-        "unbonded_chunks": "Vec<Unbonded>"
+        "lastRebond": "Option<BlockNumber>",
+        "unbondedChunks": "Vec<Unbonded>"
     },
     "GlobalDistribution": {
         "treasury": "u32",
@@ -211,8 +211,8 @@
     },
     "BTCHeader": {
         "version": "u32",
-        "previous_header_hash": "H256",
-        "merkle_root_hash": "H256",
+        "previousHeaderHash": "H256",
+        "merkleRootHash": "H256",
         "time": "u32",
         "bits": "BTCCompact",
         "nonce": "u32"
@@ -232,33 +232,33 @@
     "OrderInfo": "Order",
     "AssetInfoForRpc": {
         "token": "String",
-        "token_name": "String",
+        "tokenName": "String",
         "chain": "Chain",
         "precision": "Precision",
         "desc": "String"
     },
     "Handicap": {
-        "highest_bid": "Price",
-        "lowest_offer": "Price"
+        "highestBid": "Price",
+        "lowestOffer": "Price"
     },
     "OrderProperty": {
         "id": "OrderId",
         "side": "Side",
         "price": "Price",
         "amount": "Amount",
-        "pair_id": "TradingPairId",
+        "pairId": "TradingPairId",
         "submitter": "AccountId",
-        "order_type": "OrderType",
-        "created_at": "BlockNumber"
+        "orderType": "OrderType",
+        "createdAt": "BlockNumber"
     },
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",
         "balance": "BTreeMap<AssetType, String>",
-        "isOnline": "bool",
+        "isonline": "bool",
         "restrictions": "AssetRestrictions"
     },
     "Unbonded": {
-        "locked_until": "BlockNumber",
+        "lockedUntil": "BlockNumber",
         "value": "Balance"
     },
     "OutPoint": {
@@ -266,20 +266,20 @@
         "index": "u32"
     },
     "TransactionInput": {
-        "previous_output": "OutPoint",
-        "script_sig": "Bytes",
+        "previousOutput": "OutPoint",
+        "scriptSig": "Bytes",
         "sequence": "u32",
-        "script_witness": "Vec<Bytes>"
+        "scriptWitness": "Vec<Bytes>"
     },
     "TransactionOutput": {
         "value": "u64",
-        "script_pubkey": "Bytes"
+        "scriptPubkey": "Bytes"
     },
     "BTCTransaction": {
         "version": "i32",
         "inputs": "Vec<TransactionInput>",
         "outputs": "Vec<TransactionOutput>",
-        "lock_time": "u32"
+        "lockTime": "u32"
     },
     "BTCAddrType": {
         "_enum": [

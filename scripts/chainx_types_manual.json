@@ -1,7 +1,7 @@
 {
     "AssetInfoForRpc": {
         "token": "String",
-        "token_name": "String",
+        "tokenName": "String",
         "chain": "Chain",
         "precision": "Precision",
         "desc": "String"
@@ -23,8 +23,8 @@
     },
     "BTCHeader": {
         "version": "u32",
-        "previous_header_hash": "H256",
-        "merkle_root_hash": "H256",
+        "previousHeaderHash": "H256",
+        "merkleRootHash": "H256",
         "time": "u32",
         "bits": "BTCCompact",
         "nonce": "u32"
@@ -44,8 +44,8 @@
         ]
     },
     "Handicap": {
-        "highest_bid": "Price",
-        "lowest_offer": "Price"
+        "highestBid": "Price",
+        "lowestOffer": "Price"
     },
     "NetworkType": {
         "_enum": [
@@ -54,26 +54,26 @@
         ]
     },
     "NominatorProfile": {
-        "last_rebond": "Option<BlockNumber>",
-        "unbonded_chunks": "Vec<Unbonded>"
+        "lastRebond": "Option<BlockNumber>",
+        "unbondedChunks": "Vec<Unbonded>"
     },
     "Order": {
         "props": "OrderProperty",
         "status": "OrderStatus",
         "remaining": "Balance",
-        "executed_indices": "Vec<TradingHistoryIndex>",
-        "already_filled": "Balance",
-        "last_update_at": "BlockNumber"
+        "executedIndices": "Vec<TradingHistoryIndex>",
+        "alreadyFilled": "Balance",
+        "lastUpdateAt": "BlockNumber"
     },
     "OrderProperty": {
         "id": "OrderId",
         "side": "Side",
         "price": "Price",
         "amount": "Amount",
-        "pair_id": "TradingPairId",
+        "pairId": "TradingPairId",
         "submitter": "AccountId",
-        "order_type": "OrderType",
-        "created_at": "BlockNumber"
+        "orderType": "OrderType",
+        "createdAt": "BlockNumber"
     },
     "SignedBalance": {
         "_enum": {
@@ -84,11 +84,11 @@
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",
         "balance": "BTreeMap<AssetType, String>",
-        "isOnline": "bool",
+        "isonline": "bool",
         "restrictions": "AssetRestrictions"
     },
     "Unbonded": {
-        "locked_until": "BlockNumber",
+        "lockedUntil": "BlockNumber",
         "value": "Balance"
     },
     "OutPoint": {
@@ -96,20 +96,20 @@
         "index": "u32"
     },
     "TransactionInput": {
-        "previous_output": "OutPoint",
-        "script_sig": "Bytes",
+        "previousOutput": "OutPoint",
+        "scriptSig": "Bytes",
         "sequence": "u32",
-        "script_witness": "Vec<Bytes>"
+        "scriptWitness": "Vec<Bytes>"
     },
     "TransactionOutput": {
         "value": "u64",
-        "script_pubkey": "Bytes"
+        "scriptPubkey": "Bytes"
     },
     "BTCTransaction": {
         "version": "i32",
         "inputs": "Vec<TransactionInput>",
         "outputs": "Vec<TransactionOutput>",
-        "lock_time": "u32"
+        "lockTime": "u32"
     },
     "BTCAddrType": {
         "_enum": [
