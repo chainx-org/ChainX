@@ -4,7 +4,7 @@
 
 ChainX types generator helps you automatically generate 80% of the new types definition.
 
-The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown to JS based on ctags.
+The idea is to retrieve `Enum`/`Struct`/`Type` Rust elements which are unknown to JS based on ctags. This script will also convert the fields of structs from `snake_underscore_case` to `camelCase`.
 
 ### Requirement
 
