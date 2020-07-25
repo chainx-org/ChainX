@@ -133,27 +133,6 @@ pub enum VoteResult {
     Unfinish,
     Finish,
 }
-// impl IntoVecu8 for TrusteeAddrInfo {
-//     fn into_vecu8(self) -> Vec<u8> {
-//         self.encode()
-//     }
-//     fn from_vecu8(src: &[u8]) -> Option<Self> {
-//         Decode::decode(&mut src.as_ref())
-//     }
-// }
-
-// #[cfg(feature = "std")]
-// impl std::fmt::Debug for TrusteeAddrInfo {
-//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-//         use rustc_hex::ToHex;
-//         let hex: String = self.redeem_script.to_hex();
-//         write!(
-//             f,
-//             "TrusteeAddrInfo {{ addr: {:?}, redeem_script: {:?} }}",
-//             self.addr, hex
-//         )
-//     }
-// }
 
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

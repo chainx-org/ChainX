@@ -370,6 +370,7 @@ decl_module! {
             Ok(())
         }
 
+        // todo, move to gateway_common or records
         #[weight = 0]
         pub fn set_withdrawal_state_by_trustees(origin, withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
             let from = ensure_signed(origin)?;

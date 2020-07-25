@@ -16,25 +16,6 @@
             "DestroyFree"
         ]
     },
-    "BtcAddress": {
-        "kind": "Type",
-        "network": "BtcNetwork",
-        "hash": "AddressHash"
-    },
-    "BtcHeader": {
-        "version": "u32",
-        "previous_header_hash": "H256",
-        "merkle_root_hash": "H256",
-        "time": "u32",
-        "bits": "BtcCompact",
-        "nonce": "u32"
-    },
-    "BtcNetwork": {
-        "_enum": [
-            "Mainnet",
-            "Testnet"
-        ]
-    },
     "Chain": {
         "_enum": [
             "ChainX",
@@ -91,31 +72,122 @@
         "locked_until": "BlockNumber",
         "value": "Balance"
     },
-    "OutPoint": {
-        "hash": "H256",
-        "index": "u32"
+
+    "WithdrawalState": {
+        "_enum": [
+            "Applying",
+            "Processing",
+            "NormalFinish",
+            "RootFinish",
+            "NormalCancel",
+            "RootCancel"
+        ]
     },
-    "TransactionInput": {
-        "previous_output": "OutPoint",
-        "script_sig": "Bytes",
-        "sequence": "u32",
-        "script_witness": "Vec<Bytes>"
+    "WithdrawalRecord": {
+        "asset_id": "AssetId",
+        "applicant": "AccountId",
+        "balance": "Balance",
+        "addr": "AddrStr",
+        "ext": "Memo",
+        "height": "BlockNumber"
     },
-    "TransactionOutput": {
-        "value": "u64",
-        "script_pubkey": "Bytes"
+    "TrusteeInfoConfig": {
+        "min_trustee_count": "u32",
+        "max_trustee_count": "u32"
     },
-    "BtcTransaction": {
-        "version": "i32",
-        "inputs": "Vec<TransactionInput>",
-        "outputs": "Vec<TransactionOutput>",
-        "lock_time": "u32"
+    "GenericTrusteeIntentionProps": {
+        "about": "Text",
+        "hot_entity": "Vec<u8>",
+        "cold_entity": "Vec<u8>"
+    },
+    "GenericTrusteeSessionInfo": {
+        "trustee_list": "Vec<AccountId>",
+        "threshold": "u16",
+        "hot_address": "Vec<u8>",
+        "cold_address": "Vec<u8>"
+    },
+    "BtcTrusteeType": "Vec<u8>",
+    "BtcTrusteeAddrInfo": {
+        "addr": "BtcAddress",
+        "redeem_script": "Vec<u8>"
+    },
+    "BtcTrusteeIntentionProps": {
+        "about": "Text",
+        "hot_entity": "BtcTrusteeType",
+        "cold_entity": "BtcTrusteeType"
+    },
+    "BtcTrusteeSessionInfo": {
+        "trustee_list": "Vec<AccountId>",
+        "threshold": "u16",
+        "hot_address": "BtcTrusteeAddrInfo",
+        "cold_address": "BtcTrusteeAddrInfo"
+    },
+    "AddressHash": "H160",
+    "BtcNetwork": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
     },
     "BtcAddrType": {
         "_enum": [
             "P2PKH",
             "P2SH"
         ]
+    },
+    "BtcAddress": {
+        "kind": "BtcAddrType",
+        "network": "BtcNetwork",
+        "hash": "AddressHash"
+    },
+    "BtcCompact": "u32",
+    "BtcHeader": {
+        "version": "u32",
+        "previous_header_hash": "H256",
+        "merkle_root_hash": "H256",
+        "time": "u32",
+        "bits": "BtcCompact",
+        "nonce": "u32"
+    },
+    "BtcTransaction": "Vec<u8>",
+    "BtcHeaderIndex": {
+        "hash": "H256",
+        "height": "u32"
+    },
+    "BtcTxResult": {
+        "_enum": [
+            "Success",
+            "Failed"
+        ]
+    },
+    "BtcTxState": {
+        "result": "BtcTxResult",
+        "tx_type": "BtcTxType"
+    },
+    "BtcTxType": {
+        "_enum": [
+            "Withdrawal",
+            "Deposit",
+            "HotAndCold",
+            "TrusteeTransition",
+            "Irrelevance"
+        ]
+    },
+    "BtcDepositCache": {
+        "txid": "H256",
+        "balance": "u64"
+    },
+    "BtcVoteResult": {
+        "_enum": [
+            "Unfinish",
+            "Finish"
+        ]
+    },
+    "BtcWithdrawalProposal": {
+        "sig_state": "BtcVoteResult",
+        "withdrawal_id_list": "Vec<u32>",
+        "tx": "BtcTransaction",
+        "trustee_list": "Vec<(AccountId, bool)>"
     },
     "ValidatorInfo": {
         "account": "AccountId",
@@ -139,6 +211,5 @@
     "AssetRestrictions": "u32",
     "OrderInfo": "Order",
     "Price": "Balance",
-    "WeightType": "u128",
-    "AddressHash": "H160"
+    "WeightType": "u128"
 }

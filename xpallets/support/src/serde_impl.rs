@@ -1,6 +1,6 @@
 pub use hex_serde as hex;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serializer};
 
 pub mod text {
     use super::*;

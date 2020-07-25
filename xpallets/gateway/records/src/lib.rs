@@ -53,19 +53,19 @@ decl_module! {
         fn deposit_event() = default;
         // only for root
         #[weight = 0]
-        fn root_deposit(origin, who: T::AccountId, asset_id: AssetId, balance: T::Balance) -> DispatchResult {
+        fn root_deposit(origin, who: T::AccountId, #[compact] asset_id: AssetId, #[compact] balance: T::Balance) -> DispatchResult {
             ensure_root(origin)?;
             Self::deposit(&who, &asset_id, balance)
         }
 
         #[weight = 0]
-        fn root_withdrawal(origin, who: T::AccountId, asset_id: AssetId, balance: T::Balance) -> DispatchResult {
+        fn root_withdrawal(origin, who: T::AccountId, #[compact] asset_id: AssetId, #[compact] balance: T::Balance) -> DispatchResult {
             ensure_root(origin)?;
             Self::withdrawal(&who, &asset_id, balance, Default::default(), Default::default())
         }
 
         #[weight = 0]
-        pub fn set_withdrawal_state(origin, withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
+        pub fn set_withdrawal_state(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
             ensure_root(origin)?;
             match Self::finish_withdrawal_impl(withdrawal_id, state) {
                 Ok(_) => {
@@ -93,9 +93,10 @@ decl_module! {
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
-        <T as xpallet_assets::Trait>::Balance {
+        <T as xpallet_assets::Trait>::Balance,
+        WithdrawalRecord = WithdrawalRecord<<T as system::Trait>::AccountId, <T as xpallet_assets::Trait>::Balance, <T as system::Trait>::BlockNumber> {
         Deposit(AccountId, AssetId, Balance),
-        ApplyWithdrawal(u32, AccountId, AssetId, Balance, Memo, AddrStr),
+        ApplyWithdrawal(u32, WithdrawalRecord),
         FinishWithdrawal(u32, WithdrawalState),
     }
 );
@@ -209,14 +210,7 @@ impl<T: Trait> Module<T> {
         };
         SerialNumber::put(newid);
 
-        Self::deposit_event(RawEvent::ApplyWithdrawal(
-            id,
-            appl.applicant().clone(),
-            *asset_id,
-            appl.balance(),
-            appl.ext().clone(),
-            appl.addr().clone(), // if btc, the addr is base58 addr
-        ));
+        Self::deposit_event(RawEvent::ApplyWithdrawal(id, appl));
         Ok(())
     }
 

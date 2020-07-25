@@ -187,7 +187,7 @@
     },
     "AssetRestrictions": "u32",
     "BtcAddress": {
-        "kind": "Type",
+        "kind": "BtcAddrType",
         "network": "BtcNetwork",
         "hash": "AddressHash"
     },
@@ -243,31 +243,102 @@
         "lockedUntil": "BlockNumber",
         "value": "Balance"
     },
-    "OutPoint": {
-        "hash": "H256",
-        "index": "u32"
+    "WithdrawalState": {
+        "_enum": [
+            "Applying",
+            "Processing",
+            "NormalFinish",
+            "RootFinish",
+            "NormalCancel",
+            "RootCancel"
+        ]
     },
-    "TransactionInput": {
-        "previousOutput": "OutPoint",
-        "scriptSig": "Bytes",
-        "sequence": "u32",
-        "scriptWitness": "Vec<Bytes>"
+    "WithdrawalRecord": {
+        "assetId": "AssetId",
+        "applicant": "AccountId",
+        "balance": "Balance",
+        "addr": "AddrStr",
+        "ext": "Memo",
+        "height": "BlockNumber"
     },
-    "TransactionOutput": {
-        "value": "u64",
-        "scriptPubkey": "Bytes"
+    "TrusteeInfoConfig": {
+        "minTrusteeCount": "u32",
+        "maxTrusteeCount": "u32"
     },
-    "BtcTransaction": {
-        "version": "i32",
-        "inputs": "Vec<TransactionInput>",
-        "outputs": "Vec<TransactionOutput>",
-        "lockTime": "u32"
+    "GenericTrusteeIntentionProps": {
+        "about": "Text",
+        "hotEntity": "Vec<u8>",
+        "coldEntity": "Vec<u8>"
     },
+    "GenericTrusteeSessionInfo": {
+        "trusteeList": "Vec<AccountId>",
+        "threshold": "u16",
+        "hotAddress": "Vec<u8>",
+        "coldAddress": "Vec<u8>"
+    },
+    "BtcTrusteeType": "Vec<u8>",
+    "BtcTrusteeAddrInfo": {
+        "addr": "BtcAddress",
+        "redeemScript": "Vec<u8>"
+    },
+    "BtcTrusteeIntentionProps": {
+        "about": "Text",
+        "hotEntity": "BtcTrusteeType",
+        "coldEntity": "BtcTrusteeType"
+    },
+    "BtcTrusteeSessionInfo": {
+        "trusteeList": "Vec<AccountId>",
+        "threshold": "u16",
+        "hotAddress": "BtcTrusteeAddrInfo",
+        "coldAddress": "BtcTrusteeAddrInfo"
+    },
+    "AddressHash": "H160",
     "BtcAddrType": {
         "_enum": [
             "P2PKH",
             "P2SH"
         ]
+    },
+    "BtcCompact": "u32",
+    "BtcTransaction": "Vec<u8>",
+    "BtcHeaderIndex": {
+        "hash": "H256",
+        "height": "u32"
+    },
+    "BtcTxResult": {
+        "_enum": [
+            "Success",
+            "Failed"
+        ]
+    },
+    "BtcTxState": {
+        "result": "BtcTxResult",
+        "txType": "BtcTxType"
+    },
+    "BtcTxType": {
+        "_enum": [
+            "Withdrawal",
+            "Deposit",
+            "HotAndCold",
+            "TrusteeTransition",
+            "Irrelevance"
+        ]
+    },
+    "BtcDepositCache": {
+        "txid": "H256",
+        "balance": "u64"
+    },
+    "BtcVoteResult": {
+        "_enum": [
+            "Unfinish",
+            "Finish"
+        ]
+    },
+    "BtcWithdrawalProposal": {
+        "sigState": "BtcVoteResult",
+        "withdrawalIdList": "Vec<u32>",
+        "tx": "BtcTransaction",
+        "trusteeList": "Vec<(AccountId, bool)>"
     },
     "ValidatorInfo": {
         "account": "AccountId",
@@ -285,6 +356,5 @@
     "String": "Text",
     "RpcBalance": "String",
     "RpcWeightType": "String",
-    "MiningPower": "u128",
-    "AddressHash": "H160"
+    "MiningPower": "u128"
 }

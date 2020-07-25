@@ -31,7 +31,7 @@ impl Default for WithdrawalState {
 }
 
 /// WithdrawalRecord for withdrawal
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct WithdrawalRecord<AccountId, Balance, BlockNumber> {
     asset_id: AssetId,
     applicant: AccountId,

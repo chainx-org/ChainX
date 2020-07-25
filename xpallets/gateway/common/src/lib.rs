@@ -81,6 +81,7 @@ decl_error! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
+        // todo add user withdrawal
 
         // trustees
         #[weight = 0]
