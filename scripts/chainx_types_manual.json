@@ -84,7 +84,7 @@
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",
         "balance": "BTreeMap<AssetType, String>",
-        "isOnline": "bool",
+        "is_online": "bool",
         "restrictions": "AssetRestrictions"
     },
     "Unbonded": {
@@ -117,6 +117,22 @@
             "P2SH"
         ]
     },
+    "ValidatorInfo": {
+        "account": "AccountId",
+        "registered_at": "BlockNumber",
+        "is_chilled": "bool",
+        "last_chilled": "Option<BlockNumber>",
+        "total": "RpcBalance",
+        "last_total_vote_weight": "RpcWeightType",
+        "last_total_vote_weight_update": "BlockNumber",
+        "is_validating": "bool",
+        "self_bonded": "RpcBalance",
+        "reward_pot_account": "AccountId",
+        "reward_pot_balance": "RpcBalance"
+    },
+    "String": "Text",
+    "RpcBalance": "String",
+    "RpcWeightType": "String",
     "HandicapInfo": "Handicap",
     "MiningPower": "u128",
     "MiningWeight": "u128",
