@@ -483,6 +483,7 @@ dependencies = [
  "chainx-rpc",
  "chainx-runtime",
  "futures 0.3.5",
+ "hex 0.4.2",
  "log",
  "log4rs",
  "pallet-im-online",
@@ -507,6 +508,7 @@ dependencies = [
  "sp-transaction-pool",
  "structopt",
  "substrate-build-script-utils",
+ "xp-io",
  "xpallet-protocol",
 ]
 
@@ -531,7 +533,7 @@ dependencies = [
  "chainx-primitives",
  "chainx-runtime",
  "frame-support",
- "hex",
+ "hex 0.4.2",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -552,6 +554,10 @@ dependencies = [
  "xpallet-assets-rpc-runtime-api",
  "xpallet-contracts-rpc",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-gateway-common-rpc",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records-rpc",
+ "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-mining-staking-rpc",
  "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-transaction-payment-rpc",
@@ -570,6 +576,7 @@ dependencies = [
  "pallet-authorship",
  "pallet-grandpa",
  "pallet-im-online",
+ "pallet-multisig",
  "pallet-offences",
  "pallet-randomness-collective-flip",
  "pallet-session",
@@ -595,11 +602,15 @@ dependencies = [
  "xp-mining-staking",
  "xpallet-assets",
  "xpallet-assets-rpc-runtime-api",
- "xpallet-bridge-bitcoin",
  "xpallet-contracts",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
  "xpallet-dex-spot",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-common",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records",
+ "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-mining-asset",
  "xpallet-mining-staking",
  "xpallet-mining-staking-rpc-runtime-api",
@@ -1567,6 +1578,12 @@ dependencies = [
 
 [[package]]
 name = "hex"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
+
+[[package]]
+name = "hex"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
@@ -1588,6 +1605,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d4c5c844e2fee0bf673d54c2c177f1713b3d2af2ff6e666b49cb7572e6cf42d"
 dependencies = [
  "proc-macro-hack",
+]
+
+[[package]]
+name = "hex-serde"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3486d7bc9e52c4c5fc1856ae8a5e4ab41d2499fc20bbc44492e244e8bf1b7012"
+dependencies = [
+ "hex 0.3.2",
+ "serde",
 ]
 
 [[package]]
@@ -3073,6 +3100,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-multisig"
+version = "2.0.0-rc4"
+source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-offences"
 version = "2.0.0-rc4"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
@@ -3492,7 +3534,7 @@ source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fab
 dependencies = [
  "byteorder",
  "fixed-hash",
- "hex",
+ "hex 0.4.2",
  "impl-codec",
  "impl-serde 0.3.1",
  "primitive-types",
@@ -3565,7 +3607,7 @@ dependencies = [
  "bitflags",
  "byteorder",
  "chrono",
- "hex",
+ "hex 0.4.2",
  "lazy_static",
  "libc",
  "libflate",
@@ -4508,7 +4550,7 @@ version = "2.0.0-rc4"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
 dependencies = [
  "derive_more",
- "hex",
+ "hex 0.4.2",
  "merlin",
  "parking_lot 0.10.2",
  "rand 0.7.3",
@@ -4553,7 +4595,7 @@ dependencies = [
  "futures 0.3.5",
  "futures-timer 3.0.2",
  "futures_codec",
- "hex",
+ "hex 0.4.2",
  "ip_network",
  "libp2p",
  "linked-hash-map",
@@ -5402,7 +5444,7 @@ dependencies = [
  "futures 0.3.5",
  "hash-db",
  "hash256-std-hasher",
- "hex",
+ "hex 0.4.2",
  "impl-serde 0.3.1",
  "lazy_static",
  "libsecp256k1",
@@ -6942,6 +6984,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-io"
+version = "0.1.0"
+dependencies = [
+ "hex 0.4.2",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+ "sp-runtime-interface",
+]
+
+[[package]]
 name = "xp-mining-common"
 version = "0.1.0"
 dependencies = [
@@ -7007,31 +7060,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xpallet-bridge-bitcoin"
-version = "0.1.0"
-dependencies = [
- "chain",
- "chainx-primitives",
- "crypto",
- "frame-support",
- "frame-system",
- "keys",
- "merkle",
- "pallet-timestamp",
- "parity-scale-codec",
- "primitives",
- "script",
- "serde",
- "serialization",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "xpallet-assets",
- "xpallet-protocol",
- "xpallet-support",
-]
-
-[[package]]
 name = "xpallet-contracts"
 version = "2.0.0-rc4"
 dependencies = [
@@ -7074,7 +7102,7 @@ name = "xpallet-contracts-rpc"
 version = "0.8.0-rc4"
 dependencies = [
  "chainx-primitives",
- "hex",
+ "hex 0.4.2",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -7121,6 +7149,132 @@ dependencies = [
  "xpallet-assets",
  "xpallet-protocol",
  "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin"
+version = "0.1.0"
+dependencies = [
+ "chain",
+ "chainx-primitives",
+ "crypto",
+ "frame-support",
+ "frame-system",
+ "keys",
+ "merkle",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "primitives",
+ "script",
+ "serde",
+ "serialization",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xp-io",
+ "xpallet-assets",
+ "xpallet-gateway-common",
+ "xpallet-gateway-records",
+ "xpallet-protocol",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-common"
+version = "1.0.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "hex 0.4.2",
+ "keys",
+ "pallet-multisig",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xp-io",
+ "xpallet-assets",
+ "xpallet-gateway-records",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-common-rpc"
+version = "0.1.0"
+dependencies = [
+ "hex 0.4.2",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-common-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-gateway-common",
+]
+
+[[package]]
+name = "xpallet-gateway-records"
+version = "1.0.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-protocol",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-records-rpc"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xpallet-assets",
+ "xpallet-gateway-records-rpc-runtime-api",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-records-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-gateway-records",
 ]
 
 [[package]]
@@ -7214,8 +7368,9 @@ name = "xpallet-support"
 version = "0.1.0"
 dependencies = [
  "frame-support",
+ "hex 0.4.2",
+ "hex-serde",
  "parity-scale-codec",
- "rustc-hex",
  "serde",
  "sp-std",
 ]

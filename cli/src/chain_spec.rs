@@ -1,14 +1,16 @@
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 
 use chainx_runtime::{
-    h256_conv_endian_from_str, AssetInfo, AssetRestriction, AssetRestrictions, BTCCompact,
-    BTCHeader, BTCNetwork, BTCParams, Chain, ContractsSchedule, NetworkType,
+    h256_conv_endian_from_str, trustees, AssetInfo, AssetRestriction, AssetRestrictions,
+    BtcCompact, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Chain, ContractsSchedule,
+    NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys,
-    SudoConfig, SystemConfig, XAssetsConfig, XBridgeBitcoinConfig, XContractsConfig,
-    XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    SudoConfig, SystemConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
+    XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -86,6 +88,7 @@ pub fn development_config() -> ChainSpec {
                 ("Alice//stash", 100000),
                 ("Bob//stash", 100000),
             ],
+            testnet_trustees(),
             true,
         )
     };
@@ -125,6 +128,7 @@ pub fn local_testnet_config() -> ChainSpec {
                 ("Eve//stash", 100000),
                 ("Ferdie//stash", 100000),
             ],
+            testnet_trustees(),
             true,
         )
     };
@@ -142,6 +146,7 @@ pub fn local_testnet_config() -> ChainSpec {
 }
 
 const PCX_PRECISION: u8 = 8;
+const BTC_PRECISION: u8 = 8;
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
         xpallet_protocol::PCX,
@@ -165,24 +170,83 @@ fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
         xpallet_protocol::X_BTC,
         AssetInfo::new::<Runtime>(
             b"XBTC".to_vec(),
-            b"Bitcoin".to_vec(),
+            b"ChainX Bitcoin".to_vec(),
             Chain::Bitcoin,
-            8,
-            b"Interchain Bitcoin".to_vec(),
+            BTC_PRECISION,
+            b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        Default::default(),
+        AssetRestriction::DestroyFree.into(),
     )
 }
 
+// asset_id, asset_info, asset_restrictions, is_online, has_mining_rights
 fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
-    let xbtc = xbtc();
+    let btc = xbtc();
     let assets = vec![
         (pcx.0, pcx.1, pcx.2, true, false),
-        (xbtc.0, xbtc.1, xbtc.2, true, true),
+        (btc.0, btc.1, btc.2, true, true),
     ];
     assets
+}
+
+fn testnet_trustees() -> Vec<(
+    Chain,
+    TrusteeInfoConfig,
+    Vec<(AccountId, Vec<u8>, Vec<u8>, Vec<u8>)>,
+)> {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
+    let btc = Chain::Bitcoin;
+    let alice_hot = trustees::bitcoin::BtcTrusteeType::try_from(
+        hex::decode("035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84")
+            .expect(""),
+    )
+    .expect("");
+    let alice_cold = trustees::bitcoin::BtcTrusteeType::try_from(
+        hex::decode("0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3")
+            .expect(""),
+    )
+    .expect("");
+    let bob_hot = trustees::bitcoin::BtcTrusteeType::try_from(
+        hex::decode("02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee")
+            .expect(""),
+    )
+    .expect("");
+    let bob_cold = trustees::bitcoin::BtcTrusteeType::try_from(
+        hex::decode("020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f")
+            .expect(""),
+    )
+    .expect("");
+    let charlie_hot = trustees::bitcoin::BtcTrusteeType::try_from(
+        hex::decode("0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd")
+            .expect(""),
+    )
+    .expect("");
+    let charlie_cold = trustees::bitcoin::BtcTrusteeType::try_from(
+        hex::decode("02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99")
+            .expect(""),
+    )
+    .expect("");
+
+    let about = b"".to_vec();
+    let collection = vec![
+        (alice, about.clone(), alice_hot.into(), alice_cold.into()),
+        (bob, about.clone(), bob_hot.into(), bob_cold.into()),
+        (
+            charlie,
+            about.clone(),
+            charlie_hot.into(),
+            charlie_cold.into(),
+        ),
+    ];
+    let config = TrusteeInfoConfig {
+        min_trustee_count: 3,
+        max_trustee_count: 15,
+    };
+    vec![(btc, config, collection)]
 }
 
 fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> SessionKeys {
@@ -198,6 +262,11 @@ fn testnet_genesis(
     root_key: AccountId,
     assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
+    trustees: Vec<(
+        Chain,
+        TrusteeInfoConfig,
+        Vec<(AccountId, Vec<u8>, Vec<u8>, Vec<u8>)>,
+    )>,
     enable_println: bool,
 ) -> GenesisConfig {
     GenesisConfig {
@@ -233,9 +302,10 @@ fn testnet_genesis(
             endowed: endowed.clone(),
             memo_len: 128,
         }),
-        xpallet_bridge_bitcoin: Some(XBridgeBitcoinConfig {
-            genesis_header_and_height: (
-                BTCHeader {
+        xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
+        xpallet_gateway_bitcoin: Some(XGatewayBitcoinConfig {
+            genesis_info: (
+                BtcHeader {
                     version: 536870912,
                     previous_header_hash: h256_conv_endian_from_str(
                         "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
@@ -244,7 +314,7 @@ fn testnet_genesis(
                         "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
                     ),
                     time: 1558168296,
-                    bits: BTCCompact::new(388627269),
+                    bits: BtcCompact::new(388627269),
                     nonce: 1439505020,
                 },
                 576576,
@@ -252,14 +322,15 @@ fn testnet_genesis(
             genesis_hash: h256_conv_endian_from_str(
                 "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882",
             ),
-            params_info: BTCParams::new(
+            params_info: BtcParams::new(
                 486604799,            // max_bits
                 2 * 60 * 60,          // block_max_future
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                 10 * 60,              // target_spacing_seconds
                 4,                    // retargeting_factor
             ), // retargeting_factor
-            network_id: BTCNetwork::Mainnet,
+            network_id: BtcNetwork::Mainnet,
+            verifier: BtcTxVerifier::Recover,
             confirmation_number: 4,
             reserved_block: 2100,
             btc_withdrawal_fee: 500000,

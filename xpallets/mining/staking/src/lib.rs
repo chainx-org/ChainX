@@ -462,6 +462,12 @@ where
     }
 }
 
+impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
+    fn is_validator(who: &T::AccountId) -> bool {
+        Self::is_validator(who)
+    }
+}
+
 impl<T: Trait> Module<T> {
     #[inline]
     pub fn is_validator(who: &T::AccountId) -> bool {

@@ -9,11 +9,10 @@ pub mod traits;
 mod trigger;
 pub mod types;
 
-use codec::{Codec, Encode};
+use codec::Codec;
 // Substrate
-use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::{
-    AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Hash, MaybeSerializeDeserialize, Member, Zero,
+    AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Zero,
 };
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*, result};
 
@@ -36,7 +35,7 @@ pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke};
 pub use self::types::{
     is_valid_desc, is_valid_token, AssetErr, AssetInfo, AssetRestriction, AssetRestrictions,
     AssetType, Chain, NegativeImbalance, PositiveImbalance, SignedBalance, SignedImbalanceT,
-    TotalAssetInfo,
+    TotalAssetInfo, WithdrawalLimit,
 };
 
 pub trait Trait: system::Trait {
@@ -74,7 +73,7 @@ decl_error! {
         ///
         AlreadyExistentToken,
         ///
-        NonexistentAsset,
+        NotExistedAsset,
         ///
         InvalidAsset,
         /// Got an overflow after adding
@@ -252,10 +251,13 @@ decl_storage! {
     }
 }
 
-impl<T: Trait> ChainT for Module<T> {
+impl<T: Trait> ChainT<T::Balance> for Module<T> {
     const ASSET_ID: AssetId = xpallet_protocol::PCX;
     fn chain() -> Chain {
         Chain::ChainX
+    }
+    fn withdrawal_limit(_: &AssetId) -> result::Result<WithdrawalLimit<T::Balance>, DispatchError> {
+        Err(Error::<T>::ActionNotAllowed)?
     }
 }
 
@@ -292,7 +294,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn should_not_chainx(id: &AssetId) -> DispatchResult {
-        if *id == <Self as ChainT>::ASSET_ID {
+        if *id == <Self as ChainT<_>>::ASSET_ID {
             Err(Error::<T>::PcxNotAllowed)?;
         }
         Ok(())
@@ -376,7 +378,7 @@ impl<T: Trait> Module<T> {
                 Err(Error::<T>::InvalidAsset)?
             }
         } else {
-            Err(Error::<T>::NonexistentAsset)?
+            Err(Error::<T>::NotExistedAsset)?
         }
     }
 
@@ -737,7 +739,7 @@ impl<T: Trait> Module<T> {
         value: T::Balance,
     ) -> result::Result<(), AssetErr> {
         Self::move_balance(
-            &<Self as ChainT>::ASSET_ID,
+            &<Self as ChainT<_>>::ASSET_ID,
             from,
             from_type,
             to,

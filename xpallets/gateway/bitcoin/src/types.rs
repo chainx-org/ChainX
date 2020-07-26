@@ -1,0 +1,210 @@
+// Copyright 2018-2019 Chainpool.
+
+use codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+// Substrate
+use sp_runtime::RuntimeDebug;
+use sp_std::prelude::*;
+
+use chainx_primitives::Name;
+
+// light-bitcoin
+use btc_chain::{BlockHeader as BtcHeader, Transaction as BtcTransaction};
+use btc_keys::Address;
+use btc_primitives::{Compact, H256};
+use merkle::PartialMerkleTree;
+
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
+pub struct BtcRelayedTx {
+    pub block_hash: H256,
+    pub raw: BtcTransaction,
+    pub merkle_proof: PartialMerkleTree,
+}
+
+#[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct BtcHeaderInfo {
+    pub header: BtcHeader,
+    pub height: u32,
+}
+
+#[derive(PartialEq, Clone, Copy, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct BtcHeaderIndex {
+    pub hash: H256,
+    pub height: u32,
+}
+
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum BtcTxType {
+    Withdrawal,
+    Deposit,
+    HotAndCold,
+    TrusteeTransition,
+    Irrelevance,
+}
+
+impl Default for BtcTxType {
+    fn default() -> Self {
+        BtcTxType::Irrelevance
+    }
+}
+
+pub enum AccountInfo<AccountId> {
+    /// A value of type `L`.
+    Account((AccountId, Option<Name>)),
+    /// A value of type `R`.
+    Address(Address),
+}
+
+pub struct DepositInfo<AccountId> {
+    pub deposit_value: u64,
+    // pub account_info: AccountInfo<AccountId>,
+    pub op_return: Option<(AccountId, Option<Name>)>,
+    pub input_addr: Option<Address>,
+}
+pub enum MetaTxType<AccountId> {
+    Withdrawal,
+    Deposit(DepositInfo<AccountId>),
+    HotAndCold,
+    TrusteeTransition,
+    Irrelevance,
+}
+
+impl<AccountId> MetaTxType<AccountId> {
+    pub fn ref_into(&self) -> BtcTxType {
+        match self {
+            Self::Withdrawal => BtcTxType::Withdrawal,
+            Self::Deposit(_) => BtcTxType::Deposit,
+            Self::HotAndCold => BtcTxType::HotAndCold,
+            Self::TrusteeTransition => BtcTxType::TrusteeTransition,
+            Self::Irrelevance => BtcTxType::Irrelevance,
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+pub enum BtcTxResult {
+    Success,
+    Failed,
+}
+
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+pub struct BtcTxState {
+    pub result: BtcTxResult,
+    pub tx_type: BtcTxType,
+}
+
+#[derive(PartialEq, Clone, Encode, Decode, Default)]
+pub struct BtcDepositCache {
+    pub txid: H256,
+    pub balance: u64,
+}
+
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct BtcWithdrawalProposal<AccountId> {
+    pub sig_state: VoteResult,
+    pub withdrawal_id_list: Vec<u32>,
+    pub tx: BtcTransaction,
+    pub trustee_list: Vec<(AccountId, bool)>,
+}
+
+impl<AccountId> BtcWithdrawalProposal<AccountId> {
+    pub fn new(
+        sig_state: VoteResult,
+        withdrawal_id_list: Vec<u32>,
+        tx: BtcTransaction,
+        trustee_list: Vec<(AccountId, bool)>,
+    ) -> Self {
+        BtcWithdrawalProposal {
+            sig_state,
+            withdrawal_id_list,
+            tx,
+            trustee_list,
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum VoteResult {
+    Unfinish,
+    Finish,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct BtcParams {
+    max_bits: u32,
+    //Compact
+    block_max_future: u32,
+
+    target_timespan_seconds: u32,
+    target_spacing_seconds: u32,
+    retargeting_factor: u32,
+
+    retargeting_interval: u32,
+    min_timespan: u32,
+    max_timespan: u32,
+}
+
+impl BtcParams {
+    pub fn new(
+        max_bits: u32,
+        block_max_future: u32,
+        target_timespan_seconds: u32,
+        target_spacing_seconds: u32,
+        retargeting_factor: u32,
+    ) -> BtcParams {
+        BtcParams {
+            max_bits,
+            block_max_future,
+
+            target_timespan_seconds,
+            target_spacing_seconds,
+            retargeting_factor,
+
+            retargeting_interval: target_timespan_seconds / target_spacing_seconds,
+            min_timespan: target_timespan_seconds / retargeting_factor,
+            max_timespan: target_timespan_seconds * retargeting_factor,
+        }
+    }
+
+    pub fn max_bits(&self) -> Compact {
+        Compact::new(self.max_bits)
+    }
+
+    pub fn retargeting_interval(&self) -> u32 {
+        self.retargeting_interval
+    }
+
+    pub fn block_max_future(&self) -> u32 {
+        self.block_max_future
+    }
+    pub fn min_timespan(&self) -> u32 {
+        self.min_timespan
+    }
+
+    pub fn max_timespan(&self) -> u32 {
+        self.max_timespan
+    }
+    pub fn target_timespan_seconds(&self) -> u32 {
+        self.target_timespan_seconds
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum BtcTxVerifier {
+    Recover,
+    RuntimeInterface,
+}
+
+impl Default for BtcTxVerifier {
+    fn default() -> Self {
+        BtcTxVerifier::Recover
+    }
+}

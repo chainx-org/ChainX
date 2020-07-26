@@ -387,7 +387,7 @@ where
             return Ok(Zero::zero());
         }
         let _ = xpallet_assets::Module::<T>::move_balance(
-            &<xpallet_assets::Module<T> as xpallet_assets::ChainT>::ASSET_ID,
+            &<xpallet_assets::Module<T> as xpallet_assets::ChainT<_>>::ASSET_ID,
             who,
             xpallet_assets::AssetType::Free,
             who,
@@ -464,7 +464,7 @@ where
             let actual_fee = Module::<T>::compute_actual_fee(len as u32, info, post_info, tip);
             // refund locked fee to free
             let _ = xpallet_assets::Module::<T>::move_balance(
-                &<xpallet_assets::Module<T> as xpallet_assets::ChainT>::ASSET_ID,
+                &<xpallet_assets::Module<T> as xpallet_assets::ChainT<_>>::ASSET_ID,
                 &who,
                 xpallet_assets::AssetType::LockedFee,
                 &who,
@@ -475,7 +475,7 @@ where
             .map_err(|_| InvalidTransaction::Payment)?;
             // real do deduct fee from free balance
             let _ = xpallet_assets::Module::<T>::move_balance(
-                &<xpallet_assets::Module<T> as xpallet_assets::ChainT>::ASSET_ID,
+                &<xpallet_assets::Module<T> as xpallet_assets::ChainT<_>>::ASSET_ID,
                 &who,
                 xpallet_assets::AssetType::Free,
                 &who, // TODO to blockproducer in future
@@ -487,7 +487,7 @@ where
         }
         assert!(xpallet_assets::Module::<T>::asset_balance_of(
             &who,
-            &<xpallet_assets::Module<T> as xpallet_assets::ChainT>::ASSET_ID,
+            &<xpallet_assets::Module<T> as xpallet_assets::ChainT<_>>::ASSET_ID,
             xpallet_assets::AssetType::LockedFee
         )
         .is_zero());

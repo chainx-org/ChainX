@@ -41,15 +41,23 @@ pallet-offences = { git = "https://github.com/paritytech/substrate.git", tag = "
 pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false, features = ["historical"] }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-multisig = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../primitives", default-features = false }
 xp-mining-staking = { path = "../primitives/mining/staking", default-features = false }
 
 # ChainX pallets
+xpallet-protocol = { path = "../xpallets/protocol", default-features = false }
+xpallet-support = { path = "../xpallets/support", default-features = false }
+xpallet-system = { path = "../xpallets/system", default-features = false }
 xpallet-assets = { path = "../xpallets/assets", default-features = false }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api", default-features = false }
-xpallet-bridge-bitcoin = { path = "../xpallets/bridge/bitcoin", default-features = false }
+xpallet-gateway-records = { path = "../xpallets/gateway/records", default-features = false }
+xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api", default-features = false }
+xpallet-gateway-common = { path = "../xpallets/gateway/common", default-features = false }
+xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api", default-features = false }
+xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin", default-features = false }
 xpallet-contracts = { path = "../xpallets/contracts", default-features = false }
 xpallet-contracts-primitives = { path = "../xpallets/contracts/common", default-features = false }
 xpallet-contracts-rpc-runtime-api = { path = "../xpallets/contracts/rpc/runtime-api", default-features = false }
@@ -57,9 +65,6 @@ xpallet-dex-spot = { path = "../xpallets/dex/spot", default-features = false }
 xpallet-mining-staking = { path  = "../xpallets/mining/staking", default-features = false }
 xpallet-mining-staking-rpc-runtime-api = { path  = "../xpallets/mining/staking/rpc/runtime-api", default-features = false }
 xpallet-mining-asset = { path  = "../xpallets/mining/asset", default-features = false }
-xpallet-protocol = { path = "../xpallets/protocol", default-features = false }
-xpallet-system = { path = "../xpallets/system", default-features = false }
-xpallet-support = { path = "../xpallets/support", default-features = false }
 xpallet-transaction-payment = { path = "../xpallets/transaction-payment", default-features = false }
 xpallet-transaction-payment-rpc-runtime-api = { path = "../xpallets/transaction-payment/rpc/runtime-api", default-features = false }
 
@@ -100,13 +105,21 @@ std = [
     "pallet-offences/std",
     "pallet-timestamp/std",
     "pallet-utility/std",
+    "pallet-multisig/std",
 
     "chainx-primitives/std",
     "xp-mining-staking/std",
 
+    "xpallet-protocol/std",
+    "xpallet-support/std",
+    "xpallet-system/std",
     "xpallet-assets/std",
     "xpallet-assets-rpc-runtime-api/std",
-    "xpallet-bridge-bitcoin/std",
+    "xpallet-gateway-records/std",
+    "xpallet-gateway-records-rpc-runtime-api/std",
+    "xpallet-gateway-common/std",
+    "xpallet-gateway-common-rpc-runtime-api/std",
+    "xpallet-gateway-bitcoin/std",
     "xpallet-contracts/std",
     "xpallet-contracts-primitives/std",
     "xpallet-contracts-rpc-runtime-api/std",
@@ -114,9 +127,6 @@ std = [
     "xpallet-mining-staking/std",
     "xpallet-mining-staking-rpc-runtime-api/std",
     "xpallet-mining-asset/std",
-    "xpallet-protocol/std",
-    "xpallet-system/std",
-    "xpallet-support/std",
     "xpallet-transaction-payment/std",
     "xpallet-transaction-payment-rpc-runtime-api/std",
 ]

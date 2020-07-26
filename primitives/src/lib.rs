@@ -54,12 +54,13 @@ pub type BlockId = generic::BlockId<Block>;
 pub type Text = Vec<u8>;
 pub type Desc = Vec<u8>;
 pub type Token = Vec<u8>;
+pub type Name = Vec<u8>;
 pub type Precision = u8;
 pub type AddrStr = Vec<u8>;
 pub type AssetId = u32;
 
 /// Type for leaving a note when sending a transaction.
-#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, codec::Encode, codec::Decode)]
+#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, codec::Encode, codec::Decode, Default)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct Memo(Vec<u8>);
 
@@ -72,6 +73,12 @@ impl From<Vec<u8>> for Memo {
 impl From<&[u8]> for Memo {
     fn from(raw: &[u8]) -> Self {
         Self(raw.to_vec())
+    }
+}
+
+impl AsRef<[u8]> for Memo {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_slice()
     }
 }
 

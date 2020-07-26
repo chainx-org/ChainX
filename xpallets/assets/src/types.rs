@@ -262,6 +262,14 @@ pub fn is_valid_token<T: Trait>(v: &[u8]) -> DispatchResult {
     Ok(())
 }
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct WithdrawalLimit<Balance> {
+    pub minimal_withdrawal: Balance,
+    pub fee: Balance,
+}
+
 #[inline]
 /// Visible ASCII char [0x20, 0x7E]
 fn is_ascii_invisible(c: &u8) -> bool {
