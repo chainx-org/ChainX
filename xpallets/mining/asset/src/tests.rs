@@ -5,7 +5,7 @@ use frame_support::{
     traits::{Get, OnInitialize},
 };
 use xp_mining_staking::SessionIndex;
-use xpallet_protocol::X_Btc;
+use xpallet_protocol::X_BTC;
 
 fn t_system_block_number_inc(number: BlockNumber) {
     System::set_block_number((System::block_number() + number).into());
@@ -16,7 +16,7 @@ fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
 }
 
 fn t_issue_xbtc(to: AccountId, value: Balance) -> DispatchResult {
-    XAssets::issue(&X_Btc, &to, value)
+    XAssets::issue(&X_BTC, &to, value)
 }
 
 fn t_register_xbtc() -> DispatchResult {
@@ -32,7 +32,7 @@ fn t_register_xbtc() -> DispatchResult {
 }
 
 fn t_xbtc_total() -> Balance {
-    XAssets::all_type_total_asset_balance(&X_Btc).saturated_into()
+    XAssets::all_type_total_asset_balance(&X_BTC).saturated_into()
 }
 
 fn t_xbtc_latest_total_weights() -> WeightType {
