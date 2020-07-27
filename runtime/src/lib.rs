@@ -78,7 +78,7 @@ pub use xpallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 /// Constant values used within the runtime.
 pub mod constants;
-use constants::{currency::*, time::*};
+pub use constants::{currency::*, time::*};
 
 impl_opaque_keys! {
     pub struct SessionKeys {

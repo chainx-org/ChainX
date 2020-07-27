@@ -7405,6 +7405,7 @@ dependencies = [
  "sp-std",
  "sp-storage",
  "xpallet-assets",
+ "xpallet-support",
  "xpallet-transaction-payment-rpc-runtime-api",
 ]
 
