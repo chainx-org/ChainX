@@ -61,7 +61,7 @@ decl_module! {
             let sdot = <xsdot::Module<T> as ChainT>::TOKEN.to_vec();
             ensure!(
                 token != lbtc && token != sdot,
-                "Cannot claim from LBTC and SDOT since Proposal 12"
+                "Cannot claim from LBTC and SDOT since Proposal 12 removed these assets"
             );
             ensure!(
                 Self::psedu_intentions().contains(&token),
