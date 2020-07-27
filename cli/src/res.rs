@@ -21,6 +21,7 @@ fn as_btc_network(network_id: &str) -> BtcNetwork {
     }
 }
 
+// TODO: support testnet genesis
 pub fn load_mainnet_btc_genesis_header_info(
 ) -> ((BtcHeader, u32), xpallet_gateway_bitcoin::H256, BtcNetwork) {
     let raw: BitcoinGenesisHeader =
