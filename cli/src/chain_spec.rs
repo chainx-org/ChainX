@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
 use chainx_runtime::{
-    h256_conv_endian_from_str, trustees, AssetInfo, AssetRestriction, AssetRestrictions,
+    constants, h256_conv_endian_from_str, trustees, AssetInfo, AssetRestriction, AssetRestrictions,
     BtcCompact, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Chain, ContractsSchedule,
     NetworkType, TrusteeInfoConfig,
 };
@@ -77,16 +77,17 @@ macro_rules! endowed_gen {
 }
 
 pub fn development_config() -> ChainSpec {
-    let constructor = || {
+    let endowed_balance = 50 * constants::currency::DOLLARS;
+    let constructor = move || {
         testnet_genesis(
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             testnet_assets(),
             endowed_gen![
-                ("Alice", 100000),
-                ("Bob", 100000),
-                ("Alice//stash", 100000),
-                ("Bob//stash", 100000),
+                ("Alice", endowed_balance),
+                ("Bob", endowed_balance),
+                ("Alice//stash", endowed_balance),
+                ("Bob//stash", endowed_balance),
             ],
             testnet_trustees(),
             true,
@@ -106,7 +107,8 @@ pub fn development_config() -> ChainSpec {
 }
 
 pub fn local_testnet_config() -> ChainSpec {
-    let constructor = || {
+    let endowed_balance = 50 * constants::currency::DOLLARS;
+    let constructor = move || {
         testnet_genesis(
             vec![
                 authority_keys_from_seed("Alice"),
@@ -115,18 +117,18 @@ pub fn local_testnet_config() -> ChainSpec {
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             testnet_assets(),
             endowed_gen![
-                ("Alice", 100000),
-                ("Bob", 100000),
-                ("Charlie", 100000),
-                ("Dave", 100000),
-                ("Eve", 100000),
-                ("Ferdie", 100000),
-                ("Alice//stash", 100000),
-                ("Bob//stash", 100000),
-                ("Charlie//stash", 100000),
-                ("Dave//stash", 100000),
-                ("Eve//stash", 100000),
-                ("Ferdie//stash", 100000),
+                ("Alice", endowed_balance),
+                ("Bob", endowed_balance),
+                ("Charlie", endowed_balance),
+                ("Dave", endowed_balance),
+                ("Eve", endowed_balance),
+                ("Ferdie", endowed_balance),
+                ("Alice//stash", endowed_balance),
+                ("Bob//stash", endowed_balance),
+                ("Charlie//stash", endowed_balance),
+                ("Dave//stash", endowed_balance),
+                ("Eve//stash", endowed_balance),
+                ("Ferdie//stash", endowed_balance),
             ],
             testnet_trustees(),
             true,

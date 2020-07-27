@@ -26,6 +26,7 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.
 
 # ChainX pallets
 xpallet-transaction-payment-rpc-runtime-api = { path = "./rpc/runtime-api", default-features = false }
+xpallet-support = { path = "../support", default-features = false }
 xpallet-assets = { path = "../assets", default-features = false }
 
 [dev-dependencies]
@@ -44,6 +45,8 @@ std = [
     "sp-runtime/std",
     "frame-support/std",
     "frame-system/std",
+
     "xpallet-transaction-payment-rpc-runtime-api/std",
+    "xpallet-support/std",
     "xpallet-assets/std",
 ]
