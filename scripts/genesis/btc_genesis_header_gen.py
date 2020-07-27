@@ -9,14 +9,12 @@ import os
 
 conn = http.client.HTTPSConnection("blockstream.info")
 
-NETWORK_TYPE = 'Mainnet'
 
-
-def get_from_blockstream_api(endpoint):
+def get_from_blockstream_api(network, endpoint):
     payload = ''
     headers = {'Content-Type': 'application/json'}
 
-    if NETWORK_TYPE == 'Testnet':
+    if network == 'Testnet':
         conn.request("GET", '/testnet' + endpoint, payload, headers)
     else:
         conn.request("GET", endpoint, payload, headers)
@@ -26,14 +24,14 @@ def get_from_blockstream_api(endpoint):
     return data.decode('utf-8')
 
 
-def get_block(block_hash):
+def get_block(network, block_hash):
     endpoint = '/api/block/' + block_hash
-    return get_from_blockstream_api(endpoint)
+    return get_from_blockstream_api(network, endpoint)
 
 
-def get_block_hash(block_height):
+def get_block_hash(network, block_height):
     endpoint = '/api/block-height/' + block_height
-    return get_from_blockstream_api(endpoint)
+    return get_from_blockstream_api(network, endpoint)
 
 
 def main():
@@ -50,15 +48,18 @@ def main():
     args = parser.parse_args()
 
     if args.network != 'Mainnet':
-        NETWORK_TYPE = 'Testnet'
+        network = 'Testnet'
+    else:
+        network = 'Mainnet'
 
     print('Generating ' + args.network + ' Bitcoin Block Header for #' +
           args.height + ':\n')
 
     print('Retrieving the API of blockstream.info...')
-    blk_hash = get_block_hash(args.height)
+    blk_hash = get_block_hash(network, args.height)
     print('#' + args.height + ' hash: ' + blk_hash + '\n')
-    full_header = json.loads(get_block(blk_hash))
+
+    full_header = json.loads(get_block(network, blk_hash))
     generated = {
         'version': full_header['version'],
         'previous_header_hash': full_header['previousblockhash'],
@@ -67,7 +68,8 @@ def main():
         'bits': full_header['bits'],
         'nonce': full_header['nonce'],
         'height': args.height,
-        'hash': blk_hash
+        'hash': blk_hash,
+        "network_id": network
     }
     print('Generated Block header info:\n')
     print(json.dumps(generated, indent=4))

@@ -1,4 +1,4 @@
-use chainx_runtime::{h256_conv_endian_from_str, BtcCompact, BtcHeader};
+use chainx_runtime::{h256_conv_endian_from_str, BtcCompact, BtcHeader, BtcNetwork};
 
 #[derive(Debug, serde::Deserialize)]
 struct BitcoinGenesisHeader {
@@ -10,9 +10,19 @@ struct BitcoinGenesisHeader {
     nonce: u32,
     height: u32,
     hash: String,
+    network_id: String,
 }
 
-pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), xpallet_gateway_bitcoin::H256) {
+fn as_btc_network(network_id: &str) -> BtcNetwork {
+    match network_id {
+        "Mainnet" => BtcNetwork::Mainnet,
+        "Testnet" => BtcNetwork::Testnet,
+        _ => unreachable!("network_id is either Mainnet or Testnet"),
+    }
+}
+
+pub fn load_mainnet_btc_genesis_header_info(
+) -> ((BtcHeader, u32), xpallet_gateway_bitcoin::H256, BtcNetwork) {
     let raw: BitcoinGenesisHeader =
         serde_json::from_str(include_str!("./res/btc_genesis_header_mainnet.json"))
             .expect("JSON was not well-formatted");
@@ -30,5 +40,6 @@ pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), xpallet_gate
             raw.height,
         ),
         as_h256(&raw.hash),
+        as_btc_network(&raw.network_id),
     )
 }

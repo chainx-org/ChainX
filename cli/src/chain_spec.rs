@@ -305,10 +305,12 @@ fn testnet_genesis(
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
         xpallet_gateway_bitcoin: {
-            let (genesis_info, genesis_hash) = crate::res::load_mainnet_btc_genesis_header_info();
+            let (genesis_info, genesis_hash, network_id) =
+                crate::res::load_mainnet_btc_genesis_header_info();
             Some(XGatewayBitcoinConfig {
                 genesis_info,
                 genesis_hash,
+                network_id,
                 params_info: BtcParams::new(
                     486604799,            // max_bits
                     2 * 60 * 60,          // block_max_future
@@ -316,7 +318,6 @@ fn testnet_genesis(
                     10 * 60,              // target_spacing_seconds
                     4,                    // retargeting_factor
                 ), // retargeting_factor
-                network_id: BtcNetwork::Mainnet,
                 verifier: BtcTxVerifier::Recover,
                 confirmation_number: 4,
                 reserved_block: 2100,
