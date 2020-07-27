@@ -499,6 +499,8 @@ dependencies = [
  "sc-rpc",
  "sc-service",
  "sc-transaction-pool",
+ "serde",
+ "serde_json",
  "sp-consensus",
  "sp-consensus-aura",
  "sp-core",
@@ -509,6 +511,7 @@ dependencies = [
  "structopt",
  "substrate-build-script-utils",
  "xp-io",
+ "xpallet-gateway-bitcoin",
  "xpallet-protocol",
 ]
 

@@ -73,7 +73,7 @@ NEW_TYPES = [
 ]
 
 # Change the working directory to project root directory.
-os.chdir("..")
+os.chdir("../..")
 
 TARGET_KINDS = ['typedef', 'enum', 'struct']
 
@@ -93,9 +93,12 @@ def snake_to_camel(word):
     return s[0].lower() + s[1:]
 
 
+CHAINX_RPC_MANUAL_JSON = './scripts/chainx-js/chainx_rpc_manual.json'
+CHAINX_TYPES_MANUAL_JSON = './scripts/chainx-js/chainx_types_manual.json'
+
 MANUAL = {}
 # Read the types crated manually and convert the under_score_case to camelCase.
-with open('./scripts/chainx_types_manual.json') as json_file:
+with open(CHAINX_TYPES_MANUAL_JSON) as json_file:
     raw_manual = json.load(json_file)
     for k1, v1 in raw_manual.items():
         if isinstance(v1, dict) and '_enum' not in v1:
@@ -454,10 +457,10 @@ def write_types_and_rpc():
         #  Always override with types created manually.
         output[k] = MANUAL[k]
 
-    with open('./scripts/chainx_rpc_manual.json') as json_file:
+    with open(CHAINX_RPC_MANUAL_JSON) as json_file:
         RPC_MANUAL = json.load(json_file)
 
-    os.chdir("./scripts")
+    os.chdir("./scripts/chainx-js")
     write_json(output, 'res/chainx_types.json')
 
     for xmodule, fns in rpc_dict.items():

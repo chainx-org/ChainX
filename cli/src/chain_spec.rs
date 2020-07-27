@@ -2,9 +2,8 @@ use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
 use chainx_runtime::{
-    constants, h256_conv_endian_from_str, trustees, AssetInfo, AssetRestriction, AssetRestrictions,
-    BtcCompact, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Chain, ContractsSchedule,
-    NetworkType, TrusteeInfoConfig,
+    constants, trustees, AssetInfo, AssetRestriction, AssetRestrictions, BtcNetwork, BtcParams,
+    BtcTxVerifier, Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
@@ -26,14 +25,14 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
 
+type AccountPublic = <Signature as Verify>::Signer;
+
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
     TPublic::Pair::from_string(&format!("//{}", seed), None)
         .expect("static values are valid; qed")
         .public()
 }
-
-type AccountPublic = <Signature as Verify>::Signer;
 
 /// Helper function to generate an account ID from seed
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
@@ -305,39 +304,27 @@ fn testnet_genesis(
             memo_len: 128,
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
-        xpallet_gateway_bitcoin: Some(XGatewayBitcoinConfig {
-            genesis_info: (
-                BtcHeader {
-                    version: 536870912,
-                    previous_header_hash: h256_conv_endian_from_str(
-                        "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
-                    ),
-                    merkle_root_hash: h256_conv_endian_from_str(
-                        "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
-                    ),
-                    time: 1558168296,
-                    bits: BtcCompact::new(388627269),
-                    nonce: 1439505020,
-                },
-                576576,
-            ),
-            genesis_hash: h256_conv_endian_from_str(
-                "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882",
-            ),
-            params_info: BtcParams::new(
-                486604799,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,                    // retargeting_factor
-            ), // retargeting_factor
-            network_id: BtcNetwork::Mainnet,
-            verifier: BtcTxVerifier::Recover,
-            confirmation_number: 4,
-            reserved_block: 2100,
-            btc_withdrawal_fee: 500000,
-            max_withdrawal_count: 100,
-        }),
+        xpallet_gateway_bitcoin: {
+            let (genesis_info, genesis_hash, network_id) =
+                crate::res::load_mainnet_btc_genesis_header_info();
+            Some(XGatewayBitcoinConfig {
+                genesis_info,
+                genesis_hash,
+                network_id,
+                params_info: BtcParams::new(
+                    486604799,            // max_bits
+                    2 * 60 * 60,          // block_max_future
+                    2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                    10 * 60,              // target_spacing_seconds
+                    4,                    // retargeting_factor
+                ), // retargeting_factor
+                verifier: BtcTxVerifier::Recover,
+                confirmation_number: 4,
+                reserved_block: 2100,
+                btc_withdrawal_fee: 500000,
+                max_withdrawal_count: 100,
+            })
+        },
         xpallet_mining_staking: Some(XStakingConfig {
             validators: {
                 let pcx_endowed: std::collections::HashMap<AccountId, Balance> = endowed

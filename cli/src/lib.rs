@@ -9,6 +9,7 @@ mod service;
 mod cli;
 mod command;
 mod logger;
+mod res;
 
 pub use command::*;
 pub use sc_cli::Result;
