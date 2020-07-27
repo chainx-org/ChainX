@@ -87,7 +87,7 @@ fn test12_global_distribution_ratio_with_a_few_xbtc() {
 }
 
 #[test]
-fn test09_global_distribution_ratio_with_a_lot_of_xbtc() {
+fn test12_global_distribution_ratio_with_a_lot_of_xbtc() {
     with_externalities(&mut new_test_ext(), || {
         XAssets::issue(&b"BTC".to_vec(), &999, 1_250_000_000).unwrap();
         System::set_block_number(1);
