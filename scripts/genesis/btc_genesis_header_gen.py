@@ -55,8 +55,9 @@ def main():
     print('Generating ' + args.network + ' Bitcoin Block Header for #' +
           args.height + ':\n')
 
+    print('Retrieving the API of blockstream.info...')
     blk_hash = get_block_hash(args.height)
-    print('hash: ' + blk_hash + '\n')
+    print('#' + args.height + ' hash: ' + blk_hash + '\n')
     full_header = json.loads(get_block(blk_hash))
     generated = {
         'version': full_header['version'],

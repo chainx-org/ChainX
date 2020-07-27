@@ -259,6 +259,39 @@ fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> Sess
     }
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct BitcoinGenesisHeader {
+    version: u32,
+    previous_header_hash: String,
+    merkle_root_hash: String,
+    time: u32,
+    bits: u32,
+    nonce: u32,
+    height: u32,
+    hash: String,
+}
+
+fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), xpallet_gateway_bitcoin::H256) {
+    let raw: BitcoinGenesisHeader =
+        serde_json::from_str(include_str!("./res/btc_genesis_header_mainnet.json"))
+            .expect("JSON was not well-formatted");
+    let as_h256 = |s: &str| h256_conv_endian_from_str(s);
+    (
+        (
+            BtcHeader {
+                version: raw.version,
+                previous_header_hash: as_h256(&raw.previous_header_hash),
+                merkle_root_hash: as_h256(&raw.previous_header_hash),
+                time: raw.time,
+                bits: BtcCompact::new(raw.bits),
+                nonce: raw.nonce,
+            },
+            raw.height,
+        ),
+        as_h256(&raw.hash),
+    )
+}
+
 fn testnet_genesis(
     initial_authorities: Vec<(AccountId, AccountId, AuraId, GrandpaId, ImOnlineId)>,
     root_key: AccountId,
@@ -305,39 +338,26 @@ fn testnet_genesis(
             memo_len: 128,
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
-        xpallet_gateway_bitcoin: Some(XGatewayBitcoinConfig {
-            genesis_info: (
-                BtcHeader {
-                    version: 536870912,
-                    previous_header_hash: h256_conv_endian_from_str(
-                        "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
-                    ),
-                    merkle_root_hash: h256_conv_endian_from_str(
-                        "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
-                    ),
-                    time: 1558168296,
-                    bits: BtcCompact::new(388627269),
-                    nonce: 1439505020,
-                },
-                576576,
-            ),
-            genesis_hash: h256_conv_endian_from_str(
-                "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882",
-            ),
-            params_info: BtcParams::new(
-                486604799,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,                    // retargeting_factor
-            ), // retargeting_factor
-            network_id: BtcNetwork::Mainnet,
-            verifier: BtcTxVerifier::Recover,
-            confirmation_number: 4,
-            reserved_block: 2100,
-            btc_withdrawal_fee: 500000,
-            max_withdrawal_count: 100,
-        }),
+        xpallet_gateway_bitcoin: {
+            let (genesis_info, genesis_hash) = load_mainnet_btc_genesis_header_info();
+            Some(XGatewayBitcoinConfig {
+                genesis_info,
+                genesis_hash,
+                params_info: BtcParams::new(
+                    486604799,            // max_bits
+                    2 * 60 * 60,          // block_max_future
+                    2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                    10 * 60,              // target_spacing_seconds
+                    4,                    // retargeting_factor
+                ), // retargeting_factor
+                network_id: BtcNetwork::Mainnet,
+                verifier: BtcTxVerifier::Recover,
+                confirmation_number: 4,
+                reserved_block: 2100,
+                btc_withdrawal_fee: 500000,
+                max_withdrawal_count: 100,
+            })
+        },
         xpallet_mining_staking: Some(XStakingConfig {
             validators: {
                 let pcx_endowed: std::collections::HashMap<AccountId, Balance> = endowed
