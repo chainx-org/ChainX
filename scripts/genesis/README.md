@@ -19,5 +19,5 @@ Example:
 $ ./btc_genesis_header_gen.py 576576
 
 # Generate block header from Bitcoin testnet at height 576576.
-# ./btc_genesis_header_gen.py 576576 --network Testnet
+$ ./btc_genesis_header_gen.py 576576 --network Testnet
 ```
