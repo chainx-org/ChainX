@@ -21,7 +21,7 @@ fn test12_lbtc_and_sdot_claim_not_allowed() {
 
         assert_noop!(
             XTokens::claim(Origin::signed(100), sdot.clone()),
-            "Cannot claim from LBTC and SDOT since Proposal 12"
+            "Cannot claim from LBTC and SDOT since Proposal 12 removed these airdrop assets"
         );
     });
 }
