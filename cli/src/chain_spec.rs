@@ -2,9 +2,8 @@ use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
 use chainx_runtime::{
-    constants, h256_conv_endian_from_str, trustees, AssetInfo, AssetRestriction, AssetRestrictions,
-    BtcCompact, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Chain, ContractsSchedule,
-    NetworkType, TrusteeInfoConfig,
+    constants, trustees, AssetInfo, AssetRestriction, AssetRestrictions, BtcNetwork, BtcParams,
+    BtcTxVerifier, Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
@@ -259,39 +258,6 @@ fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> Sess
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
-struct BitcoinGenesisHeader {
-    version: u32,
-    previous_header_hash: String,
-    merkle_root_hash: String,
-    time: u32,
-    bits: u32,
-    nonce: u32,
-    height: u32,
-    hash: String,
-}
-
-fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), xpallet_gateway_bitcoin::H256) {
-    let raw: BitcoinGenesisHeader =
-        serde_json::from_str(include_str!("./res/btc_genesis_header_mainnet.json"))
-            .expect("JSON was not well-formatted");
-    let as_h256 = |s: &str| h256_conv_endian_from_str(s);
-    (
-        (
-            BtcHeader {
-                version: raw.version,
-                previous_header_hash: as_h256(&raw.previous_header_hash),
-                merkle_root_hash: as_h256(&raw.previous_header_hash),
-                time: raw.time,
-                bits: BtcCompact::new(raw.bits),
-                nonce: raw.nonce,
-            },
-            raw.height,
-        ),
-        as_h256(&raw.hash),
-    )
-}
-
 fn testnet_genesis(
     initial_authorities: Vec<(AccountId, AccountId, AuraId, GrandpaId, ImOnlineId)>,
     root_key: AccountId,
@@ -339,7 +305,7 @@ fn testnet_genesis(
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
         xpallet_gateway_bitcoin: {
-            let (genesis_info, genesis_hash) = load_mainnet_btc_genesis_header_info();
+            let (genesis_info, genesis_hash) = crate::res::load_mainnet_btc_genesis_header_info();
             Some(XGatewayBitcoinConfig {
                 genesis_info,
                 genesis_hash,
