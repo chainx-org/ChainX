@@ -6,14 +6,18 @@ use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+use sp_std::collections::btree_map::BTreeMap;
 use std::sync::Arc;
-use xpallet_mining_staking::ValidatorInfo;
+use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
 use xpallet_mining_staking_rpc_runtime_api::XStakingApi as XStakingRuntimeApi;
 use xpallet_support::RpcBalance;
 
 /// XStaking RPC methods.
 #[rpc]
-pub trait XStakingApi<BlockHash, AccountId, RpcBalance, BlockNumber> {
+pub trait XStakingApi<BlockHash, AccountId, RpcBalance, BlockNumber>
+where
+    AccountId: Ord,
+{
     /// Get overall information about all potential validators
     #[rpc(name = "xstaking_getValidators")]
     fn validators(
@@ -28,6 +32,22 @@ pub trait XStakingApi<BlockHash, AccountId, RpcBalance, BlockNumber> {
         who: AccountId,
         at: Option<BlockHash>,
     ) -> Result<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>;
+
+    /// Get the staking dividends info given the staker AccountId.
+    #[rpc(name = "xstaking_getDividendByAccount")]
+    fn staking_dividend_of(
+        &self,
+        who: AccountId,
+        at: Option<BlockHash>,
+    ) -> Result<BTreeMap<AccountId, RpcBalance>>;
+
+    /// Get the nomination details given the staker AccountId.
+    #[rpc(name = "xstaking_getNominationByAccount")]
+    fn nomination_details_of(
+        &self,
+        who: AccountId,
+        at: Option<BlockHash>,
+    ) -> Result<BTreeMap<AccountId, RpcNominatorLedger<RpcBalance, BlockNumber>>>;
 }
 
 /// A struct that implements the [`XStakingApi`].
@@ -53,7 +73,7 @@ where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XStakingRuntimeApi<Block, AccountId, Balance, BlockNumber>,
-    AccountId: Codec,
+    AccountId: Codec + Ord,
     Balance: Codec,
     BlockNumber: Codec,
 {
@@ -62,10 +82,7 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(||
-                // If the block hash is not supplied assume the best block.
-                self.client.info().best_hash));
-
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api.validators(&at).map_err(runtime_error_into_rpc_err)?)
     }
 
@@ -75,12 +92,33 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(||
-                // If the block hash is not supplied assume the best block.
-                self.client.info().best_hash));
-
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
             .validator_info_of(&at, who)
+            .map_err(runtime_error_into_rpc_err)?)
+    }
+
+    fn staking_dividend_of(
+        &self,
+        who: AccountId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<BTreeMap<AccountId, RpcBalance<Balance>>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        Ok(api
+            .staking_dividend_of(&at, who)
+            .map_err(runtime_error_into_rpc_err)?)
+    }
+
+    fn nomination_details_of(
+        &self,
+        who: AccountId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        Ok(api
+            .nomination_details_of(&at, who)
             .map_err(runtime_error_into_rpc_err)?)
     }
 }

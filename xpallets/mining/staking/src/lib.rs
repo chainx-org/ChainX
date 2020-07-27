@@ -5,6 +5,7 @@
 mod election;
 mod impls;
 mod reward;
+mod rpc;
 mod slashing;
 mod types;
 
@@ -30,6 +31,7 @@ use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::{debug, RpcBalance};
 
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
+pub use rpc::*;
 pub use types::*;
 
 /// Session reward of the first 210_000 sessions.
@@ -735,35 +737,5 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
 
         Ok(())
-    }
-}
-
-impl<T: Trait> Module<T> {
-    pub fn validators_info(
-    ) -> Vec<ValidatorInfo<T::AccountId, RpcBalance<T::Balance>, T::BlockNumber>> {
-        Self::validator_set().map(Self::validator_info_of).collect()
-    }
-
-    pub fn validator_info_of(
-        who: T::AccountId,
-    ) -> ValidatorInfo<T::AccountId, RpcBalance<T::Balance>, T::BlockNumber> {
-        let profile = Validators::<T>::get(&who);
-        let ledger: RpcValidatorLedger<RpcBalance<T::Balance>, T::BlockNumber> =
-            ValidatorLedgers::<T>::get(&who).into();
-        let self_bonded: RpcBalance<T::Balance> =
-            Nominations::<T>::get(&who, &who).nomination.into();
-        let is_validating = T::SessionInterface::validators().contains(&who);
-        let reward_pot_account = T::DetermineRewardPotAccount::reward_pot_account_for(&who);
-        let reward_pot_balance: RpcBalance<T::Balance> =
-            xpallet_assets::Module::<T>::pcx_free_balance(&reward_pot_account).into();
-        ValidatorInfo {
-            account: who,
-            profile,
-            ledger,
-            is_validating,
-            self_bonded,
-            reward_pot_account,
-            reward_pot_balance,
-        }
     }
 }

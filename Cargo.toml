@@ -5,6 +5,11 @@ authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
 description = "Fully Decentralized Interchain Crypto Asset Management on Polkadot"
 
+# jsonrpc-derive requires a new version after v14.2.
+# Remove this once Substrate releases a new tag with this patch.
+[patch.crates-io]
+jsonrpc-derive = { git = "https://github.com/paritytech/jsonrpc", rev = "57575efe9c220c7e7c0addf3c90e9577e3296c80" }
+
 [dependencies]
 cli = { package = "chainx-cli", path = "cli" }
 

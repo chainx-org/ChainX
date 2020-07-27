@@ -67,7 +67,7 @@ def main():
         'time': full_header['timestamp'],
         'bits': full_header['bits'],
         'nonce': full_header['nonce'],
-        'height': args.height,
+        'height': int(args.height),
         'hash': blk_hash,
         "network_id": network
     }
