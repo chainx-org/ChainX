@@ -47,8 +47,11 @@ pub enum ReservedType {
 decl_storage! {
     trait Store for Module<T: Trait> as XGenericReserves {
         /// All kinds of reserves of an account.
+        ///
+        /// Only native reserved types need to be stored in this Module,
+        /// the info of detailed reserved assets is recorded in `assets` Module.
         pub Reserves get(fn reserves):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => BTreeMap<ReservedType, T::Balance>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => BTreeMap<NativeReservedType, T::Balance>;
     }
 }
 
