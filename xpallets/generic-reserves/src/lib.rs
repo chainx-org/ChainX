@@ -159,6 +159,17 @@ impl<T: Trait> Module<T> {
     }
 
     ///
+    pub fn move_reserved_asset(
+        who: &T::AccountId,
+        asset_id: AssetId,
+        value: T::Balance,
+        from_ty: AssetType,
+        to_ty: AssetType,
+    ) -> Result<(), Error<T>> {
+        Ok(())
+    }
+
+    ///
     pub fn reserved_asset_of(who: &T::AccountId, asset_id: AssetId, ty: AssetType) -> T::Balance {
         todo!()
     }
