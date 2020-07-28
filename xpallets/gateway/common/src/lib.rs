@@ -16,7 +16,9 @@ use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*, res
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
-    ensure, IterableStorageMap,
+    ensure,
+    traits::Currency,
+    IterableStorageMap,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -35,12 +37,16 @@ use crate::types::{
     TrusteeIntentionProps,
 };
 
+pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
+    <T as frame_system::Trait>::AccountId,
+>>::Balance;
+
 pub trait Trait: system::Trait + pallet_multisig::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     type Validator: Validator<Self::AccountId>;
     // for chain
-    type Bitcoin: ChainT<Self::Balance>;
+    type Bitcoin: ChainT<BalanceOf<Self>>;
     type BitcoinTrustee: TrusteeForChain<
         Self::AccountId,
         trustees::bitcoin::BtcTrusteeType,
@@ -87,7 +93,7 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 0]
-        fn withdraw(origin, #[compact] asset_id: AssetId, #[compact] value: T::Balance, addr: AddrStr, ext: Memo) -> DispatchResult {
+        fn withdraw(origin, #[compact] asset_id: AssetId, #[compact] value: BalanceOf<T>, addr: AddrStr, ext: Memo) -> DispatchResult {
             let who = ensure_signed(origin)?;
             Self::apply_withdraw(who, asset_id, value, addr, ext)
         }
@@ -193,7 +199,7 @@ impl<T: Trait> Module<T> {
     fn apply_withdraw(
         who: T::AccountId,
         asset_id: AssetId,
-        value: T::Balance,
+        value: BalanceOf<T>,
         addr: AddrStr,
         ext: Memo,
     ) -> DispatchResult {
@@ -210,7 +216,7 @@ impl<T: Trait> Module<T> {
 
     pub fn withdrawal_limit(
         asset_id: &AssetId,
-    ) -> result::Result<WithdrawalLimit<T::Balance>, DispatchError> {
+    ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         let info = xpallet_assets::Module::<T>::asset_info_of(&asset_id)
             .ok_or(xpallet_assets::Error::<T>::InvalidAsset)?;
         let chain = info.chain();
@@ -222,7 +228,7 @@ impl<T: Trait> Module<T> {
 
     pub fn verify_withdrawal(
         asset_id: AssetId,
-        value: T::Balance,
+        value: BalanceOf<T>,
         addr: &[u8],
         ext: &Memo,
     ) -> DispatchResult {

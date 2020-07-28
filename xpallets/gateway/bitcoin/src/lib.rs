@@ -21,6 +21,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
     ensure,
+    traits::Currency,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -53,6 +54,10 @@ use self::types::{
 pub use self::types::{BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use crate::trustee::get_trustee_address_pair;
 use crate::tx::{remove_pending_deposit, utils::addr2vecu8};
+
+pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
+    <T as frame_system::Trait>::AccountId,
+>>::Balance;
 
 pub trait Trait:
     frame_system::Trait
@@ -146,7 +151,7 @@ decl_error! {
 decl_event!(
     pub enum Event<T> where
         <T as frame_system::Trait>::AccountId,
-        <T as xpallet_assets::Trait>::Balance
+        Balance = BalanceOf<T>
         {
         /// block hash
         InsertHeader(H256),
@@ -403,7 +408,7 @@ decl_module! {
     }
 }
 
-impl<T: Trait> ChainT<T::Balance> for Module<T> {
+impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
     const ASSET_ID: AssetId = xpallet_protocol::X_BTC;
 
     fn chain() -> Chain {
@@ -432,12 +437,12 @@ impl<T: Trait> ChainT<T::Balance> for Module<T> {
 
     fn withdrawal_limit(
         asset_id: &AssetId,
-    ) -> result::Result<WithdrawalLimit<T::Balance>, DispatchError> {
+    ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         if *asset_id != Self::ASSET_ID {
             Err(xpallet_assets::Error::<T>::ActionNotAllowed)?
         }
         let fee = Self::btc_withdrawal_fee().saturated_into();
-        let limit = WithdrawalLimit::<T::Balance> {
+        let limit = WithdrawalLimit::<BalanceOf<T>> {
             minimal_withdrawal: fee * 3.saturated_into() / 2.saturated_into(),
             fee,
         };
