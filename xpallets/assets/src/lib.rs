@@ -4,24 +4,19 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod pcx;
 pub mod traits;
 mod trigger;
 pub mod types;
 
-use codec::Codec;
 // Substrate
-use sp_runtime::traits::{
-    AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Zero,
-};
-use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*, result};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Zero};
+use sp_std::{collections::btree_map::BTreeMap, prelude::*, result};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::{Imbalance, OnNewAccount, SignedImbalance},
-    Parameter,
+    traits::Currency,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -34,23 +29,25 @@ use self::trigger::AssetChangedTrigger;
 pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke};
 pub use self::types::{
     is_valid_desc, is_valid_token, AssetErr, AssetInfo, AssetRestriction, AssetRestrictions,
-    AssetType, Chain, NegativeImbalance, PositiveImbalance, SignedBalance, SignedImbalanceT,
-    TotalAssetInfo, WithdrawalLimit,
+    AssetType, Chain, SignedBalance, TotalAssetInfo, WithdrawalLimit,
 };
+use frame_support::traits::IsDeadAccount;
+
+pub type BalanceOf<T> =
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+// pub type PositiveImbalanceOf<T> =
+// <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
+// pub type NegativeImbalanceOf<T> =
+// <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
+// pub type SignedImbalance<T> = frame_support::traits::SignedImbalance<BalanceOf<T>, PositiveImbalance<T>>;
 
 pub trait Trait: system::Trait {
-    type Balance: Parameter
-        + Member
-        + AtLeast32BitUnsigned
-        + Codec
-        + Default
-        + Copy
-        + MaybeSerializeDeserialize
-        + Debug;
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
-    type OnAssetChanged: OnAssetChanged<Self::AccountId, Self::Balance>;
+    type Currency: Currency<Self::AccountId>;
+
+    type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
 
     type OnAssetRegisterOrRevoke: OnAssetRegisterOrRevoke;
 }
@@ -97,7 +94,7 @@ decl_error! {
 decl_event!(
     pub enum Event<T> where
         <T as system::Trait>::AccountId,
-        <T as Trait>::Balance,
+        Balance = BalanceOf<T>,
         SignedBalance = SignedBalance<T>,
     {
         Register(AssetId, bool),
@@ -156,7 +153,7 @@ decl_module! {
 
         /// set free token for an account
         #[weight = 0]
-        pub fn set_balance(origin, who: T::AccountId, #[compact] id: AssetId, balances: BTreeMap<AssetType, T::Balance>) -> DispatchResult {
+        pub fn set_balance(origin, who: T::AccountId, #[compact] id: AssetId, balances: BTreeMap<AssetType, BalanceOf<T>>) -> DispatchResult {
             ensure_root(origin)?;
             info!("[set_balance]|set balances by root|who:{:?}|id:{:}|balances_map:{:?}", who, id, balances);
             Self::set_balance_by_root(&who, &id, balances)?;
@@ -165,7 +162,7 @@ decl_module! {
 
         /// transfer between account
         #[weight = 0]
-        pub fn transfer(origin, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
+        pub fn transfer(origin, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
             memo.check_validity()?;
@@ -178,7 +175,7 @@ decl_module! {
 
         /// for transfer by root
         #[weight = 0]
-        pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: T::Balance, memo: Memo) -> DispatchResult {
+        pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
             debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
             memo.check_validity()?;
@@ -235,36 +232,36 @@ decl_storage! {
 
         /// asset balance for user&asset_id, use btree_map to accept different asset type
         pub AssetBalance get(fn asset_balance):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => BTreeMap<AssetType, T::Balance>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
         /// asset balance for an asset_id, use btree_map to accept different asset type
-        pub TotalAssetBalance get(fn total_asset_balance): map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, T::Balance>;
+        pub TotalAssetBalance get(fn total_asset_balance): map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
 
         /// memo len
         pub MemoLen get(fn memo_len) config(): u32;
     }
     add_extra_genesis {
         config(assets): Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>;
-        config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>;
+        config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>;
         build(|config| {
             Module::<T>::initialize_assets(&config.assets, &config.endowed);
         })
     }
 }
 
-impl<T: Trait> ChainT<T::Balance> for Module<T> {
-    const ASSET_ID: AssetId = xpallet_protocol::PCX;
-    fn chain() -> Chain {
-        Chain::ChainX
-    }
-    fn withdrawal_limit(_: &AssetId) -> result::Result<WithdrawalLimit<T::Balance>, DispatchError> {
-        Err(Error::<T>::ActionNotAllowed)?
-    }
-}
+// impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
+//     const ASSET_ID: AssetId = xpallet_protocol::PCX;
+//     fn chain() -> Chain {
+//         Chain::ChainX
+//     }
+//     fn withdrawal_limit(_: &AssetId) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
+//         Err(Error::<T>::ActionNotAllowed)?
+//     }
+// }
 
 impl<T: Trait> Module<T> {
     fn initialize_assets(
         assets: &Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
-        endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, T::Balance)>>,
+        endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>,
     ) {
         for (id, asset, restrictions, is_online, has_mining_rights) in assets {
             Self::register_asset(
@@ -293,12 +290,12 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn should_not_chainx(id: &AssetId) -> DispatchResult {
-        if *id == <Self as ChainT<_>>::ASSET_ID {
-            Err(Error::<T>::PcxNotAllowed)?;
-        }
-        Ok(())
-    }
+    // pub fn should_not_chainx(id: &AssetId) -> DispatchResult {
+    //     if *id == <Self as ChainT<_>>::ASSET_ID {
+    //         Err(Error::<T>::PcxNotAllowed)?;
+    //     }
+    //     Ok(())
+    // }
 }
 
 // asset related
@@ -337,7 +334,7 @@ impl<T: Trait> Module<T> {
         v
     }
 
-    pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<T::Balance>> {
+    pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
         use frame_support::IterableStorageMap;
         AssetInfoOf::iter()
             .map(|(id, info)| {
@@ -363,7 +360,7 @@ impl<T: Trait> Module<T> {
 
     pub fn valid_assets_of(
         who: &T::AccountId,
-    ) -> BTreeMap<AssetId, BTreeMap<AssetType, T::Balance>> {
+    ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
             .filter_map(|(id, map)| Self::asset_online(id).map(|_| (id, map)))
@@ -438,25 +435,25 @@ impl<T: Trait> Module<T> {
 
 /// token issue destroy reserve/unreserve, it's core function
 impl<T: Trait> Module<T> {
-    pub fn all_type_total_asset_balance(id: &AssetId) -> T::Balance {
+    pub fn all_type_total_asset_balance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
     }
 
-    pub fn all_type_asset_balance(who: &T::AccountId, id: &AssetId) -> T::Balance {
+    pub fn all_type_asset_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
         let map = Self::asset_balance(who, id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
     }
 
-    pub fn asset_balance_of(who: &T::AccountId, id: &AssetId, type_: AssetType) -> T::Balance {
+    pub fn asset_balance_of(who: &T::AccountId, id: &AssetId, type_: AssetType) -> BalanceOf<T> {
         Self::asset_type_balance(who, id, type_)
     }
 
-    pub fn free_balance_of(who: &T::AccountId, id: &AssetId) -> T::Balance {
+    pub fn free_balance_of(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
         Self::asset_type_balance(&who, &id, AssetType::Free)
     }
 
-    fn asset_type_balance(who: &T::AccountId, id: &AssetId, type_: AssetType) -> T::Balance {
+    fn asset_type_balance(who: &T::AccountId, id: &AssetId, type_: AssetType) -> BalanceOf<T> {
         let balance_map = Self::asset_balance(who, id);
         match balance_map.get(&type_) {
             Some(b) => *b,
@@ -464,17 +461,17 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    pub fn issue(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
+    pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
 
         // may set storage inner
-        Self::try_new_account(&who, id);
+        Self::try_new_account(&who);
 
         let _imbalance = Self::inner_issue(id, who, AssetType::Free, value)?;
         Ok(())
     }
 
-    pub fn destroy(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
+    pub fn destroy(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
         Self::can_destroy_withdrawal(id)?;
 
@@ -482,7 +479,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn destroy_free(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
+    pub fn destroy_free(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
         Self::can_destroy_free(id)?;
 
@@ -491,31 +488,13 @@ impl<T: Trait> Module<T> {
     }
 
     fn new_account(who: &T::AccountId) {
-        T::OnNewAccount::on_new_account(&who);
-        // set empty balance for pcx
-        assert!(
-            !AssetBalance::<T>::contains_key(&who, Self::ASSET_ID),
-            "when new account, the pcx must not exist for this account!"
-        );
         info!("[new_account]|create new account|who:{:?}", who);
-        AssetBalance::<T>::insert(
-            &who,
-            Self::ASSET_ID,
-            BTreeMap::<AssetType, T::Balance>::new(),
-        );
-        // Self::deposit_event(RawEvent::NewAccount(who.clone()));
+        system::Module::<T>::on_created_account(who.clone())
     }
 
-    fn try_new_account(who: &T::AccountId, id: &AssetId) {
+    fn try_new_account(who: &T::AccountId) {
         // lookup chainx balance
-        let existed = if *id == Self::ASSET_ID {
-            AssetBalance::<T>::contains_key(who, id)
-        } else {
-            AssetBalance::<T>::contains_key(who, Self::ASSET_ID)
-        };
-
-        if !existed {
-            // init account
+        if system::Module::<T>::is_dead_account(who) {
             Self::new_account(who);
         }
     }
@@ -524,10 +503,10 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         id: &AssetId,
         type_: AssetType,
-        new_balance: T::Balance,
-    ) -> SignedImbalanceT<T> {
-        let mut original: T::Balance = Zero::zero();
-        AssetBalance::<T>::mutate(who, id, |balance_map| {
+        new_balance: BalanceOf<T>,
+    ) {
+        let mut original: BalanceOf<T> = Zero::zero();
+        let modifier = move |balance_map: &mut BTreeMap<AssetType, BalanceOf<T>>| {
             if new_balance == Zero::zero() {
                 // remove Zero balance to save space
                 if let Some(old) = balance_map.remove(&type_) {
@@ -539,29 +518,17 @@ impl<T: Trait> Module<T> {
                 // modify to new balance
                 *balance = new_balance;
             }
-        });
-        let imbalance = if original <= new_balance {
-            SignedImbalance::Positive(PositiveImbalance::<T>::new(
-                new_balance - original,
-                *id,
-                type_,
-            ))
-        } else {
-            SignedImbalance::Negative(NegativeImbalance::<T>::new(
-                original - new_balance,
-                *id,
-                type_,
-            ))
         };
-        imbalance
+        AssetBalance::<T>::mutate(who, id, modifier);
+        TotalAssetBalance::<T>::mutate(id, modifier);
     }
 
     fn inner_issue(
         id: &AssetId,
         who: &T::AccountId,
         type_: AssetType,
-        value: T::Balance,
-    ) -> result::Result<PositiveImbalance<T>, DispatchError> {
+        value: BalanceOf<T>,
+    ) -> result::Result<(), DispatchError> {
         let current = Self::asset_type_balance(&who, id, type_);
 
         debug!(
@@ -574,24 +541,24 @@ impl<T: Trait> Module<T> {
         AssetChangedTrigger::<T>::on_issue_pre(id, who);
 
         // set to storage
-        let imbalance = Self::make_type_balance_be(who, id, type_, new);
-        let positive = if let SignedImbalance::Positive(p) = imbalance {
-            p
-        } else {
-            // Impossible, but be defensive.
-            PositiveImbalance::<T>::new(Zero::zero(), *id, type_)
-        };
+        Self::make_type_balance_be(who, id, type_, new);
+        // let positive = if let SignedImbalance::Positive(p) = imbalance {
+        //     p
+        // } else {
+        //     // Impossible, but be defensive.
+        //     PositiveImbalanceOf::<T>::new(Zero::zero(), *id, type_)
+        // };
 
         AssetChangedTrigger::<T>::on_issue_post(id, who, value)?;
-        Ok(positive)
+        Ok(())
     }
 
     fn inner_destroy(
         id: &AssetId,
         who: &T::AccountId,
         type_: AssetType,
-        value: T::Balance,
-    ) -> result::Result<NegativeImbalance<T>, DispatchError> {
+        value: BalanceOf<T>,
+    ) -> result::Result<(), DispatchError> {
         let current = Self::asset_type_balance(&who, id, type_);
 
         debug!("[destroy_directly]|destroy asset for account|id:{:}|who:{:?}|type:{:?}|current:{:?}|destroy:{:?}",
@@ -603,16 +570,10 @@ impl<T: Trait> Module<T> {
 
         AssetChangedTrigger::<T>::on_destroy_pre(id, who);
 
-        let imbalance = Self::make_type_balance_be(who, id, type_, new);
-        let negative = if let SignedImbalance::Negative(n) = imbalance {
-            n
-        } else {
-            // Impossible, but be defensive.
-            NegativeImbalance::<T>::new(Zero::zero(), *id, type_)
-        };
+        Self::make_type_balance_be(who, id, type_, new);
 
         AssetChangedTrigger::<T>::on_destroy_post(id, who, value)?;
-        Ok(negative)
+        Ok(())
     }
 
     pub fn move_balance(
@@ -621,19 +582,15 @@ impl<T: Trait> Module<T> {
         from_type: AssetType,
         to: &T::AccountId,
         to_type: AssetType,
-        value: T::Balance,
-        do_trigger: bool,
-    ) -> result::Result<(SignedImbalanceT<T>, SignedImbalanceT<T>), AssetErr> {
+        value: BalanceOf<T>,
+    ) -> result::Result<(), AssetErr> {
         // check
         ensure!(Self::asset_online(id).is_some(), AssetErr::InvalidAsset);
         Self::can_move(id).map_err(|_| AssetErr::NotAllow)?;
 
         if value == Zero::zero() {
             // value is zero, do not read storage, no event
-            return Ok((
-                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
-                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
-            ));
+            return Ok(());
         }
 
         let from_balance = Self::asset_type_balance(from, id, from_type);
@@ -652,48 +609,37 @@ impl<T: Trait> Module<T> {
         if from == to && from_type == to_type {
             // same account, same type, return directly
             // same account also do trigger
-            if do_trigger {
-                AssetChangedTrigger::<T>::on_move_pre(id, from, from_type, to, to_type, value);
-                AssetChangedTrigger::<T>::on_move_post(id, from, from_type, to, to_type, value)?;
-            }
-            return Ok((
-                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
-                SignedImbalance::Positive(PositiveImbalance::<T>::zero()),
-            ));
+            AssetChangedTrigger::<T>::on_move_pre(id, from, from_type, to, to_type, value);
+            AssetChangedTrigger::<T>::on_move_post(id, from, from_type, to, to_type, value)?;
+            return Ok(());
         }
 
         // !!! all check pass, start set storage
         // for account to set storage
-        if to_type == AssetType::Free {
-            Self::try_new_account(to, id);
-        }
+        Self::try_new_account(to);
 
-        if do_trigger {
-            AssetChangedTrigger::<T>::on_move_pre(id, from, from_type, to, to_type, value);
-        }
+        AssetChangedTrigger::<T>::on_move_pre(id, from, from_type, to, to_type, value);
 
-        let from_imbalance = Self::make_type_balance_be(from, id, from_type, new_from_balance);
-        let to_imbalance = Self::make_type_balance_be(to, id, to_type, new_to_balance);
+        Self::make_type_balance_be(from, id, from_type, new_from_balance);
+        Self::make_type_balance_be(to, id, to_type, new_to_balance);
 
-        if do_trigger {
-            AssetChangedTrigger::<T>::on_move_post(id, from, from_type, to, to_type, value)?;
-        }
-        Ok((from_imbalance, to_imbalance))
+        AssetChangedTrigger::<T>::on_move_post(id, from, from_type, to, to_type, value)?;
+        Ok(())
     }
 
     pub fn move_free_balance(
         id: &AssetId,
         from: &T::AccountId,
         to: &T::AccountId,
-        value: T::Balance,
-    ) -> result::Result<(SignedImbalanceT<T>, SignedImbalanceT<T>), AssetErr> {
-        Self::move_balance(id, from, AssetType::Free, to, AssetType::Free, value, true)
+        value: BalanceOf<T>,
+    ) -> result::Result<(), AssetErr> {
+        Self::move_balance(id, from, AssetType::Free, to, AssetType::Free, value)
     }
 
     pub fn set_balance_by_root(
         who: &T::AccountId,
         id: &AssetId,
-        balances: BTreeMap<AssetType, T::Balance>,
+        balances: BTreeMap<AssetType, BalanceOf<T>>,
     ) -> DispatchResult {
         for (type_, val) in balances.into_iter() {
             let old_val = Self::asset_type_balance(who, id, type_);
@@ -701,76 +647,10 @@ impl<T: Trait> Module<T> {
                 continue;
             }
 
-            let _imbalance = Self::make_type_balance_be(who, id, type_, val);
+            Self::make_type_balance_be(who, id, type_, val);
 
             AssetChangedTrigger::<T>::on_set_balance(id, who, type_, val)?;
         }
         Ok(())
-    }
-}
-
-// wrapper for balances module
-impl<T: Trait> Module<T> {
-    pub fn pcx_free_balance(who: &T::AccountId) -> T::Balance {
-        Self::asset_balance_of(who, &Self::ASSET_ID, AssetType::Free)
-    }
-
-    pub fn pcx_type_balance(who: &T::AccountId, type_: AssetType) -> T::Balance {
-        Self::asset_balance_of(who, &Self::ASSET_ID, type_)
-    }
-
-    pub fn pcx_all_type_balance(who: &T::AccountId) -> T::Balance {
-        Self::all_type_asset_balance(who, &Self::ASSET_ID)
-    }
-
-    pub fn pcx_total_balance() -> T::Balance {
-        Self::all_type_total_asset_balance(&Self::ASSET_ID)
-    }
-
-    pub fn pcx_issue(who: &T::AccountId, value: T::Balance) -> DispatchResult {
-        Self::issue(&Self::ASSET_ID, who, value)
-    }
-
-    pub fn pcx_move_balance(
-        from: &T::AccountId,
-        from_type: AssetType,
-        to: &T::AccountId,
-        to_type: AssetType,
-        value: T::Balance,
-    ) -> result::Result<(), AssetErr> {
-        Self::move_balance(
-            &<Self as ChainT<_>>::ASSET_ID,
-            from,
-            from_type,
-            to,
-            to_type,
-            value,
-            true,
-        )?;
-        Ok(())
-    }
-
-    pub fn pcx_move_free_balance(
-        from: &T::AccountId,
-        to: &T::AccountId,
-        value: T::Balance,
-    ) -> result::Result<(), AssetErr> {
-        Self::pcx_move_balance(from, AssetType::Free, to, AssetType::Free, value)
-    }
-
-    pub fn pcx_make_free_balance_be(who: &T::AccountId, value: T::Balance) -> SignedImbalanceT<T> {
-        Self::try_new_account(who, &Self::ASSET_ID);
-        let imbalance = Self::make_type_balance_be(who, &Self::ASSET_ID, AssetType::Free, value);
-        let b = match imbalance {
-            SignedImbalance::Positive(ref p) => SignedBalance::Positive(p.peek()),
-            SignedImbalance::Negative(ref n) => SignedBalance::Negative(n.peek()),
-        };
-        Self::deposit_event(RawEvent::Change(
-            Self::ASSET_ID,
-            who.clone(),
-            AssetType::Free,
-            b,
-        ));
-        imbalance
     }
 }
