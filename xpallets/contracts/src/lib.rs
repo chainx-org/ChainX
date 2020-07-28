@@ -98,12 +98,13 @@ pub use crate::exec::{ExecError, ExecResult, ExecReturnValue, StatusCode};
 pub use crate::gas::{Gas, GasMeter};
 
 use codec::{Decode, Encode};
+use frame_support::dispatch::{
+    DispatchResult, DispatchResultWithPostInfo, Dispatchable, PostDispatchInfo,
+};
+use frame_support::traits::{Currency, Get, Randomness, Time};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::{DispatchResult, DispatchResultWithPostInfo, Dispatchable, PostDispatchInfo},
-    parameter_types,
+    decl_error, decl_event, decl_module, decl_storage, parameter_types,
     storage::child::ChildInfo,
-    traits::{Get, Randomness, Time},
     weights::{GetDispatchInfo, Weight},
     IsSubType, Parameter,
 };
@@ -112,7 +113,7 @@ use frame_system::{self as system, ensure_root, ensure_signed, RawOrigin};
 use serde::{Deserialize, Serialize};
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{
-    traits::{Convert, Hash, Zero},
+    traits::{Convert, Hash, StaticLookup, Zero},
     RuntimeDebug,
 };
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData, prelude::*};
@@ -292,14 +293,12 @@ where
     }
 }
 
-// pub type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::Currency as Currency<
-//     <T as frame_system::Trait>::AccountId,
-// >>::Balance;
-// pub type NegativeImbalanceOf<T> =
-//     <<T as pallet_transaction_payment::Trait>::Currency as Currency<
-//         <T as frame_system::Trait>::AccountId,
-//     >>::NegativeImbalance;
-pub type BalanceOf<T> = <T as xpallet_assets::Trait>::Balance;
+pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
+    <T as frame_system::Trait>::AccountId,
+>>::Balance;
+pub type NegativeImbalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
+    <T as frame_system::Trait>::AccountId,
+>>::NegativeImbalance;
 
 parameter_types! {
     // /// A reasonable default value for [`Trait::SignedClaimedHandicap`].
@@ -537,12 +536,13 @@ decl_module! {
         #[weight = *gas_limit]
         pub fn call(
             origin,
-            dest: T::AccountId,
+            dest: <T::Lookup as StaticLookup>::Source,
             #[compact] value: BalanceOf<T>,
             #[compact] gas_limit: Gas,
             data: Vec<u8>
         ) -> DispatchResultWithPostInfo {
             let origin = ensure_signed(origin)?;
+            let dest = T::Lookup::lookup(dest)?;
             let mut gas_meter = GasMeter::new(gas_limit);
 
             let result = Self::execute_wasm(origin, &mut gas_meter, |ctx, gas_meter| {
@@ -593,7 +593,7 @@ decl_module! {
         /// Convert asset balance to xrc20 asset. This function would call xrc20 `issue` interface.
         /// The gas cast would deduct the caller.
         #[weight = 0]
-        pub fn convert_to_xrc20(origin, #[compact] id: AssetId, #[compact] value: T::Balance) -> DispatchResult {
+        pub fn convert_to_xrc20(origin, #[compact] id: AssetId, #[compact] value: BalanceOf<T>) -> DispatchResult {
             let origin = ensure_signed(origin)?;
             Self::issue_to_xrc20(id, origin, value)
         }
@@ -601,7 +601,7 @@ decl_module! {
         /// Convert xrc20 asset to asset balance. This function could not be called from an extrinsic,
         /// just could be called inside the xrc20, XRC777 and etc contract instance.
         #[weight = 0]
-        pub fn convert_to_asset(origin, to: T::AccountId, #[compact] value: T::Balance) -> DispatchResult {
+        pub fn convert_to_asset(origin, to: T::AccountId, #[compact] value: BalanceOf<T>) -> DispatchResult {
             let origin = ensure_signed(origin)?;
             // check asset xrc20 is exist
             Self::refund_to_asset(origin, to, value)
@@ -640,7 +640,7 @@ decl_module! {
 
         /// Force issue xrc20 token.
         #[weight = 0]
-        pub fn force_issue_xrc20(origin, #[compact] id: AssetId, issues: Vec<(T::AccountId, T::Balance)>, gas_limit: Gas) -> DispatchResult {
+        pub fn force_issue_xrc20(origin, #[compact] id: AssetId, issues: Vec<(T::AccountId, BalanceOf<T>)>, gas_limit: Gas) -> DispatchResult {
             ensure_root(origin)?;
             for (origin, value)  in issues {
                 let params = (origin.clone(), value).encode();
@@ -699,12 +699,6 @@ impl<T: Trait> Module<T> {
         gas_limit: Gas,
         input_data: Vec<u8>,
     ) -> ExecResult {
-        if <ContractInfoOf<T>>::get(&dest).is_none() {
-            return Err(ExecError {
-                reason: Error::<T>::InvalidDestinationContract.into(),
-                buffer: input_data,
-            });
-        }
         let mut gas_meter = GasMeter::new(gas_limit);
         Self::execute_wasm(origin, &mut gas_meter, |ctx, gas_meter| {
             ctx.call(dest, value, gas_meter, input_data)
@@ -755,7 +749,7 @@ impl<T: Trait> Module<T> {
         Self::call_for_xrc20(id, selector, data)
     }
 
-    fn issue_to_xrc20(id: AssetId, origin: T::AccountId, value: T::Balance) -> DispatchResult {
+    fn issue_to_xrc20(id: AssetId, origin: T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         // check
         ensure_with_errorlog!(
             xpallet_assets::Module::<T>::free_balance_of(&origin, &id) >= value,
@@ -812,7 +806,6 @@ impl<T: Trait> Module<T> {
             &xrc20_addr,
             AssetType::ReservedXRC20,
             value,
-            true,
         )
         .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
         Ok(())
@@ -860,7 +853,7 @@ impl<T: Trait> Module<T> {
     fn refund_to_asset(
         contract_addr: T::AccountId,
         to: T::AccountId,
-        value: T::Balance,
+        value: BalanceOf<T>,
     ) -> DispatchResult {
         let id: AssetId = Self::asset_id_of_addr(&contract_addr).ok_or_else(|| {
             error!(
@@ -892,7 +885,6 @@ impl<T: Trait> Module<T> {
             &to,
             AssetType::Free,
             value,
-            true,
         )
         .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
         Ok(())
@@ -1100,7 +1092,7 @@ decl_event! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XContracts {
+    trait Store for Module<T: Trait> as RioContracts {
         /// Current cost schedule for contracts.
         CurrentSchedule get(fn current_schedule) config(): Schedule = Schedule::default();
         /// A mapping from an original code hash to the original code, untouched by instrumentation.
@@ -1145,7 +1137,7 @@ impl<T: Trait> Config<T> {
     fn preload() -> Config<T> {
         Config {
             schedule: <Module<T>>::current_schedule(),
-            existential_deposit: Zero::zero(), // T::Currency::minimum_balance(),
+            existential_deposit: T::Currency::minimum_balance(),
             // tombstone_deposit: T::TombstoneDeposit::get(),
             max_depth: T::MaxDepth::get(),
             max_value_size: T::MaxValueSize::get(),
