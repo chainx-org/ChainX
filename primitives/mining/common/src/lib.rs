@@ -72,6 +72,17 @@ pub enum Delta<Balance> {
     Zero,
 }
 
+impl<Balance: BaseArithmetic> Delta<Balance> {
+    /// Calculates `value` + `self` and returns the calculated value.
+    pub fn calculate(self, value: Balance) -> Balance {
+        match self {
+            Delta::Add(v) => value + v,
+            Delta::Sub(v) => value - v,
+            Delta::Zero => value,
+        }
+    }
+}
+
 /// General logic for state changes of the mining weight operations.
 pub trait MiningWeight<Balance: BaseArithmetic + Copy, BlockNumber>:
     BaseMiningWeight<Balance, BlockNumber>

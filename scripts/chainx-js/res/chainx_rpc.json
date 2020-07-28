@@ -168,7 +168,7 @@
         },
         "xstaking": {
             "getValidators": {
-                "description": "Some description",
+                "description": "Get overall information about all potential validators",
                 "params": [
                     {
                         "name": "at",
@@ -179,7 +179,7 @@
                 "type": "Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>"
             },
             "getValidatorByAccount": {
-                "description": "Some description",
+                "description": "Get overall information given the validator AccountId.",
                 "params": [
                     {
                         "name": "who",
@@ -192,6 +192,36 @@
                     }
                 ],
                 "type": "ValidatorInfo<AccountId, RpcBalance, BlockNumber>"
+            },
+            "getDividendByAccount": {
+                "description": "Get the staking dividends info given the staker AccountId.",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<AccountId, RpcBalance>"
+            },
+            "getNominationByAccount": {
+                "description": "Get the nomination details given the staker AccountId.",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<AccountId, RpcNominatorLedger<RpcBalance, BlockNumber>>"
             }
         }
     }

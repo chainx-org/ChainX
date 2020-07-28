@@ -70,10 +70,11 @@ NEW_TYPES = [
     "ValidatorLedger",
     "ValidatorProfile",
     "XRC20Selector",
+    "RpcNominatorLedger",
 ]
 
 # Change the working directory to project root directory.
-os.chdir("..")
+os.chdir("../..")
 
 TARGET_KINDS = ['typedef', 'enum', 'struct']
 
@@ -93,9 +94,12 @@ def snake_to_camel(word):
     return s[0].lower() + s[1:]
 
 
+CHAINX_RPC_MANUAL_JSON = './scripts/chainx-js/chainx_rpc_manual.json'
+CHAINX_TYPES_MANUAL_JSON = './scripts/chainx-js/chainx_types_manual.json'
+
 MANUAL = {}
 # Read the types crated manually and convert the under_score_case to camelCase.
-with open('./scripts/chainx_types_manual.json') as json_file:
+with open(CHAINX_TYPES_MANUAL_JSON) as json_file:
     raw_manual = json.load(json_file)
     for k1, v1 in raw_manual.items():
         if isinstance(v1, dict) and '_enum' not in v1:
@@ -395,7 +399,7 @@ def parse_rpc_params(fn):
     return params
 
 
-def parse_rpc_api(xmodule, inner_fn, line_fn):
+def parse_rpc_api(xmodule, description, inner_fn, line_fn):
     [fn, result] = line_fn.split('->')
 
     if xmodule not in rpc_dict:
@@ -408,7 +412,7 @@ def parse_rpc_api(xmodule, inner_fn, line_fn):
     # >; = 2
     ok_result = result[8:-2]
     rpc_dict[xmodule][inner_fn] = {
-        'description': 'Some description',
+        'description': description,
         'params': params,
         'type': ok_result
     }
@@ -425,6 +429,11 @@ def build_rpc():
             for line in lines:
                 idx += 1
                 if '[rpc(name =' in line:
+                    if lines[idx - 2].lstrip().startswith('///'):
+                        comment = lines[idx - 2].strip()
+                        description = comment[3:].strip()
+                    else:
+                        description = 'Some description'
                     #  [rpc(name = "xassets_getAssets")] --> xassets_getAssets
                     matches = re.findall(r'\"(.+?)\"', line)
                     name = matches[0]
@@ -439,7 +448,7 @@ def build_rpc():
                             if lines[i].strip().endswith(';'):
                                 break
                         line_fn = ''.join(fn_lines)
-                        parse_rpc_api(xmodule, inner_fn, line_fn)
+                        parse_rpc_api(xmodule, description, inner_fn, line_fn)
 
 
 def write_json(output_json, output_fname):
@@ -454,10 +463,10 @@ def write_types_and_rpc():
         #  Always override with types created manually.
         output[k] = MANUAL[k]
 
-    with open('./scripts/chainx_rpc_manual.json') as json_file:
+    with open(CHAINX_RPC_MANUAL_JSON) as json_file:
         RPC_MANUAL = json.load(json_file)
 
-    os.chdir("./scripts")
+    os.chdir("./scripts/chainx-js")
     write_json(output, 'res/chainx_types.json')
 
     for xmodule, fns in rpc_dict.items():

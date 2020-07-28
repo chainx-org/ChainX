@@ -1,4 +1,4 @@
-# Scripts
+# Scripts for chainx-js
 
 ## `types_gen.py`
 

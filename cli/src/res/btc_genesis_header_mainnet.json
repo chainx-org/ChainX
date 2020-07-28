@@ -1,0 +1,11 @@
+{
+    "version": 536870912,
+    "previous_header_hash": "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
+    "merkle_root_hash": "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
+    "time": 1558168296,
+    "bits": 388627269,
+    "nonce": 1439505020,
+    "height": 576576,
+    "hash": "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882",
+    "network_id": "Mainnet"
+}
