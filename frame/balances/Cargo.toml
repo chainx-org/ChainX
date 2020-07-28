@@ -20,6 +20,8 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", tag 
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
+chainx-primitives = { path = "../../primitives", default-features = false }
+
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
@@ -35,5 +37,7 @@ std = [
     "frame-benchmarking/std",
     "frame-support/std",
     "frame-system/std",
+
+    "chainx-primitives/std",
 ]
 runtime-benchmarks = ["frame-benchmarking"]

@@ -3051,6 +3051,7 @@ dependencies = [
 name = "pallet-balances"
 version = "2.0.0-rc4"
 dependencies = [
+ "chainx-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

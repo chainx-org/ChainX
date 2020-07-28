@@ -177,6 +177,8 @@ use sp_runtime::{
 use sp_std::prelude::*;
 use sp_std::{cmp, convert::Infallible, fmt::Debug, mem, ops::BitOr, result};
 
+use chainx_primitives::Memo;
+
 pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
 
 pub trait Subtrait<I: Instance = DefaultInstance>: frame_system::Trait {
@@ -556,6 +558,18 @@ decl_module! {
             let transactor = ensure_signed(origin)?;
             let dest = T::Lookup::lookup(dest)?;
             <Self as Currency<_>>::transfer(&transactor, &dest, value, KeepAlive)?;
+        }
+
+        #[weight = T::DbWeight::get().reads_writes(1, 1) + 70_000_000]
+        pub fn transfer_with_memo(
+            origin,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[compact] value: T::Balance,
+            memo: Memo,
+        ) {
+            let transactor = ensure_signed(origin)?;
+            memo.check_validity()?;
+            Self::transfer(frame_system::RawOrigin::Signed(transactor).into(), dest, value.into())?;
         }
     }
 }
