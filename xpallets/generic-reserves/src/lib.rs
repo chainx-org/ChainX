@@ -50,8 +50,8 @@ decl_storage! {
         ///
         /// Only native reserved types need to be stored in this Module,
         /// the info of detailed reserved assets is recorded in `assets` Module.
-        pub Reserves get(fn reserves):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => BTreeMap<NativeReservedType, T::Balance>;
+        pub NativeReserves get(fn native_reserves):
+            map hasher(blake2_128_concat) T::AccountId => BTreeMap<NativeReservedType, T::Balance>;
     }
 }
 
