@@ -31,7 +31,7 @@ pub trait Trait: pallet_balances::Trait {
 
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum NativeReserved {
+pub enum NativeReservedType {
     StakingBonded,
     StakingBondedWithdrawal,
     DexSpot,
@@ -40,7 +40,7 @@ pub enum NativeReserved {
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum ReservedType {
-    Native(NativeReserved),
+    Native(NativeReservedType),
     ExtAsset(AssetType),
 }
 
@@ -96,11 +96,11 @@ impl<T: Trait> Module<T> {
     // Native coin reserves.
     ////////////////////////////////////////////////////
 
-    /// Moves the `value` of the native coin of `who` from Free to the reserved type `ty`.
+    /// Moves the `value` of the native coin of `who` from Free to the native reserved type `ty`.
     pub fn reserve_native(
         who: &T::AccountId,
         value: T::Balance,
-        ty: ReservedType,
+        ty: NativeReservedType,
     ) -> Result<(), Error<T>> {
         Ok(())
     }
@@ -109,7 +109,7 @@ impl<T: Trait> Module<T> {
     pub fn unreserve_native(
         who: &T::AccountId,
         value: T::Balance,
-        from_ty: ReservedType,
+        from_ty: NativeReservedType,
     ) -> Result<(), Error<T>> {
         Ok(())
     }
@@ -118,14 +118,14 @@ impl<T: Trait> Module<T> {
     pub fn move_reserved_native(
         who: &T::AccountId,
         value: T::Balance,
-        from_ty: ReservedType,
-        to_ty: ReservedType,
+        from_ty: NativeReservedType,
+        to_ty: NativeReservedType,
     ) -> Result<(), Error<T>> {
         Ok(())
     }
 
     /// Returns the balance of `who` for the reserved type `ty`.
-    pub fn native_reserved_of(who: &T::AccountId, ty: ReservedType) -> T::Balance {
+    pub fn native_reserved_of(who: &T::AccountId, ty: NativeReservedType) -> T::Balance {
         todo!()
     }
 
