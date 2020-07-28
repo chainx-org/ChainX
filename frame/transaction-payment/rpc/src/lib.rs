@@ -21,6 +21,8 @@ pub use self::gen_client::Client as TransactionPaymentClient;
 use codec::{Codec, Decode};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
+use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+pub use pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi as TransactionPaymentRuntimeApi;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::Bytes;
@@ -29,8 +31,6 @@ use sp_runtime::{
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
 };
 use std::sync::Arc;
-use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
-pub use xpallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi as TransactionPaymentRuntimeApi;
 
 #[rpc]
 pub trait TransactionPaymentApi<BlockHash, ResponseType> {
@@ -88,8 +88,8 @@ where
     ) -> Result<RuntimeDispatchInfo<Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
-            // If the block hash is not supplied assume the best block.
-            self.client.info().best_hash));
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
 
         let encoded_len = encoded_xt.len() as u32;
 

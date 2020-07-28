@@ -8,8 +8,8 @@ use chainx_runtime::{
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
-    AuraConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys,
-    SudoConfig, SystemConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
+    AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, SessionConfig,
+    SessionKeys, SudoConfig, SystemConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
     XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
@@ -271,6 +271,8 @@ fn testnet_genesis(
     )>,
     enable_println: bool,
 ) -> GenesisConfig {
+    const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
+    const STASH: Balance = 100 * constants::currency::DOLLARS;
     GenesisConfig {
         frame_system: Some(SystemConfig {
             code: WASM_BINARY.to_vec(),
@@ -294,6 +296,16 @@ fn testnet_genesis(
                     )
                 })
                 .collect::<Vec<_>>(),
+        }),
+        pallet_balances: Some(BalancesConfig {
+            balances: endowed
+                .get(&xpallet_protocol::PCX)
+                .expect("PCX endowed; qed")
+                .iter()
+                .cloned()
+                .map(|(k, _)| (k, ENDOWMENT))
+                .chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
+                .collect(),
         }),
         pallet_sudo: Some(SudoConfig { key: root_key }),
         xpallet_system: Some(XSystemConfig {

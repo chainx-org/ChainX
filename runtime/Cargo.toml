@@ -43,6 +43,10 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = 
 pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
+pallet-balances = { path = "../frame/balances", default-features = false }
+pallet-transaction-payment = { path = "../frame/transaction-payment", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { path = "../frame/transaction-payment/rpc/runtime-api", default-features = false }
+
 # ChainX primitives
 chainx-primitives = { path = "../primitives", default-features = false }
 xp-mining-staking = { path = "../primitives/mining/staking", default-features = false }
@@ -65,8 +69,6 @@ xpallet-dex-spot = { path = "../xpallets/dex/spot", default-features = false }
 xpallet-mining-staking = { path  = "../xpallets/mining/staking", default-features = false }
 xpallet-mining-staking-rpc-runtime-api = { path  = "../xpallets/mining/staking/rpc/runtime-api", default-features = false }
 xpallet-mining-asset = { path  = "../xpallets/mining/asset", default-features = false }
-xpallet-transaction-payment = { path = "../xpallets/transaction-payment", default-features = false }
-xpallet-transaction-payment-rpc-runtime-api = { path = "../xpallets/transaction-payment/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
@@ -107,6 +109,10 @@ std = [
     "pallet-utility/std",
     "pallet-multisig/std",
 
+    "pallet-balances/std",
+    "pallet-transaction-payment/std",
+    "pallet-transaction-payment-rpc-runtime-api/std",
+
     "chainx-primitives/std",
     "xp-mining-staking/std",
 
@@ -127,6 +133,4 @@ std = [
     "xpallet-mining-staking/std",
     "xpallet-mining-staking-rpc-runtime-api/std",
     "xpallet-mining-asset/std",
-    "xpallet-transaction-payment/std",
-    "xpallet-transaction-payment-rpc-runtime-api/std",
 ]

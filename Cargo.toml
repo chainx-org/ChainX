@@ -17,6 +17,11 @@ members = [
     "primitives/mining/staking",
     "rpc",
 
+    "frame/balances",
+    "frame/transaction-payment",
+    "frame/transaction-payment/rpc",
+    "frame/transaction-payment/rpc/runtime-api",
+
     "xpallets/assets",
     "xpallets/assets/rpc",
     "xpallets/assets/rpc/runtime-api",
@@ -32,9 +37,6 @@ members = [
     "xpallets/mining/staking/rpc/runtime-api",
     "xpallets/protocol",
     "xpallets/support",
-    "xpallets/transaction-payment",
-    "xpallets/transaction-payment/rpc",
-    "xpallets/transaction-payment/rpc/runtime-api",
 ]
 
 [profile.release]

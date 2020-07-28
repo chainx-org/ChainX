@@ -29,6 +29,7 @@ sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag
 # Substrate pallets
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+pallet-transaction-payment-rpc = { path = "../frame/transaction-payment/rpc" }
 
 chainx-runtime = { path = "../runtime" }
 
@@ -42,7 +43,6 @@ xpallet-mining-staking-rpc = { path = "../xpallets/mining/staking/rpc" }
 xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
 xpallet-contracts-rpc = { path = "../xpallets/contracts/rpc" }
 xpallet-contracts-rpc-runtime-api = { path = "../xpallets/contracts/rpc/runtime-api" }
-xpallet-transaction-payment-rpc = { path = "../xpallets/transaction-payment/rpc" }
 xpallet-gateway-records-rpc = { path = "../xpallets/gateway/records/rpc" }
 xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api" }
 xpallet-gateway-common-rpc = { path = "../xpallets/gateway/common/rpc" }

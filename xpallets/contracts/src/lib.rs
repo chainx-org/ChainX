@@ -292,11 +292,11 @@ where
     }
 }
 
-// pub type BalanceOf<T> = <<T as xpallet_transaction_payment::Trait>::Currency as Currency<
+// pub type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::Currency as Currency<
 //     <T as frame_system::Trait>::AccountId,
 // >>::Balance;
 // pub type NegativeImbalanceOf<T> =
-//     <<T as xpallet_transaction_payment::Trait>::Currency as Currency<
+//     <<T as pallet_transaction_payment::Trait>::Currency as Currency<
 //         <T as frame_system::Trait>::AccountId,
 //     >>::NegativeImbalance;
 pub type BalanceOf<T> = <T as xpallet_assets::Trait>::Balance;
