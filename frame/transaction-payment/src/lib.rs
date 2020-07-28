@@ -56,6 +56,8 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 
+use xpallet_support::debug;
+
 /// Fee multiplier.
 pub type Multiplier = FixedU128;
 
@@ -341,11 +343,14 @@ where
             let adjusted_weight_fee = multiplier.saturating_mul_int(unadjusted_weight_fee);
 
             let base_fee = Self::weight_to_fee(T::ExtrinsicBaseWeight::get());
-            base_fee
+            let total = base_fee
                 .saturating_add(fixed_len_fee)
                 .saturating_add(adjusted_weight_fee)
-                .saturating_add(tip)
+                .saturating_add(tip);
+            debug!("[compute_fee]|total:{:?}|base_fee:{:?}|fixed_len_fee:{:?}|adjusted_weight_fee:{:?}|tip:{:?}", total, base_fee, fixed_len_fee, adjusted_weight_fee, tip);
+            total
         } else {
+            debug!("[compute_fee]|only tip:{:?}", tip);
             tip
         }
     }
