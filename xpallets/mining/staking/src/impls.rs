@@ -1,13 +1,45 @@
 use super::*;
-use codec::Encode;
+use codec::{Decode, Encode};
+use frame_support::traits::{LockIdentifier, WithdrawReasons};
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
-use sp_runtime::{traits::Hash, Perbill};
+use sp_runtime::RuntimeDebug;
+use sp_runtime::{traits::Hash, DispatchResult, Perbill};
+#[cfg(feature = "std")]
+use sp_runtime::{Deserialize, Serialize};
 use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
-use xp_mining_staking::SessionIndex;
+use xp_mining_staking::{NativeReservableCurrency, SessionIndex};
+
+const STAKING_ID: LockIdentifier = *b"staking ";
+
+#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum ReservedType {
+    Bonded,
+    BondedWithdrawal,
+}
+
+impl<T: Trait> NativeReservableCurrency<T::AccountId, BalanceOf<T>, ReservedType> for Module<T> {
+    fn reserve(who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+        // FIXME: figure out set_lock
+        T::Currency::set_lock(STAKING_ID, who, value, WithdrawReasons::all());
+        Ok(())
+    }
+    fn unreserve(who: &T::AccountId, value: BalanceOf<T>, ty: ReservedType) -> DispatchResult {
+        Ok(())
+    }
+    fn move_reserved(
+        who: &T::AccountId,
+        value: BalanceOf<T>,
+        from_ty: ReservedType,
+        to_ty: ReservedType,
+    ) -> DispatchResult {
+        Ok(())
+    }
+}
 
 impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
     for ValidatorLedger<Balance, BlockNumber>

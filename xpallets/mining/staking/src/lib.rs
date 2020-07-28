@@ -17,7 +17,7 @@ mod tests;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
     storage::IterableStorageMap,
-    traits::{Currency as CurrencyT, ExistenceRequirement, Get},
+    traits::{Currency, ExistenceRequirement, Get, LockableCurrency},
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::traits::{Convert, SaturatedConversion, Saturating, Zero};
@@ -36,7 +36,7 @@ pub use rpc::*;
 pub use types::*;
 
 pub type BalanceOf<T> =
-    <<T as Trait>::Currency as CurrencyT<<T as frame_system::Trait>::AccountId>>::Balance;
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 5_000_000_000;
@@ -63,7 +63,7 @@ pub trait Trait: frame_system::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     ///
-    type Currency: CurrencyT<Self::AccountId>;
+    type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
     ///
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
