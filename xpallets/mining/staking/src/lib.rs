@@ -15,8 +15,9 @@ mod mock;
 mod tests;
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap,
-    traits::Get,
+    decl_error, decl_event, decl_module, decl_storage, ensure,
+    storage::IterableStorageMap,
+    traits::{Currency as CurrencyT, Get},
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::traits::{Convert, SaturatedConversion, Saturating, Zero};
@@ -33,6 +34,9 @@ use xpallet_support::{debug, RpcBalance};
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 pub use rpc::*;
 pub use types::*;
+
+pub type BalanceOf<T> =
+    <<T as Trait>::Currency as CurrencyT<<T as frame_system::Trait>::AccountId>>::Balance;
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 5_000_000_000;
@@ -54,15 +58,18 @@ const DEFAULT_VALIDATOR_BONDING_DURATION: u64 = DEFAULT_BONDING_DURATION * 10;
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
-pub trait Trait: xpallet_assets::Trait {
+pub trait Trait: frame_system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    ///
+    type Currency: CurrencyT<Self::AccountId>;
 
     ///
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
     ///
-    type AssetMining: AssetMining<Self::Balance>;
+    type AssetMining: AssetMining<BalanceOf<Self>>;
 
     ///
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, Self::AccountId>;
@@ -94,7 +101,7 @@ decl_storage! {
 
         /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
         pub ValidatorCandidateRequirement get(fn validator_bond_requirement):
-            BondRequirement<T::Balance>;
+            BondRequirement<BalanceOf<T>>;
 
         /// The length of a session in blocks.
         pub BlocksPerSession get(fn blocks_per_session) config():
@@ -135,16 +142,16 @@ decl_storage! {
 
         /// The map from nominator key to the set of keys of all validators to nominate.
         pub Nominators get(fn nominators):
-            map hasher(twox_64_concat) T::AccountId => NominatorProfile<T::Balance, T::BlockNumber>;
+            map hasher(twox_64_concat) T::AccountId => NominatorProfile<BalanceOf<T>, T::BlockNumber>;
 
         /// The map from validator key to the vote weight ledger of that validator.
         pub ValidatorLedgers get(fn validator_ledgers):
-            map hasher(twox_64_concat) T::AccountId => ValidatorLedger<T::Balance, T::BlockNumber>;
+            map hasher(twox_64_concat) T::AccountId => ValidatorLedger<BalanceOf<T>, T::BlockNumber>;
 
         /// The map from nominator to the vote weight ledger of all nominees.
         pub Nominations get(fn nominations):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
-            => NominatorLedger<T::Balance, T::BlockNumber>;
+            => NominatorLedger<BalanceOf<T>, T::BlockNumber>;
 
         /// Mode of era forcing.
         pub ForceEra get(fn force_era) config(): Forcing;
@@ -173,7 +180,7 @@ decl_storage! {
         OffendersInSession get(fn offenders_in_session): Vec<T::AccountId>;
 
         /// Minimum penalty for each slash.
-        pub MinimumPenalty get(fn minimum_penalty) config(): T::Balance;
+        pub MinimumPenalty get(fn minimum_penalty) config(): BalanceOf<T>;
 
         /// The higher the severity, the more slash for the offences.
         pub OffenceSeverity get(fn offence_severity) config(): u32;
@@ -181,13 +188,13 @@ decl_storage! {
 
     add_extra_genesis {
         config(validators):
-            Vec<(T::AccountId, T::Balance)>;
+            Vec<(T::AccountId, BalanceOf<T>)>;
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
             for &(ref v, balance) in &config.validators {
                 assert!(
-                    <xpallet_assets::Module<T>>::pcx_free_balance(v) >= balance,
+                    Module::<T>::free_balance_of(v) >= balance,
                     "Validator does not have enough balance to bond."
                 );
                 Module::<T>::apply_register(v);
@@ -210,8 +217,8 @@ decl_storage! {
 decl_event!(
     pub enum Event<T>
     where
+        Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
-        <T as xpallet_assets::Trait>::Balance,
     {
         /// The staker has been rewarded by this amount. `AccountId` is the stash account.
         Reward(AccountId, Balance),
@@ -301,7 +308,7 @@ decl_module! {
 
         /// Nominates the `target` with `value` of the origin account's balance locked.
         #[weight = 10]
-        pub fn bond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
+        pub fn bond(origin, target: T::AccountId, value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
@@ -317,7 +324,7 @@ decl_module! {
 
         /// Switchs the nomination of `value` from one validator to another.
         #[weight = 10]
-        fn rebond(origin, from: T::AccountId, to: T::AccountId, value: T::Balance, memo: Memo) {
+        fn rebond(origin, from: T::AccountId, to: T::AccountId, value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
@@ -344,7 +351,7 @@ decl_module! {
 
         /// Unnominates balance `value` from validator `target`.
         #[weight = 10]
-        fn unbond(origin, target: T::AccountId, value: T::Balance, memo: Memo) {
+        fn unbond(origin, target: T::AccountId, value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
@@ -496,7 +503,7 @@ impl<T: Trait> Module<T> {
         Self::validator_set().filter(Self::is_active)
     }
 
-    pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, T::Balance)> {
+    pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
         Self::active_validator_set().map(|v| {
             let total_votes = Self::total_votes_of(&v);
             (v, total_votes)
@@ -507,8 +514,8 @@ impl<T: Trait> Module<T> {
     ///
     /// One (indivisible) PCX one power, only the votes of active validators are counted.
     #[inline]
-    pub fn total_staked() -> T::Balance {
-        Self::active_validator_votes().fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + x)
+    pub fn total_staked() -> BalanceOf<T> {
+        Self::active_validator_votes().fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + x)
     }
 
     #[inline]
@@ -517,7 +524,7 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn unbonded_chunks_of(nominator: &T::AccountId) -> Vec<Unbonded<T::Balance, T::BlockNumber>> {
+    fn unbonded_chunks_of(nominator: &T::AccountId) -> Vec<Unbonded<BalanceOf<T>, T::BlockNumber>> {
         Nominators::<T>::get(nominator).unbonded_chunks
     }
 
@@ -527,8 +534,8 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn free_balance_of(who: &T::AccountId) -> T::Balance {
-        <xpallet_assets::Module<T>>::pcx_free_balance(who)
+    fn free_balance_of(who: &T::AccountId) -> BalanceOf<T> {
+        T::Currency::free_balance(who)
     }
 
     fn is_validator_self_bonding(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
@@ -577,26 +584,26 @@ impl<T: Trait> Module<T> {
         });
     }
 
-    fn total_votes_of(validator: &T::AccountId) -> T::Balance {
+    fn total_votes_of(validator: &T::AccountId) -> BalanceOf<T> {
         ValidatorLedgers::<T>::get(validator).total
     }
 
-    fn validator_self_bonded(validator: &T::AccountId) -> T::Balance {
+    fn validator_self_bonded(validator: &T::AccountId) -> BalanceOf<T> {
         Self::bonded_to(validator, validator)
     }
 
     #[inline]
-    fn bonded_to(nominator: &T::AccountId, nominee: &T::AccountId) -> T::Balance {
+    fn bonded_to(nominator: &T::AccountId, nominee: &T::AccountId) -> BalanceOf<T> {
         Nominations::<T>::get(nominator, nominee).nomination
     }
 
-    fn acceptable_votes_limit_of(validator: &T::AccountId) -> T::Balance {
-        Self::validator_self_bonded(validator) * T::Balance::from(Self::upper_bound_factor())
+    fn acceptable_votes_limit_of(validator: &T::AccountId) -> BalanceOf<T> {
+        Self::validator_self_bonded(validator) * BalanceOf::<T>::from(Self::upper_bound_factor())
     }
 
     fn check_validator_acceptable_votes_limit(
         validator: &T::AccountId,
-        value: T::Balance,
+        value: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         let cur_total = Self::total_votes_of(validator);
         let upper_limit = Self::acceptable_votes_limit_of(validator);
@@ -607,38 +614,56 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn bond_reserve(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
-        <xpallet_assets::Module<T>>::pcx_move_balance(
-            who,
-            AssetType::Free,
-            who,
-            AssetType::ReservedStaking,
-            value,
-        )
+    fn issue(who: &T::AccountId, value: BalanceOf<T>) {
+        todo!()
     }
 
-    fn unbond_reserve(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
-        <xpallet_assets::Module<T>>::pcx_move_balance(
-            who,
-            AssetType::ReservedStaking,
-            who,
-            AssetType::ReservedStakingRevocation,
-            value,
-        )
+    fn move_balance(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
+        todo!()
     }
 
-    fn unlock_unbonded_reservation(who: &T::AccountId, value: T::Balance) -> Result<(), AssetErr> {
-        <xpallet_assets::Module<T>>::pcx_move_balance(
-            who,
-            AssetType::ReservedStakingRevocation,
-            who,
-            AssetType::Free,
-            value,
-        )
+    fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), AssetErr> {
+        todo!()
+        // <xpallet_assets::Module<T>>::pcx_move_balance(
+        // who,
+        // AssetType::Free,
+        // who,
+        // AssetType::ReservedStaking,
+        // value,
+        // )
+    }
+
+    fn unbond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), AssetErr> {
+        todo!()
+        // <xpallet_assets::Module<T>>::pcx_move_balance(
+        // who,
+        // AssetType::ReservedStaking,
+        // who,
+        // AssetType::ReservedStakingRevocation,
+        // value,
+        // )
+    }
+
+    fn unlock_unbonded_reservation(
+        who: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> Result<(), AssetErr> {
+        todo!()
+        // <xpallet_assets::Module<T>>::pcx_move_balance(
+        // who,
+        // AssetType::ReservedStakingRevocation,
+        // who,
+        // AssetType::Free,
+        // value,
+        // )
     }
 
     /// Settles and update the vote weight state of the nominator `source` and validator `target` given the delta amount.
-    fn update_vote_weight(source: &T::AccountId, target: &T::AccountId, delta: Delta<T::Balance>) {
+    fn update_vote_weight(
+        source: &T::AccountId,
+        target: &T::AccountId,
+        delta: Delta<BalanceOf<T>>,
+    ) {
         let current_block = <frame_system::Module<T>>::block_number();
 
         let source_weight =
@@ -672,7 +697,7 @@ impl<T: Trait> Module<T> {
     fn apply_bond(
         nominator: &T::AccountId,
         nominee: &T::AccountId,
-        value: T::Balance,
+        value: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         Self::bond_reserve(nominator, value)?;
         Self::update_vote_weight(nominator, nominee, Delta::Add(value));
@@ -684,7 +709,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         from: &T::AccountId,
         to: &T::AccountId,
-        value: T::Balance,
+        value: BalanceOf<T>,
         current_block: T::BlockNumber,
     ) {
         // TODO: reduce one block_number read?
@@ -698,7 +723,7 @@ impl<T: Trait> Module<T> {
     fn apply_unbond(
         who: &T::AccountId,
         target: &T::AccountId,
-        value: T::Balance,
+        value: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         debug!(
             "[apply_unbond] who:{:?}, target: {:?}, value: {:?}",

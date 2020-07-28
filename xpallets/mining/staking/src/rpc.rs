@@ -84,22 +84,22 @@ pub struct ValidatorInfo<AccountId, RpcBalance, BlockNumber> {
 
 impl<T: Trait> Module<T> {
     pub fn validators_info(
-    ) -> Vec<ValidatorInfo<T::AccountId, RpcBalance<T::Balance>, T::BlockNumber>> {
+    ) -> Vec<ValidatorInfo<T::AccountId, RpcBalance<BalanceOf<T>>, T::BlockNumber>> {
         Self::validator_set().map(Self::validator_info_of).collect()
     }
 
     pub fn validator_info_of(
         who: T::AccountId,
-    ) -> ValidatorInfo<T::AccountId, RpcBalance<T::Balance>, T::BlockNumber> {
+    ) -> ValidatorInfo<T::AccountId, RpcBalance<BalanceOf<T>>, T::BlockNumber> {
         let profile = Validators::<T>::get(&who);
-        let ledger: RpcValidatorLedger<RpcBalance<T::Balance>, T::BlockNumber> =
+        let ledger: RpcValidatorLedger<RpcBalance<BalanceOf<T>>, T::BlockNumber> =
             ValidatorLedgers::<T>::get(&who).into();
-        let self_bonded: RpcBalance<T::Balance> =
+        let self_bonded: RpcBalance<BalanceOf<T>> =
             Nominations::<T>::get(&who, &who).nomination.into();
         let is_validating = T::SessionInterface::validators().contains(&who);
         let reward_pot_account = T::DetermineRewardPotAccount::reward_pot_account_for(&who);
-        let reward_pot_balance: RpcBalance<T::Balance> =
-            xpallet_assets::Module::<T>::pcx_free_balance(&reward_pot_account).into();
+        let reward_pot_balance: RpcBalance<BalanceOf<T>> =
+            Self::free_balance_of(&reward_pot_account).into();
         ValidatorInfo {
             account: who,
             profile,
@@ -113,7 +113,7 @@ impl<T: Trait> Module<T> {
 
     pub fn staking_dividend_of(
         who: T::AccountId,
-    ) -> BTreeMap<T::AccountId, RpcBalance<T::Balance>> {
+    ) -> BTreeMap<T::AccountId, RpcBalance<BalanceOf<T>>> {
         let current_block = <frame_system::Module<T>>::block_number();
         Nominations::<T>::iter_prefix(&who)
             .filter_map(|(validator, _)| {
@@ -127,7 +127,7 @@ impl<T: Trait> Module<T> {
 
     pub fn nomination_details_of(
         who: T::AccountId,
-    ) -> BTreeMap<T::AccountId, RpcNominatorLedger<RpcBalance<T::Balance>, T::BlockNumber>> {
+    ) -> BTreeMap<T::AccountId, RpcNominatorLedger<RpcBalance<BalanceOf<T>>, T::BlockNumber>> {
         Nominations::<T>::iter_prefix(&who)
             .map(|(validator, ledger)| (validator, ledger.into()))
             .collect()

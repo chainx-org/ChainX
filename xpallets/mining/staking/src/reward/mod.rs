@@ -7,30 +7,30 @@ mod proposal09;
 impl<T: Trait> Module<T> {
     /// Simple u32 power of 2 function - simply uses a bit shift
     #[inline]
-    fn pow2(n: u32) -> T::Balance {
+    fn pow2(n: u32) -> BalanceOf<T> {
         (1_u32 << n).saturated_into()
     }
 
     /// Returns the total reward for the session, assuming it ends with this block.
     ///
     /// Due to the migration of ChainX 1.0 to ChainX 2.0,
-    fn this_session_reward(current_index: SessionIndex) -> T::Balance {
+    fn this_session_reward(current_index: SessionIndex) -> BalanceOf<T> {
         let halving_epoch = current_index / SESSIONS_PER_ROUND;
         // FIXME: migration_offset
-        let reward = INITIAL_REWARD.saturated_into::<T::Balance>() / Self::pow2(halving_epoch);
+        let reward = INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch);
         reward
     }
 
     /// Issue new fresh PCX.
     #[inline]
-    fn mint(receiver: &T::AccountId, value: T::Balance) {
-        let _ = <xpallet_assets::Module<T>>::pcx_issue(receiver, value);
+    fn mint(receiver: &T::AccountId, value: BalanceOf<T>) {
+        let _ = Self::issue(receiver, value);
     }
 
     /// Reward a (potential) validator by a specific amount.
     ///
     /// Add the reward to their balance, and their reward pot, pro-rata.
-    fn apply_reward_validator(who: &T::AccountId, reward: T::Balance) {
+    fn apply_reward_validator(who: &T::AccountId, reward: BalanceOf<T>) {
         // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
         let off_the_table = (reward.saturated_into() / 10).saturated_into();
         Self::mint(who, off_the_table);
@@ -51,7 +51,7 @@ impl<T: Trait> Module<T> {
     /// If the slashed validator can't afford that penalty, it will be
     /// removed from the validator list.
     #[inline]
-    fn reward_active_validator(validator: &T::AccountId, reward: T::Balance) {
+    fn reward_active_validator(validator: &T::AccountId, reward: BalanceOf<T>) {
         Self::apply_reward_validator(validator, reward);
         // FIXME: slash?
         // It the intention was an offline validator, we should enforce a slash.
@@ -64,7 +64,7 @@ impl<T: Trait> Module<T> {
     ///
     /// Only these active validators are able to be rewarded on each new session,
     /// the inactive ones earn nothing.
-    fn get_active_validator_set() -> impl Iterator<Item = (T::AccountId, T::Balance)> {
+    fn get_active_validator_set() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
         Self::validator_set().filter(Self::is_active).map(|who| {
             let total_votes = Self::total_votes_of(&who);
             (who, total_votes)
@@ -72,7 +72,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// 20% reward of each session is for the vesting schedule in the first halving epoch.
-    fn try_vesting(current_index: SessionIndex, this_session_reward: T::Balance) -> T::Balance {
+    fn try_vesting(current_index: SessionIndex, this_session_reward: BalanceOf<T>) -> BalanceOf<T> {
         // FIXME: consider the offset due to the migration.
         // SESSIONS_PER_ROUND --> offset
         if current_index < SESSIONS_PER_ROUND {
@@ -90,7 +90,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Distribute the session reward to all the receivers, returns the total reward for validators.
-    pub(crate) fn distribute_session_reward(session_index: SessionIndex) -> T::Balance {
+    pub(crate) fn distribute_session_reward(session_index: SessionIndex) -> BalanceOf<T> {
         let this_session_reward = Self::this_session_reward(session_index);
 
         let session_reward = Self::try_vesting(session_index, this_session_reward);
