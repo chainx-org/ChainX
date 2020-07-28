@@ -17,7 +17,7 @@ mod tests;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
     storage::IterableStorageMap,
-    traits::{Currency as CurrencyT, Get},
+    traits::{Currency as CurrencyT, ExistenceRequirement, Get},
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::traits::{Convert, SaturatedConversion, Saturating, Zero};
@@ -615,11 +615,12 @@ impl<T: Trait> Module<T> {
     }
 
     fn issue(who: &T::AccountId, value: BalanceOf<T>) {
-        todo!()
+        T::Currency::issue(value);
+        T::Currency::deposit_creating(who, value);
     }
 
     fn move_balance(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
-        todo!()
+        let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
     }
 
     fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), AssetErr> {
