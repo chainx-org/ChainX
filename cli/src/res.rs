@@ -33,7 +33,7 @@ pub fn load_mainnet_btc_genesis_header_info(
             BtcHeader {
                 version: raw.version,
                 previous_header_hash: as_h256(&raw.previous_header_hash),
-                merkle_root_hash: as_h256(&raw.previous_header_hash),
+                merkle_root_hash: as_h256(&raw.merkle_root_hash),
                 time: raw.time,
                 bits: BtcCompact::new(raw.bits),
                 nonce: raw.nonce,

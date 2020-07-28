@@ -1961,8 +1961,7 @@ dependencies = [
 [[package]]
 name = "jsonrpc-derive"
 version = "14.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fadf6945e227246825a583514534d864554e9f23d80b3c77d034b10983db5ef"
+source = "git+https://github.com/paritytech/jsonrpc?rev=57575efe9c220c7e7c0addf3c90e9577e3296c80#57575efe9c220c7e7c0addf3c90e9577e3296c80"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -7341,6 +7340,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "sp-std",
  "xpallet-mining-staking",
  "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-support",

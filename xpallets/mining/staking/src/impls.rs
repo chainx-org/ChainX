@@ -94,21 +94,42 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    /// Returns the tuple of (dividend, source_weight, target_weight) if the nominator claims right now.
+    pub fn calculate_dividend_on_claim(
+        nominator: &T::AccountId,
+        validator: &T::AccountId,
+        block_number: T::BlockNumber,
+    ) -> Result<(T::Balance, WeightType, WeightType, T::AccountId), Error<T>> {
+        let validator_pot = T::DetermineRewardPotAccount::reward_pot_account_for(validator);
+        let reward_pot_balance = xpallet_assets::Module::<T>::pcx_free_balance(&validator_pot);
+
+        let (dividend, source_weight, target_weight) =
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::compute_dividend(
+                nominator,
+                validator,
+                block_number,
+                reward_pot_balance,
+            )?;
+
+        Ok((dividend, source_weight, target_weight, validator_pot))
+    }
+
+    /// Returns the dividend of `nominator` to `validator` at `block_number`.
+    pub fn compute_dividend_at(
+        nominator: &T::AccountId,
+        validator: &T::AccountId,
+        block_number: T::BlockNumber,
+    ) -> Result<T::Balance, Error<T>> {
+        Self::calculate_dividend_on_claim(nominator, validator, block_number)
+            .map(|(dividend, _, _, _)| dividend)
+    }
+
     fn allocate_dividend(
         claimer: &T::AccountId,
         pot_account: &T::AccountId,
         dividend: T::Balance,
     ) -> Result<(), AssetErr> {
         xpallet_assets::Module::<T>::pcx_move_free_balance(pot_account, claimer, dividend)
-    }
-
-    /// Calculates the new amount given the origin amount and delta
-    fn apply_delta(origin: T::Balance, delta: Delta<T::Balance>) -> T::Balance {
-        match delta {
-            Delta::Add(v) => origin + v,
-            Delta::Sub(v) => origin - v,
-            Delta::Zero => origin,
-        }
     }
 
     /// Actually update the nominator vote weight given the new vote weight, block number and amount delta.
@@ -120,7 +141,7 @@ impl<T: Trait> Module<T> {
         delta: Delta<T::Balance>,
     ) {
         Nominations::<T>::mutate(nominator, validator, |claimer_ledger| {
-            claimer_ledger.nomination = Self::apply_delta(claimer_ledger.nomination, delta);
+            claimer_ledger.nomination = delta.calculate(claimer_ledger.nomination);
             claimer_ledger.last_vote_weight = new_weight;
             claimer_ledger.last_vote_weight_update = current_block;
         });
@@ -134,7 +155,7 @@ impl<T: Trait> Module<T> {
         delta: Delta<T::Balance>,
     ) {
         ValidatorLedgers::<T>::mutate(validator, |validator_ledger| {
-            validator_ledger.total = Self::apply_delta(validator_ledger.total, delta);
+            validator_ledger.total = delta.calculate(validator_ledger.total);
             validator_ledger.last_total_vote_weight = new_weight;
             validator_ledger.last_total_vote_weight_update = current_block;
         });
@@ -164,16 +185,8 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error> {
         let current_block = <frame_system::Module<T>>::block_number();
 
-        let claimee_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
-        let reward_pot_balance = xpallet_assets::Module::<T>::pcx_free_balance(&claimee_pot);
-
-        let (dividend, source_weight, target_weight) =
-            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::compute_dividend(
-                claimer,
-                claimee,
-                current_block,
-                reward_pot_balance,
-            )?;
+        let (dividend, source_weight, target_weight, claimee_pot) =
+            Self::calculate_dividend_on_claim(claimer, claimee, current_block)?;
 
         Self::allocate_dividend(claimer, &claimee_pot, dividend)?;
 

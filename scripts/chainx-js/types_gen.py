@@ -70,6 +70,7 @@ NEW_TYPES = [
     "ValidatorLedger",
     "ValidatorProfile",
     "XRC20Selector",
+    "RpcNominatorLedger",
 ]
 
 # Change the working directory to project root directory.
@@ -398,7 +399,7 @@ def parse_rpc_params(fn):
     return params
 
 
-def parse_rpc_api(xmodule, inner_fn, line_fn):
+def parse_rpc_api(xmodule, description, inner_fn, line_fn):
     [fn, result] = line_fn.split('->')
 
     if xmodule not in rpc_dict:
@@ -411,7 +412,7 @@ def parse_rpc_api(xmodule, inner_fn, line_fn):
     # >; = 2
     ok_result = result[8:-2]
     rpc_dict[xmodule][inner_fn] = {
-        'description': 'Some description',
+        'description': description,
         'params': params,
         'type': ok_result
     }
@@ -428,6 +429,11 @@ def build_rpc():
             for line in lines:
                 idx += 1
                 if '[rpc(name =' in line:
+                    if lines[idx - 2].lstrip().startswith('///'):
+                        comment = lines[idx - 2].strip()
+                        description = comment[3:].strip()
+                    else:
+                        description = 'Some description'
                     #  [rpc(name = "xassets_getAssets")] --> xassets_getAssets
                     matches = re.findall(r'\"(.+?)\"', line)
                     name = matches[0]
@@ -442,7 +448,7 @@ def build_rpc():
                             if lines[i].strip().endswith(';'):
                                 break
                         line_fn = ''.join(fn_lines)
-                        parse_rpc_api(xmodule, inner_fn, line_fn)
+                        parse_rpc_api(xmodule, description, inner_fn, line_fn)
 
 
 def write_json(output_json, output_fname):

@@ -34,6 +34,9 @@ use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 
+use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
+use xpallet_support::RpcBalance;
+
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
@@ -680,11 +683,17 @@ impl_runtime_apis! {
     }
 
     impl xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, BlockNumber> for Runtime {
-        fn validators() -> Vec<xpallet_mining_staking::ValidatorInfo<AccountId, xpallet_support::RpcBalance<Balance>, BlockNumber>> {
+        fn validators() -> Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
             XStaking::validators_info()
         }
-        fn validator_info_of(who: AccountId) -> xpallet_mining_staking::ValidatorInfo<AccountId, xpallet_support::RpcBalance<Balance>, BlockNumber> {
+        fn validator_info_of(who: AccountId) -> ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber> {
             XStaking::validator_info_of(who)
+        }
+        fn staking_dividend_of(who: AccountId) -> BTreeMap<AccountId, RpcBalance<Balance>> {
+            XStaking::staking_dividend_of(who)
+        }
+        fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>> {
+            XStaking::nomination_details_of(who)
         }
     }
 

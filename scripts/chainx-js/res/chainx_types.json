@@ -106,6 +106,11 @@
         "stakingRequirement": "StakingRequirement",
         "frequencyLimit": "BlockNumber"
     },
+    "RpcNominatorLedger": {
+        "nomination": "Balance",
+        "lastVoteWeight": "RpcWeightType",
+        "lastVoteWeightUpdate": "BlockNumber"
+    },
     "BondRequirement": {
         "selfBonded": "Balance",
         "total": "Balance"
@@ -165,6 +170,8 @@
         ]
     },
     "MiningWeight": "u128",
+    "RpcBalance": "String",
+    "RpcWeightType": "String",
     "WeightType": "u128",
     "AssetId": "u32",
     "Chain": {
@@ -359,7 +366,5 @@
         "rewardPotBalance": "RpcBalance"
     },
     "String": "Text",
-    "RpcBalance": "String",
-    "RpcWeightType": "String",
     "MiningPower": "u128"
 }
