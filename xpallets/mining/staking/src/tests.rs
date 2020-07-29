@@ -1,12 +1,9 @@
 use super::*;
 use crate::mock::*;
 use frame_support::{assert_err, assert_ok, traits::OnInitialize};
-use sp_runtime::DispatchResult;
 
-/*
-fn t_issue_pcx(to: AccountId, value: Balance) -> DispatchResult {
-    todo!("Remove this")
-    // XAssets::pcx_issue(&to, value)
+fn t_issue_pcx(to: AccountId, value: Balance) {
+    XStaking::mint(&to, value);
 }
 
 fn t_register(who: AccountId) -> DispatchResult {
@@ -32,11 +29,17 @@ fn t_unbond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult
 }
 
 fn t_withdraw_unbonded(who: AccountId, unbonded_index: UnbondedIndex) -> DispatchResult {
-    XStaking::withdraw_unbonded(Origin::signed(who), unbonded_index)
+    XStaking::unlock_unbonded_withdrawal(Origin::signed(who), unbonded_index)
 }
 
 fn t_system_block_number_inc(number: BlockNumber) {
     System::set_block_number((System::block_number() + number).into());
+}
+
+fn t_make_a_validator_candidate(who: AccountId, self_bonded: Balance) {
+    t_issue_pcx(who, self_bonded);
+    assert_ok!(t_register(who));
+    assert_ok!(t_bond(who, who, self_bonded));
 }
 
 fn t_start_session(session_index: SessionIndex) {
@@ -86,10 +89,10 @@ fn bond_should_work() {
 
         t_system_block_number_inc(1);
 
-        let before_bond = XAssets::pcx_free_balance(&1);
+        let before_bond = Balances::usable_balance(&1);
         assert_ok!(t_bond(1, 2, 10));
 
-        assert_eq!(XAssets::pcx_free_balance(&1), before_bond - 10);
+        assert_eq!(Balances::usable_balance(&1), before_bond - 10);
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
@@ -222,15 +225,15 @@ fn withdraw_unbond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         t_system_block_number_inc(1);
 
-        let before_bond = XAssets::pcx_free_balance(&1);
+        let before_bond = Balances::usable_balance(&1);
         assert_ok!(t_bond(1, 2, 10));
-        assert_eq!(XAssets::pcx_free_balance(&1), before_bond - 10);
+        assert_eq!(Balances::usable_balance(&1), before_bond - 10);
 
         t_system_block_number_inc(1);
 
         assert_ok!(t_unbond(1, 2, 5));
-        let before_unbond = XAssets::pcx_free_balance(&1);
-        assert_eq!(XAssets::pcx_free_balance(&1), before_unbond);
+        let before_unbond = Balances::usable_balance(&1);
+        assert_eq!(Balances::usable_balance(&1), before_unbond);
 
         assert_eq!(
             <Nominators<Test>>::get(1),
@@ -251,16 +254,10 @@ fn withdraw_unbond_should_work() {
 
         t_system_block_number_inc(1);
 
-        let before_withdraw_unbonded = XAssets::pcx_free_balance(&1);
+        let before_withdraw_unbonded = Balances::usable_balance(&1);
         assert_ok!(t_withdraw_unbonded(1, 0),);
-        assert_eq!(XAssets::pcx_free_balance(&1), before_withdraw_unbonded + 5);
+        assert_eq!(Balances::usable_balance(&1), before_withdraw_unbonded + 5);
     });
-}
-
-fn t_make_a_validator_candidate(who: AccountId, self_bonded: Balance) {
-    assert_ok!(t_issue_pcx(who, self_bonded));
-    assert_ok!(t_register(who));
-    assert_ok!(t_bond(who, who, self_bonded));
 }
 
 #[test]
@@ -332,9 +329,9 @@ fn staking_reward_should_work() {
         let t_2 = 68;
         let t_3 = 69;
 
-        assert_ok!(t_issue_pcx(t_1, 100));
-        assert_ok!(t_issue_pcx(t_2, 100));
-        assert_ok!(t_issue_pcx(t_3, 100));
+        t_issue_pcx(t_1, 100);
+        t_issue_pcx(t_2, 100);
+        t_issue_pcx(t_3, 100);
 
         // 5_000_000_000
         //
@@ -372,24 +369,24 @@ fn staking_reward_should_work() {
                 // 10% -> validator
                 // 90% -> validator's reward pot
                 assert_eq!(
-                    XAssets::pcx_free_balance(&validator),
+                    Balances::free_balance(&validator),
                     initial_free + val_total_reward * session_index as u128 / 10
                 );
                 assert_eq!(
-                    XAssets::pcx_free_balance(
+                    Balances::free_balance(
                         &DummyStakingRewardPotAccountDeterminer::reward_pot_account_for(&validator)
                     ),
                     0 + (val_total_reward - val_total_reward / 10) * session_index as u128
                 );
             };
 
-        test_validator_reward(1, 100 - 10, 10, 1);
-        test_validator_reward(2, 200 - 20, 20, 1);
-        test_validator_reward(3, 300 - 30, 30, 1);
-        test_validator_reward(4, 400 - 40, 40, 1);
+        test_validator_reward(1, 100, 10, 1);
+        test_validator_reward(2, 200, 20, 1);
+        test_validator_reward(3, 300, 30, 1);
+        test_validator_reward(4, 400, 40, 1);
 
         assert_eq!(
-            XAssets::pcx_free_balance(&TREASURY_ACCOUNT),
+            Balances::free_balance(&TREASURY_ACCOUNT),
             (treasury_reward + asset_mining_reward) * 1
         );
 
@@ -401,7 +398,7 @@ fn staking_reward_should_work() {
         let issued_manually = 100 * 3;
         let endowed = 100 + 200 + 300 + 400;
         assert_eq!(
-            XAssets::pcx_total_balance(),
+            Balances::total_issuance(),
             5_000_000_000u128 + issued_manually + endowed
         );
 
@@ -412,17 +409,13 @@ fn staking_reward_should_work() {
         all.extend_from_slice(&validators);
         all.extend_from_slice(&validators_reward_pot);
 
-        let total_issuance = || {
-            all.iter()
-                .map(|x| XAssets::all_type_asset_balance(x, &xpallet_protocol::PCX))
-                .sum::<u128>()
-        };
+        let total_issuance = || all.iter().map(|x| Balances::free_balance(x)).sum::<u128>();
 
-        assert_eq!(XAssets::pcx_total_balance(), total_issuance());
+        assert_eq!(Balances::total_issuance(), total_issuance());
 
         t_start_session(2);
         assert_eq!(
-            XAssets::pcx_total_balance(),
+            Balances::total_issuance(),
             5_000_000_000u128 * 2 + issued_manually + endowed
         );
     });
@@ -441,7 +434,6 @@ fn slash_should_work() {
         // todo!("force_new_era_test");
     });
 }
-*/
 
 #[test]
 fn mint_should_work() {
@@ -461,6 +453,8 @@ fn bond_reserve_should_work() {
         let to_mint = 10;
         XStaking::mint(&who, to_mint);
         assert_eq!(Balances::free_balance(&who), 10);
+
+        // Bond 6
         assert_ok!(XStaking::bond_reserve(&who, 6));
         assert_eq!(Balances::usable_balance(&who), 4);
         let mut locks = BTreeMap::new();
@@ -478,6 +472,72 @@ fn bond_reserve_should_work() {
         assert_err!(
             Balances::transfer(Some(who).into(), 6, 1000),
             pallet_balances::Error::<Test, _>::InsufficientBalance
+        );
+
+        // Bond 2 extra
+        assert_ok!(XStaking::bond_reserve(&who, 2));
+        let mut locks = BTreeMap::new();
+        locks.insert(LockedType::Bonded, 8);
+        assert_eq!(
+            frame_system::Account::<Test>::get(&who).data,
+            pallet_balances::AccountData {
+                free: 10,
+                reserved: 0,
+                misc_frozen: 8,
+                fee_frozen: 8
+            }
+        );
+        assert_err!(
+            XStaking::bond_reserve(&who, 3),
+            <Error<Test>>::InsufficientBalance
+        );
+
+        // Unbond 5 now, the frozen balances stay the same,
+        // only internal Staking locked state changes.
+        assert_ok!(XStaking::unbond_reserve(&who, 5));
+        let mut locks = BTreeMap::new();
+        locks.insert(LockedType::Bonded, 3);
+        locks.insert(LockedType::BondedWithdrawal, 5);
+        assert_eq!(XStaking::locks(&who), locks);
+        assert_eq!(
+            frame_system::Account::<Test>::get(&who).data,
+            pallet_balances::AccountData {
+                free: 10,
+                reserved: 0,
+                misc_frozen: 8,
+                fee_frozen: 8
+            }
+        );
+
+        // Unlock unbonded withdrawal 4.
+        XStaking::apply_unlock_unbonded_withdrawal(&who, 4);
+        let mut locks = BTreeMap::new();
+        locks.insert(LockedType::Bonded, 3);
+        locks.insert(LockedType::BondedWithdrawal, 1);
+        assert_eq!(XStaking::locks(&who), locks);
+        assert_eq!(
+            frame_system::Account::<Test>::get(&who).data,
+            pallet_balances::AccountData {
+                free: 10,
+                reserved: 0,
+                misc_frozen: 4,
+                fee_frozen: 4
+            }
+        );
+
+        // Unlock unbonded withdrawal 1.
+        XStaking::apply_unlock_unbonded_withdrawal(&who, 1);
+        let mut locks = BTreeMap::new();
+        locks.insert(LockedType::Bonded, 3);
+        assert_eq!(XStaking::locks(&who), locks);
+        assert_eq!(
+            frame_system::Account::<Test>::get(&who).data,
+            pallet_balances::AccountData {
+                free: 10,
+                reserved: 0,
+                misc_frozen: 3,
+                fee_frozen: 3
+            }
         );
     });
 }

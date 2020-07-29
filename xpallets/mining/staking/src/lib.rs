@@ -23,6 +23,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::traits::{CheckedSub, Convert, SaturatedConversion, Saturating, Zero};
+use sp_runtime::DispatchResult;
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
@@ -240,7 +241,7 @@ decl_event!(
         Claim(AccountId, AccountId, Balance),
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
         /// from the unlocking queue.
-        WithdrawUnbonded(AccountId, Balance),
+        UnlockUnbondedWithdrawal(AccountId, Balance),
         /// Offenders are forcibly to be chilled due to insufficient reward pot balance.
         ForceChilled(SessionIndex, Vec<AccountId>),
     }
@@ -263,6 +264,8 @@ decl_error! {
         InsufficientValue,
         /// Invalid rebondable value.
         InvalidRebondValue,
+        /// LockedType::Bond is missing unexpectedly.
+        LockedTypeMissingBond,
         ///
         InvalidUnbondValue,
         /// Can not schedule more unbond chunks.
@@ -370,7 +373,7 @@ decl_module! {
 
         /// Frees the unbonded balances that are due.
         #[weight = 10]
-        fn withdraw_unbonded(origin, unbonded_index: UnbondedIndex) {
+        fn unlock_unbonded_withdrawal(origin, unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
 
             let mut unbonded_chunks = Self::unbonded_chunks_of(&sender);
@@ -383,14 +386,14 @@ decl_module! {
             ensure!(current_block > locked_until, Error::<T>::UnbondRequestNotYetDue);
 
             // apply withdraw_unbonded
-            Self::unlock_unbonded_reservation(&sender, value).map_err(|_| Error::<T>::AssetError)?;
-            unbonded_chunks.swap_remove(unbonded_index as usize);
+            Self::apply_unlock_unbonded_withdrawal(&sender, value);
 
+            unbonded_chunks.swap_remove(unbonded_index as usize);
             Nominators::<T>::mutate(&sender, |nominator_profile| {
                 nominator_profile.unbonded_chunks = unbonded_chunks;
             });
 
-            Self::deposit_event(RawEvent::WithdrawUnbonded(sender, value));
+            Self::deposit_event(RawEvent::UnlockUnbondedWithdrawal(sender, value));
         }
 
         /// Claims the staking reward given the `target` validator.
@@ -620,43 +623,56 @@ impl<T: Trait> Module<T> {
         let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
     }
 
-    pub(crate) fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), Error<T>> {
+    /// Set a lock on `value` of free balance of an account.
+    pub(crate) fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+        let mut new_locks = Self::locks(who);
+        let old_bonded = *new_locks.entry(LockedType::Bonded).or_default();
+        let new_bonded = old_bonded + value;
+
         Self::free_balance_of(who)
-            .checked_sub(&value)
+            .checked_sub(&new_bonded)
             .ok_or(Error::<T>::InsufficientBalance)?;
 
-        T::Currency::set_lock(STAKING_ID, who, value, WithdrawReasons::all());
+        T::Currency::set_lock(STAKING_ID, who, new_bonded, WithdrawReasons::all());
 
-        Locks::<T>::mutate(who, |locks| {
-            *locks.entry(LockedType::Bonded).or_default() += value;
-        });
+        new_locks.insert(LockedType::Bonded, new_bonded);
+
+        Locks::<T>::insert(who, new_locks);
 
         Ok(())
     }
 
     fn unbond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), Error<T>> {
-        todo!()
-        // <xpallet_assets::Module<T>>::pcx_move_balance(
-        // who,
-        // AssetType::ReservedStaking,
-        // who,
-        // AssetType::ReservedStakingRevocation,
-        // value,
-        // )
+        Locks::<T>::mutate(who, |locks| {
+            *locks.entry(LockedType::Bonded).or_default() -= value;
+            *locks.entry(LockedType::BondedWithdrawal).or_default() += value;
+        });
+        Ok(())
     }
 
-    fn unlock_unbonded_reservation(
-        who: &T::AccountId,
-        value: BalanceOf<T>,
-    ) -> Result<(), Error<T>> {
-        todo!()
-        // <xpallet_assets::Module<T>>::pcx_move_balance(
-        // who,
-        // AssetType::ReservedStakingRevocation,
-        // who,
-        // AssetType::Free,
-        // value,
-        // )
+    /// Returns the total locked balances in Staking.
+    fn total_locked_of(who: &T::AccountId) -> BalanceOf<T> {
+        Self::locks(who)
+            .values()
+            .fold(Zero::zero(), |acc: BalanceOf<T>, x| acc + *x)
+    }
+
+    fn apply_unlock_unbonded_withdrawal(who: &T::AccountId, value: BalanceOf<T>) {
+        let new_bonded = Self::total_locked_of(who) - value;
+
+        T::Currency::set_lock(STAKING_ID, who, new_bonded, WithdrawReasons::all());
+
+        Locks::<T>::mutate(who, |locks| {
+            let old_value = *locks.entry(LockedType::BondedWithdrawal).or_default();
+            if old_value == value {
+                locks.remove(&LockedType::BondedWithdrawal);
+            } else {
+                locks.insert(
+                    LockedType::BondedWithdrawal,
+                    old_value.saturating_sub(value),
+                );
+            }
+        });
     }
 
     /// Settles and update the vote weight state of the nominator `source` and validator `target` given the delta amount.
@@ -699,7 +715,7 @@ impl<T: Trait> Module<T> {
         nominator: &T::AccountId,
         nominee: &T::AccountId,
         value: BalanceOf<T>,
-    ) -> Result<(), Error<T>> {
+    ) -> DispatchResult {
         Self::bond_reserve(nominator, value)?;
         Self::update_vote_weight(nominator, nominee, Delta::Add(value));
         Self::deposit_event(RawEvent::Bond(nominator.clone(), nominee.clone(), value));
