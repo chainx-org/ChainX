@@ -1,6 +1,5 @@
 use super::*;
 use codec::{Decode, Encode};
-use frame_support::traits::{LockIdentifier, WithdrawReasons};
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::RuntimeDebug;
@@ -13,15 +12,7 @@ use xp_mining_common::{
 };
 use xp_mining_staking::{NativeReservableCurrency, SessionIndex};
 
-const STAKING_ID: LockIdentifier = *b"staking ";
-
-#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum ReservedType {
-    Bonded,
-    BondedWithdrawal,
-}
-
+/*
 impl<T: Trait> NativeReservableCurrency<T::AccountId, BalanceOf<T>, ReservedType> for Module<T> {
     fn reserve(who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         // FIXME: figure out set_lock
@@ -40,6 +31,7 @@ impl<T: Trait> NativeReservableCurrency<T::AccountId, BalanceOf<T>, ReservedType
         Ok(())
     }
 }
+*/
 
 impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
     for ValidatorLedger<Balance, BlockNumber>
@@ -160,7 +152,7 @@ impl<T: Trait> Module<T> {
         claimer: &T::AccountId,
         pot_account: &T::AccountId,
         dividend: BalanceOf<T>,
-    ) -> Result<(), AssetErr> {
+    ) -> Result<(), Error<T>> {
         Self::move_balance(pot_account, claimer, dividend);
         Ok(())
     }

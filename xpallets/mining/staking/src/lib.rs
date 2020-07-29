@@ -17,10 +17,13 @@ mod tests;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
     storage::IterableStorageMap,
-    traits::{Currency, ExistenceRequirement, Get, LockableCurrency},
+    traits::{
+        Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
+    },
 };
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{Convert, SaturatedConversion, Saturating, Zero};
+use sp_runtime::traits::{CheckedSub, Convert, SaturatedConversion, Saturating, Zero};
+use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
 use chainx_primitives::Memo;
@@ -28,7 +31,6 @@ use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
 use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedIndex};
-use xpallet_assets::{AssetErr, AssetType};
 use xpallet_support::{debug, RpcBalance};
 
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
@@ -37,6 +39,8 @@ pub use types::*;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+
+const STAKING_ID: LockIdentifier = *b"staking ";
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 5_000_000_000;
@@ -152,6 +156,10 @@ decl_storage! {
         pub Nominations get(fn nominations):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
             => NominatorLedger<BalanceOf<T>, T::BlockNumber>;
+
+        /// All kinds of locked balances of an account in Staking.
+        pub Locks get(fn locks):
+            map hasher(blake2_128_concat) T::AccountId => BTreeMap<LockedType, BalanceOf<T>>;
 
         /// Mode of era forcing.
         pub ForceEra get(fn force_era) config(): Forcing;
@@ -281,12 +289,6 @@ decl_error! {
         CallNotAllowed,
         ///
         AssetError,
-    }
-}
-
-impl<T: Trait> From<AssetErr> for Error<T> {
-    fn from(_: AssetErr) -> Self {
-        Self::AssetError
     }
 }
 
@@ -618,20 +620,21 @@ impl<T: Trait> Module<T> {
         let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
     }
 
-    fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), AssetErr> {
-        // todo!()
+    pub(crate) fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), Error<T>> {
+        Self::free_balance_of(who)
+            .checked_sub(&value)
+            .ok_or(Error::<T>::InsufficientBalance)?;
+
+        T::Currency::set_lock(STAKING_ID, who, value, WithdrawReasons::all());
+
+        Locks::<T>::mutate(who, |locks| {
+            *locks.entry(LockedType::Bonded).or_default() += value;
+        });
+
         Ok(())
-        //
-        // <xpallet_assets::Module<T>>::pcx_move_balance(
-        // who,
-        // AssetType::Free,
-        // who,
-        // AssetType::ReservedStaking,
-        // value,
-        // )
     }
 
-    fn unbond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), AssetErr> {
+    fn unbond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), Error<T>> {
         todo!()
         // <xpallet_assets::Module<T>>::pcx_move_balance(
         // who,
@@ -645,7 +648,7 @@ impl<T: Trait> Module<T> {
     fn unlock_unbonded_reservation(
         who: &T::AccountId,
         value: BalanceOf<T>,
-    ) -> Result<(), AssetErr> {
+    ) -> Result<(), Error<T>> {
         todo!()
         // <xpallet_assets::Module<T>>::pcx_move_balance(
         // who,

@@ -453,3 +453,31 @@ fn mint_should_work() {
         assert_eq!(Balances::free_balance(&7777), to_mint);
     });
 }
+
+#[test]
+fn bond_reserve_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        let who = 7777;
+        let to_mint = 10;
+        XStaking::mint(&who, to_mint);
+        assert_eq!(Balances::free_balance(&who), 10);
+        assert_ok!(XStaking::bond_reserve(&who, 6));
+        assert_eq!(Balances::usable_balance(&who), 4);
+        let mut locks = BTreeMap::new();
+        locks.insert(LockedType::Bonded, 6);
+        assert_eq!(XStaking::locks(&who), locks);
+        assert_eq!(
+            frame_system::Account::<Test>::get(&who).data,
+            pallet_balances::AccountData {
+                free: 10,
+                reserved: 0,
+                misc_frozen: 6,
+                fee_frozen: 6 // fee_frozen is also 6 now?
+            }
+        );
+        assert_err!(
+            Balances::transfer(Some(who).into(), 6, 1000),
+            pallet_balances::Error::<Test, _>::InsufficientBalance
+        );
+    });
+}

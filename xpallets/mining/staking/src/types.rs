@@ -8,6 +8,17 @@ use xp_mining_common::WeightType;
 use xp_mining_staking::MiningPower;
 use xpallet_support::RpcWeightType;
 
+/// Detailed types of reserved balances in Staking.
+#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum LockedType {
+    /// Locked balances when nominator calls `bond`.
+    Bonded,
+    /// The locked balances transition from `Bonded` into `BondedWithdrawal` state
+    /// when nominator calls `withdraw_bonded`.
+    BondedWithdrawal,
+}
+
 /// Destination for minted fresh PCX on each new session.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum MintedDestination<AccountId> {
