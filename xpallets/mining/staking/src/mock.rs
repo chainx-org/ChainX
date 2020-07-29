@@ -22,6 +22,7 @@ pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
+pub(crate) type AccountIndex = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 
@@ -35,17 +36,18 @@ mod staking {
 }
 
 use frame_system as system;
+use pallet_balances as balances;
 use pallet_session as session;
-use xpallet_assets as assets;
 
+/*
 impl_outer_event! {
     pub enum MetaEvent for Test {
         system<T>,
-        assets<T>,
         session,
         staking<T>,
     }
 }
+*/
 
 // For testing the pallet, we construct most of a mock runtime. This means
 // first constructing a configuration type (`Test`) which `impl`s each of the
@@ -64,14 +66,14 @@ impl system::Trait for Test {
     type BaseCallFilter = ();
     type Origin = Origin;
     type Call = ();
-    type Index = u64;
+    type Index = AccountIndex;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = MetaEvent;
+    type Event = ();
     type BlockHashCount = BlockHashCount;
     type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
@@ -82,9 +84,24 @@ impl system::Trait for Test {
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type ModuleToIndex = ();
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
+}
+
+pub struct ExistentialDeposit;
+impl Get<Balance> for ExistentialDeposit {
+    fn get() -> Balance {
+        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow())
+    }
+}
+
+impl pallet_balances::Trait for Test {
+    type Balance = Balance;
+    type Event = ();
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = System;
 }
 
 parameter_types! {
@@ -97,12 +114,12 @@ impl pallet_timestamp::Trait for Test {
     type MinimumPeriod = MinimumPeriod;
 }
 
-impl xpallet_assets::Trait for Test {
-    type Balance = Balance;
-    type Event = MetaEvent;
-    type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = ();
-}
+// impl xpallet_assets::Trait for Test {
+// type Balance = Balance;
+// type Event = MetaEvent;
+// type OnAssetChanged = ();
+// type OnAssetRegisterOrRevoke = ();
+// }
 
 /// Another session handler struct to test on_disabled.
 pub struct OtherSessionHandler;
@@ -163,7 +180,7 @@ impl pallet_session::Trait for Test {
     type Keys = SessionKeys;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionHandler = (OtherSessionHandler,);
-    type Event = MetaEvent;
+    type Event = ();
     type ValidatorId = AccountId;
     type ValidatorIdOf = ();
     type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
@@ -193,7 +210,8 @@ parameter_types! {
 }
 
 impl Trait for Test {
-    type Event = MetaEvent;
+    type Currency = Balances;
+    type Event = ();
     type AssetMining = ();
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
@@ -226,6 +244,7 @@ impl Default for ExtBuilder {
     }
 }
 
+/*
 const PCX_PRECISION: u8 = 8;
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
@@ -244,6 +263,7 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             | AssetRestriction::DestroyFree,
     )
 }
+*/
 
 impl ExtBuilder {
     pub fn set_associated_constants(&self) {
@@ -258,6 +278,7 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
+        /*
         let pcx_asset = pcx();
         let assets = vec![(pcx_asset.0, pcx_asset.1, pcx_asset.2, true, false)];
 
@@ -265,10 +286,10 @@ impl ExtBuilder {
         let pcx_id = pcx().0;
         let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
         endowed.insert(pcx_id, endowed_info.clone());
-        let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets,
-            endowed,
-            memo_len: 128,
+        */
+
+        let _ = pallet_balances::GenesisConfig::<Test> {
+            balances: vec![(1, 100), (2, 200), (3, 300), (4, 400)],
         }
         .assimilate_storage(&mut storage);
 
@@ -325,7 +346,8 @@ impl ExtBuilder {
 }
 
 pub type System = frame_system::Module<Test>;
-pub type XAssets = xpallet_assets::Module<Test>;
+pub type Balances = pallet_balances::Module<Test>;
+// pub type XAssets = xpallet_assets::Module<Test>;
 pub type Session = pallet_session::Module<Test>;
 pub type Timestamp = pallet_timestamp::Module<Test>;
 pub type XStaking = Module<Test>;

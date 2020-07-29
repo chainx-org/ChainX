@@ -3,8 +3,10 @@ use crate::mock::*;
 use frame_support::{assert_err, assert_ok, traits::OnInitialize};
 use sp_runtime::DispatchResult;
 
+/*
 fn t_issue_pcx(to: AccountId, value: Balance) -> DispatchResult {
-    XAssets::pcx_issue(&to, value)
+    todo!("Remove this")
+    // XAssets::pcx_issue(&to, value)
 }
 
 fn t_register(who: AccountId) -> DispatchResult {
@@ -437,5 +439,17 @@ fn staker_reward_should_work() {
 fn slash_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         // todo!("force_new_era_test");
+    });
+}
+*/
+
+#[test]
+fn mint_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_eq!(Balances::total_issuance(), 1000);
+        let to_mint = 666;
+        XStaking::mint(&7777, to_mint);
+        assert_eq!(Balances::total_issuance(), 1000 + to_mint);
+        assert_eq!(Balances::free_balance(&7777), to_mint);
     });
 }

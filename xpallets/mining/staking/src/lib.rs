@@ -614,17 +614,14 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn issue(who: &T::AccountId, value: BalanceOf<T>) {
-        T::Currency::issue(value);
-        T::Currency::deposit_creating(who, value);
-    }
-
     fn move_balance(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
         let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
     }
 
     fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), AssetErr> {
-        todo!()
+        // todo!()
+        Ok(())
+        //
         // <xpallet_assets::Module<T>>::pcx_move_balance(
         // who,
         // AssetType::Free,

@@ -23,8 +23,8 @@ impl<T: Trait> Module<T> {
 
     /// Issue new fresh PCX.
     #[inline]
-    fn mint(receiver: &T::AccountId, value: BalanceOf<T>) {
-        let _ = Self::issue(receiver, value);
+    pub(crate) fn mint(receiver: &T::AccountId, value: BalanceOf<T>) {
+        T::Currency::deposit_creating(receiver, value);
     }
 
     /// Reward a (potential) validator by a specific amount.

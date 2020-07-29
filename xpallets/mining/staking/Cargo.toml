@@ -19,6 +19,7 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -51,6 +52,7 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "pallet-session/std",
+    "pallet-balances/std",
 
     "chainx-primitives/std",
     "xp-mining-common/std",
