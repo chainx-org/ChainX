@@ -642,6 +642,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    /// `unbond` only triggers the internal change of Staking locked type.
     fn unbond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), Error<T>> {
         Locks::<T>::mutate(who, |locks| {
             *locks.entry(LockedType::Bonded).or_default() -= value;

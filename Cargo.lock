@@ -7410,7 +7410,6 @@ dependencies = [
  "sp-std",
  "xp-mining-common",
  "xp-mining-staking",
- "xpallet-assets",
  "xpallet-protocol",
  "xpallet-support",
 ]

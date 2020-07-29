@@ -4,7 +4,6 @@
 //! approaches in general. Definitions related to sessions, slashing, etc go here.
 
 use chainx_primitives::AssetId;
-use sp_runtime::DispatchResult;
 use sp_std::prelude::Vec;
 
 /// Simple index type with which we can count sessions.
@@ -50,16 +49,4 @@ impl<AccountId: Default> TreasuryAccount<AccountId> for () {
     fn treasury_account() -> AccountId {
         Default::default()
     }
-}
-
-/// Manage the reserves of native coin.
-pub trait NativeReservableCurrency<AccountId, Balance, ReservedType> {
-    fn reserve(who: &AccountId, value: Balance) -> DispatchResult;
-    fn unreserve(who: &AccountId, value: Balance, ty: ReservedType) -> DispatchResult;
-    fn move_reserved(
-        who: &AccountId,
-        value: Balance,
-        from_ty: ReservedType,
-        to_ty: ReservedType,
-    ) -> DispatchResult;
 }

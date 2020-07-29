@@ -1,37 +1,13 @@
 use super::*;
-use codec::{Decode, Encode};
+use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
-use sp_runtime::RuntimeDebug;
-use sp_runtime::{traits::Hash, DispatchResult, Perbill};
-#[cfg(feature = "std")]
-use sp_runtime::{Deserialize, Serialize};
+use sp_runtime::{traits::Hash, Perbill};
 use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
-use xp_mining_staking::{NativeReservableCurrency, SessionIndex};
-
-/*
-impl<T: Trait> NativeReservableCurrency<T::AccountId, BalanceOf<T>, ReservedType> for Module<T> {
-    fn reserve(who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        // FIXME: figure out set_lock
-        T::Currency::set_lock(STAKING_ID, who, value, WithdrawReasons::all());
-        Ok(())
-    }
-    fn unreserve(who: &T::AccountId, value: BalanceOf<T>, ty: ReservedType) -> DispatchResult {
-        Ok(())
-    }
-    fn move_reserved(
-        who: &T::AccountId,
-        value: BalanceOf<T>,
-        from_ty: ReservedType,
-        to_ty: ReservedType,
-    ) -> DispatchResult {
-        Ok(())
-    }
-}
-*/
+use xp_mining_staking::SessionIndex;
 
 impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
     for ValidatorLedger<Balance, BlockNumber>

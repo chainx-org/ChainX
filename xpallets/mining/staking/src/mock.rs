@@ -1,6 +1,5 @@
 use crate::*;
 use crate::{Module, Trait};
-use chainx_primitives::AssetId;
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
@@ -8,12 +7,8 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, HashSet},
-};
+use std::{cell::RefCell, collections::HashSet};
 use xp_mining_staking::SessionIndex;
-use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 
@@ -113,13 +108,6 @@ impl pallet_timestamp::Trait for Test {
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
 }
-
-// impl xpallet_assets::Trait for Test {
-// type Balance = Balance;
-// type Event = MetaEvent;
-// type OnAssetChanged = ();
-// type OnAssetRegisterOrRevoke = ();
-// }
 
 /// Another session handler struct to test on_disabled.
 pub struct OtherSessionHandler;
@@ -244,27 +232,6 @@ impl Default for ExtBuilder {
     }
 }
 
-/*
-const PCX_PRECISION: u8 = 8;
-fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        xpallet_protocol::PCX,
-        AssetInfo::new::<Test>(
-            b"PCX".to_vec(),
-            b"Polkadot ChainX".to_vec(),
-            Chain::ChainX,
-            PCX_PRECISION,
-            b"ChainX's crypto currency in Polkadot ecology".to_vec(),
-        )
-        .unwrap(),
-        AssetRestriction::Deposit
-            | AssetRestriction::Withdraw
-            | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyFree,
-    )
-}
-*/
-
 impl ExtBuilder {
     pub fn set_associated_constants(&self) {
         SESSION_PER_ERA.with(|v| *v.borrow_mut() = self.session_per_era);
@@ -277,16 +244,6 @@ impl ExtBuilder {
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
-
-        /*
-        let pcx_asset = pcx();
-        let assets = vec![(pcx_asset.0, pcx_asset.1, pcx_asset.2, true, false)];
-
-        let mut endowed = BTreeMap::new();
-        let pcx_id = pcx().0;
-        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
-        endowed.insert(pcx_id, endowed_info.clone());
-        */
 
         let _ = pallet_balances::GenesisConfig::<Test> {
             balances: vec![(1, 100), (2, 200), (3, 300), (4, 400)],
