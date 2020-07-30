@@ -98,10 +98,10 @@ impl<T: Trait> Module<T> {
     /// = amount * price * 10^(quote.precision) / 10^(base.precision) * 10^(price.precision)
     /// = amount * price * 10^(quote.precision - base.precision - price.precision)
     pub(crate) fn convert_base_to_quote(
-        amount: T::Balance,
+        amount: BalanceOf<T>,
         price: T::Price,
         pair: &TradingPairProfile,
-    ) -> result::Result<T::Balance, Error<T>> {
+    ) -> result::Result<BalanceOf<T>, Error<T>> {
         if let (Some(base), Some(quote)) = (
             <xpallet_assets::Module<T>>::asset_info_of(pair.base()),
             <xpallet_assets::Module<T>>::asset_info_of(pair.quote()),

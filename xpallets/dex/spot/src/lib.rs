@@ -19,7 +19,11 @@ use sp_std::prelude::*;
 use sp_std::{cmp, fmt::Debug, result};
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, Parameter,
+    decl_error, decl_event, decl_module, decl_storage,
+    dispatch::DispatchResult,
+    ensure,
+    traits::{Currency, ReservableCurrency},
+    Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -44,9 +48,14 @@ const MAX_BACKLOG_ORDER: usize = 1000;
 /// more time than the Block time to finish.
 const DEFAULT_FLUCTUATION: u32 = 100;
 
+pub type BalanceOf<T> =
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    type Currency: ReservableCurrency<Self::AccountId>;
 
     /// The price of an order.
     type Price: Parameter
@@ -64,7 +73,7 @@ type Result<T> = result::Result<(), Error<T>>;
 pub type OrderInfo<T> = Order<
     TradingPairId,
     <T as frame_system::Trait>::AccountId,
-    <T as xpallet_assets::Trait>::Balance,
+    BalanceOf<T>,
     <T as Trait>::Price,
     <T as frame_system::Trait>::BlockNumber,
 >;
@@ -130,9 +139,9 @@ decl_storage! {
 decl_event!(
     pub enum Event<T>
     where
+        Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
         <T as frame_system::Trait>::BlockNumber,
-        <T as xpallet_assets::Trait>::Balance,
         <T as Trait>::Price,
     {
         /// A new order is created.
@@ -209,7 +218,7 @@ decl_module! {
             pair_id: TradingPairId,
             order_type: OrderType,
             side: Side,
-            amount: T::Balance,
+            amount: BalanceOf<T>,
             price: T::Price
         ) {
             let who = ensure_signed(origin)?;
@@ -232,7 +241,7 @@ decl_module! {
                 Side::Sell => (pair.base(), amount)
             };
 
-            Self::put_order_reserve(&who, &reserve_asset, reserve_amount)?;
+            Self::put_order_reserve(&who, reserve_asset, reserve_amount)?;
 
             Self::apply_put_order(who, pair_id, order_type, side, amount, price, reserve_amount)?;
         }
@@ -362,9 +371,9 @@ impl<T: Trait> Module<T> {
         pair_id: TradingPairId,
         order_type: OrderType,
         side: Side,
-        amount: T::Balance,
+        amount: BalanceOf<T>,
         price: T::Price,
-        reserve_amount: T::Balance,
+        reserve_amount: BalanceOf<T>,
     ) -> Result<T> {
         info!(
             "transactor:{:?}, pair_id:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",

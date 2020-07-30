@@ -59,9 +59,9 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         order_type: OrderType,
         side: Side,
-        amount: T::Balance,
-        remaining: T::Balance,
-    ) -> Order<TradingPairId, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
+        amount: BalanceOf<T>,
+        remaining: BalanceOf<T>,
+    ) -> Order<TradingPairId, T::AccountId, BalanceOf<T>, T::Price, T::BlockNumber> {
         let order_id = Self::order_count_of(&who);
 
         let submitter = who.clone();
@@ -89,9 +89,9 @@ impl<T: Trait> Module<T> {
         submitter: T::AccountId,
         class: OrderType,
         side: Side,
-        amount: T::Balance,
-        remaining: T::Balance,
-    ) -> Order<TradingPairId, T::AccountId, T::Balance, T::Price, T::BlockNumber> {
+        amount: BalanceOf<T>,
+        remaining: BalanceOf<T>,
+    ) -> Order<TradingPairId, T::AccountId, BalanceOf<T>, T::Price, T::BlockNumber> {
         let current_block = <system::Module<T>>::block_number();
         let props = OrderProperty {
             pair_id,
@@ -292,7 +292,7 @@ impl<T: Trait> Module<T> {
     /// Update the status of order after the turnover is calculated.
     fn update_order_on_execute(
         order: &mut OrderInfo<T>,
-        turnover: &T::Balance,
+        turnover: &BalanceOf<T>,
         trade_history_index: TradingHistoryIndex,
     ) {
         order.executed_indices.push(trade_history_index);
@@ -321,7 +321,7 @@ impl<T: Trait> Module<T> {
 
     /// Due to the loss of precision in Self::convert_base_to_quote(),
     /// the remaining could still be non-zero when the order is full filled, which must be refunded.
-    fn try_refund_remaining(order: &mut OrderInfo<T>, asset_id: &AssetId) {
+    fn try_refund_remaining(order: &mut OrderInfo<T>, asset_id: AssetId) {
         if order.is_fulfilled() && !order.remaining.is_zero() {
             Self::refund_reserved_dex_spot(&order.submitter(), asset_id, order.remaining);
             order.remaining = Zero::zero();
@@ -337,7 +337,7 @@ impl<T: Trait> Module<T> {
         maker_order: &mut OrderInfo<T>,
         taker_order: &mut OrderInfo<T>,
         price: T::Price,
-        turnover: T::Balance,
+        turnover: BalanceOf<T>,
     ) -> Result<T> {
         let pair = Self::trading_pair(pair_id)?;
 
@@ -364,8 +364,8 @@ impl<T: Trait> Module<T> {
             Side::Sell => pair.base(),
         };
 
-        Self::try_refund_remaining(maker_order, &refund_remaining_asset(maker_order));
-        Self::try_refund_remaining(taker_order, &refund_remaining_asset(taker_order));
+        Self::try_refund_remaining(maker_order, refund_remaining_asset(maker_order));
+        Self::try_refund_remaining(taker_order, refund_remaining_asset(taker_order));
 
         Self::insert_executed_order(maker_order);
         Self::insert_executed_order(taker_order);
@@ -396,7 +396,7 @@ impl<T: Trait> Module<T> {
             Side::Buy => (pair.quote(), order.remaining),
         };
 
-        Self::cancel_order_unreserve(who, &refund_token, refund_amount)?;
+        Self::cancel_order_unreserve(who, refund_token, refund_amount)?;
 
         order.update_status_on_cancel();
         order.decrease_remaining_on_cancel(refund_amount);
