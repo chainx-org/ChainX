@@ -5,6 +5,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(test)]
+mod mock;
+#[cfg(test)]
 mod tests;
 
 pub mod traits;
@@ -441,6 +443,13 @@ impl<T: Trait> Module<T> {
     pub fn all_type_total_asset_balance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
+    }
+
+    pub fn total_asset_balance_of(id: &AssetId, type_: AssetType) -> BalanceOf<T> {
+        Self::total_asset_balance(id)
+            .get(&type_)
+            .map(|b| *b)
+            .unwrap_or_default()
     }
 
     pub fn all_type_asset_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
