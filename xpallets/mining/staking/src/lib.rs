@@ -523,6 +523,7 @@ impl<T: Trait> Module<T> {
         Self::active_validator_votes().fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + x)
     }
 
+    /// Returns the bonded balance of Staking for the given account.
     pub fn staked_of(who: &T::AccountId) -> BalanceOf<T> {
         *Self::locks(who).entry(LockedType::Bonded).or_default()
     }
