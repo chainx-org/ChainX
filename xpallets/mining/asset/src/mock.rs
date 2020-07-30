@@ -312,16 +312,14 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
-        let pcx_asset = pcx();
-        let assets = vec![(pcx_asset.0, pcx_asset.1, pcx_asset.2, true, false)];
+        let _ = pallet_balances::GenesisConfig::<Test> {
+            balances: vec![(1, 100), (2, 200), (3, 300), (4, 400)],
+        }
+        .assimilate_storage(&mut storage);
 
-        let mut endowed = BTreeMap::new();
-        let pcx_id = pcx().0;
-        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
-        endowed.insert(pcx_id, endowed_info.clone());
         let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets,
-            endowed,
+            assets: vec![],
+            endowed: BTreeMap::new(),
             memo_len: 128,
         }
         .assimilate_storage(&mut storage);
