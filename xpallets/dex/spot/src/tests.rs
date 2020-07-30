@@ -281,7 +281,7 @@ fn match_order_should_work() {
 
         t_set_handicap(0, 1_000_000, 1_100_000);
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
+        t_generic_issue(trading_pair.quote(), 1, 10);
         t_issue_pcx(2, 2000);
         t_issue_pcx(3, 2000);
 
@@ -340,9 +340,9 @@ fn reap_orders_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &2, 10));
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 10));
+        t_generic_issue(trading_pair.quote(), 1, 10);
+        t_generic_issue(trading_pair.quote(), 2, 10);
+        t_generic_issue(trading_pair.quote(), 3, 10);
         t_issue_pcx(2, 20000);
         t_issue_pcx(3, 20000);
         t_issue_pcx(4, 20000);
@@ -394,27 +394,21 @@ fn refund_remaining_of_taker_order_should_work() {
         // remaining is 1
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
-        let bmap = BTreeMap::new();
-        assert_eq!(XAssets::asset_balance(1, base.clone()), bmap);
-
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller1);
         assert_eq!(XAssets::asset_balance(1, quote.clone()), bmap);
-
-        let bmap = BTreeMap::new();
-        assert_eq!(XAssets::asset_balance(2, base.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller2);
         assert_eq!(XAssets::asset_balance(2, quote.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, 238000000);
-        assert_eq!(XAssets::asset_balance(3, base.clone()), bmap);
-
-        let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, remaining);
         assert_eq!(XAssets::asset_balance(3, quote.clone()), bmap);
+
+        assert_eq!(t_generic_free_balance(1, base.clone()), 0);
+        assert_eq!(t_generic_free_balance(2, base.clone()), 0);
+        assert_eq!(t_generic_free_balance(3, base.clone()), 238000000);
     })
 }
 
@@ -422,14 +416,14 @@ fn refund_remaining_of_taker_order_should_work() {
 fn refund_remaining_of_maker_order_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
-
+        // PCX
         let base = trading_pair.base();
+        // BTC
         let quote = trading_pair.quote();
 
         t_issue_pcx(1, 1000000);
         t_issue_pcx(2, 237000000);
-
-        t_generic_issue(trading_pair.quote(), 3, 489994);
+        t_generic_issue(quote, 3, 489994);
 
         assert_ok!(t_put_order_buy(3, 0, 238000000, 2058800));
 
@@ -447,27 +441,21 @@ fn refund_remaining_of_maker_order_should_work() {
         // remaining is 1
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
-        let bmap = BTreeMap::new();
-        assert_eq!(XAssets::asset_balance(1, base.clone()), bmap);
-
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller1);
         assert_eq!(XAssets::asset_balance(1, quote.clone()), bmap);
-
-        let bmap = BTreeMap::new();
-        assert_eq!(XAssets::asset_balance(2, base.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller2);
         assert_eq!(XAssets::asset_balance(2, quote.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, 238_000_000);
-        assert_eq!(XAssets::asset_balance(3, base.clone()), bmap);
-
-        let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, remaining);
         assert_eq!(XAssets::asset_balance(3, quote.clone()), bmap);
+
+        assert_eq!(t_generic_free_balance(1, base.clone()), 0);
+        assert_eq!(t_generic_free_balance(2, base.clone()), 0);
+        assert_eq!(t_generic_free_balance(3, base.clone()), 238_000_000);
     })
 }
 

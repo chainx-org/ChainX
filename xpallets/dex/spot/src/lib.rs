@@ -20,7 +20,7 @@ use sp_std::{cmp, fmt::Debug, result};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
+    dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, ExistenceRequirement, ReservableCurrency},
     Parameter,

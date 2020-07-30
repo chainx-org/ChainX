@@ -14,7 +14,7 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         maker_order: &mut OrderInfo<T>,
         taker_order: &mut OrderInfo<T>,
-    ) -> result::Result<(BalanceOf<T>, BalanceOf<T>), Error<T>> {
+    ) -> result::Result<(BalanceOf<T>, BalanceOf<T>), DispatchError> {
         let maker = &maker_order.submitter();
         let taker = &taker_order.submitter();
 
@@ -57,14 +57,12 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
         from: &T::AccountId,
         to: &T::AccountId,
-    ) -> Result<T> {
+    ) -> DispatchResult {
         if asset_id == xpallet_protocol::PCX {
-            let _ =
-                <T as Trait>::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
+            <T as Trait>::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive)?;
             NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
-            NativeReserves::<T>::mutate(to, |reserved| *reserved -= value);
         } else {
-            let _ = Self::move_asset(asset_id, from, ReservedDexSpot, to, Free, value);
+            Self::move_asset(asset_id, from, ReservedDexSpot, to, Free, value)?;
         }
         Ok(())
     }
@@ -75,13 +73,10 @@ impl<T: Trait> Module<T> {
         asset_id: AssetId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        println!("put_order_reserve asset_id:{:?}", asset_id);
         if asset_id == xpallet_protocol::PCX {
-            println!("reserve pcx: {:?}", value);
             <T as Trait>::Currency::reserve(who, value)?;
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
-            println!("reserve asset: {:?}", value);
             ensure!(
                 <xpallet_assets::Module<T>>::free_balance_of(who, &asset_id).saturated_into()
                     >= value.saturated_into::<u128>(),

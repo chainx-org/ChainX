@@ -338,7 +338,7 @@ impl<T: Trait> Module<T> {
         taker_order: &mut OrderInfo<T>,
         price: T::Price,
         turnover: BalanceOf<T>,
-    ) -> Result<T> {
+    ) -> DispatchResult {
         let pair = Self::trading_pair(pair_id)?;
 
         let trading_history_idx = Self::trading_history_index_of(pair_id);
@@ -396,10 +396,6 @@ impl<T: Trait> Module<T> {
             Side::Buy => (pair.quote(), order.remaining),
         };
 
-        println!(
-            "[update_order_and_unreserve_on_cancel]who:{:?}, refund_token:{:?}, refund_amount:{:?}",
-            who, refund_token, refund_amount
-        );
         Self::cancel_order_unreserve(who, refund_token, refund_amount)?;
 
         order.update_status_on_cancel();
