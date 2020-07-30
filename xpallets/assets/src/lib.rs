@@ -4,12 +4,15 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod tests;
+
 pub mod traits;
 mod trigger;
 pub mod types;
 
 // Substrate
-use sp_runtime::traits::{CheckedAdd, CheckedSub, Zero};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Saturating, Zero};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*, result};
 
 use frame_support::{
@@ -507,21 +510,34 @@ impl<T: Trait> Module<T> {
         new_balance: BalanceOf<T>,
     ) {
         let mut original: BalanceOf<T> = Zero::zero();
-        let modifier = move |balance_map: &mut BTreeMap<AssetType, BalanceOf<T>>| {
-            if new_balance == Zero::zero() {
-                // remove Zero balance to save space
-                if let Some(old) = balance_map.remove(&type_) {
-                    original = old;
+        AssetBalance::<T>::mutate(
+            who,
+            id,
+            |balance_map: &mut BTreeMap<AssetType, BalanceOf<T>>| {
+                if new_balance == Zero::zero() {
+                    // remove Zero balance to save space
+                    if let Some(old) = balance_map.remove(&type_) {
+                        original = old;
+                    }
+                } else {
+                    let balance = balance_map.entry(type_).or_default();
+                    original = *balance;
+                    // modify to new balance
+                    *balance = new_balance;
                 }
+            },
+        );
+        TotalAssetBalance::<T>::mutate(id, |total: &mut BTreeMap<AssetType, BalanceOf<T>>| {
+            let balance = total.entry(type_).or_default();
+            if original <= new_balance {
+                *balance = balance.saturating_add(new_balance - original);
             } else {
-                let balance = balance_map.entry(type_).or_default();
-                original = *balance;
-                // modify to new balance
-                *balance = new_balance;
+                *balance = balance.saturating_sub(original - new_balance);
+            };
+            if *balance == Zero::zero() {
+                total.remove(&type_);
             }
-        };
-        AssetBalance::<T>::mutate(who, id, modifier);
-        TotalAssetBalance::<T>::mutate(id, modifier);
+        });
     }
 
     fn inner_issue(
