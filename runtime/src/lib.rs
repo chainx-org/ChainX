@@ -419,7 +419,7 @@ parameter_types! {
 impl pallet_multisig::Trait for Runtime {
     type Event = Event;
     type Call = Call;
-    type Currency = XAssets;
+    type Currency = Balances;
     type DepositBase = DepositBase;
     type DepositFactor = DepositFactor;
     type MaxSignatories = MaxSignatories;
@@ -437,7 +437,7 @@ impl xpallet_system::Trait for Runtime {
 }
 
 impl xpallet_assets::Trait for Runtime {
-    type Balance = Balance;
+    type Currency = Balances;
     type Event = Event;
     type OnAssetChanged = XMiningAsset;
     type OnAssetRegisterOrRevoke = XMiningAsset;
@@ -493,6 +493,7 @@ impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
 
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
+    type Currency = Balances;
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;
@@ -503,6 +504,7 @@ impl xpallet_mining_staking::Trait for Runtime {
 
 impl xpallet_mining_asset::Trait for Runtime {
     type Event = Event;
+    type StakingInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;

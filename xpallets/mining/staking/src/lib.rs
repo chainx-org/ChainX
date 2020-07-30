@@ -227,7 +227,7 @@ decl_event!(
     pub enum Event<T>
     where
         Balance = BalanceOf<T>,
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Trait>::AccountId
     {
         /// The staker has been rewarded by this amount. `AccountId` is the stash account.
         Reward(AccountId, Balance),

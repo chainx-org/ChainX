@@ -34,15 +34,14 @@ use frame_system as system;
 use pallet_balances as balances;
 use pallet_session as session;
 
-/*
 impl_outer_event! {
     pub enum MetaEvent for Test {
         system<T>,
+        balances<T>,
         session,
         staking<T>,
     }
 }
-*/
 
 // For testing the pallet, we construct most of a mock runtime. This means
 // first constructing a configuration type (`Test`) which `impl`s each of the
@@ -68,7 +67,7 @@ impl system::Trait for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = ();
+    type Event = MetaEvent;
     type BlockHashCount = BlockHashCount;
     type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
@@ -93,7 +92,7 @@ impl Get<Balance> for ExistentialDeposit {
 
 impl pallet_balances::Trait for Test {
     type Balance = Balance;
-    type Event = ();
+    type Event = MetaEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -168,7 +167,7 @@ impl pallet_session::Trait for Test {
     type Keys = SessionKeys;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionHandler = (OtherSessionHandler,);
-    type Event = ();
+    type Event = MetaEvent;
     type ValidatorId = AccountId;
     type ValidatorIdOf = ();
     type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
@@ -199,7 +198,7 @@ parameter_types! {
 
 impl Trait for Test {
     type Currency = Balances;
-    type Event = ();
+    type Event = MetaEvent;
     type AssetMining = ();
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
