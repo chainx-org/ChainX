@@ -38,15 +38,15 @@ use pallet_session as session;
 use xpallet_assets as assets;
 use xpallet_mining_staking as staking;
 
-impl_outer_event! {
-    pub enum MetaEvent for Test {
-        system<T>,
-        assets<T>,
-        session,
-        staking<T>,
-        mining_asset<T>,
-    }
-}
+// impl_outer_event! {
+// pub enum MetaEvent for Test {
+// system<T>,
+// assets<T>,
+// session,
+// staking<T>,
+// mining_asset<T>,
+// }
+// }
 
 // For testing the pallet, we construct most of a mock runtime. This means
 // first constructing a configuration type (`Test`) which `impl`s each of the
@@ -60,6 +60,8 @@ parameter_types! {
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
+
+type MetaEvent = ();
 
 impl system::Trait for Test {
     type BaseCallFilter = ();
@@ -83,7 +85,7 @@ impl system::Trait for Test {
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type ModuleToIndex = ();
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
 }
@@ -98,8 +100,23 @@ impl pallet_timestamp::Trait for Test {
     type MinimumPeriod = MinimumPeriod;
 }
 
-impl xpallet_assets::Trait for Test {
+pub struct ExistentialDeposit;
+impl Get<Balance> for ExistentialDeposit {
+    fn get() -> Balance {
+        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow())
+    }
+}
+
+impl pallet_balances::Trait for Test {
     type Balance = Balance;
+    type Event = ();
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = System;
+}
+
+impl xpallet_assets::Trait for Test {
+    type Currency = Balances;
     type Event = MetaEvent;
     type OnAssetChanged = XMiningAsset;
     type OnAssetRegisterOrRevoke = XMiningAsset;
@@ -212,6 +229,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
 }
 
 impl xpallet_mining_staking::Trait for Test {
+    type Currency = Balances;
     type Event = MetaEvent;
     type AssetMining = XMiningAsset;
     type SessionDuration = SessionDuration;
@@ -231,6 +249,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AssetId>
 }
 
 impl Trait for Test {
+    type StakingInterface = Self;
     type Event = MetaEvent;
     type TreasuryAccount = ();
     type DetermineRewardPotAccount = DummyAssetRewardPotAccountDeterminer;
@@ -366,6 +385,7 @@ impl ExtBuilder {
 }
 
 pub type System = frame_system::Module<Test>;
+pub type Balances = pallet_balances::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
 pub type Session = pallet_session::Module<Test>;
 pub type Timestamp = pallet_timestamp::Module<Test>;

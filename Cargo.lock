@@ -7355,6 +7355,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
+ "pallet-balances 2.0.0-rc4 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4)",
  "pallet-session",
  "pallet-timestamp",
  "parity-scale-codec",

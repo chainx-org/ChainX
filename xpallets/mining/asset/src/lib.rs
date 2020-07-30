@@ -43,7 +43,7 @@ pub trait Trait: xpallet_assets::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     ///
-    type StakingInterface: StakingInterface<Self::AccountId, BalanceOf<Self>>;
+    type StakingInterface: StakingInterface<Self::AccountId, u128>;
 
     ///
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
@@ -54,6 +54,15 @@ pub trait Trait: xpallet_assets::Trait {
 
 pub trait StakingInterface<AccountId, Balance> {
     fn staked_of(who: &AccountId) -> Balance;
+}
+
+impl<T: Trait> StakingInterface<<T as frame_system::Trait>::AccountId, u128> for T
+where
+    T: xpallet_mining_staking::Trait,
+{
+    fn staked_of(who: &<T as frame_system::Trait>::AccountId) -> u128 {
+        xpallet_mining_staking::Module::<T>::staked_of(who).saturated_into()
+    }
 }
 
 decl_storage! {
@@ -206,7 +215,7 @@ impl<T: Trait> Module<T> {
     ) -> Result<(), Error<T>> {
         if !staking_requirement.is_zero() {
             let staking_locked = T::StakingInterface::staked_of(who);
-            if staking_locked
+            if staking_locked.saturated_into::<BalanceOf<T>>()
                 < staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend
             {
                 warn!(
