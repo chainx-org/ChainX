@@ -66,7 +66,7 @@ where
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XStaking {
+    trait Store for Module<T: Trait> as XMiningAsset {
         ///
         pub DepositReward get(fn deposit_reward): BalanceOf<T> = 100_000.into();
 
