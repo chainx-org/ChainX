@@ -92,9 +92,8 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// Unreserve the locked asset when the order is canceled.
-    #[inline]
-    pub(crate) fn cancel_order_unreserve(
+    /// Unreserve the locked balances in Spot in general.
+    fn generic_unreserve(
         who: &T::AccountId,
         asset_id: AssetId,
         value: BalanceOf<T>,
@@ -102,10 +101,20 @@ impl<T: Trait> Module<T> {
         if asset_id == xpallet_protocol::PCX {
             <T as xpallet_assets::Trait>::Currency::unreserve(who, value);
             NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
-            Ok(())
         } else {
-            Self::move_asset(asset_id, who, ReservedDexSpot, who, Free, value)
+            Self::move_asset(asset_id, who, ReservedDexSpot, who, Free, value)?;
         }
+        Ok(())
+    }
+
+    /// Unreserve the locked asset when the order is canceled.
+    #[inline]
+    pub(crate) fn cancel_order_unreserve(
+        who: &T::AccountId,
+        asset_id: AssetId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        Self::generic_unreserve(who, asset_id, value)
     }
 
     /// Refund the remaining reserved asset when the order is fulfilled.
@@ -115,32 +124,19 @@ impl<T: Trait> Module<T> {
         asset_id: AssetId,
         remaining: BalanceOf<T>,
     ) {
-        if asset_id == xpallet_protocol::PCX {
-            <T as xpallet_assets::Trait>::Currency::unreserve(who, remaining);
-            NativeReserves::<T>::mutate(who, |reserved| *reserved -= remaining);
-        } else {
-            let _ = Self::move_asset(asset_id, who, ReservedDexSpot, who, Free, remaining);
-        }
+        let _ = Self::generic_unreserve(who, asset_id, remaining);
     }
 
-    /// Wrap the move_asset function in xassets module.
+    /// Wrap the move_balance function in xassets module.
     fn move_asset(
         asset_id: AssetId,
         from: &T::AccountId,
         from_ty: AssetType,
         to: &T::AccountId,
         to_ty: AssetType,
-        amount: BalanceOf<T>,
+        value: BalanceOf<T>,
     ) -> DispatchResult {
-        let value = amount.saturated_into::<u128>();
-        <xpallet_assets::Module<T>>::move_balance(
-            &asset_id,
-            from,
-            from_ty,
-            to,
-            to_ty,
-            value.saturated_into(),
-        )
-        .map_err(|_| DispatchError::Other("Unexpected asset error"))
+        <xpallet_assets::Module<T>>::move_balance(&asset_id, from, from_ty, to, to_ty, value)
+            .map_err(|_| DispatchError::Other("Unexpected asset error"))
     }
 }
