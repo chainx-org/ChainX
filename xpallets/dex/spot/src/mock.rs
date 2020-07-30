@@ -158,7 +158,7 @@ impl ExtBuilder {
             (btc_asset.0, btc_asset.1, pcx_asset.2, true, true),
         ];
 
-        let mut endowed = BTreeMap::new();
+        let endowed = BTreeMap::new();
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets,
             endowed,

@@ -128,14 +128,14 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         let value = amount.saturated_into::<u128>();
-        let _ = <xpallet_assets::Module<T>>::move_balance(
+        <xpallet_assets::Module<T>>::move_balance(
             &asset_id,
             from,
             from_ty,
             to,
             to_ty,
             value.saturated_into(),
-        );
-        Ok(())
+        )
+        .map_err(|_| DispatchError::Other("Unexpected asset error"))
     }
 }
