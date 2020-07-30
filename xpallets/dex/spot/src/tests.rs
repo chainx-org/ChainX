@@ -421,18 +421,18 @@ fn refund_remaining_of_maker_order_should_work() {
         // BTC
         let quote = trading_pair.quote();
 
-        t_issue_pcx(1, 1000000);
+        t_issue_pcx(1, 1_000_000);
         t_issue_pcx(2, 237000000);
         t_generic_issue(quote, 3, 489994);
 
-        assert_ok!(t_put_order_buy(3, 0, 238000000, 2058800));
+        assert_ok!(t_put_order_buy(3, 0, 238_000_000, 2_058_800));
 
         // 489994
-        let btc_reserved_for_buyer = t_convert_base_to_quote(238000000, 2058800, &trading_pair);
+        let btc_reserved_for_buyer = t_convert_base_to_quote(238_000_000, 2_058_800, &trading_pair);
 
-        assert_ok!(t_put_order_sell(1, 0, 1000000, 2058800));
+        assert_ok!(t_put_order_sell(1, 0, 1_000_000, 2058800));
         // 2058
-        let btc_for_seller1 = t_convert_base_to_quote(1_000_000, 2058800, &trading_pair);
+        let btc_for_seller1 = t_convert_base_to_quote(1_000_000, 2_058_800, &trading_pair);
 
         assert_ok!(t_put_order_sell(2, 0, 237_000_000, 2_058_800));
         // 487935
@@ -443,19 +443,19 @@ fn refund_remaining_of_maker_order_should_work() {
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller1);
-        assert_eq!(XAssets::asset_balance(1, quote.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(1, quote), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller2);
-        assert_eq!(XAssets::asset_balance(2, quote.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(2, quote), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, remaining);
-        assert_eq!(XAssets::asset_balance(3, quote.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(3, quote), bmap);
 
-        assert_eq!(t_generic_free_balance(1, base.clone()), 0);
-        assert_eq!(t_generic_free_balance(2, base.clone()), 0);
-        assert_eq!(t_generic_free_balance(3, base.clone()), 238_000_000);
+        assert_eq!(t_generic_free_balance(1, base), 0);
+        assert_eq!(t_generic_free_balance(2, base), 0);
+        assert_eq!(t_generic_free_balance(3, base), 238_000_000);
     })
 }
 

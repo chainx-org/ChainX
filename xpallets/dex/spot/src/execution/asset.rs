@@ -59,6 +59,7 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
     ) -> DispatchResult {
         if asset_id == xpallet_protocol::PCX {
+            <T as xpallet_assets::Trait>::Currency::unreserve(from, value);
             <T as xpallet_assets::Trait>::Currency::transfer(
                 from,
                 to,
@@ -83,8 +84,7 @@ impl<T: Trait> Module<T> {
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
             ensure!(
-                <xpallet_assets::Module<T>>::free_balance_of(who, &asset_id).saturated_into()
-                    >= value.saturated_into::<u128>(),
+                <xpallet_assets::Module<T>>::free_balance_of(who, &asset_id) >= value,
                 Error::<T>::InsufficientBalance
             );
             Self::move_asset(asset_id, who, Free, who, ReservedDexSpot, value)?;

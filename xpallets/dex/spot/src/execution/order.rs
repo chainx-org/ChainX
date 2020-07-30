@@ -178,13 +178,15 @@ impl<T: Trait> Module<T> {
                 );
 
                 // Execute the order at the opponent price when they match.
-                let _execution_result = Self::execute_order(
+                let execution_result = Self::execute_order(
                     pair.id,
                     &mut maker_order,
                     taker_order,
                     counterparty_price,
                     turnover,
                 );
+
+                assert!(execution_result.is_ok(), "Match order execution paniced");
 
                 // Remove maker_order if it has been full filled.
                 if maker_order.is_fulfilled() {
@@ -197,7 +199,9 @@ impl<T: Trait> Module<T> {
         }
 
         // Remove the fulfilled orders as well as the quotations.
-        Self::remove_orders_and_quotations(pair.id, counterparty_price, fulfilled_orders);
+        if !fulfilled_orders.is_empty() {
+            Self::remove_orders_and_quotations(pair.id, counterparty_price, fulfilled_orders);
+        }
     }
 
     fn match_taker_order_buy(
