@@ -59,7 +59,12 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
     ) -> DispatchResult {
         if asset_id == xpallet_protocol::PCX {
-            <T as Trait>::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive)?;
+            <T as xpallet_assets::Trait>::Currency::transfer(
+                from,
+                to,
+                value,
+                ExistenceRequirement::KeepAlive,
+            )?;
             NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
         } else {
             Self::move_asset(asset_id, from, ReservedDexSpot, to, Free, value)?;
@@ -74,7 +79,7 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         if asset_id == xpallet_protocol::PCX {
-            <T as Trait>::Currency::reserve(who, value)?;
+            <T as xpallet_assets::Trait>::Currency::reserve(who, value)?;
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
             ensure!(
@@ -95,7 +100,7 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         if asset_id == xpallet_protocol::PCX {
-            <T as Trait>::Currency::unreserve(who, value);
+            <T as xpallet_assets::Trait>::Currency::unreserve(who, value);
             NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
             Ok(())
         } else {
@@ -111,7 +116,7 @@ impl<T: Trait> Module<T> {
         remaining: BalanceOf<T>,
     ) {
         if asset_id == xpallet_protocol::PCX {
-            <T as Trait>::Currency::unreserve(who, remaining);
+            <T as xpallet_assets::Trait>::Currency::unreserve(who, remaining);
             NativeReserves::<T>::mutate(who, |reserved| *reserved -= remaining);
         } else {
             let _ = Self::move_asset(asset_id, who, ReservedDexSpot, who, Free, remaining);

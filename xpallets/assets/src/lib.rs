@@ -16,7 +16,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::Currency,
+    traits::{Currency, LockableCurrency, ReservableCurrency},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -45,7 +45,8 @@ pub trait Trait: system::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
-    type Currency: Currency<Self::AccountId>;
+    type Currency: ReservableCurrency<Self::AccountId>
+        + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
 

@@ -7348,24 +7348,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xpallet-generic-reserves"
-version = "0.1.0"
-dependencies = [
- "chainx-primitives",
- "frame-support",
- "frame-system",
- "pallet-balances 2.0.0-rc4 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4)",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "xpallet-assets",
- "xpallet-protocol",
- "xpallet-support",
-]
-
-[[package]]
 name = "xpallet-mining-asset"
 version = "0.1.0"
 dependencies = [

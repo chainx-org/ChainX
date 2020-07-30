@@ -523,6 +523,10 @@ impl<T: Trait> Module<T> {
         Self::active_validator_votes().fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + x)
     }
 
+    pub fn staked_of(who: &T::AccountId) -> BalanceOf<T> {
+        *Self::locks(who).entry(LockedType::Bonded).or_default()
+    }
+
     #[inline]
     pub fn reward_pot_for(validator: &T::AccountId) -> T::AccountId {
         T::DetermineRewardPotAccount::reward_pot_account_for(validator)

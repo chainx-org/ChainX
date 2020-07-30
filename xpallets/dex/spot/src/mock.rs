@@ -85,7 +85,6 @@ impl pallet_balances::Trait for Test {
 impl Trait for Test {
     type Event = ();
     type Price = Price;
-    type Currency = Balances;
 }
 
 impl xpallet_assets::Trait for Test {

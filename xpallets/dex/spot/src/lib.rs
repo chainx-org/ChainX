@@ -48,14 +48,13 @@ const MAX_BACKLOG_ORDER: usize = 1000;
 /// more time than the Block time to finish.
 const DEFAULT_FLUCTUATION: u32 = 100;
 
-pub type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
+    <T as frame_system::Trait>::AccountId,
+>>::Balance;
 
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-
-    type Currency: ReservableCurrency<Self::AccountId>;
 
     /// The price of an order.
     type Price: Parameter
