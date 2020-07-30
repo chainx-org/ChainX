@@ -22,7 +22,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
     ensure,
-    traits::{Currency, ReservableCurrency},
+    traits::{Currency, ExistenceRequirement, ReservableCurrency},
     Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
@@ -84,6 +84,10 @@ decl_storage! {
     trait Store for Module<T: Trait> as XSpot {
         /// How many trading pairs so far.
         pub TradingPairCount get(fn trading_pair_count): TradingPairId;
+
+        /// Record the exact balance of reserved native coins in Spot.
+        pub NativeReserves get(fn native_reserves):
+            map hasher(twox_64_concat) T::AccountId => BalanceOf<T>;
 
         /// The map from trading pair id to its static profile.
         pub TradingPairOf get(fn trading_pair_of):
@@ -401,7 +405,11 @@ impl<T: Trait> Module<T> {
         Self::order_info_of(who, order_id).ok_or(Error::<T>::InvalidOrderId)
     }
 
-    fn do_cancel_order(who: &T::AccountId, pair_id: TradingPairId, order_id: OrderId) -> Result<T> {
+    fn do_cancel_order(
+        who: &T::AccountId,
+        pair_id: TradingPairId,
+        order_id: OrderId,
+    ) -> DispatchResult {
         let pair = Self::trading_pair(pair_id)?;
         ensure!(pair.online, Error::<T>::TradingPairOffline);
 
@@ -420,7 +428,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         pair_id: TradingPairId,
         order_id: OrderId,
-    ) -> Result<T> {
+    ) -> DispatchResult {
         info!(
             "[apply_cancel_order]who:{:?}, pair_id:{}, order_id:{}",
             who, pair_id, order_id

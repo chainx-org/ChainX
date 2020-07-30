@@ -59,11 +59,14 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
     ) -> Result<T> {
         if asset_id == xpallet_protocol::PCX {
-            // FIXME
-            Ok(())
+            let _ =
+                <T as Trait>::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
+            NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
+            NativeReserves::<T>::mutate(to, |reserved| *reserved -= value);
         } else {
-            Self::move_balance(asset_id, from, ReservedDexSpot, to, Free, value)
+            let _ = Self::move_asset(asset_id, from, ReservedDexSpot, to, Free, value);
         }
+        Ok(())
     }
 
     /// Actually reserve the asset locked by putting order.
@@ -71,16 +74,20 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         asset_id: AssetId,
         value: BalanceOf<T>,
-    ) -> Result<T> {
+    ) -> DispatchResult {
+        println!("put_order_reserve asset_id:{:?}", asset_id);
         if asset_id == xpallet_protocol::PCX {
-            // FIXME
+            println!("reserve pcx: {:?}", value);
+            <T as Trait>::Currency::reserve(who, value)?;
+            NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
+            println!("reserve asset: {:?}", value);
             ensure!(
                 <xpallet_assets::Module<T>>::free_balance_of(who, &asset_id).saturated_into()
                     >= value.saturated_into::<u128>(),
                 Error::<T>::InsufficientBalance
             );
-            Self::move_balance(asset_id, who, Free, who, ReservedDexSpot, value)?;
+            Self::move_asset(asset_id, who, Free, who, ReservedDexSpot, value)?;
         }
         Ok(())
     }
@@ -91,12 +98,13 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         asset_id: AssetId,
         value: BalanceOf<T>,
-    ) -> Result<T> {
+    ) -> DispatchResult {
         if asset_id == xpallet_protocol::PCX {
-            // FIXME
+            <T as Trait>::Currency::unreserve(who, value);
+            NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
             Ok(())
         } else {
-            Self::move_balance(asset_id, who, ReservedDexSpot, who, Free, value)
+            Self::move_asset(asset_id, who, ReservedDexSpot, who, Free, value)
         }
     }
 
@@ -108,30 +116,31 @@ impl<T: Trait> Module<T> {
         remaining: BalanceOf<T>,
     ) {
         if asset_id == xpallet_protocol::PCX {
-            // FIXME
+            <T as Trait>::Currency::unreserve(who, remaining);
+            NativeReserves::<T>::mutate(who, |reserved| *reserved -= remaining);
         } else {
-            let _ = Self::move_balance(asset_id, who, ReservedDexSpot, who, Free, remaining);
+            let _ = Self::move_asset(asset_id, who, ReservedDexSpot, who, Free, remaining);
         }
     }
 
-    /// Wrap the move_balance function in xassets module.
-    fn move_balance(
+    /// Wrap the move_asset function in xassets module.
+    fn move_asset(
         asset_id: AssetId,
         from: &T::AccountId,
         from_ty: AssetType,
         to: &T::AccountId,
         to_ty: AssetType,
         amount: BalanceOf<T>,
-    ) -> Result<T> {
+    ) -> DispatchResult {
         let value = amount.saturated_into::<u128>();
-        <xpallet_assets::Module<T>>::move_balance(
+        let _ = <xpallet_assets::Module<T>>::move_balance(
             &asset_id,
             from,
             from_ty,
             to,
             to_ty,
             value.saturated_into(),
-        )?;
+        );
         Ok(())
     }
 }

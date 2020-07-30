@@ -86,6 +86,14 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    fn currency_precision_of(asset_id: AssetId) -> Option<u8> {
+        if asset_id == xpallet_protocol::PCX {
+            Some(8u8)
+        } else {
+            <xpallet_assets::Module<T>>::asset_info_of(asset_id).map(|x| x.precision())
+        }
+    }
+
     /// Converts the base currency to the quote currency given the trading pair.
     ///
     /// NOTE: There is possibly a loss of accuracy here.
@@ -102,15 +110,12 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         pair: &TradingPairProfile,
     ) -> result::Result<BalanceOf<T>, Error<T>> {
-        if let (Some(base), Some(quote)) = (
-            <xpallet_assets::Module<T>>::asset_info_of(pair.base()),
-            <xpallet_assets::Module<T>>::asset_info_of(pair.quote()),
+        if let (Some(base_p), Some(quote_p)) = (
+            Self::currency_precision_of(pair.base()),
+            Self::currency_precision_of(pair.quote()),
         ) {
-            let (base_p, quote_p, pair_p) = (
-                u32::from(base.precision()),
-                u32::from(quote.precision()),
-                pair.pip_precision,
-            );
+            let (base_p, quote_p, pair_p) =
+                (u32::from(base_p), u32::from(quote_p), pair.pip_precision);
 
             let (mul, s) = if quote_p >= (base_p + pair_p) {
                 (true, 10_u128.pow(quote_p - base_p - pair_p))
