@@ -31,6 +31,7 @@ impl<C, B> Assets<C, B> {
 
 #[rpc]
 pub trait AssetsApi<BlockHash, AccountId, Balance> {
+    /// Return all assets with AssetTypes for an account (exclude native token(PCX)). The returned map would not contains the assets which is not existed for this account but existed in valid assets list.
     #[rpc(name = "xassets_getAssetsByAccount")]
     fn assets_by_account(
         &self,
@@ -38,6 +39,7 @@ pub trait AssetsApi<BlockHash, AccountId, Balance> {
         at: Option<BlockHash>,
     ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, String>>>;
 
+    /// Return all valid assets balance with AssetTypes. (exclude native token(PCX))
     #[rpc(name = "xassets_getAssets")]
     fn assets(&self, at: Option<BlockHash>) -> Result<BTreeMap<AssetId, TotalAssetInfo>>;
 }
