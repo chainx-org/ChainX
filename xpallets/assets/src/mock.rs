@@ -51,7 +51,7 @@ impl system::Trait for Test {
     type Origin = Origin;
     type Call = ();
     type Index = u64;
-    type BlockNumber = u64;
+    type BlockNumber = BlockNumber;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
@@ -113,19 +113,16 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
 }
 
 impl ExtBuilder {
-    pub fn build(self) -> sp_io::TestExternalities {
+    pub fn build(
+        self,
+        assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
+        endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
+    ) -> sp_io::TestExternalities {
         let _ = env_logger::try_init();
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
 
-        let btc_assets = btc();
-        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
-
-        let mut endowed = BTreeMap::new();
-        let btc_id = btc().0;
-        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
-        endowed.insert(btc_id, endowed_info.clone());
         let _ = GenesisConfig::<Test> {
             assets,
             endowed,
@@ -137,7 +134,22 @@ impl ExtBuilder {
         ext
     }
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
-        let mut ext = self.build();
+        let btc_assets = btc();
+        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
+        let mut endowed = BTreeMap::new();
+        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
+        endowed.insert(btc_assets.0, endowed_info);
+
+        let mut ext = self.build(assets, endowed);
+        ext.execute_with(|| System::set_block_number(1));
+        ext.execute_with(test);
+    }
+
+    pub fn build_no_endowed_and_execute(self, test: impl FnOnce() -> ()) {
+        let btc_assets = btc();
+        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
+        let mut ext = self.build(assets, Default::default());
+        ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);
     }
 }
@@ -145,3 +157,4 @@ impl ExtBuilder {
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
 pub type XAssets = Module<Test>;
+pub type XAssetsErr = Error<Test>;

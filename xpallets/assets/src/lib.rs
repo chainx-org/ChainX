@@ -22,6 +22,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, LockableCurrency, ReservableCurrency},
+    StorageDoubleMap,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -128,7 +129,7 @@ decl_module! {
             asset: AssetInfo,
             restrictions: AssetRestrictions,
             is_online: bool,
-            has_mining_rights: bool
+            has_mining_rights: bool,
         ) -> DispatchResult {
             ensure_root(origin)?;
             asset.is_valid::<T>()?;
@@ -150,10 +151,24 @@ decl_module! {
         pub fn revoke_asset(origin, #[compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
-            Self::remove_asset(&id)?;
+            Self::remove_asset(&id);
 
             T::OnAssetRegisterOrRevoke::on_revoke(&id)?;
             Self::deposit_event(RawEvent::Revoke(id));
+            Ok(())
+        }
+
+        /// recover an offline asset,
+        #[weight = 0]
+        pub fn recover_asset(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
+            ensure_root(origin)?;
+            ensure!(Self::asset_info_of(id).is_some(), Error::<T>::NotExistedAsset);
+            ensure!(Self::asset_online(id).is_none(), Error::<T>::InvalidAsset);
+
+            Self::re_add_asset(&id);
+
+            T::OnAssetRegisterOrRevoke::on_register(&id, has_mining_rights)?;
+            Self::deposit_event(RawEvent::Register(id, has_mining_rights));
             Ok(())
         }
 
@@ -254,16 +269,6 @@ decl_storage! {
     }
 }
 
-// impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
-//     const ASSET_ID: AssetId = xpallet_protocol::PCX;
-//     fn chain() -> Chain {
-//         Chain::ChainX
-//     }
-//     fn withdrawal_limit(_: &AssetId) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-//         Err(Error::<T>::ActionNotAllowed)?
-//     }
-// }
-
 impl<T: Trait> Module<T> {
     fn initialize_assets(
         assets: &Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
@@ -295,13 +300,6 @@ impl<T: Trait> Module<T> {
         }
         Ok(())
     }
-
-    // pub fn should_not_chainx(id: &AssetId) -> DispatchResult {
-    //     if *id == <Self as ChainT<_>>::ASSET_ID {
-    //         Err(Error::<T>::PcxNotAllowed)?;
-    //     }
-    //     Ok(())
-    // }
 }
 
 // asset related
@@ -327,9 +325,12 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn remove_asset(id: &AssetId) -> DispatchResult {
+    fn remove_asset(id: &AssetId) {
         AssetOnline::remove(id);
-        Ok(())
+    }
+
+    fn re_add_asset(id: &AssetId) {
+        AssetOnline::insert(id, ());
     }
 
     pub fn asset_ids() -> Vec<AssetId> {
@@ -477,8 +478,8 @@ impl<T: Trait> Module<T> {
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
 
-        // may set storage inner
-        Self::try_new_account(&who);
+        // // may set storage inner
+        // Self::try_new_account(&who);
 
         let _imbalance = Self::inner_issue(id, who, AssetType::Free, value)?;
         Ok(())
@@ -502,7 +503,7 @@ impl<T: Trait> Module<T> {
 
     fn new_account(who: &T::AccountId) {
         info!("[new_account]|create new account|who:{:?}", who);
-        system::Module::<T>::on_created_account(who.clone())
+        system::Module::<T>::on_created_account(who.clone());
     }
 
     fn try_new_account(who: &T::AccountId) {
@@ -519,7 +520,8 @@ impl<T: Trait> Module<T> {
         new_balance: BalanceOf<T>,
     ) {
         let mut original: BalanceOf<T> = Zero::zero();
-        AssetBalance::<T>::mutate(
+        let existed = AssetBalance::<T>::contains_key(who, id);
+        let exists = AssetBalance::<T>::mutate(
             who,
             id,
             |balance_map: &mut BTreeMap<AssetType, BalanceOf<T>>| {
@@ -528,14 +530,25 @@ impl<T: Trait> Module<T> {
                     if let Some(old) = balance_map.remove(&type_) {
                         original = old;
                     }
+                    // if is_empty(), means not exists
+                    !balance_map.is_empty()
                 } else {
                     let balance = balance_map.entry(type_).or_default();
                     original = *balance;
                     // modify to new balance
                     *balance = new_balance;
+                    true
                 }
             },
         );
+        if !existed && exists {
+            Self::try_new_account(who);
+            frame_system::Module::<T>::inc_ref(who);
+        } else if existed && !exists {
+            frame_system::Module::<T>::dec_ref(who);
+            AssetBalance::<T>::remove(who, id);
+        }
+
         TotalAssetBalance::<T>::mutate(id, |total: &mut BTreeMap<AssetType, BalanceOf<T>>| {
             let balance = total.entry(type_).or_default();
             if original <= new_balance {
@@ -568,12 +581,6 @@ impl<T: Trait> Module<T> {
 
         // set to storage
         Self::make_type_balance_be(who, id, type_, new);
-        // let positive = if let SignedImbalance::Positive(p) = imbalance {
-        //     p
-        // } else {
-        //     // Impossible, but be defensive.
-        //     PositiveImbalanceOf::<T>::new(Zero::zero(), *id, type_)
-        // };
 
         AssetChangedTrigger::<T>::on_issue_post(id, who, value)?;
         Ok(())
@@ -641,8 +648,8 @@ impl<T: Trait> Module<T> {
         }
 
         // !!! all check pass, start set storage
-        // for account to set storage
-        Self::try_new_account(to);
+        // // for account to set storage
+        // Self::try_new_account(to)?;
 
         AssetChangedTrigger::<T>::on_move_pre(id, from, from_type, to, to_type, value);
 
