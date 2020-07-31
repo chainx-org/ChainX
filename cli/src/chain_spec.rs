@@ -8,8 +8,8 @@ use chainx_runtime::{
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
-    GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SudoConfig, SystemConfig,
-    TechnicalCommitteeConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
+    GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SocietyConfig, SudoConfig,
+    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
     XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
@@ -354,6 +354,15 @@ fn testnet_genesis(
                 .collect::<Vec<_>>(),
         }),
         pallet_balances: Some(BalancesConfig { balances }),
+        pallet_society: Some(SocietyConfig {
+            members: endowed_accounts
+                .iter()
+                .take((num_endowed_accounts + 1) / 2)
+                .cloned()
+                .collect(),
+            pot: 0,
+            max_members: 999,
+        }),
         pallet_sudo: Some(SudoConfig { key: root_key }),
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
