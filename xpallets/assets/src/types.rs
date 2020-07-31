@@ -6,35 +6,24 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 // Substrate
-use sp_runtime::{
-    traits::{Saturating, Zero},
-    RuntimeDebug,
-};
+use sp_runtime::RuntimeDebug;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*, result, slice::Iter};
 
-use frame_support::{
-    dispatch::{DispatchError, DispatchResult},
-    traits::{Imbalance, SignedImbalance},
-};
+use frame_support::dispatch::{DispatchError, DispatchResult};
 // ChainX
 pub use chainx_primitives::{Desc, Memo, Precision, Token};
 
-use super::traits::ChainT;
-use super::{Error, Trait};
-
-pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
+use super::{BalanceOf, Error, Trait};
 
 const MAX_TOKEN_LEN: usize = 32;
 const MAX_DESC_LEN: usize = 128;
 
-pub type SignedImbalanceT<T> = SignedImbalance<<T as Trait>::Balance, PositiveImbalance<T>>;
-
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum SignedBalance<T: Trait> {
     /// A positive imbalance (funds have been created but none destroyed).
-    Positive(T::Balance),
+    Positive(BalanceOf<T>),
     /// A negative imbalance (funds have been destroyed but none created).
-    Negative(T::Balance),
+    Negative(BalanceOf<T>),
 }
 
 macro_rules! define_enum {
@@ -302,191 +291,4 @@ pub fn is_valid_desc<T: Trait>(desc: &[u8]) -> DispatchResult {
         }
     }
     Ok(())
-}
-
-mod imbalances {
-    use frame_support::{traits::TryDrop, StorageMap};
-    use sp_std::mem;
-
-    use chainx_primitives::AssetId;
-
-    use super::{result, AssetType, ChainT, Imbalance, Saturating, Zero};
-    use crate::{Module, TotalAssetBalance, Trait};
-
-    /// Opaque, move-only struct with private fields that serves as a token denoting that
-    /// funds have been created without any equal and opposite accounting.
-    #[must_use]
-    #[cfg_attr(feature = "std", derive(Debug, PartialEq))]
-    pub struct PositiveImbalance<T: Trait>(T::Balance, AssetId, AssetType);
-    impl<T: Trait> PositiveImbalance<T> {
-        /// Create a new positive imbalance from a balance.
-        pub fn new(amount: T::Balance, id: AssetId, type_: AssetType) -> Self {
-            PositiveImbalance(amount, id, type_)
-        }
-    }
-
-    /// Opaque, move-only struct with private fields that serves as a token denoting that
-    /// funds have been destroyed without any equal and opposite accounting.
-    #[must_use]
-    #[cfg_attr(feature = "std", derive(Debug, PartialEq))]
-    pub struct NegativeImbalance<T: Trait>(T::Balance, AssetId, AssetType);
-    impl<T: Trait> NegativeImbalance<T> {
-        /// Create a new negative imbalance from a balance.
-        pub fn new(amount: T::Balance, id: AssetId, type_: AssetType) -> Self {
-            NegativeImbalance(amount, id, type_)
-        }
-    }
-
-    impl<T: Trait> TryDrop for PositiveImbalance<T> {
-        fn try_drop(self) -> result::Result<(), Self> {
-            self.drop_zero()
-        }
-    }
-
-    impl<T: Trait> Imbalance<T::Balance> for PositiveImbalance<T> {
-        type Opposite = NegativeImbalance<T>;
-
-        fn zero() -> Self {
-            PositiveImbalance::new(Zero::zero(), Module::<T>::ASSET_ID, AssetType::Free)
-        }
-
-        fn drop_zero(self) -> result::Result<(), Self> {
-            if self.0.is_zero() {
-                Ok(())
-            } else {
-                Err(self)
-            }
-        }
-
-        fn split(self, amount: T::Balance) -> (Self, Self) {
-            let first = self.0.min(amount);
-            let second = self.0 - first;
-            // create new object pair
-            let r = (
-                Self(first, self.1.clone(), self.2),
-                Self(second, self.1.clone(), self.2),
-            );
-            // drop self object
-            mem::forget(self);
-            r
-        }
-
-        fn merge(mut self, other: Self) -> Self {
-            self.0 = self.0.saturating_add(other.0);
-            // drop other object
-            mem::forget(other);
-            self
-        }
-
-        fn subsume(&mut self, other: Self) {
-            self.0 = self.0.saturating_add(other.0);
-            // drop other object
-            mem::forget(other);
-        }
-
-        fn offset(self, other: Self::Opposite) -> result::Result<Self, Self::Opposite> {
-            let (a, b) = (self.0, other.0);
-            let r = if a >= b {
-                Ok(Self::new(a - b, self.1.clone(), self.2))
-            } else {
-                Err(NegativeImbalance::new(b - a, self.1.clone(), self.2))
-            };
-            // drop tuple object
-            mem::forget((self, other));
-            r
-        }
-
-        fn peek(&self) -> T::Balance {
-            self.0.clone()
-        }
-    }
-
-    impl<T: Trait> TryDrop for NegativeImbalance<T> {
-        fn try_drop(self) -> result::Result<(), Self> {
-            self.drop_zero()
-        }
-    }
-
-    impl<T: Trait> Imbalance<T::Balance> for NegativeImbalance<T> {
-        type Opposite = PositiveImbalance<T>;
-
-        fn zero() -> Self {
-            NegativeImbalance::new(Zero::zero(), Module::<T>::ASSET_ID, AssetType::Free)
-        }
-
-        fn drop_zero(self) -> result::Result<(), Self> {
-            if self.0.is_zero() {
-                Ok(())
-            } else {
-                Err(self)
-            }
-        }
-
-        fn split(self, amount: T::Balance) -> (Self, Self) {
-            let first = self.0.min(amount);
-            let second = self.0 - first;
-            // create object pair
-            let r = (
-                Self(first, self.1.clone(), self.2),
-                Self(second, self.1.clone(), self.2),
-            );
-            // drop self
-            mem::forget(self);
-            r
-        }
-
-        fn merge(mut self, other: Self) -> Self {
-            self.0 = self.0.saturating_add(other.0);
-            // drop other
-            mem::forget(other);
-            self
-        }
-
-        fn subsume(&mut self, other: Self) {
-            self.0 = self.0.saturating_add(other.0);
-            // drop other
-            mem::forget(other);
-        }
-
-        fn offset(self, other: Self::Opposite) -> result::Result<Self, Self::Opposite> {
-            let (a, b) = (self.0, other.0);
-            let r = if a >= b {
-                Ok(Self::new(a - b, self.1.clone(), self.2))
-            } else {
-                Err(PositiveImbalance::new(b - a, self.1.clone(), self.2))
-            };
-            mem::forget((self, other));
-            r
-        }
-
-        fn peek(&self) -> T::Balance {
-            self.0.clone()
-        }
-    }
-
-    impl<T: Trait> Drop for PositiveImbalance<T> {
-        /// Basic drop handler will just square up the total issuance.
-        fn drop(&mut self) {
-            TotalAssetBalance::<T>::mutate(&self.1, |map| {
-                let balance = map.entry(self.2).or_default();
-                *balance = balance.saturating_add(self.0)
-            })
-        }
-    }
-
-    impl<T: Trait> Drop for NegativeImbalance<T> {
-        /// Basic drop handler will just square up the total issuance.
-        fn drop(&mut self) {
-            TotalAssetBalance::<T>::mutate(&self.1, |map| {
-                let balance = map.entry(self.2).or_default();
-                let new_balance = balance.saturating_sub(self.0);
-                if new_balance == Zero::zero() {
-                    // remove Zero balance to save space
-                    map.remove(&self.2);
-                } else {
-                    *balance = new_balance;
-                }
-            })
-        }
-    }
 }

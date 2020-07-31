@@ -144,16 +144,13 @@ impl<T: Trait> AccountDb<T> for DirectAccountDb {
         <ContractInfoOf<T>>::contains_key(account)
     }
     fn get_balance(&self, account: &T::AccountId) -> BalanceOf<T> {
-        <xpallet_assets::Module<T> as Currency<T::AccountId>>::free_balance(account)
+        T::Currency::free_balance(account)
     }
     fn commit(&mut self, s: ChangeSet<T>) {
         let mut total_imbalance = SignedImbalance::zero();
         for (address, changed) in s.into_iter() {
             if let Some(balance) = changed.balance() {
-                let imbalance =
-                    <xpallet_assets::Module<T> as Currency<T::AccountId>>::make_free_balance_be(
-                        &address, balance,
-                    );
+                let imbalance = T::Currency::make_free_balance_be(&address, balance);
                 total_imbalance = total_imbalance.merge(imbalance);
             }
 

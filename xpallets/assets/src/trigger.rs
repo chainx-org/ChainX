@@ -5,7 +5,7 @@ use chainx_primitives::AssetId;
 
 use crate::traits::{OnAssetChanged, OnAssetRegisterOrRevoke};
 use crate::types::{AssetErr, AssetType};
-use crate::{Module, RawEvent, Trait};
+use crate::{BalanceOf, Module, RawEvent, Trait};
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {}
 
@@ -44,7 +44,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         from_type: AssetType,
         to: &T::AccountId,
         to_type: AssetType,
-        value: T::Balance,
+        value: BalanceOf<T>,
     ) {
         T::OnAssetChanged::on_move_pre(id, from, from_type, to, to_type, value);
     }
@@ -55,7 +55,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         from_type: AssetType,
         to: &T::AccountId,
         to_type: AssetType,
-        value: T::Balance,
+        value: BalanceOf<T>,
     ) -> result::Result<(), AssetErr> {
         Module::<T>::deposit_event(RawEvent::Move(
             id.clone(),
@@ -73,7 +73,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         T::OnAssetChanged::on_issue_pre(id, who);
     }
 
-    pub fn on_issue_post(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
+    pub fn on_issue_post(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Module::<T>::deposit_event(RawEvent::Issue(id.clone(), who.clone(), value));
         T::OnAssetChanged::on_issue_post(id, who, value)?;
         Ok(())
@@ -83,7 +83,11 @@ impl<T: Trait> AssetChangedTrigger<T> {
         T::OnAssetChanged::on_destroy_pre(id, who);
     }
 
-    pub fn on_destroy_post(id: &AssetId, who: &T::AccountId, value: T::Balance) -> DispatchResult {
+    pub fn on_destroy_post(
+        id: &AssetId,
+        who: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
         Module::<T>::deposit_event(RawEvent::Destory(id.clone(), who.clone(), value));
         T::OnAssetChanged::on_destroy_post(id, who, value)?;
         Ok(())
@@ -93,7 +97,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         id: &AssetId,
         who: &T::AccountId,
         type_: AssetType,
-        value: T::Balance,
+        value: BalanceOf<T>,
     ) -> DispatchResult {
         Module::<T>::deposit_event(RawEvent::Set(id.clone(), who.clone(), type_, value));
         T::OnAssetChanged::on_set_balance(id, who, type_, value)?;

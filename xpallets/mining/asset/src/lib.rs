@@ -11,8 +11,11 @@ mod mock;
 mod tests;
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
+    decl_error, decl_event, decl_module, decl_storage,
+    dispatch::DispatchResult,
+    ensure,
     storage::IterableStorageMap,
+    traits::{Currency, ExistenceRequirement},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
@@ -31,9 +34,16 @@ use types::*;
 
 pub use impls::SimpleAssetRewardPotAccountDeterminer;
 
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
+    <T as frame_system::Trait>::AccountId,
+>>::Balance;
+
+pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    ///
+    type StakingInterface: StakingInterface<Self::AccountId, u128>;
 
     ///
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
@@ -42,10 +52,23 @@ pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;
 }
 
+pub trait StakingInterface<AccountId, Balance> {
+    fn staked_of(who: &AccountId) -> Balance;
+}
+
+impl<T: Trait> StakingInterface<<T as frame_system::Trait>::AccountId, u128> for T
+where
+    T: xpallet_mining_staking::Trait,
+{
+    fn staked_of(who: &<T as frame_system::Trait>::AccountId) -> u128 {
+        xpallet_mining_staking::Module::<T>::staked_of(who).saturated_into()
+    }
+}
+
 decl_storage! {
-    trait Store for Module<T: Trait> as XStaking {
+    trait Store for Module<T: Trait> as XMiningAsset {
         ///
-        pub DepositReward get(fn deposit_reward): T::Balance = 100_000.into();
+        pub DepositReward get(fn deposit_reward): BalanceOf<T> = 100_000.into();
 
         ///
         pub ClaimRestrictionOf get(fn claim_restriction_of):
@@ -87,8 +110,8 @@ decl_storage! {
 decl_event!(
     pub enum Event<T>
     where
+        Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
-        <T as xpallet_assets::Trait>::Balance,
     {
         ///
         Claim(AccountId, AccountId, Balance),
@@ -187,19 +210,19 @@ impl<T: Trait> Module<T> {
     /// This rule doesn't take effect if the staking requirement is zero.
     fn has_enough_staking(
         who: &T::AccountId,
-        total_dividend: T::Balance,
+        total_dividend: BalanceOf<T>,
         staking_requirement: StakingRequirement,
     ) -> Result<(), Error<T>> {
         if !staking_requirement.is_zero() {
-            let staking_locked =
-                <xpallet_assets::Module<T>>::pcx_type_balance(who, AssetType::ReservedStaking);
-            if staking_locked < staking_requirement.saturated_into::<T::Balance>() * total_dividend
+            let staking_locked = T::StakingInterface::staked_of(who);
+            if staking_locked.saturated_into::<BalanceOf<T>>()
+                < staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend
             {
                 warn!(
                     "cannot claim due to the insufficient staking, total dividend: {:?}, staking locked: {:?}, required staking: {:?}",
                     total_dividend,
                     staking_locked,
-                    staking_requirement.saturated_into::<T::Balance>() * total_dividend
+                    staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend
                 );
                 return Err(Error::<T>::InsufficientStaking);
             }
@@ -282,14 +305,14 @@ impl<T: Trait> Module<T> {
     fn issue_deposit_reward(depositor: &T::AccountId, target: &AssetId) -> DispatchResult {
         let deposit_reward = Self::deposit_reward();
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(target);
-        let reward_pot_balance = xpallet_assets::Module::<T>::pcx_free_balance(&reward_pot);
+        let reward_pot_balance = <T as xpallet_assets::Trait>::Currency::free_balance(&reward_pot);
         if reward_pot_balance >= deposit_reward {
-            xpallet_assets::Module::<T>::pcx_move_free_balance(
+            <T as xpallet_assets::Trait>::Currency::transfer(
                 &reward_pot,
                 depositor,
                 deposit_reward,
-            )
-            .map_err(|_| Error::<T>::AssetError)?;
+                ExistenceRequirement::KeepAlive,
+            )?;
         } else {
             warn!("asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}", target, reward_pot_balance, depositor);
         }

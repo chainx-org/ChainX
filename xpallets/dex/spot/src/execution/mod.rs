@@ -86,6 +86,10 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    fn currency_precision_of(asset_id: AssetId) -> Option<u8> {
+        <xpallet_assets::Module<T>>::asset_info_of(asset_id).map(|x| x.precision())
+    }
+
     /// Converts the base currency to the quote currency given the trading pair.
     ///
     /// NOTE: There is possibly a loss of accuracy here.
@@ -98,19 +102,16 @@ impl<T: Trait> Module<T> {
     /// = amount * price * 10^(quote.precision) / 10^(base.precision) * 10^(price.precision)
     /// = amount * price * 10^(quote.precision - base.precision - price.precision)
     pub(crate) fn convert_base_to_quote(
-        amount: T::Balance,
+        amount: BalanceOf<T>,
         price: T::Price,
         pair: &TradingPairProfile,
-    ) -> result::Result<T::Balance, Error<T>> {
-        if let (Some(base), Some(quote)) = (
-            <xpallet_assets::Module<T>>::asset_info_of(pair.base()),
-            <xpallet_assets::Module<T>>::asset_info_of(pair.quote()),
+    ) -> result::Result<BalanceOf<T>, Error<T>> {
+        if let (Some(base_p), Some(quote_p)) = (
+            Self::currency_precision_of(pair.base()),
+            Self::currency_precision_of(pair.quote()),
         ) {
-            let (base_p, quote_p, pair_p) = (
-                u32::from(base.precision()),
-                u32::from(quote.precision()),
-                pair.pip_precision,
-            );
+            let (base_p, quote_p, pair_p) =
+                (u32::from(base_p), u32::from(quote_p), pair.pip_precision);
 
             let (mul, s) = if quote_p >= (base_p + pair_p) {
                 (true, 10_u128.pow(quote_p - base_p - pair_p))

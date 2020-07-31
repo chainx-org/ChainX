@@ -38,7 +38,8 @@ use crate::types::{
     AccountInfo, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
 };
 use crate::{
-    AddressBinding, BoundAddressOf, Module, PendingDeposits, RawEvent, Trait, WithdrawalProposal,
+    AddressBinding, BalanceOf, BoundAddressOf, Module, PendingDeposits, RawEvent, Trait,
+    WithdrawalProposal,
 };
 
 pub fn process_tx<T: Trait>(
@@ -350,7 +351,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
 fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) -> DispatchResult {
     let id: AssetId = <Module<T> as ChainT<_>>::ASSET_ID;
 
-    let b: T::Balance = balance.saturated_into();
+    let b: BalanceOf<T> = balance.saturated_into();
     let _ = <xpallet_gateway_records::Module<T>>::deposit(&who, &id, b).map_err(|e| {
         error!(
             "deposit error!, must use root to fix this error. reason:{:?}",

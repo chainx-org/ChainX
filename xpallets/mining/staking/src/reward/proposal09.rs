@@ -8,10 +8,10 @@ use xpallet_support::debug;
 impl<T: Trait> Module<T> {
     #[inline]
     fn generic_calculate_by_proportion<S: Into<u128>>(
-        total_reward: T::Balance,
+        total_reward: BalanceOf<T>,
         mine: S,
         total: S,
-    ) -> T::Balance {
+    ) -> BalanceOf<T> {
         let mine: u128 = mine.saturated_into();
         let total: u128 = total.saturated_into();
 
@@ -22,7 +22,7 @@ impl<T: Trait> Module<T> {
                     r < u128::from(u64::max_value()),
                     "reward of per validator definitely less than u64::max_value()"
                 );
-                r.saturated_into::<T::Balance>()
+                r.saturated_into::<BalanceOf<T>>()
             }
             None => panic!("stake * session_reward overflow!"),
         }
@@ -30,25 +30,25 @@ impl<T: Trait> Module<T> {
 
     /// Calculates the individual reward according to the proportion and total reward.
     fn calc_individual_staking_reward(
-        total_reward: T::Balance,
-        my_stake: T::Balance,
-        total_stake: T::Balance,
-    ) -> T::Balance {
+        total_reward: BalanceOf<T>,
+        my_stake: BalanceOf<T>,
+        total_stake: BalanceOf<T>,
+    ) -> BalanceOf<T> {
         let mine = my_stake.saturated_into::<u128>();
         let total = total_stake.saturated_into::<u128>();
         Self::generic_calculate_by_proportion(total_reward, mine, total)
     }
 
     fn calc_invididual_asset_mining_reward(
-        total_reward: T::Balance,
+        total_reward: BalanceOf<T>,
         my_power: u128,
         total_power: u128,
-    ) -> T::Balance {
+    ) -> BalanceOf<T> {
         Self::generic_calculate_by_proportion(total_reward, my_power, total_power)
     }
 
     /// Distributes the invididual asset mining reward, returns the unpaid asset mining rewards.
-    fn distribute_to_mining_assets(total_reward: T::Balance) -> T::Balance {
+    fn distribute_to_mining_assets(total_reward: BalanceOf<T>) -> BalanceOf<T> {
         let asset_mining_info = T::AssetMining::asset_mining_power();
 
         // [PASS*] No risk of sum overflow practically.
@@ -74,11 +74,11 @@ impl<T: Trait> Module<T> {
     }
 
     /// Reward to all the active validators pro rata.
-    fn distribute_to_active_validators(session_reward: T::Balance) {
+    fn distribute_to_active_validators(session_reward: BalanceOf<T>) {
         let active_validators = Self::get_active_validator_set().collect::<Vec<_>>();
         let mut total_stake = active_validators
             .iter()
-            .fold(Zero::zero(), |acc: T::Balance, (_, x)| acc + *x);
+            .fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + *x);
         let mut total_reward = session_reward;
         for (validator, stake) in active_validators.into_iter() {
             // May become zero after meeting the last one.
@@ -93,7 +93,10 @@ impl<T: Trait> Module<T> {
 
     /// Issue new PCX to the action intentions and cross mining asset entities
     /// accroding to DistributionRatio.
-    fn distribute_mining_rewards(total: T::Balance, treasury_account: &T::AccountId) -> T::Balance {
+    fn distribute_mining_rewards(
+        total: BalanceOf<T>,
+        treasury_account: &T::AccountId,
+    ) -> BalanceOf<T> {
         let mining_distribution = Self::mining_distribution_ratio();
         let staking_reward = mining_distribution.calc_staking_reward::<T>(total);
         let max_asset_mining_reward = total - staking_reward;
@@ -122,7 +125,7 @@ impl<T: Trait> Module<T> {
         staking_reward
     }
 
-    pub(super) fn distribute_session_reward_impl_09(session_reward: T::Balance) -> T::Balance {
+    pub(super) fn distribute_session_reward_impl_09(session_reward: BalanceOf<T>) -> BalanceOf<T> {
         let global_distribution = Self::global_distribution_ratio();
         let (treasury_reward, mining_reward) =
             global_distribution.calc_rewards::<T>(session_reward);

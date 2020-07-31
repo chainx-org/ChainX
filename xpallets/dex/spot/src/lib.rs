@@ -19,7 +19,11 @@ use sp_std::prelude::*;
 use sp_std::{cmp, fmt::Debug, result};
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, Parameter,
+    decl_error, decl_event, decl_module, decl_storage,
+    dispatch::{DispatchError, DispatchResult},
+    ensure,
+    traits::{Currency, ExistenceRequirement, ReservableCurrency},
+    Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -44,7 +48,11 @@ const MAX_BACKLOG_ORDER: usize = 1000;
 /// more time than the Block time to finish.
 const DEFAULT_FLUCTUATION: u32 = 100;
 
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
+    <T as frame_system::Trait>::AccountId,
+>>::Balance;
+
+pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -64,7 +72,7 @@ type Result<T> = result::Result<(), Error<T>>;
 pub type OrderInfo<T> = Order<
     TradingPairId,
     <T as frame_system::Trait>::AccountId,
-    <T as xpallet_assets::Trait>::Balance,
+    BalanceOf<T>,
     <T as Trait>::Price,
     <T as frame_system::Trait>::BlockNumber,
 >;
@@ -75,6 +83,10 @@ decl_storage! {
     trait Store for Module<T: Trait> as XSpot {
         /// How many trading pairs so far.
         pub TradingPairCount get(fn trading_pair_count): TradingPairId;
+
+        /// Record the exact balance of reserved native coins in Spot.
+        pub NativeReserves get(fn native_reserves):
+            map hasher(twox_64_concat) T::AccountId => BalanceOf<T>;
 
         /// The map from trading pair id to its static profile.
         pub TradingPairOf get(fn trading_pair_of):
@@ -130,9 +142,9 @@ decl_storage! {
 decl_event!(
     pub enum Event<T>
     where
+        Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
         <T as frame_system::Trait>::BlockNumber,
-        <T as xpallet_assets::Trait>::Balance,
         <T as Trait>::Price,
     {
         /// A new order is created.
@@ -209,7 +221,7 @@ decl_module! {
             pair_id: TradingPairId,
             order_type: OrderType,
             side: Side,
-            amount: T::Balance,
+            amount: BalanceOf<T>,
             price: T::Price
         ) {
             let who = ensure_signed(origin)?;
@@ -232,7 +244,7 @@ decl_module! {
                 Side::Sell => (pair.base(), amount)
             };
 
-            Self::put_order_reserve(&who, &reserve_asset, reserve_amount)?;
+            Self::put_order_reserve(&who, reserve_asset, reserve_amount)?;
 
             Self::apply_put_order(who, pair_id, order_type, side, amount, price, reserve_amount)?;
         }
@@ -362,9 +374,9 @@ impl<T: Trait> Module<T> {
         pair_id: TradingPairId,
         order_type: OrderType,
         side: Side,
-        amount: T::Balance,
+        amount: BalanceOf<T>,
         price: T::Price,
-        reserve_amount: T::Balance,
+        reserve_amount: BalanceOf<T>,
     ) -> Result<T> {
         info!(
             "transactor:{:?}, pair_id:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
@@ -392,7 +404,11 @@ impl<T: Trait> Module<T> {
         Self::order_info_of(who, order_id).ok_or(Error::<T>::InvalidOrderId)
     }
 
-    fn do_cancel_order(who: &T::AccountId, pair_id: TradingPairId, order_id: OrderId) -> Result<T> {
+    fn do_cancel_order(
+        who: &T::AccountId,
+        pair_id: TradingPairId,
+        order_id: OrderId,
+    ) -> DispatchResult {
         let pair = Self::trading_pair(pair_id)?;
         ensure!(pair.online, Error::<T>::TradingPairOffline);
 
@@ -411,7 +427,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         pair_id: TradingPairId,
         order_id: OrderId,
-    ) -> Result<T> {
+    ) -> DispatchResult {
         info!(
             "[apply_cancel_order]who:{:?}, pair_id:{}, order_id:{}",
             who, pair_id, order_id

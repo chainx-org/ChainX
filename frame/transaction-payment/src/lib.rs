@@ -36,12 +36,13 @@ use codec::{Decode, Encode};
 use frame_support::{
     decl_module, decl_storage,
     dispatch::DispatchResult,
-    traits::Get,
+    traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, WithdrawReason},
     weights::{
         DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight, WeightToFeeCoefficient,
         WeightToFeePolynomial,
     },
 };
+use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use sp_runtime::{
     traits::{
         Convert, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SaturatedConversion, Saturating,
@@ -51,20 +52,19 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionValidity, TransactionValidityError,
         ValidTransaction,
     },
-    FixedPointNumber, FixedPointOperand, FixedU128, Perquintill,
+    FixedPointNumber, FixedPointOperand, FixedU128, Perquintill, RuntimeDebug,
 };
 use sp_std::prelude::*;
+
 use xpallet_support::debug;
-use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+
 /// Fee multiplier.
 pub type Multiplier = FixedU128;
 
-type BalanceOf<T> = <T as xpallet_assets::Trait>::Balance;
-// <<T as xpallet_assets::Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
-// type BalanceOf<T> =
-//     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
-// type NegativeImbalanceOf<T> =
-//     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
+type BalanceOf<T> =
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+type NegativeImbalanceOf<T> =
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
 
 /// A struct to update the weight multiplier per block. It implements `Convert<Multiplier,
 /// Multiplier>`, meaning that it can convert the previous multiplier to the next one. This should
@@ -169,14 +169,29 @@ where
     }
 }
 
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
-    // /// The currency type in which fees will be paid.
-    // type Currency: Currency<Self::AccountId> + Send + Sync;
+/// Storage releases of the module.
+#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
+enum Releases {
+    /// Original version of the module.
+    V1Ancient,
+    /// One that bumps the usage to FixedU128 from FixedI128.
+    V2,
+}
 
-    // /// Handler for the unbalanced reduction when taking transaction fees. This is either one or
-    // /// two separate imbalances, the first is the transaction fee paid, the second is the tip paid,
-    // /// if any.
-    // type OnTransactionPayment: OnUnbalanced<NegativeImbalanceOf<Self>>;
+impl Default for Releases {
+    fn default() -> Self {
+        Releases::V1Ancient
+    }
+}
+
+pub trait Trait: frame_system::Trait {
+    /// The currency type in which fees will be paid.
+    type Currency: Currency<Self::AccountId> + Send + Sync;
+
+    /// Handler for the unbalanced reduction when taking transaction fees. This is either one or
+    /// two separate imbalances, the first is the transaction fee paid, the second is the tip paid,
+    /// if any.
+    type OnTransactionPayment: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
     /// The fee to be paid for making a transaction; the per-byte portion.
     type TransactionByteFee: Get<BalanceOf<Self>>;
@@ -191,6 +206,8 @@ pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
 decl_storage! {
     trait Store for Module<T: Trait> as TransactionPayment {
         pub NextFeeMultiplier get(fn next_fee_multiplier): Multiplier = Multiplier::saturating_from_integer(1);
+
+        StorageVersion build(|_: &GenesisConfig| Releases::V2): Releases;
     }
 }
 
@@ -330,10 +347,10 @@ where
                 .saturating_add(fixed_len_fee)
                 .saturating_add(adjusted_weight_fee)
                 .saturating_add(tip);
-            debug!("[fee]|total:{:?}|base_fee:{:?}|fixed_len_fee:{:?}|adjusted_weight_fee:{:?}|tip:{:?}", total, base_fee, fixed_len_fee, adjusted_weight_fee, tip);
+            debug!("[compute_fee]|total:{:?}|base_fee:{:?}|fixed_len_fee:{:?}|adjusted_weight_fee:{:?}|tip:{:?}", total, base_fee, fixed_len_fee, adjusted_weight_fee, tip);
             total
         } else {
-            debug!("[fee]|just tip|tip:{:?}", tip);
+            debug!("[compute_fee]|only tip:{:?}", tip);
             tip
         }
     }
@@ -381,25 +398,28 @@ where
         who: &T::AccountId,
         info: &DispatchInfoOf<T::Call>,
         len: usize,
-    ) -> Result<BalanceOf<T>, TransactionValidityError> {
+    ) -> Result<(BalanceOf<T>, Option<NegativeImbalanceOf<T>>), TransactionValidityError> {
         let tip = self.0;
         let fee = Module::<T>::compute_fee(len as u32, info, tip);
 
         // Only mess with balances if fee is not zero.
         if fee.is_zero() {
-            return Ok(Zero::zero());
+            return Ok((fee, None));
         }
-        let _ = xpallet_assets::Module::<T>::move_balance(
-            &<xpallet_assets::Module<T> as xpallet_assets::ChainT<_>>::ASSET_ID,
+
+        match T::Currency::withdraw(
             who,
-            xpallet_assets::AssetType::Free,
-            who,
-            xpallet_assets::AssetType::LockedFee,
             fee,
-            false,
-        )
-        .map_err(|_| InvalidTransaction::Payment)?;
-        Ok(fee)
+            if tip.is_zero() {
+                WithdrawReason::TransactionPayment.into()
+            } else {
+                WithdrawReason::TransactionPayment | WithdrawReason::Tip
+            },
+            ExistenceRequirement::KeepAlive,
+        ) {
+            Ok(imbalance) => Ok((fee, Some(imbalance))),
+            Err(_) => Err(InvalidTransaction::Payment.into()),
+        }
     }
 }
 
@@ -423,7 +443,12 @@ where
     type AccountId = T::AccountId;
     type Call = T::Call;
     type AdditionalSigned = ();
-    type Pre = (BalanceOf<T>, Self::AccountId, BalanceOf<T>);
+    type Pre = (
+        BalanceOf<T>,
+        Self::AccountId,
+        Option<NegativeImbalanceOf<T>>,
+        BalanceOf<T>,
+    );
     fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
         Ok(())
     }
@@ -435,7 +460,7 @@ where
         info: &DispatchInfoOf<Self::Call>,
         len: usize,
     ) -> TransactionValidity {
-        let fee = self.withdraw_fee(who, info, len)?;
+        let (fee, _) = self.withdraw_fee(who, info, len)?;
 
         let mut r = ValidTransaction::default();
         // NOTE: we probably want to maximize the _fee (of any type) per weight unit_ here, which
@@ -451,8 +476,8 @@ where
         info: &DispatchInfoOf<Self::Call>,
         len: usize,
     ) -> Result<Self::Pre, TransactionValidityError> {
-        let fee = self.withdraw_fee(who, info, len)?;
-        Ok((self.0, who.clone(), fee))
+        let (fee, imbalance) = self.withdraw_fee(who, info, len)?;
+        Ok((self.0, who.clone(), imbalance, fee))
     }
 
     fn post_dispatch(
@@ -462,38 +487,28 @@ where
         len: usize,
         _result: &DispatchResult,
     ) -> Result<(), TransactionValidityError> {
-        let (tip, who, fee) = pre;
-        if !fee.is_zero() {
+        let (tip, who, imbalance, fee) = pre;
+        if let Some(payed) = imbalance {
             let actual_fee = Module::<T>::compute_actual_fee(len as u32, info, post_info, tip);
-            // refund locked fee to free
-            let _ = xpallet_assets::Module::<T>::move_balance(
-                &<xpallet_assets::Module<T> as xpallet_assets::ChainT<_>>::ASSET_ID,
-                &who,
-                xpallet_assets::AssetType::LockedFee,
-                &who,
-                xpallet_assets::AssetType::Free,
-                fee,
-                false,
-            )
-            .map_err(|_| InvalidTransaction::Payment)?;
-            // real do deduct fee from free balance
-            let _ = xpallet_assets::Module::<T>::move_balance(
-                &<xpallet_assets::Module<T> as xpallet_assets::ChainT<_>>::ASSET_ID,
-                &who,
-                xpallet_assets::AssetType::Free,
-                &who, // TODO to blockproducer in future
-                xpallet_assets::AssetType::Free,
-                actual_fee,
-                true, // and log event
-            )
-            .expect("at now, move fee must success");
+            let refund = fee.saturating_sub(actual_fee);
+            let actual_payment = match T::Currency::deposit_into_existing(&who, refund) {
+                Ok(refund_imbalance) => {
+                    // The refund cannot be larger than the up front payed max weight.
+                    // `PostDispatchInfo::calc_unspent` guards against such a case.
+                    match payed.offset(refund_imbalance) {
+                        Ok(actual_payment) => actual_payment,
+                        Err(_) => return Err(InvalidTransaction::Payment.into()),
+                    }
+                }
+                // We do not recreate the account using the refund. The up front payment
+                // is gone in that case.
+                Err(_) => payed,
+            };
+            let imbalances = actual_payment.split(tip);
+            T::OnTransactionPayment::on_unbalanceds(
+                Some(imbalances.0).into_iter().chain(Some(imbalances.1)),
+            );
         }
-        assert!(xpallet_assets::Module::<T>::asset_balance_of(
-            &who,
-            &<xpallet_assets::Module<T> as xpallet_assets::ChainT<_>>::ASSET_ID,
-            xpallet_assets::AssetType::LockedFee
-        )
-        .is_zero());
         Ok(())
     }
 }
@@ -510,6 +525,7 @@ mod tests {
         },
     };
     use pallet_balances::Call as BalancesCall;
+    use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
     use smallvec::smallvec;
     use sp_core::H256;
     use sp_runtime::{
@@ -518,7 +534,6 @@ mod tests {
         Perbill,
     };
     use std::cell::RefCell;
-    use xpallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
     const CALL: &<Runtime as frame_system::Trait>::Call =
         &Call::Balances(BalancesCall::transfer(2, 69));
@@ -789,7 +804,7 @@ mod tests {
                     &Ok(())
                 )
                 .is_ok());
-                // 75 (3/2 of the returned 50 units of weight ) is refunded
+                // 75 (3/2 of the returned 50 units of weight) is refunded
                 assert_eq!(Balances::free_balance(2), 200 - 5 - 10 - 75 - 5);
             });
     }

@@ -540,6 +540,7 @@ dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
+ "pallet-transaction-payment-rpc",
  "parity-scale-codec",
  "sc-client-api",
  "sc-rpc-api",
@@ -563,7 +564,6 @@ dependencies = [
  "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-mining-staking-rpc",
  "xpallet-mining-staking-rpc-runtime-api",
- "xpallet-transaction-payment-rpc",
 ]
 
 [[package]]
@@ -577,6 +577,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "pallet-aura",
  "pallet-authorship",
+ "pallet-balances 2.0.0-rc4",
  "pallet-grandpa",
  "pallet-im-online",
  "pallet-multisig",
@@ -585,6 +586,8 @@ dependencies = [
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
  "parity-scale-codec",
  "serde",
@@ -620,8 +623,6 @@ dependencies = [
  "xpallet-protocol",
  "xpallet-support",
  "xpallet-system",
- "xpallet-transaction-payment",
- "xpallet-transaction-payment-rpc-runtime-api",
 ]
 
 [[package]]
@@ -3047,6 +3048,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-balances"
+version = "2.0.0-rc4"
+dependencies = [
+ "chainx-primitives",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-finality-tracker"
 version = "2.0.0-rc4"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
@@ -3123,7 +3141,7 @@ source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1
 dependencies = [
  "frame-support",
  "frame-system",
- "pallet-balances",
+ "pallet-balances 2.0.0-rc4 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4)",
  "parity-scale-codec",
  "serde",
  "sp-runtime",
@@ -3193,6 +3211,55 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-timestamp",
+]
+
+[[package]]
+name = "pallet-transaction-payment"
+version = "2.0.0-rc4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances 2.0.0-rc4",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "parity-scale-codec",
+ "serde",
+ "smallvec 1.4.0",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+ "xpallet-support",
+]
+
+[[package]]
+name = "pallet-transaction-payment-rpc"
+version = "2.0.0-rc4"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-transaction-payment-rpc-runtime-api"
+version = "2.0.0-rc4"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -7022,11 +7089,14 @@ version = "0.1.0"
 dependencies = [
  "bitmask",
  "chainx-primitives",
+ "env_logger",
  "frame-support",
  "frame-system",
+ "pallet-balances 2.0.0-rc4 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4)",
  "parity-scale-codec",
  "serde",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
  "xpallet-protocol",
@@ -7070,7 +7140,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
- "pallet-balances",
+ "pallet-balances 2.0.0-rc4 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4)",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -7141,6 +7211,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
+ "pallet-balances 2.0.0-rc4 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4)",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",
@@ -7287,6 +7358,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
+ "pallet-balances 2.0.0-rc4 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4)",
  "pallet-session",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -7312,6 +7384,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
+ "pallet-balances 2.0.0-rc4 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4)",
  "pallet-session",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -7324,7 +7397,6 @@ dependencies = [
  "sp-std",
  "xp-mining-common",
  "xp-mining-staking",
- "xpallet-assets",
  "xpallet-protocol",
  "xpallet-support",
 ]
@@ -7390,56 +7462,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xpallet-protocol",
-]
-
-[[package]]
-name = "xpallet-transaction-payment"
-version = "2.0.0-rc4"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "smallvec 1.4.0",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-storage",
- "xpallet-assets",
- "xpallet-support",
- "xpallet-transaction-payment-rpc-runtime-api",
-]
-
-[[package]]
-name = "xpallet-transaction-payment-rpc"
-version = "2.0.0-rc4"
-dependencies = [
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec",
- "serde",
- "sp-api",
- "sp-blockchain",
- "sp-core",
- "sp-rpc",
- "sp-runtime",
- "xpallet-transaction-payment-rpc-runtime-api",
-]
-
-[[package]]
-name = "xpallet-transaction-payment-rpc-runtime-api"
-version = "2.0.0-rc4"
-dependencies = [
- "frame-support",
- "parity-scale-codec",
- "serde",
- "serde_json",
- "sp-api",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]

@@ -8,6 +8,17 @@ use xp_mining_common::WeightType;
 use xp_mining_staking::MiningPower;
 use xpallet_support::RpcWeightType;
 
+/// Detailed types of reserved balances in Staking.
+#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum LockedType {
+    /// Locked balances when nominator calls `bond`.
+    Bonded,
+    /// The locked balances transition from `Bonded` into `BondedWithdrawal` state
+    /// when nominator calls `withdraw_bonded`.
+    BondedWithdrawal,
+}
+
 /// Destination for minted fresh PCX on each new session.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum MintedDestination<AccountId> {
@@ -192,7 +203,7 @@ pub struct GlobalDistribution {
 
 impl GlobalDistribution {
     /// Calculates the rewards for treasury and mining accordingly.
-    pub fn calc_rewards<T: Trait>(&self, reward: T::Balance) -> (T::Balance, T::Balance) {
+    pub fn calc_rewards<T: Trait>(&self, reward: BalanceOf<T>) -> (BalanceOf<T>, BalanceOf<T>) {
         assert!(self.treasury + self.mining > 0);
         let treasury_reward = reward * self.treasury.saturated_into()
             / (self.treasury + self.mining).saturated_into();
@@ -209,7 +220,7 @@ pub struct MiningDistribution {
 
 impl MiningDistribution {
     /// Returns the reward for Staking given the total reward according to the Staking proportion.
-    pub fn calc_staking_reward<T: Trait>(&self, reward: T::Balance) -> T::Balance {
+    pub fn calc_staking_reward<T: Trait>(&self, reward: BalanceOf<T>) -> BalanceOf<T> {
         reward.saturating_mul(self.staking.saturated_into())
             / (self.asset + self.staking).saturated_into()
     }
@@ -241,8 +252,8 @@ impl MiningDistribution {
 
     pub fn has_treasury_extra<T: Trait>(
         &self,
-        asset_mining_reward_cap: T::Balance,
-    ) -> Option<T::Balance> {
+        asset_mining_reward_cap: BalanceOf<T>,
+    ) -> Option<BalanceOf<T>> {
         let (m1, m2) = self.asset_mining_vs_staking::<T>();
         if m1 >= m2 {
             debug!(
@@ -257,7 +268,7 @@ impl MiningDistribution {
             );
             // There could be some computation loss here, but it's ok.
             let treasury_extra = (m2 - m1) * asset_mining_reward_cap.saturated_into::<u128>() / m2;
-            Some(treasury_extra.saturated_into::<T::Balance>())
+            Some(treasury_extra.saturated_into::<BalanceOf<T>>())
         }
     }
 }
@@ -279,10 +290,10 @@ impl<T: Trait> Slasher<T> {
     pub fn try_slash(
         &self,
         offender: &T::AccountId,
-        expected_slash: T::Balance,
-    ) -> Result<(), T::Balance> {
+        expected_slash: BalanceOf<T>,
+    ) -> Result<(), BalanceOf<T>> {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
-        let reward_pot_balance = <xpallet_assets::Module<T>>::pcx_free_balance(&reward_pot);
+        let reward_pot_balance = Module::<T>::free_balance_of(&reward_pot);
 
         if expected_slash <= reward_pot_balance {
             self.apply_slash(&reward_pot, expected_slash);
@@ -294,7 +305,7 @@ impl<T: Trait> Slasher<T> {
     }
 
     /// Actually slash the account being punished, all slashed balance will go to the treasury.
-    fn apply_slash(&self, reward_pot: &T::AccountId, value: T::Balance) {
-        let _ = <xpallet_assets::Module<T>>::pcx_move_free_balance(reward_pot, &self.0, value);
+    fn apply_slash(&self, reward_pot: &T::AccountId, value: BalanceOf<T>) {
+        let _ = Module::<T>::move_balance(reward_pot, &self.0, value);
     }
 }

@@ -33,12 +33,14 @@ impl<C, B> XGatewayRecords<C, B> {
 
 #[rpc]
 pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
+    /// Return current withdraw list(include Applying and Processing withdraw state)
     #[rpc(name = "xgatewayrecords_withdrawalList")]
     fn withdrawal_list(
         &self,
         at: Option<BlockHash>,
     ) -> Result<BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>>;
 
+    /// Return current withdraw list for a chain(include Applying and Processing withdraw state)
     #[rpc(name = "xgatewayrecords_withdrawalListByChain")]
     fn withdrawal_list_by_chain(
         &self,
@@ -46,6 +48,7 @@ pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
         at: Option<BlockHash>,
     ) -> Result<BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>>;
 
+    /// Return current pending withdraw list for a chain
     #[rpc(name = "xgatewayrecords_pendingWithdrawalList")]
     fn pending_withdrawal_list(
         &self,
