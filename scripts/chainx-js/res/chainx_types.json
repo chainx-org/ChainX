@@ -8,14 +8,10 @@
     "AssetType": {
         "_enum": [
             "Free",
-            "ReservedStaking",
-            "ReservedStakingRevocation",
+            "Locked",
             "ReservedWithdrawal",
             "ReservedDexSpot",
-            "ReservedDexFuture",
-            "ReservedCurrency",
-            "ReservedXRC20",
-            "LockedFee"
+            "ReservedXRC20"
         ]
     },
     "XRC20Selector": {

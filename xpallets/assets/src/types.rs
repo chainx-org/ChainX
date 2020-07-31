@@ -145,27 +145,19 @@ impl AssetInfo {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetType {
     Free,
-    ReservedStaking,
-    ReservedStakingRevocation,
+    Locked,
     ReservedWithdrawal,
     ReservedDexSpot,
-    ReservedDexFuture,
-    ReservedCurrency,
     ReservedXRC20,
-    LockedFee, // LockedFee is special type, normally it must be zero, otherwise there is some error.
 }
 impl AssetType {
     pub fn iterator() -> Iter<'static, AssetType> {
         static ENUM_ITEMS: &[AssetType] = &[
             AssetType::Free,
-            AssetType::ReservedStaking,
-            AssetType::ReservedStakingRevocation,
+            AssetType::Locked,
             AssetType::ReservedWithdrawal,
             AssetType::ReservedDexSpot,
-            AssetType::ReservedDexFuture,
-            AssetType::ReservedCurrency,
             AssetType::ReservedXRC20,
-            // notice except LockedFee
         ];
         ENUM_ITEMS.iter()
     }
