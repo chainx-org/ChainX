@@ -493,9 +493,11 @@ impl xpallet_contracts::Trait for Runtime {
     type WeightPrice = pallet_transaction_payment::Module<Self>;
 }
 
+/*
 parameter_types! {
     pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
 }
+*/
 
 pub struct SimpleTreasuryAccount;
 impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
@@ -573,20 +575,6 @@ impl pallet_collective::Trait<CouncilCollective> for Runtime {
     type MaxProposals = CouncilMaxProposals;
 }
 
-/*
-parameter_types! {
-    pub const ProposalBond: Permill = Permill::from_percent(5);
-    pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
-    pub const SpendPeriod: BlockNumber = 1 * DAYS;
-    pub const Burn: Permill = Permill::from_percent(50);
-    pub const TipCountdown: BlockNumber = 1 * DAYS;
-    pub const TipFindersFee: Percent = Percent::from_percent(20);
-    pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-    pub const TipReportDepositPerByte: Balance = 1 * CENTS;
-    pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
-}
-*/
-
 parameter_types! {
     pub const CandidacyBond: Balance = 10 * DOLLARS;
     pub const VotingBond: Balance = 1 * DOLLARS;
@@ -648,7 +636,18 @@ impl pallet_membership::Trait<pallet_membership::Instance1> for Runtime {
     type MembershipChanged = TechnicalCommittee;
 }
 
-/*
+parameter_types! {
+    pub const ProposalBond: Permill = Permill::from_percent(5);
+    pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
+    pub const SpendPeriod: BlockNumber = 1 * DAYS;
+    pub const Burn: Permill = Permill::from_percent(50);
+    pub const TipCountdown: BlockNumber = 1 * DAYS;
+    pub const TipFindersFee: Percent = Percent::from_percent(20);
+    pub const TipReportDepositBase: Balance = 1 * DOLLARS;
+    pub const TipReportDepositPerByte: Balance = 1 * CENTS;
+    pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+}
+
 impl pallet_treasury::Trait for Runtime {
     type ModuleId = TreasuryModuleId;
     type Currency = Balances;
@@ -674,7 +673,6 @@ impl pallet_treasury::Trait for Runtime {
     type SpendPeriod = SpendPeriod;
     type Burn = Burn;
 }
-*/
 
 parameter_types! {
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) * MaximumBlockWeight::get();
@@ -722,7 +720,7 @@ construct_runtime!(
         TechnicalCommittee: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
         Elections: pallet_elections_phragmen::{Module, Call, Storage, Event<T>, Config<T>},
         TechnicalMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-        // Treasury: pallet_treasury::{Module, Call, Storage, Config, Event},
+        Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
         Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
