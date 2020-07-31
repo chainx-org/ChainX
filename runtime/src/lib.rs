@@ -443,70 +443,6 @@ impl pallet_sudo::Trait for Runtime {
     type Call = Call;
 }
 
-/////////////// chainx impl
-
-impl xpallet_system::Trait for Runtime {
-    type Event = Event;
-}
-
-impl xpallet_assets::Trait for Runtime {
-    type Currency = Balances;
-    type Event = Event;
-    type OnAssetChanged = XMiningAsset;
-    type OnAssetRegisterOrRevoke = XMiningAsset;
-}
-
-impl xpallet_gateway_records::Trait for Runtime {
-    type Event = Event;
-}
-
-impl xpallet_gateway_common::Trait for Runtime {
-    type Event = Event;
-    type Validator = XStaking;
-    type Bitcoin = XGatewayBitcoin;
-    type BitcoinTrustee = XGatewayBitcoin;
-}
-
-impl xpallet_gateway_bitcoin::Trait for Runtime {
-    type Event = Event;
-    type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
-    type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
-    type TrusteeMultiSigProvider = trustees::bitcoin::BtcTrusteeMultisig<Runtime>;
-    type Channel = XGatewayCommon;
-}
-
-impl xpallet_dex_spot::Trait for Runtime {
-    type Event = Event;
-    type Price = Balance;
-}
-
-impl xpallet_contracts::Trait for Runtime {
-    type Time = Timestamp;
-    type Randomness = RandomnessCollectiveFlip;
-    type Call = Call;
-    type Event = Event;
-    type DetermineContractAddress = xpallet_contracts::SimpleAddressDeterminer<Runtime>;
-    type TrieIdGenerator = xpallet_contracts::TrieIdFromParentCounter<Runtime>;
-    type StorageSizeOffset = xpallet_contracts::DefaultStorageSizeOffset;
-    type MaxDepth = xpallet_contracts::DefaultMaxDepth;
-    type MaxValueSize = xpallet_contracts::DefaultMaxValueSize;
-    type WeightPrice = pallet_transaction_payment::Module<Self>;
-}
-
-/*
-parameter_types! {
-    pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
-}
-*/
-
-pub struct SimpleTreasuryAccount;
-impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
-    fn treasury_account() -> AccountId {
-        TreasuryModuleId::get().into_account()
-    }
-}
-
-/*
 parameter_types! {
     pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
     pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
@@ -559,7 +495,6 @@ impl pallet_democracy::Trait for Runtime {
     type Scheduler = Scheduler;
     type MaxVotes = MaxVotes;
 }
-*/
 
 parameter_types! {
     pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
@@ -685,6 +620,65 @@ impl pallet_scheduler::Trait for Runtime {
     type MaximumWeight = MaximumSchedulerWeight;
 }
 
+///////////////////////////////////////////
+// Chainx pallets
+///////////////////////////////////////////
+
+impl xpallet_system::Trait for Runtime {
+    type Event = Event;
+}
+
+impl xpallet_assets::Trait for Runtime {
+    type Currency = Balances;
+    type Event = Event;
+    type OnAssetChanged = XMiningAsset;
+    type OnAssetRegisterOrRevoke = XMiningAsset;
+}
+
+impl xpallet_gateway_records::Trait for Runtime {
+    type Event = Event;
+}
+
+impl xpallet_gateway_common::Trait for Runtime {
+    type Event = Event;
+    type Validator = XStaking;
+    type Bitcoin = XGatewayBitcoin;
+    type BitcoinTrustee = XGatewayBitcoin;
+}
+
+impl xpallet_gateway_bitcoin::Trait for Runtime {
+    type Event = Event;
+    type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
+    type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
+    type TrusteeMultiSigProvider = trustees::bitcoin::BtcTrusteeMultisig<Runtime>;
+    type Channel = XGatewayCommon;
+}
+
+impl xpallet_dex_spot::Trait for Runtime {
+    type Event = Event;
+    type Price = Balance;
+}
+
+impl xpallet_contracts::Trait for Runtime {
+    type Time = Timestamp;
+    type Randomness = RandomnessCollectiveFlip;
+    type Call = Call;
+    type Event = Event;
+    type DetermineContractAddress = xpallet_contracts::SimpleAddressDeterminer<Runtime>;
+    type TrieIdGenerator = xpallet_contracts::TrieIdFromParentCounter<Runtime>;
+    type StorageSizeOffset = xpallet_contracts::DefaultStorageSizeOffset;
+    type MaxDepth = xpallet_contracts::DefaultMaxDepth;
+    type MaxValueSize = xpallet_contracts::DefaultMaxValueSize;
+    type WeightPrice = pallet_transaction_payment::Module<Self>;
+}
+
+pub struct SimpleTreasuryAccount;
+impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
+    fn treasury_account() -> AccountId {
+        TreasuryModuleId::get().into_account()
+    }
+}
+
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
@@ -716,6 +710,7 @@ construct_runtime!(
         Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
         Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+        Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
         TechnicalCommittee: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
         Elections: pallet_elections_phragmen::{Module, Call, Storage, Event<T>, Config<T>},

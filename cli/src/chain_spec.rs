@@ -7,10 +7,10 @@ use chainx_runtime::{
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
-    AuraConfig, BalancesConfig, CouncilConfig, ElectionsConfig, GenesisConfig, GrandpaConfig,
-    ImOnlineConfig, SessionConfig, SessionKeys, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
-    XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig, XGatewayCommonConfig,
-    XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
+    GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SudoConfig, SystemConfig,
+    TechnicalCommitteeConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
+    XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -325,6 +325,7 @@ fn testnet_genesis(
             phantom: Default::default(),
         }),
         pallet_membership_Instance1: Some(Default::default()),
+        pallet_democracy: Some(DemocracyConfig::default()),
         pallet_treasury: Some(Default::default()),
         pallet_elections_phragmen: Some(ElectionsConfig {
             members: endowed_accounts
