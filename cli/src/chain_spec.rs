@@ -7,9 +7,10 @@ use chainx_runtime::{
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
-    AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, SessionConfig,
-    SessionKeys, SudoConfig, SystemConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
-    XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    AuraConfig, BalancesConfig, CouncilConfig, ElectionsConfig, GenesisConfig, GrandpaConfig,
+    ImOnlineConfig, SessionConfig, SessionKeys, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+    XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig, XGatewayCommonConfig,
+    XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -271,7 +272,17 @@ fn testnet_genesis(
     enable_println: bool,
 ) -> GenesisConfig {
     const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
-    // const STASH: Balance = 100 * constants::currency::DOLLARS;
+    const STASH: Balance = 100 * constants::currency::DOLLARS;
+
+    let endowed_accounts = endowed
+        .get(&xpallet_protocol::PCX)
+        .expect("PCX endowed; qed")
+        .iter()
+        .cloned()
+        .map(|(k, _)| k)
+        .collect::<Vec<_>>();
+
+    let num_endowed_accounts = endowed_accounts.len();
 
     let balances = endowed
         .get(&xpallet_protocol::PCX)
@@ -303,6 +314,24 @@ fn testnet_genesis(
         }),
         pallet_grandpa: Some(GrandpaConfig {
             authorities: vec![],
+        }),
+        pallet_collective_Instance1: Some(CouncilConfig::default()),
+        pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
+            members: endowed_accounts
+                .iter()
+                .take((num_endowed_accounts + 1) / 2)
+                .cloned()
+                .collect(),
+            phantom: Default::default(),
+        }),
+        pallet_membership_Instance1: Some(Default::default()),
+        pallet_elections_phragmen: Some(ElectionsConfig {
+            members: endowed_accounts
+                .iter()
+                .take((num_endowed_accounts + 1) / 2)
+                .cloned()
+                .map(|member| (member, STASH))
+                .collect(),
         }),
         pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
         pallet_session: Some(SessionConfig {
