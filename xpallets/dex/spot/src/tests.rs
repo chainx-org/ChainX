@@ -12,6 +12,26 @@ use xpallet_assets::AssetType;
 const EOS: AssetId = 8888;
 const ETH: AssetId = 9999;
 
+fn t_issue_pcx(to: AccountId, value: Balance) {
+    let _ = Balances::deposit_creating(&to, value);
+}
+
+fn t_generic_issue(asset_id: AssetId, to: AccountId, value: Balance) {
+    if asset_id == xpallet_protocol::PCX {
+        t_issue_pcx(to, value);
+    } else {
+        assert_ok!(XAssets::issue(&asset_id, &to, value));
+    }
+}
+
+fn t_generic_free_balance(who: AccountId, asset_id: AssetId) -> Balance {
+    if asset_id == xpallet_protocol::PCX {
+        Balances::free_balance(who)
+    } else {
+        XAssets::free_balance_of(&who, &asset_id)
+    }
+}
+
 fn t_trading_pair_of(idx: TradingPairId) -> TradingPairProfile {
     XSpot::trading_pair_of(idx).unwrap()
 }
@@ -46,6 +66,10 @@ fn t_put_order_sell(
         amount,
         price,
     )
+}
+
+fn t_cancel_order(who: AccountId, pair_id: TradingPairId, order_id: OrderId) -> DispatchResult {
+    XSpot::cancel_order(Origin::signed(who), pair_id, order_id)
 }
 
 fn t_set_handicap(pair_idx: TradingPairId, highest_bid: Price, lowest_offer: Price) {
@@ -100,7 +124,7 @@ fn convert_base_to_quote_should_work() {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
 
         let amount = 1_000u128;
-        let price = 1_210_000u64;
+        let price = 1_210_000u128;
 
         assert_eq!(t_convert_base_to_quote(amount, price, &trading_pair), 1);
     })
@@ -109,16 +133,57 @@ fn convert_base_to_quote_should_work() {
 #[test]
 fn put_order_reserve_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        let trading_pair = XSpot::trading_pair_of(0).unwrap();
+        let pair_id = 0;
+        let who = 1;
+        let trading_pair = XSpot::trading_pair_of(pair_id).unwrap();
 
-        t_set_handicap(0, 1_000_000, 1_100_000);
+        t_set_handicap(pair_id, 1_000_000, 1_100_000);
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
-        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 10);
+        // Reserve asset.
+        t_generic_issue(trading_pair.quote(), who, 10);
+        assert_eq!(t_generic_free_balance(who, trading_pair.quote()), 10);
+        assert_ok!(t_put_order_buy(who, pair_id, 1000, 1_000_200));
+        assert_eq!(t_generic_free_balance(who, trading_pair.quote()), 9);
 
-        assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_200));
+        // Reserve native coin, 100 native coins should be reserved.
+        t_issue_pcx(who, 1000);
+        assert_ok!(t_put_order_sell(who, pair_id, 100, 1_210_000));
+        assert_eq!(
+            frame_system::Account::<Test>::get(&who).data,
+            pallet_balances::AccountData {
+                free: 900,
+                reserved: 100,
+                misc_frozen: 0,
+                fee_frozen: 0
+            }
+        );
+        assert_eq!(XSpot::native_reserves(&who), 100);
 
-        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 9);
+        // Reserve native coin, 200 more native coins should be reserved.
+        assert_ok!(t_put_order_sell(who, pair_id, 200, 1_210_000));
+        assert_eq!(
+            frame_system::Account::<Test>::get(&who).data,
+            pallet_balances::AccountData {
+                free: 700,
+                reserved: 300,
+                misc_frozen: 0,
+                fee_frozen: 0
+            }
+        );
+        assert_eq!(XSpot::native_reserves(&who), 300);
+
+        // 100 native coins should be unreserved.
+        assert_ok!(t_cancel_order(who, pair_id, 2));
+        assert_eq!(
+            frame_system::Account::<Test>::get(&1).data,
+            pallet_balances::AccountData {
+                free: 900,
+                reserved: 100,
+                misc_frozen: 0,
+                fee_frozen: 0
+            }
+        );
+        assert_eq!(XSpot::native_reserves(&1), 100);
     })
 }
 
@@ -167,7 +232,7 @@ fn price_too_high_or_too_low_should_not_work() {
         );
 
         t_set_handicap(0, 1_000_000, 1_100_000);
-        assert_ok!(XAssets::pcx_issue(&1, 1000));
+        t_issue_pcx(1, 1000);
 
         assert_ok!(t_put_order_sell(1, 0, 1000, 1_210_000));
 
@@ -187,9 +252,9 @@ fn update_handicap_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
-        assert_ok!(XAssets::pcx_issue(&2, 2000));
-        assert_ok!(XAssets::pcx_issue(&3, 2000));
+        t_generic_issue(trading_pair.quote(), 1, 10);
+        t_issue_pcx(2, 2000);
+        t_issue_pcx(3, 2000);
 
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_210_000,));
 
@@ -216,9 +281,9 @@ fn match_order_should_work() {
 
         t_set_handicap(0, 1_000_000, 1_100_000);
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
-        assert_ok!(XAssets::pcx_issue(&2, 2000));
-        assert_ok!(XAssets::pcx_issue(&3, 2000));
+        t_generic_issue(trading_pair.quote(), 1, 10);
+        t_issue_pcx(2, 2000);
+        t_issue_pcx(3, 2000);
 
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000));
 
@@ -253,9 +318,9 @@ fn cancel_order_should_work() {
         t_set_handicap(0, 1_000_000, 1_100_000);
 
         assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
-        assert_ok!(XAssets::pcx_issue(&1, 2000));
-        assert_ok!(XAssets::pcx_issue(&2, 2000));
-        assert_ok!(XAssets::pcx_issue(&3, 2000));
+        t_issue_pcx(1, 2000);
+        t_issue_pcx(2, 2000);
+        t_issue_pcx(3, 2000);
 
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000));
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100));
@@ -275,14 +340,14 @@ fn reap_orders_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &2, 10));
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 10));
-        assert_ok!(XAssets::pcx_issue(&2, 20000));
-        assert_ok!(XAssets::pcx_issue(&3, 20000));
-        assert_ok!(XAssets::pcx_issue(&4, 20000));
+        t_generic_issue(trading_pair.quote(), 1, 10);
+        t_generic_issue(trading_pair.quote(), 2, 10);
+        t_generic_issue(trading_pair.quote(), 3, 10);
+        t_issue_pcx(2, 20000);
+        t_issue_pcx(3, 20000);
+        t_issue_pcx(4, 20000);
 
-        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
+        assert_eq!(t_generic_free_balance(1, trading_pair.base()), 0);
 
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_000));
         assert_ok!(t_put_order_buy(1, 0, 5000, 1_200_000));
@@ -292,10 +357,10 @@ fn reap_orders_should_work() {
 
         assert_ok!(t_put_order_sell(4, 0, 20_000, 2_100_000 - 100));
 
-        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.quote()), 3);
-        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
-        assert_eq!(XAssets::free_balance_of(&2, &trading_pair.quote()), 6);
-        assert_eq!(XAssets::free_balance_of(&3, &trading_pair.quote()), 6);
+        assert_eq!(t_generic_free_balance(1, trading_pair.quote()), 3);
+        assert_eq!(t_generic_free_balance(1, trading_pair.base()), 0);
+        assert_eq!(t_generic_free_balance(2, trading_pair.quote()), 6);
+        assert_eq!(t_generic_free_balance(3, trading_pair.quote()), 6);
         assert_eq!(XSpot::order_info_of(4, 0).unwrap().already_filled, 1_000);
     })
 }
@@ -308,10 +373,10 @@ fn refund_remaining_of_taker_order_should_work() {
         let base = trading_pair.base();
         let quote = trading_pair.quote();
 
-        assert_ok!(XAssets::pcx_issue(&1, 1000000));
-        assert_ok!(XAssets::pcx_issue(&2, 237000000));
+        t_issue_pcx(1, 1000000);
+        t_issue_pcx(2, 237000000);
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 489994));
+        t_generic_issue(trading_pair.quote(), 3, 489994);
 
         assert_ok!(t_put_order_sell(1, 0, 1000000, 2058800,));
         // 2058
@@ -329,27 +394,21 @@ fn refund_remaining_of_taker_order_should_work() {
         // remaining is 1
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
-        let bmap = BTreeMap::new();
-        assert_eq!(XAssets::asset_balance(1, base.clone()), bmap);
-
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller1);
         assert_eq!(XAssets::asset_balance(1, quote.clone()), bmap);
-
-        let bmap = BTreeMap::new();
-        assert_eq!(XAssets::asset_balance(2, base.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller2);
         assert_eq!(XAssets::asset_balance(2, quote.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, 238000000);
-        assert_eq!(XAssets::asset_balance(3, base.clone()), bmap);
-
-        let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, remaining);
         assert_eq!(XAssets::asset_balance(3, quote.clone()), bmap);
+
+        assert_eq!(t_generic_free_balance(1, base.clone()), 0);
+        assert_eq!(t_generic_free_balance(2, base.clone()), 0);
+        assert_eq!(t_generic_free_balance(3, base.clone()), 238000000);
     })
 }
 
@@ -357,23 +416,23 @@ fn refund_remaining_of_taker_order_should_work() {
 fn refund_remaining_of_maker_order_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
-
+        // PCX
         let base = trading_pair.base();
+        // BTC
         let quote = trading_pair.quote();
 
-        assert_ok!(XAssets::pcx_issue(&1, 1000000));
-        assert_ok!(XAssets::pcx_issue(&2, 237000000));
+        t_issue_pcx(1, 1_000_000);
+        t_issue_pcx(2, 237000000);
+        t_generic_issue(quote, 3, 489994);
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 489994));
-
-        assert_ok!(t_put_order_buy(3, 0, 238000000, 2058800));
+        assert_ok!(t_put_order_buy(3, 0, 238_000_000, 2_058_800));
 
         // 489994
-        let btc_reserved_for_buyer = t_convert_base_to_quote(238000000, 2058800, &trading_pair);
+        let btc_reserved_for_buyer = t_convert_base_to_quote(238_000_000, 2_058_800, &trading_pair);
 
-        assert_ok!(t_put_order_sell(1, 0, 1000000, 2058800));
+        assert_ok!(t_put_order_sell(1, 0, 1_000_000, 2058800));
         // 2058
-        let btc_for_seller1 = t_convert_base_to_quote(1_000_000, 2058800, &trading_pair);
+        let btc_for_seller1 = t_convert_base_to_quote(1_000_000, 2_058_800, &trading_pair);
 
         assert_ok!(t_put_order_sell(2, 0, 237_000_000, 2_058_800));
         // 487935
@@ -382,27 +441,21 @@ fn refund_remaining_of_maker_order_should_work() {
         // remaining is 1
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
-        let bmap = BTreeMap::new();
-        assert_eq!(XAssets::asset_balance(1, base.clone()), bmap);
-
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller1);
-        assert_eq!(XAssets::asset_balance(1, quote.clone()), bmap);
-
-        let bmap = BTreeMap::new();
-        assert_eq!(XAssets::asset_balance(2, base.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(1, quote), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, btc_for_seller2);
-        assert_eq!(XAssets::asset_balance(2, quote.clone()), bmap);
-
-        let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, 238_000_000);
-        assert_eq!(XAssets::asset_balance(3, base.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(2, quote), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Free, remaining);
-        assert_eq!(XAssets::asset_balance(3, quote.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(3, quote), bmap);
+
+        assert_eq!(t_generic_free_balance(1, base), 0);
+        assert_eq!(t_generic_free_balance(2, base), 0);
+        assert_eq!(t_generic_free_balance(3, base), 238_000_000);
     })
 }
 
@@ -411,17 +464,17 @@ fn quotations_order_should_be_preserved_when_removing_orders_and_quotations() {
     ExtBuilder::default().build_and_execute(|| {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 100));
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &2, 100));
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &3, 100));
+        t_generic_issue(trading_pair.quote(), 1, 100);
+        t_generic_issue(trading_pair.quote(), 2, 100);
+        t_generic_issue(trading_pair.quote(), 3, 100);
 
-        assert_ok!(XAssets::pcx_issue(&2, 20000));
-        assert_ok!(XAssets::pcx_issue(&3, 20000));
-        assert_ok!(XAssets::pcx_issue(&4, 20000));
-        assert_ok!(XAssets::pcx_issue(&5, 20000));
-        assert_ok!(XAssets::pcx_issue(&6, 20000));
+        t_issue_pcx(2, 20000);
+        t_issue_pcx(3, 20000);
+        t_issue_pcx(4, 20000);
+        t_issue_pcx(5, 20000);
+        t_issue_pcx(6, 20000);
 
-        assert_eq!(XAssets::free_balance_of(&1, &trading_pair.base()), 0);
+        assert_eq!(t_generic_free_balance(1, trading_pair.base()), 0);
 
         assert_ok!(t_put_order_buy(1, 0, 1_000, 1_000_000));
         assert_ok!(t_put_order_buy(2, 0, 5_000, 1_100_000));

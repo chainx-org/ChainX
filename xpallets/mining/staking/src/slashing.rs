@@ -2,7 +2,7 @@ use super::*;
 
 impl<T: Trait> Module<T> {
     /// Average reward for validator per block.
-    fn reward_per_block(staking_reward: T::Balance, validator_count: usize) -> u128 {
+    fn reward_per_block(staking_reward: BalanceOf<T>, validator_count: usize) -> u128 {
         let session_length = T::SessionDuration::get();
         let per_reward = staking_reward.saturated_into::<u128>()
             * validator_count.saturated_into::<u128>()
@@ -11,14 +11,14 @@ impl<T: Trait> Module<T> {
     }
 
     /// TODO: flexiable slash according to slash fraction?
-    fn expected_slash_of(reward_per_block: u128) -> T::Balance {
+    fn expected_slash_of(reward_per_block: u128) -> BalanceOf<T> {
         let ideal_slash = reward_per_block * u128::from(Self::offence_severity());
         let min_slash = Self::minimum_penalty().saturated_into::<u128>();
         let expected_slash = sp_std::cmp::max(ideal_slash, min_slash);
         expected_slash.saturated_into()
     }
 
-    pub(crate) fn slash_offenders_in_session(staking_reward: T::Balance) -> Vec<T::AccountId> {
+    pub(crate) fn slash_offenders_in_session(staking_reward: BalanceOf<T>) -> Vec<T::AccountId> {
         // Find the offenders that are in the current validator set.
         let validators = T::SessionInterface::validators();
         let valid_offenders = Self::offenders_in_session()

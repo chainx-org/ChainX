@@ -5,7 +5,7 @@ use std::{
     collections::{BTreeMap, HashSet},
 };
 
-use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
+use frame_support::{impl_outer_origin, parameter_types, traits::Get, weights::Weight};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -19,8 +19,9 @@ use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
+pub(crate) type AccountIndex = u64;
 pub(crate) type Balance = u128;
-pub(crate) type Price = u64;
+pub(crate) type Price = u128;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -43,11 +44,11 @@ impl system::Trait for Test {
     type BaseCallFilter = ();
     type Origin = Origin;
     type Call = ();
-    type Index = u64;
+    type Index = AccountIndex;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = ();
@@ -61,9 +62,24 @@ impl system::Trait for Test {
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type ModuleToIndex = ();
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
+}
+
+pub struct ExistentialDeposit;
+impl Get<Balance> for ExistentialDeposit {
+    fn get() -> Balance {
+        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow())
+    }
+}
+
+impl pallet_balances::Trait for Test {
+    type Balance = Balance;
+    type Event = ();
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = System;
 }
 
 impl Trait for Test {
@@ -72,7 +88,7 @@ impl Trait for Test {
 }
 
 impl xpallet_assets::Trait for Test {
-    type Balance = Balance;
+    type Currency = Balances;
     type Event = ();
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = XSpot;
@@ -141,10 +157,7 @@ impl ExtBuilder {
             (btc_asset.0, btc_asset.1, pcx_asset.2, true, true),
         ];
 
-        let mut endowed = BTreeMap::new();
-        let pcx_id = pcx().0;
-        let endowed_info = vec![];
-        endowed.insert(pcx_id, endowed_info);
+        let endowed = BTreeMap::new();
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets,
             endowed,
@@ -195,5 +208,6 @@ impl ExtBuilder {
 }
 
 pub type System = frame_system::Module<Test>;
+pub type Balances = pallet_balances::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
 pub type XSpot = Module<Test>;

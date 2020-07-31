@@ -15,6 +15,10 @@ fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
     XStaking::bond(Origin::signed(who), target, value, b"memo".as_ref().into())
 }
 
+fn t_issue_pcx(who: AccountId, value: Balance) {
+    let _ = Balances::deposit_creating(&who, value);
+}
+
 fn t_issue_xbtc(to: AccountId, value: Balance) -> DispatchResult {
     XAssets::issue(&X_BTC, &to, value)
 }
@@ -43,16 +47,14 @@ fn t_xbtc_latest_total_weights() -> WeightType {
 }
 
 fn t_xbtc_move(from: AccountId, to: AccountId, value: Balance) {
-    XAssets::move_balance(
+    assert_ok!(XAssets::move_balance(
         &X_BTC,
         &from,
         AssetType::Free,
         &to,
         AssetType::Free,
-        value,
-        true,
-    )
-    .unwrap();
+        value
+    ));
 }
 
 fn t_xbtc_latest_weight_of(who: AccountId) -> WeightType {
@@ -309,8 +311,8 @@ fn claim_restriction_should_work() {
 
         // Block 7
         t_start_session(7);
-        assert_ok!(XAssets::pcx_issue(&1, 1_000_000_000_000u128));
-        assert_ok!(XAssets::pcx_issue(&t_1, 1_000_000_000_000u128));
+        t_issue_pcx(1, 1_000_000_000_000u128);
+        t_issue_pcx(t_1, 1_000_000_000_000u128);
         assert_ok!(t_bond(1, 1, 100_000_000_000));
         // total dividend: 2464000000
         let total_mining_dividend = 2_464_000_000;
@@ -342,7 +344,7 @@ fn total_issuance_should_work() {
         all.push(TREASURY_ACCOUNT);
         all.push(DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&X_BTC));
 
-        let total_issuance = || all.iter().map(XAssets::pcx_all_type_balance).sum::<u128>();
+        let total_issuance = || all.iter().map(Balances::total_balance).sum::<u128>();
 
         let initial = 100 + 200 + 300 + 400;
         t_start_session(1);

@@ -10,11 +10,11 @@ impl<T: Trait> Module<T> {
     pub(super) fn delivery_asset_to_each_other(
         maker_order_side: Side,
         pair: &TradingPairProfile,
-        turnover: T::Balance,
+        turnover: BalanceOf<T>,
         price: T::Price,
         maker_order: &mut OrderInfo<T>,
         taker_order: &mut OrderInfo<T>,
-    ) -> result::Result<(T::Balance, T::Balance), Error<T>> {
+    ) -> result::Result<(BalanceOf<T>, BalanceOf<T>), DispatchError> {
         let maker = &maker_order.submitter();
         let taker = &taker_order.submitter();
 
@@ -31,8 +31,8 @@ impl<T: Trait> Module<T> {
                 let maker_turnover_amount = turnover;
                 let taker_turnover_amount = turnover_in_quote;
 
-                Self::apply_delivery(&base, maker_turnover_amount, maker, taker)?;
-                Self::apply_delivery(&quote, taker_turnover_amount, taker, maker)?;
+                Self::apply_delivery(base, maker_turnover_amount, maker, taker)?;
+                Self::apply_delivery(quote, taker_turnover_amount, taker, maker)?;
 
                 Ok((maker_turnover_amount, taker_turnover_amount))
             }
@@ -42,8 +42,8 @@ impl<T: Trait> Module<T> {
                 let maker_turnover_amount = turnover_in_quote;
                 let taker_turnover_amount = turnover;
 
-                Self::apply_delivery(&base, taker_turnover_amount, taker, maker)?;
-                Self::apply_delivery(&quote, maker_turnover_amount, maker, taker)?;
+                Self::apply_delivery(base, taker_turnover_amount, taker, maker)?;
+                Self::apply_delivery(quote, maker_turnover_amount, maker, taker)?;
 
                 Ok((maker_turnover_amount, taker_turnover_amount))
             }
@@ -53,59 +53,90 @@ impl<T: Trait> Module<T> {
     /// Actually move someone's ReservedDexSpot asset_id to another one's Free.
     #[inline]
     fn apply_delivery(
-        asset_id: &AssetId,
-        value: T::Balance,
+        asset_id: AssetId,
+        value: BalanceOf<T>,
         from: &T::AccountId,
         to: &T::AccountId,
-    ) -> Result<T> {
-        Self::move_balance(asset_id, from, ReservedDexSpot, to, Free, value)
+    ) -> DispatchResult {
+        if asset_id == xpallet_protocol::PCX {
+            <T as xpallet_assets::Trait>::Currency::unreserve(from, value);
+            <T as xpallet_assets::Trait>::Currency::transfer(
+                from,
+                to,
+                value,
+                ExistenceRequirement::KeepAlive,
+            )?;
+            NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
+        } else {
+            Self::move_asset(asset_id, from, ReservedDexSpot, to, Free, value)?;
+        }
+        Ok(())
     }
 
     /// Actually reserve the asset locked by putting order.
     pub(crate) fn put_order_reserve(
         who: &T::AccountId,
-        asset_id: &AssetId,
-        value: T::Balance,
-    ) -> Result<T> {
-        if <xpallet_assets::Module<T>>::free_balance_of(who, asset_id) < value {
-            return Err(Error::<T>::InsufficientBalance);
+        asset_id: AssetId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        if asset_id == xpallet_protocol::PCX {
+            <T as xpallet_assets::Trait>::Currency::reserve(who, value)?;
+            NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
+        } else {
+            ensure!(
+                <xpallet_assets::Module<T>>::free_balance_of(who, &asset_id) >= value,
+                Error::<T>::InsufficientBalance
+            );
+            Self::move_asset(asset_id, who, Free, who, ReservedDexSpot, value)?;
         }
+        Ok(())
+    }
 
-        Self::move_balance(asset_id, who, Free, who, ReservedDexSpot, value)
+    /// Unreserve the locked balances in Spot in general.
+    fn generic_unreserve(
+        who: &T::AccountId,
+        asset_id: AssetId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        if asset_id == xpallet_protocol::PCX {
+            <T as xpallet_assets::Trait>::Currency::unreserve(who, value);
+            NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
+        } else {
+            Self::move_asset(asset_id, who, ReservedDexSpot, who, Free, value)?;
+        }
+        Ok(())
     }
 
     /// Unreserve the locked asset when the order is canceled.
     #[inline]
     pub(crate) fn cancel_order_unreserve(
         who: &T::AccountId,
-        asset_id: &AssetId,
-        value: T::Balance,
-    ) -> Result<T> {
-        Self::move_balance(asset_id, who, ReservedDexSpot, who, Free, value)
+        asset_id: AssetId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        Self::generic_unreserve(who, asset_id, value)
     }
 
     /// Refund the remaining reserved asset when the order is fulfilled.
     #[inline]
     pub(crate) fn refund_reserved_dex_spot(
         who: &T::AccountId,
-        asset_id: &AssetId,
-        remaining: T::Balance,
+        asset_id: AssetId,
+        remaining: BalanceOf<T>,
     ) {
-        let _ = Self::move_balance(asset_id, who, ReservedDexSpot, who, Free, remaining);
+        let _ = Self::generic_unreserve(who, asset_id, remaining);
     }
 
     /// Wrap the move_balance function in xassets module.
-    fn move_balance(
-        asset_id: &AssetId,
+    fn move_asset(
+        asset_id: AssetId,
         from: &T::AccountId,
-        from_type: AssetType,
+        from_ty: AssetType,
         to: &T::AccountId,
-        to_type: AssetType,
-        value: T::Balance,
-    ) -> Result<T> {
-        <xpallet_assets::Module<T>>::move_balance(
-            asset_id, from, from_type, to, to_type, value, true,
-        )?;
-        Ok(())
+        to_ty: AssetType,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        <xpallet_assets::Module<T>>::move_balance(&asset_id, from, from_ty, to, to_ty, value)
+            .map_err(|_| DispatchError::Other("Unexpected asset error"))
     }
 }

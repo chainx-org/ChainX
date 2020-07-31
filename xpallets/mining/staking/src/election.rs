@@ -45,7 +45,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Filters out all the qualified validator candidates, sorted by the total nominations.
-    fn filter_out_candidates() -> Vec<(T::Balance, T::AccountId)> {
+    fn filter_out_candidates() -> Vec<(BalanceOf<T>, T::AccountId)> {
         let mut candidates = Self::validator_set()
             .filter(Self::is_qualified_candidate)
             .map(|v| (Self::total_votes_of(&v), v))

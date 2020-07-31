@@ -17,12 +17,14 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate.git", tag = "v2
 # Substrate pallets
 frame-support = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
 
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
+xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
@@ -44,9 +46,11 @@ std = [
 
     "frame-support/std",
     "frame-system/std",
+    "pallet-balances/std",
 
     "chainx-primitives/std",
 
     "xpallet-assets/std",
+    "xpallet-protocol/std",
     "xpallet-support/std",
 ]
