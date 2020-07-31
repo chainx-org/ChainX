@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
+use serde_json::json;
+
 use chainx_runtime::{
     constants, trustees, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams, BtcTxVerifier,
     Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
@@ -13,7 +15,7 @@ use chainx_runtime::{
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
-use sc_service::ChainType;
+use sc_service::{ChainType, Properties};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -92,6 +94,7 @@ pub fn development_config() -> ChainSpec {
             true,
         )
     };
+    let network = NetworkType::Testnet;
     ChainSpec::from_genesis(
         "Development",
         "dev",
@@ -99,8 +102,16 @@ pub fn development_config() -> ChainSpec {
         constructor,
         vec![],
         None,
-        None,
-        None,
+        Some("chainx-dev"),
+        Some(
+            json!({
+                "ss58Format": network.addr_version(),
+                "network": network,
+            })
+            .as_object()
+            .expect("must success")
+            .to_owned(),
+        ),
         None,
     )
 }
@@ -133,6 +144,7 @@ pub fn local_testnet_config() -> ChainSpec {
             true,
         )
     };
+    let network = NetworkType::Testnet;
     ChainSpec::from_genesis(
         "Local Testnet",
         "local_testnet",
@@ -140,8 +152,16 @@ pub fn local_testnet_config() -> ChainSpec {
         constructor,
         vec![],
         None,
-        None,
-        None,
+        Some("chainx-local-testnet"),
+        Some(
+            json!({
+                "ss58Format": network.addr_version(),
+                "network": network,
+            })
+            .as_object()
+            .expect("must success")
+            .to_owned(),
+        ),
         None,
     )
 }
