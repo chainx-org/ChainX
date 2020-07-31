@@ -273,6 +273,7 @@ fn testnet_genesis(
 ) -> GenesisConfig {
     const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
     const STASH: Balance = 100 * constants::currency::DOLLARS;
+    const STAKING_LOCKED: Balance = 1_000 * constants::currency::DOLLARS;
 
     let endowed_accounts = endowed
         .get(&xpallet_protocol::PCX)
@@ -292,6 +293,14 @@ fn testnet_genesis(
         .map(|(k, _)| (k, ENDOWMENT))
         .collect::<Vec<_>>();
 
+    // The value of STASH balance will be reserved per phragmen member.
+    let phragmen_members = endowed_accounts
+        .iter()
+        .take((num_endowed_accounts + 1) / 2)
+        .cloned()
+        .map(|member| (member, STASH))
+        .collect();
+
     let validators = {
         let staking_authorities = initial_authorities
             .iter()
@@ -301,6 +310,7 @@ fn testnet_genesis(
             .clone()
             .into_iter()
             .filter(|(v, _)| staking_authorities.contains(&v))
+            .map(|(v, _)| (v, STAKING_LOCKED))
             .collect()
     };
 
@@ -328,12 +338,7 @@ fn testnet_genesis(
         pallet_democracy: Some(DemocracyConfig::default()),
         pallet_treasury: Some(Default::default()),
         pallet_elections_phragmen: Some(ElectionsConfig {
-            members: endowed_accounts
-                .iter()
-                .take((num_endowed_accounts + 1) / 2)
-                .cloned()
-                .map(|member| (member, STASH))
-                .collect(),
+            members: phragmen_members,
         }),
         pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
         pallet_session: Some(SessionConfig {

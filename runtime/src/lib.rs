@@ -623,7 +623,6 @@ impl pallet_scheduler::Trait for Runtime {
 ///////////////////////////////////////////
 // Chainx pallets
 ///////////////////////////////////////////
-
 impl xpallet_system::Trait for Runtime {
     type Event = Event;
 }
@@ -704,38 +703,53 @@ construct_runtime!(
         NodeBlock = chainx_primitives::Block,
         UncheckedExtrinsic = UncheckedExtrinsic
     {
+        // Basic stuff.
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
+        Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
+
         Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
+
+        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+        TransactionPayment: pallet_transaction_payment::{Module, Storage},
+
+        // Consensus support.
+        Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
+        Offences: pallet_offences::{Module, Call, Storage, Event},
+        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+        ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+
+        // Governance stuff.
         Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
         TechnicalCommittee: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
         Elections: pallet_elections_phragmen::{Module, Call, Storage, Event<T>, Config<T>},
         TechnicalMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
         Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
-        Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
-        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        TransactionPayment: pallet_transaction_payment::{Module, Storage},
-        ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-        Offences: pallet_offences::{Module, Call, Storage, Event},
+
         Utility: pallet_utility::{Module, Call, Event},
         Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
+        // ChainX basics.
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
+
+        // Mining, must be after XAssets.
+        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>},
+        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
+
+        // Cryto gateway stuff.
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config},
-        XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
-        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
-        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>},
 
+        // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
+
+        XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
     }
 );
 
