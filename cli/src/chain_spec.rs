@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
 use chainx_runtime::{
-    constants, trustees, AssetInfo, AssetRestriction, AssetRestrictions, BtcNetwork, BtcParams,
-    BtcTxVerifier, Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
+    constants, trustees, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams, BtcTxVerifier,
+    Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
@@ -271,7 +271,28 @@ fn testnet_genesis(
     enable_println: bool,
 ) -> GenesisConfig {
     const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
-    const STASH: Balance = 100 * constants::currency::DOLLARS;
+    // const STASH: Balance = 100 * constants::currency::DOLLARS;
+
+    let balances = endowed
+        .get(&xpallet_protocol::PCX)
+        .expect("PCX endowed; qed")
+        .iter()
+        .cloned()
+        .map(|(k, _)| (k, ENDOWMENT))
+        .collect::<Vec<_>>();
+
+    let validators = {
+        let staking_authorities = initial_authorities
+            .iter()
+            .map(|(s, _, _, _, _)| s)
+            .collect::<Vec<_>>();
+        balances
+            .clone()
+            .into_iter()
+            .filter(|(v, _)| staking_authorities.contains(&v))
+            .collect()
+    };
+
     GenesisConfig {
         frame_system: Some(SystemConfig {
             code: WASM_BINARY.to_vec(),
@@ -296,16 +317,7 @@ fn testnet_genesis(
                 })
                 .collect::<Vec<_>>(),
         }),
-        pallet_balances: Some(BalancesConfig {
-            balances: endowed
-                .get(&xpallet_protocol::PCX)
-                .expect("PCX endowed; qed")
-                .iter()
-                .cloned()
-                .map(|(k, _)| (k, ENDOWMENT))
-                .chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
-                .collect(),
-        }),
+        pallet_balances: Some(BalancesConfig { balances }),
         pallet_sudo: Some(SudoConfig { key: root_key }),
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
@@ -338,26 +350,7 @@ fn testnet_genesis(
             })
         },
         xpallet_mining_staking: Some(XStakingConfig {
-            validators: {
-                let pcx_endowed: std::collections::HashMap<AccountId, Balance> = endowed
-                    .get(&xpallet_protocol::PCX)
-                    .expect("PCX endowed; qed")
-                    .iter()
-                    .cloned()
-                    .collect();
-                initial_authorities
-                    .iter()
-                    .map(|x| {
-                        (
-                            x.0.clone(),
-                            pcx_endowed
-                                .get(&x.0)
-                                .expect("initial validators must have some balances; qed")
-                                .clone(),
-                        )
-                    })
-                    .collect()
-            },
+            validators,
             validator_count: 1000,
             minimum_validator_count: 4,
             sessions_per_era: 12,
