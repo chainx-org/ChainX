@@ -242,6 +242,19 @@ fn rebond_should_work() {
                 unbonded_chunks: vec![]
             }
         );
+
+        // Block 4
+        t_system_block_number_inc(1);
+        assert_err!(t_rebond(1, 2, 3, 3), Error::<Test>::NoMoreRebond);
+
+        // The rebond operation is limited to once per bonding duration.
+        assert_ok!(XStaking::set_bonding_duration(Origin::root(), 2));
+
+        t_system_block_number_inc(1);
+        assert_err!(t_rebond(1, 2, 3, 3), Error::<Test>::NoMoreRebond);
+
+        t_system_block_number_inc(1);
+        assert_ok!(t_rebond(1, 2, 3, 3));
     });
 }
 

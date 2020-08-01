@@ -21,7 +21,7 @@ use frame_support::{
         Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
     },
 };
-use frame_system::{self as system, ensure_signed};
+use frame_system::{self as system, ensure_root, ensure_signed};
 use sp_runtime::{
     traits::{CheckedSub, Convert, SaturatedConversion, Saturating, Zero},
     DispatchResult,
@@ -424,6 +424,24 @@ decl_module! {
             let sender = ensure_signed(origin)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::AlreadyValidator);
             Self::apply_register(&sender);
+        }
+
+        #[weight = 10]
+        fn set_validator_count(origin, #[compact] new: u32) {
+            ensure_root(origin)?;
+            ValidatorCount::put(new);
+        }
+
+        #[weight = 10]
+        fn set_bonding_duration(origin, new: T::BlockNumber) {
+            ensure_root(origin)?;
+            BondingDuration::<T>::put(new);
+        }
+
+        #[weight = 10]
+        fn set_validator_bonding_duration(origin, new: T::BlockNumber) {
+            ensure_root(origin)?;
+            ValidatorBondingDuration::<T>::put(new);
         }
     }
 }
