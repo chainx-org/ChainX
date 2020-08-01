@@ -309,7 +309,7 @@ decl_module! {
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
             ensure!(value <= Self::free_balance(&sender), Error::<T>::InsufficientBalance);
-            if !Self::is_validator_self_bonding(&sender, &target) {
+            if !Self::is_validator_bonding_itself(&sender, &target) {
                 Self::check_validator_acceptable_votes_limit(&target, value)?;
             }
 
@@ -327,7 +327,7 @@ decl_module! {
             ensure!(sender != from, Error::<T>::RebondSelfBondedNotAllowed);
             ensure!(value <= Self::bonded_to(&sender, &from), Error::<T>::InvalidRebondBalance);
 
-            if !Self::is_validator_self_bonding(&sender, &to) {
+            if !Self::is_validator_bonding_itself(&sender, &to) {
                 Self::check_validator_acceptable_votes_limit(&to, value)?;
             }
 
@@ -496,13 +496,6 @@ impl<T: Trait> Module<T> {
         Self::validator_set().filter(Self::is_active)
     }
 
-    pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
-        Self::active_validator_set().map(|v| {
-            let total_votes = Self::total_votes_of(&v);
-            (v, total_votes)
-        })
-    }
-
     /// Calculates the total staked PCX, i.e., total staking power.
     ///
     /// One (indivisible) PCX one power, only the votes of active validators are counted.
@@ -536,8 +529,56 @@ impl<T: Trait> Module<T> {
         T::Currency::free_balance(who)
     }
 
-    fn is_validator_self_bonding(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
+    /// Returns the total votes of a validator.
+    #[inline]
+    fn total_votes_of(validator: &T::AccountId) -> BalanceOf<T> {
+        ValidatorLedgers::<T>::get(validator).total
+    }
+
+    /// Returns the balance of `nominator` has voted to `nominee`.
+    #[inline]
+    fn bonded_to(nominator: &T::AccountId, nominee: &T::AccountId) -> BalanceOf<T> {
+        Nominations::<T>::get(nominator, nominee).nomination
+    }
+
+    #[inline]
+    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
+        let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
+    }
+
+    /// Returns an iterator of tuple (active_validator, total_votes_of_this_validator).
+    pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
+        Self::active_validator_set().map(|v| {
+            let total_votes = Self::total_votes_of(&v);
+            (v, total_votes)
+        })
+    }
+
+    /// Returns the balance that validator bonded to itself.
+    fn validator_self_bonded(validator: &T::AccountId) -> BalanceOf<T> {
+        Self::bonded_to(validator, validator)
+    }
+
+    fn is_validator_bonding_itself(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
         Self::is_validator(nominator) && *nominator == *nominee
+    }
+
+    fn acceptable_votes_limit_of(validator: &T::AccountId) -> BalanceOf<T> {
+        Self::validator_self_bonded(validator) * BalanceOf::<T>::from(Self::upper_bound_factor())
+    }
+
+    /// Returns Ok if the validator can still accept the `value` of new votes.
+    fn check_validator_acceptable_votes_limit(
+        validator: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> Result<(), Error<T>> {
+        let cur_total = Self::total_votes_of(validator);
+        let upper_limit = Self::acceptable_votes_limit_of(validator);
+        if cur_total + value <= upper_limit {
+            Ok(())
+        } else {
+            Err(Error::<T>::NoMoreAcceptableVotes)
+        }
     }
 
     /// Ensures that at the end of the current session there will be a new era.
@@ -580,41 +621,6 @@ impl<T: Trait> Module<T> {
             validator_profile.is_chilled = true;
             validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
         });
-    }
-
-    fn total_votes_of(validator: &T::AccountId) -> BalanceOf<T> {
-        ValidatorLedgers::<T>::get(validator).total
-    }
-
-    fn validator_self_bonded(validator: &T::AccountId) -> BalanceOf<T> {
-        Self::bonded_to(validator, validator)
-    }
-
-    #[inline]
-    fn bonded_to(nominator: &T::AccountId, nominee: &T::AccountId) -> BalanceOf<T> {
-        Nominations::<T>::get(nominator, nominee).nomination
-    }
-
-    fn acceptable_votes_limit_of(validator: &T::AccountId) -> BalanceOf<T> {
-        Self::validator_self_bonded(validator) * BalanceOf::<T>::from(Self::upper_bound_factor())
-    }
-
-    fn check_validator_acceptable_votes_limit(
-        validator: &T::AccountId,
-        value: BalanceOf<T>,
-    ) -> Result<(), Error<T>> {
-        let cur_total = Self::total_votes_of(validator);
-        let upper_limit = Self::acceptable_votes_limit_of(validator);
-        if cur_total + value <= upper_limit {
-            Ok(())
-        } else {
-            Err(Error::<T>::NoMoreAcceptableVotes)
-        }
-    }
-
-    #[inline]
-    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
-        let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
     }
 
     /// Set a lock on `value` of free balance of an account.

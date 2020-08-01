@@ -59,6 +59,24 @@ fn t_start_session(session_index: SessionIndex) {
     assert_eq!(Session::current_index(), session_index);
 }
 
+fn assert_bonded_locks(who: AccountId, value: Balance) {
+    assert_eq!(
+        *<Locks<Test>>::get(who)
+            .entry(LockedType::Bonded)
+            .or_default(),
+        value
+    );
+}
+
+fn assert_bonded_withdrawal_locks(who: AccountId, value: Balance) {
+    assert_eq!(
+        *<Locks<Test>>::get(who)
+            .entry(LockedType::BondedWithdrawal)
+            .or_default(),
+        value
+    );
+}
+
 #[test]
 fn cannot_force_chill_should_work() {
     ExtBuilder::default().build_and_execute(|| {
@@ -90,8 +108,11 @@ fn bond_should_work() {
         t_system_block_number_inc(1);
 
         let before_bond = Balances::usable_balance(&1);
+        // old_lock 10
+        let old_lock = *<Locks<Test>>::get(1).get(&LockedType::Bonded).unwrap();
         assert_ok!(t_bond(1, 2, 10));
 
+        assert_bonded_locks(1, old_lock + 10);
         assert_eq!(Balances::usable_balance(&1), before_bond - 10);
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
@@ -117,13 +138,17 @@ fn unbond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         assert_err!(t_unbond(1, 2, 50), Error::<Test>::InvalidUnbondBalance);
 
+        assert_bonded_locks(1, 10);
         t_system_block_number_inc(1);
 
         assert_ok!(t_bond(1, 2, 10));
+        assert_bonded_locks(1, 10 + 10);
 
         t_system_block_number_inc(1);
 
         assert_ok!(t_unbond(1, 2, 5));
+        assert_bonded_locks(1, 10 + 10 - 5);
+        assert_bonded_withdrawal_locks(1, 5);
 
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
@@ -257,6 +282,7 @@ fn withdraw_unbond_should_work() {
         let before_withdraw_unbonded = Balances::usable_balance(&1);
         assert_ok!(t_withdraw_unbonded(1, 0),);
         assert_eq!(Balances::usable_balance(&1), before_withdraw_unbonded + 5);
+        assert_bonded_withdrawal_locks(1, 0);
     });
 }
 
@@ -333,13 +359,15 @@ fn staking_reward_should_work() {
         t_issue_pcx(t_2, 100);
         t_issue_pcx(t_3, 100);
 
+        // Total minted per session:
         // 5_000_000_000
-        //
-        // |_vesting_account: 1_000_000_000
-        // |_treasury_reward: 480_000_000   12%
-        // |_mining_reward:   3_520_000_000 88%
-        //   |__ Staking        90%
-        //   |__ Asset Mining   10%
+        // │
+        // ├──> vesting_account:  1_000_000_000
+        // ├──> treasury_reward:    480_000_000 12% <--------
+        // └──> mining_reward:    3_520_000_000 88%          |
+        //    │                                              |
+        //    ├──> Staking        3_168_000_000 90%          |
+        //    └──> Asset Mining     352_000_000 10% ---------
         //
         // When you start session 1, actually there are 3 session rounds.
         // the session reward has been minted 3 times.
@@ -447,7 +475,7 @@ fn mint_should_work() {
 }
 
 #[test]
-fn bond_reserve_should_work() {
+fn balances_reserve_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let who = 7777;
         let to_mint = 10;
