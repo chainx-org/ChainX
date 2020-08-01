@@ -33,16 +33,26 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", tag = "v2.
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-authorship = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-democracy = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-identity = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-im-online = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
-pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
-pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
-pallet-offences = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
-pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false, features = ["historical"] }
-pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
-pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-offences = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-recovery = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-scheduler = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-session = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false, features = ["historical"] }
+pallet-society = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-treasury = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
+pallet-utility = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
+# Forked Substrate pallets
 pallet-balances = { path = "../frame/balances", default-features = false }
 pallet-transaction-payment = { path = "../frame/transaction-payment", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { path = "../frame/transaction-payment/rpc/runtime-api", default-features = false }
@@ -99,15 +109,24 @@ std = [
 
     "pallet-aura/std",
     "pallet-authorship/std",
+    "pallet-collective/std",
+    "pallet-democracy/std",
+    "pallet-elections-phragmen/std",
     "pallet-grandpa/std",
+    "pallet-identity/std",
     "pallet-im-online/std",
-    "pallet-randomness-collective-flip/std",
-    "pallet-sudo/std",
-    "pallet-session/std",
-    "pallet-offences/std",
-    "pallet-timestamp/std",
-    "pallet-utility/std",
+    "pallet-membership/std",
     "pallet-multisig/std",
+    "pallet-offences/std",
+    "pallet-randomness-collective-flip/std",
+    "pallet-recovery/std",
+    "pallet-scheduler/std",
+    "pallet-session/std",
+    "pallet-society/std",
+    "pallet-sudo/std",
+    "pallet-timestamp/std",
+    "pallet-treasury/std",
+    "pallet-utility/std",
 
     "pallet-balances/std",
     "pallet-transaction-payment/std",

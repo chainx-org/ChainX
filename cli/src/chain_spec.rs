@@ -9,8 +9,9 @@ use chainx_runtime::{
 };
 use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
-    AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, SessionConfig,
-    SessionKeys, SudoConfig, SystemConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
+    AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
+    GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SocietyConfig, SudoConfig,
+    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
     XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
@@ -291,7 +292,18 @@ fn testnet_genesis(
     enable_println: bool,
 ) -> GenesisConfig {
     const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
-    // const STASH: Balance = 100 * constants::currency::DOLLARS;
+    const STASH: Balance = 100 * constants::currency::DOLLARS;
+    const STAKING_LOCKED: Balance = 1_000 * constants::currency::DOLLARS;
+
+    let endowed_accounts = endowed
+        .get(&xpallet_protocol::PCX)
+        .expect("PCX endowed; qed")
+        .iter()
+        .cloned()
+        .map(|(k, _)| k)
+        .collect::<Vec<_>>();
+
+    let num_endowed_accounts = endowed_accounts.len();
 
     let balances = endowed
         .get(&xpallet_protocol::PCX)
@@ -300,6 +312,14 @@ fn testnet_genesis(
         .cloned()
         .map(|(k, _)| (k, ENDOWMENT))
         .collect::<Vec<_>>();
+
+    // The value of STASH balance will be reserved per phragmen member.
+    let phragmen_members = endowed_accounts
+        .iter()
+        .take((num_endowed_accounts + 1) / 2)
+        .cloned()
+        .map(|member| (member, STASH))
+        .collect();
 
     let validators = {
         let staking_authorities = initial_authorities
@@ -310,6 +330,7 @@ fn testnet_genesis(
             .clone()
             .into_iter()
             .filter(|(v, _)| staking_authorities.contains(&v))
+            .map(|(v, _)| (v, STAKING_LOCKED))
             .collect()
     };
 
@@ -323,6 +344,21 @@ fn testnet_genesis(
         }),
         pallet_grandpa: Some(GrandpaConfig {
             authorities: vec![],
+        }),
+        pallet_collective_Instance1: Some(CouncilConfig::default()),
+        pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
+            members: endowed_accounts
+                .iter()
+                .take((num_endowed_accounts + 1) / 2)
+                .cloned()
+                .collect(),
+            phantom: Default::default(),
+        }),
+        pallet_membership_Instance1: Some(Default::default()),
+        pallet_democracy: Some(DemocracyConfig::default()),
+        pallet_treasury: Some(Default::default()),
+        pallet_elections_phragmen: Some(ElectionsConfig {
+            members: phragmen_members,
         }),
         pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
         pallet_session: Some(SessionConfig {
@@ -338,6 +374,15 @@ fn testnet_genesis(
                 .collect::<Vec<_>>(),
         }),
         pallet_balances: Some(BalancesConfig { balances }),
+        pallet_society: Some(SocietyConfig {
+            members: endowed_accounts
+                .iter()
+                .take((num_endowed_accounts + 1) / 2)
+                .cloned()
+                .collect(),
+            pot: 0,
+            max_members: 999,
+        }),
         pallet_sudo: Some(SudoConfig { key: root_key }),
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
