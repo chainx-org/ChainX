@@ -546,6 +546,12 @@ impl<T: Trait> Module<T> {
         let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
     }
 
+    /// Create/Update a new balance lock on account `who`.
+    #[inline]
+    fn set_lock(who: &T::AccountId, new_locked: BalanceOf<T>) {
+        T::Currency::set_lock(STAKING_ID, who, new_locked, WithdrawReasons::all());
+    }
+
     /// Returns an iterator of tuple (active_validator, total_votes_of_this_validator).
     pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
         Self::active_validator_set().map(|v| {
@@ -633,10 +639,8 @@ impl<T: Trait> Module<T> {
             .checked_sub(&new_bonded)
             .ok_or(Error::<T>::InsufficientBalance)?;
 
-        T::Currency::set_lock(STAKING_ID, who, new_bonded, WithdrawReasons::all());
-
+        Self::set_lock(who, new_bonded);
         new_locks.insert(LockedType::Bonded, new_bonded);
-
         Locks::<T>::insert(who, new_locks);
 
         Ok(())
@@ -765,9 +769,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_unlock_unbonded_withdrawal(who: &T::AccountId, value: BalanceOf<T>) {
         let new_bonded = Self::total_locked_of(who) - value;
-
-        T::Currency::set_lock(STAKING_ID, who, new_bonded, WithdrawReasons::all());
-
+        Self::set_lock(who, new_bonded);
         Locks::<T>::mutate(who, |locks| {
             let old_value = *locks.entry(LockedType::BondedWithdrawal).or_default();
             if old_value == value {
