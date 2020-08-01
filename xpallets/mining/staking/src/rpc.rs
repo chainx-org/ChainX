@@ -99,7 +99,7 @@ impl<T: Trait> Module<T> {
         let is_validating = T::SessionInterface::validators().contains(&who);
         let reward_pot_account = T::DetermineRewardPotAccount::reward_pot_account_for(&who);
         let reward_pot_balance: RpcBalance<BalanceOf<T>> =
-            Self::free_balance_of(&reward_pot_account).into();
+            Self::free_balance(&reward_pot_account).into();
         ValidatorInfo {
             account: who,
             profile,

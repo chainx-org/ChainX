@@ -101,7 +101,7 @@ impl<T: Trait> Module<T> {
         block_number: T::BlockNumber,
     ) -> Result<(BalanceOf<T>, WeightType, WeightType, T::AccountId), Error<T>> {
         let validator_pot = T::DetermineRewardPotAccount::reward_pot_account_for(validator);
-        let reward_pot_balance = Self::free_balance_of(&validator_pot);
+        let reward_pot_balance = Self::free_balance(&validator_pot);
 
         let (dividend, source_weight, target_weight) =
             <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::compute_dividend(
