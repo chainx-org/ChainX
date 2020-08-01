@@ -76,11 +76,16 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     }
 }
 
+// ChainX now uses pallet_balances for native coin PCX, therefore we do not
+// have to exclude PCX asset in the OnAssetChanged methods.
+//
+// ```rust
+// if xpallet_protocol::PCX == *target {
+//     return Ok(());
+// }
+// ```
 impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Module<T> {
     fn on_issue_pre(target: &AssetId, source: &T::AccountId) {
-        if xpallet_protocol::PCX == *target {
-            return;
-        }
         let current_block = <frame_system::Module<T>>::block_number();
         Self::init_receiver_mining_ledger(source, target, current_block);
 
@@ -92,9 +97,6 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
         source: &T::AccountId,
         _value: BalanceOf<T>,
     ) -> DispatchResult {
-        if xpallet_protocol::PCX == *target {
-            return Ok(());
-        }
         Self::issue_deposit_reward(source, target)
     }
 
@@ -106,7 +108,7 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
         _: AssetType,
         _: BalanceOf<T>,
     ) {
-        if xpallet_protocol::PCX == *asset_id || from == to {
+        if from == to {
             return;
         }
         let current_block = <frame_system::Module<T>>::block_number();
