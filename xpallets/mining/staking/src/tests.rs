@@ -59,6 +59,24 @@ fn t_start_session(session_index: SessionIndex) {
     assert_eq!(Session::current_index(), session_index);
 }
 
+fn assert_bonded_locks(who: AccountId, value: Balance) {
+    assert_eq!(
+        *<Locks<Test>>::get(who)
+            .entry(LockedType::Bonded)
+            .or_default(),
+        value
+    );
+}
+
+fn assert_bonded_withdrawal_locks(who: AccountId, value: Balance) {
+    assert_eq!(
+        *<Locks<Test>>::get(who)
+            .entry(LockedType::BondedWithdrawal)
+            .or_default(),
+        value
+    );
+}
+
 #[test]
 fn cannot_force_chill_should_work() {
     ExtBuilder::default().build_and_execute(|| {
@@ -67,7 +85,7 @@ fn cannot_force_chill_should_work() {
         assert_ok!(XStaking::chill(Origin::signed(123)));
         assert_err!(
             XStaking::chill(Origin::signed(1)),
-            <Error<Test>>::InsufficientActiveValidators
+            <Error<Test>>::TooFewActiveValidators
         );
         t_make_a_validator_candidate(1234, 100);
         assert_ok!(XStaking::chill(Origin::signed(1)));
@@ -90,8 +108,11 @@ fn bond_should_work() {
         t_system_block_number_inc(1);
 
         let before_bond = Balances::usable_balance(&1);
+        // old_lock 10
+        let old_lock = *<Locks<Test>>::get(1).get(&LockedType::Bonded).unwrap();
         assert_ok!(t_bond(1, 2, 10));
 
+        assert_bonded_locks(1, old_lock + 10);
         assert_eq!(Balances::usable_balance(&1), before_bond - 10);
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
@@ -115,15 +136,19 @@ fn bond_should_work() {
 #[test]
 fn unbond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_err!(t_unbond(1, 2, 50), Error::<Test>::InvalidUnbondValue);
+        assert_err!(t_unbond(1, 2, 50), Error::<Test>::InvalidUnbondBalance);
 
+        assert_bonded_locks(1, 10);
         t_system_block_number_inc(1);
 
         assert_ok!(t_bond(1, 2, 10));
+        assert_bonded_locks(1, 10 + 10);
 
         t_system_block_number_inc(1);
 
         assert_ok!(t_unbond(1, 2, 5));
+        assert_bonded_locks(1, 10 + 10 - 5);
+        assert_bonded_withdrawal_locks(1, 5);
 
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
@@ -161,7 +186,7 @@ fn rebond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         assert_err!(
             XStaking::unbond(Origin::signed(1), 2, 50, b"memo".as_ref().into()),
-            Error::<Test>::InvalidUnbondValue
+            Error::<Test>::InvalidUnbondBalance
         );
 
         // Block 2
@@ -217,6 +242,19 @@ fn rebond_should_work() {
                 unbonded_chunks: vec![]
             }
         );
+
+        // Block 4
+        t_system_block_number_inc(1);
+        assert_err!(t_rebond(1, 2, 3, 3), Error::<Test>::NoMoreRebond);
+
+        // The rebond operation is limited to once per bonding duration.
+        assert_ok!(XStaking::set_bonding_duration(Origin::root(), 2));
+
+        t_system_block_number_inc(1);
+        assert_err!(t_rebond(1, 2, 3, 3), Error::<Test>::NoMoreRebond);
+
+        t_system_block_number_inc(1);
+        assert_ok!(t_rebond(1, 2, 3, 3));
     });
 }
 
@@ -249,7 +287,7 @@ fn withdraw_unbond_should_work() {
         t_system_block_number_inc(DEFAULT_BONDING_DURATION);
         assert_err!(
             t_withdraw_unbonded(1, 0),
-            Error::<Test>::UnbondRequestNotYetDue
+            Error::<Test>::UnbondedWithdrawalNotYetDue
         );
 
         t_system_block_number_inc(1);
@@ -257,6 +295,7 @@ fn withdraw_unbond_should_work() {
         let before_withdraw_unbonded = Balances::usable_balance(&1);
         assert_ok!(t_withdraw_unbonded(1, 0),);
         assert_eq!(Balances::usable_balance(&1), before_withdraw_unbonded + 5);
+        assert_bonded_withdrawal_locks(1, 0);
     });
 }
 
@@ -333,13 +372,15 @@ fn staking_reward_should_work() {
         t_issue_pcx(t_2, 100);
         t_issue_pcx(t_3, 100);
 
+        // Total minted per session:
         // 5_000_000_000
-        //
-        // |_vesting_account: 1_000_000_000
-        // |_treasury_reward: 480_000_000   12%
-        // |_mining_reward:   3_520_000_000 88%
-        //   |__ Staking        90%
-        //   |__ Asset Mining   10%
+        // │
+        // ├──> vesting_account:  1_000_000_000
+        // ├──> treasury_reward:    480_000_000 12% <--------
+        // └──> mining_reward:    3_520_000_000 88%          |
+        //    │                                              |
+        //    ├──> Staking        3_168_000_000 90%          |
+        //    └──> Asset Mining     352_000_000 10% ---------
         //
         // When you start session 1, actually there are 3 session rounds.
         // the session reward has been minted 3 times.
@@ -421,10 +462,131 @@ fn staking_reward_should_work() {
     });
 }
 
+fn t_reward_pot_balance(validator: AccountId) -> Balance {
+    XStaking::free_balance(
+        &DummyStakingRewardPotAccountDeterminer::reward_pot_account_for(&validator),
+    )
+}
+
 #[test]
 fn staker_reward_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        // todo!("");
+        let t_1 = 1111;
+        let t_2 = 2222;
+        let t_3 = 3333;
+
+        t_issue_pcx(t_1, 100);
+        t_issue_pcx(t_2, 100);
+        t_issue_pcx(t_3, 100);
+
+        assert_eq!(
+            <ValidatorLedgers<Test>>::get(1),
+            ValidatorLedger {
+                total: 10,
+                last_total_vote_weight: 0,
+                last_total_vote_weight_update: 0,
+            }
+        );
+        assert_ok!(t_bond(t_1, 1, 10));
+        assert_eq!(
+            <Nominations<Test>>::get(t_1, 1),
+            NominatorLedger {
+                nomination: 10,
+                last_vote_weight: 0,
+                last_vote_weight_update: 1,
+            }
+        );
+        assert_eq!(
+            <ValidatorLedgers<Test>>::get(1),
+            ValidatorLedger {
+                total: 20,
+                last_total_vote_weight: 10,
+                last_total_vote_weight_update: 1,
+            }
+        );
+
+        const TOTAL_STAKING_REWARD: Balance = 3_168_000_000;
+
+        let calc_reward_for_pot =
+            |validator_votes: Balance, total_staked: Balance, total_reward: Balance| {
+                let total_reward_for_validator = validator_votes * total_reward / total_staked;
+                let to_validator = total_reward_for_validator / 10;
+                let to_pot = total_reward_for_validator - to_validator;
+                to_pot
+            };
+
+        // Block 1
+        // total_staked = val(10+10) + val2(20) + val(30) + val(40) = 110
+        // reward pot:
+        // 1: 3_168_000_000 * 20/110 * 90% = 51_840_000
+        // 2: 3_168_000_000 * 20/110 * 90% = 51_840_000
+        // 3: 3_168_000_000 * 30/110 * 90% = 777_600_000
+        // 4: 3_168_000_000 * 40/110 * 90% = 1_036_800_000
+        t_start_session(1);
+        assert_eq!(t_reward_pot_balance(1), 518_400_000);
+        assert_eq!(t_reward_pot_balance(2), 518_400_000);
+        assert_eq!(t_reward_pot_balance(3), 777_600_000);
+        assert_eq!(t_reward_pot_balance(4), 1_036_800_000);
+
+        assert_eq!(
+            <ValidatorLedgers<Test>>::get(2),
+            ValidatorLedger {
+                total: 20,
+                last_total_vote_weight: 0,
+                last_total_vote_weight_update: 0,
+            }
+        );
+        assert_ok!(t_bond(t_2, 2, 20));
+        assert_eq!(
+            <ValidatorLedgers<Test>>::get(2),
+            ValidatorLedger {
+                total: 20 + 20,
+                last_total_vote_weight: 20,
+                last_total_vote_weight_update: 1,
+            }
+        );
+
+        // Block 2
+        // total_staked = val(10+10) + val2(20+20) + val(30) + val(40) = 130
+        // reward pot:
+        // There might be a calculation loss using 90% directly, the actual
+        // calculation is:
+        // validator 3: 3_168_000_000 * 30/130 = 731076923
+        //                    |_ validator 3: 731076923 / 10 = 73107692
+        //                    |_ validator 3's reward pot: 731076923 - 73107692
+
+        t_start_session(2);
+        // The order is [3, 4, 1, 2] when calculating.
+        assert_eq!(t_reward_pot_balance(3), 777_600_000 + 731076923 - 73107692);
+        assert_eq!(
+            t_reward_pot_balance(3),
+            777_600_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+        );
+        assert_eq!(t_reward_pot_balance(4), 1914092307);
+        assert_eq!(t_reward_pot_balance(1), 957046154);
+        assert_eq!(t_reward_pot_balance(2), 1395692309);
+
+        // validator 1: vote weight = 10 + 20 * 1 = 30
+        // t_1 vote weight: 10 * 1  = 10
+        assert_ok!(XStaking::claim(Origin::signed(t_1), 1));
+        // t_1 = reward_pot_balance * 10 / 30
+        assert_eq!(XStaking::free_balance(&t_1), 100 + 957046154 / 3);
+
+        // validator 2: vote weight = 40 * 1 + 20 = 60
+        // t_2 vote weight = 20 * 1 = 20
+        assert_ok!(XStaking::claim(Origin::signed(t_2), 2));
+        assert_eq!(XStaking::free_balance(&t_2), 100 + 1395692309 * 20 / 60);
+
+        assert_ok!(XStaking::set_minimal_validator_count(Origin::root(), 3));
+        assert_ok!(XStaking::chill(Origin::signed(3)));
+
+        // Block 3
+        t_start_session(3);
+        // validator 3 is chilled now, not rewards then.
+        assert_eq!(
+            t_reward_pot_balance(3),
+            777_600_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+        );
     });
 }
 
@@ -447,7 +609,7 @@ fn mint_should_work() {
 }
 
 #[test]
-fn bond_reserve_should_work() {
+fn balances_reserve_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let who = 7777;
         let to_mint = 10;
@@ -466,7 +628,7 @@ fn bond_reserve_should_work() {
                 free: 10,
                 reserved: 0,
                 misc_frozen: 6,
-                fee_frozen: 6 // fee_frozen is also 6 now?
+                fee_frozen: 6
             }
         );
         assert_err!(

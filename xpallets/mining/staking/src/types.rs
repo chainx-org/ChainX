@@ -293,7 +293,7 @@ impl<T: Trait> Slasher<T> {
         expected_slash: BalanceOf<T>,
     ) -> Result<(), BalanceOf<T>> {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
-        let reward_pot_balance = Module::<T>::free_balance_of(&reward_pot);
+        let reward_pot_balance = Module::<T>::free_balance(&reward_pot);
 
         if expected_slash <= reward_pot_balance {
             self.apply_slash(&reward_pot, expected_slash);
@@ -306,6 +306,6 @@ impl<T: Trait> Slasher<T> {
 
     /// Actually slash the account being punished, all slashed balance will go to the treasury.
     fn apply_slash(&self, reward_pot: &T::AccountId, value: BalanceOf<T>) {
-        let _ = Module::<T>::move_balance(reward_pot, &self.0, value);
+        Module::<T>::transfer(reward_pot, &self.0, value);
     }
 }

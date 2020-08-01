@@ -21,9 +21,11 @@ use frame_support::{
         Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
     },
 };
-use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{CheckedSub, Convert, SaturatedConversion, Saturating, Zero};
-use sp_runtime::DispatchResult;
+use frame_system::{self as system, ensure_root, ensure_signed};
+use sp_runtime::{
+    traits::{CheckedSub, Convert, SaturatedConversion, Saturating, Zero},
+    DispatchResult,
+};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
@@ -45,6 +47,7 @@ const STAKING_ID: LockIdentifier = *b"staking ";
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 5_000_000_000;
+
 /// Every 210_000 sessions, the session reward is cut in half.
 ///
 /// ChainX follows the issuance rule of Bitcoin. The `Session` in ChainX
@@ -67,16 +70,16 @@ pub trait Trait: frame_system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
-    ///
+    /// The currency mechanism.
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
-    ///
+    /// Get the treasury account.
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    ///
+    /// Asset mining integration.
     type AssetMining: AssetMining<BalanceOf<Self>>;
 
-    ///
+    /// Generate the reward pot account for a validator.
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, Self::AccountId>;
 
     /// Interface for interacting with a session module.
@@ -203,7 +206,7 @@ decl_storage! {
         build(|config: &GenesisConfig<T>| {
             for &(ref v, balance) in &config.validators {
                 assert!(
-                    Module::<T>::free_balance_of(v) >= balance,
+                    Module::<T>::free_balance(v) >= balance,
                     "Validator does not have enough balance to bond."
                 );
                 Module::<T>::apply_register(v);
@@ -229,20 +232,20 @@ decl_event!(
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId
     {
-        /// The staker has been rewarded by this amount. `AccountId` is the stash account.
-        Reward(AccountId, Balance),
-        /// One validator (and its nominators) has been slashed by the given amount.
+        /// The staker has been rewarded by this amount. `AccountId` is the stash account. [validator, reward_amount]
+        Mint(AccountId, Balance),
+        /// One validator (and its nominators) has been slashed by the given amount. [validator, slashed_amount]
         Slash(AccountId, Balance),
-        /// Nominator has bonded to the validator this amount.
+        /// Nominator has bonded to the validator this amount. [nominator, validator, amount]
         Bond(AccountId, AccountId, Balance),
-        /// An account has unbonded this amount.
+        /// An account has unbonded this amount. [nominator, validator, amount]
         Unbond(AccountId, AccountId, Balance),
-        ///
+        /// Claim the staking reward. [nominator, validator, dividend]
         Claim(AccountId, AccountId, Balance),
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
-        /// from the unlocking queue.
+        /// from the unlocking queue. [nominator, amount]
         UnlockUnbondedWithdrawal(AccountId, Balance),
-        /// Offenders are forcibly to be chilled due to insufficient reward pot balance.
+        /// Offenders are forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
         ForceChilled(SessionIndex, Vec<AccountId>),
     }
 );
@@ -250,48 +253,36 @@ decl_event!(
 decl_error! {
     /// Error for the staking module.
     pub enum Error for Module<T: Trait> {
-        /// Zero amount
+        /// The operation of zero balance in Staking makes no sense.
         ZeroBalance,
-        ///
+        /// No rewards when the vote weight is zero.
         ZeroVoteWeight,
         /// Invalid validator target.
-        InvalidValidator,
-        /// Can not force validator to be chilled.
-        InsufficientActiveValidators,
+        NotValidator,
+        /// The account is already registered as a validator.
+        AlreadyValidator,
+        /// The validator can accept no more votes from other voters.
+        NoMoreAcceptableVotes,
+        /// The validator can not (forcedly) be chilled due to the limit of minimal validators count.
+        TooFewActiveValidators,
         /// Free balance can not cover this bond operation.
         InsufficientBalance,
-        /// Can not bond with value less than minimum balance.
-        InsufficientValue,
-        /// Invalid rebondable value.
-        InvalidRebondValue,
-        /// LockedType::Bond is missing unexpectedly.
-        LockedTypeMissingBond,
-        ///
-        InvalidUnbondValue,
-        /// Can not schedule more unbond chunks.
-        NoMoreUnbondChunks,
-        /// Validators can not accept more votes from other voters.
-        NoMoreAcceptableVotes,
-        /// Can not rebond the validator self-bonded.
-        ///
-        /// Due to the validator and regular nominator have different bonding duration.
-        RebondSelfBondedNotAllowed,
-        /// Nominator did not nominate that validator before.
-        NonexistentNomination,
-        ///
-        RegisteredAlready,
-        ///
-        EmptyUnbondedChunk,
-        ///
-        InvalidUnbondedIndex,
-        ///
-        UnbondRequestNotYetDue,
         /// Can not rebond due to the restriction of rebond frequency limit.
         NoMoreRebond,
-        /// The call is not allowed at the given time due to the restriction of election period.
-        CallNotAllowed,
-        ///
-        AssetError,
+        /// An account can only rebond the balance that is no more than what it has bonded to the validator.
+        InvalidRebondBalance,
+        /// Can not rebond the validator self-bonded votes as it has a much longer bonding duration.
+        RebondSelfBondedNotAllowed,
+        /// An account can only unbond the balance that is no more than what it has bonded to the validator.
+        InvalidUnbondBalance,
+        /// An account can have only `MaximumUnbondedChunkSize` unbonded entries in parallel.
+        NoMoreUnbondChunks,
+        /// The account has no unbonded entries.
+        EmptyUnbondedChunks,
+        /// Can not find the unbonded entry given the index.
+        InvalidUnbondedIndex,
+        /// The unbonded balances are still in the locked state.
+        UnbondedWithdrawalNotYetDue,
     }
 }
 
@@ -308,38 +299,34 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        fn on_finalize() {
-        }
-
-        /// Nominates the `target` with `value` of the origin account's balance locked.
+        /// Nominate the `target` with `value` of the origin account's balance locked.
         #[weight = 10]
         pub fn bond(origin, target: T::AccountId, value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
-            ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
-            ensure!(value <= Self::free_balance_of(&sender), Error::<T>::InsufficientBalance);
-            if !Self::is_validator_self_bonding(&sender, &target) {
+            ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
+            ensure!(value <= Self::free_balance(&sender), Error::<T>::InsufficientBalance);
+            if !Self::is_validator_bonding_itself(&sender, &target) {
                 Self::check_validator_acceptable_votes_limit(&target, value)?;
             }
 
             Self::apply_bond(&sender, &target, value)?;
         }
 
-        /// Switchs the nomination of `value` from one validator to another.
+        /// Move the `value` of current nomination from one validator to another.
         #[weight = 10]
         fn rebond(origin, from: T::AccountId, to: T::AccountId, value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
-            ensure!(Self::is_validator(&from) && Self::is_validator(&to), Error::<T>::InvalidValidator);
+            ensure!(Self::is_validator(&from) && Self::is_validator(&to), Error::<T>::NotValidator);
             ensure!(sender != from, Error::<T>::RebondSelfBondedNotAllowed);
+            ensure!(value <= Self::bonded_to(&sender, &from), Error::<T>::InvalidRebondBalance);
 
-            ensure!(value <= Self::bonded_to(&sender, &from), Error::<T>::InvalidRebondValue);
-
-            if !Self::is_validator_self_bonding(&sender, &to) {
+            if !Self::is_validator_bonding_itself(&sender, &to) {
                 Self::check_validator_acceptable_votes_limit(&to, value)?;
             }
 
@@ -354,15 +341,15 @@ decl_module! {
             Self::apply_rebond(&sender,  &from, &to, value, current_block);
         }
 
-        /// Unnominates balance `value` from validator `target`.
+        /// Unnominate the `value` of bonded balance for validator `target`.
         #[weight = 10]
         fn unbond(origin, target: T::AccountId, value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
-            ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
-            ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondValue);
+            ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
+            ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondBalance);
             ensure!(
                 Self::unbonded_chunks_of(&sender).len() < Self::maximum_unbonded_chunk_size() as usize,
                 Error::<T>::NoMoreUnbondChunks
@@ -371,19 +358,19 @@ decl_module! {
             Self::apply_unbond(&sender, &target, value)?;
         }
 
-        /// Frees the unbonded balances that are due.
+        /// Unlock the frozen unbonded balances that are due.
         #[weight = 10]
         fn unlock_unbonded_withdrawal(origin, unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
 
             let mut unbonded_chunks = Self::unbonded_chunks_of(&sender);
-            ensure!(!unbonded_chunks.is_empty(), Error::<T>::EmptyUnbondedChunk);
+            ensure!(!unbonded_chunks.is_empty(), Error::<T>::EmptyUnbondedChunks);
             ensure!(unbonded_index < unbonded_chunks.len() as u32, Error::<T>::InvalidUnbondedIndex);
 
             let Unbonded { value, locked_until } = unbonded_chunks[unbonded_index as usize];
             let current_block = <frame_system::Module<T>>::block_number();
 
-            ensure!(current_block > locked_until, Error::<T>::UnbondRequestNotYetDue);
+            ensure!(current_block > locked_until, Error::<T>::UnbondedWithdrawalNotYetDue);
 
             // apply withdraw_unbonded
             Self::apply_unlock_unbonded_withdrawal(&sender, value);
@@ -396,12 +383,12 @@ decl_module! {
             Self::deposit_event(RawEvent::UnlockUnbondedWithdrawal(sender, value));
         }
 
-        /// Claims the staking reward given the `target` validator.
+        /// Claim the staking reward given the `target` validator.
         #[weight = 10]
         fn claim(origin, target: T::AccountId) {
             let sender = ensure_signed(origin)?;
 
-            ensure!(Self::is_validator(&target), Error::<T>::InvalidValidator);
+            ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
 
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
@@ -410,7 +397,7 @@ decl_module! {
         #[weight = 10]
         fn validate(origin) {
             let sender = ensure_signed(origin)?;
-            ensure!(Self::is_validator(&sender), Error::<T>::InvalidValidator);
+            ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
             Validators::<T>::mutate(sender, |validator_profile| {
                     validator_profile.is_chilled = false;
                 }
@@ -421,9 +408,9 @@ decl_module! {
         #[weight = 10]
         fn chill(origin) {
             let sender = ensure_signed(origin)?;
-            ensure!(Self::is_validator(&sender), Error::<T>::InvalidValidator);
+            ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
             if Self::is_active(&sender) {
-                ensure!(Self::can_force_chilled(), Error::<T>::InsufficientActiveValidators);
+                ensure!(Self::can_force_chilled(), Error::<T>::TooFewActiveValidators);
             }
             Validators::<T>::mutate(sender, |validator_profile| {
                     validator_profile.is_chilled = true;
@@ -432,12 +419,36 @@ decl_module! {
             );
         }
 
-        /// TODO: figure out whether this should be kept.
+        /// Register to be a validator for the origin account.
         #[weight = 100_000]
         pub fn register(origin) {
             let sender = ensure_signed(origin)?;
-            ensure!(!Self::is_validator(&sender), Error::<T>::RegisteredAlready);
+            ensure!(!Self::is_validator(&sender), Error::<T>::AlreadyValidator);
             Self::apply_register(&sender);
+        }
+
+        #[weight = 10]
+        fn set_validator_count(origin, #[compact] new: u32) {
+            ensure_root(origin)?;
+            ValidatorCount::put(new);
+        }
+
+        #[weight = 10]
+        fn set_minimal_validator_count(origin, #[compact] new: u32) {
+            ensure_root(origin)?;
+            MinimumValidatorCount::put(new);
+        }
+
+        #[weight = 10]
+        fn set_bonding_duration(origin, new: T::BlockNumber) {
+            ensure_root(origin)?;
+            BondingDuration::<T>::put(new);
+        }
+
+        #[weight = 10]
+        fn set_validator_bonding_duration(origin, new: T::BlockNumber) {
+            ensure_root(origin)?;
+            ValidatorBondingDuration::<T>::put(new);
         }
     }
 }
@@ -483,6 +494,7 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    /// Returns true if the account `who` is a validator.
     #[inline]
     pub fn is_validator(who: &T::AccountId) -> bool {
         Validators::<T>::contains_key(who)
@@ -508,16 +520,10 @@ impl<T: Trait> Module<T> {
         Self::validator_set().filter(Self::is_active)
     }
 
-    pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
-        Self::active_validator_set().map(|v| {
-            let total_votes = Self::total_votes_of(&v);
-            (v, total_votes)
-        })
-    }
-
-    /// Calculates the total staked PCX, i.e., total staking power.
+    /// Returns the sum of total active staked PCX, i.e., total staking power.
     ///
-    /// One (indivisible) PCX one power, only the votes of active validators are counted.
+    /// * One (indivisible) PCX one power.
+    /// * Only the votes of active validators are counted.
     #[inline]
     pub fn total_staked() -> BalanceOf<T> {
         Self::active_validator_votes().fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + x)
@@ -544,12 +550,69 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn free_balance_of(who: &T::AccountId) -> BalanceOf<T> {
+    fn free_balance(who: &T::AccountId) -> BalanceOf<T> {
         T::Currency::free_balance(who)
     }
 
-    fn is_validator_self_bonding(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
+    /// Returns the total votes of a validator.
+    #[inline]
+    fn total_votes_of(validator: &T::AccountId) -> BalanceOf<T> {
+        ValidatorLedgers::<T>::get(validator).total
+    }
+
+    /// Returns the balance of `nominator` has voted to `nominee`.
+    #[inline]
+    fn bonded_to(nominator: &T::AccountId, nominee: &T::AccountId) -> BalanceOf<T> {
+        Nominations::<T>::get(nominator, nominee).nomination
+    }
+
+    #[inline]
+    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
+        let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
+    }
+
+    /// Create/Update a new balance lock on account `who`.
+    #[inline]
+    fn set_lock(who: &T::AccountId, new_locked: BalanceOf<T>) {
+        T::Currency::set_lock(STAKING_ID, who, new_locked, WithdrawReasons::all());
+    }
+
+    /// Returns an iterator of tuple (active_validator, total_votes_of_this_validator).
+    ///
+    /// Only these active validators are able to be rewarded on each new session,
+    /// the inactive ones earn nothing.
+    pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
+        Self::active_validator_set().map(|v| {
+            let total_votes = Self::total_votes_of(&v);
+            (v, total_votes)
+        })
+    }
+
+    /// Returns the balance that validator bonded to itself.
+    fn validator_self_bonded(validator: &T::AccountId) -> BalanceOf<T> {
+        Self::bonded_to(validator, validator)
+    }
+
+    fn is_validator_bonding_itself(nominator: &T::AccountId, nominee: &T::AccountId) -> bool {
         Self::is_validator(nominator) && *nominator == *nominee
+    }
+
+    fn acceptable_votes_limit_of(validator: &T::AccountId) -> BalanceOf<T> {
+        Self::validator_self_bonded(validator) * BalanceOf::<T>::from(Self::upper_bound_factor())
+    }
+
+    /// Returns Ok if the validator can still accept the `value` of new votes.
+    fn check_validator_acceptable_votes_limit(
+        validator: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> Result<(), Error<T>> {
+        let cur_total = Self::total_votes_of(validator);
+        let upper_limit = Self::acceptable_votes_limit_of(validator);
+        if cur_total + value <= upper_limit {
+            Ok(())
+        } else {
+            Err(Error::<T>::NoMoreAcceptableVotes)
+        }
     }
 
     /// Ensures that at the end of the current session there will be a new era.
@@ -580,7 +643,7 @@ impl<T: Trait> Module<T> {
 
     fn try_force_chilled(who: &T::AccountId) -> Result<(), Error<T>> {
         if !Self::can_force_chilled() {
-            return Err(Error::<T>::InsufficientActiveValidators);
+            return Err(Error::<T>::TooFewActiveValidators);
         }
         Self::apply_force_chilled(who);
         Ok(())
@@ -594,54 +657,18 @@ impl<T: Trait> Module<T> {
         });
     }
 
-    fn total_votes_of(validator: &T::AccountId) -> BalanceOf<T> {
-        ValidatorLedgers::<T>::get(validator).total
-    }
-
-    fn validator_self_bonded(validator: &T::AccountId) -> BalanceOf<T> {
-        Self::bonded_to(validator, validator)
-    }
-
-    #[inline]
-    fn bonded_to(nominator: &T::AccountId, nominee: &T::AccountId) -> BalanceOf<T> {
-        Nominations::<T>::get(nominator, nominee).nomination
-    }
-
-    fn acceptable_votes_limit_of(validator: &T::AccountId) -> BalanceOf<T> {
-        Self::validator_self_bonded(validator) * BalanceOf::<T>::from(Self::upper_bound_factor())
-    }
-
-    fn check_validator_acceptable_votes_limit(
-        validator: &T::AccountId,
-        value: BalanceOf<T>,
-    ) -> Result<(), Error<T>> {
-        let cur_total = Self::total_votes_of(validator);
-        let upper_limit = Self::acceptable_votes_limit_of(validator);
-        if cur_total + value <= upper_limit {
-            Ok(())
-        } else {
-            Err(Error::<T>::NoMoreAcceptableVotes)
-        }
-    }
-
-    fn move_balance(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
-        let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
-    }
-
     /// Set a lock on `value` of free balance of an account.
     pub(crate) fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         let mut new_locks = Self::locks(who);
         let old_bonded = *new_locks.entry(LockedType::Bonded).or_default();
         let new_bonded = old_bonded + value;
 
-        Self::free_balance_of(who)
+        Self::free_balance(who)
             .checked_sub(&new_bonded)
             .ok_or(Error::<T>::InsufficientBalance)?;
 
-        T::Currency::set_lock(STAKING_ID, who, new_bonded, WithdrawReasons::all());
-
+        Self::set_lock(who, new_bonded);
         new_locks.insert(LockedType::Bonded, new_bonded);
-
         Locks::<T>::insert(who, new_locks);
 
         Ok(())
@@ -661,24 +688,6 @@ impl<T: Trait> Module<T> {
         Self::locks(who)
             .values()
             .fold(Zero::zero(), |acc: BalanceOf<T>, x| acc + *x)
-    }
-
-    fn apply_unlock_unbonded_withdrawal(who: &T::AccountId, value: BalanceOf<T>) {
-        let new_bonded = Self::total_locked_of(who) - value;
-
-        T::Currency::set_lock(STAKING_ID, who, new_bonded, WithdrawReasons::all());
-
-        Locks::<T>::mutate(who, |locks| {
-            let old_value = *locks.entry(LockedType::BondedWithdrawal).or_default();
-            if old_value == value {
-                locks.remove(&LockedType::BondedWithdrawal);
-            } else {
-                locks.insert(
-                    LockedType::BondedWithdrawal,
-                    old_value.saturating_sub(value),
-                );
-            }
-        });
     }
 
     /// Settles and update the vote weight state of the nominator `source` and validator `target` given the delta amount.
@@ -735,7 +744,6 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
         current_block: T::BlockNumber,
     ) {
-        // TODO: reduce one block_number read?
         Self::update_vote_weight(who, from, Delta::Sub(value));
         Self::update_vote_weight(who, to, Delta::Add(value));
         Nominators::<T>::mutate(who, |nominator_profile| {
@@ -785,5 +793,21 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
 
         Ok(())
+    }
+
+    fn apply_unlock_unbonded_withdrawal(who: &T::AccountId, value: BalanceOf<T>) {
+        let new_bonded = Self::total_locked_of(who) - value;
+        Self::set_lock(who, new_bonded);
+        Locks::<T>::mutate(who, |locks| {
+            let old_value = *locks.entry(LockedType::BondedWithdrawal).or_default();
+            if old_value == value {
+                locks.remove(&LockedType::BondedWithdrawal);
+            } else {
+                locks.insert(
+                    LockedType::BondedWithdrawal,
+                    old_value.saturating_sub(value),
+                );
+            }
+        });
     }
 }

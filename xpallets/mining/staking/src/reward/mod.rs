@@ -25,6 +25,7 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub(crate) fn mint(receiver: &T::AccountId, value: BalanceOf<T>) {
         T::Currency::deposit_creating(receiver, value);
+        Self::deposit_event(RawEvent::Mint(receiver.clone(), value));
     }
 
     /// Reward a (potential) validator by a specific amount.
@@ -34,16 +35,13 @@ impl<T: Trait> Module<T> {
         // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
         let off_the_table = (reward.saturated_into() / 10).saturated_into();
         Self::mint(who, off_the_table);
-        debug!("[reward_validator]issue to {:?}: {:?}", who, off_the_table);
+        debug!("[mint]=>  validator {:?}: {:?}", who, off_the_table);
 
         // Issue the rest 90% to validator's reward pot.
         let to_reward_pot = reward - off_the_table;
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(who);
         Self::mint(&reward_pot, to_reward_pot);
-        debug!(
-            "[reward_validator]issue to the reward pot{:?}: {:?}",
-            reward_pot, to_reward_pot
-        );
+        debug!("[mint]=> reward pot {:?}: {:?}", reward_pot, to_reward_pot);
     }
 
     /// Reward the intention and slash the validators that went offline in last session.
@@ -53,22 +51,6 @@ impl<T: Trait> Module<T> {
     #[inline]
     fn reward_active_validator(validator: &T::AccountId, reward: BalanceOf<T>) {
         Self::apply_reward_validator(validator, reward);
-        // FIXME: slash?
-        // It the intention was an offline validator, we should enforce a slash.
-        // if <MissedOfPerSession<T>>::exists(intention) {
-        // Self::slash_active_offline_validator(intention, reward, validators);
-        // }
-    }
-
-    /// Returns all the active validators as well as their total votes.
-    ///
-    /// Only these active validators are able to be rewarded on each new session,
-    /// the inactive ones earn nothing.
-    fn get_active_validator_set() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
-        Self::validator_set().filter(Self::is_active).map(|who| {
-            let total_votes = Self::total_votes_of(&who);
-            (who, total_votes)
-        })
     }
 
     /// 20% reward of each session is for the vesting schedule in the first halving epoch.
