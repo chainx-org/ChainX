@@ -47,6 +47,7 @@ const STAKING_ID: LockIdentifier = *b"staking ";
 
 /// Session reward of the first 210_000 sessions.
 const INITIAL_REWARD: u64 = 5_000_000_000;
+
 /// Every 210_000 sessions, the session reward is cut in half.
 ///
 /// ChainX follows the issuance rule of Bitcoin. The `Session` in ChainX
@@ -430,6 +431,12 @@ decl_module! {
         fn set_validator_count(origin, #[compact] new: u32) {
             ensure_root(origin)?;
             ValidatorCount::put(new);
+        }
+
+        #[weight = 10]
+        fn set_minimal_validator_count(origin, #[compact] new: u32) {
+            ensure_root(origin)?;
+            MinimumValidatorCount::put(new);
         }
 
         #[weight = 10]
