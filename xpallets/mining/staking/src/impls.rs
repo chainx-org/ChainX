@@ -129,7 +129,7 @@ impl<T: Trait> Module<T> {
         pot_account: &T::AccountId,
         dividend: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
-        Self::move_balance(pot_account, claimer, dividend);
+        Self::transfer(pot_account, claimer, dividend);
         Ok(())
     }
 

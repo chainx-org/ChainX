@@ -67,7 +67,7 @@ fn cannot_force_chill_should_work() {
         assert_ok!(XStaking::chill(Origin::signed(123)));
         assert_err!(
             XStaking::chill(Origin::signed(1)),
-            <Error<Test>>::InsufficientActiveValidators
+            <Error<Test>>::TooFewActiveValidators
         );
         t_make_a_validator_candidate(1234, 100);
         assert_ok!(XStaking::chill(Origin::signed(1)));
@@ -115,7 +115,7 @@ fn bond_should_work() {
 #[test]
 fn unbond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_err!(t_unbond(1, 2, 50), Error::<Test>::InvalidUnbondValue);
+        assert_err!(t_unbond(1, 2, 50), Error::<Test>::InvalidUnbondBalance);
 
         t_system_block_number_inc(1);
 
@@ -161,7 +161,7 @@ fn rebond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         assert_err!(
             XStaking::unbond(Origin::signed(1), 2, 50, b"memo".as_ref().into()),
-            Error::<Test>::InvalidUnbondValue
+            Error::<Test>::InvalidUnbondBalance
         );
 
         // Block 2
@@ -249,7 +249,7 @@ fn withdraw_unbond_should_work() {
         t_system_block_number_inc(DEFAULT_BONDING_DURATION);
         assert_err!(
             t_withdraw_unbonded(1, 0),
-            Error::<Test>::UnbondRequestNotYetDue
+            Error::<Test>::UnbondedWithdrawalNotYetDue
         );
 
         t_system_block_number_inc(1);

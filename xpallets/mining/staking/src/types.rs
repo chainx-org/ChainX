@@ -306,6 +306,6 @@ impl<T: Trait> Slasher<T> {
 
     /// Actually slash the account being punished, all slashed balance will go to the treasury.
     fn apply_slash(&self, reward_pot: &T::AccountId, value: BalanceOf<T>) {
-        let _ = Module::<T>::move_balance(reward_pot, &self.0, value);
+        Module::<T>::transfer(reward_pot, &self.0, value);
     }
 }

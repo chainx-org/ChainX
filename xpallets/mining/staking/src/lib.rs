@@ -22,8 +22,10 @@ use frame_support::{
     },
 };
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{CheckedSub, Convert, SaturatedConversion, Saturating, Zero};
-use sp_runtime::DispatchResult;
+use sp_runtime::{
+    traits::{CheckedSub, Convert, SaturatedConversion, Saturating, Zero},
+    DispatchResult,
+};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
@@ -67,13 +69,13 @@ pub trait Trait: frame_system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
-    ///
+    /// The currency mechanism.
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
-    ///
+    /// Get the treasury account.
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    ///
+    /// Asset mining integration.
     type AssetMining: AssetMining<BalanceOf<Self>>;
 
     ///
@@ -610,7 +612,8 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn move_balance(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
+    #[inline]
+    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
         let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
     }
 
@@ -647,24 +650,6 @@ impl<T: Trait> Module<T> {
         Self::locks(who)
             .values()
             .fold(Zero::zero(), |acc: BalanceOf<T>, x| acc + *x)
-    }
-
-    fn apply_unlock_unbonded_withdrawal(who: &T::AccountId, value: BalanceOf<T>) {
-        let new_bonded = Self::total_locked_of(who) - value;
-
-        T::Currency::set_lock(STAKING_ID, who, new_bonded, WithdrawReasons::all());
-
-        Locks::<T>::mutate(who, |locks| {
-            let old_value = *locks.entry(LockedType::BondedWithdrawal).or_default();
-            if old_value == value {
-                locks.remove(&LockedType::BondedWithdrawal);
-            } else {
-                locks.insert(
-                    LockedType::BondedWithdrawal,
-                    old_value.saturating_sub(value),
-                );
-            }
-        });
     }
 
     /// Settles and update the vote weight state of the nominator `source` and validator `target` given the delta amount.
@@ -721,7 +706,6 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
         current_block: T::BlockNumber,
     ) {
-        // TODO: reduce one block_number read?
         Self::update_vote_weight(who, from, Delta::Sub(value));
         Self::update_vote_weight(who, to, Delta::Add(value));
         Nominators::<T>::mutate(who, |nominator_profile| {
@@ -771,5 +755,23 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
 
         Ok(())
+    }
+
+    fn apply_unlock_unbonded_withdrawal(who: &T::AccountId, value: BalanceOf<T>) {
+        let new_bonded = Self::total_locked_of(who) - value;
+
+        T::Currency::set_lock(STAKING_ID, who, new_bonded, WithdrawReasons::all());
+
+        Locks::<T>::mutate(who, |locks| {
+            let old_value = *locks.entry(LockedType::BondedWithdrawal).or_default();
+            if old_value == value {
+                locks.remove(&LockedType::BondedWithdrawal);
+            } else {
+                locks.insert(
+                    LockedType::BondedWithdrawal,
+                    old_value.saturating_sub(value),
+                );
+            }
+        });
     }
 }
