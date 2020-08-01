@@ -75,7 +75,7 @@ impl<T: Trait> Module<T> {
 
     /// Reward to all the active validators pro rata.
     fn distribute_to_active_validators(session_reward: BalanceOf<T>) {
-        let active_validators = Self::get_active_validator_set().collect::<Vec<_>>();
+        let active_validators = Self::active_validator_votes().collect::<Vec<_>>();
         let mut total_stake = active_validators
             .iter()
             .fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + *x);

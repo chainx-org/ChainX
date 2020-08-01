@@ -78,7 +78,7 @@ pub trait Trait: frame_system::Trait {
     /// Asset mining integration.
     type AssetMining: AssetMining<BalanceOf<Self>>;
 
-    ///
+    /// Generate the reward pot account for a validator.
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, Self::AccountId>;
 
     /// Interface for interacting with a session module.
@@ -231,20 +231,20 @@ decl_event!(
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId
     {
-        /// The staker has been rewarded by this amount. `AccountId` is the stash account.
-        Reward(AccountId, Balance),
-        /// One validator (and its nominators) has been slashed by the given amount.
+        /// The staker has been rewarded by this amount. `AccountId` is the stash account. [validator, reward_amount]
+        Mint(AccountId, Balance),
+        /// One validator (and its nominators) has been slashed by the given amount. [validator, slashed_amount]
         Slash(AccountId, Balance),
-        /// Nominator has bonded to the validator this amount.
+        /// Nominator has bonded to the validator this amount. [nominator, validator, amount]
         Bond(AccountId, AccountId, Balance),
-        /// An account has unbonded this amount.
+        /// An account has unbonded this amount. [nominator, validator, amount]
         Unbond(AccountId, AccountId, Balance),
-        ///
+        /// Claim the staking reward. [nominator, validator, dividend]
         Claim(AccountId, AccountId, Balance),
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
-        /// from the unlocking queue.
+        /// from the unlocking queue. [nominator, amount]
         UnlockUnbondedWithdrawal(AccountId, Balance),
-        /// Offenders are forcibly to be chilled due to insufficient reward pot balance.
+        /// Offenders are forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
         ForceChilled(SessionIndex, Vec<AccountId>),
     }
 );
@@ -258,32 +258,30 @@ decl_error! {
         ZeroVoteWeight,
         /// Invalid validator target.
         NotValidator,
+        /// The account is already registered as a validator.
+        AlreadyValidator,
+        /// The validator can accept no more votes from other voters.
+        NoMoreAcceptableVotes,
         /// The validator can not (forcedly) be chilled due to the limit of minimal validators count.
         TooFewActiveValidators,
         /// Free balance can not cover this bond operation.
         InsufficientBalance,
+        /// Can not rebond due to the restriction of rebond frequency limit.
+        NoMoreRebond,
         /// An account can only rebond the balance that is no more than what it has bonded to the validator.
         InvalidRebondBalance,
+        /// Can not rebond the validator self-bonded votes as it has a much longer bonding duration.
+        RebondSelfBondedNotAllowed,
         /// An account can only unbond the balance that is no more than what it has bonded to the validator.
         InvalidUnbondBalance,
         /// An account can have only `MaximumUnbondedChunkSize` unbonded entries in parallel.
         NoMoreUnbondChunks,
-        /// The validator can accept no more votes from other voters.
-        NoMoreAcceptableVotes,
-        /// Can not rebond the validator self-bonded votes as it has a much longer bonding duration.
-        RebondSelfBondedNotAllowed,
-        /// The account is already registered as a validator.
-        AlreadyValidator,
         /// The account has no unbonded entries.
         EmptyUnbondedChunks,
         /// Can not find the unbonded entry given the index.
         InvalidUnbondedIndex,
         /// The unbonded balances are still in the locked state.
         UnbondedWithdrawalNotYetDue,
-        /// Can not rebond due to the restriction of rebond frequency limit.
-        NoMoreRebond,
-        /// The call is not allowed at the given time due to the restriction of election period.
-        CallNotAllowed,
     }
 }
 
@@ -471,6 +469,7 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    /// Returns true if the account `who` is a validator.
     #[inline]
     pub fn is_validator(who: &T::AccountId) -> bool {
         Validators::<T>::contains_key(who)
@@ -496,9 +495,10 @@ impl<T: Trait> Module<T> {
         Self::validator_set().filter(Self::is_active)
     }
 
-    /// Calculates the total staked PCX, i.e., total staking power.
+    /// Returns the sum of total active staked PCX, i.e., total staking power.
     ///
-    /// One (indivisible) PCX one power, only the votes of active validators are counted.
+    /// * One (indivisible) PCX one power.
+    /// * Only the votes of active validators are counted.
     #[inline]
     pub fn total_staked() -> BalanceOf<T> {
         Self::active_validator_votes().fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + x)
@@ -553,6 +553,9 @@ impl<T: Trait> Module<T> {
     }
 
     /// Returns an iterator of tuple (active_validator, total_votes_of_this_validator).
+    ///
+    /// Only these active validators are able to be rewarded on each new session,
+    /// the inactive ones earn nothing.
     pub fn active_validator_votes() -> impl Iterator<Item = (T::AccountId, BalanceOf<T>)> {
         Self::active_validator_set().map(|v| {
             let total_votes = Self::total_votes_of(&v);
