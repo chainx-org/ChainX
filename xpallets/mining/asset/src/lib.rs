@@ -12,7 +12,7 @@ mod tests;
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
+    dispatch::{DispatchError, DispatchResult},
     ensure,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement},
@@ -130,13 +130,21 @@ decl_error! {
         /// Asset error.
         AssetError,
         /// Zero mining weight.
-        ZeroMiningWeight
+        ZeroMiningWeight,
+        /// Balances error.
+        DispatchError
     }
 }
 
 impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
     fn from(_: ZeroMiningWeightError) -> Self {
         Self::ZeroMiningWeight
+    }
+}
+
+impl<T: Trait> From<DispatchError> for Error<T> {
+    fn from(_: DispatchError) -> Self {
+        Self::DispatchError
     }
 }
 
@@ -302,17 +310,25 @@ impl<T: Trait> Module<T> {
         Self::update_asset_mining_weight(target, current_block);
     }
 
+    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+        <T as xpallet_assets::Trait>::Currency::transfer(
+            from,
+            to,
+            value,
+            ExistenceRequirement::KeepAlive,
+        )
+    }
+
+    fn free_balance(who: &T::AccountId) -> BalanceOf<T> {
+        <T as xpallet_assets::Trait>::Currency::free_balance(who)
+    }
+
     fn issue_deposit_reward(depositor: &T::AccountId, target: &AssetId) -> DispatchResult {
         let deposit_reward = Self::deposit_reward();
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(target);
-        let reward_pot_balance = <T as xpallet_assets::Trait>::Currency::free_balance(&reward_pot);
+        let reward_pot_balance = Self::free_balance(&reward_pot);
         if reward_pot_balance >= deposit_reward {
-            <T as xpallet_assets::Trait>::Currency::transfer(
-                &reward_pot,
-                depositor,
-                deposit_reward,
-                ExistenceRequirement::KeepAlive,
-            )?;
+            Self::transfer(&reward_pot, depositor, deposit_reward)?;
         } else {
             warn!("asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}", target, reward_pot_balance, depositor);
         }
