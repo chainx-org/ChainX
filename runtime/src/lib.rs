@@ -90,7 +90,7 @@ pub use xpallet_protocol::*;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
-use impls::{Author, CurrencyToVoteHandler};
+use impls::CurrencyToVoteHandler;
 
 /// Constant values used within the runtime.
 pub mod constants;
@@ -273,7 +273,7 @@ impl pallet_authorship::Trait for Runtime {
     type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
     type UncleGenerations = UncleGenerations;
     type FilterUncle = ();
-    type EventHandler = (ImOnline);
+    type EventHandler = ImOnline;
 }
 
 impl pallet_aura::Trait for Runtime {
@@ -811,8 +811,8 @@ construct_runtime!(
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
 
         // Mining, must be after XAssets.
-        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>},
         XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
+        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>},
 
         // Crypto gateway stuff.
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
@@ -1061,7 +1061,7 @@ impl_runtime_apis! {
             input_data: Vec<u8>,
         ) -> ContractExecResult {
             let exec_result =
-                XContracts::bare_call(origin, dest.into(), value, gas_limit, input_data);
+                XContracts::bare_call(origin, dest, value, gas_limit, input_data);
             match exec_result {
                 Ok(v) => ContractExecResult::Success {
                     status: v.status,
