@@ -220,47 +220,49 @@ fn testnet_trustees() -> Vec<(
     TrusteeInfoConfig,
     Vec<(AccountId, Vec<u8>, Vec<u8>, Vec<u8>)>,
 )> {
-    macro_rules! btc_trustee {
+    macro_rules! btc_trustee_key {
         ($btc_pubkey:expr) => {{
             trustees::bitcoin::BtcTrusteeType::try_from(
                 hex::decode($btc_pubkey).expect("hex decode failed"),
             )
             .expect("btc trustee generation failed")
+            .into()
         }};
     }
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-    let btc = Chain::Bitcoin;
-    let alice_hot =
-        btc_trustee!("035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84");
-    let alice_cold =
-        btc_trustee!("0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3");
-    let bob_hot =
-        btc_trustee!("02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee");
-    let bob_cold =
-        btc_trustee!("020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f");
-    let charlie_hot =
-        btc_trustee!("0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd");
-    let charlie_cold =
-        btc_trustee!("02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99");
 
-    let about = b"".to_vec();
-    let collection = vec![
-        (alice, about.clone(), alice_hot.into(), alice_cold.into()),
-        (bob, about.clone(), bob_hot.into(), bob_cold.into()),
+    let btc_trustee_gen = |seed: &str, hot_pubkey: &str, cold_pubkey: &str| {
         (
-            charlie,
-            about.clone(),
-            charlie_hot.into(),
-            charlie_cold.into(),
+            get_account_id_from_seed::<sr25519::Public>(seed),
+            seed.as_bytes().to_vec(),      // About
+            btc_trustee_key!(hot_pubkey),  // Hot key
+            btc_trustee_key!(cold_pubkey), // Cold key
+        )
+    };
+
+    let btc_trustees = vec![
+        btc_trustee_gen(
+            "Alice",
+            "035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84", // hot key
+            "0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3", // colde key
+        ),
+        btc_trustee_gen(
+            "Bob",
+            "02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee",
+            "020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f",
+        ),
+        btc_trustee_gen(
+            "Charlie",
+            "0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd",
+            "02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99",
         ),
     ];
-    let config = TrusteeInfoConfig {
+
+    let btc_config = TrusteeInfoConfig {
         min_trustee_count: 3,
         max_trustee_count: 15,
     };
-    vec![(btc, config, collection)]
+
+    vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
 fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> SessionKeys {
@@ -312,6 +314,11 @@ fn testnet_genesis(
         .cloned()
         .map(|member| (member, STASH))
         .collect();
+
+    // PCX only reserves the native asset id in assets module,
+    // the actual native fund management is handled by pallet_balances.
+    let mut assets_endowed = endowed.clone();
+    assets_endowed.remove(&xpallet_protocol::PCX);
 
     let validators = {
         initial_authorities
@@ -376,7 +383,7 @@ fn testnet_genesis(
         }),
         xpallet_assets: Some(XAssetsConfig {
             assets,
-            endowed,
+            endowed: assets_endowed,
             memo_len: 128,
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
