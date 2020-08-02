@@ -11,6 +11,20 @@ use sp_std::prelude::Vec;
 
 const MAXIMUM_MEMO_LEN: u8 = 128;
 
+/// Returns Ok(_) if the input slice passes the xss check.
+///
+/// Although xss is imperceptible on-chain, we want to make it
+/// look safer off-chain.
+#[inline]
+pub fn xss_check(input: &[u8]) -> DispatchResult {
+    if input.contains(&b'<') || input.contains(&b'>') {
+        Err(DispatchError::Other(
+            "'<' and '>' are not allowed, which could be abused off-chain.",
+        ))?;
+    }
+    Ok(())
+}
+
 /// Type for leaving a note when sending a transaction.
 #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -56,7 +70,7 @@ impl Memo {
                 "transaction memo too long, valid byte length range: [0, 128]",
             ))
         } else {
-            xpallet_support::xss_check(&self.0)
+            xss_check(&self.0)
         }
     }
 }

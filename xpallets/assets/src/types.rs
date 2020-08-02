@@ -264,7 +264,7 @@ pub fn is_valid_token_name<T: Trait>(name: &[u8]) -> DispatchResult {
     if name.len() > MAX_TOKEN_LEN || name.is_empty() {
         Err(Error::<T>::InvalidAssetNameLen)?;
     }
-    xpallet_support::xss_check(name)?;
+    xp_runtime::xss_check(name)?;
     for c in name.iter() {
         if is_ascii_invisible(c) {
             Err(Error::<T>::InvalidAsscii)?;
@@ -278,7 +278,7 @@ pub fn is_valid_desc<T: Trait>(desc: &[u8]) -> DispatchResult {
     if desc.len() > MAX_DESC_LEN {
         Err(Error::<T>::InvalidDescLen)?;
     }
-    xpallet_support::xss_check(desc)?;
+    xp_runtime::xss_check(desc)?;
     for c in desc.iter() {
         if is_ascii_invisible(c) {
             Err(Error::<T>::InvalidAsscii)?;

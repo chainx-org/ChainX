@@ -12,8 +12,6 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-r
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
 
-xpallet-support = { path = "../../xpallets/support", default-features = false }
-
 [dev-dependencies]
 hex = "0.4"
 
@@ -26,6 +24,4 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "sp-std/std",
-
-    "xpallet-support/std",
 ]

@@ -262,7 +262,7 @@ pub fn is_valid_about<T: Trait>(about: &[u8]) -> DispatchResult {
         Err(Error::<T>::InvalidAboutLen)?;
     }
 
-    xpallet_support::xss_check(about)
+    xp_runtime::xss_check(about)
 }
 
 // trustees
