@@ -1,8 +1,7 @@
 use super::*;
 use codec::Encode;
 use sp_core::crypto::UncheckedFrom;
-use sp_runtime::traits::Hash;
-use sp_runtime::traits::Saturating;
+use sp_runtime::traits::{Hash, Saturating};
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
@@ -77,7 +76,11 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
 }
 
 // ChainX now uses pallet_balances for native coin PCX, therefore we do not
-// have to exclude PCX asset in the OnAssetChanged methods.
+// have to exclude PCX asset in these OnAssetChanged methods:
+//
+// * `on_issue_pre`
+// * `on_issue_post`
+// * `on_move_pre`
 //
 // ```rust
 // if xpallet_protocol::PCX == *target {
@@ -126,6 +129,8 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
 }
 
 impl<T: Trait> Module<T> {
+    /// Allocates the dividend to claimer and referral(treasury) accordingly.
+    ///
     /// Each asset miner can have a referral, which splits the 10% of
     /// of total asset mining dividend. The 10% split will be transferred
     /// to the treasury account if the claimer does not have a referral.
@@ -138,11 +143,18 @@ impl<T: Trait> Module<T> {
         claimer: &T::AccountId,
         dividend: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
-        // FIXME
-        // todo!("referral_or_treasury 10%, claimer 90%")
         let to_referral_or_treasury = dividend / 10.saturated_into();
+        let reward_splitter = T::GatewayInterface::referral_of(claimer)
+            .unwrap_or_else(|| T::TreasuryAccount::treasury_account());
+        Self::transfer(
+            claimee_reward_pot,
+            &reward_splitter,
+            to_referral_or_treasury,
+        )?;
+
         let to_claimer = dividend - to_referral_or_treasury;
         Self::transfer(claimee_reward_pot, claimer, to_claimer)?;
+
         Ok(())
     }
 }
@@ -186,6 +198,8 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
         MinerLedgers::<T>::mutate(claimer, claimee, |miner_ledger| {
             miner_ledger.last_claim = Some(current_block);
         });
+
+        Self::deposit_event(RawEvent::Claim(claimer.clone(), claimee.clone(), dividend));
 
         Ok(())
     }

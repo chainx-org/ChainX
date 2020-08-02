@@ -248,8 +248,17 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AssetId>
     }
 }
 
+pub struct DummyGatewayReferralGetter;
+
+impl GatewayInterface<AccountId> for DummyGatewayReferralGetter {
+    fn referral_of(who: &AccountId) -> Option<AccountId> {
+        Some(10_000_000_000 + *who)
+    }
+}
+
 impl Trait for Test {
     type StakingInterface = Self;
+    type GatewayInterface = DummyGatewayReferralGetter;
     type Event = MetaEvent;
     type TreasuryAccount = ();
     type DetermineRewardPotAccount = DummyAssetRewardPotAccountDeterminer;

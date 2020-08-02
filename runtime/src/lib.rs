@@ -758,9 +758,18 @@ impl xpallet_mining_staking::Trait for Runtime {
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
 }
 
+pub struct DummyReferralGetter;
+impl xpallet_mining_asset::GatewayInterface<AccountId> for DummyReferralGetter {
+    fn referral_of(_who: &AccountId) -> Option<AccountId> {
+        // FIXME impl this in gateway
+        None
+    }
+}
+
 impl xpallet_mining_asset::Trait for Runtime {
     type Event = Event;
     type StakingInterface = Self;
+    type GatewayInterface = DummyReferralGetter;
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;

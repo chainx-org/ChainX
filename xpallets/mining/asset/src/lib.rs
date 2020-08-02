@@ -42,18 +42,27 @@ pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
-    ///
+    /// Get the staked balances of asset miner.
     type StakingInterface: StakingInterface<Self::AccountId, u128>;
 
-    ///
+    /// Get the possible referral of asset miner.
+    type GatewayInterface: GatewayInterface<Self::AccountId>;
+
+    /// Get the treasury account.
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    ///
+    /// Generate the reward pot account for mining asset.
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;
 }
 
 pub trait StakingInterface<AccountId, Balance> {
     fn staked_of(who: &AccountId) -> Balance;
+}
+
+impl<AccountId, Balance: Default> StakingInterface<AccountId, Balance> for () {
+    fn staked_of(_: &AccountId) -> Balance {
+        Default::default()
+    }
 }
 
 impl<T: Trait> StakingInterface<<T as frame_system::Trait>::AccountId, u128> for T
@@ -62,6 +71,16 @@ where
 {
     fn staked_of(who: &<T as frame_system::Trait>::AccountId) -> u128 {
         xpallet_mining_staking::Module::<T>::staked_of(who).saturated_into()
+    }
+}
+
+pub trait GatewayInterface<AccountId> {
+    fn referral_of(who: &AccountId) -> Option<AccountId>;
+}
+
+impl<AccountId> GatewayInterface<AccountId> for () {
+    fn referral_of(_: &AccountId) -> Option<AccountId> {
+        None
     }
 }
 
@@ -113,8 +132,8 @@ decl_event!(
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
     {
-        ///
-        Claim(AccountId, AccountId, Balance),
+        /// Claimed the asset mining rewards. [claimer, asset_id, amount]
+        Claim(AccountId, AssetId, Balance),
     }
 );
 
@@ -127,8 +146,6 @@ decl_error! {
         InsufficientStaking,
         /// Claimer just did a claim recently, the next frequency limit is not expired.
         UnexpiredFrequencyLimit,
-        /// Asset error.
-        AssetError,
         /// Zero mining weight.
         ZeroMiningWeight,
         /// Balances error.
@@ -189,6 +206,21 @@ impl<T: Trait> Module<T> {
     #[inline]
     fn last_claim(who: &T::AccountId, asset_id: &AssetId) -> Option<T::BlockNumber> {
         MinerLedgers::<T>::get(who, asset_id).last_claim
+    }
+
+    #[inline]
+    fn free_balance(who: &T::AccountId) -> BalanceOf<T> {
+        <T as xpallet_assets::Trait>::Currency::free_balance(who)
+    }
+
+    #[inline]
+    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+        <T as xpallet_assets::Trait>::Currency::transfer(
+            from,
+            to,
+            value,
+            ExistenceRequirement::KeepAlive,
+        )
     }
 
     /// This rule doesn't take effect if the interval is zero.
@@ -308,19 +340,6 @@ impl<T: Trait> Module<T> {
     ) {
         Self::update_miner_mining_weight(source, target, current_block);
         Self::update_asset_mining_weight(target, current_block);
-    }
-
-    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        <T as xpallet_assets::Trait>::Currency::transfer(
-            from,
-            to,
-            value,
-            ExistenceRequirement::KeepAlive,
-        )
-    }
-
-    fn free_balance(who: &T::AccountId) -> BalanceOf<T> {
-        <T as xpallet_assets::Trait>::Currency::free_balance(who)
     }
 
     fn issue_deposit_reward(depositor: &T::AccountId, target: &AssetId) -> DispatchResult {

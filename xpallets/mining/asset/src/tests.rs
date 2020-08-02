@@ -314,8 +314,8 @@ fn claim_restriction_should_work() {
         t_issue_pcx(1, 1_000_000_000_000u128);
         t_issue_pcx(t_1, 1_000_000_000_000u128);
         assert_ok!(t_bond(1, 1, 100_000_000_000));
-        // total dividend: 2464000000
-        let total_mining_dividend = 2_464_000_000;
+        // total dividend: 704000000
+        let total_mining_dividend = 704000000;
         // the claimer needs 10x dividend of Staking locked.
         assert_ok!(t_bond(t_1, 1, total_mining_dividend * 10 - 1));
         assert_err!(
