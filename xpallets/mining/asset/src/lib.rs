@@ -86,21 +86,21 @@ impl<AccountId> GatewayInterface<AccountId> for () {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XMiningAsset {
-        ///
+        /// Possible reward for the new asset owners that does not have native coins yet.
         pub DepositReward get(fn deposit_reward): BalanceOf<T> = 100_000.into();
 
-        ///
+        /// Can not claim if the claimer violates the restriction.
         pub ClaimRestrictionOf get(fn claim_restriction_of):
             map hasher(twox_64_concat) AssetId => ClaimRestriction<T::BlockNumber>;
 
         /// External Assets that have the mining rights.
         pub MiningPrevilegedAssets get(fn mining_previleged_assets): Vec<AssetId>;
 
-        /// Mining weight information of the asset.
+        /// Mining weight information of the mining assets.
         pub AssetLedgers get(fn asset_ledgers):
             map hasher(twox_64_concat) AssetId => AssetLedger<T::BlockNumber>;
 
-        /// The map from nominator to the vote weight ledger of all nominees.
+        /// The map from nominator to the vote weight ledger of all mining assets.
         pub MinerLedgers get(fn miner_ledgers):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) AssetId
             => MinerLedger<T::BlockNumber>;
@@ -141,7 +141,7 @@ decl_error! {
     /// Error for the staking module.
     pub enum Error for Module<T: Trait> {
         /// The asset does not have the mining rights.
-        UnprevilegedAsset,
+        NotPrevilegedAsset,
         /// Claimer does not have enough Staking locked balance.
         InsufficientStaking,
         /// Claimer just did a claim recently, the next frequency limit is not expired.
@@ -178,7 +178,7 @@ decl_module! {
 
             ensure!(
                 Self::mining_previleged_assets().contains(&target),
-                Error::<T>::UnprevilegedAsset
+                Error::<T>::NotPrevilegedAsset
             );
 
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
@@ -348,11 +348,13 @@ impl<T: Trait> Module<T> {
         Self::update_asset_mining_weight(target, current_block);
     }
 
+    /// Gives a tiny reward to the depositor in case of it
+    /// does not have enough balances to claim the mining reward.
     fn issue_deposit_reward(depositor: &T::AccountId, target: &AssetId) -> DispatchResult {
         let deposit_reward = Self::deposit_reward();
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(target);
         let reward_pot_balance = Self::free_balance(&reward_pot);
-        if reward_pot_balance >= deposit_reward {
+        if reward_pot_balance >= deposit_reward && Self::free_balance(depositor) <= deposit_reward {
             Self::transfer(&reward_pot, depositor, deposit_reward)?;
         } else {
             warn!("asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}", target, reward_pot_balance, depositor);
