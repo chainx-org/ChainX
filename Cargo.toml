@@ -18,6 +18,7 @@ members = [
     "cli",
     "runtime",
     "primitives",
+    "primitives/runtime",
     "primitives/mining/common",
     "primitives/mining/staking",
     "rpc",

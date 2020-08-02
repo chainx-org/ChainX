@@ -177,7 +177,7 @@ use sp_runtime::{
 use sp_std::prelude::*;
 use sp_std::{cmp, convert::Infallible, fmt::Debug, mem, ops::BitOr, result};
 
-use chainx_primitives::Memo;
+use xp_runtime::Memo;
 
 pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
 

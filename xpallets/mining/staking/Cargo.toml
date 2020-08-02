@@ -23,6 +23,7 @@ pallet-balances = { git = "https://github.com/paritytech/substrate.git", tag = "
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
+xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 xp-mining-common = { path  = "../../../primitives/mining/common", default-features = false }
 xp-mining-staking = { path  = "../../../primitives/mining/staking", default-features = false }
 
@@ -54,6 +55,7 @@ std = [
     "pallet-balances/std",
 
     "chainx-primitives/std",
+    "xp-runtime/std",
     "xp-mining-common/std",
     "xp-mining-staking/std",
 

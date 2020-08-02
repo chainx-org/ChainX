@@ -615,6 +615,7 @@ dependencies = [
  "static_assertions",
  "substrate-wasm-builder-runner",
  "xp-mining-staking",
+ "xp-runtime",
  "xpallet-assets",
  "xpallet-assets-rpc-runtime-api",
  "xpallet-contracts",
@@ -3080,7 +3081,6 @@ dependencies = [
 name = "pallet-balances"
 version = "2.0.0-rc4"
 dependencies = [
- "chainx-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -3091,6 +3091,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-runtime",
 ]
 
 [[package]]
@@ -7268,6 +7269,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-runtime"
+version = "0.1.0"
+dependencies = [
+ "hex 0.4.2",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-support",
+]
+
+[[package]]
 name = "xpallet-assets"
 version = "0.1.0"
 dependencies = [
@@ -7283,6 +7297,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-runtime",
  "xpallet-protocol",
  "xpallet-support",
 ]
@@ -7453,6 +7468,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-io",
+ "xp-runtime",
  "xpallet-assets",
  "xpallet-gateway-records",
  "xpallet-support",
@@ -7483,6 +7499,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
+ "xp-runtime",
  "xpallet-assets",
  "xpallet-gateway-common",
 ]
@@ -7498,6 +7515,7 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
+ "xp-runtime",
  "xpallet-assets",
  "xpallet-protocol",
  "xpallet-support",
@@ -7581,6 +7599,7 @@ dependencies = [
  "sp-std",
  "xp-mining-common",
  "xp-mining-staking",
+ "xp-runtime",
  "xpallet-protocol",
  "xpallet-support",
 ]

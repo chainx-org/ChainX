@@ -22,7 +22,8 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
-use chainx_primitives::{AddrStr, AssetId, Memo, Name, Text};
+use chainx_primitives::{AddrStr, AssetId, Name, Text};
+use xp_runtime::Memo;
 use xpallet_assets::{AssetRestriction, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::WithdrawalState;
 use xpallet_support::{

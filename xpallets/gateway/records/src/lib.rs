@@ -15,7 +15,8 @@ use frame_system::{self as system, ensure_root};
 use sp_std::prelude::*;
 
 // ChainX
-use chainx_primitives::{AddrStr, AssetId, Memo};
+use chainx_primitives::{AddrStr, AssetId};
+use xp_runtime::Memo;
 
 use xpallet_assets::{AssetType, Chain};
 

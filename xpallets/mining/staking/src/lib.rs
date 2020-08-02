@@ -29,11 +29,11 @@ use sp_runtime::{
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
-use chainx_primitives::Memo;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
 use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedIndex};
+use xp_runtime::Memo;
 use xpallet_support::{debug, RpcBalance};
 
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};

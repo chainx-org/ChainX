@@ -10,8 +10,10 @@ use sp_runtime::RuntimeDebug;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*, result, slice::Iter};
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
+
 // ChainX
-pub use chainx_primitives::{Desc, Memo, Precision, Token};
+pub use chainx_primitives::{Desc, Precision, Token};
+pub use xp_runtime::Memo;
 
 use super::{BalanceOf, Error, Trait};
 

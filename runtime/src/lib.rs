@@ -39,7 +39,9 @@ use frame_system::{EnsureOneOf, EnsureRoot};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
+use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
+use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
 use xpallet_support::RpcBalance;
 
@@ -60,16 +62,15 @@ pub use frame_support::{
     StorageValue,
 };
 pub use pallet_timestamp::Call as TimestampCall;
+pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 pub use chainx_primitives::{
-    AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, Hash, Index, Memo, Moment,
-    Name, Signature, Token,
+    AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, Hash, Index, Moment, Name,
+    Signature, Token,
 };
-use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
-use xpallet_contracts_rpc_runtime_api::ContractExecResult;
+pub use xp_runtime::Memo;
 
 // xpallet re-exports
-pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 pub use xpallet_assets::{
     AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
     WithdrawalLimit,

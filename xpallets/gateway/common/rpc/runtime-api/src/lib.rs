@@ -5,7 +5,8 @@
 use sp_runtime::DispatchError;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-pub use chainx_primitives::{AddrStr, AssetId, Memo};
+pub use chainx_primitives::{AddrStr, AssetId};
+pub use xp_runtime::Memo;
 pub use xpallet_assets::{Chain, WithdrawalLimit};
 pub use xpallet_gateway_common::{
     trustees,
