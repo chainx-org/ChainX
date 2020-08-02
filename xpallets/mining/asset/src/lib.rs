@@ -12,7 +12,7 @@ mod tests;
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
+    dispatch::{DispatchError, DispatchResult},
     ensure,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement},
@@ -42,18 +42,27 @@ pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
-    ///
+    /// Get the staked balances of asset miner.
     type StakingInterface: StakingInterface<Self::AccountId, u128>;
 
-    ///
+    /// Get the possible referral of asset miner.
+    type GatewayInterface: GatewayInterface<Self::AccountId>;
+
+    /// Get the treasury account.
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    ///
+    /// Generate the reward pot account for mining asset.
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;
 }
 
 pub trait StakingInterface<AccountId, Balance> {
     fn staked_of(who: &AccountId) -> Balance;
+}
+
+impl<AccountId, Balance: Default> StakingInterface<AccountId, Balance> for () {
+    fn staked_of(_: &AccountId) -> Balance {
+        Default::default()
+    }
 }
 
 impl<T: Trait> StakingInterface<<T as frame_system::Trait>::AccountId, u128> for T
@@ -65,23 +74,33 @@ where
     }
 }
 
+pub trait GatewayInterface<AccountId> {
+    fn referral_of(who: &AccountId) -> Option<AccountId>;
+}
+
+impl<AccountId> GatewayInterface<AccountId> for () {
+    fn referral_of(_: &AccountId) -> Option<AccountId> {
+        None
+    }
+}
+
 decl_storage! {
     trait Store for Module<T: Trait> as XMiningAsset {
-        ///
+        /// Possible reward for the new asset owners that does not have native coins yet.
         pub DepositReward get(fn deposit_reward): BalanceOf<T> = 100_000.into();
 
-        ///
+        /// Can not claim if the claimer violates the restriction.
         pub ClaimRestrictionOf get(fn claim_restriction_of):
             map hasher(twox_64_concat) AssetId => ClaimRestriction<T::BlockNumber>;
 
         /// External Assets that have the mining rights.
         pub MiningPrevilegedAssets get(fn mining_previleged_assets): Vec<AssetId>;
 
-        /// Mining weight information of the asset.
+        /// Mining weight information of the mining assets.
         pub AssetLedgers get(fn asset_ledgers):
             map hasher(twox_64_concat) AssetId => AssetLedger<T::BlockNumber>;
 
-        /// The map from nominator to the vote weight ledger of all nominees.
+        /// The map from nominator to the vote weight ledger of all mining assets.
         pub MinerLedgers get(fn miner_ledgers):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) AssetId
             => MinerLedger<T::BlockNumber>;
@@ -113,8 +132,8 @@ decl_event!(
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
     {
-        ///
-        Claim(AccountId, AccountId, Balance),
+        /// Claimed the asset mining rewards. [claimer, asset_id, amount]
+        Claim(AccountId, AssetId, Balance),
     }
 );
 
@@ -122,21 +141,27 @@ decl_error! {
     /// Error for the staking module.
     pub enum Error for Module<T: Trait> {
         /// The asset does not have the mining rights.
-        UnprevilegedAsset,
+        NotPrevilegedAsset,
         /// Claimer does not have enough Staking locked balance.
         InsufficientStaking,
         /// Claimer just did a claim recently, the next frequency limit is not expired.
         UnexpiredFrequencyLimit,
-        /// Asset error.
-        AssetError,
         /// Zero mining weight.
-        ZeroMiningWeight
+        ZeroMiningWeight,
+        /// Balances error.
+        DispatchError
     }
 }
 
 impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
     fn from(_: ZeroMiningWeightError) -> Self {
         Self::ZeroMiningWeight
+    }
+}
+
+impl<T: Trait> From<DispatchError> for Error<T> {
+    fn from(_: DispatchError) -> Self {
+        Self::DispatchError
     }
 }
 
@@ -153,7 +178,7 @@ decl_module! {
 
             ensure!(
                 Self::mining_previleged_assets().contains(&target),
-                Error::<T>::UnprevilegedAsset
+                Error::<T>::NotPrevilegedAsset
             );
 
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
@@ -174,6 +199,12 @@ decl_module! {
                 restriction.frequency_limit = new;
             });
         }
+
+        #[weight = 10]
+        fn set_x_asset_power(origin, asset_id: AssetId, new: FixedAssetPower) {
+            ensure_root(origin)?;
+            XTypeAssetPowerMap::insert(asset_id, new);
+        }
     }
 }
 
@@ -181,6 +212,21 @@ impl<T: Trait> Module<T> {
     #[inline]
     fn last_claim(who: &T::AccountId, asset_id: &AssetId) -> Option<T::BlockNumber> {
         MinerLedgers::<T>::get(who, asset_id).last_claim
+    }
+
+    #[inline]
+    fn free_balance(who: &T::AccountId) -> BalanceOf<T> {
+        <T as xpallet_assets::Trait>::Currency::free_balance(who)
+    }
+
+    #[inline]
+    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+        <T as xpallet_assets::Trait>::Currency::transfer(
+            from,
+            to,
+            value,
+            ExistenceRequirement::KeepAlive,
+        )
     }
 
     /// This rule doesn't take effect if the interval is zero.
@@ -302,17 +348,14 @@ impl<T: Trait> Module<T> {
         Self::update_asset_mining_weight(target, current_block);
     }
 
+    /// Gives a tiny reward to the depositor in case of it
+    /// does not have enough balances to claim the mining reward.
     fn issue_deposit_reward(depositor: &T::AccountId, target: &AssetId) -> DispatchResult {
         let deposit_reward = Self::deposit_reward();
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(target);
-        let reward_pot_balance = <T as xpallet_assets::Trait>::Currency::free_balance(&reward_pot);
-        if reward_pot_balance >= deposit_reward {
-            <T as xpallet_assets::Trait>::Currency::transfer(
-                &reward_pot,
-                depositor,
-                deposit_reward,
-                ExistenceRequirement::KeepAlive,
-            )?;
+        let reward_pot_balance = Self::free_balance(&reward_pot);
+        if reward_pot_balance >= deposit_reward && Self::free_balance(depositor) <= deposit_reward {
+            Self::transfer(&reward_pot, depositor, deposit_reward)?;
         } else {
             warn!("asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}", target, reward_pot_balance, depositor);
         }

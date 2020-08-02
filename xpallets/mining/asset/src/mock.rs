@@ -15,7 +15,7 @@ use std::{
     collections::{BTreeMap, HashSet},
 };
 use xp_mining_staking::SessionIndex;
-use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
+use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 
@@ -34,19 +34,21 @@ mod mining_asset {
 }
 
 use frame_system as system;
+use pallet_balances as balances;
 use pallet_session as session;
 use xpallet_assets as assets;
 use xpallet_mining_staking as staking;
 
-// impl_outer_event! {
-// pub enum MetaEvent for Test {
-// system<T>,
-// assets<T>,
-// session,
-// staking<T>,
-// mining_asset<T>,
-// }
-// }
+impl_outer_event! {
+    pub enum MetaEvent for Test {
+        system<T>,
+        balances<T>,
+        session,
+        assets<T>,
+        staking<T>,
+        mining_asset<T>,
+    }
+}
 
 // For testing the pallet, we construct most of a mock runtime. This means
 // first constructing a configuration type (`Test`) which `impl`s each of the
@@ -60,8 +62,6 @@ parameter_types! {
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
-
-type MetaEvent = ();
 
 impl system::Trait for Test {
     type BaseCallFilter = ();
@@ -109,7 +109,7 @@ impl Get<Balance> for ExistentialDeposit {
 
 impl pallet_balances::Trait for Test {
     type Balance = Balance;
-    type Event = ();
+    type Event = MetaEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -248,8 +248,17 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AssetId>
     }
 }
 
+pub struct DummyGatewayReferralGetter;
+
+impl GatewayInterface<AccountId> for DummyGatewayReferralGetter {
+    fn referral_of(who: &AccountId) -> Option<AccountId> {
+        Some(10_000_000_000 + *who)
+    }
+}
+
 impl Trait for Test {
     type StakingInterface = Self;
+    type GatewayInterface = DummyGatewayReferralGetter;
     type Event = MetaEvent;
     type TreasuryAccount = ();
     type DetermineRewardPotAccount = DummyAssetRewardPotAccountDeterminer;
@@ -278,25 +287,6 @@ impl Default for ExtBuilder {
             session_per_era: 3,
         }
     }
-}
-
-const PCX_PRECISION: u8 = 8;
-fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        xpallet_protocol::PCX,
-        AssetInfo::new::<Test>(
-            b"PCX".to_vec(),
-            b"Polkadot ChainX".to_vec(),
-            Chain::ChainX,
-            PCX_PRECISION,
-            b"ChainX's crypto currency in Polkadot ecology".to_vec(),
-        )
-        .unwrap(),
-        AssetRestriction::Deposit
-            | AssetRestriction::Withdraw
-            | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyFree,
-    )
 }
 
 impl ExtBuilder {

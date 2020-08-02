@@ -1,8 +1,7 @@
 use super::*;
 use codec::Encode;
 use sp_core::crypto::UncheckedFrom;
-use sp_runtime::traits::Hash;
-use sp_runtime::traits::Saturating;
+use sp_runtime::traits::{Hash, Saturating};
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
@@ -76,11 +75,20 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     }
 }
 
+// ChainX now uses pallet_balances for native coin PCX, therefore we do not
+// have to exclude PCX asset in these OnAssetChanged methods:
+//
+// * `on_issue_pre`
+// * `on_issue_post`
+// * `on_move_pre`
+//
+// ```rust
+// if xpallet_protocol::PCX == *target {
+//     return Ok(());
+// }
+// ```
 impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Module<T> {
     fn on_issue_pre(target: &AssetId, source: &T::AccountId) {
-        if xpallet_protocol::PCX == *target {
-            return;
-        }
         let current_block = <frame_system::Module<T>>::block_number();
         Self::init_receiver_mining_ledger(source, target, current_block);
 
@@ -92,9 +100,6 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
         source: &T::AccountId,
         _value: BalanceOf<T>,
     ) -> DispatchResult {
-        if xpallet_protocol::PCX == *target {
-            return Ok(());
-        }
         Self::issue_deposit_reward(source, target)
     }
 
@@ -106,9 +111,10 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
         _: AssetType,
         _: BalanceOf<T>,
     ) {
-        if xpallet_protocol::PCX == *asset_id || from == to {
+        if from == to {
             return;
         }
+
         let current_block = <frame_system::Module<T>>::block_number();
         Self::init_receiver_mining_ledger(to, asset_id, current_block);
 
@@ -123,15 +129,32 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
 }
 
 impl<T: Trait> Module<T> {
+    /// Allocates the dividend to claimer and referral(treasury) accordingly.
+    ///
+    /// Each asset miner can have a referral, which splits the 10% of
+    /// of total asset mining dividend. The 10% split will be transferred
+    /// to the treasury account if the claimer does not have a referral.
+    ///
+    /// total_asset_miner_dividend
+    ///   ├──> referral(treasury) 10%
+    ///   └──> claimer            90%
     fn allocate_dividend(
+        claimee_reward_pot: &T::AccountId,
         claimer: &T::AccountId,
-        _claimee: &AssetId,
-        _claimee_reward_pot: &T::AccountId,
         dividend: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
-        // todo!("referral_or_treasury 10%, claimer 90%")
-        // FIXME
-        // let _ = xpallet_assets::Module::<T>::pcx_issue(claimer, dividend);
+        let to_referral_or_treasury = dividend / 10.saturated_into();
+        let reward_splitter = T::GatewayInterface::referral_of(claimer)
+            .unwrap_or_else(|| T::TreasuryAccount::treasury_account());
+        Self::transfer(
+            claimee_reward_pot,
+            &reward_splitter,
+            to_referral_or_treasury,
+        )?;
+
+        let to_claimer = dividend - to_referral_or_treasury;
+        Self::transfer(claimee_reward_pot, claimer, to_claimer)?;
+
         Ok(())
     }
 }
@@ -151,8 +174,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
         Self::passed_enough_interval(claimer, claimee, frequency_limit, current_block)?;
 
         let claimee_reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
-        let reward_pot_balance =
-            <T as xpallet_assets::Trait>::Currency::free_balance(&claimee_reward_pot);
+        let reward_pot_balance = Self::free_balance(&claimee_reward_pot);
 
         let (dividend, source_weight, target_weight) =
             <Self as ComputeMiningWeight<T::AccountId, _>>::compute_dividend(
@@ -164,7 +186,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 
         Self::has_enough_staking(claimer, dividend, staking_requirement)?;
 
-        Self::allocate_dividend(claimer, claimee, &claimee_reward_pot, dividend)?;
+        Self::allocate_dividend(&claimee_reward_pot, claimer, dividend)?;
 
         Self::apply_update_miner_mining_weight(claimer, claimee, 0, current_block);
         Self::apply_update_asset_mining_weight(
@@ -176,6 +198,8 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
         MinerLedgers::<T>::mutate(claimer, claimee, |miner_ledger| {
             miner_ledger.last_claim = Some(current_block);
         });
+
+        Self::deposit_event(RawEvent::Claim(claimer.clone(), claimee.clone(), dividend));
 
         Ok(())
     }

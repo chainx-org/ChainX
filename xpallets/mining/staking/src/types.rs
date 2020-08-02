@@ -15,7 +15,7 @@ pub enum LockedType {
     /// Locked balances when nominator calls `bond`.
     Bonded,
     /// The locked balances transition from `Bonded` into `BondedWithdrawal` state
-    /// when nominator calls `withdraw_bonded`.
+    /// when nominator calls `unbond`.
     BondedWithdrawal,
 }
 

@@ -81,6 +81,15 @@ fn t_xbtc_set_claim_staking_requirement(new: StakingRequirement) {
     ));
 }
 
+fn assert_xbtc_reward_pot_balance(value: Balance) {
+    assert_eq!(
+        Balances::free_balance(
+            &DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&xpallet_protocol::X_BTC)
+        ),
+        value
+    );
+}
+
 fn t_start_session(session_index: SessionIndex) {
     assert_eq!(
         <Period as Get<BlockNumber>>::get(),
@@ -314,8 +323,8 @@ fn claim_restriction_should_work() {
         t_issue_pcx(1, 1_000_000_000_000u128);
         t_issue_pcx(t_1, 1_000_000_000_000u128);
         assert_ok!(t_bond(1, 1, 100_000_000_000));
-        // total dividend: 2464000000
-        let total_mining_dividend = 2_464_000_000;
+        // total dividend: 704000000
+        let total_mining_dividend = 704000000;
         // the claimer needs 10x dividend of Staking locked.
         assert_ok!(t_bond(t_1, 1, total_mining_dividend * 10 - 1));
         assert_err!(
@@ -355,5 +364,95 @@ fn total_issuance_should_work() {
 
         t_start_session(3);
         assert_eq!(total_issuance(), 5_000_000_000 * 3 + initial);
+    });
+}
+
+fn t_set_xbtc_asset_power(new: FixedAssetPower) {
+    assert_ok!(XMiningAsset::set_x_asset_power(
+        Origin::root(),
+        xpallet_protocol::X_BTC,
+        new
+    ));
+}
+
+#[test]
+fn asset_mining_reward_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(t_register_xbtc());
+
+        let t_1 = 666_666;
+        assert_ok!(t_issue_xbtc(t_1, 1));
+
+        t_issue_pcx(4, 1000);
+
+        t_set_xbtc_asset_power(100);
+
+        assert_ok!(t_bond(4, 4, 800));
+
+        // total_staked: 100 + 800 = 900;
+        //
+        // Total minted per session:
+        // 5_000_000_000
+        // │
+        // ├──> vesting_account:  1_000_000_000
+        // ├──> treasury_reward:    480_000_000 12% <--------
+        // └──> mining_reward:    3_520_000_000 88%          |
+        //    │                                              |
+        //    ├──> Staking        3_168_000_000 90%          |
+        //    └──> Asset Mining     352_000_000 10% ---------
+        //
+        // When you start session 1, actually there are 3 session rounds.
+        // the session reward has been minted 3 times.
+        t_start_session(1);
+
+        let sub_total = 4_000_000_000u128;
+
+        let treasury_reward = sub_total * 12 / 100;
+        let mining_reward = sub_total * 88 / 100;
+
+        let asset_mining_reward = mining_reward * 10 / 100;
+
+        //    ├──> Staking        3_168_000_000 90% 900
+        //    └──> Asset Mining     352_000_000 10% 100
+
+        assert_eq!(Balances::free_balance(&TREASURY_ACCOUNT), treasury_reward);
+        assert_xbtc_reward_pot_balance(asset_mining_reward);
+
+        // XBTC mining power too few.
+        t_set_xbtc_asset_power(50);
+        t_start_session(2);
+        assert_eq!(
+            Balances::free_balance(&TREASURY_ACCOUNT),
+            treasury_reward * 2 + asset_mining_reward / 2 // extra treasury from asset mining reward.
+        );
+        assert_xbtc_reward_pot_balance(asset_mining_reward + asset_mining_reward / 2);
+
+        // XBTC mining power too much.
+        t_set_xbtc_asset_power(200);
+        t_start_session(3);
+        let treasury_balance = treasury_reward * 3 + asset_mining_reward / 2; // no extra split.
+        assert_eq!(Balances::free_balance(&TREASURY_ACCOUNT), treasury_balance);
+        let xbtc_pot_balance = asset_mining_reward + asset_mining_reward / 2 + asset_mining_reward;
+        assert_xbtc_reward_pot_balance(xbtc_pot_balance);
+
+        // Disable the staking requirement.
+        assert_ok!(XMiningAsset::set_claim_staking_requirement(
+            Origin::root(),
+            xpallet_protocol::X_BTC,
+            0
+        ));
+
+        assert_eq!(Balances::free_balance(&t_1), 0);
+        assert_ok!(XMiningAsset::claim(
+            Origin::signed(t_1),
+            xpallet_protocol::X_BTC
+        ));
+        assert_eq!(
+            Balances::free_balance(&t_1),
+            xbtc_pot_balance - xbtc_pot_balance / 10
+        );
+        let referral = DummyGatewayReferralGetter::referral_of(&t_1).unwrap_or(TREASURY_ACCOUNT);
+        assert_eq!(Balances::free_balance(&referral), xbtc_pot_balance / 10);
+        assert_eq!(Balances::free_balance(&TREASURY_ACCOUNT), treasury_balance);
     });
 }
