@@ -199,6 +199,12 @@ decl_module! {
                 restriction.frequency_limit = new;
             });
         }
+
+        #[weight = 10]
+        fn set_x_asset_power(origin, asset_id: AssetId, new: FixedAssetPower) {
+            ensure_root(origin)?;
+            XTypeAssetPowerMap::insert(asset_id, new);
+        }
     }
 }
 

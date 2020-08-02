@@ -753,7 +753,7 @@ impl xpallet_mining_staking::Trait for Runtime {
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;
-    type AssetMining = ();
+    type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
 }
@@ -1047,10 +1047,9 @@ impl_runtime_apis! {
         }
 
         fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>> {
-            let number = match XGatewayCommon::trustee_session_info_len(chain).checked_sub(1) {
-                Some(r) => r,
-                None => u32::max_value(),
-            };
+            let number = XGatewayCommon::trustee_session_info_len(chain)
+                .checked_sub(1)
+                .unwrap_or_else(u32::max_value);
             XGatewayCommon::trustee_session_info_of(chain, number)
         }
 
