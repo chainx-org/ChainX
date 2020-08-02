@@ -127,6 +127,9 @@ pub struct ValidatorProfile<BlockNumber> {
     pub is_chilled: bool,
     /// Block number of last performed `chill` operation.
     pub last_chilled: Option<BlockNumber>,
+    /// Referral identity that belongs to the validator.
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_impl::text"))]
+    pub referral_id: ReferralId,
 }
 
 /// Profile of staking nominator.

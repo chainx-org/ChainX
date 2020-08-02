@@ -59,6 +59,9 @@ pub type Precision = u8;
 pub type AddrStr = Vec<u8>;
 pub type AssetId = u32;
 
+/// Referral ID of validator.
+pub type ReferralId = Vec<u8>;
+
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
 /// account.
