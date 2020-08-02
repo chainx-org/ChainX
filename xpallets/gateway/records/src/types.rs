@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 // Substrate
 use sp_runtime::RuntimeDebug;
 
-use chainx_primitives::{AddrStr, AssetId, Memo};
+use chainx_primitives::{AddrStr, AssetId};
+use xp_runtime::Memo;
 
 /// state machine for state is:
 /// Applying(lock token) => Processing(can't cancel) =>

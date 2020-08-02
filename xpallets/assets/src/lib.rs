@@ -27,7 +27,8 @@ use frame_support::{
 use frame_system::{self as system, ensure_root, ensure_signed};
 
 // ChainX
-use chainx_primitives::{AssetId, Desc, Memo, Token};
+use chainx_primitives::{AssetId, Desc, Token};
+use xp_runtime::Memo;
 use xpallet_support::{debug, ensure_with_errorlog, info};
 
 use self::trigger::AssetChangedTrigger;
