@@ -27,7 +27,7 @@ use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trai
 
 use super::utils::{addr2vecu8, ensure_identical, get_hot_trustee_address, is_key, parse_opreturn};
 
-use crate::lockup::{handle_lockup_tx, handle_unlock_tx};
+use crate::lockup::handle_unlock_tx;
 
 pub struct TxHandler {
     pub tx_hash: H256,
@@ -65,7 +65,8 @@ impl TxHandler {
                 self.deposit::<T>()?;
             }
             TxType::Lock | TxType::Unlock => {
-                handle_lockup_tx::<T::XBitcoinLockup>(self)?;
+                // remove in proposal 12
+                // handle_lockup_tx::<T::XBitcoinLockup>(self)?;
             }
             _ => {
                 info!(
