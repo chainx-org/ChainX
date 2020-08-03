@@ -265,6 +265,7 @@ impl<T: Trait> Module<T> {
     /// * ChainX 1.0 will be deprecated once ChainX 2.0 is ready and all the airdrop assets now
     ///   will be removed, thus the logic of Proposal 12 is merely hard coded here.
     fn airdrop_proposal12(for_airdrop: T::Balance) {
+        debug!("[airdrop_proposal12]=> treasury:{:?}", for_airdrop);
         Self::distribute_to_treasury(for_airdrop);
     }
 
