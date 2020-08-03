@@ -100,8 +100,6 @@ decl_storage! {
         pub NetworkProps get(network_props) config(): (NetworkType, AddressType);
 
         pub BlockingHeight get(blocking_height): Option<T::BlockNumber>;
-
-        pub BlockingHodler: map u64 => Vec<u64>;
     }
 }
 
