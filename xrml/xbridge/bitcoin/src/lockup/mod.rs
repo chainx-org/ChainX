@@ -206,6 +206,7 @@ pub fn detect_unlock_tx<T: Trait>(tx: &Transaction) -> bool {
     false
 }
 
+#[allow(deprecated)]
 pub fn handle_lockup_tx<T: Trait>(tx_handle: &TxHandler) -> Result {
     match tx_handle.tx_info.tx_type {
         TxType::Lock => handle_lock_tx::<T>(&tx_handle.tx_info.raw_tx, &tx_handle.tx_hash)?,
