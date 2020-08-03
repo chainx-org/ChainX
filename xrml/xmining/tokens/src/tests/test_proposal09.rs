@@ -2,10 +2,7 @@
 
 use super::*;
 use crate::tests::mock::*;
-
 use runtime_io::with_externalities;
-
-const COUNCIL_ACCOUNT: u64 = 888;
 
 #[test]
 fn test09_airdro_distribution_ration_cant_be_zero() {
@@ -35,78 +32,6 @@ fn test09_calc_global_distribution() {
         assert_eq!(for_treasury, 480000000);
         assert_eq!(for_airdrop, 320000000);
         assert_eq!(for_cross_mining_and_staking, 3200000000);
-    });
-}
-
-#[test]
-fn test09_global_distribution_ratio_with_zero_xbtc() {
-    with_externalities(&mut new_test_ext(), || {
-        System::set_block_number(1);
-        XSession::check_rotate_session(System::block_number());
-        let (sdot_jackpot, lbtc_jackpot, xbtc_jackpot) = token_jackpot_accountids();
-        assert_eq!(XAssets::pcx_free_balance(&sdot_jackpot), 160_000_000);
-        assert_eq!(XAssets::pcx_free_balance(&lbtc_jackpot), 160_000_000);
-        // 4800000000 + 320000000
-        // Now xbtc is zero, all cross chain mining belongings goes to the council acccount
-        assert_eq!(XAssets::pcx_free_balance(&xbtc_jackpot), 0);
-        assert_eq!(
-            XAssets::pcx_free_balance(&COUNCIL_ACCOUNT),
-            480000000 + 320_000_000
-        );
-    });
-}
-
-#[test]
-fn test09_global_distribution_ratio_with_a_few_xbtc() {
-    with_externalities(&mut new_test_ext(), || {
-        XAssets::issue(&b"BTC".to_vec(), &999, 1250000).unwrap();
-        System::set_block_number(1);
-        XSession::check_rotate_session(System::block_number());
-        let (sdot_jackpot, lbtc_jackpot, xbtc_jackpot) = token_jackpot_accountids();
-        assert_eq!(XAssets::pcx_free_balance(&sdot_jackpot), 160_000_000);
-        assert_eq!(XAssets::pcx_free_balance(&lbtc_jackpot), 160_000_000);
-        // cross_mining_reward_cap: 40*10^8 * 80% * 10% = 320_000_000
-        //
-        // PCX staking power:               5_000_000_000 => 40* 10^8*72% = 2880000000
-        // xbtc mining power: 1250000 * 400 = 500_000_000
-        //
-        // xbtc    1
-        // ---- = ---
-        // PCX     9
-        //
-        // mining_power_cap = 5_000_000_000 * 1 / 9
-        //
-        //  5_000_000_000 / 9        500_000_000
-        //  -----------------   =   ------------
-        //  320_000_000                   ?
-        //
-        //   1         10
-        //  --- = -----------------
-        //   ?     9 * 320_000_000
-        //
-        // xbtc_jackpot_free_balance = ? = 288_000_000 = 320_000_000 - 32_000_000
-        assert_eq!(
-            XAssets::pcx_free_balance(&xbtc_jackpot),
-            320_000_000 - 32_000_000
-        );
-        assert_eq!(
-            XAssets::pcx_free_balance(&COUNCIL_ACCOUNT),
-            480000000 + 32_000_000
-        );
-    });
-}
-
-#[test]
-fn test09_global_distribution_ratio_with_a_lot_of_xbtc() {
-    with_externalities(&mut new_test_ext(), || {
-        XAssets::issue(&b"BTC".to_vec(), &999, 1_250_000_000).unwrap();
-        System::set_block_number(1);
-        XSession::check_rotate_session(System::block_number());
-        let (sdot_jackpot, lbtc_jackpot, xbtc_jackpot) = token_jackpot_accountids();
-        assert_eq!(XAssets::pcx_free_balance(&sdot_jackpot), 160_000_000);
-        assert_eq!(XAssets::pcx_free_balance(&lbtc_jackpot), 160_000_000);
-        assert_eq!(XAssets::pcx_free_balance(&xbtc_jackpot), 320_000_000);
-        assert_eq!(XAssets::pcx_free_balance(&COUNCIL_ACCOUNT), 480000000);
     });
 }
 
@@ -211,8 +136,9 @@ fn test09_test_internal_cross_chain_assets_distribution() {
         System::set_block_number(1);
         XSession::check_rotate_session(System::block_number());
         let (sdot_jackpot, lbtc_jackpot, xbtc_jackpot) = token_jackpot_accountids();
-        assert_eq!(XAssets::pcx_free_balance(&sdot_jackpot), 160_000_000);
-        assert_eq!(XAssets::pcx_free_balance(&lbtc_jackpot), 160_000_000);
+
+        assert_eq!(XAssets::pcx_free_balance(&sdot_jackpot), 0);
+        assert_eq!(XAssets::pcx_free_balance(&lbtc_jackpot), 0);
 
         // total mining power of X-BTC: F-BTC = 4:1
         assert_eq!(
@@ -226,7 +152,10 @@ fn test09_test_internal_cross_chain_assets_distribution() {
             320_000_000 * 1 / 5
         );
 
-        assert_eq!(XAssets::pcx_free_balance(&COUNCIL_ACCOUNT), 480000000);
+        assert_eq!(
+            XAssets::pcx_free_balance(&COUNCIL_ACCOUNT),
+            480000000 + 160_000_000 * 2
+        );
 
         XAssets::issue(&b"F-BTC".to_vec(), &999, 1_250_000_000).unwrap();
         let issue_reward = 100_000;
