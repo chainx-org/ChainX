@@ -7,7 +7,13 @@ fn t_issue_pcx(to: AccountId, value: Balance) {
 }
 
 fn t_register(who: AccountId) -> DispatchResult {
-    XStaking::register(Origin::signed(who))
+    let mut referral_id = who.to_string().as_bytes().to_vec();
+
+    if referral_id.len() < 2 {
+        referral_id.extend_from_slice(&[0, 0, 0, who as u8]);
+    }
+
+    XStaking::register(Origin::signed(who), referral_id)
 }
 
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {

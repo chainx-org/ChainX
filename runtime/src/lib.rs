@@ -761,7 +761,7 @@ impl xpallet_mining_staking::Trait for Runtime {
 
 pub struct DummyReferralGetter;
 impl xpallet_mining_asset::GatewayInterface<AccountId> for DummyReferralGetter {
-    fn referral_of(_who: &AccountId) -> Option<AccountId> {
+    fn referral_of(_who: &AccountId, _asset_id: AssetId) -> Option<AccountId> {
         // FIXME impl this in gateway
         None
     }

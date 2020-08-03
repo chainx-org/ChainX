@@ -141,10 +141,11 @@ impl<T: Trait> Module<T> {
     fn allocate_dividend(
         claimee_reward_pot: &T::AccountId,
         claimer: &T::AccountId,
+        claimee: &AssetId,
         dividend: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         let to_referral_or_treasury = dividend / 10.saturated_into();
-        let reward_splitter = T::GatewayInterface::referral_of(claimer)
+        let reward_splitter = T::GatewayInterface::referral_of(claimer, *claimee)
             .unwrap_or_else(|| T::TreasuryAccount::treasury_account());
         Self::transfer(
             claimee_reward_pot,
@@ -186,7 +187,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 
         Self::has_enough_staking(claimer, dividend, staking_requirement)?;
 
-        Self::allocate_dividend(&claimee_reward_pot, claimer, dividend)?;
+        Self::allocate_dividend(&claimee_reward_pot, claimer, claimee, dividend)?;
 
         Self::apply_update_miner_mining_weight(claimer, claimee, 0, current_block);
         Self::apply_update_asset_mining_weight(
