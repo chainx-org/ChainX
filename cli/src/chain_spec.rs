@@ -320,13 +320,11 @@ fn testnet_genesis(
     let mut assets_endowed = endowed.clone();
     assets_endowed.remove(&xpallet_protocol::PCX);
 
-    let validators = {
-        initial_authorities
-            .clone()
-            .into_iter()
-            .map(|((v, r), _, _, _, _)| (v, r, STAKING_LOCKED))
-            .collect::<Vec<_>>()
-    };
+    let validators = initial_authorities
+        .clone()
+        .into_iter()
+        .map(|((val, referral_id), _, _, _, _)| (val, referral_id, STAKING_LOCKED))
+        .collect::<Vec<_>>();
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
