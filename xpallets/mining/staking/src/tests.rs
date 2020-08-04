@@ -709,3 +709,22 @@ fn balances_reserve_should_work() {
         );
     });
 }
+
+#[test]
+fn referral_id_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(XStaking::register(
+            Origin::signed(111),
+            b"referral1".to_vec()
+        ));
+        assert_err!(
+            XStaking::register(Origin::signed(112), b"referral1".to_vec()),
+            Error::<Test>::OccupiedReferralIdentity
+        );
+
+        assert_ok!(XStaking::register(
+            Origin::signed(112),
+            b"referral2".to_vec()
+        ));
+    });
+}

@@ -759,6 +759,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_register(who: &T::AccountId, referral_id: ReferralId) {
         let current_block = <frame_system::Module<T>>::block_number();
+        ValidatorFor::<T>::insert(&referral_id, who.clone());
         Validators::<T>::insert(
             who,
             ValidatorProfile {
