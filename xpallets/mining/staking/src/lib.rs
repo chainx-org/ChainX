@@ -266,6 +266,8 @@ decl_error! {
         NotValidator,
         /// The account is already registered as a validator.
         AlreadyValidator,
+        /// The validators count already reaches `MaximumValidatorCount`.
+        TooManyValidators,
         /// The validator can accept no more votes from other voters.
         NoMoreAcceptableVotes,
         /// The validator can not (forcedly) be chilled due to the limit of minimal validators count.
@@ -436,6 +438,10 @@ decl_module! {
             let sender = ensure_signed(origin)?;
             Self::check_referral_id(&referral_id)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::AlreadyValidator);
+            ensure!(
+                (Self::validator_set().count() as u32) < MaximumValidatorCount::get(),
+                Error::<T>::TooManyValidators
+            );
             Self::apply_register(&sender, referral_id);
         }
 
