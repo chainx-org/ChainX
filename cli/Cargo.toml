@@ -26,6 +26,7 @@ sc-network = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.
 sc-rpc = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sc-service = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sc-transaction-pool = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sc-chain-spec = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 
 # Substrate primitives
 sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }

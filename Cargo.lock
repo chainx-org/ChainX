@@ -489,6 +489,7 @@ dependencies = [
  "pallet-im-online",
  "parking_lot 0.10.2",
  "sc-basic-authorship",
+ "sc-chain-spec",
  "sc-cli",
  "sc-client-api",
  "sc-consensus",
