@@ -8,7 +8,7 @@ use chainx_runtime::{
     constants, trustees, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams, BtcTxVerifier,
     Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
 };
-use chainx_runtime::{AccountId, AssetId, Balance, Runtime, Signature, WASM_BINARY};
+use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
     GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SocietyConfig, SudoConfig,
@@ -18,7 +18,7 @@ use chainx_runtime::{
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
-use sc_service::ChainType;
+use sc_service::{ChainType, Properties};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -60,12 +60,21 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
+type AuthorityKeysTuple = (
+    (AccountId, ReferralId), // (Staking ValidatorId, ReferralId)
+    AccountId,               // (SessionKey)
+    AuraId,
+    GrandpaId,
+    ImOnlineId,
+);
+
 /// Helper function to generate an authority key for Aura
-pub fn authority_keys_from_seed(
-    seed: &str,
-) -> (AccountId, AccountId, AuraId, GrandpaId, ImOnlineId) {
+pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
     (
-        get_account_id_from_seed::<sr25519::Public>(seed),
+        (
+            get_account_id_from_seed::<sr25519::Public>(seed),
+            seed.as_bytes().to_vec(),
+        ),
         get_account_id_from_seed::<sr25519::Public>(&format!("{}//blockauthor", seed)),
         get_from_seed::<AuraId>(seed),
         get_from_seed::<GrandpaId>(seed),
@@ -93,6 +102,19 @@ macro_rules! endowed_gen {
     }
 }
 
+/// Helper function to generate the network properties.
+fn as_properties(network: NetworkType) -> Properties {
+    json!({
+        "ss58Format": network.addr_version(),
+        "network": network,
+        "tokenDecimals": PCX_PRECISION,
+        "tokenSymbol": "PCX"
+    })
+    .as_object()
+    .expect("network properties generation can not fail; qed")
+    .to_owned()
+}
+
 pub fn development_config() -> ChainSpec {
     let endowed_balance = 50 * constants::currency::DOLLARS;
     let constructor = move || {
@@ -110,7 +132,6 @@ pub fn development_config() -> ChainSpec {
             true,
         )
     };
-    let network = NetworkType::Testnet;
     ChainSpec::from_genesis(
         "Development",
         "dev",
@@ -119,17 +140,7 @@ pub fn development_config() -> ChainSpec {
         vec![],
         None,
         Some("chainx-dev"),
-        Some(
-            json!({
-                "ss58Format": network.addr_version(),
-                "network": network,
-                "tokenDecimals": PCX_PRECISION,
-                "tokenSymbol": "PCX"
-            })
-            .as_object()
-            .expect("must success")
-            .to_owned(),
-        ),
+        Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     )
 }
@@ -162,7 +173,6 @@ pub fn local_testnet_config() -> ChainSpec {
             true,
         )
     };
-    let network = NetworkType::Testnet;
     ChainSpec::from_genesis(
         "Local Testnet",
         "local_testnet",
@@ -171,17 +181,7 @@ pub fn local_testnet_config() -> ChainSpec {
         vec![],
         None,
         Some("chainx-local-testnet"),
-        Some(
-            json!({
-                "ss58Format": network.addr_version(),
-                "network": network,
-                "tokenDecimals": PCX_PRECISION,
-                "tokenSymbol": "PCX"
-            })
-            .as_object()
-            .expect("must success")
-            .to_owned(),
-        ),
+        Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     )
 }
@@ -237,57 +237,49 @@ fn testnet_trustees() -> Vec<(
     TrusteeInfoConfig,
     Vec<(AccountId, Vec<u8>, Vec<u8>, Vec<u8>)>,
 )> {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-    let btc = Chain::Bitcoin;
-    let alice_hot = trustees::bitcoin::BtcTrusteeType::try_from(
-        hex::decode("035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84")
-            .expect(""),
-    )
-    .expect("");
-    let alice_cold = trustees::bitcoin::BtcTrusteeType::try_from(
-        hex::decode("0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3")
-            .expect(""),
-    )
-    .expect("");
-    let bob_hot = trustees::bitcoin::BtcTrusteeType::try_from(
-        hex::decode("02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee")
-            .expect(""),
-    )
-    .expect("");
-    let bob_cold = trustees::bitcoin::BtcTrusteeType::try_from(
-        hex::decode("020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f")
-            .expect(""),
-    )
-    .expect("");
-    let charlie_hot = trustees::bitcoin::BtcTrusteeType::try_from(
-        hex::decode("0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd")
-            .expect(""),
-    )
-    .expect("");
-    let charlie_cold = trustees::bitcoin::BtcTrusteeType::try_from(
-        hex::decode("02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99")
-            .expect(""),
-    )
-    .expect("");
+    macro_rules! btc_trustee_key {
+        ($btc_pubkey:expr) => {{
+            trustees::bitcoin::BtcTrusteeType::try_from(
+                hex::decode($btc_pubkey).expect("hex decode failed"),
+            )
+            .expect("btc trustee generation failed")
+            .into()
+        }};
+    }
 
-    let about = b"".to_vec();
-    let collection = vec![
-        (alice, about.clone(), alice_hot.into(), alice_cold.into()),
-        (bob, about.clone(), bob_hot.into(), bob_cold.into()),
+    let btc_trustee_gen = |seed: &str, hot_pubkey: &str, cold_pubkey: &str| {
         (
-            charlie,
-            about.clone(),
-            charlie_hot.into(),
-            charlie_cold.into(),
+            get_account_id_from_seed::<sr25519::Public>(seed),
+            seed.as_bytes().to_vec(),      // About
+            btc_trustee_key!(hot_pubkey),  // Hot key
+            btc_trustee_key!(cold_pubkey), // Cold key
+        )
+    };
+
+    let btc_trustees = vec![
+        btc_trustee_gen(
+            "Alice",
+            "035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84", // hot key
+            "0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3", // colde key
+        ),
+        btc_trustee_gen(
+            "Bob",
+            "02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee",
+            "020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f",
+        ),
+        btc_trustee_gen(
+            "Charlie",
+            "0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd",
+            "02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99",
         ),
     ];
-    let config = TrusteeInfoConfig {
+
+    let btc_config = TrusteeInfoConfig {
         min_trustee_count: 3,
         max_trustee_count: 15,
     };
-    vec![(btc, config, collection)]
+
+    vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
 fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> SessionKeys {
@@ -299,7 +291,7 @@ fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> Sess
 }
 
 fn testnet_genesis(
-    initial_authorities: Vec<(AccountId, AccountId, AuraId, GrandpaId, ImOnlineId)>,
+    initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
     assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
@@ -340,18 +332,16 @@ fn testnet_genesis(
         .map(|member| (member, STASH))
         .collect();
 
-    let validators = {
-        let staking_authorities = initial_authorities
-            .iter()
-            .map(|(s, _, _, _, _)| s)
-            .collect::<Vec<_>>();
-        balances
-            .clone()
-            .into_iter()
-            .filter(|(v, _)| staking_authorities.contains(&v))
-            .map(|(v, _)| (v, STAKING_LOCKED))
-            .collect()
-    };
+    // PCX only reserves the native asset id in assets module,
+    // the actual native fund management is handled by pallet_balances.
+    let mut assets_endowed = endowed.clone();
+    assets_endowed.remove(&xpallet_protocol::PCX);
+
+    let validators = initial_authorities
+        .clone()
+        .into_iter()
+        .map(|((val, referral_id), _, _, _, _)| (val, referral_id, STAKING_LOCKED))
+        .collect::<Vec<_>>();
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
@@ -385,8 +375,8 @@ fn testnet_genesis(
                 .iter()
                 .map(|x| {
                     (
-                        x.0.clone(),
-                        x.0.clone(),
+                        (x.0).0.clone(),
+                        (x.0).0.clone(),
                         session_keys(x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })
@@ -408,7 +398,7 @@ fn testnet_genesis(
         }),
         xpallet_assets: Some(XAssetsConfig {
             assets,
-            endowed: endowed.clone(),
+            endowed: assets_endowed,
             memo_len: 128,
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),

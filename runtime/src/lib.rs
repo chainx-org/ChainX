@@ -66,7 +66,7 @@ pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 pub use chainx_primitives::{
     AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, Hash, Index, Moment, Name,
-    Signature, Token,
+    ReferralId, Signature, Token,
 };
 pub use xp_runtime::Memo;
 
@@ -761,7 +761,7 @@ impl xpallet_mining_staking::Trait for Runtime {
 
 pub struct DummyReferralGetter;
 impl xpallet_mining_asset::GatewayInterface<AccountId> for DummyReferralGetter {
-    fn referral_of(_who: &AccountId) -> Option<AccountId> {
+    fn referral_of(_who: &AccountId, _asset_id: AssetId) -> Option<AccountId> {
         // FIXME impl this in gateway
         None
     }

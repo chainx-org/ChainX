@@ -75,11 +75,11 @@ where
 }
 
 pub trait GatewayInterface<AccountId> {
-    fn referral_of(who: &AccountId) -> Option<AccountId>;
+    fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId>;
 }
 
 impl<AccountId> GatewayInterface<AccountId> for () {
-    fn referral_of(_: &AccountId) -> Option<AccountId> {
+    fn referral_of(_: &AccountId, _: AssetId) -> Option<AccountId> {
         None
     }
 }

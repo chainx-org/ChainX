@@ -236,6 +236,8 @@ def parse_non_tuple_struct(lines, key):
     fields = lines[1:-1]
     fields_dict = {}
     for field in fields:
+        if field.strip().startswith('#[cfg'):
+            continue
         var = ''
         ty = ''
         for item in field.split():

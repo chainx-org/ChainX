@@ -1,7 +1,7 @@
 use super::*;
 use btc_keys::{Address, Public as BtcPublic};
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct BtcTrusteeAddrInfo {
@@ -9,6 +9,29 @@ pub struct BtcTrusteeAddrInfo {
     pub addr: Address,
     #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_impl::hex"))]
     pub redeem_script: Vec<u8>,
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Debug for BtcTrusteeAddrInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "BtcTrusteeAddrInfo {{ addr: {:?}, redeem_script: {} }}",
+            self.addr,
+            hex::encode(&self.redeem_script)
+        )
+    }
+}
+
+#[cfg(not(feature = "std"))]
+impl core::fmt::Debug for BtcTrusteeAddrInfo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "BtcTrusteeAddrInfo {{ addr: {:?}, redeem_script: {:?} }}",
+            self.addr, self.redeem_script
+        )
+    }
 }
 
 impl TryFrom<Vec<u8>> for BtcTrusteeAddrInfo {

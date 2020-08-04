@@ -7,7 +7,13 @@ fn t_issue_pcx(to: AccountId, value: Balance) {
 }
 
 fn t_register(who: AccountId) -> DispatchResult {
-    XStaking::register(Origin::signed(who))
+    let mut referral_id = who.to_string().as_bytes().to_vec();
+
+    if referral_id.len() < 2 {
+        referral_id.extend_from_slice(&[0, 0, 0, who as u8]);
+    }
+
+    XStaking::register(Origin::signed(who), referral_id)
 }
 
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
@@ -701,5 +707,24 @@ fn balances_reserve_should_work() {
                 fee_frozen: 3
             }
         );
+    });
+}
+
+#[test]
+fn referral_id_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(XStaking::register(
+            Origin::signed(111),
+            b"referral1".to_vec()
+        ));
+        assert_err!(
+            XStaking::register(Origin::signed(112), b"referral1".to_vec()),
+            Error::<Test>::OccupiedReferralIdentity
+        );
+
+        assert_ok!(XStaking::register(
+            Origin::signed(112),
+            b"referral2".to_vec()
+        ));
     });
 }
