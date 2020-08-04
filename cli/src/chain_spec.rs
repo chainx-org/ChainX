@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use chainx_runtime::{
@@ -16,6 +17,7 @@ use chainx_runtime::{
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
+use sc_chain_spec::ChainSpecExtension;
 use sc_service::{ChainType, Properties};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
@@ -25,8 +27,21 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
+/// Node `ChainSpec` extensions.
+///
+/// Additional parameters for some Substrate core modules,
+/// customizable from the chain spec.
+#[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
+#[serde(rename_all = "camelCase")]
+pub struct Extensions {
+    /// Block numbers with known hashes.
+    pub fork_blocks: sc_client_api::ForkBlocks<chainx_primitives::Block>,
+    /// Known bad block hashes.
+    pub bad_blocks: sc_client_api::BadBlocks<chainx_primitives::Block>,
+}
+
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -92,6 +107,8 @@ fn as_properties(network: NetworkType) -> Properties {
     json!({
         "ss58Format": network.addr_version(),
         "network": network,
+        "tokenDecimals": PCX_PRECISION,
+        "tokenSymbol": "PCX"
     })
     .as_object()
     .expect("network properties generation can not fail; qed")
@@ -124,7 +141,7 @@ pub fn development_config() -> ChainSpec {
         None,
         Some("chainx-dev"),
         Some(as_properties(NetworkType::Testnet)),
-        None,
+        Default::default(),
     )
 }
 
@@ -165,7 +182,7 @@ pub fn local_testnet_config() -> ChainSpec {
         None,
         Some("chainx-local-testnet"),
         Some(as_properties(NetworkType::Testnet)),
-        None,
+        Default::default(),
     )
 }
 
