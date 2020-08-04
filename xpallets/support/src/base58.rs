@@ -61,7 +61,7 @@ pub fn from(data: &[u8]) -> Result<Vec<u8>, &'static str> {
     Ok(ret)
 }
 
-pub fn to_base58(data: Vec<u8>) -> Vec<u8> {
+pub fn to_base58(data: &[u8]) -> Vec<u8> {
     let zcount = data.iter().take_while(|x| **x == 0).count();
     let size: usize = (data.len() - zcount) * 138 / 100 + 1;
 
@@ -111,7 +111,7 @@ mod tests {
             111, 41, 168, 159, 89, 51, 97, 179, 153, 104, 9, 74, 184, 193, 251, 6, 131, 166, 121,
             3, 1, 241, 112, 101, 146,
         ];
-        assert_eq!(from(s.as_bytes().to_vec()).unwrap(), v);
+        assert_eq!(from(s.as_bytes()).unwrap(), v);
     }
 
     #[test]
@@ -121,6 +121,6 @@ mod tests {
             111, 41, 168, 159, 89, 51, 97, 179, 153, 104, 9, 74, 184, 193, 251, 6, 131, 166, 121,
             3, 1, 241, 112, 101, 146,
         ];
-        assert_eq!(to_base58(v.to_vec()), s.as_bytes());
+        assert_eq!(to_base58(v), s.as_bytes());
     }
 }
