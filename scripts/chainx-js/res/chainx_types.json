@@ -149,6 +149,7 @@
     "TradingPairId": "u32",
     "TradingHistoryIndex": "u64",
     "PriceFluctuation": "u32",
+    "BtcAddress": "Text",
     "FixedAssetPower": "u32",
     "StakingRequirement": "u32",
     "Precision": "u8",
@@ -189,11 +190,6 @@
         ]
     },
     "AssetRestrictions": "u32",
-    "BtcAddress": {
-        "kind": "BtcAddrType",
-        "network": "BtcNetwork",
-        "hash": "AddressHash"
-    },
     "BtcHeader": {
         "version": "u32",
         "previousHeaderHash": "H256",
@@ -299,13 +295,6 @@
         "threshold": "u16",
         "hotAddress": "BtcTrusteeAddrInfo",
         "coldAddress": "BtcTrusteeAddrInfo"
-    },
-    "AddressHash": "H160",
-    "BtcAddrType": {
-        "_enum": [
-            "P2PKH",
-            "P2SH"
-        ]
     },
     "BtcCompact": "u32",
     "BtcTransaction": "Vec<u8>",

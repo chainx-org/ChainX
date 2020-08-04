@@ -16,6 +16,11 @@ use btc_keys::Address;
 use btc_primitives::{Compact, H256};
 use merkle::PartialMerkleTree;
 
+/// BtcAddress is an bitcoin address encoded in base58
+/// like: "1Nekoo5VTe7yQQ8WFqrva2UbdyRMVYCP1t" or "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"
+/// not layout state or public or else.
+pub type BtcAddress = Vec<u8>;
+
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub struct BtcRelayedTx {
     pub block_hash: H256,

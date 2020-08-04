@@ -126,24 +126,13 @@
         "hot_address": "BtcTrusteeAddrInfo",
         "cold_address": "BtcTrusteeAddrInfo"
     },
-    "AddressHash": "H160",
     "BtcNetwork": {
         "_enum": [
             "Mainnet",
             "Testnet"
         ]
     },
-    "BtcAddrType": {
-        "_enum": [
-            "P2PKH",
-            "P2SH"
-        ]
-    },
-    "BtcAddress": {
-        "kind": "BtcAddrType",
-        "network": "BtcNetwork",
-        "hash": "AddressHash"
-    },
+    "BtcAddress": "Text",
     "BtcCompact": "u32",
     "BtcHeader": {
         "version": "u32",

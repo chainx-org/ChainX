@@ -1,12 +1,12 @@
 use super::*;
-use btc_keys::{Address, Public as BtcPublic};
+use btc_keys::Public as BtcPublic;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct BtcTrusteeAddrInfo {
-    #[cfg_attr(feature = "std", serde(with = "serde_impl::btc_addr"))]
-    pub addr: Address,
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_impl::text"))]
+    pub addr: BtcAddress,
     #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_impl::hex"))]
     pub redeem_script: Vec<u8>,
 }
@@ -60,26 +60,26 @@ mod serde_impl {
         }
     }
 
-    pub mod btc_addr {
-        use super::*;
-        use sp_std::str::FromStr;
-
-        pub fn serialize<S>(value: &Address, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let output = value.to_string();
-            serializer.serialize_str(&output)
-        }
-
-        pub fn deserialize<'de, D>(deserializer: D) -> Result<Address, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let s: String = Deserialize::deserialize(deserializer)?;
-            Address::from_str(&s).map_err(|e| Error::custom(format!("{:?}", e)))
-        }
-    }
+    // pub mod btc_addr {
+    //     use super::*;
+    //     use sp_std::str::FromStr;
+    //
+    //     pub fn serialize<S>(value: &Address, serializer: S) -> Result<S::Ok, S::Error>
+    //     where
+    //         S: Serializer,
+    //     {
+    //         let output = value.to_string();
+    //         serializer.serialize_str(&output)
+    //     }
+    //
+    //     pub fn deserialize<'de, D>(deserializer: D) -> Result<Address, D::Error>
+    //     where
+    //         D: Deserializer<'de>,
+    //     {
+    //         let s: String = Deserialize::deserialize(deserializer)?;
+    //         Address::from_str(&s).map_err(|e| Error::custom(format!("{:?}", e)))
+    //     }
+    // }
 }
 
 impl TryFrom<Vec<u8>> for BtcTrusteeType {
@@ -108,3 +108,4 @@ pub type BtcTrusteeIntentionProps = TrusteeIntentionProps<BtcTrusteeType>;
 pub type BtcTrusteeSessionInfo<AccountId> = TrusteeSessionInfo<AccountId, BtcTrusteeAddrInfo>;
 pub type BtcTrusteeSessionManager<T> = TrusteeSessionManager<T, BtcTrusteeAddrInfo>;
 pub type BtcTrusteeMultisig<T> = TrusteeMultisigProvider<T, BtcTrusteeType>;
+pub type BtcAddress = Vec<u8>;
