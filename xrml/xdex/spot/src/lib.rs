@@ -146,6 +146,29 @@ decl_module! {
                 info!("[refund_locked] who: {:?}, token: {:?}, value: {:?}", who, token, value);
             }
         }
+
+        pub fn update_trading_pair(pair_index: TradingPairIndex, tick_precision: Option<u32>, new_online: bool) {
+            info!(
+                "[update_trading_pair] pair_index: {}, tick_precision: {:?}, online:{}",
+                pair_index, tick_precision, new_online
+            );
+
+            let pair = Self::trading_pair(pair_index)?;
+            if let Some(new) = tick_precision {
+                ensure!(new >= pair.tick_precision, "tick_precision can not less than the one of pair!");
+            }
+
+            <TradingPairOf<T>>::mutate(pair_index, |pair| {
+                if let Some(pair) = pair {
+                    if let Some(new) = tick_precision {
+                        pair.tick_precision = new;
+                    }
+                    pair.online = new_online;
+                }
+            });
+
+            Self::update_order_pair_event(&pair);
+        }
     }
 }
 
@@ -232,33 +255,6 @@ impl<T: Trait> Module<T> {
         <TradingPairOf<T>>::insert(index, &pair);
         <TradingPairInfoOf<T>>::insert(index, (price, price, <system::Module<T>>::block_number()));
         <TradingPairCount<T>>::put(index + 1);
-
-        Self::update_order_pair_event(&pair);
-
-        Ok(())
-    }
-
-    pub fn update_trading_pair(
-        pair_index: TradingPairIndex,
-        tick_precision: u32,
-        online: bool,
-    ) -> Result {
-        info!(
-            "[update_trading_pair] pair_index: {:}, tick_precision: {:}, online:{:}",
-            pair_index, tick_precision, online
-        );
-
-        let pair = Self::trading_pair(pair_index)?;
-        if tick_precision < pair.tick_precision {
-            return Err("tick_precision can not less than the one of pair!");
-        }
-
-        <TradingPairOf<T>>::mutate(pair_index, |pair| {
-            if let Some(pair) = pair {
-                pair.tick_precision = tick_precision;
-                pair.online = online;
-            }
-        });
 
         Self::update_order_pair_event(&pair);
 

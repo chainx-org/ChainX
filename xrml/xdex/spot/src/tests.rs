@@ -33,9 +33,21 @@ fn update_trading_pair_should_work() {
         assert_eq!(XSpot::trading_pair_of(2).unwrap().tick_precision, 1);
         assert_eq!(XSpot::trading_pair_of(2).unwrap().online, true);
 
-        assert_ok!(XSpot::update_trading_pair(2, 888, false));
+        assert_ok!(XSpot::update_trading_pair(2, Some(888), false));
         assert_eq!(XSpot::trading_pair_of(2).unwrap().tick_precision, 888);
         assert_eq!(XSpot::trading_pair_of(2).unwrap().online, false);
+
+        assert_noop!(
+            XSpot::put_order(
+                Origin::signed(1),
+                2,
+                OrderType::Limit,
+                Side::Sell,
+                1000,
+                890_000,
+            ),
+            "The trading pair must be online"
+        );
     })
 }
 
