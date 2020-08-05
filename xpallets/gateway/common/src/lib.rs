@@ -5,6 +5,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod binding;
 pub mod extractor;
 pub mod traits;
 pub mod trustees;
@@ -22,7 +23,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 
-use chainx_primitives::{AddrStr, AssetId, Name, Text};
+use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestriction, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::WithdrawalState;
@@ -31,7 +32,7 @@ use xpallet_support::{
     traits::{MultiSig, Validator},
 };
 
-use crate::traits::{ChannelBinding, TrusteeForChain};
+use crate::traits::TrusteeForChain;
 use crate::trustees::{ChainContext, TrusteeMultisigProvider};
 use crate::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
@@ -172,6 +173,11 @@ decl_storage! {
 
         pub TrusteeIntentionPropertiesOf get(fn trustee_intention_props_of):
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Option<GenericTrusteeIntentionProps>;
+
+        pub AddressBinding:
+            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress => Option<T::AccountId>;
+        pub BoundAddressOf:
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Vec<ChainAddress>;
 
         pub ChannelBindingOf get(fn channel_binding_of):
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => Option<T::AccountId>;
@@ -368,43 +374,6 @@ impl<T: Trait> Module<T> {
         ChannelBindingOf::<T>::insert(&who, &asset_id, binded.clone());
 
         Self::deposit_event(RawEvent::ChannelBinding(asset_id, who, binded))
-    }
-}
-
-impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
-    fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<Name>) {
-        if let Some(name) = channel_name {
-            // TODO relate name to an accountid
-            // Self::set_binding(asset_id, who, binded);
-            /*
-            if let Some(channel) = xaccounts::Module::<T>::intention_of(&name) {
-                match Self::get_binding_info(assert_id, who) {
-                    None => {
-                        // set to storage
-                        let key = (assert_id.clone(), who.clone());
-                        ChannelBindingOf::<T>::insert(&key, channel.clone());
-
-                        Self::deposit_event(RawEvent::ChannelBinding(
-                            assert_id.clone(),
-                            who.clone(),
-                            channel,
-                        ));
-                    }
-                    Some(_channel) => {
-                        debug!("[update_binding]|already has binding, do nothing|assert_id:{:}|who:{:?}|channel:{:?}", assert_id!(assert_id), who, _channel);
-                    }
-                }
-            } else {
-                warn!(
-                    "[update_binding]|channel not exist, do not set binding|name:{:?}",
-                    str!(&name)
-                );
-            };
-            */
-        };
-    }
-    fn get_binding_info(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
-        Self::channel_binding_of(who, assert_id)
     }
 }
 

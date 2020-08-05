@@ -15,7 +15,7 @@ use sp_std::{fmt::Debug, prelude::*, result};
 // ChainX
 use chainx_primitives::{AssetId, Name};
 use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{ChannelBinding, Extractable};
+use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding, Extractable};
 use xpallet_support::{debug, error, info, str, warn, RUNTIME_TARGET};
 
 // light-bitcoin
@@ -37,10 +37,7 @@ use crate::tx::utils::{addr2vecu8, ensure_identical};
 use crate::types::{
     AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
 };
-use crate::{
-    AddressBinding, BalanceOf, BoundAddressOf, Module, PendingDeposits, RawEvent, Trait,
-    WithdrawalProposal,
-};
+use crate::{BalanceOf, Module, PendingDeposits, RawEvent, Trait, WithdrawalProposal};
 
 pub fn process_tx<T: Trait>(
     tx: Transaction,
@@ -298,9 +295,8 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 let addr = addr2vecu8(&addr);
                 // remove old unbinding deposit info
                 remove_pending_deposit::<T>(&addr, &accountid);
-            // update or override binding info
-            // TODO move to common
-            // update_binding::<T>(&addr, &accountid);
+                // update or override binding info
+                T::AddrBinding::update_binding(Module::<T>::chain(), addr, accountid.clone());
             } else {
                 // no input addr
                 debug!("[deposit]|no input addr for this deposit tx, but has opreturn to get accountid|tx_hash:{:?}|who:{:?}", hash, accountid);
@@ -311,8 +307,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
             if let Some(addr) = deposit_info.input_addr {
                 // no opreturn, use addr to get accountid
                 let addr_bytes = addr2vecu8(&addr);
-                // TODO move to common
-                match Module::<T>::address_binding(&addr_bytes) {
+                match T::AddrBinding::get_binding(Module::<T>::chain(), addr_bytes) {
                     Some(accountid) => AccountInfo::Account((accountid, None)),
                     None => AccountInfo::Address(addr.clone()),
                 }

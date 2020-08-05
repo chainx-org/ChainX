@@ -29,7 +29,7 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use chainx_primitives::{AddrStr, AssetId};
 use xpallet_assets::{Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{ChannelBinding, Extractable, TrusteeSession},
+    traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::{
@@ -70,6 +70,7 @@ pub trait Trait:
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
     type TrusteeMultiSigProvider: MultiSig<Self::AccountId>;
     type Channel: ChannelBinding<Self::AccountId>;
+    type AddrBinding: AddrBinding<Self::AccountId, BtcAddress>;
 }
 
 decl_error! {
@@ -189,11 +190,6 @@ decl_storage! {
         pub TxState get(fn tx_state): map hasher(identity) H256 => Option<BtcTxState>;
         /// unclaimed deposit info, addr => tx_hash, btc value,
         pub PendingDeposits get(fn pending_deposits): map hasher(blake2_128_concat) BtcAddress => Vec<BtcDepositCache>;
-        // todo may move binding to common
-        ///
-        pub AddressBinding get(fn address_binding): map hasher(blake2_128_concat) BtcAddress => Option<T::AccountId>;
-        ///
-        pub BoundAddressOf get(fn bound_address_of): map hasher(blake2_128_concat) T::AccountId => Vec<BtcAddress>;
 
         /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
         pub WithdrawalProposal get(fn withdrawal_proposal): Option<BtcWithdrawalProposal<T::AccountId>>;

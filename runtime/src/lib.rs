@@ -35,7 +35,7 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use frame_system::{EnsureOneOf, EnsureRoot};
+use frame_system::{EnsureOneOf, EnsureRoot, Trait};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -65,8 +65,8 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 pub use chainx_primitives::{
-    AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, Hash, Index, Moment, Name,
-    Signature, Token,
+    AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, ChainAddress, Hash, Index,
+    Moment, Name, Signature, Token,
 };
 pub use xp_runtime::Memo;
 
@@ -96,6 +96,7 @@ use impls::CurrencyToVoteHandler;
 /// Constant values used within the runtime.
 pub mod constants;
 pub use constants::{currency::*, time::*};
+use xpallet_gateway_bitcoin::BtcAddress;
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -721,6 +722,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeMultiSigProvider = trustees::bitcoin::BtcTrusteeMultisig<Runtime>;
     type Channel = XGatewayCommon;
+    type AddrBinding = XGatewayCommon;
 }
 
 impl xpallet_dex_spot::Trait for Runtime {
@@ -1031,6 +1033,10 @@ impl_runtime_apis! {
     }
 
     impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance> for Runtime {
+        fn bound_addrs(who: AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
+            XGatewayCommon::bound_addrs(&who)
+        }
+
         fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
             XGatewayCommon::withdrawal_limit(&asset_id)
         }
