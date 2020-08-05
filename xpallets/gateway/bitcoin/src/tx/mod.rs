@@ -15,7 +15,7 @@ use sp_std::{fmt::Debug, prelude::*, result};
 // ChainX
 use chainx_primitives::{AssetId, Name};
 use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{ChannelBinding, Extractable};
+use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding, Extractable};
 use xpallet_support::{debug, error, info, str, warn, RUNTIME_TARGET};
 
 // light-bitcoin
@@ -35,12 +35,9 @@ pub use self::validator::validate_transaction;
 use crate::trustee::{get_last_trustee_address_pair, get_trustee_address_pair};
 use crate::tx::utils::{addr2vecu8, ensure_identical};
 use crate::types::{
-    AccountInfo, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
+    AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
 };
-use crate::{
-    AddressBinding, BalanceOf, BoundAddressOf, Module, PendingDeposits, RawEvent, Trait,
-    WithdrawalProposal,
-};
+use crate::{BalanceOf, Module, PendingDeposits, RawEvent, Trait, WithdrawalProposal};
 
 pub fn process_tx<T: Trait>(
     tx: Transaction,
@@ -295,10 +292,11 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
     let account_info = match deposit_info.op_return {
         Some((accountid, channel_name)) => {
             if let Some(addr) = deposit_info.input_addr {
+                let addr = addr2vecu8(&addr);
                 // remove old unbinding deposit info
                 remove_pending_deposit::<T>(&addr, &accountid);
                 // update or override binding info
-                update_binding::<T>(&addr, &accountid);
+                T::AddrBinding::update_binding(Module::<T>::chain(), addr, accountid.clone());
             } else {
                 // no input addr
                 debug!("[deposit]|no input addr for this deposit tx, but has opreturn to get accountid|tx_hash:{:?}|who:{:?}", hash, accountid);
@@ -308,7 +306,8 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
         None => {
             if let Some(addr) = deposit_info.input_addr {
                 // no opreturn, use addr to get accountid
-                match Module::<T>::address_binding(&addr) {
+                let addr_bytes = addr2vecu8(&addr);
+                match T::AddrBinding::get_binding(Module::<T>::chain(), addr_bytes) {
                     Some(accountid) => AccountInfo::Account((accountid, None)),
                     None => AccountInfo::Address(addr.clone()),
                 }
@@ -361,7 +360,7 @@ fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) -> DispatchResult {
     })?;
     Ok(())
 }
-
+/*
 fn update_binding<T: Trait>(address: &Address, who: &T::AccountId) {
     if let Some(accountid) = AddressBinding::<T>::get(&address) {
         if &accountid != who {
@@ -391,8 +390,8 @@ fn update_binding<T: Trait>(address: &Address, who: &T::AccountId) {
     );
     AddressBinding::<T>::insert(address, who.clone());
 }
-
-pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::AccountId) {
+*/
+pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::AccountId) {
     // notice this would delete this cache
     let records = PendingDeposits::take(input_address);
     for r in records {
@@ -407,23 +406,25 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &Address, who: &T::Accoun
             who.clone(),
             r.balance.saturated_into(),
             r.txid,
-            addr2vecu8(input_address),
+            input_address.clone(),
         ));
     }
 }
 
 fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balance: u64) {
+    let addr_bytes = addr2vecu8(input_address);
+
     let cache = BtcDepositCache {
         txid: txid.clone(),
         balance,
     };
 
-    PendingDeposits::mutate(input_address, |list| {
+    PendingDeposits::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
             native::debug!(
                 target: RUNTIME_TARGET,
                 "[insert_pending_deposit]|Add pending deposit|address:{:?}|txhash:{:}|balance:{:}",
-                str!(addr2vecu8(input_address)),
+                str!(addr_bytes),
                 txid,
                 balance
             );

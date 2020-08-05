@@ -509,6 +509,10 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
     fn is_validator(who: &T::AccountId) -> bool {
         Self::is_validator(who)
     }
+
+    fn validator_for(name: &[u8]) -> Option<T::AccountId> {
+        Self::validator_for(name)
+    }
 }
 
 impl<T: Trait> Module<T> {

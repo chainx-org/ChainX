@@ -65,8 +65,8 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 pub use chainx_primitives::{
-    AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, Hash, Index, Moment, Name,
-    ReferralId, Signature, Token,
+    AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, ChainAddress, Hash, Index,
+    Moment, Name, ReferralId, Signature, Token,
 };
 pub use xp_runtime::Memo;
 
@@ -721,6 +721,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeMultiSigProvider = trustees::bitcoin::BtcTrusteeMultisig<Runtime>;
     type Channel = XGatewayCommon;
+    type AddrBinding = XGatewayCommon;
 }
 
 impl xpallet_dex_spot::Trait for Runtime {
@@ -759,18 +760,18 @@ impl xpallet_mining_staking::Trait for Runtime {
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
 }
 
-pub struct DummyReferralGetter;
-impl xpallet_mining_asset::GatewayInterface<AccountId> for DummyReferralGetter {
-    fn referral_of(_who: &AccountId, _asset_id: AssetId) -> Option<AccountId> {
-        // FIXME impl this in gateway
-        None
+pub struct ReferralGetter;
+impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
+    fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId> {
+        use xpallet_gateway_common::traits::ChannelBinding;
+        XGatewayCommon::get_binding_info(&asset_id, who)
     }
 }
 
 impl xpallet_mining_asset::Trait for Runtime {
     type Event = Event;
     type StakingInterface = Self;
-    type GatewayInterface = DummyReferralGetter;
+    type GatewayInterface = ReferralGetter;
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
@@ -1031,6 +1032,10 @@ impl_runtime_apis! {
     }
 
     impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance> for Runtime {
+        fn bound_addrs(who: AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
+            XGatewayCommon::bound_addrs(&who)
+        }
+
         fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
             XGatewayCommon::withdrawal_limit(&asset_id)
         }

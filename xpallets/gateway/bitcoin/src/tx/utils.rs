@@ -4,8 +4,7 @@ use frame_support::{debug::native, dispatch::DispatchResult};
 use sp_std::prelude::Vec;
 
 // ChainX
-// use xbridge_common::{traits::TrusteeSession, types::TrusteeSessionInfo, utils::two_thirds_unsafe};
-use xpallet_support::{base58::to_base58, error, try_hex, warn, RUNTIME_TARGET};
+use xpallet_support::{base58, error, try_hex, warn, RUNTIME_TARGET};
 
 // light-bitcoin
 use btc_chain::{OutPoint, Transaction};
@@ -149,7 +148,7 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
 
 #[inline]
 pub fn addr2vecu8(addr: &Address) -> Vec<u8> {
-    to_base58(addr.layout().to_vec())
+    base58::to_base58(&*addr.layout())
 }
 
 #[cfg(feature = "std")]

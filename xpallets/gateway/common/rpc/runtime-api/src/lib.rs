@@ -5,7 +5,7 @@
 use sp_runtime::DispatchError;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-pub use chainx_primitives::{AddrStr, AssetId};
+pub use chainx_primitives::{AddrStr, AssetId, ChainAddress};
 pub use xp_runtime::Memo;
 pub use xpallet_assets::{Chain, WithdrawalLimit};
 pub use xpallet_gateway_common::{
@@ -19,6 +19,8 @@ sp_api::decl_runtime_apis! {
         AccountId: codec::Codec,
         Balance: codec::Codec,
     {
+        fn bound_addrs(who: AccountId) -> BTreeMap<Chain, Vec<ChainAddress>>;
+
         fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError>;
 
         fn verify_withdrawal(asset_id: AssetId, value: Balance, addr: AddrStr, memo: Memo) -> Result<(), DispatchError>;

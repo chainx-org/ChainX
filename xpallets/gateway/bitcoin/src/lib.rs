@@ -29,7 +29,7 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use chainx_primitives::{AddrStr, AssetId};
 use xpallet_assets::{Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{ChannelBinding, Extractable, TrusteeSession},
+    traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::{
@@ -39,7 +39,7 @@ use xpallet_support::{
 
 // light-bitcoin
 use btc_chain::Transaction;
-use btc_keys::{Address as BtcAddress, DisplayLayout};
+use btc_keys::{Address, DisplayLayout};
 use btc_ser::deserialize;
 // re-export
 pub use btc_chain::BlockHeader as BtcHeader;
@@ -48,12 +48,12 @@ pub use btc_keys::Network as BtcNetwork;
 pub use btc_primitives::h256_conv_endian_from_str;
 pub use btc_primitives::{Compact, H256, H264};
 
+pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use self::types::{
     BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcTxResult, BtcTxState,
 };
-pub use self::types::{BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use crate::trustee::get_trustee_address_pair;
-use crate::tx::{remove_pending_deposit, utils::addr2vecu8};
+use crate::tx::remove_pending_deposit;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
@@ -70,6 +70,7 @@ pub trait Trait:
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
     type TrusteeMultiSigProvider: MultiSig<Self::AccountId>;
     type Channel: ChannelBinding<Self::AccountId>;
+    type AddrBinding: AddrBinding<Self::AccountId, BtcAddress>;
 }
 
 decl_error! {
@@ -189,11 +190,6 @@ decl_storage! {
         pub TxState get(fn tx_state): map hasher(identity) H256 => Option<BtcTxState>;
         /// unclaimed deposit info, addr => tx_hash, btc value,
         pub PendingDeposits get(fn pending_deposits): map hasher(blake2_128_concat) BtcAddress => Vec<BtcDepositCache>;
-        // todo may move binding to common
-        ///
-        pub AddressBinding get(fn address_binding): map hasher(blake2_128_concat) BtcAddress => Option<T::AccountId>;
-        ///
-        pub BoundAddressOf get(fn bound_address_of): map hasher(blake2_128_concat) T::AccountId => Vec<BtcAddress>;
 
         /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
         pub WithdrawalProposal get(fn withdrawal_proposal): Option<BtcWithdrawalProposal<T::AccountId>>;
@@ -349,7 +345,7 @@ decl_module! {
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
             } else {
-                info!("[remove_pending]|release pending deposit directly, not deposit to someone|addr:{:?}", str!(addr2vecu8(&addr)));
+                info!("[remove_pending]|release pending deposit directly, not deposit to someone|addr:{:?}", str!(&addr));
                 PendingDeposits::remove(&addr);
             }
             Ok(())
@@ -417,15 +413,13 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 
     fn check_addr(addr: &[u8], _: &[u8]) -> DispatchResult {
         // this addr is base58 addr
-        let address = Self::verify_btc_address(addr)
-            .map_err(|_| Error::<T>::InvalidAddress)
-            .map_err(|e| {
-                error!(
-                    "[verify_btc_address]|failed, source addr is:{:?}",
-                    try_addr!(addr)
-                );
-                e
-            })?;
+        let address = Self::verify_btc_address(addr).map_err(|e| {
+            error!(
+                "[verify_btc_address]|failed, source addr is:{:?}",
+                try_addr!(addr)
+            );
+            e
+        })?;
 
         let (hot_addr, cold_addr) = get_trustee_address_pair::<T>()?;
         if address == hot_addr || address == cold_addr {
@@ -451,9 +445,9 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn verify_btc_address(data: &[u8]) -> result::Result<BtcAddress, DispatchError> {
+    pub fn verify_btc_address(data: &[u8]) -> result::Result<Address, DispatchError> {
         let r = base58::from(data).map_err(|_| Error::<T>::InvalidBase58)?;
-        let addr = BtcAddress::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
+        let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
         Ok(addr)
     }
 

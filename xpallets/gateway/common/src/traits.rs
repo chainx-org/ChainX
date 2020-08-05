@@ -45,3 +45,8 @@ pub trait ChannelBinding<AccountId> {
     fn update_binding(asset_id: &AssetId, who: &AccountId, channel_name: Option<Name>);
     fn get_binding_info(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
 }
+
+pub trait AddrBinding<AccountId, Addr: Into<Vec<u8>>> {
+    fn update_binding(chain: Chain, addr: Addr, who: AccountId);
+    fn get_binding(chain: Chain, addr: Addr) -> Option<AccountId>;
+}

@@ -7650,6 +7650,7 @@ dependencies = [
  "hex-serde",
  "parity-scale-codec",
  "serde",
+ "sp-runtime",
  "sp-std",
 ]
 

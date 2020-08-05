@@ -24,6 +24,14 @@ use xpallet_support::RpcBalance;
 /// XGatewayCommon RPC methods.
 #[rpc]
 pub trait XGatewayCommonApi<BlockHash, AccountId, RpcBalance> {
+    /// Get bound addrs for an accountid
+    #[rpc(name = "xgatewaycommon_boundAddrs")]
+    fn bound_addrs(
+        &self,
+        who: AccountId,
+        at: Option<BlockHash>,
+    ) -> Result<BTreeMap<Chain, Vec<String>>>;
+
     /// Get withdrawal limit(minimal_withdrawal&fee) for an AssetId
     #[rpc(name = "xgatewaycommon_withdrawalLimit")]
     fn withdrawal_limit(
@@ -168,6 +176,38 @@ where
     AccountId: Codec + Send + Sync + 'static,
     Balance: Codec + Send + Sync + 'static + From<u64>,
 {
+    fn bound_addrs(
+        &self,
+        who: AccountId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<BTreeMap<Chain, Vec<String>>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().best_hash));
+
+        let result = api
+            .bound_addrs(&at, who)
+            .map_err(|e| runtime_error_into_rpc_err(e))?;
+
+        let result = result
+            .into_iter()
+            .filter_map(|(chain, addrs)| {
+                let convert: Box<dyn Fn(Vec<u8>) -> String> = match chain {
+                    Chain::Bitcoin => {
+                        Box::new(|addr: Vec<u8>| String::from_utf8_lossy(&addr).into_owned())
+                    }
+                    Chain::Ethereum => Box::new(|addr: Vec<u8>| hex::encode(addr)),
+                    _ => return None,
+                };
+
+                Some((chain, addrs.into_iter().map(|addr| convert(addr)).collect()))
+            })
+            .collect();
+
+        Ok(result)
+    }
+
     fn withdrawal_limit(
         &self,
         asset_id: AssetId,

@@ -57,6 +57,7 @@ pub type Token = Vec<u8>;
 pub type Name = Vec<u8>;
 pub type Precision = u8;
 pub type AddrStr = Vec<u8>;
+pub type ChainAddress = Vec<u8>;
 pub type AssetId = u32;
 
 /// Referral ID of validator.

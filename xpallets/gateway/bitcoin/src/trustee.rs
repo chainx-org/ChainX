@@ -21,7 +21,7 @@ use xpallet_gateway_common::{
 };
 use xpallet_support::{debug, error, info, RUNTIME_TARGET};
 
-use crate::tx::utils::{ensure_identical, parse_output_addr};
+use crate::tx::utils::{addr2vecu8, ensure_identical, parse_output_addr};
 use crate::tx::validator::parse_and_check_signed_tx;
 use crate::types::{BtcWithdrawalProposal, VoteResult};
 use crate::{Error, Module, RawEvent, Trait, WithdrawalProposal};
@@ -40,21 +40,31 @@ fn trustee_addr_info_pair<T: Trait>(
 
 #[inline]
 pub fn get_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
-    trustee_addr_info_pair::<T>().map(|(hot_info, cold_info)| (hot_info.addr, cold_info.addr))
+    trustee_addr_info_pair::<T>().map(|(hot_info, cold_info)| {
+        (
+            Module::<T>::verify_btc_address(&hot_info.addr)
+                .expect("should not parse error from storage data; qed"),
+            Module::<T>::verify_btc_address(&cold_info.addr)
+                .expect("should not parse error from storage data; qed"),
+        )
+    })
 }
 
 #[inline]
 pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
     T::TrusteeSessionProvider::last_trustee_session().map(|session_info| {
         (
-            session_info.hot_address.addr,
-            session_info.cold_address.addr,
+            Module::<T>::verify_btc_address(&session_info.hot_address.addr)
+                .expect("should not parse error from storage data; qed"),
+            Module::<T>::verify_btc_address(&session_info.cold_address.addr)
+                .expect("should not parse error from storage data; qed"),
         )
     })
 }
 
 pub fn get_hot_trustee_address<T: Trait>() -> Result<Address, DispatchError> {
-    trustee_addr_info_pair::<T>().map(|(addr_info, _)| addr_info.addr)
+    trustee_addr_info_pair::<T>()
+        .and_then(|(addr_info, _)| Module::<T>::verify_btc_address(&addr_info.addr))
 }
 
 pub fn get_hot_trustee_redeem_script<T: Trait>() -> Result<Script, DispatchError> {
@@ -418,7 +428,7 @@ fn create_multi_address<T: Trait>(
     };
     let script_bytes: Bytes = redeem_script.into();
     Some(BtcTrusteeAddrInfo {
-        addr,
+        addr: addr2vecu8(&addr),
         redeem_script: script_bytes.into(),
     })
 }
@@ -462,8 +472,7 @@ fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> 
                         .ok_or(Error::<T>::NoWithdrawalRecord)?;
                 // record.addr() is base58
                 // verify btc address would conveRelayedTx a base58 addr to Address
-                let addr: Address = Module::<T>::verify_btc_address(&record.addr())
-                    .map_err(|_| Error::<T>::InvalidPublicKey)?;
+                let addr: Address = Module::<T>::verify_btc_address(&record.addr())?;
 
                 appl_withdrawal_list.push((addr, record.balance().saturated_into() as u64));
             }
