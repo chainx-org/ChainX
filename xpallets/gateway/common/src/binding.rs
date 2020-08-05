@@ -3,32 +3,33 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, Name};
 use xpallet_assets::Chain;
-use xpallet_support::{debug, info, try_addr};
+use xpallet_support::{debug, error, info, str, traits::Validator, try_addr, warn};
 
 use crate::traits::{AddrBinding, ChannelBinding};
 use crate::{AddressBinding, BoundAddressOf, Module, Trait};
 
 impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<Name>) {
+        let chain = match xpallet_assets::Module::<T>::asset_info_of(assert_id) {
+            Some(info) => info.chain(),
+            None => {
+                error!(
+                    "[update_binding]|meed an unexpected asset_id:{:?}",
+                    assert_id
+                );
+                return;
+            }
+        };
+
         if let Some(name) = channel_name {
-            // TODO relate name to an accountid
-            // Self::set_binding(asset_id, who, binded);
-            /*
-            if let Some(channel) = xaccounts::Module::<T>::intention_of(&name) {
-                match Self::get_binding_info(assert_id, who) {
+            if let Some(channel) = T::Validator::validator_for(&name) {
+                match Self::channel_binding_of(who, chain) {
                     None => {
                         // set to storage
-                        let key = (assert_id.clone(), who.clone());
-                        ChannelBindingOf::<T>::insert(&key, channel.clone());
-
-                        Self::deposit_event(RawEvent::ChannelBinding(
-                            assert_id.clone(),
-                            who.clone(),
-                            channel,
-                        ));
+                        Self::set_binding(chain, who.clone(), channel);
                     }
                     Some(_channel) => {
-                        debug!("[update_binding]|already has binding, do nothing|assert_id:{:}|who:{:?}|channel:{:?}", assert_id!(assert_id), who, _channel);
+                        debug!("[update_binding]|already has binding, do nothing|assert_id:{:}|chain:{:?}|who:{:?}|channel:{:?}", assert_id, chain, who, _channel);
                     }
                 }
             } else {
@@ -37,11 +38,13 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
                     str!(&name)
                 );
             };
-            */
         };
     }
+
     fn get_binding_info(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
-        Self::channel_binding_of(who, assert_id)
+        let chain =
+            xpallet_assets::Module::<T>::asset_info_of(assert_id).map(|info| info.chain())?;
+        Self::channel_binding_of(who, chain)
     }
 }
 

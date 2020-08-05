@@ -35,7 +35,7 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use frame_system::{EnsureOneOf, EnsureRoot, Trait};
+use frame_system::{EnsureOneOf, EnsureRoot};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -96,7 +96,6 @@ use impls::CurrencyToVoteHandler;
 /// Constant values used within the runtime.
 pub mod constants;
 pub use constants::{currency::*, time::*};
-use xpallet_gateway_bitcoin::BtcAddress;
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -761,18 +760,18 @@ impl xpallet_mining_staking::Trait for Runtime {
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
 }
 
-pub struct DummyReferralGetter;
-impl xpallet_mining_asset::GatewayInterface<AccountId> for DummyReferralGetter {
-    fn referral_of(_who: &AccountId, _asset_id: AssetId) -> Option<AccountId> {
-        // FIXME impl this in gateway
-        None
+pub struct ReferralGetter;
+impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
+    fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId> {
+        use xpallet_gateway_common::traits::ChannelBinding;
+        XGatewayCommon::get_binding_info(&asset_id, who)
     }
 }
 
 impl xpallet_mining_asset::Trait for Runtime {
     type Event = Event;
     type StakingInterface = Self;
-    type GatewayInterface = DummyReferralGetter;
+    type GatewayInterface = ReferralGetter;
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;

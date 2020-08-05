@@ -62,7 +62,7 @@ decl_event!(
         GenericTrusteeSessionInfo = GenericTrusteeSessionInfo<<T as system::Trait>::AccountId> {
         SetTrusteeProps(AccountId, Chain, GenericTrusteeIntentionProps),
         NewTrustees(Chain, u32, GenericTrusteeSessionInfo),
-        ChannelBinding(AssetId, AccountId, AccountId),
+        ChannelBinding(Chain, AccountId, AccountId),
     }
 );
 
@@ -150,9 +150,9 @@ decl_module! {
         }
 
         #[weight = 0]
-        pub fn force_set_binding(origin, #[compact] asset_id: AssetId, who: T::AccountId, binded: T::AccountId) -> DispatchResult {
+        pub fn force_set_binding(origin, chain: Chain, who: T::AccountId, binded: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
-            Self::set_binding(asset_id, who, binded);
+            Self::set_binding(chain, who, binded);
             Ok(())
         }
     }
@@ -180,8 +180,9 @@ decl_storage! {
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Vec<ChainAddress>;
 
         pub ChannelBindingOf get(fn channel_binding_of):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => Option<T::AccountId>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Option<T::AccountId>;
 
+        /// a hack storage to store a global data in runtime.
         TmpChain get(fn tmp_chain): Chain;
     }
     add_extra_genesis {
@@ -370,10 +371,10 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn set_binding(asset_id: AssetId, who: T::AccountId, binded: T::AccountId) {
-        ChannelBindingOf::<T>::insert(&who, &asset_id, binded.clone());
+    fn set_binding(chain: Chain, who: T::AccountId, binded: T::AccountId) {
+        ChannelBindingOf::<T>::insert(&who, &chain, binded.clone());
 
-        Self::deposit_event(RawEvent::ChannelBinding(asset_id, who, binded))
+        Self::deposit_event(RawEvent::ChannelBinding(chain, who, binded))
     }
 }
 

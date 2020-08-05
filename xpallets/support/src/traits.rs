@@ -17,10 +17,15 @@ pub trait MultiSig<AccountId: PartialEq + Debug> {
 
 pub trait Validator<AccountId> {
     fn is_validator(who: &AccountId) -> bool;
+    fn validator_for(_: &[u8]) -> Option<AccountId>;
 }
 
 impl<AccountId> Validator<AccountId> for () {
     fn is_validator(_: &AccountId) -> bool {
         false
+    }
+
+    fn validator_for(_: &[u8]) -> Option<AccountId> {
+        None
     }
 }
