@@ -251,7 +251,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AssetId>
 pub struct DummyGatewayReferralGetter;
 
 impl GatewayInterface<AccountId> for DummyGatewayReferralGetter {
-    fn referral_of(who: &AccountId) -> Option<AccountId> {
+    fn referral_of(who: &AccountId, _: AssetId) -> Option<AccountId> {
         Some(10_000_000_000 + *who)
     }
 }
@@ -317,7 +317,12 @@ impl ExtBuilder {
         let validators = vec![1, 2, 3, 4];
 
         let _ = xpallet_mining_staking::GenesisConfig::<Test> {
-            validators: vec![(1, 10), (2, 20), (3, 30), (4, 40)],
+            validators: vec![
+                (1, b"1 ".to_vec(), 10),
+                (2, b"2 ".to_vec(), 20),
+                (3, b"3 ".to_vec(), 30),
+                (4, b"4 ".to_vec(), 40),
+            ],
             validator_count: 6,
             sessions_per_era: 3,
             vesting_account: VESTING_ACCOUNT,

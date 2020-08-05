@@ -451,7 +451,8 @@ fn asset_mining_reward_should_work() {
             Balances::free_balance(&t_1),
             xbtc_pot_balance - xbtc_pot_balance / 10
         );
-        let referral = DummyGatewayReferralGetter::referral_of(&t_1).unwrap_or(TREASURY_ACCOUNT);
+        let referral = DummyGatewayReferralGetter::referral_of(&t_1, xpallet_protocol::X_BTC)
+            .unwrap_or(TREASURY_ACCOUNT);
         assert_eq!(Balances::free_balance(&referral), xbtc_pot_balance / 10);
         assert_eq!(Balances::free_balance(&TREASURY_ACCOUNT), treasury_balance);
     });

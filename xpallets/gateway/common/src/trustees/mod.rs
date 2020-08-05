@@ -5,7 +5,6 @@ use codec::{Decode, Encode, Error as CodecError};
 use serde::{Deserialize, Serialize};
 // Substrate
 use frame_support::dispatch::DispatchError;
-use sp_runtime::RuntimeDebug;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::Vec};
 
 use xpallet_assets::Chain;

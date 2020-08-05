@@ -124,7 +124,8 @@
     "ValidatorProfile": {
         "registeredAt": "BlockNumber",
         "isChilled": "bool",
-        "lastChilled": "Option<BlockNumber>"
+        "lastChilled": "Option<BlockNumber>",
+        "referralId": "ReferralId"
     },
     "NominatorProfile": {
         "lastRebond": "Option<BlockNumber>",
@@ -170,6 +171,7 @@
     "RpcBalance": "String",
     "RpcWeightType": "String",
     "WeightType": "u128",
+    "ReferralId": "Text",
     "AssetId": "u32",
     "Chain": {
         "_enum": [

@@ -29,6 +29,7 @@ use sp_runtime::{
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
+use chainx_primitives::ReferralId;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
@@ -134,6 +135,9 @@ decl_storage! {
         /// The beneficiary account of vesting schedule.
         pub VestingAccount get(fn vesting_account) config(): T::AccountId;
 
+        /// The validator account behind the referral id.
+        pub ValidatorFor: map hasher(twox_64_concat) ReferralId => Option<T::AccountId>;
+
         /// Maximum value of total_bonded/self_bonded.
         pub UpperBoundFactorOfAcceptableVotes get(fn upper_bound_factor) config():
             u32 = 10u32;
@@ -200,16 +204,17 @@ decl_storage! {
 
     add_extra_genesis {
         config(validators):
-            Vec<(T::AccountId, BalanceOf<T>)>;
+            Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
-            for &(ref v, balance) in &config.validators {
+            for &(ref v, ref referral_id, balance) in &config.validators {
                 assert!(
                     Module::<T>::free_balance(v) >= balance,
                     "Validator does not have enough balance to bond."
                 );
-                Module::<T>::apply_register(v);
+                Module::<T>::check_referral_id(referral_id).expect("Invalid referral_id in genesis");
+                Module::<T>::apply_register(v, referral_id.to_vec());
                 Module::<T>::apply_bond(v, v, balance).expect("Staking genesis initialization can not fail");
             }
             assert!(config.glob_dist_ratio.0 + config.glob_dist_ratio.1 > 0);
@@ -261,6 +266,8 @@ decl_error! {
         NotValidator,
         /// The account is already registered as a validator.
         AlreadyValidator,
+        /// The validators count already reaches `MaximumValidatorCount`.
+        TooManyValidators,
         /// The validator can accept no more votes from other voters.
         NoMoreAcceptableVotes,
         /// The validator can not (forcedly) be chilled due to the limit of minimal validators count.
@@ -283,6 +290,12 @@ decl_error! {
         InvalidUnbondedIndex,
         /// The unbonded balances are still in the locked state.
         UnbondedWithdrawalNotYetDue,
+        /// The length of referral identity is either too long or too short.
+        InvalidReferralIdentityLength,
+        /// The referral identity has been claimed by someone else.
+        OccupiedReferralIdentity,
+        /// Failed to pass the xss check.
+        XssCheckFailed,
     }
 }
 
@@ -421,10 +434,15 @@ decl_module! {
 
         /// Register to be a validator for the origin account.
         #[weight = 100_000]
-        pub fn register(origin) {
+        pub fn register(origin, referral_id: ReferralId) {
             let sender = ensure_signed(origin)?;
+            Self::check_referral_id(&referral_id)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::AlreadyValidator);
-            Self::apply_register(&sender);
+            ensure!(
+                (Self::validator_set().count() as u32) < MaximumValidatorCount::get(),
+                Error::<T>::TooManyValidators
+            );
+            Self::apply_register(&sender, referral_id);
         }
 
         #[weight = 10]
@@ -500,21 +518,31 @@ impl<T: Trait> Module<T> {
         Validators::<T>::contains_key(who)
     }
 
+    /// Returns the (possible) validator account behind the given referral id.
+    #[inline]
+    pub fn validator_for(referral_id: &[u8]) -> Option<T::AccountId> {
+        ValidatorFor::<T>::get(referral_id)
+    }
+
+    /// Return true if the validator `who` is chilled.
     #[inline]
     pub fn is_chilled(who: &T::AccountId) -> bool {
         Validators::<T>::get(who).is_chilled
     }
 
+    /// Return true if the validator `who` is not chilled.
     #[inline]
     pub fn is_active(who: &T::AccountId) -> bool {
         !Self::is_chilled(who)
     }
 
+    /// Returns all the registered validators in Staking.
     #[inline]
     pub fn validator_set() -> impl Iterator<Item = T::AccountId> {
         Validators::<T>::iter().map(|(v, _)| v)
     }
 
+    /// Returns all the validators that are not chilled.
     #[inline]
     pub fn active_validator_set() -> impl Iterator<Item = T::AccountId> {
         Self::validator_set().filter(Self::is_active)
@@ -534,6 +562,7 @@ impl<T: Trait> Module<T> {
         *Self::locks(who).entry(LockedType::Bonded).or_default()
     }
 
+    /// Returns the associated reward pot account for the given validator.
     #[inline]
     pub fn reward_pot_for(validator: &T::AccountId) -> T::AccountId {
         T::DetermineRewardPotAccount::reward_pot_account_for(validator)
@@ -599,6 +628,25 @@ impl<T: Trait> Module<T> {
 
     fn acceptable_votes_limit_of(validator: &T::AccountId) -> BalanceOf<T> {
         Self::validator_self_bonded(validator) * BalanceOf::<T>::from(Self::upper_bound_factor())
+    }
+
+    fn check_referral_id(referral_id: &[u8]) -> Result<(), Error<T>> {
+        const MIMUM_REFERRAL_ID: usize = 2;
+        const MAXIMUM_REFERRAL_ID: usize = 12;
+        let referral_id_len = referral_id.len();
+        ensure!(
+            referral_id_len >= MIMUM_REFERRAL_ID && referral_id_len <= MAXIMUM_REFERRAL_ID,
+            Error::<T>::InvalidReferralIdentityLength
+        );
+        ensure!(
+            xp_runtime::xss_check(referral_id).is_ok(),
+            Error::<T>::XssCheckFailed
+        );
+        ensure!(
+            Self::validator_for(referral_id).is_none(),
+            Error::<T>::OccupiedReferralIdentity
+        );
+        Ok(())
     }
 
     /// Returns Ok if the validator can still accept the `value` of new votes.
@@ -715,12 +763,14 @@ impl<T: Trait> Module<T> {
         Self::set_validator_vote_weight(target, target_weight, current_block, delta);
     }
 
-    fn apply_register(who: &T::AccountId) {
+    fn apply_register(who: &T::AccountId, referral_id: ReferralId) {
         let current_block = <frame_system::Module<T>>::block_number();
+        ValidatorFor::<T>::insert(&referral_id, who.clone());
         Validators::<T>::insert(
             who,
             ValidatorProfile {
                 registered_at: current_block,
+                referral_id,
                 ..Default::default()
             },
         );
