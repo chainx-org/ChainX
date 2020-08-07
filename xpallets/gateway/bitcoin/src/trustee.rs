@@ -152,8 +152,24 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
                    config.min_trustee_count, config.max_trustee_count, trustees);
             Err(Error::<T>::InvalidTrusteeCounts)?;
         }
+
+        #[cfg(feature = "std")]
+        let pretty_print_keys = |keys: &[Public]| {
+            keys.iter()
+                .map(|k| k.to_string().replace("\n", ""))
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        #[cfg(feature = "std")]
         info!(
-            "[generate_trustee_session_info]|hot_keys:{:?}|cold_keys:{:?}",
+            "[generate_trustee_session_info]|hot_keys:[{}]|cold_keys:[{}]",
+            pretty_print_keys(&hot_keys),
+            pretty_print_keys(&cold_keys)
+        );
+
+        #[cfg(not(feature = "std"))]
+        info!(
+            "generate_trustee_session_info]|hot_keys:{:?}|cold_keys:{:?}",
             hot_keys, cold_keys
         );
 

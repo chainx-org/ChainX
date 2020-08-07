@@ -35,13 +35,13 @@ impl<T: Trait> Module<T> {
         // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
         let off_the_table = (reward.saturated_into() / 10).saturated_into();
         Self::mint(who, off_the_table);
-        debug!("[mint]=>  validator {:?}: {:?}", who, off_the_table);
+        debug!("[mint]=> validator({:?}): {:?}", who, off_the_table);
 
         // Issue the rest 90% to validator's reward pot.
         let to_reward_pot = reward - off_the_table;
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(who);
         Self::mint(&reward_pot, to_reward_pot);
-        debug!("[mint]=> reward pot {:?}: {:?}", reward_pot, to_reward_pot);
+        debug!("[mint]=> reward_pot({:?}): {:?}", reward_pot, to_reward_pot);
     }
 
     /// Reward the intention and slash the validators that went offline in last session.
