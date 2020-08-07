@@ -1,6 +1,9 @@
 /// Balance type when interacting with RPC.
 pub type RpcBalance<Balance> = U128<Balance>;
 
+/// Price type of order when interacting with RPC.
+pub type RpcPrice<Price> = U128<Price>;
+
 /// WeightType when interacting with RPC.
 pub type RpcWeightType = U128<u128>;
 

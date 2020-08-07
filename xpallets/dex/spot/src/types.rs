@@ -100,24 +100,14 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
     /// Decreases the `highest_bid` by one tick.
     pub fn tick_down_highest_bid(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
-
-        self.highest_bid = self
-            .highest_bid
-            .checked_sub(&tick.saturated_into())
-            .unwrap_or_else(Zero::zero);
-
+        self.highest_bid = self.highest_bid.saturating_sub(tick.saturated_into());
         self.highest_bid
     }
 
     /// Increases the `lowest_offer` by one tick.
     pub fn tick_up_lowest_offer(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
-
-        self.lowest_offer = match self.lowest_offer.checked_add(&tick.saturated_into()) {
-            Some(x) => x,
-            None => panic!("Fail to tick up lowest_offer"),
-        };
-
+        self.lowest_offer = self.lowest_offer.saturating_add(tick.saturated_into());
         self.lowest_offer
     }
 }
@@ -170,7 +160,7 @@ pub struct TradingPairProfile {
     pub currency_pair: CurrencyPair,
     /// How many decimal places of the currency pair.
     pub pip_precision: u32,
-    ///
+    /// How many decimals of the tick size.
     pub tick_precision: u32,
     /// Is the trading pair still tradable.
     pub online: bool,
