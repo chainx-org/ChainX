@@ -14,12 +14,23 @@ pub struct BtcTrusteeAddrInfo {
 #[cfg(feature = "std")]
 impl std::fmt::Debug for BtcTrusteeAddrInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "BtcTrusteeAddrInfo {{ addr: {}, redeem_script: {} }}",
-            String::from_utf8_lossy(&self.addr),
-            hex::encode(&self.redeem_script)
-        )
+        let redeem_script_in_hex = hex::encode(&self.redeem_script);
+        if redeem_script_in_hex.len() > 16 {
+            write!(
+                f,
+                "BtcTrusteeAddrInfo {{ addr: {}, redeem_script: 0x{}...{} }}",
+                String::from_utf8_lossy(&self.addr),
+                &redeem_script_in_hex[..8],
+                &redeem_script_in_hex[redeem_script_in_hex.len() - 8..]
+            )
+        } else {
+            write!(
+                f,
+                "BtcTrusteeAddrInfo {{ addr: {}, redeem_script: 0x{} }}",
+                String::from_utf8_lossy(&self.addr),
+                redeem_script_in_hex,
+            )
+        }
     }
 }
 
