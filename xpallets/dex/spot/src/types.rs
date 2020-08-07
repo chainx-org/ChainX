@@ -86,14 +86,14 @@ impl Default for OrderStatus {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Handicap<Price> {
     pub highest_bid: Price,
-    pub lowest_offer: Price,
+    pub lowest_ask: Price,
 }
 
 impl<Price: Copy + BaseArithmetic> Handicap<Price> {
-    pub fn new(highest_bid: Price, lowest_offer: Price) -> Self {
+    pub fn new(highest_bid: Price, lowest_ask: Price) -> Self {
         Self {
             highest_bid,
-            lowest_offer,
+            lowest_ask,
         }
     }
 
@@ -104,11 +104,11 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
         self.highest_bid
     }
 
-    /// Increases the `lowest_offer` by one tick.
+    /// Increases the `lowest_ask` by one tick.
     pub fn tick_up_lowest_offer(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
-        self.lowest_offer = self.lowest_offer.saturating_add(tick.saturated_into());
-        self.lowest_offer
+        self.lowest_ask = self.lowest_ask.saturating_add(tick.saturated_into());
+        self.lowest_ask
     }
 }
 

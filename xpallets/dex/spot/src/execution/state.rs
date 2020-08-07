@@ -8,7 +8,7 @@ use sp_runtime::traits::{CheckedAdd, CheckedSub};
 /// Internal mutables
 impl<T: Trait> Module<T> {
     /// It's worth noting that the handicap is not always related to some real orders, i.e.,
-    /// current lowest_offer(or highest_bid) is suprious.
+    /// current lowest_ask(or highest_bid) is suprious.
     ///
     /// When there is no quotions at a certain price given the trading pair, we should check out
     /// whether the current handicap is true. If it's not true, adjust a tick accordingly.
@@ -19,15 +19,15 @@ impl<T: Trait> Module<T> {
             let mut handicap = <HandicapOf<T>>::get(pair.id);
             match side {
                 Side::Sell => {
-                    if !handicap.lowest_offer.is_zero()
-                        && <QuotationsOf<T>>::get(pair.id, handicap.lowest_offer).is_empty()
+                    if !handicap.lowest_ask.is_zero()
+                        && <QuotationsOf<T>>::get(pair.id, handicap.lowest_ask).is_empty()
                     {
                         handicap.tick_up_lowest_offer(tick_precision);
                         <HandicapOf<T>>::insert(pair.id, &handicap);
 
                         debug!(
-                            "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
-                            pair.id, handicap.lowest_offer, Sell,
+                            "[update_handicap] pair_index: {:?}, lowest_ask: {:?}, side: {:?}",
+                            pair.id, handicap.lowest_ask, Sell,
                         );
                     }
                 }
@@ -76,13 +76,13 @@ impl<T: Trait> Module<T> {
         if order.price() > handicap.highest_bid || handicap.highest_bid == Default::default() {
             let highest_bid = order.price();
 
-            if highest_bid >= handicap.lowest_offer {
-                handicap.lowest_offer = Self::tick_up(highest_bid, pair.tick());
+            if highest_bid >= handicap.lowest_ask {
+                handicap.lowest_ask = Self::tick_up(highest_bid, pair.tick());
 
                 debug!(
-                    "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
+                    "[update_handicap] pair_index: {:?}, lowest_ask: {:?}, side: {:?}",
                     order.pair_id(),
-                    handicap.lowest_offer,
+                    handicap.lowest_ask,
                     Side::Sell,
                 );
             }
@@ -101,11 +101,11 @@ impl<T: Trait> Module<T> {
 
     fn update_handicap_of_sellers(pair: &TradingPairProfile, order: &mut OrderInfo<T>) {
         let mut handicap = <HandicapOf<T>>::get(pair.id);
-        if order.price() < handicap.lowest_offer || handicap.lowest_offer == Default::default() {
-            let lowest_offer = order.price();
+        if order.price() < handicap.lowest_ask || handicap.lowest_ask == Default::default() {
+            let lowest_ask = order.price();
 
-            if lowest_offer <= handicap.highest_bid {
-                handicap.highest_bid = Self::tick_down(lowest_offer, pair.tick());
+            if lowest_ask <= handicap.highest_bid {
+                handicap.highest_bid = Self::tick_down(lowest_ask, pair.tick());
 
                 debug!(
                     "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
@@ -115,13 +115,13 @@ impl<T: Trait> Module<T> {
                 );
             }
 
-            handicap.lowest_offer = lowest_offer;
+            handicap.lowest_ask = lowest_ask;
             <HandicapOf<T>>::insert(order.pair_id(), handicap);
 
             debug!(
-                "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
+                "[update_handicap] pair_index: {:?}, lowest_ask: {:?}, side: {:?}",
                 order.pair_id(),
-                lowest_offer,
+                lowest_ask,
                 Side::Sell,
             );
         }

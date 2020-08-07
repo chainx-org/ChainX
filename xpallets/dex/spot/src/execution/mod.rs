@@ -9,22 +9,18 @@ use crate::types::*;
 use xpallet_support::debug;
 
 impl<T: Trait> Module<T> {
-    fn check_bid_price(
-        quote: T::Price,
-        lowest_offer: T::Price,
-        fluctuation: T::Price,
-    ) -> Result<T> {
+    fn check_bid_price(quote: T::Price, lowest_ask: T::Price, fluctuation: T::Price) -> Result<T> {
         debug!(
-            "[check_bid_price]quote: {:?}, lowest_offer: {:?}, fluctuation: {:?}",
-            quote, lowest_offer, fluctuation
+            "[check_bid_price]quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
+            quote, lowest_ask, fluctuation
         );
 
         // There is no offer yet, this is the first one.
-        if lowest_offer.is_zero() {
+        if lowest_ask.is_zero() {
             return Ok(());
         }
 
-        if quote > lowest_offer && quote - lowest_offer > fluctuation {
+        if quote > lowest_ask && quote - lowest_ask > fluctuation {
             return Err(Error::<T>::TooHighBidPrice);
         }
 
@@ -49,19 +45,19 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// Given the price volatility is 10%, a valid quote range should be:
+    /// Assume the price volatility is 10%, a valid quote range should be:
     ///
     /// - sell: [highest_bid - 10% * highest_bid, ~)
-    /// - buy:  (~, lowest_offer + 10% * lowest_offer]
+    /// - buy:  (~, lowest_ask + 10% * lowest_ask]
     pub(crate) fn is_valid_quote(quote: T::Price, side: Side, pair_id: TradingPairId) -> Result<T> {
         let handicap = <HandicapOf<T>>::get(pair_id);
-        let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
+        let (lowest_ask, highest_bid) = (handicap.lowest_ask, handicap.highest_bid);
 
         let pair = Self::trading_pair(pair_id)?;
         let fluctuation = pair.calc_fluctuation::<T>().saturated_into();
 
         match side {
-            Side::Buy => Self::check_bid_price(quote, lowest_offer, fluctuation),
+            Side::Buy => Self::check_bid_price(quote, lowest_ask, fluctuation),
             Side::Sell => Self::check_ask_price(quote, highest_bid, fluctuation),
         }
     }

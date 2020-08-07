@@ -31,7 +31,7 @@ impl<Price> From<Handicap<Price>> for RpcHandicap<RpcPrice<Price>> {
     fn from(handicap: Handicap<Price>) -> Self {
         Self {
             highest_bid: handicap.highest_bid.into(),
-            lowest_ask: handicap.lowest_offer.into(),
+            lowest_ask: handicap.lowest_ask.into(),
         }
     }
 }
@@ -116,8 +116,8 @@ impl<T: Trait> Module<T> {
     fn get_quotation_range(profile: &TradingPairProfile) -> (T::Price, T::Price) {
         let handicap = Self::handicap_of(profile.id);
         let pair_fluctuation: T::Price = profile.calc_fluctuation::<T>().saturated_into();
-        let max_valid_bid = if !handicap.lowest_offer.is_zero() {
-            handicap.lowest_offer + pair_fluctuation
+        let max_valid_bid = if !handicap.lowest_ask.is_zero() {
+            handicap.lowest_ask + pair_fluctuation
         } else {
             Zero::zero()
         };
@@ -203,9 +203,11 @@ impl<T: Trait> Module<T> {
         depth_size: u32,
     ) -> Option<Depth<RpcPrice<T::Price>, RpcBalance<BalanceOf<T>>>> {
         Self::trading_pair_of(pair_id).map(|pair| {
-            let handicap = Self::handicap_of(pair_id);
+            let Handicap {
+                lowest_ask,
+                highest_bid,
+            } = Self::handicap_of(pair_id);
 
-            let (lowest_ask, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
             let (min_valid_ask, max_valid_bid) = Self::get_quotation_range(&pair);
 
             let step = pair.tick().saturated_into::<u128>();
@@ -234,7 +236,7 @@ impl<T: Trait> Module<T> {
             let asks = generic_depth(lowest_ask, max_valid_bid);
             let bids = generic_depth(min_valid_ask, highest_bid);
 
-            Depth { bids, asks }
+            Depth { asks, bids }
         })
     }
 }
