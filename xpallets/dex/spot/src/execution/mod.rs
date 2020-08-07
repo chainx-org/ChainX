@@ -58,9 +58,7 @@ impl<T: Trait> Module<T> {
         let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
 
         let pair = Self::trading_pair(pair_id)?;
-        let fluctuation = pair
-            .calc_fluctuation(PriceFluctuationOf::get(pair_id))
-            .saturated_into();
+        let fluctuation = pair.calc_fluctuation::<T>().saturated_into();
 
         match side {
             Side::Buy => Self::check_bid_price(quote, lowest_offer, fluctuation),

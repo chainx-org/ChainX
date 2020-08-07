@@ -6,9 +6,8 @@ use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-use sp_std::collections::btree_map::BTreeMap;
 use std::sync::Arc;
-use xpallet_dex_spot::{Depth, Order, PairInfo, TradingPairId};
+use xpallet_dex_spot::{Depth, PairInfo, RpcOrder, TradingPairId};
 use xpallet_dex_spot_rpc_runtime_api::XSpotApi as XSpotRuntimeApi;
 use xpallet_support::{RpcBalance, RpcPrice};
 
@@ -25,15 +24,16 @@ pub trait XSpotApi<BlockHash, AccountId, RpcBalance, BlockNumber, RpcPrice> {
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<Vec<Order<TradingPairId, AccountId, RpcBalance, RpcPrice, BlockNumber>>>;
+    ) -> Result<Vec<RpcOrder<TradingPairId, AccountId, RpcBalance, RpcPrice, BlockNumber>>>;
 
     /// Get the depth of a trading pair.
     #[rpc(name = "xspot_getDepth")]
     fn depth(
         &self,
         pair_id: TradingPairId,
+        depth_size: u32,
         at: Option<BlockHash>,
-    ) -> Result<Vec<Depth<RpcPrice, RpcBalance>>>;
+    ) -> Result<Option<Depth<RpcPrice, RpcBalance>>>;
 }
 
 /// A struct that implements the [`XSpotApi`].
@@ -68,7 +68,9 @@ where
         &self,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<Vec<PairInfo<RpcPrice<Price>>>> {
-        todo!()
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        Ok(api.trading_pairs(&at).map_err(runtime_error_into_rpc_err)?)
     }
 
     fn orders(
@@ -76,17 +78,24 @@ where
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<
-        Vec<Order<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>,
+        Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>,
     > {
-        todo!()
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        Ok(api.orders(&at, who).map_err(runtime_error_into_rpc_err)?)
     }
 
     fn depth(
         &self,
         pair_id: TradingPairId,
+        depth_size: u32,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<Depth<RpcPrice<Price>, RpcBalance<Balance>>>> {
-        todo!()
+    ) -> Result<Option<Depth<RpcPrice<Price>, RpcBalance<Balance>>>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        Ok(api
+            .depth(&at, pair_id, depth_size)
+            .map_err(runtime_error_into_rpc_err)?)
     }
 }
 

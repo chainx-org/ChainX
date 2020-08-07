@@ -4,7 +4,7 @@
 
 use codec::Codec;
 use sp_std::prelude::*;
-use xpallet_dex_spot::{Depth, Order, PairInfo, TradingPairId};
+use xpallet_dex_spot::{Depth, PairInfo, RpcOrder, TradingPairId};
 use xpallet_support::{RpcBalance, RpcPrice};
 
 sp_api::decl_runtime_apis! {
@@ -19,9 +19,9 @@ sp_api::decl_runtime_apis! {
         fn trading_pairs() -> Vec<PairInfo<RpcPrice<Price>>>;
 
         /// Get the orders of an account.
-        fn orders(who: AccountId) -> Vec<Order<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>;
+        fn orders(who: AccountId) -> Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>;
 
         /// Get the depth of a trading pair.
-        fn depth(pair_id: TradingPairId) -> Vec<Depth<RpcPrice<Price>, RpcBalance<Balance>>>;
+        fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<RpcPrice<Price>, RpcBalance<Balance>>>;
     }
 }

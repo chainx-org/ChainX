@@ -42,8 +42,9 @@ use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
+use xpallet_dex_spot::{Depth, PairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
-use xpallet_support::RpcBalance;
+use xpallet_support::{RpcBalance, RpcPrice};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -1018,6 +1019,20 @@ impl_runtime_apis! {
         }
         fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>> {
             XStaking::nomination_details_of(who)
+        }
+    }
+
+    impl xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance> for Runtime {
+        fn trading_pairs() -> Vec<PairInfo<RpcPrice<Balance>>> {
+            XSpot::trading_pairs()
+        }
+
+        fn orders(who: AccountId) -> Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Balance>, BlockNumber>> {
+            XSpot::orders(who)
+        }
+
+        fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<RpcPrice<Balance>, RpcBalance<Balance>>> {
+            XSpot::depth(pair_id, depth_size)
         }
     }
 
