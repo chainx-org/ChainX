@@ -16,7 +16,7 @@ impl std::fmt::Debug for BtcTrusteeAddrInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "BtcTrusteeAddrInfo {{ addr: {:?}, redeem_script: {} }}",
+            "BtcTrusteeAddrInfo {{ addr: {}, redeem_script: {} }}",
             String::from_utf8_lossy(&self.addr),
             hex::encode(&self.redeem_script)
         )
