@@ -60,11 +60,8 @@ impl<T: Trait> Module<T> {
         if current_index < SESSIONS_PER_ROUND {
             let to_vesting = this_session_reward / 5.saturated_into();
             let vesting_account = Self::vesting_account();
-            debug!(
-                "[try_vesting]issue to the vesting account {:?}: {:?}",
-                vesting_account, to_vesting
-            );
             Self::mint(&vesting_account, to_vesting);
+            debug!("[mint]=> vesting({:?}): {:?}", vesting_account, to_vesting);
             this_session_reward - to_vesting
         } else {
             this_session_reward

@@ -4,7 +4,7 @@
 
 use codec::Codec;
 use sp_std::prelude::*;
-use xpallet_dex_spot::{Depth, PairInfo, RpcOrder, TradingPairId};
+use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_support::{RpcBalance, RpcPrice};
 
 sp_api::decl_runtime_apis! {
@@ -16,7 +16,7 @@ sp_api::decl_runtime_apis! {
         Price: Codec,
     {
         /// Get the overall info of all trading pairs.
-        fn trading_pairs() -> Vec<PairInfo<RpcPrice<Price>>>;
+        fn trading_pairs() -> Vec<FullPairInfo<RpcPrice<Price>, BlockNumber>>;
 
         /// Get the orders of an account.
         fn orders(who: AccountId) -> Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>;

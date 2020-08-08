@@ -135,8 +135,10 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct CurrencyPair {
     /// The first currency of a currency pair.
+    #[cfg_attr(feature = "std", serde(rename = "baseCurrency"))]
     pub base: AssetId,
     /// The second currency of a currency pair.
+    #[cfg_attr(feature = "std", serde(rename = "quoteCurrency"))]
     pub quote: AssetId,
 }
 
@@ -156,6 +158,7 @@ impl CurrencyPair {
 pub struct TradingPairProfile {
     /// The trading pair identifier.
     pub id: TradingPairId,
+    #[cfg_attr(feature = "std", serde(flatten))]
     /// The currency pair of trading pair.
     pub currency_pair: CurrencyPair,
     /// How many decimal places of the currency pair.

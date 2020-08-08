@@ -8,15 +8,40 @@ use xpallet_support::{RpcBalance, RpcPrice};
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct PairInfo<RpcPrice> {
+pub struct FullPairInfo<RpcPrice, BlockNumber> {
     #[cfg_attr(feature = "std", serde(flatten))]
     pub profile: TradingPairProfile,
     #[cfg_attr(feature = "std", serde(flatten))]
     pub handicap: RpcHandicap<RpcPrice>,
+    #[cfg_attr(feature = "std", serde(flatten))]
+    pub pair_info: RpcTradingPairInfo<RpcPrice, BlockNumber>,
     /// The maximum valid bid price.
     pub max_valid_bid: RpcPrice,
     /// The minimum valid ask price.
     pub min_valid_ask: RpcPrice,
+}
+
+/// Latest price of a trading pair.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct RpcTradingPairInfo<RpcPrice, BlockNumber> {
+    /// Price of Latest executed order.
+    pub latest_price: RpcPrice,
+    #[cfg_attr(feature = "std", serde(rename = "latestPriceUpdatedAt"))]
+    /// Block number at which point `TradingPairInfo` is updated.
+    pub last_updated: BlockNumber,
+}
+
+impl<Price, BlockNumber> From<TradingPairInfo<Price, BlockNumber>>
+    for RpcTradingPairInfo<RpcPrice<Price>, BlockNumber>
+{
+    fn from(info: TradingPairInfo<Price, BlockNumber>) -> Self {
+        Self {
+            latest_price: info.latest_price.into(),
+            last_updated: info.last_updated,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
@@ -130,7 +155,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Get the overall info of all trading pairs.
-    pub fn trading_pairs() -> Vec<PairInfo<RpcPrice<T::Price>>> {
+    pub fn trading_pairs() -> Vec<FullPairInfo<RpcPrice<T::Price>, T::BlockNumber>> {
         let pair_count = Self::trading_pair_count();
         let mut pairs = Vec::with_capacity(pair_count as usize);
         for pair_id in 0..pair_count {
@@ -138,9 +163,14 @@ impl<T: Trait> Module<T> {
                 let (min_valid_ask, max_valid_bid) = Self::get_quotation_range(&profile);
                 let handicap = Self::handicap_of(pair_id);
                 let handicap: RpcHandicap<RpcPrice<T::Price>> = handicap.into();
-                pairs.push(PairInfo {
+                let pair_info: RpcTradingPairInfo<RpcPrice<T::Price>, T::BlockNumber> =
+                    Self::trading_pair_info_of(pair_id)
+                        .map(Into::into)
+                        .unwrap_or_default();
+                pairs.push(FullPairInfo {
                     profile,
                     handicap,
+                    pair_info,
                     max_valid_bid: max_valid_bid.into(),
                     min_valid_ask: min_valid_ask.into(),
                 });

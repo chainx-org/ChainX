@@ -7,7 +7,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
-use xpallet_dex_spot::{Depth, PairInfo, RpcOrder, TradingPairId};
+use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_dex_spot_rpc_runtime_api::XSpotApi as XSpotRuntimeApi;
 use xpallet_support::{RpcBalance, RpcPrice};
 
@@ -16,7 +16,10 @@ use xpallet_support::{RpcBalance, RpcPrice};
 pub trait XSpotApi<BlockHash, AccountId, RpcBalance, BlockNumber, RpcPrice> {
     /// Get the overall info of all trading pairs.
     #[rpc(name = "xspot_getTradingPairs")]
-    fn trading_pairs(&self, at: Option<BlockHash>) -> Result<Vec<PairInfo<RpcPrice>>>;
+    fn trading_pairs(
+        &self,
+        at: Option<BlockHash>,
+    ) -> Result<Vec<FullPairInfo<RpcPrice, BlockNumber>>>;
 
     /// Get the orders of an account.
     #[rpc(name = "xspot_getOrdersByAccount")]
@@ -67,7 +70,7 @@ where
     fn trading_pairs(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<PairInfo<RpcPrice<Price>>>> {
+    ) -> Result<Vec<FullPairInfo<RpcPrice<Price>, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api.trading_pairs(&at).map_err(runtime_error_into_rpc_err)?)

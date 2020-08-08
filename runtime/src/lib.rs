@@ -42,7 +42,7 @@ use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
-use xpallet_dex_spot::{Depth, PairInfo, RpcOrder, TradingPairId};
+use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
 use xpallet_support::{RpcBalance, RpcPrice};
 
@@ -1023,7 +1023,7 @@ impl_runtime_apis! {
     }
 
     impl xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance> for Runtime {
-        fn trading_pairs() -> Vec<PairInfo<RpcPrice<Balance>>> {
+        fn trading_pairs() -> Vec<FullPairInfo<RpcPrice<Balance>, BlockNumber>> {
             XSpot::trading_pairs()
         }
 
