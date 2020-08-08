@@ -77,6 +77,13 @@ where
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>,
     <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
+        xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
+            Block,
+            AccountId,
+            Balance,
+            BlockNumber,
+        >,
+    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
         xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
             Block,
             AccountId,
@@ -99,6 +106,7 @@ where
     use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
     use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
     use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
+    use xpallet_mining_asset_rpc::{XMiningAsset, XMiningAssetApi};
     use xpallet_mining_staking_rpc::{XStaking, XStakingApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
@@ -120,6 +128,9 @@ where
     io.extend_with(ContractsApi::to_delegate(Contracts::new(client.clone())));
     io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));
     io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));
+    io.extend_with(XMiningAssetApi::to_delegate(XMiningAsset::new(
+        client.clone(),
+    )));
     io.extend_with(XGatewayRecordsApi::to_delegate(XGatewayRecords::new(
         client.clone(),
     )));

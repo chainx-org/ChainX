@@ -43,6 +43,7 @@ use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
+use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
 use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
 use xpallet_support::{RpcBalance, RpcPrice};
 
@@ -1033,6 +1034,20 @@ impl_runtime_apis! {
 
         fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<RpcPrice<Balance>, RpcBalance<Balance>>> {
             XSpot::depth(pair_id, depth_size)
+        }
+    }
+
+    impl xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<Block, AccountId, Balance, BlockNumber> for Runtime {
+        fn mining_assets() -> Vec<MiningAssetInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
+            XMiningAsset::mining_assets()
+        }
+
+        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, RpcBalance<Balance>> {
+            XMiningAsset::mining_dividend(who)
+        }
+
+        fn miner_ledger(who: AccountId) -> BTreeMap<AssetId, RpcMinerLedger<BlockNumber>> {
+            XMiningAsset::miner_ledger(who)
         }
     }
 

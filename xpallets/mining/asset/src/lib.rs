@@ -3,6 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod impls;
+mod rpc;
 mod types;
 
 #[cfg(test)]
@@ -30,9 +31,9 @@ use xp_mining_staking::TreasuryAccount;
 use xpallet_assets::AssetType;
 use xpallet_support::warn;
 
-use types::*;
-
 pub use impls::SimpleAssetRewardPotAccountDeterminer;
+pub use rpc::*;
+pub use types::*;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
