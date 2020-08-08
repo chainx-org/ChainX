@@ -27,7 +27,7 @@
     },
     "Handicap": {
         "highest_bid": "Price",
-        "lowest_offer": "Price"
+        "lowest_ask": "Price"
     },
     "NetworkType": {
         "_enum": [

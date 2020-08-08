@@ -223,7 +223,7 @@
     },
     "Handicap": {
         "highestBid": "Price",
-        "lowestOffer": "Price"
+        "lowestAsk": "Price"
     },
     "OrderProperty": {
         "id": "OrderId",
