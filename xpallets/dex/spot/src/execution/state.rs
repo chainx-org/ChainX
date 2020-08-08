@@ -72,59 +72,59 @@ impl<T: Trait> Module<T> {
     }
 
     fn update_handicap_of_buyers(pair: &TradingPairProfile, order: &mut OrderInfo<T>) {
-        let mut handicap = <HandicapOf<T>>::get(pair.id);
-        if order.price() > handicap.highest_bid || handicap.highest_bid == Default::default() {
-            let highest_bid = order.price();
+        HandicapOf::<T>::mutate(pair.id, |handicap| {
+            let order_price = order.price();
 
-            if highest_bid >= handicap.lowest_ask {
-                handicap.lowest_ask = Self::tick_up(highest_bid, pair.tick());
+            if order_price > handicap.highest_bid || handicap.highest_bid.is_zero() {
+                let new_highest_bid = order_price;
 
+                if new_highest_bid >= handicap.lowest_ask {
+                    handicap.lowest_ask = Self::tick_up(new_highest_bid, pair.tick());
+                    debug!(
+                        "[update_handicap]pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
+                        order.pair_id(),
+                        handicap.lowest_ask,
+                        Side::Sell,
+                    );
+                }
+
+                handicap.highest_bid = new_highest_bid;
                 debug!(
-                    "[update_handicap] pair_index: {:?}, lowest_ask: {:?}, side: {:?}",
+                    "[update_handicap]pair_id: {:?}, highest_bid: {:?}, side: {:?}",
                     order.pair_id(),
-                    handicap.lowest_ask,
-                    Side::Sell,
-                );
-            }
-
-            handicap.highest_bid = highest_bid;
-            <HandicapOf<T>>::insert(order.pair_id(), handicap);
-
-            debug!(
-                "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
-                order.pair_id(),
-                highest_bid,
-                Side::Buy
-            );
-        }
-    }
-
-    fn update_handicap_of_sellers(pair: &TradingPairProfile, order: &mut OrderInfo<T>) {
-        let mut handicap = <HandicapOf<T>>::get(pair.id);
-        if order.price() < handicap.lowest_ask || handicap.lowest_ask == Default::default() {
-            let lowest_ask = order.price();
-
-            if lowest_ask <= handicap.highest_bid {
-                handicap.highest_bid = Self::tick_down(lowest_ask, pair.tick());
-
-                debug!(
-                    "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
-                    order.pair_id(),
-                    handicap.highest_bid,
+                    new_highest_bid,
                     Side::Buy
                 );
             }
+        });
+    }
 
-            handicap.lowest_ask = lowest_ask;
-            <HandicapOf<T>>::insert(order.pair_id(), handicap);
+    fn update_handicap_of_sellers(pair: &TradingPairProfile, order: &mut OrderInfo<T>) {
+        HandicapOf::<T>::mutate(pair.id, |handicap| {
+            let order_price = order.price();
 
-            debug!(
-                "[update_handicap] pair_index: {:?}, lowest_ask: {:?}, side: {:?}",
-                order.pair_id(),
-                lowest_ask,
-                Side::Sell,
-            );
-        }
+            if order_price < handicap.lowest_ask || handicap.lowest_ask.is_zero() {
+                let new_lowest_ask = order_price;
+
+                if new_lowest_ask <= handicap.highest_bid {
+                    handicap.highest_bid = Self::tick_down(new_lowest_ask, pair.tick());
+                    debug!(
+                        "[update_handicap]pair_id: {:?}, highest_bid: {:?}, side: {:?}",
+                        order.pair_id(),
+                        handicap.highest_bid,
+                        Side::Buy
+                    );
+                }
+
+                handicap.lowest_ask = new_lowest_ask;
+                debug!(
+                    "[update_handicap]pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
+                    order.pair_id(),
+                    new_lowest_ask,
+                    Side::Sell,
+                );
+            }
+        });
     }
 
     /// Removes the order as well as the quotations from the order list.

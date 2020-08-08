@@ -62,6 +62,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    /// Returns true if there are already too many orders at the `price` and `side` for a trading pair.
     pub(crate) fn has_too_many_backlog_orders(
         pair_id: TradingPairId,
         price: T::Price,
@@ -69,8 +70,8 @@ impl<T: Trait> Module<T> {
     ) -> Result<T> {
         let quotations = <QuotationsOf<T>>::get(pair_id, price);
         if quotations.len() >= MAX_BACKLOG_ORDER {
-            let (who, order_index) = &quotations[0];
-            if let Some(order) = <OrderInfoOf<T>>::get(who, order_index) {
+            let (who, order_id) = &quotations[0];
+            if let Some(order) = <OrderInfoOf<T>>::get(who, order_id) {
                 if order.side() == side {
                     return Err(Error::<T>::TooManyBacklogOrders);
                 }

@@ -141,7 +141,8 @@ impl<T: Trait> Module<T> {
                 quotations.push((order.submitter(), order.id()))
             });
 
-            // Since the handicap is not always related to a real order, this guard statement is neccessary!
+            // NOTE: Since the handicap is not always related to a real order,
+            // this guard statement is neccessary!
             if order.already_filled > Zero::zero() {
                 order.status = OrderStatus::ParitialFill;
             }
