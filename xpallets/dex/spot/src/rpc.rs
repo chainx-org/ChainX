@@ -185,7 +185,7 @@ impl<T: Trait> Module<T> {
 
     /// Returns the sum of unfilled quantities at `price` of a trading pair `pair_id`.
     fn get_commulative_qty(pair_id: TradingPairId, price: T::Price) -> u128 {
-        QuotationsOf::<T>::get(pair_id, price.saturated_into::<T::Price>())
+        QuotationsOf::<T>::get(pair_id, price)
             .iter()
             .filter_map(|(trader, order_id)| OrderInfoOf::<T>::get(trader, order_id))
             .map(|order| {

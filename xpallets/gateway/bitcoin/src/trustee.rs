@@ -169,7 +169,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
 
         #[cfg(not(feature = "std"))]
         info!(
-            "generate_trustee_session_info]|hot_keys:{:?}|cold_keys:{:?}",
+            "[generate_trustee_session_info]|hot_keys:{:?}|cold_keys:{:?}",
             hot_keys, cold_keys
         );
 
