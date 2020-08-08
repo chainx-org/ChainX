@@ -26,8 +26,10 @@ pub trait XSpotApi<BlockHash, AccountId, RpcBalance, BlockNumber, RpcPrice> {
     fn orders(
         &self,
         who: AccountId,
+        page_index: u32,
+        page_size: u32,
         at: Option<BlockHash>,
-    ) -> Result<Vec<RpcOrder<TradingPairId, AccountId, RpcBalance, RpcPrice, BlockNumber>>>;
+    ) -> Result<Page<Vec<RpcOrder<TradingPairId, AccountId, RpcBalance, RpcPrice, BlockNumber>>>>;
 
     /// Get the depth of a trading pair.
     #[rpc(name = "xspot_getDepth")]
@@ -79,13 +81,32 @@ where
     fn orders(
         &self,
         who: AccountId,
+        page_index: u32,
+        page_size: u32,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<
-        Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>,
+        Page<
+            Vec<
+                RpcOrder<
+                    TradingPairId,
+                    AccountId,
+                    RpcBalance<Balance>,
+                    RpcPrice<Price>,
+                    BlockNumber,
+                >,
+            >,
+        >,
     > {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api.orders(&at, who).map_err(runtime_error_into_rpc_err)?)
+        let data = api
+            .orders(&at, who, page_index, page_size)
+            .map_err(runtime_error_into_rpc_err)?;
+        Ok(Page {
+            page_index,
+            page_size,
+            data,
+        })
     }
 
     fn depth(
@@ -100,6 +121,14 @@ where
             .depth(&at, pair_id, depth_size)
             .map_err(runtime_error_into_rpc_err)?)
     }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Page<T> {
+    pub page_index: u32,
+    pub page_size: u32,
+    pub data: T,
 }
 
 /// Error type of this RPC api.

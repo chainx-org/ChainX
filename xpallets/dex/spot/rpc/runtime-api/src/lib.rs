@@ -19,7 +19,7 @@ sp_api::decl_runtime_apis! {
         fn trading_pairs() -> Vec<FullPairInfo<RpcPrice<Price>, BlockNumber>>;
 
         /// Get the orders of an account.
-        fn orders(who: AccountId) -> Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>;
+        fn orders(who: AccountId, page_index: u32, page_size: u32) -> Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>;
 
         /// Get the depth of a trading pair.
         fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<RpcPrice<Price>, RpcBalance<Balance>>>;

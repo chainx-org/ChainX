@@ -1027,8 +1027,8 @@ impl_runtime_apis! {
             XSpot::trading_pairs()
         }
 
-        fn orders(who: AccountId) -> Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Balance>, BlockNumber>> {
-            XSpot::orders(who)
+        fn orders(who: AccountId, page_index: u32, page_size: u32) -> Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Balance>, BlockNumber>> {
+            XSpot::orders(who, page_index, page_size)
         }
 
         fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<RpcPrice<Balance>, RpcBalance<Balance>>> {

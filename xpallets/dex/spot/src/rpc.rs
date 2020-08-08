@@ -180,8 +180,12 @@ impl<T: Trait> Module<T> {
     }
 
     /// Get the orders of an account.
+    ///
+    /// The returned data will be empty if `page_index` is invalid.
     pub fn orders(
         who: T::AccountId,
+        page_index: u32,
+        page_size: u32,
     ) -> Vec<
         RpcOrder<
             TradingPairId,
@@ -191,7 +195,6 @@ impl<T: Trait> Module<T> {
             T::BlockNumber,
         >,
     > {
-        // TODO: into one page
         OrderInfoOf::<T>::iter_prefix_values(who)
             .filter_map(|order| {
                 let props: RpcOrderProperty<
@@ -210,6 +213,8 @@ impl<T: Trait> Module<T> {
                     last_update_at: order.last_update_at,
                 })
             })
+            .skip((page_index * page_size) as usize)
+            .take(page_size as usize)
             .collect()
     }
 
