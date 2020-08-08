@@ -9,7 +9,7 @@ use sp_runtime::traits::CheckedAdd;
 
 impl<T: Trait> Module<T> {
     /// When the price is far from the current handicap, i.e.,
-    /// - buy: less than the lowest_offer
+    /// - buy: less than the lowest_ask
     /// - sell: larger than the highest_bid
     /// what we only need to do is to check if the handicap should be updated.
     /// Or else we should match the order.
@@ -21,12 +21,12 @@ impl<T: Trait> Module<T> {
         price: T::Price,
     ) {
         let handicap = <HandicapOf<T>>::get(pair_index);
-        let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
+        let (lowest_ask, highest_bid) = (handicap.lowest_ask, handicap.highest_bid);
 
         // If the price is too low or too high, we only need to check if the handicap should be updated,
         // otherwise we should match this order.
         let skip_match_order = match side {
-            Side::Buy => lowest_offer.is_zero() || price < lowest_offer,
+            Side::Buy => lowest_ask.is_zero() || price < lowest_ask,
             Side::Sell => highest_bid.is_zero() || price > highest_bid,
         };
 
@@ -40,8 +40,8 @@ impl<T: Trait> Module<T> {
                 Side::Buy if price > highest_bid => {
                     <HandicapOf<T>>::mutate(pair_index, |handicap| handicap.highest_bid = price);
                 }
-                Side::Sell if lowest_offer.is_zero() || price < lowest_offer => {
-                    <HandicapOf<T>>::mutate(pair_index, |handicap| handicap.lowest_offer = price);
+                Side::Sell if lowest_ask.is_zero() || price < lowest_ask => {
+                    <HandicapOf<T>>::mutate(pair_index, |handicap| handicap.lowest_ask = price);
                 }
                 _ => (),
             }
@@ -141,7 +141,8 @@ impl<T: Trait> Module<T> {
                 quotations.push((order.submitter(), order.id()))
             });
 
-            // Since the handicap is not always related to a real order, this guard statement is neccessary!
+            // NOTE: Since the handicap is not always related to a real order,
+            // this guard statement is neccessary!
             if order.already_filled > Zero::zero() {
                 order.status = OrderStatus::ParitialFill;
             }
@@ -207,13 +208,13 @@ impl<T: Trait> Module<T> {
     fn match_taker_order_buy(
         taker_order: &mut OrderInfo<T>,
         pair: &TradingPairProfile,
-        lowest_offer: T::Price,
+        lowest_ask: T::Price,
     ) {
         let tick = pair.tick();
         let my_quote = taker_order.price();
 
         let counterparty_side = Side::Sell;
-        let (floor, ceiling) = (lowest_offer, my_quote);
+        let (floor, ceiling) = (lowest_ask, my_quote);
 
         let mut counterparty_price = floor;
 
@@ -266,12 +267,12 @@ impl<T: Trait> Module<T> {
         pair: &TradingPairProfile,
         handicap: &HandicapInfo<T>,
     ) {
-        let (lowest_offer, highest_bid) = (handicap.lowest_offer, handicap.highest_bid);
+        let (lowest_ask, highest_bid) = (handicap.lowest_ask, handicap.highest_bid);
 
-        //  Buy: [ lowest_offer  , my_quote ]
+        //  Buy: [ lowest_ask  , my_quote ]
         // Sell: [ my_quote , highest_bid   ]
         match taker_order.side() {
-            Side::Buy => Self::match_taker_order_buy(taker_order, pair, lowest_offer),
+            Side::Buy => Self::match_taker_order_buy(taker_order, pair, lowest_ask),
             Side::Sell => Self::match_taker_order_sell(taker_order, pair, highest_bid),
         }
     }

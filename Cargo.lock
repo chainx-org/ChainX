@@ -559,6 +559,8 @@ dependencies = [
  "xpallet-assets-rpc-runtime-api",
  "xpallet-contracts-rpc",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-dex-spot-rpc",
+ "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-common-rpc",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records-rpc",
@@ -623,6 +625,7 @@ dependencies = [
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
  "xpallet-dex-spot",
+ "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin",
  "xpallet-gateway-common",
  "xpallet-gateway-common-rpc-runtime-api",
@@ -7420,6 +7423,35 @@ dependencies = [
  "sp-std",
  "xpallet-assets",
  "xpallet-protocol",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-dex-spot-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-dex-spot",
+ "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-dex-spot-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
+ "xpallet-dex-spot",
  "xpallet-support",
 ]
 

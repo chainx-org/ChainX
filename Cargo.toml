@@ -37,6 +37,8 @@ members = [
     "xpallets/contracts/rpc",
     "xpallets/contracts/rpc/runtime-api",
     "xpallets/dex/spot",
+    "xpallets/dex/spot/rpc",
+    "xpallets/dex/spot/rpc/runtime-api",
     "xpallets/mining/asset",
     "xpallets/mining/staking",
     "xpallets/mining/staking/rpc",

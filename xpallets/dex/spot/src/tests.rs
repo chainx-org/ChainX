@@ -72,12 +72,12 @@ fn t_cancel_order(who: AccountId, pair_id: TradingPairId, order_id: OrderId) -> 
     XSpot::cancel_order(Origin::signed(who), pair_id, order_id)
 }
 
-fn t_set_handicap(pair_idx: TradingPairId, highest_bid: Price, lowest_offer: Price) {
+fn t_set_handicap(pair_idx: TradingPairId, highest_bid: Price, lowest_ask: Price) {
     assert_ok!(XSpot::set_handicap(
         Origin::root(),
         pair_idx,
         highest_bid,
-        lowest_offer
+        lowest_ask
     ));
 }
 
@@ -266,11 +266,11 @@ fn update_handicap_should_work() {
 
         assert_ok!(t_put_order_sell(2, 0, 500, 1_310_000 - 100));
 
-        assert_eq!(XSpot::handicap_of(0).lowest_offer, 0);
+        assert_eq!(XSpot::handicap_of(0).lowest_ask, 0);
 
         assert_ok!(t_put_order_sell(2, 0, 800, 1_3200_000));
 
-        assert_eq!(XSpot::handicap_of(0).lowest_offer, 1_3200_000);
+        assert_eq!(XSpot::handicap_of(0).lowest_ask, 1_3200_000);
     })
 }
 

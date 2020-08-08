@@ -86,39 +86,29 @@ impl Default for OrderStatus {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Handicap<Price> {
     pub highest_bid: Price,
-    pub lowest_offer: Price,
+    pub lowest_ask: Price,
 }
 
 impl<Price: Copy + BaseArithmetic> Handicap<Price> {
-    pub fn new(highest_bid: Price, lowest_offer: Price) -> Self {
+    pub fn new(highest_bid: Price, lowest_ask: Price) -> Self {
         Self {
             highest_bid,
-            lowest_offer,
+            lowest_ask,
         }
     }
 
     /// Decreases the `highest_bid` by one tick.
     pub fn tick_down_highest_bid(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
-
-        self.highest_bid = self
-            .highest_bid
-            .checked_sub(&tick.saturated_into())
-            .unwrap_or_else(Zero::zero);
-
+        self.highest_bid = self.highest_bid.saturating_sub(tick.saturated_into());
         self.highest_bid
     }
 
-    /// Increases the `lowest_offer` by one tick.
+    /// Increases the `lowest_ask` by one tick.
     pub fn tick_up_lowest_offer(&mut self, tick_precision: u32) -> Price {
         let tick = 10_u64.pow(tick_precision);
-
-        self.lowest_offer = match self.lowest_offer.checked_add(&tick.saturated_into()) {
-            Some(x) => x,
-            None => panic!("Fail to tick up lowest_offer"),
-        };
-
-        self.lowest_offer
+        self.lowest_ask = self.lowest_ask.saturating_add(tick.saturated_into());
+        self.lowest_ask
     }
 }
 
@@ -145,8 +135,10 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct CurrencyPair {
     /// The first currency of a currency pair.
+    #[cfg_attr(feature = "std", serde(rename = "baseCurrency"))]
     pub base: AssetId,
     /// The second currency of a currency pair.
+    #[cfg_attr(feature = "std", serde(rename = "quoteCurrency"))]
     pub quote: AssetId,
 }
 
@@ -166,11 +158,12 @@ impl CurrencyPair {
 pub struct TradingPairProfile {
     /// The trading pair identifier.
     pub id: TradingPairId,
+    #[cfg_attr(feature = "std", serde(flatten))]
     /// The currency pair of trading pair.
     pub currency_pair: CurrencyPair,
     /// How many decimal places of the currency pair.
     pub pip_precision: u32,
-    ///
+    /// How many decimals of the tick size.
     pub tick_precision: u32,
     /// Is the trading pair still tradable.
     pub online: bool,
@@ -209,7 +202,8 @@ impl TradingPairProfile {
     }
 
     /// The maximum ticks that the price can deviate from the handicap.
-    pub fn calc_fluctuation(&self, price_fluctuation: PriceFluctuation) -> Tick {
+    pub fn calc_fluctuation<T: Trait>(&self) -> Tick {
+        let price_fluctuation = <Module<T>>::price_fluctuation_of(self.id);
         price_fluctuation
             .saturated_into::<Tick>()
             .saturating_mul(self.tick())

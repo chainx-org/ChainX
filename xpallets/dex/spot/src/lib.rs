@@ -3,6 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod execution;
+mod rpc;
 mod types;
 
 #[cfg(test)]
@@ -31,7 +32,8 @@ use chainx_primitives::AssetId;
 use xpallet_assets::AssetErr;
 use xpallet_support::info;
 
-use types::*;
+pub use rpc::*;
+pub use types::*;
 
 /// Maximum of backlog orders.
 const MAX_BACKLOG_ORDER: usize = 1000;
