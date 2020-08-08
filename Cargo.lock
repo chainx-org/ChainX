@@ -559,6 +559,8 @@ dependencies = [
  "xpallet-assets-rpc-runtime-api",
  "xpallet-contracts-rpc",
  "xpallet-contracts-rpc-runtime-api",
+ "xpallet-dex-spot-rpc",
+ "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-common-rpc",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records-rpc",

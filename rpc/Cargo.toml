@@ -39,6 +39,8 @@ chainx-primitives = { path = "../primitives" }
 # ChainX pallets
 xpallet-assets-rpc = { path = "../xpallets/assets/rpc" }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api" }
+xpallet-dex-spot-rpc = { path = "../xpallets/dex/spot/rpc" }
+xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api" }
 xpallet-mining-staking-rpc = { path = "../xpallets/mining/staking/rpc" }
 xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
 xpallet-contracts-rpc = { path = "../xpallets/contracts/rpc" }
