@@ -283,7 +283,7 @@ impl<T: Trait> xp_mining_staking::AssetMining<BalanceOf<T>> for Module<T> {
     /// Collects the mining power of all mining assets.
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
         // Currently only X-BTC asset.
-        XTypeAssetPowerMap::iter()
+        FixedAssetPowerOf::iter()
             .map(|(asset_id, fixed_power)| {
                 let total_balance =
                     <xpallet_assets::Module<T>>::all_type_total_asset_balance(&asset_id);

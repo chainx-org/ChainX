@@ -74,7 +74,7 @@ impl<T: Trait> Module<T> {
         MiningPrevilegedAssets::get()
             .into_iter()
             .map(|asset_id| {
-                let mining_power = XTypeAssetPowerMap::get(asset_id);
+                let mining_power = FixedAssetPowerOf::get(asset_id);
                 let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&asset_id);
                 let reward_pot_balance: RpcBalance<BalanceOf<T>> =
                     Self::free_balance(&reward_pot).into();
