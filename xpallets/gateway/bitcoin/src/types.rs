@@ -21,27 +21,43 @@ use merkle::PartialMerkleTree;
 /// not layout state or public or else.
 pub type BtcAddress = Vec<u8>;
 
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
+#[derive(Clone, RuntimeDebug)]
 pub struct BtcRelayedTx {
     pub block_hash: H256,
     pub raw: BtcTransaction,
     pub merkle_proof: PartialMerkleTree,
 }
 
-#[derive(PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct BtcRelayedTxInfo {
+    pub block_hash: H256,
+    pub merkle_proof: PartialMerkleTree,
+}
+
+impl BtcRelayedTxInfo {
+    pub fn into_relayed_tx(self, tx: BtcTransaction) -> BtcRelayedTx {
+        BtcRelayedTx {
+            block_hash: self.block_hash,
+            raw: tx,
+            merkle_proof: self.merkle_proof,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct BtcHeaderInfo {
     pub header: BtcHeader,
     pub height: u32,
 }
 
-#[derive(PartialEq, Clone, Copy, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct BtcHeaderIndex {
     pub hash: H256,
     pub height: u32,
 }
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum BtcTxType {
     Withdrawal,

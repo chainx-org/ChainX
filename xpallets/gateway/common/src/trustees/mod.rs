@@ -5,7 +5,7 @@ use codec::{Decode, Encode, Error as CodecError};
 use serde::{Deserialize, Serialize};
 // Substrate
 use frame_support::dispatch::DispatchError;
-use sp_std::{convert::TryFrom, marker::PhantomData, prelude::Vec};
+use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 
 use xpallet_assets::Chain;
 use xpallet_support::{error, traits::MultiSig, warn};
@@ -13,6 +13,7 @@ use xpallet_support::{error, traits::MultiSig, warn};
 use crate::traits::{BytesLike, ChainProvider, TrusteeSession};
 use crate::types::{TrusteeIntentionProps, TrusteeSessionInfo};
 use crate::{Error, Module, Trait};
+use frame_support::traits::Contains;
 
 pub struct TrusteeSessionManager<T: Trait, TrusteeAddress>(
     PhantomData<T>,
@@ -66,28 +67,6 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
     }
 }
 
-pub struct ChainContext;
-impl ChainContext {
-    pub fn new(chain: Chain) -> Self {
-        use frame_support::StorageValue;
-        crate::TmpChain::put(chain);
-        ChainContext
-    }
-}
-
-impl Drop for ChainContext {
-    fn drop(&mut self) {
-        use frame_support::StorageValue;
-        crate::TmpChain::kill();
-    }
-}
-impl ChainProvider for ChainContext {
-    fn chain() -> Chain {
-        use frame_support::StorageValue;
-        crate::TmpChain::get()
-    }
-}
-
 pub struct TrusteeMultisigProvider<T: Trait, C: ChainProvider>(PhantomData<T>, PhantomData<C>);
 impl<T: Trait, C: ChainProvider> TrusteeMultisigProvider<T, C> {
     pub fn new() -> Self {
@@ -98,5 +77,11 @@ impl<T: Trait, C: ChainProvider> TrusteeMultisigProvider<T, C> {
 impl<T: Trait, C: ChainProvider> MultiSig<T::AccountId> for TrusteeMultisigProvider<T, C> {
     fn multisig() -> T::AccountId {
         Module::<T>::trustee_multisig_addr(C::chain())
+    }
+}
+
+impl<T: Trait, C: ChainProvider> Contains<T::AccountId> for TrusteeMultisigProvider<T, C> {
+    fn sorted_members() -> Vec<T::AccountId> {
+        vec![Self::multisig()]
     }
 }

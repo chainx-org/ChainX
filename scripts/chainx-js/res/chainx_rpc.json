@@ -28,7 +28,77 @@
                 "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
             }
         },
+        "xspot": {
+            "getTradingPairs": {
+                "description": "Get the overall info of all trading pairs.",
+                "params": [
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "Vec<FullPairInfo<RpcPrice, BlockNumber>>"
+            },
+            "getOrdersByAccount": {
+                "description": "Get the orders of an account.",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "name": "page_index",
+                        "type": "u32"
+                    },
+                    {
+                        "name": "page_size",
+                        "type": "u32"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "Page<Vec<RpcOrder<TradingPairId, AccountId, RpcBalance, RpcPrice, BlockNumber>>>"
+            },
+            "getDepth": {
+                "description": "Get the depth of a trading pair.",
+                "params": [
+                    {
+                        "name": "pair_id",
+                        "type": "TradingPairId"
+                    },
+                    {
+                        "name": "depth_size",
+                        "type": "u32"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "Option<Depth<RpcPrice, RpcBalance>>"
+            }
+        },
         "xgatewaycommon": {
+            "boundAddrs": {
+                "description": "Get bound addrs for an accountid",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<Chain, Vec<String>>"
+            },
             "withdrawalLimit": {
                 "description": "Get withdrawal limit(minimal_withdrawal&fee) for an AssetId",
                 "params": [

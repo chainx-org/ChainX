@@ -35,7 +35,7 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use frame_system::{EnsureOneOf, EnsureRoot};
+use frame_system::{EnsureOneOf, EnsureRoot, EnsureSignedBy};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -720,7 +720,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type Event = Event;
     type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
-    type TrusteeMultiSigProvider = trustees::bitcoin::BtcTrusteeMultisig<Runtime>;
+    type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
     type Channel = XGatewayCommon;
     type AddrBinding = XGatewayCommon;
 }
@@ -1075,7 +1075,10 @@ impl_runtime_apis! {
         }
 
         fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError> {
-            XGatewayCommon::try_generate_session_info(chain, candidates)
+            let info = XGatewayCommon::try_generate_session_info(chain, candidates)?;
+            // check multisig address
+            let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
+            Ok(info)
         }
     }
 
