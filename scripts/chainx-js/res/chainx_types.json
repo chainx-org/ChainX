@@ -300,6 +300,15 @@
     },
     "BtcCompact": "u32",
     "BtcTransaction": "Vec<u8>",
+    "BtcPartialMerkleTree": {
+        "txCount": "u32",
+        "hashes": "Vec<H256>",
+        "bits": "Vec<bool>"
+    },
+    "BtcRelayedTxInfo": {
+        "blockHash": "H256",
+        "merkleProof": "BtcPartialMerkleTree"
+    },
     "BtcHeaderIndex": {
         "hash": "H256",
         "height": "u32"

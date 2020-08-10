@@ -10,8 +10,6 @@ pub mod trustee;
 pub mod tx;
 mod types;
 
-use codec::Decode;
-
 // Substrate
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{prelude::*, result};
@@ -38,7 +36,7 @@ use xpallet_support::{
 // light-bitcoin
 use btc_chain::Transaction;
 use btc_keys::{Address, DisplayLayout};
-use btc_ser::deserialize;
+use btc_ser::{deserialize, Reader};
 // re-export
 pub use btc_chain::BlockHeader as BtcHeader;
 pub use btc_keys::Network as BtcNetwork;
@@ -48,7 +46,8 @@ pub use btc_primitives::{Compact, H256, H264};
 
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use self::types::{
-    BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcTxResult, BtcTxState,
+    BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo, BtcTxResult,
+    BtcTxState,
 };
 use crate::trustee::get_trustee_address_pair;
 use crate::tx::remove_pending_deposit;
@@ -269,15 +268,16 @@ decl_module! {
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
         #[weight = 0]
-        pub fn push_transaction(origin, tx: Vec<u8>, prev_tx: Option<Vec<u8>>) -> DispatchResultWithPostInfo {
+        pub fn push_transaction(origin, raw_tx: Vec<u8>, relayed_info: BtcRelayedTxInfo, prev_tx: Option<Vec<u8>>) -> DispatchResultWithPostInfo {
             let from = ensure_signed(origin)?;
-            let relay_tx: BtcRelayedTx = Decode::decode(&mut tx.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
+            let raw_tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
             let prev = if let Some(prev) = prev_tx {
-                let prev: Transaction = Decode::decode(&mut prev.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
+                let prev: Transaction = deserialize(Reader::new(prev.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
                 Some(prev)
             } else {
                 None
             };
+            let relay_tx = relayed_info.into_relayed_tx(raw_tx);
             native::debug!(
                 target: RUNTIME_TARGET,
                 "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", from, relay_tx, prev
@@ -297,8 +297,7 @@ decl_module! {
             // commiter must in trustee list
             Self::ensure_trustee(&from)?;
 
-            // let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| "Parse transaction err")?;
-            let tx: Transaction = Decode::decode(&mut tx.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
+            let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
             native::debug!(target: RUNTIME_TARGET, "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
 
             Self::apply_create_withdraw(from, tx, withdrawal_id_list.clone())?;
@@ -311,8 +310,7 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx = if let Some(raw_tx) = tx {
-                // let tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| "Parse transaction err")?;
-                let tx: Transaction = Decode::decode(&mut raw_tx.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
+                let tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
                 Some(tx)
             } else {
                 None
@@ -512,7 +510,7 @@ impl<T: Trait> Module<T> {
             error!("[apply_push_transaction]|receive an unconfirmed tx|tx hash:{:}|related block height:{:}|confirmed block height:{:}|hash:{:?}", tx_hash, height, confirmed.height, confirmed.hash);
             Err(Error::<T>::UnconfirmedTx)?;
         }
-        // protect replayed tx, just process failed and not processed tx;
+        // check whether replayed tx has been processed, just process failed and not processed tx;
         match Self::tx_state(&tx_hash) {
             None => { /* do nothing */ }
             Some(state) => {
