@@ -20,7 +20,6 @@ use frame_support::{
     debug::native,
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
-    ensure,
     traits::Currency,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
@@ -33,8 +32,7 @@ use xpallet_gateway_common::{
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::{
-    base58, debug, ensure_with_errorlog, error, info, str, traits::MultiSig, try_addr,
-    RUNTIME_TARGET,
+    base58, debug, ensure_with_errorlog, error, info, str, try_addr, RUNTIME_TARGET,
 };
 
 // light-bitcoin
@@ -54,6 +52,7 @@ use self::types::{
 };
 use crate::trustee::get_trustee_address_pair;
 use crate::tx::remove_pending_deposit;
+use frame_support::traits::EnsureOrigin;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
@@ -68,7 +67,7 @@ pub trait Trait:
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     type AccountExtractor: Extractable<Self::AccountId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
-    type TrusteeMultiSigProvider: MultiSig<Self::AccountId>;
+    type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
     type Channel: ChannelBinding<Self::AccountId>;
     type AddrBinding: AddrBinding<Self::AccountId, BtcAddress>;
 }
@@ -341,7 +340,8 @@ decl_module! {
 
         #[weight = 0]
         pub fn remove_pending(origin, addr: BtcAddress, who: Option<T::AccountId>) -> DispatchResult {
-            ensure_root(origin)?;
+            T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
+
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
             } else {
@@ -360,46 +360,16 @@ decl_module! {
 
         #[weight = 0]
         pub fn set_btc_withdrawal_fee(origin, fee: u64) -> DispatchResult {
-            ensure_root(origin)?;
+            T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             BtcWithdrawalFee::put(fee);
             Ok(())
         }
 
         #[weight = 0]
         pub fn set_btc_deposit_limit(origin, value: u64) -> DispatchResult {
-            ensure_root(origin)?;
+            T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             BtcMinDeposit::put(value);
             Ok(())
-        }
-
-        #[weight = 0]
-        pub fn remove_pending_by_trustees(origin, addr: BtcAddress, who: Option<T::AccountId>) -> DispatchResult {
-            let from = ensure_signed(origin)?;
-            ensure!(
-                T::TrusteeMultiSigProvider::check_multisig(&from),
-                Error::<T>::NotTrustee
-            );
-            Self::remove_pending(frame_system::RawOrigin::Root.into(), addr, who)
-        }
-
-        #[weight = 0]
-        pub fn set_btc_withdrawal_fee_by_trustees(origin, fee: u64) -> DispatchResult {
-            let from = ensure_signed(origin)?;
-            if !T::TrusteeMultiSigProvider::check_multisig(&from) {
-                Err(Error::<T>::NotTrustee)?
-            }
-
-            Self::set_btc_withdrawal_fee(frame_system::RawOrigin::Root.into(), fee)
-        }
-
-        #[weight = 0]
-        pub fn set_btc_deposit_limit_by_trustees(origin, value: u64) -> DispatchResult {
-            let from = ensure_signed(origin)?;
-            if !T::TrusteeMultiSigProvider::check_multisig(&from) {
-                Err(Error::<T>::NotTrustee)?
-            }
-
-            Self::set_btc_deposit_limit(frame_system::RawOrigin::Root.into(), value)
         }
     }
 }

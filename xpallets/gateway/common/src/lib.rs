@@ -27,13 +27,9 @@ use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestriction, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::WithdrawalState;
-use xpallet_support::{
-    error, info,
-    traits::{MultiSig, Validator},
-};
+use xpallet_support::{error, info, traits::Validator};
 
 use crate::traits::TrusteeForChain;
-use crate::trustees::{ChainContext, TrusteeMultisigProvider};
 use crate::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
     TrusteeIntentionProps,
@@ -111,19 +107,24 @@ decl_module! {
         /// use for trustee multisig addr
         #[weight = 0]
         pub fn transition_trustee_session(origin, chain: Chain, new_trustees: Vec<T::AccountId>) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            // judge current addr
-            let _c = ChainContext::new(chain);
-            ensure!(
-                TrusteeMultisigProvider::<T, ChainContext>::check_multisig(&who),
-                Error::<T>::InvalidMultisig
-            );
+            match ensure_signed(origin.clone()) {
+                Ok(who) => {
+                    if who != Self::trustee_multisig_addr(chain) {
+                        Err(Error::<T>::InvalidMultisig)?
+                    }
+                    ()
+                },
+                Err(_) => {
+                    ensure_signed(origin)?;
+                },
+            };
 
+            info!("[transition_trustee_session_by_root]|try to transition trustee|chain:{:?}|new_trustees:{:?}", chain, new_trustees);
             Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
         #[weight = 0]
-        pub fn set_withdrawal_state_by_trustees(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
+        pub fn set_withdrawal_state(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
             let from = ensure_signed(origin)?;
 
             let map = Self::trustee_multisigs();
@@ -133,13 +134,6 @@ decl_module! {
                 .ok_or(Error::<T>::InvalidMultisig)?;
 
             xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(chain, withdrawal_id, state)
-        }
-
-        #[weight = 0]
-        pub fn transition_trustee_session_by_root(origin, chain: Chain, new_trustees: Vec<T::AccountId>) -> DispatchResult {
-            ensure_root(origin)?;
-            info!("[transition_trustee_session_by_root]|try to transition trustee|chain:{:?}|new_trustees:{:?}", chain, new_trustees);
-            Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
         #[weight = 0]
@@ -181,9 +175,6 @@ decl_storage! {
 
         pub ChannelBindingOf get(fn channel_binding_of):
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Option<T::AccountId>;
-
-        /// a hack storage to store a global data in runtime.
-        TmpChain get(fn tmp_chain): Chain;
     }
     add_extra_genesis {
         config(trustees): Vec<(Chain, TrusteeInfoConfig, Vec<(T::AccountId, Text, Vec<u8>, Vec<u8>)>)>;
@@ -354,6 +345,7 @@ impl<T: Trait> Module<T> {
         new_trustees: Vec<T::AccountId>,
     ) -> DispatchResult {
         let info = Self::try_generate_session_info(chain, new_trustees)?;
+        let multi_addr = Self::generate_multisig_addr(chain, &info)?;
 
         let session_number = Self::trustee_session_info_len(chain);
         let next_number = match session_number.checked_add(1) {
@@ -361,14 +353,35 @@ impl<T: Trait> Module<T> {
             None => 0_u32,
         };
 
-        let multi_addr =
-            pallet_multisig::Module::<T>::multi_account_id(&info.trustee_list, info.threshold);
-
         TrusteeSessionInfoLen::insert(chain, next_number);
         TrusteeSessionInfoOf::<T>::insert(chain, session_number, info);
 
         TrusteeMultiSigAddr::<T>::insert(chain, multi_addr);
         Ok(())
+    }
+
+    pub fn generate_multisig_addr(
+        chain: Chain,
+        info: &GenericTrusteeSessionInfo<T::AccountId>,
+    ) -> result::Result<T::AccountId, DispatchError> {
+        let multi_addr =
+            pallet_multisig::Module::<T>::multi_account_id(&info.trustee_list, info.threshold);
+
+        // not allow different chain has same multi-address
+        let find_duplicated = Self::trustee_multisigs()
+            .into_iter()
+            .find(|(c, multisig)| {
+                if &multi_addr == multisig && c == &chain {
+                    true
+                } else {
+                    false
+                }
+            })
+            .is_some();
+        if find_duplicated {
+            Err(Error::<T>::InvalidMultisig)?
+        }
+        Ok(multi_addr)
     }
 
     fn set_binding(chain: Chain, who: T::AccountId, binded: T::AccountId) {
