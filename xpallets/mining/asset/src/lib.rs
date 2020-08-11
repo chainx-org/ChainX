@@ -3,6 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod impls;
+mod rpc;
 mod types;
 
 #[cfg(test)]
@@ -30,9 +31,9 @@ use xp_mining_staking::TreasuryAccount;
 use xpallet_assets::AssetType;
 use xpallet_support::warn;
 
-use types::*;
-
 pub use impls::SimpleAssetRewardPotAccountDeterminer;
+pub use rpc::*;
+pub use types::*;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
@@ -106,7 +107,7 @@ decl_storage! {
             => MinerLedger<T::BlockNumber>;
 
         /// Mining power map of X-type assets.
-        pub XTypeAssetPowerMap get(fn x_type_asset_power_map):
+        pub FixedAssetPowerOf get(fn fixed_asset_power_of):
             map hasher(twox_64_concat) AssetId => FixedAssetPower;
     }
     add_extra_genesis {
@@ -120,7 +121,7 @@ decl_storage! {
                 });
             }
             for(asset_id, fixed_power) in &config.mining_power_map {
-                XTypeAssetPowerMap::insert(asset_id, fixed_power);
+                FixedAssetPowerOf::insert(asset_id, fixed_power);
             }
         });
     }
@@ -203,7 +204,7 @@ decl_module! {
         #[weight = 10]
         fn set_x_asset_power(origin, asset_id: AssetId, new: FixedAssetPower) {
             ensure_root(origin)?;
-            XTypeAssetPowerMap::insert(asset_id, new);
+            FixedAssetPowerOf::insert(asset_id, new);
         }
     }
 }

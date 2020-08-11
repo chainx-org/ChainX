@@ -43,6 +43,8 @@ xpallet-dex-spot-rpc = { path = "../xpallets/dex/spot/rpc" }
 xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api" }
 xpallet-mining-staking-rpc = { path = "../xpallets/mining/staking/rpc" }
 xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
+xpallet-mining-asset-rpc = { path = "../xpallets/mining/asset/rpc" }
+xpallet-mining-asset-rpc-runtime-api = { path = "../xpallets/mining/asset/rpc/runtime-api" }
 xpallet-contracts-rpc = { path = "../xpallets/contracts/rpc" }
 xpallet-contracts-rpc-runtime-api = { path = "../xpallets/contracts/rpc/runtime-api" }
 xpallet-gateway-records-rpc = { path = "../xpallets/gateway/records/rpc" }

@@ -129,6 +129,36 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
 }
 
 impl<T: Trait> Module<T> {
+    /// Returns the tuple of (dividend, source_weight, target_weight, reward_pot_account).
+    pub fn calculate_dividend_on_claim(
+        claimer: &T::AccountId,
+        claimee: &AssetId,
+        block_number: T::BlockNumber,
+    ) -> Result<(BalanceOf<T>, WeightType, WeightType, T::AccountId), Error<T>> {
+        let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
+        let reward_pot_balance = Self::free_balance(&reward_pot);
+
+        let (dividend, source_weight, target_weight) =
+            <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::compute_dividend(
+                claimer,
+                claimee,
+                block_number,
+                reward_pot_balance,
+            )?;
+
+        Ok((dividend, source_weight, target_weight, reward_pot))
+    }
+
+    /// Returns the dividend of `claimer` to `claimee` at `block_number`.
+    pub fn compute_dividend_at(
+        claimer: &T::AccountId,
+        claimee: &AssetId,
+        block_number: T::BlockNumber,
+    ) -> Result<BalanceOf<T>, Error<T>> {
+        Self::calculate_dividend_on_claim(claimer, claimee, block_number)
+            .map(|(dividend, _, _, _)| dividend)
+    }
+
     /// Allocates the dividend to claimer and referral(treasury) accordingly.
     ///
     /// Each asset miner can have a referral, which splits the 10% of
@@ -174,16 +204,8 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 
         Self::passed_enough_interval(claimer, claimee, frequency_limit, current_block)?;
 
-        let claimee_reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(claimee);
-        let reward_pot_balance = Self::free_balance(&claimee_reward_pot);
-
-        let (dividend, source_weight, target_weight) =
-            <Self as ComputeMiningWeight<T::AccountId, _>>::compute_dividend(
-                claimer,
-                claimee,
-                current_block,
-                reward_pot_balance,
-            )?;
+        let (dividend, source_weight, target_weight, claimee_reward_pot) =
+            Self::calculate_dividend_on_claim(claimer, claimee, current_block)?;
 
         Self::has_enough_staking(claimer, dividend, staking_requirement)?;
 
@@ -261,7 +283,7 @@ impl<T: Trait> xp_mining_staking::AssetMining<BalanceOf<T>> for Module<T> {
     /// Collects the mining power of all mining assets.
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
         // Currently only X-BTC asset.
-        XTypeAssetPowerMap::iter()
+        FixedAssetPowerOf::iter()
             .map(|(asset_id, fixed_power)| {
                 let total_balance =
                     <xpallet_assets::Module<T>>::all_type_total_asset_balance(&asset_id);

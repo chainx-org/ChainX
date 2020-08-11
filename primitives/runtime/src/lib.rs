@@ -18,9 +18,9 @@ const MAXIMUM_MEMO_LEN: u8 = 128;
 #[inline]
 pub fn xss_check(input: &[u8]) -> DispatchResult {
     if input.contains(&b'<') || input.contains(&b'>') {
-        Err(DispatchError::Other(
+        return Err(DispatchError::Other(
             "'<' and '>' are not allowed, which could be abused off-chain.",
-        ))?;
+        ));
     }
     Ok(())
 }

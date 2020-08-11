@@ -81,6 +81,7 @@ xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-ap
 xpallet-mining-staking = { path  = "../xpallets/mining/staking", default-features = false }
 xpallet-mining-staking-rpc-runtime-api = { path  = "../xpallets/mining/staking/rpc/runtime-api", default-features = false }
 xpallet-mining-asset = { path  = "../xpallets/mining/asset", default-features = false }
+xpallet-mining-asset-rpc-runtime-api = { path  = "../xpallets/mining/asset/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4", default-features = false }
@@ -156,4 +157,5 @@ std = [
     "xpallet-mining-staking/std",
     "xpallet-mining-staking-rpc-runtime-api/std",
     "xpallet-mining-asset/std",
+    "xpallet-mining-asset-rpc-runtime-api/std",
 ]
