@@ -2,6 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod constants;
 mod election;
 mod impls;
 mod reward;
@@ -17,9 +18,7 @@ mod tests;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
     storage::IterableStorageMap,
-    traits::{
-        Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
-    },
+    traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use sp_runtime::{
@@ -30,6 +29,7 @@ use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
 use chainx_primitives::ReferralId;
+use constants::*;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
@@ -43,26 +43,6 @@ pub use types::*;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
-
-const STAKING_ID: LockIdentifier = *b"staking ";
-
-/// Session reward of the first 210_000 sessions.
-const INITIAL_REWARD: u64 = 5_000_000_000;
-
-/// Every 210_000 sessions, the session reward is cut in half.
-///
-/// ChainX follows the issuance rule of Bitcoin. The `Session` in ChainX
-/// is equivalent to `Block` in Bitcoin with regard to minting new coins.
-const SESSIONS_PER_ROUND: u32 = 210_000;
-
-const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
-const DEFAULT_MAXIMUM_VALIDATOR_COUNT: u32 = 100;
-const DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE: u32 = 10;
-
-/// ChainX 2.0 block time is targeted at 6s, i.e., 5 minute per session by default.
-const DEFAULT_BLOCKS_PER_SESSION: u64 = 50;
-const DEFAULT_BONDING_DURATION: u64 = DEFAULT_BLOCKS_PER_SESSION * 12 * 24 * 3;
-const DEFAULT_VALIDATOR_BONDING_DURATION: u64 = DEFAULT_BONDING_DURATION * 10;
 
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
