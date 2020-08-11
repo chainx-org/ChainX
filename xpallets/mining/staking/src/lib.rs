@@ -81,8 +81,7 @@ decl_storage! {
         pub ValidatorCount get(fn validator_count) config(): u32;
 
         /// Minimum number of staking participants before emergency conditions are imposed.
-        pub MinimumValidatorCount get(fn minimum_validator_count) config():
-            u32 = DEFAULT_MINIMUM_VALIDATOR_COUNT;
+        pub MinimumValidatorCount get(fn minimum_validator_count) config(): u32;
 
         /// Maximum number of staking participants before emergency conditions are imposed.
         pub MaximumValidatorCount get(fn maximum_validator_count) config():
@@ -655,10 +654,14 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    fn reasonable_minimum_validator_count() -> u32 {
+        Self::minimum_validator_count().max(1)
+    }
+
     /// Returns true if the number of active validators are more than the minimum validator count.
     fn can_force_chilled() -> bool {
         let mut active_cnt = 0u32;
-        let minimum_validator_cnt = Self::minimum_validator_count();
+        let minimum_validator_cnt = Self::reasonable_minimum_validator_count();
         Self::validator_set()
             .try_for_each(|v| {
                 if Self::is_active(&v) {

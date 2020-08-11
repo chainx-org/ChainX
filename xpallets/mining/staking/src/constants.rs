@@ -13,9 +13,6 @@ pub const INITIAL_REWARD: u64 = 5_000_000_000;
 /// is equivalent to `Block` in Bitcoin with regard to minting new coins.
 pub const SESSIONS_PER_ROUND: u32 = 210_000;
 
-/// FIXME remove this item.
-pub const DEFAULT_MINIMUM_VALIDATOR_COUNT: u32 = 4;
-
 /// The maximum number of Staking validators.
 ///
 /// Currently the election will perform a naive sort on the all candidates,

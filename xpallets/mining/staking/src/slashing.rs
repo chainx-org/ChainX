@@ -31,7 +31,7 @@ impl<T: Trait> Module<T> {
         let treasury_account = T::TreasuryAccount::treasury_account();
         let slasher = Slasher::<T>::new(treasury_account);
 
-        let minimum_validator_count = Self::minimum_validator_count() as usize;
+        let minimum_validator_count = Self::reasonable_minimum_validator_count() as usize;
 
         let active_validators = Self::active_validator_set().collect::<Vec<_>>();
         let mut active_count = active_validators.len();
