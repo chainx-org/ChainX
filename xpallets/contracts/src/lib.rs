@@ -646,7 +646,7 @@ decl_module! {
                 let params = (origin.clone(), value).encode();
 
                 if let Err(_e) = Self::call_for_xrc20(id, XRC20Selector::Issue, params.clone()) {
-                    error!("[force_issue_xrc20]|{:?}|who:{:?}|value:{:?}|params:{:?}", _e.reason, origin, value, try_hex!(&params))
+                    error!("[force_issue_xrc20]|{:?}|who:{:?}|value:{:?}|params:{:?}", _e.reason, origin, value, try_hex!(&params));
                 }
             }
             Ok(())

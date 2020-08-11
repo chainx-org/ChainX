@@ -85,6 +85,9 @@ pub mod log {
             frame_support::debug::error!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
+            #[cfg(feature = "std")]
+            $crate::error!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+            #[cfg(not(feature = "std"))]
             $crate::error!(target: "runtime", $($arg)+);
         )
     }
@@ -95,6 +98,9 @@ pub mod log {
             frame_support::debug::warn!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
+            #[cfg(feature = "std")]
+            $crate::warn!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+            #[cfg(not(feature = "std"))]
             $crate::warn!(target: "runtime", $($arg)+);
         )
     }
@@ -105,6 +111,9 @@ pub mod log {
             frame_support::debug::info!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
+            #[cfg(feature = "std")]
+            $crate::info!(target: &format!("runtime::{}", module_path!()), $($arg)+);
+            #[cfg(not(feature = "std"))]
             $crate::info!(target: "runtime", $($arg)+);
         )
     }
@@ -115,6 +124,9 @@ pub mod log {
             frame_support::debug::debug!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
+            #[cfg(feature = "std")]
+            $crate::debug!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+            #[cfg(not(feature = "std"))]
             $crate::debug!(target: "runtime", $($arg)+);
         )
     }
@@ -125,6 +137,9 @@ pub mod log {
             frame_support::debug::trace!(target: $target, $($arg)+);
         );
         ($($arg:tt)+) => (
+            #[cfg(feature = "std")]
+            $crate::trace!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+            #[cfg(not(feature = "std"))]
             $crate::trace!(target: "runtime", $($arg)+);
         )
     }
