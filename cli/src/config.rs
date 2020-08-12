@@ -22,7 +22,7 @@ fn inject_config_opts(
     let cli_opts = cli_args
         .iter()
         .filter(|i| i.starts_with("--"))
-        .map(|i| i.split('=').collect::<Vec<&str>>()[0])
+        .filter_map(|i| i.split('=').next())
         .collect::<Vec<_>>();
 
     let mut config_opts = Vec::new();
@@ -51,8 +51,7 @@ fn inject_config_opts(
                     format!(
                         "{}={}",
                         opt,
-                        a.as_str()
-                            .expect("The value of JSON entry has to be a String; qed")
+                        a.as_str().expect("Array item can always be a String; qed")
                     )
                 }));
             }
@@ -80,7 +79,8 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
                 .expect("The argument '--config <PATH>' requires a value but none was supplied");
             config_path = Some(path.to_string());
         } else if arg.starts_with("--config=") {
-            config_path = Some(arg.split('=').collect::<Vec<_>>()[1].to_string());
+            config_path = arg.split('=').skip(1).next().map(|s| s.to_string());
+            assert!(config_path.is_some(), "missing value in --config=[value]");
         }
     }
 
