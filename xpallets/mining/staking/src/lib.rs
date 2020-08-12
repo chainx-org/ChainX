@@ -654,6 +654,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    /// At least one validator is required.
     fn reasonable_minimum_validator_count() -> u32 {
         Self::minimum_validator_count().max(1)
     }
