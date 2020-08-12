@@ -85,13 +85,14 @@ fn verify_sig(
 
     //privous tx's output script_pubkey
     let script_code: Script = script_pubkey.clone().into();
-    return checker.check_signature(
+
+    checker.check_signature(
         &signature,
         &public,
         &script_code,
         sighashtype,
         SignatureVersion::Base,
-    );
+    )
 }
 
 /// Check signed transactions
@@ -141,7 +142,7 @@ pub fn parse_and_check_signed_tx_impl(
         v.push(sigs.len());
     }
     assert!(
-        v.len() > 0,
+        !v.is_empty(),
         "the list length must more than one, due to must have inputs; qed"
     );
 

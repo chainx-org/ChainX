@@ -1,5 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::type_complexity)]
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -121,7 +123,7 @@ impl<T: Trait> Module<T> {
             balance
         );
 
-        let _ = xassets::Module::<T>::issue(token, who, balance)?;
+        xassets::Module::<T>::issue(token, who, balance)?;
         Self::deposit_event(RawEvent::Deposit(who.clone(), token.clone(), balance));
         Ok(())
     }
@@ -370,7 +372,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn destroy(who: &T::AccountId, token: &Token, value: T::Balance) -> Result {
-        let _ = xassets::Module::<T>::destroy(&token, &who, value)?;
+        xassets::Module::<T>::destroy(&token, &who, value)?;
         Ok(())
     }
 
@@ -402,7 +404,7 @@ impl<T: Trait> Module<T> {
         if let Some(header) = Self::application_mheader(chain) {
             let mut index = header.index();
             while let Some(node) = Self::application_map(&index) {
-                let next = node.next().clone();
+                let next = node.next();
                 vec.push(node.data);
                 if let Some(next) = next {
                     index = next;

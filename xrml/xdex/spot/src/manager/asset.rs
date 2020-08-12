@@ -26,8 +26,8 @@ impl<T: Trait> Module<T> {
                 // maker(seller): unserve the base currency and move to the taker.
                 // taker(buyer): unserve the quote currency and move to the maker.
                 let maker_turnover_amount = turnover;
-                let taker_turnover_amount =
-                    Self::convert_base_to_quote(turnover, price, pair).unwrap_or(Zero::zero());
+                let taker_turnover_amount = Self::convert_base_to_quote(turnover, price, pair)
+                    .unwrap_or_else(|_| Zero::zero());
 
                 Self::apply_delivery(base, maker_turnover_amount, maker, taker)?;
                 Self::apply_delivery(quote, taker_turnover_amount, taker, maker)?;
@@ -37,8 +37,8 @@ impl<T: Trait> Module<T> {
             Buy => {
                 // maker(buyer): unserve the quote currency and move to the taker.
                 // taker(seller): unserve the base currency and move to the maker.
-                let maker_turnover_amount =
-                    Self::convert_base_to_quote(turnover, price, pair).unwrap_or(Zero::zero());
+                let maker_turnover_amount = Self::convert_base_to_quote(turnover, price, pair)
+                    .unwrap_or_else(|_| Zero::zero());
                 let taker_turnover_amount = turnover;
 
                 Self::apply_delivery(quote, maker_turnover_amount, maker, taker)?;

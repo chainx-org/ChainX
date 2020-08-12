@@ -11,4 +11,6 @@ pub enum CallSwitcher {
     XBTCLockup,
     SDOT,
     XContracts,
+    XMiningStaking,
+    XMiningTokens,
 }

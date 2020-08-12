@@ -18,31 +18,29 @@ impl<T: Trait> Module<T> {
             let mut handicap = <HandicapOf<T>>::get(pair.index);
             match side {
                 Sell => {
-                    if !handicap.lowest_offer.is_zero() {
-                        if <QuotationsOf<T>>::get(&(pair.index, handicap.lowest_offer)).is_empty() {
-                            handicap.tick_up_lowest_offer(tick_precision);
-                            <HandicapOf<T>>::insert(pair.index, &handicap);
+                    if !handicap.lowest_offer.is_zero()
+                        && <QuotationsOf<T>>::get(&(pair.index, handicap.lowest_offer)).is_empty()
+                    {
+                        handicap.tick_up_lowest_offer(tick_precision);
+                        <HandicapOf<T>>::insert(pair.index, &handicap);
 
-                            debug!(
-                                "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
-                                pair.index,
-                                handicap.lowest_offer,
-                                Sell,
-                            );
-                        }
+                        debug!(
+                            "[update_handicap] pair_index: {:?}, lowest_offer: {:?}, side: {:?}",
+                            pair.index, handicap.lowest_offer, Sell,
+                        );
                     }
                 }
                 Buy => {
-                    if !handicap.highest_bid.is_zero() {
-                        if <QuotationsOf<T>>::get((pair.index, handicap.highest_bid)).is_empty() {
-                            handicap.tick_down_highest_bid(tick_precision);
-                            <HandicapOf<T>>::insert(pair.index, &handicap);
+                    if !handicap.highest_bid.is_zero()
+                        && <QuotationsOf<T>>::get((pair.index, handicap.highest_bid)).is_empty()
+                    {
+                        handicap.tick_down_highest_bid(tick_precision);
+                        <HandicapOf<T>>::insert(pair.index, &handicap);
 
-                            debug!(
-                                "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
-                                pair.index, handicap.highest_bid, Buy
-                            );
-                        }
+                        debug!(
+                            "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
+                            pair.index, handicap.highest_bid, Buy
+                        );
                     }
                 }
             };

@@ -2,7 +2,7 @@
 
 use rstd::prelude::Vec;
 
-static BASE58_CHARS: &'static [u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+static BASE58_CHARS: &[u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 #[rustfmt::skip]
 static BASE58_DIGITS: [Option<u8>; 128] = [
@@ -111,7 +111,7 @@ mod tests {
             111, 41, 168, 159, 89, 51, 97, 179, 153, 104, 9, 74, 184, 193, 251, 6, 131, 166, 121,
             3, 1, 241, 112, 101, 146,
         ];
-        assert_eq!(from(s.as_bytes().to_vec()).unwrap(), v);
+        assert_eq!(from(&s.as_bytes().to_vec()).unwrap(), v);
     }
 
     #[test]

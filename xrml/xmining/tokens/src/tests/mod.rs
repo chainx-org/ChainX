@@ -2,6 +2,7 @@
 
 mod mock;
 mod test_proposal09;
+mod test_proposal12;
 
 use super::*;
 use crate::tests::mock::*;
@@ -9,6 +10,8 @@ use crate::tests::mock::*;
 use runtime_io::with_externalities;
 use support::{assert_noop, assert_ok};
 use xassets::Chain;
+
+pub const COUNCIL_ACCOUNT: u64 = 888;
 
 fn tokens() -> (Token, Token, Token) {
     let sdot = <XSdot as ChainT>::TOKEN.to_vec();
@@ -224,6 +227,7 @@ fn move_sdot_later_should_work() {
 }
 
 #[test]
+#[ignore]
 fn claim_sdot_should_work() {
     with_externalities(&mut new_test_ext(), || {
         System::set_block_number(3);
@@ -465,7 +469,10 @@ fn total_token_reward_should_be_right() {
         // intention 1 jackpot: 72_000_000 * 9 = 648_000_000
         assert_eq!(XAssets::pcx_free_balance(&101), 648_000_000);
 
-        assert_eq!(XAssets::pcx_free_balance(&888), 4_000_000_000 * 2 / 10);
+        assert_eq!(
+            XAssets::pcx_free_balance(&888),
+            4_000_000_000 * 2 / 10 + 160_000_000 * 2
+        );
 
         // 800_000_000 + 730_000_000
         // 1530_000_000
@@ -513,9 +520,9 @@ fn total_token_reward_should_be_right() {
         XSession::check_rotate_session(System::block_number());
         XAssets::move_balance(&sdot, &300, AssetType::Free, &100, AssetType::Free, 100).unwrap();
 
-        XTokens::claim(Origin::signed(100), sdot.clone()).unwrap();
-        XTokens::claim(Origin::signed(200), sdot.clone()).unwrap();
-        XTokens::claim(Origin::signed(300), sdot.clone()).unwrap();
+        // XTokens::claim(Origin::signed(100), sdot.clone()).unwrap();
+        // XTokens::claim(Origin::signed(200), sdot.clone()).unwrap();
+        // XTokens::claim(Origin::signed(300), sdot.clone()).unwrap();
 
         assert_eq!(
             all.iter()
@@ -546,46 +553,47 @@ fn claim_need_enough_staking_should_work() {
         XSession::check_rotate_session(System::block_number());
 
         // cross miner should have some stake.
-        let sdot = <XSdot as ChainT>::TOKEN.to_vec();
-        assert_ok!(XAssets::issue(&sdot, &100, 100));
-        assert_ok!(XTokens::set_claim_restriction(sdot.clone(), (10u32, 0)));
+        let xbtc = <XBitcoin as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&xbtc, &100, 100));
+        assert_ok!(XTokens::set_claim_restriction(xbtc.clone(), (10u32, 0)));
 
         System::set_block_number(4);
         XSession::check_rotate_session(System::block_number());
-        let sdot = <XSdot as ChainT>::TOKEN.to_vec();
-        // current dividend: 39603961
+        let xbtc = <XBitcoin as ChainT>::TOKEN.to_vec();
+        // current dividend: 23040
+        let cur_dividend = 23040;
         assert_noop!(
-            XTokens::claim(Origin::signed(100), sdot.clone()),
+            XTokens::claim(Origin::signed(100), xbtc.clone()),
             "Cannot claim if what you have staked is too little."
         );
-        assert_ok!(XAssets::pcx_issue(&1, 39603961 * 10));
+        assert_ok!(XAssets::pcx_issue(&1, cur_dividend * 10));
         assert_ok!(XStaking::nominate(
             Origin::signed(1),
             1.into(),
-            39603961 * 10,
+            cur_dividend * 10,
             vec![]
         ));
 
-        assert_ok!(XAssets::pcx_issue(&100, 39603961 * 5));
+        assert_ok!(XAssets::pcx_issue(&100, cur_dividend * 5));
         assert_ok!(XStaking::nominate(
             Origin::signed(100),
             1.into(),
-            39603961 * 5,
+            cur_dividend * 5,
             vec![]
         ));
         assert_noop!(
-            XTokens::claim(Origin::signed(100), sdot.clone()),
+            XTokens::claim(Origin::signed(100), xbtc.clone()),
             "Cannot claim if what you have staked is too little."
         );
 
-        assert_ok!(XAssets::pcx_issue(&100, 39603961 * 50 * 3));
+        assert_ok!(XAssets::pcx_issue(&100, cur_dividend * 50 * 3));
         assert_ok!(XStaking::nominate(
             Origin::signed(100),
             1.into(),
-            39603961 * 50 * 3,
+            cur_dividend * 50 * 3,
             vec![]
         ));
-        assert_ok!(XTokens::claim(Origin::signed(100), sdot.clone()));
+        assert_ok!(XTokens::claim(Origin::signed(100), xbtc.clone()));
     });
 }
 
@@ -595,24 +603,24 @@ fn claim_has_frequency_limit_should_work() {
         System::set_block_number(3);
         XSession::check_rotate_session(System::block_number());
 
-        let sdot = <XSdot as ChainT>::TOKEN.to_vec();
-        assert_ok!(XAssets::issue(&sdot, &100, 100));
-        assert_ok!(XTokens::set_claim_restriction(sdot.clone(), (0u32, 1)));
+        let xbtc = <XBitcoin as ChainT>::TOKEN.to_vec();
+        assert_ok!(XAssets::issue(&xbtc, &100, 100));
+        assert_ok!(XTokens::set_claim_restriction(xbtc.clone(), (0u32, 1)));
 
         System::set_block_number(4);
         XSession::check_rotate_session(System::block_number());
-        XTokens::claim(Origin::signed(100), sdot.clone()).unwrap();
+        XTokens::claim(Origin::signed(100), xbtc.clone()).unwrap();
 
         System::set_block_number(5);
         XSession::check_rotate_session(System::block_number());
         assert_noop!(
-            XTokens::claim(Origin::signed(100), sdot.clone()),
+            XTokens::claim(Origin::signed(100), xbtc.clone()),
             "Can only claim once per claim limiting period."
         );
 
         System::set_block_number(6);
         XSession::check_rotate_session(System::block_number());
-        XTokens::claim(Origin::signed(100), sdot.clone()).unwrap();
+        XTokens::claim(Origin::signed(100), xbtc.clone()).unwrap();
     });
 }
 

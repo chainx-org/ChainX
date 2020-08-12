@@ -1,7 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 
 //! this module is for btc-bridge
-
+#![allow(deprecated)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod assets_records;
@@ -129,7 +129,7 @@ decl_storage! {
         /// get BtcWithdrawalFee from genesis_config
         pub BtcWithdrawalFee get(btc_withdrawal_fee) config(): u64;
         /// min deposit value limit, default is 10w sotashi(0.001 BTC)
-        pub BtcMinDeposit get(btc_min_deposit): u64 = 1 * 100000;
+        pub BtcMinDeposit get(btc_min_deposit): u64 = 100_000;
         /// max withdraw account count in bitcoin withdrawal transaction
         pub MaxWithdrawalCount get(max_withdrawal_count) config(): u32;
     }
@@ -139,7 +139,7 @@ decl_storage! {
             use runtime_io::with_storage;
             use support::{StorageMap, StorageValue};
 
-            let (genesis_header, number): (BlockHeader, u32) = config.genesis.clone();
+            let (genesis_header, number): (BlockHeader, u32) = config.genesis;
             // would jump in test
             #[cfg(not(test))] {
             if config.network_id == 0 && number % config.params_info.retargeting_interval() != 0 {
@@ -162,7 +162,7 @@ decl_storage! {
 
             with_storage(storage, || {
                 BlockHeaderFor::<T>::insert(&genesis_hash, header_info.clone());
-                BlockHashFor::<T>::insert(&header_info.height, vec![genesis_hash.clone()]);
+                BlockHashFor::<T>::insert(&header_info.height, vec![genesis_hash]);
 
                 BestIndex::<T>::put(genesis_hash);
 
@@ -308,6 +308,15 @@ decl_module! {
                 }
             })
         }
+
+        /// handle a transaction which is already in chain storage.
+        /// (notice this function would ignore block confirmed state)
+        pub fn handle_transaction(tx_hash: H256) -> Result {
+            handle_tx::<T>(&tx_hash).map_err(|e| {
+                error!("Handle tx by root error: {:}", tx_hash);
+                e
+            })
+        }
     }
 }
 
@@ -339,6 +348,7 @@ impl<T: Trait> ChainT for Module<T> {
     }
 }
 
+#[allow(clippy::block_in_if_condition_stmt)]
 fn check_keys(keys: &[Public]) -> Result {
     let has_duplicate = (1..keys.len()).any(|i| keys[i..].contains(&keys[i - 1]));
     if has_duplicate {
@@ -366,6 +376,7 @@ const EC_P: [u8; 32] = [
 const ZERO_P: [u8; 32] = [0; 32];
 
 impl<T: Trait> TrusteeForChain<T::AccountId, Public, TrusteeAddrInfo> for Module<T> {
+    #[allow(clippy::op_ref)]
     fn check_trustee_entity(raw_addr: &[u8]) -> result::Result<Public, &'static str> {
         let public = Public::from_slice(raw_addr).map_err(|_| "Invalid Public")?;
         if let Public::Normal(_) = public {
@@ -376,7 +387,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, Public, TrusteeAddrInfo> for Module
             return Err("not Compressed Public(prefix not 2|3)");
         }
 
-        if &ZERO_P == &raw_addr[1..33] {
+        if ZERO_P == raw_addr[1..33] {
             return Err("not Compressed Public(Zero32)");
         }
 
@@ -501,7 +512,7 @@ impl<T: Trait> Module<T> {
         BlockHeaderFor::<T>::insert(&hash, header_info.clone());
         BlockHashFor::<T>::mutate(header_info.height, |v| {
             if !v.contains(&hash) {
-                v.push(hash.clone());
+                v.push(hash);
             }
         });
 
@@ -569,13 +580,25 @@ impl<T: Trait> Module<T> {
         let confirmed = header_info.confirmed;
         // notice same tx may belong to different forked block, after check merkle proof, it's all valid
         if !header_info.txid_list.contains(&tx_hash) {
-            header_info.txid_list.push(tx_hash.clone());
+            header_info.txid_list.push(tx_hash);
             // modify block info storage
             BlockHeaderFor::<T>::insert(tx.block_hash(), header_info);
         } else {
             // not pass check! this tx has already been inserted to this block
-            error!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash(), tx_hash, header_info.txid_list);
-            return Err("this block already has this tx");
+            warn!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash(), tx_hash, header_info.txid_list);
+            if Self::tx_mark_for(&tx_hash).is_some() {
+                // when tx is already existed, would judge whether the tx is handled,
+                // if this tx is already handled, `TxMarkFor` would mark this txid, and return
+                // directly, due to this tx has done once.
+                // notice `TxMarkFor` check would do again in `TxHandle`
+                error!(
+                    "[TxHandler]|this tx has already been handled|tx_hash:{:?}",
+                    tx_hash
+                );
+                return Err("this block already has this tx and been handled");
+            } else {
+                warn!("[apply_push_transaction]|tx is existed but not handled, if current block is confirmed, would handle it. tx_hash:{:?}", tx_hash);
+            }
         }
 
         // same tx may in different forked block, thus, just modify different forked block txlist, and the tx only insert once
@@ -618,11 +641,7 @@ impl<T: Trait> Module<T> {
             tx_hash, _existed, tx_type, tx.block_hash(), height, confirmed);
 
         // log event
-        Self::deposit_event(RawEvent::InsertTx(
-            tx_hash.clone(),
-            tx.block_hash().clone(),
-            tx_type,
-        ));
+        Self::deposit_event(RawEvent::InsertTx(tx_hash, *tx.block_hash(), tx_type));
 
         // if confirmed, handle this tx for deposit or withdrawal
         if confirmed {
@@ -728,7 +747,7 @@ impl<T: Trait> Module<T> {
                 let confirmed_count = proposal
                     .trustee_list
                     .iter()
-                    .filter(|(_, vote)| *vote == true)
+                    .filter(|(_, vote)| *vote)
                     .count() as u32;
 
                 if sigs_count != confirmed_count + 1 {
@@ -770,7 +789,7 @@ impl<T: Trait> Module<T> {
                 let reject_count = proposal
                     .trustee_list
                     .iter()
-                    .filter(|(_, vote)| *vote == false)
+                    .filter(|(_, vote)| !(*vote))
                     .count() as u32;
 
                 // reject count just need  < (total-required) / total

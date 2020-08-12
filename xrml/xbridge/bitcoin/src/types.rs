@@ -138,6 +138,7 @@ impl IntoVecu8 for TrusteeAddrInfo {
         self.encode()
     }
     fn from_vecu8(src: &[u8]) -> Option<Self> {
+        #[allow(clippy::useless_asref)]
         Decode::decode(&mut src.as_ref())
     }
 }

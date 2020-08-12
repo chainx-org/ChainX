@@ -1,5 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 
+#![allow(clippy::too_many_arguments)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use rstd::collections::btree_map::BTreeMap;
@@ -127,8 +128,9 @@ pub mod xcontracts_api {
                 dest: AccountIdForApi,
                 value: Balance,
                 gas_limit: u64,
+                issue_gas: bool,
                 input_data: Vec<u8>,
-            ) -> ContractExecResult;
+            ) -> (ContractExecResult, Balance);
 
             /// Query a given storage key in a given contract.
             ///

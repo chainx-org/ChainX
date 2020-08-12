@@ -16,6 +16,14 @@
 
 //! Substrate RPC interfaces.
 
+#![allow(clippy::needless_return)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::single_match)]
+#![allow(clippy::wrong_self_convention)]
+#![allow(clippy::large_enum_variant)]
+#![allow(clippy::identity_conversion)]
+#![allow(clippy::redundant_closure)]
 //#![warn(missing_docs)]
 
 mod errors;

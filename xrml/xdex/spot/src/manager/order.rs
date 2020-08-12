@@ -92,6 +92,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Create a brand new order with some defaults.
+    #[allow(clippy::too_many_arguments)]
     fn new_fresh_order(
         pair_index: TradingPairIndex,
         price: T::Price,

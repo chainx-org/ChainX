@@ -107,3 +107,63 @@ pub fn testnet_config() -> ChainSpec {
         ),
     )
 }
+
+fn testnet_mohism_genesis() -> GenesisConfig {
+    genesis(GenesisSpec::TestnetMohism)
+}
+
+pub fn testnet_mohism_config() -> ChainSpec {
+    let boot_nodes = vec![];
+    ChainSpec::from_genesis(
+        "ChainX Testnet Mohism",
+        "chainx_testnet_mohism",
+        testnet_mohism_genesis,
+        boot_nodes,
+        Some(TelemetryEndpoints::new(vec![(
+            CHAINX_TELEMETRY_URL.to_string(),
+            0,
+        )])),
+        Some("ChainX Testnet Mohism"),
+        None,
+        Some(
+            json!({
+                "network_type": "testnet",
+                "address_type": 42,
+                "bitcoin_type": "testnet"
+            })
+            .as_object()
+            .unwrap()
+            .to_owned(),
+        ),
+    )
+}
+
+fn testnet_confucianism_genesis() -> GenesisConfig {
+    genesis(GenesisSpec::TestnetConfucianism)
+}
+
+pub fn testnet_confucianism_config() -> ChainSpec {
+    let boot_nodes = vec![];
+    ChainSpec::from_genesis(
+        "ChainX Testnet Confucianism",
+        "chainx_testnet_confucianism",
+        testnet_confucianism_genesis,
+        boot_nodes,
+        Some(TelemetryEndpoints::new(vec![(
+            CHAINX_TELEMETRY_URL.to_string(),
+            0,
+        )])),
+        Some("ChainX Testnet Confucianism"),
+        None,
+        Some(
+            json!({
+                "network_type": "testnet",
+                "address_type": 42,
+                "bitcoin_type": "mainnet"
+            })
+            .as_object()
+            .unwrap()
+            .to_owned(),
+        ),
+    )
+}

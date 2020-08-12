@@ -17,7 +17,6 @@
 
 //! Substrate RPC servers.
 
-#[warn(missing_docs)]
 pub use substrate_rpc as apis;
 
 use log::error;

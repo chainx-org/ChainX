@@ -9,6 +9,9 @@
 //!      |          /
 //! bridge-features(implementation, data provider)
 
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::redundant_closure)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(test)]

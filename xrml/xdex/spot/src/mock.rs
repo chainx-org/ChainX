@@ -169,8 +169,37 @@ impl xmultisig::LimitedCall<u64> for DummyLimitedCall {
 impl xmultisig::Trait for Test {
     type MultiSig = DummyMultiSig;
     type GenesisMultiSig = DummyGenesisMultiSig;
-    type Proposal = DummyLimitedCall;
+    type Proposal = DummyCall;
+    type TrusteeCall = TrusteeCall;
     type Event = ();
+}
+
+#[derive(Clone, Eq, PartialEq, Encode, Decode, Debug)]
+pub struct DummyCall;
+
+pub struct TrusteeCall(DummyCall);
+impl From<DummyCall> for TrusteeCall {
+    fn from(call: DummyCall) -> Self {
+        TrusteeCall(call)
+    }
+}
+
+impl xmultisig::LimitedCall<u64> for TrusteeCall {
+    fn allow(&self) -> bool {
+        true
+    }
+
+    fn exec(&self, _execiser: &u64) -> Result {
+        Ok(())
+    }
+}
+
+impl support::dispatch::Dispatchable for DummyCall {
+    type Origin = Origin;
+    type Trait = DummyCall;
+    fn dispatch(self, _origin: Origin) -> support::dispatch::Result {
+        Ok(())
+    }
 }
 
 pub struct DummyMultiSig;

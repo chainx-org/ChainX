@@ -27,7 +27,7 @@ use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trai
 
 use super::utils::{addr2vecu8, ensure_identical, get_hot_trustee_address, is_key, parse_opreturn};
 
-use crate::lockup::{handle_lockup_tx, handle_unlock_tx};
+use crate::lockup::handle_unlock_tx;
 
 pub struct TxHandler {
     pub tx_hash: H256,
@@ -46,7 +46,7 @@ impl TxHandler {
         }
 
         Ok(TxHandler {
-            tx_hash: txid.clone(),
+            tx_hash: *txid,
             tx_info,
         })
     }
@@ -65,7 +65,8 @@ impl TxHandler {
                 self.deposit::<T>()?;
             }
             TxType::Lock | TxType::Unlock => {
-                handle_lockup_tx::<T::XBitcoinLockup>(self)?;
+                // remove in proposal 12
+                // handle_lockup_tx::<T::XBitcoinLockup>(self)?;
             }
             _ => {
                 info!(
@@ -166,23 +167,21 @@ impl TxHandler {
                 // remove old unbinding deposit info
                 remove_pending_deposit::<T>(&addr, &accountid);
                 // update or override binding info
-                update_binding::<T>(&accountid, channel_name, addr.clone());
+                update_binding::<T>(&accountid, channel_name, addr);
             } else {
                 // no input addr
                 warn!("[deposit]|no input addr for this deposit tx, but has opreturn to get accountid|tx_hash:{:?}|who:{:?}", self.tx_hash, accountid);
             }
             DepositAccountInfo::AccountId(accountid)
-        } else {
-            if let Some(addr) = input_addr {
-                // no opreturn, use addr to get accountid
-                match T::CrossChainProvider::get_binding_info(&addr) {
-                    Some((accountid, _)) => DepositAccountInfo::AccountId(accountid),
-                    None => DepositAccountInfo::Address(addr.clone()),
-                }
-            } else {
-                error!("[deposit]|no input addr for this deposit tx, neither has opreturn to get accountid!|tx_hash:{:?}", self.tx_hash);
-                return Err("should not happen, no input addr for this deposit tx, neither has opreturn to get accountid");
+        } else if let Some(addr) = input_addr {
+            // no opreturn, use addr to get accountid
+            match T::CrossChainProvider::get_binding_info(&addr) {
+                Some((accountid, _)) => DepositAccountInfo::AccountId(accountid),
+                None => DepositAccountInfo::Address(addr),
             }
+        } else {
+            error!("[deposit]|no input addr for this deposit tx, neither has opreturn to get accountid!|tx_hash:{:?}", self.tx_hash);
+            return Err("should not happen, no input addr for this deposit tx, neither has opreturn to get accountid");
         };
         // deposit
 
@@ -240,6 +239,7 @@ fn handle_opreturn<T: Trait>(script: &[u8], addr_type: u8) -> Option<(T::Account
     T::AccountExtractor::account_info(script, addr_type)
 }
 
+#[allow(clippy::type_complexity)]
 pub fn parse_deposit_outputs<T: Trait>(
     tx: &Transaction,
 ) -> result::Result<(Option<(T::AccountId, Option<Name>)>, u64, Option<Vec<u8>>), &'static str> {
@@ -248,6 +248,7 @@ pub fn parse_deposit_outputs<T: Trait>(
 }
 
 // just for test easy
+#[allow(clippy::type_complexity)]
 #[inline]
 pub fn parse_deposit_outputs_impl<T: Trait>(
     tx: &Transaction,
@@ -265,7 +266,7 @@ pub fn parse_deposit_outputs_impl<T: Trait>(
         // is_null_data_script is not null
         if script.is_null_data_script() {
             // only handle first valid account info opreturn, other opreturn would drop
-            if has_opreturn == false {
+            if !has_opreturn {
                 if let Some(v) = parse_opreturn(&script) {
                     let addr_type = xsystem::Module::<T>::address_type();
                     let info = handle_opreturn::<T>(&v, addr_type);
@@ -307,7 +308,7 @@ pub fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) {
 
 fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balance: u64) {
     let cache = DepositCache {
-        txid: txid.clone(),
+        txid: *txid,
         balance,
     };
 

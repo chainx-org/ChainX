@@ -215,7 +215,7 @@ where
 mod tests {
     use super::*;
     use parity_codec::{Decode, Encode};
-    use serde_derive::{Deserialize, Serialize};
+    use serde::{Deserialize, Serialize};
 
     struct TestContext;
 

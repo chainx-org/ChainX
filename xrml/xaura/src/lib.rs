@@ -152,7 +152,6 @@ impl AuraReport {
         let skipped_after = self.skipped % validator_count;
 
         let iter = (start_slot..validator_count)
-            .into_iter()
             .chain(0..start_slot)
             .enumerate();
 

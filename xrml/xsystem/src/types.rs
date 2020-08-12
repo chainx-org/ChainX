@@ -40,9 +40,7 @@ pub enum InherentError {
 
 impl IsFatalError for InherentError {
     fn is_fatal_error(&self) -> bool {
-        match self {
-            _ => true,
-        }
+        true
     }
 }
 

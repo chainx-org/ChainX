@@ -87,7 +87,7 @@ impl<Price: Copy + SimpleArithmetic + From<u64>> Handicap<Price> {
         self.highest_bid = self
             .highest_bid
             .checked_sub(&tick.into())
-            .unwrap_or(Zero::zero());
+            .unwrap_or_else(Zero::zero);
 
         self.highest_bid
     }
@@ -217,6 +217,7 @@ pub struct OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber>(
 impl<PairIndex: Clone, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber: Clone>
     OrderProperty<PairIndex, AccountId, Amount, Price, BlockNumber>
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         pair_index: PairIndex,
         index: OrderIndex,
@@ -227,7 +228,7 @@ impl<PairIndex: Clone, AccountId: Clone, Amount: Copy, Price: Copy, BlockNumber:
         price: Price,
         created_at: BlockNumber,
     ) -> Self {
-        OrderProperty(
+        Self(
             submitter, pair_index, side, amount, price, index, class, created_at,
         )
     }

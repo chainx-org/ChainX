@@ -32,6 +32,7 @@ impl<T: Trait> Module<T> {
         power.into()
     }
 
+    #[allow(unused)]
     pub(crate) fn raw_airdrop_asset_power(token: &Token) -> Option<u128> {
         let (_t, a, cs) = xstaking::Module::<T>::global_distribution_ratio();
 
@@ -121,10 +122,11 @@ impl<T: Trait> Module<T> {
             return Some(Self::one_pcx().into());
         }
 
-        // airdrop assets
+        // Airdrop assets are removed since Proposal 12
         if Self::is_airdrop_asset(token) {
-            return Self::raw_airdrop_asset_power(token)
-                .map(|raw_power| Self::apply_precision(raw_power, token));
+            return None;
+            // return Self::raw_airdrop_asset_power(token)
+            // .map(|raw_power| Self::apply_precision(raw_power, token));
         }
 
         // cross chain assets
