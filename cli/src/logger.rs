@@ -29,7 +29,7 @@ struct Directive {
 /// The log filters should be a list of comma-separated values.
 /// Example: `foo=trace,bar=debug,baz=info`
 fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>) {
-    let mut dirs = Vec::new();
+    let mut directives = Vec::new();
 
     let mut parts = log_filters.split('/');
     let mods = parts.next();
@@ -39,7 +39,7 @@ fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>)
             "warning: invalid logging log_filters '{}', ignoring it (too many '/'s)",
             log_filters
         );
-        return (dirs, None);
+        return (directives, None);
     }
 
     mods.map(|m| {
@@ -74,38 +74,36 @@ fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>)
                         continue;
                     }
                 };
-            dirs.push(Directive {
+            directives.push(Directive {
                 name: name.map(|s| s.to_string()),
                 level: log_level,
             });
         }
     });
 
-    let mut level_filter = LevelFilter::Off;
-    for d in dirs.iter() {
-        if d.name.is_none() {
-            if d.level > level_filter {
-                level_filter = d.level;
-            }
+    let mut filter_level = LevelFilter::Off;
+    for d in directives.iter() {
+        if d.name.is_none() && d.level > filter_level {
+            filter_level = d.level;
         }
     }
 
     let filter = if let Some(f) = filter {
-        if f > level_filter {
+        if f > filter_level {
             Some(f)
         } else {
-            Some(level_filter)
+            Some(filter_level)
         }
-    } else if level_filter == LevelFilter::Off {
+    } else if filter_level == LevelFilter::Off {
         None
     } else {
-        Some(level_filter)
+        Some(filter_level)
     };
 
-    return (dirs, filter);
+    return (directives, filter);
 }
 
-/// Initialize the log4rs related configuration.
+/// Initialize the log4rs configuration.
 pub fn init(log_filters: &str, params: &Cli) -> Result<(), String> {
     if params.log_size == 0 {
         return Err("the `--log-size` can't be 0".to_string());
