@@ -137,7 +137,7 @@ pub fn init(log_filters: &str, params: &Cli) -> Result<(), String> {
         "{}{}{}",
         params.log_dir,
         std::path::MAIN_SEPARATOR,
-        &params.log_name
+        &params.log_filename
     );
 
     let log_file = if params.log_compression {
