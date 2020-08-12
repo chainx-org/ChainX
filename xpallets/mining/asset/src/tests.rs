@@ -36,7 +36,7 @@ fn t_register_xbtc() -> DispatchResult {
 }
 
 fn t_xbtc_total() -> Balance {
-    XAssets::all_type_total_asset_balance(&X_BTC).saturated_into()
+    XAssets::total_issuance(&X_BTC).saturated_into()
 }
 
 fn t_xbtc_latest_total_weights() -> WeightType {

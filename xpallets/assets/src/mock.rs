@@ -83,9 +83,15 @@ impl pallet_balances::Trait for Test {
     type AccountStore = System;
 }
 
+parameter_types! {
+    pub const ChainXAssetId: AssetId = 0;
+}
+
 impl Trait for Test {
     type Event = MetaEvent;
     type Currency = Balances;
+    type NativeAssetId = ChainXAssetId;
+    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = ();
 }

@@ -87,9 +87,15 @@ impl Trait for Test {
     type Price = Price;
 }
 
+parameter_types! {
+    pub const ChainXAssetId: AssetId = 0;
+}
+
 impl xpallet_assets::Trait for Test {
-    type Currency = Balances;
     type Event = ();
+    type Currency = Balances;
+    type NativeAssetId = ChainXAssetId;
+    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
     type OnAssetRegisterOrRevoke = XSpot;
 }

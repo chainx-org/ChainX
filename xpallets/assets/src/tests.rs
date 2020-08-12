@@ -51,14 +51,11 @@ fn test_genesis() {
     ExtBuilder::default()
         .build(assets, endowed)
         .execute_with(|| {
-            assert_eq!(
-                XAssets::all_type_total_asset_balance(&abc_id),
-                100 + 200 + 300 + 400
-            );
-            assert_eq!(XAssets::all_type_total_asset_balance(&efd_id), 1000);
-            assert_eq!(XAssets::free_balance_of(&1, &abc_id), 100);
-            assert_eq!(XAssets::free_balance_of(&4, &abc_id), 400);
-            assert_eq!(XAssets::free_balance_of(&999, &efd_id), 1000);
+            assert_eq!(XAssets::total_issuance(&abc_id), 100 + 200 + 300 + 400);
+            assert_eq!(XAssets::total_issuance(&efd_id), 1000);
+            assert_eq!(XAssets::usable_balance(&1, &abc_id), 100);
+            assert_eq!(XAssets::usable_balance(&4, &abc_id), 400);
+            assert_eq!(XAssets::usable_balance(&999, &efd_id), 1000);
 
             assert_noop!(
                 XAssets::destroy_free(&abc_id, &1, 10),
@@ -142,10 +139,7 @@ fn test_register() {
 #[test]
 fn test_normal_case() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(
-            XAssets::all_type_total_asset_balance(&X_BTC),
-            100 + 200 + 300 + 400
-        );
+        assert_eq!(XAssets::total_issuance(&X_BTC), 100 + 200 + 300 + 400);
 
         assert_ok!(XAssets::transfer(
             Origin::signed(1),
@@ -154,13 +148,10 @@ fn test_normal_case() {
             50_u128.into(),
             b"".to_vec().into()
         ));
-        assert_eq!(XAssets::free_balance_of(&1, &X_BTC), 50);
-        assert_eq!(XAssets::free_balance_of(&999, &X_BTC), 50);
+        assert_eq!(XAssets::usable_balance(&1, &X_BTC), 50);
+        assert_eq!(XAssets::usable_balance(&999, &X_BTC), 50);
 
-        assert_eq!(
-            XAssets::all_type_total_asset_balance(&X_BTC),
-            100 + 200 + 300 + 400
-        );
+        assert_eq!(XAssets::total_issuance(&X_BTC), 100 + 200 + 300 + 400);
 
         assert_ok!(XAssets::move_balance(
             &X_BTC,
@@ -181,17 +172,14 @@ fn test_normal_case() {
 
         assert_ok!(XAssets::destroy(&X_BTC, &999, 15));
         assert_eq!(
-            XAssets::asset_type_balance(&999, &X_BTC, AssetType::ReservedWithdrawal),
+            XAssets::asset_typed_balance(&999, &X_BTC, AssetType::ReservedWithdrawal),
             10
         );
         assert_eq!(
             XAssets::total_asset_balance_of(&X_BTC, AssetType::ReservedWithdrawal),
             10
         );
-        assert_eq!(
-            XAssets::all_type_total_asset_balance(&X_BTC),
-            100 + 200 + 300 + 400 - 15
-        );
+        assert_eq!(XAssets::total_issuance(&X_BTC), 100 + 200 + 300 + 400 - 15);
 
         assert_ok!(XAssets::destroy(&X_BTC, &999, 10));
         assert_eq!(
@@ -205,10 +193,7 @@ fn test_normal_case() {
         assert!(XAssets::asset_balance(&999, &X_BTC)
             .get(&AssetType::ReservedWithdrawal)
             .is_none());
-        assert_eq!(
-            XAssets::all_type_total_asset_balance(&X_BTC),
-            100 + 200 + 300 + 400 - 25
-        );
+        assert_eq!(XAssets::total_issuance(&X_BTC), 100 + 200 + 300 + 400 - 25);
     })
 }
 
@@ -221,7 +206,7 @@ fn test_normal_issue_and_destroy() {
         // issue
         XAssets::issue(&btc_id, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 150);
-        assert_eq!(XAssets::all_type_total_asset_balance(&btc_id), 1050);
+        assert_eq!(XAssets::total_issuance(&btc_id), 1050);
 
         // reserve
         XAssets::move_balance(
@@ -238,7 +223,7 @@ fn test_normal_issue_and_destroy() {
             XAssets::asset_balance_of(&a, &btc_id, AssetType::ReservedWithdrawal),
             25
         );
-        assert_eq!(XAssets::free_balance_of(&a, &btc_id), 125);
+        assert_eq!(XAssets::usable_balance(&a, &btc_id), 125);
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 150);
 
         // destroy
@@ -247,9 +232,9 @@ fn test_normal_issue_and_destroy() {
             XAssets::asset_balance_of(&a, &btc_id, AssetType::ReservedWithdrawal),
             0
         );
-        assert_eq!(XAssets::free_balance_of(&a, &btc_id), 125);
+        assert_eq!(XAssets::usable_balance(&a, &btc_id), 125);
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 125);
-        assert_eq!(XAssets::all_type_total_asset_balance(&btc_id), 1025);
+        assert_eq!(XAssets::total_issuance(&btc_id), 1025);
     })
 }
 
@@ -262,7 +247,7 @@ fn test_unlock_issue_and_destroy2() {
         // issue
         XAssets::issue(&btc_id, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
-        assert_eq!(XAssets::all_type_total_asset_balance(&btc_id), 50);
+        assert_eq!(XAssets::total_issuance(&btc_id), 50);
 
         // reserve
         XAssets::move_balance(
@@ -279,7 +264,7 @@ fn test_unlock_issue_and_destroy2() {
             XAssets::asset_balance_of(&a, &btc_id, AssetType::ReservedWithdrawal),
             25
         );
-        assert_eq!(XAssets::free_balance_of(&a, &btc_id), 25);
+        assert_eq!(XAssets::usable_balance(&a, &btc_id), 25);
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
 
         // unreserve
@@ -297,7 +282,7 @@ fn test_unlock_issue_and_destroy2() {
             XAssets::asset_balance_of(&a, &btc_id, AssetType::ReservedWithdrawal),
             15
         );
-        assert_eq!(XAssets::free_balance_of(&a, &btc_id), 35);
+        assert_eq!(XAssets::usable_balance(&a, &btc_id), 35);
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
     })
 }
@@ -310,7 +295,7 @@ fn test_error_issue_and_destroy1() {
         // issue
         XAssets::issue(&btc_id, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
-        assert_eq!(XAssets::all_type_total_asset_balance(&btc_id), 50);
+        assert_eq!(XAssets::total_issuance(&btc_id), 50);
         // destroy first
         // destroy
         assert_noop!(
@@ -353,7 +338,7 @@ fn test_error_issue_and_destroy2() {
         // issue
         XAssets::issue(&btc_id, &a, 50).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
-        assert_eq!(XAssets::all_type_total_asset_balance(&btc_id), 50);
+        assert_eq!(XAssets::total_issuance(&btc_id), 50);
         // overflow
         let i: i32 = -1;
 
@@ -439,7 +424,7 @@ fn test_balance_btree_map() {
         let a: u64 = 100; // accountid
         let b: u64 = 200;
         let btc_id = X_BTC;
-        assert_eq!(XAssets::all_type_total_asset_balance(&btc_id), 1000);
+        assert_eq!(XAssets::total_issuance(&btc_id), 1000);
 
         let _ = XAssets::issue(&X_BTC, &a, 100);
         let _ = XAssets::move_balance(
@@ -471,9 +456,9 @@ fn test_balance_btree_map() {
         );
         assert_eq!(AssetBalance::<Test>::get(&a, &btc_id).len(), 1);
         assert_eq!(TotalAssetBalance::<Test>::get(&btc_id).len(), 1);
-        assert_eq!(XAssets::free_balance_of(&a, &X_BTC,), 80);
-        assert_eq!(XAssets::free_balance_of(&b, &X_BTC,), 20);
-        assert_eq!(XAssets::all_type_total_asset_balance(&X_BTC), 1100); // 1000 + 100
+        assert_eq!(XAssets::usable_balance(&a, &X_BTC,), 80);
+        assert_eq!(XAssets::usable_balance(&b, &X_BTC,), 20);
+        assert_eq!(XAssets::total_issuance(&X_BTC), 1100); // 1000 + 100
     })
 }
 
@@ -483,7 +468,7 @@ fn test_account_init() {
         let a: u64 = 999; // accountid
         let id1: u64 = 1000;
         let btc_id = X_BTC;
-        assert_eq!(XAssets::all_type_total_asset_balance(&btc_id), 1000);
+        assert_eq!(XAssets::total_issuance(&btc_id), 1000);
 
         // issue init
         let _ = XAssets::issue(&X_BTC, &a, 100);
@@ -592,7 +577,7 @@ fn test_transfer_token() {
         )
         .unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 25);
-        assert_eq!(XAssets::free_balance_of(&b, &btc_id), 25);
+        assert_eq!(XAssets::usable_balance(&b, &btc_id), 25);
 
         assert_noop!(
             XAssets::transfer(
@@ -638,8 +623,8 @@ fn test_move() {
             XAssets::move_free_balance(&btc_id, &a, &b, 1000),
             AssetErr::NotEnough
         );
-        assert_eq!(XAssets::free_balance_of(&a, &btc_id), 0);
-        assert_eq!(XAssets::free_balance_of(&b, &btc_id), 200 + 100);
+        assert_eq!(XAssets::usable_balance(&a, &btc_id), 0);
+        assert_eq!(XAssets::usable_balance(&b, &btc_id), 200 + 100);
 
         let token = X_BTC;
         assert_noop!(
@@ -654,7 +639,7 @@ fn test_move() {
             AssetErr::NotEnough
         );
 
-        assert_eq!(XAssets::free_balance_of(&a, &token), 0);
-        assert_eq!(XAssets::free_balance_of(&b, &token), 200 + 100 + 100);
+        assert_eq!(XAssets::usable_balance(&a, &token), 0);
+        assert_eq!(XAssets::usable_balance(&b, &token), 200 + 100 + 100);
     })
 }

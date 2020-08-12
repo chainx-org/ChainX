@@ -28,7 +28,7 @@ fn t_generic_free_balance(who: AccountId, asset_id: AssetId) -> Balance {
     if asset_id == xpallet_protocol::PCX {
         Balances::free_balance(who)
     } else {
-        XAssets::free_balance_of(&who, &asset_id)
+        XAssets::usable_balance(&who, &asset_id)
     }
 }
 

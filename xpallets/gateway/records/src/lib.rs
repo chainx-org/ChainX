@@ -133,7 +133,7 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         Self::check_asset(who, asset_id)?;
 
-        let free = xpallet_assets::Module::<T>::free_balance_of(who, asset_id);
+        let free = xpallet_assets::Module::<T>::usable_balance(who, asset_id);
         if free < value {
             Err(xpallet_assets::Error::<T>::InsufficientBalance)?;
         }

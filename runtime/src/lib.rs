@@ -699,9 +699,15 @@ impl xpallet_system::Trait for Runtime {
     type Event = Event;
 }
 
+parameter_types! {
+    pub const ChainXAssetId: AssetId = xpallet_protocol::PCX;
+}
+
 impl xpallet_assets::Trait for Runtime {
     type Currency = Balances;
     type Event = Event;
+    type NativeAssetId = ChainXAssetId;
+    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Runtime>;
     type OnAssetChanged = XMiningAsset;
     type OnAssetRegisterOrRevoke = XMiningAsset;
 }

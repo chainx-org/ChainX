@@ -16,7 +16,7 @@ fn test_normal() {
 
         // deposit
         assert_ok!(XRecords::deposit(&a, &btc_token, 100));
-        assert_eq!(XAssets::free_balance_of(&a, &btc_token), 100);
+        assert_eq!(XAssets::usable_balance(&a, &btc_token), 100);
 
         // withdraw
         assert_ok!(XRecords::withdrawal(
@@ -33,7 +33,7 @@ fn test_normal() {
         for i in numbers {
             assert_ok!(XRecords::withdrawal_finish(i));
         }
-        assert_eq!(XAssets::free_balance_of(&a, &btc_token), 50);
+        assert_eq!(XAssets::usable_balance(&a, &btc_token), 50);
     })
 }
 
@@ -46,9 +46,9 @@ fn test_normal2() {
 
         // deposit
         assert_ok!(XRecords::deposit(&a, &btc_token, 100));
-        assert_eq!(XAssets::free_balance_of(&a, &btc_token), 100);
+        assert_eq!(XAssets::usable_balance(&a, &btc_token), 100);
         assert_ok!(XRecords::deposit(&a, &eth_token, 500));
-        assert_eq!(XAssets::free_balance_of(&a, &eth_token), 500);
+        assert_eq!(XAssets::usable_balance(&a, &eth_token), 500);
 
         // withdraw
         assert_ok!(XRecords::withdrawal(
@@ -85,8 +85,8 @@ fn test_normal2() {
         for i in numbers1 {
             assert_ok!(XRecords::withdrawal_finish(i));
         }
-        assert_eq!(XAssets::free_balance_of(&a, &btc_token), 50);
-        assert_eq!(XAssets::free_balance_of(&a, &eth_token), 500 - 50 - 100);
+        assert_eq!(XAssets::usable_balance(&a, &btc_token), 50);
+        assert_eq!(XAssets::usable_balance(&a, &eth_token), 500 - 50 - 100);
     })
 }
 

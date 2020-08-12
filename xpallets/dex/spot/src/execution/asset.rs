@@ -84,7 +84,7 @@ impl<T: Trait> Module<T> {
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
             ensure!(
-                <xpallet_assets::Module<T>>::free_balance_of(who, &asset_id) >= value,
+                <xpallet_assets::Module<T>>::usable_balance(who, &asset_id) >= value,
                 Error::<T>::InsufficientBalance
             );
             Self::move_asset(asset_id, who, Free, who, ReservedDexSpot, value)?;
