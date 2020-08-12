@@ -14,7 +14,10 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
     )))
 }
 
-fn inject_config_opts(
+/// Extends the origin cli arg list with the options from the config file.
+///
+/// Only the options that do not appear in the command line args will be appended.
+fn extend_config_options(
     cli_args: Vec<String>,
     path: &std::path::Path,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -67,6 +70,7 @@ fn inject_config_opts(
     Ok(args)
 }
 
+/// Try to inject the options from the config file.
 pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
     let mut config_path: Option<String> = None;
 
@@ -85,7 +89,7 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
     }
 
     if let Some(config) = config_path {
-        match inject_config_opts(cli_args, Path::new(&config)) {
+        match extend_config_options(cli_args, Path::new(&config)) {
             Ok(args) => args,
             Err(e) => panic!(e.to_string()),
         }
