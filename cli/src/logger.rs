@@ -140,18 +140,18 @@ pub fn init(log_filters: &str, params: &Cli) -> Result<(), String> {
         &params.log_filename
     );
 
-    let log_file = if params.log_compression {
+    let roller_pattern = if params.log_compression {
         full_log_filename.clone() + ".gz"
     } else {
         full_log_filename.clone()
     };
 
     let roller = roll::fixed_window::FixedWindowRoller::builder()
-        .build(&format!("{}.{{}}", log_file), params.log_roll_count)
+        .build(&format!("{}.{{}}", roller_pattern), params.log_roll_count)
         .map_err(|e| format!("log rotate file:{:?}", e))?;
 
     let policy = policy::compound::CompoundPolicy::new(
-        Box::new(SizeTrigger::new(1024 * 1024 * params.log_size)), // log_size MB
+        Box::new(SizeTrigger::new(params.log_size * 1024 * 1024)), // log_size MB
         Box::new(roller),
     );
 
