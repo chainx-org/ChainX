@@ -43,6 +43,9 @@ fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>)
     }
 
     mods.map(|m| {
+        let print_warning =
+            |v: &str| eprintln!("warning: invalid log_filters value '{}', ignoring it", v);
+
         for s in m.split(',') {
             if s.is_empty() {
                 continue;
@@ -62,20 +65,12 @@ fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>)
                     (Some(part0), Some(part1), None) => match part1.parse() {
                         Ok(num) => (num, Some(part0)),
                         _ => {
-                            eprintln!(
-                                "warning: invalid logging log_filters '{}', \
-                                 ignoring it",
-                                part1
-                            );
+                            print_warning(part1);
                             continue;
                         }
                     },
                     _ => {
-                        eprintln!(
-                            "warning: invalid logging log_filters '{}', \
-                             ignoring it",
-                            s
-                        );
+                        print_warning(s);
                         continue;
                     }
                 };
@@ -86,27 +81,25 @@ fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>)
         }
     });
 
-    let mut tmp_filter = LevelFilter::Off;
+    let mut level_filter = LevelFilter::Off;
     for d in dirs.iter() {
         if d.name.is_none() {
-            if d.level > tmp_filter {
-                tmp_filter = d.level;
+            if d.level > level_filter {
+                level_filter = d.level;
             }
         }
     }
 
     let filter = if let Some(f) = filter {
-        if f > tmp_filter {
+        if f > level_filter {
             Some(f)
         } else {
-            Some(tmp_filter)
+            Some(level_filter)
         }
+    } else if level_filter == LevelFilter::Off {
+        None
     } else {
-        if tmp_filter == LevelFilter::Off {
-            None
-        } else {
-            Some(tmp_filter)
-        }
+        Some(level_filter)
     };
 
     return (dirs, filter);
