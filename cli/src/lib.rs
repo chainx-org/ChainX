@@ -8,6 +8,7 @@ mod chain_spec;
 mod service;
 mod cli;
 mod command;
+mod config;
 mod logger;
 mod res;
 

@@ -9,6 +9,12 @@ pub struct Cli {
     #[structopt(flatten)]
     pub run: RunCmd,
 
+    /// Pass [FLAG] or [OPTION] via a JSON config file
+    ///
+    /// Any options in the config file can be overrided by the same one passed from the command line.
+    #[structopt(long = "config", value_name = "PATH", parse(from_os_str))]
+    pub config_file: Option<std::path::PathBuf>,
+
     /// Enable the log4rs feature, including the log rotation function.
     //  Use `log4rs` as `env_logger` can't print the message into file directly.
     #[structopt(long = "log4rs")]
