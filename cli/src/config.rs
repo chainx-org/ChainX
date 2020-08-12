@@ -16,8 +16,8 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
 
 /// Extends the origin cli arg list with the options from the config file.
 ///
-/// Only the options that do not appear in the command line args will be appended.
-fn extend_config_options(
+/// Only the options that do not appear in the command line will be appended.
+fn extend_cli_args(
     cli_args: Vec<String>,
     path: &std::path::Path,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -89,7 +89,7 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
     }
 
     if let Some(config) = config_path {
-        match extend_config_options(cli_args, Path::new(&config)) {
+        match extend_cli_args(cli_args, Path::new(&config)) {
             Ok(args) => args,
             Err(e) => panic!(e.to_string()),
         }
