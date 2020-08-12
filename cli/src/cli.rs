@@ -9,11 +9,12 @@ pub struct Cli {
     #[structopt(flatten)]
     pub run: RunCmd,
 
-    /// Pass [FLAG] or [OPTION] via a JSON config file
+    /// Pass `foo` option starting with `--` via a JSON config file
     ///
     /// The key of JSON entry must be the form of `--KEY`, `-KEY` is invalid, e.g, you
-    /// can use `base-path` in the config file but `d` is not allowed. Any options in
-    /// the config file can be overrided by the same one passed from the command line.
+    /// can use `base-path` in the config file but `d` is not allowed. For the options like
+    /// `-d` you have to pass them from the command line. Any options in the config file
+    /// can be overrided by the same one passed from the command line.
     #[structopt(long = "config", value_name = "PATH", parse(from_os_str))]
     pub config_file: Option<std::path::PathBuf>,
 
