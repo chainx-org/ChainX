@@ -21,7 +21,7 @@ fn extend_cli_args(
     cli_args: Vec<String>,
     path: &std::path::Path,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    // Gather all the command line FLAG/OPTION
+    // Gather all the FLAGS/OPTIONS passed from the command line.
     let cli_opts = cli_args
         .iter()
         .filter(|i| i.starts_with("--"))
@@ -84,7 +84,7 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
             config_path = Some(path.to_string());
         } else if arg.starts_with("--config=") {
             config_path = arg.split('=').skip(1).next().map(|s| s.to_string());
-            assert!(config_path.is_some(), "missing value in --config=[value]");
+            assert!(config_path.is_some(), "missing PATH in --config=<PATH>");
         }
     }
 
