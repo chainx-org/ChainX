@@ -89,6 +89,9 @@ fn cannot_force_chill_should_work() {
         t_make_a_validator_candidate(123, 100);
         assert_eq!(XStaking::can_force_chilled(), true);
         assert_ok!(XStaking::chill(Origin::signed(123)));
+        assert_ok!(XStaking::chill(Origin::signed(2)));
+        assert_ok!(XStaking::chill(Origin::signed(3)));
+        assert_ok!(XStaking::chill(Origin::signed(4)));
         assert_err!(
             XStaking::chill(Origin::signed(1)),
             <Error<Test>>::TooFewActiveValidators
