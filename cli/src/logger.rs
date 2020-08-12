@@ -1,6 +1,20 @@
 use std::str::FromStr;
 
 use log::LevelFilter;
+use log4rs::{
+    append::{
+        console::ConsoleAppender,
+        rolling_file::{
+            policy::{
+                self,
+                compound::{roll, trigger::size::SizeTrigger},
+            },
+            RollingFileAppender,
+        },
+    },
+    config,
+    encode::pattern::PatternEncoder,
+};
 
 use crate::cli::Cli;
 
@@ -9,23 +23,28 @@ struct Directive {
     name: Option<String>,
     level: LevelFilter,
 }
-/// and return a vector with log directives.
-fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
+
+/// Parses the log filters and returns a vector of `Directive`.
+///
+/// The log filters should be a list of comma-separated values.
+/// Example: `foo=trace,bar=debug,baz=info`
+fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>) {
     let mut dirs = Vec::new();
 
-    let mut parts = spec.split('/');
+    let mut parts = log_filters.split('/');
     let mods = parts.next();
     let filter = parts.next().and_then(|s| FromStr::from_str(s).ok());
     if parts.next().is_some() {
         eprintln!(
-            "warning: invalid logging spec '{}', ignoring it (too many '/'s)",
-            spec
+            "warning: invalid logging log_filters '{}', ignoring it (too many '/'s)",
+            log_filters
         );
         return (dirs, None);
     }
+
     mods.map(|m| {
         for s in m.split(',') {
-            if s.len() == 0 {
+            if s.is_empty() {
                 continue;
             }
             let mut parts = s.split('=');
@@ -44,7 +63,7 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
                         Ok(num) => (num, Some(part0)),
                         _ => {
                             eprintln!(
-                                "warning: invalid logging spec '{}', \
+                                "warning: invalid logging log_filters '{}', \
                                  ignoring it",
                                 part1
                             );
@@ -53,7 +72,7 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
                     },
                     _ => {
                         eprintln!(
-                            "warning: invalid logging spec '{}', \
+                            "warning: invalid logging log_filters '{}', \
                              ignoring it",
                             s
                         );
@@ -69,7 +88,7 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
 
     let mut tmp_filter = LevelFilter::Off;
     for d in dirs.iter() {
-        if d.name == None {
+        if d.name.is_none() {
             if d.level > tmp_filter {
                 tmp_filter = d.level;
             }
@@ -93,26 +112,16 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
     return (dirs, filter);
 }
 
-pub fn init_logger_log4rs(spec: &str, params: &Cli) -> Result<(), String> {
-    use log4rs::{
-        append::{
-            console::ConsoleAppender,
-            rolling_file::{
-                policy::{
-                    self,
-                    compound::{roll, trigger},
-                },
-                RollingFileAppender,
-            },
-        },
-        config,
-        encode::pattern::PatternEncoder,
-    };
+/// Initialize the log4rs related configuration.
+pub fn init(log_filters: &str, params: &Cli) -> Result<(), String> {
+    if params.log_size == 0 {
+        return Err("the `--log-size` can't be 0".to_string());
+    }
 
-    let (directives, filter) = parse_spec(spec);
+    let (directives, filter) = parse_log_filters(log_filters);
     let filter = filter.unwrap_or(LevelFilter::Info);
 
-    let (pattern1, pattern2) = if filter > LevelFilter::Info {
+    let (console_pattern, log_file_pattern) = if filter > LevelFilter::Info {
         (
             "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {h({l})} {t}  {m}\n",
             "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {l} {t}  {m}\n", // remove color
@@ -124,34 +133,37 @@ pub fn init_logger_log4rs(spec: &str, params: &Cli) -> Result<(), String> {
         )
     };
 
-    let console = ConsoleAppender::builder()
-        .encoder(Box::new(PatternEncoder::new(pattern1)))
-        .build();
+    let full_log_filename = format!(
+        "{}{}{}",
+        params.log_dir,
+        std::path::MAIN_SEPARATOR,
+        &params.log_name
+    );
 
-    let log = params.log_dir.clone() + "/" + &params.log_name;
     let log_file = if params.log_compression {
-        log.clone() + ".gz"
+        full_log_filename.clone() + ".gz"
     } else {
-        log.clone()
+        full_log_filename.clone()
     };
 
-    if params.log_size == 0 {
-        return Err("the `--log-size` can't be 0".to_string());
-    }
-
-    let trigger = trigger::size::SizeTrigger::new(1024 * 1024 * params.log_size);
-    let roll_pattern = format!("{}.{{}}", log_file);
-    let roll = roll::fixed_window::FixedWindowRoller::builder()
-        .build(roll_pattern.as_str(), params.log_roll_count)
+    let roller = roll::fixed_window::FixedWindowRoller::builder()
+        .build(&format!("{}.{{}}", log_file), params.log_roll_count)
         .map_err(|e| format!("log rotate file:{:?}", e))?;
 
-    let policy = policy::compound::CompoundPolicy::new(Box::new(trigger), Box::new(roll));
+    let policy = policy::compound::CompoundPolicy::new(
+        Box::new(SizeTrigger::new(1024 * 1024 * params.log_size)), // log_size MB
+        Box::new(roller),
+    );
+
     let roll_file = RollingFileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new(pattern2)))
-        .build(log, Box::new(policy))
+        .encoder(Box::new(PatternEncoder::new(log_file_pattern)))
+        .build(full_log_filename, Box::new(policy))
         .map_err(|e| format!("{}", e))?;
 
-    let mut tmp_builder = if params.log_console {
+    let mut config_builder = if params.log_console {
+        let console = ConsoleAppender::builder()
+            .encoder(Box::new(PatternEncoder::new(console_pattern)))
+            .build();
         config::Config::builder()
             .appender(config::Appender::builder().build("console", Box::new(console)))
             .appender(config::Appender::builder().build("roll", Box::new(roll_file)))
@@ -162,7 +174,7 @@ pub fn init_logger_log4rs(spec: &str, params: &Cli) -> Result<(), String> {
 
     for d in directives {
         if let Some(name) = d.name {
-            tmp_builder = tmp_builder.logger(config::Logger::builder().build(name, d.level));
+            config_builder = config_builder.logger(config::Logger::builder().build(name, d.level));
         }
     }
 
@@ -175,10 +187,11 @@ pub fn init_logger_log4rs(spec: &str, params: &Cli) -> Result<(), String> {
         config::Root::builder().appender("roll").build(filter)
     };
 
-    let log_config = tmp_builder
+    let log_config = config_builder
         .build(root)
         .expect("Construct log config failure");
 
-    log4rs::init_config(log_config).expect("Initializing log config shouldn't be fail");
+    log4rs::init_config(log_config).expect("The log4rs config initialization shouldn't fail; qed");
+
     Ok(())
 }

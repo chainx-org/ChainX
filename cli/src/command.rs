@@ -58,11 +58,14 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 
 /// Parse and run command line arguments
 pub fn run() -> sc_cli::Result<()> {
-    let cli = Cli::from_args();
+    // Workaround for https://github.com/paritytech/substrate/issues/6856
+    // Remove this once the cli config file is supported in Substrate.
+    let raw_cli_args = std::env::args().collect::<Vec<_>>();
+    let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
     if cli.log4rs {
-        let s = cli.run.log_filters()?;
-        crate::logger::init_logger_log4rs(&s, &cli)?;
+        let log_filters = cli.run.log_filters()?;
+        crate::logger::init(&log_filters, &cli)?;
     }
 
     match &cli.subcommand {
