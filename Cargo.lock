@@ -7304,6 +7304,26 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-runtime",
+ "xpallet-assets-metadata",
+ "xpallet-protocol",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-assets-metadata"
+version = "0.1.0"
+dependencies = [
+ "bitmask",
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xp-runtime",
  "xpallet-protocol",
  "xpallet-support",
 ]

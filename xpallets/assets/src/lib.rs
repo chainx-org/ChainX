@@ -27,55 +27,37 @@ use frame_support::{
 use frame_system::{self as system, ensure_root, ensure_signed};
 
 // ChainX
-use chainx_primitives::{AssetId, Desc, Token};
+use chainx_primitives::AssetId;
 use xp_runtime::Memo;
 use xpallet_support::{debug, ensure_with_errorlog, info};
+// re-export
+pub use xpallet_assets_metadata::{AssetInfo, Chain};
 
-pub use self::traits::{ChainT, OnAssetChanged, OnAssetRegisterOrRevoke};
+pub use self::traits::{ChainT, OnAssetChanged};
 use self::trigger::AssetChangedTrigger;
 pub use self::types::{
-    is_valid_desc, is_valid_token, AssetErr, AssetInfo, AssetRestriction, AssetRestrictions,
-    AssetType, Chain, SignedBalance, TotalAssetInfo, WithdrawalLimit,
+    AssetErr, AssetRestriction, AssetRestrictions, AssetType, SignedBalance, TotalAssetInfo,
+    WithdrawalLimit,
 };
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + xpallet_assets_metadata::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
-    type NativeAssetId: Get<AssetId>;
-
     type OnCreatedAccount: Happened<Self::AccountId>;
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
-
-    type OnAssetRegisterOrRevoke: OnAssetRegisterOrRevoke;
 }
 
 decl_error! {
     /// Error for the Assets Module
     pub enum Error for Module<T: Trait> {
-        /// Token length is zero or too long
-        InvalidAssetLen,
-        /// Token name length is zero or too long
-        InvalidAssetNameLen,
-        /// Desc length is zero or too long
-        InvalidDescLen,
-        /// Memo length is zero or too long
-        InvalidMemoLen,
-        /// only allow ASCII alphanumeric character or '-', '.', '|', '~'
-        InvalidChar,
-        /// only allow ASCII alphanumeric character
-        InvalidAsscii,
-        ///
-        AlreadyExistentToken,
-        ///
-        NotExistedAsset,
         ///
         InvalidAsset,
         /// Got an overflow after adding
@@ -117,66 +99,6 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
-        /// register_asset to module, should allow by root
-        #[weight = 0]
-        pub fn register_asset(
-            origin,
-            #[compact] asset_id: AssetId,
-            asset: AssetInfo,
-            restrictions: AssetRestrictions,
-            is_online: bool,
-            has_mining_rights: bool,
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-            asset.is_valid::<T>()?;
-            info!("[register_asset]|id:{:}|{:?}|is_online:{:}|has_mining_rights:{:}", asset_id, asset, is_online, has_mining_rights);
-
-            Self::add_asset(asset_id, asset, restrictions)?;
-
-            T::OnAssetRegisterOrRevoke::on_register(&asset_id, has_mining_rights)?;
-            Self::deposit_event(RawEvent::Register(asset_id, has_mining_rights));
-
-            if !is_online {
-                let _ = Self::revoke_asset(frame_system::RawOrigin::Root.into(), asset_id.into());
-            }
-            Ok(())
-        }
-
-        /// revoke asset, mark this asset is invalid
-        #[weight = 0]
-        pub fn revoke_asset(origin, #[compact] id: AssetId) -> DispatchResult {
-            ensure_root(origin)?;
-            ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
-            Self::remove_asset(&id);
-
-            T::OnAssetRegisterOrRevoke::on_revoke(&id)?;
-            Self::deposit_event(RawEvent::Revoke(id));
-            Ok(())
-        }
-
-        /// recover an offline asset,
-        #[weight = 0]
-        pub fn recover_asset(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
-            ensure_root(origin)?;
-            ensure!(Self::asset_info_of(id).is_some(), Error::<T>::NotExistedAsset);
-            ensure!(Self::asset_online(id).is_none(), Error::<T>::InvalidAsset);
-
-            Self::re_add_asset(&id);
-
-            T::OnAssetRegisterOrRevoke::on_register(&id, has_mining_rights)?;
-            Self::deposit_event(RawEvent::Register(id, has_mining_rights));
-            Ok(())
-        }
-
-        /// set free token for an account
-        #[weight = 0]
-        pub fn set_balance(origin, who: T::AccountId, #[compact] id: AssetId, balances: BTreeMap<AssetType, BalanceOf<T>>) -> DispatchResult {
-            ensure_root(origin)?;
-            info!("[set_balance]|set balances by root|who:{:?}|id:{:}|balances_map:{:?}", who, id, balances);
-            Self::set_balance_impl(&who, &id, balances)?;
-            Ok(())
-        }
-
         /// transfer between account
         #[weight = 0]
         pub fn transfer(origin, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
@@ -202,16 +124,12 @@ decl_module! {
             Ok(())
         }
 
+        /// set free token for an account
         #[weight = 0]
-        pub fn modify_asset_info(origin, #[compact] id: AssetId, token: Option<Token>, token_name: Option<Token>, desc: Option<Desc>) -> DispatchResult {
+        pub fn set_balance(origin, who: T::AccountId, #[compact] id: AssetId, balances: BTreeMap<AssetType, BalanceOf<T>>) -> DispatchResult {
             ensure_root(origin)?;
-            let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::InvalidAsset)?;
-
-            token.map(|t| info.set_token(t));
-            token_name.map(|name| info.set_token_name(name));
-            desc.map(|desc| info.set_desc(desc));
-
-            AssetInfoOf::insert(id, info);
+            info!("[set_balance]|set balances by root|who:{:?}|id:{:}|balances_map:{:?}", who, id, balances);
+            Self::set_balance_impl(&who, &id, balances)?;
             Ok(())
         }
 
@@ -219,13 +137,14 @@ decl_module! {
         pub fn modify_asset_limit(origin, #[compact] id: AssetId, restriction: AssetRestriction, can_do: bool) -> DispatchResult {
             ensure_root(origin)?;
             // notice use `asset_info_of`, not `asset_online`
-            ensure!(Self::asset_info_of(id).is_some(), Error::<T>::InvalidAsset);
+            // ensure!(Self::asset_info_of(id).is_some(), Error::<T>::InvalidAsset);
+            xpallet_assets_metadata::Module::<T>::ensure_existed_assert(&id)?;
 
             AssetRestrictionsOf::mutate(id, |current| {
                 if can_do {
-                    current.set(restriction);
-                } else {
                     current.unset(restriction);
+                } else {
+                    current.set(restriction);
                 }
             });
             Ok(())
@@ -235,13 +154,6 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XAssets {
-        /// Asset id list for Chain, different Chain has different id list
-        pub AssetIdsOf get(fn asset_ids_of): map hasher(twox_64_concat) Chain => Vec<AssetId>;
-
-        /// asset info for every asset, key is asset id
-        pub AssetInfoOf get(fn asset_info_of): map hasher(twox_64_concat) AssetId => Option<AssetInfo>;
-        pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => Option<()>;
-        pub AssetRegisteredBlock get(fn asset_registered_block): map hasher(twox_64_concat) AssetId => T::BlockNumber;
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
         /// notice if not set AssetRestriction, default is true for this limit
         /// if want let limit make sense, must set false for the limit
@@ -257,31 +169,23 @@ decl_storage! {
         pub MemoLen get(fn memo_len) config(): u32;
     }
     add_extra_genesis {
-        config(assets): Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>;
+        config(assets_restrictions): Vec<(AssetId, AssetRestrictions)>;
         config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>;
         build(|config| {
-            Module::<T>::initialize_assets(&config.assets, &config.endowed);
+            Module::<T>::endow_assets(&config.endowed);
+            Module::<T>::set_restrictions(&config.assets_restrictions);
         })
     }
 }
 
+// initialize
 impl<T: Trait> Module<T> {
-    fn initialize_assets(
-        assets: &Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
-        endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>,
-    ) {
-        for (id, asset, restrictions, is_online, has_mining_rights) in assets {
-            Self::register_asset(
-                frame_system::RawOrigin::Root.into(),
-                (*id).into(),
-                asset.clone(),
-                restrictions.clone(),
-                *is_online,
-                *has_mining_rights,
-            )
-            .expect("asset registeration during the genesis can not fail");
+    fn set_restrictions(assets: &[(AssetId, AssetRestrictions)]) {
+        for (id, restrictions) in assets.iter() {
+            AssetRestrictionsOf::insert(id, *restrictions);
         }
-
+    }
+    fn endow_assets(endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>) {
         for (id, endowed) in endowed_accounts.iter() {
             for (accountid, value) in endowed.iter() {
                 Self::issue(id, accountid, *value)
@@ -289,7 +193,9 @@ impl<T: Trait> Module<T> {
             }
         }
     }
+}
 
+impl<T: Trait> Module<T> {
     pub fn ensure_not_native_asset(asset_id: &AssetId) -> DispatchResult {
         ensure!(
             *asset_id != T::NativeAssetId::get(),
@@ -301,65 +207,27 @@ impl<T: Trait> Module<T> {
 
 // asset related
 impl<T: Trait> Module<T> {
-    /// add an asset into the storage, notice the asset must be valid
-    fn add_asset(id: AssetId, asset: AssetInfo, restrictions: AssetRestrictions) -> DispatchResult {
-        let chain = asset.chain();
-        Self::ensure_not_native_asset(&id)?;
-        if Self::asset_info_of(&id).is_some() {
-            Err(Error::<T>::AlreadyExistentToken)?;
-        }
-
-        AssetInfoOf::insert(&id, asset);
-        AssetRestrictionsOf::insert(&id, restrictions);
-        AssetOnline::insert(&id, ());
-
-        AssetRegisteredBlock::<T>::insert(&id, system::Module::<T>::block_number());
-
-        AssetIdsOf::mutate(chain, |v| {
-            if !v.contains(&id) {
-                v.push(id.clone());
-            }
-        });
-        Ok(())
-    }
-
-    fn remove_asset(id: &AssetId) {
-        AssetOnline::remove(id);
-    }
-
-    fn re_add_asset(id: &AssetId) {
-        AssetOnline::insert(id, ());
-    }
-
-    pub fn asset_ids() -> Vec<AssetId> {
-        let mut v = Vec::new();
-        for i in Chain::iterator() {
-            v.extend(Self::asset_ids_of(i));
-        }
-        v
-    }
-
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
-        use frame_support::IterableStorageMap;
-        AssetInfoOf::iter()
-            .map(|(id, info)| {
-                (
-                    id,
-                    TotalAssetInfo {
-                        info,
-                        balance: Self::total_asset_balance(id),
-                        is_online: Self::asset_online(id).is_some(),
-                        restrictions: Self::asset_restrictions_of(id),
-                    },
-                )
-            })
-            .collect()
-    }
-
-    pub fn valid_asset_ids() -> Vec<AssetId> {
-        Self::asset_ids()
+        xpallet_assets_metadata::Module::<T>::asset_infos()
             .into_iter()
-            .filter(|id| Self::asset_online(id).is_some())
+            .filter_map(|(id, info)| {
+                if id == T::NativeAssetId::get() {
+                    // ignore native asset
+                    None
+                } else {
+                    let data = (
+                        id,
+                        TotalAssetInfo {
+                            info,
+                            balance: Self::total_asset_balance(id),
+                            is_online: xpallet_assets_metadata::Module::<T>::asset_online(id)
+                                .is_some(),
+                            restrictions: Self::asset_restrictions_of(id),
+                        },
+                    );
+                    Some(data)
+                }
+            })
             .collect()
     }
 
@@ -368,20 +236,10 @@ impl<T: Trait> Module<T> {
     ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
-            .filter_map(|(id, map)| Self::asset_online(id).map(|_| (id, map)))
+            .filter_map(|(id, map)| {
+                xpallet_assets_metadata::Module::<T>::asset_online(id).map(|_| (id, map))
+            })
             .collect()
-    }
-
-    pub fn get_asset(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
-        if let Some(asset) = Self::asset_info_of(id) {
-            if Self::asset_online(id).is_some() {
-                Ok(asset)
-            } else {
-                Err(Error::<T>::InvalidAsset)?
-            }
-        } else {
-            Err(Error::<T>::NotExistedAsset)?
-        }
     }
 
     pub fn can_do(id: &AssetId, limit: AssetRestriction) -> bool {
@@ -475,7 +333,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        xpallet_assets_metadata::Module::<T>::ensure_valid_asset(id)?;
 
         let _imbalance = Self::inner_issue(id, who, AssetType::Free, value)?;
         Ok(())
@@ -483,7 +341,7 @@ impl<T: Trait> Module<T> {
 
     pub fn destroy(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        xpallet_assets_metadata::Module::<T>::ensure_valid_asset(id)?;
         Self::can_destroy_withdrawal(id)?;
 
         let _imbalance = Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
@@ -492,7 +350,7 @@ impl<T: Trait> Module<T> {
 
     pub fn destroy_free(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+        xpallet_assets_metadata::Module::<T>::ensure_valid_asset(id)?;
         Self::can_destroy_free(id)?;
 
         let _imbalance = Self::inner_destroy(id, who, AssetType::Free, value)?;
@@ -509,7 +367,8 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<(), AssetErr> {
         // check
         Self::ensure_not_native_asset(id).map_err(|_| AssetErr::InvalidAsset)?;
-        ensure!(Self::asset_online(id).is_some(), AssetErr::InvalidAsset);
+        xpallet_assets_metadata::Module::<T>::ensure_valid_asset(id)
+            .map_err(|_| AssetErr::InvalidAsset)?;
         Self::can_move(id).map_err(|_| AssetErr::NotAllow)?;
 
         if value == Zero::zero() {

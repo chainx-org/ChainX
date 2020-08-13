@@ -1,26 +1,25 @@
 use crate::*;
 use crate::{Module, Trait};
 use chainx_primitives::AssetId;
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, sp_io, weights::Weight};
+use frame_support::{assert_noop, assert_ok, impl_outer_event, impl_outer_origin, parameter_types, sp_io, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
-use std::collections::BTreeMap;
+
+use xpallet_protocol::X_BTC;
 
 /// The AccountId alias in this test module.
-pub(crate) type AccountId = u64;
 pub(crate) type BlockNumber = u64;
-pub(crate) type Balance = u128;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
 }
 
 use frame_system as system;
-mod assets {
+mod xpallet_assets_metadata {
     // Re-export needed for `impl_outer_event!`.
     pub use super::super::*;
 }
@@ -28,9 +27,7 @@ mod assets {
 impl_outer_event! {
     pub enum MetaEvent for Test {
         system<T>,
-        pallet_balances<T>,
         xpallet_assets_metadata<T>,
-        assets<T>,
     }
 }
 
@@ -69,36 +66,19 @@ impl system::Trait for Test {
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type ModuleToIndex = ();
-    type AccountData = pallet_balances::AccountData<Balance>;
+    type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
-}
-parameter_types! {
-    pub const ExistentialDeposit: u64 = 1;
-}
-impl pallet_balances::Trait for Test {
-    type Balance = Balance;
-    type DustRemoval = ();
-    type Event = MetaEvent;
-    type ExistentialDeposit = ExistentialDeposit;
-    type AccountStore = System;
 }
 
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_metadata::Trait for Test {
+impl Trait for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
     type OnAssetRegisterOrRevoke = ();
-}
-
-impl Trait for Test {
-    type Event = MetaEvent;
-    type Currency = Balances;
-    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
-    type OnAssetChanged = ();
 }
 
 pub struct ExtBuilder;
@@ -108,7 +88,8 @@ impl Default for ExtBuilder {
     }
 }
 
-pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
+
+pub(crate) fn btc() -> (AssetId, AssetInfo) {
     (
         xpallet_protocol::X_BTC,
         AssetInfo::new::<Test>(
@@ -118,67 +99,88 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             8,
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
-        .unwrap(),
-        AssetRestriction::DestroyFree.into(),
+            .unwrap(),
     )
 }
 
 impl ExtBuilder {
     pub fn build(
         self,
-        assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
-        endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
+        assets: Vec<(AssetId, AssetInfo, bool, bool)>,
     ) -> sp_io::TestExternalities {
-        let _ = env_logger::try_init();
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
 
-        let mut init_assets = vec![];
-        let mut assets_restrictions = vec![];
-        for (a, b, c, d, e) in assets {
-            init_assets.push((a, b, d, e));
-            assets_restrictions.push((a, c))
+        let _ = GenesisConfig {
+            assets,
         }
-
-        let _ = xpallet_assets_metadata::GenesisConfig {
-            assets: init_assets,
-        }
-        .assimilate_storage::<Test>(&mut storage);
-
-        let _ = GenesisConfig::<Test> {
-            assets_restrictions,
-            endowed,
-            memo_len: 128,
-        }
-        .assimilate_storage(&mut storage);
+            .assimilate_storage::<Test>(&mut storage);
 
         let ext = sp_io::TestExternalities::new(storage);
         ext
     }
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
         let btc_assets = btc();
-        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
-        let mut endowed = BTreeMap::new();
-        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
-        endowed.insert(btc_assets.0, endowed_info);
-
-        let mut ext = self.build(assets, endowed);
-        ext.execute_with(|| System::set_block_number(1));
-        ext.execute_with(test);
-    }
-
-    pub fn build_no_endowed_and_execute(self, test: impl FnOnce() -> ()) {
-        let btc_assets = btc();
-        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
-        let mut ext = self.build(assets, Default::default());
+        let assets = vec![(btc_assets.0, btc_assets.1,true, true)];
+        let mut ext = self.build(assets, );
         ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);
     }
 }
 
 pub type System = frame_system::Module<Test>;
-pub type Balances = pallet_balances::Module<Test>;
-// pub type XAssetsMetadata = xpallet_assets_metadata::Module<Test>;
-pub type XAssets = Module<Test>;
-pub type XAssetsErr = Error<Test>;
+pub type XAssetsMetadata = Module<Test>;
+pub type Err = Error<Test>;
+
+#[test]
+fn test_register() {
+    ExtBuilder::default().build_and_execute(|| {
+        let abc_id = 100;
+        let abc_assets = (
+            abc_id,
+            AssetInfo::new::<Test>(
+                b"ABC".to_vec(),
+                b"ABC".to_vec(),
+                Chain::Bitcoin,
+                8,
+                b"abc".to_vec(),
+            )
+                .unwrap(),
+        );
+        assert_ok!(XAssetsMetadata::register_asset(
+            Origin::root(),
+            abc_assets.0,
+            abc_assets.1.clone(),
+            false,
+            false
+        ));
+        assert_noop!(
+            XAssetsMetadata::register_asset(
+                Origin::root(),
+                abc_assets.0,
+                abc_assets.1,
+                false,
+                false
+            ),
+            Err::AlreadyExistentToken
+        );
+
+        assert_noop!(XAssetsMetadata::get_asset(&abc_id), Err::InvalidAsset);
+
+        assert_ok!(XAssetsMetadata::recover_asset(Origin::root(), abc_id, true));
+        assert!(XAssetsMetadata::get_asset(&abc_id).is_ok());
+
+        assert_noop!(
+            XAssetsMetadata::revoke_asset(Origin::root(), 10000),
+            Err::InvalidAsset
+        );
+        assert_noop!(
+            XAssetsMetadata::recover_asset(Origin::root(), X_BTC, true),
+            Err::InvalidAsset
+        );
+
+        assert_ok!(XAssetsMetadata::revoke_asset(Origin::root(), X_BTC));
+        assert_noop!(XAssetsMetadata::get_asset(&X_BTC), Err::InvalidAsset);
+    })
+}

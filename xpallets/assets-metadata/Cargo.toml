@@ -1,8 +1,10 @@
 [package]
-name = "xpallet-assets"
+name = "xpallet-assets-metadata"
 version = "0.1.0"
-authors = ["ChainX community <https://www.chainx.org>"]
+authors = ["Aten <jincxmain@gmail.com>"]
 edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 bitmask = { version = "0.5.0", default-features = false }
@@ -24,15 +26,10 @@ xp-runtime = { path = "../../primitives/runtime", default-features = false }
 # ChainX pallets
 xpallet-protocol = { path = "../protocol", default-features = false }
 xpallet-support = { path = "../support", default-features = false }
-xpallet-assets-metadata = { path = "../assets-metadata", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
-
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
-
-env_logger = "0.7.1"
 
 [features]
 default = ["std"]
@@ -52,5 +49,4 @@ std = [
 
     "xpallet-protocol/std",
     "xpallet-support/std",
-    "xpallet-assets-metadata/std",
 ]
