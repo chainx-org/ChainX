@@ -82,16 +82,14 @@ decl_event!(
         Balance = BalanceOf<T>,
         SignedBalance = SignedBalance<T>,
     {
-        Register(AssetId, bool),
-        Revoke(AssetId),
-
         Move(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
         Issue(AssetId, AccountId, Balance),
         Destory(AssetId, AccountId, Balance),
         Set(AssetId, AccountId, AssetType, Balance),
-
         /// change token balance, SignedBalance mark Positive or Negative
         Change(AssetId, AccountId, AssetType, SignedBalance),
+        /// set AssetRestrictions for an Asset
+        SetRestrictions(AssetId, AssetRestrictions),
     }
 );
 
@@ -134,20 +132,10 @@ decl_module! {
         }
 
         #[weight = 0]
-        pub fn modify_asset_limit(origin, #[compact] id: AssetId, restriction: AssetRestriction, can_do: bool) -> DispatchResult {
+        pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
             ensure_root(origin)?;
-            // notice use `asset_info_of`, not `asset_online`
-            // ensure!(Self::asset_info_of(id).is_some(), Error::<T>::InvalidAsset);
-            xpallet_assets_metadata::Module::<T>::ensure_existed_assert(&id)?;
 
-            AssetRestrictionsOf::mutate(id, |current| {
-                if can_do {
-                    current.unset(restriction);
-                } else {
-                    current.set(restriction);
-                }
-            });
-            Ok(())
+            Self::set_asset_restrictions(id, restrictions)
         }
     }
 }
@@ -183,7 +171,8 @@ impl<T: Trait> Module<T> {
     fn set_restrictions(assets: &[(AssetId, AssetRestrictions)]) {
         for (id, restrictions) in assets.iter() {
             if *id != T::NativeAssetId::get() {
-                AssetRestrictionsOf::insert(id, *restrictions);
+                Self::set_asset_restrictions(*id, *restrictions)
+                    .expect("should not fail in genesis, qed");
             }
         }
     }
@@ -196,6 +185,19 @@ impl<T: Trait> Module<T> {
                 }
             }
         }
+    }
+}
+
+// others
+impl<T: Trait> Module<T> {
+    fn set_asset_restrictions(
+        asset_id: AssetId,
+        restrictions: AssetRestrictions,
+    ) -> DispatchResult {
+        // notice use `asset_info_of`, not `asset_online`
+        xpallet_assets_metadata::Module::<T>::ensure_existed_assert(&asset_id)?;
+        AssetRestrictionsOf::insert(asset_id, restrictions);
+        Ok(())
     }
 }
 
