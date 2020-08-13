@@ -31,34 +31,28 @@ use xpallet_support::info;
 
 pub use verifier::*;
 
-macro_rules! define_enum {
-    (
-    $(#[$attr:meta])*
-    $Name:ident { $($Variant:ident),* $(,)* }) =>
-    {
-        $(#[$attr])*
-        pub enum $Name {
-            $($Variant),*,
-        }
-        impl $Name {
-            pub fn iter() -> Iter<'static, $Name> {
-                static ENUM_ITEMS: &[$Name] = &[$($Name::$Variant),*];
-                ENUM_ITEMS.iter()
-            }
-        }
-    }
+#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum Chain {
+    ChainX,
+    Bitcoin,
+    Ethereum,
+    Polkadot,
 }
 
-define_enum!(
-    #[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
-    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    Chain {
-        ChainX,
-        Bitcoin,
-        Ethereum,
-        Polkadot,
+const CHAINS: [Chain; 4] = [
+    Chain::ChainX,
+    Chain::Bitcoin,
+    Chain::Ethereum,
+    Chain::Polkadot,
+];
+
+impl Chain {
+    /// Returns an iterator of all kinds of `Chain`.
+    pub fn iter() -> Iter<'static, Chain> {
+        CHAINS.iter()
     }
-);
+}
 
 impl Default for Chain {
     fn default() -> Self {
@@ -114,6 +108,7 @@ impl AssetInfo {
         a.is_valid::<T>()?;
         Ok(a)
     }
+
     pub fn is_valid<T: Trait>(&self) -> DispatchResult {
         is_valid_token::<T>(&self.token)?;
         is_valid_token_name::<T>(&self.token_name)?;
@@ -204,7 +199,7 @@ decl_event!(
     <T as system::Trait>::AccountId
     {
         Register(AssetId, bool),
-        Revoke(AssetId),
+        Deregister(AssetId),
         PlaceHolder(AccountId),
     }
 );
@@ -273,7 +268,7 @@ decl_module! {
             asset.is_valid::<T>()?;
             info!("[register_asset]|id:{:}|{:?}|is_online:{:}|has_mining_rights:{:}", asset_id, asset, is_online, has_mining_rights);
 
-            Self::add_asset(asset_id, asset)?;
+            Self::apply_register(asset_id, asset)?;
 
             T::OnAssetRegisterOrRevoke::on_register(&asset_id, has_mining_rights)?;
             Self::deposit_event(RawEvent::Register(asset_id, has_mining_rights));
@@ -296,7 +291,7 @@ decl_module! {
             AssetOnline::remove(id);
             T::OnAssetRegisterOrRevoke::on_revoke(&id)?;
 
-            Self::deposit_event(RawEvent::Revoke(id));
+            Self::deposit_event(RawEvent::Deregister(id));
 
             Ok(())
         }
@@ -353,7 +348,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
     /// add an asset into the storage, notice the asset must be valid
-    fn add_asset(id: AssetId, asset: AssetInfo) -> DispatchResult {
+    fn apply_register(id: AssetId, asset: AssetInfo) -> DispatchResult {
         let chain = asset.chain();
         // FIXME: Self::asset_info_of(&id).is_some() => multiple Error?
         if Self::asset_info_of(&id).is_some() {
