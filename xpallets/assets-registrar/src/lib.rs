@@ -10,7 +10,7 @@
 mod tests;
 mod verifier;
 
-use sp_std::{collections::btree_map::BTreeMap, prelude::*, result, slice::Iter};
+use sp_std::{prelude::*, result, slice::Iter};
 
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
@@ -347,28 +347,28 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    /// Returns all the asset ids of all chains so far.
+    /// Returns an iterator of all the asset ids of all chains so far.
     #[inline]
     pub fn asset_ids() -> impl Iterator<Item = AssetId> {
         Chain::iter().map(Self::asset_ids_of).flatten()
     }
 
-    /// Returns all the valid asset ids of all chains so far.
+    /// Returns an iterator of all the valid asset ids of all chains so far.
     pub fn valid_asset_ids() -> impl Iterator<Item = AssetId> {
         Self::asset_ids().filter(Self::is_valid_asset)
     }
 
-    pub fn asset_infos() -> BTreeMap<AssetId, AssetInfo> {
-        AssetInfoOf::iter().collect()
+    /// Returns an iterator of tuple (AssetId, AssetInfo) of all assets.
+    pub fn asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
+        AssetInfoOf::iter()
     }
 
-    pub fn valid_asset_infos() -> BTreeMap<AssetId, AssetInfo> {
-        Self::asset_infos()
-            .into_iter()
-            .filter(|(id, _)| Self::is_valid_asset(id))
-            .collect()
+    /// Returns an iterator of tuple (AssetId, AssetInfo) of all valid assets.
+    pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
+        Self::asset_infos().filter(|(id, _)| Self::is_valid_asset(id))
     }
 
+    /// Returns the asset info of given `id`.
     pub fn get_asset_info(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
         if let Some(asset) = Self::asset_info_of(id) {
             if Self::is_valid_asset(id) {
