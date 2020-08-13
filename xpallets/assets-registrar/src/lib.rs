@@ -304,7 +304,7 @@ decl_module! {
         ///
         /// `RegistrarHandler::on_register()` will be triggered again during the recover process.
         #[weight = 0]
-        pub fn recover_asset(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
+        pub fn recover(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(Self::asset_exists(&id), Error::<T>::AssetDoesNotExist);
             ensure!(!Self::is_valid_asset(&id), Error::<T>::AssetAlreadyValid);
