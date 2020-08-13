@@ -8,6 +8,7 @@
 
 #[cfg(test)]
 mod tests;
+mod verifier;
 
 use sp_std::{collections::btree_map::BTreeMap, prelude::*, result, slice::Iter};
 
@@ -27,6 +28,8 @@ use frame_system::{self as system, ensure_root};
 // ChainX
 use chainx_primitives::{AssetId, Decimals, Desc, Token};
 use xpallet_support::info;
+
+pub use verifier::*;
 
 macro_rules! define_enum {
     (
@@ -290,7 +293,7 @@ decl_module! {
             ensure_root(origin)?;
             ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
 
-            Self::remove_asset(&id);
+            AssetOnline::remove(id);
             T::OnAssetRegisterOrRevoke::on_revoke(&id)?;
 
             Self::deposit_event(RawEvent::Revoke(id));
@@ -305,7 +308,7 @@ decl_module! {
             ensure!(Self::asset_info_of(id).is_some(), Error::<T>::NotExistedAsset);
             ensure!(Self::asset_online(id).is_none(), Error::<T>::InvalidAsset);
 
-            Self::re_add_asset(&id);
+            AssetOnline::insert(id, ());
 
             T::OnAssetRegisterOrRevoke::on_register(&id, has_mining_rights)?;
             Self::deposit_event(RawEvent::Register(id, has_mining_rights));
@@ -313,7 +316,13 @@ decl_module! {
         }
 
         #[weight = 0]
-        pub fn modify_asset_info(origin, #[compact] id: AssetId, token: Option<Token>, token_name: Option<Token>, desc: Option<Desc>) -> DispatchResult {
+        pub fn modify_asset_info(
+            origin,
+            #[compact] id: AssetId,
+            token: Option<Token>,
+            token_name: Option<Token>,
+            desc: Option<Desc>
+        ) -> DispatchResult {
             ensure_root(origin)?;
             let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::InvalidAsset)?;
 
@@ -346,6 +355,7 @@ impl<T: Trait> Module<T> {
     /// add an asset into the storage, notice the asset must be valid
     fn add_asset(id: AssetId, asset: AssetInfo) -> DispatchResult {
         let chain = asset.chain();
+        // FIXME: Self::asset_info_of(&id).is_some() => multiple Error?
         if Self::asset_info_of(&id).is_some() {
             Err(Error::<T>::AlreadyExistentToken)?;
         }
@@ -361,14 +371,6 @@ impl<T: Trait> Module<T> {
             }
         });
         Ok(())
-    }
-
-    fn remove_asset(id: &AssetId) {
-        AssetOnline::remove(id);
-    }
-
-    fn re_add_asset(id: &AssetId) {
-        AssetOnline::insert(id, ());
     }
 
     pub fn asset_ids() -> Vec<AssetId> {
@@ -419,52 +421,3 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 }
-
-#[inline]
-/// Visible ASCII char [0x20, 0x7E]
-fn is_ascii_invisible(c: &u8) -> bool {
-    *c < 0x20 || *c > 0x7E
-}
-
-/// A valid token name should have a legal length and be visible ASCII chars only.
-pub fn is_valid_token_name<T: Trait>(name: &[u8]) -> DispatchResult {
-    if name.len() > MAX_TOKEN_LEN || name.is_empty() {
-        Err(Error::<T>::InvalidAssetNameLen)?;
-    }
-    xp_runtime::xss_check(name)?;
-    for c in name.iter() {
-        if is_ascii_invisible(c) {
-            Err(Error::<T>::InvalidAsscii)?;
-        }
-    }
-    Ok(())
-}
-
-/// A valid desc should be visible ASCII chars only and not too long.
-pub fn is_valid_desc<T: Trait>(desc: &[u8]) -> DispatchResult {
-    if desc.len() > MAX_DESC_LEN {
-        Err(Error::<T>::InvalidDescLen)?;
-    }
-    xp_runtime::xss_check(desc)?;
-    for c in desc.iter() {
-        if is_ascii_invisible(c) {
-            Err(Error::<T>::InvalidAsscii)?;
-        }
-    }
-    Ok(())
-}
-/// Token can only use ASCII alphanumeric character or "-.|~".
-pub fn is_valid_token<T: Trait>(v: &[u8]) -> DispatchResult {
-    if v.len() > MAX_TOKEN_LEN || v.is_empty() {
-        Err(Error::<T>::InvalidAssetLen)?;
-    }
-    let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || "-.|~".as_bytes().contains(c) };
-    for c in v.iter() {
-        if !is_valid(c) {
-            Err(Error::<T>::InvalidChar)?;
-        }
-    }
-    Ok(())
-}
-const MAX_TOKEN_LEN: usize = 32;
-const MAX_DESC_LEN: usize = 128;
