@@ -61,8 +61,7 @@ pub fn run() -> sc_cli::Result<()> {
     let cli = Cli::from_args();
 
     if cli.log4rs {
-        let s = cli.run.log_filters()?;
-        crate::logger::init_logger_log4rs(&s, &cli)?;
+        crate::logger::init(&cli.run.log_filters()?, &cli)?;
     }
 
     match &cli.subcommand {

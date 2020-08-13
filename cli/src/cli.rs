@@ -9,27 +9,42 @@ pub struct Cli {
     #[structopt(flatten)]
     pub run: RunCmd,
 
+    /// Enable the log4rs feature, including the log rotation function.
+    //  Use `log4rs` as `env_logger` can't print the message into file directly.
     #[structopt(long = "log4rs")]
-    /// Use `env_logger`, not `log4rs`. notice `env_logger` can't print into file directly
     pub log4rs: bool,
 
+    /// Specify the path of directory which will contain the log files.
+    ///
+    /// The directory will be created if it does not exist.
     #[structopt(long = "log-dir", default_value = "./log")]
-    /// When use `log4rs`, assign the path of log dir, notice this would create the dir directly. Default dir is `./log`
     pub log_dir: String,
-    #[structopt(long = "log-name", default_value = "chainx.log")]
-    /// When use `log4rs`, assign the log file name. Default dir is `chainx.log`, thus when use default config, the log would create in ./log/chainx.log
-    pub log_name: String,
+
+    /// Specify the name of log file.
+    ///
+    /// The latest log file would be created at ./log/chainx.log.
+    #[structopt(long = "log-filename", default_value = "chainx.log")]
+    pub log_filename: String,
+
+    /// Rotate the log file when it exceeds this size (in MB).
     #[structopt(long = "log-size", default_value = "300")]
-    /// When use `log4rs`, the default log size in log rotation. The unit is MB, default is 300 MB
     pub log_size: u64,
+
+    /// The maximum number of log rorations.
+    ///
+    /// By default the generated log files would be like `chainx.log.0`,
+    /// `chainx.log.1`, ... `chainx.log.10`. Once the number of generated log files
+    /// are larger than this variable, the oldest one will be removed.
     #[structopt(long = "log-roll-count", default_value = "10")]
-    /// When use `log4rs`, the max log rotation. Default is 10. If the log is more then the number, would delete old file.
-    /// The log would like `chainx.log.0`, `chainx.log.1` ... `chainx.log.10`
     pub log_roll_count: u32,
+
+    /// Print the log message to the console aside from the log file.
     #[structopt(long = "log-console")]
-    /// When use `log4rs`, print log into console. Default is false
     pub log_console: bool,
+
+    /// Compress the old log file to save some disk space.
+    ///
+    /// The compressed log file would be like `chainx.log.gz.0` by default.
     #[structopt(long = "log-compression")]
-    /// When use `log4rs`, compress the old log to save space. the log would like `chainx.log.gz.0`
     pub log_compression: bool,
 }
