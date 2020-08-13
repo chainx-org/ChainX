@@ -339,7 +339,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Module::<T>::ensure_valid_asset(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
 
         let _imbalance = Self::inner_issue(id, who, AssetType::Free, value)?;
         Ok(())
@@ -347,7 +347,7 @@ impl<T: Trait> Module<T> {
 
     pub fn destroy(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Module::<T>::ensure_valid_asset(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_withdrawal(id)?;
 
         let _imbalance = Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
@@ -356,7 +356,7 @@ impl<T: Trait> Module<T> {
 
     pub fn destroy_free(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Module::<T>::ensure_valid_asset(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_free(id)?;
 
         let _imbalance = Self::inner_destroy(id, who, AssetType::Free, value)?;
@@ -373,7 +373,7 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<(), AssetErr> {
         // check
         Self::ensure_not_native_asset(id).map_err(|_| AssetErr::InvalidAsset)?;
-        xpallet_assets_registrar::Module::<T>::ensure_valid_asset(id)
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)
             .map_err(|_| AssetErr::InvalidAsset)?;
         Self::can_move(id).map_err(|_| AssetErr::NotAllow)?;
 

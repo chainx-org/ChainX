@@ -156,14 +156,14 @@ fn test_register() {
             Err::AlreadyExistentToken
         );
 
-        assert_noop!(XAssetsRegistrar::get_asset(&abc_id), Err::InvalidAsset);
+        assert_noop!(XAssetsRegistrar::get_asset_info(&abc_id), Err::InvalidAsset);
 
         assert_ok!(XAssetsRegistrar::recover_asset(
             Origin::root(),
             abc_id,
             true
         ));
-        assert!(XAssetsRegistrar::get_asset(&abc_id).is_ok());
+        assert!(XAssetsRegistrar::get_asset_info(&abc_id).is_ok());
 
         assert_noop!(
             XAssetsRegistrar::deregister(Origin::root(), 10000),
@@ -175,6 +175,6 @@ fn test_register() {
         );
 
         assert_ok!(XAssetsRegistrar::deregister(Origin::root(), X_BTC));
-        assert_noop!(XAssetsRegistrar::get_asset(&X_BTC), Err::InvalidAsset);
+        assert_noop!(XAssetsRegistrar::get_asset_info(&X_BTC), Err::InvalidAsset);
     })
 }

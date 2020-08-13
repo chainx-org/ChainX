@@ -349,17 +349,13 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     /// Returns all the asset ids of all chains so far.
     #[inline]
-    pub fn asset_ids() -> Vec<AssetId> {
-        Chain::iter().map(Self::asset_ids_of).flatten().collect()
+    pub fn asset_ids() -> impl Iterator<Item = AssetId> {
+        Chain::iter().map(Self::asset_ids_of).flatten()
     }
 
     /// Returns all the valid asset ids of all chains so far.
-    pub fn valid_asset_ids() -> Vec<AssetId> {
-        // TODO: extract is_valid_asset() which can be used in serveral places.
-        Self::asset_ids()
-            .into_iter()
-            .filter(Self::is_valid_asset)
-            .collect()
+    pub fn valid_asset_ids() -> impl Iterator<Item = AssetId> {
+        Self::asset_ids().filter(Self::is_valid_asset)
     }
 
     pub fn asset_infos() -> BTreeMap<AssetId, AssetInfo> {
@@ -373,7 +369,7 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-    pub fn get_asset(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
+    pub fn get_asset_info(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
         if let Some(asset) = Self::asset_info_of(id) {
             if Self::is_valid_asset(id) {
                 Ok(asset)
@@ -400,7 +396,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn ensure_valid_asset(id: &AssetId) -> DispatchResult {
+    pub fn ensure_asset_is_valid(id: &AssetId) -> DispatchResult {
         ensure!(Self::is_valid_asset(id), Error::<T>::InvalidAsset);
         Ok(())
     }

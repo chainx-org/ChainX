@@ -233,7 +233,7 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         ext.check_validity()?;
 
-        let info = xpallet_assets_registrar::Module::<T>::get_asset(&asset_id)?;
+        let info = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
         let chain = info.chain();
         match chain {
             Chain::Bitcoin => {
