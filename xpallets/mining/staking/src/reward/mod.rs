@@ -12,11 +12,12 @@ impl<T: Trait> Module<T> {
     }
 
     /// Returns the total reward for the session, assuming it ends with this block.
-    ///
-    /// Due to the migration of ChainX 1.0 to ChainX 2.0,
-    fn this_session_reward(current_index: SessionIndex) -> BalanceOf<T> {
-        let halving_epoch = current_index / SESSIONS_PER_ROUND;
-        // FIXME: migration_offset
+    pub(crate) fn this_session_reward(current_index: SessionIndex) -> BalanceOf<T> {
+        let halving_epoch = if current_index <= MIGRATION_SESSION_OFFSET {
+            0
+        } else {
+            (current_index - MIGRATION_SESSION_OFFSET - 1) / SESSIONS_PER_ROUND + 1
+        };
         let reward = INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch);
         reward
     }

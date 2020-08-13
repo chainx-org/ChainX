@@ -68,7 +68,7 @@ impl<T: Trait> Module<T> {
 
         // Avoid reevaluate validator set if it would leave us with fewer than the minimum
         // needed validators.
-        if candidates.len() < Self::minimum_validator_count() as usize {
+        if candidates.len() < Self::reasonable_minimum_validator_count() as usize {
             return None;
         }
 
