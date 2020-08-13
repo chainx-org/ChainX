@@ -12,8 +12,9 @@ use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature
 use chainx_runtime::{
     AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
     GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SocietyConfig, SudoConfig,
-    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
-    XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsMetadataConfig, XContractsConfig,
+    XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig,
+    XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -290,6 +291,21 @@ fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> Sess
     }
 }
 
+fn init_assets(
+    assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
+) -> (
+    Vec<(AssetId, AssetInfo, bool, bool)>,
+    Vec<(AssetId, AssetRestrictions)>,
+) {
+    let mut init_assets = vec![];
+    let mut assets_restrictions = vec![];
+    for (a, b, c, d, e) in assets {
+        init_assets.push((a, b, d, e));
+        assets_restrictions.push((a, c))
+    }
+    (init_assets, assets_restrictions)
+}
+
 fn testnet_genesis(
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
@@ -305,6 +321,7 @@ fn testnet_genesis(
     const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
     const STASH: Balance = 100 * constants::currency::DOLLARS;
     const STAKING_LOCKED: Balance = 1_000 * constants::currency::DOLLARS;
+    let (assets, assets_restrictions) = init_assets(assets);
 
     let endowed_accounts = endowed
         .get(&xpallet_protocol::PCX)
@@ -396,8 +413,9 @@ fn testnet_genesis(
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
         }),
+        xpallet_assets_metadata: Some(XAssetsMetadataConfig { assets }),
         xpallet_assets: Some(XAssetsConfig {
-            assets,
+            assets_restrictions,
             endowed: assets_endowed,
             memo_len: 128,
         }),

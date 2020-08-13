@@ -66,6 +66,7 @@ xp-mining-staking = { path = "../primitives/mining/staking", default-features = 
 xpallet-protocol = { path = "../xpallets/protocol", default-features = false }
 xpallet-support = { path = "../xpallets/support", default-features = false }
 xpallet-system = { path = "../xpallets/system", default-features = false }
+xpallet-assets-metadata = { path = "../xpallets/assets-metadata", default-features = false }
 xpallet-assets = { path = "../xpallets/assets", default-features = false }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api", default-features = false }
 xpallet-gateway-records = { path = "../xpallets/gateway/records", default-features = false }
@@ -142,6 +143,7 @@ std = [
     "xpallet-protocol/std",
     "xpallet-support/std",
     "xpallet-system/std",
+    "xpallet-assets-metadata/std",
     "xpallet-assets/std",
     "xpallet-assets-rpc-runtime-api/std",
     "xpallet-gateway-records/std",

@@ -228,7 +228,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
+impl<T: Trait> xpallet_assets_metadata::OnAssetRegisterOrRevoke for Module<T> {
     fn on_register(asset_id: &AssetId, has_mining_rights: bool) -> DispatchResult {
         if !has_mining_rights {
             return Ok(());
@@ -264,7 +264,8 @@ where
 {
     fn reward_pot_account_for(asset_id: &AssetId) -> T::AccountId {
         let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
-        let registered_block = <xpallet_assets::Module<T>>::asset_registered_block(asset_id);
+        let registered_block =
+            <xpallet_assets_metadata::Module<T>>::asset_registered_block(asset_id);
         let registered_block_hash =
             <T as frame_system::Trait>::Hashing::hash(registered_block.encode().as_ref());
 

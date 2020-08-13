@@ -82,7 +82,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn currency_precision_of(asset_id: AssetId) -> Option<u8> {
-        <xpallet_assets::Module<T>>::asset_info_of(asset_id).map(|x| x.precision())
+        <xpallet_assets_metadata::Module<T>>::asset_info_of(asset_id).map(|x| x.precision())
     }
 
     /// Converts the base currency to the quote currency given the trading pair.

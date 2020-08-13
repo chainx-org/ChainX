@@ -1,7 +1,10 @@
 use crate::*;
 use crate::{Module, Trait};
 use chainx_primitives::AssetId;
-use frame_support::{assert_noop, assert_ok, impl_outer_event, impl_outer_origin, parameter_types, sp_io, weights::Weight};
+use frame_support::{
+    assert_noop, assert_ok, impl_outer_event, impl_outer_origin, parameter_types, sp_io,
+    weights::Weight,
+};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -88,7 +91,6 @@ impl Default for ExtBuilder {
     }
 }
 
-
 pub(crate) fn btc() -> (AssetId, AssetInfo) {
     (
         xpallet_protocol::X_BTC,
@@ -99,31 +101,25 @@ pub(crate) fn btc() -> (AssetId, AssetInfo) {
             8,
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
-            .unwrap(),
+        .unwrap(),
     )
 }
 
 impl ExtBuilder {
-    pub fn build(
-        self,
-        assets: Vec<(AssetId, AssetInfo, bool, bool)>,
-    ) -> sp_io::TestExternalities {
+    pub fn build(self, assets: Vec<(AssetId, AssetInfo, bool, bool)>) -> sp_io::TestExternalities {
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
 
-        let _ = GenesisConfig {
-            assets,
-        }
-            .assimilate_storage::<Test>(&mut storage);
+        let _ = GenesisConfig { assets }.assimilate_storage::<Test>(&mut storage);
 
         let ext = sp_io::TestExternalities::new(storage);
         ext
     }
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
         let btc_assets = btc();
-        let assets = vec![(btc_assets.0, btc_assets.1,true, true)];
-        let mut ext = self.build(assets, );
+        let assets = vec![(btc_assets.0, btc_assets.1, true, true)];
+        let mut ext = self.build(assets);
         ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);
     }
@@ -146,7 +142,7 @@ fn test_register() {
                 8,
                 b"abc".to_vec(),
             )
-                .unwrap(),
+            .unwrap(),
         );
         assert_ok!(XAssetsMetadata::register_asset(
             Origin::root(),

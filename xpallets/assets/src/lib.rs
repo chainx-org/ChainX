@@ -182,14 +182,18 @@ decl_storage! {
 impl<T: Trait> Module<T> {
     fn set_restrictions(assets: &[(AssetId, AssetRestrictions)]) {
         for (id, restrictions) in assets.iter() {
-            AssetRestrictionsOf::insert(id, *restrictions);
+            if *id != T::NativeAssetId::get() {
+                AssetRestrictionsOf::insert(id, *restrictions);
+            }
         }
     }
     fn endow_assets(endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>) {
         for (id, endowed) in endowed_accounts.iter() {
-            for (accountid, value) in endowed.iter() {
-                Self::issue(id, accountid, *value)
-                    .expect("asset issuance during the genesis can not fail");
+            if *id != T::NativeAssetId::get() {
+                for (accountid, value) in endowed.iter() {
+                    Self::issue(id, accountid, *value)
+                        .expect("asset issuance during the genesis can not fail");
+                }
             }
         }
     }
