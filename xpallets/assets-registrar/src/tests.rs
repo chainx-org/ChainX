@@ -81,7 +81,7 @@ parameter_types! {
 impl Trait for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
-    type OnAssetRegisterOrRevoke = ();
+    type RegistrarHandler = ();
 }
 
 pub struct ExtBuilder;

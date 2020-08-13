@@ -458,8 +458,8 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> xpallet_assets_registrar::OnAssetRegisterOrRevoke for Module<T> {
-    fn on_revoke(token: &AssetId) -> DispatchResult {
+impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
+    fn on_deregister(token: &AssetId) -> DispatchResult {
         let pair_len = TradingPairCount::get();
         for i in 0..pair_len {
             if let Some(mut pair) = TradingPairOf::get(i) {

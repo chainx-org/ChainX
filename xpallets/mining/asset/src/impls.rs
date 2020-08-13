@@ -228,7 +228,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> xpallet_assets_registrar::OnAssetRegisterOrRevoke for Module<T> {
+impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
     fn on_register(asset_id: &AssetId, has_mining_rights: bool) -> DispatchResult {
         if !has_mining_rights {
             return Ok(());
@@ -244,7 +244,7 @@ impl<T: Trait> xpallet_assets_registrar::OnAssetRegisterOrRevoke for Module<T> {
         Ok(())
     }
 
-    fn on_revoke(asset_id: &AssetId) -> DispatchResult {
+    fn on_deregister(asset_id: &AssetId) -> DispatchResult {
         MiningPrevilegedAssets::mutate(|v| {
             v.retain(|i| i != asset_id);
         });

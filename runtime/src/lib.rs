@@ -706,7 +706,7 @@ parameter_types! {
 impl xpallet_assets_registrar::Trait for Runtime {
     type Event = Event;
     type NativeAssetId = ChainXAssetId;
-    type OnAssetRegisterOrRevoke = XMiningAsset;
+    type RegistrarHandler = XMiningAsset;
 }
 
 impl xpallet_assets::Trait for Runtime {

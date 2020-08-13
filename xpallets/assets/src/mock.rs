@@ -91,7 +91,7 @@ parameter_types! {
 impl xpallet_assets_registrar::Trait for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
-    type OnAssetRegisterOrRevoke = ();
+    type RegistrarHandler = ();
 }
 
 impl Trait for Test {

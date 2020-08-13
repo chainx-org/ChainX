@@ -99,7 +99,7 @@ impl xpallet_assets::Trait for Test {
     type NativeAssetId = ChainXAssetId;
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = XSpot;
+    type RegistrarHandler = XSpot;
 }
 
 impl xfee_manager::Trait for Test {

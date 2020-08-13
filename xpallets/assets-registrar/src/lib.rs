@@ -148,18 +148,18 @@ impl AssetInfo {
     }
 }
 
-pub trait OnAssetRegisterOrRevoke {
+pub trait RegistrarHandler {
     fn on_register(_: &AssetId, _: bool) -> DispatchResult {
         Ok(())
     }
-    fn on_revoke(_: &AssetId) -> DispatchResult {
+    fn on_deregister(_: &AssetId) -> DispatchResult {
         Ok(())
     }
 }
 
-impl OnAssetRegisterOrRevoke for () {}
+impl RegistrarHandler for () {}
 
-impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRevoke for (A, B) {
+impl<A: RegistrarHandler, B: RegistrarHandler> RegistrarHandler for (A, B) {
     fn on_register(id: &AssetId, is_psedu_intention: bool) -> DispatchResult {
         let r = A::on_register(id, is_psedu_intention);
         let r2 = B::on_register(id, is_psedu_intention);
@@ -171,9 +171,9 @@ impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRe
         Ok(())
     }
 
-    fn on_revoke(id: &AssetId) -> DispatchResult {
-        let r = A::on_revoke(id);
-        let r2 = B::on_revoke(id);
+    fn on_deregister(id: &AssetId) -> DispatchResult {
+        let r = A::on_deregister(id);
+        let r2 = B::on_deregister(id);
         if r.is_ok() == false {
             return r;
         } else if r2.is_ok() == false {
@@ -191,7 +191,7 @@ pub trait Trait: system::Trait {
     type NativeAssetId: Get<AssetId>;
 
     ///
-    type OnAssetRegisterOrRevoke: OnAssetRegisterOrRevoke;
+    type RegistrarHandler: RegistrarHandler;
 }
 
 decl_event!(
@@ -270,7 +270,7 @@ decl_module! {
 
             Self::apply_register(asset_id, asset)?;
 
-            T::OnAssetRegisterOrRevoke::on_register(&asset_id, has_mining_rights)?;
+            T::RegistrarHandler::on_register(&asset_id, has_mining_rights)?;
             Self::deposit_event(RawEvent::Register(asset_id, has_mining_rights));
 
             if !is_online {
@@ -289,7 +289,7 @@ decl_module! {
             ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
 
             AssetOnline::remove(id);
-            T::OnAssetRegisterOrRevoke::on_revoke(&id)?;
+            T::RegistrarHandler::on_deregister(&id)?;
 
             Self::deposit_event(RawEvent::Deregister(id));
 
@@ -305,7 +305,7 @@ decl_module! {
 
             AssetOnline::insert(id, ());
 
-            T::OnAssetRegisterOrRevoke::on_register(&id, has_mining_rights)?;
+            T::RegistrarHandler::on_register(&id, has_mining_rights)?;
             Self::deposit_event(RawEvent::Register(id, has_mining_rights));
             Ok(())
         }

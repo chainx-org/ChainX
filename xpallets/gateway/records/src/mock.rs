@@ -51,7 +51,7 @@ impl xassets::Trait for Test {
     type OnNewAccount = ();
     type Event = ();
     type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = ();
+    type RegistrarHandler = ();
     type DetermineTokenJackpotAccountId = ();
 }
 
