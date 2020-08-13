@@ -347,7 +347,7 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    /// add an asset into the storage, notice the asset must be valid
+    /// Actually register an asset.
     fn apply_register(id: AssetId, asset: AssetInfo) -> DispatchResult {
         let chain = asset.chain();
         // FIXME: Self::asset_info_of(&id).is_some() => multiple Error?
@@ -368,15 +368,15 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    /// Returns all the asset ids of all chains so far.
+    #[inline]
     pub fn asset_ids() -> Vec<AssetId> {
-        let mut v = Vec::new();
-        for i in Chain::iter() {
-            v.extend(Self::asset_ids_of(i));
-        }
-        v
+        Chain::iter().map(Self::asset_ids_of).flatten().collect()
     }
 
+    /// Returns all the valid asset ids of all chains so far.
     pub fn valid_asset_ids() -> Vec<AssetId> {
+        // TODO: extract is_valid_asset() which can be used in serveral places.
         Self::asset_ids()
             .into_iter()
             .filter(|id| Self::asset_online(id).is_some())
