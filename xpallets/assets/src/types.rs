@@ -10,7 +10,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*, slice::Iter};
 
 // ChainX
-pub use chainx_primitives::{Desc, Precision, Token};
+pub use chainx_primitives::{Decimals, Desc, Token};
 pub use xp_runtime::Memo;
 use xpallet_assets_metadata::AssetInfo;
 

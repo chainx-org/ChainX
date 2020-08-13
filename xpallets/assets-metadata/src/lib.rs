@@ -20,7 +20,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_root};
 
 // ChainX
-use chainx_primitives::{AssetId, Desc, Precision, Token};
+use chainx_primitives::{AssetId, Decimals, Desc, Token};
 use xpallet_support::info;
 
 macro_rules! define_enum {
@@ -65,7 +65,7 @@ pub struct AssetInfo {
     token: Token,
     token_name: Token,
     chain: Chain,
-    precision: Precision,
+    decimals: Decimals,
     desc: Desc,
 }
 
@@ -74,11 +74,11 @@ impl sp_std::fmt::Debug for AssetInfo {
     fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
         write!(
             f,
-            "AssetInfo: {{token: {}, token_name: {}, chain: {:?}, precision: {}, desc: {}}}",
+            "AssetInfo: {{token: {}, token_name: {}, chain: {:?}, decimals: {}, desc: {}}}",
             String::from_utf8_lossy(&self.token).into_owned(),
             String::from_utf8_lossy(&self.token_name).into_owned(),
             self.chain,
-            self.precision,
+            self.decimals,
             String::from_utf8_lossy(&self.desc).into_owned()
         )
     }
@@ -93,14 +93,14 @@ impl AssetInfo {
         token: Token,
         token_name: Token,
         chain: Chain,
-        precision: Precision,
+        decimals: Decimals,
         desc: Desc,
     ) -> result::Result<Self, DispatchError> {
         let a = AssetInfo {
             token,
             token_name,
             chain,
-            precision,
+            decimals,
             desc,
         };
         a.is_valid::<T>()?;
@@ -124,8 +124,8 @@ impl AssetInfo {
     pub fn desc(&self) -> &Desc {
         &self.desc
     }
-    pub fn precision(&self) -> Precision {
-        self.precision
+    pub fn decimals(&self) -> Decimals {
+        self.decimals
     }
     pub fn set_desc(&mut self, desc: Desc) {
         self.desc = desc

@@ -151,7 +151,7 @@ impl CurrencyPair {
 /// Profile of a trading pair.
 ///
 /// PCX/BTC = pip, a.k.a, percentage in point. Also called exchange rate.
-/// tick precision for BTC
+/// tick decimals for BTC
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]

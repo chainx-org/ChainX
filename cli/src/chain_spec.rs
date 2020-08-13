@@ -84,8 +84,8 @@ pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
 }
 
 #[inline]
-fn balance(input: Balance, precision: u8) -> Balance {
-    input * 10_u128.pow(precision as u32)
+fn balance(input: Balance, decimals: u8) -> Balance {
+    input * 10_u128.pow(decimals as u32)
 }
 
 /// A small macro for generating the info of PCX endowed accounts.

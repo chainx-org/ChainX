@@ -165,7 +165,7 @@ decl_event!(
 decl_error! {
     /// Error for the spot module.
     pub enum Error for Module<T: Trait> {
-        /// Price can not be zero, and must be an integer multiple of the tick precision.
+        /// Price can not be zero, and must be an integer multiple of the tick decimals.
         InvalidPrice,
         /// The bid price can not higher than the PriceVolatility of current lowest_offer.
         TooHighBidPrice,

@@ -82,7 +82,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn currency_precision_of(asset_id: AssetId) -> Option<u8> {
-        <xpallet_assets_metadata::Module<T>>::asset_info_of(asset_id).map(|x| x.precision())
+        <xpallet_assets_metadata::Module<T>>::asset_info_of(asset_id).map(|x| x.decimals())
     }
 
     /// Converts the base currency to the quote currency given the trading pair.
@@ -94,8 +94,8 @@ impl<T: Trait> Module<T> {
     /// price: measured by the quote currency, e.g., BTC.
     ///
     /// volume
-    /// = amount * price * 10^(quote.precision) / 10^(base.precision) * 10^(price.precision)
-    /// = amount * price * 10^(quote.precision - base.precision - price.precision)
+    /// = amount * price * 10^(quote.decimals) / 10^(base.decimals) * 10^(price.decimals)
+    /// = amount * price * 10^(quote.decimals - base.decimals - price.decimals)
     pub(crate) fn convert_base_to_quote(
         amount: BalanceOf<T>,
         price: T::Price,
@@ -120,7 +120,7 @@ impl<T: Trait> Module<T> {
             let volume = if mul {
                 match ap.checked_mul(s) {
                     Some(r) => r,
-                    None => panic!("amount * price * precision overflow"),
+                    None => panic!("amount * price * decimals overflow"),
                 }
             } else {
                 ap / s
