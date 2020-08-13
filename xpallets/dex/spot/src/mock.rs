@@ -91,13 +91,17 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
+impl xpallet_assets_metadata::Trait for Test {
+    type Event = ();
+    type NativeAssetId = ChainXAssetId;
+    type OnAssetRegisterOrRevoke = XSpot;
+}
+
 impl xpallet_assets::Trait for Test {
     type Event = ();
     type Currency = Balances;
-    type NativeAssetId = ChainXAssetId;
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = XSpot;
 }
 
 thread_local! {
@@ -163,9 +167,19 @@ impl ExtBuilder {
             (btc_asset.0, btc_asset.1, pcx_asset.2, true, true),
         ];
 
+        let mut init_assets = vec![];
+        let mut assets_restrictions = vec![];
+        for (a, b, c, d, e) in assets {
+            init_assets.push((a, b, d, e));
+            assets_restrictions.push((a, c))
+        }
+        let _ = xpallet_assets_metadata::GenesisConfig {
+            assets: init_assets,
+        }
+        .assimilate_storage::<Test>(&mut storage);
         let endowed = BTreeMap::new();
         let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets,
+            assets_restrictions,
             endowed,
             memo_len: 128,
         }

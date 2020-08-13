@@ -37,6 +37,7 @@ use frame_system as system;
 use pallet_balances as balances;
 use pallet_session as session;
 use xpallet_assets as assets;
+use xpallet_assets_metadata as assets_metadata;
 use xpallet_mining_staking as staking;
 
 impl_outer_event! {
@@ -44,6 +45,7 @@ impl_outer_event! {
         system<T>,
         balances<T>,
         session,
+        assets_metadata<T>,
         assets<T>,
         staking<T>,
         mining_asset<T>,
@@ -118,13 +120,17 @@ impl pallet_balances::Trait for Test {
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
+impl xpallet_assets_metadata::Trait for Test {
+    type Event = MetaEvent;
+    type NativeAssetId = ChainXAssetId;
+    type OnAssetRegisterOrRevoke = XMiningAsset;
+}
+
 impl xpallet_assets::Trait for Test {
     type Event = MetaEvent;
     type Currency = Balances;
-    type NativeAssetId = ChainXAssetId;
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = XMiningAsset;
-    type OnAssetRegisterOrRevoke = XMiningAsset;
 }
 
 /// Another session handler struct to test on_disabled.
@@ -312,8 +318,10 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
+        let _ = xpallet_assets_metadata::GenesisConfig { assets: vec![] }
+            .assimilate_storage::<Test>(&mut storage);
         let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets: vec![],
+            assets_restrictions: vec![],
             endowed: BTreeMap::new(),
             memo_len: 128,
         }
@@ -384,6 +392,7 @@ impl ExtBuilder {
 
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
+pub type XAssetsMetadata = xpallet_assets_metadata::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
 pub type Session = pallet_session::Module<Test>;
 pub type Timestamp = pallet_timestamp::Module<Test>;
