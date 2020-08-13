@@ -222,9 +222,9 @@ decl_error! {
         ///
         AlreadyExistentToken,
         ///
-        NotExistedAsset,
-        ///
         InvalidAsset,
+        ///
+        AssetDoesNotExist,
     }
 }
 decl_storage! {
@@ -286,7 +286,7 @@ decl_module! {
         #[weight = 0]
         pub fn deregister(origin, #[compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
-            ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
+            ensure!(Self::is_valid_asset(&id), Error::<T>::InvalidAsset);
 
             AssetOnline::remove(id);
             T::RegistrarHandler::on_deregister(&id)?;
@@ -300,7 +300,7 @@ decl_module! {
         #[weight = 0]
         pub fn recover_asset(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
             ensure_root(origin)?;
-            ensure!(Self::asset_info_of(id).is_some(), Error::<T>::NotExistedAsset);
+            ensure!(Self::asset_info_of(id).is_some(), Error::<T>::AssetDoesNotExist);
             ensure!(Self::asset_online(id).is_none(), Error::<T>::InvalidAsset);
 
             AssetOnline::insert(id, ());
@@ -347,6 +347,64 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    /// Returns all the asset ids of all chains so far.
+    #[inline]
+    pub fn asset_ids() -> Vec<AssetId> {
+        Chain::iter().map(Self::asset_ids_of).flatten().collect()
+    }
+
+    /// Returns all the valid asset ids of all chains so far.
+    pub fn valid_asset_ids() -> Vec<AssetId> {
+        // TODO: extract is_valid_asset() which can be used in serveral places.
+        Self::asset_ids()
+            .into_iter()
+            .filter(Self::is_valid_asset)
+            .collect()
+    }
+
+    pub fn asset_infos() -> BTreeMap<AssetId, AssetInfo> {
+        AssetInfoOf::iter().collect()
+    }
+
+    pub fn valid_asset_infos() -> BTreeMap<AssetId, AssetInfo> {
+        Self::asset_infos()
+            .into_iter()
+            .filter(|(id, _)| Self::is_valid_asset(id))
+            .collect()
+    }
+
+    pub fn get_asset(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
+        if let Some(asset) = Self::asset_info_of(id) {
+            if Self::is_valid_asset(id) {
+                Ok(asset)
+            } else {
+                Err(Error::<T>::InvalidAsset)?
+            }
+        } else {
+            Err(Error::<T>::AssetDoesNotExist)?
+        }
+    }
+
+    /// Returns true if the asset info record of given `asset_id` exists.
+    pub fn asset_exists(asset_id: &AssetId) -> bool {
+        Self::asset_info_of(&asset_id).is_some()
+    }
+
+    /// Returns true if the asset of given `asset_id` is still online.
+    pub fn is_valid_asset(asset_id: &AssetId) -> bool {
+        Self::asset_online(asset_id).is_some()
+    }
+
+    pub fn ensure_assert_exists(id: &AssetId) -> DispatchResult {
+        ensure!(Self::asset_exists(id), Error::<T>::AssetDoesNotExist);
+        Ok(())
+    }
+
+    pub fn ensure_valid_asset(id: &AssetId) -> DispatchResult {
+        ensure!(Self::is_valid_asset(id), Error::<T>::InvalidAsset);
+        Ok(())
+    }
+
     /// Actually register an asset.
     fn apply_register(id: AssetId, asset: AssetInfo) -> DispatchResult {
         let chain = asset.chain();
@@ -362,57 +420,9 @@ impl<T: Trait> Module<T> {
 
         AssetIdsOf::mutate(chain, |v| {
             if !v.contains(&id) {
-                v.push(id.clone());
+                v.push(id);
             }
         });
-        Ok(())
-    }
-
-    /// Returns all the asset ids of all chains so far.
-    #[inline]
-    pub fn asset_ids() -> Vec<AssetId> {
-        Chain::iter().map(Self::asset_ids_of).flatten().collect()
-    }
-
-    /// Returns all the valid asset ids of all chains so far.
-    pub fn valid_asset_ids() -> Vec<AssetId> {
-        // TODO: extract is_valid_asset() which can be used in serveral places.
-        Self::asset_ids()
-            .into_iter()
-            .filter(|id| Self::asset_online(id).is_some())
-            .collect()
-    }
-
-    pub fn asset_infos() -> BTreeMap<AssetId, AssetInfo> {
-        AssetInfoOf::iter().collect()
-    }
-
-    pub fn valid_asset_infos() -> BTreeMap<AssetId, AssetInfo> {
-        Self::asset_infos()
-            .into_iter()
-            .filter(|(id, _)| Self::asset_online(id).is_some())
-            .collect()
-    }
-
-    pub fn get_asset(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
-        if let Some(asset) = Self::asset_info_of(id) {
-            if Self::asset_online(id).is_some() {
-                Ok(asset)
-            } else {
-                Err(Error::<T>::InvalidAsset)?
-            }
-        } else {
-            Err(Error::<T>::NotExistedAsset)?
-        }
-    }
-
-    pub fn ensure_existed_assert(id: &AssetId) -> DispatchResult {
-        ensure!(Self::asset_info_of(id).is_some(), Error::<T>::InvalidAsset);
-        Ok(())
-    }
-
-    pub fn ensure_valid_asset(id: &AssetId) -> DispatchResult {
-        ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
         Ok(())
     }
 }
