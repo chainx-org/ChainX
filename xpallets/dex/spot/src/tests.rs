@@ -109,11 +109,11 @@ fn update_trading_pair_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let pair = CurrencyPair::new(EOS, ETH);
         assert_ok!(XSpot::add_trading_pair(pair.clone(), 2, 1, 100, true));
-        assert_eq!(t_trading_pair_of(2).tick_precision, 1);
+        assert_eq!(t_trading_pair_of(2).tick_decimals, 1);
         assert_eq!(t_trading_pair_of(2).online, true);
 
         assert_ok!(XSpot::update_trading_pair(2, 888, false));
-        assert_eq!(t_trading_pair_of(2).tick_precision, 888);
+        assert_eq!(t_trading_pair_of(2).tick_decimals, 888);
         assert_eq!(t_trading_pair_of(2).online, false);
     })
 }

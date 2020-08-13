@@ -95,7 +95,7 @@ macro_rules! endowed_gen {
             let mut endowed = BTreeMap::new();
             let pcx_id = pcx().0;
             let endowed_info = vec![
-                $((get_account_id_from_seed::<sr25519::Public>($seed), balance($value, PCX_PRECISION)),)+
+                $((get_account_id_from_seed::<sr25519::Public>($seed), balance($value, PCX_DECIMALS)),)+
             ];
             endowed.insert(pcx_id, endowed_info);
             endowed
@@ -108,7 +108,7 @@ fn as_properties(network: NetworkType) -> Properties {
     json!({
         "ss58Format": network.addr_version(),
         "network": network,
-        "tokenDecimals": PCX_PRECISION,
+        "tokenDecimals": PCX_DECIMALS,
         "tokenSymbol": "PCX"
     })
     .as_object()
@@ -187,8 +187,8 @@ pub fn local_testnet_config() -> ChainSpec {
     )
 }
 
-const PCX_PRECISION: u8 = 8;
-const BTC_PRECISION: u8 = 8;
+const PCX_DECIMALS: u8 = 8;
+const BTC_DECIMALS: u8 = 8;
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
         xpallet_protocol::PCX,
@@ -196,7 +196,7 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
             Chain::ChainX,
-            PCX_PRECISION,
+            PCX_DECIMALS,
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
         )
         .unwrap(),
@@ -214,7 +214,7 @@ fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"XBTC".to_vec(),
             b"ChainX Bitcoin".to_vec(),
             Chain::Bitcoin,
-            BTC_PRECISION,
+            BTC_DECIMALS,
             b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),

@@ -42,14 +42,14 @@
         "token": "Token",
         "tokenName": "Token",
         "chain": "Chain",
-        "precision": "Precision",
+        "decimals": "Decimals",
         "desc": "Desc"
     },
     "TradingPairProfile": {
         "id": "TradingPairId",
         "currencyPair": "CurrencyPair",
-        "pipPrecision": "u32",
-        "tickPrecision": "u32",
+        "pipDecimals": "u32",
+        "tickDecimals": "u32",
         "online": "bool"
     },
     "Order": {
@@ -153,7 +153,7 @@
     "BtcAddress": "Text",
     "FixedAssetPower": "u32",
     "StakingRequirement": "u32",
-    "Precision": "u8",
+    "Decimals": "u8",
     "CurrencyPair": {
         "base": "AssetId",
         "quote": "AssetId"
@@ -218,7 +218,7 @@
         "token": "String",
         "tokenName": "String",
         "chain": "Chain",
-        "precision": "Precision",
+        "decimals": "Decimals",
         "desc": "String"
     },
     "Handicap": {

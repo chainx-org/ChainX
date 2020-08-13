@@ -13,7 +13,7 @@ impl<T: Trait> Module<T> {
     /// When there is no quotions at a certain price given the trading pair, we should check out
     /// whether the current handicap is true. If it's not true, adjust a tick accordingly.
     pub(super) fn update_handicap(pair: &TradingPairProfile, price: T::Price, side: Side) {
-        let tick_precision = pair.tick_precision;
+        let tick_decimals = pair.tick_decimals;
 
         if <QuotationsOf<T>>::get(pair.id, price).is_empty() {
             let mut handicap = <HandicapOf<T>>::get(pair.id);
@@ -22,7 +22,7 @@ impl<T: Trait> Module<T> {
                     if !handicap.lowest_ask.is_zero()
                         && <QuotationsOf<T>>::get(pair.id, handicap.lowest_ask).is_empty()
                     {
-                        handicap.tick_up_lowest_offer(tick_precision);
+                        handicap.tick_up_lowest_offer(tick_decimals);
                         <HandicapOf<T>>::insert(pair.id, &handicap);
 
                         debug!(
@@ -35,7 +35,7 @@ impl<T: Trait> Module<T> {
                     if !handicap.highest_bid.is_zero()
                         && <QuotationsOf<T>>::get(pair.id, handicap.highest_bid).is_empty()
                     {
-                        handicap.tick_down_highest_bid(tick_precision);
+                        handicap.tick_down_highest_bid(tick_decimals);
                         <HandicapOf<T>>::insert(pair.id, &handicap);
 
                         debug!(

@@ -115,7 +115,7 @@ thread_local! {
 #[derive(Default)]
 pub struct ExtBuilder;
 
-const PCX_PRECISION: u8 = 8;
+const PCX_DECIMALS: u8 = 8;
 
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
@@ -124,7 +124,7 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
             Chain::ChainX,
-            PCX_PRECISION,
+            PCX_DECIMALS,
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
         )
         .unwrap(),

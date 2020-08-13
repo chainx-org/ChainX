@@ -236,6 +236,49 @@
                 "type": "BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>"
             }
         },
+        "xminingasset": {
+            "getMiningAssets": {
+                "description": "Get overall information about all mining assets.",
+                "params": [
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "Vec<MiningAssetInfo<AccountId, RpcBalance, BlockNumber>>"
+            },
+            "getDividendByAccount": {
+                "description": "Get the asset mining dividends info given the asset miner AccountId.",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<AssetId, RpcBalance>"
+            },
+            "getMinerLedgerByAccount": {
+                "description": "Get the mining ledger details given the asset miner AccountId.",
+                "params": [
+                    {
+                        "name": "who",
+                        "type": "AccountId"
+                    },
+                    {
+                        "name": "at",
+                        "type": "Hash",
+                        "isOptional": true
+                    }
+                ],
+                "type": "BTreeMap<AssetId, RpcMinerLedger<BlockNumber>>"
+            }
+        },
         "xstaking": {
             "getValidators": {
                 "description": "Get overall information about all potential validators",

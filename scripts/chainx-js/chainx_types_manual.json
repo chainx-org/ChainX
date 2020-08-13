@@ -4,7 +4,7 @@
         "token": "String",
         "token_name": "String",
         "chain": "Chain",
-        "precision": "Precision",
+        "decimals": "Decimals",
         "desc": "String"
     },
     "AssetRestriction": {

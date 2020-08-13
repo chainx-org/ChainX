@@ -81,7 +81,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn currency_precision_of(asset_id: AssetId) -> Option<u8> {
+    fn currency_decimals_of(asset_id: AssetId) -> Option<u8> {
         <xpallet_assets_metadata::Module<T>>::asset_info_of(asset_id).map(|x| x.decimals())
     }
 
@@ -102,11 +102,11 @@ impl<T: Trait> Module<T> {
         pair: &TradingPairProfile,
     ) -> result::Result<BalanceOf<T>, Error<T>> {
         if let (Some(base_p), Some(quote_p)) = (
-            Self::currency_precision_of(pair.base()),
-            Self::currency_precision_of(pair.quote()),
+            Self::currency_decimals_of(pair.base()),
+            Self::currency_decimals_of(pair.quote()),
         ) {
             let (base_p, quote_p, pair_p) =
-                (u32::from(base_p), u32::from(quote_p), pair.pip_precision);
+                (u32::from(base_p), u32::from(quote_p), pair.pip_decimals);
 
             let (mul, s) = if quote_p >= (base_p + pair_p) {
                 (true, 10_u128.pow(quote_p - base_p - pair_p))
