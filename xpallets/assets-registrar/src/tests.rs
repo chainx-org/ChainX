@@ -126,7 +126,7 @@ impl ExtBuilder {
 }
 
 pub type System = frame_system::Module<Test>;
-pub type XAssetsMetadata = Module<Test>;
+pub type XAssetsRegistrar = Module<Test>;
 pub type Err = Error<Test>;
 
 #[test]
@@ -144,7 +144,7 @@ fn test_register() {
             )
             .unwrap(),
         );
-        assert_ok!(XAssetsMetadata::register_asset(
+        assert_ok!(XAssetsRegistrar::register(
             Origin::root(),
             abc_assets.0,
             abc_assets.1.clone(),
@@ -152,31 +152,29 @@ fn test_register() {
             false
         ));
         assert_noop!(
-            XAssetsMetadata::register_asset(
-                Origin::root(),
-                abc_assets.0,
-                abc_assets.1,
-                false,
-                false
-            ),
+            XAssetsRegistrar::register(Origin::root(), abc_assets.0, abc_assets.1, false, false),
             Err::AlreadyExistentToken
         );
 
-        assert_noop!(XAssetsMetadata::get_asset(&abc_id), Err::InvalidAsset);
+        assert_noop!(XAssetsRegistrar::get_asset(&abc_id), Err::InvalidAsset);
 
-        assert_ok!(XAssetsMetadata::recover_asset(Origin::root(), abc_id, true));
-        assert!(XAssetsMetadata::get_asset(&abc_id).is_ok());
+        assert_ok!(XAssetsRegistrar::recover_asset(
+            Origin::root(),
+            abc_id,
+            true
+        ));
+        assert!(XAssetsRegistrar::get_asset(&abc_id).is_ok());
 
         assert_noop!(
-            XAssetsMetadata::revoke_asset(Origin::root(), 10000),
+            XAssetsRegistrar::deregister(Origin::root(), 10000),
             Err::InvalidAsset
         );
         assert_noop!(
-            XAssetsMetadata::recover_asset(Origin::root(), X_BTC, true),
+            XAssetsRegistrar::recover_asset(Origin::root(), X_BTC, true),
             Err::InvalidAsset
         );
 
-        assert_ok!(XAssetsMetadata::revoke_asset(Origin::root(), X_BTC));
-        assert_noop!(XAssetsMetadata::get_asset(&X_BTC), Err::InvalidAsset);
+        assert_ok!(XAssetsRegistrar::deregister(Origin::root(), X_BTC));
+        assert_noop!(XAssetsRegistrar::get_asset(&X_BTC), Err::InvalidAsset);
     })
 }

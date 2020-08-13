@@ -120,7 +120,7 @@ impl pallet_balances::Trait for Test {
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
-impl xpallet_assets_metadata::Trait for Test {
+impl xpallet_assets_registrar::Trait for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
     type OnAssetRegisterOrRevoke = XMiningAsset;
@@ -318,7 +318,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let _ = xpallet_assets_metadata::GenesisConfig { assets: vec![] }
+        let _ = xpallet_assets_registrar::GenesisConfig { assets: vec![] }
             .assimilate_storage::<Test>(&mut storage);
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions: vec![],
@@ -392,7 +392,7 @@ impl ExtBuilder {
 
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
-pub type XAssetsMetadata = xpallet_assets_metadata::Module<Test>;
+pub type XAssetsRegistrar = xpallet_assets_registrar::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
 pub type Session = pallet_session::Module<Test>;
 pub type Timestamp = pallet_timestamp::Module<Test>;

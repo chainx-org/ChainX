@@ -259,7 +259,7 @@ decl_module! {
         ///
         /// This is a root-only operation.
         #[weight = 0]
-        pub fn register_asset(
+        pub fn register(
             origin,
             #[compact] asset_id: AssetId,
             asset: AssetInfo,
@@ -276,7 +276,7 @@ decl_module! {
             Self::deposit_event(RawEvent::Register(asset_id, has_mining_rights));
 
             if !is_online {
-                let _ = Self::revoke_asset(frame_system::RawOrigin::Root.into(), asset_id.into());
+                let _ = Self::deregister(frame_system::RawOrigin::Root.into(), asset_id.into());
             }
 
             Ok(())
@@ -286,13 +286,15 @@ decl_module! {
         ///
         /// This asset will be marked as invalid.
         #[weight = 0]
-        pub fn revoke_asset(origin, #[compact] id: AssetId) -> DispatchResult {
+        pub fn deregister(origin, #[compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(Self::asset_online(id).is_some(), Error::<T>::InvalidAsset);
-            Self::remove_asset(&id);
 
+            Self::remove_asset(&id);
             T::OnAssetRegisterOrRevoke::on_revoke(&id)?;
+
             Self::deposit_event(RawEvent::Revoke(id));
+
             Ok(())
         }
 
@@ -328,9 +330,9 @@ decl_module! {
 impl<T: Trait> Module<T> {
     fn initialize_assets(assets: &Vec<(AssetId, AssetInfo, bool, bool)>) {
         for (id, asset, is_online, has_mining_rights) in assets {
-            Self::register_asset(
+            Self::register(
                 frame_system::RawOrigin::Root.into(),
-                (*id).into(),
+                *id,
                 asset.clone(),
                 *is_online,
                 *has_mining_rights,

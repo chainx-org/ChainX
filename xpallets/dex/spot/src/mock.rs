@@ -173,7 +173,7 @@ impl ExtBuilder {
             init_assets.push((a, b, d, e));
             assets_restrictions.push((a, c))
         }
-        let _ = xpallet_assets_metadata::GenesisConfig {
+        let _ = xpallet_assets_registrar::GenesisConfig {
             assets: init_assets,
         }
         .assimilate_storage::<Test>(&mut storage);
