@@ -91,7 +91,7 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_metadata::Trait for Test {
+impl xpallet_assets_registrar::Trait for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type OnAssetRegisterOrRevoke = XSpot;

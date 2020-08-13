@@ -23,7 +23,7 @@ pallet-balances = { git = "https://github.com/paritytech/substrate.git", tag = "
 chainx-primitives = { path = "../../../primitives", default-features = false }
 
 # ChainX pallets
-xpallet-assets-metadata = { path = "../../assets-metadata", default-features = false }
+xpallet-assets-registrar = { path = "../../assets-registrar", default-features = false }
 xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
@@ -51,7 +51,7 @@ std = [
 
     "chainx-primitives/std",
 
-    "xpallet-assets-metadata/std",
+    "xpallet-assets-registrar/std",
     "xpallet-assets/std",
     "xpallet-protocol/std",
     "xpallet-support/std",

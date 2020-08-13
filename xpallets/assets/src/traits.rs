@@ -3,7 +3,7 @@ use sp_std::result;
 use frame_support::dispatch::{DispatchError, DispatchResult};
 
 use chainx_primitives::AssetId;
-use xpallet_assets_metadata::Chain;
+use xpallet_assets_registrar::Chain;
 
 use crate::types::{AssetErr, AssetType, WithdrawalLimit};
 

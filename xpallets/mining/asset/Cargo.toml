@@ -24,7 +24,7 @@ xp-mining-common = { path  = "../../../primitives/mining/common", default-featur
 xp-mining-staking = { path  = "../../../primitives/mining/staking", default-features = false }
 
 # ChainX pallets
-xpallet-assets-metadata = { path = "../../assets-metadata", default-features = false }
+xpallet-assets-registrar = { path = "../../assets-registrar", default-features = false }
 xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
@@ -56,7 +56,7 @@ std = [
     "xp-mining-common/std",
     "xp-mining-staking/std",
 
-    "xpallet-assets-metadata/std",
+    "xpallet-assets-registrar/std",
     "xpallet-assets/std",
     "xpallet-protocol/std",
     "xpallet-support/std",

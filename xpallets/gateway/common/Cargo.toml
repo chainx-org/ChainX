@@ -23,8 +23,8 @@ xp-io = { path = "../../../primitives/io", default-features = false }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 
 xpallet-support = { path = "../../support", default-features = false }
-xpallet-assets-metadata = { path = "../../assets-metadata", default-features = false }
 xpallet-assets = { path = "../../assets", default-features = false }
+xpallet-assets-registrar = { path = "../../assets-registrar", default-features = false }
 xpallet-gateway-records = { path = "../records", default-features = false }
 
 #chain
@@ -54,8 +54,8 @@ std=[
     "xp-runtime/std",
 
     "xpallet-support/std",
-    "xpallet-assets-metadata/std",
     "xpallet-assets/std",
+    "xpallet-assets-registrar/std",
     "xpallet-gateway-records/std",
 
     # chain

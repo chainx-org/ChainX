@@ -703,7 +703,7 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = xpallet_protocol::PCX;
 }
 
-impl xpallet_assets_metadata::Trait for Runtime {
+impl xpallet_assets_registrar::Trait for Runtime {
     type Event = Event;
     type NativeAssetId = ChainXAssetId;
     type OnAssetRegisterOrRevoke = XMiningAsset;
@@ -831,7 +831,7 @@ construct_runtime!(
 
         // ChainX basics.
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
-        XAssetsMetadata: xpallet_assets_metadata::{Module, Call, Storage, Event<T>, Config},
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
 
         // Mining, must be after XAssets.

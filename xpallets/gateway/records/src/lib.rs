@@ -148,7 +148,7 @@ impl<T: Trait> Module<T> {
 
     #[inline]
     fn check_chain_for_asset(asset_id: &AssetId, expected_chain: Chain) -> DispatchResult {
-        let asset = xpallet_assets_metadata::Module::<T>::get_asset(&asset_id)?;
+        let asset = xpallet_assets_registrar::Module::<T>::get_asset(&asset_id)?;
         let asset_chain = asset.chain();
         if expected_chain != asset_chain {
             Err(Error::<T>::UnexpectedChain)?;

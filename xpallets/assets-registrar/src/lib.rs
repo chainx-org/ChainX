@@ -1,3 +1,8 @@
+//! This crate provides the feature of managing the foreign assets' meta information.
+//!
+//! The foreign asset hereby means it's not the native token of the system(PCX for ChainX)
+//! but derived from the other blockchain system, e.g., Bitcoin.
+
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -33,7 +38,7 @@ macro_rules! define_enum {
             $($Variant),*,
         }
         impl $Name {
-            pub fn iterator() -> Iter<'static, $Name> {
+            pub fn iter() -> Iter<'static, $Name> {
                 static ENUM_ITEMS: &[$Name] = &[$($Name::$Variant),*];
                 ENUM_ITEMS.iter()
             }
@@ -115,24 +120,31 @@ impl AssetInfo {
     pub fn token(&self) -> &Token {
         &self.token
     }
+
     pub fn token_name(&self) -> &Token {
         &self.token_name
     }
+
     pub fn chain(&self) -> Chain {
         self.chain
     }
+
     pub fn desc(&self) -> &Desc {
         &self.desc
     }
+
     pub fn decimals(&self) -> Decimals {
         self.decimals
     }
+
     pub fn set_desc(&mut self, desc: Desc) {
         self.desc = desc
     }
+
     pub fn set_token(&mut self, token: Token) {
         self.token = token
     }
+
     pub fn set_token_name(&mut self, token_name: Token) {
         self.token_name = token_name
     }
@@ -146,7 +158,9 @@ pub trait OnAssetRegisterOrRevoke {
         Ok(())
     }
 }
+
 impl OnAssetRegisterOrRevoke for () {}
+
 impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRevoke for (A, B) {
     fn on_register(id: &AssetId, is_psedu_intention: bool) -> DispatchResult {
         let r = A::on_register(id, is_psedu_intention);
@@ -174,9 +188,11 @@ impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRe
 pub trait Trait: system::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
     /// Get Native Id
     type NativeAssetId: Get<AssetId>;
 
+    ///
     type OnAssetRegisterOrRevoke: OnAssetRegisterOrRevoke;
 }
 
@@ -220,7 +236,11 @@ decl_storage! {
 
         /// asset info for every asset, key is asset id
         pub AssetInfoOf get(fn asset_info_of): map hasher(twox_64_concat) AssetId => Option<AssetInfo>;
+
+        ///
         pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => Option<()>;
+
+        ///
         pub AssetRegisteredBlock get(fn asset_registered_block): map hasher(twox_64_concat) AssetId => T::BlockNumber;
     }
     add_extra_genesis {
@@ -234,7 +254,10 @@ decl_storage! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
-        /// register_asset to module, should allow by root
+
+        /// Register a new foreign asset.
+        ///
+        /// This is a root-only operation.
         #[weight = 0]
         pub fn register_asset(
             origin,
@@ -255,10 +278,13 @@ decl_module! {
             if !is_online {
                 let _ = Self::revoke_asset(frame_system::RawOrigin::Root.into(), asset_id.into());
             }
+
             Ok(())
         }
 
-        /// revoke asset, mark this asset is invalid
+        /// Deregister an asset with given `id`.
+        ///
+        /// This asset will be marked as invalid.
         #[weight = 0]
         pub fn revoke_asset(origin, #[compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
@@ -345,7 +371,7 @@ impl<T: Trait> Module<T> {
 
     pub fn asset_ids() -> Vec<AssetId> {
         let mut v = Vec::new();
-        for i in Chain::iterator() {
+        for i in Chain::iter() {
             v.extend(Self::asset_ids_of(i));
         }
         v

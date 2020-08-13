@@ -29,7 +29,7 @@ impl_outer_event! {
     pub enum MetaEvent for Test {
         system<T>,
         pallet_balances<T>,
-        xpallet_assets_metadata<T>,
+        xpallet_assets_registrar<T>,
         assets<T>,
     }
 }
@@ -88,7 +88,7 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_metadata::Trait for Test {
+impl xpallet_assets_registrar::Trait for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
     type OnAssetRegisterOrRevoke = ();
@@ -141,7 +141,7 @@ impl ExtBuilder {
             assets_restrictions.push((a, c))
         }
 
-        let _ = xpallet_assets_metadata::GenesisConfig {
+        let _ = xpallet_assets_registrar::GenesisConfig {
             assets: init_assets,
         }
         .assimilate_storage::<Test>(&mut storage);
@@ -179,6 +179,5 @@ impl ExtBuilder {
 
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
-// pub type XAssetsMetadata = xpallet_assets_metadata::Module<Test>;
 pub type XAssets = Module<Test>;
 pub type XAssetsErr = Error<Test>;

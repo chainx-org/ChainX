@@ -12,9 +12,9 @@ use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature
 use chainx_runtime::{
     AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
     GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SocietyConfig, SudoConfig,
-    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsMetadataConfig, XContractsConfig,
-    XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig,
-    XSystemConfig,
+    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
+    XContractsConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig,
+    XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -413,7 +413,7 @@ fn testnet_genesis(
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
         }),
-        xpallet_assets_metadata: Some(XAssetsMetadataConfig { assets }),
+        xpallet_assets_registrar: Some(XAssetsRegistrarConfig { assets }),
         xpallet_assets: Some(XAssetsConfig {
             assets_restrictions,
             endowed: assets_endowed,

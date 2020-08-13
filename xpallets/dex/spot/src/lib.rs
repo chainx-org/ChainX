@@ -458,7 +458,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> xpallet_assets_metadata::OnAssetRegisterOrRevoke for Module<T> {
+impl<T: Trait> xpallet_assets_registrar::OnAssetRegisterOrRevoke for Module<T> {
     fn on_revoke(token: &AssetId) -> DispatchResult {
         let pair_len = TradingPairCount::get();
         for i in 0..pair_len {

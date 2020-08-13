@@ -37,7 +37,7 @@ use frame_system as system;
 use pallet_balances as balances;
 use pallet_session as session;
 use xpallet_assets as assets;
-use xpallet_assets_metadata as assets_metadata;
+use xpallet_assets_registrar as assets_registrar;
 use xpallet_mining_staking as staking;
 
 impl_outer_event! {
@@ -45,7 +45,7 @@ impl_outer_event! {
         system<T>,
         balances<T>,
         session,
-        assets_metadata<T>,
+        assets_registrar<T>,
         assets<T>,
         staking<T>,
         mining_asset<T>,

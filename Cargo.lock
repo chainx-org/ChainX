@@ -622,7 +622,7 @@ dependencies = [
  "xp-mining-staking",
  "xp-runtime",
  "xpallet-assets",
- "xpallet-assets-metadata",
+ "xpallet-assets-registrar",
  "xpallet-assets-rpc-runtime-api",
  "xpallet-contracts",
  "xpallet-contracts-primitives",
@@ -7305,13 +7305,13 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-runtime",
- "xpallet-assets-metadata",
+ "xpallet-assets-registrar",
  "xpallet-protocol",
  "xpallet-support",
 ]
 
 [[package]]
-name = "xpallet-assets-metadata"
+name = "xpallet-assets-registrar"
 version = "0.1.0"
 dependencies = [
  "bitmask",
@@ -7446,7 +7446,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xpallet-assets",
- "xpallet-assets-metadata",
+ "xpallet-assets-registrar",
  "xpallet-protocol",
  "xpallet-support",
 ]
@@ -7527,7 +7527,7 @@ dependencies = [
  "xp-io",
  "xp-runtime",
  "xpallet-assets",
- "xpallet-assets-metadata",
+ "xpallet-assets-registrar",
  "xpallet-gateway-records",
  "xpallet-support",
 ]
@@ -7575,7 +7575,7 @@ dependencies = [
  "sp-std",
  "xp-runtime",
  "xpallet-assets",
- "xpallet-assets-metadata",
+ "xpallet-assets-registrar",
  "xpallet-protocol",
  "xpallet-support",
 ]
@@ -7632,7 +7632,7 @@ dependencies = [
  "xp-mining-common",
  "xp-mining-staking",
  "xpallet-assets",
- "xpallet-assets-metadata",
+ "xpallet-assets-registrar",
  "xpallet-mining-staking",
  "xpallet-protocol",
  "xpallet-support",

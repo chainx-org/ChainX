@@ -31,7 +31,7 @@ use chainx_primitives::AssetId;
 use xp_runtime::Memo;
 use xpallet_support::{debug, ensure_with_errorlog, info};
 // re-export
-pub use xpallet_assets_metadata::{AssetInfo, Chain};
+pub use xpallet_assets_registrar::{AssetInfo, Chain};
 
 pub use self::traits::{ChainT, OnAssetChanged};
 use self::trigger::AssetChangedTrigger;
@@ -43,7 +43,7 @@ pub use self::types::{
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
-pub trait Trait: system::Trait + xpallet_assets_metadata::Trait {
+pub trait Trait: system::Trait + xpallet_assets_registrar::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -195,7 +195,7 @@ impl<T: Trait> Module<T> {
         restrictions: AssetRestrictions,
     ) -> DispatchResult {
         // notice use `asset_info_of`, not `asset_online`
-        xpallet_assets_metadata::Module::<T>::ensure_existed_assert(&asset_id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_existed_assert(&asset_id)?;
         AssetRestrictionsOf::insert(asset_id, restrictions);
         Ok(())
     }
@@ -214,7 +214,7 @@ impl<T: Trait> Module<T> {
 // asset related
 impl<T: Trait> Module<T> {
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
-        xpallet_assets_metadata::Module::<T>::asset_infos()
+        xpallet_assets_registrar::Module::<T>::asset_infos()
             .into_iter()
             .filter_map(|(id, info)| {
                 if id == T::NativeAssetId::get() {
@@ -226,7 +226,7 @@ impl<T: Trait> Module<T> {
                         TotalAssetInfo {
                             info,
                             balance: Self::total_asset_balance(id),
-                            is_online: xpallet_assets_metadata::Module::<T>::asset_online(id)
+                            is_online: xpallet_assets_registrar::Module::<T>::asset_online(id)
                                 .is_some(),
                             restrictions: Self::asset_restrictions_of(id),
                         },
@@ -243,7 +243,7 @@ impl<T: Trait> Module<T> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
             .filter_map(|(id, map)| {
-                xpallet_assets_metadata::Module::<T>::asset_online(id).map(|_| (id, map))
+                xpallet_assets_registrar::Module::<T>::asset_online(id).map(|_| (id, map))
             })
             .collect()
     }
@@ -339,7 +339,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_metadata::Module::<T>::ensure_valid_asset(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_valid_asset(id)?;
 
         let _imbalance = Self::inner_issue(id, who, AssetType::Free, value)?;
         Ok(())
@@ -347,7 +347,7 @@ impl<T: Trait> Module<T> {
 
     pub fn destroy(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_metadata::Module::<T>::ensure_valid_asset(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_valid_asset(id)?;
         Self::can_destroy_withdrawal(id)?;
 
         let _imbalance = Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
@@ -356,7 +356,7 @@ impl<T: Trait> Module<T> {
 
     pub fn destroy_free(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_metadata::Module::<T>::ensure_valid_asset(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_valid_asset(id)?;
         Self::can_destroy_free(id)?;
 
         let _imbalance = Self::inner_destroy(id, who, AssetType::Free, value)?;
@@ -373,7 +373,7 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<(), AssetErr> {
         // check
         Self::ensure_not_native_asset(id).map_err(|_| AssetErr::InvalidAsset)?;
-        xpallet_assets_metadata::Module::<T>::ensure_valid_asset(id)
+        xpallet_assets_registrar::Module::<T>::ensure_valid_asset(id)
             .map_err(|_| AssetErr::InvalidAsset)?;
         Self::can_move(id).map_err(|_| AssetErr::NotAllow)?;
 
