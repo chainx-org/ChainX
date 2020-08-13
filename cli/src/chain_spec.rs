@@ -444,7 +444,6 @@ fn testnet_genesis(
         xpallet_mining_staking: Some(XStakingConfig {
             validators,
             validator_count: 1000,
-            minimum_validator_count: 4,
             sessions_per_era: 12,
             vesting_account: get_account_id_from_seed::<sr25519::Public>("vesting"),
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)

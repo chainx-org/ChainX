@@ -89,6 +89,9 @@ fn cannot_force_chill_should_work() {
         t_make_a_validator_candidate(123, 100);
         assert_eq!(XStaking::can_force_chilled(), true);
         assert_ok!(XStaking::chill(Origin::signed(123)));
+        assert_ok!(XStaking::chill(Origin::signed(2)));
+        assert_ok!(XStaking::chill(Origin::signed(3)));
+        assert_ok!(XStaking::chill(Origin::signed(4)));
         assert_err!(
             XStaking::chill(Origin::signed(1)),
             <Error<Test>>::TooFewActiveValidators
@@ -726,5 +729,38 @@ fn referral_id_should_work() {
             Origin::signed(112),
             b"referral2".to_vec()
         ));
+    });
+}
+
+#[test]
+fn migration_session_offset_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        let test_cases = vec![
+            (MIGRATION_SESSION_OFFSET, INITIAL_REWARD),
+            (MIGRATION_SESSION_OFFSET + 1, INITIAL_REWARD / 2),
+            (
+                MIGRATION_SESSION_OFFSET + SESSIONS_PER_ROUND,
+                INITIAL_REWARD / 2,
+            ),
+            (
+                MIGRATION_SESSION_OFFSET + SESSIONS_PER_ROUND + 1,
+                INITIAL_REWARD / 4,
+            ),
+            (
+                MIGRATION_SESSION_OFFSET + SESSIONS_PER_ROUND * 2,
+                INITIAL_REWARD / 4,
+            ),
+            (
+                MIGRATION_SESSION_OFFSET + SESSIONS_PER_ROUND * 2 + 1,
+                INITIAL_REWARD / 8,
+            ),
+        ];
+
+        for (session_index, session_reward) in test_cases {
+            assert_eq!(
+                XStaking::this_session_reward(session_index),
+                session_reward as Balance
+            );
+        }
     });
 }
