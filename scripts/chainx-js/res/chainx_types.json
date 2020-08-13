@@ -7,11 +7,20 @@
     },
     "AssetType": {
         "_enum": [
-            "Free",
+            "Usable",
             "Locked",
+            "Reserved",
             "ReservedWithdrawal",
             "ReservedDexSpot",
             "ReservedXRC20"
+        ]
+    },
+    "Chain": {
+        "_enum": [
+            "ChainX",
+            "Bitcoin",
+            "Ethereum",
+            "Polkadot"
         ]
     },
     "XRC20Selector": {
@@ -173,14 +182,6 @@
     "WeightType": "u128",
     "ReferralId": "Text",
     "AssetId": "u32",
-    "Chain": {
-        "_enum": [
-            "ChainX",
-            "Bitcoin",
-            "Ethereum",
-            "Polkadot"
-        ]
-    },
     "AssetRestriction": {
         "_enum": [
             "Move",

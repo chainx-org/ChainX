@@ -395,15 +395,15 @@ fn refund_remaining_of_taker_order_should_work() {
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, btc_for_seller1);
+        bmap.insert(AssetType::Usable, btc_for_seller1);
         assert_eq!(XAssets::asset_balance(1, quote.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, btc_for_seller2);
+        bmap.insert(AssetType::Usable, btc_for_seller2);
         assert_eq!(XAssets::asset_balance(2, quote.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, remaining);
+        bmap.insert(AssetType::Usable, remaining);
         assert_eq!(XAssets::asset_balance(3, quote.clone()), bmap);
 
         assert_eq!(t_generic_free_balance(1, base.clone()), 0);
@@ -442,15 +442,15 @@ fn refund_remaining_of_maker_order_should_work() {
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, btc_for_seller1);
+        bmap.insert(AssetType::Usable, btc_for_seller1);
         assert_eq!(XAssets::asset_balance(1, quote), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, btc_for_seller2);
+        bmap.insert(AssetType::Usable, btc_for_seller2);
         assert_eq!(XAssets::asset_balance(2, quote), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, remaining);
+        bmap.insert(AssetType::Usable, remaining);
         assert_eq!(XAssets::asset_balance(3, quote), bmap);
 
         assert_eq!(t_generic_free_balance(1, base), 0);

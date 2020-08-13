@@ -325,11 +325,11 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn usable_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Free)
+        Self::asset_typed_balance(&who, &id, AssetType::Usable)
     }
 
     pub fn free_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Free)
+        Self::asset_typed_balance(&who, &id, AssetType::Usable)
             + Self::asset_typed_balance(&who, &id, AssetType::Locked)
     }
 }
@@ -340,7 +340,7 @@ impl<T: Trait> Module<T> {
         Self::ensure_not_native_asset(id)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
 
-        let _imbalance = Self::inner_issue(id, who, AssetType::Free, value)?;
+        let _imbalance = Self::inner_issue(id, who, AssetType::Usable, value)?;
         Ok(())
     }
 
@@ -358,7 +358,7 @@ impl<T: Trait> Module<T> {
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_free(id)?;
 
-        let _imbalance = Self::inner_destroy(id, who, AssetType::Free, value)?;
+        let _imbalance = Self::inner_destroy(id, who, AssetType::Usable, value)?;
         Ok(())
     }
 
@@ -419,7 +419,7 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         value: BalanceOf<T>,
     ) -> result::Result<(), AssetErr> {
-        Self::move_balance(id, from, AssetType::Free, to, AssetType::Free, value)
+        Self::move_balance(id, from, AssetType::Usable, to, AssetType::Usable, value)
     }
 
     pub fn set_balance_impl(

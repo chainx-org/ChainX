@@ -802,7 +802,7 @@ impl<T: Trait> Module<T> {
         let _ = xpallet_assets::Module::<T>::move_balance(
             &id,
             &origin,
-            AssetType::Free,
+            AssetType::Usable,
             &xrc20_addr,
             AssetType::ReservedXRC20,
             value,
@@ -883,7 +883,7 @@ impl<T: Trait> Module<T> {
             &contract_addr,
             AssetType::ReservedXRC20,
             &to,
-            AssetType::Free,
+            AssetType::Usable,
             value,
         )
         .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;

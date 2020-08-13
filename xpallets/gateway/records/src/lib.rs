@@ -371,7 +371,7 @@ impl<T: Trait> Module<T> {
         let _ = xpallet_assets::Module::<T>::move_balance(
             asset_id,
             who,
-            AssetType::Free,
+            AssetType::Usable,
             who,
             AssetType::ReservedWithdrawal,
             value,
@@ -386,7 +386,7 @@ impl<T: Trait> Module<T> {
             who,
             AssetType::ReservedWithdrawal,
             who,
-            AssetType::Free,
+            AssetType::Usable,
             value,
         )
         .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;

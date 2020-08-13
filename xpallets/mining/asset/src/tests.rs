@@ -46,9 +46,9 @@ fn t_xbtc_move(from: AccountId, to: AccountId, value: Balance) {
     assert_ok!(XAssets::move_balance(
         &X_BTC,
         &from,
-        AssetType::Free,
+        AssetType::Usable,
         &to,
-        AssetType::Free,
+        AssetType::Usable,
         value
     ));
 }

@@ -230,7 +230,7 @@ decl_error! {
     }
 }
 decl_storage! {
-    trait Store for Module<T: Trait> as XAssetsMetadata {
+    trait Store for Module<T: Trait> as XAssetsRegistrar {
         /// Asset id list for Chain, different Chain has different id list
         pub AssetIdsOf get(fn asset_ids_of): map hasher(twox_64_concat) Chain => Vec<AssetId>;
 

@@ -27,8 +27,9 @@ pub enum SignedBalance<T: Trait> {
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetType {
-    Free,
+    Usable,
     Locked,
+    Reserved,
     ReservedWithdrawal,
     ReservedDexSpot,
     ReservedXRC20,
@@ -36,8 +37,9 @@ pub enum AssetType {
 impl AssetType {
     pub fn iterator() -> Iter<'static, AssetType> {
         static ENUM_ITEMS: &[AssetType] = &[
-            AssetType::Free,
+            AssetType::Usable,
             AssetType::Locked,
+            AssetType::Reserved,
             AssetType::ReservedWithdrawal,
             AssetType::ReservedDexSpot,
             AssetType::ReservedXRC20,
@@ -48,7 +50,7 @@ impl AssetType {
 
 impl Default for AssetType {
     fn default() -> Self {
-        AssetType::Free
+        AssetType::Usable
     }
 }
 
