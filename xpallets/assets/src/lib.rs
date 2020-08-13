@@ -194,7 +194,6 @@ impl<T: Trait> Module<T> {
         asset_id: AssetId,
         restrictions: AssetRestrictions,
     ) -> DispatchResult {
-        // notice use `asset_info_of`, not `asset_online`
         xpallet_assets_registrar::Module::<T>::ensure_assert_exists(&asset_id)?;
         AssetRestrictionsOf::insert(asset_id, restrictions);
         Ok(())

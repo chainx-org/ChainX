@@ -190,7 +190,7 @@ pub trait Trait: system::Trait {
     /// Get Native Id
     type NativeAssetId: Get<AssetId>;
 
-    ///
+    /// Handler for doing stuff after the asset is registered/deregistered.
     type RegistrarHandler: RegistrarHandler;
 }
 
@@ -219,11 +219,13 @@ decl_error! {
         InvalidChar,
         /// only allow ASCII alphanumeric character
         InvalidAsscii,
-        ///
-        AlreadyExistentToken,
-        ///
+        /// The asset already exists.
+        AssetAlreadyExists,
+        /// The asset is already valid.
+        AssetAlreadyValid,
+        /// The asset is not on_line.
         InvalidAsset,
-        ///
+        /// The asset does not exist.
         AssetDoesNotExist,
     }
 }
@@ -238,8 +240,8 @@ decl_storage! {
         ///
         pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => Option<()>;
 
-        ///
-        pub AssetRegisteredBlock get(fn asset_registered_block): map hasher(twox_64_concat) AssetId => T::BlockNumber;
+        /// The map of asset to the block number at which the asset was registered.
+        pub RegisteredAt get(fn registered_at): map hasher(twox_64_concat) AssetId => T::BlockNumber;
     }
     add_extra_genesis {
         config(assets): Vec<(AssetId, AssetInfo, bool, bool)>;
@@ -266,6 +268,8 @@ decl_module! {
         ) -> DispatchResult {
             ensure_root(origin)?;
             asset.is_valid::<T>()?;
+            ensure!(!Self::asset_exists(&asset_id), Error::<T>::AssetAlreadyExists);
+
             info!("[register_asset]|id:{:}|{:?}|is_online:{:}|has_mining_rights:{:}", asset_id, asset, is_online, has_mining_rights);
 
             Self::apply_register(asset_id, asset)?;
@@ -274,7 +278,7 @@ decl_module! {
             Self::deposit_event(RawEvent::Register(asset_id, has_mining_rights));
 
             if !is_online {
-                let _ = Self::deregister(frame_system::RawOrigin::Root.into(), asset_id.into());
+                let _ = Self::deregister(frame_system::RawOrigin::Root.into(), asset_id);
             }
 
             Ok(())
@@ -296,12 +300,14 @@ decl_module! {
             Ok(())
         }
 
-        /// recover an offline asset,
+        /// Recover a deregister asset to the valid state.
+        ///
+        /// `RegistrarHandler::on_register()` will be triggered again during the recover process.
         #[weight = 0]
         pub fn recover_asset(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
             ensure_root(origin)?;
-            ensure!(Self::asset_info_of(id).is_some(), Error::<T>::AssetDoesNotExist);
-            ensure!(Self::asset_online(id).is_none(), Error::<T>::InvalidAsset);
+            ensure!(Self::asset_exists(&id), Error::<T>::AssetDoesNotExist);
+            ensure!(!Self::is_valid_asset(&id), Error::<T>::AssetAlreadyValid);
 
             AssetOnline::insert(id, ());
 
@@ -310,8 +316,9 @@ decl_module! {
             Ok(())
         }
 
+        /// Update the asset info, all the new fields are optional.
         #[weight = 0]
-        pub fn modify_asset_info(
+        pub fn update_asset_info(
             origin,
             #[compact] id: AssetId,
             token: Option<Token>,
@@ -319,7 +326,8 @@ decl_module! {
             desc: Option<Desc>
         ) -> DispatchResult {
             ensure_root(origin)?;
-            let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::InvalidAsset)?;
+
+            let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::AssetDoesNotExist)?;
 
             token.map(|t| info.set_token(t));
             token_name.map(|name| info.set_token_name(name));
@@ -354,16 +362,19 @@ impl<T: Trait> Module<T> {
     }
 
     /// Returns an iterator of all the valid asset ids of all chains so far.
+    #[inline]
     pub fn valid_asset_ids() -> impl Iterator<Item = AssetId> {
         Self::asset_ids().filter(Self::is_valid_asset)
     }
 
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all assets.
+    #[inline]
     pub fn asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
         AssetInfoOf::iter()
     }
 
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all valid assets.
+    #[inline]
     pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
         Self::asset_infos().filter(|(id, _)| Self::is_valid_asset(id))
     }
@@ -391,11 +402,13 @@ impl<T: Trait> Module<T> {
         Self::asset_online(asset_id).is_some()
     }
 
+    /// Helper function for checking the asset's existence.
     pub fn ensure_assert_exists(id: &AssetId) -> DispatchResult {
         ensure!(Self::asset_exists(id), Error::<T>::AssetDoesNotExist);
         Ok(())
     }
 
+    /// Helper function for checking the asset's validity.
     pub fn ensure_asset_is_valid(id: &AssetId) -> DispatchResult {
         ensure!(Self::is_valid_asset(id), Error::<T>::InvalidAsset);
         Ok(())
@@ -404,21 +417,17 @@ impl<T: Trait> Module<T> {
     /// Actually register an asset.
     fn apply_register(id: AssetId, asset: AssetInfo) -> DispatchResult {
         let chain = asset.chain();
-        // FIXME: Self::asset_info_of(&id).is_some() => multiple Error?
-        if Self::asset_info_of(&id).is_some() {
-            Err(Error::<T>::AlreadyExistentToken)?;
-        }
-
-        AssetInfoOf::insert(&id, asset);
-        AssetOnline::insert(&id, ());
-
-        AssetRegisteredBlock::<T>::insert(&id, system::Module::<T>::block_number());
-
         AssetIdsOf::mutate(chain, |v| {
             if !v.contains(&id) {
                 v.push(id);
             }
         });
+
+        AssetInfoOf::insert(&id, asset);
+        AssetOnline::insert(&id, ());
+
+        RegisteredAt::<T>::insert(&id, system::Module::<T>::block_number());
+
         Ok(())
     }
 }
