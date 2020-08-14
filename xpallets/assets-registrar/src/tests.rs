@@ -47,7 +47,7 @@ parameter_types! {
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for Test {
+impl frame_system::Trait for Test {
     type BaseCallFilter = ();
     type Origin = Origin;
     type Call = ();
@@ -72,6 +72,7 @@ impl system::Trait for Test {
     type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type SystemWeightInfo = ();
 }
 
 parameter_types! {

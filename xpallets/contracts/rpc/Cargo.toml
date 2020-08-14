@@ -20,11 +20,11 @@ jsonrpc-core = "14.2.0"
 jsonrpc-core-client = "14.2.0"
 jsonrpc-derive = "14.2.1"
 
-sp-blockchain = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
-sp-rpc = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
-sp-api = { git = "https://github.com/paritytech/substrate.git", tag = "v2.0.0-rc4" }
+sp-blockchain = { version = "2.0.0-rc5" }
+sp-core = { version = "2.0.0-rc5" }
+sp-rpc = { version = "2.0.0-rc5" }
+sp-runtime = { version = "2.0.0-rc5" }
+sp-api = { version = "2.0.0-rc5" }
 
 chainx-primitives = { path = "../../../primitives" }
 xpallet-contracts-primitives = { path = "../common" }

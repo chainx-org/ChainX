@@ -81,6 +81,7 @@ impl system::Trait for Test {
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type SystemWeightInfo = ();
 }
 
 pub struct ExistentialDeposit;
@@ -96,6 +97,7 @@ impl pallet_balances::Trait for Test {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -106,6 +108,7 @@ impl pallet_timestamp::Trait for Test {
     type Moment = u64;
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
 }
 
 /// Another session handler struct to test on_disabled.
@@ -172,6 +175,7 @@ impl pallet_session::Trait for Test {
     type ValidatorIdOf = ();
     type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+    type WeightInfo = ();
 }
 
 pub struct DummyTreasuryAccount;

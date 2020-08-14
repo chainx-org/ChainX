@@ -102,7 +102,7 @@ fn test_call() {
     with_externalities(&mut new_test_ext(), || {
         Timestamp::set_timestamp(current_time());
         let (c1, _) = generate_blocks();
-        let origin = system::RawOrigin::Signed(99).into();
+        let origin = frame_system::RawOrigin::Signed(99).into();
         let v = btc_ser::serialize(c1.get(1).unwrap());
         let v = v.take();
         assert_ok!(XBridgeOfBtc::push_header(origin, v));

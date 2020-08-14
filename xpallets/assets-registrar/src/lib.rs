@@ -23,7 +23,7 @@ use frame_support::{
     traits::Get,
     IterableStorageMap, RuntimeDebug,
 };
-use frame_system::{self as system, ensure_root};
+use frame_system::ensure_root;
 
 // ChainX
 use chainx_primitives::{AssetId, Decimals, Desc, Token};
@@ -175,9 +175,9 @@ impl<A: RegistrarHandler, B: RegistrarHandler> RegistrarHandler for (A, B) {
     }
 }
 
-pub trait Trait: system::Trait {
+pub trait Trait: frame_system::Trait {
     /// Event
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     /// Get Native Id
     type NativeAssetId: Get<AssetId>;
@@ -187,7 +187,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_event!(
-    pub enum Event<T> where <T as system::Trait>::AccountId {
+    pub enum Event<T> where <T as frame_system::Trait>::AccountId {
         /// A new asset is registered. [asset_id, has_mining_rights]
         Register(AssetId, bool),
         /// A deregistered asset is recovered. [asset_id, has_mining_rights]
@@ -420,7 +420,7 @@ impl<T: Trait> Module<T> {
         AssetInfoOf::insert(&id, asset);
         AssetOnline::insert(&id, ());
 
-        RegisteredAt::<T>::insert(&id, system::Module::<T>::block_number());
+        RegisteredAt::<T>::insert(&id, frame_system::Module::<T>::block_number());
 
         Ok(())
     }

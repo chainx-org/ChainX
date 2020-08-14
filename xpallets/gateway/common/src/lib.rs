@@ -21,7 +21,7 @@ use frame_support::{
     traits::Currency,
     IterableStorageMap,
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_runtime::Memo;
@@ -39,8 +39,10 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-pub trait Trait: system::Trait + pallet_multisig::Trait + xpallet_gateway_records::Trait {
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+pub trait Trait:
+    frame_system::Trait + pallet_multisig::Trait + xpallet_gateway_records::Trait
+{
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type Validator: Validator<Self::AccountId>;
     // for chain
@@ -54,8 +56,8 @@ pub trait Trait: system::Trait + pallet_multisig::Trait + xpallet_gateway_record
 
 decl_event!(
     pub enum Event<T> where
-        <T as system::Trait>::AccountId,
-        GenericTrusteeSessionInfo = GenericTrusteeSessionInfo<<T as system::Trait>::AccountId> {
+        <T as frame_system::Trait>::AccountId,
+        GenericTrusteeSessionInfo = GenericTrusteeSessionInfo<<T as frame_system::Trait>::AccountId> {
         SetTrusteeProps(AccountId, Chain, GenericTrusteeIntentionProps),
         NewTrustees(Chain, u32, GenericTrusteeSessionInfo),
         ChannelBinding(Chain, AccountId, AccountId),
