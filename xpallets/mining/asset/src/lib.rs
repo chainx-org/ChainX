@@ -186,7 +186,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_claim_staking_requirement(origin, #[compact] asset_id: AssetId, new: StakingRequirement) {
+        fn set_claim_staking_requirement(origin, #[compact] asset_id: AssetId, #[compact] new: StakingRequirement) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
                 restriction.staking_requirement = new;
