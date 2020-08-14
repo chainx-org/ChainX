@@ -278,6 +278,7 @@ decl_module! {
             Self::deposit_event(RawEvent::PriceFluctuationUpdated(pair_id, new));
         }
 
+        /// Add a new trading pair.
         #[weight = 10]
         pub fn add_trading_pair(
             origin,
@@ -292,7 +293,13 @@ decl_module! {
                 Self::get_trading_pair_by_currency_pair(&currency_pair).is_none(),
                 Error::<T>::TradingPairAlreadyExists
             );
-            Self::apply_add_trading_pair(currency_pair, pip_decimals, tick_decimals, latest_price, tradable);
+            Self::apply_add_trading_pair(
+                currency_pair,
+                pip_decimals,
+                tick_decimals,
+                latest_price,
+                tradable
+            );
         }
 
         /// Update the trading pair profile.
@@ -301,23 +308,13 @@ decl_module! {
             origin,
             pair_id: TradingPairId,
             tick_decimals: u32,
-            tradable: bool,
-        ) -> DispatchResult {
+            tradable: bool
+        ) {
             ensure_root(origin)?;
             let pair = Self::trading_pair(pair_id)?;
             ensure!(tick_decimals >= pair.tick_decimals, Error::<T>::InvalidTickdecimals);
-            info!(
-                "[update_trading_pair]pair_id: {:}, tick_decimals: {:}, tradable:{:}",
-                pair_id, tick_decimals, tradable
-            );
-            TradingPairOf::mutate(pair_id, |pair| {
-                if let Some(pair) = pair {
-                    pair.tick_decimals = tick_decimals;
-                    pair.tradable = tradable;
-                }
-            });
+            Self::apply_update_trading_pair(pair_id, tick_decimals, tradable);
             Self::deposit_event(RawEvent::TradingPairUpdated(pair));
-            Ok(())
         }
     }
 }
@@ -379,6 +376,19 @@ impl<T: Trait> Module<T> {
         TradingPairCount::put(pair_id + 1);
 
         Self::deposit_event(RawEvent::AddTradingPair(pair));
+    }
+
+    fn apply_update_trading_pair(pair_id: TradingPairId, tick_decimals: u32, tradable: bool) {
+        info!(
+            "[update_trading_pair]pair_id: {:}, tick_decimals: {:}, tradable:{:}",
+            pair_id, tick_decimals, tradable
+        );
+        TradingPairOf::mutate(pair_id, |pair| {
+            if let Some(pair) = pair {
+                pair.tick_decimals = tick_decimals;
+                pair.tradable = tradable;
+            }
+        });
     }
 
     fn apply_put_order(

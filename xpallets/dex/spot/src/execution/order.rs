@@ -396,12 +396,12 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
     ) -> DispatchResult {
         // Unreserve the remaining asset.
-        let (refund_token, refund_amount) = match order.side() {
+        let (refund_asset, refund_amount) = match order.side() {
             Side::Sell => (pair.base(), order.remaining_in_base()),
             Side::Buy => (pair.quote(), order.remaining),
         };
 
-        Self::cancel_order_unreserve(who, refund_token, refund_amount)?;
+        Self::cancel_order_unreserve(who, refund_asset, refund_amount)?;
 
         order.update_status_on_cancel();
         order.decrease_remaining_on_cancel(refund_amount);
