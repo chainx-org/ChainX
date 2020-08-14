@@ -76,7 +76,7 @@ impl Default for OrderStatus {
 
 /// The best prices of a trading pair.
 ///
-/// ------------------- Lowest Offer
+/// ------------------- Lowest Ask
 ///   ask(sell price)
 /// -------------------
 ///   bid(buy price)
@@ -105,7 +105,7 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
     }
 
     /// Increases the `lowest_ask` by one tick.
-    pub fn tick_up_lowest_offer(&mut self, tick_decimals: u32) -> Price {
+    pub fn tick_up_lowest_ask(&mut self, tick_decimals: u32) -> Price {
         let tick = 10_u64.pow(tick_decimals);
         self.lowest_ask = self.lowest_ask.saturating_add(tick.saturated_into());
         self.lowest_ask
@@ -152,8 +152,8 @@ impl CurrencyPair {
 ///
 /// PCX/BTC = pip, a.k.a, percentage in point. Also called exchange rate.
 /// tick decimals for BTC
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TradingPairProfile {
     /// The trading pair identifier.
@@ -166,7 +166,7 @@ pub struct TradingPairProfile {
     /// How many decimals of the tick size.
     pub tick_decimals: u32,
     /// Is the trading pair still tradable.
-    pub online: bool,
+    pub tradable: bool,
 }
 
 impl TradingPairProfile {
@@ -175,14 +175,14 @@ impl TradingPairProfile {
         currency_pair: CurrencyPair,
         pip_decimals: u32,
         tick_decimals: u32,
-        online: bool,
+        tradable: bool,
     ) -> Self {
         Self {
             id,
             currency_pair,
             pip_decimals,
             tick_decimals,
-            online,
+            tradable,
         }
     }
 

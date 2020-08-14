@@ -293,7 +293,7 @@ decl_module! {
 
         /// Nominate the `target` with `value` of the origin account's balance locked.
         #[weight = 10]
-        pub fn bond(origin, target: T::AccountId, value: BalanceOf<T>, memo: Memo) {
+        pub fn bond(origin, target: T::AccountId, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
@@ -309,7 +309,7 @@ decl_module! {
 
         /// Move the `value` of current nomination from one validator to another.
         #[weight = 10]
-        fn rebond(origin, from: T::AccountId, to: T::AccountId, value: BalanceOf<T>, memo: Memo) {
+        fn rebond(origin, from: T::AccountId, to: T::AccountId, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
@@ -335,7 +335,7 @@ decl_module! {
 
         /// Unnominate the `value` of bonded balance for validator `target`.
         #[weight = 10]
-        fn unbond(origin, target: T::AccountId, value: BalanceOf<T>, memo: Memo) {
+        fn unbond(origin, target: T::AccountId, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             memo.check_validity()?;
 
@@ -352,7 +352,7 @@ decl_module! {
 
         /// Unlock the frozen unbonded balances that are due.
         #[weight = 10]
-        fn unlock_unbonded_withdrawal(origin, unbonded_index: UnbondedIndex) {
+        fn unlock_unbonded_withdrawal(origin, #[compact] unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
 
             let mut unbonded_chunks = Self::unbonded_chunks_of(&sender);
@@ -437,13 +437,13 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_bonding_duration(origin, new: T::BlockNumber) {
+        fn set_bonding_duration(origin, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             BondingDuration::<T>::put(new);
         }
 
         #[weight = 10]
-        fn set_validator_bonding_duration(origin, new: T::BlockNumber) {
+        fn set_validator_bonding_duration(origin, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             ValidatorBondingDuration::<T>::put(new);
         }
