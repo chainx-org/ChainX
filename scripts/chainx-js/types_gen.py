@@ -495,10 +495,8 @@ def write_types_and_rpc():
                 if k in manual_fns:
                     fns[k] = manual_fns[k]
 
-    rpc_output = {}
     #  Inject rpc decoration
-    rpc_output['rpc'] = rpc_dict
-    write_json(rpc_output, 'res/chainx_rpc.json')
+    write_json(rpc_dict, 'res/chainx_rpc.json')
 
 
 def main():

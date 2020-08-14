@@ -4,6 +4,7 @@
 .wasm-binaries
 chainx/runtime/wasm/target/
 !runtime/wasm/target/wasm32-unknown-unknown/release/chainx_runtime.compact.wasm
+node_modules
 **/._*
 .vscode/
 .DS_Store

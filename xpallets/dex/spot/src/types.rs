@@ -76,7 +76,7 @@ impl Default for OrderStatus {
 
 /// The best prices of a trading pair.
 ///
-/// ------------------- Lowest Offer
+/// ------------------- Lowest Ask
 ///   ask(sell price)
 /// -------------------
 ///   bid(buy price)
