@@ -1,4 +1,4 @@
-//! This crate provides the feature of managing the foreign assets' meta information.
+//! This crate provides the feature of managing the native and foreign assets' meta information.
 //!
 //! The foreign asset hereby means it's not the native token of the system(PCX for ChainX)
 //! but derived from the other blockchain system, e.g., Bitcoin.
