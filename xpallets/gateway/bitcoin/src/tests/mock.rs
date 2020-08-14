@@ -25,7 +25,7 @@ type AccountId = Public;
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
 
-impl system::Trait for Test {
+impl frame_system::Trait for Test {
     type Origin = Origin;
     type Index = u64;
     type BlockNumber = u64;
@@ -194,7 +194,7 @@ pub type XBridgeOfBTC = Module<Test>;
 pub type XBridgeOfBTCLockup = lockup::Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut r = system::GenesisConfig::<Test>::default()
+    let mut r = frame_system::GenesisConfig::<Test>::default()
         .build_storage()
         .unwrap()
         .0;
@@ -243,7 +243,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 }
 
 pub fn new_test_mainnet() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut r = system::GenesisConfig::<Test>::default()
+    let mut r = frame_system::GenesisConfig::<Test>::default()
         .build_storage()
         .unwrap()
         .0;

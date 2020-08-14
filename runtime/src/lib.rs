@@ -255,6 +255,8 @@ impl frame_system::Trait for Runtime {
     type OnNewAccount = ();
     /// What to do if an account is fully reaped from the system.
     type OnKilledAccount = ();
+    /// Weight information for the extrinsics of this pallet.
+    type SystemWeightInfo = ();
 }
 
 parameter_types! {
@@ -266,6 +268,7 @@ impl pallet_timestamp::Trait for Runtime {
     type Moment = u64;
     type OnTimestampSet = Aura;
     type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -327,6 +330,7 @@ impl pallet_session::Trait for Runtime {
     type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
     type Keys = SessionKeys;
     type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -338,7 +342,8 @@ impl pallet_balances::Trait for Runtime {
     type DustRemoval = ();
     type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
-    type AccountStore = frame_system::Module<Runtime>;
+    type AccountStore = System;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -389,6 +394,7 @@ impl pallet_im_online::Trait for Runtime {
     type SessionDuration = SessionDuration;
     type ReportUnresponsiveness = Offences;
     type UnsignedPriority = ImOnlineUnsignedPriority;
+    type WeightInfo = ();
 }
 
 /// Dummy implementation for the trait bound of pallet_im_online.
@@ -417,11 +423,13 @@ impl pallet_offences::Trait for Runtime {
     type IdentificationTuple = xpallet_mining_staking::IdentificationTuple<Runtime>;
     type OnOffenceHandler = XStaking;
     type WeightSoftLimit = OffencesWeightSoftLimit;
+    type WeightInfo = ();
 }
 
 impl pallet_utility::Trait for Runtime {
     type Event = Event;
     type Call = Call;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -439,6 +447,7 @@ impl pallet_multisig::Trait for Runtime {
     type DepositBase = DepositBase;
     type DepositFactor = DepositFactor;
     type MaxSignatories = MaxSignatories;
+    type WeightInfo = ();
 }
 
 impl pallet_sudo::Trait for Runtime {
@@ -496,7 +505,9 @@ impl pallet_democracy::Trait for Runtime {
     type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
     type Slash = Treasury;
     type Scheduler = Scheduler;
+    type PalletsOrigin = OriginCaller;
     type MaxVotes = MaxVotes;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -511,6 +522,7 @@ impl pallet_collective::Trait<CouncilCollective> for Runtime {
     type Event = Event;
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -542,6 +554,7 @@ impl pallet_elections_phragmen::Trait for Runtime {
     type DesiredMembers = DesiredMembers;
     type DesiredRunnersUp = DesiredRunnersUp;
     type TermDuration = TermDuration;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -556,6 +569,7 @@ impl pallet_collective::Trait<TechnicalCollective> for Runtime {
     type Event = Event;
     type MotionDuration = TechnicalMotionDuration;
     type MaxProposals = TechnicalMaxProposals;
+    type WeightInfo = ();
 }
 
 type EnsureRootOrHalfCouncil = EnsureOneOf<
@@ -610,6 +624,8 @@ impl pallet_treasury::Trait for Runtime {
     type ProposalBondMinimum = ProposalBondMinimum;
     type SpendPeriod = SpendPeriod;
     type Burn = Burn;
+    type BurnDestination = (); // todo maybe we should define it?
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -619,8 +635,11 @@ parameter_types! {
 impl pallet_scheduler::Trait for Runtime {
     type Event = Event;
     type Origin = Origin;
+    type PalletsOrigin = OriginCaller;
     type Call = Call;
     type MaximumWeight = MaximumSchedulerWeight;
+    type ScheduleOrigin = EnsureRoot<AccountId>;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -644,6 +663,7 @@ impl pallet_identity::Trait for Runtime {
     type Slashed = Treasury;
     type ForceOrigin = EnsureRootOrHalfCouncil;
     type RegistrarOrigin = EnsureRootOrHalfCouncil;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -800,7 +820,7 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
         Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 
-        Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
+        Aura: pallet_aura::{Module, Config<T>, Inherent},
 
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
@@ -972,7 +992,7 @@ impl_runtime_apis! {
             Grandpa::grandpa_authorities()
         }
 
-        fn submit_report_equivocation_extrinsic(
+        fn submit_report_equivocation_unsigned_extrinsic(
             _equivocation_proof: fg_primitives::EquivocationProof<
                 <Block as BlockT>::Hash,
                 NumberFor<Block>,

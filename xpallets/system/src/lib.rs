@@ -6,13 +6,13 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{CallMetadata, DispatchResult},
 };
-use frame_system::{self as system, ensure_root};
+use frame_system::ensure_root;
 
 use xpallet_protocol::NetworkType;
 
-pub trait Trait: system::Trait {
+pub trait Trait: frame_system::Trait {
     /// Event
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 }
 
 decl_error! {
@@ -24,7 +24,7 @@ decl_error! {
 
 decl_event!(
     pub enum Event<T> where
-        <T as system::Trait>::AccountId
+        <T as frame_system::Trait>::AccountId
     {
         BlockAccount(AccountId),
         RevokeBlockedAccounts(AccountId),

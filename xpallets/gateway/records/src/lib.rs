@@ -11,7 +11,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, traits::Currency,
     IterableStorageMap,
 };
-use frame_system::{self as system, ensure_root};
+use frame_system::ensure_root;
 use sp_std::prelude::*;
 
 // ChainX
@@ -29,9 +29,9 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-pub trait Trait: system::Trait + xpallet_assets::Trait {
+pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 }
 
 decl_error! {
@@ -98,9 +98,9 @@ decl_module! {
 
 decl_event!(
     pub enum Event<T> where
-        <T as system::Trait>::AccountId,
+        <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>,
-        WithdrawalRecord = WithdrawalRecord<<T as system::Trait>::AccountId, BalanceOf<T>, <T as system::Trait>::BlockNumber> {
+        WithdrawalRecord = WithdrawalRecord<<T as frame_system::Trait>::AccountId, BalanceOf<T>, <T as frame_system::Trait>::BlockNumber> {
         Deposit(AccountId, AssetId, Balance),
         ApplyWithdrawal(u32, WithdrawalRecord),
         FinishWithdrawal(u32, WithdrawalState),
@@ -204,7 +204,7 @@ impl<T: Trait> Module<T> {
             balance,
             addr,
             ext,
-            system::Module::<T>::block_number(),
+            frame_system::Module::<T>::block_number(),
         );
 
         // set storage

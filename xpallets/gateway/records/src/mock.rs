@@ -20,7 +20,7 @@ impl_outer_origin! {
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
 
-impl system::Trait for Test {
+impl frame_system::Trait for Test {
     type Origin = Origin;
     type Index = u64;
     type BlockNumber = u64;
@@ -63,7 +63,7 @@ pub type XAssets = xpallet_assets::Module<Test>;
 pub type XRecords = Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-    let mut r = system::GenesisConfig::<Test>::default()
+    let mut r = frame_system::GenesisConfig::<Test>::default()
         .build_storage()
         .unwrap()
         .0;

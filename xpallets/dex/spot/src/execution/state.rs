@@ -172,7 +172,7 @@ impl<T: Trait> Module<T> {
     ///
     /// This happens after an order is executed every time.
     pub(crate) fn update_latest_price(pair_index: TradingPairId, latest: T::Price) {
-        let current_block = <system::Module<T>>::block_number();
+        let current_block = <frame_system::Module<T>>::block_number();
 
         <TradingPairInfoOf<T>>::insert(
             pair_index,

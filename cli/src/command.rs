@@ -1,48 +1,53 @@
-use sc_cli::{CliConfiguration, SubstrateCli};
+use sc_cli::{ChainSpec, CliConfiguration, Role, RuntimeVersion, SubstrateCli};
+use sc_service::ServiceParams;
 
 use crate::chain_spec;
 use crate::cli::Cli;
-use crate::service;
+use crate::service::{self, new_full_params};
 
 impl SubstrateCli for Cli {
-    fn impl_name() -> &'static str {
-        "ChainX"
+    fn impl_name() -> String {
+        "ChainX".into()
     }
 
-    fn impl_version() -> &'static str {
-        env!("SUBSTRATE_CLI_IMPL_VERSION")
+    fn impl_version() -> String {
+        env!("SUBSTRATE_CLI_IMPL_VERSION").into()
     }
 
-    fn description() -> &'static str {
-        env!("CARGO_PKG_DESCRIPTION")
+    fn executable_name() -> String {
+        env!("CARGO_PKG_NAME").into()
     }
 
-    fn author() -> &'static str {
-        env!("CARGO_PKG_AUTHORS")
+    fn description() -> String {
+        env!("CARGO_PKG_DESCRIPTION").into()
     }
 
-    fn support_url() -> &'static str {
-        "https://github.com/chainx-org/ChainX"
+    fn author() -> String {
+        env!("CARGO_PKG_AUTHORS").into()
+    }
+
+    fn support_url() -> String {
+        "https://github.com/chainx-org/ChainX".into()
     }
 
     fn copyright_start_year() -> i32 {
         2020
     }
 
-    fn executable_name() -> &'static str {
-        env!("CARGO_PKG_NAME")
-    }
-
     fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
         // this id is from `--chain=<id>`
         load_spec(id)
+    }
+
+    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+        &chainx_runtime::VERSION
     }
 }
 
 fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
-        "dev" => Box::new(chain_spec::development_config()),
-        "" | "local" => Box::new(chain_spec::local_testnet_config()),
+        "dev" => Box::new(chain_spec::development_config()?),
+        "" | "local" => Box::new(chain_spec::local_testnet_config()?),
         path => {
             let p = std::path::PathBuf::from(path);
             if !p.exists() {
@@ -73,32 +78,42 @@ pub fn run() -> sc_cli::Result<()> {
             let chain_spec = &runner.config().chain_spec;
             set_default_ss58_version(chain_spec);
 
-            runner.run_subcommand(subcommand, |config| Ok(new_full_start!(config).0))
+            runner.run_subcommand(subcommand, |config| {
+                let (
+                    ServiceParams {
+                        client,
+                        backend,
+                        task_manager,
+                        import_queue,
+                        ..
+                    },
+                    ..,
+                ) = new_full_params(config)?;
+                Ok((client, backend, import_queue, task_manager))
+            })
         }
         None => {
             let runner = cli.create_runner(&cli.run)?;
             let chain_spec = &runner.config().chain_spec;
             set_default_ss58_version(chain_spec);
 
-            runner.run_node(
-                service::new_light,
-                service::new_full,
-                chainx_runtime::VERSION,
-            )
+            runner.run_node_until_exit(|config| match config.role {
+                Role::Light => service::new_light(config),
+                _ => service::new_full(config),
+            })
         }
     }
 }
 
 fn set_default_ss58_version(spec: &Box<dyn sc_service::ChainSpec>) {
-    use chainx_runtime::NetworkType;
     use sp_core::crypto::Ss58AddressFormat;
     // this `id()` is from `ChainSpec::from_genesis()` second parameter
     // todo may use a better way
-    let type_: NetworkType = if spec.id().contains("mainnet") {
-        NetworkType::Mainnet
+    let version: Ss58AddressFormat = if spec.id().contains("mainnet") {
+        Ss58AddressFormat::ChainXAccount
     } else {
-        NetworkType::Testnet
+        Ss58AddressFormat::SubstrateAccount
     };
-    let ss58_version = Ss58AddressFormat::Custom(type_.addr_version());
-    sp_core::crypto::set_default_ss58_version(ss58_version);
+
+    sp_core::crypto::set_default_ss58_version(version);
 }

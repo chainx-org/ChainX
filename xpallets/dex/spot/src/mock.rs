@@ -6,7 +6,6 @@ use std::{
 };
 
 use frame_support::{impl_outer_origin, parameter_types, traits::Get, weights::Weight};
-use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -40,7 +39,7 @@ parameter_types! {
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for Test {
+impl frame_system::Trait for Test {
     type BaseCallFilter = ();
     type Origin = Origin;
     type Call = ();
@@ -65,6 +64,7 @@ impl system::Trait for Test {
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type SystemWeightInfo = ();
 }
 
 pub struct ExistentialDeposit;
@@ -80,6 +80,7 @@ impl pallet_balances::Trait for Test {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
+    type WeightInfo = ();
 }
 
 impl Trait for Test {

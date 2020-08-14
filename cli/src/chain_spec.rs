@@ -116,10 +116,13 @@ fn as_properties(network: NetworkType) -> Properties {
     .to_owned()
 }
 
-pub fn development_config() -> ChainSpec {
+pub fn development_config() -> Result<ChainSpec, String> {
+    let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
     let endowed_balance = 50 * constants::currency::DOLLARS;
     let constructor = move || {
         testnet_genesis(
+            wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             testnet_assets(),
@@ -133,7 +136,7 @@ pub fn development_config() -> ChainSpec {
             true,
         )
     };
-    ChainSpec::from_genesis(
+    Ok(ChainSpec::from_genesis(
         "Development",
         "dev",
         ChainType::Development,
@@ -143,13 +146,16 @@ pub fn development_config() -> ChainSpec {
         Some("chainx-dev"),
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
-    )
+    ))
 }
 
-pub fn local_testnet_config() -> ChainSpec {
+pub fn local_testnet_config() -> Result<ChainSpec, String> {
+    let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
     let endowed_balance = 50 * constants::currency::DOLLARS;
     let constructor = move || {
         testnet_genesis(
+            wasm_binary,
             vec![
                 authority_keys_from_seed("Alice"),
                 authority_keys_from_seed("Bob"),
@@ -174,7 +180,7 @@ pub fn local_testnet_config() -> ChainSpec {
             true,
         )
     };
-    ChainSpec::from_genesis(
+    Ok(ChainSpec::from_genesis(
         "Local Testnet",
         "local_testnet",
         ChainType::Local,
@@ -184,7 +190,7 @@ pub fn local_testnet_config() -> ChainSpec {
         Some("chainx-local-testnet"),
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
-    )
+    ))
 }
 
 const PCX_DECIMALS: u8 = 8;
@@ -307,6 +313,7 @@ fn init_assets(
 }
 
 fn testnet_genesis(
+    wasm_binary: &[u8],
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
     assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
@@ -362,7 +369,7 @@ fn testnet_genesis(
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
-            code: WASM_BINARY.to_vec(),
+            code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         }),
         pallet_aura: Some(AuraConfig {
