@@ -48,7 +48,7 @@ const CHAINS: [Chain; 4] = [
 ];
 
 impl Chain {
-    /// Returns an iterator of all kinds of `Chain`.
+    /// Returns an iterator of all `Chain`.
     pub fn iter() -> Iter<'static, Chain> {
         CHAINS.iter()
     }
@@ -148,10 +148,12 @@ impl AssetInfo {
     }
 }
 
+/// Trait for doing some stuff on the registration/deregistration of a foreign asset.
 pub trait RegistrarHandler {
     fn on_register(_: &AssetId, _: bool) -> DispatchResult {
         Ok(())
     }
+
     fn on_deregister(_: &AssetId) -> DispatchResult {
         Ok(())
     }
@@ -160,25 +162,15 @@ pub trait RegistrarHandler {
 impl RegistrarHandler for () {}
 
 impl<A: RegistrarHandler, B: RegistrarHandler> RegistrarHandler for (A, B) {
-    fn on_register(id: &AssetId, is_psedu_intention: bool) -> DispatchResult {
-        let r = A::on_register(id, is_psedu_intention);
-        let r2 = B::on_register(id, is_psedu_intention);
-        if r.is_ok() == false {
-            return r;
-        } else if r2.is_ok() == false {
-            return r2;
-        }
+    fn on_register(id: &AssetId, has_mining_rights: bool) -> DispatchResult {
+        A::on_register(id, has_mining_rights)?;
+        B::on_register(id, has_mining_rights)?;
         Ok(())
     }
 
     fn on_deregister(id: &AssetId) -> DispatchResult {
-        let r = A::on_deregister(id);
-        let r2 = B::on_deregister(id);
-        if r.is_ok() == false {
-            return r;
-        } else if r2.is_ok() == false {
-            return r2;
-        }
+        A::on_deregister(id)?;
+        B::on_deregister(id)?;
         Ok(())
     }
 }
@@ -198,9 +190,12 @@ decl_event!(
     pub enum Event<T> where
     <T as system::Trait>::AccountId
     {
+        /// A new asset is registered. [asset_id, has_mining_rights]
         Register(AssetId, bool),
+        /// A deregistered asset is recovered. [asset_id, has_mining_rights]
+        Recover(AssetId, bool),
+        /// An asset is invalid now. [asset_id]
         Deregister(AssetId),
-        PlaceHolder(AccountId),
     }
 );
 
@@ -221,9 +216,9 @@ decl_error! {
         InvalidAsscii,
         /// The asset already exists.
         AssetAlreadyExists,
-        /// The asset is already valid.
+        /// The asset is already valid, no need to recover.
         AssetAlreadyValid,
-        /// The asset is not on_line.
+        /// The asset is not online.
         InvalidAsset,
         /// The asset does not exist.
         AssetDoesNotExist,
@@ -231,13 +226,13 @@ decl_error! {
 }
 decl_storage! {
     trait Store for Module<T: Trait> as XAssetsRegistrar {
-        /// Asset id list for Chain, different Chain has different id list
+        /// Asset id list for each Chain.
         pub AssetIdsOf get(fn asset_ids_of): map hasher(twox_64_concat) Chain => Vec<AssetId>;
 
-        /// asset info for every asset, key is asset id
+        /// Asset info of each asset.
         pub AssetInfoOf get(fn asset_info_of): map hasher(twox_64_concat) AssetId => Option<AssetInfo>;
 
-        ///
+        /// The map of asset to the online state.
         pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => Option<()>;
 
         /// The map of asset to the block number at which the asset was registered.
@@ -312,7 +307,7 @@ decl_module! {
             AssetOnline::insert(id, ());
 
             T::RegistrarHandler::on_register(&id, has_mining_rights)?;
-            Self::deposit_event(RawEvent::Register(id, has_mining_rights));
+            Self::deposit_event(RawEvent::Recover(id, has_mining_rights));
             Ok(())
         }
 
