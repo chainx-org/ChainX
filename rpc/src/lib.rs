@@ -11,6 +11,8 @@ mod types;
 use std::fmt;
 use std::sync::Arc;
 
+use sc_finality_grandpa::{SharedAuthoritySet, SharedVoterState};
+use sc_finality_grandpa_rpc::GrandpaRpcHandler;
 use sc_client_api::{backend::Backend, CallExecutor, StorageProvider};
 use sc_rpc_api::DenyUnsafe;
 use sc_service::client::Client;
@@ -37,6 +39,14 @@ pub struct LightDeps<C, F, P> {
     pub fetcher: Arc<F>,
 }
 
+/// Extra dependencies for GRANDPA
+pub struct GrandpaDeps {
+    /// Voting round info.
+    pub shared_voter_state: SharedVoterState,
+    /// Authority set info.
+    pub shared_authority_set: SharedAuthoritySet<Hash, BlockNumber>,
+}
+
 /// Full client dependencies.
 pub struct FullDeps<P, BE, E, RA> {
     /// The client instance to use.
@@ -45,6 +55,8 @@ pub struct FullDeps<P, BE, E, RA> {
     pub pool: Arc<P>,
     /// Whether to deny unsafe calls
     pub deny_unsafe: DenyUnsafe,
+    /// GRANDPA specific dependencies.
+    pub grandpa: GrandpaDeps,
 }
 
 /// Instantiate all Full RPC extensions.
@@ -114,7 +126,12 @@ where
         client,
         pool,
         deny_unsafe,
+        grandpa,
     } = deps;
+    let GrandpaDeps {
+        shared_voter_state,
+        shared_authority_set,
+    } = grandpa;
 
     io.extend_with(SystemApi::to_delegate(FullSystem::new(
         client.clone(),
@@ -124,6 +141,11 @@ where
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
         client.clone(),
     )));
+
+    io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
+        GrandpaRpcHandler::new(shared_authority_set, shared_voter_state),
+    ));
+
     io.extend_with(AssetsApi::to_delegate(Assets::new(client.clone())));
     io.extend_with(ContractsApi::to_delegate(Contracts::new(client.clone())));
     io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));

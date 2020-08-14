@@ -705,6 +705,8 @@ dependencies = [
  "pallet-transaction-payment-rpc",
  "parity-scale-codec",
  "sc-client-api",
+ "sc-finality-grandpa",
+ "sc-finality-grandpa-rpc",
  "sc-rpc-api",
  "sc-service",
  "serde_json",
@@ -5106,6 +5108,24 @@ dependencies = [
  "sp-runtime",
  "sp-utils",
  "substrate-prometheus-endpoint",
+]
+
+[[package]]
+name = "sc-finality-grandpa-rpc"
+version = "0.8.0-rc5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4794fc2931f979f975b09fb5de30e87fb824d179cd0cdce2dc22ba73959b93a"
+dependencies = [
+ "derive_more",
+ "finality-grandpa",
+ "futures 0.3.5",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "log",
+ "sc-finality-grandpa",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
