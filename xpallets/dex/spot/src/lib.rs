@@ -119,7 +119,7 @@ decl_storage! {
             double_map hasher(twox_64_concat) TradingPairId, hasher(twox_64_concat) T::Price
             => Vec<(T::AccountId, OrderId)>;
 
-        /// TradingPairId => (highest_bid, lowest_offer)
+        /// TradingPairId => (highest_bid, lowest_ask)
         pub HandicapOf get(fn handicap_of):
             map hasher(twox_64_concat) TradingPairId => HandicapInfo<T>;
 
@@ -172,9 +172,9 @@ decl_error! {
     pub enum Error for Module<T: Trait> {
         /// Price can not be zero, and must be an integer multiple of the tick decimals.
         InvalidPrice,
-        /// The bid price can not higher than the PriceVolatility of current lowest_offer.
+        /// The bid price can not higher than the PriceVolatility of current lowest ask.
         TooHighBidPrice,
-        /// The ask price can not lower than the PriceVolatility of current highest_bid.
+        /// The ask price can not lower than the PriceVolatility of current highest bid.
         TooLowAskPrice,
         /// Failed to convert_base_to_quote since amount*price too small.
         VolumeTooSmall,

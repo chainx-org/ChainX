@@ -22,7 +22,7 @@ impl<T: Trait> Module<T> {
                     if !handicap.lowest_ask.is_zero()
                         && <QuotationsOf<T>>::get(pair.id, handicap.lowest_ask).is_empty()
                     {
-                        handicap.tick_up_lowest_offer(tick_decimals);
+                        handicap.tick_up_lowest_ask(tick_decimals);
                         <HandicapOf<T>>::insert(pair.id, &handicap);
 
                         debug!(

@@ -325,8 +325,11 @@ impl<T: Trait> Module<T> {
         <OrderInfoOf<T>>::insert(order.submitter(), order.id(), order);
     }
 
-    /// Due to the loss of decimals in Self::convert_base_to_quote(),
-    /// the remaining could still be non-zero when the order is full filled, which must be refunded.
+    /// Refund the remaining asset to the order submitter.
+    ///
+    /// Due to the loss of decimals in `Self::convert_base_to_quote()`,
+    /// the remaining could still be non-zero when the order is full filled,
+    /// which must be refunded.
     fn try_refund_remaining(order: &mut OrderInfo<T>, asset_id: AssetId) {
         // NOTE: Refund the remaining reserved asset when the order is fulfilled.
         if order.is_fulfilled() && !order.remaining.is_zero() {

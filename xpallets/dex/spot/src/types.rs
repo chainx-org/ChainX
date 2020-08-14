@@ -105,7 +105,7 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
     }
 
     /// Increases the `lowest_ask` by one tick.
-    pub fn tick_up_lowest_offer(&mut self, tick_decimals: u32) -> Price {
+    pub fn tick_up_lowest_ask(&mut self, tick_decimals: u32) -> Price {
         let tick = 10_u64.pow(tick_decimals);
         self.lowest_ask = self.lowest_ask.saturating_add(tick.saturated_into());
         self.lowest_ask
