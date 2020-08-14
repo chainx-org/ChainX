@@ -253,6 +253,7 @@ decl_storage! {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
         fn deposit_event() = default;
 
         /// if use `BtcHeader` struct would export in metadata, cause complex in front-end
@@ -357,14 +358,14 @@ decl_module! {
         }
 
         #[weight = 0]
-        pub fn set_btc_withdrawal_fee(origin, fee: u64) -> DispatchResult {
+        pub fn set_btc_withdrawal_fee(origin, #[compact] fee: u64) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             BtcWithdrawalFee::put(fee);
             Ok(())
         }
 
         #[weight = 0]
-        pub fn set_btc_deposit_limit(origin, value: u64) -> DispatchResult {
+        pub fn set_btc_deposit_limit(origin, #[compact] value: u64) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             BtcMinDeposit::put(value);
             Ok(())

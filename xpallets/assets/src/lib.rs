@@ -14,7 +14,7 @@ mod trigger;
 pub mod types;
 
 // Substrate
-use sp_runtime::traits::{CheckedAdd, CheckedSub, Saturating, Zero};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*, result};
 
 use frame_support::{
@@ -95,12 +95,14 @@ decl_event!(
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
         fn deposit_event() = default;
 
         /// transfer between account
         #[weight = 0]
-        pub fn transfer(origin, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
+        pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
+            let dest = T::Lookup::lookup(dest)?;
             debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
             memo.check_validity()?;
             Self::can_transfer(&id)?;
@@ -112,8 +114,11 @@ decl_module! {
 
         /// for transfer by root
         #[weight = 0]
-        pub fn force_transfer(origin, transactor: T::AccountId, dest: T::AccountId, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
+        pub fn force_transfer(origin, transactor: <T::Lookup as StaticLookup>::Source, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
+
+            let transactor = T::Lookup::lookup(transactor)?;
+            let dest = T::Lookup::lookup(dest)?;
             debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
             memo.check_validity()?;
             Self::can_transfer(&id)?;
@@ -124,8 +129,9 @@ decl_module! {
 
         /// set free token for an account
         #[weight = 0]
-        pub fn set_balance(origin, who: T::AccountId, #[compact] id: AssetId, balances: BTreeMap<AssetType, BalanceOf<T>>) -> DispatchResult {
+        pub fn set_balance(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, balances: BTreeMap<AssetType, BalanceOf<T>>) -> DispatchResult {
             ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
             info!("[set_balance]|set balances by root|who:{:?}|id:{:}|balances_map:{:?}", who, id, balances);
             Self::set_balance_impl(&who, &id, balances)?;
             Ok(())

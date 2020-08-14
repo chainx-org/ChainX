@@ -22,7 +22,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
-    traits::{CheckedSub, Convert, SaturatedConversion, Saturating, Zero},
+    traits::{CheckedSub, Convert, SaturatedConversion, Saturating, StaticLookup, Zero},
     DispatchResult,
 };
 use sp_std::collections::btree_map::BTreeMap;
@@ -293,8 +293,10 @@ decl_module! {
 
         /// Nominate the `target` with `value` of the origin account's balance locked.
         #[weight = 10]
-        pub fn bond(origin, target: T::AccountId, value: BalanceOf<T>, memo: Memo) {
+        pub fn bond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
+            let target = T::Lookup::lookup(target)?;
+
             memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
@@ -309,8 +311,11 @@ decl_module! {
 
         /// Move the `value` of current nomination from one validator to another.
         #[weight = 10]
-        fn rebond(origin, from: T::AccountId, to: T::AccountId, value: BalanceOf<T>, memo: Memo) {
+        fn rebond(origin, from: <T::Lookup as StaticLookup>::Source, to: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
+            let from = T::Lookup::lookup(from)?;
+            let to = T::Lookup::lookup(to)?;
+
             memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
@@ -335,8 +340,10 @@ decl_module! {
 
         /// Unnominate the `value` of bonded balance for validator `target`.
         #[weight = 10]
-        fn unbond(origin, target: T::AccountId, value: BalanceOf<T>, memo: Memo) {
+        fn unbond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
+            let target = T::Lookup::lookup(target)?;
+
             memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
@@ -352,7 +359,7 @@ decl_module! {
 
         /// Unlock the frozen unbonded balances that are due.
         #[weight = 10]
-        fn unlock_unbonded_withdrawal(origin, unbonded_index: UnbondedIndex) {
+        fn unlock_unbonded_withdrawal(origin, #[compact] unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
 
             let mut unbonded_chunks = Self::unbonded_chunks_of(&sender);
@@ -377,8 +384,9 @@ decl_module! {
 
         /// Claim the staking reward given the `target` validator.
         #[weight = 10]
-        fn claim(origin, target: T::AccountId) {
+        fn claim(origin, target: <T::Lookup as StaticLookup>::Source) {
             let sender = ensure_signed(origin)?;
+            let target = T::Lookup::lookup(target)?;
 
             ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
 
@@ -437,13 +445,13 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_bonding_duration(origin, new: T::BlockNumber) {
+        fn set_bonding_duration(origin, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             BondingDuration::<T>::put(new);
         }
 
         #[weight = 10]
-        fn set_validator_bonding_duration(origin, new: T::BlockNumber) {
+        fn set_validator_bonding_duration(origin, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             ValidatorBondingDuration::<T>::put(new);
         }

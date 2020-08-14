@@ -247,6 +247,7 @@ decl_storage! {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
         fn deposit_event() = default;
 
         /// Register a new foreign asset.

@@ -12,6 +12,7 @@ use frame_support::{
     IterableStorageMap,
 };
 use frame_system::ensure_root;
+use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
 // ChainX
@@ -56,17 +57,20 @@ decl_error! {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
         fn deposit_event() = default;
         // only for root
         #[weight = 0]
-        fn root_deposit(origin, who: T::AccountId, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>) -> DispatchResult {
+        fn root_deposit(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>) -> DispatchResult {
             ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
             Self::deposit(&who, &asset_id, balance)
         }
 
         #[weight = 0]
-        fn root_withdrawal(origin, who: T::AccountId, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>) -> DispatchResult {
+        fn root_withdrawal(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>) -> DispatchResult {
             ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
             Self::withdrawal(&who, &asset_id, balance, Default::default(), Default::default())
         }
 

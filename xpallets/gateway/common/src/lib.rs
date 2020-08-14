@@ -12,6 +12,7 @@ pub mod trustees;
 pub mod types;
 pub mod utils;
 
+use sp_runtime::traits::StaticLookup;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*, result};
 
 use frame_support::{
@@ -90,6 +91,7 @@ decl_error! {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
         fn deposit_event() = default;
 
         #[weight = 0]
@@ -146,8 +148,10 @@ decl_module! {
         }
 
         #[weight = 0]
-        pub fn force_set_binding(origin, chain: Chain, who: T::AccountId, binded: T::AccountId) -> DispatchResult {
+        pub fn force_set_binding(origin, chain: Chain, who: <T::Lookup as StaticLookup>::Source, binded: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
             ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
+            let binded = T::Lookup::lookup(binded)?;
             Self::set_binding(chain, who, binded);
             Ok(())
         }
