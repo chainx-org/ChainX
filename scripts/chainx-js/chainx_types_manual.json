@@ -17,14 +17,6 @@
             "DestroyFree"
         ]
     },
-    "Chain": {
-        "_enum": [
-            "ChainX",
-            "Bitcoin",
-            "Ethereum",
-            "Polkadot"
-        ]
-    },
     "Handicap": {
         "highest_bid": "Price",
         "lowest_ask": "Price"
@@ -205,13 +197,14 @@
         "reward_pot_balance": "RpcBalance"
     },
     "String": "Text",
+    "RpcPrice": "String",
     "RpcBalance": "String",
     "RpcWeightType": "String",
-    "HandicapInfo": "Handicap",
+    "WeightType": "u128",
     "MiningPower": "u128",
     "MiningWeight": "u128",
     "AssetRestrictions": "u32",
     "OrderInfo": "Order",
-    "Price": "Balance",
-    "WeightType": "u128"
+    "HandicapInfo": "Handicap",
+    "Price": "Balance"
 }

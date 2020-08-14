@@ -363,5 +363,6 @@
         "rewardPotBalance": "RpcBalance"
     },
     "String": "Text",
+    "RpcPrice": "String",
     "MiningPower": "u128"
 }
