@@ -707,6 +707,7 @@ dependencies = [
  "sc-client-api",
  "sc-finality-grandpa",
  "sc-finality-grandpa-rpc",
+ "sc-rpc",
  "sc-rpc-api",
  "sc-service",
  "serde_json",

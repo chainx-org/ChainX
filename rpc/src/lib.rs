@@ -11,9 +11,9 @@ mod types;
 use std::fmt;
 use std::sync::Arc;
 
+use sc_client_api::{backend::Backend, CallExecutor, StorageProvider};
 use sc_finality_grandpa::{SharedAuthoritySet, SharedVoterState};
 use sc_finality_grandpa_rpc::GrandpaRpcHandler;
-use sc_client_api::{backend::Backend, CallExecutor, StorageProvider};
 use sc_rpc_api::DenyUnsafe;
 use sc_service::client::Client;
 use sp_api::ProvideRuntimeApi;
@@ -58,6 +58,9 @@ pub struct FullDeps<P, BE, E, RA> {
     /// GRANDPA specific dependencies.
     pub grandpa: GrandpaDeps,
 }
+
+/// A IO handler that uses all Full RPC extensions.
+pub type IoHandler = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 
 /// Instantiate all Full RPC extensions.
 pub fn create_full<P, M, BE, E, RA>(deps: FullDeps<P, BE, E, RA>) -> jsonrpc_core::IoHandler<M>
