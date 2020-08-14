@@ -1,5 +1,4 @@
 {
-    "Address": "AccountId",
     "AssetInfoForRpc": {
         "token": "String",
         "token_name": "String",

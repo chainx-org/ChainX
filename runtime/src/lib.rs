@@ -21,7 +21,7 @@ use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
         AccountIdConversion, BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, IdentityLookup,
-        NumberFor, OpaqueKeys, Saturating, SignedExtension,
+        NumberFor, OpaqueKeys, Saturating, SignedExtension, StaticLookup,
     },
     transaction_validity::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
@@ -268,6 +268,18 @@ impl pallet_timestamp::Trait for Runtime {
     type Moment = u64;
     type OnTimestampSet = Aura;
     type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
+parameter_types! {
+    pub const IndexDeposit: Balance = 10 * DOLLARS;
+}
+
+impl pallet_indices::Trait for Runtime {
+    type AccountIndex = AccountIndex;
+    type Currency = Balances;
+    type Deposit = IndexDeposit;
+    type Event = Event;
     type WeightInfo = ();
 }
 
@@ -823,6 +835,7 @@ construct_runtime!(
         Aura: pallet_aura::{Module, Config<T>, Inherent},
 
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+        Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Module, Storage},
 
@@ -871,7 +884,7 @@ construct_runtime!(
 );
 
 /// The address format for describing accounts.
-pub type Address = AccountId;
+pub type Address = <Indices as StaticLookup>::Source;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 /// Block type as expected by this runtime.

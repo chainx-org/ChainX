@@ -214,7 +214,6 @@
         ]
     },
     "OrderInfo": "Order",
-    "Address": "AccountId",
     "AssetInfoForRpc": {
         "token": "String",
         "tokenName": "String",
