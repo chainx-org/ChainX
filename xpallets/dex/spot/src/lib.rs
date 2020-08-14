@@ -225,11 +225,11 @@ decl_module! {
         #[weight = 10]
         pub fn put_order(
             origin,
-            pair_id: TradingPairId,
+            #[compact] pair_id: TradingPairId,
             order_type: OrderType,
             side: Side,
-            amount: BalanceOf<T>,
-            price: T::Price
+            #[compact] amount: BalanceOf<T>,
+            #[compact] price: T::Price
         ) {
             let who = ensure_signed(origin)?;
 
@@ -255,27 +255,27 @@ decl_module! {
         }
 
         #[weight = 10]
-        pub fn cancel_order(origin, pair_id: TradingPairId, order_id: OrderId) {
+        pub fn cancel_order(origin, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
             let who = ensure_signed(origin)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
         /// Force cancel an order.
         #[weight = 10]
-        fn force_cancel_order(origin, who: T::AccountId, pair_id: TradingPairId, order_id: OrderId) {
+        fn force_cancel_order(origin, who: T::AccountId, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
             ensure_root(origin)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
         #[weight = 10]
-        fn set_handicap(origin, pair_id: TradingPairId, new: Handicap< T::Price>) {
+        fn set_handicap(origin, #[compact] pair_id: TradingPairId, new: Handicap< T::Price>) {
             ensure_root(origin)?;
             info!("[set_handicap]pair_id:{:?},new handicap:{:?}", pair_id, new);
             HandicapOf::<T>::insert(pair_id, new);
         }
 
         #[weight = 10]
-        fn set_price_fluctuation(origin, pair_id: TradingPairId, new: PriceFluctuation) {
+        fn set_price_fluctuation(origin, #[compact] pair_id: TradingPairId, #[compact] new: PriceFluctuation) {
             ensure_root(origin)?;
             PriceFluctuationOf::insert(pair_id, new);
             Self::deposit_event(RawEvent::PriceFluctuationUpdated(pair_id, new));
@@ -286,9 +286,9 @@ decl_module! {
         pub fn add_trading_pair(
             origin,
             currency_pair: CurrencyPair,
-            pip_decimals: u32,
-            tick_decimals: u32,
-            latest_price: T::Price,
+            #[compact] pip_decimals: u32,
+            #[compact] tick_decimals: u32,
+            #[compact] latest_price: T::Price,
             tradable: bool,
         ) {
             ensure_root(origin)?;
@@ -309,8 +309,8 @@ decl_module! {
         #[weight = 10]
         pub fn update_trading_pair(
             origin,
-            pair_id: TradingPairId,
-            tick_decimals: u32,
+            #[compact] pair_id: TradingPairId,
+            #[compact] tick_decimals: u32,
             tradable: bool
         ) {
             ensure_root(origin)?;

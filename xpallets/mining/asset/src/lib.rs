@@ -174,7 +174,7 @@ decl_module! {
 
         /// Claims the staking reward given the `target` validator.
         #[weight = 10]
-        fn claim(origin, target: AssetId) {
+        fn claim(origin, #[compact] target: AssetId) {
             let sender = ensure_signed(origin)?;
 
             ensure!(
@@ -186,7 +186,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_claim_staking_requirement(origin, asset_id: AssetId, new: StakingRequirement) {
+        fn set_claim_staking_requirement(origin, #[compact] asset_id: AssetId, new: StakingRequirement) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
                 restriction.staking_requirement = new;
@@ -194,7 +194,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_claim_frequency_limit(origin, asset_id: AssetId, new: T::BlockNumber) {
+        fn set_claim_frequency_limit(origin, #[compact] asset_id: AssetId, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
                 restriction.frequency_limit = new;
@@ -202,7 +202,7 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_x_asset_power(origin, asset_id: AssetId, new: FixedAssetPower) {
+        fn set_x_asset_power(origin, #[compact] asset_id: AssetId, #[compact] new: FixedAssetPower) {
             ensure_root(origin)?;
             FixedAssetPowerOf::insert(asset_id, new);
         }
