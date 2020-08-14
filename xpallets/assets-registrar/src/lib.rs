@@ -187,15 +187,14 @@ pub trait Trait: system::Trait {
 }
 
 decl_event!(
-    pub enum Event<T> where
-    <T as system::Trait>::AccountId
-    {
+    pub enum Event<T> where <T as system::Trait>::AccountId {
         /// A new asset is registered. [asset_id, has_mining_rights]
         Register(AssetId, bool),
         /// A deregistered asset is recovered. [asset_id, has_mining_rights]
         Recover(AssetId, bool),
         /// An asset is invalid now. [asset_id]
         Deregister(AssetId),
+        PhantomData(AccountId),
     }
 );
 
