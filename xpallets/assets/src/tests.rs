@@ -101,13 +101,13 @@ fn test_normal_case() {
         assert_ok!(XAssets::move_balance(
             &X_BTC,
             &1,
-            AssetType::Free,
+            AssetType::Usable,
             &999,
             AssetType::ReservedWithdrawal,
             25
         ));
         assert_eq!(
-            XAssets::total_asset_balance_of(&X_BTC, AssetType::Free),
+            XAssets::total_asset_balance_of(&X_BTC, AssetType::Usable),
             1000 - 25
         );
         assert_eq!(
@@ -157,7 +157,7 @@ fn test_normal_issue_and_destroy() {
         XAssets::move_balance(
             &btc_id,
             &a,
-            AssetType::Free,
+            AssetType::Usable,
             &a,
             AssetType::ReservedWithdrawal,
             25,
@@ -198,7 +198,7 @@ fn test_unlock_issue_and_destroy2() {
         XAssets::move_balance(
             &btc_id,
             &a,
-            AssetType::Free,
+            AssetType::Usable,
             &a,
             AssetType::ReservedWithdrawal,
             25,
@@ -218,7 +218,7 @@ fn test_unlock_issue_and_destroy2() {
             &a,
             AssetType::ReservedWithdrawal,
             &a,
-            AssetType::Free,
+            AssetType::Usable,
             10,
         )
         .unwrap();
@@ -252,7 +252,7 @@ fn test_error_issue_and_destroy1() {
             XAssets::move_balance(
                 &btc_id,
                 &a,
-                AssetType::Free,
+                AssetType::Usable,
                 &a,
                 AssetType::ReservedWithdrawal,
                 100
@@ -264,7 +264,7 @@ fn test_error_issue_and_destroy1() {
         XAssets::move_balance(
             &btc_id,
             &a,
-            AssetType::Free,
+            AssetType::Usable,
             &a,
             AssetType::ReservedWithdrawal,
             25,
@@ -291,7 +291,7 @@ fn test_error_issue_and_destroy2() {
             XAssets::move_balance(
                 &btc_id,
                 &a,
-                AssetType::Free,
+                AssetType::Usable,
                 &a,
                 AssetType::ReservedWithdrawal,
                 i as Balance,
@@ -321,7 +321,7 @@ fn test_error_issue_and_destroy3() {
             XAssets::move_balance(
                 &btc_id,
                 &a,
-                AssetType::Free,
+                AssetType::Usable,
                 &a,
                 AssetType::ReservedWithdrawal,
                 25
@@ -339,7 +339,7 @@ fn test_error_issue_and_destroy3() {
             XAssets::move_balance(
                 &btc_id,
                 &a,
-                AssetType::Free,
+                AssetType::Usable,
                 &a,
                 AssetType::ReservedWithdrawal,
                 25
@@ -352,7 +352,7 @@ fn test_error_issue_and_destroy3() {
         XAssets::move_balance(
             &btc_id,
             &a,
-            AssetType::Free,
+            AssetType::Usable,
             &a,
             AssetType::ReservedWithdrawal,
             25,
@@ -375,7 +375,7 @@ fn test_balance_btree_map() {
         let _ = XAssets::move_balance(
             &X_BTC,
             &a,
-            AssetType::Free,
+            AssetType::Usable,
             &a,
             AssetType::ReservedXRC20,
             30,
@@ -388,7 +388,7 @@ fn test_balance_btree_map() {
             &a,
             AssetType::ReservedXRC20,
             &a,
-            AssetType::Free,
+            AssetType::Usable,
             10,
         );
         let _ = XAssets::move_balance(
@@ -396,7 +396,7 @@ fn test_balance_btree_map() {
             &a,
             AssetType::ReservedXRC20,
             &b,
-            AssetType::Free,
+            AssetType::Usable,
             20,
         );
         assert_eq!(AssetBalance::<Test>::get(&a, &btc_id).len(), 1);

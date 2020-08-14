@@ -20,7 +20,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
     traits::Currency,
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed};
 
 // ChainX
 use chainx_primitives::{AddrStr, AssetId};
@@ -63,7 +63,7 @@ pub trait Trait:
     + xpallet_assets::Trait
     + xpallet_gateway_records::Trait
 {
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type AccountExtractor: Extractable<Self::AccountId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
     type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;

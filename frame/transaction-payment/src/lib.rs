@@ -56,8 +56,6 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 
-use xpallet_support::debug;
-
 /// Fee multiplier.
 pub type Multiplier = FixedU128;
 
@@ -112,6 +110,46 @@ type NegativeImbalanceOf<T> =
 /// More info can be found at:
 /// https://w3f-research.readthedocs.io/en/latest/polkadot/Token%20Economics.html
 pub struct TargetedFeeAdjustment<T, S, V, M>(sp_std::marker::PhantomData<(T, S, V, M)>);
+
+/// Something that can convert the current multiplier to the next one.
+pub trait MultiplierUpdate: Convert<Multiplier, Multiplier> {
+    /// Minimum multiplier
+    fn min() -> Multiplier;
+    /// Target block saturation level
+    fn target() -> Perquintill;
+    /// Variability factor
+    fn variability() -> Multiplier;
+}
+
+impl MultiplierUpdate for () {
+    fn min() -> Multiplier {
+        Default::default()
+    }
+    fn target() -> Perquintill {
+        Default::default()
+    }
+    fn variability() -> Multiplier {
+        Default::default()
+    }
+}
+
+impl<T, S, V, M> MultiplierUpdate for TargetedFeeAdjustment<T, S, V, M>
+where
+    T: frame_system::Trait,
+    S: Get<Perquintill>,
+    V: Get<Multiplier>,
+    M: Get<Multiplier>,
+{
+    fn min() -> Multiplier {
+        M::get()
+    }
+    fn target() -> Perquintill {
+        S::get()
+    }
+    fn variability() -> Multiplier {
+        V::get()
+    }
+}
 
 impl<T, S, V, M> Convert<Multiplier, Multiplier> for TargetedFeeAdjustment<T, S, V, M>
 where
@@ -200,7 +238,7 @@ pub trait Trait: frame_system::Trait {
     type WeightToFee: WeightToFeePolynomial<Balance = BalanceOf<Self>>;
 
     /// Update the multiplier of the next block, based on the previous block's weight.
-    type FeeMultiplierUpdate: Convert<Multiplier, Multiplier>;
+    type FeeMultiplierUpdate: MultiplierUpdate;
 }
 
 decl_storage! {
@@ -237,6 +275,32 @@ decl_module! {
                     <T as frame_system::Trait>::MaximumBlockWeight::get().try_into().unwrap()
                 ).unwrap(),
             );
+
+            // This is the minimum value of the multiplier. Make sure that if we collapse to this
+            // value, we can recover with a reasonable amount of traffic. For this test we assert
+            // that if we collapse to minimum, the trend will be positive with a weight value
+            // which is 1% more than the target.
+            let min_value = T::FeeMultiplierUpdate::min();
+            let mut target =
+                T::FeeMultiplierUpdate::target() *
+                (T::AvailableBlockRatio::get() * T::MaximumBlockWeight::get());
+
+            // add 1 percent;
+            let addition = target / 100;
+            if addition == 0 {
+                // this is most likely because in a test setup we set everything to ().
+                return;
+            }
+            target += addition;
+
+            sp_io::TestExternalities::new_empty().execute_with(|| {
+                <frame_system::Module<T>>::set_block_limits(target, 0);
+                let next = T::FeeMultiplierUpdate::convert(min_value);
+                assert!(next > min_value, "The minimum bound of the multiplier is too low. When \
+                    block saturation is more than target by 1% and multiplier is minimal then \
+                    the multiplier doesn't increase."
+                );
+            })
         }
     }
 }
@@ -347,10 +411,19 @@ where
                 .saturating_add(fixed_len_fee)
                 .saturating_add(adjusted_weight_fee)
                 .saturating_add(tip);
-            debug!("[compute_fee]|total:{:?}|base_fee:{:?}|fixed_len_fee:{:?}|adjusted_weight_fee:{:?}|tip:{:?}", total, base_fee, fixed_len_fee, adjusted_weight_fee, tip);
+
+            frame_support::debug::native::debug!(
+                target: xpallet_support::RUNTIME_TARGET,
+                "[compute_fee]|total:{:?}|base_fee:{:?}|fixed_len_fee:{:?}|adjusted_weight_fee:{:?}|tip:{:?}",
+                total, base_fee, fixed_len_fee, adjusted_weight_fee, tip
+            );
             total
         } else {
-            debug!("[compute_fee]|only tip:{:?}", tip);
+            frame_support::debug::native::debug!(
+                target: xpallet_support::RUNTIME_TARGET,
+                "[compute_fee]|only tip:{:?}",
+                tip
+            );
             tip
         }
     }
@@ -603,6 +676,7 @@ mod tests {
         type AccountData = pallet_balances::AccountData<u64>;
         type OnNewAccount = ();
         type OnKilledAccount = ();
+        type SystemWeightInfo = ();
     }
 
     parameter_types! {
@@ -615,6 +689,7 @@ mod tests {
         type DustRemoval = ();
         type ExistentialDeposit = ExistentialDeposit;
         type AccountStore = System;
+        type WeightInfo = ();
     }
     thread_local! {
         static TRANSACTION_BYTE_FEE: RefCell<u64> = RefCell::new(1);
@@ -879,10 +954,10 @@ mod tests {
                 assert_eq!(
                     Balances::free_balance(1),
                     100 // original
-                - 10 // tip
-                - 5 // base
-                - 10 // len
-                - (3 * 3 / 2) // adjusted weight
+                            - 10 // tip
+                            - 5 // base
+                            - 10 // len
+                            - (3 * 3 / 2) // adjusted weight
                 );
             })
     }
@@ -900,21 +975,24 @@ mod tests {
             .base_weight(5)
             .weight_fee(2)
             .build()
-            .execute_with(|| {
-                // all fees should be x1.5
-                NextFeeMultiplier::put(Multiplier::saturating_from_rational(3, 2));
+            .execute_with(||
+                {
+                    // all fees should be x1.5
+                    NextFeeMultiplier::put(Multiplier::saturating_from_rational(3, 2));
 
-                assert_eq!(
-                    TransactionPayment::query_info(xt, len),
-                    RuntimeDispatchInfo {
-                        weight: info.weight,
-                        class: info.class,
-                        partial_fee: 5 * 2 /* base * weight_fee */
-                        + len as u64  /* len * 1 */
-                        + info.weight.min(MaximumBlockWeight::get()) as u64 * 2 * 3 / 2 /* weight */
-                    },
-                );
-            });
+                    assert_eq!(
+                        TransactionPayment::query_info(xt, len),
+                        RuntimeDispatchInfo {
+                            weight: info.weight,
+                            class: info.class,
+                            partial_fee:
+                            5 * 2 /* base * weight_fee */
+                                + len as u64  /* len * 1 */
+                                + info.weight.min(MaximumBlockWeight::get()) as u64 * 2 * 3 / 2 /* weight */
+                        },
+                    );
+
+                });
     }
 
     #[test]

@@ -24,7 +24,7 @@ use frame_support::{
     traits::{Currency, Get, Happened, IsDeadAccount, LockableCurrency, ReservableCurrency},
     StorageDoubleMap,
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed};
 
 // ChainX
 use chainx_primitives::AssetId;
@@ -43,9 +43,9 @@ pub use self::types::{
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
-pub trait Trait: system::Trait + xpallet_assets_registrar::Trait {
+pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
     /// Event
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
@@ -78,7 +78,7 @@ decl_error! {
 
 decl_event!(
     pub enum Event<T> where
-        <T as system::Trait>::AccountId,
+        <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>,
         SignedBalance = SignedBalance<T>,
     {
@@ -459,7 +459,7 @@ impl<T: Trait> Module<T> {
 
     fn try_new_account(who: &T::AccountId) {
         // lookup chainx balance
-        if system::Module::<T>::is_dead_account(who) {
+        if frame_system::Module::<T>::is_dead_account(who) {
             Self::new_account(who);
         }
     }

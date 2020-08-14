@@ -18,7 +18,7 @@ use frame_support::{
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement},
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
 use sp_std::prelude::*;
 

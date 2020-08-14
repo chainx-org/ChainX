@@ -26,7 +26,7 @@ use frame_support::{
     traits::{Currency, ExistenceRequirement, ReservableCurrency},
     Parameter,
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed};
 
 use chainx_primitives::AssetId;
 use xpallet_assets::AssetErr;

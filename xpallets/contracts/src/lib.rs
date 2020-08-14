@@ -106,9 +106,9 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, parameter_types,
     storage::child::ChildInfo,
     weights::{GetDispatchInfo, Weight},
-    IsSubType, Parameter,
+    Parameter,
 };
-use frame_system::{self as system, ensure_root, ensure_signed, RawOrigin};
+use frame_system::{ensure_root, ensure_signed, RawOrigin};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_core::crypto::UncheckedFrom;
@@ -326,7 +326,6 @@ pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The outer call dispatch type.
     type Call: Parameter
         + Dispatchable<PostInfo = PostDispatchInfo, Origin = <Self as frame_system::Trait>::Origin>
-        + IsSubType<Module<Self>, Self>
         + GetDispatchInfo;
 
     /// The overarching event type.
