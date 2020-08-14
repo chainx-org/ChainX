@@ -33,8 +33,8 @@ def ctags_has_json_support():
 
 if not ctags_has_json_support():
     print(
-        'Your ctags seems to have support of JSON output, please recompile it'
-        'for the JSON support')
+        'Your ctags seems to have the feature of JSON output, please recompile it'
+        ' for the JSON support')
     os._exit(1)
 
 if not shutil.which('fd'):
