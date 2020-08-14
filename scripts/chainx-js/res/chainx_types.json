@@ -7,11 +7,20 @@
     },
     "AssetType": {
         "_enum": [
-            "Free",
+            "Usable",
             "Locked",
+            "Reserved",
             "ReservedWithdrawal",
             "ReservedDexSpot",
             "ReservedXRC20"
+        ]
+    },
+    "Chain": {
+        "_enum": [
+            "ChainX",
+            "Bitcoin",
+            "Ethereum",
+            "Polkadot"
         ]
     },
     "XRC20Selector": {
@@ -42,14 +51,14 @@
         "token": "Token",
         "tokenName": "Token",
         "chain": "Chain",
-        "precision": "Precision",
+        "decimals": "Decimals",
         "desc": "Desc"
     },
     "TradingPairProfile": {
         "id": "TradingPairId",
         "currencyPair": "CurrencyPair",
-        "pipPrecision": "u32",
-        "tickPrecision": "u32",
+        "pipDecimals": "u32",
+        "tickDecimals": "u32",
         "online": "bool"
     },
     "Order": {
@@ -153,7 +162,7 @@
     "BtcAddress": "Text",
     "FixedAssetPower": "u32",
     "StakingRequirement": "u32",
-    "Precision": "u8",
+    "Decimals": "u8",
     "CurrencyPair": {
         "base": "AssetId",
         "quote": "AssetId"
@@ -173,14 +182,6 @@
     "WeightType": "u128",
     "ReferralId": "Text",
     "AssetId": "u32",
-    "Chain": {
-        "_enum": [
-            "ChainX",
-            "Bitcoin",
-            "Ethereum",
-            "Polkadot"
-        ]
-    },
     "AssetRestriction": {
         "_enum": [
             "Move",
@@ -218,7 +219,7 @@
         "token": "String",
         "tokenName": "String",
         "chain": "Chain",
-        "precision": "Precision",
+        "decimals": "Decimals",
         "desc": "String"
     },
     "Handicap": {

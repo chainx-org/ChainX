@@ -3,8 +3,9 @@ use sp_std::result;
 use frame_support::dispatch::{DispatchError, DispatchResult};
 
 use chainx_primitives::AssetId;
+use xpallet_assets_registrar::Chain;
 
-use crate::types::{AssetErr, AssetType, Chain, WithdrawalLimit};
+use crate::types::{AssetErr, AssetType, WithdrawalLimit};
 
 pub trait ChainT<Balance: Default> {
     /// ASSET should be the native Asset for this chain.
@@ -71,15 +72,6 @@ pub trait OnAssetChanged<AccountId, Balance> {
         _type: AssetType,
         _value: Balance,
     ) -> DispatchResult {
-        Ok(())
-    }
-}
-
-pub trait OnAssetRegisterOrRevoke {
-    fn on_register(_: &AssetId, _: bool) -> DispatchResult {
-        Ok(())
-    }
-    fn on_revoke(_: &AssetId) -> DispatchResult {
         Ok(())
     }
 }

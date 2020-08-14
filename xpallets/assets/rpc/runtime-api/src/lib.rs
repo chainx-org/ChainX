@@ -4,7 +4,7 @@ use codec::Codec;
 
 use sp_std::collections::btree_map::BTreeMap;
 
-pub use chainx_primitives::{AssetId, Precision};
+pub use chainx_primitives::{AssetId, Decimals};
 pub use xpallet_assets::{AssetInfo, AssetRestrictions, AssetType, Chain, TotalAssetInfo};
 
 sp_api::decl_runtime_apis! {

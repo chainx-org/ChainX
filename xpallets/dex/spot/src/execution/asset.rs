@@ -3,7 +3,7 @@
 //! Copyright 2020 Chainpool.
 
 use super::*;
-use xpallet_assets::AssetType::{self, Free, ReservedDexSpot};
+use xpallet_assets::AssetType::{self, ReservedDexSpot, Usable};
 
 impl<T: Trait> Module<T> {
     /// Delivery the assets to maker and taker respectively when executing the order.
@@ -68,7 +68,7 @@ impl<T: Trait> Module<T> {
             )?;
             NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
         } else {
-            Self::move_asset(asset_id, from, ReservedDexSpot, to, Free, value)?;
+            Self::move_asset(asset_id, from, ReservedDexSpot, to, Usable, value)?;
         }
         Ok(())
     }
@@ -84,10 +84,10 @@ impl<T: Trait> Module<T> {
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
             ensure!(
-                <xpallet_assets::Module<T>>::free_balance_of(who, &asset_id) >= value,
+                <xpallet_assets::Module<T>>::usable_balance(who, &asset_id) >= value,
                 Error::<T>::InsufficientBalance
             );
-            Self::move_asset(asset_id, who, Free, who, ReservedDexSpot, value)?;
+            Self::move_asset(asset_id, who, Usable, who, ReservedDexSpot, value)?;
         }
         Ok(())
     }
@@ -102,7 +102,7 @@ impl<T: Trait> Module<T> {
             <T as xpallet_assets::Trait>::Currency::unreserve(who, value);
             NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
         } else {
-            Self::move_asset(asset_id, who, ReservedDexSpot, who, Free, value)?;
+            Self::move_asset(asset_id, who, ReservedDexSpot, who, Usable, value)?;
         }
         Ok(())
     }

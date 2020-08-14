@@ -51,7 +51,7 @@ impl xassets::Trait for Test {
     type OnNewAccount = ();
     type Event = ();
     type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = ();
+    type RegistrarHandler = ();
     type DetermineTokenJackpotAccountId = ();
 }
 
@@ -94,7 +94,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             b"BTC".to_vec(),     // token
             b"Bitcoin".to_vec(), // token
             Chain::Bitcoin,
-            8, // bitcoin precision
+            8, // bitcoin decimals
             b"BTC chainx".to_vec(),
         )
         .unwrap();
@@ -103,7 +103,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
             b"ETH".to_vec(),      // token
             b"Ethereum".to_vec(), // token
             Chain::Ethereum,
-            8, // bitcoin precision
+            8, // bitcoin decimals
             b"ETH chainx".to_vec(),
         )
         .unwrap();

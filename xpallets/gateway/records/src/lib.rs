@@ -133,7 +133,7 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         Self::check_asset(who, asset_id)?;
 
-        let free = xpallet_assets::Module::<T>::free_balance_of(who, asset_id);
+        let free = xpallet_assets::Module::<T>::usable_balance(who, asset_id);
         if free < value {
             Err(xpallet_assets::Error::<T>::InsufficientBalance)?;
         }
@@ -148,7 +148,7 @@ impl<T: Trait> Module<T> {
 
     #[inline]
     fn check_chain_for_asset(asset_id: &AssetId, expected_chain: Chain) -> DispatchResult {
-        let asset = xpallet_assets::Module::<T>::get_asset(&asset_id)?;
+        let asset = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
         let asset_chain = asset.chain();
         if expected_chain != asset_chain {
             Err(Error::<T>::UnexpectedChain)?;
@@ -371,7 +371,7 @@ impl<T: Trait> Module<T> {
         let _ = xpallet_assets::Module::<T>::move_balance(
             asset_id,
             who,
-            AssetType::Free,
+            AssetType::Usable,
             who,
             AssetType::ReservedWithdrawal,
             value,
@@ -386,7 +386,7 @@ impl<T: Trait> Module<T> {
             who,
             AssetType::ReservedWithdrawal,
             who,
-            AssetType::Free,
+            AssetType::Usable,
             value,
         )
         .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;

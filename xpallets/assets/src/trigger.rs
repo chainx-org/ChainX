@@ -3,37 +3,11 @@ use sp_std::result;
 
 use chainx_primitives::AssetId;
 
-use crate::traits::{OnAssetChanged, OnAssetRegisterOrRevoke};
+use crate::traits::OnAssetChanged;
 use crate::types::{AssetErr, AssetType};
 use crate::{BalanceOf, Module, RawEvent, Trait};
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {}
-
-impl OnAssetRegisterOrRevoke for () {}
-
-impl<A: OnAssetRegisterOrRevoke, B: OnAssetRegisterOrRevoke> OnAssetRegisterOrRevoke for (A, B) {
-    fn on_register(id: &AssetId, is_psedu_intention: bool) -> DispatchResult {
-        let r = A::on_register(id, is_psedu_intention);
-        let r2 = B::on_register(id, is_psedu_intention);
-        if r.is_ok() == false {
-            return r;
-        } else if r2.is_ok() == false {
-            return r2;
-        }
-        Ok(())
-    }
-
-    fn on_revoke(id: &AssetId) -> DispatchResult {
-        let r = A::on_revoke(id);
-        let r2 = B::on_revoke(id);
-        if r.is_ok() == false {
-            return r;
-        } else if r2.is_ok() == false {
-            return r2;
-        }
-        Ok(())
-    }
-}
 
 pub struct AssetChangedTrigger<T: Trait>(::sp_std::marker::PhantomData<T>);
 

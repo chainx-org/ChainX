@@ -28,7 +28,7 @@ fn t_generic_free_balance(who: AccountId, asset_id: AssetId) -> Balance {
     if asset_id == xpallet_protocol::PCX {
         Balances::free_balance(who)
     } else {
-        XAssets::free_balance_of(&who, &asset_id)
+        XAssets::usable_balance(&who, &asset_id)
     }
 }
 
@@ -109,11 +109,11 @@ fn update_trading_pair_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let pair = CurrencyPair::new(EOS, ETH);
         assert_ok!(XSpot::add_trading_pair(pair.clone(), 2, 1, 100, true));
-        assert_eq!(t_trading_pair_of(2).tick_precision, 1);
+        assert_eq!(t_trading_pair_of(2).tick_decimals, 1);
         assert_eq!(t_trading_pair_of(2).online, true);
 
         assert_ok!(XSpot::update_trading_pair(2, 888, false));
-        assert_eq!(t_trading_pair_of(2).tick_precision, 888);
+        assert_eq!(t_trading_pair_of(2).tick_decimals, 888);
         assert_eq!(t_trading_pair_of(2).online, false);
     })
 }
@@ -395,15 +395,15 @@ fn refund_remaining_of_taker_order_should_work() {
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, btc_for_seller1);
+        bmap.insert(AssetType::Usable, btc_for_seller1);
         assert_eq!(XAssets::asset_balance(1, quote.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, btc_for_seller2);
+        bmap.insert(AssetType::Usable, btc_for_seller2);
         assert_eq!(XAssets::asset_balance(2, quote.clone()), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, remaining);
+        bmap.insert(AssetType::Usable, remaining);
         assert_eq!(XAssets::asset_balance(3, quote.clone()), bmap);
 
         assert_eq!(t_generic_free_balance(1, base.clone()), 0);
@@ -442,15 +442,15 @@ fn refund_remaining_of_maker_order_should_work() {
         let remaining = btc_reserved_for_buyer - btc_for_seller1 - btc_for_seller2;
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, btc_for_seller1);
+        bmap.insert(AssetType::Usable, btc_for_seller1);
         assert_eq!(XAssets::asset_balance(1, quote), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, btc_for_seller2);
+        bmap.insert(AssetType::Usable, btc_for_seller2);
         assert_eq!(XAssets::asset_balance(2, quote), bmap);
 
         let mut bmap = BTreeMap::new();
-        bmap.insert(AssetType::Free, remaining);
+        bmap.insert(AssetType::Usable, remaining);
         assert_eq!(XAssets::asset_balance(3, quote), bmap);
 
         assert_eq!(t_generic_free_balance(1, base), 0);

@@ -9,7 +9,7 @@ use xp_mining_staking::MiningPower;
 
 impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> BalanceOf<T> {
-        xpallet_assets::Module::<T>::all_type_total_asset_balance(&self.asset_id)
+        xpallet_assets::Module::<T>::total_issuance(&self.asset_id)
     }
 
     fn last_acum_weight(&self) -> WeightType {
@@ -228,7 +228,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
+impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
     fn on_register(asset_id: &AssetId, has_mining_rights: bool) -> DispatchResult {
         if !has_mining_rights {
             return Ok(());
@@ -244,7 +244,7 @@ impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
         Ok(())
     }
 
-    fn on_revoke(asset_id: &AssetId) -> DispatchResult {
+    fn on_deregister(asset_id: &AssetId) -> DispatchResult {
         MiningPrevilegedAssets::mutate(|v| {
             v.retain(|i| i != asset_id);
         });
@@ -264,7 +264,7 @@ where
 {
     fn reward_pot_account_for(asset_id: &AssetId) -> T::AccountId {
         let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
-        let registered_block = <xpallet_assets::Module<T>>::asset_registered_block(asset_id);
+        let registered_block = <xpallet_assets_registrar::Module<T>>::registered_at(asset_id);
         let registered_block_hash =
             <T as frame_system::Trait>::Hashing::hash(registered_block.encode().as_ref());
 
@@ -285,11 +285,10 @@ impl<T: Trait> xp_mining_staking::AssetMining<BalanceOf<T>> for Module<T> {
         // Currently only X-BTC asset.
         FixedAssetPowerOf::iter()
             .map(|(asset_id, fixed_power)| {
-                let total_balance =
-                    <xpallet_assets::Module<T>>::all_type_total_asset_balance(&asset_id);
+                let total_issuance = <xpallet_assets::Module<T>>::total_issuance(&asset_id);
                 (
                     asset_id,
-                    total_balance
+                    total_issuance
                         .saturating_mul(fixed_power.saturated_into())
                         .saturated_into::<MiningPower>(),
                 )

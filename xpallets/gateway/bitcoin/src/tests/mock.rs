@@ -90,12 +90,16 @@ impl xrecords::Trait for Test {
     type Event = ();
 }
 
+parameter_types! {
+    pub const ChainXAssetId: AssetId = 0;
+}
 impl xpallet_assets::Trait for Test {
-    type Balance = u64;
-    type OnNewAccount = ();
-    type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = ();
     type Event = ();
+    type Currency = Balances;
+    type NativeAssetId = ChainXAssetId;
+    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
+    type OnAssetChanged = ();
+    type RegistrarHandler = XSpot;
 }
 
 impl xfee_manager::Trait for Test {

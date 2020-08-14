@@ -128,11 +128,11 @@ decl_storage! {
     add_extra_genesis {
         config(trading_pairs): Vec<(AssetId, AssetId, u32, u32, T::Price, bool)>;
         build(|config| {
-            for (base, quote, pip_precision, tick_precision, price, online) in config.trading_pairs.iter() {
+            for (base, quote, pip_decimals, tick_decimals, price, online) in config.trading_pairs.iter() {
                 Module::<T>::add_trading_pair(
                     CurrencyPair::new(*base, *quote),
-                    *pip_precision,
-                    *tick_precision,
+                    *pip_decimals,
+                    *tick_decimals,
                     *price,
                     *online
                 ).expect("genesis initialization can not fail");
@@ -165,7 +165,7 @@ decl_event!(
 decl_error! {
     /// Error for the spot module.
     pub enum Error for Module<T: Trait> {
-        /// Price can not be zero, and must be an integer multiple of the tick precision.
+        /// Price can not be zero, and must be an integer multiple of the tick decimals.
         InvalidPrice,
         /// The bid price can not higher than the PriceVolatility of current lowest_offer.
         TooHighBidPrice,
@@ -185,8 +185,8 @@ decl_error! {
         TradingPairOffline,
         /// The trading pair does not exist.
         NonexistentTradingPair,
-        /// tick_precision can not less than the one of pair.
-        InvalidTickPrecision,
+        /// tick_decimals can not less than the one of pair.
+        InvalidTickdecimals,
         /// Price volatility must be less 100.
         InvalidPriceVolatility,
         /// The trading pair already exists.
@@ -283,16 +283,16 @@ impl<T: Trait> Module<T> {
     /// Public mutables
     pub fn add_trading_pair(
         currency_pair: CurrencyPair,
-        pip_precision: u32,
-        tick_precision: u32,
+        pip_decimals: u32,
+        tick_decimals: u32,
         price: T::Price,
         online: bool,
     ) -> Result<T> {
         info!(
-            "[add_trading_pair] currency_pair: {:?}, point_precision: {:}, tick_precision: {:}, price: {:?}, online: {:}",
+            "[add_trading_pair] currency_pair: {:?}, point_decimals: {:}, tick_decimals: {:}, price: {:?}, online: {:}",
             currency_pair,
-            pip_precision,
-            tick_precision,
+            pip_decimals,
+            tick_decimals,
             price,
             online
         );
@@ -307,8 +307,8 @@ impl<T: Trait> Module<T> {
         let pair = TradingPairProfile {
             id: pair_id,
             currency_pair,
-            pip_precision,
-            tick_precision,
+            pip_decimals,
+            tick_decimals,
             online,
         };
 
@@ -329,24 +329,24 @@ impl<T: Trait> Module<T> {
 
     pub fn update_trading_pair(
         pair_id: TradingPairId,
-        tick_precision: u32,
+        tick_decimals: u32,
         online: bool,
     ) -> Result<T> {
         info!(
-            "[update_trading_pair] pair_id: {:}, tick_precision: {:}, online:{:}",
-            pair_id, tick_precision, online
+            "[update_trading_pair] pair_id: {:}, tick_decimals: {:}, online:{:}",
+            pair_id, tick_decimals, online
         );
 
         let pair = Self::trading_pair(pair_id)?;
 
         ensure!(
-            tick_precision >= pair.tick_precision,
-            Error::<T>::InvalidTickPrecision
+            tick_decimals >= pair.tick_decimals,
+            Error::<T>::InvalidTickdecimals
         );
 
         TradingPairOf::mutate(pair_id, |pair| {
             if let Some(pair) = pair {
-                pair.tick_precision = tick_precision;
+                pair.tick_decimals = tick_decimals;
                 pair.online = online;
             }
         });
@@ -458,8 +458,8 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> xpallet_assets::OnAssetRegisterOrRevoke for Module<T> {
-    fn on_revoke(token: &AssetId) -> DispatchResult {
+impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
+    fn on_deregister(token: &AssetId) -> DispatchResult {
         let pair_len = TradingPairCount::get();
         for i in 0..pair_len {
             if let Some(mut pair) = TradingPairOf::get(i) {

@@ -87,11 +87,21 @@ impl Trait for Test {
     type Price = Price;
 }
 
-impl xpallet_assets::Trait for Test {
-    type Currency = Balances;
+parameter_types! {
+    pub const ChainXAssetId: AssetId = 0;
+}
+
+impl xpallet_assets_registrar::Trait for Test {
     type Event = ();
+    type NativeAssetId = ChainXAssetId;
+    type RegistrarHandler = XSpot;
+}
+
+impl xpallet_assets::Trait for Test {
+    type Event = ();
+    type Currency = Balances;
+    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
-    type OnAssetRegisterOrRevoke = XSpot;
 }
 
 thread_local! {
@@ -105,7 +115,7 @@ thread_local! {
 #[derive(Default)]
 pub struct ExtBuilder;
 
-const PCX_PRECISION: u8 = 8;
+const PCX_DECIMALS: u8 = 8;
 
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
@@ -114,7 +124,7 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
             Chain::ChainX,
-            PCX_PRECISION,
+            PCX_DECIMALS,
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
         )
         .unwrap(),
@@ -157,9 +167,19 @@ impl ExtBuilder {
             (btc_asset.0, btc_asset.1, pcx_asset.2, true, true),
         ];
 
+        let mut init_assets = vec![];
+        let mut assets_restrictions = vec![];
+        for (a, b, c, d, e) in assets {
+            init_assets.push((a, b, d, e));
+            assets_restrictions.push((a, c))
+        }
+        let _ = xpallet_assets_registrar::GenesisConfig {
+            assets: init_assets,
+        }
+        .assimilate_storage::<Test>(&mut storage);
         let endowed = BTreeMap::new();
         let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets,
+            assets_restrictions,
             endowed,
             memo_len: 128,
         }

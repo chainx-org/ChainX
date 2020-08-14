@@ -10,7 +10,7 @@ use crate::{AddressBinding, BoundAddressOf, Module, Trait};
 
 impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<Name>) {
-        let chain = match xpallet_assets::Module::<T>::asset_info_of(assert_id) {
+        let chain = match xpallet_assets_registrar::Module::<T>::asset_info_of(assert_id) {
             Some(info) => info.chain(),
             None => {
                 error!(
@@ -42,8 +42,8 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
     }
 
     fn get_binding_info(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
-        let chain =
-            xpallet_assets::Module::<T>::asset_info_of(assert_id).map(|info| info.chain())?;
+        let chain = xpallet_assets_registrar::Module::<T>::asset_info_of(assert_id)
+            .map(|info| info.chain())?;
         Self::channel_binding_of(who, chain)
     }
 }

@@ -3,7 +3,7 @@
 use sp_runtime::DispatchError;
 use sp_std::prelude::*;
 
-static BASE58_CHARS: &'static [u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+static BASE58_CHARS: &[u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 #[rustfmt::skip]
 static BASE58_DIGITS: [Option<u8>; 128] = [
@@ -35,12 +35,12 @@ pub fn from(data: &[u8]) -> Result<Vec<u8>, DispatchError> {
     for d58 in data {
         // Compute "X = X * 58 + next_digit" in base 256
         if *d58 as usize > BASE58_DIGITS.len() {
-            return Err("Bad base58")?;
+            return Err("Bad base58".into());
         }
         let mut carry = match BASE58_DIGITS[*d58 as usize] {
             Some(d58) => u32::from(d58),
             None => {
-                return Err("Bad base58")?;
+                return Err("Bad base58".into());
             }
         };
         for d256 in scratch.iter_mut().rev() {

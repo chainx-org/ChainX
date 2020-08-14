@@ -29,6 +29,7 @@ members = [
     "frame/transaction-payment/rpc/runtime-api",
 
     "xpallets/assets",
+    "xpallets/assets-registrar",
     "xpallets/assets/rpc",
     "xpallets/assets/rpc/runtime-api",
     "xpallets/gateway/bitcoin",

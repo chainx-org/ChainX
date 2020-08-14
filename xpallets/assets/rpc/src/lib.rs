@@ -11,7 +11,7 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 use chainx_primitives::AssetId;
 use xpallet_assets_rpc_runtime_api::{
-    AssetRestrictions, AssetType, AssetsApi as AssetsRuntimeApi, Chain, Precision,
+    AssetRestrictions, AssetType, AssetsApi as AssetsRuntimeApi, Chain, Decimals,
 };
 
 pub struct Assets<C, B> {
@@ -105,7 +105,7 @@ pub struct AssetInfo {
     token: String,
     token_name: String,
     chain: Chain,
-    precision: Precision,
+    decimals: Decimals,
     desc: String,
 }
 
@@ -115,7 +115,7 @@ impl From<xpallet_assets_rpc_runtime_api::AssetInfo> for AssetInfo {
             token: String::from_utf8_lossy(&info.token()).into_owned(),
             token_name: String::from_utf8_lossy(&info.token_name()).into_owned(),
             chain: info.chain(),
-            precision: info.precision(),
+            decimals: info.decimals(),
             desc: String::from_utf8_lossy(&info.desc()).into_owned(),
         }
     }

@@ -98,15 +98,15 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
     }
 
     /// Decreases the `highest_bid` by one tick.
-    pub fn tick_down_highest_bid(&mut self, tick_precision: u32) -> Price {
-        let tick = 10_u64.pow(tick_precision);
+    pub fn tick_down_highest_bid(&mut self, tick_decimals: u32) -> Price {
+        let tick = 10_u64.pow(tick_decimals);
         self.highest_bid = self.highest_bid.saturating_sub(tick.saturated_into());
         self.highest_bid
     }
 
     /// Increases the `lowest_ask` by one tick.
-    pub fn tick_up_lowest_offer(&mut self, tick_precision: u32) -> Price {
-        let tick = 10_u64.pow(tick_precision);
+    pub fn tick_up_lowest_offer(&mut self, tick_decimals: u32) -> Price {
+        let tick = 10_u64.pow(tick_decimals);
         self.lowest_ask = self.lowest_ask.saturating_add(tick.saturated_into());
         self.lowest_ask
     }
@@ -151,7 +151,7 @@ impl CurrencyPair {
 /// Profile of a trading pair.
 ///
 /// PCX/BTC = pip, a.k.a, percentage in point. Also called exchange rate.
-/// tick precision for BTC
+/// tick decimals for BTC
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
@@ -162,9 +162,9 @@ pub struct TradingPairProfile {
     /// The currency pair of trading pair.
     pub currency_pair: CurrencyPair,
     /// How many decimal places of the currency pair.
-    pub pip_precision: u32,
+    pub pip_decimals: u32,
     /// How many decimals of the tick size.
-    pub tick_precision: u32,
+    pub tick_decimals: u32,
     /// Is the trading pair still tradable.
     pub online: bool,
 }
@@ -173,15 +173,15 @@ impl TradingPairProfile {
     pub fn new(
         id: TradingPairId,
         currency_pair: CurrencyPair,
-        pip_precision: u32,
-        tick_precision: u32,
+        pip_decimals: u32,
+        tick_decimals: u32,
         online: bool,
     ) -> Self {
         Self {
             id,
             currency_pair,
-            pip_precision,
-            tick_precision,
+            pip_decimals,
+            tick_decimals,
             online,
         }
     }
@@ -198,7 +198,7 @@ impl TradingPairProfile {
 
     /// Returns the tick size of trading pair.
     pub fn tick(&self) -> Tick {
-        10_u64.pow(self.tick_precision)
+        10_u64.pow(self.tick_decimals)
     }
 
     /// The maximum ticks that the price can deviate from the handicap.

@@ -12,8 +12,9 @@ use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature
 use chainx_runtime::{
     AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
     GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SocietyConfig, SudoConfig,
-    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XContractsConfig, XGatewayBitcoinConfig,
-    XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
+    XContractsConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig,
+    XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -83,8 +84,8 @@ pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
 }
 
 #[inline]
-fn balance(input: Balance, precision: u8) -> Balance {
-    input * 10_u128.pow(precision as u32)
+fn balance(input: Balance, decimals: u8) -> Balance {
+    input * 10_u128.pow(decimals as u32)
 }
 
 /// A small macro for generating the info of PCX endowed accounts.
@@ -94,7 +95,7 @@ macro_rules! endowed_gen {
             let mut endowed = BTreeMap::new();
             let pcx_id = pcx().0;
             let endowed_info = vec![
-                $((get_account_id_from_seed::<sr25519::Public>($seed), balance($value, PCX_PRECISION)),)+
+                $((get_account_id_from_seed::<sr25519::Public>($seed), balance($value, PCX_DECIMALS)),)+
             ];
             endowed.insert(pcx_id, endowed_info);
             endowed
@@ -107,7 +108,7 @@ fn as_properties(network: NetworkType) -> Properties {
     json!({
         "ss58Format": network.addr_version(),
         "network": network,
-        "tokenDecimals": PCX_PRECISION,
+        "tokenDecimals": PCX_DECIMALS,
         "tokenSymbol": "PCX"
     })
     .as_object()
@@ -186,8 +187,8 @@ pub fn local_testnet_config() -> ChainSpec {
     )
 }
 
-const PCX_PRECISION: u8 = 8;
-const BTC_PRECISION: u8 = 8;
+const PCX_DECIMALS: u8 = 8;
+const BTC_DECIMALS: u8 = 8;
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
         xpallet_protocol::PCX,
@@ -195,7 +196,7 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
             Chain::ChainX,
-            PCX_PRECISION,
+            PCX_DECIMALS,
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
         )
         .unwrap(),
@@ -213,7 +214,7 @@ fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"XBTC".to_vec(),
             b"ChainX Bitcoin".to_vec(),
             Chain::Bitcoin,
-            BTC_PRECISION,
+            BTC_DECIMALS,
             b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
@@ -290,6 +291,21 @@ fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> Sess
     }
 }
 
+fn init_assets(
+    assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
+) -> (
+    Vec<(AssetId, AssetInfo, bool, bool)>,
+    Vec<(AssetId, AssetRestrictions)>,
+) {
+    let mut init_assets = vec![];
+    let mut assets_restrictions = vec![];
+    for (a, b, c, d, e) in assets {
+        init_assets.push((a, b, d, e));
+        assets_restrictions.push((a, c))
+    }
+    (init_assets, assets_restrictions)
+}
+
 fn testnet_genesis(
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
@@ -305,6 +321,7 @@ fn testnet_genesis(
     const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
     const STASH: Balance = 100 * constants::currency::DOLLARS;
     const STAKING_LOCKED: Balance = 1_000 * constants::currency::DOLLARS;
+    let (assets, assets_restrictions) = init_assets(assets);
 
     let endowed_accounts = endowed
         .get(&xpallet_protocol::PCX)
@@ -396,8 +413,9 @@ fn testnet_genesis(
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
         }),
+        xpallet_assets_registrar: Some(XAssetsRegistrarConfig { assets }),
         xpallet_assets: Some(XAssetsConfig {
-            assets,
+            assets_restrictions,
             endowed: assets_endowed,
             memo_len: 128,
         }),

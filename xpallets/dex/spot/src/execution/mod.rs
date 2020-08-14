@@ -81,8 +81,8 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn currency_precision_of(asset_id: AssetId) -> Option<u8> {
-        <xpallet_assets::Module<T>>::asset_info_of(asset_id).map(|x| x.precision())
+    fn currency_decimals_of(asset_id: AssetId) -> Option<u8> {
+        <xpallet_assets_registrar::Module<T>>::asset_info_of(asset_id).map(|x| x.decimals())
     }
 
     /// Converts the base currency to the quote currency given the trading pair.
@@ -94,19 +94,19 @@ impl<T: Trait> Module<T> {
     /// price: measured by the quote currency, e.g., BTC.
     ///
     /// volume
-    /// = amount * price * 10^(quote.precision) / 10^(base.precision) * 10^(price.precision)
-    /// = amount * price * 10^(quote.precision - base.precision - price.precision)
+    /// = amount * price * 10^(quote.decimals) / 10^(base.decimals) * 10^(price.decimals)
+    /// = amount * price * 10^(quote.decimals - base.decimals - price.decimals)
     pub(crate) fn convert_base_to_quote(
         amount: BalanceOf<T>,
         price: T::Price,
         pair: &TradingPairProfile,
     ) -> result::Result<BalanceOf<T>, Error<T>> {
         if let (Some(base_p), Some(quote_p)) = (
-            Self::currency_precision_of(pair.base()),
-            Self::currency_precision_of(pair.quote()),
+            Self::currency_decimals_of(pair.base()),
+            Self::currency_decimals_of(pair.quote()),
         ) {
             let (base_p, quote_p, pair_p) =
-                (u32::from(base_p), u32::from(quote_p), pair.pip_precision);
+                (u32::from(base_p), u32::from(quote_p), pair.pip_decimals);
 
             let (mul, s) = if quote_p >= (base_p + pair_p) {
                 (true, 10_u128.pow(quote_p - base_p - pair_p))
@@ -120,7 +120,7 @@ impl<T: Trait> Module<T> {
             let volume = if mul {
                 match ap.checked_mul(s) {
                     Some(r) => r,
-                    None => panic!("amount * price * precision overflow"),
+                    None => panic!("amount * price * decimals overflow"),
                 }
             } else {
                 ap / s

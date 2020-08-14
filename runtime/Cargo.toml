@@ -67,6 +67,7 @@ xpallet-protocol = { path = "../xpallets/protocol", default-features = false }
 xpallet-support = { path = "../xpallets/support", default-features = false }
 xpallet-system = { path = "../xpallets/system", default-features = false }
 xpallet-assets = { path = "../xpallets/assets", default-features = false }
+xpallet-assets-registrar = { path = "../xpallets/assets-registrar", default-features = false }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api", default-features = false }
 xpallet-gateway-records = { path = "../xpallets/gateway/records", default-features = false }
 xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api", default-features = false }
@@ -143,6 +144,7 @@ std = [
     "xpallet-support/std",
     "xpallet-system/std",
     "xpallet-assets/std",
+    "xpallet-assets-registrar/std",
     "xpallet-assets-rpc-runtime-api/std",
     "xpallet-gateway-records/std",
     "xpallet-gateway-records-rpc-runtime-api/std",

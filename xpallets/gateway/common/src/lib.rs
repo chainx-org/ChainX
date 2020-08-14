@@ -216,8 +216,8 @@ impl<T: Trait> Module<T> {
     pub fn withdrawal_limit(
         asset_id: &AssetId,
     ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        let info = xpallet_assets::Module::<T>::asset_info_of(&asset_id)
-            .ok_or(xpallet_assets::Error::<T>::InvalidAsset)?;
+        let info = xpallet_assets_registrar::Module::<T>::asset_info_of(&asset_id)
+            .ok_or(xpallet_assets_registrar::Error::<T>::AssetDoesNotExist)?;
         let chain = info.chain();
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(&asset_id),
@@ -233,8 +233,7 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         ext.check_validity()?;
 
-        let info = xpallet_assets::Module::<T>::asset_info_of(&asset_id)
-            .ok_or(xpallet_assets::Error::<T>::InvalidAsset)?;
+        let info = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
         let chain = info.chain();
         match chain {
             Chain::Bitcoin => {

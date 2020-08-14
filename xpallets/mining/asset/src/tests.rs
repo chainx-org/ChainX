@@ -4,6 +4,8 @@ use frame_support::{
     assert_err, assert_ok,
     traits::{Get, OnInitialize},
 };
+use frame_system::RawOrigin;
+
 use xp_mining_staking::SessionIndex;
 use xpallet_protocol::X_BTC;
 
@@ -25,18 +27,12 @@ fn t_issue_xbtc(to: AccountId, value: Balance) -> DispatchResult {
 
 fn t_register_xbtc() -> DispatchResult {
     let btc_asset = crate::mock::btc();
-    XAssets::register_asset(
-        frame_system::RawOrigin::Root.into(),
-        btc_asset.0,
-        btc_asset.1,
-        btc_asset.2,
-        true,
-        true,
-    )
+    XAssetsRegistrar::register(RawOrigin::Root.into(), btc_asset.0, btc_asset.1, true, true)?;
+    XAssets::set_asset_limit(RawOrigin::Root.into(), btc_asset.0, btc_asset.2)
 }
 
 fn t_xbtc_total() -> Balance {
-    XAssets::all_type_total_asset_balance(&X_BTC).saturated_into()
+    XAssets::total_issuance(&X_BTC).saturated_into()
 }
 
 fn t_xbtc_latest_total_weights() -> WeightType {
@@ -50,9 +46,9 @@ fn t_xbtc_move(from: AccountId, to: AccountId, value: Balance) {
     assert_ok!(XAssets::move_balance(
         &X_BTC,
         &from,
-        AssetType::Free,
+        AssetType::Usable,
         &to,
-        AssetType::Free,
+        AssetType::Usable,
         value
     ));
 }

@@ -699,11 +699,21 @@ impl xpallet_system::Trait for Runtime {
     type Event = Event;
 }
 
+parameter_types! {
+    pub const ChainXAssetId: AssetId = xpallet_protocol::PCX;
+}
+
+impl xpallet_assets_registrar::Trait for Runtime {
+    type Event = Event;
+    type NativeAssetId = ChainXAssetId;
+    type RegistrarHandler = XMiningAsset;
+}
+
 impl xpallet_assets::Trait for Runtime {
     type Currency = Balances;
     type Event = Event;
+    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Runtime>;
     type OnAssetChanged = XMiningAsset;
-    type OnAssetRegisterOrRevoke = XMiningAsset;
 }
 
 impl xpallet_gateway_records::Trait for Runtime {
@@ -821,6 +831,7 @@ construct_runtime!(
 
         // ChainX basics.
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
 
         // Mining, must be after XAssets.
