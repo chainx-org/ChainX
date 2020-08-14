@@ -50,7 +50,13 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    /// Actually move someone's ReservedDexSpot asset_id to another one's Free.
+    /// Returns true if the `asset_id` is native token.
+    #[inline]
+    fn is_native_asset(asset_id: AssetId) -> bool {
+        asset_id == <T as Trait>::NativeAssetId::get()
+    }
+
+    /// Move the locked balance in Spot of account `from` to another account's Free.
     #[inline]
     fn apply_delivery(
         asset_id: AssetId,
@@ -58,17 +64,24 @@ impl<T: Trait> Module<T> {
         from: &T::AccountId,
         to: &T::AccountId,
     ) -> DispatchResult {
-        if asset_id == xpallet_protocol::PCX {
-            <T as xpallet_assets::Trait>::Currency::unreserve(from, value);
-            <T as xpallet_assets::Trait>::Currency::transfer(
-                from,
-                to,
-                value,
-                ExistenceRequirement::KeepAlive,
-            )?;
-            NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
+        if Self::is_native_asset(asset_id) {
+            Self::transfer_native_asset(from, to, value)
         } else {
-            Self::move_asset(asset_id, from, ReservedDexSpot, to, Usable, value)?;
+            Self::move_foreign_asset(asset_id, from, ReservedDexSpot, to, Usable, value)
+        }
+    }
+
+    /// Unreserve the locked balances in Spot in general.
+    pub(crate) fn generic_unreserve(
+        who: &T::AccountId,
+        asset_id: AssetId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        if Self::is_native_asset(asset_id) {
+            <T as xpallet_assets::Trait>::Currency::unreserve(who, value);
+            NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
+        } else {
+            Self::unreserve_foreign_asset(who, asset_id, value)?;
         }
         Ok(())
     }
@@ -79,7 +92,7 @@ impl<T: Trait> Module<T> {
         asset_id: AssetId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        if asset_id == xpallet_protocol::PCX {
+        if Self::is_native_asset(asset_id) {
             <T as xpallet_assets::Trait>::Currency::reserve(who, value)?;
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
@@ -87,48 +100,39 @@ impl<T: Trait> Module<T> {
                 <xpallet_assets::Module<T>>::usable_balance(who, &asset_id) >= value,
                 Error::<T>::InsufficientBalance
             );
-            Self::move_asset(asset_id, who, Usable, who, ReservedDexSpot, value)?;
+            Self::move_foreign_asset(asset_id, who, Usable, who, ReservedDexSpot, value)?;
         }
         Ok(())
     }
 
-    /// Unreserve the locked balances in Spot in general.
-    fn generic_unreserve(
-        who: &T::AccountId,
-        asset_id: AssetId,
+    /// Transfer some locked native token balance of `from` to another account.
+    fn transfer_native_asset(
+        from: &T::AccountId,
+        to: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        if asset_id == xpallet_protocol::PCX {
-            <T as xpallet_assets::Trait>::Currency::unreserve(who, value);
-            NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
-        } else {
-            Self::move_asset(asset_id, who, ReservedDexSpot, who, Usable, value)?;
-        }
+        <T as xpallet_assets::Trait>::Currency::unreserve(from, value);
+        <T as xpallet_assets::Trait>::Currency::transfer(
+            from,
+            to,
+            value,
+            ExistenceRequirement::KeepAlive,
+        )?;
+        NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
         Ok(())
     }
 
-    /// Unreserve the locked asset when the order is canceled.
-    #[inline]
-    pub(crate) fn cancel_order_unreserve(
+    /// Move one's foreign asset from the state of `ReservedDexSpot` to `Usable`.
+    fn unreserve_foreign_asset(
         who: &T::AccountId,
         asset_id: AssetId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Self::generic_unreserve(who, asset_id, value)
-    }
-
-    /// Refund the remaining reserved asset when the order is fulfilled.
-    #[inline]
-    pub(crate) fn refund_reserved_dex_spot(
-        who: &T::AccountId,
-        asset_id: AssetId,
-        remaining: BalanceOf<T>,
-    ) {
-        let _ = Self::generic_unreserve(who, asset_id, remaining);
+        Self::move_foreign_asset(asset_id, who, ReservedDexSpot, who, Usable, value)
     }
 
     /// Wrap the move_balance function in xassets module.
-    fn move_asset(
+    fn move_foreign_asset(
         asset_id: AssetId,
         from: &T::AccountId,
         from_ty: AssetType,
@@ -137,6 +141,6 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         <xpallet_assets::Module<T>>::move_balance(&asset_id, from, from_ty, to, to_ty, value)
-            .map_err(|_| DispatchError::Other("Unexpected asset error"))
+            .map_err(|_| DispatchError::Other("Unexpected error from assets Module"))
     }
 }

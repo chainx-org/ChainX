@@ -23,7 +23,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::{Currency, ExistenceRequirement, ReservableCurrency},
+    traits::{Currency, ExistenceRequirement, Get, ReservableCurrency},
     Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
@@ -67,6 +67,9 @@ pub trait Trait: xpallet_assets::Trait {
         + Copy
         + MaybeSerializeDeserialize
         + Debug;
+
+    /// Get the asset id of native token.
+    type NativeAssetId: Get<AssetId>;
 }
 
 type Result<T> = result::Result<(), Error<T>>;
