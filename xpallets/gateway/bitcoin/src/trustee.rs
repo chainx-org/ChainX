@@ -19,7 +19,7 @@ use xpallet_gateway_common::{
     types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
     utils::two_thirds_unsafe,
 };
-use xpallet_support::{debug, error, info, RUNTIME_TARGET};
+use xpallet_support::{debug, error, info};
 
 use crate::tx::utils::{addr2vecu8, ensure_identical, parse_output_addr};
 use crate::tx::validator::parse_and_check_signed_tx;
@@ -194,7 +194,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
             })?;
 
         native::info!(
-            target: RUNTIME_TARGET,
+            target: xpallet_support::RUNTIME_TARGET,
             "[generate_trustee_session_info]|hot_addr:{:?}|cold_addr:{:?}|trustee_list:{:?}",
             hot_trustee_addr_info,
             cold_trustee_addr_info,

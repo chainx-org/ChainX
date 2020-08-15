@@ -85,7 +85,7 @@ impl sp_std::fmt::Debug for AssetInfo {
         )
     }
     #[cfg(not(feature = "std"))]
-    fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+    fn fmt(&self, _f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
         Ok(())
     }
 }
@@ -334,6 +334,7 @@ decl_module! {
     }
 }
 
+#[cfg(feature = "std")]
 impl<T: Trait> Module<T> {
     fn initialize_assets(assets: &Vec<(AssetId, AssetInfo, bool, bool)>) {
         for (id, asset, is_online, has_mining_rights) in assets {

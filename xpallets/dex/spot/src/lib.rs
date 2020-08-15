@@ -68,9 +68,6 @@ pub trait Trait: xpallet_assets::Trait {
         + Copy
         + MaybeSerializeDeserialize
         + Debug;
-
-    /// Get the asset id of native token.
-    type NativeAssetId: Get<AssetId>;
 }
 
 type Result<T> = result::Result<(), Error<T>>;

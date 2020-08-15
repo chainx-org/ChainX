@@ -53,7 +53,7 @@ impl<T: Trait> Module<T> {
     /// Returns true if the `asset_id` is native token.
     #[inline]
     fn is_native_asset(asset_id: AssetId) -> bool {
-        asset_id == <T as Trait>::NativeAssetId::get()
+        asset_id == T::NativeAssetId::get()
     }
 
     /// Move the locked balance in Spot of account `from` to another account's Free.

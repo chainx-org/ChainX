@@ -29,9 +29,7 @@ use xpallet_gateway_common::{
     traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use xpallet_support::{
-    base58, debug, ensure_with_errorlog, error, info, str, try_addr, RUNTIME_TARGET,
-};
+use xpallet_support::{base58, debug, ensure_with_errorlog, error, info, str, try_addr};
 
 // light-bitcoin
 use btc_chain::Transaction;
@@ -270,7 +268,7 @@ decl_module! {
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
         #[weight = 0]
         pub fn push_transaction(origin, raw_tx: Vec<u8>, relayed_info: BtcRelayedTxInfo, prev_tx: Option<Vec<u8>>) -> DispatchResultWithPostInfo {
-            let from = ensure_signed(origin)?;
+            let _from = ensure_signed(origin)?;
             let raw_tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
             let prev = if let Some(prev) = prev_tx {
                 let prev: Transaction = deserialize(Reader::new(prev.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
@@ -280,8 +278,8 @@ decl_module! {
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
             native::debug!(
-                target: RUNTIME_TARGET,
-                "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", from, relay_tx, prev
+                target: xpallet_support::RUNTIME_TARGET,
+                "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", _from, relay_tx, prev
             );
 
             Self::apply_push_transaction(relay_tx, prev)?;
@@ -299,7 +297,7 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
-            native::debug!(target: RUNTIME_TARGET, "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
+            native::debug!(target: xpallet_support::RUNTIME_TARGET, "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
 
             Self::apply_create_withdraw(from, tx, withdrawal_id_list.clone())?;
             Ok(())
@@ -316,7 +314,7 @@ decl_module! {
             } else {
                 None
             };
-            native::debug!(target: RUNTIME_TARGET, "[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
+            native::debug!(target: xpallet_support::RUNTIME_TARGET, "[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
 
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
@@ -431,7 +429,7 @@ impl<T: Trait> Module<T> {
         // prev header should exist, thus we reject orphan block
         let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
             native::error!(
-                target: RUNTIME_TARGET,
+                target: xpallet_support::RUNTIME_TARGET,
                 "[check_prev_and_convert]|not find prev header|current header:{:?}",
                 header
             );

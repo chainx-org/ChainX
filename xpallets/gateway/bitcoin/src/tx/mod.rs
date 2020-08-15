@@ -16,7 +16,7 @@ use sp_std::{fmt::Debug, prelude::*, result};
 use chainx_primitives::{AssetId, Name};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding, Extractable};
-use xpallet_support::{debug, error, info, str, warn, RUNTIME_TARGET};
+use xpallet_support::{debug, error, info, str, warn};
 
 // light-bitcoin
 use btc_chain::Transaction;
@@ -237,7 +237,7 @@ where
     let mut deposit_balance = 0;
     let mut account_info = None;
     let mut has_opreturn = false;
-    let mut original: Vec<u8> = Default::default();
+    let mut _original: Vec<u8> = Default::default();
     // parse
     for output in tx.outputs.iter() {
         // out script
@@ -251,7 +251,7 @@ where
                     let info = handle_opreturn(&v);
                     if info.is_some() {
                         // only set first valid account info
-                        original = script.to_vec();
+                        _original = script.to_vec();
                         account_info = info;
                         has_opreturn = true;
                     }
@@ -268,11 +268,11 @@ where
     }
 
     native::debug!(
-        target: RUNTIME_TARGET,
+        target: xpallet_support::RUNTIME_TARGET,
         "[parse_deposit_outputs_impl]|parse outputs|account_info:{:?}|balance:{:}|opreturn:{:}|",
         account_info,
         deposit_balance,
-        trick_format_opreturn(&original)
+        trick_format_opreturn(&_original)
     );
     (account_info, deposit_balance)
 }
@@ -422,7 +422,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
     PendingDeposits::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
             native::debug!(
-                target: RUNTIME_TARGET,
+                target: xpallet_support::RUNTIME_TARGET,
                 "[insert_pending_deposit]|Add pending deposit|address:{:?}|txhash:{:}|balance:{:}",
                 str!(addr_bytes),
                 txid,
@@ -436,7 +436,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
 fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
         native::debug!(
-            target: RUNTIME_TARGET,
+            target: xpallet_support::RUNTIME_TARGET,
             "[withdraw]|withdraw handle|proposal:{:?}|tx:{:?}",
             proposal,
             tx

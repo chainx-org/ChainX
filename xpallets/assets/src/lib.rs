@@ -173,6 +173,7 @@ decl_storage! {
 }
 
 // initialize
+#[cfg(feature = "std")]
 impl<T: Trait> Module<T> {
     fn set_restrictions(assets: &[(AssetId, AssetRestrictions)]) {
         for (id, restrictions) in assets.iter() {
