@@ -20,8 +20,8 @@ use sp_core::{
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
-        AccountIdConversion, BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, IdentityLookup,
-        NumberFor, OpaqueKeys, Saturating, SignedExtension, StaticLookup,
+        AccountIdConversion, BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, NumberFor,
+        OpaqueKeys, Saturating, SignedExtension, StaticLookup,
     },
     transaction_validity::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
@@ -218,7 +218,7 @@ impl frame_system::Trait for Runtime {
     /// The identifier used to distinguish between accounts.
     type AccountId = AccountId;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-    type Lookup = IdentityLookup<AccountId>;
+    type Lookup = Indices;
     /// The header type.
     type Header = generic::Header<BlockNumber, BlakeTwo256>;
     /// The ubiquitous event type.
