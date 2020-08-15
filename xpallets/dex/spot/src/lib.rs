@@ -14,7 +14,8 @@ mod tests;
 use codec::Codec;
 
 use sp_runtime::traits::{
-    AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, SaturatedConversion, Zero,
+    AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, SaturatedConversion, StaticLookup,
+    Zero,
 };
 use sp_std::prelude::*;
 use sp_std::{cmp, fmt::Debug, result};
@@ -67,9 +68,6 @@ pub trait Trait: xpallet_assets::Trait {
         + Copy
         + MaybeSerializeDeserialize
         + Debug;
-
-    /// Get the asset id of native token.
-    type NativeAssetId: Get<AssetId>;
 }
 
 type Result<T> = result::Result<(), Error<T>>;
@@ -262,8 +260,9 @@ decl_module! {
 
         /// Force cancel an order.
         #[weight = 10]
-        fn force_cancel_order(origin, who: T::AccountId, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
+        fn force_cancel_order(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
             ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 

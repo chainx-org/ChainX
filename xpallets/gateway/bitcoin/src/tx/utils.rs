@@ -4,7 +4,7 @@ use frame_support::{debug::native, dispatch::DispatchResult};
 use sp_std::prelude::Vec;
 
 // ChainX
-use xpallet_support::{base58, error, try_hex, warn, RUNTIME_TARGET};
+use xpallet_support::{base58, error, try_hex, warn};
 
 // light-bitcoin
 use btc_chain::{OutPoint, Transaction};
@@ -129,7 +129,7 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
                 || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
                 native::error!(
-                    target: RUNTIME_TARGET,
+                    target: xpallet_support::RUNTIME_TARGET,
                     "[ensure_identical]|tx1 not equal to tx2|tx1:{:?}|tx2:{:?}",
                     tx1,
                     tx2
@@ -140,7 +140,7 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
         return Ok(());
     }
     native::error!(
-        target: RUNTIME_TARGET,
+        target: xpallet_support::RUNTIME_TARGET,
         "The transaction text does not match the original text to be signed",
     );
     Err(Error::<T>::MismatchedTx)?

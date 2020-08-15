@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_runtime::traits::StaticLookup;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use frame_support::{
@@ -33,6 +34,7 @@ decl_event!(
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
         fn deposit_event() = default;
 
         #[weight = 0]
@@ -63,8 +65,9 @@ decl_module! {
         }
 
         #[weight = 0]
-        fn modify_blocked_list(origin, who: T::AccountId, block: bool) -> DispatchResult {
+        fn modify_blocked_list(origin, who: <T::Lookup as StaticLookup>::Source, block: bool) -> DispatchResult {
             ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
             if block {
                 BlockedAccounts::<T>::insert(who.clone(), ());
                 Self::deposit_event(RawEvent::BlockAccount(who))

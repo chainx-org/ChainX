@@ -11,8 +11,8 @@ use chainx_runtime::{
 use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
-    GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, SocietyConfig, SudoConfig,
-    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
+    GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig,
+    SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
     XContractsConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig,
     XStakingConfig, XSystemConfig,
 };
@@ -407,6 +407,7 @@ fn testnet_genesis(
                 .collect::<Vec<_>>(),
         }),
         pallet_balances: Some(BalancesConfig { balances }),
+        pallet_indices: Some(IndicesConfig { indices: vec![] }),
         pallet_society: Some(SocietyConfig {
             members: endowed_accounts
                 .iter()
