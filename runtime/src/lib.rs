@@ -771,6 +771,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
 impl xpallet_dex_spot::Trait for Runtime {
     type Event = Event;
     type Price = Balance;
+    type NativeAssetId = ChainXAssetId;
 }
 
 impl xpallet_contracts::Trait for Runtime {

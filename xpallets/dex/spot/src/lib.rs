@@ -24,7 +24,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::{Currency, ExistenceRequirement, ReservableCurrency},
+    traits::{Currency, ExistenceRequirement, Get, ReservableCurrency},
     Parameter,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -68,6 +68,9 @@ pub trait Trait: xpallet_assets::Trait {
         + Copy
         + MaybeSerializeDeserialize
         + Debug;
+
+    /// Get the asset id of native token.
+    type NativeAssetId: Get<AssetId>;
 }
 
 type Result<T> = result::Result<(), Error<T>>;
@@ -117,7 +120,7 @@ decl_storage! {
             double_map hasher(twox_64_concat) TradingPairId, hasher(twox_64_concat) T::Price
             => Vec<(T::AccountId, OrderId)>;
 
-        /// TradingPairId => (highest_bid, lowest_offer)
+        /// TradingPairId => (highest_bid, lowest_ask)
         pub HandicapOf get(fn handicap_of):
             map hasher(twox_64_concat) TradingPairId => HandicapInfo<T>;
 
@@ -129,14 +132,14 @@ decl_storage! {
     add_extra_genesis {
         config(trading_pairs): Vec<(AssetId, AssetId, u32, u32, T::Price, bool)>;
         build(|config| {
-            for (base, quote, pip_decimals, tick_decimals, price, online) in config.trading_pairs.iter() {
-                Module::<T>::add_trading_pair(
+            for (base, quote, pip_decimals, tick_decimals, price, tradable) in config.trading_pairs.iter() {
+                Module::<T>::apply_add_trading_pair(
                     CurrencyPair::new(*base, *quote),
                     *pip_decimals,
                     *tick_decimals,
                     *price,
-                    *online
-                ).expect("genesis initialization can not fail");
+                    *tradable
+                );
             }
         })
     }
@@ -156,6 +159,8 @@ decl_event!(
         UpdateOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// The order gets executed.
         OrderExecuted(OrderExecutedInfo<AccountId, Balance, BlockNumber, Price>),
+        /// A new trading pair is added.
+        AddTradingPair(TradingPairProfile),
         /// Trading pair profile has been updated.
         TradingPairUpdated(TradingPairProfile),
         /// Price fluctuation of trading pair has been updated.
@@ -168,9 +173,9 @@ decl_error! {
     pub enum Error for Module<T: Trait> {
         /// Price can not be zero, and must be an integer multiple of the tick decimals.
         InvalidPrice,
-        /// The bid price can not higher than the PriceVolatility of current lowest_offer.
+        /// The bid price can not higher than the PriceVolatility of current lowest ask.
         TooHighBidPrice,
-        /// The ask price can not lower than the PriceVolatility of current highest_bid.
+        /// The ask price can not lower than the PriceVolatility of current highest bid.
         TooLowAskPrice,
         /// Failed to convert_base_to_quote since amount*price too small.
         VolumeTooSmall,
@@ -180,10 +185,10 @@ decl_error! {
         InsufficientBalance,
         /// Invalid validator target.
         InvalidOrderType,
-        /// The order pair doesn't exist.
-        InvalidOrderPair,
-        /// Can not force validator to be chilled.
-        TradingPairOffline,
+        /// The trading pair doesn't exist.
+        InvalidTradingPair,
+        /// The trading pair is untradable.
+        TradingPairUntradable,
         /// The trading pair does not exist.
         NonexistentTradingPair,
         /// tick_decimals can not less than the one of pair.
@@ -221,11 +226,11 @@ decl_module! {
         #[weight = 10]
         pub fn put_order(
             origin,
-            pair_id: TradingPairId,
+            #[compact] pair_id: TradingPairId,
             order_type: OrderType,
             side: Side,
-            amount: BalanceOf<T>,
-            price: T::Price
+            #[compact] amount: BalanceOf<T>,
+            #[compact] price: T::Price
         ) {
             let who = ensure_signed(origin)?;
 
@@ -235,7 +240,7 @@ decl_module! {
 
             let pair = Self::trading_pair(pair_id)?;
 
-            ensure!(pair.online, Error::<T>::TradingPairOffline);
+            ensure!(pair.tradable, Error::<T>::TradingPairUntradable);
             ensure!(pair.is_valid_price(price), Error::<T>::InvalidPrice);
 
             Self::is_valid_quote(price, side, pair_id)?;
@@ -246,118 +251,81 @@ decl_module! {
                 Side::Buy => (pair.quote(), Self::convert_base_to_quote(amount, price, &pair)?),
                 Side::Sell => (pair.base(), amount)
             };
-
             Self::put_order_reserve(&who, reserve_asset, reserve_amount)?;
-
             Self::apply_put_order(who, pair_id, order_type, side, amount, price, reserve_amount)?;
         }
 
         #[weight = 10]
-        pub fn cancel_order(origin, pair_id: TradingPairId, order_id: OrderId) {
+        pub fn cancel_order(origin, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
             let who = ensure_signed(origin)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
+        /// Force cancel an order.
         #[weight = 10]
-        fn set_cancel_order(origin, who: <T::Lookup as StaticLookup>::Source, pair_id: TradingPairId, order_id: OrderId) {
+        fn force_cancel_order(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
         #[weight = 10]
-        fn set_handicap(origin, pair_id: TradingPairId, highest_bid: T::Price, lowest_offer: T::Price) {
+        fn set_handicap(origin, #[compact] pair_id: TradingPairId, new: Handicap< T::Price>) {
             ensure_root(origin)?;
-            info!("[set_handicap]pair_id:{:?},highest_bid:{:?},lowest_offer:{:?}", pair_id, highest_bid, lowest_offer,);
-            HandicapOf::<T>::insert(pair_id, HandicapInfo::<T>::new(highest_bid, lowest_offer));
+            info!("[set_handicap]pair_id:{:?},new handicap:{:?}", pair_id, new);
+            HandicapOf::<T>::insert(pair_id, new);
         }
 
         #[weight = 10]
-        fn set_price_fluctuation(origin, pair_id: TradingPairId, new: PriceFluctuation) {
+        fn set_price_fluctuation(origin, #[compact] pair_id: TradingPairId, #[compact] new: PriceFluctuation) {
             ensure_root(origin)?;
             PriceFluctuationOf::insert(pair_id, new);
             Self::deposit_event(RawEvent::PriceFluctuationUpdated(pair_id, new));
+        }
+
+        /// Add a new trading pair.
+        #[weight = 10]
+        pub fn add_trading_pair(
+            origin,
+            currency_pair: CurrencyPair,
+            #[compact] pip_decimals: u32,
+            #[compact] tick_decimals: u32,
+            #[compact] latest_price: T::Price,
+            tradable: bool,
+        ) {
+            ensure_root(origin)?;
+            ensure!(
+                Self::get_trading_pair_by_currency_pair(&currency_pair).is_none(),
+                Error::<T>::TradingPairAlreadyExists
+            );
+            Self::apply_add_trading_pair(
+                currency_pair,
+                pip_decimals,
+                tick_decimals,
+                latest_price,
+                tradable
+            );
+        }
+
+        /// Update the trading pair profile.
+        #[weight = 10]
+        pub fn update_trading_pair(
+            origin,
+            #[compact] pair_id: TradingPairId,
+            #[compact] tick_decimals: u32,
+            tradable: bool
+        ) {
+            ensure_root(origin)?;
+            let pair = Self::trading_pair(pair_id)?;
+            ensure!(tick_decimals >= pair.tick_decimals, Error::<T>::InvalidTickdecimals);
+            Self::apply_update_trading_pair(pair_id, tick_decimals, tradable);
+            Self::deposit_event(RawEvent::TradingPairUpdated(pair));
         }
     }
 }
 
 impl<T: Trait> Module<T> {
     /// Public mutables
-    pub fn add_trading_pair(
-        currency_pair: CurrencyPair,
-        pip_decimals: u32,
-        tick_decimals: u32,
-        price: T::Price,
-        online: bool,
-    ) -> Result<T> {
-        info!(
-            "[add_trading_pair] currency_pair: {:?}, point_decimals: {:}, tick_decimals: {:}, price: {:?}, online: {:}",
-            currency_pair,
-            pip_decimals,
-            tick_decimals,
-            price,
-            online
-        );
-
-        ensure!(
-            Self::get_trading_pair_by_currency_pair(&currency_pair).is_none(),
-            Error::<T>::TradingPairAlreadyExists
-        );
-
-        let pair_id = TradingPairCount::get();
-
-        let pair = TradingPairProfile {
-            id: pair_id,
-            currency_pair,
-            pip_decimals,
-            tick_decimals,
-            online,
-        };
-
-        TradingPairOf::insert(pair_id, &pair);
-        TradingPairInfoOf::<T>::insert(
-            pair_id,
-            TradingPairInfo {
-                latest_price: price,
-                last_updated: <frame_system::Module<T>>::block_number(),
-            },
-        );
-        TradingPairCount::put(pair_id + 1);
-
-        Self::deposit_event(RawEvent::TradingPairUpdated(pair));
-
-        Ok(())
-    }
-
-    pub fn update_trading_pair(
-        pair_id: TradingPairId,
-        tick_decimals: u32,
-        online: bool,
-    ) -> Result<T> {
-        info!(
-            "[update_trading_pair] pair_id: {:}, tick_decimals: {:}, online:{:}",
-            pair_id, tick_decimals, online
-        );
-
-        let pair = Self::trading_pair(pair_id)?;
-
-        ensure!(
-            tick_decimals >= pair.tick_decimals,
-            Error::<T>::InvalidTickdecimals
-        );
-
-        TradingPairOf::mutate(pair_id, |pair| {
-            if let Some(pair) = pair {
-                pair.tick_decimals = tick_decimals;
-                pair.online = online;
-            }
-        });
-
-        Self::deposit_event(RawEvent::TradingPairUpdated(pair));
-
-        Ok(())
-    }
-
     pub fn get_trading_pair_by_currency_pair(
         currency_pair: &CurrencyPair,
     ) -> Option<TradingPairProfile> {
@@ -372,7 +340,62 @@ impl<T: Trait> Module<T> {
         None
     }
 
+    #[inline]
+    fn trading_pair(pair_id: TradingPairId) -> result::Result<TradingPairProfile, Error<T>> {
+        TradingPairOf::get(pair_id).ok_or(Error::<T>::InvalidTradingPair)
+    }
+
+    fn get_order(who: &T::AccountId, order_id: OrderId) -> result::Result<OrderInfo<T>, Error<T>> {
+        Self::order_info_of(who, order_id).ok_or(Error::<T>::InvalidOrderId)
+    }
+
     /// Internal mutables
+    fn apply_add_trading_pair(
+        currency_pair: CurrencyPair,
+        pip_decimals: u32,
+        tick_decimals: u32,
+        latest_price: T::Price,
+        tradable: bool,
+    ) {
+        let pair_id = TradingPairCount::get();
+
+        let pair = TradingPairProfile {
+            id: pair_id,
+            currency_pair,
+            pip_decimals,
+            tick_decimals,
+            tradable,
+        };
+
+        info!("new trading pair: {:?}", pair);
+
+        TradingPairOf::insert(pair_id, &pair);
+        TradingPairInfoOf::<T>::insert(
+            pair_id,
+            TradingPairInfo {
+                latest_price,
+                last_updated: <frame_system::Module<T>>::block_number(),
+            },
+        );
+
+        TradingPairCount::put(pair_id + 1);
+
+        Self::deposit_event(RawEvent::AddTradingPair(pair));
+    }
+
+    fn apply_update_trading_pair(pair_id: TradingPairId, tick_decimals: u32, tradable: bool) {
+        info!(
+            "[update_trading_pair]pair_id: {:}, tick_decimals: {:}, tradable:{:}",
+            pair_id, tick_decimals, tradable
+        );
+        TradingPairOf::mutate(pair_id, |pair| {
+            if let Some(pair) = pair {
+                pair.tick_decimals = tick_decimals;
+                pair.tradable = tradable;
+            }
+        });
+    }
+
     fn apply_put_order(
         who: T::AccountId,
         pair_id: TradingPairId,
@@ -404,17 +427,13 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn get_order(who: &T::AccountId, order_id: OrderId) -> result::Result<OrderInfo<T>, Error<T>> {
-        Self::order_info_of(who, order_id).ok_or(Error::<T>::InvalidOrderId)
-    }
-
     fn do_cancel_order(
         who: &T::AccountId,
         pair_id: TradingPairId,
         order_id: OrderId,
     ) -> DispatchResult {
         let pair = Self::trading_pair(pair_id)?;
-        ensure!(pair.online, Error::<T>::TradingPairOffline);
+        ensure!(pair.tradable, Error::<T>::TradingPairUntradable);
 
         let order = Self::get_order(who, order_id)?;
         ensure!(
@@ -453,11 +472,6 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-
-    #[inline]
-    fn trading_pair(pair_id: TradingPairId) -> result::Result<TradingPairProfile, Error<T>> {
-        TradingPairOf::get(pair_id).ok_or(Error::<T>::InvalidOrderPair)
-    }
 }
 
 impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
@@ -466,7 +480,7 @@ impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
         for i in 0..pair_len {
             if let Some(mut pair) = TradingPairOf::get(i) {
                 if pair.base().eq(token) || pair.quote().eq(token) {
-                    pair.online = false;
+                    pair.tradable = false;
                     TradingPairOf::insert(i, &pair);
                     Self::deposit_event(RawEvent::TradingPairUpdated(pair));
                 }

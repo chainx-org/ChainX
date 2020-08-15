@@ -8,10 +8,33 @@ import re
 import shutil
 import subprocess
 
+
+#  Execute the system command and returns the lines of stdout.
+def execute(cmd):
+    result = subprocess.run(cmd, stdout=subprocess.PIPE)
+    return result.stdout.decode('utf-8').split("\n")
+
+
 #  You need to install ctags and fd to run this script.
 if not shutil.which('ctags'):
     print(
         'Please install https://github.com/universal-ctags/ctags to continue')
+    os._exit(1)
+
+
+def ctags_has_json_support():
+    lines = execute(['ctags', '--list-features'])
+    filtered = list(filter(lambda x: x.startswith('json'), lines))
+    if not filtered:
+        return False
+    else:
+        return True
+
+
+if not ctags_has_json_support():
+    print(
+        'Your ctags seems to have the feature of JSON output, please recompile it'
+        ' for the JSON support')
     os._exit(1)
 
 if not shutil.which('fd'):
@@ -110,12 +133,6 @@ with open(CHAINX_TYPES_MANUAL_JSON) as json_file:
             MANUAL[k1] = vv
         else:
             MANUAL[k1] = v1
-
-
-#  Execute the system command and returns the lines of stdout.
-def execute(cmd):
-    result = subprocess.run(cmd, stdout=subprocess.PIPE)
-    return result.stdout.decode('utf-8').split("\n")
 
 
 #  Read the specific line of file, lnum is 1-based.
@@ -478,10 +495,8 @@ def write_types_and_rpc():
                 if k in manual_fns:
                     fns[k] = manual_fns[k]
 
-    rpc_output = {}
     #  Inject rpc decoration
-    rpc_output['rpc'] = rpc_dict
-    write_json(rpc_output, 'res/chainx_rpc.json')
+    write_json(rpc_dict, 'res/chainx_rpc.json')
 
 
 def main():

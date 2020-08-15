@@ -319,16 +319,26 @@ impl<T: Trait> Module<T> {
         order.last_update_at = <frame_system::Module<T>>::block_number();
     }
 
+    /// Writes the `order` to the storage.
     #[inline]
     fn insert_executed_order(order: &OrderInfo<T>) {
         <OrderInfoOf<T>>::insert(order.submitter(), order.id(), order);
     }
 
-    /// Due to the loss of decimals in Self::convert_base_to_quote(),
-    /// the remaining could still be non-zero when the order is full filled, which must be refunded.
+    /// Refund the remaining asset to the order submitter.
+    ///
+    /// Due to the loss of decimals in `Self::convert_base_to_quote()`,
+    /// the remaining could still be non-zero when the order is full filled,
+    /// which must be refunded.
     fn try_refund_remaining(order: &mut OrderInfo<T>, asset_id: AssetId) {
+        // NOTE: Refund the remaining reserved asset when the order is fulfilled.
         if order.is_fulfilled() && !order.remaining.is_zero() {
-            Self::refund_reserved_dex_spot(&order.submitter(), asset_id, order.remaining);
+            let unreserve_result =
+                Self::generic_unreserve(&order.submitter(), asset_id, order.remaining);
+            assert!(
+                unreserve_result.is_ok(),
+                "Unreserve the remaining asset can not fail"
+            );
             order.remaining = Zero::zero();
         }
     }
@@ -396,12 +406,12 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
     ) -> DispatchResult {
         // Unreserve the remaining asset.
-        let (refund_token, refund_amount) = match order.side() {
+        let (refund_asset, refund_amount) = match order.side() {
             Side::Sell => (pair.base(), order.remaining_in_base()),
             Side::Buy => (pair.quote(), order.remaining),
         };
 
-        Self::cancel_order_unreserve(who, refund_token, refund_amount)?;
+        Self::generic_unreserve(who, refund_asset, refund_amount)?;
 
         order.update_status_on_cancel();
         order.decrease_remaining_on_cancel(refund_amount);

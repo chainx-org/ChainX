@@ -450,12 +450,12 @@ impl<T: Trait> Module<T> {
 
 /// token issue destroy reserve/unreserve, it's core function
 impl<T: Trait> Module<T> {
-    fn asset_typed_balance(who: &T::AccountId, id: &AssetId, type_: AssetType) -> BalanceOf<T> {
-        let balance_map = Self::asset_balance(who, id);
-        match balance_map.get(&type_) {
-            Some(b) => *b,
-            None => Zero::zero(),
-        }
+    /// Returns the balance of `who` given `asset_id` and `ty`.
+    fn asset_typed_balance(who: &T::AccountId, asset_id: &AssetId, ty: AssetType) -> BalanceOf<T> {
+        Self::asset_balance(who, asset_id)
+            .get(&ty)
+            .copied()
+            .unwrap_or_default()
     }
 
     fn new_account(who: &T::AccountId) {

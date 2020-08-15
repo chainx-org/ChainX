@@ -59,7 +59,7 @@
         "currencyPair": "CurrencyPair",
         "pipDecimals": "u32",
         "tickDecimals": "u32",
-        "online": "bool"
+        "tradable": "bool"
     },
     "Order": {
         "props": "OrderProperty",
@@ -362,5 +362,6 @@
         "rewardPotBalance": "RpcBalance"
     },
     "String": "Text",
+    "RpcPrice": "String",
     "MiningPower": "u128"
 }
