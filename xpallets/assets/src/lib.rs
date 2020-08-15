@@ -582,6 +582,7 @@ impl<T: Trait> Module<T> {
         if let Some(max_locked) = locks.iter().map(|lock| lock.amount).max() {
             let locked = Self::asset_balance_of(who, &currency_id, AssetType::Locked);
             let result = if max_locked > locked {
+                // new lock more than current locked, move usable to locked
                 Self::move_balance(
                     &currency_id,
                     who,
@@ -591,6 +592,7 @@ impl<T: Trait> Module<T> {
                     max_locked - locked,
                 )
             } else if max_locked < locked {
+                // new lock less then current locked, release locked to usable
                 Self::move_balance(
                     &currency_id,
                     who,
@@ -604,6 +606,7 @@ impl<T: Trait> Module<T> {
                 Ok(())
             };
             if let Err(e) = result {
+                // should not fail, for set lock need to check free_balance, free_balance = usable + free
                 error!(
                     "[update_locks]|move between usable and locked should not fail|asset_id:{:}|who:{:?}|max_locked:{:?}|current locked:{:?}|err:{:?}",
                     currency_id, who, max_locked, locked, e
@@ -612,7 +615,6 @@ impl<T: Trait> Module<T> {
         }
 
         // update locks
-        // let existed = <Locks<T>>::contains_key(who, currency_id);
         if locks.is_empty() {
             <Locks<T>>::remove(who, currency_id);
         } else {

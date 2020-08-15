@@ -1,10 +1,12 @@
-use frame_support::{
-    ensure,
-    traits::{BalanceStatus, LockIdentifier},
-};
 use sp_runtime::{
     traits::{CheckedSub, Saturating, Zero},
     DispatchError, DispatchResult,
+};
+use sp_std::prelude::*;
+
+use frame_support::{
+    ensure,
+    traits::{BalanceStatus, LockIdentifier},
 };
 
 use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};

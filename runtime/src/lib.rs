@@ -798,6 +798,7 @@ impl xpallet_assets_registrar::Trait for Runtime {
 impl xpallet_assets::Trait for Runtime {
     type Currency = Balances;
     type Event = Event;
+    type TreasuryAccount = SimpleTreasuryAccount;
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Runtime>;
     type OnAssetChanged = XMiningAsset;
 }
@@ -841,7 +842,7 @@ impl xpallet_contracts::Trait for Runtime {
 }
 
 pub struct SimpleTreasuryAccount;
-impl xp_mining_staking::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
+impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
     fn treasury_account() -> AccountId {
         TreasuryModuleId::get().into_account()
     }

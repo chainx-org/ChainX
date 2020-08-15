@@ -28,7 +28,7 @@ use xp_mining_common::{
     ZeroMiningWeightError,
 };
 use xpallet_assets::AssetType;
-use xpallet_support::{warn, traits::TreasuryAccount};
+use xpallet_support::{traits::TreasuryAccount, warn};
 
 pub use impls::SimpleAssetRewardPotAccountDeterminer;
 pub use rpc::*;

@@ -39,4 +39,3 @@ impl<Balance> AssetMining<Balance> for () {
 
     fn reward(_: AssetId, _: Balance) {}
 }
-

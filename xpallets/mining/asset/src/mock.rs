@@ -132,6 +132,7 @@ impl xpallet_assets_registrar::Trait for Test {
 impl xpallet_assets::Trait for Test {
     type Event = MetaEvent;
     type Currency = Balances;
+    type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = XMiningAsset;
 }
