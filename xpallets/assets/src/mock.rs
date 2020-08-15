@@ -121,7 +121,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyFree.into(),
+        AssetRestriction::DestroyUsable.into(),
     )
 }
 

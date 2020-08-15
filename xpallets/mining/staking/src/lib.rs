@@ -33,9 +33,9 @@ use constants::*;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
-use xp_mining_staking::{AssetMining, SessionIndex, TreasuryAccount, UnbondedIndex};
+use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
 use xp_runtime::Memo;
-use xpallet_support::{debug, RpcBalance};
+use xpallet_support::{debug, RpcBalance, traits::TreasuryAccount};
 
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 pub use rpc::*;

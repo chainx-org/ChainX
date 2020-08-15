@@ -40,13 +40,3 @@ impl<Balance> AssetMining<Balance> for () {
     fn reward(_: AssetId, _: Balance) {}
 }
 
-/// This trait provides a simple way to get the treasury account.
-pub trait TreasuryAccount<AccountId> {
-    fn treasury_account() -> AccountId;
-}
-
-impl<AccountId: Default> TreasuryAccount<AccountId> for () {
-    fn treasury_account() -> AccountId {
-        Default::default()
-    }
-}

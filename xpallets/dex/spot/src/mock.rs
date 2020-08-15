@@ -132,7 +132,7 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
         AssetRestriction::Deposit
             | AssetRestriction::Withdraw
             | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyFree,
+            | AssetRestriction::DestroyUsable,
     )
 }
 
@@ -150,7 +150,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
         AssetRestriction::Deposit
             | AssetRestriction::Withdraw
             | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyFree,
+            | AssetRestriction::DestroyUsable,
     )
 }
 

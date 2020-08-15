@@ -223,7 +223,7 @@ pub struct DummyTreasuryAccount;
 pub(crate) const VESTING_ACCOUNT: AccountId = 10_000;
 pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
 
-impl xp_mining_staking::TreasuryAccount<AccountId> for DummyTreasuryAccount {
+impl xpallet_support::traits::TreasuryAccount<AccountId> for DummyTreasuryAccount {
     fn treasury_account() -> AccountId {
         TREASURY_ACCOUNT
     }

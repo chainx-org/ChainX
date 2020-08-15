@@ -20,7 +20,7 @@ fn test_genesis() {
             b"abc".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyFree.into(),
+        AssetRestriction::DestroyUsable.into(),
     );
 
     let efd_assets = (
@@ -33,7 +33,7 @@ fn test_genesis() {
             b"efd".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::Transfer | AssetRestriction::DestroyFree,
+        AssetRestriction::Transfer | AssetRestriction::DestroyUsable,
     );
 
     let mut endowed = BTreeMap::new();
@@ -58,7 +58,7 @@ fn test_genesis() {
             assert_eq!(XAssets::usable_balance(&999, &efd_id), 1000);
 
             assert_noop!(
-                XAssets::destroy_free(&abc_id, &1, 10),
+                XAssets::destroy_usable(&abc_id, &1, 10),
                 XAssetsErr::ActionNotAllowed
             );
             assert_ok!(XAssets::transfer(
@@ -563,9 +563,9 @@ fn test_move() {
         let a: u64 = 1; // accountid
         let b: u64 = 2; // accountid
         let btc_id = X_BTC;
-        XAssets::move_free_balance(&btc_id, &a, &b, 100).unwrap();
+        XAssets::move_usable_balance(&btc_id, &a, &b, 100).unwrap();
         assert_noop!(
-            XAssets::move_free_balance(&btc_id, &a, &b, 1000),
+            XAssets::move_usable_balance(&btc_id, &a, &b, 1000),
             AssetErr::NotEnough
         );
         assert_eq!(XAssets::usable_balance(&a, &btc_id), 0);
@@ -573,14 +573,14 @@ fn test_move() {
 
         let token = X_BTC;
         assert_noop!(
-            XAssets::move_free_balance(&token, &a, &b, 100),
+            XAssets::move_usable_balance(&token, &a, &b, 100),
             AssetErr::NotEnough
         );
 
         XAssets::issue(&token, &a, 100).unwrap();
-        XAssets::move_free_balance(&token, &a, &b, 100).unwrap();
+        XAssets::move_usable_balance(&token, &a, &b, 100).unwrap();
         assert_noop!(
-            XAssets::move_free_balance(&token, &a, &b, 1000),
+            XAssets::move_usable_balance(&token, &a, &b, 1000),
             AssetErr::NotEnough
         );
 
