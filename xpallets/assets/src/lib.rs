@@ -8,36 +8,48 @@
 mod mock;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_multicurrency;
 
+mod multicurrency;
 pub mod traits;
 mod trigger;
 pub mod types;
 
 // Substrate
-use sp_runtime::traits::{CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero};
-use sp_std::{collections::btree_map::BTreeMap, prelude::*, result};
+use sp_runtime::traits::{
+    CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
+};
+use sp_std::{
+    collections::btree_map::BTreeMap,
+    convert::{TryFrom, TryInto},
+    prelude::*,
+    result,
+};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, Happened, IsDeadAccount, LockableCurrency, ReservableCurrency},
-    StorageDoubleMap,
+    Parameter, StorageDoubleMap,
 };
 use frame_system::{ensure_root, ensure_signed};
+
+use orml_traits::arithmetic::{self, Signed};
 
 // ChainX
 use chainx_primitives::AssetId;
 use xp_runtime::Memo;
-use xpallet_support::{debug, ensure_with_errorlog, info};
+use xpallet_support::{debug, ensure_with_errorlog, error, info, traits::TreasuryAccount};
 // re-export
 pub use xpallet_assets_registrar::{AssetInfo, Chain};
 
 pub use self::traits::{ChainT, OnAssetChanged};
 use self::trigger::AssetChangedTrigger;
 pub use self::types::{
-    AssetErr, AssetRestriction, AssetRestrictions, AssetType, SignedBalance, TotalAssetInfo,
-    WithdrawalLimit,
+    AssetErr, AssetRestriction, AssetRestrictions, AssetType, BalanceLock, SignedBalance,
+    TotalAssetInfo, WithdrawalLimit,
 };
 
 pub type BalanceOf<T> =
@@ -49,6 +61,19 @@ pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+
+    /// The amount type, should be signed version of `Balance`
+    type Amount: Signed
+        + TryInto<BalanceOf<Self>>
+        + TryFrom<BalanceOf<Self>>
+        + Parameter
+        + Member
+        + arithmetic::SimpleArithmetic
+        + Default
+        + Copy
+        + MaybeSerializeDeserialize;
+
+    type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
     type OnCreatedAccount: Happened<Self::AccountId>;
 
@@ -64,6 +89,10 @@ decl_error! {
         Overflow,
         /// Balance too low to send value
         InsufficientBalance,
+        /// Failed because liquidity restrictions due to locking
+        LiquidityRestrictions,
+        /// Cannot convert Amount into Balance type
+        AmountIntoBalanceFailed,
         /// Got an overflow after adding
         TotalAssetOverflow,
         /// Balance too low to send value
@@ -107,7 +136,7 @@ decl_module! {
             memo.check_validity()?;
             Self::can_transfer(&id)?;
 
-            Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
 
             Ok(())
         }
@@ -123,7 +152,7 @@ decl_module! {
             memo.check_validity()?;
             Self::can_transfer(&id)?;
 
-            Self::move_free_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
             Ok(())
         }
 
@@ -156,6 +185,10 @@ decl_storage! {
         /// asset balance for user&asset_id, use btree_map to accept different asset type
         pub AssetBalance get(fn asset_balance):
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
+        /// Any liquidity locks of a token type under an account.
+        /// NOTE: Should only be accessed when setting, changing and freeing a lock.
+        pub Locks get(fn locks): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => Vec<BalanceLock<BalanceOf<T>>>;
+
         /// asset balance for an asset_id, use btree_map to accept different asset type
         pub TotalAssetBalance get(fn total_asset_balance): map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
 
@@ -295,13 +328,13 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    pub fn can_destroy_free(id: &AssetId) -> DispatchResult {
+    pub fn can_destroy_usable(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestriction::DestroyFree),
+            Self::can_do(id, AssetRestriction::DestroyUsable),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow destroy free|id:{:}|action:{:?}",
             id,
-            AssetRestriction::DestroyFree,
+            AssetRestriction::DestroyUsable,
         );
         Ok(())
     }
@@ -334,9 +367,8 @@ impl<T: Trait> Module<T> {
         Self::asset_typed_balance(&who, &id, AssetType::Usable)
     }
 
-    pub fn free_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Usable)
-            + Self::asset_typed_balance(&who, &id, AssetType::Locked)
+    pub fn locked_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
+        Self::asset_typed_balance(&who, &id, AssetType::Locked)
     }
 }
 
@@ -359,10 +391,10 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn destroy_free(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+    pub fn destroy_usable(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
-        Self::can_destroy_free(id)?;
+        Self::can_destroy_usable(id)?;
 
         let _imbalance = Self::inner_destroy(id, who, AssetType::Usable, value)?;
         Ok(())
@@ -419,7 +451,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn move_free_balance(
+    pub fn move_usable_balance(
         id: &AssetId,
         from: &T::AccountId,
         to: &T::AccountId,
@@ -565,5 +597,50 @@ impl<T: Trait> Module<T> {
 
         AssetChangedTrigger::<T>::on_destroy_post(id, who, value)?;
         Ok(())
+    }
+
+    fn update_locks(currency_id: AssetId, who: &T::AccountId, locks: &[BalanceLock<BalanceOf<T>>]) {
+        // update locked balance
+        if let Some(max_locked) = locks.iter().map(|lock| lock.amount).max() {
+            let locked = Self::asset_balance_of(who, &currency_id, AssetType::Locked);
+            let result = if max_locked > locked {
+                // new lock more than current locked, move usable to locked
+                Self::move_balance(
+                    &currency_id,
+                    who,
+                    AssetType::Usable,
+                    who,
+                    AssetType::Locked,
+                    max_locked - locked,
+                )
+            } else if max_locked < locked {
+                // new lock less then current locked, release locked to usable
+                Self::move_balance(
+                    &currency_id,
+                    who,
+                    AssetType::Locked,
+                    who,
+                    AssetType::Usable,
+                    locked - max_locked,
+                )
+            } else {
+                // if max_locked == locked, need do nothing
+                Ok(())
+            };
+            if let Err(e) = result {
+                // should not fail, for set lock need to check free_balance, free_balance = usable + free
+                error!(
+                    "[update_locks]|move between usable and locked should not fail|asset_id:{:}|who:{:?}|max_locked:{:?}|current locked:{:?}|err:{:?}",
+                    currency_id, who, max_locked, locked, e
+                );
+            }
+        }
+
+        // update locks
+        if locks.is_empty() {
+            <Locks<T>>::remove(who, currency_id);
+        } else {
+            <Locks<T>>::insert(who, currency_id, locks);
+        }
     }
 }

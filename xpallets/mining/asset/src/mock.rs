@@ -23,6 +23,7 @@ pub const INIT_TIMESTAMP: u64 = 30_000;
 pub(crate) type AccountId = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
+pub(crate) type Amount = i128;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -132,6 +133,8 @@ impl xpallet_assets_registrar::Trait for Test {
 impl xpallet_assets::Trait for Test {
     type Event = MetaEvent;
     type Currency = Balances;
+    type Amount = Amount;
+    type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = XMiningAsset;
 }
@@ -223,7 +226,7 @@ pub struct DummyTreasuryAccount;
 pub(crate) const VESTING_ACCOUNT: AccountId = 10_000;
 pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
 
-impl xp_mining_staking::TreasuryAccount<AccountId> for DummyTreasuryAccount {
+impl xpallet_support::traits::TreasuryAccount<AccountId> for DummyTreasuryAccount {
     fn treasury_account() -> AccountId {
         TREASURY_ACCOUNT
     }

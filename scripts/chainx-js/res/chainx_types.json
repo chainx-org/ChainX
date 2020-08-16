@@ -214,6 +214,9 @@
         ]
     },
     "OrderInfo": "Order",
+    "Amount": "i128",
+    "CurrencyIdOf": "AssetId",
+    "CurrencyId": "AssetId",
     "AssetInfoForRpc": {
         "token": "String",
         "tokenName": "String",

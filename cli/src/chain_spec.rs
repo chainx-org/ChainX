@@ -209,7 +209,7 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
         AssetRestriction::Deposit
             | AssetRestriction::Withdraw
             | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyFree,
+            | AssetRestriction::DestroyUsable,
     )
 }
 
@@ -224,7 +224,7 @@ fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyFree.into(),
+        AssetRestriction::DestroyUsable.into(),
     )
 }
 
