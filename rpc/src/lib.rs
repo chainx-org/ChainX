@@ -1,13 +1,3 @@
-#![allow(unused)]
-
-#[macro_use]
-mod utils;
-
-mod apis;
-mod errors;
-mod impls;
-mod types;
-
 use std::fmt;
 use std::sync::Arc;
 
@@ -23,9 +13,6 @@ use sp_transaction_pool::TransactionPool;
 
 use chainx_primitives::Block;
 use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index, UncheckedExtrinsic};
-
-use apis::ChainXApi;
-use impls::ChainXRpc;
 
 /// Light client extra dependencies.
 pub struct LightDeps<C, F, P> {
