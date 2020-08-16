@@ -22,7 +22,6 @@ impl<T: Trait> Module<T> {
     ///
     /// The slashed balances will be moved to the treasury.
     pub(crate) fn slash_offenders_in_session(staking_reward: BalanceOf<T>) -> Vec<T::AccountId> {
-        // Find the offenders that are in the current validator set.
         let validators = T::SessionInterface::validators();
         let reward_per_block = Self::reward_per_block(staking_reward, validators.len());
 

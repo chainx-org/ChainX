@@ -11,15 +11,22 @@ impl<T: Trait> Module<T> {
         (1_u32 << n).saturated_into()
     }
 
+    /// Returns true if the time for first halving cycle has arrived.
+    #[inline]
+    fn first_halving_epoch_arrived(current_index: SessionIndex) -> bool {
+        current_index > MIGRATION_SESSION_OFFSET
+    }
+
     /// Returns the total reward for the session, assuming it ends with this block.
     pub(crate) fn this_session_reward(current_index: SessionIndex) -> BalanceOf<T> {
-        let halving_epoch = if current_index <= MIGRATION_SESSION_OFFSET {
-            0
-        } else {
+        let halving_epoch = if Self::first_halving_epoch_arrived(current_index) {
             (current_index - MIGRATION_SESSION_OFFSET - 1) / SESSIONS_PER_ROUND + 1
+        } else {
+            0
         };
-        let reward = INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch);
-        reward
+        let expected_reward =
+            INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch);
+        expected_reward
     }
 
     /// Issue new fresh PCX.
@@ -36,13 +43,13 @@ impl<T: Trait> Module<T> {
         // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
         let off_the_table = (reward.saturated_into() / 10).saturated_into();
         Self::mint(who, off_the_table);
-        debug!("💸 Minted validator({:?}):{:?}", who, off_the_table);
+        debug!("💸 Mint validator({:?}):{:?}", who, off_the_table);
 
         // Issue the rest 90% to validator's reward pot.
         let to_reward_pot = reward - off_the_table;
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(who);
         Self::mint(&reward_pot, to_reward_pot);
-        debug!("💸 Minted reward_pot({:?}):{:?}", reward_pot, to_reward_pot);
+        debug!("💸 Mint reward_pot({:?}):{:?}", reward_pot, to_reward_pot);
     }
 
     /// Reward the intention and slash the validators that went offline in last session.
@@ -56,13 +63,11 @@ impl<T: Trait> Module<T> {
 
     /// 20% reward of each session is for the vesting schedule in the first halving epoch.
     fn try_vesting(current_index: SessionIndex, this_session_reward: BalanceOf<T>) -> BalanceOf<T> {
-        // FIXME: consider the offset due to the migration.
-        // SESSIONS_PER_ROUND --> offset
-        if current_index < SESSIONS_PER_ROUND {
+        if !Self::first_halving_epoch_arrived(current_index) {
             let to_vesting = this_session_reward / 5.saturated_into();
             let vesting_account = Self::vesting_account();
             Self::mint(&vesting_account, to_vesting);
-            debug!("💸 Minted vesting({:?}):{:?}", vesting_account, to_vesting);
+            debug!("💸 Mint vesting({:?}):{:?}", vesting_account, to_vesting);
             this_session_reward - to_vesting
         } else {
             this_session_reward
