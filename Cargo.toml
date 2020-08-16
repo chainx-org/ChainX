@@ -21,6 +21,7 @@ members = [
     "primitives/runtime",
     "primitives/mining/common",
     "primitives/mining/staking",
+    "primitives/assets-registrar",
     "rpc",
 
     "frame/balances",

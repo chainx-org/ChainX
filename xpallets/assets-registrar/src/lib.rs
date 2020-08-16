@@ -30,6 +30,7 @@ use chainx_primitives::{AssetId, Decimals, Desc, Token};
 use xpallet_support::info;
 
 pub use verifier::*;
+pub use xp_assets_registrar::RegistrarHandler;
 
 #[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -145,33 +146,6 @@ impl AssetInfo {
 
     pub fn set_token_name(&mut self, token_name: Token) {
         self.token_name = token_name
-    }
-}
-
-/// Trait for doing some stuff on the registration/deregistration of a foreign asset.
-pub trait RegistrarHandler {
-    fn on_register(_: &AssetId, _: bool) -> DispatchResult {
-        Ok(())
-    }
-
-    fn on_deregister(_: &AssetId) -> DispatchResult {
-        Ok(())
-    }
-}
-
-impl RegistrarHandler for () {}
-
-impl<A: RegistrarHandler, B: RegistrarHandler> RegistrarHandler for (A, B) {
-    fn on_register(id: &AssetId, has_mining_rights: bool) -> DispatchResult {
-        A::on_register(id, has_mining_rights)?;
-        B::on_register(id, has_mining_rights)?;
-        Ok(())
-    }
-
-    fn on_deregister(id: &AssetId) -> DispatchResult {
-        A::on_deregister(id)?;
-        B::on_deregister(id)?;
-        Ok(())
     }
 }
 
