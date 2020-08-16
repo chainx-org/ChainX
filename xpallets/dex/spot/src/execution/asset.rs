@@ -111,12 +111,13 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        <T as xpallet_assets::Trait>::Currency::unreserve(from, value);
-        <T as xpallet_assets::Trait>::Currency::transfer(
+        // The account `to` definitely exists so this should always succeed.
+        // This is equivalent to unreserve(from, value) + transfer(from, to, value)
+        <T as xpallet_assets::Trait>::Currency::repatriate_reserved(
             from,
             to,
             value,
-            ExistenceRequirement::KeepAlive,
+            frame_support::traits::BalanceStatus::Free,
         )?;
         NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
         Ok(())

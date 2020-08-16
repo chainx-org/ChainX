@@ -24,7 +24,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::{Currency, ExistenceRequirement, Get, ReservableCurrency},
+    traits::{Currency, Get, ReservableCurrency},
     Parameter,
 };
 use frame_system::{ensure_root, ensure_signed};
