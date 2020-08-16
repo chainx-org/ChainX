@@ -33,7 +33,8 @@ impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
     }
 
     fn free_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
-        Self::free_balance(who, &currency_id)
+        Self::asset_typed_balance(&who, &currency_id, AssetType::Usable)
+            + Self::asset_typed_balance(&who, &currency_id, AssetType::Locked)
     }
 
     fn ensure_can_withdraw(
@@ -45,7 +46,7 @@ impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
             return Ok(());
         }
 
-        let new_balance = Self::free_balance(who, &currency_id)
+        let new_balance = Self::free_balance(currency_id, who)
             .checked_sub(&amount)
             .ok_or(Error::<T>::InsufficientBalance)?;
         ensure!(
@@ -108,7 +109,7 @@ impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
         if value.is_zero() {
             return true;
         }
-        Self::free_balance(who, &currency_id) >= value
+        Self::free_balance(currency_id, who) >= value
     }
 
     fn slash(
@@ -306,7 +307,7 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
             AssetType::Reserved,
             beneficiary,
             to_type,
-            value,
+            actual,
         )
         .map_err::<Error<T>, _>(Into::into)?;
         Ok(value - actual)

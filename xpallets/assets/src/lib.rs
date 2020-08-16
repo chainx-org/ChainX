@@ -8,6 +8,8 @@
 mod mock;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_multicurrency;
 
 mod multicurrency;
 pub mod traits;
@@ -366,9 +368,8 @@ impl<T: Trait> Module<T> {
         Self::asset_typed_balance(&who, &id, AssetType::Usable)
     }
 
-    pub fn free_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Usable)
-            + Self::asset_typed_balance(&who, &id, AssetType::Locked)
+    pub fn locked_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
+        Self::asset_typed_balance(&who, &id, AssetType::Locked)
     }
 }
 
