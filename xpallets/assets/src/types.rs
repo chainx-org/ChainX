@@ -14,16 +14,8 @@ pub use chainx_primitives::{Decimals, Desc, Token};
 pub use xp_runtime::Memo;
 use xpallet_assets_registrar::AssetInfo;
 
-use super::{BalanceOf, Error, Trait};
+use super::{Error, Trait};
 use frame_support::traits::LockIdentifier;
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub enum SignedBalance<T: Trait> {
-    /// A positive imbalance (funds have been created but none destroyed).
-    Positive(BalanceOf<T>),
-    /// A negative imbalance (funds have been destroyed but none created).
-    Negative(BalanceOf<T>),
-}
 
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
