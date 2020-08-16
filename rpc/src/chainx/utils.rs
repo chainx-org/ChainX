@@ -37,7 +37,7 @@ pub fn try_hex_or_str(src: &[u8]) -> String {
                 return false;
             }
         }
-        return true;
+        true
     };
     if check_is_str(src) {
         to_string!(src)
@@ -66,7 +66,7 @@ fn parse_generic_trustee_props(
                     match public {
                         BitcoinPublic::Normal(_) => {
                             error!("bitcoin TrusteeIntentionProps entity should be `Compressed`, not `Normal`, something wrong in chain!|public:{:?}", public);
-                            return None;
+                            None
                         }
                         BitcoinPublic::Compressed(ref hash) => Some(format!("{:?}", hash)),
                     }

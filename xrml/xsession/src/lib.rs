@@ -41,19 +41,19 @@ pub trait OnSessionChange<T> {
 }
 
 macro_rules! impl_session_change {
-	() => (
-		impl<T> OnSessionChange<T> for () {
-			fn on_session_change() {}
-		}
-	);
+    () => (
+        impl<T> OnSessionChange<T> for () {
+            fn on_session_change() {}
+        }
+    );
 
-	( $($t:ident)* ) => {
-		impl<T: Clone, $($t: OnSessionChange<T>),*> OnSessionChange<T> for ($($t,)*) {
-			fn on_session_change() {
-				$($t::on_session_change();)*
-			}
-		}
-	}
+    ( $($t:ident)* ) => {
+        impl<T: Clone, $($t: OnSessionChange<T>),*> OnSessionChange<T> for ($($t,)*) {
+            fn on_session_change() {
+                $($t::on_session_change();)*
+            }
+        }
+    }
 }
 
 for_each_tuple!(impl_session_change);
@@ -90,11 +90,11 @@ decl_module! {
 }
 
 decl_event!(
-	pub enum Event<T> where <T as system::Trait>::BlockNumber {
-		/// New session has happened. Note that the argument is the session index, not the block
-		/// number as the type might suggest.
-		NewSession(BlockNumber),
-	}
+    pub enum Event<T> where <T as system::Trait>::BlockNumber {
+        /// New session has happened. Note that the argument is the session index, not the block
+        /// number as the type might suggest.
+        NewSession(BlockNumber),
+    }
 );
 
 decl_storage! {

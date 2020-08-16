@@ -64,7 +64,7 @@ where
         return None;
     }
     // check checksum
-    let hash = ss58hash(&d[0..len + 1]);
+    let hash = ss58hash(&d[0..=len]);
     if d[len + 1..len + 3] != hash[0..2] {
         error!(
             "[account_info]|ss58 checksum error|calc:{:?}|provide:{:?}",
@@ -74,7 +74,7 @@ where
         return None;
     }
     // first byte is version
-    res.as_mut().copy_from_slice(&d[1..len + 1]);
+    res.as_mut().copy_from_slice(&d[1..=len]);
     Some(res)
 }
 
@@ -86,7 +86,7 @@ where
     AccountId: Default + MaybeDebug + AsMut<[u8]> + AsRef<[u8]>,
 {
     let v = split(data);
-    if v.len() < 1 {
+    if v.is_empty() {
         error!(
             "[account_info]|can't parse data|data:{:}",
             u8array_to_string(data)

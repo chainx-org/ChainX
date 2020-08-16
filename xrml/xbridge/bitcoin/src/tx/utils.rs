@@ -48,8 +48,8 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
             let address: &ScriptAddress = &script_addresses[0];
             let addr = Address {
                 kind: address.kind,
-                network: network,
-                hash: address.hash.clone(), // public key hash
+                network,
+                hash: address.hash, // public key hash
             };
             return Some(addr);
         }
@@ -95,17 +95,17 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
     if script.is_null_data_script() {
         // jump OP_RETURN, when after `is_null_data_script`, subscript must larger and equal than 1
         let s = script.subscript(1);
-        if s.len() == 0 {
+        if s.is_empty() {
             error!("[parse_opreturn]|nothing after `OP_RETURN`, valid in rule but not valid for public consensus");
             return None;
         }
         // script must large then 1
         if s[0] < Opcode::OP_PUSHDATA1 as u8 {
             if s[0] as usize == (&s[1..]).len() {
-                return Some(s[1..].to_vec());
+                Some(s[1..].to_vec())
             } else {
                 error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len:{:?}|real:{:?}", s[0], &s[1..]);
-                return None;
+                None
             }
         } else if s[0] == Opcode::OP_PUSHDATA1 as u8 {
             // when subscript [0] is `OP_PUSHDATA1`, must have [1], or is an invalid data
@@ -118,10 +118,10 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
             }
             // script must large then 2
             if s[1] as usize == (&s[2..]).len() {
-                return Some(s[2..].to_vec());
+                Some(s[2..].to_vec())
             } else {
                 error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len mark:{:?}|len:{:?}|real:{:?}", s[0], s[1], &s[2..]);
-                return None;
+                None
             }
         } else {
             error!("[parse_opreturn]|unexpect! opreturn source error, opreturn should not");

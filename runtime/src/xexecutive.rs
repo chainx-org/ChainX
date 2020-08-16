@@ -17,6 +17,9 @@
 
 //! Executive: Handles all of the top-level stuff; essentially just executing blocks/extrinsics.
 
+#![allow(clippy::op_ref)]
+#![allow(clippy::identity_op)]
+
 use crate::fee::CheckFee;
 use parity_codec::{Codec, Encode};
 use rstd::marker::PhantomData;
@@ -107,7 +110,7 @@ impl<
         let header = block.header();
 
         // check parent_hash is correct.
-        let n = header.number().clone();
+        let n = *header.number();
         assert!(
             n > System::BlockNumber::zero() && <system::Module<System>>::block_hash(n - System::BlockNumber::one()) == *header.parent_hash(),
             "Parent hash should be valid."
@@ -329,6 +332,7 @@ impl<
                 vec![]
             };
 
+            #[allow(clippy::cast_lossless)]
             TransactionValidity::Valid {
                 priority: acceleration.into() as TransactionPriority,
                 requires,
@@ -360,12 +364,12 @@ impl<
         let method_call_weight = <xfee_manager::Module<System>>::method_call_weight();
         if let Some(fee_power) = f.check_fee(switcher, method_call_weight) {
             if Payment::check_payment(&s.clone().unwrap(), encoded_len, fee_power, acc.into()).is_err() {
-                return TransactionValidity::Invalid(ApplyError::CantPay as i8);
+                TransactionValidity::Invalid(ApplyError::CantPay as i8)
             } else {
-                return valid;
+                valid
             }
         } else {
-            return TransactionValidity::Invalid(NOT_ALLOW as i8);
+            TransactionValidity::Invalid(NOT_ALLOW as i8)
         }
     }
 

@@ -32,7 +32,9 @@
 // re-export since this is necessary for `impl_apis` in runtime.
 pub use fg_primitives;
 use fg_primitives::ScheduledChange;
-use parity_codec::{Encode, KeyedVec};
+use parity_codec::Encode;
+#[cfg(feature = "std")]
+use parity_codec::KeyedVec;
 use primitives::traits::{Convert, CurrentHeight, SaturatedConversion};
 use rstd::prelude::*;
 use substrate_primitives::ed25519::Public as AuthorityId;
@@ -105,10 +107,10 @@ pub trait Trait: system::Trait + consensus::Trait {
 }
 
 decl_event!(
-	pub enum Event<T> where <T as consensus::Trait>::SessionKey {
-		/// New authority set has been applied.
-		NewAuthorities(Vec<(SessionKey, u64)>),
-	}
+    pub enum Event<T> where <T as consensus::Trait>::SessionKey {
+        /// New authority set has been applied.
+        NewAuthorities(Vec<(SessionKey, u64)>),
+    }
 );
 
 decl_storage! {
@@ -191,8 +193,7 @@ decl_module! {
 impl<T: Trait> Module<T> {
     /// Get the current set of authorities, along with their respective weights.
     pub fn grandpa_authorities() -> Vec<(T::SessionKey, u64)> {
-        let tmp = <AuthorityStorageVec<T::SessionKey>>::items();
-        tmp
+        <AuthorityStorageVec<T::SessionKey>>::items()
     }
 
     /// Schedule a change in the authorities.
@@ -217,7 +218,7 @@ impl<T: Trait> Module<T> {
         if Self::pending_change().is_none() {
             let scheduled_at = system::ChainContext::<T>::default().current_height();
 
-            if let Some(_) = forced {
+            if forced.is_some() {
                 if Self::next_forced().map_or(false, |next| next > scheduled_at) {
                     return Err("Cannot signal forced change so soon after last.");
                 }

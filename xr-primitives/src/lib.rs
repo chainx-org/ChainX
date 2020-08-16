@@ -2,6 +2,9 @@
 //! System manager: Handles all of the top-level stuff; executing block/transaction, setting code
 //! and depositing logs.
 
+#![allow(clippy::type_complexity)]
+#![allow(clippy::match_overlapping_arm)]
+#![allow(clippy::block_in_if_condition_stmt)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod generic;

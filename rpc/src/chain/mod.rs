@@ -133,7 +133,7 @@ where
     RA: Send + Sync + 'static,
 {
     fn unwrap_or_best(&self, hash: Option<Block::Hash>) -> Result<Block::Hash> {
-        Ok(match hash.into() {
+        Ok(match hash {
             None => self.client.info().chain.best_hash,
             Some(hash) => hash,
         })
@@ -243,7 +243,7 @@ where
     ) {
         self.subscribe_headers(
             subscriber,
-            || self.finalized_head().map(|h| Some(h)),
+            || self.finalized_head().map(Some),
             || {
                 self.client
                     .finality_notification_stream()

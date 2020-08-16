@@ -1,6 +1,7 @@
 // Copyright 2018-2019 Chainpool.
 //! Virtual mining for holding tokens.
 
+#![allow(clippy::ptr_arg)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod asset_power;
@@ -55,6 +56,12 @@ decl_module! {
             ensure!(
                 <xassets::Module<T> as ChainT>::TOKEN.to_vec() != token,
                 "Cannot claim from native asset via tokens module."
+            );
+            let lbtc = <xbitcoin::lockup::Module<T> as ChainT>::TOKEN.to_vec();
+            let sdot = <xsdot::Module<T> as ChainT>::TOKEN.to_vec();
+            ensure!(
+                token != lbtc && token != sdot,
+                "Cannot claim from LBTC and SDOT since Proposal 12 removed these airdrop assets"
             );
             ensure!(
                 Self::psedu_intentions().contains(&token),

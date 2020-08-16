@@ -388,55 +388,55 @@ define_env!(Env, <E: Ext>,
     //
     // - amount: How much gas is used.
     gas(ctx, amount: u32) => {
-		charge_gas(
-			&mut ctx.gas_meter,
-			ctx.schedule,
-			&mut ctx.special_trap,
-			RuntimeToken::Explicit(amount)
-		)?;
+        charge_gas(
+            &mut ctx.gas_meter,
+            ctx.schedule,
+            &mut ctx.special_trap,
+            RuntimeToken::Explicit(amount)
+            )?;
         Ok(())
     },
 
-	// Set the value at the given key in the contract storage.
-	//
-	// The value length must not exceed the maximum defined by the contracts module parameters.
-	// Storing an empty value is disallowed.
-	//
-	// # Parameters
-	//
-	// - `key_ptr`: pointer into the linear memory where the location to store the value is placed.
-	// - `value_ptr`: pointer into the linear memory where the value to set is placed.
-	// - `value_len`: the length of the value in bytes.
+    // Set the value at the given key in the contract storage.
+    //
+    // The value length must not exceed the maximum defined by the contracts module parameters.
+    // Storing an empty value is disallowed.
+    //
+    // # Parameters
+    //
+    // - `key_ptr`: pointer into the linear memory where the location to store the value is placed.
+    // - `value_ptr`: pointer into the linear memory where the value to set is placed.
+    // - `value_len`: the length of the value in bytes.
     //
     //  # Errors
     //
-    // 	- If value length exceeds the configured maximum value length of a storage entry.
-    // 	- Upon trying to set an empty storage entry (value length is 0).
-	ext_set_storage(ctx, key_ptr: u32, value_ptr: u32, value_len: u32) => {
-		if value_len > ctx.ext.max_value_size() {
-			// Bail out if value length exceeds the set maximum value size.
-			return Err(sandbox::HostError);
+    //     - If value length exceeds the configured maximum value length of a storage entry.
+    //     - Upon trying to set an empty storage entry (value length is 0).
+    ext_set_storage(ctx, key_ptr: u32, value_ptr: u32, value_len: u32) => {
+        if value_len > ctx.ext.max_value_size() {
+            // Bail out if value length exceeds the set maximum value size.
+            return Err(sandbox::HostError);
         }
         let mut key: StorageKey = [0; 32];
         read_sandbox_memory_into_buf(ctx, key_ptr, &mut key)?;
-		let value = Some(read_sandbox_memory(ctx, value_ptr, value_len)?);
-		ctx.ext.set_storage(key, value).map_err(|_| sandbox::HostError)?;
+        let value = Some(read_sandbox_memory(ctx, value_ptr, value_len)?);
+        ctx.ext.set_storage(key, value).map_err(|_| sandbox::HostError)?;
         Ok(())
     },
-	// Clear the value at the given key in the contract storage.
-	//
-	// # Parameters
-	//
-	// - `key_ptr`: pointer into the linear memory where the location to clear the value is placed.
-	ext_clear_storage(ctx, key_ptr: u32) => {
-		let mut key: StorageKey = [0; 32];
-		read_sandbox_memory_into_buf(ctx, key_ptr, &mut key)?;
-		ctx.ext.set_storage(key, None).map_err(|_| sandbox::HostError)?;
+    // Clear the value at the given key in the contract storage.
+    //
+    // # Parameters
+    //
+    // - `key_ptr`: pointer into the linear memory where the location to clear the value is placed.
+    ext_clear_storage(ctx, key_ptr: u32) => {
+        let mut key: StorageKey = [0; 32];
+        read_sandbox_memory_into_buf(ctx, key_ptr, &mut key)?;
+        ctx.ext.set_storage(key, None).map_err(|_| sandbox::HostError)?;
         Ok(())
     },
 
     // Retrieve the value under the given key from the storage and return 0.
-	// If there is no entry under the given key then this function will return 1 and
+    // If there is no entry under the given key then this function will return 1 and
     // clear the scratch buffer.
     //
     // - key_ptr: pointer into the linear memory where the key
@@ -453,35 +453,35 @@ define_env!(Env, <E: Ext>,
         }
     },
 
-	// Transfer some value to another account.
-	//
-	// If the value transfer was succesful zero is returned. Otherwise one is returned.
-	// The scratch buffer is not touched. The receiver can be a plain account or
-	// a contract.
-	//
-	// - account_ptr: a pointer to the address of the beneficiary account
-	//   Should be decodable as an `T::AccountId`. Traps otherwise.
-	// - account_len: length of the address buffer.
-	// - value_ptr: a pointer to the buffer with value, how much value to send.
-	//   Should be decodable as a `T::Balance`. Traps otherwise.
-	// - value_len: length of the value buffer.
-	ext_transfer(
-		ctx,
-		account_ptr: u32,
-		account_len: u32,
-		value_ptr: u32,
-		value_len: u32
-	) -> u32 => {
-		let callee: <<E as Ext>::T as system::Trait>::AccountId =
-			read_sandbox_memory_as(ctx, account_ptr, account_len)?;
-		let value: <<E as Ext>::T as xassets::Trait>::Balance =
-			read_sandbox_memory_as(ctx, value_ptr, value_len)?;
+    // Transfer some value to another account.
+    //
+    // If the value transfer was succesful zero is returned. Otherwise one is returned.
+    // The scratch buffer is not touched. The receiver can be a plain account or
+    // a contract.
+    //
+    // - account_ptr: a pointer to the address of the beneficiary account
+    //   Should be decodable as an `T::AccountId`. Traps otherwise.
+    // - account_len: length of the address buffer.
+    // - value_ptr: a pointer to the buffer with value, how much value to send.
+    //   Should be decodable as a `T::Balance`. Traps otherwise.
+    // - value_len: length of the value buffer.
+    ext_transfer(
+        ctx,
+        account_ptr: u32,
+        account_len: u32,
+        value_ptr: u32,
+        value_len: u32
+    ) -> u32 => {
+        let callee: <<E as Ext>::T as system::Trait>::AccountId =
+            read_sandbox_memory_as(ctx, account_ptr, account_len)?;
+        let value: <<E as Ext>::T as xassets::Trait>::Balance =
+            read_sandbox_memory_as(ctx, value_ptr, value_len)?;
 
-		match ctx.ext.transfer(&callee, value, ctx.gas_meter) {
-			Ok(_) => Ok(0),
-			Err(_) => Ok(1),
-		}
-	},
+        match ctx.ext.transfer(&callee, value, ctx.gas_meter) {
+            Ok(_) => Ok(0),
+            Err(_) => Ok(1),
+        }
+    },
 
     // Make a call to another contract.
     //
@@ -571,9 +571,9 @@ define_env!(Env, <E: Ext>,
     // of the newly instantiated contract. In the case of a failure status, the scratch buffer is
     // cleared.
     //
-	// This call fails if it would bring the calling contract below the existential deposit.
-	// In order to destroy a contract `ext_terminate` must be used.
-	//
+    // This call fails if it would bring the calling contract below the existential deposit.
+    // In order to destroy a contract `ext_terminate` must be used.
+    //
     // If the contract traps during execution or otherwise fails to complete successfully, then
     // this function clears the scratch buffer and returns 0x0100. As with a failure status, any
     // state changes made by the called contract are reverted.
@@ -652,41 +652,41 @@ define_env!(Env, <E: Ext>,
         }
     },
 
-	// Remove the calling account and transfer remaining balance.
-	//
-	// This function never returns. Either the termination was successful and the
-	// execution of the destroyed contract is halted. Or it failed during the termination
-	// which is considered fatal and results in a trap + rollback.
-	//
-	// - beneficiary_ptr: a pointer to the address of the beneficiary account where all
-	//   where all remaining funds of the caller are transfered.
-	//   Should be decodable as an `T::AccountId`. Traps otherwise.
-	// - beneficiary_len: length of the address buffer.
-	ext_terminate(
-		ctx,
-		beneficiary_ptr: u32,
-		beneficiary_len: u32
-	) => {
-		let beneficiary: <<E as Ext>::T as system::Trait>::AccountId =
-			read_sandbox_memory_as(ctx, beneficiary_ptr, beneficiary_len)?;
+    // Remove the calling account and transfer remaining balance.
+    //
+    // This function never returns. Either the termination was successful and the
+    // execution of the destroyed contract is halted. Or it failed during the termination
+    // which is considered fatal and results in a trap + rollback.
+    //
+    // - beneficiary_ptr: a pointer to the address of the beneficiary account where all
+    //   where all remaining funds of the caller are transfered.
+    //   Should be decodable as an `T::AccountId`. Traps otherwise.
+    // - beneficiary_len: length of the address buffer.
+    ext_terminate(
+        ctx,
+        beneficiary_ptr: u32,
+        beneficiary_len: u32
+    ) => {
+        let beneficiary: <<E as Ext>::T as system::Trait>::AccountId =
+            read_sandbox_memory_as(ctx, beneficiary_ptr, beneficiary_len)?;
 
-		if let Ok(_) = ctx.ext.terminate(&beneficiary, ctx.gas_meter) {
-			ctx.special_trap = Some(SpecialTrap::Termination);
-		}
-		Err(sandbox::HostError)
-	},
+        if let Ok(_) = ctx.ext.terminate(&beneficiary, ctx.gas_meter) {
+            ctx.special_trap = Some(SpecialTrap::Termination);
+        }
+        Err(sandbox::HostError)
+    },
 
     // Save a data buffer as a result of the execution, terminate the execution and return a
     // successful result to the caller.
     //
     // This is the only way to return a data buffer to the caller.
     ext_return(ctx, data_ptr: u32, data_len: u32) => {
-		charge_gas(
-			ctx.gas_meter,
-			ctx.schedule,
-			&mut ctx.special_trap,
-			RuntimeToken::ReturnData(data_len)
-		)?;
+        charge_gas(
+            ctx.gas_meter,
+            ctx.schedule,
+            &mut ctx.special_trap,
+            RuntimeToken::ReturnData(data_len)
+        )?;
 
         read_sandbox_memory_into_scratch(ctx, data_ptr, data_len)?;
         let output_buf = mem::replace(&mut ctx.scratch_buf, Vec::new());
@@ -788,11 +788,11 @@ define_env!(Env, <E: Ext>,
             approx_gas_for_balance(ctx.gas_meter.gas_price(), balance_fee)
         };
         charge_gas(
-			&mut ctx.gas_meter,
-			ctx.schedule,
-			&mut ctx.special_trap,
-			RuntimeToken::ComputedDispatchFee(fee)
-		)?;
+            &mut ctx.gas_meter,
+            ctx.schedule,
+            &mut ctx.special_trap,
+            RuntimeToken::ComputedDispatchFee(fee)
+        )?;
 
         debug!("[ext_dispatch_call]|call in contract|caller:{:?}|contract:{:?}|fee gas:{:}|call:{:?}", ctx.ext.caller(), ctx.ext.address(), fee, call);
 
@@ -804,10 +804,10 @@ define_env!(Env, <E: Ext>,
     // Record a request to restore the caller contract to the specified contract.
     //
     // At the finalization stage, i.e. when all changes from the extrinsic that invoked this
-	// contract are committed, this function will compute a tombstone hash from the caller's
+    // contract are committed, this function will compute a tombstone hash from the caller's
     // storage and the given code hash and if the hash matches the hash found in the tombstone at
     // the specified address - kill the caller contract and restore the destination contract and set
-	// the specified `rent_allowance`. All caller's funds are transferred to the destination.
+    // the specified `rent_allowance`. All caller's funds are transferred to the destination.
     //
     // This function doesn't perform restoration right away but defers it to the end of the
     // transaction. If there is no tombstone in the destination address or if the hashes don't match
@@ -898,7 +898,7 @@ define_env!(Env, <E: Ext>,
         // Finally, perform the write.
         write_sandbox_memory(
             ctx.schedule,
-			&mut ctx.special_trap,
+            &mut ctx.special_trap,
             ctx.gas_meter,
             &ctx.memory,
             dest_ptr,
@@ -946,7 +946,7 @@ define_env!(Env, <E: Ext>,
         charge_gas(
             ctx.gas_meter,
             ctx.schedule,
-			&mut ctx.special_trap,
+            &mut ctx.special_trap,
             RuntimeToken::DepositEvent(topics.len() as u32, data_len)
         )?;
         ctx.ext.deposit_event(topics, event_data);
@@ -996,127 +996,127 @@ define_env!(Env, <E: Ext>,
         Ok(())
     },
 
-	// Retrieve the value under the given key from the **runtime** storage and return 0.
-	// If there is no entry under the given key then this function will return 1 and
-	// clear the scratch buffer.
-	//
-	// - key_ptr: the pointer into the linear memory where the requested value is placed.
-	// - key_len: the length of the key in bytes.
-	ext_get_runtime_storage(ctx, key_ptr: u32, key_len: u32) -> u32 => {
-		// Steal the scratch buffer so that we hopefully save an allocation for the `key_buf`.
-		read_sandbox_memory_into_scratch(ctx, key_ptr, key_len)?;
-		let key_buf = mem::replace(&mut ctx.scratch_buf, Vec::new());
+    // Retrieve the value under the given key from the **runtime** storage and return 0.
+    // If there is no entry under the given key then this function will return 1 and
+    // clear the scratch buffer.
+    //
+    // - key_ptr: the pointer into the linear memory where the requested value is placed.
+    // - key_len: the length of the key in bytes.
+    ext_get_runtime_storage(ctx, key_ptr: u32, key_len: u32) -> u32 => {
+        // Steal the scratch buffer so that we hopefully save an allocation for the `key_buf`.
+        read_sandbox_memory_into_scratch(ctx, key_ptr, key_len)?;
+        let key_buf = mem::replace(&mut ctx.scratch_buf, Vec::new());
 
-		match ctx.ext.get_runtime_storage(&key_buf) {
-			Some(value_buf) => {
-				// The given value exists.
-				ctx.scratch_buf = value_buf;
-				Ok(0)
-			}
-			None => {
-				// Put back the `key_buf` and allow its allocation to be reused.
-				ctx.scratch_buf = key_buf;
-				ctx.scratch_buf.clear();
-				Ok(1)
-			}
-		}
-	},
+        match ctx.ext.get_runtime_storage(&key_buf) {
+            Some(value_buf) => {
+                // The given value exists.
+                ctx.scratch_buf = value_buf;
+                Ok(0)
+            }
+            None => {
+                // Put back the `key_buf` and allow its allocation to be reused.
+                ctx.scratch_buf = key_buf;
+                ctx.scratch_buf.clear();
+                Ok(1)
+            }
+        }
+    },
 
-	// // Computes the SHA2 256-bit hash on the given input buffer.
-	// //
-	// // Returns the result directly into the given output buffer.
-	// //
-	// // # Note
-	// //
-	// // - The `input` and `output` buffer may overlap.
-	// // - The output buffer is expected to hold at least 32 bytes (256 bits).
-	// // - It is the callers responsibility to provide an output buffer that
-	// //   is large enough to hold the expected amount of bytes returned by the
-	// //   chosen hash function.
-	// //
-	// // # Parameters
-	// //
-	// // - `input_ptr`: the pointer into the linear memory where the input
-	// //                data is placed.
-	// // - `input_len`: the length of the input data in bytes.
-	// // - `output_ptr`: the pointer into the linear memory where the output
-	// //                 data is placed. The function will write the result
-	// //                 directly into this buffer.
-	// ext_hash_sha2_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
-	// 	compute_hash_on_intermediate_buffer(ctx, sha2_256, input_ptr, input_len, output_ptr)
-	// },
+    // // Computes the SHA2 256-bit hash on the given input buffer.
+    // //
+    // // Returns the result directly into the given output buffer.
+    // //
+    // // # Note
+    // //
+    // // - The `input` and `output` buffer may overlap.
+    // // - The output buffer is expected to hold at least 32 bytes (256 bits).
+    // // - It is the callers responsibility to provide an output buffer that
+    // //   is large enough to hold the expected amount of bytes returned by the
+    // //   chosen hash function.
+    // //
+    // // # Parameters
+    // //
+    // // - `input_ptr`: the pointer into the linear memory where the input
+    // //                data is placed.
+    // // - `input_len`: the length of the input data in bytes.
+    // // - `output_ptr`: the pointer into the linear memory where the output
+    // //                 data is placed. The function will write the result
+    // //                 directly into this buffer.
+    // ext_hash_sha2_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+    //     compute_hash_on_intermediate_buffer(ctx, sha2_256, input_ptr, input_len, output_ptr)
+    // },
 
-	// Computes the KECCAK 256-bit hash on the given input buffer.
-	//
-	// Returns the result directly into the given output buffer.
-	//
-	// # Note
-	//
-	// - The `input` and `output` buffer may overlap.
-	// - The output buffer is expected to hold at least 32 bytes (256 bits).
-	// - It is the callers responsibility to provide an output buffer that
-	//   is large enough to hold the expected amount of bytes returned by the
-	//   chosen hash function.
-	//
-	// # Parameters
-	//
-	// - `input_ptr`: the pointer into the linear memory where the input
-	//                data is placed.
-	// - `input_len`: the length of the input data in bytes.
-	// - `output_ptr`: the pointer into the linear memory where the output
-	//                 data is placed. The function will write the result
-	//                 directly into this buffer.
-	ext_hash_keccak_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
-		compute_hash_on_intermediate_buffer(ctx, keccak_256, input_ptr, input_len, output_ptr)
-	},
+    // Computes the KECCAK 256-bit hash on the given input buffer.
+    //
+    // Returns the result directly into the given output buffer.
+    //
+    // # Note
+    //
+    // - The `input` and `output` buffer may overlap.
+    // - The output buffer is expected to hold at least 32 bytes (256 bits).
+    // - It is the callers responsibility to provide an output buffer that
+    //   is large enough to hold the expected amount of bytes returned by the
+    //   chosen hash function.
+    //
+    // # Parameters
+    //
+    // - `input_ptr`: the pointer into the linear memory where the input
+    //                data is placed.
+    // - `input_len`: the length of the input data in bytes.
+    // - `output_ptr`: the pointer into the linear memory where the output
+    //                 data is placed. The function will write the result
+    //                 directly into this buffer.
+    ext_hash_keccak_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+        compute_hash_on_intermediate_buffer(ctx, keccak_256, input_ptr, input_len, output_ptr)
+    },
 
-	// Computes the BLAKE2 256-bit hash on the given input buffer.
-	//
-	// Returns the result directly into the given output buffer.
-	//
-	// # Note
-	//
-	// - The `input` and `output` buffer may overlap.
-	// - The output buffer is expected to hold at least 32 bytes (256 bits).
-	// - It is the callers responsibility to provide an output buffer that
-	//   is large enough to hold the expected amount of bytes returned by the
-	//   chosen hash function.
-	//
-	// # Parameters
-	//
-	// - `input_ptr`: the pointer into the linear memory where the input
-	//                data is placed.
-	// - `input_len`: the length of the input data in bytes.
-	// - `output_ptr`: the pointer into the linear memory where the output
-	//                 data is placed. The function will write the result
-	//                 directly into this buffer.
-	ext_hash_blake2_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
-		compute_hash_on_intermediate_buffer(ctx, blake2_256, input_ptr, input_len, output_ptr)
-	},
+    // Computes the BLAKE2 256-bit hash on the given input buffer.
+    //
+    // Returns the result directly into the given output buffer.
+    //
+    // # Note
+    //
+    // - The `input` and `output` buffer may overlap.
+    // - The output buffer is expected to hold at least 32 bytes (256 bits).
+    // - It is the callers responsibility to provide an output buffer that
+    //   is large enough to hold the expected amount of bytes returned by the
+    //   chosen hash function.
+    //
+    // # Parameters
+    //
+    // - `input_ptr`: the pointer into the linear memory where the input
+    //                data is placed.
+    // - `input_len`: the length of the input data in bytes.
+    // - `output_ptr`: the pointer into the linear memory where the output
+    //                 data is placed. The function will write the result
+    //                 directly into this buffer.
+    ext_hash_blake2_256(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+        compute_hash_on_intermediate_buffer(ctx, blake2_256, input_ptr, input_len, output_ptr)
+    },
 
-	// Computes the BLAKE2 128-bit hash on the given input buffer.
-	//
-	// Returns the result directly into the given output buffer.
-	//
-	// # Note
-	//
-	// - The `input` and `output` buffer may overlap.
-	// - The output buffer is expected to hold at least 16 bytes (128 bits).
-	// - It is the callers responsibility to provide an output buffer that
-	//   is large enough to hold the expected amount of bytes returned by the
-	//   chosen hash function.
-	//
-	// # Parameters
-	//
-	// - `input_ptr`: the pointer into the linear memory where the input
-	//                data is placed.
-	// - `input_len`: the length of the input data in bytes.
-	// - `output_ptr`: the pointer into the linear memory where the output
-	//                 data is placed. The function will write the result
-	//                 directly into this buffer.
-	ext_hash_blake2_128(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
-		compute_hash_on_intermediate_buffer(ctx, blake2_128, input_ptr, input_len, output_ptr)
-	},
+    // Computes the BLAKE2 128-bit hash on the given input buffer.
+    //
+    // Returns the result directly into the given output buffer.
+    //
+    // # Note
+    //
+    // - The `input` and `output` buffer may overlap.
+    // - The output buffer is expected to hold at least 16 bytes (128 bits).
+    // - It is the callers responsibility to provide an output buffer that
+    //   is large enough to hold the expected amount of bytes returned by the
+    //   chosen hash function.
+    //
+    // # Parameters
+    //
+    // - `input_ptr`: the pointer into the linear memory where the input
+    //                data is placed.
+    // - `input_len`: the length of the input data in bytes.
+    // - `output_ptr`: the pointer into the linear memory where the output
+    //                 data is placed. The function will write the result
+    //                 directly into this buffer.
+    ext_hash_blake2_128(ctx, input_ptr: u32, input_len: u32, output_ptr: u32) => {
+        compute_hash_on_intermediate_buffer(ctx, blake2_128, input_ptr, input_len, output_ptr)
+    },
 );
 
 /// Computes the given hash function on the scratch buffer.

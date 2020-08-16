@@ -137,7 +137,7 @@ where
         if let Some(header) = self.client.header(&BlockId::Hash(hash))? {
             Ok(*header.number())
         } else {
-            Err(error::Error::BlockNumberErr.into())
+            Err(error::Error::BlockNumberErr)
         }
     }
 
@@ -179,7 +179,7 @@ where
         } else if let Some(v1) = Self::pickout::<V1>(state, key_v1, hasher)? {
             Ok(Err(v1))
         } else {
-            Err(error::Error::StorageNotExistErr.into())
+            Err(error::Error::StorageNotExistErr)
         }
     }
 
@@ -319,10 +319,7 @@ where
         let map =
             Self::pickout::<BTreeMap<AssetType, Balance>>(state, &balances_key, Hasher::BLAKE2256)?
                 .unwrap_or_default();
-        Ok(map
-            .get(&AssetType::Free)
-            .map(|free| *free)
-            .unwrap_or_default())
+        Ok(map.get(&AssetType::Free).copied().unwrap_or_default())
     }
 
     /// Get free balance of PCX given an account.
@@ -399,8 +396,8 @@ where
         >,
         error::Error,
     > {
-        let key = "System Events".as_bytes();
-        Ok(Self::pickout(state, &key, Hasher::TWOX128)?.unwrap_or_default())
+        let key = b"System Events";
+        Ok(Self::pickout(state, &key[..], Hasher::TWOX128)?.unwrap_or_default())
     }
 
     fn get_token_discount(

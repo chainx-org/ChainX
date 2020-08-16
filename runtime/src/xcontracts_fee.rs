@@ -25,7 +25,7 @@ impl XContractsCheckFee for Call {
         method_weight_map: BTreeMap<XString, u64>,
     ) -> Option<u64> {
         let get_switcher = |call_switcher: CallSwitcher| -> bool {
-            switcher.get(&call_switcher).map(|b| *b).unwrap_or(false)
+            switcher.get(&call_switcher).copied().unwrap_or(false)
         };
 
         // Check if a certain emergency switch is on.

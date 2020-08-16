@@ -47,7 +47,7 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as XBridgeOfSDOT {
         pub Claims get(claims) build(|config: &GenesisConfig<T>| {
-            config.claims.iter().map(|(a, b)| (a.clone(), b.clone())).collect::<Vec<_>>()
+            config.claims.iter().map(|(a, b)| (*a, *b)).collect::<Vec<_>>()
         }): map EthereumAddress => Option<T::Balance>;
         pub Total get(total) build(|config: &GenesisConfig<T>| {
             config.claims.iter().fold(Zero::zero(), |acc: T::Balance, &(_, n)| acc + n)
@@ -129,9 +129,7 @@ fn recover_eth_address(
 }
 
 fn contains(seq: &[u8], sub_seq: &[u8]) -> bool {
-    seq.windows(sub_seq.len())
-        .position(|window| window == sub_seq)
-        .is_some()
+    seq.windows(sub_seq.len()).any(|window| window == sub_seq)
 }
 
 fn ecdsa_recover(sig: &EcdsaSignature, msg: &[u8; 32]) -> Option<[u8; 64]> {

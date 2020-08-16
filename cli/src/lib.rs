@@ -17,10 +17,12 @@
 
 //! Substrate CLI library.
 
+#![allow(clippy::unreadable_literal)]
 //#![feature(custom_attribute)]
 
 mod chain_spec;
 mod genesis_config;
+mod logger;
 mod native_rpc;
 mod params;
 mod service;
@@ -45,6 +47,8 @@ use self::service::set_validator_name;
 pub enum ChainSpec {
     Development,
     Testnet,
+    TestnetMohism,
+    TestnetConfucianism,
     Mainnet,
 }
 
@@ -54,6 +58,8 @@ impl ChainSpec {
         Ok(match self {
             ChainSpec::Development => chain_spec::development_config(),
             ChainSpec::Testnet => chain_spec::testnet_config(),
+            ChainSpec::TestnetMohism => chain_spec::testnet_mohism_config(),
+            ChainSpec::TestnetConfucianism => chain_spec::testnet_confucianism_config(),
             ChainSpec::Mainnet => chain_spec::mainnet_config(),
         })
     }
@@ -61,7 +67,8 @@ impl ChainSpec {
     pub(crate) fn from(s: &str) -> Option<Self> {
         match s {
             "mainnet" | "" => Some(ChainSpec::Mainnet),
-            "testnet" => Some(ChainSpec::Testnet),
+            // "testnet-mohism" => Some(ChainSpec::TestnetMohism),
+            "testnet-confucianism" => Some(ChainSpec::TestnetConfucianism),
             "dev" => Some(ChainSpec::Development),
             _ => None,
         }
@@ -69,10 +76,13 @@ impl ChainSpec {
 }
 
 fn load_spec(id: &str) -> Result<Option<chain_spec::ChainSpec>, String> {
-    Ok(match ChainSpec::from(id) {
-        Some(spec) => Some(spec.load()?),
-        None => None,
-    })
+    match ChainSpec::from(id) {
+        Some(spec) => Ok(Some(spec.load()?)),
+        None => Err(format!(
+            "we just allow:{:?}",
+            vec!["mainnet", "testnet-confucianism", "dev"]
+        )),
+    }
 }
 
 #[derive(Debug)]
@@ -96,9 +106,10 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
         );
         return (dirs, None);
     }
-    mods.map(|m| {
+
+    if let Some(m) = mods {
         for s in m.split(',') {
-            if s.len() == 0 {
+            if s.is_empty() {
                 continue;
             }
             let mut parts = s.split('=');
@@ -138,14 +149,12 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
                 level: log_level,
             });
         }
-    });
+    }
 
     let mut tmp_filter = LevelFilter::Off;
     for d in dirs.iter() {
-        if d.name == None {
-            if d.level > tmp_filter {
-                tmp_filter = d.level;
-            }
+        if d.name == None && d.level > tmp_filter {
+            tmp_filter = d.level;
         }
     }
 
@@ -155,105 +164,13 @@ fn parse_spec(spec: &str) -> (Vec<Directive>, Option<LevelFilter>) {
         } else {
             Some(tmp_filter)
         }
+    } else if tmp_filter == LevelFilter::Off {
+        None
     } else {
-        if tmp_filter == LevelFilter::Off {
-            None
-        } else {
-            Some(tmp_filter)
-        }
+        Some(tmp_filter)
     };
 
-    return (dirs, filter);
-}
-
-fn init_logger_log4rs(spec: &str, params: ChainXParams) -> Result<(), String> {
-    use log4rs::{
-        append::{
-            console::ConsoleAppender,
-            rolling_file::{
-                policy::{
-                    self,
-                    compound::{roll, trigger},
-                },
-                RollingFileAppender,
-            },
-        },
-        config,
-        encode::pattern::PatternEncoder,
-    };
-
-    let (directives, filter) = parse_spec(spec);
-    let filter = filter.unwrap_or(LevelFilter::Info);
-
-    let (pattern1, pattern2) = if filter > LevelFilter::Info {
-        (
-            "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {h({l})} {t}  {m}\n",
-            "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {l} {t}  {m}\n", // remove color
-        )
-    } else {
-        (
-            "{d(%Y-%m-%d %H:%M:%S:%3f)} {h({l})} {m}\n",
-            "{d(%Y-%m-%d %H:%M:%S:%3f)} {l} {m}\n", // remove color
-        )
-    };
-
-    let console = ConsoleAppender::builder()
-        .encoder(Box::new(PatternEncoder::new(pattern1)))
-        .build();
-
-    let log = params.log_dir.clone() + "/" + &params.log_name;
-    let log_file = if params.log_compression {
-        log.clone() + ".gz"
-    } else {
-        log.clone()
-    };
-
-    if params.log_size == 0 {
-        return Err("the `--log-size` can't be 0".to_string());
-    }
-
-    let trigger = trigger::size::SizeTrigger::new(1024 * 1024 * params.log_size);
-    let roll_pattern = format!("{}.{{}}", log_file);
-    let roll = roll::fixed_window::FixedWindowRoller::builder()
-        .build(roll_pattern.as_str(), params.log_roll_count)
-        .map_err(|e| format!("log rotate file:{:?}", e))?;
-
-    let policy = policy::compound::CompoundPolicy::new(Box::new(trigger), Box::new(roll));
-    let roll_file = RollingFileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new(pattern2)))
-        .build(log, Box::new(policy))
-        .map_err(|e| format!("{}", e))?;
-
-    let mut tmp_builder = if params.log_console {
-        config::Config::builder()
-            .appender(config::Appender::builder().build("console", Box::new(console)))
-            .appender(config::Appender::builder().build("roll", Box::new(roll_file)))
-    } else {
-        config::Config::builder()
-            .appender(config::Appender::builder().build("roll", Box::new(roll_file)))
-    };
-
-    for d in directives {
-        if let Some(name) = d.name {
-            tmp_builder = tmp_builder.logger(config::Logger::builder().build(name, d.level));
-        }
-    }
-
-    let root = if params.log_console {
-        config::Root::builder()
-            .appender("roll")
-            .appender("console")
-            .build(filter)
-    } else {
-        config::Root::builder().appender("roll").build(filter)
-    };
-
-    let log_config = tmp_builder
-        .build(root)
-        .expect("Construct log config failure");
-
-    log4rs::init_config(log_config).expect("Initializing log config shouldn't be fail");
-    Ok(())
+    (dirs, filter)
 }
 
 pub fn run<I, T, E>(args: I, exit: E, version: cli::VersionInfo) -> error::Result<()>
@@ -273,7 +190,7 @@ where
                 cli::init_logger(s);
                 Ok(())
             } else {
-                init_logger_log4rs(s, cli.right)
+                logger::init(s, cli.right)
             }
         },
         |exit, cli_args, custom_args, config| {
@@ -300,7 +217,7 @@ where
             if config.roles == ServiceRoles::AUTHORITY {
                 let option_name = custom_args.validator_name;
                 let name = if cli_args.shared_params.dev {
-                    option_name.unwrap_or("Alice".to_string())
+                    option_name.unwrap_or_else(|| "Alice".to_string())
                 } else {
                     option_name.ok_or("if in AUTHORITY mode, must point the validator name!")?
                 };

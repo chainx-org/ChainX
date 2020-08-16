@@ -17,7 +17,7 @@ use system::ensure_none;
 // ChainX
 #[cfg(feature = "std")]
 use xsupport::u8array_to_string;
-use xsupport::{error, info};
+use xsupport::{error, info, warn};
 
 #[cfg(feature = "std")]
 pub use self::types::InherentDataProvider;
@@ -48,7 +48,7 @@ decl_module! {
             ensure_none(origin)?;
             info!("height:{:}, blockproducer: {:?}|name:{:}", system::Module::<T>::block_number(), producer, u8array_to_string(&T::Validator::get_validator_name(&producer).unwrap_or_default()));
 
-            if Self::is_validator(&producer) == false {
+            if !Self::is_validator(&producer) {
                 error!("producer:{:?} not in current validators!, validators is:{:?}", producer, T::ValidatorList::validator_list());
                 panic!("producer not in current validators!");
             }
@@ -56,9 +56,40 @@ decl_module! {
             BlockProducer::<T>::put(producer);
             Ok(())
         }
+
+        fn set_blocking_height(height: T::BlockNumber) {
+            BlockingHeight::<T>::put(height);
+        }
+
+        fn remove_blocking_height() {
+            BlockingHeight::<T>::kill();
+        }
+
         fn on_finalize(_n: T::BlockNumber) {
             BlockProducer::<T>::kill();
+            if let Some(height) = Self::blocking_height() {
+                let current_height = system::Module::<T>::block_number();
+                info!("have set blocking number, would blocking in future {:}/{:}", current_height, height);
+                if current_height == height {
+                    warn!("BLOCKING!!! meet blocking height, blocking at {:}", height);
+                    blocking();
+                }
+            }
         }
+    }
+}
+
+fn blocking() {
+    #[cfg(feature = "std")]
+    {
+        // when node run in std, would use sleep to sleep miner thread and cause `took too long`
+        std::thread::sleep(std::time::Duration::from_secs(6));
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        // when node run in wasm, would panic and exist miner. notice if remove blocking, this
+        // wasm part would not be executed, thus would not effect sync problem.
+        panic!("not allow pass in wasm")
     }
 }
 
@@ -67,6 +98,8 @@ decl_storage! {
         pub BlockProducer get(block_producer): Option<T::AccountId>;
 
         pub NetworkProps get(network_props) config(): (NetworkType, AddressType);
+
+        pub BlockingHeight get(blocking_height): Option<T::BlockNumber>;
     }
 }
 

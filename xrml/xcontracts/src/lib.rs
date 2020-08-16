@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Parity Technologies (UK) Ltd.
+// Copyright 2018-2020 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -82,6 +82,17 @@
 //! an [`eDSL`](https://wiki.haskell.org/Embedded_domain_specific_language) that enables writing
 //! WebAssembly based smart contracts in the Rust programming language. This is a work in progress.
 
+#![allow(clippy::redundant_pattern_matching)]
+#![allow(clippy::match_ref_pats)]
+#![allow(clippy::identity_conversion)]
+#![allow(clippy::len_zero)]
+#![allow(clippy::clone_on_copy)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::or_fun_call)]
+#![allow(clippy::single_match)]
+#![allow(clippy::try_err)]
+#![allow(clippy::option_option)]
+#![allow(clippy::assign_op_pattern)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[macro_use]
@@ -1240,7 +1251,7 @@ impl Default for Schedule {
                 event_per_topic_cost: 1,
                 event_base_cost: 1,
                 call_base_cost: 60000,
-                instantiate_base_cost: 200000,
+                instantiate_base_cost: 200_000,
                 sandbox_data_read_cost: 1,
                 sandbox_data_write_cost: 1,
                 max_event_topics: 4,

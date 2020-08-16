@@ -1,5 +1,6 @@
 // Copyright 2018 Chainpool.
 
+#![allow(clippy::ptr_arg)]
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -90,7 +91,7 @@ decl_module! {
                 "Price must be an integer multiple of the tick precision"
             );
 
-            Self::is_within_quotation_range(price, &side, pair_index)?;
+            Self::is_within_quotation_range(price, side, pair_index)?;
             Self::has_too_many_backlog_orders(pair_index, price, side)?;
 
             // Reserve the token according to the order side.

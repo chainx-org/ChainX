@@ -64,6 +64,7 @@ decl_module! {
             Ok(())
         }
 
+        /// release locked btc directly from a list of UXTO.
         pub fn release_lock(utxos: Vec<(H256, u32)>) {
             for utxo in utxos {
                 if destroy_utxo::<T>(utxo.0, utxo.1) {
@@ -75,6 +76,14 @@ decl_module! {
         pub fn set_locked_coin_limit(limit: (u64, u64)) {
             LockedCoinLimit::<T>::put(&limit);
             info!("[set_locked_coin_limit]|set new lockup bitoin limit to:{:?}", limit);
+        }
+
+        /// create a lock btc from a bitcoin transaction directly. `tx: Vec<u8>` must be a bitcoin
+        /// tx bytes string, otherwise would be dropped.
+        pub fn create_lock(tx: Vec<u8>) -> Result {
+            let tx: Transaction = Decode::decode(&mut tx.as_slice()).ok_or("parse btc tx err")?;
+            let hash = tx.hash();
+            handle_lock_tx::<T>(&tx, &hash)
         }
     }
 }
@@ -88,7 +97,7 @@ decl_storage! {
         pub AddressLockedCoin get(address_locked_coin): map BitcoinAddress => u64;
 
         /// single addr and ont output limit coin value, default limit is 0.01 BTC ~ 10 BTC
-        pub LockedCoinLimit get(locked_coin_limit): (u64, u64) = (1*1000000, 10*100000000);
+        pub LockedCoinLimit get(locked_coin_limit): (u64, u64) = (1_000_000, 10*100_000_000);
     }
 }
 
@@ -197,6 +206,7 @@ pub fn detect_unlock_tx<T: Trait>(tx: &Transaction) -> bool {
     false
 }
 
+#[allow(deprecated)]
 pub fn handle_lockup_tx<T: Trait>(tx_handle: &TxHandler) -> Result {
     match tx_handle.tx_info.tx_type {
         TxType::Lock => handle_lock_tx::<T>(&tx_handle.tx_info.raw_tx, &tx_handle.tx_hash)?,
@@ -345,7 +355,7 @@ where
             if let Some(addr) = parse_output_addr_with_networkid(&script, network) {
                 // compare addr
                 let addr_v = addr2vecu8(&addr);
-                if &addr_v[..4] == &opreturn_addr[..] {
+                if addr_v[..4] == opreturn_addr[..] {
                     debug!("[parse_lock_info]|it's a lock tx");
                     // value should be 0.1 <= value <= 10
                     let value = output.value;
@@ -365,6 +375,7 @@ where
 /// the data should like:
 /// `ChainX:chainx_addr[@channel]:btc_addr[0..4]`
 ///   v[0]          v[1]            v[2]
+#[allow(clippy::type_complexity)]
 fn parse_opreturn_info<AccountId, F>(
     data: &[u8],
     chainx_addr_type: u8,

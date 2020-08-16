@@ -333,11 +333,11 @@ where
             let key = <xbitcoin::BtcMinDeposit<Runtime>>::key();
             Self::pickout::<u64>(&state, &key, Hasher::TWOX128).map(|value| {
                 Some(DepositLimit {
-                    minimal_deposit: value.unwrap_or(100000),
+                    minimal_deposit: value.unwrap_or(100_000),
                 })
             })
         } else {
-            return Ok(None);
+            Ok(None)
         }
     }
 
@@ -379,7 +379,7 @@ where
         let mut records = Vec::new();
         for (nominee, record_wrapper) in self.get_nomination_records_wrapper(who, hash)? {
             if record_wrapper.0.is_err() {
-                return Err(Error::DeprecatedV0Err("chainx_getNominationRecords".into()).into());
+                return Err(Error::DeprecatedV0Err("chainx_getNominationRecords".into()));
             }
             records.push((nominee.into(), record_wrapper.into()));
         }
@@ -411,7 +411,7 @@ where
         let mut intentions_info = Vec::new();
         for info_wrapper in self.get_intentions_info_wrapper(&state, (block_id, hash))? {
             if info_wrapper.intention_profs_wrapper.is_err() {
-                return Err(Error::DeprecatedV0Err("chainx_getIntentions".into()).into());
+                return Err(Error::DeprecatedV0Err("chainx_getIntentions".into()));
             }
             intentions_info.push(info_wrapper.into());
         }
@@ -451,7 +451,9 @@ where
         let info_wrapper = self.get_intention_info_wrapper(&state, (block_id, hash), who)?;
         if let Some(ref info) = info_wrapper {
             if info.intention_profs_wrapper.is_err() {
-                return Err(Error::DeprecatedV0Err("chainx_getIntentionByAccount".into()).into());
+                return Err(Error::DeprecatedV0Err(
+                    "chainx_getIntentionByAccount".into(),
+                ));
             }
         }
         Ok(info_wrapper.map(Into::into))
@@ -481,7 +483,7 @@ where
         let mut psedu_intentions_info = Vec::new();
         for info_wrapper in self.get_psedu_intentions_info_wrapper(&state, block_id)? {
             if info_wrapper.psedu_intention_profs_wrapper.is_err() {
-                return Err(Error::DeprecatedV0Err("chainx_getPseduIntentions".into()).into());
+                return Err(Error::DeprecatedV0Err("chainx_getPseduIntentions".into()));
             }
             psedu_intentions_info.push(info_wrapper.into());
         }
@@ -515,9 +517,9 @@ where
         let mut psedu_records = Vec::new();
         for record_wrapper in self.get_psedu_nomination_records_wrapper(&state, who)? {
             if record_wrapper.deposit_vote_weight_wrapper.is_err() {
-                return Err(
-                    Error::DeprecatedV0Err("chainx_getPseduNominationRecords".into()).into(),
-                );
+                return Err(Error::DeprecatedV0Err(
+                    "chainx_getPseduNominationRecords".into(),
+                ));
             }
             psedu_records.push(record_wrapper.into());
         }
@@ -608,7 +610,7 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<QuotationsList>> {
         if piece < 1 || piece > 10 {
-            return Err(Error::QuotationsPieceErr(pair_index).into());
+            return Err(Error::QuotationsPieceErr(pair_index));
         }
 
         let mut quotationslist = QuotationsList::default();
@@ -692,7 +694,7 @@ where
                 }
             };
         } else {
-            return Err(Error::TradingPairIndexErr(pair_index).into());
+            return Err(Error::TradingPairIndexErr(pair_index));
         }
 
         Ok(Some(quotationslist))
@@ -706,7 +708,7 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<PageData<OrderDetails>>> {
         if page_size > MAX_PAGE_SIZE || page_size < 1 {
-            return Err(Error::PageSizeErr(page_size).into());
+            return Err(Error::PageSizeErr(page_size));
         }
 
         let mut orders = Vec::new();
@@ -736,7 +738,7 @@ where
             page_total = total_page;
 
             if page_index >= total_page && total_page > 0 {
-                return Err(Error::PageIndexErr(page_index).into());
+                return Err(Error::PageIndexErr(page_index));
             }
         }
 
@@ -787,7 +789,10 @@ where
                     None => Ok(Some(vec![])),
                 }
             }
-            _ => Err(Error::RuntimeErr(b"not support for this chain".to_vec(), None).into()),
+            _ => Err(Error::RuntimeErr(
+                b"not support for this chain".to_vec(),
+                None,
+            )),
         }
     }
 
@@ -800,9 +805,9 @@ where
         if let Some((number, info)) =
             self.trustee_session_info_for(self.block_id_by_hash(hash)?, chain, number)?
         {
-            return Ok(parse_trustee_session_info(chain, number, info));
+            Ok(parse_trustee_session_info(chain, number, info))
         } else {
-            return Ok(None);
+            Ok(None)
         }
     }
 
@@ -823,17 +828,17 @@ where
         hash: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<u64>> {
         if !call_params.starts_with("0x") {
-            return Err(Error::BinaryStartErr.into());
+            return Err(Error::BinaryStartErr);
         }
         let call_params: Vec<u8> = if let Ok(hex_call) = call_params[2..].from_hex() {
             hex_call
         } else {
-            return Err(Error::HexDecodeErr.into());
+            return Err(Error::HexDecodeErr);
         };
         let call: Call = if let Some(call) = Decode::decode(&mut call_params.as_slice()) {
             call
         } else {
-            return Err(Error::DecodeErr.into());
+            return Err(Error::DecodeErr);
         };
 
         let transaction_fee =
@@ -880,9 +885,7 @@ where
                     &key,
                     Hasher::TWOX128,
                 )
-                .map(|option_data| {
-                    option_data.map(|proposal| WithdrawTxInfo::from_bitcoin_proposal(proposal))
-                })
+                .map(|option_data| option_data.map(WithdrawTxInfo::from_bitcoin_proposal))
             }
             _ => Ok(None),
         }
@@ -905,7 +908,7 @@ where
 
         runtime_result
             .map(|all_session_info| parse_trustee_session_info(Chain::Bitcoin, 0, all_session_info))
-            .map_err(|e| Error::RuntimeErr(e, None).into())
+            .map_err(|e| Error::RuntimeErr(e, None))
     }
 
     fn particular_accounts(&self, hash: Option<<Block as BlockT>::Hash>) -> Result<Option<Value>> {
@@ -939,6 +942,7 @@ where
     fn contract_call(
         &self,
         call_request: CallRequest,
+        issue_gas: Option<bool>,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<Value> {
         /// A rough estimate of how much gas a decent hardware consumes per second,
@@ -955,6 +959,8 @@ where
             // If the block hash is not supplied assume the best block.
             self.client.info().chain.best_hash));
 
+        let issue_gas = issue_gas.unwrap_or(true);
+
         let CallRequest {
             origin,
             dest,
@@ -969,13 +975,14 @@ where
             )));
         }
 
-        let exec_result = api
+        let (exec_result, free) = api
             .call(
                 &at,
                 origin,
                 dest,
                 Zero::zero(),
                 gas_limit,
+                issue_gas,
                 input_data.to_vec(),
             )
             .map_err(|e| {
@@ -989,6 +996,7 @@ where
             ContractExecResult::Success { status, data } => Ok(json!({
                 "status": status,
                 "data": Bytes(data),
+                "free": if issue_gas { 0 } else { free },
             })),
             ContractExecResult::Error(e) => Err(Error::RuntimeErr(e, None)),
         }
@@ -1014,7 +1022,7 @@ where
                     b"Runtime trapped while querying storage.".to_vec(),
                     Some(format!("{:?}", e)),
                 ))?
-            .map_err(|e| Error::ContractGetStorageError(e))?
+            .map_err(Error::ContractGetStorageError)?
             .map(Bytes);
 
         Ok(get_storage_result)
@@ -1121,12 +1129,12 @@ where
 
 fn into_pagedata<T>(src: Vec<T>, page_index: u32, page_size: u32) -> Result<Option<PageData<T>>> {
     if page_size == 0 {
-        return Err(Error::PageSizeErr(page_size).into());
+        return Err(Error::PageSizeErr(page_size));
     }
 
     let page_total = (src.len() as u32 + (page_size - 1)) / page_size;
     if page_index >= page_total && page_total > 0 {
-        return Err(Error::PageIndexErr(page_index).into());
+        return Err(Error::PageIndexErr(page_index));
     }
 
     let mut list = vec![];

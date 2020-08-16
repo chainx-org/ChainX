@@ -77,7 +77,7 @@ pub fn check_prev_and_convert<T: Trait>(
         return Err(ChainErr::AncientFork);
     }
     Ok(BlockHeaderInfo {
-        header: header.clone(),
+        header,
         height: this_height,
         confirmed: false,
         txid_list: [].to_vec(),
@@ -116,7 +116,7 @@ pub fn remove_unused_headers<T: Trait>(header_info: &BlockHeaderInfo) {
 pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256, u32) {
     // update confirmd status
     let confirmations = Module::<T>::confirmation_number();
-    let mut prev_hash = header_info.header.previous_header_hash.clone();
+    let mut prev_hash = header_info.header.previous_header_hash;
     // start from prev, thus start from 1,when confirmations = 6, it's 1..5 => [1,2,3,4]
     // b(100)(confirmed) - b(101)(need_confirmed) - b(102) - b(103) - b(104) - b(105)(best) - b(106)(current)
     //                                                                           prev        current 0
@@ -159,7 +159,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BlockHeaderInfo) -> (H256
 fn handle_confirmed_block<T: Trait>(confirmed_header: &BlockHeaderInfo) {
     debug!(
         "[handle_confirmed_block]|Confirmed: height:{:}|hash:{:}",
-        confirmed_header.height as u64,
+        u64::from(confirmed_header.height),
         confirmed_header.header.hash(),
     );
     for txid in confirmed_header.txid_list.iter() {
@@ -185,10 +185,10 @@ fn handle_confirmed_block<T: Trait>(confirmed_header: &BlockHeaderInfo) {
 ///       prev        current 4
 pub fn find_confirmed_block<T: Trait>(current: &H256) -> BlockHeaderInfo {
     let confirmations = Module::<T>::confirmation_number();
-    let mut current_hash = current.clone();
+    let mut current_hash = *current;
     for _ in 0..(confirmations - 1) {
         if let Some(info) = Module::<T>::block_header_for(current_hash) {
-            if info.confirmed == true {
+            if info.confirmed {
                 return info;
             }
 

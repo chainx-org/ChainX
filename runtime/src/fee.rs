@@ -50,7 +50,7 @@ impl CheckFee for Call {
         }
 
         let get_switcher = |call_switcher: CallSwitcher| -> bool {
-            switcher.get(&call_switcher).map(|b| *b).unwrap_or(false)
+            switcher.get(&call_switcher).copied().unwrap_or(false)
         };
 
         // Check if a certain emergency switch is on.
@@ -72,6 +72,12 @@ impl CheckFee for Call {
                 return None;
             }
             Call::XContracts(..) if get_switcher(CallSwitcher::XContracts) => {
+                return None;
+            }
+            Call::XStaking(..) if get_switcher(CallSwitcher::XMiningStaking) => {
+                return None;
+            }
+            Call::XTokens(..) if get_switcher(CallSwitcher::XMiningTokens) => {
                 return None;
             }
             _ => (),

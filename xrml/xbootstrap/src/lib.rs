@@ -2,6 +2,7 @@
 
 //! this module is for bootstrap only.
 
+#![allow(clippy::type_complexity)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use support::{decl_module, decl_storage};
@@ -223,7 +224,7 @@ decl_storage! {
                     // The amount is hard-coded here. 50 * 20% = 10
                     <xassets::Module<T>>::pcx_issue(
                         &team_account,
-                        (10 * 10_u64.pow(pcx_precision as u32)).into()
+                        (10 * 10_u64.pow(u32::from(pcx_precision))).into()
                     ).unwrap();
                 }
 
