@@ -761,6 +761,18 @@ fn migration_session_offset_should_work() {
                 XStaking::this_session_reward(session_index),
                 session_reward as Balance
             );
+
+            if session_reward == INITIAL_REWARD {
+                assert_eq!(
+                    XStaking::try_vesting(session_index, session_reward),
+                    session_reward * 4 / 5
+                );
+            } else {
+                assert_eq!(
+                    XStaking::try_vesting(session_index, session_reward),
+                    session_reward
+                );
+            }
         }
     });
 }

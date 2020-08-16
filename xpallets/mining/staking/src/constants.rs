@@ -5,7 +5,7 @@ pub const STAKING_ID: LockIdentifier = *b"staking ";
 /// Session reward of the first 210_000 sessions.
 ///
 /// ChainX uses a Bitcoin like issuance model, the initial reward is 50 PCX.
-pub const INITIAL_REWARD: u64 = 5_000_000_000;
+pub const INITIAL_REWARD: u128 = 5_000_000_000;
 
 /// Every 210_000 sessions, the session reward is cut in half.
 ///

@@ -62,7 +62,10 @@ impl<T: Trait> Module<T> {
     }
 
     /// 20% reward of each session is for the vesting schedule in the first halving epoch.
-    fn try_vesting(current_index: SessionIndex, this_session_reward: BalanceOf<T>) -> BalanceOf<T> {
+    pub(crate) fn try_vesting(
+        current_index: SessionIndex,
+        this_session_reward: BalanceOf<T>,
+    ) -> BalanceOf<T> {
         if !Self::first_halving_epoch_arrived(current_index) {
             let to_vesting = this_session_reward / 5.saturated_into();
             let vesting_account = Self::vesting_account();
