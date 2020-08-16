@@ -43,7 +43,6 @@ if not shutil.which('fd'):
 
 NEW_TYPES = [
     "AssetType",
-    "SignedBalance",
     "Chain",
     "AddrStr",
     "OrderExecutedInfo",
@@ -82,7 +81,6 @@ NEW_TYPES = [
     "PriceFluctuation",
     "Selector",
     "Side",
-    "SignedBalance",
     "StakingRequirement",
     "Token",
     "TradingHistoryIndex",

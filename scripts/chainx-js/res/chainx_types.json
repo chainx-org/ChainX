@@ -1,10 +1,4 @@
 {
-    "SignedBalance": {
-        "_enum": {
-            "Negative": "Balance",
-            "Positive": "Balance"
-        }
-    },
     "AssetType": {
         "_enum": [
             "Usable",

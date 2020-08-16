@@ -48,8 +48,8 @@ pub use xpallet_assets_registrar::{AssetInfo, Chain};
 pub use self::traits::{ChainT, OnAssetChanged};
 use self::trigger::AssetChangedTrigger;
 pub use self::types::{
-    AssetErr, AssetRestriction, AssetRestrictions, AssetType, BalanceLock, SignedBalance,
-    TotalAssetInfo, WithdrawalLimit,
+    AssetErr, AssetRestriction, AssetRestrictions, AssetType, BalanceLock, TotalAssetInfo,
+    WithdrawalLimit,
 };
 
 pub type BalanceOf<T> =
@@ -109,14 +109,11 @@ decl_event!(
     pub enum Event<T> where
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>,
-        SignedBalance = SignedBalance<T>,
     {
         Move(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
         Issue(AssetId, AccountId, Balance),
         Destory(AssetId, AccountId, Balance),
         Set(AssetId, AccountId, AssetType, Balance),
-        /// change token balance, SignedBalance mark Positive or Negative
-        Change(AssetId, AccountId, AssetType, SignedBalance),
         /// set AssetRestrictions for an Asset
         SetRestrictions(AssetId, AssetRestrictions),
     }

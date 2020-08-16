@@ -51,12 +51,6 @@
         "order_type": "OrderType",
         "created_at": "BlockNumber"
     },
-    "SignedBalance": {
-        "_enum": {
-            "Negative": "Balance",
-            "Positive": "Balance"
-        }
-    },
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",
         "balance": "BTreeMap<AssetType, String>",
