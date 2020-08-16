@@ -18,6 +18,9 @@ impl<T: Trait> Module<T> {
         expected_slash.saturated_into()
     }
 
+    /// Slash the offenders actually.
+    ///
+    /// The slashed balances will be moved to the treasury.
     pub(crate) fn slash_offenders_in_session(staking_reward: BalanceOf<T>) -> Vec<T::AccountId> {
         // Find the offenders that are in the current validator set.
         let validators = T::SessionInterface::validators();
@@ -30,11 +33,9 @@ impl<T: Trait> Module<T> {
 
         let mut active_count = Self::active_validator_set().count();
 
-        let valid_offenders = Self::offenders_in_session()
+        let force_chilled = Self::offenders_in_session()
             .into_iter()
-            .filter(|offender| validators.contains(offender));
-
-        let force_chilled = valid_offenders
+            .filter(|offender| validators.contains(offender)) // FIXME: is this neccessary?
             .flat_map(|offender| {
                 let expected_slash = Self::expected_slash_of(reward_per_block);
                 match slasher.try_slash(&offender, expected_slash) {
@@ -44,6 +45,7 @@ impl<T: Trait> Module<T> {
                             "[slash_offenders_in_session]expected_slash:{:?}, actual_slashed:{:?}",
                             expected_slash, actual_slashed
                         );
+                        // Avoid the over-slashing, ensure the minimum active validators.
                         if active_count > minimum_validator_count {
                             Self::apply_force_chilled(&offender);
                             active_count -= 1;
