@@ -16,7 +16,7 @@ pub trait RegistrarHandler {
     }
 }
 
-#[impl_trait_for_tuples::impl_for_tuples(10)]
+#[impl_trait_for_tuples::impl_for_tuples(30)]
 impl RegistrarHandler for Tuple {
     fn on_register(asset_id: &AssetId, has_mining_rights: bool) -> DispatchResult {
         for_tuples!( #( Tuple::on_register(asset_id, has_mining_rights)?; )* );
