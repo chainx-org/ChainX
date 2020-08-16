@@ -48,10 +48,3 @@ format: pre-format
 
 clean:
 	@cargo clean
-
-upgrade:
-	@echo "Upgrading substrate under native..."
-	cargo update -p srml-system
-	@echo
-	@echo "Upgrading substrate under wasm..."
-	cd runtime/wasm && cargo update -p srml-system
