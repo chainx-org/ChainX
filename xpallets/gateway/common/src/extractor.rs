@@ -21,7 +21,7 @@ fn split(data: &[u8]) -> Vec<Vec<u8>> {
 
 pub fn parse_account_info(data: &[u8]) -> Option<(AccountId32, Option<Name>)> {
     let v = split(data);
-    if v.len() < 1 {
+    if v.is_empty() {
         error!("[account_info]|can't parse data|data:{:?}", str!(data));
         return None;
     }

@@ -176,7 +176,7 @@ impl<T: Trait> Module<T> {
     ) -> Result<(), Error<T>> {
         let to_referral_or_treasury = dividend / 10.saturated_into();
         let reward_splitter = T::GatewayInterface::referral_of(claimer, *claimee)
-            .unwrap_or_else(|| T::TreasuryAccount::treasury_account());
+            .unwrap_or_else(<T as Trait>::TreasuryAccount::treasury_account);
         Self::transfer(
             claimee_reward_pot,
             &reward_splitter,
@@ -222,7 +222,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
             miner_ledger.last_claim = Some(current_block);
         });
 
-        Self::deposit_event(RawEvent::Claim(claimer.clone(), claimee.clone(), dividend));
+        Self::deposit_event(RawEvent::Claim(claimer.clone(), *claimee, dividend));
 
         Ok(())
     }

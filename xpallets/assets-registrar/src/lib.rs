@@ -304,13 +304,16 @@ decl_module! {
             desc: Option<Desc>
         ) -> DispatchResult {
             ensure_root(origin)?;
-
             let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::AssetDoesNotExist)?;
-
-            token.map(|t| info.set_token(t));
-            token_name.map(|name| info.set_token_name(name));
-            desc.map(|desc| info.set_desc(desc));
-
+            if let Some(t) = token {
+                info.set_token(t)
+            };
+            if let Some(name) = token_name {
+                info.set_token_name(name);
+            }
+            if let Some(desc) = desc {
+                info.set_desc(desc);
+            };
             AssetInfoOf::insert(id, info);
             Ok(())
         }
@@ -348,10 +351,10 @@ impl<T: Trait> Module<T> {
             if Self::is_valid_asset(id) {
                 Ok(asset)
             } else {
-                Err(Error::<T>::InvalidAsset)?
+                Err(Error::<T>::InvalidAsset.into())
             }
         } else {
-            Err(Error::<T>::AssetDoesNotExist)?
+            Err(Error::<T>::AssetDoesNotExist.into())
         }
     }
 

@@ -33,7 +33,7 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
             let address: &ScriptAddress = &script_addresses[0];
             let addr = Address {
                 kind: address.kind,
-                network: network,
+                network,
                 hash: address.hash.clone(), // public key hash
             };
             return Some(addr);

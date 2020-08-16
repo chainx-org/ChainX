@@ -14,7 +14,7 @@ impl<T: Trait> Module<T> {
         let mine: u128 = mine.saturated_into();
         let total: u128 = total.saturated_into();
 
-        match mine.checked_mul(u128::from(total_reward.saturated_into())) {
+        match mine.checked_mul(total_reward.saturated_into()) {
             Some(x) => {
                 let r = x / total;
                 assert!(

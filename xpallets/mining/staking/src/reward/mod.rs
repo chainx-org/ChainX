@@ -24,9 +24,8 @@ impl<T: Trait> Module<T> {
         } else {
             0
         };
-        let expected_reward =
-            INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch);
-        expected_reward
+
+        INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch)
     }
 
     /// Issue new fresh PCX.

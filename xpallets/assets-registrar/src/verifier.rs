@@ -12,12 +12,12 @@ fn is_ascii_invisible(c: &u8) -> bool {
 /// A valid token name should have a legal length and be visible ASCII chars only.
 pub fn is_valid_token_name<T: Trait>(name: &[u8]) -> DispatchResult {
     if name.len() > MAX_TOKEN_LEN || name.is_empty() {
-        Err(Error::<T>::InvalidAssetNameLen)?;
+        return Err(Error::<T>::InvalidAssetNameLen.into());
     }
     xp_runtime::xss_check(name)?;
     for c in name.iter() {
         if is_ascii_invisible(c) {
-            Err(Error::<T>::InvalidAsscii)?;
+            return Err(Error::<T>::InvalidAsscii.into());
         }
     }
     Ok(())
@@ -26,12 +26,12 @@ pub fn is_valid_token_name<T: Trait>(name: &[u8]) -> DispatchResult {
 /// A valid desc should be visible ASCII chars only and not too long.
 pub fn is_valid_desc<T: Trait>(desc: &[u8]) -> DispatchResult {
     if desc.len() > MAX_DESC_LEN {
-        Err(Error::<T>::InvalidDescLen)?;
+        return Err(Error::<T>::InvalidDescLen.into());
     }
     xp_runtime::xss_check(desc)?;
     for c in desc.iter() {
         if is_ascii_invisible(c) {
-            Err(Error::<T>::InvalidAsscii)?;
+            return Err(Error::<T>::InvalidAsscii.into());
         }
     }
     Ok(())
@@ -40,12 +40,12 @@ pub fn is_valid_desc<T: Trait>(desc: &[u8]) -> DispatchResult {
 /// Token can only use ASCII alphanumeric character or "-.|~".
 pub fn is_valid_token<T: Trait>(v: &[u8]) -> DispatchResult {
     if v.len() > MAX_TOKEN_LEN || v.is_empty() {
-        Err(Error::<T>::InvalidAssetLen)?;
+        return Err(Error::<T>::InvalidAssetLen.into());
     }
-    let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || "-.|~".as_bytes().contains(c) };
+    let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || b"-.|~".contains(c) };
     for c in v.iter() {
         if !is_valid(c) {
-            Err(Error::<T>::InvalidChar)?;
+            return Err(Error::<T>::InvalidChar.into());
         }
     }
     Ok(())

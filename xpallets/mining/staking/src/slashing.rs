@@ -4,10 +4,8 @@ impl<T: Trait> Module<T> {
     /// Average reward for validator per block.
     fn reward_per_block(staking_reward: BalanceOf<T>, validator_count: usize) -> u128 {
         let session_length = T::SessionDuration::get();
-        let per_reward = staking_reward.saturated_into::<u128>()
-            * validator_count.saturated_into::<u128>()
-            / session_length.saturated_into::<u128>();
-        per_reward
+        staking_reward.saturated_into::<u128>() * validator_count.saturated_into::<u128>()
+            / session_length.saturated_into::<u128>()
     }
 
     /// TODO: flexiable slash according to slash fraction?
@@ -18,7 +16,7 @@ impl<T: Trait> Module<T> {
         expected_slash.saturated_into()
     }
 
-    /// Slash the offenders actually.
+    /// Slash the offenders actually, returns the force chilled offenders.
     ///
     /// The slashed balances will be moved to the treasury.
     pub(crate) fn slash_offenders_in_session(staking_reward: BalanceOf<T>) -> Vec<T::AccountId> {
@@ -32,7 +30,7 @@ impl<T: Trait> Module<T> {
 
         let mut active_count = Self::active_validator_set().count();
 
-        let force_chilled = Self::offenders_in_session()
+        Self::offenders_in_session()
             .into_iter()
             .filter(|offender| validators.contains(offender)) // FIXME: is this neccessary?
             .flat_map(|offender| {
@@ -55,8 +53,6 @@ impl<T: Trait> Module<T> {
                     }
                 }
             })
-            .collect::<Vec<_>>();
-
-        force_chilled
+            .collect()
     }
 }

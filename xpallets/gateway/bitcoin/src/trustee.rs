@@ -521,7 +521,7 @@ fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> 
 
             let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
                 if a.0 == b.0 && a.1 == b.1 {
-                    return true
+                    true
                 }
                 else {
                     error!(
@@ -529,7 +529,7 @@ fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> 
                         a,
                         b
                     );
-                    return false
+                    false
                 }
             }).count();
 

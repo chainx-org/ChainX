@@ -236,9 +236,7 @@ impl<T: Trait> Module<T> {
                     0
                 });
 
-            let era_length = session_index
-                .checked_sub(current_era_start_session_index)
-                .unwrap_or(0); // Must never happen.
+            let era_length = session_index.saturating_sub(current_era_start_session_index); // Must never happen.
 
             let ideal_era_length = Self::sessions_per_era().saturated_into::<SessionIndex>();
 

@@ -58,7 +58,7 @@ impl<'a> HeaderWork<'a> {
     }
 
     fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
-        let previous_header_hash = self.info.header.previous_header_hash.clone();
+        let previous_header_hash = self.info.header.previous_header_hash;
         let work = work_required::<T>(previous_header_hash, self.info.height, p);
         ensure_with_errorlog!(
             work == self.info.header.bits,
@@ -73,7 +73,7 @@ impl<'a> HeaderWork<'a> {
 }
 
 pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParams) -> Compact {
-    let max_bits = params.max_bits().into();
+    let max_bits = params.max_bits();
     if height == 0 {
         return max_bits;
     }
