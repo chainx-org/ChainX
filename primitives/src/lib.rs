@@ -50,6 +50,8 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 
 // Runtime type
+/// Signed version of Balance
+pub type Amount = i128;
 /// String for Runtime
 pub type Text = Vec<u8>;
 pub type Desc = Vec<u8>;

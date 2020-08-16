@@ -10,10 +10,13 @@ use sp_runtime::{
 };
 use std::collections::BTreeMap;
 
+pub use xpallet_protocol::X_BTC;
+
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
+pub(crate) type Amount = i128;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -99,6 +102,8 @@ impl xpallet_assets_registrar::Trait for Test {
 impl Trait for Test {
     type Event = MetaEvent;
     type Currency = Balances;
+    type Amount = Amount;
+    type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
 }
@@ -112,7 +117,7 @@ impl Default for ExtBuilder {
 
 pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        xpallet_protocol::X_BTC,
+        X_BTC,
         AssetInfo::new::<Test>(
             b"X-BTC".to_vec(),
             b"X-BTC".to_vec(),
@@ -121,7 +126,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyFree.into(),
+        AssetRestriction::DestroyUsable.into(),
     )
 }
 
@@ -162,7 +167,7 @@ impl ExtBuilder {
         let btc_assets = btc();
         let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
         let mut endowed = BTreeMap::new();
-        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400)];
+        let endowed_info = vec![(ALICE, 100), (BOB, 200), (CHARLIE, 300), (DAVE, 400)];
         endowed.insert(btc_assets.0, endowed_info);
 
         let mut ext = self.build(assets, endowed);
@@ -183,3 +188,8 @@ pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
 pub type XAssets = Module<Test>;
 pub type XAssetsErr = Error<Test>;
+
+pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
+pub const CHARLIE: AccountId = 3;
+pub const DAVE: AccountId = 4;

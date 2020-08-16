@@ -15,6 +15,7 @@ pub use xp_runtime::Memo;
 use xpallet_assets_registrar::AssetInfo;
 
 use super::{BalanceOf, Error, Trait};
+use frame_support::traits::LockIdentifier;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum SignedBalance<T: Trait> {
@@ -70,7 +71,7 @@ bitmask! {
         Deposit             = 1 << 2,
         Withdraw            = 1 << 3,
         DestroyWithdrawal   = 1 << 4,
-        DestroyFree         = 1 << 5,
+        DestroyUsable         = 1 << 5,
     }
 }
 
@@ -112,6 +113,18 @@ impl<T: Trait> From<AssetErr> for Error<T> {
             AssetErr::NotAllow => Error::<T>::ActionNotAllowed,
         }
     }
+}
+
+/// A single lock on a balance. There can be many of these on an account and
+/// they "overlap", so the same balance is frozen by multiple locks.
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct BalanceLock<Balance> {
+    /// An identifier for this lock. Only one lock may be in existence for each
+    /// identifier.
+    pub id: LockIdentifier,
+    /// The amount which the free balance may not drop below when this lock is
+    /// in effect.
+    pub amount: Balance,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]

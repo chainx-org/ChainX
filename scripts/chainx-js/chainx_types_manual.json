@@ -1,4 +1,7 @@
 {
+    "Amount": "i128",
+    "CurrencyIdOf": "AssetId",
+    "CurrencyId": "AssetId",
     "AssetInfoForRpc": {
         "token": "String",
         "token_name": "String",
