@@ -114,7 +114,7 @@ decl_module! {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
                     if who != Self::trustee_multisig_addr(chain) {
-                        Err(Error::<T>::InvalidMultisig)?
+                        return Err(Error::<T>::InvalidMultisig.into());
                     }
                     ()
                 },
@@ -227,7 +227,7 @@ impl<T: Trait> Module<T> {
         let chain = info.chain();
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(&asset_id),
-            _ => Err(Error::<T>::NotSupportedChain)?,
+            _ => Err(Error::<T>::NotSupportedChain.into()),
         }
     }
 
@@ -246,14 +246,14 @@ impl<T: Trait> Module<T> {
                 // bitcoin do not need memo
                 T::Bitcoin::check_addr(&addr, b"")?;
             }
-            _ => Err(Error::<T>::NotSupportedChain)?,
+            _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
         // we could only split withdrawal limit due to a runtime-api would call `withdrawal_limit`
         // to export `WithdrawalLimit` for an asset.
         let limit = Self::withdrawal_limit(&asset_id)?;
         // withdrawal value should larger than minimal_withdrawal, allow equal
         if value < limit.minimal_withdrawal {
-            Err(Error::<T>::InvalidWithdrawal)?
+            return Err(Error::<T>::InvalidWithdrawal.into());
         }
         Ok(())
     }
@@ -262,7 +262,7 @@ impl<T: Trait> Module<T> {
 pub fn is_valid_about<T: Trait>(about: &[u8]) -> DispatchResult {
     // TODO
     if about.len() > 128 {
-        Err(Error::<T>::InvalidAboutLen)?;
+        return Err(Error::<T>::InvalidAboutLen.into());
     }
 
     xp_runtime::xss_check(about)
@@ -285,7 +285,7 @@ impl<T: Trait> Module<T> {
                 let cold = T::BitcoinTrustee::check_trustee_entity(&cold_entity)?;
                 (hot.into(), cold.into())
             }
-            _ => Err(Error::<T>::NotSupportedChain)?,
+            _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
 
         let props = GenericTrusteeIntentionProps(TrusteeIntentionProps::<Vec<u8>> {
@@ -311,7 +311,7 @@ impl<T: Trait> Module<T> {
                 "[try_generate_session_info]|existing duplicate account|candidates:{:?}",
                 new_trustees
             );
-            Err(Error::<T>::DuplicatedAccountId)?;
+            return Err(Error::<T>::DuplicatedAccountId.into());
         }
         let mut props = vec![];
         for accountid in new_trustees.into_iter() {
@@ -340,7 +340,7 @@ impl<T: Trait> Module<T> {
                 session_info.trustee_list.sort();
                 session_info.into()
             }
-            _ => Err(Error::<T>::NotSupportedChain)?,
+            _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
         Ok(info)
     }
@@ -375,16 +375,10 @@ impl<T: Trait> Module<T> {
         // not allow different chain has same multi-address
         let find_duplicated = Self::trustee_multisigs()
             .into_iter()
-            .find(|(c, multisig)| {
-                if &multi_addr == multisig && c == &chain {
-                    true
-                } else {
-                    false
-                }
-            })
+            .find(|(c, multisig)| &multi_addr == multisig && c == &chain)
             .is_some();
         if find_duplicated {
-            Err(Error::<T>::InvalidMultisig)?
+            return Err(Error::<T>::InvalidMultisig.into());
         }
         Ok(multi_addr)
     }

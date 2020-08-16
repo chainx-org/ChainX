@@ -358,7 +358,7 @@ fn testnet_genesis(
 
     // PCX only reserves the native asset id in assets module,
     // the actual native fund management is handled by pallet_balances.
-    let mut assets_endowed = endowed.clone();
+    let mut assets_endowed = endowed;
     assets_endowed.remove(&xpallet_protocol::PCX);
 
     let validators = initial_authorities
@@ -471,7 +471,6 @@ fn testnet_genesis(
                 100000,
                 true,
             )],
-            ..Default::default()
         }),
         xpallet_contracts: Some(XContractsConfig {
             current_schedule: ContractsSchedule {

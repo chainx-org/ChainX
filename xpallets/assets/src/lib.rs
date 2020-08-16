@@ -251,7 +251,6 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
         xpallet_assets_registrar::Module::<T>::asset_infos()
-            .into_iter()
             .filter_map(|(id, info)| {
                 if id == T::NativeAssetId::get() {
                     // ignore native asset
@@ -348,7 +347,7 @@ impl<T: Trait> Module<T> {
     pub fn total_asset_balance_of(id: &AssetId, type_: AssetType) -> BalanceOf<T> {
         Self::total_asset_balance(id)
             .get(&type_)
-            .map(|b| *b)
+            .copied()
             .unwrap_or_default()
     }
 

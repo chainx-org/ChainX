@@ -4,10 +4,8 @@ impl<T: Trait> Module<T> {
     /// Average reward for validator per block.
     fn reward_per_block(staking_reward: BalanceOf<T>, validator_count: usize) -> u128 {
         let session_length = T::SessionDuration::get();
-        let per_reward = staking_reward.saturated_into::<u128>()
-            * validator_count.saturated_into::<u128>()
-            / session_length.saturated_into::<u128>();
-        per_reward
+        staking_reward.saturated_into::<u128>() * validator_count.saturated_into::<u128>()
+            / session_length.saturated_into::<u128>()
     }
 
     /// TODO: flexiable slash according to slash fraction?
@@ -18,14 +16,11 @@ impl<T: Trait> Module<T> {
         expected_slash.saturated_into()
     }
 
+    /// Slash the offenders actually, returns the force chilled offenders.
+    ///
+    /// The slashed balances will be moved to the treasury.
     pub(crate) fn slash_offenders_in_session(staking_reward: BalanceOf<T>) -> Vec<T::AccountId> {
-        // Find the offenders that are in the current validator set.
         let validators = T::SessionInterface::validators();
-        let valid_offenders = Self::offenders_in_session()
-            .into_iter()
-            .filter(|offender| validators.contains(offender))
-            .collect::<Vec<_>>();
-
         let reward_per_block = Self::reward_per_block(staking_reward, validators.len());
 
         let treasury_account = T::TreasuryAccount::treasury_account();
@@ -33,11 +28,11 @@ impl<T: Trait> Module<T> {
 
         let minimum_validator_count = Self::reasonable_minimum_validator_count() as usize;
 
-        let active_validators = Self::active_validator_set().collect::<Vec<_>>();
-        let mut active_count = active_validators.len();
+        let mut active_count = Self::active_validator_set().count();
 
-        let force_chilled = valid_offenders
+        Self::offenders_in_session()
             .into_iter()
+            .filter(|offender| validators.contains(offender)) // FIXME: is this neccessary?
             .flat_map(|offender| {
                 let expected_slash = Self::expected_slash_of(reward_per_block);
                 match slasher.try_slash(&offender, expected_slash) {
@@ -47,6 +42,7 @@ impl<T: Trait> Module<T> {
                             "[slash_offenders_in_session]expected_slash:{:?}, actual_slashed:{:?}",
                             expected_slash, actual_slashed
                         );
+                        // Avoid the over-slashing, ensure the minimum active validators.
                         if active_count > minimum_validator_count {
                             Self::apply_force_chilled(&offender);
                             active_count -= 1;
@@ -57,8 +53,6 @@ impl<T: Trait> Module<T> {
                     }
                 }
             })
-            .collect::<Vec<_>>();
-
-        force_chilled
+            .collect()
     }
 }

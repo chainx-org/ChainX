@@ -32,7 +32,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         value: BalanceOf<T>,
     ) -> result::Result<(), AssetErr> {
         Module::<T>::deposit_event(RawEvent::Move(
-            id.clone(),
+            *id,
             from.clone(),
             from_type,
             to.clone(),
@@ -48,7 +48,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
     }
 
     pub fn on_issue_post(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        Module::<T>::deposit_event(RawEvent::Issue(id.clone(), who.clone(), value));
+        Module::<T>::deposit_event(RawEvent::Issue(*id, who.clone(), value));
         T::OnAssetChanged::on_issue_post(id, who, value)?;
         Ok(())
     }
@@ -62,7 +62,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         who: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Module::<T>::deposit_event(RawEvent::Destory(id.clone(), who.clone(), value));
+        Module::<T>::deposit_event(RawEvent::Destory(*id, who.clone(), value));
         T::OnAssetChanged::on_destroy_post(id, who, value)?;
         Ok(())
     }
@@ -73,7 +73,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         type_: AssetType,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Module::<T>::deposit_event(RawEvent::Set(id.clone(), who.clone(), type_, value));
+        Module::<T>::deposit_event(RawEvent::Set(*id, who.clone(), type_, value));
         T::OnAssetChanged::on_set_balance(id, who, type_, value)?;
         Ok(())
     }

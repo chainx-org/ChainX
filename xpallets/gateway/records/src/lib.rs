@@ -139,7 +139,7 @@ impl<T: Trait> Module<T> {
 
         let free = xpallet_assets::Module::<T>::usable_balance(who, asset_id);
         if free < value {
-            Err(xpallet_assets::Error::<T>::InsufficientBalance)?;
+            return Err(xpallet_assets::Error::<T>::InsufficientBalance.into());
         }
 
         Ok(())
@@ -155,7 +155,7 @@ impl<T: Trait> Module<T> {
         let asset = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
         let asset_chain = asset.chain();
         if expected_chain != asset_chain {
-            Err(Error::<T>::UnexpectedChain)?;
+            return Err(Error::<T>::UnexpectedChain.into());
         }
         Ok(())
     }
@@ -236,7 +236,7 @@ impl<T: Trait> Module<T> {
                         "[process_withdrawal]|WithdrawalRecord state not `Applying`|id:{:}|state:{:?}",
                         id, state
                     );
-                    Err(Error::<T>::NotApplyingState)?;
+                    return Err(Error::<T>::NotApplyingState.into());
                 }
                 Self::check_chain(id, chain)?;
 
@@ -246,7 +246,7 @@ impl<T: Trait> Module<T> {
                     "[process_withdrawal]|id not in WithdrawalRecord records|id:{:}",
                     id
                 );
-                Err(Error::<T>::NotExisted)?;
+                return Err(Error::<T>::NotExisted.into());
             }
         }
 
@@ -279,7 +279,7 @@ impl<T: Trait> Module<T> {
                     appl.applicant(),
                     who
                 );
-                Err(Error::<T>::InvalidAccount)?;
+                return Err(Error::<T>::InvalidAccount.into());
             }
 
             if state != WithdrawalState::Applying {
@@ -296,12 +296,12 @@ impl<T: Trait> Module<T> {
         if let Some(state) = Self::state_of(serial_number) {
             if state != WithdrawalState::Processing {
                 error!("[recover_withdrawal_by_trustee]|only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", serial_number, state);
-                Err(Error::<T>::NotProcessingState)?;
+                return Err(Error::<T>::NotProcessingState.into());
             }
             WithdrawalStateOf::insert(serial_number, WithdrawalState::Applying);
             return Ok(());
         }
-        Err(Error::<T>::NotExisted)?
+        return Err(Error::<T>::NotExisted.into());
     }
 
     /// revoke to cancel
@@ -310,7 +310,7 @@ impl<T: Trait> Module<T> {
         if let Some(state) = Self::state_of(serial_number) {
             if state != WithdrawalState::Processing {
                 error!("[revoke_withdrawal_by_trustee]|only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", serial_number, state);
-                Err(Error::<T>::NotProcessingState)?;
+                return Err(Error::<T>::NotProcessingState.into());
             }
         }
         Self::finish_withdrawal_impl(serial_number, WithdrawalState::RootCancel)
@@ -325,7 +325,7 @@ impl<T: Trait> Module<T> {
             WithdrawalState::RootFinish | WithdrawalState::RootCancel => { /*do nothing*/ }
             _ => {
                 error!("[set_withdrawal_state_by_trustees]|state only allow `RootFinish` and `RootCancel`|state:{:?}", state);
-                Err(Error::<T>::InvalidState)?;
+                return Err(Error::<T>::InvalidState.into());
             }
         }
         if let Some(state) = Self::state_of(withdrawal_id) {
@@ -333,7 +333,7 @@ impl<T: Trait> Module<T> {
 
             if state != WithdrawalState::Processing {
                 error!("[set_withdrawal_state_by_trustees]only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", withdrawal_id, state);
-                Err(Error::<T>::NotProcessingState)?;
+                return Err(Error::<T>::NotProcessingState.into());
             }
         }
 

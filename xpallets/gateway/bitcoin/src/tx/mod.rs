@@ -211,14 +211,12 @@ fn detect_other_type<AccountId>(
         }
         // outputs contains other addr, it's user addr, thus it's a withdrawal
         return MetaTxType::Withdrawal;
-    } else {
-        if let Some((old_hot_addr, old_cold_addr)) = old_trustee_addr_pair {
-            let input_is_old_trustee =
-                equal_addr(&input_addr, &old_hot_addr) || equal_addr(&input_addr, &old_cold_addr);
-            if input_is_old_trustee && all_outputs_trustee {
-                // input should from old trustee addr, outputs should all be current trustee addrs
-                return MetaTxType::TrusteeTransition;
-            }
+    } else if let Some((old_hot_addr, old_cold_addr)) = old_trustee_addr_pair {
+        let input_is_old_trustee =
+            equal_addr(&input_addr, &old_hot_addr) || equal_addr(&input_addr, &old_cold_addr);
+        if input_is_old_trustee && all_outputs_trustee {
+            // input should from old trustee addr, outputs should all be current trustee addrs
+            return MetaTxType::TrusteeTransition;
         }
     }
     MetaTxType::Irrelevance
@@ -284,8 +282,7 @@ fn handle_tx<T: Trait>(tx: Transaction, meta_type: MetaTxType<T::AccountId>) -> 
         MetaTxType::<_>::Withdrawal => withdraw::<T>(tx),
         _ => BtcTxResult::Success,
     };
-    let state = BtcTxState { result, tx_type };
-    state
+    BtcTxState { result, tx_type }
 }
 
 fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {

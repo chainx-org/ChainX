@@ -8,10 +8,12 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
     let mut bytes = Vec::new();
     File::open(path)?.read_to_end(&mut bytes)?;
 
-    Ok(serde_json::from_slice(&bytes).expect(&format!(
-        "JSON was not well-formatted, please ensure {} is a valid JSON file.",
-        path.display()
-    )))
+    Ok(serde_json::from_slice(&bytes).unwrap_or_else(|_| {
+        panic!(
+            "JSON was not well-formatted, please ensure {} is a valid JSON file.",
+            path.display()
+        )
+    }))
 }
 
 /// Extends the origin cli arg list with the options from the config file.
@@ -83,7 +85,7 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
                 .expect("The argument '--config <PATH>' requires a value but none was supplied");
             config_path = Some(path.to_string());
         } else if arg.starts_with("--config=") {
-            config_path = arg.split('=').skip(1).next().map(|s| s.to_string());
+            config_path = arg.split('=').nth(1).map(|s| s.to_string());
             assert!(config_path.is_some(), "missing PATH in --config=<PATH>");
         }
     }

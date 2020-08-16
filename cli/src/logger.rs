@@ -42,7 +42,7 @@ fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>)
         return (directives, None);
     }
 
-    mods.map(|m| {
+    if let Some(m) = mods {
         let print_warning =
             |v: &str| eprintln!("warning: invalid log_filters value '{}', ignoring it", v);
 
@@ -79,7 +79,7 @@ fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>)
                 level: log_level,
             });
         }
-    });
+    }
 
     let mut filter_level = LevelFilter::Off;
     for d in directives.iter() {

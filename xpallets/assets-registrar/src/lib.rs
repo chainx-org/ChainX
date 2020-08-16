@@ -30,6 +30,7 @@ use chainx_primitives::{AssetId, Decimals, Desc, Token};
 use xpallet_support::info;
 
 pub use verifier::*;
+pub use xp_assets_registrar::RegistrarHandler;
 
 #[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -148,33 +149,6 @@ impl AssetInfo {
     }
 }
 
-/// Trait for doing some stuff on the registration/deregistration of a foreign asset.
-pub trait RegistrarHandler {
-    fn on_register(_: &AssetId, _: bool) -> DispatchResult {
-        Ok(())
-    }
-
-    fn on_deregister(_: &AssetId) -> DispatchResult {
-        Ok(())
-    }
-}
-
-impl RegistrarHandler for () {}
-
-impl<A: RegistrarHandler, B: RegistrarHandler> RegistrarHandler for (A, B) {
-    fn on_register(id: &AssetId, has_mining_rights: bool) -> DispatchResult {
-        A::on_register(id, has_mining_rights)?;
-        B::on_register(id, has_mining_rights)?;
-        Ok(())
-    }
-
-    fn on_deregister(id: &AssetId) -> DispatchResult {
-        A::on_deregister(id)?;
-        B::on_deregister(id)?;
-        Ok(())
-    }
-}
-
 pub trait Trait: frame_system::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -240,7 +214,16 @@ decl_storage! {
     add_extra_genesis {
         config(assets): Vec<(AssetId, AssetInfo, bool, bool)>;
         build(|config| {
-            Module::<T>::initialize_assets(&config.assets);
+            for (id, asset, is_online, has_mining_rights) in &config.assets {
+                Module::<T>::register(
+                    frame_system::RawOrigin::Root.into(),
+                    *id,
+                    asset.clone(),
+                    *is_online,
+                    *has_mining_rights,
+                )
+                .expect("asset registeration during the genesis can not fail");
+            }
         })
     }
 }
@@ -321,31 +304,18 @@ decl_module! {
             desc: Option<Desc>
         ) -> DispatchResult {
             ensure_root(origin)?;
-
             let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::AssetDoesNotExist)?;
-
-            token.map(|t| info.set_token(t));
-            token_name.map(|name| info.set_token_name(name));
-            desc.map(|desc| info.set_desc(desc));
-
+            if let Some(t) = token {
+                info.set_token(t)
+            }
+            if let Some(name) = token_name {
+                info.set_token_name(name);
+            }
+            if let Some(desc) = desc {
+                info.set_desc(desc);
+            }
             AssetInfoOf::insert(id, info);
             Ok(())
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl<T: Trait> Module<T> {
-    fn initialize_assets(assets: &Vec<(AssetId, AssetInfo, bool, bool)>) {
-        for (id, asset, is_online, has_mining_rights) in assets {
-            Self::register(
-                frame_system::RawOrigin::Root.into(),
-                *id,
-                asset.clone(),
-                *is_online,
-                *has_mining_rights,
-            )
-            .expect("asset registeration during the genesis can not fail");
         }
     }
 }
@@ -381,10 +351,10 @@ impl<T: Trait> Module<T> {
             if Self::is_valid_asset(id) {
                 Ok(asset)
             } else {
-                Err(Error::<T>::InvalidAsset)?
+                Err(Error::<T>::InvalidAsset.into())
             }
         } else {
-            Err(Error::<T>::AssetDoesNotExist)?
+            Err(Error::<T>::AssetDoesNotExist.into())
         }
     }
 

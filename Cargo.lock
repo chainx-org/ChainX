@@ -7810,6 +7810,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-assets-registrar"
+version = "0.1.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-support",
+ "impl-trait-for-tuples",
+]
+
+[[package]]
 name = "xp-io"
 version = "0.1.0"
 dependencies = [
@@ -7889,6 +7898,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-assets-registrar",
  "xp-runtime",
  "xpallet-protocol",
  "xpallet-support",
