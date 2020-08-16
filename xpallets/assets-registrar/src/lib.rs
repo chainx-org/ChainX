@@ -214,7 +214,16 @@ decl_storage! {
     add_extra_genesis {
         config(assets): Vec<(AssetId, AssetInfo, bool, bool)>;
         build(|config| {
-            Module::<T>::initialize_assets(&config.assets);
+            for (id, asset, is_online, has_mining_rights) in &config.assets {
+                Module::<T>::register(
+                    frame_system::RawOrigin::Root.into(),
+                    *id,
+                    asset.clone(),
+                    *is_online,
+                    *has_mining_rights,
+                )
+                .expect("asset registeration during the genesis can not fail");
+            }
         })
     }
 }
@@ -304,22 +313,6 @@ decl_module! {
 
             AssetInfoOf::insert(id, info);
             Ok(())
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl<T: Trait> Module<T> {
-    fn initialize_assets(assets: &Vec<(AssetId, AssetInfo, bool, bool)>) {
-        for (id, asset, is_online, has_mining_rights) in assets {
-            Self::register(
-                frame_system::RawOrigin::Root.into(),
-                *id,
-                asset.clone(),
-                *is_online,
-                *has_mining_rights,
-            )
-            .expect("asset registeration during the genesis can not fail");
         }
     }
 }

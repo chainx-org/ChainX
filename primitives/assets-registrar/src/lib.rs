@@ -5,12 +5,12 @@ use frame_support::dispatch::DispatchResult;
 
 /// Trait for doing some stuff on the registration/deregistration of a foreign asset.
 pub trait RegistrarHandler {
-    ///
+    /// Called when a new asset is added or a deregistered asset is recovered.
     fn on_register(_asset_id: &AssetId, _has_mining_rights: bool) -> DispatchResult {
         Ok(())
     }
 
-    ///
+    /// Called when an asset is deregistered.
     fn on_deregister(_asset_id: &AssetId) -> DispatchResult {
         Ok(())
     }
