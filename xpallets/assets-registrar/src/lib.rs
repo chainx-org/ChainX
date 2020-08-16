@@ -307,13 +307,13 @@ decl_module! {
             let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::AssetDoesNotExist)?;
             if let Some(t) = token {
                 info.set_token(t)
-            };
+            }
             if let Some(name) = token_name {
                 info.set_token_name(name);
             }
             if let Some(desc) = desc {
                 info.set_desc(desc);
-            };
+            }
             AssetInfoOf::insert(id, info);
             Ok(())
         }
