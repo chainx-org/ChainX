@@ -21,11 +21,6 @@ impl<T: Trait> Module<T> {
     pub(crate) fn slash_offenders_in_session(staking_reward: BalanceOf<T>) -> Vec<T::AccountId> {
         // Find the offenders that are in the current validator set.
         let validators = T::SessionInterface::validators();
-        let valid_offenders = Self::offenders_in_session()
-            .into_iter()
-            .filter(|offender| validators.contains(offender))
-            .collect::<Vec<_>>();
-
         let reward_per_block = Self::reward_per_block(staking_reward, validators.len());
 
         let treasury_account = T::TreasuryAccount::treasury_account();
@@ -33,11 +28,13 @@ impl<T: Trait> Module<T> {
 
         let minimum_validator_count = Self::reasonable_minimum_validator_count() as usize;
 
-        let active_validators = Self::active_validator_set().collect::<Vec<_>>();
-        let mut active_count = active_validators.len();
+        let mut active_count = Self::active_validator_set().count();
+
+        let valid_offenders = Self::offenders_in_session()
+            .into_iter()
+            .filter(|offender| validators.contains(offender));
 
         let force_chilled = valid_offenders
-            .into_iter()
             .flat_map(|offender| {
                 let expected_slash = Self::expected_slash_of(reward_per_block);
                 match slasher.try_slash(&offender, expected_slash) {
