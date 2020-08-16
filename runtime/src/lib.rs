@@ -70,8 +70,8 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 pub use chainx_primitives::{
-    AccountId, AccountIndex, AddrStr, AssetId, Balance, BlockNumber, ChainAddress, Hash, Index,
-    Moment, Name, ReferralId, Signature, Token,
+    AccountId, AccountIndex, AddrStr, Amount, AssetId, Balance, BlockNumber, ChainAddress, Hash,
+    Index, Moment, Name, ReferralId, Signature, Token,
 };
 pub use xp_runtime::Memo;
 
@@ -143,6 +143,10 @@ pub fn native_version() -> NativeVersion {
 pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
+        match call {
+            Call::Currencies(_) => return false, // forbidden Currencies call now
+            _ => {}
+        }
         use frame_support::dispatch::GetCallMetadata;
         let metadata = call.get_call_metadata();
         !XSystem::is_paused(metadata)
@@ -779,6 +783,22 @@ impl pallet_society::Trait for Runtime {
 }
 
 ///////////////////////////////////////////
+// orml
+///////////////////////////////////////////
+use orml_currencies::BasicCurrencyAdapter;
+// parameter_types! {
+//     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
+//     pub const GetStableCurrencyId: CurrencyId = CurrencyId::USDT;
+// }
+
+impl orml_currencies::Trait for Runtime {
+    type Event = Event;
+    type MultiCurrency = XAssets;
+    type NativeCurrency = BasicCurrencyAdapter<Balances, Balance, Balance, Amount, BlockNumber>;
+    type GetNativeCurrencyId = ChainXAssetId;
+}
+
+///////////////////////////////////////////
 // Chainx pallets
 ///////////////////////////////////////////
 impl xpallet_system::Trait for Runtime {
@@ -796,8 +816,9 @@ impl xpallet_assets_registrar::Trait for Runtime {
 }
 
 impl xpallet_assets::Trait for Runtime {
-    type Currency = Balances;
     type Event = Event;
+    type Currency = Balances;
+    type Amount = Amount;
     type TreasuryAccount = SimpleTreasuryAccount;
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Runtime>;
     type OnAssetChanged = XMiningAsset;
@@ -917,6 +938,11 @@ construct_runtime!(
         Utility: pallet_utility::{Module, Call, Event},
         Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+
+        // orml
+        // we retain Currencies Call for this call may be used in future, but we do not need this now,
+        // so that we filter it in BaseFilter.
+        Currencies: orml_currencies::{Module, Call, Event<T>},
 
         // ChainX basics.
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},

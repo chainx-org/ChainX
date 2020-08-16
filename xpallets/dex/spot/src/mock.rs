@@ -20,6 +20,7 @@ use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
 pub(crate) type AccountId = u64;
 pub(crate) type AccountIndex = u64;
 pub(crate) type Balance = u128;
+pub(crate) type Amount = i128;
 pub(crate) type Price = u128;
 
 impl_outer_origin! {
@@ -101,6 +102,7 @@ impl xpallet_assets_registrar::Trait for Test {
 impl xpallet_assets::Trait for Test {
     type Event = ();
     type Currency = Balances;
+    type Amount = Amount;
     type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();

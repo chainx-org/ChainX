@@ -15,17 +15,26 @@ mod trigger;
 pub mod types;
 
 // Substrate
-use sp_runtime::traits::{CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero};
-use sp_std::{collections::btree_map::BTreeMap, prelude::*, result};
+use sp_runtime::traits::{
+    CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
+};
+use sp_std::{
+    collections::btree_map::BTreeMap,
+    convert::{TryFrom, TryInto},
+    prelude::*,
+    result,
+};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, Happened, IsDeadAccount, LockableCurrency, ReservableCurrency},
-    StorageDoubleMap,
+    Parameter, StorageDoubleMap,
 };
 use frame_system::{ensure_root, ensure_signed};
+
+use orml_traits::arithmetic::{self, Signed};
 
 // ChainX
 use chainx_primitives::AssetId;
@@ -51,6 +60,17 @@ pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
+    /// The amount type, should be signed version of `Balance`
+    type Amount: Signed
+        + TryInto<BalanceOf<Self>>
+        + TryFrom<BalanceOf<Self>>
+        + Parameter
+        + Member
+        + arithmetic::SimpleArithmetic
+        + Default
+        + Copy
+        + MaybeSerializeDeserialize;
+
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
     type OnCreatedAccount: Happened<Self::AccountId>;
@@ -69,6 +89,8 @@ decl_error! {
         InsufficientBalance,
         /// Failed because liquidity restrictions due to locking
         LiquidityRestrictions,
+        /// Cannot convert Amount into Balance type
+        AmountIntoBalanceFailed,
         /// Got an overflow after adding
         TotalAssetOverflow,
         /// Balance too low to send value

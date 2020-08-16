@@ -2,14 +2,17 @@ use sp_runtime::{
     traits::{CheckedSub, Saturating, Zero},
     DispatchError, DispatchResult,
 };
-use sp_std::prelude::*;
+use sp_std::{convert::TryInto, prelude::*};
 
 use frame_support::{
     ensure,
     traits::{BalanceStatus, LockIdentifier},
 };
 
-use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
+use orml_traits::{
+    arithmetic::Signed, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+    MultiReservableCurrency,
+};
 
 use chainx_primitives::AssetId;
 use xpallet_support::{error, traits::TreasuryAccount};
@@ -158,6 +161,28 @@ impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
             None => return remaining_slash,
         };
         remaining_slash
+    }
+}
+
+impl<T: Trait> MultiCurrencyExtended<T::AccountId> for Module<T> {
+    type Amount = T::Amount;
+
+    fn update_balance(
+        currency_id: Self::CurrencyId,
+        who: &T::AccountId,
+        by_amount: Self::Amount,
+    ) -> DispatchResult {
+        if by_amount.is_zero() {
+            return Ok(());
+        }
+
+        let by_balance = TryInto::<Self::Balance>::try_into(by_amount.abs())
+            .map_err(|_| Error::<T>::AmountIntoBalanceFailed)?;
+        if by_amount.is_positive() {
+            Self::deposit(currency_id, who, by_balance)
+        } else {
+            Self::withdraw(currency_id, who, by_balance)
+        }
     }
 }
 
