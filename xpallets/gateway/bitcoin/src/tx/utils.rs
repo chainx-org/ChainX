@@ -7,9 +7,11 @@ use sp_std::prelude::Vec;
 use xpallet_support::{base58, error, try_hex, warn};
 
 // light-bitcoin
-use btc_chain::{OutPoint, Transaction};
-use btc_keys::{Address, DisplayLayout, Network};
-use btc_script::{Opcode, Script, ScriptAddress};
+use light_bitcoin::{
+    chain::{OutPoint, Transaction},
+    keys::{Address, DisplayLayout, Network},
+    script::{Opcode, Script, ScriptAddress},
+};
 
 use crate::{Error, Module, Trait};
 

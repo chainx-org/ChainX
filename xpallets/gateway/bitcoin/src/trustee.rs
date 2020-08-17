@@ -6,11 +6,13 @@ use frame_support::{
 use sp_runtime::SaturatedConversion;
 use sp_std::{convert::TryFrom, prelude::*, result};
 
-use btc_chain::Transaction;
-use btc_crypto::dhash160;
-use btc_keys::{Address, Public, Type};
-use btc_primitives::Bytes;
-use btc_script::{Builder, Opcode, Script};
+use light_bitcoin::{
+    chain::Transaction,
+    crypto::dhash160,
+    keys::{Address, Public, Type},
+    primitives::Bytes,
+    script::{Builder, Opcode, Script},
+};
 
 use xpallet_assets::Chain;
 use xpallet_gateway_common::{

@@ -18,7 +18,7 @@ use frame_support::{
     debug::native,
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
-    traits::Currency,
+    traits::{Currency, EnsureOrigin},
 };
 use frame_system::{ensure_root, ensure_signed};
 
@@ -32,15 +32,18 @@ use xpallet_gateway_common::{
 use xpallet_support::{base58, debug, ensure_with_errorlog, error, info, str, try_addr};
 
 // light-bitcoin
-use btc_chain::Transaction;
-use btc_keys::{Address, DisplayLayout};
-use btc_ser::{deserialize, Reader};
-// re-export
-pub use btc_chain::BlockHeader as BtcHeader;
-pub use btc_keys::Network as BtcNetwork;
 #[cfg(feature = "std")]
-pub use btc_primitives::h256_conv_endian_from_str;
-pub use btc_primitives::{Compact, H256, H264};
+pub use light_bitcoin::primitives::h256_conv_endian_from_str;
+pub use light_bitcoin::{
+    chain::BlockHeader as BtcHeader,
+    keys::Network as BtcNetwork,
+    primitives::{Compact, H256, H264},
+};
+use light_bitcoin::{
+    chain::Transaction,
+    keys::{Address, DisplayLayout},
+    serialization::{deserialize, Reader},
+};
 
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use self::types::{
@@ -49,7 +52,6 @@ use self::types::{
 };
 use crate::trustee::get_trustee_address_pair;
 use crate::tx::remove_pending_deposit;
-use frame_support::traits::EnsureOrigin;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,

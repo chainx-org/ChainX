@@ -9,7 +9,7 @@ use frame_support::{StorageMap, StorageValue};
 use xpallet_support::info;
 
 // light-bitcoin
-use btc_primitives::H256;
+use light_bitcoin::primitives::H256;
 
 use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
 use crate::{ConfirmedHeader, Error, MainChain, Module, Trait};

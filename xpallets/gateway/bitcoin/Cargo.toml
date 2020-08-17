@@ -30,13 +30,7 @@ xpallet-gateway-common = { path = "../common", default-features = false }
 xpallet-gateway-records = { path = "../records", default-features = false }
 
 # light-bitcoin
-btc-chain = { package = "chain", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
-btc-crypto = { package = "crypto", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
-btc-keys = { package = "keys", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
-btc-primitives = { package = "primitives", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
-btc-script = { package = "script", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
-btc-ser = { package = "serialization", git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
-merkle = { git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
 
 [features]
 default = ["std"]
@@ -63,11 +57,5 @@ std = [
     "xpallet-gateway-records/std",
 
     # light-bitcoin
-    "btc-chain/std",
-    "btc-crypto/std",
-    "btc-keys/std",
-    "btc-primitives/std",
-    "btc-script/std",
-    "btc-ser/std",
-    "merkle/std",
+    "light-bitcoin/std",
 ]

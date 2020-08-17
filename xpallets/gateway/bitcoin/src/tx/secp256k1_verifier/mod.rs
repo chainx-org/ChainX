@@ -1,6 +1,6 @@
-use btc_chain::Transaction;
-use btc_primitives::Bytes;
 use frame_support::dispatch::DispatchResult;
+
+use light_bitcoin::{chain::Transaction, primitives::Bytes};
 
 use crate::types::BtcTxVerifier;
 use crate::{Error, Module, Trait};

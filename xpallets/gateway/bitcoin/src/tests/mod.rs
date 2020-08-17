@@ -15,15 +15,10 @@ use hex_literal::hex;
 use runtime_io::with_externalities;
 use substrate_primitives::crypto::UncheckedInto;
 
-use btc_crypto::dhash160;
-use btc_primitives::h256_from_rev_str;
-use btc_script::{Builder, Opcode, Script};
-
-fn reverse_h256(mut hash: btc_primitives::H256) -> btc_primitives::H256 {
-    let bytes = hash.as_bytes_mut();
-    bytes.reverse();
-    btc_primitives::H256::from_slice(bytes)
-}
+use light_bitcoin::{
+    crypto::dhash160,
+    script::{Builder, Opcode, Script},
+};
 
 #[test]
 pub fn test_address() {
