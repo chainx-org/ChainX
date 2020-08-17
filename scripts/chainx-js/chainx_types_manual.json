@@ -199,7 +199,9 @@
     "WeightType": "u128",
     "MiningPower": "u128",
     "MiningWeight": "u128",
-    "AssetRestrictions": "u32",
+    "AssetRestrictions":  {
+        "mask": "u32"
+    },
     "OrderInfo": "Order",
     "HandicapInfo": "Handicap",
     "Price": "Balance"
