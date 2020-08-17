@@ -26,8 +26,20 @@ pub struct HeaderVerifier<'a> {
 impl<'a> HeaderVerifier<'a> {
     pub fn new<T: Trait>(header_info: &'a BtcHeaderInfo) -> result::Result<Self, ChainErr> {
         let now: T::Moment = pallet_timestamp::Module::<T>::now();
-        // bitcoin use u32 to log time, we think the timestamp would not more then u32
-        let current_time: u32 = now.saturated_into::<u32>();
+        // in substrate, timestamp would use u64 with milliseconds
+        let now: u64 = now.saturated_into::<u64>();
+        // transfer milliseconds to seconds
+        let current_time: Option<u32> = now.checked_div(1000_u64).and_then(|now| {
+            // bitcoin use u32 to log time, we think the timestamp would not more then u32
+            let now = now.saturated_into::<u32>();
+            if now == u32::max_value() {
+                // convert from u64 to u32 failed, ignore timestamp check
+                // timestamp check are not important
+                None
+            } else {
+                Some(now)
+            }
+        });
 
         Ok(HeaderVerifier {
             work: HeaderWork::new(header_info),
@@ -210,11 +222,11 @@ pub fn is_valid_proof_of_work(max_work_bits: Compact, bits: Compact, hash: &H256
 
 pub struct HeaderTimestamp<'a> {
     header: &'a BtcHeader,
-    current_time: u32,
+    current_time: Option<u32>,
 }
 
 impl<'a> HeaderTimestamp<'a> {
-    fn new(header: &'a BtcHeader, current_time: u32) -> Self {
+    fn new(header: &'a BtcHeader, current_time: Option<u32>) -> Self {
         HeaderTimestamp {
             header,
             current_time,
@@ -222,10 +234,15 @@ impl<'a> HeaderTimestamp<'a> {
     }
 
     fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
-        if self.header.time > self.current_time + p.block_max_future() {
-            error!("[HeaderTimestamp check]|Futuristic timestamp|header time{:}|current time:{:}|max_future{:?}", self.header.time, self.current_time, p.block_max_future());
-            Err(Error::<T>::HeaderFuturisticTimestamp)?
+        if let Some(current_time) = self.current_time {
+            if self.header.time > current_time + p.block_max_future() {
+                error!("[HeaderTimestamp check]|Futuristic timestamp|header time{:}|current time:{:}|max_future{:?}", self.header.time, current_time, p.block_max_future());
+                Err(Error::<T>::HeaderFuturisticTimestamp)?
+            } else {
+                Ok(())
+            }
         } else {
+            // if get chain timestamp error, just ignore blockhead time check
             Ok(())
         }
     }
