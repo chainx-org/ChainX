@@ -6,7 +6,7 @@ use sp_runtime::traits::SaturatedConversion;
 use sp_std::{cmp, result};
 
 // ChainX
-use xpallet_support::{debug, ensure_with_errorlog, error, info};
+use xpallet_support::{debug, ensure_with_errorlog, error, info, warn};
 
 // light-bitcoin
 use btc_chain::BlockHeader as BtcHeader;
@@ -243,6 +243,7 @@ impl<'a> HeaderTimestamp<'a> {
             }
         } else {
             // if get chain timestamp error, just ignore blockhead time check
+            warn!("[check_btc_header_time]|do not get timestamp or calculate timestamp error, ignore check|hash:{:?}", self.header.hash());
             Ok(())
         }
     }
