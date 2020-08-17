@@ -11,10 +11,12 @@ use sp_std::prelude::*;
 use chainx_primitives::Name;
 
 // light-bitcoin
-use btc_chain::{BlockHeader as BtcHeader, Transaction as BtcTransaction};
-use btc_keys::Address;
-use btc_primitives::{Compact, H256};
-use merkle::PartialMerkleTree;
+use light_bitcoin::{
+    chain::{BlockHeader as BtcHeader, Transaction as BtcTransaction},
+    keys::Address,
+    merkle::PartialMerkleTree,
+    primitives::{Compact, H256},
+};
 
 /// BtcAddress is an bitcoin address encoded in base58
 /// like: "1Nekoo5VTe7yQQ8WFqrva2UbdyRMVYCP1t" or "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"

@@ -19,10 +19,12 @@ use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding, Extractable};
 use xpallet_support::{debug, error, info, str, warn};
 
 // light-bitcoin
-use btc_chain::Transaction;
-use btc_keys::{Address, Network};
-use btc_primitives::H256;
-use btc_script::Script;
+use light_bitcoin::{
+    chain::Transaction,
+    keys::{Address, Network},
+    primitives::H256,
+    script::Script,
+};
 
 // use crate::traits::RelayTransaction;
 #[cfg(feature = "std")]

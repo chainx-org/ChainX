@@ -9,14 +9,15 @@ use sp_core::ecdsa::Public;
 use sp_io::{crypto::secp256k1_ecdsa_recover_compressed, EcdsaVerifyError};
 use sp_std::{convert::TryFrom, result};
 
-use btc_chain::Transaction;
-use btc_keys::Message;
-use btc_primitives::Bytes;
-use btc_script::{Script, SignatureVersion, TransactionInputSigner};
+use light_bitcoin::{
+    chain::Transaction,
+    keys::Message,
+    primitives::Bytes,
+    script::{Script, SignatureVersion, TransactionInputSigner},
+};
 
-pub use error::Secp256k1Error;
-use scalar::Scalar;
-
+pub use self::error::Secp256k1Error;
+use self::scalar::Scalar;
 use crate::{Error, Trait};
 
 #[derive(Clone, Eq, PartialEq)]

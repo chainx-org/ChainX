@@ -617,19 +617,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chain"
-version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
-dependencies = [
- "crypto",
- "parity-scale-codec",
- "primitives",
- "rustc-hex",
- "serde",
- "serialization",
-]
-
-[[package]]
 name = "chainx"
 version = "2.0.0"
 dependencies = [
@@ -983,19 +970,6 @@ name = "crunchy"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
-
-[[package]]
-name = "crypto"
-version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
-dependencies = [
- "digest 0.8.1",
- "primitives",
- "ripemd160",
- "sha-1",
- "sha2 0.8.1",
- "siphasher",
-]
 
 [[package]]
 name = "crypto-mac"
@@ -2373,21 +2347,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "keys"
-version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
-dependencies = [
- "bs58",
- "crypto",
- "libsecp256k1",
- "parity-scale-codec",
- "primitives",
- "rustc-hex",
- "serde",
- "serialization",
-]
-
-[[package]]
 name = "kv-log-macro"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2810,6 +2769,118 @@ dependencies = [
 ]
 
 [[package]]
+name = "light-bitcoin"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "light-bitcoin-chain",
+ "light-bitcoin-crypto",
+ "light-bitcoin-keys",
+ "light-bitcoin-merkle",
+ "light-bitcoin-primitives",
+ "light-bitcoin-script",
+ "light-bitcoin-serialization",
+]
+
+[[package]]
+name = "light-bitcoin-chain"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "light-bitcoin-crypto",
+ "light-bitcoin-primitives",
+ "light-bitcoin-serialization",
+ "parity-scale-codec",
+ "rustc-hex",
+ "serde",
+]
+
+[[package]]
+name = "light-bitcoin-crypto"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "digest 0.8.1",
+ "light-bitcoin-primitives",
+ "ripemd160",
+ "sha-1",
+ "sha2 0.8.1",
+ "siphasher",
+]
+
+[[package]]
+name = "light-bitcoin-keys"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "bs58",
+ "libsecp256k1",
+ "light-bitcoin-crypto",
+ "light-bitcoin-primitives",
+ "light-bitcoin-serialization",
+ "parity-scale-codec",
+ "rustc-hex",
+ "serde",
+]
+
+[[package]]
+name = "light-bitcoin-merkle"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "light-bitcoin-chain",
+ "light-bitcoin-primitives",
+ "light-bitcoin-serialization",
+ "parity-scale-codec",
+]
+
+[[package]]
+name = "light-bitcoin-primitives"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "byteorder",
+ "fixed-hash",
+ "hex 0.4.2",
+ "impl-codec",
+ "impl-serde 0.3.1",
+ "primitive-types",
+ "rustc-hex",
+ "serde",
+]
+
+[[package]]
+name = "light-bitcoin-script"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "light-bitcoin-chain",
+ "light-bitcoin-crypto",
+ "light-bitcoin-keys",
+ "light-bitcoin-primitives",
+ "light-bitcoin-serialization",
+]
+
+[[package]]
+name = "light-bitcoin-serialization"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "light-bitcoin-primitives",
+ "light-bitcoin-serialization-derive",
+]
+
+[[package]]
+name = "light-bitcoin-serialization-derive"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda27139024a27339d7a0c5dd88da6e33d"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.7",
+ "syn 1.0.38",
+]
+
+[[package]]
 name = "linked-hash-map"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2956,17 +3027,6 @@ name = "memory_units"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
-
-[[package]]
-name = "merkle"
-version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
-dependencies = [
- "chain",
- "parity-scale-codec",
- "primitives",
- "serialization",
-]
 
 [[package]]
 name = "merlin"
@@ -4138,21 +4198,6 @@ dependencies = [
  "impl-codec",
  "impl-serde 0.3.1",
  "uint",
-]
-
-[[package]]
-name = "primitives"
-version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
-dependencies = [
- "byteorder",
- "fixed-hash",
- "hex 0.4.2",
- "impl-codec",
- "impl-serde 0.3.1",
- "primitive-types",
- "rustc-hex",
- "serde",
 ]
 
 [[package]]
@@ -5639,18 +5684,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
-name = "script"
-version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
-dependencies = [
- "chain",
- "crypto",
- "keys",
- "primitives",
- "serialization",
-]
-
-[[package]]
 name = "sct"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5770,25 +5803,6 @@ dependencies = [
  "linked-hash-map",
  "serde",
  "yaml-rust",
-]
-
-[[package]]
-name = "serialization"
-version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
-dependencies = [
- "primitives",
- "serialization_derive",
-]
-
-[[package]]
-name = "serialization_derive"
-version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#324335e58fabeec485214a42d2461a6e37058e86"
-dependencies = [
- "proc-macro2",
- "quote 1.0.7",
- "syn 1.0.38",
 ]
 
 [[package]]
@@ -8059,19 +8073,13 @@ dependencies = [
 name = "xpallet-gateway-bitcoin"
 version = "0.1.0"
 dependencies = [
- "chain",
  "chainx-primitives",
- "crypto",
  "frame-support",
  "frame-system",
- "keys",
- "merkle",
+ "light-bitcoin",
  "pallet-timestamp",
  "parity-scale-codec",
- "primitives",
- "script",
  "serde",
- "serialization",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -8092,7 +8100,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex 0.4.2",
- "keys",
+ "light-bitcoin",
  "pallet-multisig",
  "parity-scale-codec",
  "serde",

@@ -1,5 +1,5 @@
 use super::*;
-use btc_keys::Public as BtcPublic;
+use light_bitcoin::keys::Public as BtcPublic;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

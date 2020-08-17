@@ -9,9 +9,11 @@ use sp_std::{cmp, result};
 use xpallet_support::{debug, ensure_with_errorlog, error, info, warn};
 
 // light-bitcoin
-use btc_chain::BlockHeader as BtcHeader;
-use btc_keys::Network;
-use btc_primitives::{Compact, H256, U256};
+use light_bitcoin::{
+    chain::BlockHeader as BtcHeader,
+    keys::Network,
+    primitives::{Compact, H256, U256},
+};
 
 use super::ChainErr;
 use crate::types::{BtcHeaderInfo, BtcParams};

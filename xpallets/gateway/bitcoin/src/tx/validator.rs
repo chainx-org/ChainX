@@ -8,9 +8,7 @@ use frame_support::{
 use sp_std::{prelude::Vec, result};
 
 // light-bitcoin
-use btc_chain::Transaction;
-use btc_primitives::H256;
-use btc_script::Script;
+use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
 
 // ChainX
 use xpallet_support::{debug, error, try_hex};
