@@ -443,7 +443,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
         match ensure_identical::<T>(&tx, &proposal.tx) {
             Ok(()) => {
                 for number in proposal.withdrawal_id_list.iter() {
-                    match xpallet_gateway_records::Module::<T>::finish_withdrawal(*number) {
+                    match xpallet_gateway_records::Module::<T>::finish_withdrawal(None, *number) {
                         Ok(_) => {
                             info!("[withdraw]|ID of withdrawal completion: {:}", *number);
                         }

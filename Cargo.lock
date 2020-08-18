@@ -3411,6 +3411,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-utilities"
+version = "0.1.3-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?rev=d3630e35ce737aef3f9c7857e9b4bd540f37530c#d3630e35ce737aef3f9c7857e9b4bd540f37530c"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "serde",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "owning_ref"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7348,7 +7360,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.3.23",
+ "rand 0.5.6",
 ]
 
 [[package]]
@@ -8152,8 +8164,12 @@ dependencies = [
  "chainx-primitives",
  "frame-support",
  "frame-system",
+ "orml-utilities",
+ "pallet-balances 2.0.0-rc5 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "serde",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
  "xp-runtime",

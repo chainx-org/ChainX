@@ -3,6 +3,8 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::transmute_ptr_to_ptr)]
 
 #[cfg(test)]
 mod mock;
@@ -384,7 +386,7 @@ impl<T: Trait> Module<T> {
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_withdrawal(id)?;
 
-        let _imbalance = Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
+        Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
         Ok(())
     }
 
@@ -393,7 +395,7 @@ impl<T: Trait> Module<T> {
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_usable(id)?;
 
-        let _imbalance = Self::inner_destroy(id, who, AssetType::Usable, value)?;
+        Self::inner_destroy(id, who, AssetType::Usable, value)?;
         Ok(())
     }
 
@@ -599,36 +601,42 @@ impl<T: Trait> Module<T> {
     fn update_locks(currency_id: AssetId, who: &T::AccountId, locks: &[BalanceLock<BalanceOf<T>>]) {
         // update locked balance
         if let Some(max_locked) = locks.iter().map(|lock| lock.amount).max() {
-            let locked = Self::asset_balance_of(who, &currency_id, AssetType::Locked);
-            let result = if max_locked > locked {
-                // new lock more than current locked, move usable to locked
-                Self::move_balance(
-                    &currency_id,
-                    who,
-                    AssetType::Usable,
-                    who,
-                    AssetType::Locked,
-                    max_locked - locked,
-                )
-            } else if max_locked < locked {
-                // new lock less then current locked, release locked to usable
-                Self::move_balance(
-                    &currency_id,
-                    who,
-                    AssetType::Locked,
-                    who,
-                    AssetType::Usable,
-                    locked - max_locked,
-                )
-            } else {
-                // if max_locked == locked, need do nothing
-                Ok(())
+            use sp_std::cmp::Ordering;
+            let current_locked = Self::asset_balance_of(who, &currency_id, AssetType::Locked);
+
+            let result = match max_locked.cmp(&current_locked) {
+                Ordering::Greater => {
+                    // new lock more than current locked, move usable to locked
+                    Self::move_balance(
+                        &currency_id,
+                        who,
+                        AssetType::Usable,
+                        who,
+                        AssetType::Locked,
+                        max_locked - current_locked,
+                    )
+                }
+                Ordering::Less => {
+                    // new lock less then current locked, release locked to usable
+                    Self::move_balance(
+                        &currency_id,
+                        who,
+                        AssetType::Locked,
+                        who,
+                        AssetType::Usable,
+                        current_locked - max_locked,
+                    )
+                }
+                Ordering::Equal => {
+                    // if max_locked == locked, need do nothing
+                    Ok(())
+                }
             };
             if let Err(e) = result {
                 // should not fail, for set lock need to check free_balance, free_balance = usable + free
                 error!(
                     "[update_locks]|move between usable and locked should not fail|asset_id:{:}|who:{:?}|max_locked:{:?}|current locked:{:?}|err:{:?}",
-                    currency_id, who, max_locked, locked, e
+                    currency_id, who, max_locked, current_locked, e
                 );
             }
         }

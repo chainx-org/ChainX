@@ -257,7 +257,7 @@ impl<T: Trait> Module<T> {
             Err(Error::<T>::InvalidSigCount)?
         };
 
-        xpallet_gateway_records::Module::<T>::process_withdrawal(
+        xpallet_gateway_records::Module::<T>::process_withdrawals(
             Chain::Bitcoin,
             &withdrawal_id_list,
         )?;
