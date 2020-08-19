@@ -4,126 +4,252 @@
 
 use crate::*;
 
+use core::time::Duration;
+use std::cell::RefCell;
+
 // Substrate
-use primitives::testing::{Digest, DigestItem, Header, UintAuthorityId};
-use primitives::traits::{BlakeTwo256, IdentityLookup};
-use primitives::BuildStorage;
-use substrate_primitives::ed25519::Public;
-use substrate_primitives::{Blake2Hasher, H256 as S_H256};
-use support::impl_outer_origin;
+use frame_support::{
+    impl_outer_dispatch, impl_outer_origin, parameter_types, sp_io, weights::Weight,
+};
+use frame_system::EnsureSignedBy;
+// use sp_core::H256;
+use sp_runtime::{
+    testing::Header,
+    traits::{BlakeTwo256, IdentityLookup},
+    AccountId32, Perbill,
+};
 
 // light-bitcoin
 use light_bitcoin::primitives::{h256_conv_endian_from_str, Compact};
-use xbridge_common::traits::IntoVecu8;
+// use xbridge_common::traits::IntoVecu8;
+use chainx_primitives::AssetId;
+use xpallet_assets::{AssetRestriction, AssetRestrictions};
+use xpallet_assets_registrar::AssetInfo;
+use xpallet_gateway_common::trustees::bitcoin::BtcTrusteeType;
+
+use sp_core::crypto::UncheckedInto;
+pub use xpallet_protocol::X_BTC;
+pub use xpallet_protocol::X_ETH;
+
+/// The AccountId alias in this test module.
+pub(crate) type AccountId = AccountId32;
+pub(crate) type BlockNumber = u64;
+pub(crate) type Balance = u128;
+pub(crate) type Amount = i128;
 
 impl_outer_origin! {
-    pub enum Origin for Test {}
+    pub enum Origin for Test where system = frame_system {}
 }
-
-type AccountId = Public;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
 
+parameter_types! {
+    pub const BlockHashCount: u64 = 250;
+    pub const MaximumBlockWeight: Weight = 1024;
+    pub const MaximumBlockLength: u32 = 2 * 1024;
+    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+}
+
 impl frame_system::Trait for Test {
+    type BaseCallFilter = ();
     type Origin = Origin;
+    type Call = ();
     type Index = u64;
-    type BlockNumber = u64;
-    type Hash = S_H256;
+    type BlockNumber = BlockNumber;
+    type Hash = H256;
     type Hashing = BlakeTwo256;
-    type Digest = Digest;
     type AccountId = AccountId;
-    type Lookup = IdentityLookup<AccountId>;
+    type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = ();
-    type Log = DigestItem;
-}
-
-impl consensus::Trait for Test {
-    type Log = DigestItem;
-    type SessionKey = UintAuthorityId;
-    type InherentOfflineReport = ();
-}
-
-impl timestamp::Trait for Test {
-    type Moment = u64;
-    type OnTimestampSet = ();
-}
-
-impl xsystem::Trait for Test {
-    type ValidatorList = MockValidatorList;
-    type Validator = MockValidator;
-}
-
-pub struct MockValidatorList;
-impl xsystem::ValidatorList<AccountId> for MockValidatorList {
-    fn validator_list() -> Vec<AccountId> {
-        vec![]
-    }
-}
-
-pub struct MockValidator;
-impl xsystem::Validator<AccountId> for MockValidator {
-    fn get_validator_by_name(_name: &[u8]) -> Option<AccountId> {
-        Some(AccountId::default())
-    }
-    fn get_validator_name(_: &AccountId) -> Option<Vec<u8>> {
-        None
-    }
-}
-
-impl xaccounts::Trait for Test {
-    type DetermineIntentionJackpotAccountId = MockDeterminator;
-}
-
-pub struct MockDeterminator;
-impl xaccounts::IntentionJackpotAccountIdFor<AccountId> for MockDeterminator {
-    fn accountid_for_unsafe(_: &AccountId) -> AccountId {
-        AccountId::default()
-    }
-    fn accountid_for_safe(_: &AccountId) -> Option<AccountId> {
-        Some(AccountId::default())
-    }
-}
-
-impl xrecords::Trait for Test {
-    type Event = ();
+    type BlockHashCount = BlockHashCount;
+    type MaximumBlockWeight = MaximumBlockWeight;
+    type DbWeight = ();
+    type BlockExecutionWeight = ();
+    type ExtrinsicBaseWeight = ();
+    type MaximumExtrinsicWeight = MaximumBlockWeight;
+    type MaximumBlockLength = MaximumBlockLength;
+    type AvailableBlockRatio = AvailableBlockRatio;
+    type Version = ();
+    type ModuleToIndex = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
+    type OnNewAccount = ();
+    type OnKilledAccount = ();
+    type SystemWeightInfo = ();
 }
 
 parameter_types! {
+    pub const ExistentialDeposit: u64 = 0;
+}
+impl pallet_balances::Trait for Test {
+    type Balance = Balance;
+    type DustRemoval = ();
+    type Event = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = System;
+    type WeightInfo = ();
+}
+
+// parameter_types! {
+//     pub const DepositBase: u64 = 1;
+//     pub const DepositFactor: u64 = 1;
+//     pub const MaxSignatories: u16 = 3;
+// }
+// impl pallet_multisig::Trait for Test {
+//     type Event = ();
+//     type Call = Call;
+//     type Currency = Balances;
+//     type DepositBase = DepositBase;
+//     type DepositFactor = DepositFactor;
+//     type MaxSignatories = MaxSignatories;
+//     type WeightInfo = ();
+// }
+
+// assets
+parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
+
+impl xpallet_assets_registrar::Trait for Test {
+    type Event = ();
+    type NativeAssetId = ChainXAssetId;
+    type RegistrarHandler = ();
+}
+
 impl xpallet_assets::Trait for Test {
     type Event = ();
     type Currency = Balances;
-    type NativeAssetId = ChainXAssetId;
+    type Amount = Amount;
+    type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
-    type RegistrarHandler = XSpot;
 }
 
-impl xfee_manager::Trait for Test {
+impl xpallet_gateway_records::Trait for Test {
     type Event = ();
 }
 
-impl xbridge_common::Trait for Test {
+impl xpallet_gateway_common::Trait for Test {
     type Event = ();
+    type Validator = ();
+    type DetermineMultisigAddress = ();
+    type Bitcoin = XGatewayBitcoin;
+    type BitcoinTrustee = XGatewayBitcoin;
 }
 
-impl lockup::Trait for Test {
-    type Event = ();
+thread_local! {
+    pub static NOW: RefCell<Option<Duration>> = RefCell::new(None);
+}
+
+pub struct Timestamp;
+impl UnixTime for Timestamp {
+    fn now() -> Duration {
+        NOW.with(|m| {
+            m.borrow().unwrap_or_else(|| {
+                use std::time::{SystemTime, UNIX_EPOCH};
+                let start = SystemTime::now();
+                let since_the_epoch = start
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards");
+                since_the_epoch
+            })
+        })
+    }
 }
 
 impl Trait for Test {
-    type XBitcoinLockup = Self;
-
-    type AccountExtractor = xbridge_common::extractor::Extractor<AccountId>;
-    type TrusteeSessionProvider = DummyTrusteeSession;
-    type TrusteeMultiSigProvider = DummyBitcoinTrusteeMultiSig;
-    type CrossChainProvider = DummyCrossChain;
     type Event = ();
+    type UnixTime = Timestamp;
+    type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
+    type TrusteeSessionProvider =
+        xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
+    type TrusteeOrigin = EnsureSignedBy<
+        xpallet_gateway_common::trustees::bitcoin::BtcTrusteeMultisig<Test>,
+        AccountId,
+    >;
+    type Channel = XGatewayCommon;
+    type AddrBinding = XGatewayCommon;
 }
 
+pub type System = frame_system::Module<Test>;
+pub type Balances = pallet_balances::Module<Test>;
+pub type XAssets = xpallet_assets::Module<Test>;
+pub type XRecords = xpallet_gateway_records::Module<Test>;
+pub type XGatewayCommon = xpallet_gateway_common::Module<Test>;
+pub type XGatewayBitcoin = Module<Test>;
+pub type XGatewayBitcoinErr = Error<Test>;
+
+pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        X_BTC,
+        AssetInfo::new::<Test>(
+            b"X-BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8,
+            b"ChainX's cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        AssetRestriction::DestroyUsable.into(),
+    )
+}
+
+lazy_static::lazy_static! {
+    pub static ref ALICE: AccountId = H256::repeat_byte(1).unchecked_into();
+    pub static ref BOB: AccountId = H256::repeat_byte(2).unchecked_into();
+    pub static ref CHARLIE: AccountId = H256::repeat_byte(3).unchecked_into();
+    pub static ref DAVE: AccountId = H256::repeat_byte(4).unchecked_into();
+}
+
+pub struct ExtBuilder;
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        Self
+    }
+}
+impl ExtBuilder {
+    pub fn build(self) -> sp_io::TestExternalities {
+        let mut storage = frame_system::GenesisConfig::default()
+            .build_storage::<Test>()
+            .unwrap();
+
+        let btc_assets = btc();
+        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
+        // let mut endowed = BTreeMap::new();
+        // let endowed_info = vec![(ALICE, 100), (BOB, 200), (CHARLIE, 300), (DAVE, 400)];
+        // endowed.insert(btc_assets.0, endowed_info.clone());
+        // endowed.insert(eth_assets.0, endowed_info);
+
+        let mut init_assets = vec![];
+        let mut assets_restrictions = vec![];
+        for (a, b, c, d, e) in assets {
+            init_assets.push((a, b, d, e));
+            assets_restrictions.push((a, c))
+        }
+
+        let _ = xpallet_assets_registrar::GenesisConfig {
+            assets: init_assets,
+        }
+        .assimilate_storage::<Test>(&mut storage);
+
+        let _ = xpallet_assets::GenesisConfig::<Test> {
+            assets_restrictions,
+            endowed: Default::default(),
+            memo_len: 128,
+        }
+        .assimilate_storage(&mut storage);
+
+        let ext = sp_io::TestExternalities::new(storage);
+        ext
+    }
+    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+        let mut ext = self.build();
+        ext.execute_with(|| System::set_block_number(1));
+        ext.execute_with(test);
+    }
+}
+/*
 pub struct DummyTrusteeSession;
 impl xbridge_common::traits::TrusteeSession<AccountId, TrusteeAddrInfo> for DummyTrusteeSession {
     fn trustee_session(
@@ -472,3 +598,4 @@ pub fn generate_mock_blocks() -> (Vec<BTCHeader>, Vec<BTCHeader>) {
     };
     (vec![b0.clone(), b1, b2, b3, b4], vec![b0, b1_fork, b2_fork])
 }
+*/

@@ -32,6 +32,14 @@ xpallet-gateway-records = { path = "../records", default-features = false }
 # light-bitcoin
 light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
 
+[dev-dependencies]
+lazy_static = "1.4"
+hex = "0.4"
+pallet-balances = { version = "2.0.0-rc5" }
+pallet-multisig = { version = "2.0.0-rc5" }
+
+xpallet-assets-registrar = { path = "../../assets-registrar" }
+
 [features]
 default = ["std"]
 std = [

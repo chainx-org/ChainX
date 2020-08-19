@@ -18,7 +18,7 @@ use frame_support::{
     debug::native,
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
-    traits::{Currency, EnsureOrigin},
+    traits::{Currency, EnsureOrigin, UnixTime},
 };
 use frame_system::{ensure_root, ensure_signed};
 
@@ -58,12 +58,10 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
 >>::Balance;
 
 pub trait Trait:
-    frame_system::Trait
-    + pallet_timestamp::Trait
-    + xpallet_assets::Trait
-    + xpallet_gateway_records::Trait
+    frame_system::Trait + xpallet_assets::Trait + xpallet_gateway_records::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type UnixTime: UnixTime;
     type AccountExtractor: Extractable<Self::AccountId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
     type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;

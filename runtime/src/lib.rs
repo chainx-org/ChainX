@@ -48,7 +48,7 @@ use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
 use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
-use xpallet_support::{RpcBalance, RpcPrice};
+use xpallet_support::{traits::MultisigAddressFor, RpcBalance, RpcPrice};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -828,15 +828,24 @@ impl xpallet_gateway_records::Trait for Runtime {
     type Event = Event;
 }
 
+pub struct MultisigProvider;
+impl MultisigAddressFor<AccountId> for MultisigProvider {
+    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId {
+        Multisig::multi_account_id(who, threshold)
+    }
+}
+
 impl xpallet_gateway_common::Trait for Runtime {
     type Event = Event;
     type Validator = XStaking;
+    type DetermineMultisigAddress = MultisigProvider;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
 }
 
 impl xpallet_gateway_bitcoin::Trait for Runtime {
     type Event = Event;
+    type UnixTime = Timestamp;
     type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;

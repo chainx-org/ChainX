@@ -28,7 +28,10 @@ use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestriction, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::WithdrawalState;
-use xpallet_support::{error, info, traits::Validator};
+use xpallet_support::{
+    error, info,
+    traits::{MultisigAddressFor, Validator},
+};
 
 use crate::traits::TrusteeForChain;
 use crate::types::{
@@ -40,12 +43,11 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-pub trait Trait:
-    frame_system::Trait + pallet_multisig::Trait + xpallet_gateway_records::Trait
-{
+pub trait Trait: frame_system::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type Validator: Validator<Self::AccountId>;
+    type DetermineMultisigAddress: MultisigAddressFor<Self::AccountId>;
     // for chain
     type Bitcoin: ChainT<BalanceOf<Self>>;
     type BitcoinTrustee: TrusteeForChain<
@@ -370,7 +372,7 @@ impl<T: Trait> Module<T> {
         info: &GenericTrusteeSessionInfo<T::AccountId>,
     ) -> result::Result<T::AccountId, DispatchError> {
         let multi_addr =
-            pallet_multisig::Module::<T>::multi_account_id(&info.trustee_list, info.threshold);
+            T::DetermineMultisigAddress::calc_multisig(&info.trustee_list, info.threshold);
 
         // not allow different chain has same multi-address
         let find_duplicated = Self::trustee_multisigs()
