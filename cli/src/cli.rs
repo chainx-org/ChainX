@@ -1,4 +1,4 @@
-use sc_cli::{RunCmd, Subcommand};
+use sc_cli::CliConfiguration;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -8,6 +8,26 @@ pub struct Cli {
 
     #[structopt(flatten)]
     pub run: RunCmd,
+}
+
+/// Possible subcommands of the main binary.
+#[derive(Debug, StructOpt)]
+pub enum Subcommand {
+    /// A set of base subcommands handled by `sc_cli`.
+    #[structopt(flatten)]
+    Base(sc_cli::Subcommand),
+
+    /// The custom benchmark subcommmand benchmarking runtime pallets.
+    #[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
+    Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+}
+
+#[allow(missing_docs)]
+#[derive(Debug, StructOpt)]
+pub struct RunCmd {
+    #[allow(missing_docs)]
+    #[structopt(flatten)]
+    pub base: sc_cli::RunCmd,
 
     /// Pass `foo` option starting with `--` via a JSON config file
     ///
@@ -18,6 +38,21 @@ pub struct Cli {
     #[structopt(long = "config", value_name = "PATH", parse(from_os_str))]
     pub config_file: Option<std::path::PathBuf>,
 
+    #[structopt(flatten)]
+    pub logger: LoggerParams,
+}
+
+impl Cli {
+    pub fn try_init_logger(&self) -> sc_cli::Result<()> {
+        if self.run.logger.log4rs {
+            crate::logger::init(&self.run.base.log_filters()?, &self.run.logger)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, StructOpt)]
+pub struct LoggerParams {
     /// Enable the log4rs feature, including the log rotation function.
     //  Use `log4rs` as `env_logger` can't print the message into file directly.
     #[structopt(long = "log4rs")]

@@ -150,7 +150,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 }
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
-    let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+    let wasm_binary =
+        WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
     let endowed_balance = 50 * constants::currency::DOLLARS;
     let constructor = move || {
@@ -239,11 +240,10 @@ fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> 
     assets
 }
 
-fn testnet_trustees() -> Vec<(
-    Chain,
-    TrusteeInfoConfig,
-    Vec<(AccountId, Vec<u8>, Vec<u8>, Vec<u8>)>,
-)> {
+// (account_id, about, hot_key, cold_key)
+type TrusteeParams = (AccountId, Vec<u8>, Vec<u8>, Vec<u8>);
+
+fn testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)> {
     macro_rules! btc_trustee_key {
         ($btc_pubkey:expr) => {{
             trustees::bitcoin::BtcTrusteeType::try_from(
@@ -297,8 +297,9 @@ fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> Sess
     }
 }
 
+type AssetParams = (AssetId, AssetInfo, AssetRestrictions, bool, bool);
 fn init_assets(
-    assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
+    assets: Vec<AssetParams>,
 ) -> (
     Vec<(AssetId, AssetInfo, bool, bool)>,
     Vec<(AssetId, AssetRestrictions)>,
@@ -316,13 +317,9 @@ fn testnet_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
-    assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
+    assets: Vec<AssetParams>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
-    trustees: Vec<(
-        Chain,
-        TrusteeInfoConfig,
-        Vec<(AccountId, Vec<u8>, Vec<u8>, Vec<u8>)>,
-    )>,
+    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)>,
     enable_println: bool,
 ) -> GenesisConfig {
     const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;

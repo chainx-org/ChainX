@@ -38,12 +38,14 @@ sp-runtime = { version = "2.0.0-rc5" }
 sp-transaction-pool = { version = "2.0.0-rc5" }
 
 # Substrate pallets
+frame-benchmarking-cli = { version = "2.0.0-rc5" }
 pallet-im-online = { version = "2.0.0-rc5" }
 
 chainx-primitives = { path = "../primitives" }
 chainx-runtime = { path = "../runtime" }
 xp-io = { path = "../primitives/io" }
 chainx-rpc = { path = "../rpc" }
+chainx-executor = { path = "../executor" }
 
 xpallet-protocol = { path = "../xpallets/protocol" }
 xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin" }

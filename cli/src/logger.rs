@@ -16,8 +16,6 @@ use log4rs::{
     encode::pattern::PatternEncoder,
 };
 
-use crate::cli::Cli;
-
 #[derive(Debug)]
 struct Directive {
     name: Option<String>,
@@ -100,11 +98,11 @@ fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>)
         Some(filter_level)
     };
 
-    return (directives, filter);
+    (directives, filter)
 }
 
 /// Initialize the log4rs configuration.
-pub fn init(log_filters: &str, params: &Cli) -> Result<(), String> {
+pub fn init(log_filters: &str, params: &crate::cli::LoggerParams) -> Result<(), String> {
     if params.log_size == 0 {
         return Err("the `--log-size` can't be 0".to_string());
     }

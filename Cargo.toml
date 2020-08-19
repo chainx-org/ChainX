@@ -16,13 +16,14 @@ cli = { package = "chainx-cli", path = "cli" }
 [workspace]
 members = [
     "cli",
-    "runtime",
+    "executor",
     "primitives",
     "primitives/runtime",
     "primitives/mining/common",
     "primitives/mining/staking",
     "primitives/assets-registrar",
     "rpc",
+    "runtime",
 
     "frame/balances",
     "frame/transaction-payment",
