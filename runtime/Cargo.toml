@@ -27,6 +27,7 @@ sp-transaction-pool = { version = "2.0.0-rc5", default-features = false }
 sp-version = { version = "2.0.0-rc5", default-features = false }
 
 # Substrate pallets
+frame-benchmarking = { version = "2.0.0-rc5", default-features = false, optional = true }
 frame-executive = { version = "2.0.0-rc5", default-features = false }
 frame-support = { version = "2.0.0-rc5", default-features = false }
 frame-system = { version = "2.0.0-rc5", default-features = false }
@@ -111,6 +112,7 @@ std = [
     "sp-transaction-pool/std",
     "sp-version/std",
 
+    "frame-benchmarking/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
@@ -169,4 +171,24 @@ std = [
     "xpallet-mining-staking-rpc-runtime-api/std",
     "xpallet-mining-asset/std",
     "xpallet-mining-asset-rpc-runtime-api/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-collective/runtime-benchmarks",
+    "pallet-democracy/runtime-benchmarks",
+    "pallet-elections-phragmen/runtime-benchmarks",
+    "pallet-grandpa/runtime-benchmarks",
+    "pallet-identity/runtime-benchmarks",
+    "pallet-im-online/runtime-benchmarks",
+    "pallet-indices/runtime-benchmarks",
+    "pallet-multisig/runtime-benchmarks",
+    "pallet-scheduler/runtime-benchmarks",
+    "pallet-society/runtime-benchmarks",
+    "pallet-timestamp/runtime-benchmarks",
+    "pallet-treasury/runtime-benchmarks",
+    "pallet-utility/runtime-benchmarks",
 ]

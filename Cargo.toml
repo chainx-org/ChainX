@@ -13,6 +13,9 @@ jsonrpc-derive = { git = "https://github.com/paritytech/jsonrpc", rev = "57575ef
 [dependencies]
 cli = { package = "chainx-cli", path = "cli" }
 
+[features]
+runtime-benchmarks = ["cli/runtime-benchmarks"]
+
 [workspace]
 members = [
     "cli",
