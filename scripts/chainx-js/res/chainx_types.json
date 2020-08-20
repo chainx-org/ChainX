@@ -374,6 +374,17 @@
             "BondedWithdrawal"
         ]
     },
+    "MiningAssetInfo": {
+        "assetId": "AssetId",
+        "miningPower": "FixedAssetPower",
+        "rewardPot": "AccountId",
+        "rewardPotBalance": "RpcBalance",
+        "ledgerInfo": "RpcAssetLedger"
+    },
+    "RpcAssetLedger": {
+        "lastTotalMiningWeight": "RpcWeightType",
+        "lastTotalMiningWeightUpdate": "BlockNumber"
+    },
     "String": "Text",
     "RpcPrice": "String",
     "MiningPower": "u128"
