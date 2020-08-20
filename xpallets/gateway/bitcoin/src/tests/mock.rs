@@ -6,6 +6,7 @@ use crate::*;
 
 use core::time::Duration;
 use std::cell::RefCell;
+use std::convert::TryFrom;
 
 // Substrate
 use frame_support::{
@@ -25,9 +26,10 @@ use light_bitcoin::primitives::{h256_conv_endian_from_str, Compact};
 use chainx_primitives::AssetId;
 use xpallet_assets::{AssetRestriction, AssetRestrictions};
 use xpallet_assets_registrar::AssetInfo;
-use xpallet_gateway_common::trustees::bitcoin::BtcTrusteeType;
+use xpallet_gateway_common::trustees::{self, bitcoin::BtcTrusteeType};
 
 use sp_core::crypto::UncheckedInto;
+use xpallet_gateway_common::types::TrusteeInfoConfig;
 pub use xpallet_protocol::X_BTC;
 pub use xpallet_protocol::X_ETH;
 
@@ -240,6 +242,32 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
+        let _ = xpallet_gateway_common::GenesisConfig::<Test> {
+            trustees: trustees(),
+        }
+        .assimilate_storage(&mut storage);
+
+        let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
+
+        let _ = GenesisConfig {
+            genesis_info,
+            genesis_hash,
+            network_id,
+            params_info: BtcParams::new(
+                486604799,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            verifier: BtcTxVerifier::Recover,
+            confirmation_number: 4,
+            reserved_block: 2100,
+            btc_withdrawal_fee: 500000,
+            max_withdrawal_count: 100,
+        }
+        .assimilate_storage::<Test>(&mut storage);
+
         let ext = sp_io::TestExternalities::new(storage);
         ext
     }
@@ -248,6 +276,244 @@ impl ExtBuilder {
         ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);
     }
+}
+
+pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNetwork) {
+    let as_h256 = |s: &str| h256_conv_endian_from_str(s);
+    (
+        (
+            BtcHeader {
+                version: 536870912,
+                previous_header_hash: as_h256(
+                    "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
+                ),
+                merkle_root_hash: as_h256(
+                    "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
+                ),
+                time: 1558168296,
+                bits: Compact::new(388627269),
+                nonce: 1439505020,
+            },
+            576576,
+        ),
+        as_h256("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
+        BtcNetwork::Mainnet,
+    )
+}
+
+fn trustees() -> Vec<(
+    Chain,
+    TrusteeInfoConfig,
+    Vec<(AccountId, Vec<u8>, Vec<u8>, Vec<u8>)>,
+)> {
+    let btc_trustees = vec![
+        (
+            ALICE.clone(),
+            b"".to_vec(),
+            hex::decode("035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84")
+                .expect("hex decode failed")
+                .into(),
+            hex::decode("0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3")
+                .expect("hex decode failed")
+                .into(),
+        ),
+        (
+            BOB.clone(),
+            b"".to_vec(),
+            hex::decode("02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee")
+                .expect("hex decode failed")
+                .into(),
+            hex::decode("020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f")
+                .expect("hex decode failed")
+                .into(),
+        ),
+        (
+            CHARLIE.clone(),
+            b"".to_vec(),
+            hex::decode("0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd")
+                .expect("hex decode failed")
+                .into(),
+            hex::decode("02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99")
+                .expect("hex decode failed")
+                .into(),
+        ),
+    ];
+    let btc_config = TrusteeInfoConfig {
+        min_trustee_count: 3,
+        max_trustee_count: 15,
+    };
+    vec![(Chain::Bitcoin, btc_config, btc_trustees)]
+}
+
+pub fn generate_blocks() -> (Vec<BtcHeader>, Vec<BtcHeader>) {
+    let b0: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: Default::default(),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707",
+        ),
+        time: 1546999089,
+        bits: Compact::new(436290411),
+        nonce: 562223693,
+    }; //1451572
+
+    let b1: BtcHeader = BtcHeader {
+        version: 536928256,
+        previous_header_hash: h256_conv_endian_from_str(
+            "00000000000000fd9cea8b846895f507c63b005d20ac56e87d1cdf80effd5c0a",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "c16a4a6a6cc43c67770cbec9dd0cc4bf7e956d6b4c9e7c15ff1a2dc8ef3afc63",
+        ),
+        time: 1547000297,
+        bits: Compact::new(486604799),
+        nonce: 2982943095,
+    };
+
+    let b2: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: h256_conv_endian_from_str(
+            "0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "14f332ae3422cfa8726f5e5fcf2d309b54ce005f3581f1f20f252772717044b5",
+        ),
+        time: 1547000572,
+        bits: Compact::new(436290411),
+        nonce: 744509129,
+    };
+
+    let b3: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: h256_conv_endian_from_str(
+            "00000000000000a6350fbd74c4f75decdc9e49ed3c89a53d5122bc699730c6fe",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "048e1e4749826e877bed94c811f282c93bcab78d024cd01e0e5c3b2e86a7c0eb",
+        ),
+        time: 1547001773,
+        bits: Compact::new(486604799),
+        nonce: 2225829261,
+    };
+
+    let b4: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: h256_conv_endian_from_str(
+            "000000005239e07019651d0cd871d2f4d663c827202442aff61fbc8b01c4afe8",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "64cc2d51b45420c4965c24ee3b0a63827291e400cad4ccc9f956db9f653e60f4",
+        ),
+        time: 1547001916,
+        bits: Compact::new(436290411),
+        nonce: 4075542957,
+    };
+
+    let b1_fork: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: h256_conv_endian_from_str(
+            "00000000000000e83086b78ebc3da4af6d892963fa3fd5e1648c693de623d1b7",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "20c8b156c122a28d63f0344bdb38cc402b80a078eacec3de08150032c524536c",
+        ),
+        time: 1547002101,
+        bits: Compact::new(520159231),
+        nonce: 1425818149,
+    };
+
+    (vec![b0.clone(), b1, b2, b3, b4], vec![b0, b1_fork])
+}
+pub fn generate_mock_blocks() -> (Vec<BtcHeader>, Vec<BtcHeader>) {
+    let b0: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: Default::default(),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707",
+        ),
+        time: 1546999089,
+        bits: Compact::new(436290411),
+        nonce: 562223693,
+    }; //1451572
+
+    let b1: BtcHeader = BtcHeader {
+        version: 536928256,
+        previous_header_hash: h256_conv_endian_from_str(
+            "00000000000000fd9cea8b846895f507c63b005d20ac56e87d1cdf80effd5c0a",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "c16a4a6a6cc43c67770cbec9dd0cc4bf7e956d6b4c9e7c15ff1a2dc8ef3afc63",
+        ),
+        time: 1547000297,
+        bits: Compact::new(486604799),
+        nonce: 2982943095,
+    };
+
+    let b2: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: h256_conv_endian_from_str(
+            "0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "14f332ae3422cfa8726f5e5fcf2d309b54ce005f3581f1f20f252772717044b5",
+        ),
+        time: 1547000572,
+        bits: Compact::new(436290411),
+        nonce: 744509129,
+    };
+
+    let b3: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: h256_conv_endian_from_str(
+            "00000000000000a6350fbd74c4f75decdc9e49ed3c89a53d5122bc699730c6fe",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "048e1e4749826e877bed94c811f282c93bcab78d024cd01e0e5c3b2e86a7c0eb",
+        ),
+        time: 1547001773,
+        bits: Compact::new(486604799),
+        nonce: 2225829261,
+    };
+
+    let b4: BtcHeader = BtcHeader {
+        version: 536870912,
+        previous_header_hash: h256_conv_endian_from_str(
+            "000000005239e07019651d0cd871d2f4d663c827202442aff61fbc8b01c4afe8",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "64cc2d51b45420c4965c24ee3b0a63827291e400cad4ccc9f956db9f653e60f4",
+        ),
+        time: 1547001916,
+        bits: Compact::new(436290411),
+        nonce: 4075542957,
+    };
+
+    let b1_fork: BtcHeader = BtcHeader {
+        version: 1,
+        previous_header_hash: h256_conv_endian_from_str(
+            "0305b6acb0feee5bd7f5f74606190c35877299b881691db2e56a53452e3929f9",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "a93cb284a0b0cdf28a1d764ec442a59b1b77284db1fcf34d7a951710e292e400",
+        ),
+        time: 1540290070,
+        bits: Compact::new(520159231),
+        nonce: 26781,
+    };
+
+    let b2_fork: BtcHeader = BtcHeader {
+        version: 1,
+        previous_header_hash: h256_conv_endian_from_str(
+            "0000b7b52e51d3b424d349e9b277e35c69c5ac46856e60a6abe65c052238d429",
+        ),
+        merkle_root_hash: h256_conv_endian_from_str(
+            "2353cdfe80ee98f1def0d0db73c4a70049fb633cf331bdbf717ea15dfa523c86",
+        ),
+        time: 1540291070,
+        bits: Compact::new(520159231),
+        nonce: 55581,
+    };
+    (vec![b0.clone(), b1, b2, b3, b4], vec![b0, b1_fork, b2_fork])
 }
 /*
 pub struct DummyTrusteeSession;
@@ -330,7 +596,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         GenesisConfig::<Test> {
             // start genesis block: (genesis, blocknumber)
             genesis: (
-                BTCHeader {
+                BtcHeader {
                     version: 980090880,
                     previous_header_hash: h256_conv_endian_from_str(
                         "00000000000000ab706b663326210d03780fea6ecfe0cc59c78f0c7dddba9cc2",
@@ -389,7 +655,7 @@ pub fn new_test_mainnet() -> runtime_io::TestExternalities<Blake2Hasher> {
         GenesisConfig::<Test> {
             // start genesis block: (genesis, blocknumber)
             genesis: (
-                BTCHeader {
+                BtcHeader {
                     version: 545259520,
                     previous_header_hash: h256_conv_endian_from_str(
                         "00000000000000000001b2505c11119fcf29be733ec379f686518bf1090a522a",
@@ -427,175 +693,7 @@ pub fn new_test_mainnet() -> runtime_io::TestExternalities<Blake2Hasher> {
     r.into()
 }
 
-pub fn generate_blocks() -> (Vec<BTCHeader>, Vec<BTCHeader>) {
-    let b0: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: Default::default(),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707",
-        ),
-        time: 1546999089,
-        bits: Compact::new(436290411),
-        nonce: 562223693,
-    }; //1451572
 
-    let b1: BTCHeader = BTCHeader {
-        version: 536928256,
-        previous_header_hash: h256_conv_endian_from_str(
-            "00000000000000fd9cea8b846895f507c63b005d20ac56e87d1cdf80effd5c0a",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "c16a4a6a6cc43c67770cbec9dd0cc4bf7e956d6b4c9e7c15ff1a2dc8ef3afc63",
-        ),
-        time: 1547000297,
-        bits: Compact::new(486604799),
-        nonce: 2982943095,
-    };
 
-    let b2: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: h256_conv_endian_from_str(
-            "0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "14f332ae3422cfa8726f5e5fcf2d309b54ce005f3581f1f20f252772717044b5",
-        ),
-        time: 1547000572,
-        bits: Compact::new(436290411),
-        nonce: 744509129,
-    };
 
-    let b3: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: h256_conv_endian_from_str(
-            "00000000000000a6350fbd74c4f75decdc9e49ed3c89a53d5122bc699730c6fe",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "048e1e4749826e877bed94c811f282c93bcab78d024cd01e0e5c3b2e86a7c0eb",
-        ),
-        time: 1547001773,
-        bits: Compact::new(486604799),
-        nonce: 2225829261,
-    };
-
-    let b4: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: h256_conv_endian_from_str(
-            "000000005239e07019651d0cd871d2f4d663c827202442aff61fbc8b01c4afe8",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "64cc2d51b45420c4965c24ee3b0a63827291e400cad4ccc9f956db9f653e60f4",
-        ),
-        time: 1547001916,
-        bits: Compact::new(436290411),
-        nonce: 4075542957,
-    };
-
-    let b1_fork: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: h256_conv_endian_from_str(
-            "00000000000000e83086b78ebc3da4af6d892963fa3fd5e1648c693de623d1b7",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "20c8b156c122a28d63f0344bdb38cc402b80a078eacec3de08150032c524536c",
-        ),
-        time: 1547002101,
-        bits: Compact::new(520159231),
-        nonce: 1425818149,
-    };
-
-    (vec![b0.clone(), b1, b2, b3, b4], vec![b0, b1_fork])
-}
-
-pub fn generate_mock_blocks() -> (Vec<BTCHeader>, Vec<BTCHeader>) {
-    let b0: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: Default::default(),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "815ca8bbed88af8afaa6c4995acba6e6e7453e705e0bc7039472aa3b6191a707",
-        ),
-        time: 1546999089,
-        bits: Compact::new(436290411),
-        nonce: 562223693,
-    }; //1451572
-
-    let b1: BTCHeader = BTCHeader {
-        version: 536928256,
-        previous_header_hash: h256_conv_endian_from_str(
-            "00000000000000fd9cea8b846895f507c63b005d20ac56e87d1cdf80effd5c0a",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "c16a4a6a6cc43c67770cbec9dd0cc4bf7e956d6b4c9e7c15ff1a2dc8ef3afc63",
-        ),
-        time: 1547000297,
-        bits: Compact::new(486604799),
-        nonce: 2982943095,
-    };
-
-    let b2: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: h256_conv_endian_from_str(
-            "0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "14f332ae3422cfa8726f5e5fcf2d309b54ce005f3581f1f20f252772717044b5",
-        ),
-        time: 1547000572,
-        bits: Compact::new(436290411),
-        nonce: 744509129,
-    };
-
-    let b3: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: h256_conv_endian_from_str(
-            "00000000000000a6350fbd74c4f75decdc9e49ed3c89a53d5122bc699730c6fe",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "048e1e4749826e877bed94c811f282c93bcab78d024cd01e0e5c3b2e86a7c0eb",
-        ),
-        time: 1547001773,
-        bits: Compact::new(486604799),
-        nonce: 2225829261,
-    };
-
-    let b4: BTCHeader = BTCHeader {
-        version: 536870912,
-        previous_header_hash: h256_conv_endian_from_str(
-            "000000005239e07019651d0cd871d2f4d663c827202442aff61fbc8b01c4afe8",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "64cc2d51b45420c4965c24ee3b0a63827291e400cad4ccc9f956db9f653e60f4",
-        ),
-        time: 1547001916,
-        bits: Compact::new(436290411),
-        nonce: 4075542957,
-    };
-
-    let b1_fork: BTCHeader = BTCHeader {
-        version: 1,
-        previous_header_hash: h256_conv_endian_from_str(
-            "0305b6acb0feee5bd7f5f74606190c35877299b881691db2e56a53452e3929f9",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "a93cb284a0b0cdf28a1d764ec442a59b1b77284db1fcf34d7a951710e292e400",
-        ),
-        time: 1540290070,
-        bits: Compact::new(520159231),
-        nonce: 26781,
-    };
-
-    let b2_fork: BTCHeader = BTCHeader {
-        version: 1,
-        previous_header_hash: h256_conv_endian_from_str(
-            "0000b7b52e51d3b424d349e9b277e35c69c5ac46856e60a6abe65c052238d429",
-        ),
-        merkle_root_hash: h256_conv_endian_from_str(
-            "2353cdfe80ee98f1def0d0db73c4a70049fb633cf331bdbf717ea15dfa523c86",
-        ),
-        time: 1540291070,
-        bits: Compact::new(520159231),
-        nonce: 55581,
-    };
-    (vec![b0.clone(), b1, b2, b3, b4], vec![b0, b1_fork, b2_fork])
-}
 */

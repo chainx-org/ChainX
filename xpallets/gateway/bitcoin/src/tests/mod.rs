@@ -2,7 +2,7 @@
 
 #![cfg(test)]
 
-// mod header;
+mod header;
 mod mock;
 // mod opreturn;
 // mod trustee;
@@ -12,8 +12,15 @@ use super::*;
 
 use light_bitcoin::{
     crypto::dhash160,
+    primitives::H256,
     script::{Builder, Opcode, Script},
 };
+
+fn reverse_h256(mut hash: H256) -> H256 {
+    let bytes = hash.as_bytes_mut();
+    bytes.reverse();
+    H256::from_slice(bytes)
+}
 
 #[test]
 pub fn test_address() {

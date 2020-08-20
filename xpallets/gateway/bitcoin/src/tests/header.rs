@@ -1,21 +1,22 @@
 use super::*;
 
-#[test]
-fn test() {
-    with_externalities(&mut new_test_ext(), || {
-        use substrate_primitives::hexdisplay::HexDisplay;
-        let r = <Headers<Test>>::key_for(&h256_from_rev_str(
-            "00000000000025c23a19cc91ad8d3e33c2630ce1df594e1ae0bf0eabe30a9176",
-        ));
-        let a = substrate_primitives::twox_128(&r);
-        println!("0x{:}", HexDisplay::from(&a));
-    })
-}
+use light_bitcoin::serialization;
+
+// #[test]
+// fn test() {
+//     with_externalities(&mut new_test_ext(), || {
+//         use substrate_primitives::hexdisplay::HexDisplay;
+//         let r = <Headers<Test>>::key_for(&h256_from_rev_str(
+//             "00000000000025c23a19cc91ad8d3e33c2630ce1df594e1ae0bf0eabe30a9176",
+//         ));
+//         let a = substrate_primitives::twox_128(&r);
+//         println!("0x{:}", HexDisplay::from(&a));
+//     })
+// }
 
 #[test]
 fn test_init_blocks() {
     let (c1, _) = generate_blocks();
-
     assert_eq!(
         format!("{:?}", reverse_h256(c1.get(0).unwrap().hash())),
         "0x2c22ca732c7b99c43057df342f903ffc8a7e132e09563edb122b1f573458ac5b"
@@ -45,7 +46,7 @@ fn test_init_mock_blocks() {
         format!("{:?}", reverse_h256(c1.get(0).unwrap().hash())),
         "0x2c22ca732c7b99c43057df342f903ffc8a7e132e09563edb122b1f573458ac5b"
     );
-    println!("{:?}", btc_ser::serialize(c1.get(1).unwrap()));
+    println!("{:?}", serialization::serialize(c1.get(1).unwrap()));
     assert_eq!(
         format!("{:?}", reverse_h256(c1.get(1).unwrap().hash())),
         "0x0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd"
