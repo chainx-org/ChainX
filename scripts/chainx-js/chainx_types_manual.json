@@ -1,5 +1,6 @@
 {
     "Amount": "i128",
+    "AmountOf": "Amount",
     "CurrencyIdOf": "AssetId",
     "CurrencyId": "AssetId",
     "AssetInfoForRpc": {
@@ -98,6 +99,7 @@
         "hot_address": "Vec<u8>",
         "cold_address": "Vec<u8>"
     },
+    "ChainAddress": "Vec<u8>",
     "BtcTrusteeType": "Vec<u8>",
     "BtcTrusteeAddrInfo": {
         "addr": "BtcAddress",
@@ -179,6 +181,12 @@
         "tx": "BtcTransaction",
         "trustee_list": "Vec<(AccountId, bool)>"
     },
+    "BtcTxVerifier": {
+        "_enum": [
+            "Recover",
+            "RuntimeInterface"
+        ]
+    },
     "ValidatorInfo": {
         "account": "AccountId",
         "registered_at": "BlockNumber",
@@ -191,6 +199,12 @@
         "self_bonded": "RpcBalance",
         "reward_pot_account": "AccountId",
         "reward_pot_balance": "RpcBalance"
+    },
+    "LockedType": {
+        "_enum": [
+            "Bonded",
+            "BondedWithdrawal"
+        ]
     },
     "String": "Text",
     "RpcPrice": "String",
