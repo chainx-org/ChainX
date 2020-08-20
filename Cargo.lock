@@ -631,6 +631,7 @@ dependencies = [
  "chainx-primitives",
  "chainx-rpc",
  "chainx-runtime",
+ "frame-benchmarking",
  "frame-benchmarking-cli",
  "futures 0.3.5",
  "hex 0.4.2",
@@ -810,6 +811,10 @@ dependencies = [
  "xpallet-support",
  "xpallet-system",
 ]
+
+[[package]]
+name = "chainx-service"
+version = "0.1.0"
 
 [[package]]
 name = "chrono"
@@ -3669,7 +3674,6 @@ version = "2.0.0-rc5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "972a5079a31585bd032271fd3a2d91b6f354fb91b9d0e03688f602183f0cb3e3"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -3702,7 +3706,6 @@ version = "2.0.0-rc5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab3d8046d2a7da90f61dae43a2602ffecc3493e361f85829596609f5a5f039dc"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",

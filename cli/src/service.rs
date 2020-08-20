@@ -24,6 +24,7 @@ native_executor_instance!(
     xp_io::ss_58_codec::HostFunctions,
 );
 
+// (frame_benchmarking::benchmarking::HostFunctions, xp_io::ss_58_codec::HostFunctions),
 type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 type FullBackend = sc_service::TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;

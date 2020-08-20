@@ -24,6 +24,7 @@ members = [
     "primitives/assets-registrar",
     "rpc",
     "runtime",
+    "service",
 
     "frame/balances",
     "frame/transaction-payment",
