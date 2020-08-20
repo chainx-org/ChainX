@@ -7,5 +7,5 @@ native_executor_instance!(
     pub Executor,
     chainx_runtime::api::dispatch,
     chainx_runtime::native_version,
-    frame_benchmarking::benchmarking::HostFunctions,
+    (frame_benchmarking::benchmarking::HostFunctions, xp_io::ss_58_codec::HostFunctions),
 );
