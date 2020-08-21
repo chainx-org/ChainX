@@ -1,10 +1,6 @@
 use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
 use sc_service::ServiceParams;
 
-// use chainx_executor::Executor;
-use crate::service::Executor;
-use chainx_runtime::Block;
-
 use crate::chain_spec;
 use crate::cli::{Cli, Subcommand};
 use crate::service::{self, new_full_params};
@@ -90,7 +86,9 @@ pub fn run() -> sc_cli::Result<()> {
 
                 set_default_ss58_version(chain_spec);
 
-                runner.sync_run(|config| cmd.run::<Block, chainx_executor::Executor>(config))
+                runner.sync_run(|config| {
+                    cmd.run::<chainx_runtime::Block, chainx_executor::Executor>(config)
+                })
             } else {
                 println!(
                     "Benchmarking wasn't enabled when building the node. \

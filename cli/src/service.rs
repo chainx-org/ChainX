@@ -4,8 +4,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use sc_client_api::{ExecutorProvider, RemoteBackend};
-use sc_executor::native_executor_instance;
-pub use sc_executor::NativeExecutor;
 use sc_finality_grandpa::{
     FinalityProofProvider as GrandpaFinalityProofProvider, StorageAndProofProvider,
 };
@@ -13,18 +11,10 @@ use sc_service::{error::Error as ServiceError, Configuration, ServiceComponents,
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use sp_inherents::InherentDataProviders;
 
+use chainx_executor::Executor;
 use chainx_primitives::Block;
 use chainx_runtime::{self, RuntimeApi};
 
-// Our native executor instance.
-native_executor_instance!(
-    pub Executor,
-    chainx_runtime::api::dispatch,
-    chainx_runtime::native_version,
-    xp_io::ss_58_codec::HostFunctions,
-);
-
-// (frame_benchmarking::benchmarking::HostFunctions, xp_io::ss_58_codec::HostFunctions),
 type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 type FullBackend = sc_service::TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
