@@ -200,12 +200,6 @@
         "reward_pot_account": "AccountId",
         "reward_pot_balance": "RpcBalance"
     },
-    "LockedType": {
-        "_enum": [
-            "Bonded",
-            "BondedWithdrawal"
-        ]
-    },
     "String": "Text",
     "RpcPrice": "String",
     "RpcBalance": "String",
