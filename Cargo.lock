@@ -631,7 +631,6 @@ dependencies = [
  "chainx-primitives",
  "chainx-rpc",
  "chainx-runtime",
- "frame-benchmarking",
  "frame-benchmarking-cli",
  "futures 0.3.5",
  "hex 0.4.2",
