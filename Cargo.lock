@@ -3580,7 +3580,6 @@ version = "2.0.0-rc5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9be904529e457f126bf9c0003c81f6e79e98d0e49287d6fc73deaaaac5b7b4bf"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -3653,7 +3652,6 @@ version = "2.0.0-rc5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e82ac2379c00fb169db96477768952bba1e5b45bfedbfde1ae7626083b56d5e0"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-authorship",
@@ -3842,7 +3840,6 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-inherents",
- "sp-io",
  "sp-runtime",
  "sp-std",
  "sp-timestamp",
@@ -3903,7 +3900,6 @@ version = "2.0.0-rc5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9ee3b95c3acf025fd47eaece3b8ff51fc50e3ea85fd38fa2188bc7aed5c477f"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances 2.0.0-rc5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3919,7 +3915,6 @@ version = "2.0.0-rc5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35c35218f4e2a8b4c731a282d27aa7ab81033cb521575afc4a162d0f6a973c0b"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
