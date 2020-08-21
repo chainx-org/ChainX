@@ -355,7 +355,8 @@ impl pallet_session::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: Balance = 1 * DOLLARS;
+    // There is no dusty accounts in ChainX.
+    pub const ExistentialDeposit: Balance = 0;
 }
 
 impl pallet_balances::Trait for Runtime {

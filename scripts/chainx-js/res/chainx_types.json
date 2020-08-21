@@ -40,6 +40,12 @@
             "Sell"
         ]
     },
+    "LockedType": {
+        "_enum": [
+            "Bonded",
+            "BondedWithdrawal"
+        ]
+    },
     "Memo": "Text",
     "AssetInfo": {
         "token": "Token",
@@ -91,6 +97,22 @@
         "retargetingInterval": "u32",
         "minTimespan": "u32",
         "maxTimespan": "u32"
+    },
+    "RpcMinerLedger": {
+        "lastMiningWeight": "RpcWeightType",
+        "lastMiningWeightUpdate": "BlockNumber",
+        "lastClaim": "Option<BlockNumber>"
+    },
+    "RpcAssetLedger": {
+        "lastTotalMiningWeight": "RpcWeightType",
+        "lastTotalMiningWeightUpdate": "BlockNumber"
+    },
+    "MiningAssetInfo": {
+        "assetId": "AssetId",
+        "miningPower": "FixedAssetPower",
+        "rewardPot": "AccountId",
+        "rewardPotBalance": "RpcBalance",
+        "ledgerInfo": "RpcAssetLedger<BlockNumber>"
     },
     "AssetLedger": {
         "lastTotalMiningWeight": "MiningWeight",
@@ -170,12 +192,12 @@
             "Canceled"
         ]
     },
-    "MiningWeight": "u128",
-    "RpcBalance": "String",
     "RpcWeightType": "String",
+    "AssetId": "u32",
+    "RpcBalance": "String",
+    "MiningWeight": "u128",
     "WeightType": "u128",
     "ReferralId": "Text",
-    "AssetId": "u32",
     "AssetRestriction": {
         "_enum": [
             "Move",
@@ -186,7 +208,9 @@
             "DestroyFree"
         ]
     },
-    "AssetRestrictions": "u32",
+    "AssetRestrictions": {
+        "mask": "u32"
+    },
     "BtcHeader": {
         "version": "u32",
         "previousHeaderHash": "H256",
@@ -209,6 +233,7 @@
     },
     "OrderInfo": "Order",
     "Amount": "i128",
+    "AmountOf": "Amount",
     "CurrencyIdOf": "AssetId",
     "CurrencyId": "AssetId",
     "AssetInfoForRpc": {
@@ -279,6 +304,7 @@
         "hotAddress": "Vec<u8>",
         "coldAddress": "Vec<u8>"
     },
+    "ChainAddress": "Vec<u8>",
     "BtcTrusteeType": "Vec<u8>",
     "BtcTrusteeAddrInfo": {
         "addr": "BtcAddress",
@@ -344,6 +370,12 @@
         "withdrawalIdList": "Vec<u32>",
         "tx": "BtcTransaction",
         "trusteeList": "Vec<(AccountId, bool)>"
+    },
+    "BtcTxVerifier": {
+        "_enum": [
+            "Recover",
+            "RuntimeInterface"
+        ]
     },
     "ValidatorInfo": {
         "account": "AccountId",
