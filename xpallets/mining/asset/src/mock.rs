@@ -254,6 +254,7 @@ impl xpallet_mining_staking::Trait for Test {
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;
+    type WeightInfo = ();
 }
 
 pub struct DummyAssetRewardPotAccountDeterminer;
