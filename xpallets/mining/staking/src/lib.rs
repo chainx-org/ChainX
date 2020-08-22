@@ -10,6 +10,8 @@ mod rpc;
 mod slashing;
 mod types;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -19,6 +21,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
+    weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
@@ -47,6 +50,44 @@ pub type BalanceOf<T> =
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
+pub trait WeightInfo {
+    fn register() -> Weight;
+    fn bond() -> Weight;
+    fn unbond() -> Weight;
+    fn unlock_unbonded_withdrawal() -> Weight;
+    fn rebond() -> Weight;
+    fn claim() -> Weight;
+    fn chill() -> Weight;
+    fn validate() -> Weight;
+}
+
+impl WeightInfo for () {
+    fn register() -> Weight {
+        1_000_000_000
+    }
+    fn bond() -> Weight {
+        1_000_000_000
+    }
+    fn unbond() -> Weight {
+        1_000_000_000
+    }
+    fn unlock_unbonded_withdrawal() -> Weight {
+        1_000_000_000
+    }
+    fn rebond() -> Weight {
+        1_000_000_000
+    }
+    fn claim() -> Weight {
+        1_000_000_000
+    }
+    fn chill() -> Weight {
+        1_000_000_000
+    }
+    fn validate() -> Weight {
+        1_000_000_000
+    }
+}
+
 pub trait Trait: frame_system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -73,6 +114,9 @@ pub trait Trait: frame_system::Trait {
     /// since the workers avoids sending them at the very beginning of the session, assuming
     /// there is a chance the authority will produce a block and they won't be necessary.
     type SessionDuration: Get<Self::BlockNumber>;
+
+    /// Weight information for extrinsics in this pallet.
+    type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -292,7 +336,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// Nominate the `target` with `value` of the origin account's balance locked.
-        #[weight = 10]
+        #[weight = T::WeightInfo::bond()]
         pub fn bond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
@@ -310,7 +354,7 @@ decl_module! {
         }
 
         /// Move the `value` of current nomination from one validator to another.
-        #[weight = 10]
+        #[weight = T::WeightInfo::rebond()]
         fn rebond(origin, from: <T::Lookup as StaticLookup>::Source, to: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             let from = T::Lookup::lookup(from)?;
@@ -339,7 +383,7 @@ decl_module! {
         }
 
         /// Unnominate the `value` of bonded balance for validator `target`.
-        #[weight = 10]
+        #[weight = T::WeightInfo::unbond()]
         fn unbond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
@@ -358,7 +402,7 @@ decl_module! {
         }
 
         /// Unlock the frozen unbonded balances that are due.
-        #[weight = 10]
+        #[weight = T::WeightInfo::unlock_unbonded_withdrawal()]
         fn unlock_unbonded_withdrawal(origin, #[compact] unbonded_index: UnbondedIndex) {
             let sender = ensure_signed(origin)?;
 
@@ -383,7 +427,7 @@ decl_module! {
         }
 
         /// Claim the staking reward given the `target` validator.
-        #[weight = 10]
+        #[weight = T::WeightInfo::claim()]
         fn claim(origin, target: <T::Lookup as StaticLookup>::Source) {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
@@ -394,7 +438,7 @@ decl_module! {
         }
 
         /// Declare the desire to validate for the origin account.
-        #[weight = 10]
+        #[weight = T::WeightInfo::validate()]
         fn validate(origin) {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
@@ -405,7 +449,7 @@ decl_module! {
         }
 
         /// Declare no desire to validate for the origin account.
-        #[weight = 10]
+        #[weight = T::WeightInfo::chill()]
         fn chill(origin) {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
@@ -420,7 +464,7 @@ decl_module! {
         }
 
         /// Register to be a validator for the origin account.
-        #[weight = 100_000]
+        #[weight = T::WeightInfo::register()]
         pub fn register(origin, referral_id: ReferralId) {
             let sender = ensure_signed(origin)?;
             Self::check_referral_id(&referral_id)?;

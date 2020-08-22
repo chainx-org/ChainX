@@ -21,6 +21,8 @@ frame-system = { version = "2.0.0-rc5", default-features = false }
 pallet-session = { version = "2.0.0-rc5", default-features = false }
 pallet-balances = { version = "2.0.0-rc5", default-features = false }
 
+frame-benchmarking = { version = "2.0.0-rc5", default-features = false, optional = true }
+
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
@@ -35,6 +37,7 @@ xpallet-protocol = { path = "../../protocol" }
 sp-core = { version = "2.0.0-rc5" }
 sp-io = { version = "2.0.0-rc5" }
 pallet-timestamp = { version = "2.0.0-rc5" }
+frame-benchmarking = { version = "2.0.0-rc5" }
 env_logger = "0.7.1"
 
 [features]
@@ -60,4 +63,7 @@ std = [
     "xp-mining-staking/std",
 
     "xpallet-support/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
 ]

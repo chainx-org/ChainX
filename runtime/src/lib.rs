@@ -104,6 +104,8 @@ use impls::CurrencyToVoteHandler;
 pub mod constants;
 pub use constants::{currency::*, time::*};
 
+mod weights;
+
 impl_opaque_keys! {
     pub struct SessionKeys {
         pub aura: Aura,
@@ -881,6 +883,7 @@ impl xpallet_mining_staking::Trait for Runtime {
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
+    type WeightInfo = weights::xpallet_mining_staking::WeightForXpalletMiningStaking;
 }
 
 pub struct ReferralGetter;
@@ -1317,6 +1320,8 @@ impl_runtime_apis! {
             );
             // Substrate
             add_benchmark!(params, batches, pallet_balances, Balances);
+
+            add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
