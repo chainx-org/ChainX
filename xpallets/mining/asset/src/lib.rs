@@ -6,6 +6,8 @@ mod impls;
 mod rpc;
 mod types;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -17,6 +19,7 @@ use frame_support::{
     ensure,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement},
+    weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
@@ -38,6 +41,16 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
+pub trait WeightInfo {
+    fn claim() -> Weight;
+}
+
+impl WeightInfo for () {
+    fn claim() -> Weight {
+        1_000_000_000
+    }
+}
+
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -53,6 +66,8 @@ pub trait Trait: xpallet_assets::Trait {
 
     /// Generate the reward pot account for mining asset.
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;
+
+    type WeightInfo: WeightInfo;
 }
 
 pub trait StakingInterface<AccountId, Balance> {
@@ -172,7 +187,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// Claims the staking reward given the `target` validator.
-        #[weight = 10]
+        #[weight = T::WeightInfo::claim()]
         fn claim(origin, #[compact] target: AssetId) {
             let sender = ensure_signed(origin)?;
 

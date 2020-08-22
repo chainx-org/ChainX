@@ -25,7 +25,7 @@ fn t_issue_xbtc(to: AccountId, value: Balance) -> DispatchResult {
     XAssets::issue(&X_BTC, &to, value)
 }
 
-fn t_register_xbtc() -> DispatchResult {
+pub(crate) fn t_register_xbtc() -> DispatchResult {
     let btc_asset = crate::mock::btc();
     XAssetsRegistrar::register(RawOrigin::Root.into(), btc_asset.0, btc_asset.1, true, true)?;
     XAssets::set_asset_limit(RawOrigin::Root.into(), btc_asset.0, btc_asset.2)

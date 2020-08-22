@@ -901,6 +901,7 @@ impl xpallet_mining_asset::Trait for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
+    type WeightInfo = weights::xpallet_mining_asset::WeightForXpalletMiningAsset;
 }
 
 construct_runtime!(
@@ -1321,6 +1322,7 @@ impl_runtime_apis! {
             // Substrate
             add_benchmark!(params, batches, pallet_balances, Balances);
 
+            add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
             add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }

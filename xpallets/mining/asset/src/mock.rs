@@ -281,6 +281,7 @@ impl Trait for Test {
     type Event = MetaEvent;
     type TreasuryAccount = ();
     type DetermineRewardPotAccount = DummyAssetRewardPotAccountDeterminer;
+    type WeightInfo = ();
 }
 
 thread_local! {
