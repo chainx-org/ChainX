@@ -61,7 +61,7 @@ impl<T: Trait> Module<T> {
     ///
     /// This should only be called at the end of an era.
     fn select_and_update_validators(_current_era: EraIndex) -> Option<Vec<T::AccountId>> {
-        // TODO: move to offchain worker solution.
+        // TODO: might move to offchain worker solution in the future.
         // Currently there is no performance issue practically.
         let candidates = Self::filter_out_candidates();
         debug!("[select_and_update_validators]candidates:{:?}", candidates);
