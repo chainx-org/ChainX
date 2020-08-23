@@ -852,6 +852,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
 impl xpallet_dex_spot::Trait for Runtime {
     type Event = Event;
     type Price = Balance;
+    type WeightInfo = weights::xpallet_dex_spot::WeightForXpalletDexSpot;
 }
 
 impl xpallet_contracts::Trait for Runtime {
@@ -1324,6 +1325,7 @@ impl_runtime_apis! {
 
             add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
             add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
+            add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

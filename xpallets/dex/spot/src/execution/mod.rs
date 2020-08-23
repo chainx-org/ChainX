@@ -9,7 +9,11 @@ use crate::types::*;
 use xpallet_support::debug;
 
 impl<T: Trait> Module<T> {
-    fn check_bid_price(quote: T::Price, lowest_ask: T::Price, fluctuation: T::Price) -> Result<T> {
+    fn check_bid_price(
+        quote: T::Price,
+        lowest_ask: T::Price,
+        fluctuation: T::Price,
+    ) -> result::Result<(), Error<T>> {
         debug!(
             "[check_bid_price]quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
             quote, lowest_ask, fluctuation
@@ -27,7 +31,11 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn check_ask_price(quote: T::Price, highest_bid: T::Price, fluctuation: T::Price) -> Result<T> {
+    fn check_ask_price(
+        quote: T::Price,
+        highest_bid: T::Price,
+        fluctuation: T::Price,
+    ) -> result::Result<(), Error<T>> {
         debug!(
             "[check_ask_price] Sell: quote: {:?}, highest_bid: {:?}, fluctuation: {:?}",
             quote, highest_bid, fluctuation
@@ -49,7 +57,11 @@ impl<T: Trait> Module<T> {
     ///
     /// - sell: [highest_bid - 10% * highest_bid, ~)
     /// - buy:  (~, lowest_ask + 10% * lowest_ask]
-    pub(crate) fn is_valid_quote(quote: T::Price, side: Side, pair_id: TradingPairId) -> Result<T> {
+    pub(crate) fn is_valid_quote(
+        quote: T::Price,
+        side: Side,
+        pair_id: TradingPairId,
+    ) -> result::Result<(), Error<T>> {
         let handicap = <HandicapOf<T>>::get(pair_id);
         let (lowest_ask, highest_bid) = (handicap.lowest_ask, handicap.highest_bid);
 
@@ -67,7 +79,7 @@ impl<T: Trait> Module<T> {
         pair_id: TradingPairId,
         price: T::Price,
         side: Side,
-    ) -> Result<T> {
+    ) -> result::Result<(), Error<T>> {
         let quotations = <QuotationsOf<T>>::get(pair_id, price);
         if quotations.len() >= MAX_BACKLOG_ORDER {
             let (who, order_id) = &quotations[0];
@@ -108,7 +120,7 @@ impl<T: Trait> Module<T> {
             let (base_p, quote_p, pair_p) =
                 (u32::from(base_p), u32::from(quote_p), pair.pip_decimals);
 
-            let (mul, s) = if quote_p >= (base_p + pair_p) {
+            let (mul, exp) = if quote_p >= (base_p + pair_p) {
                 (true, 10_u128.pow(quote_p - base_p - pair_p))
             } else {
                 (false, 10_u128.pow(base_p + pair_p - quote_p))
@@ -118,25 +130,23 @@ impl<T: Trait> Module<T> {
             let ap = amount.saturated_into::<u128>() * price.saturated_into::<u128>();
 
             let volume = if mul {
-                match ap.checked_mul(s) {
-                    Some(r) => r,
-                    None => panic!("amount * price * decimals overflow"),
-                }
+                ap.checked_mul(exp)
+                    .unwrap_or_else(|| panic!("amount * price * decimals overflow"))
             } else {
-                ap / s
+                ap / exp // exp can't be zero; qed
             };
 
             if !volume.is_zero() {
-                if volume < u128::from(u64::max_value()) {
-                    return Ok((volume as u64).saturated_into());
+                if volume < u128::max_value() {
+                    Ok(volume.saturated_into::<BalanceOf<T>>())
                 } else {
-                    panic!("the value of converted quote currency definitely less than u64::max_value()")
+                    panic!("the value of converted quote currency definitely less than u128::max_value()")
                 }
+            } else {
+                Err(Error::<T>::VolumeTooSmall)
             }
         } else {
-            return Err(Error::<T>::InvalidTradingPairAsset);
+            Err(Error::<T>::InvalidTradingPairAsset)
         }
-
-        Err(Error::<T>::VolumeTooSmall)
     }
 }

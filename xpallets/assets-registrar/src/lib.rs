@@ -176,13 +176,11 @@ decl_error! {
     /// Error for the Assets Metadata Module
     pub enum Error for Module<T: Trait> {
         /// Token length is zero or too long
-        InvalidAssetLen,
+        InvalidAssetLength,
         /// Token name length is zero or too long
-        InvalidAssetNameLen,
+        InvalidAssetNameLength,
         /// Desc length is zero or too long
-        InvalidDescLen,
-        /// Memo length is zero or too long
-        InvalidMemoLen,
+        InvalidDescLength,
         /// only allow ASCII alphanumeric character or '-', '.', '|', '~'
         InvalidChar,
         /// only allow ASCII alphanumeric character

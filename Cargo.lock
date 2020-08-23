@@ -8074,6 +8074,7 @@ dependencies = [
  "chainx-primitives",
  "chrono",
  "env_logger",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances 2.0.0-rc5 (registry+https://github.com/rust-lang/crates.io-index)",

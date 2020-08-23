@@ -9,14 +9,14 @@ use frame_support::{assert_noop, assert_ok};
 use sp_std::collections::btree_map::BTreeMap;
 use xpallet_assets::AssetType;
 
-const EOS: AssetId = 8888;
-const ETH: AssetId = 9999;
+pub(crate) const EOS: AssetId = 8888;
+pub(crate) const ETH: AssetId = 9999;
 
-fn t_issue_pcx(to: AccountId, value: Balance) {
+pub(crate) fn t_issue_pcx(to: AccountId, value: Balance) {
     let _ = Balances::deposit_creating(&to, value);
 }
 
-fn t_generic_issue(asset_id: AssetId, to: AccountId, value: Balance) {
+pub(crate) fn t_generic_issue(asset_id: AssetId, to: AccountId, value: Balance) {
     if asset_id == xpallet_protocol::PCX {
         t_issue_pcx(to, value);
     } else {
@@ -24,7 +24,7 @@ fn t_generic_issue(asset_id: AssetId, to: AccountId, value: Balance) {
     }
 }
 
-fn t_generic_free_balance(who: AccountId, asset_id: AssetId) -> Balance {
+pub(crate) fn t_generic_free_balance(who: AccountId, asset_id: AssetId) -> Balance {
     if asset_id == xpallet_protocol::PCX {
         Balances::free_balance(who)
     } else {
@@ -72,7 +72,7 @@ fn t_cancel_order(who: AccountId, pair_id: TradingPairId, order_id: OrderId) -> 
     XSpot::cancel_order(Origin::signed(who), pair_id, order_id)
 }
 
-fn t_set_handicap(pair_idx: TradingPairId, highest_bid: Price, lowest_ask: Price) {
+pub(crate) fn t_set_handicap(pair_idx: TradingPairId, highest_bid: Price, lowest_ask: Price) {
     assert_ok!(XSpot::set_handicap(
         Origin::root(),
         pair_idx,
@@ -88,7 +88,7 @@ fn t_convert_base_to_quote(amount: Balance, price: Price, pair: &TradingPairProf
     XSpot::convert_base_to_quote(amount, price, pair).unwrap()
 }
 
-fn t_add_trading_pair(
+pub(crate) fn t_add_trading_pair(
     currency_pair: CurrencyPair,
     pip_decimals: u32,
     tick_decimals: u32,

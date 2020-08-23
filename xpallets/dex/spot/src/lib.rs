@@ -6,6 +6,8 @@ mod execution;
 mod rpc;
 mod types;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -25,6 +27,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, ReservableCurrency},
+    weights::Weight,
     Parameter,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -55,6 +58,20 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
+pub trait WeightInfo {
+    fn put_order() -> Weight;
+    fn cancel_order() -> Weight;
+}
+
+impl WeightInfo for () {
+    fn put_order() -> Weight {
+        1_000_000_000
+    }
+    fn cancel_order() -> Weight {
+        1_000_000_000
+    }
+}
+
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -68,9 +85,9 @@ pub trait Trait: xpallet_assets::Trait {
         + Copy
         + MaybeSerializeDeserialize
         + Debug;
-}
 
-type Result<T> = result::Result<(), Error<T>>;
+    type WeightInfo: WeightInfo;
+}
 
 pub type OrderInfo<T> = Order<
     TradingPairId,
@@ -253,14 +270,23 @@ decl_module! {
         }
 
         #[weight = 10]
-        pub fn cancel_order(origin, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
+        pub fn cancel_order(
+            origin,
+            #[compact] pair_id: TradingPairId,
+            #[compact] order_id: OrderId
+        ) {
             let who = ensure_signed(origin)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
         /// Force cancel an order.
         #[weight = 10]
-        fn force_cancel_order(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
+        fn force_cancel_order(
+            origin,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[compact] pair_id: TradingPairId,
+            #[compact] order_id: OrderId
+        ) {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
@@ -274,7 +300,11 @@ decl_module! {
         }
 
         #[weight = 10]
-        fn set_price_fluctuation(origin, #[compact] pair_id: TradingPairId, #[compact] new: PriceFluctuation) {
+        fn set_price_fluctuation(
+            origin,
+            #[compact] pair_id: TradingPairId,
+            #[compact] new: PriceFluctuation
+        ) {
             ensure_root(origin)?;
             PriceFluctuationOf::insert(pair_id, new);
             Self::deposit_event(RawEvent::PriceFluctuationUpdated(pair_id, new));
@@ -401,7 +431,7 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
         price: T::Price,
         reserve_amount: BalanceOf<T>,
-    ) -> Result<T> {
+    ) -> result::Result<(), Error<T>> {
         info!(
             "transactor:{:?}, pair_id:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
             who, pair_id, order_type, side, amount, price
