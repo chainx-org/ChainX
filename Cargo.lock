@@ -8091,6 +8091,7 @@ dependencies = [
  "hex 0.4.2",
  "lazy_static",
  "light-bitcoin",
+ "orml-utilities",
  "pallet-balances 2.0.0-rc5 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-multisig",
  "pallet-timestamp",

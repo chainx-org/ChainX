@@ -7,11 +7,12 @@ mod mock;
 // mod opreturn;
 // mod trustee;
 
+use frame_support::{assert_noop, assert_ok};
+
 use self::mock::*;
 use super::*;
 
 use light_bitcoin::{
-    crypto::dhash160,
     primitives::H256,
     script::{Builder, Opcode, Script},
 };
@@ -20,6 +21,10 @@ fn reverse_h256(mut hash: H256) -> H256 {
     let bytes = hash.as_bytes_mut();
     bytes.reverse();
     H256::from_slice(bytes)
+}
+
+fn as_h256(s: &str) -> H256 {
+    h256_conv_endian_from_str(s)
 }
 
 #[test]

@@ -4,15 +4,17 @@ mod header_proof;
 
 // Substrate
 use frame_support::{StorageMap, StorageValue};
+use sp_runtime::DispatchResult;
+use sp_std::cmp::Ordering;
 
 // ChainX
-use xpallet_support::info;
+use xpallet_support::{error, info};
 
 // light-bitcoin
 use light_bitcoin::primitives::H256;
 
 use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
-use crate::{ConfirmedHeader, Error, MainChain, Module, Trait};
+use crate::{ConfirmedIndex, Error, MainChain, Module, Trait};
 
 pub use self::header_proof::HeaderVerifier;
 
@@ -39,28 +41,37 @@ impl<T: Trait> From<ChainErr> for Error<T> {
     }
 }
 
-///      confirmed = best_height - (confirmations - 1)
-///           |--------- confirmations = 6 ------------|
-/// b(prev) - b(confirm) - b - b - b - b - b(best_index)
-/// #issue 501 https://github.com/chainpool/ChainX/issues/501
-pub fn update_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> BtcHeaderIndex {
-    // update confirmd status
+/// todo move this issue to ChainX-org/ChainX repo
+/// #issue 501 https://github.com/chainpool/ChainX/issues/501 would explain how to define
+/// confirmation count
+///      confirmed_height = now_height - (confirmations - 1)
+///           |--- confirmations = 4 ---|
+/// b(prev) - b(confirm)  -  b  -  b  - b
+///           4              3     2    1 (confirmations)
+///           97             98    99   100(height)
+/// this function would pick the confirmed Index, and return the Index on the look back path
+fn look_back_confirmed_header<T: Trait>(
+    header_info: &BtcHeaderInfo,
+) -> (Option<BtcHeaderIndex>, Vec<BtcHeaderIndex>) {
     let confirmations = Module::<T>::confirmation_number();
+    let mut chain = Vec::with_capacity(confirmations as usize);
     let mut prev_hash = header_info.header.previous_header_hash.clone();
-    // start from prev, thus start from 1,when confirmations = 6, it's 1..5 => [1,2,3,4]
-    // b(100)(confirmed) - b(101)(need_confirmed) - b(102) - b(103) - b(104) - b(105)(best) - b(106)(current)
-    //                                                                           prev        current 0
-    //                                                                 prev     current 1 (start loop from this)
-    //                                                       prev     current 2
-    //                                              prev     current 3
-    //                                  prev     current 4
-    set_main_chain::<T>(header_info.height, &header_info.header.hash());
-    for _i in 1..(confirmations - 1) {
+
+    // put current header
+    chain.push(BtcHeaderIndex {
+        hash: header_info.header.hash(),
+        height: header_info.height,
+    });
+    // e.g. when confirmations is 4, loop 3 times max
+    for _i in 1..confirmations {
         if let Some(current_info) = Module::<T>::headers(&prev_hash) {
-            set_main_chain::<T>(current_info.height, &prev_hash);
+            chain.push(BtcHeaderIndex {
+                hash: prev_hash,
+                height: current_info.height,
+            });
             prev_hash = current_info.header.previous_header_hash;
         } else {
-            // if not find current header info, jump out of loop
+            // if not find current header info, should be exceed genesis height, jump out of loop
             info!(
                 "[update_confirmed_header]|not find for hash:{:?}, current reverse count:{:}",
                 prev_hash, _i
@@ -68,27 +79,85 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> BtcHead
             break;
         }
     }
-
-    if let Some(info) = Module::<T>::headers(&prev_hash) {
-        let index = BtcHeaderIndex {
-            hash: prev_hash,
-            height: info.height,
-        };
-        // update confirmed index
-        ConfirmedHeader::put(index);
-        index
+    let len = chain.len();
+    if len == confirmations as usize {
+        // confirmations must more than 0, thus, chain.last() must be some
+        (chain.last().map(Clone::clone), chain)
     } else {
-        // no not have prev hash in storage, return genesis header info
-        info!(
-            "[update_confirmed_header]|not find prev header, use genesis instead|prev:{:?}",
-            prev_hash
-        );
-        let info = Module::<T>::genesis_info();
-        BtcHeaderIndex {
-            hash: info.0.hash(),
-            height: info.1,
+        (None, chain)
+    }
+}
+
+pub fn update_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Option<BtcHeaderIndex> {
+    let (confirmed, chain) = look_back_confirmed_header::<T>(header_info);
+    for index in chain {
+        set_main_chain::<T>(index.height, &index.hash);
+    }
+    confirmed.map(|index| {
+        ConfirmedIndex::put(index);
+        index
+    })
+
+    // if let Some(index) = confirmed {
+    //     // update confirmed index
+
+    // } else {
+    //     info!(
+    //         "[update_confirmed_header]|not find prev header, use genesis instead|prev:{:?}",
+    //         should_confirmed_hash
+    //     );
+    //     let info = Module::<T>::genesis_info();
+    //     BtcHeaderIndex {
+    //         hash: info.0.hash(),
+    //         height: info.1,
+    //     }
+    // }
+}
+
+pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> DispatchResult {
+    let (confirmed, _) = look_back_confirmed_header::<T>(header_info);
+    if let Some(current_confirmed) = ConfirmedIndex::get() {
+        if let Some(now_confirmed) = confirmed {
+            return match current_confirmed.height.cmp(&now_confirmed.height) {
+                Ordering::Greater => {
+                    // e.g:
+                    //          current_confirmed
+                    // b  ---------------- b  ------ b --- b --- b(best)
+                    // |(now_confirmed)--- b  ------ b --- b(now)
+                    // 99              100       101  102    103
+                    // current_confirmed > now_ocnfirmed
+                    Ok(())
+                }
+                Ordering::Equal => {
+                    // e.g:
+                    //current_confirmed
+                    // b --------------- b  ------ b --- b(best)
+                    // |(now_confirmed)- b  ------ b --- b(now)
+                    // 99              100       101  102    103
+                    // current_confirmed = now_confirmed
+                    if current_confirmed.hash == now_confirmed.hash {
+                        Ok(())
+                    } else {
+                        // e.g:
+                        //
+                        //  b --------- b(current_confirmed) b  ------ b --- b(best)
+                        //  | --------- b(now_confirmed) --- b  ------ b --- b(now)
+                        // 99              100       101  102    103
+                        // current_confirmed = now_confirmed
+                        Err(Error::<T>::AncientFork.into())
+                    }
+                }
+                Ordering::Less => {
+                    // normal should not happen, for call `check_confirmed_header` should under
+                    // current <= best
+                    error!("[check_confirmed_header]|should not happen, current confirmed is less than confirmed for this header|current:{:?}|now:{:?}", current_confirmed, now_confirmed);
+                    Err(Error::<T>::AncientFork.into())
+                }
+            };
         }
     }
+    // do not have confirmed yet.
+    Ok(())
 }
 
 pub fn set_main_chain<T: Trait>(height: u32, main_hash: &H256) {
@@ -99,7 +168,6 @@ pub fn set_main_chain<T: Trait>(height: u32, main_hash: &H256) {
     }
     for hash in hashes {
         if hash == *main_hash {
-            // TODO detect not exist state
             MainChain::insert(&hash, ());
         } else {
             MainChain::remove(&hash);

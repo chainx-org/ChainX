@@ -1,103 +1,233 @@
 use super::*;
 
-use light_bitcoin::serialization;
-
-// #[test]
-// fn test() {
-//     with_externalities(&mut new_test_ext(), || {
-//         use substrate_primitives::hexdisplay::HexDisplay;
-//         let r = <Headers<Test>>::key_for(&h256_from_rev_str(
-//             "00000000000025c23a19cc91ad8d3e33c2630ce1df594e1ae0bf0eabe30a9176",
-//         ));
-//         let a = substrate_primitives::twox_128(&r);
-//         println!("0x{:}", HexDisplay::from(&a));
-//     })
-// }
-
 #[test]
-fn test_init_blocks() {
-    let (c1, _) = generate_blocks();
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(0).unwrap().hash())),
-        "0x2c22ca732c7b99c43057df342f903ffc8a7e132e09563edb122b1f573458ac5b"
-    );
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(1).unwrap().hash())),
-        "0x0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd"
-    );
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(2).unwrap().hash())),
-        "0x00000000000000a6350fbd74c4f75decdc9e49ed3c89a53d5122bc699730c6fe"
-    );
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(3).unwrap().hash())),
-        "0x000000005239e07019651d0cd871d2f4d663c827202442aff61fbc8b01c4afe8"
-    );
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(4).unwrap().hash())),
-        "0x00000000000000e83086b78ebc3da4af6d892963fa3fd5e1648c693de623d1b7"
-    );
-}
+fn test_genesis() {
+    ExtBuilder::default().build_and_execute(|| {
+        let (header, num) = XGatewayBitcoin::genesis_info();
+        assert_eq!(
+            format!("{:?}", reverse_h256(header.hash())),
+            "0x0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"
+        );
+        assert_eq!(num, 576576);
 
-#[test]
-fn test_init_mock_blocks() {
-    let (c1, _) = generate_mock_blocks();
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(0).unwrap().hash())),
-        "0x2c22ca732c7b99c43057df342f903ffc8a7e132e09563edb122b1f573458ac5b"
-    );
-    println!("{:?}", serialization::serialize(c1.get(1).unwrap()));
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(1).unwrap().hash())),
-        "0x0000000000008bc1a5a3ee37368eeeb958f61464a1a5d18ed22e1430965ab3dd"
-    );
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(2).unwrap().hash())),
-        "0x00000000000000a6350fbd74c4f75decdc9e49ed3c89a53d5122bc699730c6fe"
-    );
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(3).unwrap().hash())),
-        "0x000000005239e07019651d0cd871d2f4d663c827202442aff61fbc8b01c4afe8"
-    );
-    assert_eq!(
-        format!("{:?}", reverse_h256(c1.get(4).unwrap().hash())),
-        "0x00000000000000e83086b78ebc3da4af6d892963fa3fd5e1648c693de623d1b7"
-    );
-}
-
-//#[test]
-//fn test_genesis() {
-//    with_externalities(&mut new_test_mock_ext(), || {
-//        let (header, num) = XBridgeOfBtc::genesis_info();
-//        let _r = <GenesisInfo<Test>>::get();
-//        assert_eq!(
-//            format!("{:?}", reverse_h256(header.hash())),
-//            "00000000000000fd9cea8b846895f507c63b005d20ac56e87d1cdf80effd5c0a"
-//        );
-//        assert_eq!(num, 1457525);
-//
-//        let best_hash = XBridgeOfBtc::best_index();
-//        assert_eq!(best_hash, header.hash());
-//    })
-//}
-/*
-#[test]
-fn test_normal() {
-    with_externalities(&mut new_test_mainnet(), || {
-        Timestamp::set_timestamp(current_time());
-        let (c1, _) = generate_blocks();
-//        assert_err!(
-//            XBridgeOfBtc::apply_push_header(c1.get(0).unwrap().clone()),
-//            "Can\'t find previous header"
-//        );
-        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(1).unwrap().clone()));
-//        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(2).unwrap().clone()));
-
-//        let best_hash = XBridgeOfBtc::best_index();
-//        assert_eq!(best_hash, c1.get(2).unwrap().hash());
+        let index = XGatewayBitcoin::best_index();
+        assert_eq!(
+            index,
+            BtcHeaderIndex {
+                hash: header.hash(),
+                height: 576576
+            }
+        );
     })
 }
 
+#[test]
+fn test_insert_headers() {
+    let (base_height, c1, _) = generate_blocks();
+    ExtBuilder::default()
+        .build_mock(
+            (c1.get(0).unwrap().clone(), base_height),
+            BtcNetwork::Mainnet,
+        )
+        .execute_with(|| {
+            assert_noop!(
+                XGatewayBitcoin::apply_push_header(c1.get(0).unwrap().clone()),
+                XGatewayBitcoinErr::ExistedHeader
+            );
+
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(1).unwrap().clone()
+            ));
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(2).unwrap().clone()
+            ));
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(3).unwrap().clone()
+            ));
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(4).unwrap().clone()
+            ));
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(5).unwrap().clone()
+            ));
+
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, c1.get(5).unwrap().hash());
+
+            should_in_mainchain(&c1, true);
+        })
+}
+
+fn should_in_mainchain(headers: &[BtcHeader], expect: bool) {
+    for header in headers.iter() {
+        assert_eq!(
+            XGatewayBitcoin::main_chain(&header.hash()).is_some(),
+            expect
+        );
+    }
+}
+
+#[test]
+fn test_insert_forked_headers_from_genesis_height() {
+    // e.g.
+    // b1
+    // b --- b --- b --- b
+    // |---- b --- b
+    let (base_height, c1, forked) = generate_blocks();
+    ExtBuilder::default()
+        .build_mock(
+            (c1.get(1).unwrap().clone(), base_height + 1),
+            BtcNetwork::Mainnet,
+        )
+        .execute_with(|| {
+            // note: confirm block is 4
+            assert_noop!(
+                XGatewayBitcoin::apply_push_header(c1.get(1).unwrap().clone()),
+                XGatewayBitcoinErr::ExistedHeader
+            );
+
+            // insert first
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(2).unwrap().clone()
+            ));
+            // best index is normal block 2
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, c1.get(2).unwrap().hash());
+
+            // insert forked first
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                forked.get(2).unwrap().clone()
+            ));
+            // contains two block at height 2, but best index still normal
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, c1.get(2).unwrap().hash());
+            should_in_mainchain(&c1[1..3], true);
+
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                forked.get(3).unwrap().clone()
+            ));
+            // forked block overtake than normal, change current best to forked 3
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, forked.get(3).unwrap().hash());
+            assert_eq!(XGatewayBitcoin::confirmed_index(), None);
+            should_in_mainchain(&c1[2..3], false);
+            should_in_mainchain(&forked[1..4], true);
+
+            // start insert normal
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(3).unwrap().clone()
+            ));
+            // because forked 3 insert before, so that even receive normal 3, best still forked 3
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, forked.get(3).unwrap().hash());
+
+            // switch forked to normal chain
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(4).unwrap().clone()
+            ));
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, c1.get(4).unwrap().hash());
+            // confirm set to 1
+            let confirmed_index = XGatewayBitcoin::confirmed_index().unwrap();
+            assert_eq!(confirmed_index.hash, c1.get(1).unwrap().hash());
+
+            // move confirmed in normal chain
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(5).unwrap().clone()
+            ));
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, c1.get(5).unwrap().hash());
+            // confirm set to 2
+            let confirmed_index = XGatewayBitcoin::confirmed_index().unwrap();
+            assert_eq!(confirmed_index.hash, c1.get(2).unwrap().hash());
+
+            should_in_mainchain(&c1[1..6], true);
+            should_in_mainchain(&forked[2..4], false);
+            println!("current confirmed height:{:?}", confirmed_index.height);
+
+            // add a forked block exceed confirmed height, this forked block would mark as AncientFork,
+            // but now this forked block is less then best, so do not do confirmed check
+            // and on the other hand, confirmed block for this forked block is before current normal
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                forked.get(4).unwrap().clone()
+            ));
+            // but when add a more forked block, would try to move confirmed
+            assert_noop!(
+                XGatewayBitcoin::apply_push_header(forked.get(5).unwrap().clone()),
+                XGatewayBitcoinErr::AncientFork,
+            );
+        })
+}
+
+#[test]
+fn test_insert_forked_headers() {
+    // e.g.
+    // b0
+    // b --- b --- b --- b --- b
+    //       |---- b --- b
+    let (base_height, c1, forked) = generate_blocks();
+    ExtBuilder::default()
+        .build_mock(
+            (c1.get(0).unwrap().clone(), base_height),
+            BtcNetwork::Mainnet,
+        )
+        .execute_with(|| {
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(1).unwrap().clone()
+            ));
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(2).unwrap().clone()
+            ));
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(3).unwrap().clone()
+            ));
+            should_in_mainchain(&c1[0..4], true);
+            // now confirmed would set
+            let confirmed_index = XGatewayBitcoin::confirmed_index().unwrap();
+            assert_eq!(confirmed_index.hash, c1.get(0).unwrap().hash());
+
+            // insert forked
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                forked.get(2).unwrap().clone()
+            ));
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                forked.get(3).unwrap().clone()
+            ));
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, c1.get(3).unwrap().hash());
+            let confirmed_index = XGatewayBitcoin::confirmed_index().unwrap();
+            assert_eq!(confirmed_index.hash, c1.get(0).unwrap().hash());
+            should_in_mainchain(&c1[0..4], true);
+            should_in_mainchain(&forked[2..4], false);
+
+            // insert forked, switch chain, but confirm b1, b1 is also the parent for normal chain
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                forked.get(4).unwrap().clone()
+            ));
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, forked.get(4).unwrap().hash());
+            let confirmed_index = XGatewayBitcoin::confirmed_index().unwrap();
+            assert_eq!(confirmed_index.hash, c1.get(1).unwrap().hash());
+            should_in_mainchain(&c1[2..4], false);
+            should_in_mainchain(&forked[1..5], true);
+
+            // b1 still on normal chain, so we could switch to normal and reset main chain
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(4).unwrap().clone()
+            ));
+            assert_ok!(XGatewayBitcoin::apply_push_header(
+                c1.get(5).unwrap().clone()
+            ));
+            let best_index = XGatewayBitcoin::best_index();
+            assert_eq!(best_index.hash, c1.get(5).unwrap().hash());
+            let confirmed_index = XGatewayBitcoin::confirmed_index().unwrap();
+            assert_eq!(confirmed_index.hash, c1.get(2).unwrap().hash());
+            should_in_mainchain(&c1[0..6], true);
+            should_in_mainchain(&forked[2..5], false);
+        });
+}
+
+/*
 #[test]
 fn test_call() {
     with_externalities(&mut new_test_ext(), || {
@@ -106,7 +236,7 @@ fn test_call() {
         let origin = frame_system::RawOrigin::Signed(99).into();
         let v = btc_ser::serialize(c1.get(1).unwrap());
         let v = v.take();
-        assert_ok!(XBridgeOfBtc::push_header(origin, v));
+        assert_ok!(XGatewayBitcoin::push_header(origin, v));
     })
 }
 
@@ -115,13 +245,13 @@ fn test_genesis2() {
     with_externalities(&mut new_test_ext(), || {
         Timestamp::set_timestamp(current_time());
         let (c1, _) = generate_blocks();
-        assert_err!(
-            XBridgeOfBtc::apply_push_header(c1.get(0).unwrap().clone()),
+        assert_noop!(
+            XGatewayBitcoin::apply_push_header(c1.get(0).unwrap().clone()),
             "Block parent is unknown"
         );
-        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(1).unwrap().clone()));
-        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(2).unwrap().clone()));
-        assert_ok!(XBridgeOfBtc::apply_push_header(c1.get(3).unwrap().clone()));
+        assert_ok!(XGatewayBitcoin::apply_push_header(c1.get(1).unwrap().clone()));
+        assert_ok!(XGatewayBitcoin::apply_push_header(c1.get(2).unwrap().clone()));
+        assert_ok!(XGatewayBitcoin::apply_push_header(c1.get(3).unwrap().clone()));
     })
 }
 
