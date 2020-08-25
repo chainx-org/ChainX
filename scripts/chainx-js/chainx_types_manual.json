@@ -200,6 +200,10 @@
         "reward_pot_account": "AccountId",
         "reward_pot_balance": "RpcBalance"
     },
+    "NominatorInfo": {
+        "last_rebond": "Option<BlockNumber>",
+        "unbonded_chunks": "RpcUnbonded"
+    },
     "String": "Text",
     "RpcPrice": "String",
     "RpcBalance": "String",

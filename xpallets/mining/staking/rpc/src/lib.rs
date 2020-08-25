@@ -8,7 +8,7 @@ use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use sp_std::collections::btree_map::BTreeMap;
 use std::sync::Arc;
-use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
+use xpallet_mining_staking::{NominatorInfo, RpcNominatorLedger, ValidatorInfo};
 use xpallet_mining_staking_rpc_runtime_api::XStakingApi as XStakingRuntimeApi;
 use xpallet_support::RpcBalance;
 
@@ -48,6 +48,14 @@ where
         who: AccountId,
         at: Option<BlockHash>,
     ) -> Result<BTreeMap<AccountId, RpcNominatorLedger<RpcBalance, BlockNumber>>>;
+
+    /// Get individual nominator information given the nominator AccountId.
+    #[rpc(name = "xstaking_getNominatorByAccount")]
+    fn nominator_info_of(
+        &self,
+        who: AccountId,
+        at: Option<BlockHash>,
+    ) -> Result<NominatorInfo<RpcBalance, BlockNumber>>;
 }
 
 /// A struct that implements the [`XStakingApi`].
@@ -119,6 +127,18 @@ where
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
             .nomination_details_of(&at, who)
+            .map_err(runtime_error_into_rpc_err)?)
+    }
+
+    fn nominator_info_of(
+        &self,
+        who: AccountId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<NominatorInfo<RpcBalance<Balance>, BlockNumber>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        Ok(api
+            .nominator_info_of(&at, who)
             .map_err(runtime_error_into_rpc_err)?)
     }
 }

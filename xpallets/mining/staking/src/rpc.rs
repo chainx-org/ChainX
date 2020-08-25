@@ -82,6 +82,40 @@ pub struct ValidatorInfo<AccountId, RpcBalance, BlockNumber> {
     pub reward_pot_balance: RpcBalance,
 }
 
+/// Type for noting when the unbonded fund can be withdrawn.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct RpcUnbonded<RpcBalance, BlockNumber> {
+    /// Amount of funds to be unlocked.
+    pub value: RpcBalance,
+    /// Block number at which point it'll be unlocked.
+    pub locked_until: BlockNumber,
+}
+
+impl<Balance, BlockNumber> From<Unbonded<Balance, BlockNumber>>
+    for RpcUnbonded<RpcBalance<Balance>, BlockNumber>
+{
+    fn from(unbonded: Unbonded<Balance, BlockNumber>) -> Self {
+        let value: RpcBalance<Balance> = unbonded.value.into();
+        Self {
+            value,
+            locked_until: unbonded.locked_until,
+        }
+    }
+}
+
+/// Profile of staking nominator.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct NominatorInfo<RpcBalance, BlockNumber> {
+    /// Block number of last `rebond` operation.
+    pub last_rebond: Option<BlockNumber>,
+    /// Total unbonded entries.
+    pub unbonded_chunks: Vec<RpcUnbonded<RpcBalance, BlockNumber>>,
+}
+
 impl<T: Trait> Module<T> {
     pub fn validators_info(
     ) -> Vec<ValidatorInfo<T::AccountId, RpcBalance<BalanceOf<T>>, T::BlockNumber>> {
@@ -131,5 +165,19 @@ impl<T: Trait> Module<T> {
         Nominations::<T>::iter_prefix(&who)
             .map(|(validator, ledger)| (validator, ledger.into()))
             .collect()
+    }
+
+    pub fn nominator_info_of(
+        who: T::AccountId,
+    ) -> NominatorInfo<RpcBalance<BalanceOf<T>>, T::BlockNumber> {
+        let nominator_profile = Nominators::<T>::get(&who);
+        NominatorInfo {
+            last_rebond: nominator_profile.last_rebond,
+            unbonded_chunks: nominator_profile
+                .unbonded_chunks
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        }
     }
 }

@@ -49,7 +49,7 @@ use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
-use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
+use xpallet_mining_staking::{NominatorInfo, RpcNominatorLedger, ValidatorInfo};
 use xpallet_support::{RpcBalance, RpcPrice};
 
 #[cfg(any(feature = "std", test))]
@@ -1155,6 +1155,9 @@ impl_runtime_apis! {
         }
         fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>> {
             XStaking::nomination_details_of(who)
+        }
+        fn nominator_info_of(who: AccountId) -> NominatorInfo<RpcBalance<Balance>, BlockNumber> {
+            XStaking::nominator_info_of(who)
         }
     }
 
