@@ -1,4 +1,8 @@
 use super::*;
+use crate::tx::parse_deposit_outputs_impl;
+
+use sp_core::crypto::UncheckedInto;
+use sp_std::str::FromStr;
 
 #[test]
 fn test_opreturn() {
@@ -43,39 +47,118 @@ fn test_opreturn() {
     let t9: Transaction = "0200000001776ae4d3fbebbd8568c610b265f54a1a8e1f03f2a16cac99ca9490e32583313b000000006b483045022100e7526da20fda326cce8181516906fc287c49c6f420843f2ecdb0ee4d72e6f899022053259e1e4e6fea0be0277ec1f5c21822c678ac8999887369c4b05c0f897eae81012102ebaf854b6220e3d44a32373aabbe1b6e4c3f824a7855aeac65b6854cd84d6f87ffffffff03a0bb0d000000000017a914cb94110435d0635223eebe25ed2aaabc03781c45870000000000000000326a30355153485037615a615733354e38387166374a484a41595a51426b78704d66527065534270616a334e5431484d44746e00000000000000003d6a3b3554744a66364d567943636d53345347683335534c7a62684137365535724e645552715a7556686a657473454b524e44404d61746857616c6c657400000000".into();
     println!("{:?}", t9);
 
-    with_externalities(&mut new_test_mainnet(), || {
-        use tx::handler::parse_deposit_outputs_impl;
-
+    ExtBuilder::default().build_and_execute(|| {
         let hot_addr =
-            XBridgeOfBtc::verify_btc_address(b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF").unwrap();
+            XGatewayBitcoin::verify_btc_address(b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF").expect("");
         println!("{:?}", hot_addr);
 
-        let r = parse_deposit_outputs_impl::<Test>(&t1, &hot_addr).unwrap();
-        assert_eq!(r, (None, 30000, None));
+        fn mock_parse_deposit_outputs(
+            tx: &Transaction,
+            hot_addr: &Address,
+        ) -> (Option<(AccountId, Option<Vec<u8>>)>, u64) {
+            parse_deposit_outputs_impl(tx, hot_addr, BtcNetwork::Mainnet, |script| {
+                <Test as Trait>::AccountExtractor::account_info(script)
+            })
+        }
 
-        let r = parse_deposit_outputs_impl::<Test>(&t2, &hot_addr).unwrap();
-        assert_eq!(r, (None, 20000, None));
+        let r = mock_parse_deposit_outputs(&t1, &hot_addr);
+        assert_eq!(r, (None, 30000));
 
-        let r = parse_deposit_outputs_impl::<Test>(&t3, &hot_addr).unwrap();
+        let r = mock_parse_deposit_outputs(&t2, &hot_addr);
+        assert_eq!(r, (None, 20000));
+
+        let r = mock_parse_deposit_outputs(&t3, &hot_addr);
         //        assert_eq!(r, (Some((999, None)), 0, Some(Vec::from_hex("6a4c509999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999").unwrap())));
-        assert_eq!(r, (None, 0, None));
+        assert_eq!(r, (None, 0));
 
-        let r = parse_deposit_outputs_impl::<Test>(&t4, &hot_addr).unwrap();
-        assert_eq!(r, (Some((hex!("e101b125be8161a1198d29e719424a126ce448d2da0459ff621688d56278a21e").unchecked_into(), None)), 30000, Some(hex!("6a3035556a336568616d445a57506667413869415a656e6863416d5044616b6a6634614d626b424234645856766a6f573678").to_vec())));
+        let r = mock_parse_deposit_outputs(&t4, &hot_addr);
+        assert_eq!(
+            r,
+            (
+                Some((
+                    AccountId::from_str(
+                        "e101b125be8161a1198d29e719424a126ce448d2da0459ff621688d56278a21e"
+                    )
+                    .expect(""),
+                    None
+                )),
+                30000
+            )
+        );
 
-        let r = parse_deposit_outputs_impl::<Test>(&t5, &hot_addr).unwrap();
-        assert_eq!(r, (Some((hex!("265c210541e4fe09e174486d2a7584073b275ce8eab2c48babf881d6b857215e").unchecked_into(), Some("Axonomy".as_bytes().to_vec()))), 950000000, Some(hex!("6a383551574b5a5934514174344e4338733571634a564a6e53624c534a3157396976355334694a4a5055723350646b646e6a4041786f6e6f6d79").to_vec())));
+        let r = mock_parse_deposit_outputs(&t5, &hot_addr);
+        assert_eq!(
+            r,
+            (
+                Some((
+                    AccountId::from_str(
+                        "265c210541e4fe09e174486d2a7584073b275ce8eab2c48babf881d6b857215e"
+                    )
+                    .expect(""),
+                    Some("Axonomy".as_bytes().to_vec())
+                )),
+                950000000
+            )
+        );
 
-        let r = parse_deposit_outputs_impl::<Test>(&t6, &hot_addr).unwrap();
-        assert_eq!(r, (Some((hex!("bbd52f388a42abde1d597f0436c3e5f539d7f54c61a86d75968c1c1d50759c45").unchecked_into(), Some("MathWallet".as_bytes().to_vec()))), 11000, Some(hex!("6a3b3554744a66364d567943636d53345347683335534c7a62684137365535724e645552715a7556686a657473454b524e44404d61746857616c6c6574").to_vec())));
+        let r = mock_parse_deposit_outputs(&t6, &hot_addr);
+        assert_eq!(
+            r,
+            (
+                Some((
+                    AccountId::from_str(
+                        "bbd52f388a42abde1d597f0436c3e5f539d7f54c61a86d75968c1c1d50759c45"
+                    )
+                    .expect(""),
+                    Some("MathWallet".as_bytes().to_vec())
+                )),
+                11000
+            )
+        );
 
-        let r = parse_deposit_outputs_impl::<Test>(&t7, &hot_addr).unwrap();
-        assert_eq!(r, (Some((hex!("2347cf540209771b27b22ab0b592e2b25c13ddac03b4ce836370a8ab8aa0eaae").unchecked_into(), None)), 10000, Some(hex!("6a30355153485037615a615733354e38387166374a484a41595a51426b78704d66527065534270616a334e5431484d44746e").to_vec())));
+        let r = mock_parse_deposit_outputs(&t7, &hot_addr);
+        assert_eq!(
+            r,
+            (
+                Some((
+                    AccountId::from_str(
+                        "2347cf540209771b27b22ab0b592e2b25c13ddac03b4ce836370a8ab8aa0eaae"
+                    )
+                    .expect(""),
+                    None
+                )),
+                10000,
+            )
+        );
 
-        let r = parse_deposit_outputs_impl::<Test>(&t8, &hot_addr).unwrap();
-        assert_eq!(r, (Some((hex!("bbd52f388a42abde1d597f0436c3e5f539d7f54c61a86d75968c1c1d50759c45").unchecked_into(),  Some("MathWallet".as_bytes().to_vec()))), 900000, Some(hex!("6a3b3554744a66364d567943636d53345347683335534c7a62684137365535724e645552715a7556686a657473454b524e44404d61746857616c6c6574").to_vec())));
+        let r = mock_parse_deposit_outputs(&t8, &hot_addr);
+        assert_eq!(
+            r,
+            (
+                Some((
+                    AccountId::from_str(
+                        "bbd52f388a42abde1d597f0436c3e5f539d7f54c61a86d75968c1c1d50759c45"
+                    )
+                    .expect(""),
+                    Some("MathWallet".as_bytes().to_vec())
+                )),
+                900000,
+            )
+        );
 
-        let r = parse_deposit_outputs_impl::<Test>(&t9, &hot_addr).unwrap();
-        assert_eq!(r, (Some((hex!("2347cf540209771b27b22ab0b592e2b25c13ddac03b4ce836370a8ab8aa0eaae").unchecked_into(),  None)), 900000, Some(hex!("6a30355153485037615a615733354e38387166374a484a41595a51426b78704d66527065534270616a334e5431484d44746e").to_vec())));
+        let r = mock_parse_deposit_outputs(&t9, &hot_addr);
+        assert_eq!(
+            r,
+            (
+                Some((
+                    AccountId::from_str(
+                        "2347cf540209771b27b22ab0b592e2b25c13ddac03b4ce836370a8ab8aa0eaae"
+                    )
+                    .expect(""),
+                    None
+                )),
+                900000,
+            )
+        );
     });
 }
