@@ -1,5 +1,7 @@
 use super::*;
 
+use light_bitcoin::serialization;
+
 #[test]
 fn test_genesis() {
     ExtBuilder::default().build_and_execute(|| {
@@ -23,7 +25,7 @@ fn test_genesis() {
 
 #[test]
 fn test_insert_headers() {
-    let (base_height, c1, _) = generate_blocks();
+    let (base_height, c1, _) = generate_mock_blocks();
     ExtBuilder::default()
         .build_mock(
             (c1.get(0).unwrap().clone(), base_height),
@@ -73,7 +75,7 @@ fn test_insert_forked_headers_from_genesis_height() {
     // b1
     // b --- b --- b --- b
     // |---- b --- b
-    let (base_height, c1, forked) = generate_blocks();
+    let (base_height, c1, forked) = generate_mock_blocks();
     ExtBuilder::default()
         .build_mock(
             (c1.get(1).unwrap().clone(), base_height + 1),
@@ -165,7 +167,7 @@ fn test_insert_forked_headers() {
     // b0
     // b --- b --- b --- b --- b
     //       |---- b --- b
-    let (base_height, c1, forked) = generate_blocks();
+    let (base_height, c1, forked) = generate_mock_blocks();
     ExtBuilder::default()
         .build_mock(
             (c1.get(0).unwrap().clone(), base_height),
@@ -227,72 +229,30 @@ fn test_insert_forked_headers() {
         });
 }
 
-/*
+#[test]
+fn test_change_difficulty() {
+    ExtBuilder::default().build_and_execute(|| {
+        let headers = generate_blocks();
+        let to_height = 576576 + 2016 + 1;
+        let current_difficulty = headers[&576577].bits;
+        let new_difficulty = headers[&to_height].bits;
+        println!(
+            "current_difficulty: bit:{:?}|new_difficulty: bit:{:?}",
+            current_difficulty, new_difficulty
+        );
+        for i in 576577..to_height {
+            assert_ok!(XGatewayBitcoin::apply_push_header(headers[&i].clone()));
+        }
+    })
+}
+
 #[test]
 fn test_call() {
-    with_externalities(&mut new_test_ext(), || {
-        Timestamp::set_timestamp(current_time());
-        let (c1, _) = generate_blocks();
-        let origin = frame_system::RawOrigin::Signed(99).into();
-        let v = btc_ser::serialize(c1.get(1).unwrap());
+    ExtBuilder::default().build_and_execute(|| {
+        let headers = generate_blocks();
+        let origin = frame_system::RawOrigin::Signed(Default::default()).into();
+        let v = serialization::serialize(&headers[&(576576 + 1)]);
         let v = v.take();
         assert_ok!(XGatewayBitcoin::push_header(origin, v));
     })
 }
-
-#[test]
-fn test_genesis2() {
-    with_externalities(&mut new_test_ext(), || {
-        Timestamp::set_timestamp(current_time());
-        let (c1, _) = generate_blocks();
-        assert_noop!(
-            XGatewayBitcoin::apply_push_header(c1.get(0).unwrap().clone()),
-            "Block parent is unknown"
-        );
-        assert_ok!(XGatewayBitcoin::apply_push_header(c1.get(1).unwrap().clone()));
-        assert_ok!(XGatewayBitcoin::apply_push_header(c1.get(2).unwrap().clone()));
-        assert_ok!(XGatewayBitcoin::apply_push_header(c1.get(3).unwrap().clone()));
-    })
-}
-
-#[test]
-fn test_changebit() {
-    with_externalities(&mut new_test_ext(), || {
-        let b1 = BtcHeader {
-            version: 1,
-            previous_header_hash: h256_from_rev_str(
-                "00000000864b744c5025331036aa4a16e9ed1cbb362908c625272150fa059b29",
-            ),
-            merkle_root_hash: h256_from_rev_str(
-                "70d6379650ac87eaa4ac1de27c21217b81a034a53abf156c422a538150bd80f4",
-            ),
-            time: 1337966314,
-            bits: Compact::new(486604799),
-            nonce: 2391008772,
-        };
-        // 2016
-        assert_eq!(
-            format!("{:?}", reverse_h256(b1.hash())),
-            "0x0000000089d757fd95d79f7fcc2bc25ca7fc16492dca9aa610730ea05d9d3de9"
-        );
-
-        let _b2 = BtcHeader {
-            version: 1,
-            previous_header_hash: h256_from_rev_str(
-                "00000000864b744c5025331036aa4a16e9ed1cbb362908c625272150fa059b29",
-            ),
-            merkle_root_hash: h256_from_rev_str(
-                "70d6379650ac87eaa4ac1de27c21217b81a034a53abf156c422a538150bd80f4",
-            ),
-            time: 1337966314,
-            bits: Compact::new(486604799),
-            nonce: 2391008772,
-        };
-        // 2017
-        assert_eq!(
-            format!("{:?}", reverse_h256(b1.hash())),
-            "0x0000000089d757fd95d79f7fcc2bc25ca7fc16492dca9aa610730ea05d9d3de9"
-        );
-    })
-}
-*/

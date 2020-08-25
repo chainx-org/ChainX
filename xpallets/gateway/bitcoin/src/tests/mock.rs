@@ -10,25 +10,27 @@ use std::cell::RefCell;
 // Substrate
 use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
 use frame_system::EnsureSignedBy;
-// use sp_core::H256;
+use sp_core::crypto::UncheckedInto;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
     AccountId32, Perbill,
 };
+use sp_std::collections::btree_map::BTreeMap;
 
 // light-bitcoin
 use light_bitcoin::primitives::Compact;
+use light_bitcoin::serialization;
 
 // use xbridge_common::traits::IntoVecu8;
 use chainx_primitives::AssetId;
 use xpallet_assets::{AssetRestriction, AssetRestrictions};
 use xpallet_assets_registrar::AssetInfo;
 use xpallet_gateway_common::trustees::{self, bitcoin::BtcTrusteeType};
+use xpallet_gateway_common::types::TrusteeInfoConfig;
 
 use crate::tests::as_h256;
-use sp_core::crypto::UncheckedInto;
-use xpallet_gateway_common::types::TrusteeInfoConfig;
+
 pub use xpallet_protocol::X_BTC;
 pub use xpallet_protocol::X_ETH;
 
@@ -422,7 +424,7 @@ fn trustees() -> Vec<(
     vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
-pub fn generate_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
+pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
     let b0 = BtcHeader {
         version: 0x20000002,
         previous_header_hash: as_h256(
@@ -568,6 +570,20 @@ pub fn generate_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
         vec![b0.clone(), b1, b2, b3, b4, b5],
         vec![b0, b1, b2_fork, b3_fork, b4_fork, b5_fork, b6_fork],
     )
+}
+
+pub fn generate_blocks() -> BTreeMap<u32, BtcHeader> {
+    let bytes = include_bytes!("./res/headers-576576-578692.json");
+    let headers: Vec<(u32, String)> = serde_json::from_slice(&bytes[..]).expect("should not fail");
+    headers
+        .into_iter()
+        .map(|(height, h)| {
+            let hex = hex::decode(h).expect("should be valid hex");
+            let header =
+                serialization::deserialize(Reader::new(&hex)).expect("should be valid header");
+            (height, header)
+        })
+        .collect()
 }
 
 /*
