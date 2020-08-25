@@ -408,7 +408,7 @@ pub fn get_sig_num<T: Trait>() -> (u32, u32) {
     (two_thirds_unsafe(trustee_num), trustee_num)
 }
 
-fn create_multi_address<T: Trait>(
+pub(crate) fn create_multi_address<T: Trait>(
     pubkeys: &Vec<Public>,
     sig_num: u32,
 ) -> Option<BtcTrusteeAddrInfo> {

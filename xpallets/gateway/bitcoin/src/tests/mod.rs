@@ -5,8 +5,8 @@
 mod header;
 mod mock;
 mod opreturn;
+mod trustee;
 mod tx;
-// mod trustee;
 
 use frame_support::{assert_noop, assert_ok};
 
