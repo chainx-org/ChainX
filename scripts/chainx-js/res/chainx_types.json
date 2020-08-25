@@ -132,6 +132,14 @@
         "lastVoteWeight": "RpcWeightType",
         "lastVoteWeightUpdate": "BlockNumber"
     },
+    "RpcUnbonded": {
+        "value": "RpcBalance",
+        "lockedUntil": "BlockNumber"
+    },
+    "NominatorInfo": {
+        "lastRebond": "Option<BlockNumber>",
+        "unbondedChunks": "RpcUnbonded"
+    },
     "BondRequirement": {
         "selfBonded": "Balance",
         "total": "Balance"
