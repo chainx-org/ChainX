@@ -1,7 +1,6 @@
 use super::*;
 use crate::tx::parse_deposit_outputs_impl;
 
-use sp_core::crypto::UncheckedInto;
 use sp_std::str::FromStr;
 
 #[test]

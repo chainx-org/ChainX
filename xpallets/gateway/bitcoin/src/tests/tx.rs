@@ -299,8 +299,6 @@ fn test_push_tx_call() {
             merkle_proof: proof,
         };
 
-        let tx = serialization::serialize(&normal_deposit.clone());
-
         assert_ok!(XGatewayBitcoin::push_transaction(
             frame_system::RawOrigin::Signed(Default::default()).into(),
             tx.clone().into(),
