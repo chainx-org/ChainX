@@ -233,7 +233,7 @@ impl<T: Trait> Module<T> {
         asset_id: AssetId,
         restrictions: AssetRestrictions,
     ) -> DispatchResult {
-        xpallet_assets_registrar::Module::<T>::ensure_assert_exists(&asset_id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_exists(&asset_id)?;
         AssetRestrictionsOf::insert(asset_id, restrictions);
         Ok(())
     }

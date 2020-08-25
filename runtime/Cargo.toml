@@ -53,6 +53,9 @@ pallet-indices = { version = "2.0.0-rc5", default-features = false }
 pallet-treasury = { version = "2.0.0-rc5", default-features = false }
 pallet-utility = { version = "2.0.0-rc5", default-features = false }
 
+frame-system-benchmarking = { version = "2.0.0-rc5", default-features = false, optional = true }
+frame-benchmarking = { version = "2.0.0-rc5", default-features = false, optional = true }
+
 # Forked Substrate pallets
 pallet-balances = { path = "../frame/balances", default-features = false }
 pallet-transaction-payment = { path = "../frame/transaction-payment", default-features = false }
@@ -170,4 +173,14 @@ std = [
     "xpallet-mining-staking-rpc-runtime-api/std",
     "xpallet-mining-asset/std",
     "xpallet-mining-asset-rpc-runtime-api/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system-benchmarking",
+    "frame-system/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-collective/runtime-benchmarks",
+    "pallet-society/runtime-benchmarks",
 ]

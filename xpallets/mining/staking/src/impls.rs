@@ -93,13 +93,20 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     }
 }
 
+type DividendParams<T> = (
+    BalanceOf<T>,
+    WeightType,
+    WeightType,
+    <T as frame_system::Trait>::AccountId,
+);
+
 impl<T: Trait> Module<T> {
     /// Returns the tuple of (dividend, source_weight, target_weight) if the nominator claims right now.
     pub fn calculate_dividend_on_claim(
         nominator: &T::AccountId,
         validator: &T::AccountId,
         block_number: T::BlockNumber,
-    ) -> Result<(BalanceOf<T>, WeightType, WeightType, T::AccountId), Error<T>> {
+    ) -> Result<DividendParams<T>, Error<T>> {
         let validator_pot = T::DetermineRewardPotAccount::reward_pot_account_for(validator);
         let reward_pot_balance = Self::free_balance(&validator_pot);
 
@@ -203,6 +210,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    /// Issue new session reward and try slashing the offenders at the same time.
     fn mint_and_slash(session_index: SessionIndex) {
         // TODO: the whole flow of session changes?
         //

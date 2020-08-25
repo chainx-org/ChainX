@@ -369,7 +369,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Helper function for checking the asset's existence.
-    pub fn ensure_assert_exists(id: &AssetId) -> DispatchResult {
+    pub fn ensure_asset_exists(id: &AssetId) -> DispatchResult {
         ensure!(Self::asset_exists(id), Error::<T>::AssetDoesNotExist);
         Ok(())
     }

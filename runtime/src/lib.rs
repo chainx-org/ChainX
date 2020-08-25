@@ -19,6 +19,8 @@ use sp_core::{
     u32_trait::{_1, _2, _3, _4},
     OpaqueMetadata,
 };
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::RuntimeString;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
@@ -47,7 +49,7 @@ use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
-use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
+use xpallet_mining_staking::{NominatorInfo, RpcNominatorLedger, ValidatorInfo};
 use xpallet_support::{traits::MultisigAddressFor, RpcBalance, RpcPrice};
 
 #[cfg(any(feature = "std", test))]
@@ -353,7 +355,8 @@ impl pallet_session::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: Balance = 1 * DOLLARS;
+    // There is no dusty accounts in ChainX.
+    pub const ExistentialDeposit: Balance = 0;
 }
 
 impl pallet_balances::Trait for Runtime {
@@ -1162,6 +1165,9 @@ impl_runtime_apis! {
         fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>> {
             XStaking::nomination_details_of(who)
         }
+        fn nominator_info_of(who: AccountId) -> NominatorInfo<RpcBalance<Balance>, BlockNumber> {
+            XStaking::nominator_info_of(who)
+        }
     }
 
     impl xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance> for Runtime {
@@ -1281,4 +1287,52 @@ impl_runtime_apis! {
             }
         }
     }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn dispatch_benchmark(
+            pallet: Vec<u8>,
+            benchmark: Vec<u8>,
+            lowest_range_values: Vec<u32>,
+            highest_range_values: Vec<u32>,
+            steps: Vec<u32>,
+            repeat: u32,
+        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark};
+
+            impl frame_system_benchmarking::Trait for Runtime {}
+
+            // let whitelist: Vec<TrackedStorageKey> = vec![
+                // // Block Number
+                // hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
+                // // Total Issuance
+                // hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
+                // // Execution Phase
+                // hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
+                // // Event Count
+                // hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
+                // // System Events
+                // hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
+                // // Treasury Account
+                // hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
+            // ];
+
+            let mut batches = Vec::<BenchmarkBatch>::new();
+            let params = (
+                &pallet,
+                &benchmark,
+                &lowest_range_values,
+                &highest_range_values,
+                &steps,
+                repeat,
+                &Vec::new(),
+            );
+            // Substrate
+            add_benchmark!(params, batches, pallet_balances, Balances);
+
+            if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+            Ok(batches)
+        }
+    }
+
 }

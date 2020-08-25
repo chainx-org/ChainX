@@ -1,8 +1,8 @@
-use sc_cli::{ChainSpec, CliConfiguration, Role, RuntimeVersion, SubstrateCli};
+use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
 use sc_service::ServiceParams;
 
 use crate::chain_spec;
-use crate::cli::Cli;
+use crate::cli::{Cli, Subcommand};
 use crate::service::{self, new_full_params};
 
 impl SubstrateCli for Cli {
@@ -52,9 +52,7 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
             let p = std::path::PathBuf::from(path);
             if !p.exists() {
                 // TODO more better hint
-                return Err(format!(
-                    "not a valid path or just allow [\"dev\", \"local\"]"
-                ));
+                return Err("not a valid path or just allow [\"dev\", \"local\"]".into());
             }
             Box::new(chain_spec::ChainSpec::from_json_file(p)?)
         }
@@ -68,12 +66,38 @@ pub fn run() -> sc_cli::Result<()> {
     let raw_cli_args = std::env::args().collect::<Vec<_>>();
     let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
-    if cli.log4rs {
-        crate::logger::init(&cli.run.log_filters()?, &cli)?;
-    }
+    cli.try_init_logger()?;
 
     match &cli.subcommand {
-        Some(subcommand) => {
+        None => {
+            let runner = cli.create_runner(&cli.run.base)?;
+            let chain_spec = &runner.config().chain_spec;
+            set_default_ss58_version(chain_spec);
+
+            runner.run_node_until_exit(|config| match config.role {
+                Role::Light => service::new_light(config),
+                _ => service::new_full(config),
+            })
+        }
+        Some(Subcommand::Benchmark(cmd)) => {
+            if cfg!(feature = "runtime-benchmarks") {
+                let runner = cli.create_runner(cmd)?;
+                let chain_spec = &runner.config().chain_spec;
+
+                set_default_ss58_version(chain_spec);
+
+                runner.sync_run(|config| {
+                    cmd.run::<chainx_runtime::Block, chainx_executor::Executor>(config)
+                })
+            } else {
+                println!(
+                    "Benchmarking wasn't enabled when building the node. \
+                    You can enable it with `--features runtime-benchmarks`."
+                );
+                Ok(())
+            }
+        }
+        Some(Subcommand::Base(subcommand)) => {
             let runner = cli.create_runner(subcommand)?;
             let chain_spec = &runner.config().chain_spec;
             set_default_ss58_version(chain_spec);
@@ -90,16 +114,6 @@ pub fn run() -> sc_cli::Result<()> {
                     ..,
                 ) = new_full_params(config)?;
                 Ok((client, backend, import_queue, task_manager))
-            })
-        }
-        None => {
-            let runner = cli.create_runner(&cli.run)?;
-            let chain_spec = &runner.config().chain_spec;
-            set_default_ss58_version(chain_spec);
-
-            runner.run_node_until_exit(|config| match config.role {
-                Role::Light => service::new_light(config),
-                _ => service::new_full(config),
             })
         }
     }
