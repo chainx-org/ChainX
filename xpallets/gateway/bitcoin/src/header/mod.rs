@@ -5,7 +5,7 @@ mod header_proof;
 // Substrate
 use frame_support::{StorageMap, StorageValue};
 use sp_runtime::DispatchResult;
-use sp_std::cmp::Ordering;
+use sp_std::{cmp::Ordering, prelude::*};
 
 // ChainX
 use xpallet_support::{error, info};
