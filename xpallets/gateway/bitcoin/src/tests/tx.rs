@@ -1,11 +1,13 @@
 #![allow(non_upper_case_globals)]
 
 use codec::{Decode, Encode};
+use light_bitcoin::merkle::PartialMerkleTree;
+use light_bitcoin::serialization;
+use sp_std::str::FromStr;
 
 use super::*;
 use crate::tx::detect_transaction_type_impl;
 use crate::types::{MetaTxType, VoteResult};
-use sp_std::str::FromStr;
 
 const DEPOSIT_HOT_ADDR: &'static str = "3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF";
 const DEPOSIT_COLD_ADDR: &'static str = "3FLBhPfEqmw4Wn5EQMeUzPLrQtJMprgwnw";
@@ -53,6 +55,9 @@ lazy_static::lazy_static! {
     static ref withdraw: Transaction = Transaction::from("0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000");
     // https://btc.com/512c2bfa2b608eeb75b172f496cf1ee3c9292afa4f4f992a01939ccfa6ed2c05.rawhex
     static ref withdraw_prev: Transaction = Transaction::from("02000000018554af3a19f2475bb293e81fe123b588a50d7c86ce97ed4f015853b427e45f12040000006a473044022037957f493964792e6bedd37aa5193892bd9fdb5d974d87f5334f36b0d544c7f202203d7bb2ac644204437b77e9c34ea5bf875da41d728ef7352c9d74ff507da64502012102bd47917d4cf403ca8e9cb71c84a127e0451686877fe186614385025ccd1ed9cc000000000260a62f010000000017a914cb94110435d0635223eebe25ed2aaabc03781c45870000000000000000366a343552547a425a4d3274346537414d547442534e3853424c3878316b716e39713769355a75566e3569537876526341326b40484c5400000000");
+
+    // https://btc.com/f1a9161a045a01db7ae02b8c0531e2fe2e9740efe30afe6d84a12e3cac251344.rawhex
+    static ref normal_deposit: Transaction = Transaction::from("0200000003a50c032806a643a0ad85803ff77e0ecb58baf327bcc91e269945402c551fada5000000006a473044022031d06016a6e996a07ca1881c70fc328b4ca075d80f5284378c11c9fc018112c00220480b8371bf9967da2af205dacc7ee4ff880b1bebd6c8a77f3cd24bae425c672f01210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a1010396000000003fd0c0f65304982c8ff0ce9a38bcdffc8afdf8e76f1ff518a0db3fa943992f94590000006a473044022012e3920b2e2a45f6c28667f5854f894077b140a8267c6da0069fcf9c541e4db60220382e1f09267ba2f3d2d2a7bf77daf8b9bdacc6693b760d477657cd0b64bdf7c801210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a1010396000000009d61e22d5434504c247ffb5be5a744a513b1cf274da8be492e401495b2aaafd0180000006b48304502210097491bd7c5aad0fca30b022b3d7bbae50dcd3658dddd4dd9ab6da6217863c7f902205e8ef79cf2f8620398de9812f5d5a5cb04e96f674a9f1af9e872b82623de802d01210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a101039600000000032077fc020000000017a914cb94110435d0635223eebe25ed2aaabc03781c45871a7c0000000000001976a91427f82ed8de307712c1f5fbbb3a52a96163449c3d88ac00000000000000003d6a3b355555716e46544e52596d656b6d5a4e5375335041695050476b737635746169373752625a366173365468773837704a40436861696e5846616e7300000000");
 }
 
 fn mock_detect_transaction_type<T: Trait>(
@@ -270,4 +275,48 @@ fn test_process_tx() {
         let r = mock_process_tx::<Test>(withdraw.clone(), Some(withdraw_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
     })
+}
+
+#[test]
+fn test_push_tx_call() {
+    // https://btc.com/f1a9161a045a01db7ae02b8c0531e2fe2e9740efe30afe6d84a12e3cac251344.rawhex
+    let tx = serialization::serialize(&normal_deposit.clone());
+    let headers = generate_blocks();
+    let block_hash = headers[&577667].hash();
+
+    let raw_proof= hex::decode("7a0a00000df93909095e26bc2226c7a308a197623e1338d97205dab31e8bb1938fdd1ffb750120040316fc943d5a2d2a2034a0fe563e0e32298a13a826bfdf9c70779586dba5271dce89f50cee96759a25b44b975c073f3ba6a12a92209494709907cb15922eac15e16ae180f9e63d96e25e1c8056b34f194a8a0d2f14bd935e9c2abc79dd8d0c425975eac4696b4d5bca42d09ecb27b7397e1061d138b69c9283fb47337aa61179b15b17ee942e635d5c9479b337ba1877054708336fca85d3e64fb4519ce5319ea3940b45a0a2be630ffc8091c23199e3468ec08e6e49aa7d2097614c22441325ac3c2ea1846dfe0ae3ef40972efee231058c2be07adb015a041a16a9f1dc9e699c56bbfb3e7dc751ea295188f5af86348789547c58981341ddb1eae528a1566ea4b17b099bb29d27728ccf398669eabd82ee4910eaccba7e5e40be6351d734b422020e5c57910de3a94f1eced6b1151333c425048a93f49c9e7110a77201b34ad3a09a12f3bdb8f1fce78c21ec868a32e36eef263077f047eaaa7c5842feee2b12a1651f1deaf50afcddbca8e2bfb36d707133dfa27235e72cc169fc0704d7ad0a00").expect("");
+    let proof: PartialMerkleTree =
+        serialization::deserialize(Reader::new(raw_proof.as_slice())).expect("");
+
+    ExtBuilder::default().build_and_execute(|| {
+        let confirmed = XGatewayBitcoin::confirmation_number();
+        // insert headers
+        for i in 576577..=577667 + confirmed {
+            assert_ok!(XGatewayBitcoin::apply_push_header(headers[&i].clone()));
+        }
+        let info = BtcRelayedTxInfo {
+            block_hash,
+            merkle_proof: proof,
+        };
+
+        let tx = serialization::serialize(&normal_deposit.clone());
+
+        assert_ok!(XGatewayBitcoin::push_transaction(
+            frame_system::RawOrigin::Signed(Default::default()).into(),
+            tx.clone().into(),
+            info.clone(),
+            None,
+        ));
+
+        // reject replay
+        assert_noop!(
+            XGatewayBitcoin::push_transaction(
+                frame_system::RawOrigin::Signed(Default::default()).into(),
+                tx.clone().into(),
+                info,
+                None,
+            ),
+            XGatewayBitcoinErr::ReplayedTx,
+        );
+    });
 }

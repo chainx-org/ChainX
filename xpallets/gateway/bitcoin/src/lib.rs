@@ -109,43 +109,43 @@ decl_error! {
         UnconfirmedTx,
         /// reject replay proccessed tx
         ReplayedTx,
-        ///
+        /// process tx failed
+        ProcessTxFailed,
+        /// withdraw tx not match expected tx
         MismatchedTx,
-        ///
+        /// invalid bitcoin address
         InvalidAddress,
-        ///
+        /// verify tx signature failed
         VerifySignFailed,
-        ///
+        /// invalid sign count in trustee withdrawal tx proposal
         InvalidSignCount,
-        ///
+        /// invalid bitcoin public key
         InvalidPublicKey,
-        ///
+        /// construct bad signature
         ConstructBadSign,
         /// Invalid signature
         BadSignature,
         /// Parse redeem script failed
         BadRedeemScript,
-        ///
+        /// not set trustee yet
         NotTrustee,
-        ///
+        /// duplicated pubkey for trustees
         DuplicatedKeys,
-        ///
+        /// can't generate multisig address
         GenerateMultisigFailed,
-        ///
-        InvalidTrusteeCounts,
-        ///
+        /// invalid trustee count
+        InvalidTrusteeCount,
+        /// unexpected withdraw records count
         WroungWithdrawalCount,
-        ///
-        InvalidSigCount,
-        ///
+        /// reject sig for current proposal
         RejectSig,
-        ///
+        /// no proposal for current withdrawal
         NoProposal,
-        ///
+        /// invalid proposal
         InvalidProposal,
-        ///
+        /// last proposal not finished yet
         NotFinishProposal,
-        ///
+        /// no withdrawal record for this id
         NoWithdrawalRecord,
     }
 }
@@ -538,6 +538,9 @@ impl<T: Trait> Module<T> {
         // set storage
         TxState::insert(&tx_hash, state);
         Self::deposit_event(RawEvent::ProcessTx(tx_hash, block_hash, state));
-        Ok(())
+        match state.result {
+            BtcTxResult::Success => Ok(()),
+            BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed)?,
+        }
     }
 }

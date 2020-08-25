@@ -152,7 +152,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
         {
             error!("[generate_trustee_session_info]|trustees is less/more than {{min:[{:}], max:[{:}]}} people, can't generate trustee addr|trustees:{:?}",
                    config.min_trustee_count, config.max_trustee_count, trustees);
-            Err(Error::<T>::InvalidTrusteeCounts)?;
+            Err(Error::<T>::InvalidTrusteeCount)?;
         }
 
         #[cfg(feature = "std")]
@@ -254,7 +254,7 @@ impl<T: Trait> Module<T> {
             true
         } else {
             error!("[apply_create_withdraw]|the sigs for tx could not more than 1 in apply_create_withdraw|current sigs:{:}", sigs_count);
-            Err(Error::<T>::InvalidSigCount)?
+            Err(Error::<T>::InvalidSignCount)?
         };
 
         xpallet_gateway_records::Module::<T>::process_withdrawals(
@@ -312,7 +312,7 @@ impl<T: Trait> Module<T> {
                 let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
                 if sigs_count == 0 {
                     error!("[apply_sig_withdraw]|the tx sig should not be zero, zero is the source tx without any sig|tx{:?}", tx);
-                    Err(Error::<T>::InvalidSigCount)?;
+                    Err(Error::<T>::InvalidSignCount)?;
                 }
 
                 let confirmed_count = proposal
@@ -327,7 +327,7 @@ impl<T: Trait> Module<T> {
                         sigs_count,
                         confirmed_count
                     );
-                    Err(Error::<T>::InvalidSigCount)?;
+                    Err(Error::<T>::InvalidSignCount)?;
                 }
 
                 insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list)?;
