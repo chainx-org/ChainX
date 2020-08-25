@@ -4,6 +4,7 @@
 
 mod header;
 mod mock;
+mod tx;
 // mod opreturn;
 // mod trustee;
 
