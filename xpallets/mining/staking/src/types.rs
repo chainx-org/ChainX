@@ -93,23 +93,14 @@ impl<Balance, BlockNumber> From<ValidatorLedger<Balance, BlockNumber>>
 /// Vote weight properties of nominator.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct NominatorLedger<Balance, BlockNumber> {
-    /// The amount of
+    /// The amount of vote.
     pub nomination: Balance,
     /// Last calculated total vote weight of current nominator.
     pub last_vote_weight: WeightType,
     /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,
-}
-
-/// Vote weight properties of nominator.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-pub struct RpcNominatorLedger<Balance, BlockNumber> {
-    /// The amount of
-    pub nomination: Balance,
-    /// Last calculated total vote weight of current nominator.
-    pub last_vote_weight: RpcWeightType,
-    /// Block number at which point `last_vote_weight` just updated.
-    pub last_vote_weight_update: BlockNumber,
+    /// Unbonded entries.
+    pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
 /// Profile of staking validator.
@@ -136,11 +127,9 @@ pub struct ValidatorProfile<BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct NominatorProfile<Balance, BlockNumber> {
+pub struct NominatorProfile<BlockNumber> {
     /// Block number of last `rebond` operation.
     pub last_rebond: Option<BlockNumber>,
-    /// Total unbonded entries.
-    pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
 /// Total information about a validator.

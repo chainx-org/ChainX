@@ -34,8 +34,12 @@ fn t_unbond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult
     XStaking::unbond(Origin::signed(who), target, value, b"memo".as_ref().into())
 }
 
-fn t_withdraw_unbonded(who: AccountId, unbonded_index: UnbondedIndex) -> DispatchResult {
-    XStaking::unlock_unbonded_withdrawal(Origin::signed(who), unbonded_index)
+fn t_withdraw_unbonded(
+    who: AccountId,
+    target: AccountId,
+    unbonded_index: UnbondedIndex,
+) -> DispatchResult {
+    XStaking::unlock_unbonded_withdrawal(Origin::signed(who), target, unbonded_index)
 }
 
 fn t_system_block_number_inc(number: BlockNumber) {
@@ -137,6 +141,7 @@ fn bond_should_work() {
                 nomination: 10,
                 last_vote_weight: 0,
                 last_vote_weight_update: 2,
+                unbonded_chunks: vec![]
             }
         );
     });
@@ -174,13 +179,6 @@ fn unbond_should_work() {
                 nomination: 5,
                 last_vote_weight: 10,
                 last_vote_weight_update: 3,
-            }
-        );
-
-        assert_eq!(
-            <Nominators<Test>>::get(1),
-            NominatorProfile {
-                last_rebond: None,
                 unbonded_chunks: vec![Unbonded {
                     value: 5,
                     locked_until: 50 * 12 * 24 * 3 + 3
@@ -232,6 +230,7 @@ fn rebond_should_work() {
                 nomination: 5,
                 last_vote_weight: 10,
                 last_vote_weight_update: 3,
+                unbonded_chunks: vec![]
             }
         );
 
@@ -241,6 +240,7 @@ fn rebond_should_work() {
                 nomination: 5,
                 last_vote_weight: 0,
                 last_vote_weight_update: 3,
+                unbonded_chunks: vec![]
             }
         );
 
@@ -248,7 +248,6 @@ fn rebond_should_work() {
             <Nominators<Test>>::get(1),
             NominatorProfile {
                 last_rebond: Some(3),
-                unbonded_chunks: vec![]
             }
         );
 
@@ -283,26 +282,23 @@ fn withdraw_unbond_should_work() {
         assert_eq!(Balances::usable_balance(&1), before_unbond);
 
         assert_eq!(
-            <Nominators<Test>>::get(1),
-            NominatorProfile {
-                last_rebond: None,
-                unbonded_chunks: vec![Unbonded {
-                    value: 5,
-                    locked_until: DEFAULT_BONDING_DURATION + 3
-                }]
-            }
+            <Nominations<Test>>::get(1, 2).unbonded_chunks,
+            vec![Unbonded {
+                value: 5,
+                locked_until: DEFAULT_BONDING_DURATION + 3
+            }]
         );
 
         t_system_block_number_inc(DEFAULT_BONDING_DURATION);
         assert_err!(
-            t_withdraw_unbonded(1, 0),
+            t_withdraw_unbonded(1, 2, 0),
             Error::<Test>::UnbondedWithdrawalNotYetDue
         );
 
         t_system_block_number_inc(1);
 
         let before_withdraw_unbonded = Balances::usable_balance(&1);
-        assert_ok!(t_withdraw_unbonded(1, 0),);
+        assert_ok!(t_withdraw_unbonded(1, 2, 0),);
         assert_eq!(Balances::usable_balance(&1), before_withdraw_unbonded + 5);
         assert_bonded_withdrawal_locks(1, 0);
     });
@@ -503,6 +499,7 @@ fn staker_reward_should_work() {
                 nomination: 10,
                 last_vote_weight: 0,
                 last_vote_weight_update: 1,
+                unbonded_chunks: vec![]
             }
         );
         assert_eq!(

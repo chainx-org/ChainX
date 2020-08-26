@@ -133,7 +133,7 @@ decl_storage! {
 
         /// The map from nominator key to the set of keys of all validators to nominate.
         pub Nominators get(fn nominators):
-            map hasher(twox_64_concat) T::AccountId => NominatorProfile<BalanceOf<T>, T::BlockNumber>;
+            map hasher(twox_64_concat) T::AccountId => NominatorProfile<T::BlockNumber>;
 
         /// The map from validator key to the vote weight ledger of that validator.
         pub ValidatorLedgers get(fn validator_ledgers):
@@ -350,7 +350,7 @@ decl_module! {
             ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
             ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondBalance);
             ensure!(
-                Self::unbonded_chunks_of(&sender).len() < Self::maximum_unbonded_chunk_size() as usize,
+                Self::unbonded_chunks_of(&sender, &target).len() < Self::maximum_unbonded_chunk_size() as usize,
                 Error::<T>::NoMoreUnbondChunks
             );
 
@@ -359,10 +359,16 @@ decl_module! {
 
         /// Unlock the frozen unbonded balances that are due.
         #[weight = 10]
-        fn unlock_unbonded_withdrawal(origin, #[compact] unbonded_index: UnbondedIndex) {
+        fn unlock_unbonded_withdrawal(
+            origin,
+            target: <T::Lookup as StaticLookup>::Source,
+            #[compact] unbonded_index: UnbondedIndex
+        ) {
             let sender = ensure_signed(origin)?;
+            let target = T::Lookup::lookup(target)?;
 
-            let mut unbonded_chunks = Self::unbonded_chunks_of(&sender);
+            // TODO: use try_mutate
+            let mut unbonded_chunks = Self::unbonded_chunks_of(&sender, &target);
             ensure!(!unbonded_chunks.is_empty(), Error::<T>::EmptyUnbondedChunks);
             ensure!(unbonded_index < unbonded_chunks.len() as u32, Error::<T>::InvalidUnbondedIndex);
 
@@ -375,7 +381,7 @@ decl_module! {
             Self::apply_unlock_unbonded_withdrawal(&sender, value);
 
             unbonded_chunks.swap_remove(unbonded_index as usize);
-            Nominators::<T>::mutate(&sender, |nominator_profile| {
+            Nominations::<T>::mutate(&sender, &target, |nominator_profile| {
                 nominator_profile.unbonded_chunks = unbonded_chunks;
             });
 
@@ -560,8 +566,11 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn unbonded_chunks_of(nominator: &T::AccountId) -> Vec<Unbonded<BalanceOf<T>, T::BlockNumber>> {
-        Nominators::<T>::get(nominator).unbonded_chunks
+    fn unbonded_chunks_of(
+        nominator: &T::AccountId,
+        target: &T::AccountId,
+    ) -> Vec<Unbonded<BalanceOf<T>, T::BlockNumber>> {
+        Nominations::<T>::get(nominator, target).unbonded_chunks
     }
 
     #[inline]
@@ -816,7 +825,7 @@ impl<T: Trait> Module<T> {
 
         let locked_until = <frame_system::Module<T>>::block_number() + bonding_duration;
 
-        let mut unbonded_chunks = Self::unbonded_chunks_of(who);
+        let mut unbonded_chunks = Self::unbonded_chunks_of(who, target);
 
         if let Some(idx) = unbonded_chunks
             .iter()
@@ -830,7 +839,7 @@ impl<T: Trait> Module<T> {
             });
         }
 
-        Nominators::<T>::mutate(who, |nominator_profile| {
+        Nominations::<T>::mutate(who, target, |nominator_profile| {
             nominator_profile.unbonded_chunks = unbonded_chunks;
         });
 
