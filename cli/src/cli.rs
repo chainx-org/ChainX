@@ -1,4 +1,4 @@
-use sc_cli::CliConfiguration;
+use sc_cli::{CliConfiguration, KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -17,9 +17,21 @@ pub enum Subcommand {
     #[structopt(flatten)]
     Base(sc_cli::Subcommand),
 
+    /// Key management cli utilities
+    Key(KeySubcommand),
+
     /// The custom benchmark subcommmand benchmarking runtime pallets.
     #[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+
+    /// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
+    Verify(VerifyCmd),
+
+    /// Generate a seed that provides a vanity address.
+    Vanity(VanityCmd),
+
+    /// Sign a message, with a given (secret) key.
+    Sign(SignCmd),
 }
 
 #[allow(missing_docs)]

@@ -8,6 +8,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+/// Weights for pallets used in the runtime.
+mod weights;
+
 use codec::Encode;
 
 use static_assertions::const_assert;
@@ -45,6 +48,7 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
@@ -109,6 +113,7 @@ impl_opaque_keys! {
         pub aura: Aura,
         pub grandpa: Grandpa,
         pub im_online: ImOnline,
+        pub authority_discovery: AuthorityDiscovery,
     }
 }
 
@@ -291,6 +296,8 @@ impl pallet_indices::Trait for Runtime {
     type Event = Event;
     type WeightInfo = ();
 }
+
+impl pallet_authority_discovery::Trait for Runtime {}
 
 parameter_types! {
     pub const UncleGenerations: BlockNumber = 5;
@@ -934,6 +941,7 @@ construct_runtime!(
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+        AuthorityDiscovery: pallet_authority_discovery::{Module, Call, Config},
 
         // Governance stuff.
         Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
@@ -1123,6 +1131,12 @@ impl_runtime_apis! {
             Historical::prove((fg_primitives::KEY_TYPE, authority_id))
                 .map(|p| p.encode())
                 .map(fg_primitives::OpaqueKeyOwnershipProof::new)
+        }
+    }
+
+    impl sp_authority_discovery::AuthorityDiscoveryApi<Block> for Runtime {
+        fn authorities() -> Vec<AuthorityDiscoveryId> {
+            AuthorityDiscovery::authorities()
         }
     }
 
