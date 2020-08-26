@@ -806,6 +806,7 @@ impl orml_currencies::Trait for Runtime {
     type MultiCurrency = XAssets;
     type NativeCurrency = BasicCurrencyAdapter<Balances, Balance, Balance, Amount, BlockNumber>;
     type GetNativeCurrencyId = ChainXAssetId;
+    type WeightInfo = ();
 }
 
 ///////////////////////////////////////////
