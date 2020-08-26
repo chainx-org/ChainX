@@ -131,10 +131,6 @@ decl_storage! {
         pub Validators get(fn validators):
             map hasher(twox_64_concat) T::AccountId => ValidatorProfile<T::BlockNumber>;
 
-        /// The map from nominator key to the set of keys of all validators to nominate.
-        pub Nominators get(fn nominators):
-            map hasher(twox_64_concat) T::AccountId => NominatorProfile<T::BlockNumber>;
-
         /// The map from validator key to the vote weight ledger of that validator.
         pub ValidatorLedgers get(fn validator_ledgers):
             map hasher(twox_64_concat) T::AccountId => ValidatorLedger<BalanceOf<T>, T::BlockNumber>;
@@ -143,6 +139,10 @@ decl_storage! {
         pub Nominations get(fn nominations):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
             => NominatorLedger<BalanceOf<T>, T::BlockNumber>;
+
+        /// The map from nominator to the block number of last `rebond` operation.
+        pub LastRebondOf get(fn last_rebond_of):
+            map hasher(twox_64_concat) T::AccountId => Option<T::BlockNumber>;
 
         /// All kinds of locked balances of an account in Staking.
         pub Locks get(fn locks):
@@ -574,11 +574,6 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn last_rebond_of(nominator: &T::AccountId) -> Option<T::BlockNumber> {
-        Nominators::<T>::get(nominator).last_rebond
-    }
-
-    #[inline]
     fn free_balance(who: &T::AccountId) -> BalanceOf<T> {
         T::Currency::free_balance(who)
     }
@@ -801,8 +796,8 @@ impl<T: Trait> Module<T> {
     ) {
         Self::update_vote_weight(who, from, Delta::Sub(value));
         Self::update_vote_weight(who, to, Delta::Add(value));
-        Nominators::<T>::mutate(who, |nominator_profile| {
-            nominator_profile.last_rebond = Some(current_block);
+        LastRebondOf::<T>::mutate(who, |last_rebond| {
+            *last_rebond = Some(current_block);
         });
     }
 

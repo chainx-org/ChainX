@@ -171,9 +171,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn nominator_info_of(who: T::AccountId) -> NominatorInfo<T::BlockNumber> {
-        let nominator_profile = Nominators::<T>::get(&who);
-        NominatorInfo {
-            last_rebond: nominator_profile.last_rebond,
-        }
+        let last_rebond = LastRebondOf::<T>::get(&who);
+        NominatorInfo { last_rebond }
     }
 }

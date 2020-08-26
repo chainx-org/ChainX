@@ -244,12 +244,7 @@ fn rebond_should_work() {
             }
         );
 
-        assert_eq!(
-            <Nominators<Test>>::get(1),
-            NominatorProfile {
-                last_rebond: Some(3),
-            }
-        );
+        assert_eq!(<LastRebondOf<Test>>::get(1), Some(3));
 
         // Block 4
         t_system_block_number_inc(1);

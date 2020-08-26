@@ -28,6 +28,6 @@ sp_api::decl_runtime_apis! {
         fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>>;
 
         /// Get individual nominator information given the nominator AccountId.
-        fn nominator_info_of(who: AccountId) -> NominatorInfo<RpcBalance<Balance>, BlockNumber>;
+        fn nominator_info_of(who: AccountId) -> NominatorInfo<BlockNumber>;
     }
 }

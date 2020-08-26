@@ -55,7 +55,7 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<NominatorInfo<RpcBalance, BlockNumber>>;
+    ) -> Result<NominatorInfo<BlockNumber>>;
 }
 
 /// A struct that implements the [`XStakingApi`].
@@ -134,7 +134,7 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<NominatorInfo<RpcBalance<Balance>, BlockNumber>> {
+    ) -> Result<NominatorInfo<BlockNumber>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
