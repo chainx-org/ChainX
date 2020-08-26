@@ -4,7 +4,6 @@ use sp_runtime::AccountId32;
 use sp_std::prelude::Vec;
 
 use chainx_primitives::Name;
-use xp_io::ss_58_codec::from_ss58check;
 use xpallet_support::{debug, error, str};
 
 use crate::traits::Extractable;
@@ -19,6 +18,54 @@ fn split(data: &[u8]) -> Vec<Vec<u8>> {
     data.split(|x| *x == b'@').map(|d| d.to_vec()).collect()
 }
 
+/// use custom runtime-interface to provide ss58check from outside of runtime. but this feature
+/// could not be used in parachain
+#[cfg(feature = "ss58check")]
+pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
+    use xp_io::ss_58_codec::from_ss58check;
+    from_ss58check(data)
+        .map_err(|e| {
+            error!(
+                "[parse_address]|parse account error|src:{:?}|reason:{:?}",
+                str!(data),
+                e
+            );
+            e
+        })
+        .ok()
+}
+/// due to current parachain do not allow custom runtime-interface, thus we just could
+/// impl address parse in runtime, and ignore address version check.
+/// same to `substrate/core/primitives/src/crypto.rs:trait Ss58Codec`
+#[cfg(not(feature = "ss58check"))]
+pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
+    let mut res: [u8; 32] = Default::default();
+    let len = res.len();
+    // parse data from base58 to raw
+    let d = xpallet_support::base58::from(data)
+        .map_err(|e| {
+            error!(
+                "[parse_address]|parse base58 err|e:{:?}|data:{:?}",
+                e,
+                str!(data)
+            );
+            e
+        })
+        .ok()?;
+    if d.len() != len + 3 {
+        // Invalid length.
+        error!(
+            "[parse_address]|bad length|data len:{:}|len:{:}",
+            d.len(),
+            len
+        );
+        return None;
+    }
+    // ignore address version check, for can't calc blake512 in runtime
+    res.copy_from_slice(&d[1..len + 1]);
+    Some(res.into())
+}
+
 pub fn parse_account_info(data: &[u8]) -> Option<(AccountId32, Option<Name>)> {
     let v = split(data);
     if v.is_empty() {
@@ -27,16 +74,7 @@ pub fn parse_account_info(data: &[u8]) -> Option<(AccountId32, Option<Name>)> {
     }
 
     let op = &v[0];
-    let res = from_ss58check(&op[..])
-        .map_err(|e| {
-            error!(
-                "[parse_account_info]|parse account error|src:{:?}|reason:{:?}",
-                str!(&op[..]),
-                e
-            );
-            e
-        })
-        .ok()?;
+    let res = parse_address(&op[..])?;
 
     // channel is a validator
     let channel_name = if v.len() > 1 {
@@ -53,7 +91,8 @@ pub fn parse_account_info(data: &[u8]) -> Option<(AccountId32, Option<Name>)> {
 }
 
 impl Extractable<AccountId32> for Extractor {
-    /// same to `substrate/core/primitives/src/crypto.rs:trait Ss58Codec`
+    /// parse account info from a bytes data like format "AccountId@Channel",
+    /// notice we use `@` as separator
     fn account_info(data: &[u8]) -> Option<(AccountId32, Option<Name>)> {
         parse_account_info(data)
     }
@@ -63,24 +102,22 @@ impl Extractable<AccountId32> for Extractor {
 fn test_extractor() {
     use sp_core::{
         crypto::{set_default_ss58_version, Ss58AddressFormat, UncheckedInto},
-        ed25519::Public,
         H256,
     };
     let addr: Vec<u8> =
         hex::decode("f778a69d4166401048acb0f7b2625e9680609f8859c78e3d28e2549f84f0269a")
             .expect("must be valid hex");
     let addr = H256::from_slice(&addr);
-    let mainnet = Ss58AddressFormat::Custom(44); // todo change this when update substrate
+    let mainnet = Ss58AddressFormat::ChainXAccount;
     let testnet = Ss58AddressFormat::SubstrateAccount;
     {
         // test for ed25519 and channel
         set_default_ss58_version(mainnet);
-        let result = Extractor::<Public>::account_info(
-            "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
-        );
+        let result =
+            Extractor::account_info("5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes());
         assert_eq!(result, Some((addr.unchecked_into(), None)));
 
-        let result = Extractor::<Public>::account_info(
+        let result = Extractor::account_info(
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4@channel1".as_bytes(),
         );
         assert_eq!(
@@ -90,11 +127,9 @@ fn test_extractor() {
     }
     {
         // test for sr25519
-        use sp_core::sr25519::Public;
         set_default_ss58_version(mainnet);
-        let result = Extractor::<Public>::account_info(
-            "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
-        );
+        let result =
+            Extractor::account_info("5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes());
         assert_eq!(result, Some((addr.unchecked_into(), None)));
     }
     {
@@ -105,22 +140,37 @@ fn test_extractor() {
             hex::decode("00308187439ac204df9e299e1e54a00000000bf348e03dad679737c91871dc53")
                 .expect("must be valid hex");
         let addr = H256::from_slice(&addr);
-        let result = Extractor::<Public>::account_info(
-            "5C4xGQZwoNEM5mdk2U3vJbFZPr6ZKFSiqWnc9JRDcJ3w2x5D".as_bytes(),
-        );
-        assert_eq!(result, None);
+        let result =
+            Extractor::account_info("5C4xGQZwoNEM5mdk2U3vJbFZPr6ZKFSiqWnc9JRDcJ3w2x5D".as_bytes());
+
+        #[cfg(feature = "ss58check")]
+        {
+            // in ss58check feature, would check ss58version
+            assert_eq!(result, None);
+        }
+        #[cfg(not(feature = "ss58check"))]
+        {
+            // not in ss58check feature, would not check ss58 version
+            assert_eq!(result, Some((addr.unchecked_into(), None)));
+        }
+
         // new checksum
-        let result = Extractor::<Public>::account_info(
-            "5C4xGQZwoNEM5mdk2U3vJbFZPr6ZKFSiqWnc9JRDcJ3w334p".as_bytes(),
-        );
+        let result =
+            Extractor::account_info("5C4xGQZwoNEM5mdk2U3vJbFZPr6ZKFSiqWnc9JRDcJ3w334p".as_bytes());
         assert_eq!(result, Some((addr.unchecked_into(), None)));
     }
     {
         // test for version
         set_default_ss58_version(testnet);
-        let result = Extractor::<Public>::account_info(
-            "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
-        );
-        assert_eq!(result, None);
+        let result =
+            Extractor::account_info("5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes());
+        #[cfg(feature = "ss58check")]
+        {
+            assert_eq!(result, None);
+        }
+        #[cfg(not(feature = "ss58check"))]
+        {
+            assert_eq!(result, Some((addr.unchecked_into(), None)));
+        }
     }
 }

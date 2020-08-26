@@ -82,12 +82,13 @@ pub enum AccountInfo<AccountId> {
     Address(Address),
 }
 
+#[derive(PartialEq, Eq, Clone, RuntimeDebug)]
 pub struct DepositInfo<AccountId> {
     pub deposit_value: u64,
-    // pub account_info: AccountInfo<AccountId>,
     pub op_return: Option<(AccountId, Option<Name>)>,
     pub input_addr: Option<Address>,
 }
+#[derive(PartialEq, Eq, Clone, RuntimeDebug)]
 pub enum MetaTxType<AccountId> {
     Withdrawal,
     Deposit(DepositInfo<AccountId>),
@@ -120,7 +121,7 @@ pub struct BtcTxState {
     pub tx_type: BtcTxType,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, Default)]
+#[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
 pub struct BtcDepositCache {
     pub txid: H256,
     pub balance: u64,

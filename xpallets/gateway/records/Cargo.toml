@@ -16,6 +16,9 @@ frame-support = { version = "2.0.0-rc5", default-features = false }
 frame-system = { version = "2.0.0-rc5", default-features = false }
 #timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
 
+# orml
+orml-utilities = { version = "0.1.3-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "d3630e35ce737aef3f9c7857e9b4bd540f37530c", default-features = false }
+
 # ChainX
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
@@ -27,6 +30,10 @@ xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
 # Substrate
+sp-io = { version = "2.0.0-rc5" }
+sp-core = { version = "2.0.0-rc5" }
+
+pallet-balances = { version = "2.0.0-rc5" }
 
 [features]
 default = ["std"]
@@ -39,6 +46,8 @@ std = [
     "sp-runtime/std",
     "frame-support/std",
     "frame-system/std",
+
+    "orml-utilities/std",
 
     # ChainX
     "chainx-primitives/std",

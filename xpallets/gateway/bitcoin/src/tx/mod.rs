@@ -169,10 +169,8 @@ where
     let (opreturn, deposit_value) =
         parse_deposit_outputs_impl(tx, hot_addr, network, handle_opreturn);
     if deposit_value >= min_deposit {
-        if opreturn.is_none() && input_addr.is_none() {
-            warn!("[detect_deposit_type]|receive a deposit tx but do not have valid opreturn & not have input addr|tx:{:?}", tx.hash());
-            return MetaTxType::Irrelevance;
-        }
+        // if opreturn.is_none() && input_addr.is_none() == true
+        // we still think it's a deposit tx, but would not process it.
         let info = DepositInfo {
             deposit_value,
             op_return: opreturn,
@@ -277,17 +275,26 @@ where
     (account_info, deposit_balance)
 }
 
-fn handle_tx<T: Trait>(tx: Transaction, meta_type: MetaTxType<T::AccountId>) -> BtcTxState {
+pub(crate) fn handle_tx<T: Trait>(
+    tx: Transaction,
+    meta_type: MetaTxType<T::AccountId>,
+) -> BtcTxState {
     let tx_type = meta_type.ref_into();
     let result = match meta_type {
         MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
         MetaTxType::<_>::Withdrawal => withdraw::<T>(tx),
+        MetaTxType::<_>::Irrelevance => BtcTxResult::Failed, // mark Irrelevance be Failed, for it may be replayed in future
         _ => BtcTxResult::Success,
     };
     BtcTxState { result, tx_type }
 }
 
 fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
+    if deposit_info.op_return.is_none() && deposit_info.input_addr.is_none() {
+        warn!("[deposit]|process a deposit tx but do not have valid opreturn & not have input addr|tx:{:?}", hash);
+        return BtcTxResult::Failed;
+    }
+
     let account_info = match deposit_info.op_return {
         Some((accountid, channel_name)) => {
             if let Some(addr) = deposit_info.input_addr {
@@ -311,6 +318,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                     None => AccountInfo::Address(addr.clone()),
                 }
             } else {
+                // should not meet this branch, due it's handled before, it's unreachable
                 error!("[deposit]|no input addr for this deposit tx, neither has opreturn to get accountid!|tx_hash:{:?}", hash);
                 return BtcTxResult::Failed;
             }
@@ -443,7 +451,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
         match ensure_identical::<T>(&tx, &proposal.tx) {
             Ok(()) => {
                 for number in proposal.withdrawal_id_list.iter() {
-                    match xpallet_gateway_records::Module::<T>::finish_withdrawal(*number) {
+                    match xpallet_gateway_records::Module::<T>::finish_withdrawal(None, *number) {
                         Ok(_) => {
                             info!("[withdraw]|ID of withdrawal completion: {:}", *number);
                         }
@@ -461,10 +469,6 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
                 WithdrawalProposal::<T>::put(proposal);
 
                 Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(tx.hash(), tx_hash));
-                // let _ = xfee_manager::Module::<T>::modify_switcher(
-                //     xfee_manager::CallSwitcher::XBtc,
-                //     true,
-                // );
                 BtcTxResult::Failed
             }
         }
@@ -474,10 +478,6 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
         // no proposal, but find a withdraw tx, it's a fatal error in withdrawal
         Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(tx.hash(), Default::default()));
 
-        // TODO use trait
-        // let _ =
-        //     xfee_manager::Module::<T>::modify_switcher(xfee_manager::CallSwitcher::XBtc, true);
-        // do not return Err, mark this tx has been handled
         BtcTxResult::Failed
     }
 }

@@ -1,9 +1,8 @@
 // Copyright 2018-2019 Chainpool.
 
 // Substrate
-use frame_support::dispatch::DispatchResult;
-use sp_runtime::traits::SaturatedConversion;
-use sp_std::{cmp, result};
+use frame_support::{dispatch::DispatchResult, traits::UnixTime};
+use sp_std::{cmp, convert::TryFrom, result};
 
 // ChainX
 use xpallet_support::{debug, ensure_with_errorlog, error, info, warn};
@@ -27,21 +26,10 @@ pub struct HeaderVerifier<'a> {
 
 impl<'a> HeaderVerifier<'a> {
     pub fn new<T: Trait>(header_info: &'a BtcHeaderInfo) -> result::Result<Self, ChainErr> {
-        let now: T::Moment = pallet_timestamp::Module::<T>::now();
-        // in substrate, timestamp would use u64 with milliseconds
-        let now: u64 = now.saturated_into::<u64>();
-        // transfer milliseconds to seconds
-        let current_time: Option<u32> = now.checked_div(1000_u64).and_then(|now| {
-            // bitcoin use u32 to log time, we think the timestamp would not more then u32
-            let now = now.saturated_into::<u32>();
-            if now == u32::max_value() {
-                // convert from u64 to u32 failed, ignore timestamp check
-                // timestamp check are not important
-                None
-            } else {
-                Some(now)
-            }
-        });
+        let current = T::UnixTime::now();
+        // if convert from u64 to u32 failed, ignore timestamp check
+        // timestamp check are not important
+        let current_time = u32::try_from(current.as_secs()).ok();
 
         Ok(HeaderVerifier {
             work: HeaderWork::new(header_info),

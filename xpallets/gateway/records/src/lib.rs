@@ -1,8 +1,11 @@
 // Copyright 2018-2019 Chainpool.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::type_complexity)]
 
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 mod tests;
 pub mod types;
 
@@ -14,6 +17,8 @@ use frame_support::{
 use frame_system::ensure_root;
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
+
+use orml_utilities::with_transaction_result;
 
 // ChainX
 use chainx_primitives::{AddrStr, AssetId};
@@ -125,8 +130,8 @@ decl_storage! {
 
 impl<T: Trait> Module<T> {
     /// deposit/withdrawal pre-process
-    fn check_asset(_: &T::AccountId, _: &AssetId) -> DispatchResult {
-        // other check
+    fn check_asset(_: &T::AccountId, id: &AssetId) -> DispatchResult {
+        xpallet_assets::Module::<T>::ensure_not_native_asset(id)?;
         Ok(())
     }
 
@@ -226,47 +231,76 @@ impl<T: Trait> Module<T> {
     }
 
     /// change Applying to Processing
-    pub fn process_withdrawal(chain: Chain, serial_number: &[u32]) -> DispatchResult {
-        let mut v = Vec::new();
-
-        for id in serial_number.iter() {
-            if let Some(state) = Self::state_of(id) {
+    pub fn process_withdrawal(chain: Chain, serial_number: u32) -> DispatchResult {
+        match Self::state_of(serial_number) {
+            Some(state) => {
                 if state != WithdrawalState::Applying {
                     error!(
                         "[process_withdrawal]|WithdrawalRecord state not `Applying`|id:{:}|state:{:?}",
-                        id, state
+                        serial_number, state
                     );
                     return Err(Error::<T>::NotApplyingState.into());
                 }
-                Self::check_chain(id, chain)?;
+                Self::check_chain(&serial_number, chain)?;
 
-                v.push(*id);
-            } else {
+                // set storage
+                WithdrawalStateOf::insert(serial_number, WithdrawalState::Processing);
+                Ok(())
+            }
+            None => {
                 error!(
                     "[process_withdrawal]|id not in WithdrawalRecord records|id:{:}",
-                    id
+                    serial_number
                 );
-                return Err(Error::<T>::NotExisted.into());
+                Err(Error::<T>::NotExisted.into())
             }
         }
+    }
 
-        // mark all records is `Processing`
-        for id in v.iter_mut() {
-            WithdrawalStateOf::insert(id, WithdrawalState::Processing);
-        }
-        Ok(())
+    pub fn process_withdrawals(chain: Chain, serial_numbers: &[u32]) -> DispatchResult {
+        with_transaction_result(|| {
+            for id in serial_numbers.iter() {
+                Self::process_withdrawal(chain, *id)?;
+            }
+            Ok(())
+        })
     }
 
     /// withdrawal finish, let the locking asset destroy
     /// Change Processing to final state
-    pub fn finish_withdrawal(serial_number: u32) -> DispatchResult {
+    /// notice parameter `chain`, when the withdrawal_id(serial_number) is passed by runtime
+    /// self logic, just pass `None`, when the withdrawal_id is passed by the parameter from call(which
+    /// means the id is from outside), should pass `Some(chain)` to verify whether the withdrawal is
+    /// related to this chain.
+    ///
+    /// e.g. bitcoin release reserved by receive a valid withdrawal transaction, the withdraw id is
+    /// valid when trustees submit withdrawal info, so that just release it directly.
+    /// ethereum released reserved by trustees submit release request directly, so that we should check
+    /// whether the withdrawal belongs to Ethereum Chain, in case release other chain withdraw.
+    pub fn finish_withdrawal(expected_chain: Option<Chain>, serial_number: u32) -> DispatchResult {
         if let Some(state) = Self::state_of(serial_number) {
             if state != WithdrawalState::Processing {
                 error!("[finish_withdrawal]only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", serial_number, state);
-                Err(Error::<T>::NotProcessingState)?;
+                return Err(Error::<T>::NotProcessingState.into());
+            }
+            // notice if pass Some(), must check the chain
+            if let Some(chain) = expected_chain {
+                Self::check_chain(&serial_number, chain)?;
             }
         }
         Self::finish_withdrawal_impl(serial_number, WithdrawalState::NormalFinish)
+    }
+
+    pub fn finish_withdrawals(
+        expected_chain: Option<Chain>,
+        serial_numbers: &[u32],
+    ) -> DispatchResult {
+        with_transaction_result(|| {
+            for id in serial_numbers.iter() {
+                Self::finish_withdrawal(expected_chain, *id)?;
+            }
+            Ok(())
+        })
     }
 
     pub fn revoke_withdrawal(who: &T::AccountId, serial_number: u32) -> DispatchResult {
@@ -284,7 +318,7 @@ impl<T: Trait> Module<T> {
 
             if state != WithdrawalState::Applying {
                 error!("[finish_withdrawal]|only allow `Applying` for this WithdrawalRecord|id:{:}|state:{:?}", serial_number, state);
-                Err(Error::<T>::NotApplyingState)?;
+                return Err(Error::<T>::NotApplyingState.into());
             }
         }
         Self::finish_withdrawal_impl(serial_number, WithdrawalState::NormalCancel)
@@ -301,7 +335,7 @@ impl<T: Trait> Module<T> {
             WithdrawalStateOf::insert(serial_number, WithdrawalState::Applying);
             return Ok(());
         }
-        return Err(Error::<T>::NotExisted.into());
+        Err(Error::<T>::NotExisted.into())
     }
 
     /// revoke to cancel
