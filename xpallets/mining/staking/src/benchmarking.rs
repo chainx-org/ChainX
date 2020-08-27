@@ -142,6 +142,34 @@ benchmarks! {
     verify {
         assert!(Module::<T>::is_active(&validator));
     }
+
+    set_validator_count {
+        let c in 0 .. 1000;
+    }: _(RawOrigin::Root, c)
+    verify {
+        assert_eq!(ValidatorCount::get(), c);
+    }
+
+    set_minimal_validator_count {
+        let c in 0 .. 1000;
+    }: _(RawOrigin::Root, c)
+    verify {
+        assert_eq!(MinimumValidatorCount::get(), c);
+    }
+
+    set_bonding_duration {
+        let c in 0 .. 100;
+    }: _(RawOrigin::Root, c.into())
+    verify {
+        assert_eq!(BondingDuration::<T>::get(), c.into());
+    }
+
+    set_validator_bonding_duration {
+        let c in 0 .. 1000;
+    }: _(RawOrigin::Root, c.into())
+    verify {
+        assert_eq!(ValidatorBondingDuration::<T>::get(), c.into());
+    }
 }
 
 #[cfg(test)]

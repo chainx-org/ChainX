@@ -8,9 +8,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-/// Weights for pallets used in the runtime.
-mod weights;
-
 use codec::Encode;
 
 use static_assertions::const_assert;
@@ -901,7 +898,7 @@ impl xpallet_mining_staking::Trait for Runtime {
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
-    type WeightInfo = weights::xpallet_mining_staking::WeightForXpalletMiningStaking;
+    type WeightInfo = weights::xpallet_mining_staking::WeightInfo;
 }
 
 pub struct ReferralGetter;
@@ -1317,6 +1314,7 @@ impl_runtime_apis! {
             highest_range_values: Vec<u32>,
             steps: Vec<u32>,
             repeat: u32,
+            extra: bool,
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
             use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark};
 
@@ -1346,6 +1344,7 @@ impl_runtime_apis! {
                 &steps,
                 repeat,
                 &Vec::new(),
+                extra,
             );
             // Substrate
             add_benchmark!(params, batches, pallet_balances, Balances);

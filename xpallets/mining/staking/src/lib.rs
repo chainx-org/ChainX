@@ -59,6 +59,10 @@ pub trait WeightInfo {
     fn claim() -> Weight;
     fn chill() -> Weight;
     fn validate() -> Weight;
+    fn set_validator_count() -> Weight;
+    fn set_minimal_validator_count() -> Weight;
+    fn set_bonding_duration() -> Weight;
+    fn set_validator_bonding_duration() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -84,6 +88,18 @@ impl WeightInfo for () {
         1_000_000_000
     }
     fn validate() -> Weight {
+        1_000_000_000
+    }
+    fn set_validator_count() -> Weight {
+        1_000_000_000
+    }
+    fn set_minimal_validator_count() -> Weight {
+        1_000_000_000
+    }
+    fn set_bonding_duration() -> Weight {
+        1_000_000_000
+    }
+    fn set_validator_bonding_duration() -> Weight {
         1_000_000_000
     }
 }
@@ -482,25 +498,25 @@ decl_module! {
             Self::apply_register(&sender, referral_id);
         }
 
-        #[weight = 10]
+        #[weight = T::WeightInfo::set_validator_count()]
         fn set_validator_count(origin, #[compact] new: u32) {
             ensure_root(origin)?;
             ValidatorCount::put(new);
         }
 
-        #[weight = 10]
+        #[weight = T::WeightInfo::set_minimal_validator_count()]
         fn set_minimal_validator_count(origin, #[compact] new: u32) {
             ensure_root(origin)?;
             MinimumValidatorCount::put(new);
         }
 
-        #[weight = 10]
+        #[weight = T::WeightInfo::set_bonding_duration()]
         fn set_bonding_duration(origin, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             BondingDuration::<T>::put(new);
         }
 
-        #[weight = 10]
+        #[weight = T::WeightInfo::set_validator_bonding_duration()]
         fn set_validator_bonding_duration(origin, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             ValidatorBondingDuration::<T>::put(new);
