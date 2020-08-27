@@ -128,17 +128,17 @@
         "frequencyLimit": "BlockNumber"
     },
     "RpcNominatorLedger": {
-        "nomination": "Balance",
+        "nomination": "RpcBalance",
         "lastVoteWeight": "RpcWeightType",
-        "lastVoteWeightUpdate": "BlockNumber"
+        "lastVoteWeightUpdate": "BlockNumber",
+        "unbondedChunks": "Vec<RpcUnbonded>"
     },
     "RpcUnbonded": {
         "value": "RpcBalance",
         "lockedUntil": "BlockNumber"
     },
     "NominatorInfo": {
-        "lastRebond": "Option<BlockNumber>",
-        "unbondedChunks": "RpcUnbonded"
+        "lastRebond": "Option<BlockNumber>"
     },
     "BondRequirement": {
         "selfBonded": "Balance",
@@ -152,17 +152,14 @@
     "NominatorLedger": {
         "nomination": "Balance",
         "lastVoteWeight": "WeightType",
-        "lastVoteWeightUpdate": "BlockNumber"
+        "lastVoteWeightUpdate": "BlockNumber",
+        "unbondedChunks": "Vec<Unbonded>"
     },
     "ValidatorProfile": {
         "registeredAt": "BlockNumber",
         "isChilled": "bool",
         "lastChilled": "Option<BlockNumber>",
         "referralId": "ReferralId"
-    },
-    "NominatorProfile": {
-        "lastRebond": "Option<BlockNumber>",
-        "unbondedChunks": "Vec<Unbonded>"
     },
     "GlobalDistribution": {
         "treasury": "u32",
@@ -272,8 +269,8 @@
         "restrictions": "AssetRestrictions"
     },
     "Unbonded": {
-        "lockedUntil": "BlockNumber",
-        "value": "Balance"
+        "value": "Balance",
+        "lockedUntil": "BlockNumber"
     },
     "WithdrawalState": {
         "_enum": [
@@ -397,6 +394,20 @@
         "selfBonded": "RpcBalance",
         "rewardPotAccount": "AccountId",
         "rewardPotBalance": "RpcBalance"
+    },
+    "FullPairInfo": {
+        "baseCurrency": "AssetId",
+        "highestBid": "RpcPrice",
+        "id": "TradingPairId",
+        "latestPrice": "RpcPrice",
+        "latestPriceUpdatedAt": "BlockNumber",
+        "lowestAsk": "RpcPrice",
+        "maxValidBid": "RpcPrice",
+        "minValidAsk": "RpcPrice",
+        "pipDecimals": "u32",
+        "quoteCurrency": "AssetId",
+        "tickDecimals": "u32",
+        "tradable": "bool"
     },
     "String": "Text",
     "RpcPrice": "String",
