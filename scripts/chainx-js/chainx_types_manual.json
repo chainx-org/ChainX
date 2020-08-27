@@ -204,6 +204,20 @@
         "last_rebond": "Option<BlockNumber>",
         "unbonded_chunks": "RpcUnbonded"
     },
+    "FullPairInfo": {
+        "base_currency": "AssetId",
+        "highest_bid": "RpcPrice",
+        "id": "TradingPairId",
+        "latest_price": "RpcPrice",
+        "latest_price_updated_at": "BlockNumber",
+        "lowest_ask": "RpcPrice",
+        "max_valid_bid": "RpcPrice",
+        "min_valid_ask": "RpcPrice",
+        "pip_decimals": "u32",
+        "quote_currency": "AssetId",
+        "tick_decimals": "u32",
+        "tradable": "bool"
+    },
     "String": "Text",
     "RpcPrice": "String",
     "RpcBalance": "String",
