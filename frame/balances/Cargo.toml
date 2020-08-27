@@ -25,7 +25,7 @@ xp-runtime = { path = "../../primitives/runtime", default-features = false }
 [dev-dependencies]
 sp-io = { version = "2.0.0-rc6" }
 sp-core = { version = "2.0.0-rc6" }
-pallet-transaction-payment = { path = "../transaction-payment" }
+pallet-transaction-payment = { version = "2.0.0-rc6" }
 
 [features]
 default = ["std"]

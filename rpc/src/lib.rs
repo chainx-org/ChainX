@@ -12,7 +12,7 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
 
 use chainx_primitives::Block;
-use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index, UncheckedExtrinsic};
+use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
 
 /// Light client extra dependencies.
 pub struct LightDeps<C, F, P> {
@@ -61,11 +61,7 @@ where
     C: Send + Sync + 'static,
     C::Api: BlockBuilder<Block>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
-    C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<
-        Block,
-        Balance,
-        UncheckedExtrinsic,
-    >,
+    C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: xpallet_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance>,
     C::Api:
         xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, BlockNumber>,
