@@ -6,7 +6,6 @@ use sp_runtime::RuntimeDebug;
 use sp_runtime::{Deserialize, Serialize};
 use xp_mining_common::WeightType;
 use xp_mining_staking::MiningPower;
-use xpallet_support::RpcWeightType;
 
 /// Detailed types of reserved balances in Staking.
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
@@ -63,53 +62,17 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
     pub last_total_vote_weight_update: BlockNumber,
 }
 
-/// Vote weight properties of validator.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct RpcValidatorLedger<RpcBalance, BlockNumber> {
-    /// The total amount of all the nominators' vote balances.
-    pub total: RpcBalance,
-    /// Last calculated total vote weight of current validator.
-    pub last_total_vote_weight: RpcWeightType,
-    /// Block number at which point `last_total_vote_weight` just updated.
-    pub last_total_vote_weight_update: BlockNumber,
-}
-
-impl<Balance, BlockNumber> From<ValidatorLedger<Balance, BlockNumber>>
-    for RpcValidatorLedger<RpcBalance<Balance>, BlockNumber>
-{
-    fn from(ledger: ValidatorLedger<Balance, BlockNumber>) -> Self {
-        let last_total_vote_weight: RpcWeightType = ledger.last_total_vote_weight.into();
-        let total: RpcBalance<Balance> = ledger.total.into();
-        Self {
-            total,
-            last_total_vote_weight,
-            last_total_vote_weight_update: ledger.last_total_vote_weight_update,
-        }
-    }
-}
-
 /// Vote weight properties of nominator.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct NominatorLedger<Balance, BlockNumber> {
-    /// The amount of
+    /// The amount of vote.
     pub nomination: Balance,
     /// Last calculated total vote weight of current nominator.
     pub last_vote_weight: WeightType,
     /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,
-}
-
-/// Vote weight properties of nominator.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-pub struct RpcNominatorLedger<Balance, BlockNumber> {
-    /// The amount of
-    pub nomination: Balance,
-    /// Last calculated total vote weight of current nominator.
-    pub last_vote_weight: RpcWeightType,
-    /// Block number at which point `last_vote_weight` just updated.
-    pub last_vote_weight_update: BlockNumber,
+    /// Unbonded entries.
+    pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
 }
 
 /// Profile of staking validator.
@@ -132,18 +95,6 @@ pub struct ValidatorProfile<BlockNumber> {
     pub referral_id: ReferralId,
 }
 
-/// Profile of staking nominator.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct NominatorProfile<Balance, BlockNumber> {
-    /// Block number of last `rebond` operation.
-    pub last_rebond: Option<BlockNumber>,
-    /// Total unbonded entries.
-    pub unbonded_chunks: Vec<Unbonded<Balance, BlockNumber>>,
-}
-
-/// Total information about a validator.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]

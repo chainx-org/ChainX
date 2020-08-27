@@ -1180,7 +1180,7 @@ impl_runtime_apis! {
         fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>> {
             XStaking::nomination_details_of(who)
         }
-        fn nominator_info_of(who: AccountId) -> NominatorInfo<RpcBalance<Balance>, BlockNumber> {
+        fn nominator_info_of(who: AccountId) -> NominatorInfo<BlockNumber> {
             XStaking::nominator_info_of(who)
         }
     }
