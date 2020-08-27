@@ -212,7 +212,7 @@
     },
     "NominatorLedger": {
         "nomination": "Balance",
-        "last_voteWeight": "WeightType",
+        "last_vote_weight": "WeightType",
         "last_vote_weight_update": "BlockNumber",
         "unbonded_chunks": "Vec<Unbonded>"
     },
