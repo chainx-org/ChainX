@@ -1,9 +1,9 @@
 use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
-use sc_service::ServiceParams;
+use sc_service::PartialComponents;
 
 use crate::chain_spec;
 use crate::cli::{Cli, Subcommand};
-use crate::service::{self, new_full_params};
+use crate::service::{self, new_partial};
 
 impl SubstrateCli for Cli {
     fn impl_name() -> String {
@@ -97,22 +97,23 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok(())
             }
         }
+        Some(Subcommand::Key(cmd)) => cmd.run(),
+        Some(Subcommand::Sign(cmd)) => cmd.run(),
+        Some(Subcommand::Verify(cmd)) => cmd.run(),
+        Some(Subcommand::Vanity(cmd)) => cmd.run(),
         Some(Subcommand::Base(subcommand)) => {
             let runner = cli.create_runner(subcommand)?;
             let chain_spec = &runner.config().chain_spec;
             set_default_ss58_version(chain_spec);
 
             runner.run_subcommand(subcommand, |config| {
-                let (
-                    ServiceParams {
-                        client,
-                        backend,
-                        task_manager,
-                        import_queue,
-                        ..
-                    },
-                    ..,
-                ) = new_full_params(config)?;
+                let PartialComponents {
+                    client,
+                    backend,
+                    task_manager,
+                    import_queue,
+                    ..
+                } = new_partial(&config)?;
                 Ok((client, backend, import_queue, task_manager))
             })
         }

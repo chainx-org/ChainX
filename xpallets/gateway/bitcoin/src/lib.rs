@@ -20,6 +20,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
     ensure,
     traits::{Currency, EnsureOrigin, UnixTime},
+    weights::Pays,
 };
 use frame_system::{ensure_root, ensure_signed};
 
@@ -261,13 +262,18 @@ decl_module! {
 
         /// if use `BtcHeader` struct would export in metadata, cause complex in front-end
         #[weight = 0]
-        pub fn push_header(origin, header: Vec<u8>) -> DispatchResult {
+        pub fn push_header(origin, header: Vec<u8>) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
             let header: BtcHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
             debug!("[push_header]|from:{:?}|header:{:?}", _from, header);
 
             Self::apply_push_header(header)?;
-            Ok(())
+
+            let post_info = PostDispatchInfo {
+                actual_weight: Some(Zero::zero()),
+                pays_fee: Pays::No,
+            };
+            Ok(post_info)
         }
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
@@ -291,6 +297,7 @@ decl_module! {
 
             let post_info = PostDispatchInfo {
                 actual_weight: Some(Zero::zero()),
+                pays_fee: Pays::No,
             };
             Ok(post_info)
         }

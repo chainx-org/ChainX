@@ -195,6 +195,7 @@ impl<T: Trait> GasMeter<T> {
     {
         let post_info = PostDispatchInfo {
             actual_weight: Some(self.gas_spent()),
+            pays_fee: Default::default(),
         };
 
         result
