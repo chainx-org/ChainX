@@ -105,6 +105,7 @@ use impls::CurrencyToVoteHandler;
 pub mod constants;
 pub use constants::{currency::*, time::*};
 
+/// Weights for pallets used in the runtime.
 mod weights;
 
 impl_opaque_keys! {
