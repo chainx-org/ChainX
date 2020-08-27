@@ -35,7 +35,7 @@ use xp_mining_common::{
 };
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
 use xp_runtime::Memo;
-use xpallet_support::{debug, traits::TreasuryAccount, RpcBalance};
+use xpallet_support::{debug, traits::TreasuryAccount};
 
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 pub use rpc::*;

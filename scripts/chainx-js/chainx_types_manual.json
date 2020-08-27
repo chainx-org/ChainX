@@ -30,10 +30,6 @@
             "Testnet"
         ]
     },
-    "NominatorProfile": {
-        "last_rebond": "Option<BlockNumber>",
-        "unbonded_chunks": "Vec<Unbonded>"
-    },
     "Order": {
         "props": "OrderProperty",
         "status": "OrderStatus",
@@ -200,10 +196,6 @@
         "reward_pot_account": "AccountId",
         "reward_pot_balance": "RpcBalance"
     },
-    "NominatorInfo": {
-        "last_rebond": "Option<BlockNumber>",
-        "unbonded_chunks": "RpcUnbonded"
-    },
     "FullPairInfo": {
         "base_currency": "AssetId",
         "highest_bid": "RpcPrice",
@@ -217,6 +209,22 @@
         "quote_currency": "AssetId",
         "tick_decimals": "u32",
         "tradable": "bool"
+    },
+    "NominatorLedger": {
+        "nomination": "Balance",
+        "last_voteWeight": "WeightType",
+        "last_vote_weight_update": "BlockNumber",
+        "unbonded_chunks": "Vec<Unbonded>"
+    },
+    "RpcNominatorLedger": {
+        "nomination": "RpcBalance",
+        "last_vote_weight": "RpcWeightType",
+        "last_vote_weight_update": "BlockNumber",
+        "unbonded_chunks": "Vec<RpcUnbonded>"
+    },
+    "Unbonded": {
+        "value": "Balance",
+        "locked_until": "BlockNumber"
     },
     "String": "Text",
     "RpcPrice": "String",
