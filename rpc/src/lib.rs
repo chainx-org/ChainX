@@ -1,11 +1,11 @@
 use std::fmt;
 use std::sync::Arc;
 
-use sc_client_api::{backend::Backend, CallExecutor, StorageProvider};
-use sc_finality_grandpa::{SharedAuthoritySet, SharedVoterState};
+use jsonrpc_pubsub::manager::SubscriptionManager;
+
+use sc_finality_grandpa::{GrandpaJustificationStream, SharedAuthoritySet, SharedVoterState};
 use sc_finality_grandpa_rpc::GrandpaRpcHandler;
-use sc_rpc_api::DenyUnsafe;
-use sc_service::client::Client;
+pub use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
@@ -32,12 +32,16 @@ pub struct GrandpaDeps {
     pub shared_voter_state: SharedVoterState,
     /// Authority set info.
     pub shared_authority_set: SharedAuthoritySet<Hash, BlockNumber>,
+    /// Receives notifications about justification events from Grandpa.
+    pub justification_stream: GrandpaJustificationStream<Block>,
+    /// Subscription manager to keep track of pubsub subscribers.
+    pub subscriptions: SubscriptionManager,
 }
 
 /// Full client dependencies.
-pub struct FullDeps<P, BE, E, RA> {
+pub struct FullDeps<C, P> {
     /// The client instance to use.
-    pub client: Arc<Client<BE, E, Block, RA>>,
+    pub client: Arc<C>,
     /// Transaction pool instance.
     pub pool: Arc<P>,
     /// Whether to deny unsafe calls
@@ -50,56 +54,39 @@ pub struct FullDeps<P, BE, E, RA> {
 pub type IoHandler = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<P, M, BE, E, RA>(deps: FullDeps<P, BE, E, RA>) -> jsonrpc_core::IoHandler<M>
+pub fn create_full<C, P>(deps: FullDeps<C, P>) -> jsonrpc_core::IoHandler<sc_rpc_api::Metadata>
 where
-    BE: Backend<Block> + 'static,
-    BE::State: sp_state_machine::backend::Backend<sp_runtime::traits::BlakeTwo256>,
-    E: CallExecutor<Block>, //+ Clone + Send + Sync,
-    RA: Send + Sync + 'static,
-    Client<BE, E, Block, RA>: Send + Sync + 'static,
-    Client<BE, E, Block, RA>: ProvideRuntimeApi<Block>,
-    Client<BE, E, Block, RA>: HeaderBackend<Block>
-        + HeaderMetadata<Block, Error = BlockChainError>
-        + StorageProvider<Block, BE>
-        + 'static,
-    Client<BE, E, Block, RA>: Send + Sync + 'static,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api: BlockBuilder<Block>,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<
-            Block,
-            Balance,
-            UncheckedExtrinsic,
-        >,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xpallet_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance>,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
+    C: ProvideRuntimeApi<Block>,
+    C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
+    C: Send + Sync + 'static,
+    C::Api: BlockBuilder<Block>,
+    C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
+    C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<
+        Block,
+        Balance,
+        UncheckedExtrinsic,
+    >,
+    C::Api: xpallet_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance>,
+    C::Api:
         xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, BlockNumber>,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
+    C::Api:
         xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
-            Block,
-            AccountId,
-            Balance,
-            BlockNumber,
-        >,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
-            Block,
-            AccountId,
-            Balance,
-            BlockNumber,
-        >,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>,
-    <Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api:
-        xpallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
-    <<Client<BE, E, Block, RA> as ProvideRuntimeApi<Block>>::Api as sp_api::ApiErrorExt>::Error:
-        fmt::Debug,
+    C::Api: xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
+        Block,
+        AccountId,
+        Balance,
+        BlockNumber,
+    >,
+    C::Api: xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
+        Block,
+        AccountId,
+        Balance,
+        BlockNumber,
+    >,
+    C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>,
+    C::Api: xpallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
+    <C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
     P: TransactionPool + 'static,
-    M: jsonrpc_core::Metadata + Default,
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
@@ -121,6 +108,8 @@ where
     let GrandpaDeps {
         shared_voter_state,
         shared_authority_set,
+        justification_stream,
+        subscriptions,
     } = grandpa;
 
     io.extend_with(SystemApi::to_delegate(FullSystem::new(
@@ -133,7 +122,12 @@ where
     )));
 
     io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
-        GrandpaRpcHandler::new(shared_authority_set, shared_voter_state),
+        GrandpaRpcHandler::new(
+            shared_authority_set,
+            shared_voter_state,
+            justification_stream,
+            subscriptions,
+        ),
     ));
 
     io.extend_with(AssetsApi::to_delegate(Assets::new(client.clone())));

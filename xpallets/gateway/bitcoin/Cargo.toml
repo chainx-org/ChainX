@@ -5,21 +5,21 @@ authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.1", features = ["derive"], default-features = false }
+codec = { package = "parity-scale-codec", version = "1.3.4", features = ["derive"], default-features = false }
 serde = { version = "1.0", optional = true }
 
 # Substrate primitives
-sp-core = { version = "2.0.0-rc5", default-features = false }
-sp-runtime = { version = "2.0.0-rc5", default-features = false }
-sp-std = { version = "2.0.0-rc5", default-features = false }
-sp-io = { version = "2.0.0-rc5", default-features = false }
+sp-core = { version = "2.0.0-rc6", default-features = false }
+sp-runtime = { version = "2.0.0-rc6", default-features = false }
+sp-std = { version = "2.0.0-rc6", default-features = false }
+sp-io = { version = "2.0.0-rc6", default-features = false }
 # Substrate pallets
-frame-support = { version = "2.0.0-rc5", default-features = false }
-frame-system = { version = "2.0.0-rc5", default-features = false }
-pallet-timestamp = { version = "2.0.0-rc5", default-features = false }
+frame-support = { version = "2.0.0-rc6", default-features = false }
+frame-system = { version = "2.0.0-rc6", default-features = false }
+pallet-timestamp = { version = "2.0.0-rc6", default-features = false }
 
 # orml
-orml-utilities = { version = "0.1.3-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "d3630e35ce737aef3f9c7857e9b4bd540f37530c", default-features = false }
+orml-utilities = { version = "0.1.3-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "27d55f6a8e74b989578ccfb7c44616c3016dcb2a", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -39,8 +39,8 @@ light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = 
 lazy_static = "1.4"
 hex = "0.4"
 serde_json = "1.0"
-pallet-balances = { version = "2.0.0-rc5" }
-pallet-multisig = { version = "2.0.0-rc5" }
+pallet-balances = { version = "2.0.0-rc6" }
+pallet-multisig = { version = "2.0.0-rc6" }
 
 xpallet-assets-registrar = { path = "../../assets-registrar" }
 
