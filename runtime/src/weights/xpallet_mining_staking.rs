@@ -52,7 +52,7 @@ impl xpallet_mining_staking::WeightInfo for WeightInfo {
         (14988000 as Weight).saturating_add(DbWeight::get().writes(1 as Weight))
     }
     // WARNING! Some components were not used: ["c"]
-    fn set_minimal_validator_count() -> Weight {
+    fn set_minimum_validator_count() -> Weight {
         (11813000 as Weight).saturating_add(DbWeight::get().writes(1 as Weight))
     }
     // WARNING! Some components were not used: ["c"]

@@ -916,7 +916,7 @@ impl xpallet_mining_asset::Trait for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
-    type WeightInfo = weights::xpallet_mining_asset::WeightForXpalletMiningAsset;
+    type WeightInfo = weights::xpallet_mining_asset::WeightInfo;
 }
 
 construct_runtime!(

@@ -60,7 +60,7 @@ pub trait WeightInfo {
     fn chill() -> Weight;
     fn validate() -> Weight;
     fn set_validator_count() -> Weight;
-    fn set_minimal_validator_count() -> Weight;
+    fn set_minimum_validator_count() -> Weight;
     fn set_bonding_duration() -> Weight;
     fn set_validator_bonding_duration() -> Weight;
 }
@@ -93,7 +93,7 @@ impl WeightInfo for () {
     fn set_validator_count() -> Weight {
         1_000_000_000
     }
-    fn set_minimal_validator_count() -> Weight {
+    fn set_minimum_validator_count() -> Weight {
         1_000_000_000
     }
     fn set_bonding_duration() -> Weight {
@@ -504,8 +504,8 @@ decl_module! {
             ValidatorCount::put(new);
         }
 
-        #[weight = T::WeightInfo::set_minimal_validator_count()]
-        fn set_minimal_validator_count(origin, #[compact] new: u32) {
+        #[weight = T::WeightInfo::set_minimum_validator_count()]
+        fn set_minimum_validator_count(origin, #[compact] new: u32) {
             ensure_root(origin)?;
             MinimumValidatorCount::put(new);
         }

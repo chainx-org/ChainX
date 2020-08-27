@@ -150,7 +150,7 @@ benchmarks! {
         assert_eq!(ValidatorCount::get(), c);
     }
 
-    set_minimal_validator_count {
+    set_minimum_validator_count {
         let c in 0 .. 1000;
     }: _(RawOrigin::Root, c)
     verify {
@@ -189,6 +189,10 @@ mod tests {
             assert_ok!(test_benchmark_claim::<Test>());
             assert_ok!(test_benchmark_chill::<Test>());
             assert_ok!(test_benchmark_validate::<Test>());
+            assert_ok!(test_benchmark_set_validator_count::<Test>());
+            assert_ok!(test_benchmark_set_minimum_validator_count::<Test>());
+            assert_ok!(test_benchmark_set_bonding_duration::<Test>());
+            assert_ok!(test_benchmark_set_validator_bonding_duration::<Test>());
         });
     }
 }

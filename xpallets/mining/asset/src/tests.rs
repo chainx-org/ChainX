@@ -364,7 +364,7 @@ fn total_issuance_should_work() {
 }
 
 fn t_set_xbtc_asset_power(new: FixedAssetPower) {
-    assert_ok!(XMiningAsset::set_x_asset_power(
+    assert_ok!(XMiningAsset::set_asset_power(
         Origin::root(),
         xpallet_protocol::X_BTC,
         new

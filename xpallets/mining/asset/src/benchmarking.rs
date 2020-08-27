@@ -30,6 +30,27 @@ benchmarks! {
         // 10% belongs to the referral/treasury, 90% is the miner's reward.
         assert!(Module::<T>::free_balance(&miner) == 90.into());
     }
+
+    set_claim_staking_requirement {
+        let c in 0 .. 1000;
+    }: _(RawOrigin::Root, X_BTC, c)
+    verify {
+        assert_eq!(ClaimRestrictionOf::<T>::get(X_BTC).staking_requirement, c);
+    }
+
+    set_claim_frequency_limit {
+        let c in 0 .. 1000;
+    }: _(RawOrigin::Root, X_BTC, c.into())
+    verify {
+        assert_eq!(ClaimRestrictionOf::<T>::get(X_BTC).frequency_limit, c.into());
+    }
+
+    set_asset_power {
+        let c in 0 .. 1000;
+    }: _(RawOrigin::Root, X_BTC, c)
+    verify {
+        assert_eq!(FixedAssetPowerOf::get(X_BTC), c);
+    }
 }
 
 #[cfg(test)]
@@ -43,6 +64,9 @@ mod tests {
         ExtBuilder::default().build().execute_with(|| {
             assert_ok!(crate::tests::t_register_xbtc());
             assert_ok!(test_benchmark_claim::<Test>());
+            assert_ok!(test_benchmark_set_claim_staking_requirement::<Test>());
+            assert_ok!(test_benchmark_set_claim_frequency_limit::<Test>());
+            assert_ok!(test_benchmark_set_asset_power::<Test>());
         });
     }
 }
