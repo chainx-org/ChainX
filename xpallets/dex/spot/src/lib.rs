@@ -61,6 +61,11 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
 pub trait WeightInfo {
     fn put_order() -> Weight;
     fn cancel_order() -> Weight;
+    fn force_cancel_order() -> Weight;
+    fn set_handicap() -> Weight;
+    fn set_price_fluctuation() -> Weight;
+    fn add_trading_pair() -> Weight;
+    fn update_trading_pair() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -68,6 +73,21 @@ impl WeightInfo for () {
         1_000_000_000
     }
     fn cancel_order() -> Weight {
+        1_000_000_000
+    }
+    fn force_cancel_order() -> Weight {
+        1_000_000_000
+    }
+    fn set_handicap() -> Weight {
+        1_000_000_000
+    }
+    fn set_price_fluctuation() -> Weight {
+        1_000_000_000
+    }
+    fn add_trading_pair() -> Weight {
+        1_000_000_000
+    }
+    fn update_trading_pair() -> Weight {
         1_000_000_000
     }
 }
@@ -237,7 +257,7 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        #[weight = 10]
+        #[weight = T::WeightInfo::put_order()]
         pub fn put_order(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -269,7 +289,7 @@ decl_module! {
             Self::apply_put_order(who, pair_id, order_type, side, amount, price, reserve_amount)?;
         }
 
-        #[weight = 10]
+        #[weight = T::WeightInfo::cancel_order()]
         pub fn cancel_order(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -280,7 +300,7 @@ decl_module! {
         }
 
         /// Force cancel an order.
-        #[weight = 10]
+        #[weight = T::WeightInfo::force_cancel_order()]
         fn force_cancel_order(
             origin,
             who: <T::Lookup as StaticLookup>::Source,
@@ -292,14 +312,14 @@ decl_module! {
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
-        #[weight = 10]
+        #[weight = T::WeightInfo::set_handicap()]
         fn set_handicap(origin, #[compact] pair_id: TradingPairId, new: Handicap< T::Price>) {
             ensure_root(origin)?;
             info!("[set_handicap]pair_id:{:?},new handicap:{:?}", pair_id, new);
             HandicapOf::<T>::insert(pair_id, new);
         }
 
-        #[weight = 10]
+        #[weight = T::WeightInfo::set_price_fluctuation()]
         fn set_price_fluctuation(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -311,7 +331,7 @@ decl_module! {
         }
 
         /// Add a new trading pair.
-        #[weight = 10]
+        #[weight = T::WeightInfo::add_trading_pair()]
         pub fn add_trading_pair(
             origin,
             currency_pair: CurrencyPair,
@@ -335,7 +355,7 @@ decl_module! {
         }
 
         /// Update the trading pair profile.
-        #[weight = 10]
+        #[weight = T::WeightInfo::update_trading_pair()]
         pub fn update_trading_pair(
             origin,
             #[compact] pair_id: TradingPairId,
