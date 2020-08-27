@@ -76,7 +76,7 @@ benchmarks! {
 
         Module::<T>::unbond(
             RawOrigin::Signed(validator.clone()).into(),
-            validator_lookup,
+            validator_lookup.clone(),
             20.into(),
             b"memo".as_ref().into()
         )?;
@@ -84,7 +84,7 @@ benchmarks! {
         let block_number: T::BlockNumber = frame_system::Module::<T>::block_number();
         frame_system::Module::<T>::set_block_number(block_number + 1.into());
 
-    }: _(RawOrigin::Signed(validator.clone()), 0)
+    }: _(RawOrigin::Signed(validator.clone()), validator_lookup, 0)
     verify {
         assert!(Module::<T>::bonded_to(&validator, &validator) == 80.into());
         assert!(Module::<T>::staked_of(&validator)  == 80.into());

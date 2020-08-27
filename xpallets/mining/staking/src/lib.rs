@@ -403,7 +403,6 @@ decl_module! {
 
         /// Unlock the frozen unbonded balances that are due.
         #[weight = T::WeightInfo::unlock_unbonded_withdrawal()]
-        #[weight = 10]
         fn unlock_unbonded_withdrawal(
             origin,
             target: <T::Lookup as StaticLookup>::Source,
