@@ -578,7 +578,7 @@ fn staker_reward_should_work() {
         assert_ok!(XStaking::claim(Origin::signed(t_2), 2));
         assert_eq!(XStaking::free_balance(&t_2), 100 + 1395692309 * 20 / 60);
 
-        assert_ok!(XStaking::set_minimal_validator_count(Origin::root(), 3));
+        assert_ok!(XStaking::set_minimum_validator_count(Origin::root(), 3));
         assert_ok!(XStaking::chill(Origin::signed(3)));
 
         // Block 3
