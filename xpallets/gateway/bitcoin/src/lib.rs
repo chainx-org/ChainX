@@ -18,9 +18,13 @@ use frame_support::{
     debug::native,
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
-    traits::{Currency, EnsureOrigin},
+    ensure,
+    traits::{Currency, EnsureOrigin, UnixTime},
+    weights::Pays,
 };
 use frame_system::{ensure_root, ensure_signed};
+
+use orml_utilities::with_transaction_result;
 
 // ChainX
 use chainx_primitives::{AddrStr, AssetId};
@@ -58,12 +62,10 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
 >>::Balance;
 
 pub trait Trait:
-    frame_system::Trait
-    + pallet_timestamp::Trait
-    + xpallet_assets::Trait
-    + xpallet_gateway_records::Trait
+    frame_system::Trait + xpallet_assets::Trait + xpallet_gateway_records::Trait
 {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type UnixTime: UnixTime;
     type AccountExtractor: Extractable<Self::AccountId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
     type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
@@ -82,6 +84,8 @@ decl_error! {
         InvalidBestIndex,
         /// Invalid proof-of-work (Block hash does not satisfy nBits)
         InvalidPoW,
+        /// Fork is too long to proceed
+        AncientFork,
         /// Previous tx id not equal input point hash
         InvalidPrevTx,
         /// Futuristic timestamp
@@ -106,43 +110,43 @@ decl_error! {
         UnconfirmedTx,
         /// reject replay proccessed tx
         ReplayedTx,
-        ///
+        /// process tx failed
+        ProcessTxFailed,
+        /// withdraw tx not match expected tx
         MismatchedTx,
-        ///
+        /// invalid bitcoin address
         InvalidAddress,
-        ///
+        /// verify tx signature failed
         VerifySignFailed,
-        ///
+        /// invalid sign count in trustee withdrawal tx proposal
         InvalidSignCount,
-        ///
+        /// invalid bitcoin public key
         InvalidPublicKey,
-        ///
+        /// construct bad signature
         ConstructBadSign,
         /// Invalid signature
         BadSignature,
         /// Parse redeem script failed
         BadRedeemScript,
-        ///
+        /// not set trustee yet
         NotTrustee,
-        ///
+        /// duplicated pubkey for trustees
         DuplicatedKeys,
-        ///
+        /// can't generate multisig address
         GenerateMultisigFailed,
-        ///
-        InvalidTrusteeCounts,
-        ///
+        /// invalid trustee count
+        InvalidTrusteeCount,
+        /// unexpected withdraw records count
         WroungWithdrawalCount,
-        ///
-        InvalidSigCount,
-        ///
+        /// reject sig for current proposal
         RejectSig,
-        ///
+        /// no proposal for current withdrawal
         NoProposal,
-        ///
+        /// invalid proposal
         InvalidProposal,
-        ///
+        /// last proposal not finished yet
         NotFinishProposal,
-        ///
+        /// no withdrawal record for this id
         NoWithdrawalRecord,
     }
 }
@@ -176,7 +180,7 @@ decl_storage! {
         /// best header info
         pub BestIndex get(fn best_index): BtcHeaderIndex;
         /// confirmed header info
-        pub ConfirmedHeader get(fn confirmed_header): BtcHeaderIndex;
+        pub ConfirmedIndex get(fn confirmed_index): Option<BtcHeaderIndex>;
         /// block hash list for a height, include forked header hash
         pub BlockHashFor get(fn block_hash_for): map hasher(twox_64_concat) u32 => Vec<H256>;
         /// mark this blockhash is in mainchain
@@ -242,7 +246,7 @@ decl_storage! {
             MainChain::insert(&genesis_hash, ());
 
             BestIndex::put(genesis_index);
-            ConfirmedHeader::put(genesis_index);
+            // ConfirmedIndex::put(genesis_index);
 
             Module::<T>::deposit_event(RawEvent::InsertHeader(
                 genesis_hash,
@@ -258,13 +262,18 @@ decl_module! {
 
         /// if use `BtcHeader` struct would export in metadata, cause complex in front-end
         #[weight = 0]
-        pub fn push_header(origin, header: Vec<u8>) -> DispatchResult {
+        pub fn push_header(origin, header: Vec<u8>) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
             let header: BtcHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
             debug!("[push_header]|from:{:?}|header:{:?}", _from, header);
 
             Self::apply_push_header(header)?;
-            Ok(())
+
+            let post_info = PostDispatchInfo {
+                actual_weight: Some(Zero::zero()),
+                pays_fee: Pays::No,
+            };
+            Ok(post_info)
         }
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
@@ -288,6 +297,7 @@ decl_module! {
 
             let post_info = PostDispatchInfo {
                 actual_weight: Some(Zero::zero()),
+                pays_fee: Pays::No,
             };
             Ok(post_info)
         }
@@ -333,7 +343,7 @@ decl_module! {
         #[weight = 0]
         pub fn set_confirmed_index(origin, index: BtcHeaderIndex) -> DispatchResult {
             ensure_root(origin)?;
-            ConfirmedHeader::put(index);
+            ConfirmedIndex::put(index);
             Ok(())
         }
 
@@ -448,47 +458,48 @@ impl<T: Trait> Module<T> {
             header::HeaderVerifier::new::<T>(&header_info).map_err::<Error<T>, _>(Into::into)?;
         c.check::<T>()?;
 
-        // insert into storage
-        let hash = header_info.header.hash();
-        // insert valid header into storage
-        Headers::insert(&hash, header_info.clone());
-        // storage height => block list (contains forked header hash)
-        BlockHashFor::mutate(header_info.height, |v| {
-            if !v.contains(&hash) {
-                v.push(hash.clone());
-            }
-        });
+        with_transaction_result(|| {
+            // insert into storage
+            let hash = header_info.header.hash();
+            // insert valid header into storage
+            Headers::insert(&hash, header_info.clone());
+            // storage height => block list (contains forked header hash)
+            BlockHashFor::mutate(header_info.height, |v| {
+                if !v.contains(&hash) {
+                    v.push(hash.clone());
+                }
+            });
 
-        debug!("[apply_push_header]|verify pass, insert to storage|height:{:}|hash:{:?}|block hashs for this height:{:?}",
-            header_info.height,
-            hash,
-            Self::block_hash_for(header_info.height)
-        );
-
-        let best_index = Self::best_index();
-
-        if header_info.height > best_index.height {
-            // new best index
-            let new_best_index = BtcHeaderIndex {
-                hash,
-                height: header_info.height,
-            };
-
-            let confirmed_index = header::update_confirmed_header::<T>(&header_info);
-            info!(
-                "[apply_push_header]|update to new height|height:{:}|hash:{:?}|confirm:{:?}",
-                header_info.height, hash, confirmed_index
+            debug!("[apply_push_header]|verify pass, insert to storage|height:{:}|hash:{:?}|block hashs for this height:{:?}",
+                   header_info.height,
+                   hash,
+                   Self::block_hash_for(header_info.height)
             );
-            // change new best index
-            BestIndex::put(new_best_index);
-        } else {
-            info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}", best_index.height, header_info.height);
-            // let info = header::find_confirmed_block::<T>(&hash);
-            // (info.header.hash(), info.height)
-        };
-        Self::deposit_event(RawEvent::InsertHeader(hash));
 
-        Ok(())
+            let best_index = Self::best_index();
+
+            if header_info.height > best_index.height {
+                // new best index
+                let new_best_index = BtcHeaderIndex {
+                    hash,
+                    height: header_info.height,
+                };
+                // note update_confirmed_header would mutate other storage depend on BlockHashFor
+                let confirmed_index = header::update_confirmed_header::<T>(&header_info);
+                info!(
+                    "[apply_push_header]|update to new height|height:{:}|hash:{:?}|confirm:{:?}",
+                    header_info.height, hash, confirmed_index
+                );
+                // change new best index
+                BestIndex::put(new_best_index);
+            } else {
+                // forked chain
+                info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}", best_index.height, header_info.height);
+                header::check_confirmed_header::<T>(&header_info)?;
+            };
+            Self::deposit_event(RawEvent::InsertHeader(hash));
+            Ok(())
+        })
     }
 
     fn apply_push_transaction(tx: BtcRelayedTx, prev: Option<Transaction>) -> DispatchResult {
@@ -505,7 +516,15 @@ impl<T: Trait> Module<T> {
         // verify, check merkle proof
         tx::validate_transaction::<T>(&tx, merkle_root, prev.as_ref())?;
 
-        let confirmed = Self::confirmed_header();
+        // ensure the tx should belong to the main chain, means should submit mainchain tx,
+        // e.g. a tx may be packed in main chain block, and forked chain block, only submit main chain tx
+        // could pass the verify.
+        ensure!(
+            Self::main_chain(&tx.block_hash).is_some(),
+            Error::<T>::UnconfirmedTx
+        );
+        // if ConfirmedIndex not set, due to confirm height not beyond genesis height
+        let confirmed = Self::confirmed_index().ok_or(Error::<T>::UnconfirmedTx)?;
         let height = header_info.height;
         if height > confirmed.height {
             error!("[apply_push_transaction]|receive an unconfirmed tx|tx hash:{:}|related block height:{:}|confirmed block height:{:}|hash:{:?}", tx_hash, height, confirmed.height, confirmed.hash);
@@ -526,6 +545,9 @@ impl<T: Trait> Module<T> {
         // set storage
         TxState::insert(&tx_hash, state);
         Self::deposit_event(RawEvent::ProcessTx(tx_hash, block_hash, state));
-        Ok(())
+        match state.result {
+            BtcTxResult::Success => Ok(()),
+            BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed)?,
+        }
     }
 }

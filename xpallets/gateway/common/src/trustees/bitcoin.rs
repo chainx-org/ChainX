@@ -1,5 +1,6 @@
 use super::*;
 use light_bitcoin::keys::Public as BtcPublic;
+use sp_runtime::RuntimeDebug;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -59,7 +60,7 @@ impl Into<Vec<u8>> for BtcTrusteeAddrInfo {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct BtcTrusteeType(pub BtcPublic);
 impl Into<Vec<u8>> for BtcTrusteeType {
     fn into(self) -> Vec<u8> {

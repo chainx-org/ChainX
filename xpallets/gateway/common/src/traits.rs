@@ -9,6 +9,7 @@ use xpallet_assets::Chain;
 use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
 pub trait Extractable<AccountId> {
+    /// parse account info from a bytes data.
     fn account_info(data: &[u8]) -> Option<(AccountId, Option<Name>)>;
 }
 

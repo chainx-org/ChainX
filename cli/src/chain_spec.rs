@@ -10,16 +10,17 @@ use chainx_runtime::{
 };
 use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
-    AuraConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GenesisConfig,
-    GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig,
-    SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
-    XContractsConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig,
-    XStakingConfig, XSystemConfig,
+    AuraConfig, AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig,
+    ElectionsConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig,
+    SessionKeys, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig,
+    XAssetsRegistrarConfig, XContractsConfig, XGatewayBitcoinConfig, XGatewayCommonConfig,
+    XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
 use sc_service::{ChainType, Properties};
+use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -67,6 +68,7 @@ type AuthorityKeysTuple = (
     AuraId,
     GrandpaId,
     ImOnlineId,
+    AuthorityDiscoveryId,
 );
 
 /// Helper function to generate an authority key for Aura
@@ -80,6 +82,7 @@ pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
         get_from_seed::<AuraId>(seed),
         get_from_seed::<GrandpaId>(seed),
         get_from_seed::<ImOnlineId>(seed),
+        get_from_seed::<AuthorityDiscoveryId>(seed),
     )
 }
 
@@ -289,11 +292,17 @@ fn testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)> {
     vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
-fn session_keys(aura: AuraId, grandpa: GrandpaId, im_online: ImOnlineId) -> SessionKeys {
+fn session_keys(
+    aura: AuraId,
+    grandpa: GrandpaId,
+    im_online: ImOnlineId,
+    authority_discovery: AuthorityDiscoveryId,
+) -> SessionKeys {
     SessionKeys {
         grandpa,
         aura,
         im_online,
+        authority_discovery,
     }
 }
 
@@ -361,7 +370,7 @@ fn testnet_genesis(
     let validators = initial_authorities
         .clone()
         .into_iter()
-        .map(|((val, referral_id), _, _, _, _)| (val, referral_id, STAKING_LOCKED))
+        .map(|((val, referral_id), _, _, _, _, _)| (val, referral_id, STAKING_LOCKED))
         .collect::<Vec<_>>();
 
     GenesisConfig {
@@ -391,6 +400,7 @@ fn testnet_genesis(
             members: phragmen_members,
         }),
         pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
+        pallet_authority_discovery: Some(AuthorityDiscoveryConfig { keys: vec![] }),
         pallet_session: Some(SessionConfig {
             keys: initial_authorities
                 .iter()
@@ -398,7 +408,7 @@ fn testnet_genesis(
                     (
                         (x.0).0.clone(),
                         (x.0).0.clone(),
-                        session_keys(x.2.clone(), x.3.clone(), x.4.clone()),
+                        session_keys(x.2.clone(), x.3.clone(), x.4.clone(), x.5.clone()),
                     )
                 })
                 .collect::<Vec<_>>(),

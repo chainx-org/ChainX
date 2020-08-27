@@ -54,7 +54,7 @@ NEW_TYPES = [
     "TradingPairId", "TradingPairInfo", "TradingPairProfile", "UnbondedIndex",
     "ValidatorLedger", "ValidatorProfile", "XRC20Selector",
     "RpcNominatorLedger", "RpcMinerLedger", "RpcAssetLedger",
-    "MiningAssetInfo", "LockedType"
+    "MiningAssetInfo", "LockedType", "NominatorInfo", "RpcUnbonded"
 ]
 
 # Change the working directory to project root directory.

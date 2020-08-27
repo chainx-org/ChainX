@@ -8,6 +8,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+/// Weights for pallets used in the runtime.
+mod weights;
+
 use codec::Encode;
 
 use static_assertions::const_assert;
@@ -45,12 +48,13 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
-use xpallet_mining_staking::{RpcNominatorLedger, ValidatorInfo};
-use xpallet_support::{RpcBalance, RpcPrice};
+use xpallet_mining_staking::{NominatorInfo, RpcNominatorLedger, ValidatorInfo};
+use xpallet_support::{traits::MultisigAddressFor, RpcBalance, RpcPrice};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -111,6 +115,7 @@ impl_opaque_keys! {
         pub aura: Aura,
         pub grandpa: Grandpa,
         pub im_online: ImOnline,
+        pub authority_discovery: AuthorityDiscovery,
     }
 }
 
@@ -293,6 +298,8 @@ impl pallet_indices::Trait for Runtime {
     type Event = Event;
     type WeightInfo = ();
 }
+
+impl pallet_authority_discovery::Trait for Runtime {}
 
 parameter_types! {
     pub const UncleGenerations: BlockNumber = 5;
@@ -801,6 +808,7 @@ impl orml_currencies::Trait for Runtime {
     type MultiCurrency = XAssets;
     type NativeCurrency = BasicCurrencyAdapter<Balances, Balance, Balance, Amount, BlockNumber>;
     type GetNativeCurrencyId = ChainXAssetId;
+    type WeightInfo = ();
 }
 
 ///////////////////////////////////////////
@@ -833,15 +841,24 @@ impl xpallet_gateway_records::Trait for Runtime {
     type Event = Event;
 }
 
+pub struct MultisigProvider;
+impl MultisigAddressFor<AccountId> for MultisigProvider {
+    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId {
+        Multisig::multi_account_id(who, threshold)
+    }
+}
+
 impl xpallet_gateway_common::Trait for Runtime {
     type Event = Event;
     type Validator = XStaking;
+    type DetermineMultisigAddress = MultisigProvider;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
 }
 
 impl xpallet_gateway_bitcoin::Trait for Runtime {
     type Event = Event;
+    type UnixTime = Timestamp;
     type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
@@ -930,6 +947,7 @@ construct_runtime!(
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+        AuthorityDiscovery: pallet_authority_discovery::{Module, Call, Config},
 
         // Governance stuff.
         Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
@@ -1122,6 +1140,12 @@ impl_runtime_apis! {
         }
     }
 
+    impl sp_authority_discovery::AuthorityDiscoveryApi<Block> for Runtime {
+        fn authorities() -> Vec<AuthorityDiscoveryId> {
+            AuthorityDiscovery::authorities()
+        }
+    }
+
     impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
         fn account_nonce(account: AccountId) -> Index {
             System::account_nonce(account)
@@ -1160,6 +1184,9 @@ impl_runtime_apis! {
         }
         fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>> {
             XStaking::nomination_details_of(who)
+        }
+        fn nominator_info_of(who: AccountId) -> NominatorInfo<RpcBalance<Balance>, BlockNumber> {
+            XStaking::nominator_info_of(who)
         }
     }
 

@@ -1,6 +1,16 @@
 use crate::error;
 use sp_std::fmt::Debug;
 
+pub trait MultisigAddressFor<AccountId> {
+    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId;
+}
+
+impl<AccountId: Default> MultisigAddressFor<AccountId> for () {
+    fn calc_multisig(_: &[AccountId], _: u16) -> AccountId {
+        Default::default()
+    }
+}
+
 pub trait MultiSig<AccountId: PartialEq + Debug> {
     fn multisig() -> AccountId;
 
