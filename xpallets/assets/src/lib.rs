@@ -128,16 +128,23 @@ decl_module! {
 
         /// transfer between account
         #[weight = 0]
-        pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
+        pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             let dest = T::Lookup::lookup(dest)?;
-            debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
-            memo.check_validity()?;
+            debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
             Self::can_transfer(&id)?;
 
             Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
 
             Ok(())
+        }
+
+        /// transfer between account with memo
+        #[weight = 0]
+        pub fn transfer_with_memo(origin, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
+            memo.check_validity()?;
+            debug!("[transfer_with_memo]|memo:{}", memo);
+            Self::transfer(origin, dest, id, value)
         }
 
         /// for transfer by root
