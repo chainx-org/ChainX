@@ -157,7 +157,6 @@ impl ExtBuilder {
         let _ = GenesisConfig::<Test> {
             assets_restrictions,
             endowed,
-            memo_len: 128,
         }
         .assimilate_storage(&mut storage);
 

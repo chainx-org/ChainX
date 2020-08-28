@@ -239,7 +239,6 @@ impl ExtBuilder {
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,
             endowed: Default::default(),
-            memo_len: 128,
         }
         .assimilate_storage(&mut storage);
 
@@ -296,7 +295,6 @@ impl ExtBuilder {
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,
             endowed: Default::default(),
-            memo_len: 128,
         }
         .assimilate_storage(&mut storage);
 

@@ -22,7 +22,6 @@ orml-traits = { version = "0.1.3-dev", git = "https://github.com/open-web3-stack
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
-xp-runtime = { path = "../../primitives/runtime", default-features = false }
 
 # ChainX pallets
 xpallet-assets-registrar = { path = "../assets-registrar", default-features = false }
@@ -51,7 +50,6 @@ std = [
     "frame-system/std",
 
     "chainx-primitives/std",
-    "xp-runtime/std",
 
     "xpallet-assets-registrar/std",
     "xpallet-protocol/std",

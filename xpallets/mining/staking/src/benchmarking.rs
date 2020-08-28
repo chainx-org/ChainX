@@ -21,7 +21,6 @@ fn b_bond<T: Trait>(nominator: T::AccountId, validator: T::AccountId, value: u32
         RawOrigin::Signed(nominator).into(),
         validator_lookup,
         value.into(),
-        b"memo".as_ref().into()
     )
     .is_ok());
 }
@@ -55,7 +54,7 @@ benchmarks! {
         let nominator = create_funded_user::<T>("nominator", u, 100);
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
         let validator_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator.clone());
-    }: _(RawOrigin::Signed(nominator.clone()), validator_lookup, 10.into(), b"memo".to_vec().into())
+    }: _(RawOrigin::Signed(nominator.clone()), validator_lookup, 10.into())
     verify {
         assert!(Nominations::<T>::contains_key(nominator, validator));
     }
@@ -63,7 +62,7 @@ benchmarks! {
     unbond {
         let validator: T::AccountId = create_validator::<T>("validator", 2, 100);
         let validator_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator.clone());
-    }: _(RawOrigin::Signed(validator.clone()), validator_lookup, 10.into(), b"memo".to_vec().into())
+    }: _(RawOrigin::Signed(validator.clone()), validator_lookup, 10.into())
     verify {
         assert!(Module::<T>::bonded_to(&validator, &validator) == 90.into());
     }
@@ -78,7 +77,6 @@ benchmarks! {
             RawOrigin::Signed(validator.clone()).into(),
             validator_lookup.clone(),
             20.into(),
-            b"memo".as_ref().into()
         )?;
 
         let block_number: T::BlockNumber = frame_system::Module::<T>::block_number();
@@ -97,7 +95,7 @@ benchmarks! {
         b_bond::<T>(nominator.clone(), validator1.clone(), 30);
         let validator1_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator1.clone());
         let validator2_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator2.clone());
-    }: _(RawOrigin::Signed(nominator.clone()), validator1_lookup, validator2_lookup, 10.into(), b"memo".to_vec().into())
+    }: _(RawOrigin::Signed(nominator.clone()), validator1_lookup, validator2_lookup, 10.into())
     verify {
         assert!(Module::<T>::bonded_to(&nominator, &validator1) == 20.into());
         assert!(Module::<T>::bonded_to(&nominator, &validator2) == 10.into());
