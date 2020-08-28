@@ -128,6 +128,7 @@ impl xpallet_assets_registrar::Trait for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XMiningAsset;
+    type WeightInfo = ();
 }
 
 impl xpallet_assets::Trait for Test {
@@ -254,6 +255,7 @@ impl xpallet_mining_staking::Trait for Test {
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;
+    type WeightInfo = ();
 }
 
 pub struct DummyAssetRewardPotAccountDeterminer;
@@ -280,6 +282,7 @@ impl Trait for Test {
     type Event = MetaEvent;
     type TreasuryAccount = ();
     type DetermineRewardPotAccount = DummyAssetRewardPotAccountDeterminer;
+    type WeightInfo = ();
 }
 
 thread_local! {

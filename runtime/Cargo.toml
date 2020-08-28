@@ -184,4 +184,8 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "pallet-society/runtime-benchmarks",
+    "xpallet-mining-asset/runtime-benchmarks",
+    "xpallet-mining-staking/runtime-benchmarks",
+    "xpallet-dex-spot/runtime-benchmarks",
+    "xpallet-assets-registrar/runtime-benchmarks",
 ]

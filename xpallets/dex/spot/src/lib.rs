@@ -6,6 +6,8 @@ mod execution;
 mod rpc;
 mod types;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -25,6 +27,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, ReservableCurrency},
+    weights::Weight,
     Parameter,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -55,6 +58,40 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
+pub trait WeightInfo {
+    fn put_order() -> Weight;
+    fn cancel_order() -> Weight;
+    fn force_cancel_order() -> Weight;
+    fn set_handicap() -> Weight;
+    fn set_price_fluctuation() -> Weight;
+    fn add_trading_pair() -> Weight;
+    fn update_trading_pair() -> Weight;
+}
+
+impl WeightInfo for () {
+    fn put_order() -> Weight {
+        1_000_000_000
+    }
+    fn cancel_order() -> Weight {
+        1_000_000_000
+    }
+    fn force_cancel_order() -> Weight {
+        1_000_000_000
+    }
+    fn set_handicap() -> Weight {
+        1_000_000_000
+    }
+    fn set_price_fluctuation() -> Weight {
+        1_000_000_000
+    }
+    fn add_trading_pair() -> Weight {
+        1_000_000_000
+    }
+    fn update_trading_pair() -> Weight {
+        1_000_000_000
+    }
+}
+
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -68,9 +105,9 @@ pub trait Trait: xpallet_assets::Trait {
         + Copy
         + MaybeSerializeDeserialize
         + Debug;
-}
 
-type Result<T> = result::Result<(), Error<T>>;
+    type WeightInfo: WeightInfo;
+}
 
 pub type OrderInfo<T> = Order<
     TradingPairId,
@@ -220,7 +257,7 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        #[weight = 10]
+        #[weight = <T as Trait>::WeightInfo::put_order()]
         pub fn put_order(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -252,36 +289,49 @@ decl_module! {
             Self::apply_put_order(who, pair_id, order_type, side, amount, price, reserve_amount)?;
         }
 
-        #[weight = 10]
-        pub fn cancel_order(origin, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
+        #[weight = <T as Trait>::WeightInfo::cancel_order()]
+        pub fn cancel_order(
+            origin,
+            #[compact] pair_id: TradingPairId,
+            #[compact] order_id: OrderId
+        ) {
             let who = ensure_signed(origin)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
         /// Force cancel an order.
-        #[weight = 10]
-        fn force_cancel_order(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] pair_id: TradingPairId, #[compact] order_id: OrderId) {
+        #[weight = <T as Trait>::WeightInfo::force_cancel_order()]
+        fn force_cancel_order(
+            origin,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[compact] pair_id: TradingPairId,
+            #[compact] order_id: OrderId
+        ) {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
-        #[weight = 10]
+        #[weight = <T as Trait>::WeightInfo::set_handicap()]
         fn set_handicap(origin, #[compact] pair_id: TradingPairId, new: Handicap< T::Price>) {
             ensure_root(origin)?;
             info!("[set_handicap]pair_id:{:?},new handicap:{:?}", pair_id, new);
             HandicapOf::<T>::insert(pair_id, new);
         }
 
-        #[weight = 10]
-        fn set_price_fluctuation(origin, #[compact] pair_id: TradingPairId, #[compact] new: PriceFluctuation) {
+        #[weight = <T as Trait>::WeightInfo::set_price_fluctuation()]
+        fn set_price_fluctuation(
+            origin,
+            #[compact] pair_id: TradingPairId,
+            #[compact] new: PriceFluctuation
+        ) {
             ensure_root(origin)?;
             PriceFluctuationOf::insert(pair_id, new);
             Self::deposit_event(RawEvent::PriceFluctuationUpdated(pair_id, new));
         }
 
         /// Add a new trading pair.
-        #[weight = 10]
+        #[weight = <T as Trait>::WeightInfo::add_trading_pair()]
         pub fn add_trading_pair(
             origin,
             currency_pair: CurrencyPair,
@@ -305,7 +355,7 @@ decl_module! {
         }
 
         /// Update the trading pair profile.
-        #[weight = 10]
+        #[weight = <T as Trait>::WeightInfo::update_trading_pair()]
         pub fn update_trading_pair(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -401,7 +451,7 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
         price: T::Price,
         reserve_amount: BalanceOf<T>,
-    ) -> Result<T> {
+    ) -> result::Result<(), Error<T>> {
         info!(
             "transactor:{:?}, pair_id:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
             who, pair_id, order_type, side, amount, price

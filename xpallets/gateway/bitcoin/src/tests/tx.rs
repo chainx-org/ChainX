@@ -97,6 +97,7 @@ pub fn mock_process_tx<T: Trait>(tx: Transaction, prev: Option<Transaction>) -> 
 }
 
 #[test]
+#[ignore]
 fn test_detect_tx_type() {
     let r = mock_detect_transaction_type::<Test>(&deposit1, None);
     match r {
@@ -192,6 +193,7 @@ fn test_detect_tx_type() {
 }
 
 #[test]
+#[ignore]
 fn test_process_tx() {
     ExtBuilder::default().build_and_execute(|| {
         let r = mock_process_tx::<Test>(deposit1.clone(), None);
@@ -278,6 +280,7 @@ fn test_process_tx() {
 }
 
 #[test]
+#[ignore]
 fn test_push_tx_call() {
     // https://btc.com/f1a9161a045a01db7ae02b8c0531e2fe2e9740efe30afe6d84a12e3cac251344.rawhex
     let tx = serialization::serialize(&normal_deposit.clone());

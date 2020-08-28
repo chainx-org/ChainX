@@ -208,6 +208,7 @@ impl Trait for Test {
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;
+    type WeightInfo = ();
 }
 
 thread_local! {

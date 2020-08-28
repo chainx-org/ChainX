@@ -8,9 +8,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-/// Weights for pallets used in the runtime.
-mod weights;
-
 use codec::Encode;
 
 use static_assertions::const_assert;
@@ -106,6 +103,9 @@ use impls::CurrencyToVoteHandler;
 /// Constant values used within the runtime.
 pub mod constants;
 pub use constants::{currency::*, time::*};
+
+/// Weights for pallets used in the runtime.
+mod weights;
 
 impl_opaque_keys! {
     pub struct SessionKeys {
@@ -823,6 +823,7 @@ impl xpallet_assets_registrar::Trait for Runtime {
     type Event = Event;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XMiningAsset;
+    type WeightInfo = weights::xpallet_assets_registrar::WeightInfo;
 }
 
 impl xpallet_assets::Trait for Runtime {
@@ -866,6 +867,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
 impl xpallet_dex_spot::Trait for Runtime {
     type Event = Event;
     type Price = Balance;
+    type WeightInfo = weights::xpallet_dex_spot::WeightInfo;
 }
 
 impl xpallet_contracts::Trait for Runtime {
@@ -897,6 +899,7 @@ impl xpallet_mining_staking::Trait for Runtime {
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
+    type WeightInfo = weights::xpallet_mining_staking::WeightInfo;
 }
 
 pub struct ReferralGetter;
@@ -914,6 +917,7 @@ impl xpallet_mining_asset::Trait for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
+    type WeightInfo = weights::xpallet_mining_asset::WeightInfo;
 }
 
 construct_runtime!(
@@ -1310,6 +1314,7 @@ impl_runtime_apis! {
             highest_range_values: Vec<u32>,
             steps: Vec<u32>,
             repeat: u32,
+            extra: bool,
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
             use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark};
 
@@ -1339,9 +1344,15 @@ impl_runtime_apis! {
                 &steps,
                 repeat,
                 &Vec::new(),
+                extra,
             );
             // Substrate
             add_benchmark!(params, batches, pallet_balances, Balances);
+
+            add_benchmark!(params, batches, xpallet_assets_registrar, XAssetsRegistrar);
+            add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
+            add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
+            add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

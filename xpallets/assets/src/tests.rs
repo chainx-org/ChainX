@@ -68,12 +68,7 @@ fn test_genesis() {
                 50_u128.into(),
             ));
             assert_noop!(
-                XAssets::transfer(
-                    Origin::signed(999),
-                    1,
-                    efd_id.into(),
-                    50_u128.into(),
-                ),
+                XAssets::transfer(Origin::signed(999), 1, efd_id.into(), 50_u128.into(),),
                 XAssetsErr::ActionNotAllowed
             );
         });
@@ -505,23 +500,12 @@ fn test_transfer_token() {
         // issue 50 to account 1
         XAssets::issue(&btc_id, &a, 50).unwrap();
         // transfer
-        XAssets::transfer(
-            Origin::signed(a),
-            b.into(),
-            btc_id.into(),
-            25,
-        )
-        .unwrap();
+        XAssets::transfer(Origin::signed(a), b.into(), btc_id.into(), 25).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 25);
         assert_eq!(XAssets::usable_balance(&b, &btc_id), 25);
 
         assert_noop!(
-            XAssets::transfer(
-                Origin::signed(a),
-                b.into(),
-                btc_id.into(),
-                50,
-            ),
+            XAssets::transfer(Origin::signed(a), b.into(), btc_id.into(), 50,),
             XAssetsErr::InsufficientBalance
         );
     })
