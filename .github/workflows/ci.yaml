@@ -60,16 +60,7 @@ jobs:
       run: cargo clippy
 
     - name: Test
-      # FIXME: test all
-      run: |
-          cd xpallets/mining/asset
-          cargo test -- --nocapture
-          cd -
-          cd xpallets/mining/staking
-          cargo test -- --nocapture
-          cd -
-          cd xpallets/dex/spot
-          cargo test -- --nocapture
+      run: cargo test --workspace --exclude xpallet-contracts
 
     - name: Compile
       run: cargo test --no-run

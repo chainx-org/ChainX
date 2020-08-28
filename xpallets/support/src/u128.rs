@@ -11,7 +11,7 @@ pub type RpcWeightType = U128<u128>;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```no_compile
 /// use xpallet_support::RpcBalance;
 ///
 /// sp_api::decl_runtime_apis! {

@@ -6,6 +6,8 @@ mod impls;
 mod rpc;
 mod types;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -17,6 +19,7 @@ use frame_support::{
     ensure,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement},
+    weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
@@ -38,6 +41,28 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
+pub trait WeightInfo {
+    fn claim() -> Weight;
+    fn set_claim_staking_requirement() -> Weight;
+    fn set_claim_frequency_limit() -> Weight;
+    fn set_asset_power() -> Weight;
+}
+
+impl WeightInfo for () {
+    fn claim() -> Weight {
+        1_000_000_000
+    }
+    fn set_claim_staking_requirement() -> Weight {
+        1_000_000_000
+    }
+    fn set_claim_frequency_limit() -> Weight {
+        1_000_000_000
+    }
+    fn set_asset_power() -> Weight {
+        1_000_000_000
+    }
+}
+
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -53,6 +78,8 @@ pub trait Trait: xpallet_assets::Trait {
 
     /// Generate the reward pot account for mining asset.
     type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;
+
+    type WeightInfo: WeightInfo;
 }
 
 pub trait StakingInterface<AccountId, Balance> {
@@ -172,7 +199,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// Claims the staking reward given the `target` validator.
-        #[weight = 10]
+        #[weight = <T as Trait>::WeightInfo::claim()]
         fn claim(origin, #[compact] target: AssetId) {
             let sender = ensure_signed(origin)?;
 
@@ -184,7 +211,7 @@ decl_module! {
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
-        #[weight = 10]
+        #[weight = <T as Trait>::WeightInfo::set_claim_staking_requirement()]
         fn set_claim_staking_requirement(origin, #[compact] asset_id: AssetId, #[compact] new: StakingRequirement) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
@@ -192,7 +219,7 @@ decl_module! {
             });
         }
 
-        #[weight = 10]
+        #[weight = <T as Trait>::WeightInfo::set_claim_frequency_limit()]
         fn set_claim_frequency_limit(origin, #[compact] asset_id: AssetId, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
@@ -200,8 +227,8 @@ decl_module! {
             });
         }
 
-        #[weight = 10]
-        fn set_x_asset_power(origin, #[compact] asset_id: AssetId, #[compact] new: FixedAssetPower) {
+        #[weight = <T as Trait>::WeightInfo::set_asset_power()]
+        fn set_asset_power(origin, #[compact] asset_id: AssetId, #[compact] new: FixedAssetPower) {
             ensure_root(origin)?;
             FixedAssetPowerOf::insert(asset_id, new);
         }

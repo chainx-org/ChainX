@@ -17,13 +17,13 @@
 //! Both of these two approaches share one same rule when calculating the individual reward, i.e.,
 //! **time-sensitive weight calculation**.
 //!
-//! ```
+//! ```no_compile
 //! Amount(Balance) * Duration(BlockNumber) = Weight
 //! ```
 //!
 //! For Staking:
 //!
-//! ```
+//! ```no_compile
 //! staked_balance(Balance) * time(BlockNumber) = vote_weight
 //! ```
 //!
@@ -31,7 +31,7 @@
 //!
 //! For Asset Mining:
 //!
-//! ```
+//! ```no_compile
 //! ext_asset_balance(Balance) * time(BlockNumber) = ext_mining_weight
 //! ```
 //!

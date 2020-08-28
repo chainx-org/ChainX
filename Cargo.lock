@@ -8398,6 +8398,7 @@ version = "0.1.0"
 dependencies = [
  "bitmask",
  "chainx-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -8518,6 +8519,7 @@ dependencies = [
  "chainx-primitives",
  "chrono",
  "env_logger",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8704,6 +8706,7 @@ version = "0.1.0"
 dependencies = [
  "chainx-primitives",
  "env_logger",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8761,6 +8764,7 @@ version = "0.1.0"
 dependencies = [
  "chainx-primitives",
  "env_logger",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",

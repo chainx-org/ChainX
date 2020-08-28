@@ -17,6 +17,8 @@ sp-runtime = { version = "2.0.0-rc6", default-features = false }
 frame-support = { version = "2.0.0-rc6", default-features = false }
 frame-system = { version = "2.0.0-rc6", default-features = false }
 
+frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
+
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
 xp-assets-registrar = { path = "../../primitives/assets-registrar", default-features = false }
@@ -29,6 +31,7 @@ xpallet-support = { path = "../support", default-features = false }
 [dev-dependencies]
 sp-io = { version = "2.0.0-rc6" }
 sp-core = { version = "2.0.0-rc6" }
+frame-benchmarking = { version = "2.0.0-rc6" }
 
 [features]
 default = ["std"]
@@ -49,4 +52,7 @@ std = [
 
     "xpallet-protocol/std",
     "xpallet-support/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
 ]

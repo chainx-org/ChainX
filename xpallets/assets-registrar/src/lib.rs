@@ -6,6 +6,8 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 #[cfg(test)]
 mod tests;
 mod verifier;
@@ -21,6 +23,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::Get,
+    weights::Weight,
     IterableStorageMap, RuntimeDebug,
 };
 use frame_system::ensure_root;
@@ -31,6 +34,28 @@ use xpallet_support::info;
 
 pub use verifier::*;
 pub use xp_assets_registrar::RegistrarHandler;
+
+pub trait WeightInfo {
+    fn register() -> Weight;
+    fn deregister() -> Weight;
+    fn recover() -> Weight;
+    fn update_asset_info() -> Weight;
+}
+
+impl WeightInfo for () {
+    fn register() -> Weight {
+        1_000_000_000
+    }
+    fn deregister() -> Weight {
+        1_000_000_000
+    }
+    fn recover() -> Weight {
+        1_000_000_000
+    }
+    fn update_asset_info() -> Weight {
+        1_000_000_000
+    }
+}
 
 #[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -158,6 +183,8 @@ pub trait Trait: frame_system::Trait {
 
     /// Handler for doing stuff after the asset is registered/deregistered.
     type RegistrarHandler: RegistrarHandler;
+
+    type WeightInfo: WeightInfo;
 }
 
 decl_event!(
@@ -176,13 +203,11 @@ decl_error! {
     /// Error for the Assets Metadata Module
     pub enum Error for Module<T: Trait> {
         /// Token length is zero or too long
-        InvalidAssetLen,
+        InvalidAssetLength,
         /// Token name length is zero or too long
-        InvalidAssetNameLen,
+        InvalidAssetNameLength,
         /// Desc length is zero or too long
-        InvalidDescLen,
-        /// Memo length is zero or too long
-        InvalidMemoLen,
+        InvalidDescLength,
         /// only allow ASCII alphanumeric character or '-', '.', '|', '~'
         InvalidChar,
         /// only allow ASCII alphanumeric character
@@ -236,7 +261,7 @@ decl_module! {
         /// Register a new foreign asset.
         ///
         /// This is a root-only operation.
-        #[weight = 0]
+        #[weight = T::WeightInfo::register()]
         pub fn register(
             origin,
             #[compact] asset_id: AssetId,
@@ -265,7 +290,7 @@ decl_module! {
         /// Deregister an asset with given `id`.
         ///
         /// This asset will be marked as invalid.
-        #[weight = 0]
+        #[weight = T::WeightInfo::deregister()]
         pub fn deregister(origin, #[compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(Self::is_valid_asset(&id), Error::<T>::InvalidAsset);
@@ -281,7 +306,7 @@ decl_module! {
         /// Recover a deregister asset to the valid state.
         ///
         /// `RegistrarHandler::on_register()` will be triggered again during the recover process.
-        #[weight = 0]
+        #[weight = T::WeightInfo::recover()]
         pub fn recover(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(Self::asset_exists(&id), Error::<T>::AssetDoesNotExist);
@@ -295,7 +320,7 @@ decl_module! {
         }
 
         /// Update the asset info, all the new fields are optional.
-        #[weight = 0]
+        #[weight = T::WeightInfo::update_asset_info()]
         pub fn update_asset_info(
             origin,
             #[compact] id: AssetId,
