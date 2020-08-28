@@ -98,6 +98,7 @@ impl xpallet_assets_registrar::Trait for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XSpot;
+    type WeightInfo = ();
 }
 
 impl xpallet_assets::Trait for Test {

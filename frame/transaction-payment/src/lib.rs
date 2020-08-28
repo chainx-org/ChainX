@@ -806,12 +806,14 @@ mod tests {
     fn post_info_from_weight(w: Weight) -> PostDispatchInfo {
         PostDispatchInfo {
             actual_weight: Some(w),
+            pays_fee: Default::default(),
         }
     }
 
     fn default_post_info() -> PostDispatchInfo {
         PostDispatchInfo {
             actual_weight: None,
+            pays_fee: Default::default(),
         }
     }
 
