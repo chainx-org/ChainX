@@ -34,6 +34,7 @@ pub fn test_address() {
 }
 
 #[test]
+#[ignore]
 fn test_accountid() {
     let script = Script::from(
         "5HnDcuKFCvsR42s8Tz2j2zLHLZAaiHG4VNyJDa7iLRunRuhM@33"

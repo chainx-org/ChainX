@@ -4,6 +4,7 @@ use crate::tx::parse_deposit_outputs_impl;
 use sp_std::str::FromStr;
 
 #[test]
+#[ignore]
 fn test_opreturn() {
     // error tx from mathwallet test
     // pubkey just have opreturn
