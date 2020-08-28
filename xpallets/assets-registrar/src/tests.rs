@@ -83,6 +83,7 @@ impl Trait for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
+    type WeightInfo = ();
 }
 
 pub struct ExtBuilder;

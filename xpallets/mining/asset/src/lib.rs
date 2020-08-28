@@ -199,7 +199,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// Claims the staking reward given the `target` validator.
-        #[weight = T::WeightInfo::claim()]
+        #[weight = <T as Trait>::WeightInfo::claim()]
         fn claim(origin, #[compact] target: AssetId) {
             let sender = ensure_signed(origin)?;
 
@@ -211,7 +211,7 @@ decl_module! {
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
-        #[weight = T::WeightInfo::set_claim_staking_requirement()]
+        #[weight = <T as Trait>::WeightInfo::set_claim_staking_requirement()]
         fn set_claim_staking_requirement(origin, #[compact] asset_id: AssetId, #[compact] new: StakingRequirement) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
@@ -219,7 +219,7 @@ decl_module! {
             });
         }
 
-        #[weight = T::WeightInfo::set_claim_frequency_limit()]
+        #[weight = <T as Trait>::WeightInfo::set_claim_frequency_limit()]
         fn set_claim_frequency_limit(origin, #[compact] asset_id: AssetId, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
@@ -227,7 +227,7 @@ decl_module! {
             });
         }
 
-        #[weight = T::WeightInfo::set_asset_power()]
+        #[weight = <T as Trait>::WeightInfo::set_asset_power()]
         fn set_asset_power(origin, #[compact] asset_id: AssetId, #[compact] new: FixedAssetPower) {
             ensure_root(origin)?;
             FixedAssetPowerOf::insert(asset_id, new);

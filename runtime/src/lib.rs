@@ -824,6 +824,7 @@ impl xpallet_assets_registrar::Trait for Runtime {
     type Event = Event;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XMiningAsset;
+    type WeightInfo = weights::xpallet_assets_registrar::WeightInfo;
 }
 
 impl xpallet_assets::Trait for Runtime {
@@ -1350,6 +1351,7 @@ impl_runtime_apis! {
             // Substrate
             add_benchmark!(params, batches, pallet_balances, Balances);
 
+            add_benchmark!(params, batches, xpallet_assets_registrar, XAssetsRegistrar);
             add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
             add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
             add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
