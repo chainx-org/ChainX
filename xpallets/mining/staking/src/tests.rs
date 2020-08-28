@@ -17,21 +17,15 @@ fn t_register(who: AccountId) -> DispatchResult {
 }
 
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
-    XStaking::bond(Origin::signed(who), target, value, b"memo".as_ref().into())
+    XStaking::bond(Origin::signed(who), target, value)
 }
 
 fn t_rebond(who: AccountId, from: AccountId, to: AccountId, value: Balance) -> DispatchResult {
-    XStaking::rebond(
-        Origin::signed(who),
-        from,
-        to,
-        value,
-        b"memo".as_ref().into(),
-    )
+    XStaking::rebond(Origin::signed(who), from, to, value)
 }
 
 fn t_unbond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
-    XStaking::unbond(Origin::signed(who), target, value, b"memo".as_ref().into())
+    XStaking::unbond(Origin::signed(who), target, value)
 }
 
 fn t_withdraw_unbonded(
@@ -192,7 +186,7 @@ fn unbond_should_work() {
 fn rebond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         assert_err!(
-            XStaking::unbond(Origin::signed(1), 2, 50, b"memo".as_ref().into()),
+            XStaking::unbond(Origin::signed(1), 2, 50),
             Error::<Test>::InvalidUnbondBalance
         );
 

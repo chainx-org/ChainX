@@ -181,8 +181,6 @@ decl_error! {
         InvalidAssetNameLen,
         /// Desc length is zero or too long
         InvalidDescLen,
-        /// Memo length is zero or too long
-        InvalidMemoLen,
         /// only allow ASCII alphanumeric character or '-', '.', '|', '~'
         InvalidChar,
         /// only allow ASCII alphanumeric character

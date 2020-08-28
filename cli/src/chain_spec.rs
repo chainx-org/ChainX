@@ -432,7 +432,6 @@ fn testnet_genesis(
         xpallet_assets: Some(XAssetsConfig {
             assets_restrictions,
             endowed: assets_endowed,
-            memo_len: 128,
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
         xpallet_gateway_bitcoin: {

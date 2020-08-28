@@ -42,7 +42,6 @@ use orml_traits::arithmetic::{self, Signed};
 
 // ChainX
 use chainx_primitives::AssetId;
-use xp_runtime::Memo;
 use xpallet_support::{debug, ensure_with_errorlog, error, info, traits::TreasuryAccount};
 // re-export
 pub use xpallet_assets_registrar::{AssetInfo, Chain};
@@ -139,23 +138,14 @@ decl_module! {
             Ok(())
         }
 
-        /// transfer between account with memo
-        #[weight = 0]
-        pub fn transfer_with_memo(origin, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
-            memo.check_validity()?;
-            debug!("[transfer_with_memo]|memo:{}", memo);
-            Self::transfer(origin, dest, id, value)
-        }
-
         /// for transfer by root
         #[weight = 0]
-        pub fn force_transfer(origin, transactor: <T::Lookup as StaticLookup>::Source, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>, memo: Memo) -> DispatchResult {
+        pub fn force_transfer(origin, transactor: <T::Lookup as StaticLookup>::Source, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>) -> DispatchResult {
             ensure_root(origin)?;
 
             let transactor = T::Lookup::lookup(transactor)?;
             let dest = T::Lookup::lookup(dest)?;
-            debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}|memo:{}", transactor, dest, id, value, memo);
-            memo.check_validity()?;
+            debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
             Self::can_transfer(&id)?;
 
             Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
@@ -197,9 +187,6 @@ decl_storage! {
 
         /// asset balance for an asset_id, use btree_map to accept different asset type
         pub TotalAssetBalance get(fn total_asset_balance): map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
-
-        /// memo len
-        pub MemoLen get(fn memo_len) config(): u32;
     }
     add_extra_genesis {
         config(assets_restrictions): Vec<(AssetId, AssetRestrictions)>;

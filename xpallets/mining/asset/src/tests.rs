@@ -14,7 +14,7 @@ fn t_system_block_number_inc(number: BlockNumber) {
 }
 
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
-    XStaking::bond(Origin::signed(who), target, value, b"memo".as_ref().into())
+    XStaking::bond(Origin::signed(who), target, value)
 }
 
 fn t_issue_pcx(who: AccountId, value: Balance) {

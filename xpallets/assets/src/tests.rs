@@ -66,7 +66,6 @@ fn test_genesis() {
                 999,
                 abc_id.into(),
                 50_u128.into(),
-                b"".to_vec().into()
             ));
             assert_noop!(
                 XAssets::transfer(
@@ -74,7 +73,6 @@ fn test_genesis() {
                     1,
                     efd_id.into(),
                     50_u128.into(),
-                    b"".to_vec().into()
                 ),
                 XAssetsErr::ActionNotAllowed
             );
@@ -91,7 +89,6 @@ fn test_normal_case() {
             999,
             X_BTC.into(),
             50_u128.into(),
-            b"".to_vec().into()
         ));
         assert_eq!(XAssets::usable_balance(&1, &X_BTC), 50);
         assert_eq!(XAssets::usable_balance(&999, &X_BTC), 50);
@@ -429,7 +426,6 @@ fn test_account_init() {
             id1.into(),
             btc_id.into(),
             25,
-            b"".to_vec().into()
         ));
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
@@ -465,7 +461,6 @@ fn test_transfer_not_init() {
             new_id.into(),
             btc_id.into(),
             25,
-            b"".to_vec().into()
         ));
         check_only_one_new_account(new_id);
 
@@ -474,7 +469,6 @@ fn test_transfer_not_init() {
             new_id.into(),
             btc_id.into(),
             25,
-            b"".to_vec().into()
         ));
         check_only_one_new_account(new_id);
 
@@ -490,7 +484,6 @@ fn test_transfer_not_init() {
             a.into(),
             btc_id.into(),
             50,
-            b"".to_vec().into()
         ));
         assert_eq!(System::refs(&new_id), 0);
         assert_ok!(XAssets::transfer(
@@ -498,7 +491,6 @@ fn test_transfer_not_init() {
             new_id.into(),
             btc_id.into(),
             50,
-            b"".to_vec().into()
         ));
         check_only_one_new_account(new_id);
     })
@@ -518,7 +510,6 @@ fn test_transfer_token() {
             b.into(),
             btc_id.into(),
             25,
-            b"".to_vec().into(),
         )
         .unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 25);
@@ -530,7 +521,6 @@ fn test_transfer_token() {
                 b.into(),
                 btc_id.into(),
                 50,
-                b"".to_vec().into()
             ),
             XAssetsErr::InsufficientBalance
         );
@@ -550,7 +540,6 @@ fn test_transfer_to_self() {
             a.into(),
             btc_id.into(),
             25,
-            b"".to_vec().into()
         ));
 
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);

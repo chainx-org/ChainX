@@ -34,7 +34,6 @@ use xp_mining_common::{
     Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
-use xp_runtime::Memo;
 use xpallet_support::{debug, traits::TreasuryAccount};
 
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
@@ -293,11 +292,9 @@ decl_module! {
 
         /// Nominate the `target` with `value` of the origin account's balance locked.
         #[weight = 10]
-        pub fn bond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
+        pub fn bond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>) {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
-
-            memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
@@ -311,12 +308,10 @@ decl_module! {
 
         /// Move the `value` of current nomination from one validator to another.
         #[weight = 10]
-        fn rebond(origin, from: <T::Lookup as StaticLookup>::Source, to: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
+        fn rebond(origin, from: <T::Lookup as StaticLookup>::Source, to: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>) {
             let sender = ensure_signed(origin)?;
             let from = T::Lookup::lookup(from)?;
             let to = T::Lookup::lookup(to)?;
-
-            memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&from) && Self::is_validator(&to), Error::<T>::NotValidator);
@@ -340,11 +335,9 @@ decl_module! {
 
         /// Unnominate the `value` of bonded balance for validator `target`.
         #[weight = 10]
-        fn unbond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>, memo: Memo) {
+        fn unbond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>) {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
-
-            memo.check_validity()?;
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
