@@ -61,8 +61,6 @@ fn test_opreturn() {
                 <Test as Trait>::AccountExtractor::account_info(script)
             })
         }
-        use sp_core::crypto::{Ss58AddressFormat};
-        println!("ss58:{:?}", Ss58AddressFormat::default());
         let r = mock_parse_deposit_outputs(&t1, &hot_addr);
         assert_eq!(r, (None, 30000));
 
