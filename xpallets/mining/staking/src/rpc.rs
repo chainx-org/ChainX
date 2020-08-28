@@ -45,6 +45,8 @@ pub struct RpcNominatorLedger<RpcBalance, BlockNumber> {
     pub last_vote_weight: RpcWeightType,
     /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,
+    /// Unbonded entries.
+    pub unbonded_chunks: Vec<RpcUnbonded<RpcBalance, BlockNumber>>,
 }
 
 impl<Balance, BlockNumber> From<NominatorLedger<Balance, BlockNumber>>
@@ -57,6 +59,7 @@ impl<Balance, BlockNumber> From<NominatorLedger<Balance, BlockNumber>>
             nomination,
             last_vote_weight,
             last_vote_weight_update: ledger.last_vote_weight_update,
+            unbonded_chunks: ledger.unbonded_chunks.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -109,14 +112,13 @@ impl<Balance, BlockNumber> From<Unbonded<Balance, BlockNumber>>
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct NominatorInfo<RpcBalance, BlockNumber> {
+pub struct NominatorInfo<BlockNumber> {
     /// Block number of last `rebond` operation.
     pub last_rebond: Option<BlockNumber>,
-    /// Total unbonded entries.
-    pub unbonded_chunks: Vec<RpcUnbonded<RpcBalance, BlockNumber>>,
 }
 
 impl<T: Trait> Module<T> {
+    #[allow(clippy::type_complexity)]
     pub fn validators_info(
     ) -> Vec<ValidatorInfo<T::AccountId, RpcBalance<BalanceOf<T>>, T::BlockNumber>> {
         Self::validator_set().map(Self::validator_info_of).collect()
@@ -159,6 +161,7 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn nomination_details_of(
         who: T::AccountId,
     ) -> BTreeMap<T::AccountId, RpcNominatorLedger<RpcBalance<BalanceOf<T>>, T::BlockNumber>> {
@@ -167,17 +170,8 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-    pub fn nominator_info_of(
-        who: T::AccountId,
-    ) -> NominatorInfo<RpcBalance<BalanceOf<T>>, T::BlockNumber> {
-        let nominator_profile = Nominators::<T>::get(&who);
-        NominatorInfo {
-            last_rebond: nominator_profile.last_rebond,
-            unbonded_chunks: nominator_profile
-                .unbonded_chunks
-                .into_iter()
-                .map(Into::into)
-                .collect(),
-        }
+    pub fn nominator_info_of(who: T::AccountId) -> NominatorInfo<T::BlockNumber> {
+        let last_rebond = LastRebondOf::<T>::get(&who);
+        NominatorInfo { last_rebond }
     }
 }
