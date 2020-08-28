@@ -8,6 +8,9 @@ mod opreturn;
 mod trustee;
 mod tx;
 
+use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
+use std::sync::Mutex;
+
 use frame_support::{assert_noop, assert_ok};
 
 use self::mock::*;
@@ -28,16 +31,32 @@ fn as_h256(s: &str) -> H256 {
     h256_conv_endian_from_str(s)
 }
 
+struct Guard<'a>((std::sync::MutexGuard<'a, ()>, Ss58AddressFormat));
+impl<'a> Drop for Guard<'a> {
+    fn drop(&mut self) {
+        set_default_ss58_version((self.0).1)
+    }
+}
+lazy_static::lazy_static!(
+    static ref LOCK: Mutex<()> = Mutex::new(());
+);
+fn force_ss58_version() -> Guard<'static> {
+    let c = LOCK.lock().unwrap();
+    let default = Ss58AddressFormat::default();
+    set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
+    Guard((c, default))
+}
+
 #[test]
 pub fn test_address() {
     XGatewayBitcoin::verify_btc_address(&b"mqVznxoxdeSNYgDCg6ZVE5pc6476BY6zHK".to_vec()).unwrap();
 }
 
 #[test]
-#[ignore]
 fn test_accountid() {
+    let _g = force_ss58_version();
     let script = Script::from(
-        "5HnDcuKFCvsR42s8Tz2j2zLHLZAaiHG4VNyJDa7iLRunRuhM@33"
+        "5Uj3ehamDZWPfgA8iAZenhcAmPDakjf4aMbkBB4dXVvjoW6x@33"
             .as_bytes()
             .to_vec(),
     );

@@ -4,7 +4,6 @@ use crate::tx::parse_deposit_outputs_impl;
 use sp_std::str::FromStr;
 
 #[test]
-#[ignore]
 fn test_opreturn() {
     // error tx from mathwallet test
     // pubkey just have opreturn
@@ -48,6 +47,8 @@ fn test_opreturn() {
     println!("{:?}", t9);
 
     ExtBuilder::default().build_and_execute(|| {
+        let _g = force_ss58_version();
+
         let hot_addr =
             XGatewayBitcoin::verify_btc_address(b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF").expect("");
         println!("{:?}", hot_addr);
@@ -60,7 +61,8 @@ fn test_opreturn() {
                 <Test as Trait>::AccountExtractor::account_info(script)
             })
         }
-
+        use sp_core::crypto::{Ss58AddressFormat};
+        println!("ss58:{:?}", Ss58AddressFormat::default());
         let r = mock_parse_deposit_outputs(&t1, &hot_addr);
         assert_eq!(r, (None, 30000));
 
