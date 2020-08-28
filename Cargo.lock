@@ -831,7 +831,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authority-discovery",
  "pallet-authorship",
- "pallet-balances 2.0.0-rc6",
+ "pallet-balances",
  "pallet-collective",
  "pallet-democracy",
  "pallet-elections-phragmen",
@@ -1467,8 +1467,6 @@ dependencies = [
 [[package]]
 name = "frame-executive"
 version = "2.0.0-rc6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7a0cd96943af326c968548906a3968d573c7c6ddfa645c4bd2ed8168c1b6c68"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -1478,6 +1476,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-tracing",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -3839,23 +3838,6 @@ dependencies = [
 [[package]]
 name = "pallet-balances"
 version = "2.0.0-rc6"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "xp-runtime",
-]
-
-[[package]]
-name = "pallet-balances"
-version = "2.0.0-rc6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec78c836f1481626270edfa445c612ba8e3aa6601f418f31a9aa815ae3ab6584"
 dependencies = [
@@ -4049,7 +4031,7 @@ checksum = "9bcdd3ac96beb0896f4822cbcf98bf78344fb06dd63377249007c3b3726d1a69"
 dependencies = [
  "frame-support",
  "frame-system",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-runtime",
@@ -4230,7 +4212,7 @@ checksum = "3a888547023bbb8190589f28dd6dc4bb09b65d804cffb7e716efe1c6995a2652"
 dependencies = [
  "frame-support",
  "frame-system",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-runtime",
@@ -8380,7 +8362,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-traits",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -8450,7 +8432,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8521,7 +8503,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",
@@ -8575,7 +8557,7 @@ dependencies = [
  "lazy_static",
  "light-bitcoin",
  "orml-utilities",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "pallet-multisig",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8654,7 +8636,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-utilities",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -8707,7 +8689,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "pallet-session",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8764,7 +8746,7 @@ dependencies = [
  "env_logger",
  "frame-support",
  "frame-system",
- "pallet-balances 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "pallet-session",
  "pallet-timestamp",
  "parity-scale-codec",
