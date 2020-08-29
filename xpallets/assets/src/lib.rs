@@ -140,7 +140,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// transfer between account
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::transfer()]
         pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             let dest = T::Lookup::lookup(dest)?;
@@ -153,7 +153,7 @@ decl_module! {
         }
 
         /// for transfer by root
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::force_transfer()]
         pub fn force_transfer(origin, transactor: <T::Lookup as StaticLookup>::Source, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>) -> DispatchResult {
             ensure_root(origin)?;
 
@@ -167,7 +167,7 @@ decl_module! {
         }
 
         /// set free token for an account
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_balance(balances.len() as u32)]
         pub fn set_balance(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, balances: BTreeMap<AssetType, BalanceOf<T>>) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
@@ -176,7 +176,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_asset_limit()]
         pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
             ensure_root(origin)?;
 
