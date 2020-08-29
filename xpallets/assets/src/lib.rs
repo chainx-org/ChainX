@@ -98,7 +98,6 @@ decl_error! {
         TotalAssetOverflow,
         /// Balance too low to send value
         TotalAssetInsufficientBalance,
-
         ///  Not Allow native asset,
         DenyNativeAsset,
         /// Action is not allowed.
@@ -557,12 +556,11 @@ impl<T: Trait> Module<T> {
             "[issue]|issue to account|id:{:}|who:{:?}|type:{:?}|current:{:?}|value:{:?}",
             id, who, type_, current, value
         );
-        // check
+
         let new = current.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 
         AssetChangedTrigger::<T>::on_issue_pre(id, who);
 
-        // set to storage
         Self::make_type_balance_be(who, id, type_, new);
 
         AssetChangedTrigger::<T>::on_issue_post(id, who, value)?;
@@ -579,7 +577,7 @@ impl<T: Trait> Module<T> {
 
         debug!("[destroy_directly]|destroy asset for account|id:{:}|who:{:?}|type:{:?}|current:{:?}|destroy:{:?}",
                id, who, type_, current, value);
-        // check
+
         let new = current
             .checked_sub(&value)
             .ok_or(Error::<T>::InsufficientBalance)?;
