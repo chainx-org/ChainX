@@ -16,6 +16,9 @@ sp-io = { version = "2.0.0-rc6", default-features = false }
 # Substrate pallets
 frame-support = { version = "2.0.0-rc6", default-features = false }
 frame-system = { version = "2.0.0-rc6", default-features = false }
+
+frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
+
 pallet-timestamp = { version = "2.0.0-rc6", default-features = false }
 
 # orml
@@ -72,4 +75,7 @@ std = [
 
     # light-bitcoin
     "light-bitcoin/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
 ]

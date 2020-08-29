@@ -6,6 +6,8 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::transmute_ptr_to_ptr)]
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]

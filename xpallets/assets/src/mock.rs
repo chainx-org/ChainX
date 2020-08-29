@@ -163,14 +163,17 @@ impl ExtBuilder {
         let ext = sp_io::TestExternalities::new(storage);
         ext
     }
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+    pub fn build_default(self) -> sp_io::TestExternalities {
         let btc_assets = btc();
         let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
         let mut endowed = BTreeMap::new();
         let endowed_info = vec![(ALICE, 100), (BOB, 200), (CHARLIE, 300), (DAVE, 400)];
         endowed.insert(btc_assets.0, endowed_info);
 
-        let mut ext = self.build(assets, endowed);
+        self.build(assets, endowed)
+    }
+    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+        let mut ext = self.build_default();
         ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);
     }

@@ -17,6 +17,8 @@ sp-runtime = { version = "2.0.0-rc6", default-features = false }
 frame-support = { version = "2.0.0-rc6", default-features = false }
 frame-system = { version = "2.0.0-rc6", default-features = false }
 
+frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
+
 # orml
 orml-traits = { version = "0.1.3-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "27d55f6a8e74b989578ccfb7c44616c3016dcb2a", default-features = false }
 
@@ -57,3 +59,7 @@ std = [
 
     "orml-traits/std",
 ]
+runtime-benchmarks = [
+    "frame-benchmarking",
+]
+

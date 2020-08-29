@@ -15,6 +15,8 @@ sp-runtime = { version = "2.0.0-rc6", default-features = false }
 frame-support = { version = "2.0.0-rc6", default-features = false }
 frame-system = { version = "2.0.0-rc6", default-features = false }
 
+frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
+
 # chainx runtime module
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
@@ -60,4 +62,7 @@ std = [
 ]
 ss58check = [
     "xp-io"
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
 ]

@@ -8360,6 +8360,7 @@ dependencies = [
  "bitmask",
  "chainx-primitives",
  "env_logger",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-traits",
@@ -8553,6 +8554,7 @@ name = "xpallet-gateway-bitcoin"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex 0.4.2",
@@ -8583,6 +8585,7 @@ name = "xpallet-gateway-common"
 version = "1.0.0"
 dependencies = [
  "chainx-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex 0.4.2",
@@ -8635,6 +8638,7 @@ name = "xpallet-gateway-records"
 version = "1.0.0"
 dependencies = [
  "chainx-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-utilities",
@@ -8822,6 +8826,7 @@ dependencies = [
 name = "xpallet-system"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",

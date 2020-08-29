@@ -14,7 +14,8 @@ sp-runtime = { version = "2.0.0-rc6", default-features = false }
 
 frame-support = { version = "2.0.0-rc6", default-features = false }
 frame-system = { version = "2.0.0-rc6", default-features = false }
-#timestamp = { package = "srml-timestamp", git = "https://github.com/chainpool/substrate", branch="chainx-master", default-features = false }
+
+frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
 
 # orml
 orml-utilities = { version = "0.1.3-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "27d55f6a8e74b989578ccfb7c44616c3016dcb2a", default-features = false }
@@ -57,4 +58,7 @@ std = [
     "xpallet-assets-registrar/std",
     "xpallet-protocol/std",
     "xpallet-support/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
 ]
