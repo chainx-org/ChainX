@@ -15,6 +15,7 @@ mod tests;
 #[cfg(test)]
 mod tests_multicurrency;
 
+mod default_weight;
 mod multicurrency;
 pub mod traits;
 mod trigger;
@@ -36,6 +37,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, Happened, IsDeadAccount, LockableCurrency, ReservableCurrency},
+    weights::Weight,
     Parameter, StorageDoubleMap,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -57,6 +59,14 @@ pub use self::types::{
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+
+// xpallet_assets
+pub trait WeightInfo {
+    fn transfer() -> Weight;
+    fn force_transfer() -> Weight;
+    fn set_balance(n: u32) -> Weight;
+    fn set_asset_limit() -> Weight;
+}
 
 pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
     /// Event
@@ -81,6 +91,8 @@ pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
     type OnCreatedAccount: Happened<Self::AccountId>;
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
+
+    type WeightInfo: WeightInfo;
 }
 
 decl_error! {

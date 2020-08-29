@@ -127,6 +127,7 @@ impl xpallet_assets::Trait for Test {
     type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
+    type WeightInfo = ();
 }
 
 impl xpallet_gateway_records::Trait for Test {

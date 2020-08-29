@@ -56,7 +56,6 @@ benchmarks! {
     }
 
     set_asset_limit {
-        let n in 1 .. AssetType::iterator().collect::<Vec<_>>().len() as u32;
         let res = AssetRestriction::Deposit|AssetRestriction::DestroyUsable;
     }: set_asset_limit(RawOrigin::Root, ASSET_ID, res)
     verify {
