@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 use sp_std::fmt;
 
 /// trick struct to wrap a string and just impl `Debug`.

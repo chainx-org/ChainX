@@ -1,4 +1,6 @@
-pub use log::*;
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
+pub use self::log::*;
 
 #[cfg(feature = "std")]
 #[macro_export]
