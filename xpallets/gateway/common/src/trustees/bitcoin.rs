@@ -6,9 +6,9 @@ use sp_runtime::RuntimeDebug;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct BtcTrusteeAddrInfo {
-    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_impl::text"))]
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_text"))]
     pub addr: BtcAddress,
-    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_impl::hex"))]
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_hex"))]
     pub redeem_script: Vec<u8>,
 }
 
@@ -72,7 +72,7 @@ impl Into<Vec<u8>> for BtcTrusteeType {
 mod serde_impl {
     use super::*;
     use serde::{de::Error, Deserializer, Serializer};
-    use xpallet_support::serde_impl::hex;
+    use xpallet_support::serde_hex;
 
     impl Serialize for BtcTrusteeType {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -80,7 +80,7 @@ mod serde_impl {
             S: Serializer,
         {
             let d = (&*self.0).to_vec();
-            hex::serialize(&d, serializer)
+            serde_hex::serialize(&d, serializer)
         }
     }
     impl<'de> Deserialize<'de> for BtcTrusteeType {
@@ -88,7 +88,7 @@ mod serde_impl {
         where
             D: Deserializer<'de>,
         {
-            let data: Vec<u8> = hex::deserialize(deserializer)?;
+            let data: Vec<u8> = serde_hex::deserialize(deserializer)?;
             let pubkey = BtcPublic::from_slice(&data)
                 .map_err(|e| Error::custom(format!("not valid pubkey hex:{:?}", e)))?;
             Ok(BtcTrusteeType(pubkey))

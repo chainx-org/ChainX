@@ -90,7 +90,7 @@ decl_storage! {
     }
 }
 
-const ALWAYS_ALLOW: [&'static str; 1] = ["Sudo"];
+const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];
 const PALLET_MARK: &[u8; 1] = b"#";
 
 impl<T: Trait> Module<T> {

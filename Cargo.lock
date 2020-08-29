@@ -714,7 +714,7 @@ dependencies = [
  "chainx-runtime",
  "frame-benchmarking-cli",
  "futures 0.3.5",
- "hex 0.4.2",
+ "hex",
  "jsonrpc-pubsub",
  "log",
  "log4rs",
@@ -2042,12 +2042,6 @@ dependencies = [
 
 [[package]]
 name = "hex"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
-
-[[package]]
-name = "hex"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
@@ -2069,16 +2063,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d4c5c844e2fee0bf673d54c2c177f1713b3d2af2ff6e666b49cb7572e6cf42d"
 dependencies = [
  "proc-macro-hack",
-]
-
-[[package]]
-name = "hex-serde"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3486d7bc9e52c4c5fc1856ae8a5e4ab41d2499fc20bbc44492e244e8bf1b7012"
-dependencies = [
- "hex 0.3.2",
- "serde",
 ]
 
 [[package]]
@@ -3198,7 +3182,7 @@ source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#c6ca0deda271
 dependencies = [
  "byteorder 1.3.4",
  "fixed-hash",
- "hex 0.4.2",
+ "hex",
  "impl-codec",
  "impl-serde 0.3.1",
  "primitive-types",
@@ -5356,7 +5340,7 @@ dependencies = [
  "env_logger",
  "fdlimit",
  "futures 0.3.5",
- "hex 0.4.2",
+ "hex",
  "lazy_static",
  "libp2p 0.22.0",
  "log",
@@ -5674,7 +5658,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "528afd2d984ab1bc4667fb60b5d2fbd685bf286145f630be7bc8cdbff8d1858f"
 dependencies = [
  "derive_more",
- "hex 0.4.2",
+ "hex",
  "merlin",
  "parking_lot 0.10.2",
  "rand 0.7.3",
@@ -5722,7 +5706,7 @@ dependencies = [
  "futures 0.3.5",
  "futures-timer 3.0.2",
  "futures_codec",
- "hex 0.4.2",
+ "hex",
  "ip_network",
  "libp2p 0.23.0",
  "linked-hash-map",
@@ -6636,7 +6620,7 @@ dependencies = [
  "futures 0.3.5",
  "hash-db",
  "hash256-std-hasher",
- "hex 0.4.2",
+ "hex",
  "impl-serde 0.3.1",
  "lazy_static",
  "libsecp256k1",
@@ -8314,7 +8298,7 @@ dependencies = [
 name = "xp-io"
 version = "0.1.0"
 dependencies = [
- "hex 0.4.2",
+ "hex",
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",
@@ -8345,7 +8329,7 @@ dependencies = [
 name = "xp-runtime"
 version = "0.1.0"
 dependencies = [
- "hex 0.4.2",
+ "hex",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -8467,7 +8451,7 @@ name = "xpallet-contracts-rpc"
 version = "0.8.0-rc4"
 dependencies = [
  "chainx-primitives",
- "hex 0.4.2",
+ "hex",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -8551,10 +8535,11 @@ dependencies = [
 name = "xpallet-gateway-bitcoin"
 version = "0.1.0"
 dependencies = [
+ "bs58",
  "chainx-primitives",
  "frame-support",
  "frame-system",
- "hex 0.4.2",
+ "hex",
  "lazy_static",
  "light-bitcoin",
  "orml-utilities",
@@ -8584,7 +8569,7 @@ dependencies = [
  "chainx-primitives",
  "frame-support",
  "frame-system",
- "hex 0.4.2",
+ "hex",
  "light-bitcoin",
  "parity-scale-codec",
  "serde",
@@ -8603,7 +8588,7 @@ dependencies = [
 name = "xpallet-gateway-common-rpc"
 version = "0.1.0"
 dependencies = [
- "hex 0.4.2",
+ "hex",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -8809,11 +8794,10 @@ name = "xpallet-support"
 version = "0.1.0"
 dependencies = [
  "frame-support",
- "hex 0.4.2",
- "hex-serde",
+ "hex",
  "parity-scale-codec",
  "serde",
- "sp-runtime",
+ "serde_json",
  "sp-std",
 ]
 
