@@ -299,7 +299,7 @@ impl pallet_indices::Trait for Runtime {
 impl pallet_authority_discovery::Trait for Runtime {}
 
 parameter_types! {
-    pub const UncleGenerations: BlockNumber = 5;
+    pub const UncleGenerations: BlockNumber = 0;
 }
 
 impl pallet_authorship::Trait for Runtime {
@@ -328,6 +328,17 @@ impl pallet_grandpa::Trait for Runtime {
     type KeyOwnerProofSystem = Historical;
 
     type HandleEquivocation = ();
+}
+
+parameter_types! {
+    pub WindowSize: BlockNumber = pallet_finality_tracker::DEFAULT_WINDOW_SIZE.into();
+    pub ReportLatency: BlockNumber = pallet_finality_tracker::DEFAULT_REPORT_LATENCY.into();
+}
+
+impl pallet_finality_tracker::Trait for Runtime {
+    type OnFinalizationStalled = ();
+    type WindowSize = WindowSize;
+    type ReportLatency = ReportLatency;
 }
 
 parameter_types! {
@@ -943,6 +954,7 @@ construct_runtime!(
         Offences: pallet_offences::{Module, Call, Storage, Event},
         Historical: pallet_session_historical::{Module},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
+        FinalityTracker: pallet_finality_tracker::{Module, Call, Storage, Inherent},
         Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
         ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
         AuthorityDiscovery: pallet_authority_discovery::{Module, Call, Config},
