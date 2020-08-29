@@ -835,6 +835,7 @@ dependencies = [
  "pallet-collective",
  "pallet-democracy",
  "pallet-elections-phragmen",
+ "pallet-finality-tracker",
  "pallet-grandpa",
  "pallet-identity",
  "pallet-im-online",
