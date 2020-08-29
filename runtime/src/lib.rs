@@ -1361,6 +1361,7 @@ impl_runtime_apis! {
             // Substrate
             add_benchmark!(params, batches, pallet_balances, Balances);
 
+            add_benchmark!(params, batches, xpallet_assets, XAssets);
             add_benchmark!(params, batches, xpallet_assets_registrar, XAssetsRegistrar);
             add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
             add_benchmark!(params, batches, xpallet_mining_staking, XStaking);

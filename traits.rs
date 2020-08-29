@@ -1,7 +1,7 @@
-// xpallet_mining_asset
+// xpallet_assets
 pub trait WeightInfo {
-	fn claim() -> Weight;
-	fn set_claim_staking_requirement(c: u32, ) -> Weight;
-	fn set_claim_frequency_limit(c: u32, ) -> Weight;
-	fn set_asset_power(c: u32, ) -> Weight;
+	fn transfer() -> Weight;
+	fn force_transfer() -> Weight;
+	fn set_balance(n: u32, ) -> Weight;
+	fn set_asset_limit(n: u32, ) -> Weight;
 }
