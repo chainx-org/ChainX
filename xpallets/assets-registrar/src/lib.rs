@@ -370,6 +370,11 @@ impl<T: Trait> Module<T> {
         Self::asset_infos().filter(|(id, _)| Self::is_valid_asset(id))
     }
 
+    /// Returns true if the given `asset_id` is an online asset.
+    pub fn is_online(asset_id: AssetId) -> bool {
+        Self::asset_online(asset_id).is_some()
+    }
+
     /// Returns the asset info of given `id`.
     pub fn get_asset_info(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
         if let Some(asset) = Self::asset_info_of(id) {
