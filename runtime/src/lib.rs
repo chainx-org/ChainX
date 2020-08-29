@@ -299,7 +299,7 @@ impl pallet_indices::Trait for Runtime {
 impl pallet_authority_discovery::Trait for Runtime {}
 
 parameter_types! {
-    pub const UncleGenerations: BlockNumber = 5;
+    pub const UncleGenerations: BlockNumber = 0;
 }
 
 impl pallet_authorship::Trait for Runtime {
