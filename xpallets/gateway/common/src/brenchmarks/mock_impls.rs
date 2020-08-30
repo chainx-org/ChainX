@@ -1,4 +1,5 @@
 use super::*;
+use crate::*;
 
 // hack for compiling error
 pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Trait>(sp_std::marker::PhantomData<T>);

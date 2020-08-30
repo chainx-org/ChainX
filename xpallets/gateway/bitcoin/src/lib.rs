@@ -407,7 +407,9 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
                     Err(Error::<T>::InvalidAddress)?;
                 }
             }
-            Err(e) => {error!("[check_addr]|not get trustee addr|err:{:?}", e);},
+            Err(e) => {
+                error!("[check_addr]|not get trustee addr|err:{:?}", e);
+            }
         }
 
         Ok(())

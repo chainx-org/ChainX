@@ -9,15 +9,21 @@ mod benchmarking;
 // However, substrate benchmarks must inside the crate, thus we move source test case framework outside
 // of the crate, and in current crate, we make a simple mocked test case framework(`ExtBuilder`),
 // just use this `ExtBuilder` for benchmarks, not for test case.
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 pub mod mock_impls;
 
+#[cfg(test)]
 use mock::*;
 
-use crate::*;
-
 // for compile
-#[test]
-fn base() {
-    ExtBuilder::default().build().execute_with(|| {})
+#[cfg(test)]
+mod tests {
+    use crate::brenchmarks::mock::ExtBuilder;
+
+    #[test]
+    fn base() {
+        ExtBuilder::default().build().execute_with(|| {})
+    }
 }

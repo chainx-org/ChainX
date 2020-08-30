@@ -865,6 +865,7 @@ impl xpallet_gateway_common::Trait for Runtime {
     type DetermineMultisigAddress = MultisigProvider;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
+    type WeightInfo = ();
 }
 
 impl xpallet_gateway_bitcoin::Trait for Runtime {
@@ -1368,6 +1369,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
             add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
             add_benchmark!(params, batches, xpallet_getaway_records, XGatewayRecords);
+            add_benchmark!(params, batches, xpallet_getaway_common, XGatewayCommon);
             add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }

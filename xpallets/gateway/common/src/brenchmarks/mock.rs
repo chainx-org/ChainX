@@ -140,6 +140,7 @@ impl crate::Trait for Test {
     type DetermineMultisigAddress = MultisigAddr;
     type Bitcoin = mock_impls::MockBitcoin<Test>;
     type BitcoinTrustee = mock_impls::MockBitcoin<Test>;
+    type WeightInfo = ();
 }
 
 thread_local! {
@@ -185,13 +186,6 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
         .unwrap(),
         AssetRestriction::DestroyUsable.into(),
     )
-}
-
-lazy_static::lazy_static! {
-    pub static ref ALICE: AccountId = H256::repeat_byte(1).unchecked_into();
-    pub static ref BOB: AccountId = H256::repeat_byte(2).unchecked_into();
-    pub static ref CHARLIE: AccountId = H256::repeat_byte(3).unchecked_into();
-    pub static ref DAVE: AccountId = H256::repeat_byte(4).unchecked_into();
 }
 
 pub struct ExtBuilder;
@@ -244,7 +238,7 @@ fn trustees() -> Vec<(
 )> {
     let btc_trustees = vec![
         (
-            ALICE.clone(),
+            H256::repeat_byte(1).unchecked_into(),
             b"".to_vec(),
             hex::decode("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6")
                 .expect("hex decode failed")
@@ -254,7 +248,7 @@ fn trustees() -> Vec<(
                 .into(),
         ),
         (
-            BOB.clone(),
+            H256::repeat_byte(2).unchecked_into(),
             b"".to_vec(),
             hex::decode("0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d")
                 .expect("hex decode failed")
@@ -264,7 +258,7 @@ fn trustees() -> Vec<(
                 .into(),
         ),
         (
-            CHARLIE.clone(),
+            H256::repeat_byte(3).unchecked_into(),
             b"".to_vec(),
             hex::decode("03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102")
                 .expect("hex decode failed")

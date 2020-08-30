@@ -5,10 +5,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
 mod brenchmarks;
-
-// mod benchmarking;
 
 mod binding;
 pub mod extractor;
@@ -16,6 +13,7 @@ pub mod traits;
 pub mod trustees;
 pub mod types;
 pub mod utils;
+mod weight_info;
 
 use sp_runtime::traits::StaticLookup;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*, result};
@@ -43,6 +41,7 @@ use crate::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
     TrusteeIntentionProps,
 };
+use crate::weight_info::WeightInfo;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
@@ -60,6 +59,7 @@ pub trait Trait: frame_system::Trait + xpallet_gateway_records::Trait {
         trustees::bitcoin::BtcTrusteeType,
         trustees::bitcoin::BtcTrusteeAddrInfo,
     >;
+    type WeightInfo: WeightInfo;
 }
 
 decl_event!(
@@ -101,14 +101,14 @@ decl_module! {
         type Error = Error<T>;
         fn deposit_event() = default;
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::withdraw()]
         fn withdraw(origin, #[compact] asset_id: AssetId, #[compact] value: BalanceOf<T>, addr: AddrStr, ext: Memo) -> DispatchResult {
             let who = ensure_signed(origin)?;
             Self::apply_withdraw(who, asset_id, value, addr, ext)
         }
 
         // trustees
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::setup_trustee()]
         pub fn setup_trustee(origin, chain: Chain, about: Text, hot_entity: Vec<u8>, cold_entity: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(T::Validator::is_validator(&who), Error::<T>::NotValidator);
@@ -116,7 +116,7 @@ decl_module! {
         }
 
         /// use for trustee multisig addr
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::transition_trustee_session(new_trustees.len() as u32)]
         pub fn transition_trustee_session(origin, chain: Chain, new_trustees: Vec<T::AccountId>) -> DispatchResult {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
@@ -134,7 +134,7 @@ decl_module! {
             Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
             let from = ensure_signed(origin)?;
 
@@ -147,7 +147,7 @@ decl_module! {
             xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(chain, withdrawal_id, state)
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_trustee_info_config()]
         pub fn set_trustee_info_config(origin, chain: Chain, config: TrusteeInfoConfig) -> DispatchResult {
             ensure_root(origin)?;
             TrusteeInfoConfigOf::insert(chain, config);

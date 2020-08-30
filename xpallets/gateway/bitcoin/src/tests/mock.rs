@@ -125,6 +125,7 @@ impl xpallet_gateway_common::Trait for Test {
     type DetermineMultisigAddress = ();
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
+    type WeightInfo = ();
 }
 
 thread_local! {

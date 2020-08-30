@@ -23,7 +23,7 @@ impl WeightInfo for () {
             .saturating_add(DbWeight::get().reads(11 as Weight))
             .saturating_add(DbWeight::get().writes(8 as Weight))
     }
-    fn set_withdrawal_state_list(u: u32, ) -> Weight {
+    fn set_withdrawal_state_list(u: u32) -> Weight {
         (602878000 as Weight)
             .saturating_add((54000 as Weight).saturating_mul(u as Weight))
             .saturating_add(DbWeight::get().reads(11 as Weight))
