@@ -188,49 +188,43 @@ decl_storage! {
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
         /// notice if not set AssetRestriction, default is true for this limit
         /// if want let limit make sense, must set false for the limit
-        pub AssetRestrictionsOf get(fn asset_restrictions_of): map hasher(twox_64_concat) AssetId => AssetRestrictions;
+        pub AssetRestrictionsOf get(fn asset_restrictions_of):
+            map hasher(twox_64_concat) AssetId => AssetRestrictions;
 
         /// asset balance for user&asset_id, use btree_map to accept different asset type
         pub AssetBalance get(fn asset_balance):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId
+            => BTreeMap<AssetType, BalanceOf<T>>;
 
         /// Any liquidity locks of a token type under an account.
         /// NOTE: Should only be accessed when setting, changing and freeing a lock.
-        pub Locks get(fn locks): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => Vec<BalanceLock<BalanceOf<T>>>;
+        pub Locks get(fn locks):
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId
+            => Vec<BalanceLock<BalanceOf<T>>>;
 
         /// asset balance for an asset_id, use btree_map to accept different asset type
-        pub TotalAssetBalance get(fn total_asset_balance): map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
+        pub TotalAssetBalance get(fn total_asset_balance):
+            map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
     }
     add_extra_genesis {
         config(assets_restrictions): Vec<(AssetId, AssetRestrictions)>;
         config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>;
         build(|config| {
-            Module::<T>::endow_assets(&config.endowed);
-            Module::<T>::set_restrictions(&config.assets_restrictions);
-        })
-    }
-}
-
-// initialize
-#[cfg(feature = "std")]
-impl<T: Trait> Module<T> {
-    fn set_restrictions(assets: &[(AssetId, AssetRestrictions)]) {
-        for (id, restrictions) in assets.iter() {
-            if *id != T::NativeAssetId::get() {
-                Self::set_asset_restrictions(*id, *restrictions)
-                    .expect("should not fail in genesis, qed");
-            }
-        }
-    }
-    fn endow_assets(endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>) {
-        for (id, endowed) in endowed_accounts.iter() {
-            if *id != T::NativeAssetId::get() {
-                for (accountid, value) in endowed.iter() {
-                    Self::issue(id, accountid, *value)
-                        .expect("asset issuance during the genesis can not fail");
+            for (id, endowed) in &config.endowed {
+                if *id != T::NativeAssetId::get() {
+                    for (accountid, value) in endowed.iter() {
+                        Module::<T>::issue(id, accountid, *value)
+                            .expect("asset issuance during the genesis can not fail");
+                    }
                 }
             }
-        }
+            for (id, restrictions) in &config.assets_restrictions {
+                if *id != T::NativeAssetId::get() {
+                    Module::<T>::set_asset_restrictions(*id, *restrictions)
+                        .expect("should not fail in genesis, qed");
+                }
+            }
+        })
     }
 }
 
