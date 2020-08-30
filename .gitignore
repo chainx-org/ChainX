@@ -26,4 +26,4 @@ log/
 
 # for substrate weight
 traits.rs
-*.rs
+/*.rs
