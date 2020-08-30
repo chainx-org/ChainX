@@ -22,7 +22,6 @@ use sp_std::collections::btree_map::BTreeMap;
 use light_bitcoin::primitives::Compact;
 use light_bitcoin::serialization;
 
-// use xbridge_common::traits::IntoVecu8;
 use chainx_primitives::AssetId;
 use xpallet_assets::{AssetRestriction, AssetRestrictions};
 use xpallet_assets_registrar::AssetInfo;
@@ -92,21 +91,6 @@ impl pallet_balances::Trait for Test {
     type AccountStore = System;
     type WeightInfo = ();
 }
-
-// parameter_types! {
-//     pub const DepositBase: u64 = 1;
-//     pub const DepositFactor: u64 = 1;
-//     pub const MaxSignatories: u16 = 3;
-// }
-// impl pallet_multisig::Trait for Test {
-//     type Event = ();
-//     type Call = Call;
-//     type Currency = Balances;
-//     type DepositBase = DepositBase;
-//     type DepositFactor = DepositFactor;
-//     type MaxSignatories = MaxSignatories;
-//     type WeightInfo = ();
-// }
 
 // assets
 parameter_types! {
@@ -335,28 +319,6 @@ impl ExtBuilder {
         ext.execute_with(test);
     }
 }
-
-// pub fn load_mock_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNetwork) {
-//     (
-//         (
-//             BtcHeader {
-//                 version: 0x20000002,
-//                 previous_header_hash: as_h256(
-//                     "000000000000000000eb9bc1f9557dc9e2cfe576f57a52f6be94720b338029e4",
-//                 ),
-//                 merkle_root_hash: as_h256(
-//                     "5b65144f6518bf4795abd428acd0c3fb2527e4e5c94b0f5a7366f4826001884a",
-//                 ),
-//                 time: 1501593374,
-//                 bits: Compact::new(0x18014735),
-//                 nonce: 0x7559dd16,
-//             },
-//             478558,
-//         ),
-//         as_h256("0000000000000000011865af4122fe3b144e2cbeea86142e8ff2fb4107352d43"),
-//         BtcNetwork::Mainnet,
-//     )
-// }
 
 pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNetwork) {
     (

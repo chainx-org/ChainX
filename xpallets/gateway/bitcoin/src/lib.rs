@@ -400,9 +400,14 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
             e
         })?;
 
-        let (hot_addr, cold_addr) = get_trustee_address_pair::<T>()?;
-        if address == hot_addr || address == cold_addr {
-            Err(Error::<T>::InvalidAddress)?;
+        match get_trustee_address_pair::<T>() {
+            Ok((hot_addr, cold_addr)) => {
+                // do not allow withdraw from trustee address
+                if address == hot_addr || address == cold_addr {
+                    Err(Error::<T>::InvalidAddress)?;
+                }
+            }
+            Err(e) => {error!("[check_addr]|not get trustee addr|err:{:?}", e);},
         }
 
         Ok(())

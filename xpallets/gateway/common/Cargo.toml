@@ -32,7 +32,13 @@ light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = 
 
 [dev-dependencies]
 hex = "0.4"
+lazy_static = "1.4"
 sp-core = { version = "2.0.0-rc6" }
+sp-io = { version = "2.0.0-rc6" }
+
+pallet-balances = { version = "2.0.0-rc6" }
+xpallet-gateway-bitcoin = { path = "../bitcoin" }
+xpallet-protocol = { path = "../../protocol" }
 
 [features]
 default = ["std"]
