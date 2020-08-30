@@ -25,12 +25,9 @@ use crate::types::TrusteeInfoConfig;
 
 pub use xpallet_protocol::X_BTC;
 pub use xpallet_protocol::X_ETH;
-use xpallet_support::traits::MultisigAddressFor;
+use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 pub(crate) type AccountId = AccountId32;
-// pub type Signature = MultiSignature;
-// pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-// pub type AccountId = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 pub(crate) type Amount = i128;
@@ -126,9 +123,20 @@ impl MultisigAddressFor<AccountId> for MultisigAddr {
     }
 }
 
+pub struct AlwaysValidator;
+impl Validator<AccountId> for AlwaysValidator {
+    fn is_validator(_who: &AccountId) -> bool {
+        true
+    }
+
+    fn validator_for(_: &[u8]) -> Option<AccountId> {
+        None
+    }
+}
+
 impl crate::Trait for Test {
     type Event = ();
-    type Validator = ();
+    type Validator = AlwaysValidator;
     type DetermineMultisigAddress = MultisigAddr;
     type Bitcoin = mock_impls::MockBitcoin<Test>;
     type BitcoinTrustee = mock_impls::MockBitcoin<Test>;

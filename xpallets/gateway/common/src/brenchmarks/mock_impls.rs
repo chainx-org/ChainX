@@ -14,8 +14,8 @@ mod bitcoin {
             Chain::Bitcoin
         }
 
-        fn check_addr(addr: &[u8], ext: &[u8]) -> DispatchResult {
-            xpallet_gateway_bitcoin::Module::<T>::check_addr(addr, ext)
+        fn check_addr(_: &[u8], _: &[u8]) -> DispatchResult {
+            Ok(())
         }
 
         fn withdrawal_limit(
