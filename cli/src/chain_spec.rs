@@ -109,7 +109,7 @@ macro_rules! endowed_gen {
 /// Helper function to generate the network properties.
 fn as_properties(network: NetworkType) -> Properties {
     json!({
-        "ss58Format": network.addr_version(),
+        "ss58Format": network.ss58_addr_format_id(),
         "network": network,
         "tokenDecimals": PCX_DECIMALS,
         "tokenSymbol": "PCX"
