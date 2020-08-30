@@ -83,6 +83,7 @@ pub trait Trait: xpallet_assets::Trait {
 }
 
 pub trait StakingInterface<AccountId, Balance> {
+    /// Returns the amount of `who`s locked balances in Staking.
     fn staked_of(who: &AccountId) -> Balance;
 }
 
@@ -102,6 +103,7 @@ where
 }
 
 pub trait GatewayInterface<AccountId> {
+    /// Returns the potential referral of `who` for `asset_id`.
     fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId>;
 }
 
@@ -292,7 +294,8 @@ impl<T: Trait> Module<T> {
                 < staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend
             {
                 warn!(
-                    "cannot claim due to the insufficient staking, total dividend: {:?}, staking locked: {:?}, required staking: {:?}",
+                    "{:?}'s staked balance is not insufficient, total dividend: {:?}, staked: {:?}, required: {:?}",
+                    who,
                     total_dividend,
                     staking_locked,
                     staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend
@@ -384,7 +387,12 @@ impl<T: Trait> Module<T> {
         if reward_pot_balance >= deposit_reward && Self::free_balance(depositor) <= deposit_reward {
             Self::transfer(&reward_pot, depositor, deposit_reward)?;
         } else {
-            warn!("asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}", target, reward_pot_balance, depositor);
+            warn!(
+                "asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}",
+                target,
+                reward_pot_balance,
+                depositor
+            );
         }
         Ok(())
     }

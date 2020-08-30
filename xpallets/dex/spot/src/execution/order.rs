@@ -1,9 +1,6 @@
 // Copyright 2019 Chainpool.
 //! This module takes care of the order processing.
 
-#[cfg(feature = "std")]
-use chrono::prelude::*;
-
 use super::*;
 use sp_runtime::traits::CheckedAdd;
 
@@ -122,14 +119,12 @@ impl<T: Trait> Module<T> {
         handicap: &HandicapInfo<T>,
     ) {
         #[cfg(feature = "std")]
-        let begin = Local::now().timestamp_millis();
+        let now = std::time::Instant::now();
 
         Self::apply_match_order(order, pair, handicap);
 
         #[cfg(feature = "std")]
-        let end = Local::now().timestamp_millis();
-        #[cfg(feature = "std")]
-        debug!("[match order] elasped time: {:}ms", end - begin);
+        debug!("Took {:?}ms to match this order", now.elapsed().as_millis());
 
         // Remove the full filled order, otherwise the quotations, order status and handicap
         // should be updated.

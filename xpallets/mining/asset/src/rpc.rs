@@ -69,6 +69,7 @@ pub struct MiningAssetInfo<AccountId, RpcBalance, BlockNumber> {
 
 impl<T: Trait> Module<T> {
     /// Get overall information about all mining assets.
+    #[allow(clippy::type_complexity)]
     pub fn mining_assets(
     ) -> Vec<MiningAssetInfo<T::AccountId, RpcBalance<BalanceOf<T>>, T::BlockNumber>> {
         MiningPrevilegedAssets::get()

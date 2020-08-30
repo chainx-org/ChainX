@@ -8484,7 +8484,6 @@ name = "xpallet-dex-spot"
 version = "0.1.0"
 dependencies = [
  "chainx-primitives",
- "chrono",
  "env_logger",
  "frame-benchmarking",
  "frame-support",

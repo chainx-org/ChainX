@@ -275,18 +275,17 @@ decl_event!(
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId
     {
-        /// The staker has been rewarded by this amount. `AccountId` is the stash account. [validator, reward_amount]
+        /// Issue new balance to this account. [account, reward_amount]
         Mint(AccountId, Balance),
-        /// One validator (and its nominators) has been slashed by the given amount. [validator, slashed_amount]
+        /// One validator (and its reward pot) has been slashed by the given amount. [validator, slashed_amount]
         Slash(AccountId, Balance),
         /// Nominator has bonded to the validator this amount. [nominator, validator, amount]
         Bond(AccountId, AccountId, Balance),
         /// An account has unbonded this amount. [nominator, validator, amount]
         Unbond(AccountId, AccountId, Balance),
-        /// Claim the staking reward. [nominator, validator, dividend]
+        /// Claim the staking dividend. [nominator, validator, dividend]
         Claim(AccountId, AccountId, Balance),
-        /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
-        /// from the unlocking queue. [nominator, amount]
+        /// The nominator has withdrawn the locked balance due to the unbond operation. [nominator, amount]
         UnlockUnbondedWithdrawal(AccountId, Balance),
         /// Offenders are forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
         ForceChilled(SessionIndex, Vec<AccountId>),

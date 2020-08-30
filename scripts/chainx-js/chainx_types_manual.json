@@ -226,6 +226,10 @@
         "value": "Balance",
         "locked_until": "BlockNumber"
     },
+    "Depth": {
+        "asks": "Vec<(RpcPrice, RpcBalance)>",
+        "bids": "Vec<(RpcPrice, RpcBalance)>"
+    },
     "String": "Text",
     "RpcPrice": "String",
     "RpcBalance": "String",
