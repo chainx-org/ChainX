@@ -25,5 +25,5 @@ bak/
 log/
 
 # for substrate weight
-/traits.rs
 /*.rs
+/traits.rs
