@@ -9,23 +9,23 @@ pub trait WeightInfo {
 
 impl WeightInfo for () {
     fn root_deposit() -> Weight {
-        (642188000 as Weight)
+        (646702000 as Weight)
             .saturating_add(DbWeight::get().reads(12 as Weight))
             .saturating_add(DbWeight::get().writes(6 as Weight))
     }
     fn root_withdrawal() -> Weight {
-        (592399000 as Weight)
+        (599782000 as Weight)
             .saturating_add(DbWeight::get().reads(9 as Weight))
             .saturating_add(DbWeight::get().writes(7 as Weight))
     }
     fn set_withdrawal_state() -> Weight {
-        (596020000 as Weight)
+        (605412000 as Weight)
             .saturating_add(DbWeight::get().reads(11 as Weight))
             .saturating_add(DbWeight::get().writes(8 as Weight))
     }
-    fn set_withdrawal_state_list(u: u32) -> Weight {
-        (603071000 as Weight)
-            .saturating_add((80000 as Weight).saturating_mul(u as Weight))
+    fn set_withdrawal_state_list(u: u32, ) -> Weight {
+        (602878000 as Weight)
+            .saturating_add((54000 as Weight).saturating_mul(u as Weight))
             .saturating_add(DbWeight::get().reads(11 as Weight))
             .saturating_add(DbWeight::get().writes(8 as Weight))
     }

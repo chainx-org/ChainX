@@ -70,21 +70,21 @@ decl_module! {
         type Error = Error<T>;
         fn deposit_event() = default;
         // only for root
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::root_deposit()]
         fn root_deposit(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             Self::deposit(&who, &asset_id, balance)
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::root_withdrawal()]
         fn root_withdrawal(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>, addr: AddrStr, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             Self::withdrawal(&who, &asset_id, balance, addr, memo)
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(state != WithdrawalState::Applying || state != WithdrawalState::Processing, "Do not accept this state.");
@@ -100,7 +100,7 @@ decl_module! {
             }
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_withdrawal_state_list(item.len() as u32)]
         pub fn set_withdrawal_state_list(origin, item: Vec<(u32, WithdrawalState)>) -> DispatchResult {
             ensure_root(origin.clone())?;
             for (withdrawal_id, state) in item {
