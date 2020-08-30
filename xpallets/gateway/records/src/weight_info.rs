@@ -1,4 +1,4 @@
-use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};;
+use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
 
 pub trait WeightInfo {
     fn root_deposit() -> Weight;

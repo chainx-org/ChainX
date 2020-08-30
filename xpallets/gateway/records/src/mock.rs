@@ -100,6 +100,7 @@ impl xpallet_assets::Trait for Test {
 
 impl Trait for Test {
     type Event = ();
+    type WeightInfo = ();
 }
 
 pub type System = frame_system::Module<Test>;

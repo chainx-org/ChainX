@@ -132,6 +132,7 @@ impl xpallet_assets::Trait for Test {
 
 impl xpallet_gateway_records::Trait for Test {
     type Event = ();
+    type WeightInfo = ();
 }
 
 impl xpallet_gateway_common::Trait for Test {

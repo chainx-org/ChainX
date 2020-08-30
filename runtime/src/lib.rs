@@ -849,6 +849,7 @@ impl xpallet_assets::Trait for Runtime {
 
 impl xpallet_gateway_records::Trait for Runtime {
     type Event = Event;
+    type WeightInfo = ();
 }
 
 pub struct MultisigProvider;

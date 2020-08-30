@@ -3,7 +3,7 @@
 use super::*;
 use crate::Module as XGatewayRecords;
 
-use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
 
 const ASSET_ID: AssetId = xpallet_protocol::X_BTC;
