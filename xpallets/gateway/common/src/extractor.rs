@@ -42,7 +42,8 @@ pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
     let mut res: [u8; 32] = Default::default();
     let len = res.len();
     // parse data from base58 to raw
-    let d = xpallet_support::base58::from(data)
+    let d = bs58::decode(data)
+        .into_vec()
         .map_err(|e| {
             error!(
                 "[parse_address]|parse base58 err|e:{:?}|data:{:?}",
