@@ -60,6 +60,7 @@ std = [
 
     "frame-support/std",
     "frame-system/std",
+    "frame-benchmarking/std",
     "pallet-timestamp/std",
 
     "orml-utilities/std",

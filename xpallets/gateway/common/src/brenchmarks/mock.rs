@@ -171,6 +171,7 @@ impl xpallet_gateway_bitcoin::Trait for Test {
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Test>, AccountId>;
     type Channel = (); // mock_impls::MockCommon<Test>;
     type AddrBinding = (); //mock_impls::MockCommon<Test>;
+    type WeightInfo = ();
 }
 
 pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {

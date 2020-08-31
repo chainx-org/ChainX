@@ -47,6 +47,7 @@ std = [
     "sp-runtime/std",
     "frame-support/std",
     "frame-system/std",
+    "frame-benchmarking/std",
 
     "orml-utilities/std",
 

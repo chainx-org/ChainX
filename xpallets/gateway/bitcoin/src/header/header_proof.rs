@@ -45,7 +45,12 @@ impl<'a> HeaderVerifier<'a> {
             self.work.check::<T>(&params)?;
         }
         self.proof_of_work.check::<T>(&params)?;
-        self.timestamp.check::<T>(&params)?;
+        // ignore this in benchmarks
+        #[cfg(not(feature = "runtime-benchmarks"))]
+        {
+            self.timestamp.check::<T>(&params)?;
+        }
+
         Ok(())
     }
 }

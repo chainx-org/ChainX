@@ -48,6 +48,19 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         "dev" => Box::new(chain_spec::development_config()?),
         "" | "local" => Box::new(chain_spec::local_testnet_config()?),
+        "benchmarks" => {
+            #[cfg(feature = "runtime-benchmarks")]
+            {
+                Box::new(chain_spec::benchmarks_config()?)
+            }
+            #[cfg(not(feature = "runtime-benchmarks"))]
+            {
+                return Err(
+                    "benchmarks chain-config should compile with feature `runtime-benchmarks`"
+                        .into(),
+                );
+            }
+        }
         path => {
             let p = std::path::PathBuf::from(path);
             if !p.exists() {

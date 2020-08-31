@@ -126,7 +126,7 @@ decl_module! {
                     ()
                 },
                 Err(_) => {
-                    ensure_signed(origin)?;
+                    ensure_root(origin)?;
                 },
             };
 

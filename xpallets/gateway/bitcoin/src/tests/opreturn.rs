@@ -1,4 +1,4 @@
-use super::*;
+use super::common::*;
 use crate::tx::parse_deposit_outputs_impl;
 
 use sp_std::str::FromStr;

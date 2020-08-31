@@ -193,4 +193,5 @@ runtime-benchmarks = [
     "xpallet-assets-registrar/runtime-benchmarks",
     "xpallet-gateway-records/runtime-benchmarks",
     "xpallet-gateway-common/runtime-benchmarks",
+    "xpallet-gateway-bitcoin/runtime-benchmarks",
 ]

@@ -171,6 +171,7 @@ impl xpallet_gateway_bitcoin::Trait for Test {
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Test>, AccountId>;
     type Channel = XGatewayCommon;
     type AddrBinding = XGatewayCommon;
+    type WeightInfo = ();
 }
 
 pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
