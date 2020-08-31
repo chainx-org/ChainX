@@ -1,8 +1,7 @@
-use crate::error;
-use sp_std::fmt::Debug;
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 pub trait MultisigAddressFor<AccountId> {
-    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId;
+    fn calc_multisig(accounts: &[AccountId], threshold: u16) -> AccountId;
 }
 
 impl<AccountId: Default> MultisigAddressFor<AccountId> for () {
@@ -11,23 +10,14 @@ impl<AccountId: Default> MultisigAddressFor<AccountId> for () {
     }
 }
 
-pub trait MultiSig<AccountId: PartialEq + Debug> {
+pub trait MultiSig<AccountId: PartialEq> {
     fn multisig() -> AccountId;
-
-    fn check_multisig(who: &AccountId) -> bool {
-        let current_multisig_addr = Self::multisig();
-        if current_multisig_addr != *who {
-            error!("[check_multisig]|the account not match current multisig addr|current:{:?}|who:{:?}", current_multisig_addr, who);
-            false
-        } else {
-            true
-        }
-    }
 }
 
 pub trait Validator<AccountId> {
     fn is_validator(who: &AccountId) -> bool;
-    fn validator_for(_: &[u8]) -> Option<AccountId>;
+
+    fn validator_for(name: &[u8]) -> Option<AccountId>;
 }
 
 impl<AccountId> Validator<AccountId> for () {

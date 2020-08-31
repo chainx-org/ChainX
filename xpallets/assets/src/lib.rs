@@ -112,7 +112,6 @@ decl_error! {
         TotalAssetOverflow,
         /// Balance too low to send value
         TotalAssetInsufficientBalance,
-
         ///  Not Allow native asset,
         DenyNativeAsset,
         /// Action is not allowed.
@@ -140,8 +139,13 @@ decl_module! {
         fn deposit_event() = default;
 
         /// transfer between account
-        #[weight = <T as Trait>::WeightInfo::transfer()]
-        pub fn transfer(origin, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>) -> DispatchResult {
+        #[weight = 0]
+        pub fn transfer(
+            origin,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[compact] id: AssetId,
+            #[compact] value: BalanceOf<T>
+        ) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             let dest = T::Lookup::lookup(dest)?;
             debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
@@ -153,22 +157,31 @@ decl_module! {
         }
 
         /// for transfer by root
-        #[weight = <T as Trait>::WeightInfo::force_transfer()]
-        pub fn force_transfer(origin, transactor: <T::Lookup as StaticLookup>::Source, dest: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, #[compact] value: BalanceOf<T>) -> DispatchResult {
+        #[weight = 0]
+        pub fn force_transfer(
+            origin,
+            transactor: <T::Lookup as StaticLookup>::Source,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[compact] id: AssetId,
+            #[compact] value: BalanceOf<T>
+        ) -> DispatchResult {
             ensure_root(origin)?;
-
             let transactor = T::Lookup::lookup(transactor)?;
             let dest = T::Lookup::lookup(dest)?;
             debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
             Self::can_transfer(&id)?;
-
             Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
             Ok(())
         }
 
         /// set free token for an account
-        #[weight = <T as Trait>::WeightInfo::set_balance(balances.len() as u32)]
-        pub fn set_balance(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] id: AssetId, balances: BTreeMap<AssetType, BalanceOf<T>>) -> DispatchResult {
+        #[weight = 0]
+        pub fn set_balance(
+            origin,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[compact] id: AssetId,
+            balances: BTreeMap<AssetType, BalanceOf<T>>
+        ) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             info!("[set_balance]|set balances by root|who:{:?}|id:{:}|balances_map:{:?}", who, id, balances);
@@ -179,7 +192,6 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::set_asset_limit()]
         pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
             ensure_root(origin)?;
-
             Self::set_asset_restrictions(id, restrictions)
         }
     }
@@ -190,48 +202,43 @@ decl_storage! {
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
         /// notice if not set AssetRestriction, default is true for this limit
         /// if want let limit make sense, must set false for the limit
-        pub AssetRestrictionsOf get(fn asset_restrictions_of): map hasher(twox_64_concat) AssetId => AssetRestrictions;
+        pub AssetRestrictionsOf get(fn asset_restrictions_of):
+            map hasher(twox_64_concat) AssetId => AssetRestrictions;
 
         /// asset balance for user&asset_id, use btree_map to accept different asset type
         pub AssetBalance get(fn asset_balance):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId
+            => BTreeMap<AssetType, BalanceOf<T>>;
+
         /// Any liquidity locks of a token type under an account.
         /// NOTE: Should only be accessed when setting, changing and freeing a lock.
-        pub Locks get(fn locks): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId => Vec<BalanceLock<BalanceOf<T>>>;
+        pub Locks get(fn locks):
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId
+            => Vec<BalanceLock<BalanceOf<T>>>;
 
         /// asset balance for an asset_id, use btree_map to accept different asset type
-        pub TotalAssetBalance get(fn total_asset_balance): map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
+        pub TotalAssetBalance get(fn total_asset_balance):
+            map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
     }
     add_extra_genesis {
         config(assets_restrictions): Vec<(AssetId, AssetRestrictions)>;
         config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>;
         build(|config| {
-            Module::<T>::endow_assets(&config.endowed);
-            Module::<T>::set_restrictions(&config.assets_restrictions);
-        })
-    }
-}
-
-// initialize
-#[cfg(feature = "std")]
-impl<T: Trait> Module<T> {
-    fn set_restrictions(assets: &[(AssetId, AssetRestrictions)]) {
-        for (id, restrictions) in assets.iter() {
-            if *id != T::NativeAssetId::get() {
-                Self::set_asset_restrictions(*id, *restrictions)
-                    .expect("should not fail in genesis, qed");
-            }
-        }
-    }
-    fn endow_assets(endowed_accounts: &BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>) {
-        for (id, endowed) in endowed_accounts.iter() {
-            if *id != T::NativeAssetId::get() {
-                for (accountid, value) in endowed.iter() {
-                    Self::issue(id, accountid, *value)
-                        .expect("asset issuance during the genesis can not fail");
+            for (id, endowed) in &config.endowed {
+                if *id != T::NativeAssetId::get() {
+                    for (accountid, value) in endowed.iter() {
+                        Module::<T>::issue(id, accountid, *value)
+                            .expect("asset issuance during the genesis can not fail");
+                    }
                 }
             }
-        }
+            for (id, restrictions) in &config.assets_restrictions {
+                if *id != T::NativeAssetId::get() {
+                    Module::<T>::set_asset_restrictions(*id, *restrictions)
+                        .expect("should not fail in genesis, qed");
+                }
+            }
+        })
     }
 }
 
@@ -271,8 +278,7 @@ impl<T: Trait> Module<T> {
                         TotalAssetInfo {
                             info,
                             balance: Self::total_asset_balance(id),
-                            is_online: xpallet_assets_registrar::Module::<T>::asset_online(id)
-                                .is_some(),
+                            is_online: xpallet_assets_registrar::Module::<T>::is_online(id),
                             restrictions: Self::asset_restrictions_of(id),
                         },
                     );
@@ -571,12 +577,11 @@ impl<T: Trait> Module<T> {
             "[issue]|issue to account|id:{:}|who:{:?}|type:{:?}|current:{:?}|value:{:?}",
             id, who, type_, current, value
         );
-        // check
+
         let new = current.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 
         AssetChangedTrigger::<T>::on_issue_pre(id, who);
 
-        // set to storage
         Self::make_type_balance_be(who, id, type_, new);
 
         AssetChangedTrigger::<T>::on_issue_post(id, who, value)?;
@@ -593,7 +598,7 @@ impl<T: Trait> Module<T> {
 
         debug!("[destroy_directly]|destroy asset for account|id:{:}|who:{:?}|type:{:?}|current:{:?}|destroy:{:?}",
                id, who, type_, current, value);
-        // check
+
         let new = current
             .checked_sub(&value)
             .ok_or(Error::<T>::InsufficientBalance)?;

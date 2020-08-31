@@ -4,7 +4,7 @@ use frame_support::{debug::native, dispatch::DispatchResult};
 use sp_std::prelude::Vec;
 
 // ChainX
-use xpallet_support::{base58, error, try_hex, warn};
+use xpallet_support::{error, try_hex, warn};
 
 // light-bitcoin
 use light_bitcoin::{
@@ -150,7 +150,7 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
 
 #[inline]
 pub fn addr2vecu8(addr: &Address) -> Vec<u8> {
-    base58::to_base58(&*addr.layout())
+    bs58::encode(&*addr.layout()).into_vec()
 }
 
 #[cfg(feature = "std")]

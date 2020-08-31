@@ -75,6 +75,9 @@ mod tests {
     fn test_benchmarks() {
         ExtBuilder::default().build(vec![]).execute_with(|| {
             assert_ok!(test_benchmark_register::<Test>());
+            assert_ok!(test_benchmark_deregister::<Test>());
+            assert_ok!(test_benchmark_recover::<Test>());
+            assert_ok!(test_benchmark_update_asset_info::<Test>());
         });
     }
 }

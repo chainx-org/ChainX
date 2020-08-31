@@ -130,10 +130,10 @@ pub struct RpcOrder<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Depth<RpcPrice, RpcBalance> {
-    /// List of bids in pair of (price, quantity).
-    pub bids: Vec<(RpcPrice, RpcBalance)>,
     /// List of asks in pair of (price, quantity).
     pub asks: Vec<(RpcPrice, RpcBalance)>,
+    /// List of bids in pair of (price, quantity).
+    pub bids: Vec<(RpcPrice, RpcBalance)>,
 }
 
 impl<T: Trait> Module<T> {

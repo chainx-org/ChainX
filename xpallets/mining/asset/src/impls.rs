@@ -130,6 +130,7 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
 
 impl<T: Trait> Module<T> {
     /// Returns the tuple of (dividend, source_weight, target_weight, reward_pot_account).
+    #[allow(clippy::type_complexity)]
     pub fn calculate_dividend_on_claim(
         claimer: &T::AccountId,
         claimee: &AssetId,

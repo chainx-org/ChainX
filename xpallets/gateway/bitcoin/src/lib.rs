@@ -35,7 +35,7 @@ use xpallet_gateway_common::{
     traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use xpallet_support::{base58, debug, ensure_with_errorlog, error, info, str, try_addr};
+use xpallet_support::{debug, ensure_with_errorlog, error, info, str, try_addr};
 
 // light-bitcoin
 #[cfg(feature = "std")]
@@ -436,7 +436,9 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 
 impl<T: Trait> Module<T> {
     pub fn verify_btc_address(data: &[u8]) -> result::Result<Address, DispatchError> {
-        let r = base58::from(data).map_err(|_| Error::<T>::InvalidBase58)?;
+        let r = bs58::decode(data)
+            .into_vec()
+            .map_err(|_| Error::<T>::InvalidBase58)?;
         let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
         Ok(addr)
     }

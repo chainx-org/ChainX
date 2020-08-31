@@ -409,6 +409,10 @@
         "tickDecimals": "u32",
         "tradable": "bool"
     },
+    "Depth": {
+        "asks": "Vec<(RpcPrice, RpcBalance)>",
+        "bids": "Vec<(RpcPrice, RpcBalance)>"
+    },
     "String": "Text",
     "RpcPrice": "String",
     "MiningPower": "u128"

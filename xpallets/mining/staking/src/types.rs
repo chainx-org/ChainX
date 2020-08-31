@@ -34,7 +34,7 @@ pub struct BondRequirement<Balance> {
     pub self_bonded: Balance,
     /// The minimal amount of total-bonded balance to be a qualified validator candidate.
     ///
-    /// total-bonded = self-bonded + all the other nominators' nominations.
+    /// total_bonded = self_bonded + all the other nominators' nominations.
     pub total: Balance,
 }
 
@@ -91,28 +91,8 @@ pub struct ValidatorProfile<BlockNumber> {
     /// Block number of last performed `chill` operation.
     pub last_chilled: Option<BlockNumber>,
     /// Referral identity that belongs to the validator.
-    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_impl::text"))]
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_text"))]
     pub referral_id: ReferralId,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorInfo<AccountId, RpcBalance, BlockNumber> {
-    /// AccountId of this (potential) validator.
-    pub account: AccountId,
-    #[cfg_attr(feature = "std", serde(flatten))]
-    pub profile: ValidatorProfile<BlockNumber>,
-    #[cfg_attr(feature = "std", serde(flatten))]
-    pub ledger: RpcValidatorLedger<RpcBalance, BlockNumber>,
-    /// Being a validator, responsible for authoring the new blocks.
-    pub is_validating: bool,
-    /// How much balances the validator has bonded itself.
-    pub self_bonded: RpcBalance,
-    /// AccountId of the reward pot of this validator.
-    pub reward_pot_account: AccountId,
-    /// Balance of the reward pot account.
-    pub reward_pot_balance: RpcBalance,
 }
 
 /// Information regarding the active era (era in used in session).
