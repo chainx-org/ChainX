@@ -52,7 +52,7 @@ fn t_put_order_buy(
     )
 }
 
-fn t_put_order_sell(
+pub(crate) fn t_put_order_sell(
     who: AccountId,
     pair_idx: TradingPairId,
     amount: Balance,

@@ -67,6 +67,7 @@ impl<Price> From<Handicap<Price>> for RpcHandicap<RpcPrice<Price>> {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct RpcOrderProperty<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber> {
     /// The order identifier.
+    #[cfg_attr(feature = "std", serde(rename = "orderId"))]
     pub id: OrderId,
     /// The direction of order.
     pub side: Side,
@@ -110,6 +111,7 @@ impl<PairId, AccountId, Amount, Price, BlockNumber>
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct RpcOrder<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber> {
     /// Immutable details of the order.
+    #[cfg_attr(feature = "std", serde(flatten))]
     pub props: RpcOrderProperty<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber>,
     /// Status of the order.
     pub status: OrderStatus,
@@ -127,7 +129,7 @@ pub struct RpcOrder<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber> {
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Depth<RpcPrice, RpcBalance> {
     /// List of asks in pair of (price, quantity).
@@ -182,6 +184,9 @@ impl<T: Trait> Module<T> {
     /// Get the orders of an account.
     ///
     /// The returned data will be empty if `page_index` is invalid.
+    ///
+    /// FIXME: page_size should be limited.
+    #[allow(clippy::type_complexity)]
     pub fn orders(
         who: T::AccountId,
         page_index: u32,
@@ -196,7 +201,7 @@ impl<T: Trait> Module<T> {
         >,
     > {
         OrderInfoOf::<T>::iter_prefix_values(who)
-            .filter_map(|order| {
+            .map(|order| {
                 let props: RpcOrderProperty<
                     TradingPairId,
                     T::AccountId,
@@ -204,14 +209,14 @@ impl<T: Trait> Module<T> {
                     RpcPrice<T::Price>,
                     T::BlockNumber,
                 > = order.props.into();
-                Some(RpcOrder {
+                RpcOrder {
                     props,
                     status: order.status,
                     remaining: order.remaining.into(),
                     executed_indices: order.executed_indices,
                     already_filled: order.already_filled.into(),
                     last_update_at: order.last_update_at,
-                })
+                }
             })
             .skip((page_index * page_size) as usize)
             .take(page_size as usize)
@@ -232,7 +237,8 @@ impl<T: Trait> Module<T> {
             .sum()
     }
 
-    /// Get the depth of a trading pair given the depth size.
+    /// Get the depth of a trading pair around the handicap given the depth size.
+    #[allow(clippy::type_complexity)]
     pub fn depth(
         pair_id: TradingPairId,
         depth_size: u32,
@@ -273,5 +279,39 @@ impl<T: Trait> Module<T> {
 
             Depth { asks, bids }
         })
+    }
+}
+
+#[cfg(test)]
+mod rpc_tests {
+    use super::*;
+    use crate::mock::*;
+    use crate::tests::{t_issue_pcx, t_put_order_sell, t_set_handicap};
+    use frame_support::assert_ok;
+
+    #[test]
+    fn rpc_depth_should_work() {
+        ExtBuilder::default().build_and_execute(|| {
+            let pair_id = 0;
+            let who = 1;
+
+            t_set_handicap(pair_id, 1_000_000, 1_100_000);
+
+            t_issue_pcx(who, 1000);
+            // The depth does not count this order in.
+            assert_ok!(t_put_order_sell(who, pair_id, 100, 1_210_000));
+            assert_ok!(t_put_order_sell(who, pair_id, 100, 1_109_000));
+            assert_ok!(t_put_order_sell(who, pair_id, 200, 1_108_000));
+
+            assert_eq!(XSpot::depth(pair_id, 100).unwrap(), {
+                Depth {
+                    asks: vec![
+                        (1_108_000.into(), 200.into()),
+                        (1_109_000.into(), 100.into()),
+                    ],
+                    bids: vec![],
+                }
+            });
+        });
     }
 }
