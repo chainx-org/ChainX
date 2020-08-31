@@ -8573,6 +8573,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex",
+ "lazy_static",
  "light-bitcoin",
  "pallet-balances",
  "parity-scale-codec",
