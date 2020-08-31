@@ -16,6 +16,15 @@ use xpallet_assets_registrar::AssetInfo;
 use super::{Error, Trait};
 use frame_support::traits::LockIdentifier;
 
+const ASSET_TYPES: [AssetType; 6] = [
+    AssetType::Usable,
+    AssetType::Locked,
+    AssetType::Reserved,
+    AssetType::ReservedWithdrawal,
+    AssetType::ReservedDexSpot,
+    AssetType::ReservedXRC20,
+];
+
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetType {
@@ -26,17 +35,10 @@ pub enum AssetType {
     ReservedDexSpot,
     ReservedXRC20,
 }
+
 impl AssetType {
-    pub fn iterator() -> Iter<'static, AssetType> {
-        static ENUM_ITEMS: &[AssetType] = &[
-            AssetType::Usable,
-            AssetType::Locked,
-            AssetType::Reserved,
-            AssetType::ReservedWithdrawal,
-            AssetType::ReservedDexSpot,
-            AssetType::ReservedXRC20,
-        ];
-        ENUM_ITEMS.iter()
+    pub fn iter() -> Iter<'static, AssetType> {
+        ASSET_TYPES.iter()
     }
 }
 
@@ -62,7 +64,7 @@ bitmask! {
         Deposit             = 1 << 2,
         Withdraw            = 1 << 3,
         DestroyWithdrawal   = 1 << 4,
-        DestroyUsable         = 1 << 5,
+        DestroyUsable       = 1 << 5,
     }
 }
 
