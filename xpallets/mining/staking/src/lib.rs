@@ -150,10 +150,6 @@ decl_storage! {
         pub ValidatorCandidateRequirement get(fn validator_bond_requirement):
             BondRequirement<BalanceOf<T>>;
 
-        /// The length of a session in blocks.
-        pub BlocksPerSession get(fn blocks_per_session) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(DEFAULT_BLOCKS_PER_SESSION);
-
         /// The length of a staking era in sessions.
         pub SessionsPerEra get(fn sessions_per_era) config():
             T::BlockNumber = T::BlockNumber::saturated_from::<u64>(12);
