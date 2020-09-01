@@ -5,7 +5,7 @@ use light_bitcoin::merkle::PartialMerkleTree;
 use light_bitcoin::serialization;
 use sp_std::str::FromStr;
 
-use super::*;
+use super::common::*;
 use crate::tx::detect_transaction_type_impl;
 use crate::types::{MetaTxType, VoteResult};
 

@@ -4,11 +4,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod benchmarking;
 pub mod header;
 mod tests;
 pub mod trustee;
 pub mod tx;
 mod types;
+mod weight_info;
 
 // Substrate
 use sp_runtime::{traits::Zero, SaturatedConversion};
@@ -56,6 +58,7 @@ use self::types::{
 };
 use crate::trustee::get_trustee_address_pair;
 use crate::tx::remove_pending_deposit;
+use crate::weight_info::WeightInfo;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
@@ -71,6 +74,7 @@ pub trait Trait:
     type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
     type Channel: ChannelBinding<Self::AccountId>;
     type AddrBinding: AddrBinding<Self::AccountId, BtcAddress>;
+    type WeightInfo: WeightInfo;
 }
 
 decl_error! {
@@ -261,7 +265,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// if use `BtcHeader` struct would export in metadata, cause complex in front-end
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::push_header()]
         pub fn push_header(origin, header: Vec<u8>) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
             let header: BtcHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
@@ -277,7 +281,7 @@ decl_module! {
         }
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::push_transaction()]
         pub fn push_transaction(origin, raw_tx: Vec<u8>, relayed_info: BtcRelayedTxInfo, prev_tx: Option<Vec<u8>>) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
             let raw_tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
@@ -302,7 +306,7 @@ decl_module! {
             Ok(post_info)
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::create_withdraw_tx()]
         pub fn create_withdraw_tx(origin, withdrawal_id_list: Vec<u32>, tx: Vec<u8>) -> DispatchResult {
             let from = ensure_signed(origin)?;
             // commiter must in trustee list
@@ -315,7 +319,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::sign_withdraw_tx()]
         pub fn sign_withdraw_tx(origin, tx: Option<Vec<u8>>) -> DispatchResult {
             let from = ensure_signed(origin)?;
             Self::ensure_trustee(&from)?;
@@ -333,21 +337,21 @@ decl_module! {
         }
 
         /// Dangerous! Be careful to set BestIndex
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_best_index()]
         pub fn set_best_index(origin, index: BtcHeaderIndex) -> DispatchResult {
             ensure_root(origin)?;
             BestIndex::put(index);
             Ok(())
         }
         /// Dangerous! Be careful to set ConfirmedIndex
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_confirmed_index()]
         pub fn set_confirmed_index(origin, index: BtcHeaderIndex) -> DispatchResult {
             ensure_root(origin)?;
             ConfirmedIndex::put(index);
             Ok(())
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::remove_pending()]
         pub fn remove_pending(origin, addr: BtcAddress, who: Option<T::AccountId>) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
 
@@ -360,21 +364,21 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::remove_proposal()]
         pub fn remove_proposal(origin) -> DispatchResult {
             ensure_root(origin)?;
             WithdrawalProposal::<T>::kill();
             Ok(())
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_btc_withdrawal_fee()]
         pub fn set_btc_withdrawal_fee(origin, #[compact] fee: u64) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             BtcWithdrawalFee::put(fee);
             Ok(())
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_btc_deposit_limit()]
         pub fn set_btc_deposit_limit(origin, #[compact] value: u64) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             BtcMinDeposit::put(value);
@@ -400,9 +404,16 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
             e
         })?;
 
-        let (hot_addr, cold_addr) = get_trustee_address_pair::<T>()?;
-        if address == hot_addr || address == cold_addr {
-            Err(Error::<T>::InvalidAddress)?;
+        match get_trustee_address_pair::<T>() {
+            Ok((hot_addr, cold_addr)) => {
+                // do not allow withdraw from trustee address
+                if address == hot_addr || address == cold_addr {
+                    Err(Error::<T>::InvalidAddress)?;
+                }
+            }
+            Err(e) => {
+                error!("[check_addr]|not get trustee addr|err:{:?}", e);
+            }
         }
 
         Ok(())

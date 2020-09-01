@@ -844,10 +844,12 @@ impl xpallet_assets::Trait for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Runtime>;
     type OnAssetChanged = XMiningAsset;
+    type WeightInfo = ();
 }
 
 impl xpallet_gateway_records::Trait for Runtime {
     type Event = Event;
+    type WeightInfo = ();
 }
 
 pub struct MultisigProvider;
@@ -863,6 +865,7 @@ impl xpallet_gateway_common::Trait for Runtime {
     type DetermineMultisigAddress = MultisigProvider;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
+    type WeightInfo = ();
 }
 
 impl xpallet_gateway_bitcoin::Trait for Runtime {
@@ -873,6 +876,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
     type Channel = XGatewayCommon;
     type AddrBinding = XGatewayCommon;
+    type WeightInfo = ();
 }
 
 impl xpallet_dex_spot::Trait for Runtime {
@@ -1361,9 +1365,13 @@ impl_runtime_apis! {
             // Substrate
             add_benchmark!(params, batches, pallet_balances, Balances);
 
+            add_benchmark!(params, batches, xpallet_assets, XAssets);
             add_benchmark!(params, batches, xpallet_assets_registrar, XAssetsRegistrar);
             add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
             add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
+            add_benchmark!(params, batches, xpallet_gateway_records, XGatewayRecords);
+            add_benchmark!(params, batches, xpallet_gateway_common, XGatewayCommon);
+            add_benchmark!(params, batches, xpallet_gateway_bitcoin, XGatewayBitcoin);
             add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }

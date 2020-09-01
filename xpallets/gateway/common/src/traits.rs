@@ -13,6 +13,12 @@ pub trait Extractable<AccountId> {
     fn account_info(data: &[u8]) -> Option<(AccountId, Option<Name>)>;
 }
 
+impl<AccountId> Extractable<AccountId> for () {
+    fn account_info(_data: &[u8]) -> Option<(AccountId, Option<Name>)> {
+        None
+    }
+}
+
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
 
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
@@ -42,12 +48,44 @@ pub trait TrusteeSession<AccountId, TrusteeAddress: BytesLike> {
     ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 }
 
+impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddress> for () {
+    fn trustee_session(
+        _: u32,
+    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
+        Err("NoTrustee".into())
+    }
+
+    fn current_trustee_session(
+    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
+        Err("NoTrustee".into())
+    }
+
+    fn last_trustee_session(
+    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
+        Err("NoTrustee".into())
+    }
+}
+
 pub trait ChannelBinding<AccountId> {
     fn update_binding(asset_id: &AssetId, who: &AccountId, channel_name: Option<Name>);
     fn get_binding_info(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
 }
 
+impl<AccountId> ChannelBinding<AccountId> for () {
+    fn update_binding(_: &AssetId, _: &AccountId, _: Option<Name>) {}
+    fn get_binding_info(_: &AssetId, _: &AccountId) -> Option<AccountId> {
+        None
+    }
+}
+
 pub trait AddrBinding<AccountId, Addr: Into<Vec<u8>>> {
     fn update_binding(chain: Chain, addr: Addr, who: AccountId);
     fn get_binding(chain: Chain, addr: Addr) -> Option<AccountId>;
+}
+
+impl<AccountId, Addr: Into<Vec<u8>>> AddrBinding<AccountId, Addr> for () {
+    fn update_binding(_: Chain, _: Addr, _: AccountId) {}
+    fn get_binding(_: Chain, _: Addr) -> Option<AccountId> {
+        None
+    }
 }

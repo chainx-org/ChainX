@@ -1,4 +1,4 @@
-use super::*;
+use super::common::*;
 
 use light_bitcoin::serialization;
 

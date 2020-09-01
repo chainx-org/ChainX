@@ -8344,6 +8344,7 @@ dependencies = [
  "bitmask",
  "chainx-primitives",
  "env_logger",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-traits",
@@ -8537,6 +8538,7 @@ version = "0.1.0"
 dependencies = [
  "bs58",
  "chainx-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -8567,20 +8569,26 @@ name = "xpallet-gateway-common"
 version = "1.0.0"
 dependencies = [
  "chainx-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
+ "lazy_static",
  "light-bitcoin",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
  "xp-io",
  "xp-runtime",
  "xpallet-assets",
  "xpallet-assets-registrar",
+ "xpallet-gateway-bitcoin",
  "xpallet-gateway-records",
+ "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -8619,6 +8627,7 @@ name = "xpallet-gateway-records"
 version = "1.0.0"
 dependencies = [
  "chainx-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-utilities",
@@ -8805,6 +8814,7 @@ dependencies = [
 name = "xpallet-system"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",

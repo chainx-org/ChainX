@@ -95,10 +95,12 @@ impl xpallet_assets::Trait for Test {
     type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = ();
+    type WeightInfo = ();
 }
 
 impl Trait for Test {
     type Event = ();
+    type WeightInfo = ();
 }
 
 pub type System = frame_system::Module<Test>;

@@ -1,6 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 
-use super::mock::*;
+pub use super::mock::*;
 use super::*;
 
 use frame_support::{assert_noop, assert_ok};

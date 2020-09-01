@@ -138,6 +138,7 @@ impl xpallet_assets::Trait for Test {
     type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
     type OnAssetChanged = XMiningAsset;
+    type WeightInfo = ();
 }
 
 /// Another session handler struct to test on_disabled.

@@ -3,19 +3,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
 
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 pub mod types;
+mod weight_info;
 
 // Substrate
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, traits::Currency,
-    IterableStorageMap,
+    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
+    traits::Currency, IterableStorageMap,
 };
 use frame_system::ensure_root;
 use sp_runtime::traits::StaticLookup;
+use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
 use orml_utilities::with_transaction_result;
@@ -29,7 +32,7 @@ use xpallet_assets::{AssetType, Chain};
 use xpallet_support::{error, info, try_addr, warn};
 
 pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalState};
-use sp_std::collections::btree_map::BTreeMap;
+use crate::weight_info::WeightInfo;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
@@ -38,6 +41,8 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    type WeightInfo: WeightInfo;
 }
 
 decl_error! {
@@ -65,23 +70,24 @@ decl_module! {
         type Error = Error<T>;
         fn deposit_event() = default;
         // only for root
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::root_deposit()]
         fn root_deposit(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             Self::deposit(&who, &asset_id, balance)
         }
 
-        #[weight = 0]
-        fn root_withdrawal(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>) -> DispatchResult {
+        #[weight = <T as Trait>::WeightInfo::root_withdrawal()]
+        fn root_withdrawal(origin, who: <T::Lookup as StaticLookup>::Source, #[compact] asset_id: AssetId, #[compact] balance: BalanceOf<T>, addr: AddrStr, memo: Memo) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
-            Self::withdrawal(&who, &asset_id, balance, Default::default(), Default::default())
+            Self::withdrawal(&who, &asset_id, balance, addr, memo)
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
             ensure_root(origin)?;
+            ensure!(state != WithdrawalState::Applying || state != WithdrawalState::Processing, "Do not accept this state.");
             match Self::finish_withdrawal_impl(withdrawal_id, state) {
                 Ok(_) => {
                     info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
@@ -94,7 +100,7 @@ decl_module! {
             }
         }
 
-        #[weight = 0]
+        #[weight = <T as Trait>::WeightInfo::set_withdrawal_state_list(item.len() as u32)]
         pub fn set_withdrawal_state_list(origin, item: Vec<(u32, WithdrawalState)>) -> DispatchResult {
             ensure_root(origin.clone())?;
             for (withdrawal_id, state) in item {

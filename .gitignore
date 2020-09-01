@@ -23,3 +23,7 @@ bak/
 .chainx/
 .sub/
 log/
+
+# for substrate weight
+/*.rs
+/traits.rs
