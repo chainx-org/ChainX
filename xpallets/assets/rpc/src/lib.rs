@@ -68,7 +68,7 @@ where
                     .map(|(id, m)| {
                         // if balance not use u128, this part could be deleted
                         let mut r = BTreeMap::new();
-                        AssetType::iterator().for_each(|type_| {
+                        AssetType::iter().for_each(|type_| {
                             let balance = if let Some(b) = m.get(type_) {
                                 (*b).to_string()
                             } else {
@@ -135,7 +135,7 @@ impl<Balance: ToString> From<xpallet_assets_rpc_runtime_api::TotalAssetInfo<Bala
 {
     fn from(info: xpallet_assets_rpc_runtime_api::TotalAssetInfo<Balance>) -> Self {
         let mut r = BTreeMap::new();
-        AssetType::iterator().for_each(|type_| {
+        AssetType::iter().for_each(|type_| {
             let balance = if let Some(b) = info.balance.get(type_) {
                 (*b).to_string()
             } else {

@@ -48,6 +48,21 @@
         "order_type": "OrderType",
         "created_at": "BlockNumber"
     },
+    "RpcOrder": {
+        "order_id": "OrderId",
+        "side": "Side",
+        "price": "RpcPrice",
+        "amount": "RpcBalance",
+        "pair_id": "TradingPairId",
+        "submitter": "AccountId",
+        "order_type": "OrderType",
+        "created_at": "BlockNumber",
+        "status": "OrderStatus",
+        "remaining": "RpcBalance",
+        "executed_indices": "Vec<TradingHistoryIndex>",
+        "already_filled": "RpcBalance",
+        "last_update_at": "BlockNumber"
+    },
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",
         "balance": "BTreeMap<AssetType, String>",

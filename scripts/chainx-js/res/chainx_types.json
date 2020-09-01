@@ -46,6 +46,12 @@
             "BondedWithdrawal"
         ]
     },
+    "NetworkType": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
+    },
     "Memo": "Text",
     "AssetInfo": {
         "token": "Token",
@@ -230,12 +236,6 @@
             "Testnet"
         ]
     },
-    "NetworkType": {
-        "_enum": [
-            "Mainnet",
-            "Testnet"
-        ]
-    },
     "OrderInfo": "Order",
     "Amount": "i128",
     "AmountOf": "Amount",
@@ -261,6 +261,21 @@
         "submitter": "AccountId",
         "orderType": "OrderType",
         "createdAt": "BlockNumber"
+    },
+    "RpcOrder": {
+        "orderId": "OrderId",
+        "side": "Side",
+        "price": "RpcPrice",
+        "amount": "RpcBalance",
+        "pairId": "TradingPairId",
+        "submitter": "AccountId",
+        "orderType": "OrderType",
+        "createdAt": "BlockNumber",
+        "status": "OrderStatus",
+        "remaining": "RpcBalance",
+        "executedIndices": "Vec<TradingHistoryIndex>",
+        "alreadyFilled": "RpcBalance",
+        "lastUpdateAt": "BlockNumber"
     },
     "TotalAssetInfoForRpc": {
         "info": "AssetInfoForRpc",

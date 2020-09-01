@@ -343,6 +343,7 @@ impl pallet_finality_tracker::Trait for Runtime {
 
 parameter_types! {
     pub const Offset: BlockNumber = 0;
+    /// Session length.
     pub const Period: BlockNumber = 50;
     pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
