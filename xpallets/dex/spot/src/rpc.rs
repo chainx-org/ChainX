@@ -124,6 +124,8 @@ pub struct RpcOrder<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber> {
     pub executed_indices: Vec<TradingHistoryIndex>,
     /// The amount of executed, measured by the **base** currency.
     pub already_filled: RpcBalance,
+    /// Current locked asset balance in this order.
+    pub reserved_balance: RpcBalance,
     /// Block number at which the order details updated.
     pub last_update_at: BlockNumber,
 }
@@ -201,22 +203,27 @@ impl<T: Trait> Module<T> {
         >,
     > {
         OrderInfoOf::<T>::iter_prefix_values(who)
-            .map(|order| {
-                let props: RpcOrderProperty<
-                    TradingPairId,
-                    T::AccountId,
-                    RpcBalance<BalanceOf<T>>,
-                    RpcPrice<T::Price>,
-                    T::BlockNumber,
-                > = order.props.into();
-                RpcOrder {
-                    props,
-                    status: order.status,
-                    remaining: order.remaining.into(),
-                    executed_indices: order.executed_indices,
-                    already_filled: order.already_filled.into(),
-                    last_update_at: order.last_update_at,
-                }
+            .flat_map(|order| {
+                Self::trading_pair(order.pair_id())
+                    .ok()
+                    .and_then(|pair| match order.props.side {
+                        Side::Buy => Self::convert_base_to_quote(
+                            order.remaining_in_base(),
+                            order.props.price,
+                            &pair,
+                        )
+                        .ok(),
+                        Side::Sell => Some(order.remaining),
+                    })
+                    .map(|reserved_balance| RpcOrder {
+                        props: order.props.into(),
+                        reserved_balance: reserved_balance.into(),
+                        status: order.status,
+                        remaining: order.remaining.into(),
+                        executed_indices: order.executed_indices,
+                        already_filled: order.already_filled.into(),
+                        last_update_at: order.last_update_at,
+                    })
             })
             .skip((page_index * page_size) as usize)
             .take(page_size as usize)
