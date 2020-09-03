@@ -189,10 +189,14 @@ decl_event!(
     {
         /// A new order is created.
         PutOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
-        /// There is an update to the order due to it's canceled or get executed.
-        UpdateOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
-        /// The order gets executed.
+        /// There is an update to the order due to it gets executed.
+        UpdateMakerOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        /// There is an update to the order due to it gets executed.
+        UpdateTakerOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        /// Overall information about the maker and taker orders when there is an order execution.
         OrderExecuted(OrderExecutedInfo<AccountId, Balance, BlockNumber, Price>),
+        /// There is an update to the order due to it gets canceled.
+        UpdateCanceledOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// A new trading pair is added.
         AddTradingPair(TradingPairProfile),
         /// Trading pair profile has been updated.

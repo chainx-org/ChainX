@@ -245,6 +245,11 @@
         "asks": "Vec<(RpcPrice, RpcBalance)>",
         "bids": "Vec<(RpcPrice, RpcBalance)>"
     },
+    "Page": {
+        "page_index": "u32",
+        "page_size": "u32",
+        "data": "Vec<RpcOrder>"
+    },
     "String": "Text",
     "RpcPrice": "String",
     "RpcBalance": "String",

@@ -3,6 +3,7 @@
 
 use super::*;
 use sp_runtime::traits::CheckedAdd;
+use sp_std::cmp::Ordering;
 
 impl<T: Trait> Module<T> {
     /// When the price is far from the current handicap, i.e.,
@@ -45,8 +46,6 @@ impl<T: Trait> Module<T> {
         } else {
             Self::match_order(&pair, order, &handicap);
         }
-
-        Self::deposit_event(RawEvent::UpdateOrder(order.clone()));
     }
 
     /// Insert a fresh order and return the inserted result.
@@ -111,8 +110,10 @@ impl<T: Trait> Module<T> {
         )
     }
 
-    /// Match the new putted order. When the matching is complete, we should check
-    /// if the order has been fulfilled and update the handicap.
+    /// Match the newly created order.
+    ///
+    /// When the matching is complete, we should check if the order has been
+    /// fulfilled and update the handicap.
     fn match_order(
         pair: &TradingPairProfile,
         order: &mut OrderInfo<T>,
@@ -265,7 +266,7 @@ impl<T: Trait> Module<T> {
         let (lowest_ask, highest_bid) = (handicap.lowest_ask, handicap.highest_bid);
 
         //  Buy: [ lowest_ask  , my_quote ]
-        // Sell: [ my_quote , highest_bid   ]
+        // Sell: [ my_quote , highest_bid ]
         match taker_order.side() {
             Side::Buy => Self::match_taker_order_buy(taker_order, pair, lowest_ask),
             Side::Sell => Self::match_taker_order_sell(taker_order, pair, highest_bid),
@@ -303,14 +304,13 @@ impl<T: Trait> Module<T> {
             None => panic!("add order.already_filled overflow"),
         };
 
-        order.status = if order.already_filled == order.amount() {
-            OrderStatus::Filled
-        } else if order.already_filled < order.amount() {
-            OrderStatus::ParitialFill
-        } else {
-            panic!("Already filled of an order can't greater than the order's amount.");
+        order.status = match order.already_filled.cmp(&order.amount()) {
+            Ordering::Greater => {
+                panic!("Already filled of an order can't greater than the order's amount.");
+            }
+            Ordering::Less => OrderStatus::ParitialFill,
+            Ordering::Equal => OrderStatus::Filled,
         };
-
         order.last_update_at = <frame_system::Module<T>>::block_number();
     }
 
@@ -380,8 +380,8 @@ impl<T: Trait> Module<T> {
         Self::insert_executed_order(maker_order);
         Self::insert_executed_order(taker_order);
 
-        Self::deposit_event(RawEvent::UpdateOrder(maker_order.clone()));
-        Self::deposit_event(RawEvent::UpdateOrder(taker_order.clone()));
+        Self::deposit_event(RawEvent::UpdateMakerOrder(maker_order.clone()));
+        Self::deposit_event(RawEvent::UpdateTakerOrder(taker_order.clone()));
         Self::deposit_event(RawEvent::OrderExecuted(OrderExecutedInfo::new(
             trading_history_idx,
             pair_id,
@@ -414,7 +414,7 @@ impl<T: Trait> Module<T> {
 
         OrderInfoOf::<T>::insert(order.submitter(), order.id(), order.clone());
 
-        Self::deposit_event(RawEvent::UpdateOrder(order.clone()));
+        Self::deposit_event(RawEvent::UpdateCanceledOrder(order.clone()));
 
         Ok(())
     }
