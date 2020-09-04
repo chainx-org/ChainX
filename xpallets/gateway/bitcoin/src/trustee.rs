@@ -1,7 +1,7 @@
 use frame_support::{
     debug::native,
     dispatch::{DispatchError, DispatchResult},
-    StorageValue,
+    ensure, StorageValue,
 };
 use sp_runtime::SaturatedConversion;
 use sp_std::{convert::TryFrom, prelude::*, result};
@@ -368,7 +368,7 @@ impl<T: Trait> Module<T> {
 
                     // release withdrawal for applications
                     for id in proposal.withdrawal_id_list.iter() {
-                        let _ = xpallet_gateway_records::Module::<T>::recover_withdrawal_by_trustee(
+                        let _ = xpallet_gateway_records::Module::<T>::recover_withdrawal(
                             Chain::Bitcoin,
                             *id,
                         );
@@ -390,6 +390,34 @@ impl<T: Trait> Module<T> {
             "[apply_sig_withdraw]|current sig|state:{:?}|trustee vote:{:?}",
             proposal.sig_state, proposal.trustee_list
         );
+
+        WithdrawalProposal::<T>::put(proposal);
+        Ok(())
+    }
+
+    pub fn force_replace_withdraw_tx(tx: Transaction) -> DispatchResult {
+        let mut proposal: BtcWithdrawalProposal<T::AccountId> =
+            Self::withdrawal_proposal().ok_or(Error::<T>::NoProposal)?;
+
+        ensure!(
+            proposal.sig_state == VoteResult::Finish,
+            "Only allow force change finished vote"
+        );
+
+        // make sure withdrawal list is same as current proposal
+        let current_withdrawal_list = &proposal.withdrawal_id_list;
+        check_withdraw_tx_impl::<T>(&tx, current_withdrawal_list)?;
+
+        // sign
+        // check first and get signatures from commit transaction
+        let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
+        ensure!(
+            proposal.trustee_list.len() as u32 == sigs_count,
+            Error::<T>::InvalidSignCount
+        );
+
+        // replace old transaction
+        proposal.tx = tx;
 
         WithdrawalProposal::<T>::put(proposal);
         Ok(())
@@ -481,65 +509,69 @@ fn insert_trustee_vote_state<T: Trait>(
 fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
     match Module::<T>::withdrawal_proposal() {
         Some(_) => Err(Error::<T>::NotFinishProposal)?,
-        None => {
-            // withdrawal addr list for account withdrawal application
-            let mut appl_withdrawal_list: Vec<(Address, u64)> = Vec::new();
-            for withdraw_index in withdrawal_id_list.iter() {
-                let record =
-                    xpallet_gateway_records::Module::<T>::pending_withdrawals(withdraw_index)
-                        .ok_or(Error::<T>::NoWithdrawalRecord)?;
-                // record.addr() is base58
-                // verify btc address would conveRelayedTx a base58 addr to Address
-                let addr: Address = Module::<T>::verify_btc_address(&record.addr())?;
+        None => check_withdraw_tx_impl::<T>(tx, withdrawal_id_list),
+    }
+}
 
-                appl_withdrawal_list.push((addr, record.balance().saturated_into() as u64));
-            }
-            // not allow deposit directly to cold address, only hot address allow
-            let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
-            // withdrawal addr list for tx outputs
-            let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
-            let mut tx_withdraw_list = Vec::new();
-            for output in tx.outputs.iter() {
-                let script: Script = output.script_pubkey.clone().into();
-                let addr = parse_output_addr::<T>(&script).ok_or("not found addr in this out")?;
-                if addr.hash != hot_trustee_address.hash {
-                    // expect change to trustee_addr output
-                    tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));
-                }
-            }
+fn check_withdraw_tx_impl<T: Trait>(
+    tx: &Transaction,
+    withdrawal_id_list: &[u32],
+) -> DispatchResult {
+    // withdrawal addr list for account withdrawal application
+    let mut appl_withdrawal_list: Vec<(Address, u64)> = Vec::new();
+    for withdraw_index in withdrawal_id_list.iter() {
+        let record = xpallet_gateway_records::Module::<T>::pending_withdrawals(withdraw_index)
+            .ok_or(Error::<T>::NoWithdrawalRecord)?;
+        // record.addr() is base58
+        // verify btc address would conveRelayedTx a base58 addr to Address
+        let addr: Address = Module::<T>::verify_btc_address(&record.addr())?;
 
-            tx_withdraw_list.sort();
-            appl_withdrawal_list.sort();
-
-            // appl_withdrawal_list must match to tx_withdraw_list
-            if appl_withdrawal_list.len() != tx_withdraw_list.len() {
-                error!("withdrawal tx's outputs not equal to withdrawal application list, withdrawal application len:{:}, withdrawal tx's outputs len:{:}|withdrawal application list:{:?}, tx withdrawal outputs:{:?}",
-                       appl_withdrawal_list.len(), tx_withdraw_list.len(),
-                       withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(),
-                       tx_withdraw_list
-                );
-                return Err(Error::<T>::InvalidProposal)?;
-            }
-
-            let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
-                if a.0 == b.0 && a.1 == b.1 {
-                    true
-                }
-                else {
-                    error!(
-                        "withdrawal tx's output not match to withdrawal application. withdrawal application :{:?}, tx withdrawal output:{:?}",
-                        a,
-                        b
-                    );
-                    false
-                }
-            }).count();
-
-            if count != appl_withdrawal_list.len() {
-                Err(Error::<T>::InvalidProposal)?;
-            }
-
-            Ok(())
+        appl_withdrawal_list.push((addr, record.balance().saturated_into() as u64));
+    }
+    // not allow deposit directly to cold address, only hot address allow
+    let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
+    // withdrawal addr list for tx outputs
+    let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
+    let mut tx_withdraw_list = Vec::new();
+    for output in tx.outputs.iter() {
+        let script: Script = output.script_pubkey.clone().into();
+        let addr = parse_output_addr::<T>(&script).ok_or("not found addr in this out")?;
+        if addr.hash != hot_trustee_address.hash {
+            // expect change to trustee_addr output
+            tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));
         }
     }
+
+    tx_withdraw_list.sort();
+    appl_withdrawal_list.sort();
+
+    // appl_withdrawal_list must match to tx_withdraw_list
+    if appl_withdrawal_list.len() != tx_withdraw_list.len() {
+        error!("withdrawal tx's outputs not equal to withdrawal application list, withdrawal application len:{:}, withdrawal tx's outputs len:{:}|withdrawal application list:{:?}, tx withdrawal outputs:{:?}",
+               appl_withdrawal_list.len(), tx_withdraw_list.len(),
+               withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(),
+               tx_withdraw_list
+        );
+        return Err(Error::<T>::InvalidProposal)?;
+    }
+
+    let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
+        if a.0 == b.0 && a.1 == b.1 {
+            true
+        }
+        else {
+            error!(
+                "withdrawal tx's output not match to withdrawal application. withdrawal application :{:?}, tx withdrawal output:{:?}",
+                a,
+                b
+            );
+            false
+        }
+    }).count();
+
+    if count != appl_withdrawal_list.len() {
+        Err(Error::<T>::InvalidProposal)?;
+    }
+
+    Ok(())
 }

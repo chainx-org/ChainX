@@ -58,6 +58,56 @@ fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
     (withdraw, info, prev)
 }
 
+fn prepare_withdrawal<T: Trait>() -> Transaction {
+    // https://btc.com/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270.rawhex
+    const RAW_TX: &'static str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
+    let old_withdraw = Transaction::from(RAW_TX);
+    // https://btc.com/092684402f9b21abdb1d2d76511d5983bd1250d173ced171a3f76d03fcc43e97.rawhex
+    const ANOTHER_TX: &'static str =
+        "0100000001059ec66e2a2123364a56bd48f10f57d8a41ecf4082669e6fc85485637043879100000000fdfd00004830450221009fbe7b8f2f4ae771e8773cb5206b9f20286676e2c7cfa98a8e95368acfc3cb3c02203969727a276d7333d5f8815fa364307b8015783cfefbd53def28befdb81855fc0147304402205e5bbe039457d7657bb90dbe63ac30b9547242b44cc03e1f7a690005758e34aa02207208ed76a269d193f1e10583bd902561dbd02826d0486c33a4b1b1839a3d226f014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff04288e0300000000001976a914eb016d7998c88a79a50a0408dd7d5839b1ce1a6888aca0bb0d00000000001976a914646fe05e35369248c3f8deea436dc2b92c7dc86888ac50c30000000000001976a914d1a68d6e891a88d53d9bc3b88d172a3ff6b238c388ac20ee03020000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
+    let tmp = Transaction::from(ANOTHER_TX);
+
+    let accounts = accounts::<T>();
+    let alice = accounts[0].clone();
+    let bob = accounts[1].clone();
+    let withdrawal_fee = XGatewayBitcoin::<T>::btc_withdrawal_fee();
+
+    let balance1 = (9778400 + withdrawal_fee).saturated_into();
+    let balance2 = (9900000 + withdrawal_fee).saturated_into();
+    XGatewayRecords::<T>::deposit(&alice, &ASSET_ID, balance1).unwrap();
+    XGatewayRecords::<T>::deposit(&bob, &ASSET_ID, balance2).unwrap();
+    // prepare withdraw info
+    XGatewayRecords::<T>::withdrawal(
+        &alice,
+        &ASSET_ID,
+        balance1,
+        b"12kEgqNShFw7BN27QCMQZCynQpSuV4x1Ax".to_vec(),
+        b"memo".to_vec().into(),
+    )
+    .unwrap();
+    XGatewayRecords::<T>::withdrawal(
+        &bob,
+        &ASSET_ID,
+        balance2,
+        b"1NNZZKR6pos2M4yiJhS76NjcRHxoJUATy4".to_vec(),
+        b"memo".to_vec().into(),
+    )
+    .unwrap();
+
+    let proposal = BtcWithdrawalProposal::<T::AccountId> {
+        sig_state: VoteResult::Finish,
+        withdrawal_id_list: vec![0, 1],
+        tx: old_withdraw.clone(),
+        trustee_list: vec![(alice, true), (bob, true)],
+    };
+    WithdrawalProposal::<T>::put(proposal);
+
+    // replace tx
+    let mut new_withdraw = old_withdraw;
+    new_withdraw.inputs = tmp.inputs; // replace inputs
+    new_withdraw
+}
+
 fn create_tx() -> Transaction {
     Transaction::from("0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000b40047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000")
 }
@@ -234,6 +284,17 @@ benchmarks! {
         assert!(WithdrawalProposal::<T>::get().is_none());
     }
 
+    force_replace_proposal_tx {
+        let l in 1 .. 1024 * 1024 * 500; // 500KB length
+
+        Verifier::put(BtcTxVerifier::Test);
+        let tx = prepare_withdrawal::<T>();
+        let raw = serialization::serialize(&tx);
+    }: _(RawOrigin::Root, raw.into())
+    verify {
+        assert_eq!(WithdrawalProposal::<T>::get().unwrap().tx, tx);
+    }
+
     set_btc_withdrawal_fee {
         let caller = common::accounts::<T>()[0].clone();
     }: _(RawOrigin::Root,  2000000)
@@ -281,6 +342,10 @@ mod tests {
 
         ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_remove_pending::<Test>());
+        });
+
+        ExtBuilder::default().build().execute_with(|| {
+            assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
         });
 
         ExtBuilder::default().build().execute_with(|| {
