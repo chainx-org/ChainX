@@ -237,6 +237,14 @@
         "last_vote_weight_update": "BlockNumber",
         "unbonded_chunks": "Vec<RpcUnbonded>"
     },
+    "MiningAssetInfo": {
+        "asset_id": "AssetId",
+        "mining_power": "FixedAssetPower",
+        "reward_pot": "AccountId",
+        "reward_pot_balance": "RpcBalance",
+        "last_total_mining_weight": "RpcWeightType",
+        "last_total_mining_weight_update": "BlockNumber"
+    },
     "Unbonded": {
         "value": "Balance",
         "locked_until": "BlockNumber"

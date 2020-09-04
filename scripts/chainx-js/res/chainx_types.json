@@ -118,7 +118,8 @@
         "miningPower": "FixedAssetPower",
         "rewardPot": "AccountId",
         "rewardPotBalance": "RpcBalance",
-        "ledgerInfo": "RpcAssetLedger<BlockNumber>"
+        "lastTotalMiningWeight": "RpcWeightType",
+        "lastTotalMiningWeightUpdate": "BlockNumber"
     },
     "AssetLedger": {
         "lastTotalMiningWeight": "MiningWeight",
