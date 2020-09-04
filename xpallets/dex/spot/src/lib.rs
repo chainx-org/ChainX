@@ -5,6 +5,7 @@
 mod execution;
 mod rpc;
 mod types;
+mod weight_info;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -27,7 +28,6 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, ReservableCurrency},
-    weights::Weight,
     Parameter,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -38,6 +38,7 @@ use xpallet_support::info;
 
 pub use rpc::*;
 pub use types::*;
+pub use weight_info::WeightInfo;
 
 /// Maximum of backlog orders.
 const MAX_BACKLOG_ORDER: usize = 1000;
@@ -58,39 +59,15 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-pub trait WeightInfo {
-    fn put_order() -> Weight;
-    fn cancel_order() -> Weight;
-    fn force_cancel_order() -> Weight;
-    fn set_handicap() -> Weight;
-    fn set_price_fluctuation() -> Weight;
-    fn add_trading_pair() -> Weight;
-    fn update_trading_pair() -> Weight;
-}
+pub type OrderInfo<T> = Order<
+    TradingPairId,
+    <T as frame_system::Trait>::AccountId,
+    BalanceOf<T>,
+    <T as Trait>::Price,
+    <T as frame_system::Trait>::BlockNumber,
+>;
 
-impl WeightInfo for () {
-    fn put_order() -> Weight {
-        1_000_000_000
-    }
-    fn cancel_order() -> Weight {
-        1_000_000_000
-    }
-    fn force_cancel_order() -> Weight {
-        1_000_000_000
-    }
-    fn set_handicap() -> Weight {
-        1_000_000_000
-    }
-    fn set_price_fluctuation() -> Weight {
-        1_000_000_000
-    }
-    fn add_trading_pair() -> Weight {
-        1_000_000_000
-    }
-    fn update_trading_pair() -> Weight {
-        1_000_000_000
-    }
-}
+pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
 
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
@@ -108,16 +85,6 @@ pub trait Trait: xpallet_assets::Trait {
 
     type WeightInfo: WeightInfo;
 }
-
-pub type OrderInfo<T> = Order<
-    TradingPairId,
-    <T as frame_system::Trait>::AccountId,
-    BalanceOf<T>,
-    <T as Trait>::Price,
-    <T as frame_system::Trait>::BlockNumber,
->;
-
-pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
 
 decl_storage! {
     trait Store for Module<T: Trait> as XSpot {
