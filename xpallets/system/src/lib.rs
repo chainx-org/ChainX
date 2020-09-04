@@ -6,14 +6,24 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{CallMetadata, DispatchResult},
+    traits::Currency,
 };
 use frame_system::ensure_root;
 
 use xpallet_protocol::NetworkType;
 
+const PALLET_MARK: &[u8; 1] = b"#";
+const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];
+
+pub type BalanceOf<T> =
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+
 pub trait Trait: frame_system::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    /// The currency mechanism.
+    type Currency: Currency<Self::AccountId>;
 }
 
 decl_error! {
@@ -25,10 +35,14 @@ decl_error! {
 
 decl_event!(
     pub enum Event<T> where
+        Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId
     {
         BlockAccount(AccountId),
         RevokeBlockedAccounts(AccountId),
+        /// Transaction fee is paid to the block author and its reward pot in 10:90.
+        /// [author, author_fee, reward_pot, reward_pot_fee]
+        TransactionFeePaid(AccountId, Balance, AccountId, Balance),
     }
 );
 
@@ -48,12 +62,10 @@ decl_module! {
                 } else {
                     sub_paused.insert(PALLET_MARK.to_vec(), ());
                 }
+            } else if let Some(c) = call {
+                sub_paused.remove(&c[..]);
             } else {
-                if let Some(c) = call {
-                    sub_paused.remove(&c[..]);
-                } else {
-                    sub_paused.remove(&PALLET_MARK[..]);
-                }
+                sub_paused.remove(&PALLET_MARK[..]);
             }
 
             if sub_paused.is_empty() {
@@ -89,9 +101,6 @@ decl_storage! {
         pub BlockedAccounts get(fn blocked_accounts): map hasher(blake2_128_concat) T::AccountId => Option<()>;
     }
 }
-
-const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];
-const PALLET_MARK: &[u8; 1] = b"#";
 
 impl<T: Trait> Module<T> {
     pub fn is_paused(metadata: CallMetadata) -> bool {

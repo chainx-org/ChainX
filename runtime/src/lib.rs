@@ -59,8 +59,8 @@ pub use sp_runtime::BuildStorage;
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
-        Currency, Filter, InstanceFilter, KeyOwnerProofSystem, LockIdentifier, OnUnbalanced,
-        Randomness,
+        Currency, Filter, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
+        OnUnbalanced, Randomness,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -396,18 +396,26 @@ type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
 pub struct DealWithFees;
 impl OnUnbalanced<NegativeImbalance> for DealWithFees {
-    fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
-        if let Some(_fees) = fees_then_tips.next() {
-            // for fees, 80% to treasury, 20% to author
-            // let mut split = fees.ration(80, 20);
-            // if let Some(tips) = fees_then_tips.next() {
-            //     // for tips, if any, 80% to treasury, 20% to author (though this can be anything)
-            //     tips.ration_merge_into(80, 20, &mut split);
-            // }
-            // Treasury::on_unbalanced(split.0);
-            // Author::on_unbalanced(split.1);
-            // TODO impl fees dispatch
-        }
+    fn on_nonzero_unbalanced(fees: NegativeImbalance) {
+        // for fees, 90% to the reward pot of author, 10% to author
+        let (to_reward_pot, to_author) = fees.ration(90, 10);
+
+        let to_author_numeric_amount = to_author.peek();
+        let to_reward_pot_numeric_amount = to_reward_pot.peek();
+
+        let author = <pallet_authorship::Module<Runtime>>::author();
+        let reward_pot = <xpallet_mining_staking::Module<Runtime>>::reward_pot_for(&author);
+
+        <pallet_balances::Module<Runtime>>::resolve_creating(&author, to_author);
+        <pallet_balances::Module<Runtime>>::resolve_creating(&reward_pot, to_reward_pot);
+        <frame_system::Module<Runtime>>::deposit_event(
+            xpallet_system::RawEvent::TransactionFeePaid(
+                author,
+                to_author_numeric_amount,
+                reward_pot,
+                to_reward_pot_numeric_amount,
+            ),
+        );
     }
 }
 
@@ -825,6 +833,7 @@ impl orml_currencies::Trait for Runtime {
 ///////////////////////////////////////////
 impl xpallet_system::Trait for Runtime {
     type Event = Event;
+    type Currency = Balances;
 }
 
 parameter_types! {
