@@ -9,6 +9,7 @@ mod reward;
 mod rpc;
 mod slashing;
 mod types;
+mod weight_info;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -21,7 +22,6 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
-    weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
@@ -42,66 +42,13 @@ use xpallet_support::{debug, traits::TreasuryAccount};
 pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 pub use rpc::*;
 pub use types::*;
+pub use weight_info::WeightInfo;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
-
-pub trait WeightInfo {
-    fn register() -> Weight;
-    fn bond() -> Weight;
-    fn unbond() -> Weight;
-    fn unlock_unbonded_withdrawal() -> Weight;
-    fn rebond() -> Weight;
-    fn claim() -> Weight;
-    fn chill() -> Weight;
-    fn validate() -> Weight;
-    fn set_validator_count() -> Weight;
-    fn set_minimum_validator_count() -> Weight;
-    fn set_bonding_duration() -> Weight;
-    fn set_validator_bonding_duration() -> Weight;
-}
-
-impl WeightInfo for () {
-    fn register() -> Weight {
-        1_000_000_000
-    }
-    fn bond() -> Weight {
-        1_000_000_000
-    }
-    fn unbond() -> Weight {
-        1_000_000_000
-    }
-    fn unlock_unbonded_withdrawal() -> Weight {
-        1_000_000_000
-    }
-    fn rebond() -> Weight {
-        1_000_000_000
-    }
-    fn claim() -> Weight {
-        1_000_000_000
-    }
-    fn chill() -> Weight {
-        1_000_000_000
-    }
-    fn validate() -> Weight {
-        1_000_000_000
-    }
-    fn set_validator_count() -> Weight {
-        1_000_000_000
-    }
-    fn set_minimum_validator_count() -> Weight {
-        1_000_000_000
-    }
-    fn set_bonding_duration() -> Weight {
-        1_000_000_000
-    }
-    fn set_validator_bonding_duration() -> Weight {
-        1_000_000_000
-    }
-}
 
 pub trait Trait: frame_system::Trait {
     /// The overarching event type.

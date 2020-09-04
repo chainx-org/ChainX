@@ -11,6 +11,7 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 mod verifier;
+mod weight_info;
 
 use sp_std::{prelude::*, result, slice::Iter};
 
@@ -23,7 +24,6 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::Get,
-    weights::Weight,
     IterableStorageMap, RuntimeDebug,
 };
 use frame_system::ensure_root;
@@ -33,29 +33,8 @@ use chainx_primitives::{AssetId, Decimals, Desc, Token};
 use xpallet_support::info;
 
 pub use verifier::*;
+pub use weight_info::WeightInfo;
 pub use xp_assets_registrar::RegistrarHandler;
-
-pub trait WeightInfo {
-    fn register() -> Weight;
-    fn deregister() -> Weight;
-    fn recover() -> Weight;
-    fn update_asset_info() -> Weight;
-}
-
-impl WeightInfo for () {
-    fn register() -> Weight {
-        1_000_000_000
-    }
-    fn deregister() -> Weight {
-        1_000_000_000
-    }
-    fn recover() -> Weight {
-        1_000_000_000
-    }
-    fn update_asset_info() -> Weight {
-        1_000_000_000
-    }
-}
 
 #[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
