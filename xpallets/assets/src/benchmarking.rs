@@ -39,7 +39,7 @@ benchmarks! {
     }
 
     set_balance {
-        let n in 1 .. AssetType::iterator().collect::<Vec<_>>().len() as u32;
+        let n in 1 .. AssetType::iter().collect::<Vec<_>>().len() as u32;
 
         let user: T::AccountId = account("user", 0, SEED);
         let user_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());

@@ -9,6 +9,7 @@ pub trait WeightInfo {
     fn set_confirmed_index() -> Weight;
     fn remove_pending() -> Weight;
     fn remove_proposal() -> Weight;
+    fn force_replace_proposal_tx() -> Weight;
     fn set_btc_withdrawal_fee() -> Weight;
     fn set_btc_deposit_limit() -> Weight;
 }
@@ -50,6 +51,11 @@ impl WeightInfo for () {
     }
     fn remove_proposal() -> Weight {
         (16530000 as Weight).saturating_add(DbWeight::get().writes(1 as Weight))
+    }
+    fn force_replace_proposal_tx() -> Weight {
+        (2962661000 as Weight)
+            .saturating_add(DbWeight::get().reads(17 as Weight))
+            .saturating_add(DbWeight::get().writes(5 as Weight))
     }
     fn set_btc_withdrawal_fee() -> Weight {
         (15960000 as Weight).saturating_add(DbWeight::get().writes(1 as Weight))

@@ -102,9 +102,15 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = <T as Trait>::WeightInfo::withdraw()]
-        fn withdraw(origin, #[compact] asset_id: AssetId, #[compact] value: BalanceOf<T>, addr: AddrStr, ext: Memo) -> DispatchResult {
+        pub fn withdraw(origin, #[compact] asset_id: AssetId, #[compact] value: BalanceOf<T>, addr: AddrStr, ext: Memo) -> DispatchResult {
             let who = ensure_signed(origin)?;
             Self::apply_withdraw(who, asset_id, value, addr, ext)
+        }
+
+        #[weight = <T as Trait>::WeightInfo::withdraw()]
+        pub fn revoke_withdraw(origin, id: u32) -> DispatchResult {
+            let from = ensure_signed(origin)?;
+            xpallet_gateway_records::Module::<T>::revoke_withdrawal(&from, id)
         }
 
         // trustees

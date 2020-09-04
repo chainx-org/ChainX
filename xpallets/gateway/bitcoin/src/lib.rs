@@ -306,6 +306,9 @@ decl_module! {
             Ok(post_info)
         }
 
+        /// Trustee create a proposal for a withdrawal list. `tx` is the proposal withdrawal transaction.
+        /// The `tx` would have a sign for current creator or do not have sign. if creator do not sign
+        /// for this transaction, he could do `sign_withdraw_tx` later.
         #[weight = <T as Trait>::WeightInfo::create_withdraw_tx()]
         pub fn create_withdraw_tx(origin, withdrawal_id_list: Vec<u32>, tx: Vec<u8>) -> DispatchResult {
             let from = ensure_signed(origin)?;
@@ -319,6 +322,9 @@ decl_module! {
             Ok(())
         }
 
+        /// Trustees sign a withdrawal proposal. If `tx` is None, means this trustee vote to reject
+        /// this proposal. If `tx` is Some(), the inner part must be a valid transaction with this
+        /// trustee signature.
         #[weight = <T as Trait>::WeightInfo::sign_withdraw_tx()]
         pub fn sign_withdraw_tx(origin, tx: Option<Vec<u8>>) -> DispatchResult {
             let from = ensure_signed(origin)?;
@@ -351,6 +357,9 @@ decl_module! {
             Ok(())
         }
 
+        /// Allow root or trustees could remove pending deposits for an address and decide whether
+        /// deposit to an account id. if pass `None` to `who`, would just remove pendings, if pass
+        /// Some, would deposit to this account id.
         #[weight = <T as Trait>::WeightInfo::remove_pending()]
         pub fn remove_pending(origin, addr: BtcAddress, who: Option<T::AccountId>) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
@@ -364,6 +373,8 @@ decl_module! {
             Ok(())
         }
 
+        /// Dangerous! remove current withdrawal proposal directly. Please check business logic before
+        /// do this operation.
         #[weight = <T as Trait>::WeightInfo::remove_proposal()]
         pub fn remove_proposal(origin) -> DispatchResult {
             ensure_root(origin)?;
@@ -371,6 +382,24 @@ decl_module! {
             Ok(())
         }
 
+        /// Dangerous! force replace current withdrawal proposal transaction. Please check business
+        /// logic before do this operation. Must make sure current proposal transaction is invalid
+        /// (e.g. when created a proposal, the inputs are not in double spend state, but after other
+        /// trustees finish signing, the inputs are in double spend due other case. Thus could create
+        /// a new valid transaction which outputs same to current proposal to replace current proposal
+        /// transaction.)
+        #[weight = <T as Trait>::WeightInfo::force_replace_proposal_tx()]
+        pub fn force_replace_proposal_tx(origin, tx: Vec<u8>) -> DispatchResult {
+            T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
+            let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
+            native::debug!(
+                target: xpallet_support::RUNTIME_TARGET,
+                "[force_replace_proposal_tx]|new_tx:{:?}", tx,
+            );
+            Self::force_replace_withdraw_tx(tx)
+        }
+
+        /// Set bitcoin withdrawal fee
         #[weight = <T as Trait>::WeightInfo::set_btc_withdrawal_fee()]
         pub fn set_btc_withdrawal_fee(origin, #[compact] fee: u64) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
@@ -378,6 +407,7 @@ decl_module! {
             Ok(())
         }
 
+        /// Set bitcoin deposit limit
         #[weight = <T as Trait>::WeightInfo::set_btc_deposit_limit()]
         pub fn set_btc_deposit_limit(origin, #[compact] value: u64) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;

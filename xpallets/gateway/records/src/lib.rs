@@ -13,8 +13,10 @@ mod weight_info;
 
 // Substrate
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
-    traits::Currency, IterableStorageMap,
+    decl_error, decl_event, decl_module, decl_storage,
+    dispatch::{DispatchError, DispatchResult},
+    traits::Currency,
+    IterableStorageMap,
 };
 use frame_system::ensure_root;
 use sp_runtime::traits::StaticLookup;
@@ -29,7 +31,7 @@ use xp_runtime::Memo;
 
 use xpallet_assets::{AssetType, Chain};
 
-use xpallet_support::{error, info, try_addr, warn};
+use xpallet_support::{error, info, try_addr};
 
 pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalState};
 use crate::weight_info::WeightInfo;
@@ -85,19 +87,9 @@ decl_module! {
         }
 
         #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
-        pub fn set_withdrawal_state(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
+        pub fn set_withdrawal_state(origin, #[compact] withdrawal_id: u32, expected_state: WithdrawalState) -> DispatchResult {
             ensure_root(origin)?;
-            ensure!(state != WithdrawalState::Applying || state != WithdrawalState::Processing, "Do not accept this state.");
-            match Self::finish_withdrawal_impl(withdrawal_id, state) {
-                Ok(_) => {
-                    info!("[withdraw]|ID of withdrawal completion: {:}", withdrawal_id);
-                    Ok(())
-                }
-                Err(_e) => {
-                    error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:?}, please use root to fix it", withdrawal_id, _e);
-                    Err(_e)
-                }
-            }
+            Self::set_withdrawal_state_by_root(withdrawal_id, expected_state)
         }
 
         #[weight = <T as Trait>::WeightInfo::set_withdrawal_state_list(item.len() as u32)]
@@ -331,11 +323,11 @@ impl<T: Trait> Module<T> {
     }
 
     /// revoke to applying
-    pub fn recover_withdrawal_by_trustee(chain: Chain, serial_number: u32) -> DispatchResult {
+    pub fn recover_withdrawal(chain: Chain, serial_number: u32) -> DispatchResult {
         Self::check_chain(&serial_number, chain)?;
         if let Some(state) = Self::state_of(serial_number) {
             if state != WithdrawalState::Processing {
-                error!("[recover_withdrawal_by_trustee]|only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", serial_number, state);
+                error!("[recover_withdrawal]|only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", serial_number, state);
                 return Err(Error::<T>::NotProcessingState.into());
             }
             WithdrawalStateOf::insert(serial_number, WithdrawalState::Applying);
@@ -344,16 +336,38 @@ impl<T: Trait> Module<T> {
         Err(Error::<T>::NotExisted.into())
     }
 
-    /// revoke to cancel
-    pub fn revoke_withdrawal_by_trustee(chain: Chain, serial_number: u32) -> DispatchResult {
-        Self::check_chain(&serial_number, chain)?;
-        if let Some(state) = Self::state_of(serial_number) {
-            if state != WithdrawalState::Processing {
-                error!("[revoke_withdrawal_by_trustee]|only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", serial_number, state);
-                return Err(Error::<T>::NotProcessingState.into());
+    pub fn set_withdrawal_state_by_root(
+        withdrawal_id: u32,
+        expected_state: WithdrawalState,
+    ) -> DispatchResult {
+        let get_chain = |withdrawal_id: u32| -> Result<Chain, DispatchError> {
+            let record = Self::pending_withdrawals(withdrawal_id).ok_or(Error::<T>::NotExisted)?;
+            let asset_id = record.asset_id();
+            let asset = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
+            let asset_chain = asset.chain();
+            Ok(asset_chain)
+        };
+        match expected_state {
+            WithdrawalState::Applying => {
+                // this branch require this withdrawal is Processing
+                // would remove `Processing` to `Applying`
+                let chain = get_chain(withdrawal_id)?;
+                Self::recover_withdrawal(chain, withdrawal_id)
+            }
+            WithdrawalState::Processing => {
+                let chain = get_chain(withdrawal_id)?;
+                // current state just allow Applying, this would change Applying to Processing
+                Self::process_withdrawal(chain, withdrawal_id)?;
+                Ok(())
+            }
+            WithdrawalState::NormalFinish
+            | WithdrawalState::NormalCancel
+            | WithdrawalState::RootFinish
+            | WithdrawalState::RootCancel => {
+                // if current state is `Applying`, also could do Finish/Cancel for this withdrawal
+                Self::finish_withdrawal_impl(withdrawal_id, expected_state)
             }
         }
-        Self::finish_withdrawal_impl(serial_number, WithdrawalState::RootCancel)
     }
 
     pub fn set_withdrawal_state_by_trustees(
@@ -400,7 +414,8 @@ impl<T: Trait> Module<T> {
                 Self::unlock(&who, &asset_id, balance)?;
             }
             _ => {
-                warn!("[finish_withdrawal_impl]|should not meet this branch in normally, except in root|state:{:?}", state);
+                error!("[finish_withdrawal_impl]|should not meet this branch in normally, except in root|state:{:?}", state);
+                Err("Do not expect this state in finish_withdrawal")?;
             }
         }
 

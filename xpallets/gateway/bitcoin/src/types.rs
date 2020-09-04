@@ -225,6 +225,9 @@ impl BtcParams {
 pub enum BtcTxVerifier {
     Recover,
     RuntimeInterface,
+    #[cfg(any(feature = "runtime-benchmarks", test))]
+    /// Test would ignore sign check and always return true
+    Test,
 }
 
 impl Default for BtcTxVerifier {

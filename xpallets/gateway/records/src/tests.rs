@@ -4,6 +4,7 @@ pub use super::mock::*;
 use super::*;
 
 use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 
 #[test]
 fn test_normal() {
@@ -122,6 +123,54 @@ fn test_withdrawal_more_then_usable() {
             ),
             xpallet_assets::Error::<Test>::InsufficientBalance
         );
+    })
+}
+
+#[test]
+fn test_withdrawal_force_set_state() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(XRecords::deposit(&ALICE, &X_BTC, 10));
+        // applying
+        assert_ok!(XRecords::withdrawal(
+            &ALICE,
+            &X_BTC,
+            10,
+            b"addr".to_vec(),
+            b"ext".to_vec().into()
+        ));
+        assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100);
+        // ignore processing state, force release locked balance
+        assert_ok!(XRecords::set_withdrawal_state(
+            RawOrigin::Root.into(),
+            0,
+            WithdrawalState::RootCancel
+        ));
+        assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 10);
+        // change to processing
+        assert_ok!(XRecords::withdrawal(
+            &ALICE,
+            &X_BTC,
+            10,
+            b"addr".to_vec(),
+            b"ext".to_vec().into()
+        ));
+        assert_ok!(XRecords::set_withdrawal_state(
+            RawOrigin::Root.into(),
+            1,
+            WithdrawalState::Processing
+        ));
+        // reject revoke for a processing state
+        assert_noop!(
+            XRecords::revoke_withdrawal(&ALICE, 1),
+            XRecordsErr::NotApplyingState
+        );
+        // force change to applying
+        assert_ok!(XRecords::set_withdrawal_state(
+            RawOrigin::Root.into(),
+            1,
+            WithdrawalState::Applying
+        ));
+        assert_eq!(XRecords::state_of(1), Some(WithdrawalState::Applying));
     })
 }
 

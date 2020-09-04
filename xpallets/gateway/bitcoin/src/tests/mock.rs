@@ -161,7 +161,7 @@ impl Trait for Test {
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
-// pub type XGatewayRecords = xpallet_gateway_records::Module<Test>;
+pub type XGatewayRecords = xpallet_gateway_records::Module<Test>;
 pub type XGatewayCommon = xpallet_gateway_common::Module<Test>;
 pub type XGatewayBitcoin = Module<Test>;
 pub type XGatewayBitcoinErr = Error<Test>;
