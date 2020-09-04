@@ -5,6 +5,7 @@
 mod impls;
 mod rpc;
 mod types;
+mod weight_info;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -19,7 +20,6 @@ use frame_support::{
     ensure,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement},
-    weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
@@ -36,32 +36,11 @@ use xpallet_support::{traits::TreasuryAccount, warn};
 pub use impls::SimpleAssetRewardPotAccountDeterminer;
 pub use rpc::*;
 pub use types::*;
+pub use weight_info::WeightInfo;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
-
-pub trait WeightInfo {
-    fn claim() -> Weight;
-    fn set_claim_staking_requirement() -> Weight;
-    fn set_claim_frequency_limit() -> Weight;
-    fn set_asset_power() -> Weight;
-}
-
-impl WeightInfo for () {
-    fn claim() -> Weight {
-        1_000_000_000
-    }
-    fn set_claim_staking_requirement() -> Weight {
-        1_000_000_000
-    }
-    fn set_claim_frequency_limit() -> Weight {
-        1_000_000_000
-    }
-    fn set_asset_power() -> Weight {
-        1_000_000_000
-    }
-}
 
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.

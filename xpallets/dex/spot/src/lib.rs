@@ -5,6 +5,7 @@
 mod execution;
 mod rpc;
 mod types;
+mod weight_info;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -27,7 +28,6 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, ReservableCurrency},
-    weights::Weight,
     Parameter,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -38,6 +38,7 @@ use xpallet_support::info;
 
 pub use rpc::*;
 pub use types::*;
+pub use weight_info::WeightInfo;
 
 /// Maximum of backlog orders.
 const MAX_BACKLOG_ORDER: usize = 1000;
@@ -58,39 +59,15 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-pub trait WeightInfo {
-    fn put_order() -> Weight;
-    fn cancel_order() -> Weight;
-    fn force_cancel_order() -> Weight;
-    fn set_handicap() -> Weight;
-    fn set_price_fluctuation() -> Weight;
-    fn add_trading_pair() -> Weight;
-    fn update_trading_pair() -> Weight;
-}
+pub type OrderInfo<T> = Order<
+    TradingPairId,
+    <T as frame_system::Trait>::AccountId,
+    BalanceOf<T>,
+    <T as Trait>::Price,
+    <T as frame_system::Trait>::BlockNumber,
+>;
 
-impl WeightInfo for () {
-    fn put_order() -> Weight {
-        1_000_000_000
-    }
-    fn cancel_order() -> Weight {
-        1_000_000_000
-    }
-    fn force_cancel_order() -> Weight {
-        1_000_000_000
-    }
-    fn set_handicap() -> Weight {
-        1_000_000_000
-    }
-    fn set_price_fluctuation() -> Weight {
-        1_000_000_000
-    }
-    fn add_trading_pair() -> Weight {
-        1_000_000_000
-    }
-    fn update_trading_pair() -> Weight {
-        1_000_000_000
-    }
-}
+pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
 
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
@@ -108,16 +85,6 @@ pub trait Trait: xpallet_assets::Trait {
 
     type WeightInfo: WeightInfo;
 }
-
-pub type OrderInfo<T> = Order<
-    TradingPairId,
-    <T as frame_system::Trait>::AccountId,
-    BalanceOf<T>,
-    <T as Trait>::Price,
-    <T as frame_system::Trait>::BlockNumber,
->;
-
-pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
 
 decl_storage! {
     trait Store for Module<T: Trait> as XSpot {
@@ -188,13 +155,17 @@ decl_event!(
         <T as Trait>::Price,
     {
         /// A new order is created.
-        PutOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
-        /// There is an update to the order due to it's canceled or get executed.
-        UpdateOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
-        /// The order gets executed.
+        NewOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        /// There is an update to the order due to it gets executed.
+        MakerOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        /// There is an update to the order due to it gets executed.
+        TakerOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        /// Overall information about the maker and taker orders when there is an order execution.
         OrderExecuted(OrderExecutedInfo<AccountId, Balance, BlockNumber, Price>),
+        /// There is an update to the order due to it gets canceled.
+        CanceledOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// A new trading pair is added.
-        AddTradingPair(TradingPairProfile),
+        TradingPairAdded(TradingPairProfile),
         /// Trading pair profile has been updated.
         TradingPairUpdated(TradingPairProfile),
         /// Price fluctuation of trading pair has been updated.
@@ -427,7 +398,7 @@ impl<T: Trait> Module<T> {
 
         TradingPairCount::put(pair_id + 1);
 
-        Self::deposit_event(RawEvent::AddTradingPair(pair));
+        Self::deposit_event(RawEvent::TradingPairAdded(pair));
     }
 
     fn apply_update_trading_pair(pair_id: TradingPairId, tick_decimals: u32, tradable: bool) {
