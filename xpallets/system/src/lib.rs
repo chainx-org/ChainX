@@ -6,14 +6,21 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{CallMetadata, DispatchResult},
+    traits::{Currency, LockableCurrency},
 };
 use frame_system::ensure_root;
 
 use xpallet_protocol::NetworkType;
 
+pub type BalanceOf<T> =
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+
 pub trait Trait: frame_system::Trait {
     /// Event
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+    /// The currency mechanism.
+    type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 }
 
 decl_error! {
@@ -25,10 +32,15 @@ decl_error! {
 
 decl_event!(
     pub enum Event<T> where
+        Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId
     {
         BlockAccount(AccountId),
         RevokeBlockedAccounts(AccountId),
+        /// Transaction fee is paid to the block author. [author, amount]
+        AuthorFeePaid(AccountId, Balance),
+        /// Transaction fee is paid to the reward pot of block author. [reward_pot, amount]
+        AuthorRewardPotFeePaid(AccountId, Balance),
     }
 );
 
