@@ -37,7 +37,7 @@ decl_event!(
     {
         BlockAccount(AccountId),
         RevokeBlockedAccounts(AccountId),
-        /// Transaction fee is paid to the block author and its reward pot accordingly.
+        /// Transaction fee is paid to the block author and its reward pot in 10:90.
         /// [author, author_fee, reward_pot, reward_pot_fee]
         TransactionFeePaid(AccountId, Balance, AccountId, Balance),
     }
