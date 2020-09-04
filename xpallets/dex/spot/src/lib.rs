@@ -155,17 +155,17 @@ decl_event!(
         <T as Trait>::Price,
     {
         /// A new order is created.
-        PutOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        NewOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// There is an update to the order due to it gets executed.
-        UpdateMakerOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        MakerOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// There is an update to the order due to it gets executed.
-        UpdateTakerOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        TakerOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// Overall information about the maker and taker orders when there is an order execution.
         OrderExecuted(OrderExecutedInfo<AccountId, Balance, BlockNumber, Price>),
         /// There is an update to the order due to it gets canceled.
-        UpdateCanceledOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
+        CanceledOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
         /// A new trading pair is added.
-        AddTradingPair(TradingPairProfile),
+        TradingPairAdded(TradingPairProfile),
         /// Trading pair profile has been updated.
         TradingPairUpdated(TradingPairProfile),
         /// Price fluctuation of trading pair has been updated.
@@ -398,7 +398,7 @@ impl<T: Trait> Module<T> {
 
         TradingPairCount::put(pair_id + 1);
 
-        Self::deposit_event(RawEvent::AddTradingPair(pair));
+        Self::deposit_event(RawEvent::TradingPairAdded(pair));
     }
 
     fn apply_update_trading_pair(pair_id: TradingPairId, tick_decimals: u32, tradable: bool) {
