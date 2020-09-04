@@ -34,5 +34,7 @@ pub fn verify_sig<T: Trait>(
         BtcTxVerifier::RuntimeInterface => {
             runtime_interface::verify_sig_impl::<T>(sig, pubkey, tx, script_pubkey, index)
         }
+        #[cfg(any(feature = "runtime-benchmarks", test))]
+        BtcTxVerifier::Test => Ok(()),
     }
 }

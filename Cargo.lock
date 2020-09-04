@@ -8568,6 +8568,7 @@ dependencies = [
 name = "xpallet-gateway-common"
 version = "1.0.0"
 dependencies = [
+ "bs58",
  "chainx-primitives",
  "frame-benchmarking",
  "frame-support",
