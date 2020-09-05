@@ -8395,6 +8395,7 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "xpallet-assets-rpc-runtime-api",
+ "xpallet-support",
 ]
 
 [[package]]
