@@ -16,4 +16,5 @@ sp-runtime = { version = "2.0.0-rc6" }
 sp-blockchain = { version = "2.0.0-rc6" }
 
 chainx-primitives = { path = "../../../primitives" }
+xpallet-support = { path = "../../support" }
 xpallet-assets-rpc-runtime-api = { path = "./runtime-api" }

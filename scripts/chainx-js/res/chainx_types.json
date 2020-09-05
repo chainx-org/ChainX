@@ -284,10 +284,6 @@
         "isOnline": "bool",
         "restrictions": "AssetRestrictions"
     },
-    "Unbonded": {
-        "value": "Balance",
-        "lockedUntil": "BlockNumber"
-    },
     "WithdrawalState": {
         "_enum": [
             "Applying",
@@ -425,11 +421,29 @@
         "tickDecimals": "u32",
         "tradable": "bool"
     },
+    "Unbonded": {
+        "value": "Balance",
+        "lockedUntil": "BlockNumber"
+    },
     "Depth": {
         "asks": "Vec<(RpcPrice, RpcBalance)>",
         "bids": "Vec<(RpcPrice, RpcBalance)>"
     },
+    "Page": {
+        "pageIndex": "u32",
+        "pageSize": "u32",
+        "data": "Vec<RpcOrder>"
+    },
     "String": "Text",
     "RpcPrice": "String",
-    "MiningPower": "u128"
+    "MiningPower": "u128",
+    "WithdrawalRecordForRpc": {
+        "assetId": "AssetId",
+        "applicant": "AccountId",
+        "balance": "RpcBalance",
+        "addr": "String",
+        "ext": "String",
+        "height": "BlockNumber",
+        "state": "WithdrawalState"
+    }
 }

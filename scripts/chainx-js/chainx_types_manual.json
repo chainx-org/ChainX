@@ -69,10 +69,6 @@
         "is_online": "bool",
         "restrictions": "AssetRestrictions"
     },
-    "Unbonded": {
-        "locked_until": "BlockNumber",
-        "value": "Balance"
-    },
     "WithdrawalState": {
         "_enum": [
             "Applying",
@@ -270,5 +266,14 @@
     },
     "OrderInfo": "Order",
     "HandicapInfo": "Handicap",
-    "Price": "Balance"
+    "Price": "Balance",
+    "WithdrawalRecordForRpc": {
+        "asset_id": "AssetId",
+        "applicant": "AccountId",
+        "balance": "RpcBalance",
+        "addr": "String",
+        "ext": "String",
+        "height": "BlockNumber",
+        "state": "WithdrawalState"
+    }
 }

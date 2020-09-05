@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
@@ -7,12 +8,16 @@ use jsonrpc_derive::rpc;
 use serde::{Deserialize, Serialize};
 
 use sp_blockchain::HeaderBackend;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+use sp_runtime::{
+    generic::BlockId,
+    traits::{Block as BlockT, Zero},
+};
 
 use chainx_primitives::AssetId;
 use xpallet_assets_rpc_runtime_api::{
     AssetRestrictions, AssetType, AssetsApi as AssetsRuntimeApi, Chain, Decimals,
 };
+use xpallet_support::RpcBalance;
 
 pub struct Assets<C, B> {
     client: Arc<C>,
@@ -30,18 +35,21 @@ impl<C, B> Assets<C, B> {
 }
 
 #[rpc]
-pub trait AssetsApi<BlockHash, AccountId, Balance> {
+pub trait AssetsApi<BlockHash, AccountId, Balance>
+where
+    Balance: ToString + FromStr,
+{
     /// Return all assets with AssetTypes for an account (exclude native token(PCX)). The returned map would not contains the assets which is not existed for this account but existed in valid assets list.
     #[rpc(name = "xassets_getAssetsByAccount")]
     fn assets_by_account(
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, String>>>;
+    ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, RpcBalance<Balance>>>>;
 
     /// Return all valid assets balance with AssetTypes. (exclude native token(PCX))
     #[rpc(name = "xassets_getAssets")]
-    fn assets(&self, at: Option<BlockHash>) -> Result<BTreeMap<AssetId, TotalAssetInfo>>;
+    fn assets(&self, at: Option<BlockHash>) -> Result<BTreeMap<AssetId, TotalAssetInfo<Balance>>>;
 }
 
 impl<C, Block, AccountId, Balance> AssetsApi<<Block as BlockT>::Hash, AccountId, Balance>
@@ -53,13 +61,13 @@ where
     C::Api: AssetsRuntimeApi<Block, AccountId, Balance>,
     Block: BlockT,
     AccountId: Clone + std::fmt::Display + Codec,
-    Balance: Clone + std::fmt::Display + Codec + ToString,
+    Balance: Clone + Copy + std::fmt::Display + Codec + ToString + FromStr + Zero,
 {
     fn assets_by_account(
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, String>>> {
+    ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, RpcBalance<Balance>>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.assets_for_account(&at, who)
@@ -70,9 +78,9 @@ where
                         let mut r = BTreeMap::new();
                         AssetType::iter().for_each(|type_| {
                             let balance = if let Some(b) = m.get(type_) {
-                                (*b).to_string()
+                                (*b).into()
                             } else {
-                                "0".to_string()
+                                Balance::zero().into()
                             };
                             r.insert(*type_, balance);
                         });
@@ -86,7 +94,7 @@ where
     fn assets(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AssetId, TotalAssetInfo>> {
+    ) -> Result<BTreeMap<AssetId, TotalAssetInfo<Balance>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.assets(&at)
@@ -123,27 +131,27 @@ impl From<xpallet_assets_rpc_runtime_api::AssetInfo> for AssetInfo {
 
 #[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TotalAssetInfo {
+pub struct TotalAssetInfo<Balance: ToString + FromStr> {
     pub info: AssetInfo,
-    pub balance: BTreeMap<AssetType, String>,
+    pub balance: BTreeMap<AssetType, RpcBalance<Balance>>,
     pub is_online: bool,
     pub restrictions: AssetRestrictions,
 }
 
-impl<Balance: ToString> From<xpallet_assets_rpc_runtime_api::TotalAssetInfo<Balance>>
-    for TotalAssetInfo
+impl<Balance: Copy + Clone + ToString + FromStr + Zero>
+    From<xpallet_assets_rpc_runtime_api::TotalAssetInfo<Balance>> for TotalAssetInfo<Balance>
 {
     fn from(info: xpallet_assets_rpc_runtime_api::TotalAssetInfo<Balance>) -> Self {
         let mut r = BTreeMap::new();
         AssetType::iter().for_each(|type_| {
             let balance = if let Some(b) = info.balance.get(type_) {
-                (*b).to_string()
+                (*b).into()
             } else {
-                "0".to_string()
+                Balance::zero().into()
             };
             r.insert(*type_, balance);
         });
-        TotalAssetInfo {
+        TotalAssetInfo::<Balance> {
             info: info.info.into(),
             balance: r,
             is_online: info.is_online,

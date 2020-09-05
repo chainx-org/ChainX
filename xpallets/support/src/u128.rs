@@ -66,7 +66,7 @@ impl<Balance: std::str::FromStr> std::str::FromStr for U128<Balance> {
 }
 
 #[cfg(feature = "std")]
-impl<Balance: std::fmt::Display> serde::ser::Serialize for U128<Balance> {
+impl<Balance: std::string::ToString> serde::ser::Serialize for U128<Balance> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::ser::Serializer,

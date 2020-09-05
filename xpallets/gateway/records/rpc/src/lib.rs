@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
@@ -14,7 +15,7 @@ use xpallet_assets::Chain;
 use xpallet_gateway_records_rpc_runtime_api::{
     Withdrawal, WithdrawalState, XGatewayRecordsApi as GatewayRecordsRuntimeApi,
 };
-use xpallet_support::try_addr;
+use xpallet_support::{try_addr, RpcBalance};
 
 pub struct XGatewayRecords<C, B> {
     client: Arc<C>,
@@ -32,13 +33,16 @@ impl<C, B> XGatewayRecords<C, B> {
 }
 
 #[rpc]
-pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
+pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber>
+where
+    Balance: ToString + FromStr,
+{
     /// Return current withdraw list(include Applying and Processing withdraw state)
     #[rpc(name = "xgatewayrecords_withdrawalList")]
     fn withdrawal_list(
         &self,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>>;
+    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>>;
 
     /// Return current withdraw list for a chain(include Applying and Processing withdraw state)
     #[rpc(name = "xgatewayrecords_withdrawalListByChain")]
@@ -46,7 +50,7 @@ pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
         &self,
         chain: Chain,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>>;
+    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>>;
 
     /// Return current pending withdraw list for a chain
     #[rpc(name = "xgatewayrecords_pendingWithdrawalList")]
@@ -54,7 +58,7 @@ pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
         &self,
         chain: Chain,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>>;
+    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>>;
 }
 
 impl<C, Block, AccountId, Balance, BlockNumber>
@@ -67,13 +71,13 @@ where
     C::Api: GatewayRecordsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     Block: BlockT,
     AccountId: Clone + std::fmt::Display + Codec,
-    Balance: Clone + std::fmt::Display + Codec + ToString,
+    Balance: Clone + std::fmt::Display + Codec + ToString + FromStr,
     BlockNumber: Clone + std::fmt::Display + Codec,
 {
     fn withdrawal_list(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>> {
+    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.withdrawal_list(&at)
@@ -89,7 +93,7 @@ where
         &self,
         chain: Chain,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>> {
+    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.withdrawal_list_by_chain(&at, chain)
@@ -104,7 +108,7 @@ where
         &self,
         chain: Chain,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecord<AccountId, BlockNumber>>> {
+    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.withdrawal_list_by_chain(&at, chain)
@@ -125,26 +129,27 @@ where
 
 #[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WithdrawalRecord<AccountId, BlockNumber> {
+pub struct WithdrawalRecordForRpc<AccountId, Balance: ToString + FromStr, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,
-    pub balance: String,
+    pub balance: RpcBalance<Balance>,
     pub addr: String,
     pub ext: String,
     pub height: BlockNumber,
     pub state: WithdrawalState,
 }
 
-impl<AccountId, Balance: ToString, BlockNumber> From<Withdrawal<AccountId, Balance, BlockNumber>>
-    for WithdrawalRecord<AccountId, BlockNumber>
+impl<AccountId, Balance: ToString + FromStr, BlockNumber>
+    From<Withdrawal<AccountId, Balance, BlockNumber>>
+    for WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>
 {
     fn from(record: Withdrawal<AccountId, Balance, BlockNumber>) -> Self {
-        WithdrawalRecord {
+        WithdrawalRecordForRpc {
             asset_id: record.asset_id,
             applicant: record.applicant,
-            balance: record.balance.to_string(),
+            balance: record.balance.into(),
             addr: format!("{:?}", try_addr!(record.addr)),
-            ext: format!("{:}", record.ext),
+            ext: format!("{:}", String::from_utf8_lossy(record.ext.as_ref())),
             height: record.height,
             state: record.state,
         }
