@@ -507,7 +507,7 @@ impl<T: Trait> Module<T> {
         })?;
 
         // convert btc header to self header info
-        let header_info: BtcHeaderInfo = BtcHeaderInfo {
+        let header_info = BtcHeaderInfo {
             header,
             height: prev_info.height + 1,
         };
