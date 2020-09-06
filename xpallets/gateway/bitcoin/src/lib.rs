@@ -222,7 +222,7 @@ decl_storage! {
     add_extra_genesis {
         config(genesis_hash): H256;
         build(|config| {
-            let genesis_header = config.genesis_info.0.clone();
+            let genesis_header = config.genesis_info.0;
             let genesis_hash = genesis_header.hash();
             let genesis_index = BtcHeaderIndex {
                 hash: genesis_hash,
@@ -246,7 +246,7 @@ decl_storage! {
             }
 
             Headers::insert(&genesis_hash, header_info);
-            BlockHashFor::insert(&genesis_index.height, vec![genesis_hash.clone()]);
+            BlockHashFor::insert(&genesis_index.height, vec![genesis_hash]);
             MainChain::insert(&genesis_hash, ());
 
             BestIndex::put(genesis_index);
@@ -282,12 +282,16 @@ decl_module! {
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
         #[weight = <T as Trait>::WeightInfo::push_transaction()]
-        pub fn push_transaction(origin, raw_tx: Vec<u8>, relayed_info: BtcRelayedTxInfo, prev_tx: Option<Vec<u8>>) -> DispatchResultWithPostInfo {
+        pub fn push_transaction(
+            origin,
+            raw_tx: Vec<u8>,
+            relayed_info: BtcRelayedTxInfo,
+            prev_tx: Option<Vec<u8>>
+        ) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
-            let raw_tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
+            let raw_tx = Self::deserialize_tx(raw_tx.as_slice())?;
             let prev = if let Some(prev) = prev_tx {
-                let prev: Transaction = deserialize(Reader::new(prev.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
-                Some(prev)
+                Some(Self::deserialize_tx(prev.as_slice())?)
             } else {
                 None
             };
@@ -315,10 +319,12 @@ decl_module! {
             // commiter must in trustee list
             Self::ensure_trustee(&from)?;
 
-            let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
-            native::debug!(target: xpallet_support::RUNTIME_TARGET, "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
+            let tx = Self::deserialize_tx(tx.as_slice())?;
+            native::debug!(
+                target: xpallet_support::RUNTIME_TARGET,
+                "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
 
-            Self::apply_create_withdraw(from, tx, withdrawal_id_list.clone())?;
+            Self::apply_create_withdraw(from, tx, withdrawal_id_list)?;
             Ok(())
         }
 
@@ -331,8 +337,7 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx = if let Some(raw_tx) = tx {
-                let tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
-                Some(tx)
+                Some(Self::deserialize_tx(raw_tx.as_slice())?)
             } else {
                 None
             };
@@ -349,6 +354,7 @@ decl_module! {
             BestIndex::put(index);
             Ok(())
         }
+
         /// Dangerous! Be careful to set ConfirmedIndex
         #[weight = <T as Trait>::WeightInfo::set_confirmed_index()]
         pub fn set_confirmed_index(origin, index: BtcHeaderIndex) -> DispatchResult {
@@ -391,7 +397,7 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::force_replace_proposal_tx()]
         pub fn force_replace_proposal_tx(origin, tx: Vec<u8>) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
-            let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
+            let tx = Self::deserialize_tx(tx.as_slice())?;
             native::debug!(
                 target: xpallet_support::RUNTIME_TARGET,
                 "[force_replace_proposal_tx]|new_tx:{:?}", tx,
@@ -438,7 +444,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
             Ok((hot_addr, cold_addr)) => {
                 // do not allow withdraw from trustee address
                 if address == hot_addr || address == cold_addr {
-                    Err(Error::<T>::InvalidAddress)?;
+                    return Err(Error::<T>::InvalidAddress.into());
                 }
             }
             Err(e) => {
@@ -453,7 +459,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
         asset_id: &AssetId,
     ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         if *asset_id != Self::ASSET_ID {
-            Err(xpallet_assets::Error::<T>::ActionNotAllowed)?
+            return Err(xpallet_assets::Error::<T>::ActionNotAllowed.into());
         }
         let fee = Self::btc_withdrawal_fee().saturated_into();
         let limit = WithdrawalLimit::<BalanceOf<T>> {
@@ -471,6 +477,12 @@ impl<T: Trait> Module<T> {
             .map_err(|_| Error::<T>::InvalidBase58)?;
         let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
         Ok(addr)
+    }
+
+    /// Helper function for deserializing the slice of raw tx.
+    #[inline]
+    fn deserialize_tx(input: &[u8]) -> result::Result<Transaction, Error<T>> {
+        deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 
     fn apply_push_header(header: BtcHeader) -> DispatchResult {
@@ -509,7 +521,7 @@ impl<T: Trait> Module<T> {
             // storage height => block list (contains forked header hash)
             BlockHashFor::mutate(header_info.height, |v| {
                 if !v.contains(&hash) {
-                    v.push(hash.clone());
+                    v.push(hash);
                 }
             });
 
@@ -571,7 +583,7 @@ impl<T: Trait> Module<T> {
         let height = header_info.height;
         if height > confirmed.height {
             error!("[apply_push_transaction]|receive an unconfirmed tx|tx hash:{:}|related block height:{:}|confirmed block height:{:}|hash:{:?}", tx_hash, height, confirmed.height, confirmed.hash);
-            Err(Error::<T>::UnconfirmedTx)?;
+            return Err(Error::<T>::UnconfirmedTx.into());
         }
         // check whether replayed tx has been processed, just process failed and not processed tx;
         match Self::tx_state(&tx_hash) {
@@ -579,7 +591,7 @@ impl<T: Trait> Module<T> {
             Some(state) => {
                 if state.result == BtcTxResult::Success {
                     error!("[apply_push_transaction]|reject processed tx|tx hash:{:}|type:{:?}|result:{:?}", tx_hash, state.tx_type, state.result);
-                    Err(Error::<T>::ReplayedTx)?;
+                    return Err(Error::<T>::ReplayedTx.into());
                 }
             }
         }
@@ -590,7 +602,7 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::ProcessTx(tx_hash, block_hash, state));
         match state.result {
             BtcTxResult::Success => Ok(()),
-            BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed)?,
+            BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed.into()),
         }
     }
 }

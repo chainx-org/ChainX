@@ -142,7 +142,7 @@ impl<AccountId> BtcWithdrawalProposal<AccountId> {
         tx: BtcTransaction,
         trustee_list: Vec<(AccountId, bool)>,
     ) -> Self {
-        BtcWithdrawalProposal {
+        Self {
             sig_state,
             withdrawal_id_list,
             tx,
@@ -183,7 +183,7 @@ impl BtcParams {
         target_spacing_seconds: u32,
         retargeting_factor: u32,
     ) -> BtcParams {
-        BtcParams {
+        Self {
             max_bits,
             block_max_future,
 
