@@ -55,7 +55,7 @@ fn look_back_confirmed_header<T: Trait>(
 ) -> (Option<BtcHeaderIndex>, Vec<BtcHeaderIndex>) {
     let confirmations = Module::<T>::confirmation_number();
     let mut chain = Vec::with_capacity(confirmations as usize);
-    let mut prev_hash = header_info.header.previous_header_hash.clone();
+    let mut prev_hash = header_info.header.previous_header_hash;
 
     // put current header
     chain.push(BtcHeaderIndex {

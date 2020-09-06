@@ -244,7 +244,7 @@ where
         // is_null_data_script is not null
         if script.is_null_data_script() {
             // only handle first valid account info opreturn, other opreturn would drop
-            if has_opreturn == false {
+            if !has_opreturn {
                 if let Some(v) = parse_opreturn(&script) {
                     let info = handle_opreturn(&v);
                     if info.is_some() {
@@ -315,7 +315,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 let addr_bytes = addr2vecu8(&addr);
                 match T::AddrBinding::get_binding(Module::<T>::chain(), addr_bytes) {
                     Some(accountid) => AccountInfo::Account((accountid, None)),
-                    None => AccountInfo::Address(addr.clone()),
+                    None => AccountInfo::Address(addr),
                 }
             } else {
                 // should not meet this branch, due it's handled before, it's unreachable
@@ -333,7 +333,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 channel_name,
             );
 
-            if let Err(_) = deposit_token::<T>(&accountid, deposit_info.deposit_value) {
+            if deposit_token::<T>(&accountid, deposit_info.deposit_value).is_err() {
                 return BtcTxResult::Failed;
             }
             info!(
@@ -422,7 +422,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
     let addr_bytes = addr2vecu8(input_address);
 
     let cache = BtcDepositCache {
-        txid: txid.clone(),
+        txid: *txid,
         balance,
     };
 

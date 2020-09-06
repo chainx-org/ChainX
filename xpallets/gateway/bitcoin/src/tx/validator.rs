@@ -41,11 +41,11 @@ pub fn validate_transaction<T: Trait>(
             "[validate_transaction]|Check failed for merkle tree proof|merkle_root:{:?}|hash:{:?}",
             merkle_root, hash
         );
-        Err(Error::<T>::BadMerkleProof)?;
+        return Err(Error::<T>::BadMerkleProof.into());
     }
     if !matches.iter().any(|h| *h == tx_hash) {
         error!("[validate_transaction]|Tx hash should in matches of partial merkle tree");
-        Err(Error::<T>::BadMerkleProof)?;
+        return Err(Error::<T>::BadMerkleProof.into());
     }
 
     if let Some(prev) = prev_tx {
@@ -55,7 +55,7 @@ pub fn validate_transaction<T: Trait>(
         let expected_id = tx.raw.inputs[0].previous_output.hash;
         if previous_txid != expected_id {
             error!("[validate_transaction]|relay previou tx's hash not equail to relay tx first input|expected_id:{:?}|prev:{:?}", expected_id, previous_txid);
-            Err(Error::<T>::InvalidPrevTx)?;
+            return Err(Error::<T>::InvalidPrevTx.into());
         }
     }
     Ok(())
@@ -85,7 +85,7 @@ pub fn parse_and_check_signed_tx_impl<T: Trait>(
         let script: Script = tx.inputs[i].script_sig.clone().into();
         if script.len() < 2 {
             // if script length less than 2, it must has no sig in input, use 0 to represent it
-            Err(Error::<T>::InvalidSignCount)?;
+            return Err(Error::<T>::InvalidSignCount.into());
         }
         let (sigs, _) = script
             .extract_multi_scriptsig()
@@ -98,13 +98,13 @@ pub fn parse_and_check_signed_tx_impl<T: Trait>(
             });
             if !verify {
                 error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, try_hex!(&bytes_redeem_script));
-                Err(Error::<T>::VerifySignFailed)?
+                return Err(Error::<T>::VerifySignFailed.into());
             }
         }
         input_signs.push(sigs.len());
     }
     // the list length must more than one, due to must have inputs; qed
-    ensure!(input_signs.len() > 0, Error::<T>::InvalidSignCount);
+    ensure!(!input_signs.is_empty(), Error::<T>::InvalidSignCount);
 
     let first = &input_signs[0];
     // if just one element, `iter().all()` would return true
@@ -112,6 +112,6 @@ pub fn parse_and_check_signed_tx_impl<T: Trait>(
         Ok(*first as u32)
     } else {
         // all inputs sigs count should be same, otherwise it's an invalid tx
-        Err(Error::<T>::InvalidSignCount)?
+        Err(Error::<T>::InvalidSignCount.into())
     }
 }
