@@ -17,7 +17,6 @@ use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{prelude::*, result};
 
 use frame_support::{
-    debug::native,
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
     ensure,
@@ -60,13 +59,22 @@ use crate::trustee::get_trustee_address_pair;
 use crate::tx::remove_pending_deposit;
 use crate::weight_info::WeightInfo;
 
+// syntactic sugar for native log.
+#[macro_export]
+macro_rules! native {
+    ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
+        frame_support::debug::native::$level!(
+            target: xpallet_support::RUNTIME_TARGET,
+            $patter $(, $values)*
+        )
+    };
+}
+
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-pub trait Trait:
-    frame_system::Trait + xpallet_assets::Trait + xpallet_gateway_records::Trait
-{
+pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type UnixTime: UnixTime;
     type AccountExtractor: Extractable<Self::AccountId>;
@@ -296,10 +304,7 @@ decl_module! {
                 None
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
-            native::debug!(
-                target: xpallet_support::RUNTIME_TARGET,
-                "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", _from, relay_tx, prev
-            );
+            native!(debug, "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", _from, relay_tx, prev);
 
             Self::apply_push_transaction(relay_tx, prev)?;
 
@@ -320,9 +325,10 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native::debug!(
-                target: xpallet_support::RUNTIME_TARGET,
-                "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
+            native!(
+                debug,
+                "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx
+            );
 
             Self::apply_create_withdraw(from, tx, withdrawal_id_list)?;
             Ok(())
@@ -341,7 +347,7 @@ decl_module! {
             } else {
                 None
             };
-            native::debug!(target: xpallet_support::RUNTIME_TARGET, "[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
+            native!(debug, "[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
 
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
@@ -398,10 +404,7 @@ decl_module! {
         pub fn force_replace_proposal_tx(origin, tx: Vec<u8>) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native::debug!(
-                target: xpallet_support::RUNTIME_TARGET,
-                "[force_replace_proposal_tx]|new_tx:{:?}", tx,
-            );
+            native!(debug, "[force_replace_proposal_tx]|new_tx:{:?}", tx);
             Self::force_replace_withdraw_tx(tx)
         }
 
@@ -495,8 +498,8 @@ impl<T: Trait> Module<T> {
         );
         // prev header should exist, thus we reject orphan block
         let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
-            native::error!(
-                target: xpallet_support::RUNTIME_TARGET,
+            native!(
+                error,
                 "[check_prev_and_convert]|not find prev header|current header:{:?}",
                 header
             );
