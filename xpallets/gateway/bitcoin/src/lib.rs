@@ -17,7 +17,6 @@ use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{prelude::*, result};
 
 use frame_support::{
-    debug::native,
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
     ensure,
@@ -60,13 +59,22 @@ use crate::trustee::get_trustee_address_pair;
 use crate::tx::remove_pending_deposit;
 use crate::weight_info::WeightInfo;
 
+// syntactic sugar for native log.
+#[macro_export]
+macro_rules! native {
+    ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
+        frame_support::debug::native::$level!(
+            target: xpallet_support::RUNTIME_TARGET,
+            $patter $(, $values)*
+        )
+    };
+}
+
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-pub trait Trait:
-    frame_system::Trait + xpallet_assets::Trait + xpallet_gateway_records::Trait
-{
+pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type UnixTime: UnixTime;
     type AccountExtractor: Extractable<Self::AccountId>;
@@ -103,14 +111,14 @@ decl_error! {
         /// Ancient fork
         HeaderAncientFork,
         /// Header already exists
-        ExistedHeader,
+        ExistingHeader,
         /// Can't find previous header
         PrevHeaderNotExisted,
         /// Cannot deserialize the header or tx vec
         DeserializeErr,
         ///
         BadMerkleProof,
-        /// reject unconfirmed transaction
+        /// The tx is not yet confirmed, i.e, the block of which is not confirmed.
         UnconfirmedTx,
         /// reject replay proccessed tx
         ReplayedTx,
@@ -226,7 +234,7 @@ decl_storage! {
     add_extra_genesis {
         config(genesis_hash): H256;
         build(|config| {
-            let genesis_header = config.genesis_info.0.clone();
+            let genesis_header = config.genesis_info.0;
             let genesis_hash = genesis_header.hash();
             let genesis_index = BtcHeaderIndex {
                 hash: genesis_hash,
@@ -250,7 +258,7 @@ decl_storage! {
             }
 
             Headers::insert(&genesis_hash, header_info);
-            BlockHashFor::insert(&genesis_index.height, vec![genesis_hash.clone()]);
+            BlockHashFor::insert(&genesis_index.height, vec![genesis_hash]);
             MainChain::insert(&genesis_hash, ());
 
             BestIndex::put(genesis_index);
@@ -286,20 +294,21 @@ decl_module! {
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
         #[weight = <T as Trait>::WeightInfo::push_transaction()]
-        pub fn push_transaction(origin, raw_tx: Vec<u8>, relayed_info: BtcRelayedTxInfo, prev_tx: Option<Vec<u8>>) -> DispatchResultWithPostInfo {
+        pub fn push_transaction(
+            origin,
+            raw_tx: Vec<u8>,
+            relayed_info: BtcRelayedTxInfo,
+            prev_tx: Option<Vec<u8>>
+        ) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
-            let raw_tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
+            let raw_tx = Self::deserialize_tx(raw_tx.as_slice())?;
             let prev = if let Some(prev) = prev_tx {
-                let prev: Transaction = deserialize(Reader::new(prev.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
-                Some(prev)
+                Some(Self::deserialize_tx(prev.as_slice())?)
             } else {
                 None
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
-            native::debug!(
-                target: xpallet_support::RUNTIME_TARGET,
-                "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", _from, relay_tx, prev
-            );
+            native!(debug, "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", _from, relay_tx, prev);
 
             Self::apply_push_transaction(relay_tx, prev)?;
 
@@ -319,10 +328,13 @@ decl_module! {
             // commiter must in trustee list
             Self::ensure_trustee(&from)?;
 
-            let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
-            native::debug!(target: xpallet_support::RUNTIME_TARGET, "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx);
+            let tx = Self::deserialize_tx(tx.as_slice())?;
+            native!(
+                debug,
+                "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx
+            );
 
-            Self::apply_create_withdraw(from, tx, withdrawal_id_list.clone())?;
+            Self::apply_create_withdraw(from, tx, withdrawal_id_list)?;
             Ok(())
         }
 
@@ -335,12 +347,11 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx = if let Some(raw_tx) = tx {
-                let tx: Transaction = deserialize(Reader::new(raw_tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
-                Some(tx)
+                Some(Self::deserialize_tx(raw_tx.as_slice())?)
             } else {
                 None
             };
-            native::debug!(target: xpallet_support::RUNTIME_TARGET, "[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
+            native!(debug, "[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
 
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
@@ -353,6 +364,7 @@ decl_module! {
             BestIndex::put(index);
             Ok(())
         }
+
         /// Dangerous! Be careful to set ConfirmedIndex
         #[weight = <T as Trait>::WeightInfo::set_confirmed_index()]
         pub fn set_confirmed_index(origin, index: BtcHeaderIndex) -> DispatchResult {
@@ -395,11 +407,8 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::force_replace_proposal_tx()]
         pub fn force_replace_proposal_tx(origin, tx: Vec<u8>) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
-            let tx: Transaction = deserialize(Reader::new(tx.as_slice())).map_err(|_| Error::<T>::DeserializeErr)?;
-            native::debug!(
-                target: xpallet_support::RUNTIME_TARGET,
-                "[force_replace_proposal_tx]|new_tx:{:?}", tx,
-            );
+            let tx = Self::deserialize_tx(tx.as_slice())?;
+            native!(debug, "[force_replace_proposal_tx]|new_tx:{:?}", tx);
             Self::force_replace_withdraw_tx(tx)
         }
 
@@ -442,7 +451,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
             Ok((hot_addr, cold_addr)) => {
                 // do not allow withdraw from trustee address
                 if address == hot_addr || address == cold_addr {
-                    Err(Error::<T>::InvalidAddress)?;
+                    return Err(Error::<T>::InvalidAddress.into());
                 }
             }
             Err(e) => {
@@ -457,7 +466,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
         asset_id: &AssetId,
     ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         if *asset_id != Self::ASSET_ID {
-            Err(xpallet_assets::Error::<T>::ActionNotAllowed)?
+            return Err(xpallet_assets::Error::<T>::ActionNotAllowed.into());
         }
         let fee = Self::btc_withdrawal_fee().saturated_into();
         let limit = WithdrawalLimit::<BalanceOf<T>> {
@@ -477,18 +486,24 @@ impl<T: Trait> Module<T> {
         Ok(addr)
     }
 
+    /// Helper function for deserializing the slice of raw tx.
+    #[inline]
+    fn deserialize_tx(input: &[u8]) -> result::Result<Transaction, Error<T>> {
+        deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
+    }
+
     fn apply_push_header(header: BtcHeader) -> DispatchResult {
         // current should not exist
         ensure_with_errorlog!(
             Self::headers(&header.hash()).is_none(),
-            Error::<T>::ExistedHeader,
+            Error::<T>::ExistingHeader,
             "Header already exists|hash:{:}",
             header.hash(),
         );
         // prev header should exist, thus we reject orphan block
         let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
-            native::error!(
-                target: xpallet_support::RUNTIME_TARGET,
+            native!(
+                error,
                 "[check_prev_and_convert]|not find prev header|current header:{:?}",
                 header
             );
@@ -496,7 +511,7 @@ impl<T: Trait> Module<T> {
         })?;
 
         // convert btc header to self header info
-        let header_info: BtcHeaderInfo = BtcHeaderInfo {
+        let header_info = BtcHeaderInfo {
             header,
             height: prev_info.height + 1,
         };
@@ -513,7 +528,7 @@ impl<T: Trait> Module<T> {
             // storage height => block list (contains forked header hash)
             BlockHashFor::mutate(header_info.height, |v| {
                 if !v.contains(&hash) {
-                    v.push(hash.clone());
+                    v.push(hash);
                 }
             });
 
@@ -557,7 +572,7 @@ impl<T: Trait> Module<T> {
                 "[apply_push_transaction]|tx's block header must exist before|block_hash:{:}",
                 block_hash
             );
-            "tx's block header must exist before"
+            "tx's block header must already exist"
         })?;
         let merkle_root = header_info.header.merkle_root_hash;
         // verify, check merkle proof
@@ -575,7 +590,7 @@ impl<T: Trait> Module<T> {
         let height = header_info.height;
         if height > confirmed.height {
             error!("[apply_push_transaction]|receive an unconfirmed tx|tx hash:{:}|related block height:{:}|confirmed block height:{:}|hash:{:?}", tx_hash, height, confirmed.height, confirmed.hash);
-            Err(Error::<T>::UnconfirmedTx)?;
+            return Err(Error::<T>::UnconfirmedTx.into());
         }
         // check whether replayed tx has been processed, just process failed and not processed tx;
         match Self::tx_state(&tx_hash) {
@@ -583,18 +598,17 @@ impl<T: Trait> Module<T> {
             Some(state) => {
                 if state.result == BtcTxResult::Success {
                     error!("[apply_push_transaction]|reject processed tx|tx hash:{:}|type:{:?}|result:{:?}", tx_hash, state.tx_type, state.result);
-                    Err(Error::<T>::ReplayedTx)?;
+                    return Err(Error::<T>::ReplayedTx.into());
                 }
             }
         }
 
         let state = tx::process_tx::<T>(tx.raw, prev)?;
-        // set storage
         TxState::insert(&tx_hash, state);
         Self::deposit_event(RawEvent::ProcessTx(tx_hash, block_hash, state));
         match state.result {
             BtcTxResult::Success => Ok(()),
-            BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed)?,
+            BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed.into()),
         }
     }
 }

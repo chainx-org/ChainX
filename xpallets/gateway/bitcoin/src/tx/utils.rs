@@ -1,6 +1,6 @@
 // Copyright 2018-2019 Chainpool.
 // Substrate
-use frame_support::{debug::native, dispatch::DispatchResult};
+use frame_support::dispatch::DispatchResult;
 use sp_std::prelude::Vec;
 
 // ChainX
@@ -13,7 +13,7 @@ use light_bitcoin::{
     script::{Opcode, Script, ScriptAddress},
 };
 
-use crate::{Error, Module, Trait};
+use crate::{native, Error, Module, Trait};
 
 pub fn parse_output_addr<T: Trait>(script: &Script) -> Option<Address> {
     let network = Module::<T>::network_id();
@@ -36,7 +36,7 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
             let addr = Address {
                 kind: address.kind,
                 network,
-                hash: address.hash.clone(), // public key hash
+                hash: address.hash, // public key hash
             };
             return Some(addr);
         }
@@ -82,33 +82,33 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
     if script.is_null_data_script() {
         // jump OP_RETURN, when after `is_null_data_script`, subscript must larger and equal than 1
         let s = script.subscript(1);
-        if s.len() == 0 {
-            error!("[parse_opreturn]|nothing after `OP_RETURN`, valid in rule but not valid for public consensus");
+        if s.is_empty() {
+            error!("[parse_opreturn]|nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
             return None;
         }
         // script must large then 1
         if s[0] < Opcode::OP_PUSHDATA1 as u8 {
             if s[0] as usize == (&s[1..]).len() {
-                return Some(s[1..].to_vec());
+                Some(s[1..].to_vec())
             } else {
                 error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len:{:?}|real:{:?}", s[0], &s[1..]);
-                return None;
+                None
             }
         } else if s[0] == Opcode::OP_PUSHDATA1 as u8 {
             // when subscript [0] is `OP_PUSHDATA1`, must have [1], or is an invalid data
             if s.len() < 2 {
                 error!(
-                    "[parse_opreturn]|nothing after `OP_PUSHDATA1`, not a valid opreturn|{:?}",
+                    "[parse_opreturn]|nothing after `OP_PUSHDATA1`, invalid opreturn|{:?}",
                     s
                 );
                 return None;
             }
             // script must large then 2
             if s[1] as usize == (&s[2..]).len() {
-                return Some(s[2..].to_vec());
+                Some(s[2..].to_vec())
             } else {
                 error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len mark:{:?}|len:{:?}|real:{:?}", s[0], s[1], &s[2..]);
-                return None;
+                None
             }
         } else {
             error!("[parse_opreturn]|unexpect! opreturn source error, opreturn should not");
@@ -120,6 +120,7 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
     }
 }
 
+/// Returns Ok if `tx1` and `tx2` are the same transaction.
 pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs
@@ -130,22 +131,22 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
             if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
                 || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
-                native::error!(
-                    target: xpallet_support::RUNTIME_TARGET,
-                    "[ensure_identical]|tx1 not equal to tx2|tx1:{:?}|tx2:{:?}",
+                native!(
+                    error,
+                    "[ensure_identical]|tx1 is different to tx2|tx1:{:?}|tx2:{:?}",
                     tx1,
                     tx2
                 );
-                Err(Error::<T>::MismatchedTx)?;
+                return Err(Error::<T>::MismatchedTx.into());
             }
         }
         return Ok(());
     }
-    native::error!(
-        target: xpallet_support::RUNTIME_TARGET,
+    native!(
+        error,
         "The transaction text does not match the original text to be signed",
     );
-    Err(Error::<T>::MismatchedTx)?
+    Err(Error::<T>::MismatchedTx.into())
 }
 
 #[inline]

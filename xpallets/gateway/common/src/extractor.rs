@@ -3,20 +3,10 @@
 use sp_runtime::AccountId32;
 use sp_std::prelude::Vec;
 
-use chainx_primitives::Name;
+use chainx_primitives::ReferralId;
 use xpallet_support::{debug, error, str};
 
 use crate::traits::Extractable;
-
-/// Definition of something that the external world might want to say; its
-/// existence implies that it has been checked and is good, particularly with
-/// regards to the signature.
-#[derive(PartialEq, Eq, Clone)]
-pub struct Extractor;
-
-fn split(data: &[u8]) -> Vec<Vec<u8>> {
-    data.split(|x| *x == b'@').map(|d| d.to_vec()).collect()
-}
 
 /// use custom runtime-interface to provide ss58check from outside of runtime. but this feature
 /// could not be used in parachain
@@ -34,6 +24,7 @@ pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
         })
         .ok()
 }
+
 /// due to current parachain do not allow custom runtime-interface, thus we just could
 /// impl address parse in runtime, and ignore address version check.
 /// same to `substrate/core/primitives/src/crypto.rs:trait Ss58Codec`
@@ -67,35 +58,42 @@ pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
     Some(res.into())
 }
 
-pub fn parse_account_info(data: &[u8]) -> Option<(AccountId32, Option<Name>)> {
-    let v = split(data);
-    if v.is_empty() {
-        error!("[account_info]|can't parse data|data:{:?}", str!(data));
-        return None;
-    }
-
-    let op = &v[0];
-    let res = parse_address(&op[..])?;
-
-    // channel is a validator
-    let channel_name = if v.len() > 1 {
-        Some(v[1].to_vec())
-    } else {
-        None
-    };
-
-    debug!(
-        "[account_info]|parse account info success!|who:{:?}|channel:{:?}",
-        res, channel_name
-    );
-    Some((res, channel_name))
+fn split(data: &[u8]) -> Vec<Vec<u8>> {
+    data.split(|x| *x == b'@').map(|d| d.to_vec()).collect()
 }
 
+/// Definition of something that the external world might want to say; its
+/// existence implies that it has been checked and is good, particularly with
+/// regards to the signature.
+#[derive(PartialEq, Eq, Clone)]
+pub struct Extractor;
+
 impl Extractable<AccountId32> for Extractor {
-    /// parse account info from a bytes data like format "AccountId@Channel",
-    /// notice we use `@` as separator
-    fn account_info(data: &[u8]) -> Option<(AccountId32, Option<Name>)> {
-        parse_account_info(data)
+    /// Extracts the target deposit AccountId in ChainX and possible referral
+    /// from the slice in the format of "AccountId@ReferralId".
+    ///
+    /// NOTE: `@` is used to be the separator. `ReferralId` is an essential
+    /// attribute of Staking validator.
+    fn account_info(data: &[u8]) -> Option<(AccountId32, Option<ReferralId>)> {
+        let v = split(data);
+        if v.is_empty() {
+            error!("[account_info]|can't parse data|data:{:?}", str!(data));
+            return None;
+        }
+
+        let target_account = parse_address(&v[0][..])?;
+
+        let referral_id = if v.len() > 1 {
+            Some(v[1].to_vec())
+        } else {
+            None
+        };
+
+        debug!(
+            "[extract_account_info]||target_account:{:?}|referral_id:{:?}",
+            target_account, referral_id
+        );
+        Some((target_account, referral_id))
     }
 }
 

@@ -31,7 +31,7 @@ impl<'a> HeaderVerifier<'a> {
         // timestamp check are not important
         let current_time = u32::try_from(current.as_secs()).ok();
 
-        Ok(HeaderVerifier {
+        Ok(Self {
             work: HeaderWork::new(header_info),
             proof_of_work: HeaderProofOfWork::new(&header_info.header),
             timestamp: HeaderTimestamp::new(&header_info.header, current_time),
@@ -116,10 +116,10 @@ pub fn work_required_retarget<T: Trait>(
     // bits of last block
     let last_bits = parent_header.bits;
 
-    let genesis = Module::<T>::genesis_info();
+    let (genesis_header, genesis_height) = Module::<T>::genesis_info();
     let mut retarget_header = parent_header;
-    if retarget_num < genesis.1 {
-        retarget_header = genesis.0;
+    if retarget_num < genesis_height {
+        retarget_header = genesis_header;
     } else {
         let hash_list = Module::<T>::block_hash_for(&retarget_num);
         for h in hash_list {
@@ -138,13 +138,12 @@ pub fn work_required_retarget<T: Trait>(
     let mut retarget: U256 = last_bits.into();
     let maximum: U256 = params.max_bits().into();
 
-    retarget = retarget
-        * U256::from(retarget_timespan(
-            retarget_timestamp,
-            last_timestamp,
-            params,
-        ));
-    retarget = retarget / U256::from(params.target_timespan_seconds());
+    retarget *= U256::from(retarget_timespan(
+        retarget_timestamp,
+        last_timestamp,
+        params,
+    ));
+    retarget /= U256::from(params.target_timespan_seconds());
 
     debug!(
         "[work_required_retarget]|retarget:{:}|maximum:{:?}",
@@ -181,14 +180,14 @@ pub struct HeaderProofOfWork<'a> {
 
 impl<'a> HeaderProofOfWork<'a> {
     fn new(header: &'a BtcHeader) -> Self {
-        HeaderProofOfWork { header }
+        Self { header }
     }
 
     fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
         if is_valid_proof_of_work(p.max_bits(), self.header.bits, &self.header.hash()) {
             Ok(())
         } else {
-            Err(Error::<T>::InvalidPoW)?
+            Err(Error::<T>::InvalidPoW.into())
         }
     }
 }
@@ -222,7 +221,7 @@ pub struct HeaderTimestamp<'a> {
 
 impl<'a> HeaderTimestamp<'a> {
     fn new(header: &'a BtcHeader, current_time: Option<u32>) -> Self {
-        HeaderTimestamp {
+        Self {
             header,
             current_time,
         }
@@ -232,7 +231,7 @@ impl<'a> HeaderTimestamp<'a> {
         if let Some(current_time) = self.current_time {
             if self.header.time > current_time + p.block_max_future() {
                 error!("[HeaderTimestamp check]|Futuristic timestamp|header time{:}|current time:{:}|max_future{:?}", self.header.time, current_time, p.block_max_future());
-                Err(Error::<T>::HeaderFuturisticTimestamp)?
+                Err(Error::<T>::HeaderFuturisticTimestamp.into())
             } else {
                 Ok(())
             }

@@ -73,7 +73,7 @@ pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 pub use chainx_primitives::{
     AccountId, AccountIndex, AddrStr, Amount, AssetId, Balance, BlockNumber, ChainAddress, Hash,
-    Index, Moment, Name, ReferralId, Signature, Token,
+    Index, Moment, ReferralId, Signature, Token,
 };
 pub use xp_runtime::Memo;
 

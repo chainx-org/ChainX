@@ -56,7 +56,6 @@ pub type Amount = i128;
 pub type Text = Vec<u8>;
 pub type Desc = Vec<u8>;
 pub type Token = Vec<u8>;
-pub type Name = Vec<u8>;
 pub type AddrStr = Vec<u8>;
 pub type ChainAddress = Vec<u8>;
 /// Referral ID of validator.

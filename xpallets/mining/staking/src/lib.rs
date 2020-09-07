@@ -224,6 +224,8 @@ decl_event!(
         Slash(AccountId, Balance),
         /// Nominator has bonded to the validator this amount. [nominator, validator, amount]
         Bond(AccountId, AccountId, Balance),
+        /// Nominator switched the vote from one validator to another. [nominator, from, to, amount]
+        Rebond(AccountId, AccountId, AccountId, Balance),
         /// An account has unbonded this amount. [nominator, validator, amount]
         Unbond(AccountId, AccountId, Balance),
         /// Claim the staking dividend. [nominator, validator, dividend]
@@ -794,6 +796,12 @@ impl<T: Trait> Module<T> {
         LastRebondOf::<T>::mutate(who, |last_rebond| {
             *last_rebond = Some(current_block);
         });
+        Self::deposit_event(RawEvent::Rebond(
+            who.clone(),
+            from.clone(),
+            to.clone(),
+            value,
+        ));
     }
 
     fn apply_unbond(

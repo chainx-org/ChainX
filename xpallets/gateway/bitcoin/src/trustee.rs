@@ -77,16 +77,17 @@ fn check_keys<T: Trait>(keys: &[Public]) -> DispatchResult {
     let has_duplicate = (1..keys.len()).any(|i| keys[i..].contains(&keys[i - 1]));
     if has_duplicate {
         error!("[generate_new_trustees]|keys contains duplicate pubkey");
-        Err(Error::<T>::DuplicatedKeys)?;
+        return Err(Error::<T>::DuplicatedKeys.into());
     }
-    if keys.iter().any(|public: &Public| {
+    let has_normal_pubkey = keys.iter().any(|public: &Public| {
         if let Public::Normal(_) = public {
             true
         } else {
             false
         }
-    }) {
-        Err("unexpect! all keys(bitcoin Public) should be compressed")?;
+    });
+    if has_normal_pubkey {
+        return Err("unexpect! all keys(bitcoin Public) should be compressed".into());
     }
     Ok(())
 }
@@ -106,22 +107,22 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
         let public = trustee_type.0;
         if let Public::Normal(_) = public {
             error!("not allow Normal Public for bitcoin now");
-            Err(Error::<T>::InvalidPublicKey)?
+            return Err(Error::<T>::InvalidPublicKey.into());
         }
 
         if 2 != raw_addr[0] && 3 != raw_addr[0] {
             error!("not Compressed Public(prefix not 2|3)");
-            Err(Error::<T>::InvalidPublicKey)?
+            return Err(Error::<T>::InvalidPublicKey.into());
         }
 
-        if &ZERO_P == &raw_addr[1..33] {
+        if ZERO_P == raw_addr[1..33] {
             error!("not Compressed Public(Zero32)");
-            Err(Error::<T>::InvalidPublicKey)?
+            return Err(Error::<T>::InvalidPublicKey.into());
         }
 
         if &raw_addr[1..33] >= &EC_P {
             error!("not Compressed Public(EC_P)");
-            Err(Error::<T>::InvalidPublicKey)?
+            return Err(Error::<T>::InvalidPublicKey.into());
         }
 
         Ok(BtcTrusteeType(public))
@@ -152,7 +153,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
         {
             error!("[generate_trustee_session_info]|trustees is less/more than {{min:[{:}], max:[{:}]}} people, can't generate trustee addr|trustees:{:?}",
                    config.min_trustee_count, config.max_trustee_count, trustees);
-            Err(Error::<T>::InvalidTrusteeCount)?;
+            return Err(Error::<T>::InvalidTrusteeCount.into());
         }
 
         #[cfg(feature = "std")]
@@ -216,13 +217,14 @@ impl<T: Trait> Module<T> {
     pub fn ensure_trustee(who: &T::AccountId) -> DispatchResult {
         let trustee_session_info = trustee_session::<T>()?;
         if trustee_session_info.trustee_list.iter().any(|n| n == who) {
-            return Ok(());
+            Ok(())
+        } else {
+            error!(
+                "[ensure_trustee]|Committer not in the trustee list!|who:{:?}|trustees:{:?}",
+                who, trustee_session_info.trustee_list
+            );
+            Err(Error::<T>::NotTrustee.into())
         }
-        error!(
-            "[ensure_trustee]|Committer not in the trustee list!|who:{:?}|trustees:{:?}",
-            who, trustee_session_info.trustee_list
-        );
-        Err(Error::<T>::NotTrustee)?
     }
 
     pub fn apply_create_withdraw(
@@ -233,7 +235,7 @@ impl<T: Trait> Module<T> {
         let withdraw_amount = Self::max_withdrawal_count();
         if withdrawal_id_list.len() > withdraw_amount as usize {
             error!("[apply_create_withdraw]|Exceeding the maximum withdrawal amount|current list len:{:}|max:{:}", withdrawal_id_list.len(), withdraw_amount);
-            Err(Error::<T>::WroungWithdrawalCount)?;
+            return Err(Error::<T>::WroungWithdrawalCount.into());
         }
         // remove duplicate
         let mut withdrawal_id_list = withdrawal_id_list;
@@ -254,7 +256,7 @@ impl<T: Trait> Module<T> {
             true
         } else {
             error!("[apply_create_withdraw]|the sigs for tx could not more than 1 in apply_create_withdraw|current sigs:{:}", sigs_count);
-            Err(Error::<T>::InvalidSignCount)?
+            return Err(Error::<T>::InvalidSignCount.into());
         };
 
         xpallet_gateway_records::Module::<T>::process_withdrawals(
@@ -280,7 +282,7 @@ impl<T: Trait> Module<T> {
             info!("[apply_create_withdraw]apply sign after create proposal");
             // due to `SignWithdrawalProposal` event should after `CreateWithdrawalProposal`, thus this function should after proposal
             // but this function would have an error return, this error return should not meet.
-            if let Err(_) = insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list) {
+            if insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list).is_err() {
                 // should not be error in this function, if hit this branch, panic to clear all modification
                 // TODO change to revoke in future
                 panic!("insert_trustee_vote_state should not be error")
@@ -298,7 +300,7 @@ impl<T: Trait> Module<T> {
 
         if proposal.sig_state == VoteResult::Finish {
             error!("[apply_sig_withdraw]|proposal is on FINISH state, can't sign for this proposal|proposal：{:?}", proposal);
-            Err(Error::<T>::RejectSig)?;
+            return Err(Error::<T>::RejectSig.into());
         }
 
         let (sig_num, total) = get_sig_num::<T>();
@@ -312,13 +314,13 @@ impl<T: Trait> Module<T> {
                 let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
                 if sigs_count == 0 {
                     error!("[apply_sig_withdraw]|the tx sig should not be zero, zero is the source tx without any sig|tx{:?}", tx);
-                    Err(Error::<T>::InvalidSignCount)?;
+                    return Err(Error::<T>::InvalidSignCount.into());
                 }
 
                 let confirmed_count = proposal
                     .trustee_list
                     .iter()
-                    .filter(|(_, vote)| *vote == true)
+                    .filter(|(_, vote)| *vote)
                     .count() as u32;
 
                 if sigs_count != confirmed_count + 1 {
@@ -327,7 +329,7 @@ impl<T: Trait> Module<T> {
                         sigs_count,
                         confirmed_count
                     );
-                    Err(Error::<T>::InvalidSignCount)?;
+                    return Err(Error::<T>::InvalidSignCount.into());
                 }
 
                 insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list)?;
@@ -353,7 +355,7 @@ impl<T: Trait> Module<T> {
                 let reject_count = proposal
                     .trustee_list
                     .iter()
-                    .filter(|(_, vote)| *vote == false)
+                    .filter(|(_, vote)| !(*vote))
                     .count() as u32;
 
                 // reject count just need  < (total-required) / total
@@ -379,7 +381,7 @@ impl<T: Trait> Module<T> {
                     Self::deposit_event(RawEvent::DropWithdrawalProposal(
                         reject_count as u32,
                         sig_num as u32,
-                        proposal.withdrawal_id_list.clone(),
+                        proposal.withdrawal_id_list,
                     ));
                     return Ok(());
                 }
@@ -437,7 +439,7 @@ pub fn get_sig_num<T: Trait>() -> (u32, u32) {
 }
 
 pub(crate) fn create_multi_address<T: Trait>(
-    pubkeys: &Vec<Public>,
+    pubkeys: &[Public],
     sig_num: u32,
 ) -> Option<BtcTrusteeAddrInfo> {
     let sum = pubkeys.len() as u32;
@@ -491,7 +493,7 @@ fn insert_trustee_vote_state<T: Trait>(
         Some(_) => {
             // if account is exist, override state
             error!("[inseRelayedTx_trustee_vote_state]|already vote for this withdrawal proposal|who:{:?}|old vote:{:}", who, state);
-            return Err("already vote for this withdrawal proposal")?;
+            return Err("already vote for this withdrawal proposal".into());
         }
         None => {
             trustee_list.push((who.clone(), state));
@@ -508,7 +510,7 @@ fn insert_trustee_vote_state<T: Trait>(
 /// Check that the cash withdrawal transaction is correct
 fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
     match Module::<T>::withdrawal_proposal() {
-        Some(_) => Err(Error::<T>::NotFinishProposal)?,
+        Some(_) => Err(Error::<T>::NotFinishProposal.into()),
         None => check_withdraw_tx_impl::<T>(tx, withdrawal_id_list),
     }
 }
@@ -552,7 +554,7 @@ fn check_withdraw_tx_impl<T: Trait>(
                withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(),
                tx_withdraw_list
         );
-        return Err(Error::<T>::InvalidProposal)?;
+        return Err(Error::<T>::InvalidProposal.into());
     }
 
     let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
@@ -570,7 +572,7 @@ fn check_withdraw_tx_impl<T: Trait>(
     }).count();
 
     if count != appl_withdrawal_list.len() {
-        Err(Error::<T>::InvalidProposal)?;
+        return Err(Error::<T>::InvalidProposal.into());
     }
 
     Ok(())

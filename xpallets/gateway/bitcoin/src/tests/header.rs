@@ -34,7 +34,7 @@ fn test_insert_headers() {
         .execute_with(|| {
             assert_noop!(
                 XGatewayBitcoin::apply_push_header(c1.get(0).unwrap().clone()),
-                XGatewayBitcoinErr::ExistedHeader
+                XGatewayBitcoinErr::ExistingHeader
             );
 
             assert_ok!(XGatewayBitcoin::apply_push_header(
@@ -85,7 +85,7 @@ fn test_insert_forked_headers_from_genesis_height() {
             // note: confirm block is 4
             assert_noop!(
                 XGatewayBitcoin::apply_push_header(c1.get(1).unwrap().clone()),
-                XGatewayBitcoinErr::ExistedHeader
+                XGatewayBitcoinErr::ExistingHeader
             );
 
             // insert first

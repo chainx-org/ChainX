@@ -13,7 +13,7 @@ use frame_support::{
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{fmt::Debug, prelude::*, result};
 // ChainX
-use chainx_primitives::{AssetId, Name};
+use chainx_primitives::{AssetId, ReferralId};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding, Extractable};
 use xpallet_support::{debug, error, info, str, warn};
@@ -101,7 +101,7 @@ pub fn detect_transaction_type_impl<AccountId, F>(
 ) -> MetaTxType<AccountId>
 where
     AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
+    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
 {
     let input_addr = prev.and_then(|prev_tx| {
         // parse input addr
@@ -164,7 +164,7 @@ fn detect_deposit_type<AccountId, F>(
 ) -> MetaTxType<AccountId>
 where
     AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
+    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
 {
     let (opreturn, deposit_value) =
         parse_deposit_outputs_impl(tx, hot_addr, network, handle_opreturn);
@@ -227,10 +227,10 @@ pub fn parse_deposit_outputs_impl<AccountId, F>(
     hot_addr: &Address,
     network: Network,
     handle_opreturn: F,
-) -> (Option<(AccountId, Option<Name>)>, u64)
+) -> (Option<(AccountId, Option<ReferralId>)>, u64)
 where
     AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
+    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
 {
     let mut deposit_balance = 0;
     let mut account_info = None;
@@ -244,7 +244,7 @@ where
         // is_null_data_script is not null
         if script.is_null_data_script() {
             // only handle first valid account info opreturn, other opreturn would drop
-            if has_opreturn == false {
+            if !has_opreturn {
                 if let Some(v) = parse_opreturn(&script) {
                     let info = handle_opreturn(&v);
                     if info.is_some() {
@@ -315,7 +315,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 let addr_bytes = addr2vecu8(&addr);
                 match T::AddrBinding::get_binding(Module::<T>::chain(), addr_bytes) {
                     Some(accountid) => AccountInfo::Account((accountid, None)),
-                    None => AccountInfo::Address(addr.clone()),
+                    None => AccountInfo::Address(addr),
                 }
             } else {
                 // should not meet this branch, due it's handled before, it's unreachable
@@ -333,7 +333,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 channel_name,
             );
 
-            if let Err(_) = deposit_token::<T>(hash, &accountid, deposit_info.deposit_value) {
+            if deposit_token::<T>(hash, &accountid, deposit_info.deposit_value).is_err() {
                 return BtcTxResult::Failed;
             }
             info!(
@@ -427,7 +427,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
     let addr_bytes = addr2vecu8(input_address);
 
     let cache = BtcDepositCache {
-        txid: txid.clone(),
+        txid: *txid,
         balance,
     };
 

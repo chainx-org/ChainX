@@ -3,18 +3,19 @@
 use frame_support::dispatch::DispatchError;
 use sp_std::{convert::TryFrom, prelude::Vec, result};
 
-use chainx_primitives::{AssetId, Name};
+use chainx_primitives::{AssetId, ReferralId};
 use xpallet_assets::Chain;
 
 use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
+/// Trait for extracting the deposit info from op_return.
 pub trait Extractable<AccountId> {
-    /// parse account info from a bytes data.
-    fn account_info(data: &[u8]) -> Option<(AccountId, Option<Name>)>;
+    /// Returns the target deposit account and possible referral id.
+    fn account_info(data: &[u8]) -> Option<(AccountId, Option<ReferralId>)>;
 }
 
 impl<AccountId> Extractable<AccountId> for () {
-    fn account_info(_data: &[u8]) -> Option<(AccountId, Option<Name>)> {
+    fn account_info(_data: &[u8]) -> Option<(AccountId, Option<ReferralId>)> {
         None
     }
 }
@@ -67,12 +68,12 @@ impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddr
 }
 
 pub trait ChannelBinding<AccountId> {
-    fn update_binding(asset_id: &AssetId, who: &AccountId, channel_name: Option<Name>);
+    fn update_binding(asset_id: &AssetId, who: &AccountId, channel_name: Option<ReferralId>);
     fn get_binding_info(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
 }
 
 impl<AccountId> ChannelBinding<AccountId> for () {
-    fn update_binding(_: &AssetId, _: &AccountId, _: Option<Name>) {}
+    fn update_binding(_: &AssetId, _: &AccountId, _: Option<ReferralId>) {}
     fn get_binding_info(_: &AssetId, _: &AccountId) -> Option<AccountId> {
         None
     }
