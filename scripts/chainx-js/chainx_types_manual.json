@@ -61,6 +61,7 @@
         "remaining": "RpcBalance",
         "executed_indices": "Vec<TradingHistoryIndex>",
         "already_filled": "RpcBalance",
+        "reserved_balance": "RpcBalance",
         "last_update_at": "BlockNumber"
     },
     "TotalAssetInfoForRpc": {
