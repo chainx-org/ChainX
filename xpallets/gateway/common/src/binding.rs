@@ -1,7 +1,7 @@
 use frame_support::{IterableStorageDoubleMap, StorageDoubleMap};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-use chainx_primitives::{AssetId, ChainAddress, Name};
+use chainx_primitives::{AssetId, ChainAddress, ReferralId};
 use xpallet_assets::Chain;
 use xpallet_support::{debug, error, info, str, traits::Validator, try_addr, warn};
 
@@ -9,7 +9,7 @@ use crate::traits::{AddrBinding, ChannelBinding};
 use crate::{AddressBinding, BoundAddressOf, Module, Trait};
 
 impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
-    fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<Name>) {
+    fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<ReferralId>) {
         let chain = match xpallet_assets_registrar::Module::<T>::asset_info_of(assert_id) {
             Some(info) => info.chain(),
             None => {

@@ -13,7 +13,7 @@ use frame_support::{
 use sp_runtime::SaturatedConversion;
 use sp_std::{fmt::Debug, prelude::*, result};
 // ChainX
-use chainx_primitives::{AssetId, Name};
+use chainx_primitives::{AssetId, ReferralId};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding, Extractable};
 use xpallet_support::{debug, error, info, str, warn};
@@ -101,7 +101,7 @@ pub fn detect_transaction_type_impl<AccountId, F>(
 ) -> MetaTxType<AccountId>
 where
     AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
+    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
 {
     let input_addr = prev.and_then(|prev_tx| {
         // parse input addr
@@ -164,7 +164,7 @@ fn detect_deposit_type<AccountId, F>(
 ) -> MetaTxType<AccountId>
 where
     AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
+    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
 {
     let (opreturn, deposit_value) =
         parse_deposit_outputs_impl(tx, hot_addr, network, handle_opreturn);
@@ -227,10 +227,10 @@ pub fn parse_deposit_outputs_impl<AccountId, F>(
     hot_addr: &Address,
     network: Network,
     handle_opreturn: F,
-) -> (Option<(AccountId, Option<Name>)>, u64)
+) -> (Option<(AccountId, Option<ReferralId>)>, u64)
 where
     AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<Name>)>,
+    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
 {
     let mut deposit_balance = 0;
     let mut account_info = None;

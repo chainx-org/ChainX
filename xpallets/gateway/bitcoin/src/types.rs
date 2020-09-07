@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
-use chainx_primitives::Name;
+use chainx_primitives::ReferralId;
 
 // light-bitcoin
 use light_bitcoin::{
@@ -77,7 +77,7 @@ impl Default for BtcTxType {
 
 pub enum AccountInfo<AccountId> {
     /// A value of type `L`.
-    Account((AccountId, Option<Name>)),
+    Account((AccountId, Option<ReferralId>)),
     /// A value of type `R`.
     Address(Address),
 }
@@ -85,9 +85,10 @@ pub enum AccountInfo<AccountId> {
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
 pub struct DepositInfo<AccountId> {
     pub deposit_value: u64,
-    pub op_return: Option<(AccountId, Option<Name>)>,
+    pub op_return: Option<(AccountId, Option<ReferralId>)>,
     pub input_addr: Option<Address>,
 }
+
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
 pub enum MetaTxType<AccountId> {
     Withdrawal,

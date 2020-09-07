@@ -111,14 +111,14 @@ decl_error! {
         /// Ancient fork
         HeaderAncientFork,
         /// Header already exists
-        ExistedHeader,
+        ExistingHeader,
         /// Can't find previous header
         PrevHeaderNotExisted,
         /// Cannot deserialize the header or tx vec
         DeserializeErr,
         ///
         BadMerkleProof,
-        /// reject unconfirmed transaction
+        /// The tx is not yet confirmed, i.e, the block of which is not confirmed.
         UnconfirmedTx,
         /// reject replay proccessed tx
         ReplayedTx,
@@ -492,7 +492,7 @@ impl<T: Trait> Module<T> {
         // current should not exist
         ensure_with_errorlog!(
             Self::headers(&header.hash()).is_none(),
-            Error::<T>::ExistedHeader,
+            Error::<T>::ExistingHeader,
             "Header already exists|hash:{:}",
             header.hash(),
         );
@@ -568,7 +568,7 @@ impl<T: Trait> Module<T> {
                 "[apply_push_transaction]|tx's block header must exist before|block_hash:{:}",
                 block_hash
             );
-            "tx's block header must exist before"
+            "tx's block header must already exist"
         })?;
         let merkle_root = header_info.header.merkle_root_hash;
         // verify, check merkle proof
@@ -600,7 +600,6 @@ impl<T: Trait> Module<T> {
         }
 
         let state = tx::process_tx::<T>(tx.raw, prev)?;
-        // set storage
         TxState::insert(&tx_hash, state);
         Self::deposit_event(RawEvent::ProcessTx(tx_hash, block_hash, state));
         match state.result {
