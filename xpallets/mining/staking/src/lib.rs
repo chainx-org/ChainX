@@ -1,4 +1,12 @@
 //! # Staking Module
+//!
+//! ## Terminology
+//!
+//! - Validator nickname: The nickname, a.k.a, Validator name in ChainX 1.0 is
+//!     exclusively used as the ReferralId for getting some reward(10% of the
+//!     total dividend) in Asset Mining because the depositor marks this
+//!     validator as its referral when doing the deposit.
+//!     Validator nickname and ReferralId is interchangeable in various scenarios.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -423,16 +431,23 @@ decl_module! {
         }
 
         /// Register to be a validator for the origin account.
+        ///
+        /// The reason for using `validator_nickname` instead of `referral_id` as
+        /// the variable name is when we interact with this interface from outside
+        /// we can take this as the nickname of validator, which possibly
+        /// can help reduce some misunderstanding for these unfamiliar with
+        /// the referral mechanism in Asset Mining. In the context of codebase, we
+        /// always use the concept of referral id.
         #[weight = T::WeightInfo::register()]
-        pub fn register(origin, referral_id: ReferralId) {
+        pub fn register(origin, validator_nickname: ReferralId) {
             let sender = ensure_signed(origin)?;
-            Self::check_referral_id(&referral_id)?;
+            Self::check_referral_id(&validator_nickname)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::AlreadyValidator);
             ensure!(
                 (Self::validator_set().count() as u32) < MaximumValidatorCount::get(),
                 Error::<T>::TooManyValidators
             );
-            Self::apply_register(&sender, referral_id);
+            Self::apply_register(&sender, validator_nickname);
         }
 
         #[weight = T::WeightInfo::set_validator_count()]
