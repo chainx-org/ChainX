@@ -184,6 +184,10 @@ decl_event!(
         WithdrawalFatalErr(H256, H256),
         /// reject_count, sum_count, withdrawal id list
         DropWithdrawalProposal(u32, u32, Vec<u32>),
+        /// Deposit token for a account.
+        DepositToken(H256, AccountId, Balance),
+        /// Withdraw token for a list of withdrawal applications.
+        WithdrawToken(H256, Vec<u32>, Balance),
     }
 );
 

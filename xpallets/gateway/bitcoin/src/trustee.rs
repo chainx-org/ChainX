@@ -528,7 +528,7 @@ fn check_withdraw_tx_impl<T: Trait>(
         // verify btc address would conveRelayedTx a base58 addr to Address
         let addr: Address = Module::<T>::verify_btc_address(&record.addr())?;
 
-        appl_withdrawal_list.push((addr, record.balance().saturated_into() as u64));
+        appl_withdrawal_list.push((addr, record.balance().saturated_into::<u64>()));
     }
     // not allow deposit directly to cold address, only hot address allow
     let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;

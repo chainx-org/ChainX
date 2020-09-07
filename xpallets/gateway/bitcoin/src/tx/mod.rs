@@ -10,7 +10,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     StorageMap, StorageValue,
 };
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{fmt::Debug, prelude::*, result};
 // ChainX
 use chainx_primitives::{AssetId, ReferralId};
@@ -35,7 +35,7 @@ use self::utils::{
 };
 pub use self::validator::validate_transaction;
 use crate::trustee::{get_last_trustee_address_pair, get_trustee_address_pair};
-use crate::tx::utils::{addr2vecu8, ensure_identical};
+use crate::tx::utils::addr2vecu8;
 use crate::types::{
     AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
 };
@@ -333,7 +333,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 channel_name,
             );
 
-            if deposit_token::<T>(&accountid, deposit_info.deposit_value).is_err() {
+            if deposit_token::<T>(hash, &accountid, deposit_info.deposit_value).is_err() {
                 return BtcTxResult::Failed;
             }
             info!(
@@ -354,18 +354,23 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
     BtcTxResult::Success
 }
 
-fn deposit_token<T: Trait>(who: &T::AccountId, balance: u64) -> DispatchResult {
+fn deposit_token<T: Trait>(tx_hash: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
     let id: AssetId = <Module<T> as ChainT<_>>::ASSET_ID;
 
     let b: BalanceOf<T> = balance.saturated_into();
-    let _ = <xpallet_gateway_records::Module<T>>::deposit(&who, &id, b).map_err(|e| {
-        error!(
-            "deposit error!, must use root to fix this error. reason:{:?}",
-            e
-        );
-        e
-    })?;
-    Ok(())
+    match <xpallet_gateway_records::Module<T>>::deposit(&who, &id, b) {
+        Ok(a) => {
+            Module::<T>::deposit_event(RawEvent::DepositToken(tx_hash, who.clone(), b));
+            Ok(a)
+        }
+        Err(e) => {
+            error!(
+                "[deposit_token]deposit error, must use root to fix this error. reason:{:?}",
+                e
+            );
+            Err(e.into())
+        }
+    }
 }
 /*
 fn update_binding<T: Trait>(address: &Address, who: &T::AccountId) {
@@ -403,10 +408,10 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::Acc
     let records = PendingDeposits::take(input_address);
     for r in records {
         // ignore error
-        let _ = deposit_token::<T>(who, r.balance);
+        let _ = deposit_token::<T>(r.txid, who, r.balance);
         info!(
-            "[remove_pending_deposit]|use pending info to re-deposit|who:{:?}|balance:{:}",
-            who, r.balance
+            "[remove_pending_deposit]|use pending info to re-deposit|who:{:?}|balance:{:}|cached_tx:{:?}",
+            who, r.balance, r.txid,
         );
 
         Module::<T>::deposit_event(RawEvent::DepositPending(
@@ -448,29 +453,47 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             proposal,
             tx
         );
-        match ensure_identical::<T>(&tx, &proposal.tx) {
-            Ok(()) => {
-                for number in proposal.withdrawal_id_list.iter() {
-                    match xpallet_gateway_records::Module::<T>::finish_withdrawal(None, *number) {
-                        Ok(_) => {
-                            info!("[withdraw]|ID of withdrawal completion: {:}", *number);
-                        }
-                        Err(_e) => {
-                            error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:?}, please use root to fix it", *number, _e);
-                        }
+        let proposal_hash = proposal.tx.hash();
+        let tx_hash = tx.hash();
+
+        if proposal_hash == tx_hash {
+            let mut total = BalanceOf::<T>::zero();
+            for number in proposal.withdrawal_id_list.iter() {
+                // just for event record
+                let withdraw_balance =
+                    xpallet_gateway_records::Module::<T>::pending_withdrawals(number)
+                        .map(|record| record.balance())
+                        .unwrap_or(BalanceOf::<T>::zero());
+                total += withdraw_balance;
+
+                match xpallet_gateway_records::Module::<T>::finish_withdrawal(None, *number) {
+                    Ok(_) => {
+                        info!("[withdraw]|ID of withdrawal completion: {:}", *number);
+                    }
+                    Err(_e) => {
+                        error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:?}, please use root to fix it", *number, _e);
                     }
                 }
-                BtcTxResult::Success
             }
-            Err(e) => {
-                let tx_hash = proposal.tx.hash();
-                error!("[withdraw]|Withdrawal failed, reason:{:?}, please use root to fix it|withdrawal idlist:{:?}|proposal id:{:?}|tx hash:{:}",
-                       e, proposal.withdrawal_id_list, proposal.tx.hash(), tx.hash());
-                WithdrawalProposal::<T>::put(proposal);
 
-                Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(tx.hash(), tx_hash));
-                BtcTxResult::Failed
-            }
+            let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
+            // real withdraw value would reduce withdraw_fee
+            total -=
+                (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
+            Module::<T>::deposit_event(RawEvent::WithdrawToken(
+                tx_hash,
+                proposal.withdrawal_id_list,
+                total,
+            ));
+            BtcTxResult::Success
+        } else {
+            error!("[withdraw]|Withdrawal failed, mismatch withdraw. please use root to fix it|withdrawal idlist:{:?}|proposal id:{:?}|tx hash:{:}",
+                   proposal.withdrawal_id_list, proposal_hash, tx_hash);
+            // re-store proposal into storage.
+            WithdrawalProposal::<T>::put(proposal);
+
+            Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(proposal_hash, tx_hash));
+            BtcTxResult::Failed
         }
     } else {
         error!("[withdraw]|Withdrawal failed, the proposal is EMPTY, but receive a withdrawal tx, please use root to fix it|tx hash:{:}", tx.hash());
