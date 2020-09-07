@@ -2,7 +2,7 @@
 //!
 //! ## Terminology
 //!
-//! - Validator nickname: The nickname, a.k.a, Validator name in ChainX 1.0 is
+//! - Validator nickname: The nickname, a.k.a, Validator name in ChainX 1.0, is
 //!     exclusively used as the ReferralId for getting some reward(10% of the
 //!     total dividend) in Asset Mining because the depositor marks this
 //!     validator as its referral when doing the deposit.
