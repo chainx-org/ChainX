@@ -36,7 +36,7 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
             let addr = Address {
                 kind: address.kind,
                 network,
-                hash: address.hash.clone(), // public key hash
+                hash: address.hash, // public key hash
             };
             return Some(addr);
         }
@@ -83,7 +83,7 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
         // jump OP_RETURN, when after `is_null_data_script`, subscript must larger and equal than 1
         let s = script.subscript(1);
         if s.is_empty() {
-            error!("[parse_opreturn]|nothing after `OP_RETURN`, valid in rule but not valid for public consensus");
+            error!("[parse_opreturn]|nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
             return None;
         }
         // script must large then 1
@@ -98,7 +98,7 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
             // when subscript [0] is `OP_PUSHDATA1`, must have [1], or is an invalid data
             if s.len() < 2 {
                 error!(
-                    "[parse_opreturn]|nothing after `OP_PUSHDATA1`, not a valid opreturn|{:?}",
+                    "[parse_opreturn]|nothing after `OP_PUSHDATA1`, invalid opreturn|{:?}",
                     s
                 );
                 return None;
@@ -120,6 +120,7 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
     }
 }
 
+/// Returns Ok if `tx1` and `tx2` are the same transaction.
 pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs
@@ -132,7 +133,7 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
             {
                 native!(
                     error,
-                    "[ensure_identical]|tx1 not equal to tx2|tx1:{:?}|tx2:{:?}",
+                    "[ensure_identical]|tx1 is different to tx2|tx1:{:?}|tx2:{:?}",
                     tx1,
                     tx2
                 );
