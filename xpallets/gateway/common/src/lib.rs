@@ -361,7 +361,7 @@ impl<T: Trait> Module<T> {
             (1..new_trustees.len()).any(|i| new_trustees[i..].contains(&new_trustees[i - 1]));
         if has_duplicate {
             error!(
-                "[try_generate_session_info]|existing duplicated account|candidates:{:?}",
+                "[try_generate_session_info]|existing duplicate account|candidates:{:?}",
                 new_trustees
             );
             return Err(Error::<T>::DuplicatedAccountId.into());
