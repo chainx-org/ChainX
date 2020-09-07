@@ -206,35 +206,50 @@ decl_storage! {
 
         /// trustee basal info config
         pub TrusteeInfoConfigOf get(fn trustee_info_config): map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
+
         /// when generate trustee, auto generate a new session number, increase the newest trustee addr, can't modify by user
         pub TrusteeSessionInfoLen get(fn trustee_session_info_len): map hasher(twox_64_concat) Chain => u32 = 0;
 
         pub TrusteeSessionInfoOf get(fn trustee_session_info_of):
-            double_map hasher(twox_64_concat) Chain, hasher(twox_64_concat) u32 => Option<GenericTrusteeSessionInfo<T::AccountId>>;
+            double_map hasher(twox_64_concat) Chain, hasher(twox_64_concat) u32
+            => Option<GenericTrusteeSessionInfo<T::AccountId>>;
 
         pub TrusteeIntentionPropertiesOf get(fn trustee_intention_props_of):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Option<GenericTrusteeIntentionProps>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Option<GenericTrusteeIntentionProps>;
 
         pub AddressBinding:
-            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress => Option<T::AccountId>;
+            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress
+            => Option<T::AccountId>;
+
         pub BoundAddressOf:
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Vec<ChainAddress>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Vec<ChainAddress>;
 
         pub ChannelBindingOf get(fn channel_binding_of):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Option<T::AccountId>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Option<T::AccountId>;
     }
     add_extra_genesis {
         config(trustees): Vec<(Chain, TrusteeInfoConfig, Vec<(T::AccountId, Text, Vec<u8>, Vec<u8>)>)>;
         build(|config| {
             for (chain, info_config, trustee_infos) in config.trustees.iter() {
-                let mut trustees = vec![];
+                let mut trustees = Vec::with_capacity(trustee_infos.len());
                 for (who, about, hot, cold) in trustee_infos.iter() {
-                    Module::<T>::setup_trustee_impl(who.clone(), *chain, about.clone(), hot.clone(), cold.clone()).expect("must success");
+                    Module::<T>::setup_trustee_impl(
+                        who.clone(),
+                        *chain,
+                        about.clone(),
+                        hot.clone(),
+                        cold.clone(),
+                    )
+                    .expect("setup trustee can not fail; qed");
                     trustees.push(who.clone());
                 }
                 // config set should before transitino
                 TrusteeInfoConfigOf::insert(chain, info_config.clone());
-                Module::<T>::transition_trustee_session_impl(*chain, trustees).expect("must success in genesis");
+                Module::<T>::transition_trustee_session_impl(*chain, trustees)
+                    .expect("trustee session transition can not fail; qed");
             }
         })
     }
@@ -263,9 +278,7 @@ impl<T: Trait> Module<T> {
     pub fn withdrawal_limit(
         asset_id: &AssetId,
     ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        let info = xpallet_assets_registrar::Module::<T>::asset_info_of(&asset_id)
-            .ok_or(xpallet_assets_registrar::Error::<T>::AssetDoesNotExist)?;
-        let chain = info.chain();
+        let chain = xpallet_assets_registrar::Module::<T>::chain_of(asset_id)?;
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(&asset_id),
             _ => Err(Error::<T>::NotSupportedChain.into()),
@@ -280,8 +293,7 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         ext.check_validity()?;
 
-        let info = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
-        let chain = info.chain();
+        let chain = xpallet_assets_registrar::Module::<T>::chain_of(&asset_id)?;
         match chain {
             Chain::Bitcoin => {
                 // bitcoin do not need memo

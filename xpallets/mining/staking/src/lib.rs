@@ -382,7 +382,6 @@ decl_module! {
 
             ensure!(current_block > locked_until, Error::<T>::UnbondedWithdrawalNotYetDue);
 
-            // apply withdraw_unbonded
             Self::apply_unlock_unbonded_withdrawal(&sender, value);
 
             unbonded_chunks.swap_remove(unbonded_index as usize);
