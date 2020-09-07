@@ -1,12 +1,12 @@
 use std::collections::BTreeMap;
-use std::convert::TryFrom;
 
+use hex_literal::hex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use chainx_runtime::{
-    constants, trustees, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams, BtcTxVerifier,
-    Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
+    constants, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams, BtcTxVerifier, Chain,
+    ContractsSchedule, NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
@@ -22,9 +22,12 @@ use sc_chain_spec::ChainSpecExtension;
 use sc_service::{ChainType, Properties};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
+
+use crate::genesis::trustees::TrusteeParams;
+use crate::res::BitcoinParams;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -135,7 +138,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            testnet_trustees(),
+            crate::res::load_mainnet_btc_genesis_header_info,
+            crate::genesis::trustees::local_testnet_trustees(),
             true,
         )
     };
@@ -169,7 +173,8 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            benchmarks_trustees(),
+            crate::res::load_mainnet_btc_genesis_header_info,
+            crate::genesis::trustees::benchmarks_trustees(),
             true,
         )
     };
@@ -214,7 +219,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 ("Eve//stash", endowed_balance),
                 ("Ferdie//stash", endowed_balance),
             ],
-            testnet_trustees(),
+            crate::res::load_mainnet_btc_genesis_header_info,
+            crate::genesis::trustees::local_testnet_trustees(),
             true,
         )
     };
@@ -226,6 +232,71 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
         vec![],
         None,
         Some("chainx-local-testnet"),
+        Some(as_properties(NetworkType::Testnet)),
+        Default::default(),
+    ))
+}
+
+pub fn testnet_config() -> Result<ChainSpec, String> {
+    let wasm_binary = WASM_BINARY.ok_or("Testnet wasm not available".to_string())?;
+
+    let initial_authorities: Vec<AuthorityKeysTuple> = vec![
+        (
+            (
+                // 5FZoQhgUCmqBxnkHX7jCqThScS2xQWiwiF61msg63CFL3Y8f
+                hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"].into(),
+                b"Alice".to_vec(),
+            ),
+            // 5FZoQhgUCmqBxnkHX7jCqThScS2xQWiwiF61msg63CFL3Y8f
+            hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"].into(),
+            // 5FZoQhgUCmqBxnkHX7jCqThScS2xQWiwiF61msg63CFL3Y8f
+            hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"]
+                .unchecked_into(),
+            // 5FZoQhgUCmqBxnkHX7jCqThScS2xQWiwiF61msg63CFL3Y8f
+            hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"]
+                .unchecked_into(),
+            // 5FZoQhgUCmqBxnkHX7jCqThScS2xQWiwiF61msg63CFL3Y8f
+            hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"]
+                .unchecked_into(),
+            // 5FZoQhgUCmqBxnkHX7jCqThScS2xQWiwiF61msg63CFL3Y8f
+            hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"]
+                .unchecked_into(),
+        ),
+        // TODO
+    ];
+    // 5FZoQhgUCmqBxnkHX7jCqThScS2xQWiwiF61msg63CFL3Y8f
+    let root_key: AccountId =
+        hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"].into();
+    let assets = testnet_assets();
+    let endowed_balance = 50 * constants::currency::DOLLARS;
+    let mut endowed = BTreeMap::new();
+    let pcx_id = pcx().0;
+    let endowed_info = initial_authorities
+        .iter()
+        .map(|i| ((i.0).0.clone(), endowed_balance))
+        .collect::<Vec<_>>();
+    endowed.insert(pcx_id, endowed_info);
+
+    let constructor = move || {
+        testnet_genesis(
+            wasm_binary,
+            initial_authorities.clone(),
+            root_key.clone(),
+            assets.clone(),
+            endowed.clone(),
+            crate::res::load_testnet_btc_genesis_header_info,
+            crate::genesis::trustees::testnet_trustees(),
+            false,
+        )
+    };
+    Ok(ChainSpec::from_genesis(
+        "Testnet",
+        "chainx_testnet",
+        ChainType::Live,
+        constructor,
+        vec![],
+        None,
+        Some("chainx-testnet"),
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
@@ -277,105 +348,6 @@ fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> 
     assets
 }
 
-// (account_id, about, hot_key, cold_key)
-type TrusteeParams = (AccountId, Vec<u8>, Vec<u8>, Vec<u8>);
-
-fn testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)> {
-    macro_rules! btc_trustee_key {
-        ($btc_pubkey:expr) => {{
-            trustees::bitcoin::BtcTrusteeType::try_from(
-                hex::decode($btc_pubkey).expect("hex decode failed"),
-            )
-            .expect("btc trustee generation failed")
-            .into()
-        }};
-    }
-
-    let btc_trustee_gen = |seed: &str, hot_pubkey: &str, cold_pubkey: &str| {
-        (
-            get_account_id_from_seed::<sr25519::Public>(seed),
-            seed.as_bytes().to_vec(),      // About
-            btc_trustee_key!(hot_pubkey),  // Hot key
-            btc_trustee_key!(cold_pubkey), // Cold key
-        )
-    };
-
-    let btc_trustees = vec![
-        btc_trustee_gen(
-            "Alice",
-            "035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84", // hot key
-            "0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3", // colde key
-        ),
-        btc_trustee_gen(
-            "Bob",
-            "02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee",
-            "020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f",
-        ),
-        btc_trustee_gen(
-            "Charlie",
-            "0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd",
-            "02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99",
-        ),
-    ];
-
-    let btc_config = TrusteeInfoConfig {
-        min_trustee_count: 3,
-        max_trustee_count: 15,
-    };
-
-    vec![(Chain::Bitcoin, btc_config, btc_trustees)]
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-fn benchmarks_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)> {
-    macro_rules! btc_trustee_key {
-        ($btc_pubkey:expr) => {{
-            trustees::bitcoin::BtcTrusteeType::try_from(
-                hex::decode($btc_pubkey).expect("hex decode failed"),
-            )
-            .expect("btc trustee generation failed")
-            .into()
-        }};
-    }
-
-    let btc_trustee_gen = |seed: &str, hot_pubkey: &str, cold_pubkey: &str| {
-        (
-            get_account_id_from_seed::<sr25519::Public>(seed),
-            seed.as_bytes().to_vec(),      // About
-            btc_trustee_key!(hot_pubkey),  // Hot key
-            btc_trustee_key!(cold_pubkey), // Cold key
-        )
-    };
-
-    let btc_trustees = vec![
-        // 1
-        btc_trustee_gen(
-            "Alice",
-            "02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6",
-            "0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88",
-        ),
-        // 2
-        btc_trustee_gen(
-            "Bob",
-            "0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d",
-            "02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278",
-        ),
-        // 3
-        btc_trustee_gen(
-            "Charlie",
-            "03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102", // hot key
-            "0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3", // colde key
-        ),
-    ];
-
-    let btc_config = TrusteeInfoConfig {
-        min_trustee_count: 3,
-        max_trustee_count: 15,
-    };
-
-    vec![(Chain::Bitcoin, btc_config, btc_trustees)]
-}
-
 fn session_keys(
     aura: AuraId,
     grandpa: GrandpaId,
@@ -406,15 +378,19 @@ fn init_assets(
     (init_assets, assets_restrictions)
 }
 
-fn testnet_genesis(
+fn testnet_genesis<F>(
     wasm_binary: &[u8],
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
     assets: Vec<AssetParams>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
+    bitcoin_info: F,
     trustees: Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)>,
     enable_println: bool,
-) -> GenesisConfig {
+) -> GenesisConfig
+where
+    F: FnOnce() -> BitcoinParams,
+{
     const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
     const STASH: Balance = 100 * constants::currency::DOLLARS;
     const STAKING_LOCKED: Balance = 1_000 * constants::currency::DOLLARS;
@@ -519,12 +495,16 @@ fn testnet_genesis(
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
         xpallet_gateway_bitcoin: {
-            let (genesis_info, genesis_hash, network_id) =
-                crate::res::load_mainnet_btc_genesis_header_info();
+            let BitcoinParams {
+                genesis_info,
+                genesis_hash,
+                network,
+                confirmed_count,
+            } = bitcoin_info(); // crate::res::load_mainnet_btc_genesis_header_info();
             Some(XGatewayBitcoinConfig {
                 genesis_info,
                 genesis_hash,
-                network_id,
+                network_id: network,
                 params_info: BtcParams::new(
                     486604799,            // max_bits
                     2 * 60 * 60,          // block_max_future
@@ -533,7 +513,7 @@ fn testnet_genesis(
                     4,                    // retargeting_factor
                 ), // retargeting_factor
                 verifier: BtcTxVerifier::Recover,
-                confirmation_number: 4,
+                confirmation_number: confirmed_count,
                 reserved_block: 2100,
                 btc_withdrawal_fee: 500000,
                 max_withdrawal_count: 100,

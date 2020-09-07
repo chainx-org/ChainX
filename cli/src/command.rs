@@ -46,8 +46,10 @@ impl SubstrateCli for Cli {
 
 fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
+        "" | "mainnet" => unimplemented!("not impl mainnet config yet."),
         "dev" => Box::new(chain_spec::development_config()?),
-        "" | "local" => Box::new(chain_spec::local_testnet_config()?),
+        "local" => Box::new(chain_spec::local_testnet_config()?),
+        "testnet" => Box::new(chain_spec::testnet_config()?),
         "benchmarks" => {
             #[cfg(feature = "runtime-benchmarks")]
             {

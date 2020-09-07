@@ -1,0 +1,11 @@
+{
+    "version": 536870912,
+    "previous_header_hash": "000000000000031916f9a9b423c287c3e753197188d5fe49d84d4ef5e4e3f3ff",
+    "merkle_root_hash": "77d2368257be91bcf123cb8fba1bc8b95f354b5dcd1cac1c6ecd27ec323ab810",
+    "time": 1599483448,
+    "bits": 436469756,
+    "nonce": 354815149,
+    "height": 1831950,
+    "hash": "00000000000001d3560f8d3db725fa89cb5fa646edfd8a3974ddf955cd006731",
+    "network_id": "Testnet"
+}
