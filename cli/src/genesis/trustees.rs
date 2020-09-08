@@ -85,24 +85,26 @@ pub fn benchmarks_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams
     vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
-// TODO wait for pubkey
-pub fn testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)> {
+pub fn staging_testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)> {
     let btc_trustees = vec![
         (
-            hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"].into(),
-            b"".to_vec(), // About
+            // 5Ca46gRUa2oS6GukzKph8qFfn4WdhP5yhuRaTuzaXsKjfGgM
+            hex!["16624186f2ea93a21f34e00ae622959e40d841231b26e625be93f75137b2a10d"].into(),
+            b"Validator1".to_vec(), // About
             btc_trustee_key!("035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84"), // Hot key
             btc_trustee_key!("0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3"), // Cold key
         ),
         (
-            hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"].into(),
-            b"".to_vec(), // About
+            // 5DV17DNeRCidmacaP1MdhD8YV8A94PmVyr4eRcKq8tG6Q17C
+            hex!["3ec431c8b3ae28095ad652f5531a770ef21e59779d4a3a46e0217baa4c614624"].into(),
+            b"Validator2".to_vec(), // About
             btc_trustee_key!("02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee"), // Hot key
             btc_trustee_key!("020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f"), // Cold key
         ),
         (
-            hex!["9ae581fef1fc06828723715731adcf810e42ce4dadad629b1b7fa5c3c144a81d"].into(),
-            b"".to_vec(), // About
+            // 5ERY5k4cDMhhE7B8PRA26fCs1VbHNZJAhHoiuZhzP18cxq8T
+            hex!["685bb75b531394c4d522003784cc62fa15fcab8fe16c19c3f4a1eeae308afa4f"].into(),
+            b"Validator3".to_vec(), // About
             btc_trustee_key!("0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd"), // Hot key
             btc_trustee_key!("02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99"), // Cold key
         ),

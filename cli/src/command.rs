@@ -49,7 +49,7 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
         "" | "mainnet" => unimplemented!("not impl mainnet config yet."),
         "dev" => Box::new(chain_spec::development_config()?),
         "local" => Box::new(chain_spec::local_testnet_config()?),
-        "testnet" => Box::new(chain_spec::testnet_config()?),
+        "staging" => Box::new(chain_spec::staging_testnet_config()?),
         "benchmarks" => {
             #[cfg(feature = "runtime-benchmarks")]
             {
