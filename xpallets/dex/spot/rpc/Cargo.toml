@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-dex-spot-rpc"
-version = "0.1.0"
+version = "2.0.0-alpha"
 authors = ["ChainX community <https://www.chainx.org>"]
 edition = "2018"
 
