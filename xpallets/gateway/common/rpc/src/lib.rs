@@ -118,7 +118,7 @@ where
 
         let result = api
             .trustee_properties(&at, chain, who)
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+            .map_err(runtime_error_into_rpc_err)?;
         let result = result.ok_or(RpcError {
             code: ErrorCode::ServerError(RUNTIME_ERROR + 1),
             message: "Not exist".into(),
@@ -138,7 +138,7 @@ where
 
         let result = api
             .trustee_session_info(&at, chain)
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+            .map_err(runtime_error_into_rpc_err)?;
         let result = result.ok_or(RpcError {
             code: ErrorCode::ServerError(RUNTIME_ERROR + 1),
             message: "Not exist".into(),
@@ -159,7 +159,7 @@ where
 
         let result = api
             .generate_trustee_session_info(&at, chain, candidates)
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+            .map_err(runtime_error_into_rpc_err)?;
         let result = result.map_err(runtime_error_into_rpc_err)?;
 
         Ok(result)
@@ -188,7 +188,7 @@ where
 
         let result = api
             .bound_addrs(&at, who)
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+            .map_err(runtime_error_into_rpc_err)?;
 
         let result = result
             .into_iter()
@@ -220,12 +220,12 @@ where
 
         let result = api
             .withdrawal_limit(&at, asset_id)
-            .map_err(|e| runtime_error_into_rpc_err(e))?
+            .map_err(runtime_error_into_rpc_err)?
             .map(|src| WithdrawalLimit {
                 minimal_withdrawal: src.minimal_withdrawal.into(),
                 fee: src.fee.into(),
             })
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+            .map_err(runtime_error_into_rpc_err)?;
         Ok(result)
     }
 
@@ -245,7 +245,7 @@ where
                 data: Some(format!("{:?}", err).into()),
             })?
         } else {
-            hex::decode(&addr).unwrap_or(addr.into_bytes())
+            hex::decode(&addr).unwrap_or_else(|_| addr.into_bytes())
         };
         let memo = memo.into_bytes();
 
@@ -254,8 +254,8 @@ where
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
         api.verify_withdrawal(&at, asset_id, value, addr, memo.into())
-            .map_err(|e| runtime_error_into_rpc_err(e))?
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+            .map_err(runtime_error_into_rpc_err)?
+            .map_err(runtime_error_into_rpc_err)?;
         Ok(())
     }
 
@@ -267,7 +267,7 @@ where
 
         let result = api
             .trustee_multisigs(&at)
-            .map_err(|e| runtime_error_into_rpc_err(e))?;
+            .map_err(runtime_error_into_rpc_err)?;
 
         Ok(result)
     }

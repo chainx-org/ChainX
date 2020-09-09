@@ -682,7 +682,8 @@ impl<T: Trait> Module<T> {
         Self::minimum_validator_count().max(1)
     }
 
-    /// Returns true if the number of active validators are more than the minimum validator count.
+    /// Returns true if the number of active validators are more than the
+    /// reasonable minimum validator count.
     fn can_force_chilled() -> bool {
         let mut active_cnt = 0u32;
         let minimum_validator_cnt = Self::reasonable_minimum_validator_count();
@@ -708,8 +709,8 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    /// Force the validator `who` to be chilled.
     fn apply_force_chilled(who: &T::AccountId) {
-        // Force the validator to be chilled
         Validators::<T>::mutate(who, |validator_profile| {
             validator_profile.is_chilled = true;
             validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
@@ -749,7 +750,8 @@ impl<T: Trait> Module<T> {
             .fold(Zero::zero(), |acc: BalanceOf<T>, x| acc + *x)
     }
 
-    /// Settles and update the vote weight state of the nominator `source` and validator `target` given the delta amount.
+    /// Settles and update the vote weight state of the nominator `source` and
+    /// validator `target` given the delta amount.
     fn update_vote_weight(
         source: &T::AccountId,
         target: &T::AccountId,
@@ -867,6 +869,7 @@ impl<T: Trait> Module<T> {
         Self::set_lock(who, new_bonded);
         Locks::<T>::mutate(who, |locks| {
             let old_value = *locks.entry(LockedType::BondedWithdrawal).or_default();
+            // All the bonded funds have been withdrawn.
             if old_value == value {
                 locks.remove(&LockedType::BondedWithdrawal);
             } else {
