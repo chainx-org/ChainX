@@ -102,7 +102,13 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = <T as Trait>::WeightInfo::withdraw()]
-        pub fn withdraw(origin, #[compact] asset_id: AssetId, #[compact] value: BalanceOf<T>, addr: AddrStr, ext: Memo) -> DispatchResult {
+        pub fn withdraw(
+            origin,
+            #[compact] asset_id: AssetId,
+            #[compact] value: BalanceOf<T>,
+            addr: AddrStr,
+            ext: Memo
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             Self::apply_withdraw(who, asset_id, value, addr, ext)
         }
@@ -115,7 +121,13 @@ decl_module! {
 
         // trustees
         #[weight = <T as Trait>::WeightInfo::setup_trustee()]
-        pub fn setup_trustee(origin, chain: Chain, about: Text, hot_entity: Vec<u8>, cold_entity: Vec<u8>) -> DispatchResult {
+        pub fn setup_trustee(
+            origin,
+            chain: Chain,
+            about: Text,
+            hot_entity: Vec<u8>,
+            cold_entity: Vec<u8>
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(T::Validator::is_validator(&who), Error::<T>::NotValidator);
             Self::setup_trustee_impl(who, chain, about, hot_entity, cold_entity)
@@ -123,25 +135,36 @@ decl_module! {
 
         /// use for trustee multisig addr
         #[weight = <T as Trait>::WeightInfo::transition_trustee_session(new_trustees.len() as u32)]
-        pub fn transition_trustee_session(origin, chain: Chain, new_trustees: Vec<T::AccountId>) -> DispatchResult {
+        pub fn transition_trustee_session(
+            origin,
+            chain: Chain,
+            new_trustees: Vec<T::AccountId>
+        ) -> DispatchResult {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
                     if who != Self::trustee_multisig_addr(chain) {
                         return Err(Error::<T>::InvalidMultisig.into());
                     }
-                    ()
                 },
                 Err(_) => {
                     ensure_root(origin)?;
                 },
             };
 
-            info!("[transition_trustee_session_by_root]|try to transition trustee|chain:{:?}|new_trustees:{:?}", chain, new_trustees);
+            info!(
+                "[transition_trustee_session_by_root]|try to transition trustee|chain:{:?}|new_trustees:{:?}",
+                chain,
+                new_trustees
+            );
             Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
         #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
-        pub fn set_withdrawal_state(origin, #[compact] withdrawal_id: u32, state: WithdrawalState) -> DispatchResult {
+        pub fn set_withdrawal_state(
+            origin,
+            #[compact] withdrawal_id: u32,
+            state: WithdrawalState
+        ) -> DispatchResult {
             let from = ensure_signed(origin)?;
 
             let map = Self::trustee_multisigs();
@@ -161,7 +184,12 @@ decl_module! {
         }
 
         #[weight = 0]
-        pub fn force_set_binding(origin, chain: Chain, who: <T::Lookup as StaticLookup>::Source, binded: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+        pub fn force_set_binding(
+            origin,
+            chain: Chain,
+            who: <T::Lookup as StaticLookup>::Source,
+            binded: <T::Lookup as StaticLookup>::Source
+        ) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             let binded = T::Lookup::lookup(binded)?;
@@ -178,35 +206,50 @@ decl_storage! {
 
         /// trustee basal info config
         pub TrusteeInfoConfigOf get(fn trustee_info_config): map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
+
         /// when generate trustee, auto generate a new session number, increase the newest trustee addr, can't modify by user
         pub TrusteeSessionInfoLen get(fn trustee_session_info_len): map hasher(twox_64_concat) Chain => u32 = 0;
 
         pub TrusteeSessionInfoOf get(fn trustee_session_info_of):
-            double_map hasher(twox_64_concat) Chain, hasher(twox_64_concat) u32 => Option<GenericTrusteeSessionInfo<T::AccountId>>;
+            double_map hasher(twox_64_concat) Chain, hasher(twox_64_concat) u32
+            => Option<GenericTrusteeSessionInfo<T::AccountId>>;
 
         pub TrusteeIntentionPropertiesOf get(fn trustee_intention_props_of):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Option<GenericTrusteeIntentionProps>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Option<GenericTrusteeIntentionProps>;
 
         pub AddressBinding:
-            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress => Option<T::AccountId>;
+            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress
+            => Option<T::AccountId>;
+
         pub BoundAddressOf:
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Vec<ChainAddress>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Vec<ChainAddress>;
 
         pub ChannelBindingOf get(fn channel_binding_of):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain => Option<T::AccountId>;
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Option<T::AccountId>;
     }
     add_extra_genesis {
         config(trustees): Vec<(Chain, TrusteeInfoConfig, Vec<(T::AccountId, Text, Vec<u8>, Vec<u8>)>)>;
         build(|config| {
             for (chain, info_config, trustee_infos) in config.trustees.iter() {
-                let mut trustees = vec![];
+                let mut trustees = Vec::with_capacity(trustee_infos.len());
                 for (who, about, hot, cold) in trustee_infos.iter() {
-                    Module::<T>::setup_trustee_impl(who.clone(), *chain, about.clone(), hot.clone(), cold.clone()).expect("must success");
+                    Module::<T>::setup_trustee_impl(
+                        who.clone(),
+                        *chain,
+                        about.clone(),
+                        hot.clone(),
+                        cold.clone(),
+                    )
+                    .expect("setup trustee can not fail; qed");
                     trustees.push(who.clone());
                 }
                 // config set should before transitino
                 TrusteeInfoConfigOf::insert(chain, info_config.clone());
-                Module::<T>::transition_trustee_session_impl(*chain, trustees).expect("must success in genesis");
+                Module::<T>::transition_trustee_session_impl(*chain, trustees)
+                    .expect("trustee session transition can not fail; qed");
             }
         })
     }
@@ -235,9 +278,7 @@ impl<T: Trait> Module<T> {
     pub fn withdrawal_limit(
         asset_id: &AssetId,
     ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        let info = xpallet_assets_registrar::Module::<T>::asset_info_of(&asset_id)
-            .ok_or(xpallet_assets_registrar::Error::<T>::AssetDoesNotExist)?;
-        let chain = info.chain();
+        let chain = xpallet_assets_registrar::Module::<T>::chain_of(asset_id)?;
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(&asset_id),
             _ => Err(Error::<T>::NotSupportedChain.into()),
@@ -252,8 +293,7 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         ext.check_validity()?;
 
-        let info = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
-        let chain = info.chain();
+        let chain = xpallet_assets_registrar::Module::<T>::chain_of(&asset_id)?;
         match chain {
             Chain::Bitcoin => {
                 // bitcoin do not need memo
@@ -326,10 +366,10 @@ impl<T: Trait> Module<T> {
             );
             return Err(Error::<T>::DuplicatedAccountId.into());
         }
-        let mut props = vec![];
+        let mut props = Vec::with_capacity(new_trustees.len());
         for accountid in new_trustees.into_iter() {
             let p = Self::trustee_intention_props_of(&accountid, chain).ok_or_else(|| {
-                error!("[transition_trustee_session]|not all candidate has registered as a trustee yet|who:{:?}",  accountid);
+                error!("[transition_trustee_session]|some candidate has not registered as a trustee|who:{:?}",  accountid);
                 Error::<T>::NotRegistered
             })?;
             props.push((accountid, p));
@@ -385,11 +425,11 @@ impl<T: Trait> Module<T> {
         let multi_addr =
             T::DetermineMultisigAddress::calc_multisig(&info.trustee_list, info.threshold);
 
-        // not allow different chain has same multi-address
+        // Each chain must have a distinct multisig address,
+        // duplicated multisig address is not allowed.
         let find_duplicated = Self::trustee_multisigs()
             .into_iter()
-            .find(|(c, multisig)| &multi_addr == multisig && c == &chain)
-            .is_some();
+            .any(|(c, multisig)| multi_addr == multisig && c == chain);
         if find_duplicated {
             return Err(Error::<T>::InvalidMultisig.into());
         }

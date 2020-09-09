@@ -354,6 +354,13 @@ impl<T: Trait> Module<T> {
         Self::asset_online(asset_id).is_some()
     }
 
+    /// Returns the chain of given asset `asset_id`.
+    pub fn chain_of(asset_id: &AssetId) -> result::Result<Chain, DispatchError> {
+        Self::asset_info_of(asset_id)
+            .map(|info| info.chain())
+            .ok_or_else(|| Error::<T>::AssetDoesNotExist.into())
+    }
+
     /// Returns the asset info of given `id`.
     pub fn get_asset_info(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
         if let Some(asset) = Self::asset_info_of(id) {

@@ -96,7 +96,7 @@ pub use xpallet_protocol::*;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
-use impls::{CurrencyToVoteHandler, SlowAdjustingFeeUpdate};
+use impls::{CurrencyToVoteHandler, SlowAdjustingFeeUpdate, DealWithFees};
 
 /// Constant values used within the runtime.
 pub mod constants;
@@ -388,31 +388,6 @@ parameter_types! {
 
 }
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
-
-pub struct DealWithFees;
-impl OnUnbalanced<NegativeImbalance> for DealWithFees {
-    fn on_nonzero_unbalanced(fees: NegativeImbalance) {
-        // for fees, 90% to the reward pot of author, 10% to author
-        let (to_reward_pot, to_author) = fees.ration(90, 10);
-
-        let to_author_numeric_amount = to_author.peek();
-        let to_reward_pot_numeric_amount = to_reward_pot.peek();
-
-        let author = <pallet_authorship::Module<Runtime>>::author();
-        let reward_pot = <xpallet_mining_staking::Module<Runtime>>::reward_pot_for(&author);
-
-        <pallet_balances::Module<Runtime>>::resolve_creating(&author, to_author);
-        <pallet_balances::Module<Runtime>>::resolve_creating(&reward_pot, to_reward_pot);
-        <frame_system::Module<Runtime>>::deposit_event(
-            xpallet_system::RawEvent::TransactionFeePaid(
-                author,
-                to_author_numeric_amount,
-                reward_pot,
-                to_reward_pot_numeric_amount,
-            ),
-        );
-    }
-}
 
 impl pallet_transaction_payment::Trait for Runtime {
     type Currency = Balances;
