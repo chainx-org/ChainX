@@ -9,6 +9,7 @@ mod service;
 mod cli;
 mod command;
 mod config;
+mod genesis;
 mod logger;
 mod res;
 

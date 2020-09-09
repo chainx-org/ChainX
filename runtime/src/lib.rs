@@ -31,8 +31,7 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         TransactionValidityError, ValidTransaction,
     },
-    ApplyExtrinsicResult, DispatchError, FixedPointNumber, ModuleId, Perbill, Percent, Permill,
-    Perquintill,
+    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
@@ -69,7 +68,6 @@ pub use frame_support::{
     StorageValue,
 };
 pub use pallet_timestamp::Call as TimestampCall;
-pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 pub use chainx_primitives::{
     AccountId, AccountIndex, AddrStr, Amount, AssetId, Balance, BlockNumber, ChainAddress, Hash,
@@ -98,12 +96,11 @@ pub use xpallet_protocol::*;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
-use impls::{CurrencyToVoteHandler, DealWithFees};
+use impls::{CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
 
 /// Constant values used within the runtime.
 pub mod constants;
-pub use constants::{currency::*, time::*};
-
+pub use constants::{currency::*, fee::WeightToFee, time::*};
 /// Weights for pallets used in the runtime.
 mod weights;
 
@@ -387,10 +384,8 @@ impl pallet_balances::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const TransactionByteFee: Balance = 1; // TODO change in future
-    pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
-    pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
-    pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
+    pub const TransactionByteFee: Balance = 10 * MILLICENTS; // 100 => 0.000001 pcx
+
 }
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
@@ -398,9 +393,8 @@ impl pallet_transaction_payment::Trait for Runtime {
     type Currency = Balances;
     type OnTransactionPayment = DealWithFees;
     type TransactionByteFee = TransactionByteFee;
-    type WeightToFee = IdentityFee<Balance>;
-    type FeeMultiplierUpdate =
-        TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+    type WeightToFee = WeightToFee;
+    type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 }
 
 parameter_types! {
@@ -790,10 +784,6 @@ impl pallet_society::Trait for Runtime {
 // orml
 ///////////////////////////////////////////
 use orml_currencies::BasicCurrencyAdapter;
-// parameter_types! {
-//     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
-//     pub const GetStableCurrencyId: CurrencyId = CurrencyId::USDT;
-// }
 
 impl orml_currencies::Trait for Runtime {
     type Event = Event;
