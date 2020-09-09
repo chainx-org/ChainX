@@ -242,7 +242,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 }
 
 pub fn staging_testnet_config() -> Result<ChainSpec, String> {
-    let wasm_binary = WASM_BINARY.ok_or("Staging Testnet wasm not available".to_string())?;
+    let wasm_binary =
+        WASM_BINARY.ok_or_else(|| "Staging Testnet wasm not available".to_string())?;
     // subkey inspect-key --uri "$SECRET"
     // 5ERUBzfWtZzB59HM2qekCKzPm9sFo433z3V4rGgJXd7ugWNv
     let root_key: AccountId =
@@ -273,6 +274,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         // 5FCPo3uswynCs1rPvCpnjFykhN3jmeUH51ocMqfpzPq9jVwc
         hex!["8a91dc3768bdba8bba11da5c3b2ae954eede9591a6b7a2d156637d84aee5623c"].into(),
     );
+
     // aura
     // 5EZ47mio3fjhb1iwGSLKZGmgYvhZRJakfGmPfAemMAMBAA7e
     let aura1: AuraId =
@@ -283,6 +285,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
     // 5CV7jA56wV3mjzLi4JMg4oXATNpwKfcet61NwYJqAAiRsEH9
     let aura3: AuraId =
         hex!["129e3eb4543ed8188d67df20122bb73add3f0ea5fdbd480fdbb9f6b4c14dd872"].unchecked_into();
+
     // grandpa
     // 5EntNNUQB97ui1F2g1aT9tTBUHsUY3Zi6noVLH5uVfoFadYR
     let grandpa1: GrandpaId =
@@ -293,6 +296,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
     // 5Hj97jQ5SE4TWbpJX1w8CtjZftK9ZzvHUtQWtuiunc1hfTG2
     let grandpa3: GrandpaId =
         hex!["fa7d863e427ebb01df0c66d05cfbbb043ff8abb964786a4ee8d2eceda2b43fef"].unchecked_into();
+
     // im-online
     // 5GmSNWiRT6GMptZsb97kAMC3eqRikMP4uA8m96JQgCdv5vKf
     let im_online1: ImOnlineId =
@@ -303,6 +307,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
     // 5EtJ2KYfVdCscuBrBrV6KVvq9eqhajS9MpHPY9BoEWrhxGCw
     let im_online3: ImOnlineId =
         hex!["7cc403ead4673f243779bb77041e8791f85fc42ebfa2dbffd7ddcc68e6321807"].unchecked_into();
+
     // authority-discovery
     // 5F4kvJLWoKr9ikn3pEXpTCfLDnfpLAVUf2itbFuJM1NdLuUM
     let authority_discovery1: AuthorityDiscoveryId =

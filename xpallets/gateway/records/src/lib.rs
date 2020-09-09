@@ -40,6 +40,12 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
+pub type WithdrawalRecordOf<T> = WithdrawalRecord<
+    <T as frame_system::Trait>::AccountId,
+    BalanceOf<T>,
+    <T as frame_system::Trait>::BlockNumber,
+>;
+
 pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -107,7 +113,8 @@ decl_event!(
     pub enum Event<T> where
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>,
-        WithdrawalRecord = WithdrawalRecord<<T as frame_system::Trait>::AccountId, BalanceOf<T>, <T as frame_system::Trait>::BlockNumber> {
+        WithdrawalRecord = WithdrawalRecordOf<T>
+    {
         Deposit(AccountId, AssetId, Balance),
         ApplyWithdrawal(u32, WithdrawalRecord),
         FinishWithdrawal(u32, WithdrawalState),
@@ -117,10 +124,11 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as XGatewayRecords {
         /// withdrawal applications collection, use serial number to mark them, and has prev and next to link them
-        pub PendingWithdrawals get(fn pending_withdrawals):map hasher(twox_64_concat) u32
-                => Option<WithdrawalRecord<T::AccountId, BalanceOf<T>, T::BlockNumber>>;
+        pub PendingWithdrawals get(fn pending_withdrawals):
+            map hasher(twox_64_concat) u32 => Option<WithdrawalRecordOf<T>>;
 
         pub WithdrawalStateOf get(fn state_of): map hasher(twox_64_concat) u32 => Option<WithdrawalState>;
+
         /// withdrawal WithdrawalRecord serial number
         pub SerialNumber get(fn number): u32 = 0;
     }
@@ -155,8 +163,7 @@ impl<T: Trait> Module<T> {
 
     #[inline]
     fn check_chain_for_asset(asset_id: &AssetId, expected_chain: Chain) -> DispatchResult {
-        let asset = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
-        let asset_chain = asset.chain();
+        let asset_chain = xpallet_assets_registrar::Module::<T>::chain_of(asset_id)?;
         if expected_chain != asset_chain {
             return Err(Error::<T>::UnexpectedChain.into());
         }
@@ -178,7 +185,7 @@ impl<T: Trait> Module<T> {
             who, asset_id, balance
         );
 
-        let _ = xpallet_assets::Module::<T>::issue(asset_id, who, balance)?;
+        xpallet_assets::Module::<T>::issue(asset_id, who, balance)?;
         Self::deposit_event(RawEvent::Deposit(who.clone(), *asset_id, balance));
         Ok(())
     }
@@ -205,7 +212,7 @@ impl<T: Trait> Module<T> {
             ext
         );
 
-        let appl = WithdrawalRecord::<T::AccountId, BalanceOf<T>, T::BlockNumber>::new(
+        let appl = WithdrawalRecordOf::<T>::new(
             who.clone(),
             *asset_id,
             balance,
@@ -241,7 +248,6 @@ impl<T: Trait> Module<T> {
                 }
                 Self::check_chain(&serial_number, chain)?;
 
-                // set storage
                 WithdrawalStateOf::insert(serial_number, WithdrawalState::Processing);
                 Ok(())
             }
@@ -343,8 +349,7 @@ impl<T: Trait> Module<T> {
         let get_chain = |withdrawal_id: u32| -> Result<Chain, DispatchError> {
             let record = Self::pending_withdrawals(withdrawal_id).ok_or(Error::<T>::NotExisted)?;
             let asset_id = record.asset_id();
-            let asset = xpallet_assets_registrar::Module::<T>::get_asset_info(&asset_id)?;
-            let asset_chain = asset.chain();
+            let asset_chain = xpallet_assets_registrar::Module::<T>::chain_of(&asset_id)?;
             Ok(asset_chain)
         };
         match expected_state {
@@ -415,7 +420,7 @@ impl<T: Trait> Module<T> {
             }
             _ => {
                 error!("[finish_withdrawal_impl]|should not meet this branch in normally, except in root|state:{:?}", state);
-                Err("Do not expect this state in finish_withdrawal")?;
+                return Err("Do not expect this state in finish_withdrawal".into());
             }
         }
 
@@ -427,7 +432,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn lock(who: &T::AccountId, asset_id: &AssetId, value: BalanceOf<T>) -> DispatchResult {
-        let _ = xpallet_assets::Module::<T>::move_balance(
+        xpallet_assets::Module::<T>::move_balance(
             asset_id,
             who,
             AssetType::Usable,
@@ -440,7 +445,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn unlock(who: &T::AccountId, asset_id: &AssetId, value: BalanceOf<T>) -> DispatchResult {
-        let _ = xpallet_assets::Module::<T>::move_balance(
+        xpallet_assets::Module::<T>::move_balance(
             asset_id,
             who,
             AssetType::ReservedWithdrawal,
@@ -453,7 +458,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn destroy(who: &T::AccountId, asset_id: &AssetId, value: BalanceOf<T>) -> DispatchResult {
-        let _ = xpallet_assets::Module::<T>::destroy(&asset_id, &who, value)?;
+        xpallet_assets::Module::<T>::destroy(&asset_id, &who, value)?;
         Ok(())
     }
 

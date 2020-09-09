@@ -56,7 +56,7 @@ where
         ext: Memo,
         height: BlockNumber,
     ) -> Self {
-        WithdrawalRecord::<AccountId, Balance, BlockNumber> {
+        Self {
             asset_id,
             applicant,
             balance,
@@ -95,12 +95,13 @@ pub struct Withdrawal<AccountId, Balance, BlockNumber> {
     pub height: BlockNumber,
     pub state: WithdrawalState,
 }
+
 impl<AccountId, Balance, BlockNumber> Withdrawal<AccountId, Balance, BlockNumber> {
     pub fn new(
         record: WithdrawalRecord<AccountId, Balance, BlockNumber>,
         state: WithdrawalState,
     ) -> Self {
-        Withdrawal {
+        Self {
             asset_id: record.asset_id,
             applicant: record.applicant,
             balance: record.balance,

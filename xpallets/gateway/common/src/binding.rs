@@ -10,12 +10,12 @@ use crate::{AddressBinding, BoundAddressOf, Module, Trait};
 
 impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<ReferralId>) {
-        let chain = match xpallet_assets_registrar::Module::<T>::asset_info_of(assert_id) {
-            Some(info) => info.chain(),
-            None => {
+        let chain = match xpallet_assets_registrar::Module::<T>::chain_of(assert_id) {
+            Ok(c) => c,
+            Err(e) => {
                 error!(
-                    "[update_binding]|meed an unexpected asset_id:{:?}",
-                    assert_id
+                    "[update_binding]|meed an unexpected asset_id:{:?}, error:{:?}",
+                    assert_id, e
                 );
                 return;
             }
@@ -42,8 +42,7 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
     }
 
     fn get_binding_info(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
-        let chain = xpallet_assets_registrar::Module::<T>::asset_info_of(assert_id)
-            .map(|info| info.chain())?;
+        let chain = xpallet_assets_registrar::Module::<T>::chain_of(assert_id).ok()?;
         Self::channel_binding_of(who, chain)
     }
 }
