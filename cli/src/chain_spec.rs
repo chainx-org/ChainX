@@ -132,6 +132,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
+            get_account_id_from_seed::<sr25519::Public>("vesting"),
             testnet_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
@@ -167,6 +168,7 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
+            get_account_id_from_seed::<sr25519::Public>("vesting"),
             testnet_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
@@ -205,6 +207,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 authority_keys_from_seed("Bob"),
             ],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
+            get_account_id_from_seed::<sr25519::Public>("vesting"),
             testnet_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
@@ -353,6 +356,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
             wasm_binary,
             initial_authorities.clone(),
             root_key.clone(),
+            root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
             crate::res::load_testnet_btc_genesis_header_info,
@@ -457,6 +461,7 @@ fn testnet_genesis<F>(
     wasm_binary: &[u8],
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
+    vesting_account: AccountId,
     assets: Vec<AssetParams>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
     bitcoin_info: F,
@@ -598,7 +603,7 @@ where
             validators,
             validator_count: 50,
             sessions_per_era: 12,
-            vesting_account: get_account_id_from_seed::<sr25519::Public>("vesting"),
+            vesting_account,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             ..Default::default()
