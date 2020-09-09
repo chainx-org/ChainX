@@ -4,13 +4,12 @@ use sp_runtime::{traits::Convert, FixedPointNumber, Perquintill};
 
 use frame_support::{
     parameter_types,
-    traits::{Currency, OnUnbalanced},
+    traits::{Currency, Imbalance, OnUnbalanced},
 };
-use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment, Imbalance};
+use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
 use crate::{Authorship, Balances, NegativeImbalance, Runtime};
 use chainx_primitives::Balance;
-use sp_runtime::traits::Convert;
 
 pub struct Author;
 impl OnUnbalanced<NegativeImbalance> for Author {

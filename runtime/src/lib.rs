@@ -96,7 +96,7 @@ pub use xpallet_protocol::*;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
-use impls::{CurrencyToVoteHandler, SlowAdjustingFeeUpdate, DealWithFees};
+use impls::{CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
 
 /// Constant values used within the runtime.
 pub mod constants;
