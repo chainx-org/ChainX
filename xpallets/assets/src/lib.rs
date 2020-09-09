@@ -126,7 +126,7 @@ decl_event!(
     {
         Move(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
         Issue(AssetId, AccountId, Balance),
-        Destory(AssetId, AccountId, Balance),
+        Destroy(AssetId, AccountId, Balance),
         Set(AssetId, AccountId, AssetType, Balance),
         /// set AssetRestrictions for an Asset
         SetRestrictions(AssetId, AssetRestrictions),

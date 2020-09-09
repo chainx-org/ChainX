@@ -62,7 +62,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         who: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Module::<T>::deposit_event(RawEvent::Destory(*id, who.clone(), value));
+        Module::<T>::deposit_event(RawEvent::Destroy(*id, who.clone(), value));
         T::OnAssetChanged::on_destroy_post(id, who, value)?;
         Ok(())
     }
