@@ -9,3 +9,11 @@ frame-benchmarking = { version = "2.0.0-rc6" }
 sc-executor = { version = "0.8.0-rc6" }
 chainx-runtime = { path = "../runtime" }
 xp-io = { path = "../primitives/io" }
+
+[features]
+wasmtime = [
+    "sc-executor/wasmtime",
+]
+wasmi-errno = [
+    "sc-executor/wasmi-errno",
+]
