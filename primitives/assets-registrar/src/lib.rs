@@ -1,4 +1,9 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
+//! The asset registrar primitives.
+
 #![cfg_attr(not(feature = "std"), no_std)]
+#![deny(missing_docs)]
 
 use chainx_primitives::AssetId;
 use frame_support::dispatch::DispatchResult;
