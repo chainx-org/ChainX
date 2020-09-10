@@ -380,6 +380,7 @@ impl<T: Trait> Module<T> {
         Self::insert_executed_order(maker_order);
         Self::insert_executed_order(taker_order);
 
+        // FIXME: The information delivered by these events seems be redundant.
         Self::deposit_event(RawEvent::MakerOrderUpdated(maker_order.clone()));
         Self::deposit_event(RawEvent::TakerOrderUpdated(taker_order.clone()));
         Self::deposit_event(RawEvent::OrderExecuted(OrderExecutedInfo::new(
