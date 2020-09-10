@@ -17,5 +17,5 @@ pub const ASSET_SYMBOL_MAX_LEN: usize = 24;
 pub const ASSET_NAME_MAX_LEN: usize = 48;
 /// The maximum length of asset description
 pub const ASSET_DESC_MAX_LEN: usize = 128;
-/// The maximum number of memo bytes
-pub const MEMO_BYTES_MAX_NUM: usize = 80;
+/// The maximum length of memo
+pub const MEMO_MAX_LEN: usize = 80;

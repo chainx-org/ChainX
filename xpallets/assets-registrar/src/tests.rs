@@ -1,6 +1,5 @@
-use crate::*;
-use crate::{Module, Trait};
-use chainx_primitives::AssetId;
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 use frame_support::{
     assert_noop, assert_ok, impl_outer_event, impl_outer_origin, parameter_types, sp_io,
     weights::Weight,
@@ -12,7 +11,10 @@ use sp_runtime::{
     Perbill,
 };
 
+use chainx_primitives::AssetId;
 use xpallet_protocol::X_BTC;
+
+use crate::*;
 
 /// The AccountId alias in this test module.
 pub(crate) type BlockNumber = u64;
@@ -118,6 +120,7 @@ impl ExtBuilder {
         let ext = sp_io::TestExternalities::new(storage);
         ext
     }
+
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
         let btc_assets = btc();
         let assets = vec![(btc_assets.0, btc_assets.1, true, true)];

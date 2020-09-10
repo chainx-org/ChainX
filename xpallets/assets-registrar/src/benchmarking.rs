@@ -1,7 +1,9 @@
-use super::*;
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-pub use frame_benchmarking::{account, benchmarks};
+use frame_benchmarking::benchmarks;
 use frame_system::RawOrigin;
+
+use super::*;
 
 const ASSET_ID: AssetId = 8888;
 

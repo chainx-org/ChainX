@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 //! This crate provides the feature of managing the native and foreign assets' meta information.
 //!
 //! The foreign asset hereby means it's not the native token of the system(PCX for ChainX)
@@ -28,12 +30,11 @@ use frame_support::{
 };
 use frame_system::ensure_root;
 
-// ChainX
 use chainx_primitives::{AssetId, Decimals, Desc, Token};
 use xpallet_support::info;
 
-pub use verifier::*;
-pub use weight_info::WeightInfo;
+pub use self::verifier::*;
+pub use self::weight_info::WeightInfo;
 pub use xp_assets_registrar::RegistrarHandler;
 
 #[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
@@ -190,7 +191,7 @@ decl_error! {
         /// only allow ASCII alphanumeric character or '-', '.', '|', '~'
         InvalidChar,
         /// only allow ASCII alphanumeric character
-        InvalidAsscii,
+        InvalidAscii,
         /// The asset already exists.
         AssetAlreadyExists,
         /// The asset is already valid, no need to recover.
@@ -201,6 +202,7 @@ decl_error! {
         AssetDoesNotExist,
     }
 }
+
 decl_storage! {
     trait Store for Module<T: Trait> as XAssetsRegistrar {
         /// Asset id list for each Chain.

@@ -1,23 +1,32 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
+use xpallet_protocol::{ASSET_DESC_MAX_LEN, ASSET_NAME_MAX_LEN, ASSET_SYMBOL_MAX_LEN};
+
 use super::*;
 
-pub const MAX_TOKEN_LEN: usize = 32;
-pub const MAX_DESC_LEN: usize = 128;
-
-/// Visible ASCII char [0x20, 0x7E]
-#[inline]
-fn is_ascii_invisible(c: &u8) -> bool {
-    *c < 0x20 || *c > 0x7E
+/// Token can only use ASCII alphanumeric character or "-.|~".
+pub fn is_valid_token<T: Trait>(token: &[u8]) -> DispatchResult {
+    if token.len() > ASSET_SYMBOL_MAX_LEN || token.is_empty() {
+        return Err(Error::<T>::InvalidAssetLength.into());
+    }
+    let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || b"-.|~".contains(c) };
+    for c in token {
+        if !is_valid(c) {
+            return Err(Error::<T>::InvalidChar.into());
+        }
+    }
+    Ok(())
 }
 
 /// A valid token name should have a legal length and be visible ASCII chars only.
 pub fn is_valid_token_name<T: Trait>(name: &[u8]) -> DispatchResult {
-    if name.len() > MAX_TOKEN_LEN || name.is_empty() {
+    if name.len() > ASSET_NAME_MAX_LEN || name.is_empty() {
         return Err(Error::<T>::InvalidAssetNameLength.into());
     }
     xp_runtime::xss_check(name)?;
-    for c in name.iter() {
-        if is_ascii_invisible(c) {
-            return Err(Error::<T>::InvalidAsscii.into());
+    for c in name {
+        if !is_ascii_visible(c) {
+            return Err(Error::<T>::InvalidAscii.into());
         }
     }
     Ok(())
@@ -25,28 +34,20 @@ pub fn is_valid_token_name<T: Trait>(name: &[u8]) -> DispatchResult {
 
 /// A valid desc should be visible ASCII chars only and not too long.
 pub fn is_valid_desc<T: Trait>(desc: &[u8]) -> DispatchResult {
-    if desc.len() > MAX_DESC_LEN {
+    if desc.len() > ASSET_DESC_MAX_LEN {
         return Err(Error::<T>::InvalidDescLength.into());
     }
     xp_runtime::xss_check(desc)?;
-    for c in desc.iter() {
-        if is_ascii_invisible(c) {
-            return Err(Error::<T>::InvalidAsscii.into());
+    for c in desc {
+        if !is_ascii_visible(c) {
+            return Err(Error::<T>::InvalidAscii.into());
         }
     }
     Ok(())
 }
 
-/// Token can only use ASCII alphanumeric character or "-.|~".
-pub fn is_valid_token<T: Trait>(v: &[u8]) -> DispatchResult {
-    if v.len() > MAX_TOKEN_LEN || v.is_empty() {
-        return Err(Error::<T>::InvalidAssetLength.into());
-    }
-    let is_valid = |c: &u8| -> bool { c.is_ascii_alphanumeric() || b"-.|~".contains(c) };
-    for c in v.iter() {
-        if !is_valid(c) {
-            return Err(Error::<T>::InvalidChar.into());
-        }
-    }
-    Ok(())
+/// Visible ASCII char [0x20, 0x7E]
+#[inline]
+fn is_ascii_visible(c: &u8) -> bool {
+    *c == b' ' || c.is_ascii_graphic()
 }
