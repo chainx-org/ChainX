@@ -4,7 +4,13 @@
 import os
 import sys
 
-import toml
+try:
+    import toml
+except ImportError as e:
+    print(
+        'Please first install toml using `pip3 install toml` and rerun this script'
+    )
+    exit(1)
 
 if len(sys.argv) != 2:
     print('  Usage: ./apply_bump_version.py next_version')
@@ -26,6 +32,8 @@ def write_back(lines, f):
 
 def do_bump_version(cargo_path):
     lines = read_file(cargo_path)
+    #  We assume all Cargo.toml follows the auto generated template, otherwise
+    #  skip it.
     if lines[0].strip() != '[package]':
         print(cargo_path, 'may not be bumped properly, skipping...')
         return
@@ -42,9 +50,11 @@ def main():
     os.chdir("../")
 
     for member in toml.load("Cargo.toml")['workspace']['members']:
+        #  Ignore the forked contracts pallets
         if 'contracts' in member:
             print('Skipped bump version for package', member)
             continue
+
         cargo_path = os.path.join(member, 'Cargo.toml')
         do_bump_version(cargo_path)
 
