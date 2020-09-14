@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Chainpool.
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! New minted PCX distribution logic for ChainX Proposal 09.
 

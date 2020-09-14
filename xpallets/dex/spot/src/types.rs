@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 //! This module defines all the types used in Spot Module.
 
 use super::*;

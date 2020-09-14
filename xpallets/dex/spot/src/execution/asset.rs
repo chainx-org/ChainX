@@ -1,6 +1,6 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 //! This module handles all the asset related operations in Spot.
-//!
-//! Copyright 2020 Chainpool.
 
 use super::*;
 use xpallet_assets::AssetType::{self, ReservedDexSpot, Usable};

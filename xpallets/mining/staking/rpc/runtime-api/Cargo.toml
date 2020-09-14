@@ -1,7 +1,7 @@
 [package]
 name = "xpallet-mining-staking-rpc-runtime-api"
 version = "2.0.0-alpha.0"
-authors = ["ChainX community <https://www.chainx.org>"]
+authors = ["The ChainX Authors"]
 edition = "2018"
 
 [package.metadata.docs.rs]

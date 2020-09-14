@@ -1,4 +1,5 @@
-// Copyright 2018-2019 Chainpool.
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 // Substrate
 use frame_support::dispatch::DispatchResult;
 use sp_std::prelude::Vec;

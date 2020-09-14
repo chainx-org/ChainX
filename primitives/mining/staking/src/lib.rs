@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 //! A crate which contains primitives that are useful for implementation that uses staking
