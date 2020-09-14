@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 use sp_std::ops::{Add, AddAssign, Mul, MulAssign};
 
 const SECP256K1_N_0: u32 = 0xD0364141;

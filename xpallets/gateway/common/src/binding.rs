@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 use frame_support::{IterableStorageDoubleMap, StorageDoubleMap};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 

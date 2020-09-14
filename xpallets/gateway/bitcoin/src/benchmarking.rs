@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 #![cfg(feature = "runtime-benchmarks")]
 
 use frame_benchmarking::{benchmarks, whitelisted_caller};

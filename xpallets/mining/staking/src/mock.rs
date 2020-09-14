@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 use crate::*;
 use crate::{Module, Trait};
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};

@@ -1,7 +1,7 @@
 [package]
 name = "chainx"
 version = "2.0.0-alpha.0"
-authors = ["ChainX community <https://www.chainx.org>"]
+authors = ["The ChainX Authors"]
 edition = "2018"
 description = "Fully Decentralized Interchain Crypto Asset Management on Polkadot"
 
@@ -25,14 +25,21 @@ members = [
     "primitives/mining/common",
     "primitives/mining/staking",
     "primitives/assets-registrar",
+    "primitives/io",
     "rpc",
     "runtime",
 
     "xpallets/assets",
-    "xpallets/assets-registrar",
     "xpallets/assets/rpc",
     "xpallets/assets/rpc/runtime-api",
+    "xpallets/assets-registrar",
     "xpallets/gateway/bitcoin",
+    "xpallets/gateway/common",
+    "xpallets/gateway/common/rpc",
+    "xpallets/gateway/common/rpc/runtime-api",
+    "xpallets/gateway/records",
+    "xpallets/gateway/records/rpc",
+    "xpallets/gateway/records/rpc/runtime-api",
     "xpallets/contracts",
     "xpallets/contracts/common",
     "xpallets/contracts/rpc",
@@ -48,6 +55,7 @@ members = [
     "xpallets/mining/staking/rpc/runtime-api",
     "xpallets/protocol",
     "xpallets/support",
+    "xpallets/system",
 ]
 
 [profile.release]

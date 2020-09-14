@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 //! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]

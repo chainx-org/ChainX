@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 use std::sync::Arc;

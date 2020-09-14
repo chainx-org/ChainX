@@ -1,3 +1,5 @@
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 use sp_std::convert::{AsMut, AsRef};
 use sp_std::mem;
 

@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Chainpool.
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sp_runtime::AccountId32;
 use sp_std::prelude::Vec;

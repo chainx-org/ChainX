@@ -1,4 +1,5 @@
-// Copyright 2018-2019 Chainpool.
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+
 //! Assets: Handles token asset balances.
 
 // Ensure we're `no_std` when compiling for Wasm.

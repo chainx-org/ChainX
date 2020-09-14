@@ -1,9 +1,9 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::RuntimeDebug;
 
 /// The network type of ChainX.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
