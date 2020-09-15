@@ -1041,7 +1041,10 @@ impl_runtime_apis! {
 
     impl sp_block_builder::BlockBuilder<Block> for Runtime {
         fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
-            Executive::apply_extrinsic(extrinsic)
+            Executive::apply_extrinsic(extrinsic).map_err(|err| {
+                frame_support::debug::error!(target: xpallet_support::RUNTIME_TARGET, "[apply_extrinsic]|{:?}", err);
+                err
+            })
         }
 
         fn finalize_block() -> <Block as BlockT>::Header {

@@ -1649,6 +1649,8 @@ dependencies = [
 [[package]]
 name = "frame-executive"
 version = "2.0.0-rc6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7a0cd96943af326c968548906a3968d573c7c6ddfa645c4bd2ed8168c1b6c68"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -1658,7 +1660,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-tracing",
- "xpallet-support",
 ]
 
 [[package]]

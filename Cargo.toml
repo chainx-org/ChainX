@@ -7,7 +7,6 @@ description = "Fully Decentralized Interchain Crypto Asset Management on Polkado
 
 [patch.crates-io]
 # patch for substrate runtime module
-frame-executive = { path = "./frame/executive" }
 pallet-transaction-payment = { path = "./frame/transaction-payment" }
 
 [dependencies]
