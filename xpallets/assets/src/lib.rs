@@ -22,10 +22,6 @@ pub mod traits;
 mod trigger;
 pub mod types;
 
-// Substrate
-use sp_runtime::traits::{
-    CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
-};
 use sp_std::{
     collections::btree_map::BTreeMap,
     convert::{TryFrom, TryInto},
@@ -42,14 +38,14 @@ use frame_support::{
     Parameter, StorageDoubleMap,
 };
 use frame_system::{ensure_root, ensure_signed};
+use orml_traits::arithmetic::{Signed, SimpleArithmetic};
+use sp_runtime::traits::{
+    CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
+};
 
-use orml_traits::arithmetic::{self, Signed};
-
-// ChainX
 use chainx_primitives::AssetId;
-use xpallet_support::{debug, ensure_with_errorlog, error, info, traits::TreasuryAccount};
-// re-export
 pub use xpallet_assets_registrar::{AssetInfo, Chain};
+use xpallet_support::{debug, ensure_with_errorlog, error, info, traits::TreasuryAccount};
 
 pub use self::traits::{ChainT, OnAssetChanged};
 use self::trigger::AssetChangedTrigger;
@@ -61,7 +57,7 @@ pub use self::types::{
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
-// xpallet_assets
+/// Weight information for extrinsics in this pallet.
 pub trait WeightInfo {
     fn transfer() -> Weight;
     fn force_transfer() -> Weight;
@@ -69,23 +65,26 @@ pub trait WeightInfo {
     fn set_asset_limit() -> Weight;
 }
 
+/// The module's config trait.
+///
+/// `frame_system::Trait` should always be included in our implied traits.
 pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
-    /// Event
+    /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
     /// The amount type, should be signed version of `Balance`
-    type Amount: Signed
-        + TryInto<BalanceOf<Self>>
-        + TryFrom<BalanceOf<Self>>
-        + Parameter
+    type Amount: Parameter
         + Member
-        + arithmetic::SimpleArithmetic
         + Default
         + Copy
-        + MaybeSerializeDeserialize;
+        + MaybeSerializeDeserialize
+        + Signed
+        + SimpleArithmetic
+        + TryInto<BalanceOf<Self>>
+        + TryFrom<BalanceOf<Self>>;
 
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
@@ -93,6 +92,7 @@ pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
 
+    /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
 }
 
@@ -137,6 +137,7 @@ decl_event!(
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         type Error = Error<T>;
+
         fn deposit_event() = default;
 
         /// transfer between account
@@ -249,7 +250,7 @@ impl<T: Trait> Module<T> {
         asset_id: AssetId,
         restrictions: AssetRestrictions,
     ) -> DispatchResult {
-        xpallet_assets_registrar::Module::<T>::ensure_asset_exists(&asset_id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_exists(&asset_id)?;
         AssetRestrictionsOf::insert(asset_id, restrictions);
         Ok(())
     }
@@ -279,7 +280,7 @@ impl<T: Trait> Module<T> {
                         TotalAssetInfo {
                             info,
                             balance: Self::total_asset_balance(id),
-                            is_online: xpallet_assets_registrar::Module::<T>::is_online(id),
+                            is_online: xpallet_assets_registrar::Module::<T>::is_online(&id),
                             restrictions: Self::asset_restrictions_of(id),
                         },
                     );

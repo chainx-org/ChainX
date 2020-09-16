@@ -2,12 +2,7 @@
 
 use frame_support::weights::Weight;
 
-pub trait WeightInfo {
-    fn register() -> Weight;
-    fn deregister() -> Weight;
-    fn recover() -> Weight;
-    fn update_asset_info() -> Weight;
-}
+use crate::WeightInfo;
 
 impl WeightInfo for () {
     fn register() -> Weight {
