@@ -77,12 +77,12 @@ decl_module! {
         ///
         /// This is a root-only operation.
         #[weight = 0]
-        pub fn modify_paused(origin, pallet: Vec<u8>, call: Option<Vec<u8>>, is_paused: bool) -> DispatchResult {
+        pub fn modify_paused(origin, pallet: Vec<u8>, call: Option<Vec<u8>>, should_paused: bool) -> DispatchResult {
             ensure_root(origin)?;
 
             let mut paused = Self::paused(&pallet);
 
-            if is_paused {
+            if should_paused {
                 if let Some(c) = call {
                     // pause the call of the pallet
                     paused.insert(c, ());
@@ -112,11 +112,11 @@ decl_module! {
         ///
         /// This is a root-only operation.
         #[weight = 0]
-        fn modify_blocked_list(origin, who: <T::Lookup as StaticLookup>::Source, is_block: bool) -> DispatchResult {
+        fn modify_blocked_list(origin, who: <T::Lookup as StaticLookup>::Source, should_block: bool) -> DispatchResult {
             ensure_root(origin)?;
 
             let who = T::Lookup::lookup(who)?;
-            if is_block {
+            if should_block {
                 BlockedAccounts::<T>::insert(who.clone(), ());
                 Self::deposit_event(Event::<T>::BlockAccount(who))
             } else {

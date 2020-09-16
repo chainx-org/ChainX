@@ -13,7 +13,6 @@ sp-std = { version = "2.0.0-rc6", default-features = false }
 sp-runtime = { version = "2.0.0-rc6", default-features = false }
 
 # Substrate pallets
-#frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
 frame-support = { version = "2.0.0-rc6", default-features = false }
 frame-system = { version = "2.0.0-rc6", default-features = false }
 
@@ -34,6 +33,3 @@ std = [
 
     "xpallet-protocol/std",
 ]
-#runtime-benchmarks = [
-#    "frame-benchmarking",
-#]

@@ -86,8 +86,8 @@ decl_error! {
         InvalidAscii,
         /// The asset already exists.
         AssetAlreadyExists,
-        /// The asset is not exist.
-        AssetIsNotExist,
+        /// The asset does not exist.
+        AssetDoesNotExist,
         /// The asset is already valid (online), no need to recover.
         AssetAlreadyValid,
         /// The asset is invalid (not online).
@@ -146,7 +146,7 @@ decl_module! {
             ensure_root(origin)?;
 
             asset.is_valid::<T>()?;
-            ensure!(!Self::asset_is_exists(&asset_id), Error::<T>::AssetAlreadyExists);
+            ensure!(!Self::asset_exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
             info!("[register_asset]|id:{:}|{:?}|is_online:{:}|has_mining_rights:{:}", asset_id, asset, is_online, has_mining_rights);
 
@@ -190,7 +190,7 @@ decl_module! {
         pub fn recover(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
             ensure_root(origin)?;
 
-            ensure!(Self::asset_is_exists(&id), Error::<T>::AssetIsNotExist);
+            ensure!(Self::asset_exists(&id), Error::<T>::AssetDoesNotExist);
             ensure!(!Self::asset_is_valid(&id), Error::<T>::AssetAlreadyValid);
 
             AssetOnline::insert(id, ());
@@ -213,7 +213,7 @@ decl_module! {
         ) -> DispatchResult {
             ensure_root(origin)?;
 
-            let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::AssetIsNotExist)?;
+            let mut info = Self::asset_info_of(&id).ok_or(Error::<T>::AssetDoesNotExist)?;
             if let Some(t) = token {
                 info.set_token(t)
             }
@@ -258,7 +258,7 @@ impl<T: Trait> Module<T> {
     pub fn chain_of(asset_id: &AssetId) -> result::Result<Chain, DispatchError> {
         Self::asset_info_of(asset_id)
             .map(|info| info.chain())
-            .ok_or_else(|| Error::<T>::AssetIsNotExist.into())
+            .ok_or_else(|| Error::<T>::AssetDoesNotExist.into())
     }
 
     /// Returns the asset info of given `id`.
@@ -270,7 +270,7 @@ impl<T: Trait> Module<T> {
                 Err(Error::<T>::AssetIsInvalid.into())
             }
         } else {
-            Err(Error::<T>::AssetIsNotExist.into())
+            Err(Error::<T>::AssetDoesNotExist.into())
         }
     }
 
@@ -280,7 +280,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Returns true if the asset info record of given `asset_id` exists.
-    pub fn asset_is_exists(asset_id: &AssetId) -> bool {
+    pub fn asset_exists(asset_id: &AssetId) -> bool {
         Self::asset_info_of(asset_id).is_some()
     }
 
@@ -290,8 +290,8 @@ impl<T: Trait> Module<T> {
     }
 
     /// Helper function for checking the asset's existence.
-    pub fn ensure_asset_is_exists(id: &AssetId) -> DispatchResult {
-        ensure!(Self::asset_is_exists(id), Error::<T>::AssetIsNotExist);
+    pub fn ensure_asset_exists(id: &AssetId) -> DispatchResult {
+        ensure!(Self::asset_exists(id), Error::<T>::AssetDoesNotExist);
         Ok(())
     }
 
