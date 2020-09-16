@@ -10,11 +10,11 @@
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
-mod default_weights;
 #[cfg(test)]
 mod tests;
 mod types;
 mod verifier;
+mod weight_info;
 
 use sp_std::{prelude::*, result};
 
@@ -23,7 +23,6 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::Get,
-    weights::Weight,
     IterableStorageMap,
 };
 use frame_system::ensure_root;
@@ -32,15 +31,8 @@ use chainx_primitives::{AssetId, Desc, Token};
 use xpallet_support::info;
 
 pub use self::types::{AssetInfo, Chain};
+pub use self::weight_info::WeightInfo;
 pub use xp_assets_registrar::RegistrarHandler;
-
-/// Weight information for extrinsics in this pallet.
-pub trait WeightInfo {
-    fn register() -> Weight;
-    fn deregister() -> Weight;
-    fn recover() -> Weight;
-    fn update_asset_info() -> Weight;
-}
 
 /// The module's config trait.
 ///
