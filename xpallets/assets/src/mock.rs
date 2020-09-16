@@ -34,7 +34,7 @@ impl_outer_event! {
     pub enum MetaEvent for Test {
         system<T>,
         pallet_balances<T>,
-        xpallet_assets_registrar<T>,
+        xpallet_assets_registrar,
         assets<T>,
     }
 }
