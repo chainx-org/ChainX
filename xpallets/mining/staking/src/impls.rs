@@ -222,6 +222,7 @@ impl<T: Trait> Module<T> {
         let force_chilled = Self::slash_offenders_in_session(staking_reward);
 
         if !force_chilled.is_empty() {
+            debug!("[mint_and_slash]force_chilled:{:?}", force_chilled);
             Self::deposit_event(RawEvent::ForceChilled(session_index, force_chilled));
             // Force a new era if some offender's reward pot has been wholly slashed.
             Self::ensure_new_era();
@@ -388,6 +389,7 @@ where
         slash_fraction: &[Perbill],
         _slash_session: SessionIndex,
     ) -> Result<OnOffenceRes, ()> {
+        debug!("[on_offence]offenders:{:?}", offenders);
         // TODO: make use of slash_fraction
         for (details, _slash_fraction) in offenders.iter().zip(slash_fraction) {
             // reporters are actually always empty.

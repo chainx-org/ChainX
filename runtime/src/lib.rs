@@ -343,7 +343,7 @@ impl pallet_finality_tracker::Trait for Runtime {
 parameter_types! {
     pub const Offset: BlockNumber = 0;
     /// Session length.
-    pub const Period: BlockNumber = 50;
+    pub const Period: BlockNumber = 2;
     pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
 
@@ -421,8 +421,8 @@ impl pallet_im_online::Trait for Runtime {
 impl pallet_session_historical::Trait for Runtime {
     type FullIdentification = AccountId;
     /// Substrate: given the stash account ID, find the active exposure of nominators on that account.
-    /// ChainX: we don't need such info due to the reward pot.
-    type FullIdentificationOf = ();
+    /// ChainX: the full identity is always the validator account itself.
+    type FullIdentificationOf = SimpleValidatorIdConverter;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime

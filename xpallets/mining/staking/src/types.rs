@@ -231,6 +231,10 @@ impl<T: Trait> Slasher<T> {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
         let reward_pot_balance = Module::<T>::free_balance(&reward_pot);
 
+        debug!(
+            "[try_slash]reward_pot_balance:{:?}, expected_slash:{:?}",
+            reward_pot_balance, expected_slash
+        );
         if expected_slash <= reward_pot_balance {
             self.apply_slash(&reward_pot, expected_slash);
             Ok(())

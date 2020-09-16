@@ -15,6 +15,10 @@ impl<T: Trait> Module<T> {
         let ideal_slash = reward_per_block * u128::from(Self::offence_severity());
         let min_slash = Self::minimum_penalty().saturated_into::<u128>();
         let expected_slash = sp_std::cmp::max(ideal_slash, min_slash);
+        debug!(
+            "[expected_slash_of]reward_per_block:{:?}, ideal_slash:{:?}, min_slash:{:?}",
+            reward_per_block, ideal_slash, min_slash
+        );
         expected_slash.saturated_into()
     }
 
@@ -34,21 +38,25 @@ impl<T: Trait> Module<T> {
 
         Self::offenders_in_session()
             .into_iter()
-            .filter(|offender| validators.contains(offender)) // FIXME: is this neccessary?
             .flat_map(|offender| {
                 let expected_slash = Self::expected_slash_of(reward_per_block);
                 match slasher.try_slash(&offender, expected_slash) {
-                    Ok(_) => None, // Slash the offender successfully.
+                    Ok(_) => {
+                        debug!("[slash_offenders_in_session]slash the offender:{:?} for expected_slash:{:?} successfully", offender, expected_slash);
+                        // Slash the offender successfully.
+                        None
+                    }
                     Err(actual_slashed) => {
                         debug!(
-                            "[slash_offenders_in_session]expected_slash:{:?}, actual_slashed:{:?}",
-                            expected_slash, actual_slashed
+                            "[slash_offenders_in_session]insufficient reward pot balance, actual_slashed:{:?}",
+                            actual_slashed
                         );
                         // Avoid the over-slashing, ensure the minimum active validators.
                         if active_count > minimum_validator_count {
                             Self::apply_force_chilled(&offender);
                             active_count -= 1;
-                            Some(offender) // The offender does not have enough balance for the slashing.
+                            // The offender does not have enough balance for the slashing.
+                            Some(offender)
                         } else {
                             None
                         }
