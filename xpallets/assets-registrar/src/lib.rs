@@ -146,7 +146,7 @@ decl_module! {
             ensure_root(origin)?;
 
             asset.is_valid::<T>()?;
-            ensure!(!Self::asset_exists(&asset_id), Error::<T>::AssetAlreadyExists);
+            ensure!(!Self::exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
             info!("[register_asset]|id:{:}|{:?}|is_online:{:}|has_mining_rights:{:}", asset_id, asset, is_online, has_mining_rights);
 
@@ -171,7 +171,7 @@ decl_module! {
         pub fn deregister(origin, #[compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
 
-            ensure!(Self::asset_is_valid(&id), Error::<T>::AssetIsInvalid);
+            ensure!(Self::is_valid(&id), Error::<T>::AssetIsInvalid);
 
             AssetOnline::remove(id);
             T::RegistrarHandler::on_deregister(&id)?;
@@ -190,8 +190,8 @@ decl_module! {
         pub fn recover(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
             ensure_root(origin)?;
 
-            ensure!(Self::asset_exists(&id), Error::<T>::AssetDoesNotExist);
-            ensure!(!Self::asset_is_valid(&id), Error::<T>::AssetAlreadyValid);
+            ensure!(Self::exists(&id), Error::<T>::AssetDoesNotExist);
+            ensure!(!Self::is_valid(&id), Error::<T>::AssetAlreadyValid);
 
             AssetOnline::insert(id, ());
 
@@ -239,7 +239,7 @@ impl<T: Trait> Module<T> {
     /// Returns an iterator of all the valid asset ids of all chains so far.
     #[inline]
     pub fn valid_asset_ids() -> impl Iterator<Item = AssetId> {
-        Self::asset_ids().filter(Self::asset_is_valid)
+        Self::asset_ids().filter(Self::is_valid)
     }
 
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all assets.
@@ -251,7 +251,7 @@ impl<T: Trait> Module<T> {
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all valid assets.
     #[inline]
     pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
-        Self::asset_infos().filter(|(id, _)| Self::asset_is_valid(id))
+        Self::asset_infos().filter(|(id, _)| Self::is_valid(id))
     }
 
     /// Returns the chain of given asset `asset_id`.
@@ -264,7 +264,7 @@ impl<T: Trait> Module<T> {
     /// Returns the asset info of given `id`.
     pub fn get_asset_info(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
         if let Some(asset) = Self::asset_info_of(id) {
-            if Self::asset_is_valid(id) {
+            if Self::is_valid(id) {
                 Ok(asset)
             } else {
                 Err(Error::<T>::AssetIsInvalid.into())
@@ -280,24 +280,24 @@ impl<T: Trait> Module<T> {
     }
 
     /// Returns true if the asset info record of given `asset_id` exists.
-    pub fn asset_exists(asset_id: &AssetId) -> bool {
+    pub fn exists(asset_id: &AssetId) -> bool {
         Self::asset_info_of(asset_id).is_some()
     }
 
-    /// Returns true if the asset of given `asset_id` is still online.
-    pub fn asset_is_valid(asset_id: &AssetId) -> bool {
+    /// Returns true if the asset of given `asset_id` is valid (only check if still online currently).
+    pub fn is_valid(asset_id: &AssetId) -> bool {
         Self::is_online(asset_id)
     }
 
     /// Helper function for checking the asset's existence.
     pub fn ensure_asset_exists(id: &AssetId) -> DispatchResult {
-        ensure!(Self::asset_exists(id), Error::<T>::AssetDoesNotExist);
+        ensure!(Self::exists(id), Error::<T>::AssetDoesNotExist);
         Ok(())
     }
 
     /// Helper function for checking the asset's validity.
     pub fn ensure_asset_is_valid(id: &AssetId) -> DispatchResult {
-        ensure!(Self::asset_is_valid(id), Error::<T>::AssetIsInvalid);
+        ensure!(Self::is_valid(id), Error::<T>::AssetIsInvalid);
         Ok(())
     }
 
