@@ -142,9 +142,9 @@ impl<AccountId, Balance, BlockNumber> From<Withdrawal<AccountId, Balance, BlockN
         WithdrawalRecordForRpc {
             asset_id: record.asset_id,
             applicant: record.applicant,
-            balance: record.balance.into(),
+            balance: record.balance,
             addr: format!("{:?}", try_addr!(record.addr)),
-            ext: format!("{:}", String::from_utf8_lossy(record.ext.as_ref())),
+            ext: String::from_utf8_lossy(record.ext.as_ref()).into_owned(),
             height: record.height,
             state: record.state,
         }

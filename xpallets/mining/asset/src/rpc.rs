@@ -23,7 +23,6 @@ pub struct MiningAssetInfo<AccountId, Balance, BlockNumber> {
 
 impl<T: Trait> Module<T> {
     /// Get overall information about all mining assets.
-    #[allow(clippy::type_complexity)]
     pub fn mining_assets() -> Vec<MiningAssetInfo<T::AccountId, BalanceOf<T>, T::BlockNumber>> {
         MiningPrevilegedAssets::get()
             .into_iter()
@@ -49,7 +48,7 @@ impl<T: Trait> Module<T> {
         MinerLedgers::<T>::iter_prefix(&who)
             .filter_map(|(asset_id, _)| {
                 match Self::compute_dividend_at(&who, &asset_id, current_block) {
-                    Ok(dividend) => Some((asset_id, dividend.into())),
+                    Ok(dividend) => Some((asset_id, dividend)),
                     Err(_) => None,
                 }
             })
@@ -58,8 +57,6 @@ impl<T: Trait> Module<T> {
 
     /// Get the nomination details given the staker AccountId.
     pub fn miner_ledger(who: T::AccountId) -> BTreeMap<AssetId, MinerLedger<T::BlockNumber>> {
-        MinerLedgers::<T>::iter_prefix(&who)
-            .map(|(asset_id, ledger)| (asset_id, ledger.into()))
-            .collect()
+        MinerLedgers::<T>::iter_prefix(&who).collect()
     }
 }

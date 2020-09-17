@@ -48,25 +48,26 @@ impl Default for Chain {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct AssetInfo {
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_text"))]
     token: Token,
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_text"))]
     token_name: Token,
     chain: Chain,
     decimals: Decimals,
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_text"))]
     desc: Desc,
 }
 
 impl fmt::Debug for AssetInfo {
     #[cfg(feature = "std")]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "AssetInfo: {{token: {}, token_name: {}, chain: {:?}, decimals: {}, desc: {}}}",
-            String::from_utf8_lossy(&self.token).into_owned(),
-            String::from_utf8_lossy(&self.token_name).into_owned(),
-            self.chain,
-            self.decimals,
-            String::from_utf8_lossy(&self.desc).into_owned()
-        )
+        f.debug_struct("AssetInfo")
+            .field("token", &String::from_utf8_lossy(&self.token))
+            .field("token_name", &String::from_utf8_lossy(&self.token_name))
+            .field("chain", &self.chain)
+            .field("decimals", &self.decimals)
+            .field("desc", &String::from_utf8_lossy(&self.desc))
+            .finish()
     }
     #[cfg(not(feature = "std"))]
     fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {

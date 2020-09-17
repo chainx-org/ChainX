@@ -3,6 +3,7 @@
 //! Runtime API definition required by ChainX RPC extensions.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::too_many_arguments, clippy::unnecessary_mut_passed)]
 
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 

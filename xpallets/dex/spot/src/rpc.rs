@@ -102,7 +102,6 @@ impl<T: Trait> Module<T> {
     /// The returned data will be empty if `page_index` is invalid.
     ///
     /// FIXME: page_size should be limited.
-    #[allow(clippy::type_complexity)]
     pub fn orders(
         who: T::AccountId,
         page_index: u32,
@@ -151,7 +150,6 @@ impl<T: Trait> Module<T> {
     }
 
     /// Get the depth of a trading pair around the handicap given the depth size.
-    #[allow(clippy::type_complexity)]
     pub fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<T::Price, BalanceOf<T>>> {
         Self::trading_pair_of(pair_id).map(|pair| {
             let Handicap {

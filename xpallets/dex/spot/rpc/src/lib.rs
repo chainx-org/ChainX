@@ -2,15 +2,22 @@
 
 //! RPC interface for the DEX Spot module.
 
+#![allow(clippy::type_complexity)]
+
+use std::sync::Arc;
+
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
+use serde::{Deserialize, Serialize};
+
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-use std::sync::Arc;
-use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
-use xpallet_dex_spot_rpc_runtime_api::XSpotApi as XSpotRuntimeApi;
+
+use xpallet_dex_spot_rpc_runtime_api::{
+    Depth, FullPairInfo, RpcOrder, TradingPairId, XSpotApi as XSpotRuntimeApi,
+};
 
 /// XSpot RPC methods.
 #[rpc]
@@ -109,7 +116,7 @@ where
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Page<T> {
     pub page_index: u32,

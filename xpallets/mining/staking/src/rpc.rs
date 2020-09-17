@@ -39,7 +39,6 @@ pub struct NominatorInfo<BlockNumber> {
 }
 
 impl<T: Trait> Module<T> {
-    #[allow(clippy::type_complexity)]
     pub fn validators_info() -> Vec<ValidatorInfo<T::AccountId, BalanceOf<T>, T::BlockNumber>> {
         Self::validator_set().map(Self::validator_info_of).collect()
     }
@@ -77,7 +76,6 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-    #[allow(clippy::type_complexity)]
     pub fn nomination_details_of(
         who: T::AccountId,
     ) -> BTreeMap<T::AccountId, NominatorLedger<BalanceOf<T>, T::BlockNumber>> {
