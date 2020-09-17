@@ -72,7 +72,7 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
 pub struct TrusteeMultisigProvider<T: Trait, C: ChainProvider>(PhantomData<T>, PhantomData<C>);
 impl<T: Trait, C: ChainProvider> TrusteeMultisigProvider<T, C> {
     pub fn new() -> Self {
-        TrusteeMultisigProvider::<_, _>(PhantomData::<T>::default(), PhantomData::<C>::default())
+        TrusteeMultisigProvider::<_, _>(Default::default(), Default::default())
     }
 }
 
