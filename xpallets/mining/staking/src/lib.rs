@@ -479,6 +479,19 @@ decl_module! {
             ensure_root(origin)?;
             ValidatorBondingDuration::<T>::put(new);
         }
+
+        // FIXME: add to WeightInfo once it's stable.
+        #[weight = 10_000_000]
+        fn set_minimum_penalty(origin, #[compact] new: BalanceOf<T>) {
+            ensure_root(origin)?;
+            MinimumPenalty::<T>::put(new);
+        }
+
+        #[weight = 10_000_000]
+        fn set_offence_severity(origin, #[compact] new: u32) {
+            ensure_root(origin)?;
+            OffenceSeverity::put(new);
+        }
     }
 }
 
