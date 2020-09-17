@@ -1,7 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::collections::BTreeMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
@@ -12,12 +11,10 @@ use serde::{Deserialize, Serialize};
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use chainx_primitives::AssetId;
-use xpallet_assets::Chain;
 use xpallet_gateway_records_rpc_runtime_api::{
-    Withdrawal, WithdrawalState, XGatewayRecordsApi as GatewayRecordsRuntimeApi,
+    AssetId, Chain, Withdrawal, WithdrawalState, XGatewayRecordsApi as GatewayRecordsRuntimeApi,
 };
-use xpallet_support::{try_addr, RpcBalance};
+use xpallet_support::try_addr;
 
 pub struct XGatewayRecords<C, B> {
     client: Arc<C>,
@@ -35,10 +32,7 @@ impl<C, B> XGatewayRecords<C, B> {
 }
 
 #[rpc]
-pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber>
-where
-    Balance: ToString + FromStr,
-{
+pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
     /// Return current withdraw list(include Applying and Processing withdraw state)
     #[rpc(name = "xgatewayrecords_withdrawalList")]
     fn withdrawal_list(
@@ -73,7 +67,7 @@ where
     C::Api: GatewayRecordsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     Block: BlockT,
     AccountId: Clone + std::fmt::Display + Codec,
-    Balance: Clone + std::fmt::Display + Codec + ToString + FromStr,
+    Balance: Clone + std::fmt::Display + Codec,
     BlockNumber: Clone + std::fmt::Display + Codec,
 {
     fn withdrawal_list(
@@ -131,18 +125,17 @@ where
 
 #[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WithdrawalRecordForRpc<AccountId, Balance: ToString + FromStr, BlockNumber> {
+pub struct WithdrawalRecordForRpc<AccountId, Balance, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,
-    pub balance: RpcBalance<Balance>,
+    pub balance: Balance,
     pub addr: String,
     pub ext: String,
     pub height: BlockNumber,
     pub state: WithdrawalState,
 }
 
-impl<AccountId, Balance: ToString + FromStr, BlockNumber>
-    From<Withdrawal<AccountId, Balance, BlockNumber>>
+impl<AccountId, Balance, BlockNumber> From<Withdrawal<AccountId, Balance, BlockNumber>>
     for WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>
 {
     fn from(record: Withdrawal<AccountId, Balance, BlockNumber>) -> Self {

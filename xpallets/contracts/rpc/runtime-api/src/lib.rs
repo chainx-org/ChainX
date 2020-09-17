@@ -23,12 +23,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_std::vec::Vec;
+
 use codec::{Codec, Decode, Encode};
 
 use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
 
-use chainx_primitives::AssetId;
+pub use chainx_primitives::AssetId;
 pub use xpallet_contracts_primitives::{GetStorageResult, XRC20Selector};
 
 /// A result of execution of a contract.
@@ -51,7 +52,8 @@ pub enum ContractExecResult {
 
 sp_api::decl_runtime_apis! {
     /// The API to interact with contracts without using executive.
-    pub trait ContractsApi<AccountId, Balance, BlockNumber> where
+    pub trait ContractsApi<AccountId, Balance, BlockNumber>
+    where
         AccountId: Codec,
         Balance: Codec,
         BlockNumber: Codec,

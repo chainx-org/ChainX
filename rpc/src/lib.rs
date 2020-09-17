@@ -64,7 +64,7 @@ where
     C::Api: BlockBuilder<Block>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-    C::Api: xpallet_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance>,
+    C::Api: xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>,
     C::Api:
         xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, BlockNumber>,
     C::Api:
@@ -88,7 +88,7 @@ where
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
-    use xpallet_assets_rpc::{Assets, AssetsApi};
+    use xpallet_assets_rpc::{Assets, XAssetsApi};
     use xpallet_contracts_rpc::{Contracts, ContractsApi};
     use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
     use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
@@ -128,7 +128,7 @@ where
         ),
     ));
 
-    io.extend_with(AssetsApi::to_delegate(Assets::new(client.clone())));
+    io.extend_with(XAssetsApi::to_delegate(Assets::new(client.clone())));
     io.extend_with(ContractsApi::to_delegate(Contracts::new(client.clone())));
     io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));
     io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));

@@ -2,15 +2,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Codec;
-
 use sp_std::collections::btree_map::BTreeMap;
+
+use codec::Codec;
 
 pub use chainx_primitives::{AssetId, Decimals};
 pub use xpallet_assets::{AssetInfo, AssetRestrictions, AssetType, Chain, TotalAssetInfo};
 
 sp_api::decl_runtime_apis! {
-    pub trait AssetsApi<AccountId, Balance> where
+    pub trait XAssetsApi<AccountId, Balance>
+    where
         AccountId: Codec,
         Balance: Codec,
     {

@@ -4,8 +4,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_runtime::DispatchError;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
+
+use sp_runtime::DispatchError;
 
 pub use chainx_primitives::{AddrStr, AssetId, ChainAddress};
 pub use xp_runtime::Memo;
@@ -17,7 +18,8 @@ pub use xpallet_gateway_common::{
 
 sp_api::decl_runtime_apis! {
     /// The API to query account nonce (aka transaction index).
-    pub trait XGatewayCommonApi<AccountId, Balance> where
+    pub trait XGatewayCommonApi<AccountId, Balance>
+    where
         AccountId: codec::Codec,
         Balance: codec::Codec,
     {

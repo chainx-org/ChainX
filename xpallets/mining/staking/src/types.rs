@@ -66,6 +66,8 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
 
 /// Vote weight properties of nominator.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct NominatorLedger<Balance, BlockNumber> {
     /// The amount of vote.
     pub nomination: Balance,

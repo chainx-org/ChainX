@@ -21,11 +21,10 @@ use xpallet_gateway_common_rpc_runtime_api::{
     AssetId, Chain, GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, WithdrawalLimit,
     XGatewayCommonApi as XGatewayCommonRuntimeApi,
 };
-use xpallet_support::RpcBalance;
 
 /// XGatewayCommon RPC methods.
 #[rpc]
-pub trait XGatewayCommonApi<BlockHash, AccountId, RpcBalance> {
+pub trait XGatewayCommonApi<BlockHash, AccountId, Balance> {
     /// Get bound addrs for an accountid
     #[rpc(name = "xgatewaycommon_boundAddrs")]
     fn bound_addrs(
@@ -40,7 +39,7 @@ pub trait XGatewayCommonApi<BlockHash, AccountId, RpcBalance> {
         &self,
         asset_id: AssetId,
         at: Option<BlockHash>,
-    ) -> Result<WithdrawalLimit<RpcBalance>>;
+    ) -> Result<WithdrawalLimit<Balance>>;
 
     /// Use the params to verify whether the withdrawal apply is valid. Notice those params is same as the params for call `XGatewayCommon::withdraw(...)`, including checking address is valid or something else. Front-end should use this rpc to check params first, than could create the extrinsic.
     #[rpc(name = "xgatewaycommon_verifyWithdrawal")]
@@ -168,8 +167,7 @@ where
     }
 }
 
-impl<C, Block, AccountId, Balance>
-    XGatewayCommonApi<<Block as BlockT>::Hash, AccountId, RpcBalance<Balance>>
+impl<C, Block, AccountId, Balance> XGatewayCommonApi<<Block as BlockT>::Hash, AccountId, Balance>
     for XGatewayCommon<C, Block, AccountId, Balance>
 where
     Block: BlockT,
@@ -214,7 +212,7 @@ where
         &self,
         asset_id: AssetId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<WithdrawalLimit<RpcBalance<Balance>>> {
+    ) -> Result<WithdrawalLimit<Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
@@ -224,8 +222,8 @@ where
             .withdrawal_limit(&at, asset_id)
             .map_err(runtime_error_into_rpc_err)?
             .map(|src| WithdrawalLimit {
-                minimal_withdrawal: src.minimal_withdrawal.into(),
-                fee: src.fee.into(),
+                minimal_withdrawal: src.minimal_withdrawal,
+                fee: src.fee,
             })
             .map_err(runtime_error_into_rpc_err)?;
         Ok(result)
