@@ -609,7 +609,7 @@ where
         xpallet_mining_staking: Some(XStakingConfig {
             validators,
             validator_count: 50,
-            sessions_per_era: 2,
+            sessions_per_era: 12,
             vesting_account,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
