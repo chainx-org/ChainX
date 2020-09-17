@@ -13,9 +13,8 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use chainx_primitives::AssetId;
 use xpallet_mining_asset_rpc_runtime_api::{
-    MinerLedger, MiningAssetInfo, XMiningAssetApi as XMiningAssetRuntimeApi,
+    AssetId, MinerLedger, MiningAssetInfo, XMiningAssetApi as XMiningAssetRuntimeApi,
 };
 
 /// XMiningAsset RPC methods.

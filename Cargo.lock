@@ -9270,12 +9270,10 @@ dependencies = [
 name = "xpallet-mining-asset-rpc"
 version = "2.0.0-alpha.0"
 dependencies = [
- "chainx-primitives",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "parity-scale-codec",
- "serde",
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
@@ -9328,7 +9326,6 @@ dependencies = [
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "parity-scale-codec",
- "serde",
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
