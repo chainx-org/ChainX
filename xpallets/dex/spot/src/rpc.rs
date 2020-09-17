@@ -215,10 +215,7 @@ mod rpc_tests {
 
             assert_eq!(XSpot::depth(pair_id, 100).unwrap(), {
                 Depth {
-                    asks: vec![
-                        (1_108_000.into(), 200.into()),
-                        (1_109_000.into(), 100.into()),
-                    ],
+                    asks: vec![(1_108_000, 200), (1_109_000, 100)],
                     bids: vec![],
                 }
             });
