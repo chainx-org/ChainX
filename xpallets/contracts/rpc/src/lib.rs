@@ -36,9 +36,9 @@ use sp_runtime::{
 
 pub use self::gen_client::Client as ContractsClient;
 
-use chainx_primitives::AssetId;
 pub use xpallet_contracts_rpc_runtime_api::{
-    self as runtime_api, ContractExecResult, ContractsApi as ContractsRuntimeApi, XRC20Selector,
+    self as runtime_api, AssetId, ContractExecResult, ContractsApi as ContractsRuntimeApi,
+    XRC20Selector,
 };
 
 const RUNTIME_ERROR: i64 = 1;

@@ -2,21 +2,24 @@
 
 //! RPC interface for the transaction payment module.
 
+use std::collections::btree_map::BTreeMap;
+use std::sync::Arc;
+
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
+
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-use sp_std::collections::btree_map::BTreeMap;
-use std::sync::Arc;
-use xpallet_mining_staking::{NominatorInfo, RpcNominatorLedger, ValidatorInfo};
-use xpallet_mining_staking_rpc_runtime_api::XStakingApi as XStakingRuntimeApi;
-use xpallet_support::RpcBalance;
+
+use xpallet_mining_staking_rpc_runtime_api::{
+    NominatorInfo, NominatorLedger, ValidatorInfo, XStakingApi as XStakingRuntimeApi,
+};
 
 /// XStaking RPC methods.
 #[rpc]
-pub trait XStakingApi<BlockHash, AccountId, RpcBalance, BlockNumber>
+pub trait XStakingApi<BlockHash, AccountId, Balance, BlockNumber>
 where
     AccountId: Ord,
 {
@@ -25,7 +28,7 @@ where
     fn validators(
         &self,
         at: Option<BlockHash>,
-    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>>;
+    ) -> Result<Vec<ValidatorInfo<AccountId, Balance, BlockNumber>>>;
 
     /// Get overall information given the validator AccountId.
     #[rpc(name = "xstaking_getValidatorByAccount")]
@@ -33,7 +36,7 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>;
+    ) -> Result<ValidatorInfo<AccountId, Balance, BlockNumber>>;
 
     /// Get the staking dividends info given the staker AccountId.
     #[rpc(name = "xstaking_getDividendByAccount")]
@@ -41,7 +44,7 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<AccountId, RpcBalance>>;
+    ) -> Result<BTreeMap<AccountId, Balance>>;
 
     /// Get the nomination details given the staker AccountId.
     #[rpc(name = "xstaking_getNominationByAccount")]
@@ -49,7 +52,7 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<AccountId, RpcNominatorLedger<RpcBalance, BlockNumber>>>;
+    ) -> Result<BTreeMap<AccountId, NominatorLedger<Balance, BlockNumber>>>;
 
     /// Get individual nominator information given the nominator AccountId.
     #[rpc(name = "xstaking_getNominatorByAccount")]
@@ -77,8 +80,7 @@ impl<C, B> XStaking<C, B> {
 }
 
 impl<C, Block, AccountId, Balance, BlockNumber>
-    XStakingApi<<Block as BlockT>::Hash, AccountId, RpcBalance<Balance>, BlockNumber>
-    for XStaking<C, Block>
+    XStakingApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber> for XStaking<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
@@ -90,7 +92,7 @@ where
     fn validators(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>> {
+    ) -> Result<Vec<ValidatorInfo<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api.validators(&at).map_err(runtime_error_into_rpc_err)?)
@@ -100,7 +102,7 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
+    ) -> Result<ValidatorInfo<AccountId, Balance, BlockNumber>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
@@ -112,7 +114,7 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AccountId, RpcBalance<Balance>>> {
+    ) -> Result<BTreeMap<AccountId, Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
@@ -124,7 +126,7 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>>> {
+    ) -> Result<BTreeMap<AccountId, NominatorLedger<Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api

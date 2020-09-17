@@ -49,9 +49,9 @@ use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
-use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
-use xpallet_mining_staking::{NominatorInfo, RpcNominatorLedger, ValidatorInfo};
-use xpallet_support::{traits::MultisigAddressFor, RpcBalance, RpcPrice};
+use xpallet_mining_asset::{MinerLedger, MiningAssetInfo};
+use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
+use xpallet_support::traits::MultisigAddressFor;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -1155,7 +1155,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_assets_rpc_runtime_api::AssetsApi<Block, AccountId, Balance> for Runtime {
+    impl xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance> for Runtime {
         fn assets_for_account(who: AccountId) -> BTreeMap<AssetId, BTreeMap<AssetType, Balance>> {
             XAssets::valid_assets_of(&who)
         }
@@ -1166,16 +1166,16 @@ impl_runtime_apis! {
     }
 
     impl xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, BlockNumber> for Runtime {
-        fn validators() -> Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
+        fn validators() -> Vec<ValidatorInfo<AccountId, Balance, BlockNumber>> {
             XStaking::validators_info()
         }
-        fn validator_info_of(who: AccountId) -> ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber> {
+        fn validator_info_of(who: AccountId) -> ValidatorInfo<AccountId, Balance, BlockNumber> {
             XStaking::validator_info_of(who)
         }
-        fn staking_dividend_of(who: AccountId) -> BTreeMap<AccountId, RpcBalance<Balance>> {
+        fn staking_dividend_of(who: AccountId) -> BTreeMap<AccountId, Balance> {
             XStaking::staking_dividend_of(who)
         }
-        fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, RpcNominatorLedger<RpcBalance<Balance>, BlockNumber>> {
+        fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, NominatorLedger<Balance, BlockNumber>> {
             XStaking::nomination_details_of(who)
         }
         fn nominator_info_of(who: AccountId) -> NominatorInfo<BlockNumber> {
@@ -1184,29 +1184,29 @@ impl_runtime_apis! {
     }
 
     impl xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance> for Runtime {
-        fn trading_pairs() -> Vec<FullPairInfo<RpcPrice<Balance>, BlockNumber>> {
+        fn trading_pairs() -> Vec<FullPairInfo<Balance, BlockNumber>> {
             XSpot::trading_pairs()
         }
 
-        fn orders(who: AccountId, page_index: u32, page_size: u32) -> Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Balance>, BlockNumber>> {
+        fn orders(who: AccountId, page_index: u32, page_size: u32) -> Vec<RpcOrder<TradingPairId, AccountId, Balance, Balance, BlockNumber>> {
             XSpot::orders(who, page_index, page_size)
         }
 
-        fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<RpcPrice<Balance>, RpcBalance<Balance>>> {
+        fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<Balance, Balance>> {
             XSpot::depth(pair_id, depth_size)
         }
     }
 
     impl xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<Block, AccountId, Balance, BlockNumber> for Runtime {
-        fn mining_assets() -> Vec<MiningAssetInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
+        fn mining_assets() -> Vec<MiningAssetInfo<AccountId, Balance, BlockNumber>> {
             XMiningAsset::mining_assets()
         }
 
-        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, RpcBalance<Balance>> {
+        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, Balance> {
             XMiningAsset::mining_dividend(who)
         }
 
-        fn miner_ledger(who: AccountId) -> BTreeMap<AssetId, RpcMinerLedger<BlockNumber>> {
+        fn miner_ledger(who: AccountId) -> BTreeMap<AssetId, MinerLedger<BlockNumber>> {
             XMiningAsset::miner_ledger(who)
         }
     }

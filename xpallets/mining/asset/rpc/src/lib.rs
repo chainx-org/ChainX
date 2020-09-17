@@ -2,28 +2,31 @@
 
 //! RPC interface for the transaction payment module.
 
-use chainx_primitives::AssetId;
+use std::collections::btree_map::BTreeMap;
+use std::sync::Arc;
+
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
+
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-use sp_std::collections::btree_map::BTreeMap;
-use std::sync::Arc;
-use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
-use xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi as XMiningAssetRuntimeApi;
-use xpallet_support::RpcBalance;
+
+use chainx_primitives::AssetId;
+use xpallet_mining_asset_rpc_runtime_api::{
+    MinerLedger, MiningAssetInfo, XMiningAssetApi as XMiningAssetRuntimeApi,
+};
 
 /// XMiningAsset RPC methods.
 #[rpc]
-pub trait XMiningAssetApi<BlockHash, AccountId, RpcBalance, BlockNumber> {
+pub trait XMiningAssetApi<BlockHash, AccountId, Balance, BlockNumber> {
     /// Get overall information about all mining assets.
     #[rpc(name = "xminingasset_getMiningAssets")]
     fn mining_assets(
         &self,
         at: Option<BlockHash>,
-    ) -> Result<Vec<MiningAssetInfo<AccountId, RpcBalance, BlockNumber>>>;
+    ) -> Result<Vec<MiningAssetInfo<AccountId, Balance, BlockNumber>>>;
 
     /// Get the asset mining dividends info given the asset miner AccountId.
     #[rpc(name = "xminingasset_getDividendByAccount")]
@@ -31,7 +34,7 @@ pub trait XMiningAssetApi<BlockHash, AccountId, RpcBalance, BlockNumber> {
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<AssetId, RpcBalance>>;
+    ) -> Result<BTreeMap<AssetId, Balance>>;
 
     /// Get the mining ledger details given the asset miner AccountId.
     #[rpc(name = "xminingasset_getMinerLedgerByAccount")]
@@ -39,7 +42,7 @@ pub trait XMiningAssetApi<BlockHash, AccountId, RpcBalance, BlockNumber> {
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<AssetId, RpcMinerLedger<BlockNumber>>>;
+    ) -> Result<BTreeMap<AssetId, MinerLedger<BlockNumber>>>;
 }
 
 /// A struct that implements the [`XMiningAssetApi`].
@@ -59,7 +62,7 @@ impl<C, B> XMiningAsset<C, B> {
 }
 
 impl<C, Block, AccountId, Balance, BlockNumber>
-    XMiningAssetApi<<Block as BlockT>::Hash, AccountId, RpcBalance<Balance>, BlockNumber>
+    XMiningAssetApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber>
     for XMiningAsset<C, Block>
 where
     Block: BlockT,
@@ -72,7 +75,7 @@ where
     fn mining_assets(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<MiningAssetInfo<AccountId, RpcBalance<Balance>, BlockNumber>>> {
+    ) -> Result<Vec<MiningAssetInfo<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api.mining_assets(&at).map_err(runtime_error_into_rpc_err)?)
@@ -82,7 +85,7 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AssetId, RpcBalance<Balance>>> {
+    ) -> Result<BTreeMap<AssetId, Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
@@ -94,7 +97,7 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AssetId, RpcMinerLedger<BlockNumber>>> {
+    ) -> Result<BTreeMap<AssetId, MinerLedger<BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api

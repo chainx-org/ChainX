@@ -5,129 +5,44 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Saturating, RuntimeDebug};
-use xpallet_support::{RpcBalance, RpcPrice};
 
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct FullPairInfo<RpcPrice, BlockNumber> {
+pub struct FullPairInfo<Price, BlockNumber> {
     #[cfg_attr(feature = "std", serde(flatten))]
     pub profile: TradingPairProfile,
     #[cfg_attr(feature = "std", serde(flatten))]
-    pub handicap: RpcHandicap<RpcPrice>,
+    pub handicap: Handicap<Price>,
     #[cfg_attr(feature = "std", serde(flatten))]
-    pub pair_info: RpcTradingPairInfo<RpcPrice, BlockNumber>,
+    pub pair_info: TradingPairInfo<Price, BlockNumber>,
     /// The maximum valid bid price.
-    pub max_valid_bid: RpcPrice,
+    pub max_valid_bid: Price,
     /// The minimum valid ask price.
-    pub min_valid_ask: RpcPrice,
-}
-
-/// Latest price of a trading pair.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct RpcTradingPairInfo<RpcPrice, BlockNumber> {
-    /// Price of Latest executed order.
-    pub latest_price: RpcPrice,
-    #[cfg_attr(feature = "std", serde(rename = "latestPriceUpdatedAt"))]
-    /// Block number at which point `TradingPairInfo` is updated.
-    pub last_updated: BlockNumber,
-}
-
-impl<Price, BlockNumber> From<TradingPairInfo<Price, BlockNumber>>
-    for RpcTradingPairInfo<RpcPrice<Price>, BlockNumber>
-{
-    fn from(info: TradingPairInfo<Price, BlockNumber>) -> Self {
-        Self {
-            latest_price: info.latest_price.into(),
-            last_updated: info.last_updated,
-        }
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct RpcHandicap<RpcPrice> {
-    pub highest_bid: RpcPrice,
-    pub lowest_ask: RpcPrice,
-}
-
-impl<Price> From<Handicap<Price>> for RpcHandicap<RpcPrice<Price>> {
-    fn from(handicap: Handicap<Price>) -> Self {
-        Self {
-            highest_bid: handicap.highest_bid.into(),
-            lowest_ask: handicap.lowest_ask.into(),
-        }
-    }
-}
-
-/// Immutable information of an order.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct RpcOrderProperty<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber> {
-    /// The order identifier.
-    #[cfg_attr(feature = "std", serde(rename = "orderId"))]
-    pub id: OrderId,
-    /// The direction of order.
-    pub side: Side,
-    /// The price of order.
-    pub price: RpcPrice,
-    /// The amount of order, measured in the base currency.
-    pub amount: RpcBalance,
-    /// The trading pair identifier.
-    pub pair_id: PairId,
-    /// The account that submitted the order.
-    pub submitter: AccountId,
-    /// The type of order.
-    pub order_type: OrderType,
-    /// Block number at which the order is created.
-    pub created_at: BlockNumber,
-}
-
-impl<PairId, AccountId, Amount, Price, BlockNumber>
-    From<OrderProperty<PairId, AccountId, Amount, Price, BlockNumber>>
-    for RpcOrderProperty<PairId, AccountId, RpcBalance<Amount>, RpcPrice<Price>, BlockNumber>
-{
-    fn from(props: OrderProperty<PairId, AccountId, Amount, Price, BlockNumber>) -> Self {
-        let price: RpcPrice<Price> = props.price.into();
-        let amount: RpcBalance<Amount> = props.amount.into();
-        Self {
-            id: props.id,
-            side: props.side,
-            price,
-            amount,
-            pair_id: props.pair_id,
-            submitter: props.submitter,
-            order_type: props.order_type,
-            created_at: props.created_at,
-        }
-    }
+    pub min_valid_ask: Price,
 }
 
 /// Details of an order.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct RpcOrder<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber> {
+pub struct RpcOrder<PairId, AccountId, Balance, Price, BlockNumber> {
     /// Immutable details of the order.
     #[cfg_attr(feature = "std", serde(flatten))]
-    pub props: RpcOrderProperty<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber>,
+    pub props: OrderProperty<PairId, AccountId, Balance, Price, BlockNumber>,
     /// Status of the order.
     pub status: OrderStatus,
     /// The amount of unexecuted, measured by the **quote** currency.
     ///
     /// While (props.amount() - already_filled) can be expressed as
     /// the remaining amount as well, it's measured by the base currency.
-    pub remaining: RpcBalance,
+    pub remaining: Balance,
     /// Indices of all executed transaction records.
     pub executed_indices: Vec<TradingHistoryIndex>,
     /// The amount of executed, measured by the **base** currency.
-    pub already_filled: RpcBalance,
+    pub already_filled: Balance,
     /// Current locked asset balance in this order.
-    pub reserved_balance: RpcBalance,
+    pub reserved_balance: Balance,
     /// Block number at which the order details updated.
     pub last_update_at: BlockNumber,
 }
@@ -135,11 +50,11 @@ pub struct RpcOrder<PairId, AccountId, RpcBalance, RpcPrice, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Depth<RpcPrice, RpcBalance> {
+pub struct Depth<Price, Balance> {
     /// List of asks in pair of (price, quantity).
-    pub asks: Vec<(RpcPrice, RpcBalance)>,
+    pub asks: Vec<(Price, Balance)>,
     /// List of bids in pair of (price, quantity).
-    pub bids: Vec<(RpcPrice, RpcBalance)>,
+    pub bids: Vec<(Price, Balance)>,
 }
 
 impl<T: Trait> Module<T> {
@@ -161,24 +76,21 @@ impl<T: Trait> Module<T> {
     }
 
     /// Get the overall info of all trading pairs.
-    pub fn trading_pairs() -> Vec<FullPairInfo<RpcPrice<T::Price>, T::BlockNumber>> {
+    pub fn trading_pairs() -> Vec<FullPairInfo<T::Price, T::BlockNumber>> {
         let pair_count = Self::trading_pair_count();
         let mut pairs = Vec::with_capacity(pair_count as usize);
         for pair_id in 0..pair_count {
             if let Some(profile) = Self::trading_pair_of(pair_id) {
                 let (min_valid_ask, max_valid_bid) = Self::get_quotation_range(&profile);
                 let handicap = Self::handicap_of(pair_id);
-                let handicap: RpcHandicap<RpcPrice<T::Price>> = handicap.into();
-                let pair_info: RpcTradingPairInfo<RpcPrice<T::Price>, T::BlockNumber> =
-                    Self::trading_pair_info_of(pair_id)
-                        .map(Into::into)
-                        .unwrap_or_default();
+                let pair_info: TradingPairInfo<T::Price, T::BlockNumber> =
+                    Self::trading_pair_info_of(pair_id).unwrap_or_default();
                 pairs.push(FullPairInfo {
                     profile,
                     handicap,
                     pair_info,
-                    max_valid_bid: max_valid_bid.into(),
-                    min_valid_ask: min_valid_ask.into(),
+                    max_valid_bid,
+                    min_valid_ask,
                 });
             }
         }
@@ -195,15 +107,7 @@ impl<T: Trait> Module<T> {
         who: T::AccountId,
         page_index: u32,
         page_size: u32,
-    ) -> Vec<
-        RpcOrder<
-            TradingPairId,
-            T::AccountId,
-            RpcBalance<BalanceOf<T>>,
-            RpcPrice<T::Price>,
-            T::BlockNumber,
-        >,
-    > {
+    ) -> Vec<RpcOrder<TradingPairId, T::AccountId, BalanceOf<T>, T::Price, T::BlockNumber>> {
         OrderInfoOf::<T>::iter_prefix_values(who)
             .flat_map(|order| {
                 Self::trading_pair(order.pair_id())
@@ -218,12 +122,12 @@ impl<T: Trait> Module<T> {
                         Side::Sell => Some(order.remaining),
                     })
                     .map(|reserved_balance| RpcOrder {
-                        props: order.props.into(),
-                        reserved_balance: reserved_balance.into(),
+                        props: order.props,
                         status: order.status,
-                        remaining: order.remaining.into(),
+                        remaining: order.remaining,
                         executed_indices: order.executed_indices,
-                        already_filled: order.already_filled.into(),
+                        already_filled: order.already_filled,
+                        reserved_balance,
                         last_update_at: order.last_update_at,
                     })
             })
@@ -248,10 +152,7 @@ impl<T: Trait> Module<T> {
 
     /// Get the depth of a trading pair around the handicap given the depth size.
     #[allow(clippy::type_complexity)]
-    pub fn depth(
-        pair_id: TradingPairId,
-        depth_size: u32,
-    ) -> Option<Depth<RpcPrice<T::Price>, RpcBalance<BalanceOf<T>>>> {
+    pub fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<T::Price, BalanceOf<T>>> {
         Self::trading_pair_of(pair_id).map(|pair| {
             let Handicap {
                 lowest_ask,
@@ -276,7 +177,7 @@ impl<T: Trait> Module<T> {
                         } else {
                             let price: T::Price = price.saturated_into();
                             let cummulative_qty: BalanceOf<T> = cummulative_qty.saturated_into();
-                            Some((price.into(), cummulative_qty.into()))
+                            Some((price, cummulative_qty))
                         }
                     })
                     .take(depth_size as usize)

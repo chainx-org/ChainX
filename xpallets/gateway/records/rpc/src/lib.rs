@@ -12,12 +12,10 @@ use serde::{Deserialize, Serialize};
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use chainx_primitives::AssetId;
-use xpallet_assets::Chain;
 use xpallet_gateway_records_rpc_runtime_api::{
-    Withdrawal, WithdrawalState, XGatewayRecordsApi as GatewayRecordsRuntimeApi,
+    AssetId, Chain, Withdrawal, WithdrawalState, XGatewayRecordsApi as GatewayRecordsRuntimeApi,
 };
-use xpallet_support::{try_addr, RpcBalance};
+use xpallet_support::try_addr;
 
 pub struct XGatewayRecords<C, B> {
     client: Arc<C>,
@@ -131,18 +129,17 @@ where
 
 #[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WithdrawalRecordForRpc<AccountId, Balance: ToString + FromStr, BlockNumber> {
+pub struct WithdrawalRecordForRpc<AccountId, Balance, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,
-    pub balance: RpcBalance<Balance>,
+    pub balance: Balance,
     pub addr: String,
     pub ext: String,
     pub height: BlockNumber,
     pub state: WithdrawalState,
 }
 
-impl<AccountId, Balance: ToString + FromStr, BlockNumber>
-    From<Withdrawal<AccountId, Balance, BlockNumber>>
+impl<AccountId, Balance, BlockNumber> From<Withdrawal<AccountId, Balance, BlockNumber>>
     for WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>
 {
     fn from(record: Withdrawal<AccountId, Balance, BlockNumber>) -> Self {

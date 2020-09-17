@@ -15,11 +15,9 @@ use sp_runtime::{
     traits::{Block as BlockT, Zero},
 };
 
-use chainx_primitives::AssetId;
 use xpallet_assets_rpc_runtime_api::{
-    AssetRestrictions, AssetType, AssetsApi as AssetsRuntimeApi, Chain, Decimals,
+    AssetId, AssetRestrictions, AssetType, Chain, Decimals, XAssetsApi as XAssetsRuntimeApi,
 };
-use xpallet_support::RpcBalance;
 
 pub struct Assets<C, B> {
     client: Arc<C>,
@@ -37,7 +35,7 @@ impl<C, B> Assets<C, B> {
 }
 
 #[rpc]
-pub trait AssetsApi<BlockHash, AccountId, Balance>
+pub trait XAssetsApi<BlockHash, AccountId, Balance>
 where
     Balance: ToString + FromStr,
 {
@@ -47,20 +45,20 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, RpcBalance<Balance>>>>;
+    ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, Balance>>>;
 
     /// Return all valid assets balance with AssetTypes. (exclude native token(PCX))
     #[rpc(name = "xassets_getAssets")]
     fn assets(&self, at: Option<BlockHash>) -> Result<BTreeMap<AssetId, TotalAssetInfo<Balance>>>;
 }
 
-impl<C, Block, AccountId, Balance> AssetsApi<<Block as BlockT>::Hash, AccountId, Balance>
+impl<C, Block, AccountId, Balance> XAssetsApi<<Block as BlockT>::Hash, AccountId, Balance>
     for Assets<C, Block>
 where
     C: sp_api::ProvideRuntimeApi<Block>,
     C: HeaderBackend<Block>,
     C: Send + Sync + 'static,
-    C::Api: AssetsRuntimeApi<Block, AccountId, Balance>,
+    C::Api: XAssetsRuntimeApi<Block, AccountId, Balance>,
     Block: BlockT,
     AccountId: Clone + std::fmt::Display + Codec,
     Balance: Clone + Copy + std::fmt::Display + Codec + ToString + FromStr + Zero,
@@ -69,7 +67,7 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, RpcBalance<Balance>>>> {
+    ) -> Result<BTreeMap<AssetId, BTreeMap<AssetType, Balance>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.assets_for_account(&at, who)
@@ -82,7 +80,7 @@ where
                             let balance = if let Some(b) = m.get(type_) {
                                 (*b).into()
                             } else {
-                                Balance::zero().into()
+                                Balance::zero()
                             };
                             r.insert(*type_, balance);
                         });
@@ -135,7 +133,7 @@ impl From<xpallet_assets_rpc_runtime_api::AssetInfo> for AssetInfo {
 #[serde(rename_all = "camelCase")]
 pub struct TotalAssetInfo<Balance: ToString + FromStr> {
     pub info: AssetInfo,
-    pub balance: BTreeMap<AssetType, RpcBalance<Balance>>,
+    pub balance: BTreeMap<AssetType, Balance>,
     pub is_online: bool,
     pub restrictions: AssetRestrictions,
 }
