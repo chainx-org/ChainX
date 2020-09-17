@@ -28,7 +28,6 @@ use serde::{Deserialize, Serialize};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::{Bytes, H256};
-use sp_rpc::number;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Header as HeaderT},
@@ -85,7 +84,7 @@ pub struct CallRequest<AccountId, Balance> {
     origin: AccountId,
     dest: AccountId,
     value: Balance,
-    gas_limit: number::NumberOrHex,
+    gas_limit: u64,
     input_data: Bytes,
 }
 
@@ -365,7 +364,7 @@ mod tests {
         "#,
         )
         .unwrap();
-        assert_eq!(req.gas_limit.into_u256(), U256::from(0xe8d4a51000u64));
+        assert_eq!(U256::from(req.gas_limit), U256::from(0xe8d4a51000u64));
     }
 
     #[test]

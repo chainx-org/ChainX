@@ -9031,7 +9031,6 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-core",
- "sp-rpc",
  "sp-runtime",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
