@@ -48,7 +48,7 @@ impl_outer_event! {
         system<T>,
         balances<T>,
         session,
-        assets_registrar<T>,
+        assets_registrar,
         assets<T>,
         staking<T>,
         mining_asset<T>,

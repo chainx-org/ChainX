@@ -32,7 +32,7 @@ mod xpallet_assets_metadata {
 impl_outer_event! {
     pub enum MetaEvent for Test {
         system<T>,
-        xpallet_assets_metadata<T>,
+        xpallet_assets_metadata,
     }
 }
 
@@ -161,14 +161,17 @@ fn test_register() {
             Err::AssetAlreadyExists
         );
 
-        assert_noop!(XAssetsRegistrar::get_asset_info(&abc_id), Err::InvalidAsset);
+        assert_noop!(
+            XAssetsRegistrar::get_asset_info(&abc_id),
+            Err::AssetIsInvalid
+        );
 
         assert_ok!(XAssetsRegistrar::recover(Origin::root(), abc_id, true));
         assert!(XAssetsRegistrar::get_asset_info(&abc_id).is_ok());
 
         assert_noop!(
             XAssetsRegistrar::deregister(Origin::root(), 10000),
-            Err::InvalidAsset
+            Err::AssetIsInvalid
         );
         assert_noop!(
             XAssetsRegistrar::recover(Origin::root(), X_BTC, true),
@@ -176,6 +179,9 @@ fn test_register() {
         );
 
         assert_ok!(XAssetsRegistrar::deregister(Origin::root(), X_BTC));
-        assert_noop!(XAssetsRegistrar::get_asset_info(&X_BTC), Err::InvalidAsset);
+        assert_noop!(
+            XAssetsRegistrar::get_asset_info(&X_BTC),
+            Err::AssetIsInvalid
+        );
     })
 }

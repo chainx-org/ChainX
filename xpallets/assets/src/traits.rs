@@ -14,7 +14,7 @@ pub trait ChainT<Balance: Default> {
     /// e.g.
     ///     if ChainT for Bitcoin, then ASSET is X_BTC
     ///     if ChainT for Ethereum, then ASSET is X_ETH
-    ///     if ChainT for Polkadot, then ASSET is X_ETH
+    ///     if ChainT for Polkadot, then ASSET is X_DOT
     const ASSET_ID: AssetId;
     fn chain() -> Chain;
     fn check_addr(_addr: &[u8], _ext: &[u8]) -> DispatchResult {

@@ -2,6 +2,7 @@
 
 use frame_support::weights::Weight;
 
+/// Weight information for extrinsics in this pallet.
 pub trait WeightInfo {
     fn register() -> Weight;
     fn deregister() -> Weight;

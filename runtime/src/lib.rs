@@ -963,7 +963,7 @@ construct_runtime!(
 
         // ChainX basics.
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
-        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event<T>, Config},
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event, Config},
         XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
 
         // Mining, must be after XAssets.
