@@ -1,7 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::collections::BTreeMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
@@ -33,10 +32,7 @@ impl<C, B> XGatewayRecords<C, B> {
 }
 
 #[rpc]
-pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber>
-where
-    Balance: ToString + FromStr,
-{
+pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
     /// Return current withdraw list(include Applying and Processing withdraw state)
     #[rpc(name = "xgatewayrecords_withdrawalList")]
     fn withdrawal_list(
@@ -71,7 +67,7 @@ where
     C::Api: GatewayRecordsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     Block: BlockT,
     AccountId: Clone + std::fmt::Display + Codec,
-    Balance: Clone + std::fmt::Display + Codec + ToString + FromStr,
+    Balance: Clone + std::fmt::Display + Codec,
     BlockNumber: Clone + std::fmt::Display + Codec,
 {
     fn withdrawal_list(
