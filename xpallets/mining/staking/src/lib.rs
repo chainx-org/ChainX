@@ -79,6 +79,11 @@ pub trait Trait: frame_system::Trait {
     /// Interface for interacting with a session module.
     type SessionInterface: self::SessionInterface<Self::AccountId>;
 
+    /// The number of unfinished sessions in the first halving epoch.
+    ///
+    /// When the ChainX 2.0 migration happens, the first halving epoch is not over yet.
+    type MigrationSessionOffset: Get<SessionIndex>;
+
     /// An expected duration of the session.
     ///
     /// This parameter is used to determine the longevity of `heartbeat` transaction

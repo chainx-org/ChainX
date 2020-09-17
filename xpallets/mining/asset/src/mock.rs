@@ -238,6 +238,7 @@ impl xpallet_support::traits::TreasuryAccount<AccountId> for DummyTreasuryAccoun
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = 50;
+    pub const MigrationSessionOffset: u32 = 500;
 }
 
 pub struct DummyStakingRewardPotAccountDeterminer;
@@ -254,6 +255,7 @@ impl xpallet_mining_staking::Trait for Test {
     type Currency = Balances;
     type Event = MetaEvent;
     type AssetMining = XMiningAsset;
+    type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;

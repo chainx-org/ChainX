@@ -16,13 +16,13 @@ impl<T: Trait> Module<T> {
     /// Returns true if the time for first halving cycle has arrived.
     #[inline]
     fn first_halving_epoch_arrived(current_index: SessionIndex) -> bool {
-        current_index > MIGRATION_SESSION_OFFSET
+        current_index > T::MigrationSessionOffset::get()
     }
 
     /// Returns the total reward for the session, assuming it ends with this block.
     pub(crate) fn this_session_reward(current_index: SessionIndex) -> BalanceOf<T> {
         let halving_epoch = if Self::first_halving_epoch_arrived(current_index) {
-            (current_index - MIGRATION_SESSION_OFFSET - 1) / SESSIONS_PER_ROUND + 1
+            (current_index - T::MigrationSessionOffset::get() - 1) / SESSIONS_PER_ROUND + 1
         } else {
             0
         };

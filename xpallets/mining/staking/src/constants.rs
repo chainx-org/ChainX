@@ -37,9 +37,3 @@ pub const DEFAULT_BONDING_DURATION: u64 = DEFAULT_BLOCKS_PER_SESSION * 12 * 24 *
 
 /// The default bonding duration for validator is 3 * 10 days.
 pub const DEFAULT_VALIDATOR_BONDING_DURATION: u64 = DEFAULT_BONDING_DURATION * 10;
-
-/// The number of unfinished sessions in the first halving epoch.
-///
-/// When the ChainX 2.0 migration happens, the first halving epoch is not over yet.
-/// FIXME: replace this when the migration offset is determinated.
-pub const MIGRATION_SESSION_OFFSET: u32 = 500;

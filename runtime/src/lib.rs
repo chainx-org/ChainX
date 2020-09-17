@@ -47,6 +47,7 @@ use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
+use xp_mining_staking::SessionIndex;
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
@@ -882,9 +883,15 @@ impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccou
     }
 }
 
+parameter_types! {
+    /// FIXME: replace this when the migration offset is determinated.
+    pub const MigrationSessionOffset: SessionIndex = 500;
+}
+
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;
