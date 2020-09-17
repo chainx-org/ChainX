@@ -197,7 +197,7 @@ where
                     Chain::Bitcoin => {
                         Box::new(|addr: Vec<u8>| String::from_utf8_lossy(&addr).into_owned())
                     }
-                    Chain::Ethereum => Box::new(|addr: Vec<u8>| hex::encode(addr)),
+                    Chain::Ethereum => Box::new(hex::encode),
                     _ => return None,
                 };
 

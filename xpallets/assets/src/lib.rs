@@ -4,8 +4,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::type_complexity)]
-#![allow(clippy::transmute_ptr_to_ptr)]
+#![allow(clippy::type_complexity, clippy::transmute_ptr_to_ptr)]
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;

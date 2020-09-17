@@ -5,6 +5,7 @@
 //! `trustees`, `crosschain binding` and something others
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::new_without_default, clippy::type_complexity)]
 
 mod brenchmarks;
 

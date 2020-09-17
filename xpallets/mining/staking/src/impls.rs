@@ -6,6 +6,7 @@ use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
 use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
+use sp_std::cmp::Ordering;
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
@@ -292,13 +293,15 @@ impl<T: Trait> Module<T> {
         if let Some(next_active_era_start_session_index) =
             Self::eras_start_session_index(next_active_era)
         {
-            if next_active_era_start_session_index == start_session {
-                Self::start_era(start_session);
-            } else if next_active_era_start_session_index < start_session {
-                // This arm should never happen, but better handle it than to stall the
-                // staking pallet.
-                frame_support::print("Warning: A session appears to have been skipped.");
-                Self::start_era(start_session);
+            match next_active_era_start_session_index.cmp(&start_session) {
+                Ordering::Equal => Self::start_era(start_session),
+                Ordering::Less => {
+                    // This arm should never happen, but better handle it than to stall the
+                    // staking pallet.
+                    frame_support::print("Warning: A session appears to have been skipped.");
+                    Self::start_era(start_session);
+                }
+                Ordering::Greater => {}
             }
         }
     }

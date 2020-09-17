@@ -8961,7 +8961,6 @@ dependencies = [
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "parity-scale-codec",
- "serde",
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
@@ -9083,7 +9082,6 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
 ]
 

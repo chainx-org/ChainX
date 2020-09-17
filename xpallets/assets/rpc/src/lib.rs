@@ -6,7 +6,6 @@ use std::sync::Arc;
 use codec::Codec;
 use jsonrpc_core::{Error, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use serde::{Deserialize, Serialize};
 
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
@@ -15,7 +14,7 @@ use sp_runtime::{
 };
 
 use xpallet_assets_rpc_runtime_api::{
-    AssetId, AssetRestrictions, AssetType, Chain, Decimals, XAssetsApi as XAssetsRuntimeApi,
+    AssetId, AssetType, TotalAssetInfo, XAssetsApi as XAssetsRuntimeApi,
 };
 
 pub struct Assets<C, B> {
@@ -74,7 +73,7 @@ where
                         let mut r = BTreeMap::new();
                         AssetType::iter().for_each(|type_| {
                             let balance = if let Some(b) = m.get(type_) {
-                                (*b).into()
+                                *b
                             } else {
                                 Balance::zero()
                             };
@@ -96,63 +95,30 @@ where
         api.assets(&at)
             .map(|map| {
                 map.into_iter()
-                    .map(|(id, info)| (id, info.into()))
+                    .map(|(id, info)| {
+                        // if balance not use u128, this part could be deleted
+                        let mut r = BTreeMap::new();
+                        AssetType::iter().for_each(|type_| {
+                            let balance = if let Some(b) = info.balance.get(type_) {
+                                *b
+                            } else {
+                                Balance::zero()
+                            };
+                            r.insert(*type_, balance);
+                        });
+                        (
+                            id,
+                            TotalAssetInfo::<Balance> {
+                                info: info.info,
+                                balance: r,
+                                is_online: info.is_online,
+                                restrictions: info.restrictions,
+                            },
+                        )
+                    })
                     .collect()
             })
             .map_err(runtime_error_into_rpc_err)
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AssetInfo {
-    token: String,
-    token_name: String,
-    chain: Chain,
-    decimals: Decimals,
-    desc: String,
-}
-
-impl From<xpallet_assets_rpc_runtime_api::AssetInfo> for AssetInfo {
-    fn from(info: xpallet_assets_rpc_runtime_api::AssetInfo) -> Self {
-        AssetInfo {
-            token: String::from_utf8_lossy(&info.token()).into_owned(),
-            token_name: String::from_utf8_lossy(&info.token_name()).into_owned(),
-            chain: info.chain(),
-            decimals: info.decimals(),
-            desc: String::from_utf8_lossy(&info.desc()).into_owned(),
-        }
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TotalAssetInfo<Balance> {
-    pub info: AssetInfo,
-    pub balance: BTreeMap<AssetType, Balance>,
-    pub is_online: bool,
-    pub restrictions: AssetRestrictions,
-}
-
-impl<Balance: Copy + Clone + Zero> From<xpallet_assets_rpc_runtime_api::TotalAssetInfo<Balance>>
-    for TotalAssetInfo<Balance>
-{
-    fn from(info: xpallet_assets_rpc_runtime_api::TotalAssetInfo<Balance>) -> Self {
-        let mut r = BTreeMap::new();
-        AssetType::iter().for_each(|type_| {
-            let balance = if let Some(b) = info.balance.get(type_) {
-                (*b).into()
-            } else {
-                Balance::zero().into()
-            };
-            r.insert(*type_, balance);
-        });
-        TotalAssetInfo::<Balance> {
-            info: info.info.into(),
-            balance: r,
-            is_online: info.is_online,
-            restrictions: info.restrictions,
-        }
     }
 }
 

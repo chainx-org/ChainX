@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::too_many_arguments, clippy::unnecessary_mut_passed)]
 
 use sp_std::collections::btree_map::BTreeMap;
 

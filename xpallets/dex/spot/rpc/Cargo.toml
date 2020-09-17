@@ -18,5 +18,4 @@ sp-api = "2.0.0-rc6"
 sp-runtime = "2.0.0-rc6"
 sp-blockchain = "2.0.0-rc6"
 
-xpallet-dex-spot = { path = "../" }
 xpallet-dex-spot-rpc-runtime-api = { path = "./runtime-api" }
