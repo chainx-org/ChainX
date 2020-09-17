@@ -69,19 +69,13 @@ where
             .map(|map| {
                 map.into_iter()
                     .map(|(id, m)| {
-                        // if balance not use u128, this part could be deleted
-                        let mut r = BTreeMap::new();
-                        AssetType::iter().for_each(|type_| {
-                            let balance = if let Some(b) = m.get(type_) {
-                                *b
-                            } else {
-                                Balance::zero()
-                            };
-                            r.insert(*type_, balance);
-                        });
-                        (id, r)
+                        let balance = AssetType::iter()
+                            .cloned()
+                            .map(|ty| (ty, m.get(&ty).copied().unwrap_or_else(Balance::zero)))
+                            .collect::<BTreeMap<_, _>>();
+                        (id, balance)
                     })
-                    .collect()
+                    .collect::<BTreeMap<_, _>>()
             })
             .map_err(runtime_error_into_rpc_err)
     }
@@ -96,21 +90,19 @@ where
             .map(|map| {
                 map.into_iter()
                     .map(|(id, info)| {
-                        // if balance not use u128, this part could be deleted
-                        let mut r = BTreeMap::new();
-                        AssetType::iter().for_each(|type_| {
-                            let balance = if let Some(b) = info.balance.get(type_) {
-                                *b
-                            } else {
-                                Balance::zero()
-                            };
-                            r.insert(*type_, balance);
-                        });
+                        let balance = AssetType::iter()
+                            .map(|ty| {
+                                (
+                                    *ty,
+                                    info.balance.get(ty).copied().unwrap_or_else(Balance::zero),
+                                )
+                            })
+                            .collect::<BTreeMap<_, _>>();
                         (
                             id,
                             TotalAssetInfo::<Balance> {
                                 info: info.info,
-                                balance: r,
+                                balance,
                                 is_online: info.is_online,
                                 restrictions: info.restrictions,
                             },
