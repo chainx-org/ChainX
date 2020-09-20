@@ -614,7 +614,7 @@ where
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             minimum_penalty: 2 * DOLLARS,
-            offence_severity: 1,
+            offence_severity: 2,
             ..Default::default()
         }),
         xpallet_mining_asset: Some(XMiningAssetConfig {

@@ -47,7 +47,6 @@ use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
-use xp_mining_staking::SessionIndex;
 use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MiningAssetInfo, RpcMinerLedger};
@@ -76,6 +75,7 @@ pub use chainx_primitives::{
     AccountId, AccountIndex, AddrStr, Amount, AssetId, Balance, BlockNumber, ChainAddress, Hash,
     Index, Moment, ReferralId, Signature, Token,
 };
+pub use xp_mining_staking::SessionIndex;
 pub use xp_runtime::Memo;
 
 // xpallet re-exports
