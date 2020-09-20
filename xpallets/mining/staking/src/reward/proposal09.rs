@@ -73,21 +73,30 @@ impl<T: Trait> Module<T> {
     }
 
     /// Reward to all the active validators pro rata.
-    fn distribute_to_active_validators(session_reward: BalanceOf<T>) {
+    fn distribute_to_active_validators(
+        session_reward: BalanceOf<T>,
+    ) -> Vec<(T::AccountId, BalanceOf<T>)> {
         let active_validators = Self::active_validator_votes().collect::<Vec<_>>();
         let mut total_stake = active_validators
             .iter()
             .fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + *x);
         let mut total_reward = session_reward;
-        for (validator, stake) in active_validators.into_iter() {
-            // May become zero after meeting the last one.
-            if !total_stake.is_zero() {
-                let reward = Self::calc_individual_staking_reward(total_reward, stake, total_stake);
-                Self::reward_active_validator(&validator, reward);
-                total_stake -= stake;
-                total_reward -= reward;
-            }
-        }
+        active_validators
+            .into_iter()
+            .filter_map(|(validator, stake)| {
+                // May become zero after meeting the last one.
+                if !total_stake.is_zero() {
+                    let reward =
+                        Self::calc_individual_staking_reward(total_reward, stake, total_stake);
+                    Self::reward_active_validator(&validator, reward);
+                    total_stake -= stake;
+                    total_reward -= reward;
+                    Some((validator, reward))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Issue new PCX to the action intentions and cross mining asset entities
@@ -95,12 +104,12 @@ impl<T: Trait> Module<T> {
     fn distribute_mining_rewards(
         total: BalanceOf<T>,
         treasury_account: &T::AccountId,
-    ) -> BalanceOf<T> {
+    ) -> Vec<(T::AccountId, BalanceOf<T>)> {
         let mining_distribution = Self::mining_distribution_ratio();
         let staking_reward = mining_distribution.calc_staking_reward::<T>(total);
         let max_asset_mining_reward = total - staking_reward;
 
-        Self::distribute_to_active_validators(staking_reward);
+        let validator_rewards = Self::distribute_to_active_validators(staking_reward);
 
         let real_asset_mining_reward = if let Some(treasury_extra) =
             mining_distribution.has_treasury_extra::<T>(max_asset_mining_reward)
@@ -121,13 +130,15 @@ impl<T: Trait> Module<T> {
             Self::mint(treasury_account, unpaid_asset_mining_reward);
         }
 
-        staking_reward
+        validator_rewards
     }
 
     /// Main minting logic.
     ///
     /// Returns the reward balance minted specifically for Staking.
-    pub(super) fn distribute_session_reward_impl_09(session_reward: BalanceOf<T>) -> BalanceOf<T> {
+    pub(super) fn distribute_session_reward_impl_09(
+        session_reward: BalanceOf<T>,
+    ) -> Vec<(T::AccountId, BalanceOf<T>)> {
         let global_distribution = Self::global_distribution_ratio();
         let (treasury_reward, mining_reward) =
             global_distribution.calc_rewards::<T>(session_reward);

@@ -79,7 +79,9 @@ impl<T: Trait> Module<T> {
     }
 
     /// Distribute the session reward to all the receivers, returns the total reward for validators.
-    pub(crate) fn distribute_session_reward(session_index: SessionIndex) -> BalanceOf<T> {
+    pub(crate) fn distribute_session_reward(
+        session_index: SessionIndex,
+    ) -> Vec<(T::AccountId, BalanceOf<T>)> {
         let this_session_reward = Self::this_session_reward(session_index);
 
         let session_reward = Self::try_vesting(session_index, this_session_reward);
