@@ -9,15 +9,15 @@ use serde_json::json;
 
 use chainx_runtime::{
     constants::currency::DOLLARS, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams,
-    BtcTxVerifier, Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
+    BtcTxVerifier, Chain, NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig,
     ElectionsConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig,
     SessionKeys, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig,
-    XAssetsRegistrarConfig, XContractsConfig, XGatewayBitcoinConfig, XGatewayCommonConfig,
-    XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
+    XAssetsRegistrarConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig,
+    XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -144,7 +144,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
             ],
             crate::res::load_mainnet_btc_genesis_header_info,
             crate::genesis::trustees::local_testnet_trustees(),
-            true,
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -180,7 +179,6 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
             ],
             crate::res::load_mainnet_btc_genesis_header_info,
             crate::genesis::trustees::benchmarks_trustees(),
-            true,
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -227,7 +225,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
             ],
             crate::res::load_mainnet_btc_genesis_header_info,
             crate::genesis::trustees::local_testnet_trustees(),
-            true,
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -368,7 +365,6 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
             endowed.clone(),
             crate::res::load_testnet_btc_genesis_header_info,
             crate::genesis::trustees::staging_testnet_trustees(),
-            false,
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -473,7 +469,6 @@ fn testnet_genesis<F>(
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
     bitcoin_info: F,
     trustees: Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)>,
-    enable_println: bool,
 ) -> GenesisConfig
 where
     F: FnOnce() -> BitcoinParams,
@@ -630,12 +625,6 @@ where
                 100000,
                 true,
             )],
-        }),
-        xpallet_contracts: Some(XContractsConfig {
-            current_schedule: ContractsSchedule {
-                enable_println, // this should only be enabled on development chains
-                ..Default::default()
-            },
         }),
     }
 }

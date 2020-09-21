@@ -82,14 +82,12 @@ where
         BlockNumber,
     >,
     C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>,
-    C::Api: xpallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     <C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
     P: TransactionPool + 'static,
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
     use xpallet_assets_rpc::{Assets, XAssetsApi};
-    use xpallet_contracts_rpc::{Contracts, ContractsApi};
     use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
     use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
     use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
@@ -129,7 +127,6 @@ where
     ));
 
     io.extend_with(XAssetsApi::to_delegate(Assets::new(client.clone())));
-    io.extend_with(ContractsApi::to_delegate(Contracts::new(client.clone())));
     io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));
     io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));
     io.extend_with(XMiningAssetApi::to_delegate(XMiningAsset::new(
