@@ -47,7 +47,6 @@ use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
-use xpallet_contracts_rpc_runtime_api::ContractExecResult;
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MinerLedger, MiningAssetInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
@@ -83,8 +82,6 @@ pub use xpallet_assets::{
     AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
     WithdrawalLimit,
 };
-pub use xpallet_contracts::Schedule as ContractsSchedule;
-pub use xpallet_contracts_primitives::XRC20Selector;
 #[cfg(feature = "std")]
 pub use xpallet_gateway_bitcoin::h256_conv_endian_from_str;
 pub use xpallet_gateway_bitcoin::{
@@ -863,19 +860,6 @@ impl xpallet_dex_spot::Trait for Runtime {
     type WeightInfo = weights::xpallet_dex_spot::WeightInfo;
 }
 
-impl xpallet_contracts::Trait for Runtime {
-    type Time = Timestamp;
-    type Randomness = RandomnessCollectiveFlip;
-    type Call = Call;
-    type Event = Event;
-    type DetermineContractAddress = xpallet_contracts::SimpleAddressDeterminer<Runtime>;
-    type TrieIdGenerator = xpallet_contracts::TrieIdFromParentCounter<Runtime>;
-    type StorageSizeOffset = xpallet_contracts::DefaultStorageSizeOffset;
-    type MaxDepth = xpallet_contracts::DefaultMaxDepth;
-    type MaxValueSize = xpallet_contracts::DefaultMaxValueSize;
-    type WeightPrice = pallet_transaction_payment::Module<Self>;
-}
-
 pub struct SimpleTreasuryAccount;
 impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
     fn treasury_account() -> AccountId {
@@ -984,8 +968,6 @@ construct_runtime!(
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
-
-        XContracts: xpallet_contracts::{Module, Call, Config, Storage, Event<T>},
     }
 );
 
@@ -1261,50 +1243,6 @@ impl_runtime_apis! {
             // check multisig address
             let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
             Ok(info)
-        }
-    }
-
-    impl xpallet_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance, BlockNumber>
-        for Runtime
-    {
-        fn call(
-            origin: AccountId,
-            dest: AccountId,
-            value: Balance,
-            gas_limit: u64,
-            input_data: Vec<u8>,
-        ) -> ContractExecResult {
-            let exec_result =
-                XContracts::bare_call(origin, dest, value, gas_limit, input_data);
-            match exec_result {
-                Ok(v) => ContractExecResult::Success {
-                    status: v.status,
-                    data: v.data,
-                },
-                Err(_) => ContractExecResult::Error,
-            }
-        }
-
-        fn get_storage(
-            address: AccountId,
-            key: [u8; 32],
-        ) -> xpallet_contracts_primitives::GetStorageResult {
-            XContracts::get_storage(address, key)
-        }
-
-        fn xrc20_call(
-            id: AssetId,
-            selector: XRC20Selector,
-            data: Vec<u8>,
-        ) -> ContractExecResult {
-            let exec_result = XContracts::call_xrc20(id, selector, data);
-            match exec_result {
-                Ok(v) => ContractExecResult::Success {
-                    status: v.status,
-                    data: v.data,
-                },
-                Err(_) => ContractExecResult::Error,
-            }
         }
     }
 
