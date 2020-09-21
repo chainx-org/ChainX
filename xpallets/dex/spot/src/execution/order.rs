@@ -141,7 +141,7 @@ impl<T: Trait> Module<T> {
             // NOTE: Since the handicap is not always related to a real order,
             // this guard statement is neccessary!
             if order.already_filled > Zero::zero() {
-                order.status = OrderStatus::ParitialFill;
+                order.status = OrderStatus::PartialFill;
             }
 
             <OrderInfoOf<T>>::insert(order.submitter(), order.id(), order.clone());
@@ -309,7 +309,7 @@ impl<T: Trait> Module<T> {
             Ordering::Greater => {
                 panic!("Already filled of an order can't greater than the order's amount.");
             }
-            Ordering::Less => OrderStatus::ParitialFill,
+            Ordering::Less => OrderStatus::PartialFill,
             Ordering::Equal => OrderStatus::Filled,
         };
         order.last_update_at = <frame_system::Module<T>>::block_number();
