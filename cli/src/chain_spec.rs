@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use chainx_runtime::{
-    constants, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams, BtcTxVerifier, Chain,
-    ContractsSchedule, NetworkType, TrusteeInfoConfig,
+    constants::currency::DOLLARS, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams,
+    BtcTxVerifier, Chain, ContractsSchedule, NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
@@ -128,7 +128,7 @@ fn as_properties(network: NetworkType) -> Properties {
 pub fn development_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
-    let endowed_balance = 50 * constants::currency::DOLLARS;
+    let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
         testnet_genesis(
             wasm_binary,
@@ -164,7 +164,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 pub fn benchmarks_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
-    let endowed_balance = 50 * constants::currency::DOLLARS;
+    let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
         testnet_genesis(
             wasm_binary,
@@ -200,7 +200,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
     let wasm_binary =
         WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
-    let endowed_balance = 50 * constants::currency::DOLLARS;
+    let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
         testnet_genesis(
             wasm_binary,
@@ -349,7 +349,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
     ];
 
     let assets = testnet_assets();
-    let endowed_balance = 50 * constants::currency::DOLLARS;
+    let endowed_balance = 50 * DOLLARS;
     let mut endowed = BTreeMap::new();
     let pcx_id = pcx().0;
     let endowed_info = initial_authorities
@@ -478,9 +478,9 @@ fn testnet_genesis<F>(
 where
     F: FnOnce() -> BitcoinParams,
 {
-    const ENDOWMENT: Balance = 10_000_000 * constants::currency::DOLLARS;
-    const STASH: Balance = 100 * constants::currency::DOLLARS;
-    const STAKING_LOCKED: Balance = 1_000 * constants::currency::DOLLARS;
+    const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
+    const STASH: Balance = 100 * DOLLARS;
+    const STAKING_LOCKED: Balance = 1_000 * DOLLARS;
     let (assets, assets_restrictions) = init_assets(assets);
 
     let endowed_accounts = endowed
@@ -613,6 +613,8 @@ where
             vesting_account,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
+            minimum_penalty: 2 * DOLLARS,
+            offence_severity: 2,
             ..Default::default()
         }),
         xpallet_mining_asset: Some(XMiningAssetConfig {

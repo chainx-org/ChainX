@@ -61,11 +61,11 @@ pub enum OrderStatus {
     /// Order just got created.
     Created,
     /// Order has been filled partially.
-    ParitialFill,
+    PartialFill,
     /// Order has been filled completely.
     Filled,
     /// Order has been canceled with partial fill.
-    ParitialFillAndCanceled,
+    PartialFillAndCanceled,
     /// Order has been canceled without any deal.
     Canceled,
 }
@@ -343,9 +343,9 @@ where
         self.already_filled >= self.amount()
     }
 
-    /// Returns true if the `status` of order is `Canceled` or `ParitialFillAndCanceled`.
+    /// Returns true if the `status` of order is `Canceled` or `PartialFillAndCanceled`.
     pub fn is_canceled(&self) -> bool {
-        self.status == OrderStatus::Canceled || self.status == OrderStatus::ParitialFillAndCanceled
+        self.status == OrderStatus::Canceled || self.status == OrderStatus::PartialFillAndCanceled
     }
 
     fn _sub_remaining(&mut self, value: Balance) {
@@ -370,10 +370,10 @@ where
     /// Updates the status of an order when it's being canceled.
     ///
     /// If the `already_filled` is not zero, then the status of order become
-    /// `ParitialFillAndCanceled`, otherwise it's `Canceled`.
+    /// `PartialFillAndCanceled`, otherwise it's `Canceled`.
     pub fn update_status_on_cancel(&mut self) {
         self.status = if !self.already_filled.is_zero() {
-            OrderStatus::ParitialFillAndCanceled
+            OrderStatus::PartialFillAndCanceled
         } else {
             OrderStatus::Canceled
         };

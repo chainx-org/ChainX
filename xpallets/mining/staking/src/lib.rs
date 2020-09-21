@@ -79,6 +79,11 @@ pub trait Trait: frame_system::Trait {
     /// Interface for interacting with a session module.
     type SessionInterface: self::SessionInterface<Self::AccountId>;
 
+    /// The number of unfinished sessions in the first halving epoch.
+    ///
+    /// When the ChainX 2.0 migration happens, the first halving epoch is not over yet.
+    type MigrationSessionOffset: Get<SessionIndex>;
+
     /// An expected duration of the session.
     ///
     /// This parameter is used to determine the longevity of `heartbeat` transaction
@@ -108,8 +113,7 @@ decl_storage! {
             BondRequirement<BalanceOf<T>>;
 
         /// The length of a staking era in sessions.
-        pub SessionsPerEra get(fn sessions_per_era) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(12);
+        pub SessionsPerEra get(fn sessions_per_era) config(): SessionIndex = 12;
 
         /// The length of the bonding duration in blocks.
         pub BondingDuration get(fn bonding_duration) config():
@@ -199,6 +203,7 @@ decl_storage! {
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
+            assert!(config.offence_severity > 1, "Offence severity too weak");
             for &(ref v, ref referral_id, balance) in &config.validators {
                 assert!(
                     Module::<T>::free_balance(v) >= balance,
@@ -288,6 +293,8 @@ decl_error! {
         OccupiedReferralIdentity,
         /// Failed to pass the xss check.
         XssCheckFailed,
+        /// Offence severity is too weak to kick out an offender.
+        WeakOffenceSeverity,
     }
 }
 
@@ -473,6 +480,26 @@ decl_module! {
         fn set_validator_bonding_duration(origin, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             ValidatorBondingDuration::<T>::put(new);
+        }
+
+        // FIXME: add to WeightInfo once it's stable.
+        #[weight = 10_000_000]
+        fn set_minimum_penalty(origin, #[compact] new: BalanceOf<T>) {
+            ensure_root(origin)?;
+            MinimumPenalty::<T>::put(new);
+        }
+
+        #[weight = 10_000_000]
+        fn set_sessions_per_era(origin, #[compact] new: SessionIndex) {
+            ensure_root(origin)?;
+            SessionsPerEra::put(new);
+        }
+
+        #[weight = 10_000_000]
+        fn set_offence_severity(origin, #[compact] new: u32) {
+            ensure_root(origin)?;
+            ensure!(new > 1, Error::<T>::WeakOffenceSeverity);
+            OffenceSeverity::put(new);
         }
     }
 }

@@ -183,9 +183,9 @@
     "OrderStatus": {
         "_enum": [
             "Created",
-            "ParitialFill",
+            "PartialFill",
             "Filled",
-            "ParitialFillAndCanceled",
+            "PartialFillAndCanceled",
             "Canceled"
         ]
     },

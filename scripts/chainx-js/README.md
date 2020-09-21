@@ -33,6 +33,6 @@ $ ./types_gen.py
 # └── chainx_types.json
 ```
 
-The auto generated `chainx_types.json` and `chainx_rpc.json` **need a review** to handle the corner cases because the script unevitably has some liminations.
+The auto generated `chainx_types.json` and `chainx_rpc.json` **need a review** to handle the corner cases because the script unevitably has some limitations.
 
 If some types are failed to be extracted correctly using the script, then you just write them into `chainx_types_manual.json` or `chainx_rpc_manual.json` by hand. These manully created types will always override the auto generated ones.

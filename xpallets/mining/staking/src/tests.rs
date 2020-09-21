@@ -724,22 +724,22 @@ fn referral_id_should_work() {
 fn migration_session_offset_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let test_cases = vec![
-            (MIGRATION_SESSION_OFFSET, INITIAL_REWARD),
-            (MIGRATION_SESSION_OFFSET + 1, INITIAL_REWARD / 2),
+            (MigrationSessionOffset::get(), INITIAL_REWARD),
+            (MigrationSessionOffset::get() + 1, INITIAL_REWARD / 2),
             (
-                MIGRATION_SESSION_OFFSET + SESSIONS_PER_ROUND,
+                MigrationSessionOffset::get() + SESSIONS_PER_ROUND,
                 INITIAL_REWARD / 2,
             ),
             (
-                MIGRATION_SESSION_OFFSET + SESSIONS_PER_ROUND + 1,
+                MigrationSessionOffset::get() + SESSIONS_PER_ROUND + 1,
                 INITIAL_REWARD / 4,
             ),
             (
-                MIGRATION_SESSION_OFFSET + SESSIONS_PER_ROUND * 2,
+                MigrationSessionOffset::get() + SESSIONS_PER_ROUND * 2,
                 INITIAL_REWARD / 4,
             ),
             (
-                MIGRATION_SESSION_OFFSET + SESSIONS_PER_ROUND * 2 + 1,
+                MigrationSessionOffset::get() + SESSIONS_PER_ROUND * 2 + 1,
                 INITIAL_REWARD / 8,
             ),
         ];

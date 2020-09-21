@@ -200,12 +200,14 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = 50;
+    pub const MigrationSessionOffset: u32 = 500;
 }
 
 impl Trait for Test {
     type Currency = Balances;
     type Event = MetaEvent;
     type AssetMining = ();
+    type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
@@ -270,6 +272,7 @@ impl ExtBuilder {
             vesting_account: VESTING_ACCOUNT,
             glob_dist_ratio: (12, 88),
             mining_ratio: (10, 90),
+            offence_severity: 2,
             ..Default::default()
         }
         .assimilate_storage(&mut storage);

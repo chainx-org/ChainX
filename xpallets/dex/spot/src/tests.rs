@@ -312,14 +312,14 @@ fn match_order_should_work() {
         let order_1_1 = XSpot::order_info_of(1, 1).unwrap();
 
         assert_eq!(order_1_1.already_filled, 500);
-        assert_eq!(order_1_1.status, OrderStatus::ParitialFill);
+        assert_eq!(order_1_1.status, OrderStatus::PartialFill);
         assert_eq!(order_1_1.executed_indices, vec![0]);
 
         assert_ok!(t_put_order_sell(2, 0, 700, 1_000_100));
 
         assert_eq!(XSpot::order_info_of(1, 1), None);
         let order_2_1 = XSpot::order_info_of(2, 1).unwrap();
-        assert_eq!(order_2_1.status, OrderStatus::ParitialFill);
+        assert_eq!(order_2_1.status, OrderStatus::PartialFill);
         assert_eq!(order_2_1.already_filled, 500);
         assert_eq!(order_2_1.remaining, 200);
         assert_eq!(order_2_1.executed_indices, vec![1]);

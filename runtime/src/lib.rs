@@ -75,6 +75,7 @@ pub use chainx_primitives::{
     AccountId, AccountIndex, AddrStr, Amount, AssetId, Balance, BlockNumber, ChainAddress, Hash,
     Index, Moment, ReferralId, Signature, Token,
 };
+pub use xp_mining_staking::SessionIndex;
 pub use xp_runtime::Memo;
 
 // xpallet re-exports
@@ -421,8 +422,8 @@ impl pallet_im_online::Trait for Runtime {
 impl pallet_session_historical::Trait for Runtime {
     type FullIdentification = AccountId;
     /// Substrate: given the stash account ID, find the active exposure of nominators on that account.
-    /// ChainX: we don't need such info due to the reward pot.
-    type FullIdentificationOf = ();
+    /// ChainX: the full identity is always the validator account itself.
+    type FullIdentificationOf = SimpleValidatorIdConverter;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -882,9 +883,15 @@ impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccou
     }
 }
 
+parameter_types! {
+    /// FIXME: replace this when the migration offset is determinated.
+    pub const MigrationSessionOffset: SessionIndex = 500;
+}
+
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
     type SessionInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;

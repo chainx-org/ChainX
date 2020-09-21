@@ -215,17 +215,18 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 impl<T: Trait> Module<T> {
     /// Issue new session reward and try slashing the offenders at the same time.
     fn mint_and_slash(session_index: SessionIndex) {
-        // TODO: the whole flow of session changes?
-        //
         // Only the active validators can be rewarded.
-        let staking_reward = Self::distribute_session_reward(session_index);
+        let validator_rewards = Self::distribute_session_reward(session_index);
 
-        let force_chilled = Self::slash_offenders_in_session(staking_reward);
-
-        if !force_chilled.is_empty() {
-            Self::deposit_event(RawEvent::ForceChilled(session_index, force_chilled));
-            // Force a new era if some offender's reward pot has been wholly slashed.
-            Self::ensure_new_era();
+        let offenders = <OffendersInSession<T>>::take();
+        if !offenders.is_empty() {
+            let force_chilled = Self::slash_offenders_in_session(offenders, validator_rewards);
+            if !force_chilled.is_empty() {
+                debug!("Force chilled: {:?}", force_chilled);
+                Self::deposit_event(RawEvent::ForceChilled(session_index, force_chilled));
+                // Force a new era if some offender's reward pot has been wholly slashed.
+                Self::ensure_new_era();
+            }
         }
     }
 }
@@ -391,6 +392,7 @@ where
         slash_fraction: &[Perbill],
         _slash_session: SessionIndex,
     ) -> Result<OnOffenceRes, ()> {
+        debug!("[on_offence]offenders:{:?}", offenders);
         // TODO: make use of slash_fraction
         for (details, _slash_fraction) in offenders.iter().zip(slash_fraction) {
             // reporters are actually always empty.

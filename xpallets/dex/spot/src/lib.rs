@@ -458,7 +458,7 @@ impl<T: Trait> Module<T> {
 
         let order = Self::get_order(who, order_id)?;
         ensure!(
-            order.status == OrderStatus::Created || order.status == OrderStatus::ParitialFill,
+            order.status == OrderStatus::Created || order.status == OrderStatus::PartialFill,
             Error::<T>::CancelOrderNotAllowed
         );
 
