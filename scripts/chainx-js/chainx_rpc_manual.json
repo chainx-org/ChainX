@@ -9,7 +9,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
+            "type": "BTreeMap<AssetId, TotalAssetInfo>"
         }
     }
 }

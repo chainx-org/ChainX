@@ -43,7 +43,7 @@ if not shutil.which('fd'):
 
 NEW_TYPES = [
     "AssetType", "Chain", "AddrStr", "OrderExecutedInfo", "TradingPairProfile",
-    "TradingPairId", "PriceFluctuation", "AddrStr", "AssetInfo", "AssetLedger",
+    "TradingPairId", "PriceFluctuation", "AssetInfo", "AssetLedger",
     "AssetRestriction", "AssetRestrictions", "AssetType", "BtcAddress",
     "BtcHeader", "BtcHeaderInfo", "BtcNetwork", "BtcParams", "BondRequirement",
     "ClaimRestriction", "Desc", "FixedAssetPower", "GlobalDistribution",
@@ -53,8 +53,7 @@ NEW_TYPES = [
     "StakingRequirement", "Token", "TradingHistoryIndex", "TradingPairId",
     "TradingPairInfo", "TradingPairProfile", "UnbondedIndex",
     "ValidatorLedger", "ValidatorProfile", "XRC20Selector",
-    "RpcNominatorLedger", "RpcMinerLedger", "RpcAssetLedger",
-    "MiningAssetInfo", "LockedType", "NominatorInfo", "RpcUnbonded"
+    "MiningAssetInfo", "LockedType", "NominatorInfo", "Unbonded"
 ]
 
 # Change the working directory to project root directory.
