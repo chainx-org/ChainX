@@ -22,7 +22,7 @@ fn test_genesis() {
             b"abc".to_vec(),
         )
         .unwrap(),
-        AssetRestrictions::DESTROY_USABLE,
+        AssetRestrictions::DestroyUsable,
     );
 
     let efd_assets = (
@@ -35,7 +35,7 @@ fn test_genesis() {
             b"efd".to_vec(),
         )
         .unwrap(),
-        AssetRestrictions::TRANSFER | AssetRestrictions::DESTROY_USABLE,
+        AssetRestrictions::Transfer | AssetRestrictions::DestroyUsable,
     );
 
     let mut endowed = BTreeMap::new();
