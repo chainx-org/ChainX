@@ -31,9 +31,11 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 use crate::genesis::trustees::TrusteeParams;
 use crate::res::BitcoinParams;
+use sc_service::config::TelemetryEndpoints;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const CHAINX_TELEMETRY_URL: &str = "ws://stats.chainx.org:1024/submit/";
 
 /// Node `ChainSpec` extensions.
 ///
@@ -379,6 +381,149 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         ],
         None,
         Some("chainx-staging-testnet"),
+        Some(as_properties(NetworkType::Testnet)),
+        Default::default(),
+    ))
+}
+
+pub fn testnet_config() -> Result<ChainSpec, String> {
+    let wasm_binary = include_bytes!("./wasm/chainx_runtime_testnet.compact.wasm");
+    // subkey inspect-key --uri "$SECRET"
+    // 5ERUBzfWtZzB59HM2qekCKzPm9sFo433z3V4rGgJXd7ugWNv
+    let root_key: AccountId =
+        hex!["684e9d27ae6b5ab3a673616de27bd3e455062c83090de607ab49a2f7396b5a19"].into();
+    // bash:
+    // for i in 1 2 3; do for j in validator blockauthor; do subkey inspect-key --uri "$SECRET//$i//$j"; done; done
+    // for i in 1 2 3; do for j in aura; do subkey inspect-key --scheme sr25519  --uri "$SECRET//$i//$j"; done; done
+    // for i in 1 2 3; do for j in grandpa; do subkey inspect-key --scheme ed25519 --uri "$SECRET//$i//$j"; done; done
+    // for i in 1 2 3; do for j in im_online; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
+    // for i in 1 2 3; do for j in authority_discovery; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
+
+    // validator & blockauthor
+    let (validator1, blockauthor1): (AccountId, AccountId) = (
+        // 5Ca46gRUa2oS6GukzKph8qFfn4WdhP5yhuRaTuzaXsKjfGgM
+        hex!["16624186f2ea93a21f34e00ae622959e40d841231b26e625be93f75137b2a10d"].into(),
+        // 5Ca1ayQB2GfVb6tPjB849aViHF4vVgBs6USiNVqGeKorPwMw
+        hex!["1659cc960f00d5c82662bd97b516330caf9759d7fa7b98fee45005765a19287c"].into(),
+    );
+    let (validator2, blockauthor2): (AccountId, AccountId) = (
+        // 5DV17DNeRCidmacaP1MdhD8YV8A94PmVyr4eRcKq8tG6Q17C
+        hex!["3ec431c8b3ae28095ad652f5531a770ef21e59779d4a3a46e0217baa4c614624"].into(),
+        // 5FWYBfwLKQhGVqbUZevjkXpM9EqS79tYRkRAwUvnDT2QdJa8
+        hex!["9868855492e0bbf55034b9eb52f0200ede9a0e47b5388074163c0fdc7251cd43"].into(),
+    );
+    let (validator3, blockauthor3): (AccountId, AccountId) = (
+        // 5ERY5k4cDMhhE7B8PRA26fCs1VbHNZJAhHoiuZhzP18cxq8T
+        hex!["685bb75b531394c4d522003784cc62fa15fcab8fe16c19c3f4a1eeae308afa4f"].into(),
+        // 5FCPo3uswynCs1rPvCpnjFykhN3jmeUH51ocMqfpzPq9jVwc
+        hex!["8a91dc3768bdba8bba11da5c3b2ae954eede9591a6b7a2d156637d84aee5623c"].into(),
+    );
+
+    // aura
+    // 5EZ47mio3fjhb1iwGSLKZGmgYvhZRJakfGmPfAemMAMBAA7e
+    let aura1: AuraId =
+        hex!["6e178a72736139a91e32dadeb57c2822501690e9d8f1516a04b18372cd981831"].unchecked_into();
+    // 5EpnwHC4QjhHXq9tGV4FE94GG17JBDDBXfBALPu5VQTVqbyp
+    let aura2: AuraId =
+        hex!["7a185d241085c938fda96b54059632f885866befb1183aa4dd456f8a406db70c"].unchecked_into();
+    // 5CV7jA56wV3mjzLi4JMg4oXATNpwKfcet61NwYJqAAiRsEH9
+    let aura3: AuraId =
+        hex!["129e3eb4543ed8188d67df20122bb73add3f0ea5fdbd480fdbb9f6b4c14dd872"].unchecked_into();
+
+    // grandpa
+    // 5EntNNUQB97ui1F2g1aT9tTBUHsUY3Zi6noVLH5uVfoFadYR
+    let grandpa1: GrandpaId =
+        hex!["78a4292a2fbccbedc19663a787d13ad5e1af9b1aa4cc7d28adb10c239965eaf5"].unchecked_into();
+    // 5CYecRFedCR6rjCe3d6AwLi9AsArdga8fdzUPfCR11bp45Ax
+    let grandpa2: GrandpaId =
+        hex!["154ff203b637f4dd8d3e186e6820414bb43ccddf0022f3d1754c3862decd3696"].unchecked_into();
+    // 5Hj97jQ5SE4TWbpJX1w8CtjZftK9ZzvHUtQWtuiunc1hfTG2
+    let grandpa3: GrandpaId =
+        hex!["fa7d863e427ebb01df0c66d05cfbbb043ff8abb964786a4ee8d2eceda2b43fef"].unchecked_into();
+
+    // im-online
+    // 5GmSNWiRT6GMptZsb97kAMC3eqRikMP4uA8m96JQgCdv5vKf
+    let im_online1: ImOnlineId =
+        hex!["d001dde321a31457fc615210754a49f9793d22d282e3bb7153ed4257dd238777"].unchecked_into();
+    // 5G25Rj3gBQG1bd9sSGzXNdD6c1zTm7W1srBWusjTrA1V6paZ
+    let im_online2: ImOnlineId =
+        hex!["aeefcefafc41d8b69327cc61e5d9961769851f5238f4cf8ce7f149bf9c9cc85d"].unchecked_into();
+    // 5EtJ2KYfVdCscuBrBrV6KVvq9eqhajS9MpHPY9BoEWrhxGCw
+    let im_online3: ImOnlineId =
+        hex!["7cc403ead4673f243779bb77041e8791f85fc42ebfa2dbffd7ddcc68e6321807"].unchecked_into();
+
+    // authority-discovery
+    // 5F4kvJLWoKr9ikn3pEXpTCfLDnfpLAVUf2itbFuJM1NdLuUM
+    let authority_discovery1: AuthorityDiscoveryId =
+        hex!["84bf028f518c5039c30400da70909f41346c2078ae32d406eb7b74829f13904f"].unchecked_into();
+    // 5EhrqABtJXMpzVXu2oy6AQTUAoAAUBikDhXVxCYSfvnox2eQ
+    let authority_discovery2: AuthorityDiscoveryId =
+        hex!["74cec1864e320408617c7276e98fe2aa75c1f552f2a5621ead78d6c43b390a28"].unchecked_into();
+    // 5GTRgcMghrEz92uKLvQLX9opt5SnonYNF9fEqAHooAss2TNq
+    let authority_discovery3: AuthorityDiscoveryId =
+        hex!["c245222eed6474d094baf1db1225a18dae39567fa16dd7ab0e181e5770d73e26"].unchecked_into();
+
+    let initial_authorities: Vec<AuthorityKeysTuple> = vec![
+        (
+            (validator1, b"Validator1".to_vec()),
+            blockauthor1,
+            aura1,
+            grandpa1,
+            im_online1,
+            authority_discovery1,
+        ),
+        (
+            (validator2, b"Validator2".to_vec()),
+            blockauthor2,
+            aura2,
+            grandpa2,
+            im_online2,
+            authority_discovery2,
+        ),
+        (
+            (validator3, b"Validator3".to_vec()),
+            blockauthor3,
+            aura3,
+            grandpa3,
+            im_online3,
+            authority_discovery3,
+        ),
+    ];
+
+    let assets = testnet_assets();
+    let endowed_balance = 50 * DOLLARS;
+    let mut endowed = BTreeMap::new();
+    let pcx_id = pcx().0;
+    let endowed_info = initial_authorities
+        .iter()
+        .map(|i| ((i.0).0.clone(), endowed_balance))
+        .collect::<Vec<_>>();
+    endowed.insert(pcx_id, endowed_info);
+
+    let constructor = move || {
+        testnet_genesis(
+            &wasm_binary[..],
+            initial_authorities.clone(),
+            root_key.clone(),
+            root_key.clone(), // use root key as vesting_account
+            assets.clone(),
+            endowed.clone(),
+            crate::res::load_testnet_btc_genesis_header_info,
+            crate::genesis::trustees::staging_testnet_trustees(),
+        )
+    };
+    Ok(ChainSpec::from_genesis(
+        "ChainX Testnet",
+        "chainx_testnet",
+        ChainType::Live,
+        constructor,
+        vec![
+            "/dns/p2p.testnet-1.chainx.org/tcp/30333/p2p/12D3KooWQq7h1cqwRqFaRnp7LxcWmBAzJtizS4uckJrxyK5KHron".to_string().try_into().expect("must be valid bootnode"),
+            "/dns/p2p.testnet-2.chainx.org/tcp/30334/p2p/12D3KooWNKCPciz7iAJ6DBqSygsfzHCVdoMCMWoBgo1EgHMrTpDN".to_string().try_into().expect("must be valid bootnode"),
+            "/dns/p2p.testnet-3.chainx.org/tcp/30335/p2p/12D3KooWLuxACVFoeddQ4ja68C7Y4qNrXtpBC9gx7akRPacnvoJe".to_string().try_into().expect("must be valid bootnode"),
+        ],
+        Some(TelemetryEndpoints::new(vec![(CHAINX_TELEMETRY_URL.to_string(), 0)]).expect("Testnet telemetry url is valid; qed")),
+        Some("chainx-testnet"),
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
