@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use chainx_runtime::{
-    constants::currency::DOLLARS, AssetInfo, AssetRestrictions, BtcParams,
-    BtcTxVerifier, Chain, NetworkType, TrusteeInfoConfig,
+    constants::currency::DOLLARS, AssetInfo, AssetRestrictions, BtcParams, BtcTxVerifier, Chain,
+    NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{

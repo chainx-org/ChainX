@@ -248,7 +248,10 @@ decl_module! {
 
 // others
 impl<T: Trait> Module<T> {
-    fn set_asset_restrictions(asset_id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
+    fn set_asset_restrictions(
+        asset_id: AssetId,
+        restrictions: AssetRestrictions,
+    ) -> DispatchResult {
         xpallet_assets_registrar::Module::<T>::ensure_asset_exists(&asset_id)?;
         AssetRestrictionsOf::insert(asset_id, restrictions);
         Ok(())
