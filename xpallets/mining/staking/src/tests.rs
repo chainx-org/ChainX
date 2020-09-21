@@ -8,14 +8,14 @@ fn t_issue_pcx(to: AccountId, value: Balance) {
     XStaking::mint(&to, value);
 }
 
-fn t_register(who: AccountId) -> DispatchResult {
+fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
     let mut referral_id = who.to_string().as_bytes().to_vec();
 
     if referral_id.len() < 2 {
         referral_id.extend_from_slice(&[0, 0, 0, who as u8]);
     }
 
-    XStaking::register(Origin::signed(who), referral_id)
+    XStaking::register(Origin::signed(who), referral_id, initial_bond)
 }
 
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
@@ -44,8 +44,7 @@ fn t_system_block_number_inc(number: BlockNumber) {
 
 fn t_make_a_validator_candidate(who: AccountId, self_bonded: Balance) {
     t_issue_pcx(who, self_bonded);
-    assert_ok!(t_register(who));
-    assert_ok!(t_bond(who, who, self_bonded));
+    assert_ok!(t_register(who, self_bonded));
 }
 
 fn t_start_session(session_index: SessionIndex) {
@@ -706,16 +705,18 @@ fn referral_id_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         assert_ok!(XStaking::register(
             Origin::signed(111),
-            b"referral1".to_vec()
+            b"referral1".to_vec(),
+            0
         ));
         assert_err!(
-            XStaking::register(Origin::signed(112), b"referral1".to_vec()),
+            XStaking::register(Origin::signed(112), b"referral1".to_vec(), 0),
             Error::<Test>::OccupiedReferralIdentity
         );
 
         assert_ok!(XStaking::register(
             Origin::signed(112),
-            b"referral2".to_vec()
+            b"referral2".to_vec(),
+            0
         ));
     });
 }
