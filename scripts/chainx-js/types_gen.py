@@ -49,10 +49,10 @@ NEW_TYPES = [
     "ClaimRestriction", "Desc", "FixedAssetPower", "GlobalDistribution",
     "HandicapInfo", "Memo", "MinerLedger", "MiningDistribution", "NetworkType",
     "NominatorLedger", "Order", "OrderExecutedInfo", "OrderId", "OrderInfo",
-    "OrderType", "Price", "PriceFluctuation", "Selector", "Side",
+    "OrderType", "Price", "PriceFluctuation", "Side",
     "StakingRequirement", "Token", "TradingHistoryIndex", "TradingPairId",
     "TradingPairInfo", "TradingPairProfile", "UnbondedIndex",
-    "ValidatorLedger", "ValidatorProfile", "XRC20Selector",
+    "ValidatorLedger", "ValidatorProfile",
     "MiningAssetInfo", "LockedType", "NominatorInfo", "Unbonded"
 ]
 
