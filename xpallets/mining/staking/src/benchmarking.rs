@@ -32,9 +32,9 @@ pub fn create_validator<T: Trait>(string: &'static str, n: u32, value: u32) -> T
     assert!(crate::Module::<T>::register(
         RawOrigin::Signed(validator.clone()).into(),
         n.to_be_bytes().to_vec(),
+        value.into()
     )
     .is_ok());
-    b_bond::<T>(validator.clone(), validator.clone(), value);
     validator
 }
 
@@ -47,7 +47,7 @@ benchmarks! {
     register {
         let validator = create_funded_user::<T>("validator", u, 100);
         let referral_id = (u as u32).to_be_bytes();
-    }: _(RawOrigin::Signed(validator.clone()), referral_id.to_vec())
+    }: _(RawOrigin::Signed(validator.clone()), referral_id.to_vec(), 10.into())
     verify {
         assert!(Validators::<T>::contains_key(validator));
     }
@@ -125,7 +125,7 @@ benchmarks! {
     chill {
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
         if !Module::<T>::is_validator(&validator) {
-            Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec())?;
+            Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100.into())?;
         }
     }: _(RawOrigin::Signed(validator.clone()))
     verify {
@@ -135,7 +135,7 @@ benchmarks! {
     validate {
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
         if !Module::<T>::is_validator(&validator) {
-            Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec())?;
+            Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100.into())?;
         }
         Module::<T>::chill(RawOrigin::Signed(validator.clone()).into())?;
     }: _(RawOrigin::Signed(validator.clone()))

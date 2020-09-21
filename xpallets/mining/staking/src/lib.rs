@@ -447,7 +447,7 @@ decl_module! {
         /// the referral mechanism in Asset Mining. In the context of codebase, we
         /// always use the concept of referral id.
         #[weight = T::WeightInfo::register()]
-        pub fn register(origin, validator_nickname: ReferralId) {
+        pub fn register(origin, validator_nickname: ReferralId, #[compact] initial_bond: BalanceOf<T>) {
             let sender = ensure_signed(origin)?;
             Self::check_referral_id(&validator_nickname)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::AlreadyValidator);
@@ -455,7 +455,11 @@ decl_module! {
                 (Self::validator_set().count() as u32) < MaximumValidatorCount::get(),
                 Error::<T>::TooManyValidators
             );
+            ensure!(initial_bond <= Self::free_balance(&sender), Error::<T>::InsufficientBalance);
             Self::apply_register(&sender, validator_nickname);
+            if !initial_bond.is_zero() {
+                Self::apply_bond(&sender, &sender, initial_bond)?;
+            }
         }
 
         #[weight = T::WeightInfo::set_validator_count()]
