@@ -355,6 +355,7 @@ impl ExtBuilder {
             vesting_account: VESTING_ACCOUNT,
             glob_dist_ratio: (12, 88),
             mining_ratio: (10, 90),
+            offence_severity: 2,
             ..Default::default()
         }
         .assimilate_storage(&mut storage);
