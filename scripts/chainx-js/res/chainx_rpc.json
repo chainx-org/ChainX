@@ -13,7 +13,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AssetId, BTreeMap<AssetType, RpcBalance<Balance>>>"
+            "type": "BTreeMap<AssetId, BTreeMap<AssetType, Balance>>"
         },
         "getAssets": {
             "description": "get all assets balance and infos",
@@ -24,7 +24,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AssetId, TotalAssetInfoForRpc>"
+            "type": "BTreeMap<AssetId, TotalAssetInfo>"
         }
     },
     "xspot": {
@@ -37,7 +37,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "Vec<FullPairInfo<RpcPrice, BlockNumber>>"
+            "type": "Vec<FullPairInfo<Price, BlockNumber>>"
         },
         "getOrdersByAccount": {
             "description": "Get the orders of an account.",
@@ -60,7 +60,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "Page<Vec<RpcOrder<TradingPairId, AccountId, RpcBalance, RpcPrice, BlockNumber>>>"
+            "type": "Page<Vec<RpcOrder<TradingPairId, AccountId, Balance, Price, BlockNumber>>>"
         },
         "getDepth": {
             "description": "Get the depth of a trading pair.",
@@ -79,7 +79,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "Option<Depth<RpcPrice, RpcBalance>>"
+            "type": "Option<Depth<Price, Balance>>"
         }
     },
     "xgatewaycommon": {
@@ -111,7 +111,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "WithdrawalLimit<RpcBalance>"
+            "type": "WithdrawalLimit<Balance>"
         },
         "verifyWithdrawal": {
             "description": "Use the params to verify whether the withdrawal apply is valid. Notice those params is same as the params for call `XGatewayCommon::withdraw(...)`, including checking address is valid or something else. Front-end should use this rpc to check params first, than could create the extrinsic.",
@@ -245,7 +245,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "Vec<MiningAssetInfo<AccountId, RpcBalance, BlockNumber>>"
+            "type": "Vec<MiningAssetInfo<AccountId, Balance, BlockNumber>>"
         },
         "getDividendByAccount": {
             "description": "Get the asset mining dividends info given the asset miner AccountId.",
@@ -260,7 +260,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AssetId, RpcBalance>"
+            "type": "BTreeMap<AssetId, Balance>"
         },
         "getMinerLedgerByAccount": {
             "description": "Get the mining ledger details given the asset miner AccountId.",
@@ -275,7 +275,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AssetId, RpcMinerLedger<BlockNumber>>"
+            "type": "BTreeMap<AssetId, MinerLedger<BlockNumber>>"
         }
     },
     "xstaking": {
@@ -288,7 +288,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "Vec<ValidatorInfo<AccountId, RpcBalance, BlockNumber>>"
+            "type": "Vec<ValidatorInfo<AccountId, Balance, BlockNumber>>"
         },
         "getValidatorByAccount": {
             "description": "Get overall information given the validator AccountId.",
@@ -303,7 +303,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "ValidatorInfo<AccountId, RpcBalance, BlockNumber>"
+            "type": "ValidatorInfo<AccountId, Balance, BlockNumber>"
         },
         "getDividendByAccount": {
             "description": "Get the staking dividends info given the staker AccountId.",
@@ -318,7 +318,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AccountId, RpcBalance>"
+            "type": "BTreeMap<AccountId, Balance>"
         },
         "getNominationByAccount": {
             "description": "Get the nomination details given the staker AccountId.",
@@ -333,7 +333,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AccountId, RpcNominatorLedger<RpcBalance, BlockNumber>>"
+            "type": "BTreeMap<AccountId, NominatorLedger<Balance, BlockNumber>>"
         },
         "getNominatorByAccount": {
             "description": "Get individual nominator information given the nominator AccountId.",

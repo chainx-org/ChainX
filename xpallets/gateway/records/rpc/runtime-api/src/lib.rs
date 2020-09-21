@@ -1,17 +1,19 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
-use codec::Codec;
+#![allow(clippy::too_many_arguments, clippy::unnecessary_mut_passed)]
 
 use sp_std::collections::btree_map::BTreeMap;
+
+use codec::Codec;
 
 pub use chainx_primitives::{AssetId, Decimals};
 pub use xpallet_assets::Chain;
 pub use xpallet_gateway_records::{Withdrawal, WithdrawalState};
 
 sp_api::decl_runtime_apis! {
-    pub trait XGatewayRecordsApi<AccountId, Balance, BlockNumber> where
+    pub trait XGatewayRecordsApi<AccountId, Balance, BlockNumber>
+    where
         AccountId: Codec,
         Balance: Codec,
         BlockNumber: Codec,

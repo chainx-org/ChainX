@@ -13,7 +13,6 @@ sp-api = { version = "2.0.0-rc6", default-features = false }
 sp-std = { version = "2.0.0-rc6", default-features = false }
 
 xpallet-mining-staking = { path = "../..", default-features = false }
-xpallet-support = { path = "../../../../support", default-features = false }
 
 [features]
 default = ["std"]
@@ -23,5 +22,4 @@ std = [
     "sp-std/std",
 
     "xpallet-mining-staking/std",
-    "xpallet-support/std",
 ]

@@ -2,26 +2,30 @@
 
 //! RPC interface for the DEX Spot module.
 
+#![allow(clippy::type_complexity)]
+
+use std::sync::Arc;
+
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
+use serde::{Deserialize, Serialize};
+
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-use std::sync::Arc;
-use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
-use xpallet_dex_spot_rpc_runtime_api::XSpotApi as XSpotRuntimeApi;
-use xpallet_support::{RpcBalance, RpcPrice};
+
+use xpallet_dex_spot_rpc_runtime_api::{
+    Depth, FullPairInfo, RpcOrder, TradingPairId, XSpotApi as XSpotRuntimeApi,
+};
 
 /// XSpot RPC methods.
 #[rpc]
-pub trait XSpotApi<BlockHash, AccountId, RpcBalance, BlockNumber, RpcPrice> {
+pub trait XSpotApi<BlockHash, AccountId, Balance, BlockNumber, Price> {
     /// Get the overall info of all trading pairs.
     #[rpc(name = "xspot_getTradingPairs")]
-    fn trading_pairs(
-        &self,
-        at: Option<BlockHash>,
-    ) -> Result<Vec<FullPairInfo<RpcPrice, BlockNumber>>>;
+    fn trading_pairs(&self, at: Option<BlockHash>)
+        -> Result<Vec<FullPairInfo<Price, BlockNumber>>>;
 
     /// Get the orders of an account.
     #[rpc(name = "xspot_getOrdersByAccount")]
@@ -31,7 +35,7 @@ pub trait XSpotApi<BlockHash, AccountId, RpcBalance, BlockNumber, RpcPrice> {
         page_index: u32,
         page_size: u32,
         at: Option<BlockHash>,
-    ) -> Result<Page<Vec<RpcOrder<TradingPairId, AccountId, RpcBalance, RpcPrice, BlockNumber>>>>;
+    ) -> Result<Page<Vec<RpcOrder<TradingPairId, AccountId, Balance, Price, BlockNumber>>>>;
 
     /// Get the depth of a trading pair.
     #[rpc(name = "xspot_getDepth")]
@@ -40,7 +44,7 @@ pub trait XSpotApi<BlockHash, AccountId, RpcBalance, BlockNumber, RpcPrice> {
         pair_id: TradingPairId,
         depth_size: u32,
         at: Option<BlockHash>,
-    ) -> Result<Option<Depth<RpcPrice, RpcBalance>>>;
+    ) -> Result<Option<Depth<Price, Balance>>>;
 }
 
 /// A struct that implements the [`XSpotApi`].
@@ -60,8 +64,7 @@ impl<C, B> XSpot<C, B> {
 }
 
 impl<C, Block, AccountId, Balance, BlockNumber, Price>
-    XSpotApi<<Block as BlockT>::Hash, AccountId, RpcBalance<Balance>, BlockNumber, RpcPrice<Price>>
-    for XSpot<C, Block>
+    XSpotApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber, Price> for XSpot<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
@@ -74,7 +77,7 @@ where
     fn trading_pairs(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<FullPairInfo<RpcPrice<Price>, BlockNumber>>> {
+    ) -> Result<Vec<FullPairInfo<Price, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api.trading_pairs(&at).map_err(runtime_error_into_rpc_err)?)
@@ -86,19 +89,7 @@ where
         page_index: u32,
         page_size: u32,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<
-        Page<
-            Vec<
-                RpcOrder<
-                    TradingPairId,
-                    AccountId,
-                    RpcBalance<Balance>,
-                    RpcPrice<Price>,
-                    BlockNumber,
-                >,
-            >,
-        >,
-    > {
+    ) -> Result<Page<Vec<RpcOrder<TradingPairId, AccountId, Balance, Price, BlockNumber>>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         let data = api
@@ -116,7 +107,7 @@ where
         pair_id: TradingPairId,
         depth_size: u32,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<Depth<RpcPrice<Price>, RpcBalance<Balance>>>> {
+    ) -> Result<Option<Depth<Price, Balance>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
@@ -125,7 +116,7 @@ where
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Page<T> {
     pub page_index: u32,

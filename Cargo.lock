@@ -8957,17 +8957,14 @@ dependencies = [
 name = "xpallet-assets-rpc"
 version = "2.0.0-alpha.0"
 dependencies = [
- "chainx-primitives",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "parity-scale-codec",
- "serde",
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
  "xpallet-assets-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -8977,7 +8974,6 @@ dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
  "sp-api",
- "sp-runtime",
  "sp-std",
  "xpallet-assets",
 ]
@@ -9024,7 +9020,6 @@ dependencies = [
 name = "xpallet-contracts-rpc"
 version = "0.8.0-rc4"
 dependencies = [
- "chainx-primitives",
  "hex",
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9035,7 +9030,6 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-core",
- "sp-rpc",
  "sp-runtime",
  "xpallet-contracts-primitives",
  "xpallet-contracts-rpc-runtime-api",
@@ -9088,10 +9082,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "sp-std",
- "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9102,7 +9093,6 @@ dependencies = [
  "sp-api",
  "sp-std",
  "xpallet-dex-spot",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9179,7 +9169,6 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "xpallet-gateway-common-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9223,7 +9212,6 @@ dependencies = [
 name = "xpallet-gateway-records-rpc"
 version = "2.0.0-alpha.0"
 dependencies = [
- "chainx-primitives",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -9232,7 +9220,6 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "xpallet-assets",
  "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-support",
 ]
@@ -9244,7 +9231,6 @@ dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
  "sp-api",
- "sp-runtime",
  "sp-std",
  "xpallet-assets",
  "xpallet-gateway-records",
@@ -9282,7 +9268,6 @@ dependencies = [
 name = "xpallet-mining-asset-rpc"
 version = "2.0.0-alpha.0"
 dependencies = [
- "chainx-primitives",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -9290,10 +9275,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "sp-std",
- "xpallet-mining-asset",
  "xpallet-mining-asset-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9305,7 +9287,6 @@ dependencies = [
  "sp-api",
  "sp-std",
  "xpallet-mining-asset",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9346,10 +9327,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "sp-std",
- "xpallet-mining-staking",
  "xpallet-mining-staking-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9360,7 +9338,6 @@ dependencies = [
  "sp-api",
  "sp-std",
  "xpallet-mining-staking",
- "xpallet-support",
 ]
 
 [[package]]

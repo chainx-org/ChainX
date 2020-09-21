@@ -3,9 +3,11 @@
 //! Runtime API definition required by ChainX RPC extensions.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::too_many_arguments, clippy::unnecessary_mut_passed)]
+
+use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use sp_runtime::DispatchError;
-use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 pub use chainx_primitives::{AddrStr, AssetId, ChainAddress};
 pub use xp_runtime::Memo;
@@ -17,7 +19,8 @@ pub use xpallet_gateway_common::{
 
 sp_api::decl_runtime_apis! {
     /// The API to query account nonce (aka transaction index).
-    pub trait XGatewayCommonApi<AccountId, Balance> where
+    pub trait XGatewayCommonApi<AccountId, Balance>
+    where
         AccountId: codec::Codec,
         Balance: codec::Codec,
     {

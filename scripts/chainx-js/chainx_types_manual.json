@@ -3,7 +3,7 @@
     "AmountOf": "Amount",
     "CurrencyIdOf": "AssetId",
     "CurrencyId": "AssetId",
-    "AssetInfoForRpc": {
+    "AssetInfo": {
         "token": "String",
         "token_name": "String",
         "chain": "Chain",
@@ -51,22 +51,22 @@
     "RpcOrder": {
         "order_id": "OrderId",
         "side": "Side",
-        "price": "RpcPrice",
-        "amount": "RpcBalance",
+        "price": "Price",
+        "amount": "Balance",
         "pair_id": "TradingPairId",
         "submitter": "AccountId",
         "order_type": "OrderType",
         "created_at": "BlockNumber",
         "status": "OrderStatus",
-        "remaining": "RpcBalance",
+        "remaining": "Balance",
         "executed_indices": "Vec<TradingHistoryIndex>",
-        "already_filled": "RpcBalance",
-        "reserved_balance": "RpcBalance",
+        "already_filled": "Balance",
+        "reserved_balance": "Balance",
         "last_update_at": "BlockNumber"
     },
-    "TotalAssetInfoForRpc": {
-        "info": "AssetInfoForRpc",
-        "balance": "BTreeMap<AssetType, String>",
+    "TotalAssetInfo": {
+        "info": "AssetInfo",
+        "balance": "BTreeMap<AssetType, Balance>",
         "is_online": "bool",
         "restrictions": "AssetRestrictions"
     },
@@ -200,23 +200,23 @@
         "registered_at": "BlockNumber",
         "is_chilled": "bool",
         "last_chilled": "Option<BlockNumber>",
-        "total": "RpcBalance",
-        "last_total_vote_weight": "RpcWeightType",
+        "total": "Balance",
+        "last_total_vote_weight": "WeightType",
         "last_total_vote_weight_update": "BlockNumber",
         "is_validating": "bool",
-        "self_bonded": "RpcBalance",
+        "self_bonded": "Balance",
         "reward_pot_account": "AccountId",
-        "reward_pot_balance": "RpcBalance"
+        "reward_pot_balance": "Balance"
     },
     "FullPairInfo": {
         "base_currency": "AssetId",
-        "highest_bid": "RpcPrice",
+        "highest_bid": "Price",
         "id": "TradingPairId",
-        "latest_price": "RpcPrice",
+        "latest_price": "Price",
         "latest_price_updated_at": "BlockNumber",
-        "lowest_ask": "RpcPrice",
-        "max_valid_bid": "RpcPrice",
-        "min_valid_ask": "RpcPrice",
+        "lowest_ask": "Price",
+        "max_valid_bid": "Price",
+        "min_valid_ask": "Price",
         "pip_decimals": "u32",
         "quote_currency": "AssetId",
         "tick_decimals": "u32",
@@ -228,18 +228,12 @@
         "last_vote_weight_update": "BlockNumber",
         "unbonded_chunks": "Vec<Unbonded>"
     },
-    "RpcNominatorLedger": {
-        "nomination": "RpcBalance",
-        "last_vote_weight": "RpcWeightType",
-        "last_vote_weight_update": "BlockNumber",
-        "unbonded_chunks": "Vec<RpcUnbonded>"
-    },
     "MiningAssetInfo": {
         "asset_id": "AssetId",
         "mining_power": "FixedAssetPower",
         "reward_pot": "AccountId",
-        "reward_pot_balance": "RpcBalance",
-        "last_total_mining_weight": "RpcWeightType",
+        "reward_pot_balance": "Balance",
+        "last_total_mining_weight": "WeightType",
         "last_total_mining_weight_update": "BlockNumber"
     },
     "Unbonded": {
@@ -247,8 +241,8 @@
         "locked_until": "BlockNumber"
     },
     "Depth": {
-        "asks": "Vec<(RpcPrice, RpcBalance)>",
-        "bids": "Vec<(RpcPrice, RpcBalance)>"
+        "asks": "Vec<(Price, Balance)>",
+        "bids": "Vec<(Price, Balance)>"
     },
     "Page": {
         "page_index": "u32",
@@ -256,9 +250,7 @@
         "data": "Vec<RpcOrder>"
     },
     "String": "Text",
-    "RpcPrice": "String",
-    "RpcBalance": "String",
-    "RpcWeightType": "String",
+    "Balance": "u128",
     "WeightType": "u128",
     "MiningPower": "u128",
     "MiningWeight": "u128",
@@ -272,7 +264,7 @@
     "WithdrawalRecordForRpc": {
         "asset_id": "AssetId",
         "applicant": "AccountId",
-        "balance": "RpcBalance",
+        "balance": "Balance",
         "addr": "String",
         "ext": "String",
         "height": "BlockNumber",

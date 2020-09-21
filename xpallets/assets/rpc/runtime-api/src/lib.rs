@@ -1,16 +1,18 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
-use codec::Codec;
+#![allow(clippy::too_many_arguments, clippy::unnecessary_mut_passed)]
 
 use sp_std::collections::btree_map::BTreeMap;
+
+use codec::Codec;
 
 pub use chainx_primitives::{AssetId, Decimals};
 pub use xpallet_assets::{AssetInfo, AssetRestrictions, AssetType, Chain, TotalAssetInfo};
 
 sp_api::decl_runtime_apis! {
-    pub trait AssetsApi<AccountId, Balance> where
+    pub trait XAssetsApi<AccountId, Balance>
+    where
         AccountId: Codec,
         Balance: Codec,
     {

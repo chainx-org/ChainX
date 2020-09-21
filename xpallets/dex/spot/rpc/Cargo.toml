@@ -9,14 +9,13 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.4" }
-serde = { version = "1.0.10", features = ["derive"] }
-sp-api = { version = "2.0.0-rc6" }
-sp-runtime = { version = "2.0.0-rc6" }
-sp-std = { version = "2.0.0-rc6" }
-sp-blockchain = { version = "2.0.0-rc6" }
-jsonrpc-core = "14.2.0"
-jsonrpc-derive = "14.2.1"
-jsonrpc-core-client = "14.2.0"
-xpallet-dex-spot = { path = "../" }
+serde = { version = "1.0.101", features = ["derive"] }
+jsonrpc-core = { version = "14.2.0", features = ["arbitrary_precision"] }
+jsonrpc-core-client = { version = "14.2.0", features = ["arbitrary_precision"] }
+jsonrpc-derive = "14.2.2"
+
+sp-api = "2.0.0-rc6"
+sp-runtime = "2.0.0-rc6"
+sp-blockchain = "2.0.0-rc6"
+
 xpallet-dex-spot-rpc-runtime-api = { path = "./runtime-api" }
-xpallet-support = { path = "../../../support" }
