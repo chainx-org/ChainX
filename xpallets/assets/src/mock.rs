@@ -119,7 +119,7 @@ impl Default for ExtBuilder {
     }
 }
 
-pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
+pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestriction) {
     (
         X_BTC,
         AssetInfo::new::<Test>(
@@ -130,14 +130,14 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyUsable.into(),
+        AssetRestrictions::DESTROY_USABLE.into(),
     )
 }
 
 impl ExtBuilder {
     pub fn build(
         self,
-        assets: Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)>,
+        assets: Vec<(AssetId, AssetInfo, AssetRestriction, bool, bool)>,
         endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
     ) -> sp_io::TestExternalities {
         let _ = env_logger::try_init();

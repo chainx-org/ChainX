@@ -7,7 +7,7 @@ use chainx_primitives::AssetId;
 
 use crate::traits::OnAssetChanged;
 use crate::types::{AssetErr, AssetType};
-use crate::{BalanceOf, Module, RawEvent, Trait};
+use crate::{BalanceOf, Event, Module, Trait};
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {}
 
@@ -33,7 +33,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         to_type: AssetType,
         value: BalanceOf<T>,
     ) -> result::Result<(), AssetErr> {
-        Module::<T>::deposit_event(RawEvent::Move(
+        Module::<T>::deposit_event(Event::<T>::Move(
             *id,
             from.clone(),
             from_type,
@@ -50,7 +50,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
     }
 
     pub fn on_issue_post(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        Module::<T>::deposit_event(RawEvent::Issue(*id, who.clone(), value));
+        Module::<T>::deposit_event(Event::<T>::Issue(*id, who.clone(), value));
         T::OnAssetChanged::on_issue_post(id, who, value)?;
         Ok(())
     }
@@ -64,7 +64,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         who: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Module::<T>::deposit_event(RawEvent::Destroy(*id, who.clone(), value));
+        Module::<T>::deposit_event(Event::<T>::Destroy(*id, who.clone(), value));
         T::OnAssetChanged::on_destroy_post(id, who, value)?;
         Ok(())
     }
@@ -75,7 +75,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         type_: AssetType,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Module::<T>::deposit_event(RawEvent::Set(*id, who.clone(), type_, value));
+        Module::<T>::deposit_event(Event::<T>::Set(*id, who.clone(), type_, value));
         T::OnAssetChanged::on_set_balance(id, who, type_, value)?;
         Ok(())
     }

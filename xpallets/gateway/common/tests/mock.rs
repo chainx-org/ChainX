@@ -19,7 +19,7 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
-use xpallet_assets::{AssetRestriction, AssetRestrictions};
+use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::{AssetInfo, Chain};
 use xpallet_gateway_bitcoin::{BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Compact};
 
@@ -187,7 +187,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyUsable.into(),
+        AssetRestrictions::DestroyUsable,
     )
 }
 

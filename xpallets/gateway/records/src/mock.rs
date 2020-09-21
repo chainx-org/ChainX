@@ -11,7 +11,7 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
-use xpallet_assets::{AssetRestriction, AssetRestrictions};
+use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
 pub use xpallet_protocol::X_BTC;
 pub use xpallet_protocol::X_ETH;
@@ -120,7 +120,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyUsable.into(),
+        AssetRestrictions::DestroyUsable,
     )
 }
 pub(crate) fn eth() -> (AssetId, AssetInfo, AssetRestrictions) {
@@ -134,7 +134,7 @@ pub(crate) fn eth() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Ethereum".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyUsable.into(),
+        AssetRestrictions::DestroyUsable,
     )
 }
 

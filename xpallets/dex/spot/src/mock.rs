@@ -16,7 +16,7 @@ use sp_runtime::{
 };
 
 use chainx_primitives::{AssetId, BlockNumber};
-use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
+use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -137,10 +137,10 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::Deposit
-            | AssetRestriction::Withdraw
-            | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyUsable,
+        AssetRestrictions::Deposit
+            | AssetRestrictions::Withdraw
+            | AssetRestrictions::DestroyWithdrawal
+            | AssetRestrictions::DestroyUsable,
     )
 }
 
@@ -155,10 +155,10 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::Deposit
-            | AssetRestriction::Withdraw
-            | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyUsable,
+        AssetRestrictions::Deposit
+            | AssetRestrictions::Withdraw
+            | AssetRestrictions::DestroyWithdrawal
+            | AssetRestrictions::DestroyUsable,
     )
 }
 

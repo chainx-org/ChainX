@@ -79,8 +79,7 @@ pub use xp_runtime::Memo;
 
 // xpallet re-exports
 pub use xpallet_assets::{
-    AssetInfo, AssetRestriction, AssetRestrictions, AssetType, Chain, TotalAssetInfo,
-    WithdrawalLimit,
+    AssetInfo, AssetRestrictions, AssetType, Chain, TotalAssetInfo, WithdrawalLimit,
 };
 #[cfg(feature = "std")]
 pub use xpallet_gateway_bitcoin::h256_conv_endian_from_str;

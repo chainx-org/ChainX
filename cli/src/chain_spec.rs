@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use chainx_runtime::{
-    constants::currency::DOLLARS, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams,
+    constants::currency::DOLLARS, AssetInfo, AssetRestrictions, BtcParams,
     BtcTxVerifier, Chain, NetworkType, TrusteeInfoConfig,
 };
 use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
@@ -542,10 +542,10 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::Deposit
-            | AssetRestriction::Withdraw
-            | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyUsable,
+        AssetRestrictions::Deposit
+            | AssetRestrictions::Withdraw
+            | AssetRestrictions::DestroyWithdrawal
+            | AssetRestrictions::DestroyUsable,
     )
 }
 
@@ -560,7 +560,7 @@ fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyUsable.into(),
+        AssetRestrictions::DestroyUsable,
     )
 }
 

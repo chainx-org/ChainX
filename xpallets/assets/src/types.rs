@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use bitmask::bitmask;
+// use bitmask::bitmask;
+use bitflags::bitflags;
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -48,29 +49,23 @@ impl Default for AssetType {
     }
 }
 
-bitmask! {
-    ///
+bitflags! {
+    /// Restrictions for asset operations.
     #[derive(Encode, Decode)]
-    #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    pub mask AssetRestrictions: u32 where
-    ///
-    #[derive(Encode, Decode)]
-    #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
-    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    flags AssetRestriction {
-        Move                = 1 << 0,
-        Transfer            = 1 << 1,
-        Deposit             = 1 << 2,
-        Withdraw            = 1 << 3,
-        DestroyWithdrawal   = 1 << 4,
-        DestroyUsable       = 1 << 5,
+    pub struct AssetRestrictions: u32 {
+        const Move                = 1 << 0;
+        const Transfer            = 1 << 1;
+        const Deposit             = 1 << 2;
+        const Withdraw            = 1 << 3;
+        const DestroyWithdrawal   = 1 << 4;
+        const DestroyUsable       = 1 << 5;
     }
 }
 
 impl Default for AssetRestrictions {
     fn default() -> Self {
-        AssetRestrictions::none()
+        AssetRestrictions::empty()
     }
 }
 
