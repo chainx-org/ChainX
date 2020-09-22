@@ -13,8 +13,9 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*, slice::Iter};
 pub use chainx_primitives::{Decimals, Desc, Token};
 use xpallet_assets_registrar::AssetInfo;
 
-use super::{Error, Trait};
 use frame_support::traits::LockIdentifier;
+
+use crate::{Error, Trait};
 
 const ASSET_TYPES: [AssetType; 6] = [
     AssetType::Usable,
