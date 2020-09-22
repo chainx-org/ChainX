@@ -259,6 +259,7 @@
     },
     "OrderInfo": "Order",
     "HandicapInfo": "Handicap",
+    "FullIdentification": "ValidatorId",
     "Price": "Balance",
     "WithdrawalRecordOf": "WithdrawalRecord",
     "WithdrawalRecordForRpc": {
