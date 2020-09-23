@@ -60,7 +60,7 @@ jobs:
       run: cargo clippy
 
     - name: Test
-      run: cargo test --workspace --exclude xpallet-contracts
+      run: cargo test
 
     - name: Compile
       run: cargo test --no-run
