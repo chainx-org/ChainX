@@ -17,17 +17,6 @@
             "Polkadot"
         ]
     },
-    "XRC20Selector": {
-        "_enum": [
-            "BalanceOf",
-            "TotalSupply",
-            "Name",
-            "Symbol",
-            "Decimals",
-            "Issue",
-            "Destroy"
-        ]
-    },
     "OrderType": {
         "_enum": [
             "Limit",
@@ -54,11 +43,11 @@
     },
     "Memo": "Text",
     "AssetInfo": {
-        "token": "Token",
-        "tokenName": "Token",
+        "token": "String",
+        "tokenName": "String",
         "chain": "Chain",
         "decimals": "Decimals",
-        "desc": "Desc"
+        "desc": "String"
     },
     "TradingPairProfile": {
         "id": "TradingPairId",
@@ -165,7 +154,6 @@
     "Desc": "Text",
     "Token": "Text",
     "AddrStr": "Text",
-    "Selector": "[u8; 4]",
     "HandicapInfo": "Handicap",
     "Price": "Balance",
     "OrderId": "u64",
@@ -410,6 +398,7 @@
     "String": "Text",
     "Balance": "u128",
     "MiningPower": "u128",
+    "FullIdentification": "ValidatorId",
     "WithdrawalRecordOf": "WithdrawalRecord",
     "WithdrawalRecordForRpc": {
         "assetId": "AssetId",
