@@ -5,8 +5,8 @@ authors = ["The ChainX Authors"]
 edition = "2018"
 
 [dependencies]
-frame-benchmarking = { version = "2.0.0-rc6" }
-sc-executor = { version = "0.8.0-rc6" }
+frame-benchmarking = { version = "2.0.0" }
+sc-executor = { version = "0.8.0" }
 chainx-runtime = { path = "../runtime" }
 xp-io = { path = "../primitives/io" }
 

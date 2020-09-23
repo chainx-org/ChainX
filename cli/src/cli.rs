@@ -12,13 +12,8 @@ pub struct Cli {
     pub run: RunCmd,
 }
 
-/// Possible subcommands of the main binary.
 #[derive(Debug, StructOpt)]
 pub enum Subcommand {
-    /// A set of base subcommands handled by `sc_cli`.
-    #[structopt(flatten)]
-    Base(sc_cli::Subcommand),
-
     /// Key management cli utilities
     Key(KeySubcommand),
 
@@ -34,6 +29,30 @@ pub enum Subcommand {
 
     /// Sign a message, with a given (secret) key.
     Sign(SignCmd),
+
+    /// Build a chain specification.
+    BuildSpec(sc_cli::BuildSpecCmd),
+
+    /// Build a chain specification with a light client sync state.
+    BuildSyncSpec(sc_cli::BuildSyncSpecCmd),
+
+    /// Validate blocks.
+    CheckBlock(sc_cli::CheckBlockCmd),
+
+    /// Export blocks.
+    ExportBlocks(sc_cli::ExportBlocksCmd),
+
+    /// Export the state of a given block into a chain spec.
+    ExportState(sc_cli::ExportStateCmd),
+
+    /// Import blocks.
+    ImportBlocks(sc_cli::ImportBlocksCmd),
+
+    /// Remove the whole chain.
+    PurgeChain(sc_cli::PurgeChainCmd),
+
+    /// Revert the chain to a previous state.
+    Revert(sc_cli::RevertCmd),
 }
 
 #[allow(missing_docs)]
