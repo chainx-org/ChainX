@@ -54,12 +54,12 @@ bitflags! {
     #[derive(Encode, Decode)]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
     pub struct AssetRestrictions: u32 {
-        const Move                = 1 << 0;
-        const Transfer            = 1 << 1;
-        const Deposit             = 1 << 2;
-        const Withdraw            = 1 << 3;
-        const DestroyWithdrawal   = 1 << 4;
-        const DestroyUsable       = 1 << 5;
+        const MOVE                = 1 << 0;
+        const TRANSFER            = 1 << 1;
+        const DEPOSIT             = 1 << 2;
+        const WITHDRAW            = 1 << 3;
+        const DESTROY_WITHDRAWAL  = 1 << 4;
+        const DESTROY_USABLE      = 1 << 5;
     }
 }
 

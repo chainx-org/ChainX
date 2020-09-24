@@ -120,7 +120,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestrictions::DestroyUsable,
+        AssetRestrictions::DESTROY_USABLE,
     )
 }
 pub(crate) fn eth() -> (AssetId, AssetInfo, AssetRestrictions) {
@@ -134,7 +134,7 @@ pub(crate) fn eth() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Ethereum".to_vec(),
         )
         .unwrap(),
-        AssetRestrictions::DestroyUsable,
+        AssetRestrictions::DESTROY_USABLE,
     )
 }
 

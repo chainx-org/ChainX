@@ -542,10 +542,10 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
         )
         .unwrap(),
-        AssetRestrictions::Deposit
-            | AssetRestrictions::Withdraw
-            | AssetRestrictions::DestroyWithdrawal
-            | AssetRestrictions::DestroyUsable,
+        AssetRestrictions::DEPOSIT
+            | AssetRestrictions::WITHDRAW
+            | AssetRestrictions::DESTROY_WITHDRAWAL
+            | AssetRestrictions::DESTROY_USABLE,
     )
 }
 
@@ -560,7 +560,7 @@ fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestrictions::DestroyUsable,
+        AssetRestrictions::DESTROY_USABLE,
     )
 }
 

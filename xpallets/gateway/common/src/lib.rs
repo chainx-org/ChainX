@@ -267,7 +267,7 @@ impl<T: Trait> Module<T> {
         ext: Memo,
     ) -> DispatchResult {
         ensure!(
-            xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestrictions::Withdraw),
+            xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestrictions::WITHDRAW),
             xpallet_assets::Error::<T>::ActionNotAllowed,
         );
 

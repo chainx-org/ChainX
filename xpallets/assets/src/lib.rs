@@ -19,7 +19,6 @@ mod default_weight;
 mod multicurrency;
 pub mod traits;
 mod trigger;
-#[allow(non_upper_case_globals)]
 pub mod types;
 
 use sp_std::{
@@ -311,11 +310,11 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_move(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestrictions::Move),
+            Self::can_do(id, AssetRestrictions::MOVE),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow move|id:{:}|action:{:?}",
             id,
-            AssetRestrictions::Move,
+            AssetRestrictions::MOVE,
         );
         Ok(())
     }
@@ -323,11 +322,11 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_transfer(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestrictions::Transfer),
+            Self::can_do(id, AssetRestrictions::TRANSFER),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow transfer|id:{:}|action:{:?}",
             id,
-            AssetRestrictions::Transfer,
+            AssetRestrictions::TRANSFER,
         );
         Ok(())
     }
@@ -335,11 +334,11 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_withdrawal(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestrictions::DestroyWithdrawal),
+            Self::can_do(id, AssetRestrictions::DESTROY_WITHDRAWAL),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow destroy withdrawal|id:{:}|action:{:?}",
             id,
-            AssetRestrictions::DestroyWithdrawal,
+            AssetRestrictions::DESTROY_WITHDRAWAL,
         );
         Ok(())
     }
@@ -347,11 +346,11 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_usable(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestrictions::DestroyUsable),
+            Self::can_do(id, AssetRestrictions::DESTROY_USABLE),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow destroy free|id:{:}|action:{:?}",
             id,
-            AssetRestrictions::DestroyUsable,
+            AssetRestrictions::DESTROY_USABLE,
         );
         Ok(())
     }
