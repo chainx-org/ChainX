@@ -659,6 +659,21 @@ where
         .into_iter()
         .map(|((val, referral_id), _, _, _, _, _)| (val, referral_id, STAKING_LOCKED))
         .collect::<Vec<_>>();
+    let btc_genesis_trustees = trustees
+        .iter()
+        .find_map(|(chain, _, trustee_params)| {
+            if *chain == Chain::Bitcoin {
+                Some(
+                    trustee_params
+                        .iter()
+                        .map(|i| (i.0).clone())
+                        .collect::<Vec<_>>(),
+                )
+            } else {
+                None
+            }
+        })
+        .expect("must success for bitcoin trustee info");
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
@@ -729,6 +744,7 @@ where
                 confirmed_count,
             } = bitcoin_info(); // crate::res::load_mainnet_btc_genesis_header_info();
             Some(XGatewayBitcoinConfig {
+                genesis_trustees: btc_genesis_trustees,
                 genesis_info,
                 genesis_hash,
                 network_id: network,

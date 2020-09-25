@@ -67,6 +67,12 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
             e
         })
     }
+
+    #[cfg(feature = "std")]
+    fn genesis_trustee(chain: Chain, trustees: &[T::AccountId]) {
+        Module::<T>::transition_trustee_session_impl(chain, trustees.to_vec())
+            .expect("trustee session transition can not fail; qed");
+    }
 }
 
 pub struct TrusteeMultisigProvider<T: Trait, C: ChainProvider>(PhantomData<T>, PhantomData<C>);
