@@ -144,7 +144,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            crate::res::load_mainnet_btc_genesis_header_info,
+            crate::res::load_testnet_btc_genesis_header_info,
             crate::genesis::trustees::local_testnet_trustees(),
         )
     };
@@ -225,7 +225,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 ("Eve//stash", endowed_balance),
                 ("Ferdie//stash", endowed_balance),
             ],
-            crate::res::load_mainnet_btc_genesis_header_info,
+            crate::res::load_testnet_btc_genesis_header_info,
             crate::genesis::trustees::local_testnet_trustees(),
         )
     };
