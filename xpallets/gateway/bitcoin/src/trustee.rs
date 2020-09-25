@@ -262,8 +262,8 @@ impl<T: Trait> Module<T> {
         };
 
         xpallet_gateway_records::Module::<T>::process_withdrawals(
-            Chain::Bitcoin,
             &withdrawal_id_list,
+            Chain::Bitcoin,
         )?;
 
         let mut proposal = BtcWithdrawalProposal::new(
