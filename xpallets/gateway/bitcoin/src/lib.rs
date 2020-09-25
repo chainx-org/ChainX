@@ -265,7 +265,9 @@ decl_storage! {
             BestIndex::put(genesis_index);
 
             // init trustee (not this action should ha)
-            T::TrusteeSessionProvider::genesis_trustee(Module::<T>::chain(), &config.genesis_trustees);
+            if !config.genesis_trustees.is_empty() {
+                T::TrusteeSessionProvider::genesis_trustee(Module::<T>::chain(), &config.genesis_trustees);
+            }
         })
     }
 }
