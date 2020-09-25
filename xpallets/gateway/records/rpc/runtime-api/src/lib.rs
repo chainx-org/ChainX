@@ -9,7 +9,7 @@ use codec::Codec;
 
 pub use chainx_primitives::{AssetId, Decimals};
 pub use xpallet_assets::Chain;
-pub use xpallet_gateway_records::{Withdrawal, WithdrawalState, WithdrawalRecordId};
+pub use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId, WithdrawalState};
 
 sp_api::decl_runtime_apis! {
     pub trait XGatewayRecordsApi<AccountId, Balance, BlockNumber>
