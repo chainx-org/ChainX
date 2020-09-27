@@ -989,7 +989,7 @@ construct_runtime!(
         // Crypto gateway stuff.
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config},
+        XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
