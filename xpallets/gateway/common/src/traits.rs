@@ -47,6 +47,9 @@ pub trait TrusteeSession<AccountId, TrusteeAddress: BytesLike> {
 
     fn last_trustee_session(
     ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
+
+    #[cfg(feature = "std")]
+    fn genesis_trustee(chain: Chain, init: &[AccountId]);
 }
 
 impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddress> for () {
@@ -65,6 +68,9 @@ impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddr
     ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
         Err("NoTrustee".into())
     }
+
+    #[cfg(feature = "std")]
+    fn genesis_trustee(_: Chain, _: &[AccountId]) {}
 }
 
 pub trait ChannelBinding<AccountId> {
