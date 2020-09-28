@@ -1,7 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-#![cfg(feature = "runtime-benchmarks")]
-
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
 use light_bitcoin::merkle::PartialMerkleTree;
@@ -76,20 +74,20 @@ fn prepare_withdrawal<T: Trait>() -> Transaction {
 
     let balance1 = (9778400 + withdrawal_fee).saturated_into();
     let balance2 = (9900000 + withdrawal_fee).saturated_into();
-    XGatewayRecords::<T>::deposit(&alice, &ASSET_ID, balance1).unwrap();
-    XGatewayRecords::<T>::deposit(&bob, &ASSET_ID, balance2).unwrap();
+    XGatewayRecords::<T>::deposit(&alice, ASSET_ID, balance1).unwrap();
+    XGatewayRecords::<T>::deposit(&bob, ASSET_ID, balance2).unwrap();
     // prepare withdraw info
-    XGatewayRecords::<T>::withdrawal(
+    XGatewayRecords::<T>::withdraw(
         &alice,
-        &ASSET_ID,
+        ASSET_ID,
         balance1,
         b"12kEgqNShFw7BN27QCMQZCynQpSuV4x1Ax".to_vec(),
         b"memo".to_vec().into(),
     )
     .unwrap();
-    XGatewayRecords::<T>::withdrawal(
+    XGatewayRecords::<T>::withdraw(
         &bob,
-        &ASSET_ID,
+        ASSET_ID,
         balance2,
         b"1NNZZKR6pos2M4yiJhS76NjcRHxoJUATy4".to_vec(),
         b"memo".to_vec().into(),
@@ -156,10 +154,10 @@ benchmarks! {
         let tx_raw = serialization::serialize(&tx).into();
         let prev_tx_raw = serialization::serialize(&prev).into();
 
-        XGatewayRecords::<T>::deposit(&caller, &ASSET_ID, 9778400.into()).unwrap();
-        XGatewayRecords::<T>::deposit(&caller, &ASSET_ID, 9900000.into()).unwrap();
-        XGatewayRecords::<T>::withdrawal(&caller, &ASSET_ID, 9778400.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
-        XGatewayRecords::<T>::withdrawal(&caller, &ASSET_ID, 9900000.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9778400.into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000.into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9778400.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9900000.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
         xpallet_gateway_records::WithdrawalStateOf::insert(0, WithdrawalState::Processing);
         xpallet_gateway_records::WithdrawalStateOf::insert(1, WithdrawalState::Processing);
 
@@ -194,10 +192,10 @@ benchmarks! {
         let btc_withdrawal_fee = XGatewayBitcoin::<T>::btc_withdrawal_fee();
         let first_withdraw = (9778400 + btc_withdrawal_fee).saturated_into();
         let second_withdraw = (9900000 + btc_withdrawal_fee).saturated_into();
-        XGatewayRecords::<T>::deposit(&caller, &ASSET_ID, first_withdraw).unwrap();
-        XGatewayRecords::<T>::deposit(&caller, &ASSET_ID, second_withdraw).unwrap();
-        XGatewayRecords::<T>::withdrawal(&caller, &ASSET_ID, first_withdraw, b"12kEgqNShFw7BN27QCMQZCynQpSuV4x1Ax".to_vec(), b"".to_vec().into()).unwrap();
-        XGatewayRecords::<T>::withdrawal(&caller, &ASSET_ID, second_withdraw, b"1NNZZKR6pos2M4yiJhS76NjcRHxoJUATy4".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, first_withdraw).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, second_withdraw).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, first_withdraw, b"12kEgqNShFw7BN27QCMQZCynQpSuV4x1Ax".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, second_withdraw, b"1NNZZKR6pos2M4yiJhS76NjcRHxoJUATy4".to_vec(), b"".to_vec().into()).unwrap();
 
         let tx = create_tx();
         let tx_raw: Vec<u8> = serialization::serialize(&tx).into();

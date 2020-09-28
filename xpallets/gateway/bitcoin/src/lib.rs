@@ -4,6 +4,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod header;
 mod tests;
@@ -20,7 +21,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
     ensure,
-    traits::{Currency, EnsureOrigin, UnixTime},
+    traits::{EnsureOrigin, UnixTime},
     weights::Pays,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -29,7 +30,7 @@ use orml_utilities::with_transaction_result;
 
 // ChainX
 use chainx_primitives::{AddrStr, AssetId};
-use xpallet_assets::{Chain, ChainT, WithdrawalLimit};
+use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
     traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
@@ -69,10 +70,6 @@ macro_rules! native {
         )
     };
 }
-
-pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
->>::Balance;
 
 pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -164,10 +161,11 @@ decl_error! {
 }
 
 decl_event!(
-    pub enum Event<T> where
+    pub enum Event<T>
+    where
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>
-        {
+    {
         /// block hash
         InsertHeader(H256),
         /// tx hash, block hash, tx type

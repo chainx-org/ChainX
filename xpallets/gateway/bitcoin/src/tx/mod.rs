@@ -358,7 +358,7 @@ fn deposit_token<T: Trait>(tx_hash: H256, who: &T::AccountId, balance: u64) -> D
     let id: AssetId = <Module<T> as ChainT<_>>::ASSET_ID;
 
     let b: BalanceOf<T> = balance.saturated_into();
-    match <xpallet_gateway_records::Module<T>>::deposit(&who, &id, b) {
+    match <xpallet_gateway_records::Module<T>>::deposit(&who, id, b) {
         Ok(a) => {
             Module::<T>::deposit_event(RawEvent::DepositToken(tx_hash, who.clone(), b));
             Ok(a)
@@ -466,7 +466,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
                         .unwrap_or(BalanceOf::<T>::zero());
                 total += withdraw_balance;
 
-                match xpallet_gateway_records::Module::<T>::finish_withdrawal(None, *number) {
+                match xpallet_gateway_records::Module::<T>::finish_withdrawal(*number, None) {
                     Ok(_) => {
                         info!("[withdraw]|ID of withdrawal completion: {:}", *number);
                     }

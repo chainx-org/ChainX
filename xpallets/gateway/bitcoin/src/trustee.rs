@@ -373,8 +373,8 @@ impl<T: Trait> Module<T> {
                     // release withdrawal for applications
                     for id in proposal.withdrawal_id_list.iter() {
                         let _ = xpallet_gateway_records::Module::<T>::recover_withdrawal(
-                            Chain::Bitcoin,
                             *id,
+                            Chain::Bitcoin,
                         );
                     }
 

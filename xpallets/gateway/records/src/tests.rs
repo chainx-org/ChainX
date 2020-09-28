@@ -14,7 +14,7 @@ fn test_normal() {
         assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 100);
 
         // withdraw
-        assert_ok!(XRecords::apply_withdraw(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
             X_BTC,
             50,
@@ -46,7 +46,7 @@ fn test_normal2() {
         assert_eq!(XAssets::usable_balance(&ALICE, &X_ETH), 500 + 100);
 
         // withdraw
-        assert_ok!(XRecords::apply_withdraw(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
             X_BTC,
             50,
@@ -54,14 +54,14 @@ fn test_normal2() {
             b"ext".to_vec().into()
         ));
         // withdrawal twice at once
-        assert_ok!(XRecords::apply_withdraw(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
             X_ETH,
             100,
             b"addr".to_vec(),
             b"ext".to_vec().into()
         ));
-        assert_ok!(XRecords::apply_withdraw(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
             X_ETH,
             50,
@@ -114,7 +114,7 @@ fn test_withdrawal_more_then_usable() {
         assert_ok!(XRecords::deposit(&ALICE, X_BTC, 10));
 
         assert_noop!(
-            XRecords::apply_withdraw(
+            XRecords::withdraw(
                 &ALICE,
                 X_BTC,
                 100 + 50,
@@ -131,7 +131,7 @@ fn test_withdrawal_force_set_state() {
     ExtBuilder::default().build_and_execute(|| {
         assert_ok!(XRecords::deposit(&ALICE, X_BTC, 10));
         // applying
-        assert_ok!(XRecords::apply_withdraw(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
             X_BTC,
             10,
@@ -147,7 +147,7 @@ fn test_withdrawal_force_set_state() {
         ));
         assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 10);
         // change to processing
-        assert_ok!(XRecords::apply_withdraw(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
             X_BTC,
             10,
@@ -183,7 +183,7 @@ fn test_withdrawal_chainx() {
         );
 
         assert_noop!(
-            XRecords::apply_withdraw(
+            XRecords::withdraw(
                 &ALICE,
                 ChainXAssetId::get(),
                 50,

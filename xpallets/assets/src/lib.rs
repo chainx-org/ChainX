@@ -396,7 +396,11 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn destroy(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+    pub fn destroy_reserved_withdrawal(
+        id: &AssetId,
+        who: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_withdrawal(id)?;

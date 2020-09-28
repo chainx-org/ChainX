@@ -118,7 +118,7 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::withdraw()]
         pub fn revoke_withdraw(origin, id: u32) -> DispatchResult {
             let from = ensure_signed(origin)?;
-            xpallet_gateway_records::Module::<T>::revoke_withdrawal(&from, id)
+            xpallet_gateway_records::Module::<T>::cancel_withdrawal(id, &from)
         }
 
         // trustees
@@ -175,7 +175,7 @@ decl_module! {
                 .find_map(|(chain, multisig)| if from == multisig { Some(chain) } else { None })
                 .ok_or(Error::<T>::InvalidMultisig)?;
 
-            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(chain, withdrawal_id, state)
+            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(withdrawal_id, chain, state)
         }
 
         #[weight = <T as Trait>::WeightInfo::set_trustee_info_config()]
@@ -273,7 +273,7 @@ impl<T: Trait> Module<T> {
 
         Self::verify_withdrawal(asset_id, value, &addr, &ext)?;
 
-        xpallet_gateway_records::Module::<T>::withdrawal(&who, &asset_id, value, addr, ext)?;
+        xpallet_gateway_records::Module::<T>::withdraw(&who, asset_id, value, addr, ext)?;
         Ok(())
     }
 

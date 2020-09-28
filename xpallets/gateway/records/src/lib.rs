@@ -52,19 +52,17 @@ pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
 decl_error! {
     /// Error for the XGatewayRecords Module
     pub enum Error for Module<T: Trait> {
-        /// reject native asset for this module
-        DenyNativeAsset,
-        /// id not in withdrawal records
+        /// Id not in withdrawal records
         NotExisted,
         /// WithdrawalRecord state not `Applying`
         NotApplyingState,
         /// WithdrawalRecord state not `Processing`
         NotProcessingState,
-        /// the applicant is not this account
+        /// The applicant is not this account
         InvalidAccount,
-        /// state only allow `RootFinish` and `RootCancel`
+        /// State only allow `RootFinish` and `RootCancel`
         InvalidState,
-        /// meet unexpected chain
+        /// Meet unexpected chain
         UnexpectedChain,
     }
 }
@@ -96,7 +94,7 @@ decl_storage! {
         pub WithdrawalStateOf get(fn state_of):
             map hasher(twox_64_concat) WithdrawalRecordId => Option<WithdrawalState>;
 
-        /// The id of next withdraw record (u32 is enough).
+        /// The id of next withdraw record.
         pub NextWithdrawalRecordId get(fn id): WithdrawalRecordId = 0;
     }
 }
@@ -136,7 +134,7 @@ decl_module! {
         ) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
-            Self::apply_withdraw(&who, asset_id, balance, addr, memo)
+            Self::withdraw(&who, asset_id, balance, addr, memo)
         }
 
         /// Set the state of withdrawal record with given id and state.
@@ -215,12 +213,12 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    /// Apply withdrawal (lock asset token).
+    /// Withdrawal asset (lock asset token firstly, follow-up operations are required).
     ///
     /// WithdrawalRecord State: `Applying`
     ///
     /// Note: this func has include withdrawal_init and withdrawal_locking
-    pub fn apply_withdraw(
+    pub fn withdraw(
         who: &T::AccountId,
         asset_id: AssetId,
         balance: BalanceOf<T>,
@@ -232,7 +230,7 @@ impl<T: Trait> Module<T> {
 
         let id = Self::id();
         info!(
-            "[apply_withdraw]|id:{:}|who:{:?}|asset_id:{:}|balance:{:?}|addr:{:?}|memo:{:}",
+            "[apply_withdrawal]|id:{:}|who:{:?}|asset_id:{:}|balance:{:?}|addr:{:?}|memo:{:}",
             id,
             who,
             asset_id,
@@ -244,13 +242,6 @@ impl<T: Trait> Module<T> {
         let record =
             WithdrawalRecordOf::<T>::new(who.clone(), asset_id, balance, addr, ext, height);
 
-        Self::apply_withdrawal_impl(id, record)
-    }
-
-    fn apply_withdrawal_impl(
-        id: WithdrawalRecordId,
-        record: WithdrawalRecordOf<T>,
-    ) -> DispatchResult {
         // Lock usable asset token
         Self::lock(record.applicant(), record.asset_id(), record.balance())?;
 
@@ -268,19 +259,22 @@ impl<T: Trait> Module<T> {
     ///
     /// WithdrawalRecord State: `Applying` ==> `Processing`
     pub fn process_withdrawal(id: WithdrawalRecordId, chain: Chain) -> DispatchResult {
-        let (record, state) = Self::ensure_withdrawal_records_exists(id)?;
+        let (record, curr_state) = Self::ensure_withdrawal_records_exists(id)?;
         Self::ensure_asset_belongs_to_chain(record.asset_id(), chain)?;
-        if state != WithdrawalState::Applying {
+        Self::process_withdrawal_impl(id, curr_state)
+    }
+
+    fn process_withdrawal_impl(
+        id: WithdrawalRecordId,
+        curr_state: WithdrawalState,
+    ) -> DispatchResult {
+        if curr_state != WithdrawalState::Applying {
             error!(
-                "[process_withdrawal]|WithdrawalRecord state not `Applying`|id:{:}|state:{:?}",
-                id, state
+                "[process_withdrawal]|Current withdrawal state must be `Applying`|id:{:}|state:{:?}",
+                id, curr_state
             );
             return Err(Error::<T>::NotApplyingState.into());
         }
-        Self::process_withdrawal_impl(id)
-    }
-
-    fn process_withdrawal_impl(id: WithdrawalRecordId) -> DispatchResult {
         WithdrawalStateOf::insert(id, WithdrawalState::Processing);
         Self::deposit_event(Event::<T>::ProcessWithdrawal(id));
         Ok(())
@@ -300,19 +294,22 @@ impl<T: Trait> Module<T> {
     ///
     /// WithdrawalRecord State: `Processing` ==> `Applying`
     pub fn recover_withdrawal(id: WithdrawalRecordId, chain: Chain) -> DispatchResult {
-        let (record, state) = Self::ensure_withdrawal_records_exists(id)?;
+        let (record, curr_state) = Self::ensure_withdrawal_records_exists(id)?;
         Self::ensure_asset_belongs_to_chain(record.asset_id(), chain)?;
-        if state != WithdrawalState::Processing {
+        Self::recover_withdrawal_impl(id, curr_state)
+    }
+
+    fn recover_withdrawal_impl(
+        id: WithdrawalRecordId,
+        curr_state: WithdrawalState,
+    ) -> DispatchResult {
+        if curr_state != WithdrawalState::Processing {
             error!(
-                "[recover_withdrawal]|WithdrawalRecord state not `Processing`|id:{:}|state:{:?}",
-                id, state
+                "[recover_withdrawal]|Current withdrawal state must be `Processing`|id:{:}|state:{:?}",
+                id, curr_state
             );
             return Err(Error::<T>::NotProcessingState.into());
         }
-        Self::recover_withdrawal_impl(id)
-    }
-
-    fn recover_withdrawal_impl(id: WithdrawalRecordId) -> DispatchResult {
         WithdrawalStateOf::insert(id, WithdrawalState::Applying);
         Self::deposit_event(Event::<T>::RecoverWithdrawal(id));
         Ok(())
@@ -322,30 +319,33 @@ impl<T: Trait> Module<T> {
     ///
     /// WithdrawalRecord State: `Applying` ==> `NormalCancel`
     pub fn cancel_withdrawal(id: WithdrawalRecordId, who: &T::AccountId) -> DispatchResult {
-        let (record, state) = Self::ensure_withdrawal_records_exists(id)?;
+        let (record, curr_state) = Self::ensure_withdrawal_records_exists(id)?;
         if record.applicant() != who {
             error!(
-                "[cancel_withdrawal]|the applicant is not this account|applicant:{:?}|who:{:?}",
+                "[cancel_withdrawal]|The applicant is not this account|applicant:{:?}|who:{:?}",
                 record.applicant(),
                 who
             );
             return Err(Error::<T>::InvalidAccount.into());
         }
-        if state != WithdrawalState::Applying {
-            error!(
-                "[cancel_withdrawal]|WithdrawalRecord state not `Applying`|id:{:}|state:{:?}",
-                id, state
-            );
-            return Err(Error::<T>::NotApplyingState.into());
-        }
-        Self::cancel_withdrawal_impl(id, record, WithdrawalState::NormalCancel)
+
+        Self::cancel_withdrawal_impl(id, record, curr_state, WithdrawalState::NormalCancel)
     }
 
     fn cancel_withdrawal_impl(
         id: WithdrawalRecordId,
         record: WithdrawalRecordOf<T>,
-        state: WithdrawalState,
+        curr_state: WithdrawalState,
+        new_state: WithdrawalState,
     ) -> DispatchResult {
+        if curr_state != WithdrawalState::Applying {
+            error!(
+                "[cancel_withdrawal]|Current withdrawal state must be `Applying`|id:{:}|state:{:?}",
+                id, curr_state
+            );
+            return Err(Error::<T>::NotApplyingState.into());
+        }
+
         // Unlock reserved asset
         Self::unlock(record.applicant(), record.asset_id(), record.balance())?;
 
@@ -353,7 +353,7 @@ impl<T: Trait> Module<T> {
         PendingWithdrawals::<T>::remove(id);
         WithdrawalStateOf::remove(id);
 
-        Self::deposit_event(Event::<T>::CancelWithdrawal(id, state));
+        Self::deposit_event(Event::<T>::CancelWithdrawal(id, new_state));
         Ok(())
     }
 
@@ -374,34 +374,35 @@ impl<T: Trait> Module<T> {
         id: WithdrawalRecordId,
         expected_chain: Option<Chain>,
     ) -> DispatchResult {
-        let (record, state) = Self::ensure_withdrawal_records_exists(id)?;
+        let (record, curr_state) = Self::ensure_withdrawal_records_exists(id)?;
         if let Some(chain) = expected_chain {
             Self::ensure_asset_belongs_to_chain(record.asset_id(), chain)?;
         }
-        if state != WithdrawalState::Processing {
-            error!(
-                "[finish_withdrawal]|WithdrawalRecord state not `Processing`|id:{:}|state:{:?}",
-                id, state
-            );
-            return Err(Error::<T>::NotProcessingState.into());
-        }
-
-        Self::finish_withdrawal_impl(id, record, WithdrawalState::NormalFinish)
+        Self::finish_withdrawal_impl(id, record, curr_state, WithdrawalState::NormalFinish)
     }
 
     fn finish_withdrawal_impl(
         id: WithdrawalRecordId,
         record: WithdrawalRecordOf<T>,
-        state: WithdrawalState,
+        curr_state: WithdrawalState,
+        new_state: WithdrawalState,
     ) -> DispatchResult {
-        // Destroy reserved asset
+        if curr_state != WithdrawalState::Processing {
+            error!(
+                "[finish_withdrawal]|Current withdrawal state must be `Processing`|id:{:}|state:{:?}",
+                id, curr_state
+            );
+            return Err(Error::<T>::NotProcessingState.into());
+        }
+
+        // Destroy locked asset
         Self::destroy(record.applicant(), record.asset_id(), record.balance())?;
 
         // Remove storage
         PendingWithdrawals::<T>::remove(id);
         WithdrawalStateOf::remove(id);
 
-        Self::deposit_event(Event::<T>::FinishWithdrawal(id, state));
+        Self::deposit_event(Event::<T>::FinishWithdrawal(id, new_state));
         Ok(())
     }
 
@@ -422,33 +423,36 @@ impl<T: Trait> Module<T> {
         id: WithdrawalRecordId,
         new_state: WithdrawalState,
     ) -> DispatchResult {
-        let (record, state) = Self::ensure_withdrawal_records_exists(id)?;
-        match (state, new_state) {
-            (WithdrawalState::Applying, WithdrawalState::Applying)
-            | (WithdrawalState::Processing, WithdrawalState::Processing) => {
-                // do nothing
-                Ok(())
-            }
+        let (record, curr_state) = Self::ensure_withdrawal_records_exists(id)?;
+        match (curr_state, new_state) {
+            (curr, new) if curr == new => Ok(()),
             (WithdrawalState::Applying, WithdrawalState::Processing) => {
                 // State: `Applying` ==> `Processing`
-                Self::process_withdrawal_impl(id)
+                Self::process_withdrawal_impl(id, curr_state)
             }
             (WithdrawalState::Processing, WithdrawalState::Applying) => {
                 // State: `Processing` ==> `Applying`
-                Self::recover_withdrawal_impl(id)
+                Self::recover_withdrawal_impl(id, curr_state)
             }
             (WithdrawalState::Applying, WithdrawalState::NormalCancel)
             | (WithdrawalState::Applying, WithdrawalState::RootCancel) => {
                 // State: `Applying` ==> `NormalCancel`|`RootCancel`
-                Self::cancel_withdrawal_impl(id, record, new_state)
+                Self::cancel_withdrawal_impl(id, record, curr_state, new_state)
+            }
+            (WithdrawalState::Applying, WithdrawalState::NormalFinish)
+            | (WithdrawalState::Applying, WithdrawalState::RootFinish) => {
+                // State: `Applying` ==> `Processing` ==> `NormalFinish`|`RootFinish`
+                Self::process_withdrawal_impl(id, curr_state)?;
+                let curr_state = Self::state_of(id).ok_or(Error::<T>::NotExisted)?;
+                Self::finish_withdrawal_impl(id, record, curr_state, new_state)
             }
             (WithdrawalState::Processing, WithdrawalState::NormalFinish)
             | (WithdrawalState::Processing, WithdrawalState::RootFinish) => {
                 // State: `Processing` ==> `NormalFinish`|`RootFinish`
-                Self::finish_withdrawal_impl(id, record, new_state)
+                Self::finish_withdrawal_impl(id, record, curr_state, new_state)
             }
             _ => {
-                error!("[set_withdrawal_state_by_root]|should not meet this branch in normally, except in root|state:{:?}", state);
+                error!("[set_withdrawal_state_by_root]|Should not meet this branch in normally, except in root|current state:{:?}|new state:{:?}", curr_state, new_state);
                 Err("Do not expect this state in set_withdrawal_state_by_root".into())
             }
         }
@@ -462,14 +466,14 @@ impl<T: Trait> Module<T> {
         let (record, state) = Self::ensure_withdrawal_records_exists(id)?;
         Self::ensure_asset_belongs_to_chain(record.asset_id(), chain)?;
         if state != WithdrawalState::Processing {
-            error!("[set_withdrawal_state_by_trustees]only allow `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", id, state);
+            error!("[set_withdrawal_state_by_trustees]|Current withdrawal state must be `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", id, state);
             return Err(Error::<T>::NotProcessingState.into());
         }
 
         match new_state {
             WithdrawalState::RootFinish | WithdrawalState::RootCancel => { /*do nothing*/ }
             _ => {
-                error!("[set_withdrawal_state_by_trustees]|state only allow `RootFinish` and `RootCancel`|state:{:?}", new_state);
+                error!("[set_withdrawal_state_by_trustees]|New withdrawal state must be `RootFinish` or `RootCancel`|state:{:?}", new_state);
                 return Err(Error::<T>::InvalidState.into());
             }
         }
@@ -503,7 +507,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn destroy(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
-        xpallet_assets::Module::<T>::destroy(&asset_id, &who, value)?;
+        xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&asset_id, &who, value)?;
         Ok(())
     }
 }
