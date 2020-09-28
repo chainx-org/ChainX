@@ -13,7 +13,7 @@ pub mod serde_hex {
         T: AsRef<[u8]>,
     {
         let output = hex::encode(value);
-        serializer.serialize_str(&output)
+        serializer.serialize_str(&format!("0x{:}", output))
     }
 
     /// A deserializer that first encodes the argument as a hex-string
@@ -22,7 +22,12 @@ pub mod serde_hex {
         D: de::Deserializer<'de>,
     {
         let data = String::deserialize(deserializer)?;
-        let hex = hex::decode(data).map_err(de::Error::custom)?;
+        let data_ref = if data.starts_with("0x") {
+            &data[2..]
+        } else {
+            &data[..]
+        };
+        let hex = hex::decode(data_ref).map_err(de::Error::custom)?;
         Ok(hex)
     }
 }
