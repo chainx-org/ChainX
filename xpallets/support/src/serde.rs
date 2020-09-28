@@ -22,12 +22,12 @@ pub mod serde_hex {
         D: de::Deserializer<'de>,
     {
         let data = String::deserialize(deserializer)?;
-        let data_ref = if data.starts_with("0x") {
+        let data = if data.starts_with("0x") {
             &data[2..]
         } else {
             &data[..]
         };
-        let hex = hex::decode(data_ref).map_err(de::Error::custom)?;
+        let hex = hex::decode(data).map_err(de::Error::custom)?;
         Ok(hex)
     }
 }
@@ -70,8 +70,8 @@ mod tests {
         assert_eq!(ser, "\"0x30313233343536373839\"");
         let de = serde_json::from_str::<HexTest>(&ser).unwrap();
         assert_eq!(de, test);
-        let ser2 = "\"30313233343536373839\""; // without 0x
-        let de = serde_json::from_str::<HexTest>(&ser2).unwrap();
+        // without 0x
+        let de = serde_json::from_str::<HexTest>("\"30313233343536373839\"").unwrap();
         assert_eq!(de, test);
     }
 
