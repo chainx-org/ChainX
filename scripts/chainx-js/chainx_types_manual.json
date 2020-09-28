@@ -70,6 +70,7 @@
         "is_online": "bool",
         "restrictions": "AssetRestrictions"
     },
+    "WithdrawalRecordId": "u32",
     "WithdrawalState": {
         "_enum": [
             "Applying",
@@ -262,7 +263,7 @@
     "FullIdentification": "ValidatorId",
     "Price": "Balance",
     "WithdrawalRecordOf": "WithdrawalRecord",
-    "WithdrawalRecordForRpc": {
+    "RpcWithdrawalRecord": {
         "asset_id": "AssetId",
         "applicant": "AccountId",
         "balance": "Balance",
