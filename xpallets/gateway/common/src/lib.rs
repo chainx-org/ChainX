@@ -248,10 +248,9 @@ decl_storage! {
                     .expect("setup trustee can not fail; qed");
                     trustees.push(who.clone());
                 }
-                // config set should before transitino
+                // config set should before transition
                 TrusteeInfoConfigOf::insert(chain, info_config.clone());
-                Module::<T>::transition_trustee_session_impl(*chain, trustees)
-                    .expect("trustee session transition can not fail; qed");
+                // trustee init should happen in chain module like gateway_bitcoin/gateway_ethereum.
             }
         })
     }

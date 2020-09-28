@@ -231,6 +231,7 @@ decl_storage! {
     }
     add_extra_genesis {
         config(genesis_hash): H256;
+        config(genesis_trustees): Vec<T::AccountId>;
         build(|config| {
             let genesis_header = config.genesis_info.0;
             let genesis_hash = genesis_header.hash();
@@ -260,11 +261,11 @@ decl_storage! {
             MainChain::insert(&genesis_hash, ());
 
             BestIndex::put(genesis_index);
-            // ConfirmedIndex::put(genesis_index);
 
-            Module::<T>::deposit_event(RawEvent::InsertHeader(
-                genesis_hash,
-            ));
+            // init trustee (not this action should ha)
+            if !config.genesis_trustees.is_empty() {
+                T::TrusteeSessionProvider::genesis_trustee(Module::<T>::chain(), &config.genesis_trustees);
+            }
         })
     }
 }

@@ -83,9 +83,7 @@ pub trait XGatewayCommonApi<BlockHash, AccountId, Balance> {
 /// A struct that implements the [`XStakingApi`].
 pub struct XGatewayCommon<C, B, AccountId, Balance> {
     client: Arc<C>,
-    _marker: std::marker::PhantomData<B>,
-    _marker2: std::marker::PhantomData<AccountId>,
-    _marker3: std::marker::PhantomData<Balance>,
+    _marker: std::marker::PhantomData<(B, AccountId, Balance)>,
 }
 
 impl<C, B, AccountId, Balance> XGatewayCommon<C, B, AccountId, Balance> {
@@ -94,8 +92,6 @@ impl<C, B, AccountId, Balance> XGatewayCommon<C, B, AccountId, Balance> {
         Self {
             client,
             _marker: Default::default(),
-            _marker2: Default::default(),
-            _marker3: Default::default(),
         }
     }
 }

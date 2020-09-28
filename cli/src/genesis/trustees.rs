@@ -33,18 +33,18 @@ pub fn local_testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<TrusteePar
     let btc_trustees = vec![
         btc_trustee_gen(
             "Alice",
-            "035b8fb240f808f4d3d0d024fdf3b185b942e984bba81b6812b8610f66d59f3a84", // hot key
-            "0227e54b65612152485a812b8856e92f41f64788858466cc4d8df674939a5538c3", // colde key
+            "0376b9649206c74cc3dad6332c3a86d925a251bf9a55e6381f5d67b29a47559634", // hot key
+            "0300849497d4f88ebc3e1bc2583677c5abdbd3b63640b3c5c50cd4628a33a2a2ca", // colde key
         ),
         btc_trustee_gen(
             "Bob",
-            "02a79800dfed17ad4c78c52797aa3449925692bc8c83de469421080f42d27790ee",
-            "020699bf931859cafdacd8ac4d3e055eae7551427487e281e3efba618bdd395f2f",
+            "0285eed6fa121c3a82ba6d0c37fa37e72bb06740761bfe9f294d2fa95fe237d5ba",
+            "032122032ae9656f9a133405ffe02101469a8d62002270a33ceccf0e40dda54d08",
         ),
         btc_trustee_gen(
             "Charlie",
-            "0306117a360e5dbe10e1938a047949c25a86c0b0e08a0a7c1e611b97de6b2917dd",
-            "02a83c80e371ddf0a29006096765d060190bb607ec015ba6023b40ace582e13b99",
+            "036e1b175cc285b62a8b86e4ea94f32d627b36d60673b37eb3dd07d7b8c9ae6ddb",
+            "02b3cc747f572d33f12870fa6866aebbfd2b992ba606b8dc89b676b3697590ad63",
         ),
     ];
 
