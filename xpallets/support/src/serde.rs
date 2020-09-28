@@ -67,8 +67,11 @@ mod tests {
 
         let test = HexTest(b"0123456789".to_vec());
         let ser = serde_json::to_string(&test).unwrap();
-        assert_eq!(ser, "\"30313233343536373839\"");
+        assert_eq!(ser, "\"0x30313233343536373839\"");
         let de = serde_json::from_str::<HexTest>(&ser).unwrap();
+        assert_eq!(de, test);
+        let ser2 = "\"30313233343536373839\""; // without 0x
+        let de = serde_json::from_str::<HexTest>(&ser2).unwrap();
         assert_eq!(de, test);
     }
 
