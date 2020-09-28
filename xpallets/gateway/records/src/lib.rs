@@ -90,11 +90,11 @@ decl_storage! {
         pub PendingWithdrawals get(fn pending_withdrawals):
             map hasher(twox_64_concat) WithdrawalRecordId => Option<WithdrawalRecordOf<T>>;
 
-        /// The state of withdraw record corresponding to a id.
+        /// The state of withdraw record corresponding to an id.
         pub WithdrawalStateOf get(fn state_of):
             map hasher(twox_64_concat) WithdrawalRecordId => Option<WithdrawalState>;
 
-        /// The id of next withdraw record.
+        /// The id of next withdrawal record.
         pub NextWithdrawalRecordId get(fn id): WithdrawalRecordId = 0;
     }
 }
