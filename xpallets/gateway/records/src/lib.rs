@@ -75,12 +75,12 @@ decl_event!(
         Balance = BalanceOf<T>,
         WithdrawalRecord = WithdrawalRecordOf<T>
     {
-        Deposit(AccountId, AssetId, Balance),
-        ApplyWithdrawal(WithdrawalRecordId, WithdrawalRecord),
-        ProcessWithdrawal(WithdrawalRecordId),
-        RecoverWithdrawal(WithdrawalRecordId),
-        CancelWithdrawal(WithdrawalRecordId, WithdrawalState),
-        FinishWithdrawal(WithdrawalRecordId, WithdrawalState),
+        Deposited(AccountId, AssetId, Balance),
+        WithdrawalApplied(WithdrawalRecordId, WithdrawalRecord),
+        WithdrawalProcessed(WithdrawalRecordId),
+        WithdrawalRecovered(WithdrawalRecordId),
+        WithdrawalCanceled(WithdrawalRecordId, WithdrawalState),
+        WithdrawalFinished(WithdrawalRecordId, WithdrawalState),
     }
 );
 
@@ -209,7 +209,7 @@ impl<T: Trait> Module<T> {
         );
 
         xpallet_assets::Module::<T>::issue(&asset_id, who, balance)?;
-        Self::deposit_event(Event::<T>::Deposit(who.clone(), asset_id, balance));
+        Self::deposit_event(Event::<T>::Deposited(who.clone(), asset_id, balance));
         Ok(())
     }
 
@@ -251,7 +251,7 @@ impl<T: Trait> Module<T> {
         let next_id = id.checked_add(1_u32).unwrap_or(0);
         NextWithdrawalRecordId::put(next_id);
 
-        Self::deposit_event(Event::<T>::ApplyWithdrawal(id, record));
+        Self::deposit_event(Event::<T>::WithdrawalApplied(id, record));
         Ok(())
     }
 
@@ -276,7 +276,7 @@ impl<T: Trait> Module<T> {
             return Err(Error::<T>::NotApplyingState.into());
         }
         WithdrawalStateOf::insert(id, WithdrawalState::Processing);
-        Self::deposit_event(Event::<T>::ProcessWithdrawal(id));
+        Self::deposit_event(Event::<T>::WithdrawalProcessed(id));
         Ok(())
     }
 
@@ -311,7 +311,7 @@ impl<T: Trait> Module<T> {
             return Err(Error::<T>::NotProcessingState.into());
         }
         WithdrawalStateOf::insert(id, WithdrawalState::Applying);
-        Self::deposit_event(Event::<T>::RecoverWithdrawal(id));
+        Self::deposit_event(Event::<T>::WithdrawalRecovered(id));
         Ok(())
     }
 
@@ -353,7 +353,7 @@ impl<T: Trait> Module<T> {
         PendingWithdrawals::<T>::remove(id);
         WithdrawalStateOf::remove(id);
 
-        Self::deposit_event(Event::<T>::CancelWithdrawal(id, new_state));
+        Self::deposit_event(Event::<T>::WithdrawalCanceled(id, new_state));
         Ok(())
     }
 
@@ -402,7 +402,7 @@ impl<T: Trait> Module<T> {
         PendingWithdrawals::<T>::remove(id);
         WithdrawalStateOf::remove(id);
 
-        Self::deposit_event(Event::<T>::FinishWithdrawal(id, new_state));
+        Self::deposit_event(Event::<T>::WithdrawalFinished(id, new_state));
         Ok(())
     }
 

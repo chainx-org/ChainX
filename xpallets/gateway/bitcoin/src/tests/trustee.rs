@@ -208,8 +208,8 @@ fn force_replace_withdraw() {
 
         let balance1 = (9778400 + withdrawal_fee).into();
         let balance2 = (9900000 + withdrawal_fee).into();
-        XGatewayRecords::deposit(&alice,X_BTC, balance1).unwrap();
-        XGatewayRecords::deposit(&bob,X_BTC, balance2).unwrap();
+        XGatewayRecords::deposit(&alice, X_BTC, balance1).unwrap();
+        XGatewayRecords::deposit(&bob, X_BTC, balance2).unwrap();
         // prepare withdraw info
         assert_ok!(XGatewayCommon::withdraw(
             RawOrigin::Signed(alice.clone()).into(),
