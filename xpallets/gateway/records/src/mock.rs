@@ -13,8 +13,7 @@ use sp_runtime::{
 use chainx_primitives::AssetId;
 use xpallet_assets::{AssetRestriction, AssetRestrictions};
 use xpallet_assets_registrar::AssetInfo;
-pub use xpallet_protocol::X_BTC;
-pub use xpallet_protocol::X_ETH;
+pub use xpallet_protocol::{X_BTC, X_ETH};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;

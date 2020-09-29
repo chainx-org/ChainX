@@ -813,7 +813,7 @@ use orml_currencies::BasicCurrencyAdapter;
 impl orml_currencies::Trait for Runtime {
     type Event = Event;
     type MultiCurrency = XAssets;
-    type NativeCurrency = BasicCurrencyAdapter<Balances, Balance, Balance, Amount, BlockNumber>;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
     type GetNativeCurrencyId = ChainXAssetId;
     type WeightInfo = ();
 }

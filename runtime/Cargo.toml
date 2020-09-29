@@ -63,9 +63,8 @@ pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-featur
 frame-system-benchmarking = { version = "2.0.0", default-features = false, optional = true }
 frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
 
-# orml
-orml-traits = { version = "0.2.1-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "b023edf1d9bbd9062c8adf27ebff1737d434f127", default-features = false }
-orml-currencies = { version = "0.2.1-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "b023edf1d9bbd9062c8adf27ebff1737d434f127", default-features = false }
+orml-traits = { version = "0.3", default-features = false }
+orml-currencies = { version = "0.3", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../primitives", default-features = false }

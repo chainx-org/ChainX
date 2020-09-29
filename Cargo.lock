@@ -3831,8 +3831,9 @@ dependencies = [
 
 [[package]]
 name = "orml-currencies"
-version = "0.2.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?rev=b023edf1d9bbd9062c8adf27ebff1737d434f127#b023edf1d9bbd9062c8adf27ebff1737d434f127"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "afe97800a5ec20bfe06ca549fe0740f6a9332f90ed275c5fd42d18d5a7e44b17"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3846,8 +3847,9 @@ dependencies = [
 
 [[package]]
 name = "orml-traits"
-version = "0.2.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?rev=b023edf1d9bbd9062c8adf27ebff1737d434f127#b023edf1d9bbd9062c8adf27ebff1737d434f127"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abdc369a1b32825538919239f9d679cdb995ad88ac501a2074e4fad9535199c4"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -3861,8 +3863,9 @@ dependencies = [
 
 [[package]]
 name = "orml-utilities"
-version = "0.2.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?rev=b023edf1d9bbd9062c8adf27ebff1737d434f127#b023edf1d9bbd9062c8adf27ebff1737d434f127"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "443eb6c483e466b7bbb4613d3361b7b4087239b7449a73c7719699d6bb013a94"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -8040,7 +8043,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.7.3",
+ "rand 0.3.23",
 ]
 
 [[package]]
