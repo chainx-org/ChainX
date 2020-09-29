@@ -102,7 +102,7 @@ impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
                     amount,
                 )
                 .map_err::<Error<T>, _>(Into::into)?;
-                Self::destroy(&currency_id, who, amount)
+                Self::destroy_reserved_withdrawal(&currency_id, who, amount)
             }
         }
     }

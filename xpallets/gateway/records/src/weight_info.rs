@@ -4,7 +4,7 @@ use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
 
 pub trait WeightInfo {
     fn root_deposit() -> Weight;
-    fn root_withdrawal() -> Weight;
+    fn root_withdraw() -> Weight;
     fn set_withdrawal_state() -> Weight;
     fn set_withdrawal_state_list(u: u32) -> Weight;
 }
@@ -15,7 +15,7 @@ impl WeightInfo for () {
             .saturating_add(DbWeight::get().reads(12 as Weight))
             .saturating_add(DbWeight::get().writes(6 as Weight))
     }
-    fn root_withdrawal() -> Weight {
+    fn root_withdraw() -> Weight {
         (599782000 as Weight)
             .saturating_add(DbWeight::get().reads(9 as Weight))
             .saturating_add(DbWeight::get().writes(7 as Weight))

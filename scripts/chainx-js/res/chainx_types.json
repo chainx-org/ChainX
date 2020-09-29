@@ -249,6 +249,7 @@
         "isOnline": "bool",
         "restrictions": "AssetRestrictions"
     },
+    "WithdrawalRecordId": "u32",
     "WithdrawalState": {
         "_enum": [
             "Applying",
@@ -400,7 +401,7 @@
     "MiningPower": "u128",
     "FullIdentification": "ValidatorId",
     "WithdrawalRecordOf": "WithdrawalRecord",
-    "WithdrawalRecordForRpc": {
+    "RpcWithdrawalRecord": {
         "assetId": "AssetId",
         "applicant": "AccountId",
         "balance": "Balance",
