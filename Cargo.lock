@@ -728,7 +728,6 @@ dependencies = [
  "structopt",
  "substrate-build-script-utils",
  "xp-io",
- "xpallet-gateway-bitcoin",
  "xpallet-protocol",
 ]
 

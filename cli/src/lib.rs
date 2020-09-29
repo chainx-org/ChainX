@@ -6,14 +6,13 @@
 #![warn(unused_extern_crates)]
 
 mod chain_spec;
-#[macro_use]
-mod service;
 mod cli;
 mod command;
 mod config;
 mod genesis;
 mod logger;
-mod res;
+mod service;
 
-pub use command::*;
 pub use sc_cli::Result;
+
+pub use self::command::*;

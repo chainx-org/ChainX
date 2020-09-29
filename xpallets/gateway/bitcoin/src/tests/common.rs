@@ -23,7 +23,7 @@ pub fn reverse_h256(mut hash: H256) -> H256 {
 
 #[cfg(test)]
 pub fn as_h256(s: &str) -> H256 {
-    h256_conv_endian_from_str(s)
+    light_bitcoin::primitives::h256_conv_endian_from_str(s)
 }
 
 #[cfg(test)]
