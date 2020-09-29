@@ -1,7 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-#![cfg(feature = "runtime-benchmarks")]
-
 use super::*;
 use crate::Module as XGatewayRecords;
 
@@ -27,7 +25,7 @@ fn deposit_and_withdraw<T: Trait>(who: T::AccountId, amount: BalanceOf<T>) {
     let addr = b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF".to_vec();
     let memo = b"memo".to_vec().into();
     let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who);
-    XGatewayRecords::<T>::root_withdrawal(
+    XGatewayRecords::<T>::root_withdraw(
         RawOrigin::Root.into(),
         receiver_lookup,
         ASSET_ID,
@@ -54,7 +52,7 @@ benchmarks! {
         assert_eq!(xpallet_assets::Module::<T>::usable_balance(&receiver, &ASSET_ID), amount);
     }
 
-    root_withdrawal {
+    root_withdraw {
         let receiver: T::AccountId = whitelisted_caller();
         let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(receiver.clone());
         let amount: BalanceOf<T> = 1000.into();
@@ -106,7 +104,7 @@ mod tests {
         });
 
         ExtBuilder::default().build().execute_with(|| {
-            assert_ok!(test_benchmark_root_withdrawal::<Test>());
+            assert_ok!(test_benchmark_root_withdraw::<Test>());
         });
 
         ExtBuilder::default().build().execute_with(|| {

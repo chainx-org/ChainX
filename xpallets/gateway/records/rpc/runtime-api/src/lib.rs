@@ -9,7 +9,7 @@ use codec::Codec;
 
 pub use chainx_primitives::{AssetId, Decimals};
 pub use xpallet_assets::Chain;
-pub use xpallet_gateway_records::{Withdrawal, WithdrawalState};
+pub use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId, WithdrawalState};
 
 sp_api::decl_runtime_apis! {
     pub trait XGatewayRecordsApi<AccountId, Balance, BlockNumber>
@@ -18,8 +18,8 @@ sp_api::decl_runtime_apis! {
         Balance: Codec,
         BlockNumber: Codec,
     {
-        fn withdrawal_list() -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>>;
+        fn withdrawal_list() -> BTreeMap<WithdrawalRecordId, Withdrawal<AccountId, Balance, BlockNumber>>;
 
-        fn withdrawal_list_by_chain(chain: Chain) -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>>;
+        fn withdrawal_list_by_chain(chain: Chain) -> BTreeMap<WithdrawalRecordId, Withdrawal<AccountId, Balance, BlockNumber>>;
     }
 }

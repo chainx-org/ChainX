@@ -22,7 +22,7 @@ benchmarks! {
         let caller: T::AccountId = accounts::<T>()[0].clone();
 
         let amount: BalanceOf<T> = 10_00000000.into();
-        XGatewayRecords::<T>::deposit(&caller, &ASSET_ID, amount).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, amount).unwrap();
 
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
         let memo = b"".to_vec().into();
@@ -184,7 +184,7 @@ fn prepare_intention<T: Trait>() -> Vec<T::AccountId> {
     v
 }
 fn deposit<T: Trait>(who: T::AccountId, amount: BalanceOf<T>) {
-    let _ = XGatewayRecords::<T>::deposit(&who, &ASSET_ID, amount);
+    let _ = XGatewayRecords::<T>::deposit(&who, ASSET_ID, amount);
 }
 
 fn deposit_and_withdraw<T: Trait>(who: T::AccountId, amount: BalanceOf<T>) {
