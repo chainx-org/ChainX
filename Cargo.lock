@@ -3940,12 +3940,12 @@ dependencies = [
 
 [[package]]
 name = "orml-currencies"
-version = "0.1.3-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?rev=46708eacd6418810d3e64f0cd9a242d4fcb6ebec#46708eacd6418810d3e64f0cd9a242d4fcb6ebec"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b2da4b85eb73083d61212210a8c982a330d9408c3504d2355654542507e10ac"
 dependencies = [
  "frame-support",
  "frame-system",
- "integer-sqrt",
  "orml-traits",
  "parity-scale-codec",
  "serde",
@@ -3956,12 +3956,12 @@ dependencies = [
 
 [[package]]
 name = "orml-traits"
-version = "0.1.3-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?rev=46708eacd6418810d3e64f0cd9a242d4fcb6ebec#46708eacd6418810d3e64f0cd9a242d4fcb6ebec"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3550238dccf96dfeb6f381eade0011109c6c3a459ccce6c3fa30e24b36c63fe0"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
- "integer-sqrt",
  "num-traits",
  "parity-scale-codec",
  "serde",
@@ -3972,13 +3972,14 @@ dependencies = [
 
 [[package]]
 name = "orml-utilities"
-version = "0.1.3-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?rev=46708eacd6418810d3e64f0cd9a242d4fcb6ebec#46708eacd6418810d3e64f0cd9a242d4fcb6ebec"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75b796ae8f5ac84f0b6fc8779fb525a7ea8bdfe0f9111e5f4c1eebf30c755ab9"
 dependencies = [
  "frame-support",
- "integer-sqrt",
  "parity-scale-codec",
  "serde",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]

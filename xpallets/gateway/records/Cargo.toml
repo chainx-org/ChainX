@@ -14,7 +14,7 @@ frame-support = { version = "2.0.0-rc6", default-features = false }
 frame-system = { version = "2.0.0-rc6", default-features = false }
 frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
 
-orml-utilities = { version = "0.1.3-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "46708eacd6418810d3e64f0cd9a242d4fcb6ebec", default-features = false }
+orml-utilities = { version = "0.2", default-features = false }
 
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }

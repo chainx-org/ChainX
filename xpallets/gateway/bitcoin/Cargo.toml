@@ -9,34 +9,25 @@ bs58 = { version = "0.3", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "1.3.4", features = ["derive"], default-features = false }
 serde = { version = "1.0", optional = true }
 
-# Substrate primitives
 sp-core = { version = "2.0.0-rc6", default-features = false }
 sp-runtime = { version = "2.0.0-rc6", default-features = false }
 sp-std = { version = "2.0.0-rc6", default-features = false }
 sp-io = { version = "2.0.0-rc6", default-features = false }
-# Substrate pallets
 frame-support = { version = "2.0.0-rc6", default-features = false }
 frame-system = { version = "2.0.0-rc6", default-features = false }
-
 frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
-
 pallet-timestamp = { version = "2.0.0-rc6", default-features = false }
 
-# orml
-orml-utilities = { version = "0.1.3-dev", git = "https://github.com/open-web3-stack/open-runtime-module-library.git", rev = "46708eacd6418810d3e64f0cd9a242d4fcb6ebec", default-features = false }
+orml-utilities = { version = "0.2", default-features = false }
 
-# ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-io = { path = "../../../primitives/io", default-features = false }
-
-# ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 xpallet-gateway-common = { path = "../common", default-features = false }
 xpallet-gateway-records = { path = "../records", default-features = false }
 
-# light-bitcoin
 light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
 
 [dev-dependencies]
@@ -59,7 +50,6 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "sp-io/std",
-
     "frame-support/std",
     "frame-system/std",
     "frame-benchmarking/std",
@@ -69,7 +59,6 @@ std = [
 
     "chainx-primitives/std",
     "xp-io/std",
-
     "xpallet-assets/std",
     "xpallet-protocol/std",
     "xpallet-support/std",
