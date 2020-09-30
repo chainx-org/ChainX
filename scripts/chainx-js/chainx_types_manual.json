@@ -142,11 +142,7 @@
         "nonce": "u32"
     },
     "BtcTransaction": "Vec<u8>",
-    "BtcPartialMerkleTree": {
-        "tx_count": "u32",
-        "hashes": "Vec<H256>",
-        "bits": "Vec<bool>"
-    },
+    "BtcPartialMerkleTree": "Vec<u8>",
     "BtcRelayedTxInfo": {
         "block_hash": "H256",
         "merkle_proof": "BtcPartialMerkleTree"
