@@ -8,7 +8,7 @@ use sp_runtime::{traits::Hash, Perbill};
 use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 use sp_std::cmp::Ordering;
 use xp_mining_common::{
-    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors,
 };
 use xp_mining_staking::SessionIndex;
 

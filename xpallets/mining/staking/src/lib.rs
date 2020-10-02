@@ -44,7 +44,7 @@ use sp_std::prelude::*;
 use chainx_primitives::ReferralId;
 use constants::*;
 use xp_mining_common::{
-    Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
+    Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, WeightType, ZeroMiningWeightError,
 };
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
 use xpallet_support::{debug, traits::TreasuryAccount};
@@ -590,6 +590,24 @@ impl<T: Trait> Module<T> {
         Self::unbond_reserve(sender, value)?;
         Self::mutate_unbonded_chunks(sender, target, value, locked_until);
         Ok(())
+    }
+
+    #[cfg(feature = "std")]
+    pub fn force_set_nominator_vote_weight(
+        nominator: &T::AccountId,
+        validator: &T::AccountId,
+        new_weight: WeightType,
+    ) {
+        Nominations::<T>::mutate(nominator, validator, |claimer_ledger| {
+            claimer_ledger.last_vote_weight = new_weight;
+        });
+    }
+
+    #[cfg(feature = "std")]
+    pub fn force_set_validator_vote_weight(validator: &T::AccountId, new_weight: WeightType) {
+        ValidatorLedgers::<T>::mutate(validator, |validator_ledger| {
+            validator_ledger.last_total_vote_weight = new_weight;
+        });
     }
 
     /// Returns true if the account `who` is a validator.
