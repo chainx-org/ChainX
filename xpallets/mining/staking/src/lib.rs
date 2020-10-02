@@ -320,7 +320,14 @@ decl_module! {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
 
-            Self::try_bond(&sender, &target, value)?;
+            ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
+            ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
+            ensure!(value <= Self::free_balance(&sender), Error::<T>::InsufficientBalance);
+            if !Self::is_validator_bonding_itself(&sender, &target) {
+                Self::check_validator_acceptable_votes_limit(&target, value)?;
+            }
+
+            Self::apply_bond(&sender, &target, value)?;
         }
 
         /// Move the `value` of current nomination from one validator to another.
@@ -543,25 +550,6 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
 
 impl<T: Trait> Module<T> {
     /// Expose the bond impl for initializing the genesis state easier.
-    pub fn try_bond(
-        sender: &T::AccountId,
-        target: &T::AccountId,
-        value: BalanceOf<T>,
-    ) -> DispatchResult {
-        ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
-        ensure!(Self::is_validator(target), Error::<T>::NotValidator);
-        ensure!(
-            value <= Self::free_balance(sender),
-            Error::<T>::InsufficientBalance
-        );
-        if !Self::is_validator_bonding_itself(sender, target) {
-            Self::check_validator_acceptable_votes_limit(target, value)?;
-        }
-
-        Self::apply_bond(sender, target, value)?;
-        Ok(())
-    }
-
     #[cfg(feature = "std")]
     pub fn register_genesis_validator(
         validators: &[(T::AccountId, ReferralId, BalanceOf<T>)],
@@ -575,6 +563,20 @@ impl<T: Trait> Module<T> {
             Self::apply_register(validator, referral_id.to_vec());
             Self::apply_bond(validator, validator, *balance)?;
         }
+        Ok(())
+    }
+
+    #[cfg(feature = "std")]
+    pub fn force_bond(
+        sender: &T::AccountId,
+        target: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        Self::bond_reserve(sender, value)?;
+        let delta = Delta::Add(value);
+        Nominations::<T>::mutate(sender, target, |claimer_ledger| {
+            claimer_ledger.nomination = delta.calculate(claimer_ledger.nomination);
+        });
         Ok(())
     }
 
