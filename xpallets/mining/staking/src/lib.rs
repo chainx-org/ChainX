@@ -210,15 +210,6 @@ decl_storage! {
         config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
             assert!(config.offence_severity > 1, "Offence severity too weak");
-            for &(ref v, ref referral_id, balance) in &config.validators {
-                assert!(
-                    Module::<T>::free_balance(v) >= balance,
-                    "Validator does not have enough balance to bond."
-                );
-                Module::<T>::check_referral_id(referral_id).expect("Invalid referral_id in genesis");
-                Module::<T>::apply_register(v, referral_id.to_vec());
-                Module::<T>::apply_bond(v, v, balance).expect("Staking genesis initialization can not fail");
-            }
             assert!(config.glob_dist_ratio.0 + config.glob_dist_ratio.1 > 0);
             assert!(config.mining_ratio.0 + config.mining_ratio.1 > 0);
             GlobalDistributionRatio::put(GlobalDistribution {
@@ -229,6 +220,7 @@ decl_storage! {
                 asset: config.mining_ratio.0,
                 staking: config.mining_ratio.1,
             });
+            Module::<T>::register_genesis_validator(&config.validators).expect("Failed to register genesis validators");
         });
     }
 }
@@ -567,6 +559,22 @@ impl<T: Trait> Module<T> {
         }
 
         Self::apply_bond(sender, target, value)?;
+        Ok(())
+    }
+
+    #[cfg(feature = "std")]
+    pub fn register_genesis_validator(
+        validators: &[(T::AccountId, ReferralId, BalanceOf<T>)],
+    ) -> DispatchResult {
+        for (validator, referral_id, balance) in validators {
+            assert!(
+                Self::free_balance(validator) >= *balance,
+                "Validator does not have enough balance to bond."
+            );
+            Self::check_referral_id(referral_id)?;
+            Self::apply_register(validator, referral_id.to_vec());
+            Self::apply_bond(validator, validator, *balance)?;
+        }
         Ok(())
     }
 
