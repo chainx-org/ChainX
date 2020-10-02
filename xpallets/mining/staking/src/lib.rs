@@ -936,15 +936,15 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
         locked_until: T::BlockNumber,
     ) {
-        Nominations::<T>::mutate(who, target, |nominator_profile| {
-            if let Some(idx) = nominator_profile
+        Nominations::<T>::mutate(who, target, |nominator| {
+            if let Some(idx) = nominator
                 .unbonded_chunks
                 .iter()
                 .position(|x| x.locked_until == locked_until)
             {
-                nominator_profile.unbonded_chunks[idx].value += value;
+                nominator.unbonded_chunks[idx].value += value;
             } else {
-                nominator_profile.unbonded_chunks.push(Unbonded {
+                nominator.unbonded_chunks.push(Unbonded {
                     value,
                     locked_until,
                 });
