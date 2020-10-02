@@ -870,6 +870,8 @@ impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccou
 parameter_types! {
     /// FIXME: replace this when the migration offset is determinated.
     pub const MigrationSessionOffset: SessionIndex = 500;
+    pub const MinimumReferralId: u32 = 2;
+    pub const MaximumReferralId: u32 = 12;
 }
 
 impl xpallet_mining_staking::Trait for Runtime {
@@ -877,6 +879,8 @@ impl xpallet_mining_staking::Trait for Runtime {
     type Currency = Balances;
     type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
+    type MinimumReferralId = MinimumReferralId;
+    type MaximumReferralId = MaximumReferralId;
     type SessionInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;
     type AssetMining = XMiningAsset;

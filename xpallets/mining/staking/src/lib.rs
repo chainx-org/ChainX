@@ -84,6 +84,12 @@ pub trait Trait: frame_system::Trait {
     /// When the ChainX 2.0 migration happens, the first halving epoch is not over yet.
     type MigrationSessionOffset: Get<SessionIndex>;
 
+    /// The minimum byte length of validator referral id.
+    type MinimumReferralId: Get<u32>;
+
+    /// The maximum byte length of validator referral id.
+    type MaximumReferralId: Get<u32>;
+
     /// An expected duration of the session.
     ///
     /// This parameter is used to determine the longevity of `heartbeat` transaction
@@ -306,6 +312,11 @@ impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        /// The minimum byte length of referral id.
+        const MinimumReferralId: u32 = T::MinimumReferralId::get();
+
+        /// The maximum byte length of referral id.
+        const MaximumReferralId: u32 = T::MaximumReferralId::get();
 
         type Error = Error<T>;
 
@@ -317,14 +328,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
 
-            ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
-            ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
-            ensure!(value <= Self::free_balance(&sender), Error::<T>::InsufficientBalance);
-            if !Self::is_validator_bonding_itself(&sender, &target) {
-                Self::check_validator_acceptable_votes_limit(&target, value)?;
-            }
-
-            Self::apply_bond(&sender, &target, value)?;
+            Self::try_bond(&sender, &target, value)?;
         }
 
         /// Move the `value` of current nomination from one validator to another.
@@ -360,14 +364,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
 
-            ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
-            ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
-            ensure!(value <= Self::bonded_to(&sender, &target), Error::<T>::InvalidUnbondBalance);
-            ensure!(
-                Self::unbonded_chunks_of(&sender, &target).len() < Self::maximum_unbonded_chunk_size() as usize,
-                Error::<T>::NoMoreUnbondChunks
-            );
-
+            Self::can_unbond(&sender, &target, value)?;
             Self::apply_unbond(&sender, &target, value)?;
         }
 
@@ -553,6 +550,40 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    /// Expose the bond impl for initializing the genesis state easier.
+    pub fn try_bond(
+        sender: &T::AccountId,
+        target: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
+        ensure!(Self::is_validator(target), Error::<T>::NotValidator);
+        ensure!(
+            value <= Self::free_balance(sender),
+            Error::<T>::InsufficientBalance
+        );
+        if !Self::is_validator_bonding_itself(sender, target) {
+            Self::check_validator_acceptable_votes_limit(target, value)?;
+        }
+
+        Self::apply_bond(sender, target, value)?;
+        Ok(())
+    }
+
+    /// Mock the `unbond` operation but lock the funds until the specific height `locked_until`.
+    #[cfg(feature = "std")]
+    pub fn force_unbond(
+        sender: &T::AccountId,
+        target: &T::AccountId,
+        value: BalanceOf<T>,
+        locked_until: T::BlockNumber,
+    ) -> DispatchResult {
+        Self::can_unbond(sender, target, value)?;
+        Self::unbond_reserve(sender, value)?;
+        Self::mutate_unbonded_chunks(sender, target, value, locked_until);
+        Ok(())
+    }
+
     /// Returns true if the account `who` is a validator.
     #[inline]
     pub fn is_validator(who: &T::AccountId) -> bool {
@@ -670,11 +701,10 @@ impl<T: Trait> Module<T> {
     }
 
     fn check_referral_id(referral_id: &[u8]) -> Result<(), Error<T>> {
-        const MIMUM_REFERRAL_ID: usize = 2;
-        const MAXIMUM_REFERRAL_ID: usize = 12;
         let referral_id_len = referral_id.len();
         ensure!(
-            referral_id_len >= MIMUM_REFERRAL_ID && referral_id_len <= MAXIMUM_REFERRAL_ID,
+            referral_id_len >= T::MinimumReferralId::get() as usize
+                && referral_id_len <= T::MaximumReferralId::get() as usize,
             Error::<T>::InvalidReferralIdentityLength
         );
         ensure!(
@@ -767,6 +797,25 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    fn can_unbond(
+        sender: &T::AccountId,
+        target: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
+        ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
+        ensure!(Self::is_validator(target), Error::<T>::NotValidator);
+        ensure!(
+            value <= Self::bonded_to(sender, target),
+            Error::<T>::InvalidUnbondBalance
+        );
+        ensure!(
+            Self::unbonded_chunks_of(sender, target).len()
+                < Self::maximum_unbonded_chunk_size() as usize,
+            Error::<T>::NoMoreUnbondChunks
+        );
+        Ok(())
+    }
+
     /// `unbond` only triggers the internal change of Staking locked type.
     fn unbond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> Result<(), Error<T>> {
         Locks::<T>::mutate(who, |locks| {
@@ -853,25 +902,12 @@ impl<T: Trait> Module<T> {
         ));
     }
 
-    fn apply_unbond(
+    fn mutate_unbonded_chunks(
         who: &T::AccountId,
         target: &T::AccountId,
         value: BalanceOf<T>,
-    ) -> Result<(), Error<T>> {
-        debug!(
-            "[apply_unbond] who:{:?}, target: {:?}, value: {:?}",
-            who, target, value
-        );
-        Self::unbond_reserve(who, value)?;
-
-        let bonding_duration = if Self::is_validator(who) && *who == *target {
-            Self::validator_bonding_duration()
-        } else {
-            Self::bonding_duration()
-        };
-
-        let locked_until = <frame_system::Module<T>>::block_number() + bonding_duration;
-
+        locked_until: T::BlockNumber,
+    ) {
         let mut unbonded_chunks = Self::unbonded_chunks_of(who, target);
 
         if let Some(idx) = unbonded_chunks
@@ -889,6 +925,30 @@ impl<T: Trait> Module<T> {
         Nominations::<T>::mutate(who, target, |nominator_profile| {
             nominator_profile.unbonded_chunks = unbonded_chunks;
         });
+    }
+
+    fn bonding_duration_for(who: &T::AccountId, target: &T::AccountId) -> T::BlockNumber {
+        if Self::is_validator(who) && *who == *target {
+            Self::validator_bonding_duration()
+        } else {
+            Self::bonding_duration()
+        }
+    }
+
+    fn apply_unbond(
+        who: &T::AccountId,
+        target: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> Result<(), Error<T>> {
+        debug!(
+            "[apply_unbond] who:{:?}, target: {:?}, value: {:?}",
+            who, target, value
+        );
+        Self::unbond_reserve(who, value)?;
+
+        let locked_until =
+            <frame_system::Module<T>>::block_number() + Self::bonding_duration_for(who, target);
+        Self::mutate_unbonded_chunks(who, target, value, locked_until);
 
         Self::update_vote_weight(who, target, Delta::Sub(value));
 
