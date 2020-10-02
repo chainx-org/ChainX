@@ -936,22 +936,19 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
         locked_until: T::BlockNumber,
     ) {
-        let mut unbonded_chunks = Self::unbonded_chunks_of(who, target);
-
-        if let Some(idx) = unbonded_chunks
-            .iter()
-            .position(|x| x.locked_until == locked_until)
-        {
-            unbonded_chunks[idx].value += value;
-        } else {
-            unbonded_chunks.push(Unbonded {
-                value,
-                locked_until,
-            });
-        }
-
         Nominations::<T>::mutate(who, target, |nominator_profile| {
-            nominator_profile.unbonded_chunks = unbonded_chunks;
+            if let Some(idx) = nominator_profile
+                .unbonded_chunks
+                .iter()
+                .position(|x| x.locked_until == locked_until)
+            {
+                nominator_profile.unbonded_chunks[idx].value += value;
+            } else {
+                nominator_profile.unbonded_chunks.push(Unbonded {
+                    value,
+                    locked_until,
+                });
+            }
         });
     }
 
