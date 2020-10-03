@@ -27,4 +27,4 @@ pub const MEMO_MAX_LEN: usize = 80;
 pub const PCX_DECIMALS: u8 = 8;
 
 /// Decimals of X_BTC.
-pub const X_BTC_DECIMALS: u8 = 8;
+pub const BTC_DECIMALS: u8 = 8;
