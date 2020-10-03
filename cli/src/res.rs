@@ -53,7 +53,9 @@ fn build_bitcoin_params(raw: BitcoinGenesisHeader, confirmed_count: u32) -> Bitc
 
 macro_rules! json_from_str {
     ($file:expr) => {
-        serde_json::from_str(include_str!($file)).expect("JSON was not well-formatted")
+        serde_json::from_str(include_str!($file))
+            .map_err(|e| log::error!("{:?}", e))
+            .expect("JSON was not well-formatted")
     };
 }
 
@@ -83,4 +85,32 @@ pub fn balances() -> Vec<(AccountId, Balance)> {
 pub fn xassets() -> Vec<(AccountId, Balance)> {
     let balances: Vec<BalanceInfo> = json_from_str!("./res/genesis_xassets.json");
     balances.into_iter().map(|b| (b.who, b.free)).collect()
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ValidatorInfo {
+    who: AccountId,
+    referral_id: String,
+    self_bonded: Balance,
+    total_nomination: Balance,
+    total_weight: String,
+}
+
+pub fn validators() -> Vec<(AccountId, Vec<u8>, Balance, Balance, u128)> {
+    let validators: Vec<ValidatorInfo> = json_from_str!("./res/genesis_validators.json");
+    validators
+        .into_iter()
+        .map(|v| {
+            (
+                v.who,
+                v.referral_id.as_bytes().to_vec(),
+                v.self_bonded,
+                v.total_nomination,
+                v.total_weight
+                    .parse::<u128>()
+                    .expect("Parse u128 from string failed"),
+            )
+        })
+        .collect()
 }

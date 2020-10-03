@@ -9,6 +9,8 @@ use sp_std::prelude::*;
 
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
+#[cfg(feature = "std")]
+use xpallet_mining_staking::GenesisValidatorInfo;
 use xpallet_support::info;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
@@ -29,10 +31,18 @@ decl_storage! {
     add_extra_genesis {
         config(balances): Vec<(T::AccountId, T::Balance)>;
         config(xassets): Vec<(T::AccountId, BalanceOf<T>)>;
+        config(validators): Vec<GenesisValidatorInfo<T>>;
         build(|config| {
-            use crate::genesis::balances;
+            use crate::genesis::{xassets, balances, xstaking};
+
+            let now = std::time::Instant::now();
 
             balances::initialize::<T>(&config.balances);
+            xassets::initialize::<T>(&config.xassets);
+            xstaking::initialize::<T>(&config.validators);
+
+            info!("Took {:?}ms to orchestrate the exported state from ChainX 1.0", now.elapsed().as_millis());
+
         })
     }
 }
@@ -40,10 +50,11 @@ decl_storage! {
 #[cfg(feature = "std")]
 mod genesis {
     pub mod balances {
+        use crate::Trait;
         use frame_support::traits::StoredMap;
         use pallet_balances::AccountData;
 
-        pub fn initialize<T: crate::Trait>(balances: &[(T::AccountId, T::Balance)]) {
+        pub fn initialize<T: Trait>(balances: &[(T::AccountId, T::Balance)]) {
             for (who, free) in balances {
                 T::AccountStore::insert(
                     who,
@@ -57,19 +68,26 @@ mod genesis {
     }
 
     pub mod xassets {
-        pub fn initialize<T: crate::Trait>(btc_assets: &[(T::AccountId, crate::BalanceOf<T>)]) {
+        use crate::{BalanceOf, Trait};
+        use xpallet_protocol::X_BTC;
+
+        pub fn initialize<T: Trait>(btc_assets: &[(T::AccountId, BalanceOf<T>)]) {
             for (who, free) in btc_assets {
-                xpallet_assets::Module::<T>::issue(&xpallet_protocol::X_BTC, who, *free)
-                    .expect("Failed to issue BTC asset");
+                xpallet_assets::Module::<T>::force_set_free_balance(&X_BTC, who, *free);
             }
         }
     }
 
     pub mod xstaking {
-        pub fn initialize<T: crate::Trait>(balances: Vec<(T::AccountId, T::Balance)>) {
-            //////////     XStaking
+        use crate::Trait;
+        use xpallet_mining_staking::GenesisValidatorInfo;
+
+        pub fn initialize<T: Trait>(validators: &[GenesisValidatorInfo<T>]) {
             /////// register validator
-            //
+            xpallet_mining_staking::Module::<T>::register_genesis_validators(validators)
+                .expect("Failed to register genesis validators");
+
+            //////// Nominator
             // TODO:
             // 1. mock vote
             // 2. mock unbond
@@ -80,7 +98,9 @@ mod genesis {
     }
 
     pub mod xminingasset {
-        pub fn initialize<T: crate::Trait>(balances: Vec<(T::AccountId, T::Balance)>) {
+        use crate::Trait;
+
+        pub fn initialize<T: Trait>(balances: Vec<(T::AccountId, T::Balance)>) {
             //////////    XAssets
             ////// Set mining weight.
             ////// 1. mining asset weight

@@ -771,7 +771,7 @@ where
             })
         },
         xpallet_mining_staking: Some(XStakingConfig {
-            validators,
+            validators: vec![],
             validator_count: 50,
             sessions_per_era: 12,
             vesting_account,
@@ -790,7 +790,8 @@ where
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             balances: crate::res::balances(),
-            xassets: crate::res::balances(),
+            xassets: crate::res::xassets(),
+            validators: crate::res::validators(),
         }),
     }
 }

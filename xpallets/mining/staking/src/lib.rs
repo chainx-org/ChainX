@@ -204,8 +204,7 @@ decl_storage! {
     }
 
     add_extra_genesis {
-        config(validators):
-            Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
+        config(validators): Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
@@ -220,7 +219,6 @@ decl_storage! {
                 asset: config.mining_ratio.0,
                 staking: config.mining_ratio.1,
             });
-            Module::<T>::register_genesis_validator(&config.validators).expect("Failed to register genesis validators");
         });
     }
 }
@@ -548,20 +546,33 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
     }
 }
 
+#[cfg(feature = "std")]
+pub type GenesisValidatorInfo<T> = (
+    <T as frame_system::Trait>::AccountId,
+    ReferralId,
+    BalanceOf<T>,
+    BalanceOf<T>,
+    WeightType,
+);
+
 impl<T: Trait> Module<T> {
-    /// Expose the bond impl for initializing the genesis state easier.
     #[cfg(feature = "std")]
-    pub fn register_genesis_validator(
-        validators: &[(T::AccountId, ReferralId, BalanceOf<T>)],
-    ) -> DispatchResult {
-        for (validator, referral_id, balance) in validators {
-            assert!(
-                Self::free_balance(validator) >= *balance,
-                "Validator does not have enough balance to bond."
-            );
+    pub fn register_genesis_validators(validators: &[GenesisValidatorInfo<T>]) -> DispatchResult {
+        for (validator, referral_id, self_bonded, total_nomination, total_weight) in validators {
             Self::check_referral_id(referral_id)?;
+            if !self_bonded.is_zero() {
+                assert!(
+                    Self::free_balance(validator) >= *self_bonded,
+                    "Validator does not have enough balance to bond."
+                );
+                Self::bond_reserve(validator, *self_bonded)?;
+            }
             Self::apply_register(validator, referral_id.to_vec());
-            Self::apply_bond(validator, validator, *balance)?;
+
+            ValidatorLedgers::<T>::mutate(validator, |validator| {
+                validator.total = *total_nomination;
+                validator.last_total_vote_weight = *total_weight;
+            });
         }
         Ok(())
     }
