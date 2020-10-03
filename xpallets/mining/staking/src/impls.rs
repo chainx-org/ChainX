@@ -151,10 +151,10 @@ impl<T: Trait> Module<T> {
         current_block: T::BlockNumber,
         delta: Delta<BalanceOf<T>>,
     ) {
-        Nominations::<T>::mutate(nominator, validator, |claimer_ledger| {
-            claimer_ledger.nomination = delta.calculate(claimer_ledger.nomination);
-            claimer_ledger.last_vote_weight = new_weight;
-            claimer_ledger.last_vote_weight_update = current_block;
+        Nominations::<T>::mutate(nominator, validator, |claimer| {
+            claimer.nomination = delta.calculate(claimer.nomination);
+            claimer.last_vote_weight = new_weight;
+            claimer.last_vote_weight_update = current_block;
         });
     }
 
