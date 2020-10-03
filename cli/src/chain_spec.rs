@@ -9,6 +9,7 @@ use serde_json::json;
 
 use sc_chain_spec::ChainSpecExtension;
 use sc_service::{config::TelemetryEndpoints, ChainType, Properties};
+
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
@@ -17,14 +18,14 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 
-use xpallet_protocol::{PCX, X_BTC};
+use xpallet_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
 
 use chainx_runtime::{
     constants::{currency::DOLLARS, time::DAYS},
-    AssetInfo, AssetRestriction, AssetRestrictions, BtcParams, BtcTxVerifier, Chain, NetworkType,
-    TrusteeInfoConfig,
+    AccountId, AssetId, AssetInfo, AssetRestriction, AssetRestrictions, Balance, BtcParams,
+    BtcTxVerifier, Chain, NetworkType, ReferralId, Runtime, Signature, TrusteeInfoConfig,
+    WASM_BINARY,
 };
-use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig,
     ElectionsConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig,
@@ -147,7 +148,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            crate::res::testnet_btc_genesis_header_info,
+            crate::res::testnet_btc_genesis_header,
             crate::genesis::trustees::local_testnet_trustees(),
         )
     };
@@ -228,7 +229,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 ("Eve//stash", endowed_balance),
                 ("Ferdie//stash", endowed_balance),
             ],
-            crate::res::testnet_btc_genesis_header_info,
+            crate::res::testnet_btc_genesis_header,
             crate::genesis::trustees::local_testnet_trustees(),
         )
     };
@@ -368,7 +369,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
             root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
-            crate::res::testnet_btc_genesis_header_info,
+            crate::res::testnet_btc_genesis_header,
             crate::genesis::trustees::staging_testnet_trustees(),
         )
     };
@@ -511,7 +512,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
             root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
-            crate::res::testnet_btc_genesis_header_info,
+            crate::res::testnet_btc_genesis_header,
             crate::genesis::trustees::staging_testnet_trustees(),
         )
     };
@@ -532,11 +533,9 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
     ))
 }
 
-const PCX_DECIMALS: u8 = 8;
-const BTC_DECIMALS: u8 = 8;
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        xpallet_protocol::PCX,
+        PCX,
         AssetInfo::new::<Runtime>(
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
@@ -656,13 +655,9 @@ where
         .iter()
         .take((num_endowed_accounts + 1) / 2)
         .cloned()
-        .collect();
+        .collect::<Vec<_>>();
 
-    let society_members = endowed_accounts
-        .iter()
-        .take((num_endowed_accounts + 1) / 2)
-        .cloned()
-        .collect();
+    let society_members = tech_comm_members.clone();
 
     // PCX only reserves the native asset id in assets module,
     // the actual native fund management is handled by pallet_balances.
@@ -674,7 +669,6 @@ where
         .into_iter()
         .map(|((val, referral_id), _, _, _, _, _)| (val, referral_id, STAKING_LOCKED))
         .collect::<Vec<_>>();
-
     let btc_genesis_trustees = trustees
         .iter()
         .find_map(|(chain, _, trustee_params)| {
@@ -689,7 +683,7 @@ where
                 None
             }
         })
-        .expect("bitcoin trustees initialization can not fail; qed");
+        .expect("must success for bitcoin trustee info");
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
@@ -750,7 +744,7 @@ where
                 genesis_hash,
                 network,
                 confirmed_count,
-            } = bitcoin_info(); // crate::res::mainnet_btc_genesis_header_info();
+            } = bitcoin_info(); // crate::res::mainnet_btc_genesis_header();
             Some(XGatewayBitcoinConfig {
                 genesis_trustees: btc_genesis_trustees,
                 genesis_info,
@@ -762,7 +756,7 @@ where
                     2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                     10 * 60,              // target_spacing_seconds
                     4,                    // retargeting_factor
-                ), // retargeting_factor
+                ),
                 verifier: BtcTxVerifier::Recover,
                 confirmation_number: confirmed_count,
                 reserved_block: 2100,
@@ -771,7 +765,7 @@ where
             })
         },
         xpallet_mining_staking: Some(XStakingConfig {
-            validators: vec![],
+            validators,
             validator_count: 50,
             sessions_per_era: 12,
             vesting_account,

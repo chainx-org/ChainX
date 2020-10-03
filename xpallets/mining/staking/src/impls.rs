@@ -19,11 +19,11 @@ where
     BlockNumber: Default + BaseArithmetic + Copy,
 {
     fn amount(&self) -> Balance {
-        self.total
+        self.total_nomination
     }
 
     fn set_amount(&mut self, new: Balance) {
-        self.total = new;
+        self.total_nomination = new;
     }
 
     fn last_acum_weight(&self) -> WeightType {
@@ -151,24 +151,24 @@ impl<T: Trait> Module<T> {
         current_block: T::BlockNumber,
         delta: Delta<BalanceOf<T>>,
     ) {
-        Nominations::<T>::mutate(nominator, validator, |claimer_ledger| {
-            claimer_ledger.nomination = delta.calculate(claimer_ledger.nomination);
-            claimer_ledger.last_vote_weight = new_weight;
-            claimer_ledger.last_vote_weight_update = current_block;
+        Nominations::<T>::mutate(nominator, validator, |claimer| {
+            claimer.nomination = delta.calculate(claimer.nomination);
+            claimer.last_vote_weight = new_weight;
+            claimer.last_vote_weight_update = current_block;
         });
     }
 
     ///
     pub(crate) fn set_validator_vote_weight(
-        validator: &T::AccountId,
+        who: &T::AccountId,
         new_weight: WeightType,
         current_block: T::BlockNumber,
         delta: Delta<BalanceOf<T>>,
     ) {
-        ValidatorLedgers::<T>::mutate(validator, |validator_ledger| {
-            validator_ledger.total = delta.calculate(validator_ledger.total);
-            validator_ledger.last_total_vote_weight = new_weight;
-            validator_ledger.last_total_vote_weight_update = current_block;
+        ValidatorLedgers::<T>::mutate(who, |validator| {
+            validator.total_nomination = delta.calculate(validator.total_nomination);
+            validator.last_total_vote_weight = new_weight;
+            validator.last_total_vote_weight_update = current_block;
         });
     }
 

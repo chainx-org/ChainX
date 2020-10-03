@@ -60,13 +60,13 @@ macro_rules! json_from_str {
 }
 
 // testnet
-pub fn testnet_btc_genesis_header_info() -> BitcoinParams {
+pub fn testnet_btc_genesis_header() -> BitcoinParams {
     let raw: BitcoinGenesisHeader = json_from_str!("./res/btc_genesis_header_testnet.json");
     build_bitcoin_params(raw, 6u32)
 }
 
 // mainnet
-pub fn mainnet_btc_genesis_header_info() -> BitcoinParams {
+pub fn mainnet_btc_genesis_header() -> BitcoinParams {
     let raw: BitcoinGenesisHeader = json_from_str!("./res/btc_genesis_header_mainnet.json");
     build_bitcoin_params(raw, 4u32)
 }

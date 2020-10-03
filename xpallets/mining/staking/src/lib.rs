@@ -388,8 +388,8 @@ decl_module! {
             Self::apply_unlock_unbonded_withdrawal(&sender, value);
 
             unbonded_chunks.swap_remove(unbonded_index as usize);
-            Nominations::<T>::mutate(&sender, &target, |nominator_profile| {
-                nominator_profile.unbonded_chunks = unbonded_chunks;
+            Nominations::<T>::mutate(&sender, &target, |nominator| {
+                nominator.unbonded_chunks = unbonded_chunks;
             });
 
             Self::deposit_event(RawEvent::UnlockUnbondedWithdrawal(sender, value));
@@ -411,8 +411,8 @@ decl_module! {
         fn validate(origin) {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
-            Validators::<T>::mutate(sender, |validator_profile| {
-                    validator_profile.is_chilled = false;
+            Validators::<T>::mutate(sender, |validator| {
+                    validator.is_chilled = false;
                 }
             );
         }
@@ -425,9 +425,9 @@ decl_module! {
             if Self::is_active(&sender) {
                 ensure!(Self::can_force_chilled(), Error::<T>::TooFewActiveValidators);
             }
-            Validators::<T>::mutate(sender, |validator_profile| {
-                    validator_profile.is_chilled = true;
-                    validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
+            Validators::<T>::mutate(sender, |validator| {
+                    validator.is_chilled = true;
+                    validator.last_chilled = Some(<frame_system::Module<T>>::block_number());
                 }
             );
         }
@@ -585,8 +585,8 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         Self::bond_reserve(sender, value)?;
         let delta = Delta::Add(value);
-        Nominations::<T>::mutate(sender, target, |claimer_ledger| {
-            claimer_ledger.nomination = delta.calculate(claimer_ledger.nomination);
+        Nominations::<T>::mutate(sender, target, |nominator| {
+            nominator.nomination = delta.calculate(nominator.nomination);
         });
         Ok(())
     }
@@ -611,15 +611,15 @@ impl<T: Trait> Module<T> {
         validator: &T::AccountId,
         new_weight: WeightType,
     ) {
-        Nominations::<T>::mutate(nominator, validator, |claimer_ledger| {
-            claimer_ledger.last_vote_weight = new_weight;
+        Nominations::<T>::mutate(nominator, validator, |nominator| {
+            nominator.last_vote_weight = new_weight;
         });
     }
 
     #[cfg(feature = "std")]
-    pub fn force_set_validator_vote_weight(validator: &T::AccountId, new_weight: WeightType) {
-        ValidatorLedgers::<T>::mutate(validator, |validator_ledger| {
-            validator_ledger.last_total_vote_weight = new_weight;
+    pub fn force_set_validator_vote_weight(who: &T::AccountId, new_weight: WeightType) {
+        ValidatorLedgers::<T>::mutate(who, |validator| {
+            validator.last_total_vote_weight = new_weight;
         });
     }
 
@@ -695,7 +695,7 @@ impl<T: Trait> Module<T> {
     /// Returns the total votes of a validator.
     #[inline]
     fn total_votes_of(validator: &T::AccountId) -> BalanceOf<T> {
-        ValidatorLedgers::<T>::get(validator).total
+        ValidatorLedgers::<T>::get(validator).total_nomination
     }
 
     /// Returns the balance of `nominator` has voted to `nominee`.
@@ -813,9 +813,9 @@ impl<T: Trait> Module<T> {
 
     /// Force the validator `who` to be chilled.
     fn apply_force_chilled(who: &T::AccountId) {
-        Validators::<T>::mutate(who, |validator_profile| {
-            validator_profile.is_chilled = true;
-            validator_profile.last_chilled = Some(<frame_system::Module<T>>::block_number());
+        Validators::<T>::mutate(who, |validator| {
+            validator.is_chilled = true;
+            validator.last_chilled = Some(<frame_system::Module<T>>::block_number());
         });
     }
 

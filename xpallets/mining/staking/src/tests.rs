@@ -106,7 +106,7 @@ fn bond_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
-                total: 20,
+                total_nomination: 20,
                 last_total_vote_weight: 0,
                 last_total_vote_weight_update: 0,
             }
@@ -125,7 +125,7 @@ fn bond_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
-                total: 30,
+                total_nomination: 30,
                 last_total_vote_weight: 40,
                 last_total_vote_weight_update: 2,
             }
@@ -162,7 +162,7 @@ fn unbond_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
-                total: 25,
+                total_nomination: 25,
                 last_total_vote_weight: 30 + 20 * 2,
                 last_total_vote_weight_update: 3,
             }
@@ -204,7 +204,7 @@ fn rebond_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
-                total: 25,
+                total_nomination: 25,
                 last_total_vote_weight: 30 + 40,
                 last_total_vote_weight_update: 3,
             }
@@ -213,7 +213,7 @@ fn rebond_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(3),
             ValidatorLedger {
-                total: 30 + 5,
+                total_nomination: 30 + 5,
                 last_total_vote_weight: 30 * 3,
                 last_total_vote_weight_update: 3,
             }
@@ -477,7 +477,7 @@ fn staker_reward_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(1),
             ValidatorLedger {
-                total: 10,
+                total_nomination: 10,
                 last_total_vote_weight: 0,
                 last_total_vote_weight_update: 0,
             }
@@ -495,7 +495,7 @@ fn staker_reward_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(1),
             ValidatorLedger {
-                total: 20,
+                total_nomination: 20,
                 last_total_vote_weight: 10,
                 last_total_vote_weight_update: 1,
             }
@@ -527,7 +527,7 @@ fn staker_reward_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
-                total: 20,
+                total_nomination: 20,
                 last_total_vote_weight: 0,
                 last_total_vote_weight_update: 0,
             }
@@ -536,7 +536,7 @@ fn staker_reward_should_work() {
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
-                total: 20 + 20,
+                total_nomination: 20 + 20,
                 last_total_vote_weight: 20,
                 last_total_vote_weight_update: 1,
             }
