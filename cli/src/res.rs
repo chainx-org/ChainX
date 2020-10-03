@@ -51,7 +51,7 @@ fn build_bitcoin_params(raw: BitcoinGenesisHeader, confirmed_count: u32) -> Bitc
 }
 
 // testnet
-pub fn load_testnet_btc_genesis_header_info() -> BitcoinParams {
+pub fn testnet_btc_genesis_header() -> BitcoinParams {
     let raw: BitcoinGenesisHeader =
         serde_json::from_str(include_str!("./res/btc_genesis_header_testnet.json"))
             .expect("JSON was not well-formatted");
@@ -59,7 +59,7 @@ pub fn load_testnet_btc_genesis_header_info() -> BitcoinParams {
 }
 
 // mainnet
-pub fn load_mainnet_btc_genesis_header_info() -> BitcoinParams {
+pub fn mainnet_btc_genesis_header() -> BitcoinParams {
     let raw: BitcoinGenesisHeader =
         serde_json::from_str(include_str!("./res/btc_genesis_header_mainnet.json"))
             .expect("JSON was not well-formatted");

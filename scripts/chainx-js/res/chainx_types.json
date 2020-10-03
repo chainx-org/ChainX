@@ -126,7 +126,7 @@
         "lockedUntil": "BlockNumber"
     },
     "ValidatorLedger": {
-        "total": "Balance",
+        "totalNomination": "Balance",
         "lastTotalVoteWeight": "WeightType",
         "lastTotalVoteWeightUpdate": "BlockNumber"
     },

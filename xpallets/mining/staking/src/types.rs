@@ -57,7 +57,7 @@ pub struct Unbonded<Balance, BlockNumber> {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct ValidatorLedger<Balance, BlockNumber> {
     /// The total amount of all the nominators' vote balances.
-    pub total: Balance,
+    pub total_nomination: Balance,
     /// Last calculated total vote weight of current validator.
     pub last_total_vote_weight: WeightType,
     /// Block number at which point `last_total_vote_weight` just updated.

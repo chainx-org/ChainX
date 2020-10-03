@@ -17,6 +17,7 @@ use sp_runtime::{
 
 use chainx_primitives::{AssetId, BlockNumber};
 use xpallet_assets::{AssetInfo, AssetRestriction, AssetRestrictions, Chain};
+use xpallet_protocol::PCX_DECIMALS;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -123,8 +124,6 @@ thread_local! {
 
 #[derive(Default)]
 pub struct ExtBuilder;
-
-const PCX_DECIMALS: u8 = 8;
 
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
