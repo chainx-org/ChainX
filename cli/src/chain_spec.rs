@@ -651,6 +651,14 @@ where
         .map(|member| (member, STASH))
         .collect();
 
+    let tech_comm_members = endowed_accounts
+        .iter()
+        .take((num_endowed_accounts + 1) / 2)
+        .cloned()
+        .collect::<Vec<_>>();
+
+    let society_members = tech_comm_members.clone();
+
     // PCX only reserves the native asset id in assets module,
     // the actual native fund management is handled by pallet_balances.
     let mut assets_endowed = endowed;
@@ -690,11 +698,7 @@ where
         }),
         pallet_collective_Instance1: Some(CouncilConfig::default()),
         pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
-            members: endowed_accounts
-                .iter()
-                .take((num_endowed_accounts + 1) / 2)
-                .cloned()
-                .collect(),
+            members: tech_comm_members,
             phantom: Default::default(),
         }),
         pallet_membership_Instance1: Some(Default::default()),
@@ -720,11 +724,7 @@ where
         pallet_balances: Some(BalancesConfig { balances }),
         pallet_indices: Some(IndicesConfig { indices: vec![] }),
         pallet_society: Some(SocietyConfig {
-            members: endowed_accounts
-                .iter()
-                .take((num_endowed_accounts + 1) / 2)
-                .cloned()
-                .collect(),
+            members: society_members,
             pot: 0,
             max_members: 999,
         }),
@@ -744,7 +744,7 @@ where
                 genesis_hash,
                 network,
                 confirmed_count,
-            } = bitcoin_info(); // crate::res::load_mainnet_btc_genesis_header_info();
+            } = bitcoin_info(); // crate::res::mainnet_btc_genesis_header();
             Some(XGatewayBitcoinConfig {
                 genesis_trustees: btc_genesis_trustees,
                 genesis_info,
@@ -756,7 +756,7 @@ where
                     2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                     10 * 60,              // target_spacing_seconds
                     4,                    // retargeting_factor
-                ), // retargeting_factor
+                ),
                 verifier: BtcTxVerifier::Recover,
                 confirmation_number: confirmed_count,
                 reserved_block: 2100,
