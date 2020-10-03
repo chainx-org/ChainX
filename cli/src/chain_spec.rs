@@ -7,11 +7,25 @@ use hex_literal::hex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use sc_chain_spec::ChainSpecExtension;
+use sc_service::{config::TelemetryEndpoints, ChainType, Properties};
+
+use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
+use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_runtime::traits::{IdentifyAccount, Verify};
+
+use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
+
+use xpallet_protocol::{PCX, PCX_DECIMALS, X_BTC, X_BTC_DECIMALS};
+
 use chainx_runtime::{
-    constants::currency::DOLLARS, AssetInfo, AssetRestriction, AssetRestrictions, BtcParams,
-    BtcTxVerifier, Chain, NetworkType, TrusteeInfoConfig,
+    constants::{currency::DOLLARS, time::DAYS},
+    AccountId, AssetId, AssetInfo, AssetRestriction, AssetRestrictions, Balance, BtcParams,
+    BtcTxVerifier, Chain, NetworkType, ReferralId, Runtime, Signature, TrusteeInfoConfig,
+    WASM_BINARY,
 };
-use chainx_runtime::{AccountId, AssetId, Balance, ReferralId, Runtime, Signature, WASM_BINARY};
 use chainx_runtime::{
     AuraConfig, AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig,
     ElectionsConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig,
@@ -20,18 +34,8 @@ use chainx_runtime::{
     XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
-use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
-use sc_chain_spec::ChainSpecExtension;
-use sc_service::{ChainType, Properties};
-use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
-use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{IdentifyAccount, Verify};
-
 use crate::genesis::trustees::TrusteeParams;
 use crate::res::BitcoinParams;
-use sc_service::config::TelemetryEndpoints;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -144,7 +148,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            crate::res::load_testnet_btc_genesis_header_info,
+            crate::res::testnet_btc_genesis_header,
             crate::genesis::trustees::local_testnet_trustees(),
         )
     };
@@ -225,7 +229,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 ("Eve//stash", endowed_balance),
                 ("Ferdie//stash", endowed_balance),
             ],
-            crate::res::load_testnet_btc_genesis_header_info,
+            crate::res::testnet_btc_genesis_header,
             crate::genesis::trustees::local_testnet_trustees(),
         )
     };
@@ -365,7 +369,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
             root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
-            crate::res::load_testnet_btc_genesis_header_info,
+            crate::res::testnet_btc_genesis_header,
             crate::genesis::trustees::staging_testnet_trustees(),
         )
     };
@@ -508,7 +512,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
             root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
-            crate::res::load_testnet_btc_genesis_header_info,
+            crate::res::testnet_btc_genesis_header,
             crate::genesis::trustees::staging_testnet_trustees(),
         )
     };
@@ -529,11 +533,9 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
     ))
 }
 
-const PCX_DECIMALS: u8 = 8;
-const BTC_DECIMALS: u8 = 8;
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        xpallet_protocol::PCX,
+        PCX,
         AssetInfo::new::<Runtime>(
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
@@ -551,12 +553,12 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
 
 fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        xpallet_protocol::X_BTC,
+        X_BTC,
         AssetInfo::new::<Runtime>(
             b"XBTC".to_vec(),
             b"ChainX Bitcoin".to_vec(),
             Chain::Bitcoin,
-            BTC_DECIMALS,
+            X_BTC_DECIMALS,
             b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
@@ -624,7 +626,7 @@ where
     let (assets, assets_restrictions) = init_assets(assets);
 
     let endowed_accounts = endowed
-        .get(&xpallet_protocol::PCX)
+        .get(&PCX)
         .expect("PCX endowed; qed")
         .iter()
         .cloned()
@@ -634,7 +636,7 @@ where
     let num_endowed_accounts = endowed_accounts.len();
 
     let balances = endowed
-        .get(&xpallet_protocol::PCX)
+        .get(&PCX)
         .expect("PCX endowed; qed")
         .iter()
         .cloned()
@@ -652,7 +654,7 @@ where
     // PCX only reserves the native asset id in assets module,
     // the actual native fund management is handled by pallet_balances.
     let mut assets_endowed = endowed;
-    assets_endowed.remove(&xpallet_protocol::PCX);
+    assets_endowed.remove(&PCX);
 
     let validators = initial_authorities
         .clone()
@@ -774,18 +776,11 @@ where
             ..Default::default()
         }),
         xpallet_mining_asset: Some(XMiningAssetConfig {
-            claim_restrictions: vec![(xpallet_protocol::X_BTC, (10, chainx_runtime::DAYS * 7))],
-            mining_power_map: vec![(xpallet_protocol::X_BTC, 400)],
+            claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
+            mining_power_map: vec![(X_BTC, 400)],
         }),
         xpallet_dex_spot: Some(XSpotConfig {
-            trading_pairs: vec![(
-                xpallet_protocol::PCX,
-                xpallet_protocol::X_BTC,
-                9,
-                2,
-                100000,
-                true,
-            )],
+            trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
         }),
     }
 }
