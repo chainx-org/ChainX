@@ -907,6 +907,8 @@ impl xpallet_mining_asset::Trait for Runtime {
     type WeightInfo = weights::xpallet_mining_asset::WeightInfo;
 }
 
+impl xpallet_genesis_builder::Trait for Runtime {}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -972,6 +974,8 @@ construct_runtime!(
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
+
+        XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>},
     }
 );
 

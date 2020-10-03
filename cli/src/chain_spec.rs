@@ -16,8 +16,8 @@ use chainx_runtime::{
     AuraConfig, AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig,
     ElectionsConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig,
     SessionKeys, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig,
-    XAssetsRegistrarConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig,
-    XSpotConfig, XStakingConfig, XSystemConfig,
+    XAssetsRegistrarConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XGenesisBuilderConfig,
+    XMiningAssetConfig, XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -786,6 +786,10 @@ where
                 100000,
                 true,
             )],
+        }),
+        xpallet_genesis_builder: Some(XGenesisBuilderConfig {
+            balances: crate::res::balances(),
+            xassets: crate::res::balances(),
         }),
     }
 }

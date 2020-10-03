@@ -1,5 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+use chainx_primitives::{AccountId, Balance};
 use chainx_runtime::{h256_conv_endian_from_str, BtcCompact, BtcHeader, BtcNetwork};
 
 #[derive(Debug, serde::Deserialize)]
@@ -50,18 +51,36 @@ fn build_bitcoin_params(raw: BitcoinGenesisHeader, confirmed_count: u32) -> Bitc
     }
 }
 
+macro_rules! json_from_str {
+    ($file:expr) => {
+        serde_json::from_str(include_str!($file)).expect("JSON was not well-formatted")
+    };
+}
+
 // testnet
 pub fn load_testnet_btc_genesis_header_info() -> BitcoinParams {
-    let raw: BitcoinGenesisHeader =
-        serde_json::from_str(include_str!("./res/btc_genesis_header_testnet.json"))
-            .expect("JSON was not well-formatted");
+    let raw: BitcoinGenesisHeader = json_from_str!("./res/btc_genesis_header_testnet.json");
     build_bitcoin_params(raw, 6u32)
 }
 
 // mainnet
 pub fn load_mainnet_btc_genesis_header_info() -> BitcoinParams {
-    let raw: BitcoinGenesisHeader =
-        serde_json::from_str(include_str!("./res/btc_genesis_header_mainnet.json"))
-            .expect("JSON was not well-formatted");
+    let raw: BitcoinGenesisHeader = json_from_str!("./res/btc_genesis_header_mainnet.json");
     build_bitcoin_params(raw, 4u32)
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct BalanceInfo {
+    who: AccountId,
+    free: Balance,
+}
+
+pub fn balances() -> Vec<(AccountId, Balance)> {
+    let balances: Vec<BalanceInfo> = json_from_str!("./res/genesis_balances.json");
+    balances.into_iter().map(|b| (b.who, b.free)).collect()
+}
+
+pub fn xassets() -> Vec<(AccountId, Balance)> {
+    let balances: Vec<BalanceInfo> = json_from_str!("./res/genesis_xassets.json");
+    balances.into_iter().map(|b| (b.who, b.free)).collect()
 }

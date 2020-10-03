@@ -39,6 +39,7 @@ members = [
     "xpallets/gateway/records",
     "xpallets/gateway/records/rpc",
     "xpallets/gateway/records/rpc/runtime-api",
+    "xpallets/genesis-builder",
     "xpallets/dex/spot",
     "xpallets/dex/spot/rpc",
     "xpallets/dex/spot/rpc/runtime-api",
