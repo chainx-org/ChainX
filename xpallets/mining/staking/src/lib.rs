@@ -684,7 +684,7 @@ impl<T: Trait> Module<T> {
     /// Returns the total votes of a validator.
     #[inline]
     fn total_votes_of(validator: &T::AccountId) -> BalanceOf<T> {
-        ValidatorLedgers::<T>::get(validator).total
+        ValidatorLedgers::<T>::get(validator).total_nomination
     }
 
     /// Returns the balance of `nominator` has voted to `nominee`.
