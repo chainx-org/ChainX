@@ -570,7 +570,7 @@ impl<T: Trait> Module<T> {
             Self::apply_register(validator, referral_id.to_vec());
 
             ValidatorLedgers::<T>::mutate(validator, |validator| {
-                validator.total = *total_nomination;
+                validator.total_nomination = *total_nomination;
                 validator.last_total_vote_weight = *total_weight;
             });
         }
