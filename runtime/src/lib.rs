@@ -304,17 +304,13 @@ impl pallet_aura::Trait for Runtime {
 impl pallet_grandpa::Trait for Runtime {
     type Event = Event;
     type Call = Call;
-
     type KeyOwnerProof =
         <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
-
     type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
         KeyTypeId,
         GrandpaId,
     )>>::IdentificationTuple;
-
     type KeyOwnerProofSystem = Historical;
-
     type HandleEquivocation = ();
 }
 
