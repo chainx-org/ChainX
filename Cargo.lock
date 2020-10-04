@@ -760,6 +760,7 @@ dependencies = [
  "substrate-build-script-utils",
  "xp-io",
  "xpallet-gateway-bitcoin",
+ "xpallet-mining-staking",
  "xpallet-protocol",
 ]
 

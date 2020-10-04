@@ -10,7 +10,7 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
 #[cfg(feature = "std")]
-use xpallet_mining_staking::GenesisValidatorInfo;
+use xpallet_mining_staking::{GenesisValidatorInfo, WeightType};
 use xpallet_support::info;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
@@ -30,19 +30,26 @@ decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
         config(balances): Vec<(T::AccountId, T::Balance)>;
-        config(xassets): Vec<(T::AccountId, BalanceOf<T>)>;
+        config(xbtc_assets): Vec<(T::AccountId, BalanceOf<T>)>;
         config(validators): Vec<GenesisValidatorInfo<T>>;
+        config(nominators): Vec<(T::AccountId, Vec<(T::AccountId, xpallet_mining_staking::BalanceOf<T>, WeightType)>)>;
+        config(unbonds): Vec<(T::AccountId, Vec<(T::AccountId, Vec<(xpallet_mining_staking::BalanceOf<T>, T::BlockNumber)>)>)>;
+        config(xbtc_weight): WeightType;
+        config(xbtc_miners): Vec<(T::AccountId, WeightType)>;
         build(|config| {
-            use crate::genesis::{xassets, balances, xstaking};
+            use crate::genesis::{xassets, balances, xstaking, xminingasset};
 
             let now = std::time::Instant::now();
 
             balances::initialize::<T>(&config.balances);
-            xassets::initialize::<T>(&config.xassets);
-            xstaking::initialize::<T>(&config.validators);
+            xassets::initialize::<T>(&config.xbtc_assets);
+            xstaking::initialize::<T>(&config.validators, &config.nominators, &config.unbonds);
+            xminingasset::initialize::<T>(&config.xbtc_miners);
 
-            info!("Took {:?}ms to orchestrate the exported state from ChainX 1.0", now.elapsed().as_millis());
-
+            info!(
+                "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
+                now.elapsed().as_millis()
+            );
         })
     }
 }
@@ -71,8 +78,8 @@ mod genesis {
         use crate::{BalanceOf, Trait};
         use xpallet_protocol::X_BTC;
 
-        pub fn initialize<T: Trait>(btc_assets: &[(T::AccountId, BalanceOf<T>)]) {
-            for (who, free) in btc_assets {
+        pub fn initialize<T: Trait>(xbtc_assets: &[(T::AccountId, BalanceOf<T>)]) {
+            for (who, free) in xbtc_assets {
                 xpallet_assets::Module::<T>::force_set_free_balance(&X_BTC, who, *free);
             }
         }
@@ -80,27 +87,72 @@ mod genesis {
 
     pub mod xstaking {
         use crate::Trait;
-        use xpallet_mining_staking::GenesisValidatorInfo;
+        use xpallet_mining_staking::{BalanceOf, GenesisValidatorInfo, WeightType};
 
-        pub fn initialize<T: Trait>(validators: &[GenesisValidatorInfo<T>]) {
+        pub fn initialize<T: Trait>(
+            validators: &[GenesisValidatorInfo<T>],
+            nominators: &[(T::AccountId, Vec<(T::AccountId, BalanceOf<T>, WeightType)>)],
+            unbonds: &[(
+                T::AccountId,
+                Vec<(T::AccountId, Vec<(BalanceOf<T>, T::BlockNumber)>)>,
+            )],
+        ) {
             /////// register validator
-            xpallet_mining_staking::Module::<T>::register_genesis_validators(validators)
-                .expect("Failed to register genesis validators");
+            let genesis_validators = validators.iter().map(|v| v.0.clone()).collect::<Vec<_>>();
+            xpallet_mining_staking::Module::<T>::initialize_validators(validators)
+                .expect("Failed to initialize staking validators");
 
-            //////// Nominator
-            // TODO:
             // 1. mock vote
-            // 2. mock unbond
             // 3. set vote weights
+            for (nominator, nominations) in nominators {
+                for (nominee, value, weight) in nominations {
+                    assert!(
+                        genesis_validators.contains(nominee),
+                        "nominee has not registered to be a validator!"
+                    );
 
-            //////////    XAssets
+                    // TODO: assert!(force_bond)
+                    if let Err(e) =
+                        xpallet_mining_staking::Module::<T>::force_bond(nominator, nominee, *value)
+                    {
+                        frame_support::debug::native::debug!(
+                                "force nominator{:?} vote nominee:{:?} value:{:?} failed, current free balance:{:?}",
+                                nominator,
+                                nominee,
+                                value,
+                                pallet_balances::Module::<T>::free_balance(nominator)
+
+                            );
+                    }
+
+                    xpallet_mining_staking::Module::<T>::force_set_nominator_vote_weight(
+                        nominator, nominee, *weight,
+                    );
+                }
+            }
+
+            // 2. mock unbond
+            for (nominator, unbonded_list) in unbonds {
+                for (target, unbonded_chunks) in unbonded_list {
+                    for (value, locked_until) in unbonded_chunks {
+                        xpallet_mining_staking::Module::<T>::force_unbond(
+                            nominator,
+                            target,
+                            *value,
+                            *locked_until,
+                        )
+                        .expect("force unbond failed");
+                    }
+                }
+            }
         }
     }
 
     pub mod xminingasset {
         use crate::Trait;
+        use xpallet_mining_staking::WeightType;
 
-        pub fn initialize<T: Trait>(balances: Vec<(T::AccountId, T::Balance)>) {
+        pub fn initialize<T: Trait>(xbtc_miners: &[(T::AccountId, WeightType)]) {
             //////////    XAssets
             ////// Set mining weight.
             ////// 1. mining asset weight

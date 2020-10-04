@@ -44,7 +44,7 @@ use sp_std::prelude::*;
 use chainx_primitives::ReferralId;
 use constants::*;
 use xp_mining_common::{
-    Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, WeightType, ZeroMiningWeightError,
+    Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, ZeroMiningWeightError,
 };
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
 use xpallet_support::{debug, traits::TreasuryAccount};
@@ -53,6 +53,7 @@ pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 pub use rpc::*;
 pub use types::*;
 pub use weight_info::WeightInfo;
+pub use xp_mining_common::WeightType;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -557,7 +558,7 @@ pub type GenesisValidatorInfo<T> = (
 
 impl<T: Trait> Module<T> {
     #[cfg(feature = "std")]
-    pub fn register_genesis_validators(validators: &[GenesisValidatorInfo<T>]) -> DispatchResult {
+    pub fn initialize_validators(validators: &[GenesisValidatorInfo<T>]) -> DispatchResult {
         for (validator, referral_id, self_bonded, total_nomination, total_weight) in validators {
             Self::check_referral_id(referral_id)?;
             if !self_bonded.is_zero() {

@@ -53,6 +53,7 @@ chainx-rpc = { path = "../rpc" }
 chainx-executor = { path = "../executor" }
 
 xpallet-protocol = { path = "../xpallets/protocol" }
+xpallet-mining-staking = { path  = "../xpallets/mining/staking" }
 xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin" }
 
 [build-dependencies]

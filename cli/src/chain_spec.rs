@@ -784,8 +784,12 @@ where
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             balances: crate::res::balances(),
-            xassets: crate::res::xassets(),
+            xbtc_assets: crate::res::xassets(),
             validators: crate::res::validators(),
+            nominators: crate::res::nominators(),
+            unbonds: crate::res::unbonds(),
+            xbtc_miners: vec![],
+            xbtc_weight: 666u128,
         }),
     }
 }

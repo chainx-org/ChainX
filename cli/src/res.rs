@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use chainx_primitives::{AccountId, Balance};
+use chainx_primitives::{AccountId, Balance, BlockNumber};
 use chainx_runtime::{h256_conv_endian_from_str, BtcCompact, BtcHeader, BtcNetwork};
 
 #[derive(Debug, serde::Deserialize)]
@@ -110,6 +110,84 @@ pub fn validators() -> Vec<(AccountId, Vec<u8>, Balance, Balance, u128)> {
                 v.total_weight
                     .parse::<u128>()
                     .expect("Parse u128 from string failed"),
+            )
+        })
+        .collect()
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Nomination {
+    nominee: AccountId,
+    nomination: Balance,
+    weight: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct NominatorInfo {
+    nominator: AccountId,
+    nominations: Vec<Nomination>,
+}
+
+pub fn nominators() -> Vec<(AccountId, Vec<(AccountId, Balance, u128)>)> {
+    let nominators: Vec<NominatorInfo> = json_from_str!("./res/genesis_nominators.json");
+    nominators
+        .into_iter()
+        .map(|n| {
+            (
+                n.nominator,
+                n.nominations
+                    .into_iter()
+                    .map(|nom| {
+                        (
+                            nom.nominee,
+                            nom.nomination,
+                            nom.weight
+                                .parse::<u128>()
+                                .expect("Parse u128 from string failed"),
+                        )
+                    })
+                    .collect(),
+            )
+        })
+        .collect()
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Unbond {
+    target: AccountId,
+    unbonded_chunks: Vec<xpallet_mining_staking::Unbonded<Balance, BlockNumber>>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UnbondInfo {
+    nominator: AccountId,
+    unbonds: Vec<Unbond>,
+}
+
+pub fn unbonds() -> Vec<(AccountId, Vec<(AccountId, Vec<(Balance, BlockNumber)>)>)> {
+    let unbonds: Vec<UnbondInfo> = json_from_str!("./res/genesis_unbonds.json");
+    unbonds
+        .into_iter()
+        .map(|info| {
+            (
+                info.nominator,
+                info.unbonds
+                    .into_iter()
+                    .map(|unbond| {
+                        (
+                            unbond.target,
+                            unbond
+                                .unbonded_chunks
+                                .into_iter()
+                                .map(|i| (i.value, i.locked_until))
+                                .collect(),
+                        )
+                    })
+                    .collect(),
             )
         })
         .collect()
