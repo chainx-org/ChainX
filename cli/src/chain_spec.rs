@@ -788,8 +788,8 @@ where
             validators: crate::res::validators(),
             nominators: crate::res::nominators(),
             unbonds: crate::res::unbonds(),
-            xbtc_miners: vec![],
-            xbtc_weight: 666u128,
+            xbtc_miners: crate::res::xbtc_miners(),
+            xbtc_weight: crate::res::xbtc_weight(),
         }),
     }
 }

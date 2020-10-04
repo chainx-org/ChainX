@@ -107,9 +107,7 @@ pub fn validators() -> Vec<(AccountId, Vec<u8>, Balance, Balance, u128)> {
                 v.referral_id.as_bytes().to_vec(),
                 v.self_bonded,
                 v.total_nomination,
-                v.total_weight
-                    .parse::<u128>()
-                    .expect("Parse u128 from string failed"),
+                as_u128(&v.total_weight),
             )
         })
         .collect()
@@ -139,15 +137,7 @@ pub fn nominators() -> Vec<(AccountId, Vec<(AccountId, Balance, u128)>)> {
                 n.nominator,
                 n.nominations
                     .into_iter()
-                    .map(|nom| {
-                        (
-                            nom.nominee,
-                            nom.nomination,
-                            nom.weight
-                                .parse::<u128>()
-                                .expect("Parse u128 from string failed"),
-                        )
-                    })
+                    .map(|nom| (nom.nominee, nom.nomination, as_u128(&nom.weight)))
                     .collect(),
             )
         })
@@ -190,5 +180,36 @@ pub fn unbonds() -> Vec<(AccountId, Vec<(AccountId, Vec<(Balance, BlockNumber)>)
                     .collect(),
             )
         })
+        .collect()
+}
+
+fn as_u128(s: &str) -> u128 {
+    s.parse::<u128>().expect("parse u128 from string failed")
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct XbtcInfo {
+    balance: Balance,
+    weight: String,
+}
+
+pub fn xbtc_weight() -> u128 {
+    let xbtc_info: XbtcInfo = json_from_str!("./res/genesis_xbtc_info.json");
+    as_u128(&xbtc_info.weight)
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct XbtcMiner {
+    who: AccountId,
+    weight: String,
+}
+
+pub fn xbtc_miners() -> Vec<(AccountId, u128)> {
+    let xbtc_miners: Vec<XbtcMiner> = json_from_str!("./res/genesis_xbtc_miners.json");
+    xbtc_miners
+        .into_iter()
+        .map(|m| (m.who, as_u128(&m.weight)))
         .collect()
 }

@@ -44,7 +44,7 @@ decl_storage! {
             balances::initialize::<T>(&config.balances);
             xassets::initialize::<T>(&config.xbtc_assets);
             xstaking::initialize::<T>(&config.validators, &config.nominators, &config.unbonds);
-            xminingasset::initialize::<T>(&config.xbtc_miners);
+            xminingasset::initialize::<T>(config.xbtc_weight, &config.xbtc_miners);
 
             info!(
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
@@ -112,7 +112,7 @@ mod genesis {
                     );
 
                     // TODO: assert!(force_bond)
-                    if let Err(e) =
+                    if let Err(_e) =
                         xpallet_mining_staking::Module::<T>::force_bond(nominator, nominee, *value)
                     {
                         frame_support::debug::native::debug!(
@@ -151,12 +151,30 @@ mod genesis {
     pub mod xminingasset {
         use crate::Trait;
         use xpallet_mining_staking::WeightType;
+        use xpallet_protocol::X_BTC;
 
-        pub fn initialize<T: Trait>(xbtc_miners: &[(T::AccountId, WeightType)]) {
+        pub fn initialize<T: Trait>(
+            new_xbtc_weight: WeightType,
+            xbtc_miners: &[(T::AccountId, WeightType)],
+        ) {
             //////////    XAssets
             ////// Set mining weight.
             ////// 1. mining asset weight
             ////// 2. miner weight
+            let current_block = frame_system::Module::<T>::block_number();
+            for (miner, weight) in xbtc_miners {
+                xpallet_mining_asset::Module::<T>::force_set_miner_mining_weight(
+                    miner,
+                    &X_BTC,
+                    *weight,
+                    current_block,
+                );
+            }
+            xpallet_mining_asset::Module::<T>::force_set_asset_mining_weight(
+                &X_BTC,
+                new_xbtc_weight,
+                current_block,
+            );
         }
     }
 }
