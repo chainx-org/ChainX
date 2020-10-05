@@ -35,7 +35,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
-    traits::{CheckedSub, Convert, SaturatedConversion, Saturating, StaticLookup, Zero},
+    traits::{Convert, SaturatedConversion, Saturating, StaticLookup, Zero},
     DispatchResult,
 };
 use sp_std::collections::btree_map::BTreeMap;
@@ -567,6 +567,9 @@ impl<T: Trait> Module<T> {
                     "Validator does not have enough balance to bond."
                 );
                 Self::bond_reserve(validator, *self_bonded)?;
+                Nominations::<T>::mutate(validator, validator, |nominator| {
+                    nominator.nomination = *self_bonded;
+                });
             }
             Self::apply_register(validator, referral_id.to_vec());
 
@@ -584,11 +587,12 @@ impl<T: Trait> Module<T> {
         target: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Self::bond_reserve(sender, value)?;
-        let delta = Delta::Add(value);
-        Nominations::<T>::mutate(sender, target, |nominator| {
-            nominator.nomination = delta.calculate(nominator.nomination);
-        });
+        if !value.is_zero() {
+            Self::bond_reserve(sender, value)?;
+            Nominations::<T>::mutate(sender, target, |nominator| {
+                nominator.nomination = value;
+            });
+        }
         Ok(())
     }
 
@@ -600,7 +604,14 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
         locked_until: T::BlockNumber,
     ) -> DispatchResult {
-        Self::can_unbond(sender, target, value)?;
+        // We can not reuse can_unbond() as the target can has no bond but has unbonds.
+        // Self::can_unbond(sender, target, value)?;
+        ensure!(Self::is_validator(target), Error::<T>::NotValidator);
+        ensure!(
+            Self::unbonded_chunks_of(sender, target).len()
+                < Self::maximum_unbonded_chunk_size() as usize,
+            Error::<T>::NoMoreUnbondChunks
+        );
         Self::unbond_reserve(sender, value)?;
         Self::mutate_unbonded_chunks(sender, target, value, locked_until);
         Ok(())
@@ -826,9 +837,10 @@ impl<T: Trait> Module<T> {
         let old_bonded = *new_locks.entry(LockedType::Bonded).or_default();
         let new_bonded = old_bonded + value;
 
-        Self::free_balance(who)
-            .checked_sub(&new_bonded)
-            .ok_or(Error::<T>::InsufficientBalance)?;
+        ensure!(
+            Self::free_balance(who) >= new_bonded,
+            Error::<T>::InsufficientBalance
+        );
 
         Self::set_lock(who, new_bonded);
         new_locks.insert(LockedType::Bonded, new_bonded);

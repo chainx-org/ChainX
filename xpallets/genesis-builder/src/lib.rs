@@ -106,42 +106,34 @@ mod genesis {
             // 3. set vote weights
             for (nominator, nominations) in nominators {
                 for (nominee, value, weight) in nominations {
-                    assert!(
-                        genesis_validators.contains(nominee),
-                        "nominee has not registered to be a validator!"
-                    );
-
-                    // TODO: assert!(force_bond)
-                    if let Err(_e) =
+                    // The dead validators in 1.0 has been dropped.
+                    if genesis_validators.contains(nominee) {
+                        // Validator self bonded already processed in initialize_validators()
+                        if *nominee == *nominator {
+                            continue;
+                        }
                         xpallet_mining_staking::Module::<T>::force_bond(nominator, nominee, *value)
-                    {
-                        frame_support::debug::native::debug!(
-                                "force nominator{:?} vote nominee:{:?} value:{:?} failed, current free balance:{:?}",
-                                nominator,
-                                nominee,
-                                value,
-                                pallet_balances::Module::<T>::free_balance(nominator)
-
-                            );
+                            .expect("force bond failed");
+                        xpallet_mining_staking::Module::<T>::force_set_nominator_vote_weight(
+                            nominator, nominee, *weight,
+                        );
                     }
-
-                    xpallet_mining_staking::Module::<T>::force_set_nominator_vote_weight(
-                        nominator, nominee, *weight,
-                    );
                 }
             }
 
             // 2. mock unbond
             for (nominator, unbonded_list) in unbonds {
                 for (target, unbonded_chunks) in unbonded_list {
-                    for (value, locked_until) in unbonded_chunks {
-                        xpallet_mining_staking::Module::<T>::force_unbond(
-                            nominator,
-                            target,
-                            *value,
-                            *locked_until,
-                        )
-                        .expect("force unbond failed");
+                    if genesis_validators.contains(target) {
+                        for (value, locked_until) in unbonded_chunks {
+                            xpallet_mining_staking::Module::<T>::force_unbond(
+                                nominator,
+                                target,
+                                *value,
+                                *locked_until,
+                            )
+                            .expect("force unbond failed");
+                        }
                     }
                 }
             }
