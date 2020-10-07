@@ -65,8 +65,8 @@ decl_module! {
                 "current fishermen:{:?}|sender{:?}", Self::fishermen(), who
             );
 
-            let fst_not_existed = <Reported<T>>::get(&fst_header.2).is_none();
-            let snd_not_existed = <Reported<T>>::get(&snd_header.2).is_none();
+            let fst_not_existed = !<Reported<T>>::get(&fst_header.2);
+            let snd_not_existed = !<Reported<T>>::get(&snd_header.2);
 
             debug!("report double signer|signer:{:?}|first:({:?}, {:}, {:?})|not existed:{:}|second:({:?}, {:}, {:?})|not existed:{:}",
                 double_signer,
@@ -85,8 +85,8 @@ decl_module! {
 
             let _ = Self::slash(&double_signer, fst_height, snd_height, fst_header.1);
 
-            <Reported<T>>::insert(&fst_header.2, ());
-            <Reported<T>>::insert(&snd_header.2, ());
+            <Reported<T>>::insert(&fst_header.2, true);
+            <Reported<T>>::insert(&snd_header.2, true);
             Ok(())
         }
 
@@ -113,7 +113,7 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as XFisher {
         /// If the validator has been reported the double sign misbehavior at a certain height.
-        pub Reported get(reported): map H512 => Option<()>;
+        pub Reported get(reported): map H512 => bool;
 
         /// Qualified accounts to report the double signer.
         pub Fishermen get(fishermen): Vec<T::AccountId>;
