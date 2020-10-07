@@ -107,7 +107,10 @@ decl_storage! {
         pub TxFor get(tx_for): map H256 => Option<TxInfo>;
         /// mark tx has been handled, in case re-handle this tx
         /// do not need to remove after this tx is removed from ChainX
-        pub TxMarkFor get(tx_mark_for): map H256 => Option<()>;
+        /// DEPRECATED!!!
+        // pub TxMarkFor get(tx_mark_for): map H256 => Option<()>;
+        /// For `Option<()>` is a bug in substrate v1.0, we use `TxMarkFor2` instead of `TxMarkFor`
+        pub TxMarkFor2 get(tx_mark_for2): map H256 => bool;
         /// tx first input addr for this tx
         pub InputAddrFor get(input_addr_for): map H256 => Option<BitcoinAddress>;
 
@@ -586,7 +589,7 @@ impl<T: Trait> Module<T> {
         } else {
             // not pass check! this tx has already been inserted to this block
             warn!("[apply_push_transaction]|this block already has this tx|block_hash:{:}|tx_hash:{:}|tx_list:{:?}", tx.block_hash(), tx_hash, header_info.txid_list);
-            if Self::tx_mark_for(&tx_hash).is_some() {
+            if Self::tx_mark_for2(&tx_hash) {
                 // when tx is already existed, would judge whether the tx is handled,
                 // if this tx is already handled, `TxMarkFor` would mark this txid, and return
                 // directly, due to this tx has done once.
