@@ -320,6 +320,13 @@ decl_module! {
                 e
             })
         }
+
+        /// Force set `TxMarkFor2` state.
+        pub fn set_tx_mark(marks: Vec<(H256, bool)>) {
+            for m in marks {
+                TxMarkFor2::<T>::insert(m.0, m.1);
+            }
+        }
     }
 }
 
