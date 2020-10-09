@@ -109,7 +109,7 @@ pub struct TxInfo {
     pub height: u32,
     #[deprecated(
         since = "1.0.0",
-        note = "Please not modify this property, use `TxMarkFor` instead of it"
+        note = "Please not modify this property, use `TxMarkFor2` instead of it"
     )]
     pub done: bool,
 }
