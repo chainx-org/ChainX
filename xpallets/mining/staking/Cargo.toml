@@ -9,19 +9,19 @@ codec = { package = "parity-scale-codec", version = "1.3.4", default-features = 
 serde = { version = "1.0.101", optional = true }
 
 # Substrate primitives
-sp-arithmetic = { version = "2.0.0-rc6", default-features = false }
-sp-core = { version = "2.0.0-rc6", default-features = false }
-sp-runtime = { version = "2.0.0-rc6", default-features = false }
-sp-staking = { version = "2.0.0-rc6", default-features = false }
-sp-std = { version = "2.0.0-rc6", default-features = false }
+sp-arithmetic = { version = "2.0.0", default-features = false }
+sp-core = { version = "2.0.0", default-features = false }
+sp-runtime = { version = "2.0.0", default-features = false }
+sp-staking = { version = "2.0.0", default-features = false }
+sp-std = { version = "2.0.0", default-features = false }
 
 # Substrate pallets
-frame-support = { version = "2.0.0-rc6", default-features = false }
-frame-system = { version = "2.0.0-rc6", default-features = false }
-pallet-session = { version = "2.0.0-rc6", default-features = false }
-pallet-balances = { version = "2.0.0-rc6", default-features = false }
+frame-support = { version = "2.0.0", default-features = false }
+frame-system = { version = "2.0.0", default-features = false }
+pallet-session = { version = "2.0.0", default-features = false }
+pallet-balances = { version = "2.0.0", default-features = false }
 
-frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
+frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -34,10 +34,10 @@ xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
 xpallet-protocol = { path = "../../protocol" }
-sp-core = { version = "2.0.0-rc6" }
-sp-io = { version = "2.0.0-rc6" }
-pallet-timestamp = { version = "2.0.0-rc6" }
-frame-benchmarking = { version = "2.0.0-rc6" }
+sp-core = { version = "2.0.0" }
+sp-io = { version = "2.0.0" }
+pallet-timestamp = { version = "2.0.0" }
+frame-benchmarking = { version = "2.0.0" }
 env_logger = "0.7.1"
 
 [features]
