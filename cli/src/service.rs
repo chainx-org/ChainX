@@ -213,8 +213,6 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
         system_rpc_tx,
     })?;
 
-    // let shared_voter_state = rpc_setup;
-
     if role.is_authority() {
         let proposer = sc_basic_authorship::ProposerFactory::new(
             client.clone(),
