@@ -23,7 +23,7 @@ use btc_primitives::H256;
 use btc_script::Script;
 
 use crate::types::{DepositAccountInfo, DepositCache, TxInfo, TxType};
-use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait, TxMarkFor};
+use crate::{CurrentWithdrawalProposal, Module, PendingDepositMap, RawEvent, Trait, TxMarkFor2};
 
 use super::utils::{addr2vecu8, ensure_identical, get_hot_trustee_address, is_key, parse_opreturn};
 
@@ -37,7 +37,7 @@ pub struct TxHandler {
 impl TxHandler {
     pub fn new<T: Trait>(txid: &H256) -> result::Result<TxHandler, &'static str> {
         let tx_info = Module::<T>::tx_for(txid).ok_or("not find this txinfo for this txid")?;
-        if Module::<T>::tx_mark_for(txid).is_some() {
+        if Module::<T>::tx_mark_for2(txid) {
             error!(
                 "[TxHandler]|this tx has already been handled|tx_hash:{:}",
                 txid
@@ -77,7 +77,7 @@ impl TxHandler {
         };
 
         // handle finish, mark this tx has done
-        TxMarkFor::<T>::insert(&self.tx_hash, ());
+        TxMarkFor2::<T>::insert(&self.tx_hash, true);
 
         Ok(())
     }

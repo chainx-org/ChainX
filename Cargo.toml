@@ -1,6 +1,6 @@
 [package]
 name = "chainx"
-version = "1.1.1"
+version = "1.1.2"
 build = "build.rs"
 authors = ["Chainpool <https://www.chainx.org>"]
 edition = "2018"
