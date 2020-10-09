@@ -163,12 +163,12 @@ pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Dispatch
 pub fn set_main_chain<T: Trait>(height: u32, main_hash: &H256) {
     let hashes = Module::<T>::block_hash_for(&height);
     if hashes.len() == 1 {
-        MainChain::insert(&hashes[0], ());
+        MainChain::insert(&hashes[0], true);
         return;
     }
     for hash in hashes {
         if hash == *main_hash {
-            MainChain::insert(&hash, ());
+            MainChain::insert(&hash, true);
         } else {
             MainChain::remove(&hash);
         }

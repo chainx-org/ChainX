@@ -63,7 +63,7 @@ decl_storage! {
         pub Paused get(fn paused): map hasher(twox_64_concat) Vec<u8> => BTreeMap<Vec<u8>, ()>;
 
         /// Blocked account ids.
-        pub BlockedAccounts get(fn blocked_accounts): map hasher(blake2_128_concat) T::AccountId => Option<()>;
+        pub BlockedAccounts get(fn blocked_accounts): map hasher(blake2_128_concat) T::AccountId => bool;
     }
 }
 
@@ -117,7 +117,7 @@ decl_module! {
 
             let who = T::Lookup::lookup(who)?;
             if should_block {
-                BlockedAccounts::<T>::insert(who.clone(), ());
+                BlockedAccounts::<T>::insert(who.clone(), true);
                 Self::deposit_event(Event::<T>::BlockAccount(who))
             } else {
                 BlockedAccounts::<T>::remove(&who);
@@ -150,6 +150,8 @@ impl<T: Trait> Module<T> {
 
     /// Returns the blocked account id list.
     pub fn blocked_list() -> Vec<T::AccountId> {
-        BlockedAccounts::<T>::iter().map(|(a, _)| a).collect()
+        BlockedAccounts::<T>::iter()
+            .filter_map(|(a, blocked)| if blocked { Some(a) } else { None })
+            .collect()
     }
 }

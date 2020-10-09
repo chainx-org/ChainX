@@ -295,7 +295,11 @@ impl<T: Trait> Module<T> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
             .filter_map(|(id, map)| {
-                xpallet_assets_registrar::Module::<T>::asset_online(id).map(|_| (id, map))
+                if xpallet_assets_registrar::Module::<T>::asset_online(id) {
+                    Some((id, map))
+                } else {
+                    None
+                }
             })
             .collect()
     }
