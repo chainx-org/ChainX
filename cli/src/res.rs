@@ -1,6 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use chainx_primitives::{AccountId, Balance, BlockNumber};
+use std::collections::HashMap;
+
+use chainx_primitives::{AccountId, Balance};
 use chainx_runtime::{h256_conv_endian_from_str, BtcCompact, BtcHeader, BtcNetwork};
 
 #[derive(Debug, serde::Deserialize)]
@@ -144,45 +146,6 @@ pub fn nominators() -> Vec<(AccountId, Vec<(AccountId, Balance, u128)>)> {
         .collect()
 }
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Unbond {
-    target: AccountId,
-    unbonded_chunks: Vec<xpallet_mining_staking::Unbonded<Balance, BlockNumber>>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct UnbondInfo {
-    nominator: AccountId,
-    unbonds: Vec<Unbond>,
-}
-
-pub fn unbonds() -> Vec<(AccountId, Vec<(AccountId, Vec<(Balance, BlockNumber)>)>)> {
-    let unbonds: Vec<UnbondInfo> = json_from_str!("./res/genesis_unbonds.json");
-    unbonds
-        .into_iter()
-        .map(|info| {
-            (
-                info.nominator,
-                info.unbonds
-                    .into_iter()
-                    .map(|unbond| {
-                        (
-                            unbond.target,
-                            unbond
-                                .unbonded_chunks
-                                .into_iter()
-                                .map(|i| (i.value, i.locked_until))
-                                .collect(),
-                        )
-                    })
-                    .collect(),
-            )
-        })
-        .collect()
-}
-
 fn as_u128(s: &str) -> u128 {
     s.parse::<u128>().expect("parse u128 from string failed")
 }
@@ -212,4 +175,21 @@ pub fn xbtc_miners() -> Vec<(AccountId, u128)> {
         .into_iter()
         .map(|m| (m.who, as_u128(&m.weight)))
         .collect()
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SpecialAccounts {
+    council: AccountId,
+    team: AccountId,
+    pots: HashMap<AccountId, AccountId>,
+}
+
+pub fn special_accounts() -> (AccountId, AccountId, Vec<(AccountId, AccountId)>) {
+    let special_accounts: SpecialAccounts = json_from_str!("./res/genesis_special_accounts.json");
+    (
+        special_accounts.council,
+        special_accounts.team,
+        special_accounts.pots.into_iter().collect(),
+    )
 }

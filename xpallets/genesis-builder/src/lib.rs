@@ -33,17 +33,28 @@ decl_storage! {
         config(xbtc_assets): Vec<(T::AccountId, BalanceOf<T>)>;
         config(validators): Vec<GenesisValidatorInfo<T>>;
         config(nominators): Vec<(T::AccountId, Vec<(T::AccountId, xpallet_mining_staking::BalanceOf<T>, WeightType)>)>;
-        config(unbonds): Vec<(T::AccountId, Vec<(T::AccountId, Vec<(xpallet_mining_staking::BalanceOf<T>, T::BlockNumber)>)>)>;
         config(xbtc_weight): WeightType;
         config(xbtc_miners): Vec<(T::AccountId, WeightType)>;
+        config(special_accounts): (T::AccountId, T::AccountId, Vec<(T::AccountId, T::AccountId)>);
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xminingasset};
 
             let now = std::time::Instant::now();
 
-            balances::initialize::<T>(&config.balances);
+            let (legacy_treasury_account, legacy_vesting_account, legacy_reward_pots) = (
+                config.special_accounts.0.clone(),
+                config.special_accounts.1.clone(),
+                &config.special_accounts.2
+            );
+
+            balances::initialize::<T>(
+                &config.balances,
+                legacy_treasury_account,
+                legacy_vesting_account,
+                legacy_reward_pots,
+            );
             xassets::initialize::<T>(&config.xbtc_assets);
-            xstaking::initialize::<T>(&config.validators, &config.nominators, &config.unbonds);
+            xstaking::initialize::<T>(&config.validators, &config.nominators);
             xminingasset::initialize::<T>(config.xbtc_weight, &config.xbtc_miners);
 
             info!(
@@ -60,16 +71,55 @@ mod genesis {
         use crate::Trait;
         use frame_support::traits::StoredMap;
         use pallet_balances::AccountData;
+        use xpallet_mining_staking::RewardPotAccountFor;
+        use xpallet_support::traits::TreasuryAccount;
 
-        pub fn initialize<T: Trait>(balances: &[(T::AccountId, T::Balance)]) {
-            for (who, free) in balances {
+        fn validator_for<'a, T: Trait, I: Iterator<Item = &'a (T::AccountId, T::AccountId)>>(
+            target: &T::AccountId,
+            pots: I,
+        ) -> Option<&'a T::AccountId> {
+            pots.filter(|(pot, _)| *pot == *target)
+                .next()
+                .map(|(_, v)| v)
+        }
+
+        pub fn initialize<T: Trait>(
+            balances: &[(T::AccountId, T::Balance)],
+            legacy_treasury_account: T::AccountId,
+            legacy_vesting_account: T::AccountId,
+            legacy_reward_pots: &[(T::AccountId, T::AccountId)],
+        ) {
+            let treasury_account =
+                <T as xpallet_mining_staking::Trait>::TreasuryAccount::treasury_account();
+
+            let set_free_balance = |who: &T::AccountId, free: &T::Balance| {
                 T::AccountStore::insert(
                     who,
                     AccountData {
                         free: *free,
                         ..Default::default()
                     },
-                );
+                )
+            };
+
+            for (who, free) in balances {
+                if *who == legacy_treasury_account {
+                    set_free_balance(&treasury_account, free);
+                } else if *who == legacy_vesting_account {
+                    set_free_balance(
+                        &xpallet_mining_staking::Module::<T>::vesting_account(),
+                        free,
+                    );
+                } else if let Some(validator) =
+                    validator_for::<T, _>(who, legacy_reward_pots.iter())
+                {
+                    let new_pot = <T as xpallet_mining_staking::Trait>::DetermineRewardPotAccount::reward_pot_account_for(
+                            validator,
+                        );
+                    set_free_balance(&new_pot, free);
+                } else {
+                    set_free_balance(who, free);
+                }
             }
         }
     }
@@ -92,10 +142,6 @@ mod genesis {
         pub fn initialize<T: Trait>(
             validators: &[GenesisValidatorInfo<T>],
             nominators: &[(T::AccountId, Vec<(T::AccountId, BalanceOf<T>, WeightType)>)],
-            unbonds: &[(
-                T::AccountId,
-                Vec<(T::AccountId, Vec<(BalanceOf<T>, T::BlockNumber)>)>,
-            )],
         ) {
             /////// register validator
             let genesis_validators = validators.iter().map(|v| v.0.clone()).collect::<Vec<_>>();
@@ -117,23 +163,6 @@ mod genesis {
                         xpallet_mining_staking::Module::<T>::force_set_nominator_vote_weight(
                             nominator, nominee, *weight,
                         );
-                    }
-                }
-            }
-
-            // 2. mock unbond
-            for (nominator, unbonded_list) in unbonds {
-                for (target, unbonded_chunks) in unbonded_list {
-                    if genesis_validators.contains(target) {
-                        for (value, locked_until) in unbonded_chunks {
-                            xpallet_mining_staking::Module::<T>::force_unbond(
-                                nominator,
-                                target,
-                                *value,
-                                *locked_until,
-                            )
-                            .expect("force unbond failed");
-                        }
                     }
                 }
             }
