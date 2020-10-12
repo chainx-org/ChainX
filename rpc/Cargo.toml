@@ -14,6 +14,9 @@ sc-client-api = { version = "2.0.0" }
 sc-service = { version = "0.8.0", features = ["test-helpers"] }
 sc-rpc-api = { version = "0.8.0" }
 sc-rpc = { version = "2.0.0" }
+sc-keystore = { version = "2.0.0" }
+sc-consensus-babe = { version = "0.8.0"}
+sc-consensus-epochs = { version = "0.8.0"}
 
 sc-finality-grandpa = { version = "0.8.0" }
 sc-finality-grandpa-rpc = { version = "0.8.0" }
