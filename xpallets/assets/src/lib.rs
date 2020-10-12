@@ -294,9 +294,7 @@ impl<T: Trait> Module<T> {
     ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
-            .filter_map(|(id, map)| {
-                xpallet_assets_registrar::Module::<T>::asset_online(id).map(|_| (id, map))
-            })
+            .filter(|(id, _)| xpallet_assets_registrar::Module::<T>::asset_online(id))
             .collect()
     }
 

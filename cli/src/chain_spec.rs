@@ -183,7 +183,7 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            crate::res::load_mainnet_btc_genesis_header_info,
+            crate::res::mainnet_btc_genesis_header,
             crate::genesis::trustees::benchmarks_trustees(),
         )
     };
