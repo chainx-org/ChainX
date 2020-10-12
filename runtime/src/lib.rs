@@ -372,8 +372,9 @@ impl pallet_session::Trait for Runtime {
     type Event = Event;
     type ValidatorId = <Self as frame_system::Trait>::AccountId;
     type ValidatorIdOf = SimpleValidatorIdConverter;
-    type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
-    type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+    type ShouldEndSession = Babe;
+    type NextSessionRotation = Babe;
+    // type SessionManager = pallet_session::historical::NoteHistoricalRoot<Self, XStaking>;
     type SessionManager = XStaking;
     type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
     type Keys = SessionKeys;
