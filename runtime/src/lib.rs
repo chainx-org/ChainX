@@ -352,8 +352,6 @@ impl pallet_finality_tracker::Trait for Runtime {
 
 parameter_types! {
     pub const Offset: BlockNumber = 0;
-    /// Session length.
-    pub const Period: BlockNumber = 50;
     pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
 
@@ -374,7 +372,7 @@ impl pallet_session::Trait for Runtime {
     type ValidatorIdOf = SimpleValidatorIdConverter;
     type ShouldEndSession = Babe;
     type NextSessionRotation = Babe;
-    // type SessionManager = pallet_session::historical::NoteHistoricalRoot<Self, XStaking>;
+    // We do not make use of the historical feature of pallet-session, hereby use XStaking only.
     type SessionManager = XStaking;
     type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
     type Keys = SessionKeys;
@@ -415,7 +413,6 @@ impl pallet_transaction_payment::Trait for Runtime {
 }
 
 parameter_types! {
-    /// Babe use EPOCH_DURATION_IN_SLOTS here, we use Aura.
     pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS;
     pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
     /// We prioritize im-online heartbeats over election solution submission.
