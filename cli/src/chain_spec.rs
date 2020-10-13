@@ -683,7 +683,7 @@ where
                 None
             }
         })
-        .expect("must success for bitcoin trustee info");
+        .expect("bitcoin trustees generation can not fail; qed");
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
