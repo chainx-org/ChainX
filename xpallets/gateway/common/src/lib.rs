@@ -387,11 +387,8 @@ impl<T: Trait> Module<T> {
                         )
                     })
                     .collect();
-                let mut session_info =
-                    T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
+                let session_info = T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
 
-                // sort account list to make sure generate a stable multisig addr(addr is related with accounts sequence)
-                session_info.trustee_list.sort();
                 session_info.into()
             }
             _ => return Err(Error::<T>::NotSupportedChain.into()),
