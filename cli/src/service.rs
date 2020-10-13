@@ -24,7 +24,8 @@ use chainx_runtime::{self, RuntimeApi};
 
 type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 type FullBackend = sc_service::TFullBackend<Block>;
-type FullGrandpaBlockImport = sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, FullClient, FullSelectChain>;
+type FullGrandpaBlockImport =
+    sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, FullClient, FullSelectChain>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 pub fn new_partial(
@@ -39,13 +40,9 @@ pub fn new_partial(
         (
             impl Fn(chainx_rpc::DenyUnsafe, sc_rpc::SubscriptionTaskExecutor) -> chainx_rpc::IoHandler,
             (
-                sc_consensus_babe::BabeBlockImport<
-                    Block,
-                    FullClient,
-                    FullGrandpaBlockImport,
-                >,
+                sc_consensus_babe::BabeBlockImport<Block, FullClient, FullGrandpaBlockImport>,
                 sc_finality_grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
-                sc_consensus_babe::BabeLink<Block>
+                sc_consensus_babe::BabeLink<Block>,
             ),
             (
                 sc_finality_grandpa::SharedVoterState,
@@ -126,7 +123,7 @@ pub fn new_partial(
                 babe: chainx_rpc::BabeDeps {
                     babe_config: babe_config.clone(),
                     shared_epoch_changes: shared_epoch_changes.clone(),
-                    keystore: keystore.clone()
+                    keystore: keystore.clone(),
                 },
                 grandpa: chainx_rpc::GrandpaDeps {
                     shared_voter_state: shared_voter_state.clone(),
@@ -165,8 +162,7 @@ pub struct NewFullBase {
 }
 
 /// Creates a full service from the configuration.
-pub fn new_full_base(config: Configuration,
-    ) -> Result<NewFullBase, ServiceError> {
+pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError> {
     let sc_service::PartialComponents {
         client,
         backend,
@@ -191,7 +187,7 @@ pub fn new_full_base(config: Configuration,
             on_demand: None,
             block_announce_validator_builder: None,
             finality_proof_request_builder: None,
-            finality_proof_provider: Some(finality_proof_provider)
+            finality_proof_provider: Some(finality_proof_provider),
         })?;
 
     if config.offchain_worker.enabled {
@@ -249,7 +245,7 @@ pub fn new_full_base(config: Configuration,
             inherent_data_providers: inherent_data_providers.clone(),
             force_authoring,
             babe_link,
-            can_author_with
+            can_author_with,
         };
 
         let babe = sc_consensus_babe::start_babe(babe_config)?;
@@ -404,7 +400,7 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
         inherent_data_providers.clone(),
         &task_manager.spawn_handle(),
         config.prometheus_registry(),
-        sp_consensus::NeverCanAuthor
+        sp_consensus::NeverCanAuthor,
     )?;
 
     let finality_proof_provider =
