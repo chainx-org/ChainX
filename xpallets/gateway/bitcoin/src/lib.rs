@@ -170,6 +170,8 @@ decl_event!(
         InsertHeader(H256),
         /// tx hash, block hash, tx type
         ProcessTx(H256, H256, BtcTxState),
+        /// Unclaimed deposit tx
+        UnclaimedDeposit(H256),
         /// who, balance, txhsah, Chain Addr
         DepositPending(AccountId, Balance, H256, AddrStr),
         /// create withdraw tx, who proposal, withdrawal list id
