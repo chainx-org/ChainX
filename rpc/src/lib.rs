@@ -4,6 +4,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use sc_consensus_babe::Epoch;
+use sc_consensus_babe_rpc::BabeRpcHandler;
 use sc_finality_grandpa::{
     FinalityProofProvider, GrandpaJustificationStream, SharedAuthoritySet, SharedVoterState,
 };
@@ -14,6 +15,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
+use sp_consensus_babe::BabeApi;
 use sp_transaction_pool::TransactionPool;
 
 use chainx_primitives::Block;
@@ -83,6 +85,7 @@ where
     C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
     C: Send + Sync + 'static,
     C::Api: BlockBuilder<Block>,
+    C::Api: BabeApi<Block>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>,
@@ -124,9 +127,14 @@ where
         pool,
         select_chain,
         deny_unsafe,
-        babe,
         grandpa,
+        babe,
     } = deps;
+    let BabeDeps {
+        keystore,
+        babe_config,
+        shared_epoch_changes,
+    } = babe;
     let GrandpaDeps {
         shared_voter_state,
         shared_authority_set,
@@ -143,7 +151,16 @@ where
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
         client.clone(),
     )));
-
+    io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(
+        BabeRpcHandler::new(
+            client.clone(),
+            shared_epoch_changes,
+            keystore,
+            babe_config,
+            select_chain,
+            deny_unsafe,
+        ),
+    ));
     io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
         GrandpaRpcHandler::new(
             shared_authority_set,

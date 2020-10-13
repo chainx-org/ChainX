@@ -10,30 +10,31 @@ jsonrpc-core = { version = "15.0.0", features = ["arbitrary_precision"] }
 jsonrpc-pubsub = "15.0.0"
 
 # Substrate client
-sc-client-api = { version = "2.0.0" }
+sc-client-api = "2.0.0"
 sc-service = { version = "0.8.0", features = ["test-helpers"] }
-sc-rpc-api = { version = "0.8.0" }
-sc-rpc = { version = "2.0.0" }
-sc-keystore = { version = "2.0.0" }
-sc-consensus-babe = { version = "0.8.0"}
-sc-consensus-epochs = { version = "0.8.0"}
-
-sc-finality-grandpa = { version = "0.8.0" }
-sc-finality-grandpa-rpc = { version = "0.8.0" }
+sc-rpc-api = "0.8.0"
+sc-rpc = "2.0.0"
+sc-keystore = "2.0.0"
+sc-consensus-babe = "0.8.0"
+sc-consensus-babe-rpc = "0.8.0"
+sc-consensus-epochs = "0.8.0"
+sc-finality-grandpa = "0.8.0"
+sc-finality-grandpa-rpc = "0.8.0"
 
 # Substrate primitives
-sp-api = { version = "2.0.0" }
-sp-blockchain = { version = "2.0.0" }
-sp-block-builder = { version = "2.0.0" }
-sp-consensus = { version = "0.8.0" }
-sp-runtime = { version = "2.0.0" }
-sp-state-machine = { version = "0.8.0" }
-sp-transaction-pool = { version = "2.0.0" }
+sp-api = "2.0.0"
+sp-blockchain = "2.0.0"
+sp-block-builder = "2.0.0"
+sp-consensus = "0.8.0"
+sp-consensus-babe = "0.8.0"
+sp-runtime = "2.0.0"
+sp-state-machine = "0.8.0"
+sp-transaction-pool = "2.0.0"
 
 # Substrate pallets
-frame-support = { version = "2.0.0" }
-substrate-frame-rpc-system = { version = "2.0.0" }
-pallet-transaction-payment-rpc = { version = "2.0.0" }
+frame-support = "2.0.0"
+substrate-frame-rpc-system = "2.0.0"
+pallet-transaction-payment-rpc = "2.0.0"
 
 chainx-runtime = { path = "../runtime" }
 
