@@ -132,15 +132,7 @@
         ]
     },
     "BtcAddress": "Text",
-    "BtcCompact": "u32",
-    "BtcHeader": {
-        "version": "u32",
-        "previous_header_hash": "H256",
-        "merkle_root_hash": "H256",
-        "time": "u32",
-        "bits": "BtcCompact",
-        "nonce": "u32"
-    },
+    "BtcHeader": "Vec<u8>",
     "BtcTransaction": "Vec<u8>",
     "BtcPartialMerkleTree": "Vec<u8>",
     "BtcRelayedTxInfo": {
