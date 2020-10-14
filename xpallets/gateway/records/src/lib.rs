@@ -75,11 +75,17 @@ decl_event!(
         Balance = BalanceOf<T>,
         WithdrawalRecord = WithdrawalRecordOf<T>
     {
+        /// An account deposited some asset. [who, asset_id, amount]
         Deposited(AccountId, AssetId, Balance),
-        WithdrawalApplied(WithdrawalRecordId, WithdrawalRecord),
+        /// A withdrawl application was created. [withdrawal_id, record_info]
+        WithdrawalApplicationCreated(WithdrawalRecordId, WithdrawalRecord),
+        /// A withdrawal proposal was processed. [withdrawal_id]
         WithdrawalProcessed(WithdrawalRecordId),
+        /// A withdrawal proposal was recovered. [withdrawal_id]
         WithdrawalRecovered(WithdrawalRecordId),
+        /// A withdrawal proposal was canceled. [withdrawal_id, withdrawal_state]
         WithdrawalCanceled(WithdrawalRecordId, WithdrawalState),
+        /// A withdrawal proposal was finished successfully. [withdrawal_id, withdrawal_state]
         WithdrawalFinished(WithdrawalRecordId, WithdrawalState),
     }
 );
@@ -217,7 +223,7 @@ impl<T: Trait> Module<T> {
     ///
     /// WithdrawalRecord State: `Applying`
     ///
-    /// Note: this func has include withdrawal_init and withdrawal_locking
+    /// NOTE: this function has included withdrawal_init and withdrawal_locking.
     pub fn withdraw(
         who: &T::AccountId,
         asset_id: AssetId,
@@ -251,7 +257,7 @@ impl<T: Trait> Module<T> {
         let next_id = id.checked_add(1_u32).unwrap_or(0);
         NextWithdrawalRecordId::put(next_id);
 
-        Self::deposit_event(Event::<T>::WithdrawalApplied(id, record));
+        Self::deposit_event(Event::<T>::WithdrawalApplicationCreated(id, record));
         Ok(())
     }
 

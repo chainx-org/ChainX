@@ -67,10 +67,11 @@ pub trait Trait: frame_system::Trait + xpallet_gateway_records::Trait {
 decl_event!(
     pub enum Event<T> where
         <T as frame_system::Trait>::AccountId,
-        GenericTrusteeSessionInfo = GenericTrusteeSessionInfo<<T as frame_system::Trait>::AccountId> {
+    {
+        ///
         SetTrusteeProps(AccountId, Chain, GenericTrusteeIntentionProps),
-        NewTrustees(Chain, u32, GenericTrusteeSessionInfo),
-        ChannelBinding(Chain, AccountId, AccountId),
+        ///
+        ChannelBinded(Chain, AccountId, AccountId),
     }
 );
 
@@ -437,7 +438,7 @@ impl<T: Trait> Module<T> {
     fn set_binding(chain: Chain, who: T::AccountId, binded: T::AccountId) {
         ChannelBindingOf::<T>::insert(&who, &chain, binded.clone());
 
-        Self::deposit_event(RawEvent::ChannelBinding(chain, who, binded))
+        Self::deposit_event(Event::<T>::ChannelBinded(chain, who, binded))
     }
 }
 
