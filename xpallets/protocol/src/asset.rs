@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use chainx_primitives::AssetId;
+use chainx_primitives::{AssetId, Decimals};
 
 // match to SLIP-0044 Registered coin types for BIP-0044
 // [Registered coin types](https://github.com/satoshilabs/slips/blob/master/slip-0044.md)
@@ -34,9 +34,13 @@ use chainx_primitives::AssetId;
 
 /// Native asset of ChainX.
 pub const PCX: AssetId = 0;
+/// Decimals of PCX, the native token of ChainX.
+pub const PCX_DECIMALS: Decimals = 8;
 
 /// BTC asset in ChainX backed by the Mainnet Bitcoin.
 pub const X_BTC: AssetId = 1;
+/// Decimals of BTC.
+pub const BTC_DECIMALS: Decimals = 8;
 /// Reserved since this symbol had been used in legacy ChainX 1.0.
 pub const L_BTC: AssetId = 0x90000000 | X_BTC;
 

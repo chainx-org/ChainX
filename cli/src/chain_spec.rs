@@ -22,16 +22,15 @@ use xpallet_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
 
 use chainx_runtime::{
     constants::{currency::DOLLARS, time::DAYS},
-    AccountId, AssetId, AssetInfo, AssetRestriction, AssetRestrictions, Balance, BtcParams,
-    BtcTxVerifier, Chain, NetworkType, ReferralId, Runtime, Signature, TrusteeInfoConfig,
-    WASM_BINARY,
+    AccountId, AssetId, AssetInfo, AssetRestrictions, Balance, BtcParams, BtcTxVerifier, Chain,
+    NetworkType, ReferralId, Runtime, SessionKeys, Signature, TrusteeInfoConfig, WASM_BINARY,
 };
 use chainx_runtime::{
     AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
-    GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
-    SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig,
-    XAssetsRegistrarConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig,
-    XSpotConfig, XStakingConfig, XSystemConfig,
+    GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SocietyConfig,
+    SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
+    XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig,
+    XSystemConfig,
 };
 
 use crate::genesis::trustees::TrusteeParams;
@@ -544,10 +543,10 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's crypto currency in Polkadot ecology".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::Deposit
-            | AssetRestriction::Withdraw
-            | AssetRestriction::DestroyWithdrawal
-            | AssetRestriction::DestroyUsable,
+        AssetRestrictions::DEPOSIT
+            | AssetRestrictions::WITHDRAW
+            | AssetRestrictions::DESTROY_WITHDRAWAL
+            | AssetRestrictions::DESTROY_USABLE,
     )
 }
 
@@ -562,7 +561,7 @@ fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyUsable.into(),
+        AssetRestrictions::DESTROY_USABLE,
     )
 }
 

@@ -441,6 +441,8 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
                 balance
             );
             list.push(cache);
+
+            Module::<T>::deposit_event(RawEvent::UnclaimedDeposit(*txid));
         }
     });
 }

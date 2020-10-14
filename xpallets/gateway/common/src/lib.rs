@@ -31,7 +31,7 @@ use frame_system::{ensure_root, ensure_signed};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_runtime::Memo;
-use xpallet_assets::{AssetRestriction, Chain, ChainT, WithdrawalLimit};
+use xpallet_assets::{AssetRestrictions, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::WithdrawalState;
 use xpallet_support::{
     error, info,
@@ -266,7 +266,7 @@ impl<T: Trait> Module<T> {
         ext: Memo,
     ) -> DispatchResult {
         ensure!(
-            xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestriction::Withdraw),
+            xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestrictions::WITHDRAW),
             xpallet_assets::Error::<T>::ActionNotAllowed,
         );
 

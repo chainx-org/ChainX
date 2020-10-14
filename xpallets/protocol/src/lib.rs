@@ -22,9 +22,3 @@ pub const ASSET_DESC_MAX_LEN: usize = 128;
 
 /// The maximum length of memo
 pub const MEMO_MAX_LEN: usize = 80;
-
-/// Decimals of PCX, the native token of ChainX.
-pub const PCX_DECIMALS: u8 = 8;
-
-/// Decimals of X_BTC.
-pub const BTC_DECIMALS: u8 = 8;
