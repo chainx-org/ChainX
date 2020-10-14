@@ -157,21 +157,21 @@ decl_event!(
         <T as frame_system::Trait>::BlockNumber,
         <T as Trait>::Price,
     {
-        /// A new order is created.
+        /// A new order was created. [order_info]
         NewOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
-        /// There is an update to the order due to it gets executed.
+        /// There was an update to the order due to it gets executed. [maker_order_info]
         MakerOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
-        /// There is an update to the order due to it gets executed.
+        /// There was an update to the order due to it gets executed. [taker_order_info]
         TakerOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
-        /// Overall information about the maker and taker orders when there is an order execution.
+        /// Overall information about the maker and taker orders when there was an order execution. [order_executed_info]
         OrderExecuted(OrderExecutedInfo<AccountId, Balance, BlockNumber, Price>),
-        /// There is an update to the order due to it gets canceled.
+        /// There is an update to the order due to it gets canceled. [order_info]
         CanceledOrderUpdated(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
-        /// A new trading pair is added.
+        /// A new trading pair is added. [pair_profile]
         TradingPairAdded(TradingPairProfile),
-        /// Trading pair profile has been updated.
+        /// Trading pair profile has been updated. [pair_profile]
         TradingPairUpdated(TradingPairProfile),
-        /// Price fluctuation of trading pair has been updated.
+        /// Price fluctuation of trading pair has been updated. [pair_id, price_fluctuation]
         PriceFluctuationUpdated(TradingPairId, PriceFluctuation),
     }
 );

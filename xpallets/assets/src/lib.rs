@@ -124,11 +124,15 @@ decl_event!(
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>,
     {
+        /// Move balance of an asset from one to another. [asset_id, from, from_type, to, to_type, amount]
         Move(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
-        Issue(AssetId, AccountId, Balance),
-        Destroy(AssetId, AccountId, Balance),
-        Set(AssetId, AccountId, AssetType, Balance),
-        /// Set restrictions for an asset
+        /// New balances of an asset were issued. [asset_id, receiver, amount]
+        Issued(AssetId, AccountId, Balance),
+        /// Some balances of an asset were destoryed. [asset_id, who, amount]
+        Destroyed(AssetId, AccountId, Balance),
+        /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
+        SetBalance(AssetId, AccountId, AssetType, Balance),
+        /// Set restrictions for an asset by root. [asset_id, assets_restrictions]
         SetRestrictions(AssetId, AssetRestrictions),
     }
 );

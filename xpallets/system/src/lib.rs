@@ -44,11 +44,11 @@ decl_event!(
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
     {
-        /// An account is blocked.
-        BlockAccount(AccountId),
+        /// An account was blocked. [who]
+        AccountBlocked(AccountId),
         /// The blocked status of an account is revoked.
         RevokeBlockedAccount(AccountId),
-        /// Transaction fee is paid to the block author and its reward pot in 10:90.
+        /// Transaction fee was paid to the block author and its reward pot in 10:90.
         /// [author, author_fee, reward_pot, reward_pot_fee]
         TransactionFeePaid(AccountId, Balance, AccountId, Balance),
     }
@@ -118,7 +118,7 @@ decl_module! {
             let who = T::Lookup::lookup(who)?;
             if should_block {
                 BlockedAccounts::<T>::insert(who.clone(), true);
-                Self::deposit_event(Event::<T>::BlockAccount(who))
+                Self::deposit_event(Event::<T>::AccountBlocked(who))
             } else {
                 BlockedAccounts::<T>::remove(&who);
                 Self::deposit_event(Event::<T>::RevokeBlockedAccount(who));
