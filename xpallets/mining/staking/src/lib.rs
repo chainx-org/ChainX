@@ -237,14 +237,14 @@ decl_event!(
         Slashed(AccountId, Balance),
         /// A nominator bonded to the validator this amount. [nominator, validator, amount]
         Bonded(AccountId, AccountId, Balance),
-        /// Nominator switched the vote from one validator to another. [nominator, from, to, amount]
+        /// A nominator switched the vote from one validator to another. [nominator, from, to, amount]
         Rebonded(AccountId, AccountId, AccountId, Balance),
-        /// An account unbonded this amount. [nominator, validator, amount]
+        /// A nominator unbonded this amount. [nominator, validator, amount]
         Unbonded(AccountId, AccountId, Balance),
-        /// An staker claimed the staking dividend. [nominator, validator, dividend]
+        /// A nominator claimed the staking dividend. [nominator, validator, dividend]
         Claimed(AccountId, AccountId, Balance),
-        /// The nominator withdrawed the locked balance due to the unbond operation. [nominator, amount]
-        UnbondedWithdrawalUnlocked(AccountId, Balance),
+        /// The nominator withdrew the locked balance from the unlocking queue. [nominator, amount]
+        Withdrawn(AccountId, Balance),
         /// Offenders were forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
         ForceChilled(SessionIndex, Vec<AccountId>),
     }
@@ -394,7 +394,7 @@ decl_module! {
                 nominator.unbonded_chunks = unbonded_chunks;
             });
 
-            Self::deposit_event(Event::<T>::UnbondedWithdrawalUnlocked(sender, value));
+            Self::deposit_event(Event::<T>::Withdrawn(sender, value));
         }
 
         /// Claim the staking reward given the `target` validator.
